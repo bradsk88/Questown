@@ -29,7 +29,7 @@ public class VisitorTrigger extends SimpleCriterionTrigger<VisitorTrigger.Instan
             BlockPos nearPos
     ) {
         Player np = level.getNearestPlayer(
-                nearPos.getX(), nearPos.getY(), nearPos.getZ(), 8.0D, false
+                nearPos.getX(), nearPos.getY(), nearPos.getZ(), 16.0D, false
         );
         if (!(np instanceof ServerPlayer sp)) {
             return;

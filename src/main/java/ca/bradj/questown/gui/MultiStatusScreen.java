@@ -1,10 +1,8 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.core.Pair;
+import ca.bradj.questown.core.Triplet;
 import ca.bradj.questown.core.UtilClean;
-import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
@@ -25,13 +23,16 @@ import static ca.bradj.questown.gui.PagedCardScreen.*;
 
 public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, UUID> {
 
-    private final Map<UUID, Collection<IStatus<?>>> statusSmoothingQueue = new HashMap<>();
+    private final Map<UUID, StatusPacket> statusSmoothingQueue = new HashMap<>();
     private final FlagTabs tabs;
 
     public record SyncedData(
-            Map<UUID, Pair<JobID, IStatus<?>>> villagers,
+            Map<UUID, StatusPacket> villagerStatuses,
             Map<UUID, ImmutableList<net.minecraft.world.item.Item>> items
     ) {
+        public JobID getJob(UUID uuid) {
+            return Util.orNull(villagerStatuses.get(uuid), StatusPacket::jobId);
+        }
     }
 
     // TODO: These are updated by a network message. Is there any way we can protect access?
@@ -73,7 +74,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
 
     @Override
     protected ImmutableList<UUID> cardsData() {
-        return ImmutableList.copyOf(syncedData.villagers.keySet());
+        return ImmutableList.copyOf(syncedData.villagerStatuses.keySet());
     }
 
     @Override
@@ -115,7 +116,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         Compat.drawDarkText(
                 font,
                 stack,
-                Compat.translatable(syncedData.villagers.get(uuid).a().rootId()),
+                Compat.translatable(syncedData.villagerStatuses.get(uuid).jobId().rootId()),
                 nameX,
                 destY
         );
@@ -133,24 +134,22 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
 
         int destX = coords.rightXPadded() - drawWidth;
         int destY = coords.topYPadded() - MED_PADDING;
-        IStatus<?> status = getSmoothedStatus(uuid);
-        JobID job = syncedData.villagers.get(uuid).a();
-        ResourceLocation texture = ServerJobsRegistry.getTexture(job, status);
-        RenderSystem.setShaderTexture(0, texture);
+        @NotNull StatusPacket status = getSmoothedStatus(uuid);
+        RenderSystem.setShaderTexture(0, status.image());
         blit(stack, destX, destY, 0, 0, drawWidth, drawHeight, texWidth, texHeight);
     }
 
-    private @NotNull IStatus<?> getSmoothedStatus(UUID villagerUUID) {
-        Collection<IStatus<?>> q = UtilClean.getOrDefaultCollection(
+    private @NotNull StatusPacket getSmoothedStatus(UUID villagerUUID) {
+        Collection<StatusPacket> q = UtilClean.getOrDefaultCollection(
                 statusSmoothingQueue,
                 villagerUUID,
                 EvictingQueue.create(5),
                 true
         );
-        q.add(syncedData.villagers.get(villagerUUID).b());
+        q.add(syncedData.villagerStatuses.get(villagerUUID));
         statusSmoothingQueue.put(villagerUUID, q);
-        HashMap<IStatus<?>, Integer> counter = new HashMap<>();
-        for (IStatus<?> iStatus : q) {
+        HashMap<Triplet<JobID, Component, ResourceLocation>, Integer> counter = new HashMap<>();
+        for (Triplet<JobID, Component, ResourceLocation> iStatus : q) {
             counter.compute(iStatus, (ignored, oldCt) -> oldCt == null ? 1 : oldCt + 1);
         }
         return counter
@@ -197,7 +196,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
                 continue;
             }
             UUID villagerUUID = uuids.get(i);
-            IStatus<?> status = getSmoothedStatus(villagerUUID);
+            @NotNull Triplet<JobID, Component, ResourceLocation> status = getSmoothedStatus(villagerUUID);
             JobID jobId = syncedData.villagers().get(villagerUUID).a();
             ImmutableList<Component> components = JobTooltips.get((ProductionStatus) status, jobId);
             super.renderTooltip(stack, components, Optional.empty(), mouseX, mouseY);

@@ -35,6 +35,7 @@ public class TownFlagTileData {
     private static final String NBT_HEALSPOTS = String.format("%s_heal_spots", Questown.MODID);
     private static final String NBT_BLOCKS_OF_PROGRESS_STORED = String.format("%s_bops_stored", Questown.MODID);
     private static final String NBT_BLOCK_ROOMS = QTNBT.keyify("block_rooms");
+    private static final String NBT_BONUS_GIVEN = QTNBT.keyify("bonus_given");
 
     public static Map<String, InitPair> initialize() {
 
@@ -43,13 +44,26 @@ public class TownFlagTileData {
         b.put(NBT_QUEST_BATCHES, initQuestBatches());
         b.put(NBT_MORNING_REWARDS, initMorningRewards());
         b.put(NBT_WELCOME_MATS, initWelcomeMats());
-        b.put(NBT_BLOCK_ROOMS, initBlockRooms());
         b.put(NBT_JOBS, initJobs());
         b.put(NBT_KNOWLEDGE, initKnowledge());
         b.put(NBT_VILLAGERS, initVillagers());
         b.put(NBT_HEALSPOTS, initHealSpots());
+        b.put(NBT_BLOCK_ROOMS, initBlockRooms());
         b.put(NBT_BLOCKS_OF_PROGRESS_STORED, initBlocksOfProgress());
+        b.put(NBT_BONUS_GIVEN, initBonusGiven());
         return b.build();
+    }
+
+    private static InitPair initBonusGiven() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.givenBonusFood = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> {
+                    flag.givenBonusFood = false;
+                }
+        );
     }
 
     private static @NotNull InitPair initRooms() {
@@ -206,8 +220,9 @@ public class TownFlagTileData {
         write(t, NBT_KNOWLEDGE, TownKnowledgeStoreSerializer.INSTANCE.serializeNBT(flag.getKnowledge()));
         write(t, NBT_VILLAGERS, TownVillagerHandle.SERIALIZER.serialize(flag.getVillagers(), currentTick));
         write(t, NBT_HEALSPOTS, TownHealingHandle.SERIALIZER.serialize(flag.getVillagers(), currentTick));
-        write(t, NBT_BLOCKS_OF_PROGRESS_STORED, flag.serializeBOP());
         write(t, NBT_BLOCK_ROOMS, flag.serializeBlockRooms());
+        write(t, NBT_BLOCKS_OF_PROGRESS_STORED, flag.serializeBOP());
+        write(t, NBT_BONUS_GIVEN, flag.serializeBonusGiven());
         // FIXME: Serialize economics
     }
 
