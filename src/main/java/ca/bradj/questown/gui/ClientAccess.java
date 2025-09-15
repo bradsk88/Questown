@@ -24,7 +24,7 @@ import java.util.function.Supplier;
 public class ClientAccess {
 
     private static final Map<Pair<JobID, ProductionStatus>, ResourceLocation> artOverrides = new HashMap<>();
-    private static final Map<Pair<JobID, ProductionStatus>, Pair<String, String>> textOverrides = new HashMap<>();
+    private static final Map<Pair<JobID, ProductionStatus>, ImmutableList<Component>> textOverrides = new HashMap<>();
 
     public static boolean openVillagerAdvancements(
             BlockPos flagPos,
@@ -92,15 +92,13 @@ public class ClientAccess {
     }
 
     public static void storeTextOverride(
-            JobID id,
             ProductionStatus status,
-            String text1,
-            String text2
+            StatusPacket packet
     ) {
-        textOverrides.put(new Pair<>(id, status), new Pair<>(text1, text2));
+        textOverrides.put(new Pair<>(packet.jobId(), status), packet.texts());
     }
 
-    public static @Nullable Pair<String, String> getStatusText(
+    public static @Nullable ImmutableList<Component> getStatusText(
             JobID jobId,
             ProductionStatus status
     ) {

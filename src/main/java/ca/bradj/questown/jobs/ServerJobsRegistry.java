@@ -8,6 +8,7 @@ import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.gui.JobTooltips;
 import ca.bradj.questown.gui.StatusArt;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -26,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -74,20 +76,27 @@ public class ServerJobsRegistry {
         return StatusArt.getTexture(job, status);
     }
 
-    public static @Nullable Pair<String, String> getStatusText(
+    public static @NotNull ImmutableList<Component> getStatusText(
             JobID job,
             IStatus<?> status
     ) {
+        if (isSeekingWork(job)) {
+            return JobTooltips.buildStandardTooltipKeys(status, job);
+        }
         try {
             Work work = getWork(job);
             if (work == null) {
-                return null;
+                throw new IllegalStateException("No work found for job ID: " + job);
             }
-            return work.applyStatusTextOverride(status);
+            Pair<String, String> stringStringPair = work.applyStatusTextOverride(status);
+            if (stringStringPair != null) {
+                return Pair.toList(stringStringPair).stream().map(Compat::translatable)
+                           .collect(ImmutableList.toImmutableList());
+            }
         } catch (Exception e) {
-            QT.JOB_LOGGER.error("Failed to apply status tooltip override");
-            return null;
+            QT.JOB_LOGGER.error("Failed to apply status tooltip override", e);
         }
+        return JobTooltips.buildStandardTooltipKeys(status, job);
     }
 
     private static @Nullable Work getWork(JobID job) {
@@ -202,7 +211,8 @@ public class ServerJobsRegistry {
                             return null;
                         }
                     }, bp.blockPos(), bp.heldItems(), bp.townUniqueItems(), bp.jobBlockAlreadyUsed(),
-                    bp.jobActive())),
+                            bp.jobActive()
+                    )),
                     (id, bs, bp) -> cached.apply(id).shouldInitializeWorkState.test(
                             new WorkLocation.BlockInfo() {
                                 @Override

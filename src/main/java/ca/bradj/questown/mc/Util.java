@@ -29,6 +29,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -237,7 +238,7 @@ public class Util {
 
     public static <X, Y> @Nullable Y orNull(
             @Nullable X input,
-            Function<X, Y> fn
+            Function<@NotNull X, Y> fn
     ) {
         if (input == null) {
             return null;
@@ -471,5 +472,13 @@ public class Util {
                 return level.getBlockEntity(bp);
             }
         };
+    }
+
+    public static <X, Y> Y ifNullElse(
+            @Nullable X texts,
+            Supplier<Y> whenNull,
+            Function<@NotNull X, Y> whenNotNull
+    ) {
+        return texts == null ? whenNull.get() : whenNotNull.apply(texts);
     }
 }
