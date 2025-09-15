@@ -1,13 +1,9 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.gui.MultiStatusScreen;
-import ca.bradj.questown.gui.SessionUniqueOrdinals;
-import ca.bradj.questown.jobs.IStatus;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.Jobs;
+import ca.bradj.questown.gui.StatusPacket;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -34,10 +30,7 @@ public record MultiStatusScreenSyncMessage(
             FriendlyByteBuf buffer
     ) {
         buffer.writeMap(
-                msg.data.villagers(), FriendlyByteBuf::writeUUID, (b, v) -> {
-                    Jobs.writeIdToNetwork(b, v.a());
-                    b.writeInt(SessionUniqueOrdinals.getOrdinal(v.b()));
-                }
+                msg.data.villagerStatuses(), FriendlyByteBuf::writeUUID, StatusPacket::toNetwork
         );
         buffer.writeMap(
                 msg.data.items(), FriendlyByteBuf::writeUUID, (b, v) ->
@@ -46,13 +39,10 @@ public record MultiStatusScreenSyncMessage(
     }
 
     public static MultiStatusScreenSyncMessage decode(FriendlyByteBuf buffer) {
-        HashMap<UUID, Pair<JobID, IStatus<?>>> data = buffer.readMap(
+        HashMap<UUID, StatusPacket> data = buffer.readMap(
                 HashMap::new,
                 FriendlyByteBuf::readUUID,
-                b -> new Pair<>(
-                        Jobs.getIdFromNetwork(b),
-                        SessionUniqueOrdinals.getStatus(b.readInt())
-                )
+                StatusPacket::fromNetwork
         );
         HashMap<UUID, ImmutableList<Item>> data2 = buffer.readMap(
                 HashMap::new,
@@ -83,7 +73,7 @@ public record MultiStatusScreenSyncMessage(
         ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(
                 Dist.CLIENT,
                 () -> () -> MultiStatusScreen.syncedData = new MultiStatusScreen.SyncedData(
-                        ImmutableMap.copyOf(data.villagers()),
+                        ImmutableMap.copyOf(data.villagerStatuses()),
                         UtilClean.deepCopy(data.items())
                 )
         )).exceptionally(MultiStatusScreenSyncMessage::logError);

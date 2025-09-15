@@ -1,6 +1,5 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
@@ -19,14 +18,11 @@ public class JobTooltips {
             ProductionStatus status,
             JobID jobId
     ) {
-        Pair<String, String> overrides = ClientAccess.getStatusText(jobId, status);
-        if (overrides != null) {
-            return Pair.toList(Pair.monoMap(overrides, Compat::translatable));
-        }
-        return buildStandardTooltipComponents(status, jobId);
+        @Nullable ImmutableList<Component> overrides = ClientAccess.getStatusText(jobId, status);
+        return overrides == null ? buildStandardTooltipKeys(status, jobId) : overrides;
     }
 
-    private static @NotNull ImmutableList<Component> buildStandardTooltipComponents(
+    public static @NotNull ImmutableList<Component> buildStandardTooltipKeys(
             IStatus<?> status,
             JobID jobId
     ) {

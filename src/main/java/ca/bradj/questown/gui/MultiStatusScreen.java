@@ -1,9 +1,7 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.core.Triplet;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.EvictingQueue;
@@ -11,7 +9,6 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -23,23 +20,18 @@ import static ca.bradj.questown.gui.PagedCardScreen.*;
 
 public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, UUID> {
 
-    private final Map<UUID, StatusPacket> statusSmoothingQueue = new HashMap<>();
+    private final Map<UUID, Collection<StatusPacket>> statusSmoothingQueue = new HashMap<>();
     private final FlagTabs tabs;
 
-    public record SyncedData(
-            Map<UUID, StatusPacket> villagerStatuses,
-            Map<UUID, ImmutableList<net.minecraft.world.item.Item>> items
-    ) {
+    public record SyncedData(Map<UUID, StatusPacket> villagerStatuses,
+                             Map<UUID, ImmutableList<net.minecraft.world.item.Item>> items) {
         public JobID getJob(UUID uuid) {
             return Util.orNull(villagerStatuses.get(uuid), StatusPacket::jobId);
         }
     }
 
     // TODO: These are updated by a network message. Is there any way we can protect access?
-    public static SyncedData syncedData = new SyncedData(
-            new HashMap<>(),
-            new HashMap<>()
-    );
+    public static SyncedData syncedData = new SyncedData(new HashMap<>(), new HashMap<>());
 
     public MultiStatusScreen(
             MultiStatusMenu menu,
@@ -148,15 +140,12 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         );
         q.add(syncedData.villagerStatuses.get(villagerUUID));
         statusSmoothingQueue.put(villagerUUID, q);
-        HashMap<Triplet<JobID, Component, ResourceLocation>, Integer> counter = new HashMap<>();
-        for (Triplet<JobID, Component, ResourceLocation> iStatus : q) {
+        HashMap<StatusPacket, Integer> counter = new HashMap<>();
+        for (StatusPacket iStatus : q) {
             counter.compute(iStatus, (ignored, oldCt) -> oldCt == null ? 1 : oldCt + 1);
         }
-        return counter
-                .entrySet()
-                .stream()
-                .max(Comparator.comparingInt(Map.Entry::getValue))
-                .map(Map.Entry::getKey).orElseThrow();
+        return counter.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).map(Map.Entry::getKey)
+                      .orElseThrow();
     }
 
     @Override
@@ -169,7 +158,10 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int bgY = (this.height - backgroundHeight()) / 2;
 
         if (this.tabs.renderTooltip(
-                bgX, bgY, mouseX, mouseY,
+                bgX,
+                bgY,
+                mouseX,
+                mouseY,
                 key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
         )) {
             return;
@@ -196,10 +188,8 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
                 continue;
             }
             UUID villagerUUID = uuids.get(i);
-            @NotNull Triplet<JobID, Component, ResourceLocation> status = getSmoothedStatus(villagerUUID);
-            JobID jobId = syncedData.villagers().get(villagerUUID).a();
-            ImmutableList<Component> components = JobTooltips.get((ProductionStatus) status, jobId);
-            super.renderTooltip(stack, components, Optional.empty(), mouseX, mouseY);
+            @NotNull StatusPacket status = getSmoothedStatus(villagerUUID);
+            super.renderTooltip(stack, status.texts(), Optional.empty(), mouseX, mouseY);
             return;
         }
         super.renderTooltip(stack, mouseX, mouseY);

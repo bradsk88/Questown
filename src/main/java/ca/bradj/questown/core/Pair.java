@@ -17,6 +17,13 @@ public record Pair<A, B>(A a, B b) {
         return new Pair<>(mapper.apply(in.a), mapper.apply(in.b));
     }
 
+    public static <A, B> Pair<B, B> map(Pair<A, A> pair, Function<A, B> o) {
+        return new Pair<>(o.apply(pair.a), o.apply(pair.b));
+    }
+    public static <A, B, C> Pair<A, C> mapB(Pair<A, B> pair, Function<B, C> o) {
+        return new Pair<>(pair.a, o.apply(pair.b));
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
