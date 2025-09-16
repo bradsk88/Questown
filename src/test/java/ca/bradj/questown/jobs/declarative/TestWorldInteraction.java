@@ -155,6 +155,13 @@ public class TestWorldInteraction extends
     }
 
     @Override
+    protected void triggerCompletionAdvancement(
+            Void inputs,
+            Position position
+    ) {
+    }
+
+    @Override
     protected void preStateChangeHooks(
             @NotNull Boolean ctx,
             Collection<String> rules,

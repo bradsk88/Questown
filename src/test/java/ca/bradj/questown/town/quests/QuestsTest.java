@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.quests;
 
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -33,12 +34,21 @@ class QuestsTest {
         quests = new QuestBatch<>(new Quest.QuestFactory<>() {
             @Override
             public TestQuest newQuest(@Nullable UUID ownerId, Integer recipeId) {
-                return TestQuest.standalone(ownerId, recipeId, Quest.QuestStatus.ACTIVE);
+                return TestQuest.standalone(VillagerUUID.from(ownerId), recipeId, Quest.QuestStatus.ACTIVE);
             }
 
             @Override
             public TestQuest newUpgradeQuest(@Nullable UUID ownerId, Integer oldRecipeId, Integer newRecipeId) {
-                return TestQuest.upgrade(ownerId, newRecipeId, oldRecipeId, Quest.QuestStatus.ACTIVE);
+                return TestQuest.upgrade(VillagerUUID.from(ownerId), newRecipeId, oldRecipeId, Quest.QuestStatus.ACTIVE);
+            }
+
+            @Override
+            public TestQuest newItemQuest(
+                    @Nullable UUID ownerId,
+                    Integer itemId,
+                    int count
+            ) {
+                throw new UnsupportedOperationException("Not implemented");
             }
 
             @Override
@@ -74,6 +84,11 @@ class QuestsTest {
             protected @NotNull RewardApplier getApplier() {
                 return () -> {
                 };
+            }
+
+            @Override
+            public boolean addsQuestsWhenApplied() {
+                return false;
             }
         }, null);
     }
@@ -193,17 +208,17 @@ class QuestsTest {
 
 class TestQuest extends Quest<Integer, Room> {
 
-    TestQuest(UUID ownerId, Integer id, @Nullable Integer from) {
-        super(null, ownerId, id, from);
+    TestQuest(VillagerUUID ownerId, Integer id, @Nullable Integer from) {
+        super(null, ownerId, id, from, QuestType.ROOM, 1);
     }
 
-    public static TestQuest standalone(UUID ownerId, Integer id, QuestStatus status) {
+    public static TestQuest standalone(VillagerUUID ownerId, Integer id, QuestStatus status) {
         TestQuest testQuest = new TestQuest(ownerId, id, null);
         testQuest.status = status;
         return testQuest;
     }
 
-    public static TestQuest upgrade(UUID ownerId, Integer id, Integer from, QuestStatus status) {
+    public static TestQuest upgrade(VillagerUUID ownerId, Integer id, Integer from, QuestStatus status) {
         TestQuest testQuest = new TestQuest(ownerId, id, from);
         testQuest.status = status;
         return testQuest;
