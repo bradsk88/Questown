@@ -197,10 +197,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
         MCQuestBatch jobQuest = new MCQuestBatch(UUID.randomUUID(), visitorUUID, new MCInstantReward(town, reward));
         jobQuest.addNewQuest(visitorUUID, ServerJobsRegistry.getRoomForJobRootId(town.getServerLevel(), job));
-        if (!town.getWorkHandle().hasAtLeastOneBoard()) {
-            jobQuest.addNewQuest(visitorUUID, SpecialQuests.JOB_BOARD);
-        }
-
         quests.questBatches.add(jobQuest);
     }
 
@@ -266,9 +262,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         quests.addBatch(batch);
     }
 
-    public static ImmutableSet<UUID> getVillagers(TownQuests quests) {
+    public static ImmutableSet<VillagerUUID> getVillagers(TownQuests quests) {
         return ImmutableSet.copyOf(quests.questBatches.getAllBatches().stream().map(MCQuestBatch::getOwner)
-                                                      .map(VillagerUUID::get)
                                                       .filter(Objects::nonNull).collect(Collectors.toSet()));
     }
 
@@ -277,6 +272,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         //  If it has, discard the pending quests and start over.
         ServerLevel level = town.getServerLevel();
         int size = getVillagers(this).size();
+
+        if (questBatches.hasCampfireQuestOnly(SpecialQuests.CAMPFIRE::equals) && !questRequests.isEmpty()) {
+            addNonRandomFirstBatch(town);
+            playerDiscardedLastBatch = false;
+            return;
+        }
+
         if (this.playerDiscardedLastBatch) {
             size = size - 1;
         }
@@ -338,6 +340,17 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
 
         pendingQuests = pop; // Can't grow more (at the moment) and not needed. Push back for next tick.
+    }
+
+    private void addNonRandomFirstBatch(TownInterface town) {
+        PendingReward pr = questRequests.pop();
+        MCDelayedReward batchReward = new MCDelayedReward(town, pr.reward());
+        MCQuestBatch q = new MCQuestBatch(UUID.randomUUID(), pr.owner(), batchReward);
+        q.addNewQuest(pr.owner(), SpecialQuests.BEDROOM);
+        q.addNewQuest(pr.owner(), SpecialQuests.JOB_BOARD);
+        q.addNewQuest(pr.owner(), SpecialQuests.STORE_ROOM_SMALL);
+        questBatches.add(q);
+        QT.QUESTS_LOGGER.debug("Non-random tutorial quest batch was given to {}: {}", pr.owner(), q.toNiceString());
     }
 
     private static boolean isNotSpecial(ResourceLocation id) {

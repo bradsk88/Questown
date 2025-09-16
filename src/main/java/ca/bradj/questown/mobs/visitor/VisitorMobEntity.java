@@ -1207,35 +1207,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return InteractionResult.PASS;
         }
 
-        List<? extends Map.Entry<MCQuest, MCReward>> q4v = town.getQuestHandle()
-                                                               .getQuestsWithRewardsForVillager(getUUID());
-        Collection<UIQuest> quests = UIQuest.fromLevel(level, q4v);
-
-        AdvancementsInit.VISITOR_TRIGGER.trigger(
-                sp, VisitorTrigger.Triggers.FirstVisitor
-        );
-
-        Predicate<MCQuest> isComplete = Quest::isComplete;
-        Set<MCQuest> finishedQuests = q4v
-                .stream()
-                .map(Map.Entry::getKey)
-                .filter(isComplete)
-                .collect(Collectors.toSet());
-        Set<MCQuest> unfinishedQuests = q4v
-                .stream()
-                .map(Map.Entry::getKey)
-                .filter(isComplete.negate())
-                .collect(Collectors.toSet());
-
-        VisitorQuestsContainer.VisitorContext ctx = new VisitorQuestsContainer.VisitorContext(
-                town.getQuestHandle().getVillagersWithQuests()
-                    .stream()
-                    .filter(Objects::nonNull)
-                    .toList()
-                    .size() == 1,
-                finishedQuests.size(),
-                unfinishedQuests.size()
-        );
+        AdvancementsInit.VISITOR_TRIGGER.trigger(sp, VisitorTrigger.Triggers.FirstVisitor);
         Jobs.openInventoryAndStatusScreen(sp, this);
 
         return InteractionResult.sidedSuccess(isClientSide);

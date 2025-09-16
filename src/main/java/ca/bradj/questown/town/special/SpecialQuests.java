@@ -47,6 +47,7 @@ public class SpecialQuests {
     );
     public static final ResourceLocation BEDROOM = Questown.ResourceLocation("bedroom");
     public static final ResourceLocation JOB_BOARD = Questown.ResourceLocation("job_board");
+    public static final ResourceLocation STORE_ROOM_SMALL = Questown.ResourceLocation("store_room");
     public static final ResourceLocation DINING_ROOM = Questown.ResourceLocation("dining_room");
     public static final ResourceLocation CLINIC = Questown.ResourceLocation("clinic");
     public static final WorkLocation TOWN_GATE_LOCATION = new WorkLocation(

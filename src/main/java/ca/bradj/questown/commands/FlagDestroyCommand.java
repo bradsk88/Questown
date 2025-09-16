@@ -1,8 +1,5 @@
 package ca.bradj.questown.commands;
 
-import ca.bradj.questown.core.advancements.ApproachTownTrigger;
-import ca.bradj.questown.core.init.AdvancementsInit;
-import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -12,9 +9,10 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.commands.arguments.coordinates.Coordinates;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-public class FlagCommand {
+public class FlagDestroyCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         RequiredArgumentBuilder<CommandSourceStack, Coordinates> posArg = Commands.argument(
                 "pos",
@@ -22,7 +20,7 @@ public class FlagCommand {
         );
 
         LiteralArgumentBuilder<CommandSourceStack> subCmd = Commands.literal("flag");
-        LiteralArgumentBuilder<CommandSourceStack> subSubCmd = Commands.literal("place_above");
+        LiteralArgumentBuilder<CommandSourceStack> subSubCmd = Commands.literal("destroy");
 
         // @formatter:off
         src.register(
@@ -30,7 +28,8 @@ public class FlagCommand {
                 subCmd
                     .requires(AddExperienceCommand::isCreative)
                     .then(posArg
-                        .then(subSubCmd
+                        .then(
+                            subSubCmd
                             .executes(css -> setBlock(
                                 css.getSource(),
                                 BlockPosArgument.getLoadedBlockPos(css, "pos")
@@ -46,15 +45,14 @@ public class FlagCommand {
             BlockPos target
     ) {
         BlockEntity e = source.getLevel().getBlockEntity(target);
-        if ((e instanceof TownFlagBlockEntity)) {
+        if (!(e instanceof TownFlagBlockEntity tf)) {
             return 0;
         }
 
-        source.getLevel().setBlockAndUpdate(target.above(), BlocksInit.COBBLESTONE_TOWN_FLAG.get().defaultBlockState());
+        tf.getVillagerHandle().entities().forEach(LivingEntity::kill);
 
-        AdvancementsInit.APPROACH_TOWN_TRIGGER.trigger(
-                source.getPlayer(), ApproachTownTrigger.Triggers.FirstVisit
-        );
+        source.getLevel().removeBlock(target, true);
+
         return 0;
     }
 }

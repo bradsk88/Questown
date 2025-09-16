@@ -63,14 +63,14 @@ public class FlagMenus {
     }
 
     public static void writeAndLink(
-            FriendlyByteBuf data,
+            FriendlyByteBuf buf,
             List<UIQuest> quests,
             FlagTabsEmbedding.FlagInfo flagInfo,
             ServerPlayer player,
             Iterable<? extends VisitorMobEntity> es,
             int bopCount
     ) {
-        TownQuestsContainer.write(data, quests, flagInfo.flagPos());
+        TownQuestsContainer.write(buf, quests, flagInfo.flagPos());
         MultiStatusScreenSyncMessage msg = new MultiStatusScreenSyncMessage(makeSyncData(es));
         QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), msg);
         for (VisitorMobEntity e : es) {
@@ -90,7 +90,7 @@ public class FlagMenus {
                 }
             });
         }
-        TownBlockofProgressMenu.write(data, flagInfo, bopCount);
+        TownBlockofProgressMenu.write(buf, flagInfo, bopCount);
     }
 
     private static MultiStatusScreen.@NotNull SyncedData makeSyncData(Iterable<? extends VisitorMobEntity> es) {

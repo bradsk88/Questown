@@ -168,9 +168,9 @@ public class Compat {
     public static void openScreen(
             ServerPlayer sender,
             MenuProvider menuProvider,
-            Consumer<FriendlyByteBuf> consumer
+            Consumer<FriendlyByteBuf> writer
     ) {
-        NetworkHooks.openScreen(sender, menuProvider, consumer);
+        NetworkHooks.openScreen(sender, menuProvider, writer);
     }
 
     public static DeferredRegister<MenuType<?>> CreateMenuRegister(String modid) {

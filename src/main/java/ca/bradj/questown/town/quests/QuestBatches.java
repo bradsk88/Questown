@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class QuestBatches<
@@ -44,6 +45,17 @@ public class QuestBatches<
 
     public boolean decline(BATCH b) {
         return batches.remove(b);
+    }
+
+    public boolean hasCampfireQuestOnly(Predicate<KEY> isCampfire) {
+        if (batches.size() > 1) {
+            return false;
+        }
+        ImmutableList<QUEST> qs = batches.get(0).getAll();
+        if (qs.size() > 1) {
+            return false;
+        }
+        return isCampfire.test(qs.get(0).getWantedId());
     }
 
     public interface Tracker<ITEM_KEY, ITEM, QUEST> {

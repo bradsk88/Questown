@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Now that you have a job board, you can ask your villagers to bring supplies. $(br2)Gatherers can definitely find wheat seeds, so let's start by asking for those.$(br2)Hint: Right-click on the job board block and click the (+) in the top-right to request items."
+      "text": "Now that you have a job board, you can ask your villagers to bring supplies. $(br2)Villagers can definitely find wheat seeds, so let's start by asking for those.$(br2)Hint: Right-click on the job board block and click the (+) in the top-right to request items."
     },
     {
       "type": "patchouli:image",

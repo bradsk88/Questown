@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.RemoveQuestFromUIMessage;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -53,15 +54,20 @@ public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
     }
 
     public static Collection<UIQuest> readQuests(FriendlyByteBuf data) {
-        int size = data.readInt();
-        ArrayList<UIQuest> r = data.readCollection(
-                c -> new ArrayList<>(size), buf -> {
-                    ResourceLocation recipeID = buf.readResourceLocation();
-                    return new UIQuest.Serializer().fromNetwork(recipeID, buf);
-                }
-        );
-        r.sort(UIQuest::compareTo);
-        return r;
+        try {
+            int size = data.readInt();
+            ArrayList<UIQuest> r = data.readCollection(
+                    c -> new ArrayList<>(size), buf -> {
+                        ResourceLocation recipeID = buf.readResourceLocation();
+                        return new UIQuest.Serializer().fromNetwork(recipeID, buf);
+                    }
+            );
+            r.sort(UIQuest::compareTo);
+            return r;
+        } catch (Exception e) {
+            QT.GUI_LOGGER.error("Failed to read quests", e);
+            throw e;
+        }
     }
 
     protected static void writeFlagPos(
@@ -74,7 +80,12 @@ public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
     }
 
     public static BlockPos readFlagPos(FriendlyByteBuf data) {
-        return new BlockPos(data.readInt(), data.readInt(), data.readInt());
+        try {
+            return new BlockPos(data.readInt(), data.readInt(), data.readInt());
+        } catch (Exception e) {
+            QT.GUI_LOGGER.error("Failed to read flag pos", e);
+            throw e;
+        }
     }
 
     @Override

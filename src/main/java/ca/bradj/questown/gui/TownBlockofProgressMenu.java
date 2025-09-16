@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import ca.bradj.questown.jobs.IStatus;
@@ -46,8 +47,13 @@ public class TownBlockofProgressMenu extends AbstractContainerMenu implements Fl
     }
 
     public static int read(FriendlyByteBuf buf) {
-        FlagInfo.read(buf);
-        return buf.readInt();
+        try {
+            FlagInfo.read(buf);
+            return buf.readInt();
+        } catch (Exception e) {
+            QT.GUI_LOGGER.error("Failed to read bops", e);
+            throw e;
+        }
     }
 
     @Override

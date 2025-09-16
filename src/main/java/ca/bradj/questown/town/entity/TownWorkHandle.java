@@ -37,6 +37,12 @@ import java.util.function.Consumer;
 
 public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
+    private boolean initialized;
+
+    void setInitialized() {
+        this.initialized = true;
+    }
+
     public record Change(
             @Nullable WorkRequest removed
     ) {
