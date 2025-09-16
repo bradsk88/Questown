@@ -34,7 +34,6 @@ public class StatusesProductionRoutineTest {
     );
 
     IRoomRecipeMatch<Room, String, Position, String> arbitraryMatch = new IRoomRecipeMatch<Room, String, Position, String>() {
-        @Override
         public String getRecipeID() {
             return "test";
         }
@@ -554,8 +553,7 @@ public class StatusesProductionRoutineTest {
 
     @Test
     void StatusShouldBe_WORK_insteadOfINGREDIENTS_WhenSitesNeedBothKindsOfWork_AndEntityInJobSiteThatNeedsWORK_WithSupplies() {
-        IRoomRecipeMatch<Room, String, Position, String> otherRoom = new IRoomRecipeMatch<>() {
-            @Override
+        IRoomRecipeMatch<Room, String, Position, String> otherRoom = new IRoomRecipeMatch<Room, String, Position, String>() {
             public String getRecipeID() {
                 return "jobsite";
             }
