@@ -121,7 +121,7 @@ public class TownQuestsHandle implements QuestsHolder {
     }
 
     @Override
-    public ImmutableSet<UUID> getVillagersWithQuests() {
+    public ImmutableSet<VillagerUUID> getVillagersWithQuests() {
         return TownQuests.getVillagers(unsafeGetTown().quests);
     }
 
@@ -138,9 +138,9 @@ public class TownQuestsHandle implements QuestsHolder {
     }
 
     @Override
-    public void addRandomUpgradeQuestForVisitor(UUID visitorUUID) {
+    public void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID) {
         TownFlagBlockEntity t = unsafeGetTown();
-        TownQuests.addUpgradeQuest(t, t.quests, VillagerUUID.from(visitorUUID));
+        TownQuests.addUpgradeQuest(t, t.quests, visitorUUID);
         t.setChanged();
     }
 
@@ -226,7 +226,7 @@ public class TownQuestsHandle implements QuestsHolder {
         }
 
         if (b.getOwner() != null) {
-            t.addMorningReward(new AddRandomUpgradeQuest(t, VillagerUUID.get(b.getOwner())));
+            t.addMorningReward(new AddRandomUpgradeQuest(t, b.getOwner()));
             return;
         }
 

@@ -53,6 +53,21 @@ public class VillagerTabs extends Tabs implements SubUI {
         b.add(new Tab(
                 (rc, x, y) -> {
                     int txBefore = RenderSystem.getShaderTexture(0);
+                    Util.blitTab(rc.stack(), x, y, 0);
+                    RenderSystem.setShaderTexture(0, txBefore);
+                }, setScreen(econScreenFn), "tooltips.economics", econScreenFn == null
+        ));
+        b.add(new Tab(
+                (rc, x, y) -> {
+                    int txBefore = RenderSystem.getShaderTexture(0);
+                    RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
+                    GuiComponent.blit(rc.stack(), x + 13, y + 11, 0, 0, 0, 9, 9, 256, 256);
+                    RenderSystem.setShaderTexture(0, txBefore);
+                }, setScreen(sScreenFn), "tooltips.stats", sScreenFn == null
+        ));
+        b.add(new Tab(
+                (rc, x, y) -> {
+                    int txBefore = RenderSystem.getShaderTexture(0);
                     RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
                     PoseStack stack = rc.stack();
                     stack.pushPose();
@@ -77,21 +92,6 @@ public class VillagerTabs extends Tabs implements SubUI {
                 setScreen(qScreenFn),
                 "tooltips.quests",
                 qScreenFn == null
-        ));
-        b.add(new Tab(
-                (rc, x, y) -> {
-                    int txBefore = RenderSystem.getShaderTexture(0);
-                    RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
-                    GuiComponent.blit(rc.stack(), x + 13, y + 11, 0, 0, 0, 9, 9, 256, 256);
-                    RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(sScreenFn), "tooltips.stats", sScreenFn == null
-        ));
-        b.add(new Tab(
-                (rc, x, y) -> {
-                    int txBefore = RenderSystem.getShaderTexture(0);
-                    Util.blitTab(rc.stack(), x, y, 0);
-                    RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(econScreenFn), "tooltips.economics", econScreenFn == null
         ));
         if (showBopTab) {
             b.add(new Tab(

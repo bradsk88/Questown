@@ -28,7 +28,7 @@ public interface QuestsHolder {
 
     List<AbstractMap.SimpleEntry<MCQuest, MCReward>> getQuestsWithRewardsForVillager(UUID uuid);
 
-    ImmutableSet<UUID> getVillagersWithQuests();
+    ImmutableSet<VillagerUUID> getVillagersWithQuests();
 
     Collection<MCQuest> getQuestsForVillager(UUID uuid);
 
@@ -36,7 +36,7 @@ public interface QuestsHolder {
 
     Collection<MCQuestBatch> getAllBatchesForVillager(UUID uuid);
 
-    void addRandomUpgradeQuestForVisitor(UUID visitorUUID);
+    void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID);
 
     void addItemQuest(
             ResourceLocation itemId,

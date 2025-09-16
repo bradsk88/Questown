@@ -362,6 +362,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 updateWorkersAfterRequestChange();
                 setChanged();
             });
+            t.workHandle.setInitialized();
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
             if (!level.isClientSide()) {
                 TownFlags.register(uuid, t);

@@ -3,6 +3,7 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.ModItemGroup;
@@ -157,7 +158,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         if (itemInHand.getItem().equals(Items.DIAMOND)) {
-            for (UUID uuid : entity.getQuestHandle().getVillagersWithQuests()) {
+            for (VillagerUUID uuid : entity.getQuestHandle().getVillagersWithQuests()) {
                 entity.addImmediateReward(
                         new AddRandomUpgradeQuest(entity, uuid)
                 );
