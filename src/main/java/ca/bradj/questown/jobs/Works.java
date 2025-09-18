@@ -65,7 +65,7 @@ public class Works {
     /**
      * @deprecated Doesn't handle special jobs well. Try using ServerJobsRegistry instead.
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static Supplier<Work> get(JobID jobID) {
         if (!initialized) {
             throw new IllegalStateException("Works not initialized");

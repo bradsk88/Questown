@@ -4,6 +4,8 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.*;
@@ -131,6 +133,7 @@ public class UIQuest implements Comparable<UIQuest> {
         return switch (v.getType()) {
             case ROOM -> getRoomIngredients(v, rMap);
             case ITEM -> Collections.nCopies(v.getCountNeeded(), Ingredient.of(reg.getValue(v.getWantedId())));
+            case JOB_CHANGE -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case UNKNOWN -> ImmutableList.of();
         };
     }
@@ -193,8 +196,13 @@ public class UIQuest implements Comparable<UIQuest> {
         return switch (type) {
             case ROOM -> RoomRecipes.getName(wantedId);
             case ITEM -> Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size());
+            case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractJobName());
             case UNKNOWN -> Compat.literal("ERROR");
         };
+    }
+
+    private String extractJobName() {
+        return JobID.fromRL(wantedId).jobId();
     }
 
     public String jobName() {

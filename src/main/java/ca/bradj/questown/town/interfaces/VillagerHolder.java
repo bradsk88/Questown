@@ -1,9 +1,11 @@
 package ca.bradj.questown.town.interfaces;
 
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.VillagerStatsData;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -58,6 +60,8 @@ public interface VillagerHolder {
     VillagerStatsData getStats(UUID uuid);
 
     Collection<JobID> getJobs();
+
+    ImmutableMap<VillagerUUID, JobID> getVillagerJobs();
 
     void changeJobForVillager(
             UUID villagerUUID,

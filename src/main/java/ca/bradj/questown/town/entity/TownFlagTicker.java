@@ -130,6 +130,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         TownFlagBlockEntity e = tickData.entity();
         e.possibleWork.invalidate();
         e.quests.processItemQuests(TownContainers.getAllStacks(e, e.getServerLevel()));
+        e.quests.processJobChanges(e.getVillagerHandle().getVillagerJobs());
     }
 
     @Override
@@ -228,7 +229,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
     ) {
         QT.FLAG_LOGGER.debug("No quests found. Adding a batch for {}", v.getVUID());
         TownFlagBlockEntity e = tickData.entity();
-        e.questsHandle.addBatchOfRandomQuestsForVisitor(v.getVUID());
+        e.questsHandle.addBatchOfQuestsForVisitor(v.getVUID());
         e.setChanged();
     }
 

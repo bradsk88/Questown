@@ -47,7 +47,7 @@ public class QuestBatches<
         return batches.remove(b);
     }
 
-    public boolean hasCampfireQuestOnly(Predicate<KEY> isCampfire) {
+    public boolean hasOneQuestOnly(Predicate<KEY> matches) {
         if (batches.size() > 1) {
             return false;
         }
@@ -55,7 +55,11 @@ public class QuestBatches<
         if (qs.size() > 1) {
             return false;
         }
-        return isCampfire.test(qs.get(0).getWantedId());
+        return matches.test(qs.get(0).getWantedId());
+    }
+
+    public boolean includes(Predicate<QUEST> matches) {
+        return batches.stream().anyMatch(b -> b.getAll().stream().anyMatch(matches));
     }
 
     public interface Tracker<ITEM_KEY, ITEM, QUEST> {
@@ -169,10 +173,11 @@ public class QuestBatches<
             BATCH e = this.emptyBatch(v.getBatchUUID(), owner, v.reward);
             ImmutableList.Builder<QUEST> eqb = ImmutableList.builder();
             v.getAll().forEach(q -> {
-                if (q.getType() == Quest.QuestType.ITEM) {
-                    e.addItemQuest(owner, q.getWantedId(), q.getCountNeeded());
-                } else {
-                    e.addNewQuest(owner, q.getWantedId());
+                switch (q.getType()) {
+                    case ITEM -> e.addItemQuest(owner, q.getWantedId(), q.getCountNeeded());
+                    case ROOM -> e.addNewQuest(owner, q.getWantedId());
+                    case JOB_CHANGE -> e.addJobChangeQuest(q.getWantedId());
+                    case UNKNOWN -> QT.QUESTS_LOGGER.error("Unexpected type: {}. Skipping duplicate check.", q.getType());
                 }
                 IdIgnoring<QUEST> iq = new IdIgnoring<>(q);
                 if (completedQuests.contains(iq)) {

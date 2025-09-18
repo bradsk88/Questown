@@ -15,7 +15,7 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
-import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
+import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -131,9 +131,9 @@ public class TownQuestsHandle implements QuestsHolder {
     }
 
     @Override
-    public void addBatchOfRandomQuestsForVisitor(@Nullable VillagerUUID visitorUUID) {
+    public void addBatchOfQuestsForVisitor(@Nullable VillagerUUID visitorUUID) {
         TownFlagBlockEntity t = unsafeGetTown();
-        TownQuests.addRandomBatchForVisitor(t, t.quests, visitorUUID);
+        TownQuests.addBatchForVisitor(t, t.quests, visitorUUID);
         t.setChanged();
     }
 
@@ -221,7 +221,7 @@ public class TownQuestsHandle implements QuestsHolder {
             MCQuestBatch b
     ) {
         if (Compat.getRandomBool(t.getServerLevel())) {
-            t.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(t, null));
+            t.addMorningReward(new AddBatchOfQuestsForVisitorReward(t, null));
             return;
         }
 
@@ -238,7 +238,7 @@ public class TownQuestsHandle implements QuestsHolder {
         }
 
         QT.QUESTS_LOGGER.error("No villagers to assign next upgrade quest batch to, falling back to randdom");
-        t.addMorningReward(new AddBatchOfRandomQuestsForVisitorReward(t, null));
+        t.addMorningReward(new AddBatchOfQuestsForVisitorReward(t, null));
     }
 
     @Override

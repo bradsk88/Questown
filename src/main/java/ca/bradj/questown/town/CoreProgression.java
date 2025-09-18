@@ -1,32 +1,47 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.gui.ItemEconomicsData;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.OptionalInt;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class CoreProgression<JOB, ROOM> {
 
+    private final ImmutableList<ItemEconomicsData> needs;
     private final Predicate<JOB> isGatherer;
     private final Function<Collection<JOB>, JOB> chooseRandom;
     private final Predicate<JOB> generatesVillagerFood;
-    private final Predicate<JOB> generatesNeededResources;
+    private final EconData<JOB> econData;
+
+    public record TotalTimesNeeded(int value) {
+    }
+
+    public interface EconData<JOB> {
+        Collection<ItemEconomicsData> getForResults(JOB job, ImmutableList<ItemEconomicsData> allData);
+    }
 
     public CoreProgression(
+            Collection<ItemEconomicsData> needs,
             Predicate<JOB> isGatherer,
             Function<Collection<JOB>, JOB> chooseRandom,
             Predicate<JOB> generatesVillagerFood,
-            Predicate<JOB> generatesNeededResources
+            EconData<JOB> econData
     ) {
+        this.needs = ImmutableList.copyOf(needs);
         this.isGatherer = isGatherer;
         this.chooseRandom = chooseRandom;
         this.generatesVillagerFood = generatesVillagerFood;
-        this.generatesNeededResources = generatesNeededResources;
+        this.econData = econData;
     }
 
     public @Nullable JOB getFirstJobChange(
@@ -64,20 +79,38 @@ public class CoreProgression<JOB, ROOM> {
             return chooseRandom.apply(foodProducing);
         }
 
-        // Prefer jobs that meet the needs of the town
-        List<JOB> resourceProducing = roomsWithoutQuest.keySet().stream().filter(generatesNeededResources).toList();
-        if (!resourceProducing.isEmpty()) {
-            return chooseRandom.apply(resourceProducing);
+        // Prefer jobs that best meet the needs of the town
+        Map<JOB, Collection<ItemEconomicsData>> most = UtilClean.toMap(
+                roomsWithoutQuest.keySet(),
+                z -> econData.getForResults(z, needs)
+        );
+        ImmutableMap.Builder<JOB, TotalTimesNeeded> b = ImmutableMap.builder();
+        for (Map.Entry<JOB, Collection<ItemEconomicsData>> re : most.entrySet()) {
+            int times = re.getValue().stream()
+                             .mapToInt(ItemEconomicsData::timesNeeded)
+                             .sum();
+            b.put(re.getKey(), new TotalTimesNeeded(times));
+        }
+
+        ImmutableMap<JOB, TotalTimesNeeded> times = b.build();
+        OptionalInt maxTimesNeeded = times.values().stream().mapToInt(TotalTimesNeeded::value).max();
+        if (maxTimesNeeded.isPresent()) {
+            List<JOB> mostNeeded = times.entrySet()
+                                       .stream()
+                                       .filter(v -> v.getValue().value == maxTimesNeeded.getAsInt())
+                                       .map(Map.Entry::getKey)
+                                       .toList();
+            return chooseRandom.apply(mostNeeded);
         }
 
         return chooseRandom.apply(roomsWithoutQuest.keySet());
     }
 
     public CoreProgression<JOB, ROOM> withFoodCheck(Predicate<JOB> o) {
-        return new CoreProgression<>(isGatherer, chooseRandom, o, generatesNeededResources);
+        return new CoreProgression<>(needs, isGatherer, chooseRandom, o, econData);
     }
 
-    public CoreProgression<JOB, ROOM> withResourceCheck(Predicate<JOB> o) {
-        return new CoreProgression<>(isGatherer, chooseRandom, generatesVillagerFood, o);
+    public CoreProgression<JOB, ROOM> withEconomics(EconData<JOB> o) {
+        return new CoreProgression<>(needs, isGatherer, chooseRandom, generatesVillagerFood, o);
     }
 }
