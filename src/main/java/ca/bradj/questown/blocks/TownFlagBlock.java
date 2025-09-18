@@ -12,7 +12,7 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
-import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
+import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -169,7 +169,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (itemInHand.getItem().equals(Items.GOLD_BLOCK)) {
             UUID randomVillager = entity.getRandomVillager();
             entity.addImmediateReward(
-                    new AddBatchOfRandomQuestsForVisitorReward(entity, randomVillager)
+                    new AddBatchOfQuestsForVisitorReward(entity, randomVillager)
             );
             return InteractionResult.sidedSuccess(false);
         }

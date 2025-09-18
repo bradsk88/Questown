@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.gui.ItemEconomicsData;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Assertions;
@@ -10,10 +11,11 @@ import java.util.function.Predicate;
 class CoreProgressionTest {
 
     private static final CoreProgression<String, String> INSTANCE = new CoreProgression<>(
+            ImmutableList.of(),
             "gatherer"::equals,
             l -> l.size() == 1 ? ImmutableList.copyOf(l).get(0) : "random from [" + String.join(",", l) + "]",
             job -> false,
-            job -> false
+            (job, all) -> ImmutableList.of() // No jobs meet resource needs
     );
 
     @Test
@@ -147,6 +149,7 @@ class CoreProgressionTest {
 
         Assertions.assertEquals("farmer", result);
     }
+
     @Test
     public void testTwoRequestableOtherOptionsWhereFoodIsProducedByBoth() {
         ImmutableMap<String, String> rooms = ImmutableMap.of(
@@ -168,6 +171,7 @@ class CoreProgressionTest {
 
         Assertions.assertEquals("random from [farmer,miner]", result);
     }
+
     @Test
     public void testTwoRequestableOtherOptionsWhereFoodIsProducedByNeither() {
         ImmutableMap<String, String> rooms = ImmutableMap.of(
@@ -189,6 +193,7 @@ class CoreProgressionTest {
 
         Assertions.assertEquals("random from [farmer,miner]", result);
     }
+
     @Test
     public void testTwoRequestableFoodlessOtherOptionsWhereANeededResourceIsProducedByOneOnly() {
         ImmutableMap<String, String> rooms = ImmutableMap.of(
@@ -197,12 +202,17 @@ class CoreProgressionTest {
                 "miner", "mine"
         );
 
+        ImmutableMap<String, ImmutableList<ItemEconomicsData>> timesNeeded = ImmutableMap.of(
+                "gatherer", ImmutableList.of(),
+                "farmer", ImmutableList.of(),
+                "miner", ImmutableList.of(new ItemEconomicsData("iron", 1))
+        );
+
         Predicate<String> questAlreadyExists = room -> false;
         Predicate<String> jobMakesFood = job -> false;
-        Predicate<String> jobMakesNeededResource = "miner"::equals;
         CoreProgression<String, String> p = INSTANCE
                 .withFoodCheck(jobMakesFood)
-                .withResourceCheck(jobMakesNeededResource);
+                .withEconomics((j, all) -> timesNeeded.get(j));
 
         String result = p.getFirstJobChange(
                 ImmutableList.of("gatherer", "farmer", "miner"),

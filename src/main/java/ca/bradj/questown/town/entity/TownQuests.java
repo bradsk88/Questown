@@ -5,10 +5,17 @@ import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.gui.ItemEconomicsData;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.town.CoreProgression;
 import ca.bradj.questown.town.NoMCEconomics;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -72,11 +79,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             );
         }
     };
-    private @Nullable QuestBatchSeed pendingQuests = null;
-    private final Stack<PendingReward> questRequests = new Stack<>();
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
+    private final Stack<PendingReward> questRequests = new Stack<>();
     private final UnsafeTown town = new UnsafeTown(getClass());
     boolean playerDiscardedLastBatch;
+    private @Nullable QuestBatchSeed pendingQuests = null;
 
     TownQuests() {
         questBatches.addChangeListener(this);
@@ -99,7 +106,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         // This is where a lot of the "progression" logic for Questown happens.
         // Changing this may significantly affect the feel of the game.
 
-        UUID nextVisitorUUID = UUID.randomUUID();
+        VillagerUUID nextVisitorUUID = VillagerUUID.random();
 
         if (town.getVillagerHandle().size() == 1) {
             return new MCRewardList(
@@ -112,14 +119,14 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCRewardList newVisitor = new MCRewardList(
                 town,
                 new SpawnVisitorReward(town, nextVisitorUUID),
-                new AddBatchOfRandomQuestsForVisitorReward(town, nextVisitorUUID)
+                new AddBatchOfQuestsForVisitorReward(town, VillagerUUID.get(nextVisitorUUID))
         );
         if (town.getQuestHandle().getVillagersWithQuests().isEmpty()) {
             // Spawn a villager with a set of quests
             return newVisitor;
         }
 
-        UUID randomVillager = town.getRandomVillager();
+        VillagerUUID randomVillager = VillagerUUID.from(town.getRandomVillager());
         if (Compat.getRandomBool(town.getServerLevel()) && randomVillager != null) {
             // Add upgrades for an existing villager's quests
             return new MCRewardList(town, new AddRandomUpgradeQuest(town, randomVillager));
@@ -192,7 +199,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCRewardList reward = new MCRewardList(
                 town, new ChangeJobReward(town, VillagerUUID.get(visitorUUID), job),
                 // TODO: Randomize? Maybe do EITHER new villager or more quests
-                new AddBatchOfRandomQuestsForVisitorReward(town, town.getRandomVillager())
+                new AddBatchOfQuestsForVisitorReward(town, town.getRandomVillager())
         );
 
         MCQuestBatch jobQuest = new MCQuestBatch(UUID.randomUUID(), visitorUUID, new MCInstantReward(town, reward));
@@ -241,7 +248,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                                   .filter(Objects::nonNull).map(ResourceLocation::toString).toList()).toList();
     }
 
-    public static void addRandomBatchForVisitor(
+    public static void addBatchForVisitor(
             TownInterface town,
             TownQuests quests,
             @Nullable VillagerUUID visitorUUID
@@ -267,22 +274,56 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                                                       .filter(Objects::nonNull).collect(Collectors.toSet()));
     }
 
+    private static boolean sameItem(
+            ItemEconomicsData v,
+            MCTownItem z
+    ) {
+        return Ingredients.fromString(v.ingredientKey()).test(z.toMCItemStack());
+    }
+
+    private static boolean producesFood(
+            TownFlagBlockEntity town,
+            JobID j
+    ) {
+        return ServerJobsRegistry.getResults(town.getTownData(), j).stream().anyMatch(
+                i -> Ingredient.of(TagsInit.Items.VILLAGER_FOOD).test(i.toMCItemStack())
+        );
+    }
+
+    private static boolean isNotSpecial(ResourceLocation id) {
+        if (SpecialQuests.FARM.equals(id)) {
+            return true;
+        }
+        if (SpecialQuests.SPECIAL_QUESTS.containsKey(id)) {
+            return false;
+        }
+        return true;
+    }
+
+    @NotNull
+    private static Predicate<Quest<ResourceLocation, MCRoom>> matchesToUpgrade(
+            ResourceLocation from,
+            ResourceLocation to
+    ) {
+        return v -> v.getWantedId().equals(to) && v.fromRecipeID().map(z -> z.equals(from)).orElse(false);
+    }
+
     public void tick(TownInterface town) {
-        // TODO: Check if target weight (based on town size) has changed since last tick
-        //  If it has, discard the pending quests and start over.
         ServerLevel level = town.getServerLevel();
         int size = getVillagers(this).size();
 
-        if (questBatches.hasCampfireQuestOnly(SpecialQuests.CAMPFIRE::equals) && !questRequests.isEmpty()) {
-            addNonRandomFirstBatch(town);
-            playerDiscardedLastBatch = false;
+        if (addTutorialBatches()) {
+            this.playerDiscardedLastBatch = false;
             return;
         }
 
         if (this.playerDiscardedLastBatch) {
             size = size - 1;
         }
+
         int targetItemWeight = Config.MIN_WEIGHT_PER_QUEST_BATCH.get() + (Config.QUEST_BATCH_VILLAGER_BOOST_FACTOR.get() * (size + 2)) / 2;
+        // TODO: Check if target weight (based on town size) has changed since last tick
+        //  If it has, discard the pending quests and start over.
         if (pendingQuests == null) {
             QT.QUESTS_LOGGER.debug("Preparing quest batch with target weight: {}", targetItemWeight);
             pendingQuests = new QuestBatchSeed(level, UUID.randomUUID(), targetItemWeight);
@@ -342,25 +383,174 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         pendingQuests = pop; // Can't grow more (at the moment) and not needed. Push back for next tick.
     }
 
-    private void addNonRandomFirstBatch(TownInterface town) {
-        PendingReward pr = questRequests.pop();
-        MCDelayedReward batchReward = new MCDelayedReward(town, pr.reward());
-        MCQuestBatch q = new MCQuestBatch(UUID.randomUUID(), pr.owner(), batchReward);
-        q.addNewQuest(pr.owner(), SpecialQuests.BEDROOM);
-        q.addNewQuest(pr.owner(), SpecialQuests.JOB_BOARD);
-        q.addNewQuest(pr.owner(), SpecialQuests.STORE_ROOM_SMALL);
-        questBatches.add(q);
-        QT.QUESTS_LOGGER.debug("Non-random tutorial quest batch was given to {}: {}", pr.owner(), q.toNiceString());
-    }
-
-    private static boolean isNotSpecial(ResourceLocation id) {
-        if (SpecialQuests.FARM.equals(id)) {
+    private boolean addTutorialBatches() {
+        TownFlagBlockEntity t = town.getUnsafe();
+        if (questBatches.hasOneQuestOnly(SpecialQuests.CAMPFIRE::equals) && !questRequests.isEmpty()) {
+            // Phase one: Ask for the bare essentials (bedroom, storeroom, job board, gate)
+            addQuestsForVillagerKickoff(t);
             return true;
         }
-        if (SpecialQuests.SPECIAL_QUESTS.containsKey(id)) {
+
+        if (!questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE)) {
+            // Phase two: Ask the player to complete at least one job change
+            addQuestsForJobChangeAndFood(t);
+            return true;
+        }
+
+        @Nullable JobHaver jobToCreateRoomFor = getJobToCreateRoomFor();
+        // FIXME: This is apparently always true, causes infinite quest creation
+        if (jobToCreateRoomFor != null) {
+            // Phase three: Ask the player to provide the room for the new job
+            addQuestForNewJobRoom(t, jobToCreateRoomFor);
+            return true;
+        }
+
+        return false;
+    }
+
+    private record JobHaver(VillagerUUID villager, JobID job) {
+    }
+
+    private @Nullable JobHaver getJobToCreateRoomFor() {
+        JobHaver jobToUseIfNoQuestsExist = null;
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (!q.isComplete()) {
+                    continue;
+                }
+                if (q.getType() != Quest.QuestType.JOB_CHANGE) {
+                    continue;
+                }
+                if (batch.getOwner() == null) {
+                    QT.QUESTS_LOGGER.error("Job Change quest had no owner. This is likely a bug.");
+                }
+                jobToUseIfNoQuestsExist = new JobHaver(
+                        batch.getOwner(),
+                        JobID.fromRL(q.getWantedId())
+                );
+                if (jobRoomQuestExists(q, batch.getOwner())) {
+                    return null;
+                }
+            }
+        }
+        return jobToUseIfNoQuestsExist;
+    }
+
+    private boolean jobRoomQuestExists(
+            MCQuest jobChange,
+            @NotNull VillagerUUID owner
+    ) {
+        JobID jobId = JobID.fromRL(jobChange.getWantedId());
+        ResourceLocation room = ServerJobsRegistry.getRoomForJobId(jobId);
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            if (batchIsRoomForJob(batch, owner, room)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean batchIsRoomForJob(
+            MCQuestBatch batch,
+            @NotNull VillagerUUID owner,
+            ResourceLocation room
+    ) {
+        if (batch.size() != 1) {
             return false;
         }
-        return true;
+        if (!owner.equals(batch.getOwner())) {
+            return false;
+        }
+        return batch.getAll().stream().allMatch(v -> v.getWantedId().equals(room));
+    }
+
+    private void addQuestsForVillagerKickoff(TownInterface town) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.TOWN_GATE));
+        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.BEDROOM));
+        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.JOB_BOARD));
+        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.STORE_ROOM_SMALL));
+
+        MCQuestBatch qb = q.withRewardUponCompletion(new MCInstantReward(
+                town, new MCRewardList(
+                town,
+                new SpawnVisitorReward(town, VillagerUUID.random()),
+                // TODO: Consider "announcing" the new batch to keep players in the loop
+                new AddBatchOfQuestsForVisitorReward(town, null)
+        )
+        ));
+        questBatches.add(qb);
+        QT.QUESTS_LOGGER.debug("Tutorial quests added to town: {}", qb.toNiceString());
+    }
+
+    private MCQuest roomQuest(
+            UUID batchUUID,
+            ResourceLocation roomId
+    ) {
+        return MCQuest.standalone(batchUUID, null, roomId);
+    }
+
+    private void addQuestsForJobChangeAndFood(
+            TownFlagBlockEntity town
+    ) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        WorksBehaviour.TownData data = town.getTownData();
+        CoreProgression<JobID, ResourceLocation> prog = new CoreProgression<>(
+                town.getEconomicsHandle().getAggregatedItems(null),
+                GathererUnmappedNoToolWorkQtrDay.ID::equals,
+                jobs -> Compat.shuffle(jobs.iterator(), town.getServerLevel()).get(0),
+                j -> producesFood(town, j),
+                (j, needs) -> resourceImpact(needs, data, j)
+        );
+        JobID jc = getJobForFirstChangeQuest(prog);
+        q.addNewQuest(MCQuest.item(batchUUID, null, Compat.getItemId(Items.APPLE), 10));
+        q.addNewQuest(MCQuest.jobChange(batchUUID, null, jc));
+
+        MCQuestBatch qq = q.withRewardUponCompletion(new AddBatchOfQuestsForVisitorReward(town, null));
+        questBatches.add(qq);
+        QT.QUESTS_LOGGER.debug("Tutorial batch #2 was added to town: {}", qq.toNiceString());
+    }
+
+    private void addQuestForNewJobRoom(
+            TownFlagBlockEntity t,
+            JobHaver job
+    ) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        ResourceLocation room = ServerJobsRegistry.getRoomForJobId(job.job());
+        q.addNewQuest(MCQuest.standalone(batchUUID, job.villager(), room));
+
+        // TODO: Add a quest for supplying the new worker with whatever they need
+//        ImmutableList<Ingredient> wanted = ServerJobsRegistry.getWantedResourcesProvider(job.job())
+//                                                             .apply(ImmutableList.of());
+//        for (Ingredient ingredient : wanted) {
+//            q.addNewQuest(MCQuest.item(batchUUID, job.villager(), Ingredients.toRL(), 1));
+//        }
+
+        MCQuestBatch qq = q.withRewardUponCompletion(new MCDelayedReward(
+                town.getUnsafe(), defaultQuestCompletionRewards(town.getUnsafe())
+        ));
+        questBatches.add(qq);
+        QT.QUESTS_LOGGER.debug("Tutorial batch #3 was added to town: {}", qq.toNiceString());
+    }
+
+    private @Nullable JobID getJobForFirstChangeQuest(CoreProgression<JobID, ResourceLocation> prog) {
+        return prog.getFirstJobChange(
+                ServerJobsRegistry.getAllRootJobs(),
+                ServerJobsRegistry::getRoomForJobId,
+                q -> questBatches.includes(v -> q.equals(v.getWantedId()))
+        );
+    }
+
+    private Collection<ItemEconomicsData> resourceImpact(
+            ImmutableList<ItemEconomicsData> needs,
+            WorksBehaviour.TownData data,
+            JobID j
+    ) {
+        ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(data, j);
+        return needs.stream().filter(v -> results.stream().anyMatch(z -> sameItem(v, z))).toList();
     }
 
     private ImmutableList<RoomNeed<ResourceLocation>> getNeededRooms(NoMCEconomics economicsHandle) {
@@ -463,14 +653,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                   .anyMatch(matchesToUpgrade(fromRecipeID, toRecipeID));
     }
 
-    @NotNull
-    private static Predicate<Quest<ResourceLocation, MCRoom>> matchesToUpgrade(
-            ResourceLocation from,
-            ResourceLocation to
-    ) {
-        return v -> v.getWantedId().equals(to) && v.fromRecipeID().map(z -> z.equals(from)).orElse(false);
-    }
-
     public void changeRoomOnly(
             MCRoom oldRoom,
             MCRoom newRoom
@@ -541,6 +723,41 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     public void processItemQuests(ImmutableList<MCTownItem> allStacks) {
         questBatches.processItemQuests(allStacks, this::questMatchesStack, TownQuests.TRACKER);
+    }
+
+    public void processJobChanges(ImmutableMap<VillagerUUID, JobID> villagerJobs) {
+        // TODO: Consider putting on QuestBatches and testing
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (q.getType() != Quest.QuestType.JOB_CHANGE) {
+                    continue;
+                }
+                JobID wantedJobId = JobID.fromRL(q.getWantedId());
+
+                if (batch.getOwner() != null) {
+                    if (wantedJobId.equals(villagerJobs.get(batch.getOwner()))) {
+                        QT.QUESTS_LOGGER.debug("Job change quest already had owner");
+                        batch.markRecipeAsComplete(null, q.getWantedId());
+                        return;
+                    }
+                }
+
+                List<VillagerUUID> matches = villagerJobs
+                        .entrySet()
+                        .stream()
+                        .filter(v -> v.getValue().equals(wantedJobId))
+                        .map(v -> v.getKey())
+                        .toList();
+                if (matches.isEmpty()) {
+                    continue;
+                }
+                VillagerUUID owner = Compat.shuffle(matches.iterator(), town.getServerLevelUnsafe())
+                                           .get(0);
+                QT.QUESTS_LOGGER.debug("Job change quest owner changed from null to {}", owner);
+                batch.setOwner(owner);
+                batch.markRecipeAsComplete(null, q.getWantedId());
+            }
+        }
     }
 
     private boolean questMatchesStack(

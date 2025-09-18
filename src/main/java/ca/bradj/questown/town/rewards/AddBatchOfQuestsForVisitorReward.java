@@ -11,14 +11,14 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
-public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
+public class AddBatchOfQuestsForVisitorReward extends MCReward {
 
     public static final String ID = "add_random_batch_of_quests";
     private static final String NBT_VISITOR_UUID = "visitor_uuid";
     private final TownInterface town;
     private @Nullable VillagerUUID visitorUUID;
 
-    public AddBatchOfRandomQuestsForVisitorReward(
+    public AddBatchOfQuestsForVisitorReward(
             RewardType<? extends MCReward> rType,
             @NotNull TownInterface entity,
             @Nullable UUID visitorUUID
@@ -28,7 +28,7 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
         this.town = entity;
     }
 
-    public AddBatchOfRandomQuestsForVisitorReward(
+    public AddBatchOfQuestsForVisitorReward(
             @NotNull TownInterface entity,
             @Nullable UUID visitorUUID
     ) {
@@ -37,7 +37,7 @@ public class AddBatchOfRandomQuestsForVisitorReward extends MCReward {
 
     @Override
     protected @NotNull RewardApplier getApplier() {
-        return () -> town.getQuestHandle().addBatchOfRandomQuestsForVisitor(visitorUUID);
+        return () -> town.getQuestHandle().addBatchOfQuestsForVisitor(visitorUUID);
     }
 
     @Override

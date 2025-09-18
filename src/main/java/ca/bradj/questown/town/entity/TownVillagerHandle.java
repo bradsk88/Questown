@@ -2,7 +2,9 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
@@ -187,6 +189,17 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public Collection<JobID> getJobs() {
         return entities.stream().map(v -> ((VisitorMobEntity) v).getJobId()).toList();
+    }
+
+    @Override
+    public ImmutableMap<VillagerUUID, JobID> getVillagerJobs() {
+        ImmutableMap.Builder<VillagerUUID, JobID> b = ImmutableMap.builder();
+        entities.stream()
+                .filter(v -> v instanceof VisitorMobEntity)
+                .map(v -> (VisitorMobEntity) v)
+                .filter(v -> v.getVUID() != null) // TODO: Why would a villager have a null UUID?
+                .forEach(v -> b.put(v.getVUID(), v.getJobId()));
+        return b.build();
     }
 
     @Override
@@ -554,8 +567,9 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
-    public void scheduleJobRootChange(UUID villagerUUID,
-                                      boolean instant
+    public void scheduleJobRootChange(
+            UUID villagerUUID,
+            boolean instant
     ) {
         VisitorMobEntity e = getEntity(villagerUUID);
         if (e == null) {

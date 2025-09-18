@@ -143,10 +143,10 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     }
 
     public enum QuestType {
-        ITEM, ROOM, UNKNOWN;
+        ITEM, ROOM, JOB_CHANGE, UNKNOWN;
     }
 
-    interface QuestFactory<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>> {
+    protected interface QuestFactory<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>> {
         QUEST newQuest(
                 @Nullable UUID ownerId,
                 KEY recipeId
@@ -170,6 +170,8 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         );
 
         QUEST lost(QUEST foundQuest);
+
+        QUEST newJobQuest(KEY id);
     }
 
     @Override

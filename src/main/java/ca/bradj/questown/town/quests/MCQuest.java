@@ -1,7 +1,9 @@
 package ca.bradj.questown.town.quests;
 
-    import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.gui.QuestTypes;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -50,7 +52,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
 
     public static MCQuest upgrade(
             UUID batchUUID,
-            @Nullable VillagerUUID ownerId, ResourceLocation oldRecipeId, ResourceLocation newRecipeId
+            @Nullable VillagerUUID ownerId,
+            ResourceLocation oldRecipeId,
+            ResourceLocation newRecipeId
     ) {
         return new MCQuest(batchUUID, ownerId, newRecipeId, oldRecipeId, QuestType.ROOM, 1);
     }
@@ -64,10 +68,34 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return new MCQuest(batchUUID, ownerId, itemId, null, QuestType.ITEM, count);
     }
 
+    public static MCQuest jobChange(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            JobID jobId
+    ) {
+        ResourceLocation rl = JobID.toRL(jobId);
+        return jobChange(batchUUID, ownerId, rl);
+    }
+
+    public static MCQuest jobChange(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            ResourceLocation jobId
+    ) {
+        return new MCQuest(batchUUID, ownerId, jobId, null, QuestType.JOB_CHANGE, 1);
+    }
+
     // TODO: Consider changing this to a door instead of a room, since the room can change shape easily
     //  and when the door is removed, the quest is invalidated anyway.
     public MCQuest completed(@Nullable MCRoom room) {
-        MCQuest q = new MCQuest(this.batchUUID, this.ownerUUID, this.getWantedId(), this.fromRecipeID().orElse(null), getType(), getCountNeeded());
+        MCQuest q = new MCQuest(
+                this.batchUUID,
+                this.ownerUUID,
+                this.getWantedId(),
+                this.fromRecipeID().orElse(null),
+                getType(),
+                getCountNeeded()
+        );
         q.ownerUUID = this.ownerUUID;
         q.status = QuestStatus.COMPLETED;
         q.completedOn = room;
@@ -75,7 +103,14 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
     }
 
     public MCQuest lost() {
-        MCQuest q = new MCQuest(this.batchUUID, this.ownerUUID, this.getWantedId(), this.fromRecipeID().orElse(null), QuestType.ROOM, 1);
+        MCQuest q = new MCQuest(
+                this.batchUUID,
+                this.ownerUUID,
+                this.getWantedId(),
+                this.fromRecipeID().orElse(null),
+                QuestType.ROOM,
+                1
+        );
         q.ownerUUID = this.ownerUUID;
         q.status = QuestStatus.ACTIVE; // TODO: Use (and render) "lost" status?
         q.completedOn = null;
@@ -85,7 +120,6 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
     public static class Serializer {
 
         private static final String NBT_UUID = "UUID";
-        private static final String NBT_BATCH_UUID = "batch_uuid";
         private static final String NBT_RECIPE_TYPE = "recipe_type";
         private static final String NBT_COUNT = "count";
         private static final String NBT_RECIPE_ID = "recipe_id";
@@ -138,7 +172,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             MCQuest quest = new MCQuest();
             @Nullable VillagerUUID uuid = null;
             if (nbt.contains(NBT_UUID)) {
-                uuid =  VillagerUUID.fromNBT(nbt, NBT_UUID);
+                uuid = VillagerUUID.fromNBT(nbt, NBT_UUID);
             }
             QuestType type = QuestType.ROOM;
             if (nbt.contains(NBT_RECIPE_TYPE)) {

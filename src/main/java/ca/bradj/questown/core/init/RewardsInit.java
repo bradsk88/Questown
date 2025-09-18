@@ -50,12 +50,12 @@ public class RewardsInit {
                     .build(Questown.ResourceLocation(SpawnVisitorReward.ID))
     );
 
-    public static final RegistryObject<RewardType<AddBatchOfRandomQuestsForVisitorReward>> RANDOM_BATCH_FOR_VILLAGER
+    public static final RegistryObject<RewardType<AddBatchOfQuestsForVisitorReward>> RANDOM_BATCH_FOR_VILLAGER
             = REWARD_TYPES.register(
-            AddBatchOfRandomQuestsForVisitorReward.ID,
+            AddBatchOfQuestsForVisitorReward.ID,
             () -> RewardType.Builder
-                    .of((rType, flag) -> new AddBatchOfRandomQuestsForVisitorReward(rType, flag, null))
-                    .build(Questown.ResourceLocation(AddBatchOfRandomQuestsForVisitorReward.ID))
+                    .of((rType, flag) -> new AddBatchOfQuestsForVisitorReward(rType, flag, null))
+                    .build(Questown.ResourceLocation(AddBatchOfQuestsForVisitorReward.ID))
     );
 
     public static final RegistryObject<RewardType<AddRandomUpgradeQuest>> RANDOM_UPGRADE_FOR_VILLAGER

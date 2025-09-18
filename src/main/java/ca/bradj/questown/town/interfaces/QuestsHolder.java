@@ -32,7 +32,7 @@ public interface QuestsHolder {
 
     Collection<MCQuest> getQuestsForVillager(UUID uuid);
 
-    void addBatchOfRandomQuestsForVisitor(@Nullable VillagerUUID visitorUUID);
+    void addBatchOfQuestsForVisitor(@Nullable VillagerUUID visitorUUID);
 
     Collection<MCQuestBatch> getAllBatchesForVillager(UUID uuid);
 

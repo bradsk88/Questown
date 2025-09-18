@@ -1,8 +1,10 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.Questown;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -38,6 +40,19 @@ public record JobID(String rootId, String jobId) {
             lt.add(JobID.toTag(jobID));
         }
         return lt;
+    }
+
+    public static ResourceLocation toRL(JobID jobId) {
+        return Questown.ResourceLocation(jobId.rootId + "_qt_" + jobId.jobId);
+    }
+
+    public static JobID fromRL(ResourceLocation rl) {
+        String[] s = rl.getPath().split("_qt_");
+        if (s.length != 2) {
+            throw new IllegalArgumentException("Unexpected JobID ResourceLocation format: " + rl);
+        }
+
+        return new JobID(s[0], s[1]);
     }
 
     @Override

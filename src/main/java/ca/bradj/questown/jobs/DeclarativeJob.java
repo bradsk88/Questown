@@ -141,13 +141,9 @@ public class DeclarativeJob extends
                         return makeClaim(ownerUUID);
                     }
                     return null;
-                }, (x, i) -> {
-                    Integer ii = i.ingredientIndex();
-                    if (ii != null) {
-                        return Util.orNull(ingredientsRequiredAtStates.get(ii), Ingredients::toString);
-                    }
-                    return Util.orNull(toolsRequiredAtStates.get(i.toolIndex()), Ingredients::toString);
-                }, () -> location.baseRoom().toString(), workInterval, sound
+                },
+                (x, i) -> getUnmetNeed(ingredientsRequiredAtStates, toolsRequiredAtStates, i),
+                () -> location.baseRoom().toString(), workInterval, sound
         );
         this.maxState = maxState;
         this.location = location;
@@ -156,6 +152,18 @@ public class DeclarativeJob extends
         this.logic = new JobLogic<>();
         this.workInterval = workInterval;
         this.recipe = buildRecipe(this);
+    }
+
+    private static @Nullable String getUnmetNeed(
+            ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
+            NeedsRegistrations.Need i
+    ) {
+        Integer ii = i.ingredientIndex();
+        if (ii != null) {
+            return Util.orNull(ingredientsRequiredAtStates.get(ii), Ingredients::toString);
+        }
+        return Util.orNull(toolsRequiredAtStates.get(i.toolIndex()), Ingredients::toString);
     }
 
     @Override

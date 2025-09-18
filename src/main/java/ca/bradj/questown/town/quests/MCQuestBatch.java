@@ -15,6 +15,9 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 // MCQuests is a simple wrapper for Quests that is coupled to Minecraft
@@ -22,23 +25,16 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
     public static final Serializer SERIALIZER = new Serializer();
     private VillagerUUID owner;
 
-    MCQuestBatch() {
-        this(null, null, null);
-    }
-
-    public MCQuestBatch(
-            UUID batchUUID,
-            @Nullable VillagerUUID owner,
-            @NotNull MCReward reward
+    private static Quest.QuestFactory<ResourceLocation, MCRoom, MCQuest> FACTORY(
+            UUID batchUUID
     ) {
-        super(new Quest.QuestFactory<ResourceLocation, MCRoom, MCQuest>() {
-
+        return new Quest.QuestFactory<>() {
             @Override
             public MCQuest newQuest(
                     @Nullable UUID ownerID,
                     ResourceLocation recipeId
             ) {
-                return MCQuest.standalone(batchUUID, VillagerUUID.from(ownerID), recipeId);
+                return MCQuest.standalone(batchUUID, dep(ownerID), recipeId);
             }
 
             @Override
@@ -47,7 +43,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
                     ResourceLocation oldRecipeId,
                     ResourceLocation newRecipeId
             ) {
-                return MCQuest.upgrade(batchUUID, VillagerUUID.from(ownerID), oldRecipeId, newRecipeId);
+                return MCQuest.upgrade(batchUUID, dep(ownerID), oldRecipeId, newRecipeId);
             }
 
             @Override
@@ -56,7 +52,12 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
                     ResourceLocation itemId,
                     int count
             ) {
-                return MCQuest.item(batchUUID, VillagerUUID.from(ownerId), itemId, count);
+                return MCQuest.item(batchUUID, dep(ownerId), itemId, count);
+            }
+
+            @Override
+            public MCQuest newJobQuest(ResourceLocation id) {
+                return MCQuest.jobChange(batchUUID, null, id);
             }
 
             @Override
@@ -71,8 +72,79 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             public MCQuest lost(MCQuest foundQuest) {
                 return foundQuest.lost();
             }
-        }, reward, batchUUID);
+        };
+    }
+
+    ;
+
+    MCQuestBatch() {
+        this(null, null, null);
+    }
+
+    public void setOwner(VillagerUUID owner) {
         this.owner = owner;
+    }
+
+    public static final class Inputs {
+        private final UUID batchUUID;
+        private final @Nullable VillagerUUID owner;
+        private final List<MCQuest> quests = new ArrayList<>();
+
+        public Inputs(
+                UUID batchUUID,
+                @Nullable VillagerUUID owner
+        ) {
+            this.batchUUID = batchUUID;
+            this.owner = owner;
+        }
+
+        public MCQuestBatch withRewardUponCompletion(@NotNull MCReward reward) {
+            MCQuestBatch mcQuestBatch = new MCQuestBatch();
+            mcQuestBatch.initialize(batchUUID, quests, reward);
+            return mcQuestBatch;
+        }
+
+        public void addNewQuest(
+                MCQuest q
+        ) {
+            quests.add(q);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) return true;
+            if (obj == null || obj.getClass() != this.getClass()) return false;
+            var that = (Inputs) obj;
+            return Objects.equals(this.batchUUID, that.batchUUID) && Objects.equals(this.owner, that.owner);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(batchUUID, owner);
+        }
+
+        @Override
+        public String toString() {
+            return "Inputs[" + "batchUUID=" + batchUUID + ", " + "owner=" + owner + ']';
+        }
+    }
+
+    /**
+     * @deprecated Use Inputs.withRewardUponCompletion for improved readability
+     */
+    @Deprecated(forRemoval = true)
+    public MCQuestBatch(
+            UUID batchUUID,
+            @Nullable VillagerUUID owner,
+            @NotNull MCReward reward
+            // TODO: Allow null once this goes private
+    ) {
+        super(FACTORY(batchUUID), reward, batchUUID);
+        this.owner = owner;
+    }
+
+    private static @Nullable VillagerUUID dep(@Nullable UUID ownerID) {
+        return VillagerUUID.from(ownerID);
     }
 
     public VillagerUUID getOwner() {
@@ -86,9 +158,11 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
     }
 
     public String toNiceString() {
-        return String.format("%s from [%s]", reward.toNiceString(), Strings.join(
-                this.getAll().stream().map(Quest::toShortString).toList(), ","
-        ));
+        return String.format(
+                "%s from [%s]",
+                reward.toNiceString(),
+                Strings.join(this.getAll().stream().map(Quest::toShortString).toList(), ",")
+        );
     }
 
     public static class Serializer {
@@ -156,7 +230,10 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
                     return null;
                 }
                 batchUUID = UUID.randomUUID();
-                QT.QUESTS_LOGGER.warn("[Backwards Compatibility] Generating UUID for quest batch with missing UUID: {}", batchUUID);
+                QT.QUESTS_LOGGER.warn(
+                        "[Backwards Compatibility] Generating UUID for quest batch with missing UUID: {}",
+                        batchUUID
+                );
             }
             return batchUUID;
         }

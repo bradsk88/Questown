@@ -55,7 +55,7 @@ public class ServerJobsRegistry {
             UUID uuid,
             JobID p
     ) {
-        return Works.get(p).get().jobFunc.apply(uuid).getGlobalSpecialRules().contains(SpecialRules.ALWAYS_CONSIDER);
+        return getWorkSupplier(p).get().jobFunc.apply(uuid).getGlobalSpecialRules().contains(SpecialRules.ALWAYS_CONSIDER);
     }
 
     public static ResourceLocation getTexture(
@@ -100,7 +100,7 @@ public class ServerJobsRegistry {
     }
 
     private static @Nullable Work getWork(JobID job) {
-        Supplier<Work> workSupplier = Works.get(job);
+        Supplier<Work> workSupplier = getWorkSupplier(job);
         if (workSupplier == null) {
             return null;
         }
@@ -115,7 +115,7 @@ public class ServerJobsRegistry {
             UUID villagerUUID
     ) {
         JobID initialID = GathererUnmappedNoToolWorkQtrDay.ID;
-        Work work = Works.get(initialID).get();
+        Work work = getWorkSupplier(initialID).get();
         return work.jobFunc.apply(villagerUUID);
     }
 
@@ -172,6 +172,15 @@ public class ServerJobsRegistry {
             }
         }
         return b.build();
+    }
+
+    public static ImmutableSet<MCTownItem> getResults(
+            WorksBehaviour.TownData data,
+            JobID job
+    ) {
+        Supplier<Work> work = getWorkSupplier(job);
+        Work w = work.get();
+        return w.results.apply(data);
     }
 
     private record SpecialJob(Predicate<JobID> idTest,
@@ -334,6 +343,13 @@ public class ServerJobsRegistry {
         return work.baseRoom;
     }
 
+    public static ResourceLocation getRoomForJobId(
+            JobID jobId
+    ) {
+        Supplier<Work> w = getWorkSupplier(jobId);
+        return w.get().baseRoom;
+    }
+
     public static Work getRandomWork(
             ServerLevel rand,
             String rootId,
@@ -346,7 +362,7 @@ public class ServerJobsRegistry {
                                                         .toList();
         if (x.isEmpty()) {
             QT.JOB_LOGGER.error("No jobs found for root ID: {}", rootId);
-            return Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get();
+            return getWorkSupplier(GathererUnmappedNoToolWorkQtrDay.ID).get();
         }
         Work work = x.get(Compat.nextInt(rand, x.size())).getValue().get();
         return work;
@@ -419,7 +435,7 @@ public class ServerJobsRegistry {
             return false;
         }
 
-        Supplier<Work> w = Works.get(p);
+        Supplier<Work> w = getWorkSupplier(p);
         if (w == null) {
             QT.JOB_LOGGER.error("[Satisfaction check] No recognized job for ID: {}", p);
             return false;
@@ -453,7 +469,7 @@ public class ServerJobsRegistry {
             return (items) -> sj.get().needs().apply(p, items);
         }
 
-        Supplier<Work> w = Works.get(p);
+        Supplier<Work> w = getWorkSupplier(p);
         if (w == null) {
             QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
             return (items) -> ImmutableList.of();
@@ -461,11 +477,16 @@ public class ServerJobsRegistry {
         return (items) -> ImmutableList.copyOf(w.get().needs.apply(items));
     }
 
+    private static Supplier<Work> getWorkSupplier(JobID p) {
+        //noinspection removal ServerJobsRegistry is the only entity who should use Works
+        return Works.get(p);
+    }
+
     public static ItemStack getDefaultWorkForNewWorker(JobID v) {
         if (isSeekingWork(v)) {
             return ItemStack.EMPTY;
         }
-        Supplier<Work> w = Works.get(v);
+        Supplier<Work> w = getWorkSupplier(v);
         if (w == null) {
             QT.JOB_LOGGER.error("[Default Work Request] No recognized job for ID: {}", v);
             return ItemStack.EMPTY;
@@ -496,7 +517,7 @@ public class ServerJobsRegistry {
             JobID p,
             Signals.DayTime currentTick
     ) {
-        Work w = Works.get(p).get();
+        Work w = getWorkSupplier(p).get();
         long jobDuration = w.jobFunc.apply(villagerID).getTotalDuration();
         long finalTick = currentTick.dayTime() + jobDuration;
         Signals nextSegment = Signals.fromDayTime(new Signals.DayTime(finalTick));
@@ -582,10 +603,10 @@ public class ServerJobsRegistry {
             }
         }
         if (j == null) {
-            Supplier<Work> fn = Works.get(jobName);
+            Supplier<Work> fn = getWorkSupplier(jobName);
             if (fn == null) {
                 QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
-                j = Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc.apply(ownerUUID);
+                j = getWorkSupplier(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc.apply(ownerUUID);
             } else {
                 Work work = fn.get();
                 j = work.jobFunc.apply(ownerUUID);
@@ -636,10 +657,10 @@ public class ServerJobsRegistry {
             return new SimpleSnapshot<>(job, ProductionStatus.fromNumber(status), heldItems);
         }
 
-        Supplier<Work> f = Works.get(job);
+        Supplier<Work> f = getWorkSupplier(job);
         if (f == null) {
             QT.JOB_LOGGER.error("No journal snapshot factory for {}. Falling back to Simple/Gatherer", job);
-            f = Works.get(GathererUnmappedNoToolWorkQtrDay.ID);
+            f = getWorkSupplier(GathererUnmappedNoToolWorkQtrDay.ID);
         }
         return f.get().snapshotFunc.apply(job, status, heldItems);
     }
