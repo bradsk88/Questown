@@ -62,6 +62,10 @@ public class QuestBatches<
         return batches.stream().anyMatch(b -> b.getAll().stream().anyMatch(matches));
     }
 
+    public boolean isEmpty() {
+        return batches.isEmpty();
+    }
+
     public interface Tracker<ITEM_KEY, ITEM, QUEST> {
         int addCount(Map<ITEM_KEY, Integer> map, ITEM item);
         void removeCount(Map<ITEM_KEY, Integer> map, QUEST quest);

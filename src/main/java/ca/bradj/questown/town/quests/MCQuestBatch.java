@@ -244,6 +244,11 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
         if (reward.contains(RewardsInit.VISITOR.get())) {
             return "dialog.visitors.instruction.sleep_visitors";
         }
+        if (reward instanceof MCInstantReward) {
+            if (reward.contains(RewardsInit.RANDOM_BATCH_FOR_VILLAGER.get())) {
+                return "dialog.visitors.instruction.new_quests_now";
+            }
+        }
         return null;
     }
 }

@@ -69,4 +69,8 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
         // TODO: Show BOP tab conditionally
         return false;
     }
+
+    public boolean isBlessed() {
+        return tx.hasBlockOfProgress() && tx.isBlessed();
+    }
 }
