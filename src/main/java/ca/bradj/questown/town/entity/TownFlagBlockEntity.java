@@ -775,7 +775,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public FlagTabsEmbedding.FlagInfo getInfo() {
-        return new FlagTabsEmbedding.FlagInfo(getBlockPos(), bopCount > 0);
+        return FlagTabsEmbedding.FlagInfo.dumb(getBlockPos(), bopCount > 0);
     }
 
     public void ejectBlockOfProgress(ServerPlayer sender) {
@@ -796,7 +796,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
         BlockPos pos = getBlockPos();
-        ItemStack stack = new ItemStack(Items.CARROT, 5);
+        ItemStack stack = new ItemStack(Items.CARROT, 10);
         level.addFreshEntity(new ItemEntity(level, pos.getX(), pos.getY(), pos.getZ(), stack));
         givenBonusFood = true;
     }

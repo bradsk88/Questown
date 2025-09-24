@@ -43,7 +43,7 @@ public class FlagMenus {
             Collection<UIQuest> quests = VillagerQuestsContainer.readQuests(buf);
             BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
             int blocksOfProgress = TownBlockofProgressMenu.read(buf);
-            FlagTabsEmbedding.FlagInfo flagInfo = new FlagTabsEmbedding.FlagInfo(
+            FlagTabsEmbedding.FlagInfo flagInfo = FlagTabsEmbedding.FlagInfo.dumb(
                     flagPos,
                     blocksOfProgress > 0
             ); // TODO: Or maybe always show?

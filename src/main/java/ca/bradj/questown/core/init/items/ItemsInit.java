@@ -142,6 +142,7 @@ public class ItemsInit {
                     event.getPos(),
                     event.getItemStack()
             );
+            event.setCanceled(true);
         }
     }
 

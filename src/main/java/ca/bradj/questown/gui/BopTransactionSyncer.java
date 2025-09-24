@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.blocks.BlockOfProgress;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.Slot;
@@ -39,11 +40,18 @@ public class BopTransactionSyncer {
     }
 
     public boolean hasBlockOfProgress() {
-        Slot bopSlot = getBopSlot();
-        return bopSlot.getItem().is(ItemsInit.BLOCK_OF_PROGRESS.get());
+        return getBopSlotItem().is(ItemsInit.BLOCK_OF_PROGRESS.get());
+    }
+
+    private @NotNull ItemStack getBopSlotItem() {
+        return getBopSlot().getItem();
     }
 
     public void clearBopSlot() {
         getBopSlot().set(ItemStack.EMPTY);
+    }
+
+    public boolean isBlessed() {
+        return BlockOfProgress.isBlessed(getBopSlotItem());
     }
 }

@@ -7,6 +7,7 @@ import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.roomrecipes.Matches;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.UnsafeTown;
@@ -30,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
@@ -99,13 +101,38 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
     @Override
     public void registerBlockAsRoom(
             ResourceLocation blockId,
-            BlockPos clickedPos
+            BlockPos pos
     ) {
-        UtilClean.addOrInitialize(roomBlocks, blockId, clickedPos, ArrayList::new);
-        QT.FLAG_LOGGER.debug("Registered block-room at {}: {}", clickedPos, blockId);
+        UtilClean.addOrInitialize(roomBlocks, blockId, pos, ArrayList::new);
+        QT.FLAG_LOGGER.debug("Registered block-room at {}: {}", pos, blockId);
         TownFlagBlockEntity t = town.getUnsafe();
-        t.subBlocks.register(clickedPos);
+        t.subBlocks.register(pos);
         t.setChanged();
+        broadcastBlockRoomCreated(blockId, pos, t);
+    }
+
+    private static void broadcastBlockRoomCreated(
+            ResourceLocation blockId,
+            BlockPos pos,
+            TownFlagBlockEntity t
+    ) {
+        MCRoom room = Spaces.metaRoomAround(pos, 1);
+        ImmutableMap<BlockPos, Block> blocks = ImmutableMap.of(
+                pos, getBlockRoomBlock(pos, t)
+        );
+        RoomRecipeMatch<MCRoom> m = new RoomRecipeMatches<>(room, ImmutableList.of(blockId), blocks.entrySet());
+        t.roomRecipeCreated(room, m);
+    }
+
+    private static @NotNull Block getBlockRoomBlock(
+            BlockPos pos,
+            TownFlagBlockEntity t
+    ) {
+        // We should be able to trust that the block state will not be null
+        // because we are literally registering a "block room" at this position.
+        // By necessity, that should mean the block state is not null
+        //noinspection DataFlowIssue
+        return t.getServerLevel().getBlockState(pos).getBlock();
     }
 
     private Collection<RoomRecipeMatch<MCRoom>> getBlockMetaRooms(

@@ -190,9 +190,6 @@ public class UIQuest implements Comparable<UIQuest> {
     }
 
     public Component getName() {
-        if (SpecialQuests.isSpecialQuest(wantedId)) {
-            return Compat.translatable(wantedId.getPath());
-        }
         return switch (type) {
             case ROOM -> RoomRecipes.getName(wantedId);
             case ITEM -> Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size());

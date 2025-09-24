@@ -28,7 +28,7 @@ public class VillagerQuestsContainer extends AbstractQuestsContainer implements 
                 MenuTypesInit.VILLAGER_QUESTS.get(),
                 windowId,
                 quests,
-                new FlagTabsEmbedding.FlagInfo(flagPos, showBlockOfProgressTab)
+                FlagTabsEmbedding.FlagInfo.dumb(flagPos, showBlockOfProgressTab)
         );
         this.villagerUUID = villagerUUID;
         this.showBlockOfProgressTab = showBlockOfProgressTab;

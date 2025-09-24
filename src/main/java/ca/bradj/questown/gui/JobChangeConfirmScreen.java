@@ -104,7 +104,13 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
     ) {
         int bgY = y1;
         int textWidth = backgroundWidth - slot.getWidth() - (8 * 2);
-        List<FormattedCharSequence> parts = font.split(Compat.translatable("menu.unlock_root.insert_bop"), textWidth);
+
+
+        String key = "menu.unlock_root.insert_bop";
+        if (menu.isBlessed()) {
+            key = "menu.unlock_root.insert_bop_blessed";
+        }
+        List<FormattedCharSequence> parts = font.split(Compat.translatable(key), textWidth);
         for (FormattedCharSequence part : parts) {
             Compat.drawDarkText(font, stack, part, x, bgY);
             bgY += 8;

@@ -312,8 +312,24 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         ServerLevel level = town.getServerLevel();
         int size = getVillagers(this).size();
 
-        if (addTutorialBatches()) {
-            this.playerDiscardedLastBatch = false;
+        if (!questRequests.isEmpty()) {
+            Tutorial r = addTutorialBatches();
+            switch (r) {
+                case APPLIED -> {
+                    this.questRequests.clear();
+                    this.playerDiscardedLastBatch = false;
+                    return;
+                }
+                case SKIPPED -> {
+                    return;
+                }
+                case DONE -> {
+                    // Move on to regular generation
+                }
+            }
+        }
+
+        if (town.getVillagerHandle().entities().isEmpty()) {
             return;
         }
 
@@ -383,29 +399,61 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         pendingQuests = pop; // Can't grow more (at the moment) and not needed. Push back for next tick.
     }
 
-    private boolean addTutorialBatches() {
+    private enum Tutorial {
+        SKIPPED,
+        APPLIED,
+        DONE
+    }
+
+    private Tutorial addTutorialBatches() {
+        if (questBatches.isEmpty()) {
+            return Tutorial.SKIPPED;
+        }
+
         TownFlagBlockEntity t = town.getUnsafe();
-        if (questBatches.hasOneQuestOnly(SpecialQuests.CAMPFIRE::equals) && !questRequests.isEmpty()) {
+        if (questBatches.hasOneQuestOnly(SpecialQuests.CAMPFIRE::equals)) {
             // Phase one: Ask for the bare essentials (bedroom, storeroom, job board, gate)
             addQuestsForVillagerKickoff(t);
-            return true;
+            return Tutorial.APPLIED;
+        }
+
+        if (!allVillagerKickoffQuestsDone()) {
+            return Tutorial.SKIPPED;
+        }
+
+        if (town.getUnsafe().getVillagerHandle().entities().size() < 2) {
+            return Tutorial.SKIPPED;
         }
 
         if (!questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE)) {
             // Phase two: Ask the player to complete at least one job change
             addQuestsForJobChangeAndFood(t);
-            return true;
+            return Tutorial.APPLIED;
+        }
+
+        if (!questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE && q.isComplete())) {
+            return Tutorial.SKIPPED;
         }
 
         @Nullable JobHaver jobToCreateRoomFor = getJobToCreateRoomFor();
-        // FIXME: This is apparently always true, causes infinite quest creation
         if (jobToCreateRoomFor != null) {
             // Phase three: Ask the player to provide the room for the new job
             addQuestForNewJobRoom(t, jobToCreateRoomFor);
-            return true;
+            return Tutorial.APPLIED;
         }
 
-        return false;
+        return Tutorial.DONE;
+    }
+
+    private boolean allVillagerKickoffQuestsDone() {
+        return VILLAGER_KICKOFF_QUESTS.stream().allMatch(k -> questBatches.includes(q -> isDoneRoom(q, k)));
+    }
+
+    private static boolean isDoneRoom(
+            MCQuest v,
+            ResourceLocation bedroom
+    ) {
+        return v.isComplete() && v.getType() == Quest.QuestType.ROOM && bedroom.equals(v.getWantedId());
     }
 
     private record JobHaver(VillagerUUID villager, JobID job) {
@@ -464,21 +512,22 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return batch.getAll().stream().allMatch(v -> v.getWantedId().equals(room));
     }
 
+    private static final ImmutableList<ResourceLocation> VILLAGER_KICKOFF_QUESTS = ImmutableList.of(
+            SpecialQuests.TOWN_GATE,
+            SpecialQuests.BEDROOM,
+            SpecialQuests.JOB_BOARD,
+            SpecialQuests.STORE_ROOM_SMALL
+    );
+
     private void addQuestsForVillagerKickoff(TownInterface town) {
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
-        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.TOWN_GATE));
-        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.BEDROOM));
-        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.JOB_BOARD));
-        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.STORE_ROOM_SMALL));
+        VILLAGER_KICKOFF_QUESTS.forEach(k -> q.addNewQuest(roomQuest(batchUUID, k)));
 
-        MCQuestBatch qb = q.withRewardUponCompletion(new MCInstantReward(
-                town, new MCRewardList(
+        MCQuestBatch qb = q.withRewardUponCompletion(new MCRewardList(
                 town,
-                new SpawnVisitorReward(town, VillagerUUID.random()),
-                // TODO: Consider "announcing" the new batch to keep players in the loop
-                new AddBatchOfQuestsForVisitorReward(town, null)
-        )
+                new MCDelayedReward(town, new SpawnVisitorReward(town, VillagerUUID.random())),
+                new MCInstantReward(town, new AddBatchOfQuestsForVisitorReward(town, null))
         ));
         questBatches.add(qb);
         QT.QUESTS_LOGGER.debug("Tutorial quests added to town: {}", qb.toNiceString());

@@ -63,9 +63,6 @@ public class RoomRecipes {
     }
 
     public static Component getName(ResourceLocation id) {
-        if (id.getPath().startsWith("special_quest")) {
-            return Compat.translatable(id.getPath());
-        }
         return Compat.translatable(String.format("room.%s", id.getPath()));
     }
 
