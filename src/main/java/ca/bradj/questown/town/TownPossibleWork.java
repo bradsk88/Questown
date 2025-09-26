@@ -112,25 +112,30 @@ public class TownPossibleWork {
         econ.registerUnmetNeed(tick, uuid, Ingredients.toString(xx));
     }
 
-    private static List<JobID> getJobsSortedByPossibility(
+    private static ImmutableList<JobID> getJobsSortedByPossibility(
             String root,
             ImmutableSet<Map.Entry<JobID, Supplier<Work>>> allJobs,
             TownFlagBlockEntity t
     ) {
-        // FIXME: Only include jobs that are known by the villagers
-        Stream<Map.Entry<JobID, Supplier<Work>>> e = allJobs.stream().filter(v -> root.equals(v.getKey().rootId()));
+        // TODO[Performance]: Only include jobs that are known by the villagers
         ImmutableMap.Builder<JobID, Double> b = ImmutableMap.builder();
-        e.forEach(w -> b.put(
-                w.getKey(),
-                getWorkPercentPossible(t, w)
-        )); // FIXME: Convert to for loop for easier debugging
+        for (Map.Entry<JobID, Supplier<Work>> jw : allJobs) {
+            if (!root.equals(jw.getKey().rootId())) {
+                continue;
+            }
+            b.put(jw.getKey(), getWorkPercentPossible(t, jw));
+        }
+
         ImmutableMap<JobID, Double> list = b.build();
         List<Map.Entry<JobID, Double>> out = filter(list, Config.PREFERRED_JOB_ACCEPTANCE.get());
         if (out.isEmpty()) {
             QT.FLAG_LOGGER.debug("Could not generate preferred work. Using fallbacks.");
             out = filter(list, Config.MIN_JOB_ACCEPTANCE.get());
         }
-        return out.stream().sorted(Comparator.comparingDouble(Map.Entry::getValue)).map(Map.Entry::getKey).toList();
+        return out.stream()
+                  .sorted(Comparator.comparingDouble(Map.Entry::getValue))
+                  .map(Map.Entry::getKey)
+                  .collect(ImmutableList.toImmutableList());
     }
 
     private static List<Map.Entry<JobID, Double>> filter(

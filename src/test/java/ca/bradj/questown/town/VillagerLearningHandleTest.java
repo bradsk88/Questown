@@ -137,7 +137,7 @@ class VillagerLearningHandleTest {
         assertEquals(ImmutableSet.of("aa", "ab", "ba", "bb"), all);
     }
 
-    // FIXME: Test same root different sub-trees
+    // TODO: Test same root different sub-trees
     //  E.g. fishing gatherer and shovel gatherer should generate 4 potential "awarenesses"
 
     @Test
