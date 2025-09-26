@@ -29,6 +29,7 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.TownVillagers;
+import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.special.SpecialQuests;

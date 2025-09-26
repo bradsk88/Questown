@@ -40,4 +40,10 @@ public interface TownFlagInitialization {
     );
 
     CompoundTag serializeBonusGiven();
+
+    boolean initEconomics(CompoundTag tag);
+
+    void initEconomicsForNewFlag();
+
+    CompoundTag serializeEconomics();
 }

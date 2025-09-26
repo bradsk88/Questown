@@ -9,6 +9,7 @@ import ca.bradj.questown.gui.*;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.Quest;

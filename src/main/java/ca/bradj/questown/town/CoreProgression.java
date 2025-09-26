@@ -1,11 +1,9 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.core.UtilClean;
-import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.gui.ItemEconomicsData;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;

@@ -1,6 +1,5 @@
 package ca.bradj.questown.town.quests;
 
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.gui.QuestTypes;
 import ca.bradj.questown.jobs.JobID;

@@ -1,6 +1,6 @@
 package ca.bradj.questown.town.quests;
 
-import ca.bradj.questown.town.NoMCEconomics;
+import ca.bradj.questown.town.econ.NoMCEconomics;
 
 public record RoomNeed<ID>(
         ID id,
