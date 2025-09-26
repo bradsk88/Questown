@@ -1,4 +1,4 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.town.econ;
 
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.gui.ItemEconomicsData;
@@ -15,9 +15,9 @@ import java.util.*;
 public class NoMCEconomics {
 
     // TODO[ASAP]: Validate need record size
-    private final EvictingQueue<UnmetNeed> unmetNeedsRecord = EvictingQueue.create(100);
-    private final EvictingQueue<UnmetNeed> unmetRoomsRecord = EvictingQueue.create(100);
-    private boolean needAggregate;
+    final EvictingQueue<UnmetNeed> unmetNeedsRecord = EvictingQueue.create(100);
+    final EvictingQueue<UnmetNeed> unmetRoomsRecord = EvictingQueue.create(100);
+    boolean needAggregate;
     private Map<UUID, ImmutableList<ItemEconomicsData>> aggregated = ImmutableMap.of();
     private ImmutableList<ItemEconomicsData> aggregatedAll = ImmutableList.of();
     private ImmutableList<RoomNeed<String>> roomsAll = ImmutableList.of();

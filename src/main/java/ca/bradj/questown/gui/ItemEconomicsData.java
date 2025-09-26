@@ -1,6 +1,6 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.town.NoMCEconomics;
+import ca.bradj.questown.town.econ.NoMCEconomics;
 
 public record ItemEconomicsData(
         String ingredientKey,

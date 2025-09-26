@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.town.*;
+import ca.bradj.questown.town.econ.TownEconomicsSerializer;
 import ca.bradj.questown.town.quests.MCMorningRewards;
 import ca.bradj.questown.town.quests.MCQuestBatches;
 import com.google.common.collect.ImmutableList;
@@ -147,5 +148,21 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         CompoundTag compoundTag = new CompoundTag();
         compoundTag.putBoolean("value", flag.givenBonusFood);
         return compoundTag;
+    }
+
+    @Override
+    public boolean initEconomics(CompoundTag tag) {
+        TownEconomicsSerializer.INSTANCE.deserialize(flag.getEconomicsHandle(), tag);
+        return true;
+    }
+
+    @Override
+    public void initEconomicsForNewFlag() {
+        // No action required
+    }
+
+    @Override
+    public CompoundTag serializeEconomics() {
+        return TownEconomicsSerializer.INSTANCE.serialize(flag.getEconomicsHandle());
     }
 }

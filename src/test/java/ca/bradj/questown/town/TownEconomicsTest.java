@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.gui.ItemEconomicsData;
+import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.quests.RoomNeed;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

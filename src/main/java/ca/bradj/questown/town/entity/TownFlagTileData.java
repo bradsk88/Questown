@@ -36,6 +36,7 @@ public class TownFlagTileData {
     private static final String NBT_BLOCKS_OF_PROGRESS_STORED = String.format("%s_bops_stored", Questown.MODID);
     private static final String NBT_BLOCK_ROOMS = QTNBT.keyify("block_rooms");
     private static final String NBT_BONUS_GIVEN = QTNBT.keyify("bonus_given");
+    private static final String NBT_ECONOMICS = QTNBT.keyify("economics");
 
     public static Map<String, InitPair> initialize() {
 
@@ -51,7 +52,15 @@ public class TownFlagTileData {
         b.put(NBT_BLOCK_ROOMS, initBlockRooms());
         b.put(NBT_BLOCKS_OF_PROGRESS_STORED, initBlocksOfProgress());
         b.put(NBT_BONUS_GIVEN, initBonusGiven());
+        b.put(NBT_ECONOMICS, initEconomics());
         return b.build();
+    }
+
+    private static InitPair initEconomics() {
+        return new InitPair(
+                (tag, flag) -> flag.initializer().initEconomics(tag),
+                flag -> flag.initializer().initEconomicsForNewFlag()
+        );
     }
 
     private static InitPair initBonusGiven() {
@@ -223,6 +232,7 @@ public class TownFlagTileData {
         write(t, NBT_BLOCK_ROOMS, flag.serializeBlockRooms());
         write(t, NBT_BLOCKS_OF_PROGRESS_STORED, flag.serializeBOP());
         write(t, NBT_BONUS_GIVEN, flag.serializeBonusGiven());
+        write(t, NBT_ECONOMICS, flag.serializeEconomics());
         // FIXME: Serialize economics
     }
 

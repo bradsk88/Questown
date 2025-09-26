@@ -9,10 +9,8 @@ import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.EntitiesInit;
-import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.gui.VillagerStats;
 import ca.bradj.questown.gui.VillagerStatsMenu;
-import ca.bradj.questown.gui.VisitorQuestsContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
@@ -101,8 +99,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.*;
-import java.util.stream.Collectors;
+import java.util.function.BiPredicate;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static net.minecraft.world.entity.Pose.SLEEPING;
 
