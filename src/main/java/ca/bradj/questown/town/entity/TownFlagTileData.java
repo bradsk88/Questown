@@ -233,7 +233,6 @@ public class TownFlagTileData {
         write(t, NBT_BLOCKS_OF_PROGRESS_STORED, flag.serializeBOP());
         write(t, NBT_BONUS_GIVEN, flag.serializeBonusGiven());
         write(t, NBT_ECONOMICS, flag.serializeEconomics());
-        // FIXME: Serialize economics
     }
 
     private static void write(
