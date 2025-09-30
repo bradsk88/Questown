@@ -14,6 +14,10 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * @deprecated Use Town Wand
+ */
+@Deprecated(forRemoval = true)
 public class TownDoorItem extends Item {
     public static final String ITEM_ID = "town_door";
 

@@ -10,6 +10,7 @@ import ca.bradj.questown.core.init.*;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.*;
+import ca.bradj.questown.gui.town.status.MultiStatusScreen;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import ca.bradj.questown.render.FishingHookRenderer;

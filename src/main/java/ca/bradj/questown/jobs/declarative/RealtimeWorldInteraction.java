@@ -27,6 +27,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
@@ -305,12 +306,13 @@ public class RealtimeWorldInteraction extends
         if (wtu == null) {
             return true;
         }
-        return tryGiveItems(mcExtra, ImmutableList.of(wtu.item()), wtu.pos());
+        return tryGiveItems(mcExtra, wtu.itemsInserted(), wtu.pos());
     }
 
     @Override
-    public boolean hasInserted(MCExtra mcExtra) {
-        return mcExtra.entity().getWorkToUndo() != null;
+    public int timesInserted(MCExtra mcExtra) {
+        VisitorMobEntity.WorkToUndo workToUndo = mcExtra.entity().getWorkToUndo();
+        return workToUndo == null ? 0 : workToUndo.itemsInserted().size();
     }
 
     @Override
@@ -368,9 +370,20 @@ public class RealtimeWorldInteraction extends
                     return in;
                 },
                 position,
-                Util.orNull(workToUndo, v -> v.item().get().get()),
+                last(workToUndo),
                 () -> inputs.town().getVillagerHandle().clearPoseRequests(inputs.entity().getUUID())
         );
+    }
+
+    private Item last(VisitorMobEntity.WorkToUndo workToUndo) {
+        if (workToUndo == null) {
+            return null;
+        }
+        ImmutableList<MCHeldItem> ii = workToUndo.itemsInserted();
+        if (ii.isEmpty()) {
+            return null;
+        }
+        return ii.get(ii.size() -1).get().get();
     }
 
     @Override

@@ -1,8 +1,7 @@
-package ca.bradj.questown.core.network;
+package ca.bradj.questown.gui.town.status;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.UtilClean;
-import ca.bradj.questown.gui.MultiStatusScreen;
 import ca.bradj.questown.gui.StatusPacket;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;

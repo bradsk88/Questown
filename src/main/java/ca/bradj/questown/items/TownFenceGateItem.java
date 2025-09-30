@@ -11,6 +11,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * @deprecated Use Town Wand
+ */
+@Deprecated(forRemoval = true)
 public class TownFenceGateItem extends Item {
     public static final String ITEM_ID = "town_fence_gate";
 

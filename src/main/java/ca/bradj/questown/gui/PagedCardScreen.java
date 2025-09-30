@@ -40,15 +40,15 @@ public final class PagedCardScreen<D> {
         );
     }
 
-    protected static final int backgroundWidth = 176;
+    public static final int backgroundWidth = 176;
     public final int backgroundHeight;
-    protected static final int borderPadding = 6;
-    protected static final int buttonWidth = 13;
-    protected static final int SMALL_PADDING = 1;
-    protected static final int MED_PADDING = 5;
-    protected static final int BIG_PADDING = 10;
-    protected static final int UNSCALED_CARD_HEIGHT = 42;
-    protected static final int CARD_WIDTH = (backgroundWidth) - (BIG_PADDING * 2);
+    public static final int borderPadding = 6;
+    public static final int buttonWidth = 13;
+    public static final int SMALL_PADDING = 1;
+    public static final int MED_PADDING = 5;
+    public static final int BIG_PADDING = 10;
+    public static final int UNSCALED_CARD_HEIGHT = 42;
+    public static final int CARD_WIDTH = (backgroundWidth) - (BIG_PADDING * 2);
     public static final int buttonHeight = 13;
     private final Supplier<Integer> height;
     private final Supplier<Integer> width;
@@ -70,7 +70,6 @@ public final class PagedCardScreen<D> {
             Supplier<List<D>> cardsData,
             Consumer<D> setRenderColorForCard,
             CardRenderer<D> renderCardContent,
-            // TODO: Replace Pair with Coordinate
             int heightScale,
             int buttonY,
             int extraHeight

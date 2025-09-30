@@ -13,7 +13,7 @@ public class NeedsRegistrations<POS, EXTRA> {
     private final Consumer<EXTRA> registerUnmetRoom;
 
     public record Need(
-            @Nullable Integer ingredientIndex,
+            @Nullable Integer timesInserted,
             @Nullable Integer toolIndex
     ) {
 
@@ -35,7 +35,7 @@ public class NeedsRegistrations<POS, EXTRA> {
     public void addUnmet(
             EXTRA extra,
             @Nullable POS workspot,
-            boolean hasInserted
+            int timesInserted
     ) {
         State state = State.fresh();
         if (workspot != null) {
@@ -50,9 +50,8 @@ public class NeedsRegistrations<POS, EXTRA> {
             registerUnmetNeed.accept(extra, new Need(null, ingredientIndex));
             return;
         }
-        // TODO: Register needed ingredients beyond just the first and second work state
-        if (hasInserted) {
-            ingredientIndex += 1;
+        if (timesInserted > 0) {
+            ingredientIndex += timesInserted;
         }
         registerUnmetNeed.accept(extra, new Need(ingredientIndex, null));
     }

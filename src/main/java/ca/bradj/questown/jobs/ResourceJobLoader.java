@@ -575,10 +575,6 @@ public class ResourceJobLoader {
 
         JsonArray states = object.get("work_states").getAsJsonArray();
 
-        if (states.size() > 3) {
-            QT.INIT_LOGGER.warn("Jobs with more than 3 states are likely to have bugs ({})", id);
-        }
-
         int maxState = 0;
         for (int i = 0; i < states.size(); i++) {
             JsonObject v = states.get(i).getAsJsonObject();

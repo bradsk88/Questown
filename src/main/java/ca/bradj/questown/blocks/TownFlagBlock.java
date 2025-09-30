@@ -206,12 +206,9 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         if (Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES).test(itemInHand)) {
             converted = ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance();
-            player.giveExperiencePoints(100);
-            // TODO: Advancement
         }
         if (Ingredient.of(ItemTags.DOORS).test(itemInHand)) {
             converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
-            // TODO: Advancement
         }
         if (itemInHand.getItem().equals(ItemsInit.TOWN_DOOR.get())) {
             converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
@@ -227,7 +224,6 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         if (Ingredient.of(Tags.Items.FENCE_GATES).test(itemInHand)) {
             converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();
-            // TODO: Advancement
         }
         if (itemInHand.getItem().equals(ItemsInit.TOWN_FENCE_GATE.get())) {
             converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();

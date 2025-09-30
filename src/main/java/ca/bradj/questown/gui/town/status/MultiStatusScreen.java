@@ -1,6 +1,7 @@
-package ca.bradj.questown.gui;
+package ca.bradj.questown.gui.town.status;
 
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.gui.*;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
@@ -30,8 +31,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         }
     }
 
-    // TODO: These are updated by a network message. Is there any way we can protect access?
-    public static SyncedData syncedData = new SyncedData(new HashMap<>(), new HashMap<>());
+    static SyncedData syncedData = new SyncedData(new HashMap<>(), new HashMap<>());
 
     public MultiStatusScreen(
             MultiStatusMenu menu,
