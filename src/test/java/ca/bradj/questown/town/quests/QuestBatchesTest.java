@@ -41,6 +41,11 @@ class QuestBatchesTest {
         }
 
         @Override
+        public TestQuest newJobQuest(Integer id) {
+            throw new UnsupportedOperationException("Not implemented");
+        }
+
+        @Override
         public TestQuest completed(Room room, TestQuest input) {
             TestQuest testQuest;
             if (input.fromRecipeID().isPresent()) {

@@ -12,11 +12,16 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-@SuppressWarnings("UnstableApiUsage")
 public class NoMCEconomics {
 
-    final EvictingQueue<UnmetNeed> unmetNeedsRecord = EvictingQueue.create(Config.ECONOMIC_RECORDS_DEPTH.get());
-    final EvictingQueue<UnmetNeed> unmetRoomsRecord = EvictingQueue.create(Config.ECONOMIC_RECORDS_DEPTH.get());
+    final Queue<UnmetNeed> unmetNeedsRecord = initQueue();
+
+    @SuppressWarnings("UnstableApiUsage")
+    private static @NotNull EvictingQueue<UnmetNeed> initQueue() {
+        return EvictingQueue.create(Config.ECONOMIC_RECORDS_DEPTH.get());
+    }
+
+    final Queue<UnmetNeed> unmetRoomsRecord = initQueue();
     boolean needAggregate;
     private Map<UUID, ImmutableList<ItemEconomicsData>> aggregated = ImmutableMap.of();
     private ImmutableList<ItemEconomicsData> aggregatedAll = ImmutableList.of();

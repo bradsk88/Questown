@@ -142,7 +142,7 @@ public class DeclarativeJob extends
                     }
                     return null;
                 },
-                (x, i) -> getUnmetNeed(ingredientsRequiredAtStates, toolsRequiredAtStates, i),
+                (x, i) -> getUnmetNeed(ingredientsRequiredAtStates, ingredientsQtyRequiredAtStates, toolsRequiredAtStates, i),
                 () -> location.baseRoom().toString(), workInterval, sound
         );
         this.maxState = maxState;
@@ -156,14 +156,16 @@ public class DeclarativeJob extends
 
     private static @Nullable String getUnmetNeed(
             ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Integer> qtyRequiredAtStates,
             ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
-            NeedsRegistrations.Need i
+            NeedsRegistrations.Need need
     ) {
-        Integer ii = i.ingredientIndex();
+        Integer ii = need.timesInserted();
         if (ii != null) {
-            return Util.orNull(ingredientsRequiredAtStates.get(ii), Ingredients::toString);
+            int actual = NoMCNeeds.getActualIndex(ii, qtyRequiredAtStates);
+            return Util.orNull(ingredientsRequiredAtStates.get(actual + 1), Ingredients::toString);
         }
-        return Util.orNull(toolsRequiredAtStates.get(i.toolIndex()), Ingredients::toString);
+        return Util.orNull(toolsRequiredAtStates.get(need.toolIndex()), Ingredients::toString);
     }
 
     @Override
@@ -638,9 +640,9 @@ public class DeclarativeJob extends
             public void registerUnmetNeeds(
                     ProductionStatus status,
                     @Nullable BlockPos workspot,
-                    boolean hasInserted
+                    int timesInserted
             ) {
-                world.registerUnmetNeeds(extra, workspot, hasInserted);
+                world.registerUnmetNeeds(extra, workspot, timesInserted);
             }
 
             @Override
@@ -649,8 +651,8 @@ public class DeclarativeJob extends
             }
 
             @Override
-            public boolean hasInsertedSupplies() {
-                return world.hasInserted(extra);
+            public int timesInserted() {
+                return world.timesInserted(extra);
             }
 
             @Override

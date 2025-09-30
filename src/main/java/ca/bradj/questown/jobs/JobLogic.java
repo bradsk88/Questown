@@ -59,10 +59,10 @@ public class JobLogic<EXTRA, TOWN, POS> {
         void registerUnmetNeeds(
                 ProductionStatus status,
                 @Nullable POS workspot,
-                boolean b
+                int timesInserted
         );
 
-        boolean hasInsertedSupplies();
+        int timesInserted();
 
         void registerUnmetRooms();
     }
@@ -127,7 +127,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
             // This is for handling villagers who get stuck as work seekers
             worldBeforeTick.registerUnmetNeeds(
                     status, Util.orNull(workSpot, WorkPosition::jobBlock),
-                    worldBeforeTick.hasInsertedSupplies()
+                    worldBeforeTick.timesInserted()
             );
         }
 
@@ -196,7 +196,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
                 worldBeforeTick.registerUnmetNeeds(
                         status,
                         Util.orNull(workSpot, WorkPosition::jobBlock),
-                        worldBeforeTick.hasInsertedSupplies()
+                        worldBeforeTick.timesInserted()
                 );
             } else if (status == ProductionStatus.NO_JOBSITE) {
                 worldBeforeTick.registerUnmetRooms();

@@ -97,6 +97,10 @@ public class ItemsInit {
             () -> new BlockItem(BlocksInit.FISHING_STATION_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
+    /**
+     * @deprecated Use Town Wand
+     */
+    @Deprecated(forRemoval = true)
     public static final RegistryObject<Item> TOWN_DOOR = ITEMS.register(TownDoorItem.ITEM_ID, TownDoorItem::new);
 
     public static final RegistryObject<Item> TOWN_DOOR_TESTER = ITEMS.register(
@@ -106,6 +110,10 @@ public class ItemsInit {
 
     public static final RegistryObject<Item> FALSE_DOOR = ITEMS.register(FalseDoorItem.ITEM_ID, FalseDoorItem::new);
 
+    /**
+     * @deprecated Use Town Wand
+     */
+    @Deprecated(forRemoval = true)
     public static final RegistryObject<Item> TOWN_FENCE_GATE = ITEMS.register(
             TownFenceGateItem.ITEM_ID,
             TownFenceGateItem::new

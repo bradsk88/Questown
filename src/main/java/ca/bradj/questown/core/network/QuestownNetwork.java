@@ -1,6 +1,7 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.gui.town.status.MultiStatusScreenSyncMessage;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkDirection;

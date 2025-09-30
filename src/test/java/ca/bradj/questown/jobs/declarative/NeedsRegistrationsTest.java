@@ -23,12 +23,12 @@ class NeedsRegistrationsTest {
                     if (idx.isTool()) {
                         throw new AssertionError("Should not set tool");
                     }
-                    unmetIngredient.set(idx.ingredientIndex());
+                    unmetIngredient.set(idx.timesInserted());
 
                 },
                 (no, pos) -> null
         );
-        r.addUnmet(null, ARB_POS, false);
+        r.addUnmet(null, ARB_POS, 0);
         assertEquals(0, unmetIngredient.get());
     }
 
@@ -42,12 +42,12 @@ class NeedsRegistrationsTest {
                     if (idx.isTool()) {
                         throw new AssertionError("Should not set tool");
                     }
-                    unmetIngredient.set(idx.ingredientIndex());
+                    unmetIngredient.set(idx.timesInserted());
 
                 },
                 (no, pos) -> State.fresh()
         );
-        r.addUnmet(null, ARB_POS, false);
+        r.addUnmet(null, ARB_POS, 0);
         assertEquals(0, unmetIngredient.get());
     }
 
@@ -67,7 +67,7 @@ class NeedsRegistrationsTest {
                 },
                 (no, pos) -> State.fresh().setWorkLeft(1)
         );
-        r.addUnmet(null, ARB_POS, false);
+        r.addUnmet(null, ARB_POS, 0);
         assertEquals(0, unmetTool.get());
     }
 
@@ -81,12 +81,12 @@ class NeedsRegistrationsTest {
                     if (idx.isTool()) {
                         throw new AssertionError("Should not set tool");
                     }
-                    unmetIngredient.set(idx.ingredientIndex());
+                    unmetIngredient.set(idx.timesInserted());
 
                 },
                 (no, pos) -> State.freshAtState(1)
         );
-        r.addUnmet(null, ARB_POS, false);
+        r.addUnmet(null, ARB_POS, 0);
         assertEquals(1, unmetIngredient.get());
     }
 
@@ -106,7 +106,7 @@ class NeedsRegistrationsTest {
                 },
                 (no, pos) -> State.freshAtState(1).setWorkLeft(1)
         );
-        r.addUnmet(null, ARB_POS, false);
+        r.addUnmet(null, ARB_POS, 0);
         assertEquals(1, unmetTool.get());
     }
 
@@ -120,12 +120,12 @@ class NeedsRegistrationsTest {
                     if (idx.isTool()) {
                         throw new AssertionError("Should not set tool");
                     }
-                    unmetIngr.set(idx.ingredientIndex());
+                    unmetIngr.set(idx.timesInserted());
 
                 },
                 (no, pos) -> State.freshAtState(1).setWorkLeft(1)
         );
-        r.addUnmet(null, null, false);
+        r.addUnmet(null, null, 0);
         assertEquals(0, unmetIngr.get());
     }
 }

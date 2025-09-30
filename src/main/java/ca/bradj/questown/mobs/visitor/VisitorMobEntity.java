@@ -304,9 +304,22 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public record WorkToUndo(
             JobID jobID,
             BlockPos pos,
-            MCHeldItem item
-            // TODO[Bugs]: Add quantity
+            ImmutableList<MCHeldItem> itemsInserted
     ) {
+        public static WorkToUndo and(
+                @Nullable VisitorMobEntity.WorkToUndo workToUndo,
+                JobID id,
+                BlockPos bp,
+                MCHeldItem item
+        ) {
+            if (workToUndo == null) {
+                return new WorkToUndo(id, bp, ImmutableList.of(item));
+            }
+            return new WorkToUndo(
+                    id, bp,
+                    ImmutableList.<MCHeldItem>builder().addAll(workToUndo.itemsInserted()).add(item).build()
+            );
+        }
     }
 
     /**
@@ -344,7 +357,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 initializedJob.addStatusListener(getNotifiedOfJobStatusChanges())
         );
         this.cleanupJobListeners.add(initializedJob.addItemInsertionListener(
-                (bp, item) -> this.workToUndo = new WorkToUndo(initializedJob.getId(), bp, item)
+                (bp, item) ->  this.workToUndo = WorkToUndo.and(this.workToUndo, initializedJob.getId(), bp, item)
         ));
         this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
                 id -> this.workToUndo = null

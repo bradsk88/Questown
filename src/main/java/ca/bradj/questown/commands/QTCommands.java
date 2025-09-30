@@ -22,7 +22,6 @@ public class QTCommands {
                     sp,
                     Compat.translatable("messages.command.failed_not_flag", Util.getShortString(target))
             );
-            // TODO: Better error handling?
             return null;
         }
         return tfbe;

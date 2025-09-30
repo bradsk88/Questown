@@ -345,9 +345,9 @@ public class MCTownStateWorldInteraction extends
     }
 
     @Override
-    public boolean hasInserted(Inputs inputs) {
+    public int timesInserted(Inputs inputs) {
         // TODO[Warp]: Implement
-        return false;
+        return 0;
     }
 
     @Override
