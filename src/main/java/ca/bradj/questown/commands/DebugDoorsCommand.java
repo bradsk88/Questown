@@ -2,8 +2,6 @@ package ca.bradj.questown.commands;
 
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.init.items.ItemsInit;
-import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -15,7 +13,6 @@ import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.commands.arguments.coordinates.Coordinates;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntity;
 
 import javax.annotation.Nullable;
 

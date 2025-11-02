@@ -139,7 +139,7 @@ public class Compat {
         return ImmutableList.copyOf(list);
     }
 
-    public static int nextInt(
+    public static int nextRandomInt(
             @Nullable ServerLevel server,
             int i
     ) {

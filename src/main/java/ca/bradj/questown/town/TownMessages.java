@@ -29,6 +29,11 @@ public class TownMessages {
             String key,
             Object... args
     ) {
+        if (level == null) {
+            QT.FLAG_LOGGER.debug("Skipping message broadcast before TownMessages was initialized: {} {}", key, args);
+            return;
+        }
+
         QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
         for (ServerPlayer p : level.getServer()
                                    .getPlayerList()

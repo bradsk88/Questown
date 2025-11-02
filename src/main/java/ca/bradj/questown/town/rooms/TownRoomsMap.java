@@ -4,7 +4,6 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.TownFlagBlockEntity;
 import ca.bradj.questown.town.TownRooms;
 import ca.bradj.questown.town.WallDetection;

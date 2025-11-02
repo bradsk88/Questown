@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.blacksmith.MapBackedWSC;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.TestWorldInteraction;

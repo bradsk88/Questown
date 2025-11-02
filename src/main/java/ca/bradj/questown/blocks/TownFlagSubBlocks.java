@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.NotNull;
 
@@ -15,7 +16,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
-import java.util.function.Function;
 
 public final class TownFlagSubBlocks {
 
@@ -23,7 +23,7 @@ public final class TownFlagSubBlocks {
     private final Map<BlockPos, Integer> pendingTicks = new HashMap<>();
     private final Map<BlockPos, Integer> ticksWithoutParent = new HashMap<>();
     private final Map<BlockPos, Integer> ticksWithoutChild = new HashMap<>();
-    private final Map<BlockPos, Function<BlockPos, Collection<ItemStack>>> dropOnOrphaned = new HashMap<>();
+    private final Map<BlockPos, OnOrphaned> runOnOrphaned = new HashMap<>();
     private final BlockPos flagPos;
     private boolean parentIsUnloaded = false;
 
@@ -51,7 +51,7 @@ public final class TownFlagSubBlocks {
         ImmutableMap.Builder<BlockPos, Integer> twoc = ImmutableMap.builder();
         ticksWithoutChild.forEach((bp, v) -> {
             if (v > Compat.configGet(Config.FLAG_SUB_BLOCK_REMOVED_TICKS).get()) {
-                dropDrops(sl, bp, dropOnOrphaned.get(bp).apply(flagPos));
+                runOnOrphaned.get(bp).run(sl, bp, flagPos);
                 ticksWithoutParent.remove(bp);
                 return;
             }
@@ -78,11 +78,11 @@ public final class TownFlagSubBlocks {
         if (twop >= Compat.configGet(Config.FLAG_SUB_BLOCK_RETENTION_TICKS).get()) {
             QT.BLOCK_LOGGER.debug("Parent has stopped ticking. Entity removed at {}", pos);
             sl.removeBlock(pos, true);
-            dropDrops(sl, pos, dropOnOrphaned.get(pos).apply(flagPos));
+            runOnOrphaned.get(pos).run(sl, pos, flagPos);
         }
     }
 
-    private static void dropDrops(
+   public static void dropDrops(
             ServerLevel sl,
             BlockPos pos,
             Collection<ItemStack> drops
@@ -101,7 +101,8 @@ public final class TownFlagSubBlocks {
         BlockEntity e = sl.getBlockEntity(pop);
         if (e instanceof TownFlagSubEntity s) {
             ticksWithoutParent.put(pop, 0);
-            dropOnOrphaned.put(pop, s::dropWhenOrphaned);
+            Block blockBeforeRemoval = s.getBlock();
+            runOnOrphaned.put(pop, (a, b, c) -> s.runWhenOrphaned(a, blockBeforeRemoval, b, c));
             s.addTickListener(() -> this.tick(sl, pop));
             QT.FLAG_LOGGER.debug("Registered sub block of town flag: {}", s.getClass().getName());
             return true;

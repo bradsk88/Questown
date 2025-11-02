@@ -5,7 +5,6 @@ import ca.bradj.questown.town.quests.MCDelayedReward;
 import ca.bradj.questown.town.quests.MCInstantReward;
 import ca.bradj.questown.town.quests.MCRewardList;
 import ca.bradj.questown.town.rewards.*;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;

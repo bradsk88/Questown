@@ -73,6 +73,10 @@ public class BlocksInit {
             FishingStationBlock.ITEM_ID, FishingStationBlock::new
     ));
 
+    public static final RegistryObject<Block> MINESHAFT = BlockAsRoomEntity.register(BLOCKS.register(
+            MineshaftBlock.ITEM_ID, MineshaftBlock::new
+    ));
+
     // Vanilla Blocks
 
     public static final RegistryObject<Block> SAPLING_TESTER_BLOCK = BLOCKS.register(

@@ -1,13 +1,14 @@
 package ca.bradj.questown.blocks;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.item.ItemStack;
-
-import java.util.Collection;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
 
 public interface TownFlagSubEntity {
 
-    Collection<ItemStack> dropWhenOrphaned(BlockPos flagPos);
+    void runWhenOrphaned(ServerLevel sl, Block childBlock, BlockPos childPos, BlockPos flagPos);
 
     void addTickListener(Runnable listener);
+
+    Block getBlock();
 }

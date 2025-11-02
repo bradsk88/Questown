@@ -1,6 +1,5 @@
 package ca.bradj.questown.blocks;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.init.TilesInit;
@@ -38,7 +37,6 @@ public abstract class RoomBlock extends TownFlagSubBlock<BlockAsRoomEntity> impl
         ItemStack item = ctx.getItemInHand();
         @Nullable TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sl, item);
         if (parent == null) {
-            QT.BLOCK_LOGGER.error("Failed to link block-room to a flag. This is a bug, please report it.");
             return stateForPlacement;
         }
         parent.getRoomHandle().registerBlockAsRoom(getRoomId(this), ctx.getClickedPos());

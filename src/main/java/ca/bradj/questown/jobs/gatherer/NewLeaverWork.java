@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs.gatherer;
 
-import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.SoundInfo;

@@ -21,7 +21,6 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static ca.bradj.questown.core.network.AddWorkFromUIMessage.Action.CONFIRMED;
 import static ca.bradj.questown.core.network.AddWorkFromUIMessage.Action.REJECTED;

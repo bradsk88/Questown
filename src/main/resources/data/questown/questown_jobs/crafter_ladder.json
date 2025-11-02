@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "id": "crafter/ladder",
+  "priority": "3000",
+  "parent": null,
+  "icon": "minecraft:ladder",
+  "initial_request": "minecraft:ladder",
+  "result": {
+    "type": "item",
+    "item": "minecraft:ladder",
+    "quantity": 1
+  },
+  "block": "minecraft:crafting_table",
+  "room": "questown:crafting_room",
+  "work_states": [
+    {
+      "ingredients": "minecraft:stick",
+      "quantity": 2
+    },
+    {
+      "work": 20
+    }
+  ],
+  "cooldown_ticks": 20,
+  "sound": {
+    "id": "minecraft:block.wood.hit",
+    "chance": "100",
+    "duration": 20
+  }
+}

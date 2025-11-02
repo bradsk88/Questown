@@ -103,6 +103,9 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         QT.FLAG_LOGGER.debug("Registered block-room at {}: {}", clickedPos, blockId);
         TownFlagBlockEntity t = town.getUnsafe();
         t.subBlocks.register(clickedPos);
+        MCRoom room = Spaces.metaRoomAround(clickedPos, Config.META_ROOM_DIAMETER.get());
+        Map<BlockPos, Block> blocks = RecipeDetection.getBlocksInRoom(town.getServerLevelUnsafe(), room, false);
+        t.roomRecipeCreated(room, new RoomRecipeMatches<>(room, ImmutableList.of(blockId), blocks.entrySet()));
         t.setChanged();
     }
 

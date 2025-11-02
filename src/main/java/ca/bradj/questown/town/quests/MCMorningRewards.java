@@ -3,7 +3,6 @@ package ca.bradj.questown.town.quests;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 
 import java.util.ArrayList;
 import java.util.Collection;

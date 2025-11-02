@@ -9,7 +9,7 @@ import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.electronwill.nightconfig.core.Config;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -84,7 +84,8 @@ public class RoomRecipes {
         } else {
             rMapB.put(SpecialQuests.FARM, SpecialQuests.SPECIAL_QUESTS.get(SpecialQuests.FARM));
         }
-        recipes.getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
+        List<RoomRecipe> allRecipesFor = recipes.getAllRecipesFor(RecipesInit.ROOM);
+        allRecipesFor.forEach(v -> rMapB.put(v.getId(), v));
         return rMapB.build();
     }
 
@@ -98,10 +99,9 @@ public class RoomRecipes {
             if (weight > stopAt) {
                 return weight;
             }
-            JsonElement js = in.toJson();
             boolean foundWeight = false;
-            if (js.getAsJsonObject().has("item")) {
-                String id = js.getAsJsonObject().get("item").getAsString();
+            if (getAsJsonObject(in).has("item")) {
+                String id = getAsJsonObject(in).get("item").getAsString();
                 if (allWeights.contains(String.format("%s", id))) {
                     weight += allWeights.getInt(id);
                     foundWeight = true;
@@ -111,8 +111,8 @@ public class RoomRecipes {
                     );
                 }
             }
-            if (js.getAsJsonObject().has("tag")) {
-                String id = js.getAsJsonObject().get("tag").getAsString();
+            if (getAsJsonObject(in).has("tag")) {
+                String id = getAsJsonObject(in).get("tag").getAsString();
                 String tID = String.format("#%s", id);
                 if (allWeights.contains(tID)) {
                     weight += allWeights.getInt(tID);
@@ -128,6 +128,14 @@ public class RoomRecipes {
             }
         }
         return weight;
+    }
+
+    private static JsonObject getAsJsonObject(Ingredient js) {
+        try {
+            return js.toJson().getAsJsonObject();
+        } catch (IllegalStateException e) {
+            throw new IllegalStateException("Not a JSON object: " + js, e);
+        }
     }
 
     public static boolean containsAllTags(
