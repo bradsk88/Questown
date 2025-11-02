@@ -75,7 +75,7 @@ public class SpecialRules {
 
     // Global rule. When enabled, the LAST item in the villager's inventory will
     // be rendered in their off-hand.
-    public static final String RENDER_LAST_ITEM_IN_OFF_HAND = "render_last_item_in_off_hand";
+    public static final String ONLY_RENDER_FIRST_ITEM_IN_HAND = "only_render_first_item_in_hand";
 
     // Global rule. If there is more than one item stack which matches the villagers
     // ingredient needs, they will choose one of those stacks randomly. When this rule

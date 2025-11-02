@@ -46,8 +46,8 @@ public class FishingStationBlock extends RoomBlock {
         // Start with random
         // TODO: Config
         for (int i = 0; i < 20; i++) {
-            relative = blockPos.relative(facing, Compat.nextInt(sl, 5));
-            relative = relative.relative(facing.getClockWise(), Compat.nextInt(sl, 5) - 2);
+            relative = blockPos.relative(facing, Compat.nextRandomInt(sl, 5));
+            relative = relative.relative(facing.getClockWise(), Compat.nextRandomInt(sl, 5) - 2);
             relative = sl.getHeightmapPos(Heightmap.Types.WORLD_SURFACE, relative);
 
             // If block below is water and block above is air, we can place the hook here

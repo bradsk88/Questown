@@ -364,7 +364,7 @@ public class ServerJobsRegistry {
             QT.JOB_LOGGER.error("No jobs found for root ID: {}", rootId);
             return getWorkSupplier(GathererUnmappedNoToolWorkQtrDay.ID).get();
         }
-        Work work = x.get(Compat.nextInt(rand, x.size())).getValue().get();
+        Work work = x.get(Compat.nextRandomInt(rand, x.size())).getValue().get();
         return work;
     }
 

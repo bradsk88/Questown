@@ -14,6 +14,7 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.*;
@@ -127,11 +128,7 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
             return cachedCosts.get(qID);
         }
         Map<ResourceLocation, RoomRecipe> hydrated = new HashMap<>(recipes.get());
-        for (Supplier<RoomBlock> e : BlockAsRoomEntity.ALL) {
-            ResourceLocation rID = RoomBlock.getRoomId(e.get());
-            Ingredient ingr = Ingredient.of(e.get().asItem());
-            hydrated.put(rID, new RoomRecipe(rID, NonNullList.withSize(1, ingr), 1, false));
-        }
+        addBlockRooms(hydrated);
         if (!hydrated.containsKey(qID)) {
             throw new IllegalStateException("No recipe found for ID " + qID);
         }
@@ -141,6 +138,32 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
         }
         cachedCosts.put(qID, recipeWeight);
         return recipeWeight;
+    }
+
+    private static void addBlockRooms(Map<ResourceLocation, RoomRecipe> hydrated) {
+        for (Supplier<RoomBlock> e : BlockAsRoomEntity.ALL) {
+            RoomBlock roomBlock = e.get();
+            if (roomBlock.asItem().equals(Items.AIR)) {
+                String m = "Invalid initialization detected. RoomBlock's item seems unregistered: ";
+                throw new IllegalStateException(m + roomBlock.getId());
+            }
+            ResourceLocation rID = RoomBlock.getRoomId(roomBlock);
+            Ingredient ingr = Ingredient.of(roomBlock.asItem());
+            hydrated.put(rID, new RoomRecipe(rID, NonNullList.withSize(1, ingr), 1, false));
+        }
+    }
+
+    @Override
+    protected boolean isOvergrown() {
+        boolean isOvergrown = batch.size() > 50;
+        if (isOvergrown) {
+            QT.logBug("Quest batch overgrown: {}", batch);
+            for (MCQuest q : batch.getAll()) {
+                QT.QUESTS_LOGGER.debug(" - Quest: {} [Cost: {}]", q.getWantedId(),
+                        computeQuestCost(this::recipesFromLevel, q.getWantedId(), Integer.MAX_VALUE));
+            }
+        }
+        return isOvergrown;
     }
 
     @Override

@@ -2,12 +2,13 @@ package ca.bradj.questown.blocks.entity;
 
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.TownFlagBlock;
+import ca.bradj.questown.blocks.TownFlagSubBlocks;
 import ca.bradj.questown.blocks.TownFlagSubEntity;
 import ca.bradj.questown.core.init.TilesInit;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -39,8 +40,22 @@ public class BlockAsRoomEntity extends BlockEntity implements TownFlagSubEntity 
     }
 
     @Override
-    public Collection<ItemStack> dropWhenOrphaned(BlockPos flagPos) {
-        ItemStack toDrop = Items.OAK_SIGN.getDefaultInstance();
+    public Block getBlock() {
+        return getBlockState().getBlock();
+    }
+
+    @Override
+    public void runWhenOrphaned(
+            ServerLevel sl,
+            Block childBlock,
+            BlockPos childPos,
+            BlockPos flagPos
+    ) {
+        TownFlagSubBlocks.dropDrops(sl, childPos, dropWhenOrphaned(flagPos));
+    }
+
+    private Collection<ItemStack> dropWhenOrphaned(BlockPos flagPos) {
+        ItemStack toDrop = getBlockState().getBlock().asItem().getDefaultInstance();
         TownFlagBlock.StoreParentOnNBT(toDrop, flagPos);
         return ImmutableList.of(toDrop);
     }

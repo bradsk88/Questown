@@ -520,7 +520,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                     heldItem, j.getInventory()
                                .getItem(0)
             );
-            if (j.getGlobalSpecialRules().contains(SpecialRules.RENDER_LAST_ITEM_IN_OFF_HAND)) {
+            if (!j.getGlobalSpecialRules().contains(SpecialRules.ONLY_RENDER_FIRST_ITEM_IN_HAND)) {
                 int size = j.getInventory().getContainerSize();
                 boolean holdingMultiple = false;
                 for (int i = 1; i < size; i++) {

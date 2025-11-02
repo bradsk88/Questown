@@ -9,6 +9,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.logic.IPredicateCollection;
@@ -23,7 +24,6 @@ import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
 import net.minecraft.core.BlockPos;
@@ -67,15 +67,34 @@ public class TownPossibleWork {
         Stream<String> roots = t.getVillagerHandle().getJobs().stream().map(JobID::rootId);
         ImmutableSet<Map.Entry<JobID, Supplier<Work>>> rjs = Works.regularJobs();
         roots.forEach(root -> {
-            List<JobID> jobs = getJobsSortedByPossibility(root, rjs, t);
-            preselectedJobs.put(root, jobs);
+            List<JobPossibility> unfilteredJobs = getJobsSortedByPossibility(root, rjs, t);
+            // TODO: Only log this if the player has enabled in-depth logging
+            QT.FLAG_LOGGER.debug("Possible jobs for root {}: [{}]", root,
+                    Strings.join(
+                            unfilteredJobs.stream()
+                                          .map(JobPossibility::toString)
+                                          .toList(),
+                            ","
+                    )
+            );
+
+            List<JobPossibility> jobs = unfilteredJobs.stream().filter(
+                    v -> v.score.value > Config.PREFERRED_JOB_ACCEPTANCE.get()
+            ).toList();
+            if (jobs.isEmpty()) {
+                jobs = unfilteredJobs.stream().filter(
+                        v -> v.score.value > Config.MIN_JOB_ACCEPTANCE.get()
+                ).toList();
+            }
+            ImmutableList<JobID> preselected = jobs.stream().map(v -> v.jobID).collect(ImmutableList.toImmutableList());
+            preselectedJobs.put(root, preselected);
             if (jobs.isEmpty()) {
                 registerUnmetNeeds(root);
             }
             QT.FLAG_LOGGER.debug(
                     "Prepared for {}: [{}]",
                     root,
-                    Strings.join(jobs.stream().map(JobID::jobId).toList(), ",")
+                    Strings.join(preselected.stream().map(JobID::jobId).toList(), ",")
             );
         });
         shouldRecompute = false;
@@ -112,47 +131,41 @@ public class TownPossibleWork {
         econ.registerUnmetNeed(tick, uuid, Ingredients.toString(xx));
     }
 
-    private static ImmutableList<JobID> getJobsSortedByPossibility(
+    private record JobPossibility(
+            JobID jobID,
+            WithReason<Double> score
+    ) {
+        @Override
+        public String toString() {
+            return "JobPossibility{" +
+                    "jobID=" + jobID +
+                    ", score=" + score +
+                    '}';
+        }
+    }
+
+    private static ImmutableList<JobPossibility> getJobsSortedByPossibility(
             String root,
             ImmutableSet<Map.Entry<JobID, Supplier<Work>>> allJobs,
             TownFlagBlockEntity t
     ) {
-        // TODO[Performance]: Only include jobs that are known by the villagers
-        ImmutableMap.Builder<JobID, Double> b = ImmutableMap.builder();
-        for (Map.Entry<JobID, Supplier<Work>> jw : allJobs) {
-            if (!root.equals(jw.getKey().rootId())) {
-                continue;
-            }
-            b.put(jw.getKey(), getWorkPercentPossible(t, jw));
+        // FIXME: Only include jobs that are known by the villagers
+        List<Map.Entry<JobID, Supplier<Work>>> e = allJobs.stream().filter(v -> root.equals(v.getKey().rootId())).toList();
+        ImmutableList.Builder<JobPossibility> b = ImmutableList.builder();
+        for (Map.Entry<JobID, Supplier<Work>> w : e) {
+            b.add(new JobPossibility(w.getKey(), getWorkPercentPossible(t, w)));
         }
-
-        ImmutableMap<JobID, Double> list = b.build();
-        List<Map.Entry<JobID, Double>> out = filter(list, Config.PREFERRED_JOB_ACCEPTANCE.get());
-        if (out.isEmpty()) {
-            QT.FLAG_LOGGER.debug("Could not generate preferred work. Using fallbacks.");
-            out = filter(list, Config.MIN_JOB_ACCEPTANCE.get());
-        }
-        return out.stream()
-                  .sorted(Comparator.comparingDouble(Map.Entry::getValue))
-                  .map(Map.Entry::getKey)
-                  .collect(ImmutableList.toImmutableList());
+        return b.build();
     }
 
-    private static List<Map.Entry<JobID, Double>> filter(
-            ImmutableMap<JobID, Double> list,
-            Double threshold
-    ) {
-        return list.entrySet().stream().filter(v -> v.getValue() > threshold).toList();
-    }
-
-    private static double getWorkPercentPossible(
+    private static WithReason<Double> getWorkPercentPossible(
             TownFlagBlockEntity t,
             Map.Entry<JobID, Supplier<Work>> w
     ) {
         Work work = w.getValue().get();
         Job<?, ?, ?> j = work.jobFunc.apply(UUID.randomUUID());
         if (!(j instanceof DeclarativeJob dj)) {
-            return 0.0;
+            return WithReason.always(0.0, "Unsupported job class " + j.getClass().getName());
         }
 
         if (!ServerJobsRegistry.canFit(null, j.getId(), Util.getDayTime(t.getServerLevel()))) {
@@ -160,21 +173,24 @@ public class TownPossibleWork {
                     "Villager will not do {} because there is not enough time left in the day",
                     j.getId().toNiceString()
             );
-            return 0.0;
+            return WithReason.always(0.0, "Not enough time left in the day");
         }
 
-        int hps = getHighestPossibleState(t, dj);
-        double v = (double) hps / dj.getMaxState();
-        float shuffler = Compat.nextInt(t.getServerLevel(), 100) / 10000f;
-        return v + shuffler;
+        WithReason<Integer> hps = getHighestPossibleState(t, dj);
+        double v = (double) hps.value / dj.getMaxState();
+        float shuffler = Compat.nextRandomInt(t.getServerLevel(), 100) / 10000f;
+        return WithReason.always(
+                v + shuffler,
+                "Highest possible job state: " + hps + " (out of " + dj.getMaxState() + ", with randomizer " + shuffler + ")"
+        );
     }
 
-    private static int getHighestPossibleState(
+    private static WithReason<Integer> getHighestPossibleState(
             TownFlagBlockEntity t,
             DeclarativeJob dj
     ) {
         if (dj.specialGlobalRules.contains(SpecialRules.ALWAYS_CONSIDER)) {
-            return dj.getMaxState();
+            return WithReason.always(dj.getMaxState(), "Special rule ALWAYS_CONSIDER present");
         }
         boolean townHasJobSite = false;
         ServerLevel sl = Preconditions.checkNotNull(t.getServerLevel());
@@ -198,7 +214,7 @@ public class TownPossibleWork {
             }
         }
         if (!townHasJobSite) {
-            return 0;
+            return WithReason.always(0, "Town lacks required job site (or descendant) of: " + dj.location().baseRoom());
         }
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
@@ -232,10 +248,20 @@ public class TownPossibleWork {
             }
 
             if (!townHasIngredient || !townHasTool) {
-                return Math.max(0, i - 1);
+                int max = Math.max(0, i - 1);
+                return WithReason.always(
+                        max,
+                        "Lacking " +
+                                (townHasIngredient ? "" : "ingredients ") +
+                                (townHasTool ? "" : "tools ") +
+                                "for job state " + ii + "/" + dj.getMaxState()
+                );
             }
         }
-        return dj.getMaxState();
+        return WithReason.always(
+                dj.getMaxState(),
+                "All ingredients and tools available for all job states"
+        );
     }
 
     private static boolean isJobBlock(
