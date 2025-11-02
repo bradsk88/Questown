@@ -10,7 +10,7 @@ import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.roomrecipes.Matches;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.UnsafeTown;
-import ca.bradj.questown.town.WallDetection;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rooms.MultiLevelRoomDetector;
@@ -105,6 +105,9 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         QT.FLAG_LOGGER.debug("Registered block-room at {}: {}", pos, blockId);
         TownFlagBlockEntity t = town.getUnsafe();
         t.subBlocks.register(pos);
+        MCRoom room = Spaces.metaRoomAround(pos, Config.META_ROOM_DIAMETER.get());
+        Map<BlockPos, Block> blocks = RecipeDetection.getBlocksInRoom(town.getServerLevelUnsafe(), room, false);
+        t.roomRecipeCreated(room, new RoomRecipeMatches<>(room, ImmutableList.of(blockId), blocks.entrySet()));
         t.setChanged();
         broadcastBlockRoomCreated(blockId, pos, t);
     }

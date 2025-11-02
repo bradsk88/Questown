@@ -90,7 +90,7 @@ public abstract class ProductionJob<
     ) {
         // Don't recompute jobsite if we already have a target.
         // But DO retry every once in a while to account for "stuck villager" bugs
-        if (this.jobSite == null || Compat.nextInt(town.getServerLevel(), 200) == 0) {
+        if (this.jobSite == null || Compat.nextRandomInt(town.getServerLevel(), 200) == 0) {
             ServerLevel sl = town.getServerLevel();
             if (sl == null) {
                 return null;

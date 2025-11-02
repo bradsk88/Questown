@@ -5,6 +5,8 @@ import ca.bradj.questown._vanilla.blocks.SaplingTesterBlock;
 import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.items.*;
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -91,7 +93,6 @@ public class ItemsInit {
             () -> new BlockItem(BlocksInit.BLOCK_OF_PROGRESS.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
-
     public static final RegistryObject<Item> FISHING_STATION_BLOCK = ITEMS.register(
             FishingStationBlock.ITEM_ID,
             () -> new BlockItem(BlocksInit.FISHING_STATION_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)
@@ -101,6 +102,11 @@ public class ItemsInit {
      * @deprecated Use Town Wand
      */
     @Deprecated(forRemoval = true)
+    public static final RegistryObject<Item> MINESHAFT_BLOCK = ITEMS.register(
+            MineshaftBlock.ITEM_ID,
+            () -> new BlockItem(BlocksInit.MINESHAFT.get(), Questown.DEFAULT_ITEM_PROPS)
+    );
+
     public static final RegistryObject<Item> TOWN_DOOR = ITEMS.register(TownDoorItem.ITEM_ID, TownDoorItem::new);
 
     public static final RegistryObject<Item> TOWN_DOOR_TESTER = ITEMS.register(
@@ -137,7 +143,9 @@ public class ItemsInit {
     @SubscribeEvent
     public static void onInteractBlock(PlayerInteractEvent.RightClickBlock event) {
         final var level = event.getLevel();
-        if (level.isClientSide) return; // Note this is fired both client and server side
+        if (!(event.getEntity() instanceof ServerPlayer sp)) {
+            return;
+        }
         if (level.getBlockEntity(event.getPos()) instanceof TownFlagBlockEntity) {
             return;
         }
@@ -151,6 +159,15 @@ public class ItemsInit {
                     event.getItemStack()
             );
             event.setCanceled(true);
+        }
+        if (itemUsed instanceof BlockItem bi) {
+            if (bi.getBlock() instanceof RoomBlock) {
+                ServerLevel sl = (ServerLevel) event.getLevel();
+                TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sl, event.getItemStack());
+                if (parent == null) {
+                    Util.onScreenText(() -> sp, "message.questown.room_block.how_to_flag", Compat.getItemName(ItemsInit.TOWN_WAND.get()));
+                }
+            }
         }
     }
 

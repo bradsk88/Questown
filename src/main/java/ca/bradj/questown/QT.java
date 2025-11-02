@@ -1,7 +1,11 @@
 package ca.bradj.questown;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class QT {
 
@@ -18,4 +22,14 @@ public class QT {
     public static final Logger QUESTS_LOGGER = LogManager.getLogger("Questown:Quests");
     public static final Logger PROFILE_LOGGER = LogManager.getLogger("Questown:Profiling");
     public static final Logger GUI_LOGGER = LogManager.getLogger("Questown:GUI");
+
+    public static void logBug(
+            String s,
+            Object... flagPos
+    ) {
+        // Add all of flagPos to c
+        List<Object> c = new ArrayList<>(ImmutableList.of(flagPos));
+        c.add("https://github.com/bradsk88/questown/issues");
+        LOGGER.error(s + " (This is a bug; please report it to the mod author) at {}", c.toArray());
+    }
 }
