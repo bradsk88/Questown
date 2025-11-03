@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
@@ -11,6 +12,8 @@ import mezz.jei.gui.elements.GuiIconButtonSmall;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -147,7 +150,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
             int mouseX,
             int mouseY
     ) {
-        Inventory dummyInv = new Inventory(null);
+        Container dummyInv = new SimpleContainer(1028);
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
 
         int slotIndex = 0;
@@ -191,7 +194,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
             int mouseY,
             ItemStack itemStack,
             int iconX,
-            Inventory dummyInv,
+            Container dummyInv,
             int slotIndex,
             ImmutableList.Builder<Slot> b
     ) {
@@ -329,7 +332,12 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
     ) {
         for (Slot s : slots) {
             if (s.x < x && s.x + 16 > x && s.y < y && s.y + 16 > y) {
-                menu.sendRequest(Ingredient.of(s.getItem()));
+                Ingredient item = Ingredient.of(s.getItem());
+                if (!menu.canRequest(item)) {
+                    QT.logBug("AddWorkScreen: ingredient slot not acceptable: {}", s.getItem());
+                    return false;
+                }
+                menu.sendRequest(item);
                 return true;
             }
         }
