@@ -35,6 +35,16 @@ public final class AddWorkFromUIMessage {
         this.action = action;
     }
 
+    public static boolean canEncode(Ingredient item) {
+        try {
+            Ingredients.toString(item);
+            return true;
+        } catch (Exception e) {
+            QT.GUI_LOGGER.error("Failed to encode ingredient {}: {}", item, e.getMessage());
+            return false;
+        }
+    }
+
     public enum Action {
         INQUIRED,
         CONFIRMED,

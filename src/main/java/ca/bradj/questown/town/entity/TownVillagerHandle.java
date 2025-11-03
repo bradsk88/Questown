@@ -192,13 +192,13 @@ public class TownVillagerHandle implements VillagerHolder {
 
     @Override
     public ImmutableMap<VillagerUUID, JobID> getVillagerJobs() {
-        ImmutableMap.Builder<VillagerUUID, JobID> b = ImmutableMap.builder();
+        Map<VillagerUUID, JobID> b = new HashMap<>();
         entities.stream()
                 .filter(v -> v instanceof VisitorMobEntity)
                 .map(v -> (VisitorMobEntity) v)
                 .filter(v -> v.getVUID() != null) // TODO: Why would a villager have a null UUID?
                 .forEach(v -> b.put(v.getVUID(), v.getJobId()));
-        return b.build();
+        return ImmutableMap.copyOf(b);
     }
 
     @Override
