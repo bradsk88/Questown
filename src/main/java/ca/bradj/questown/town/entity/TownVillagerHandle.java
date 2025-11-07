@@ -19,7 +19,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -27,6 +29,7 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -37,6 +40,7 @@ import java.util.stream.Stream;
 public class TownVillagerHandle implements VillagerHolder {
 
     public static final TownVillagerHandlerSerializer SERIALIZER = new TownVillagerHandlerSerializer();
+    private final Map<VillagerUUID, CompoundTag> customData = new HashMap<>();
 
     public static void staticInit() {
         TownVillagerUIs.staticInit();
@@ -594,6 +598,30 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public boolean isUnlocked(JobID jobID) {
         return learning.isUnlocked(jobID);
+    }
+
+    @Override
+    public ServerLevel storeUnprotectedData(
+            @Nullable VillagerUUID from,
+            String key,
+            String value
+    ) {
+        CompoundTag tag = UtilClean.getOrDefault(customData, from, new CompoundTag());
+        tag.putString(key, value);
+        customData.put(from, tag);
+        return null;
+    }
+
+    @Override
+    public @Nullable String getUnprotectedData(
+            @Nullable VillagerUUID from,
+            String key
+    ) {
+        CompoundTag tag = UtilClean.getOrDefault(customData, from, new CompoundTag());
+        if (!tag.contains(key)) {
+            return null;
+        }
+        return tag.getString(key);
     }
 
     public ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs() {

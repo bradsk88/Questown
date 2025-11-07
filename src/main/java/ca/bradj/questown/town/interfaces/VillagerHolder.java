@@ -7,9 +7,11 @@ import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.VillagerStatsData;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -120,4 +122,21 @@ public interface VillagerHolder {
     );
 
     boolean isUnlocked(JobID jobID);
+
+    /**
+     * Do not expect this data to survive a server restart. It might also get overwritten by other mods.
+     */
+    ServerLevel storeUnprotectedData(
+            @Nullable VillagerUUID from,
+            String key,
+            String value
+    );
+
+    /**
+     * Do not expect this data to survive a server restart. It might also get overwritten by other mods.
+     */
+    @Nullable String getUnprotectedData(
+            @Nullable VillagerUUID from,
+            String key
+    );
 }
