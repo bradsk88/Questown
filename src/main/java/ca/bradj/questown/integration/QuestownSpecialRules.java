@@ -117,6 +117,10 @@ public final class QuestownSpecialRules {
                 Questown.ResourceLocation("take_from_slot_2"),
                 new TakeFromSlotSpecialRule(2)
         );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.RANDOM_WORKSPOT_PREFER_SOCIAL),
+                new RandomWorkSpot(true)
+        );
 
         VanillaSpecialRules.register();
     }

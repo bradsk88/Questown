@@ -1,35 +1,37 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.blocks.HospitalBedBlock;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
-import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.properties.BedPart;
-
-import java.util.Collection;
 
 import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
 
-public class ResterWork {
-    public static final String ID = "resting";
+// DowntimeWork represents a job where a villager takes downtime, typically walking around town randomly,
+// with a preference for visiting other villagers. This job has ten states, giving us the ability to
+// trigger the "random workspot" special rule multiple times. But the villager might change back to
+// working before completing all ten states - for example, if they have an "introvert" trait (although
+// traits don't exist yet).
+public class DowntimeWork {
+    public static final String ID = "downtime";
 
-    public static final int BLOCK_STATE_NEED_BED = 0;
-    public static final int BLOCK_STATE_NEED_REST = 1;
-    public static final int BLOCK_STATE_DONE = 2;
+    public static final int BLOCK_STATE_ZERO = 0;
+    public static final int BLOCK_STATE_ONE = 1;
+    public static final int BLOCK_STATE_TWO = 2;
+    public static final int BLOCK_STATE_THREE = 3;
+    public static final int BLOCK_STATE_FOUR = 4;
+    public static final int BLOCK_STATE_FIVE = 5;
+    public static final int BLOCK_STATE_SIX = 6;
+    public static final int BLOCK_STATE_SEVEN = 7;
+    public static final int BLOCK_STATE_EIGHT = 8;
+    public static final int BLOCK_STATE_NINE = 9;
+    public static final int BLOCK_STATE_DONE = 10;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
@@ -37,15 +39,27 @@ public class ResterWork {
     public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of();
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of();
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_BED,
-            1
-    );
-    public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_REST,
-            2000
-    );
+            BLOCK_STATE_ZERO, 1,
+            BLOCK_STATE_ONE, 1,
+            BLOCK_STATE_TWO, 1,
+            BLOCK_STATE_THREE, 1,
+            BLOCK_STATE_FOUR, 1,
+            BLOCK_STATE_FIVE, 1,
+            BLOCK_STATE_SIX, 1,
+            BLOCK_STATE_SEVEN, 1,
+            BLOCK_STATE_EIGHT, 1,
+            BLOCK_STATE_NINE, 1
 
-    public static final int PAUSE_FOR_ACTION = 10;
+    );
+    public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of();
+    public static final int PAUSE_FOR_ACTION = 100;
+
+    // This all gets ignored in favor of RANDOM_WORKSPOT_PREFER_SOCIAL
+    public static final WorkLocation ARBITRARY_LOCATION = new WorkLocation(
+            (ctx) -> true,
+            (blockInfo, blockPos) -> true,
+            SpecialQuests.TOWN_FLAG
+    );
 
     public static Work asWork(
             String rootId
@@ -55,11 +69,7 @@ public class ResterWork {
                 Blocks.BLACK_BED.asItem().getDefaultInstance(),
                 new JobID(rootId, ID),
                 WorksBehaviour.noResultDescription(),
-                new WorkLocation(
-                        (ctx) -> isBed(ctx.blockInfo(), ctx.blockPos()),
-                        ResterWork::isBed,
-                        SpecialQuests.CLINIC
-                ),
+                ARBITRARY_LOCATION,
                 new WorkStates(
                         MAX_STATE,
                         Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
@@ -73,16 +83,12 @@ public class ResterWork {
                         WorkWorldInteractions.ALWAYS_EMPTY_RESULT_GENERATOR
                 ),
                 new WorkSpecialRules(
-                        ImmutableMap.of(
-                                ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_BED),
-                                ImmutableList.of(SpecialRules.LIE_ON_WORKSPOT),
-                                ProductionStatus.EXTRACTING_PRODUCT,
-                                ImmutableList.of(SpecialRules.CLEAR_POSE)
-                        ), ImmutableList.of(
-                        SpecialRules.CLAIM_SPOT,
-                        SpecialRules.WORK_IN_EVENING,
-                        SpecialRules.PREFER_INTERACTION_STAND_ON_TOP
-                )
+                        ImmutableMap.of(), // No stage rules
+                        ImmutableList.of(
+                                SpecialRules.RANDOM_WORKSPOT_PREFER_SOCIAL,
+                                SpecialRules.RANDOM_DOWNTIME_POSE,
+                                SpecialRules.WORK_IN_EVENING
+                        )
                 ),
                 null,
                 new ExpirationRules(
@@ -95,19 +101,11 @@ public class ResterWork {
         );
     }
 
-    private static boolean isBed(
-            WorkLocation.BlockInfo i,
-            BlockPos p
-    ) {
-        boolean isBlock = WorkLocation.isBlock(HospitalBedBlock.class).test(i, p);
-        return isBlock && i.state(p).getValue(BedBlock.PART).equals(BedPart.HEAD);
-    }
-
     public static JobID getIdForRoot(String rootId) {
         return new JobID(rootId, ID);
     }
 
-    public static boolean isResting(JobID jobName) {
+    public static boolean isActive(JobID jobName) {
         return ID.equals(jobName.jobId());
     }
 }

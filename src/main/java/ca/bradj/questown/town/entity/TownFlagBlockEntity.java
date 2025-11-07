@@ -4,6 +4,7 @@ import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.advancements.RoomTrigger;
@@ -19,6 +20,7 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
+import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
@@ -548,6 +550,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
         }
 
+        if (Compat.nextRandomInt(getServerLevel(), 100) <= Config.CHANCE_OF_DOWNTIME.get() - 1) {
+            villagerHandle.changeJobForVillager(ownerUUID, DowntimeWork.getIdForRoot(currentJob.rootId()), false);
+            return true;
+
+        }
+
         if (villagerHandle.hasBlockOfProgress(ownerUUID)) {
             MCHeldItem bop = MCHeldItem.fromTown(ItemsInit.BLOCK_OF_PROGRESS.get());
             villager.tryGiveItem(bop, InventoryFullStrategy.REMOVE_FROM_WORLD);
@@ -641,6 +649,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return healing;
     }
 
+    @SuppressWarnings("removal") // Already using recommended alternative
     @Override
     public @Nullable ContainerTarget<MCContainer, MCTownItem> findMatchingContainer(ContainerTarget.CheckFn<MCTownItem> c) {
         return TownContainers.findMatching(this, c);

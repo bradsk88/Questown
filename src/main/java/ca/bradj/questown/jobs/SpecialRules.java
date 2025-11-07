@@ -55,6 +55,11 @@ public class SpecialRules {
     // sleeping position on top of the workspot for the duration of that
     // state.
     public static final String LIE_ON_WORKSPOT = "lie_on_workspot";
+    // If this rule is active for a job state, the villager will assume a
+    // random position until the work cooldown has ended. This was added
+    // for "downtime" jobs where you want the villager to appear to be
+    // relaxing.
+    public static final String RANDOM_DOWNTIME_POSE = "random_downtime_pose";
     // If this rule is active for a job state, any requested poses will be
     // cleared. For example, LIE_ON_WORKSPOT sets the villager to the sleeping
     // pose on top of their workspot.
@@ -88,4 +93,10 @@ public class SpecialRules {
 
     // Global rule. Disabled experience gaining from this job.
     public static final String NO_EXPERIENCE_GAINED = "no_experience_gained";
+
+    // Global rule. When enabled, after finishing one unit of work, the villager
+    // will choose a random location in the village to walk to before starting
+    // their next unit of work. About half the time, that random location will be
+    // near other villagers.
+    public static final String RANDOM_WORKSPOT_PREFER_SOCIAL = "random_workspot_prefer_social" ;
 }

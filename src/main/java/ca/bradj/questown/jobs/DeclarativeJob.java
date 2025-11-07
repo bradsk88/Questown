@@ -5,6 +5,7 @@ import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.jobs.ItemCheckReplacer;
 import ca.bradj.questown.integration.jobs.JobCheckReplacer;
@@ -45,6 +46,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.apache.logging.log4j.Marker;
@@ -86,6 +88,7 @@ public class DeclarativeJob extends
     private @Nullable Long secondLastSupplyTick = null;
 
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
+    private boolean isFirstTick = true;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -142,7 +145,12 @@ public class DeclarativeJob extends
                     }
                     return null;
                 },
-                (x, i) -> getUnmetNeed(ingredientsRequiredAtStates, ingredientsQtyRequiredAtStates, toolsRequiredAtStates, i),
+                (x, i) -> getUnmetNeed(
+                        ingredientsRequiredAtStates,
+                        ingredientsQtyRequiredAtStates,
+                        toolsRequiredAtStates,
+                        i
+                ),
                 () -> location.baseRoom().toString(), workInterval, sound
         );
         this.maxState = maxState;
@@ -315,13 +323,43 @@ public class DeclarativeJob extends
                 p -> town.getWorkStatusHandle(ownerUUID).getJobBlockState(p),
                 State.fresh()
         );
-        PreTickHook.run(specialGlobalRules, location, heldItems, fn -> rniot.set(fn.apply(rniot.get())), bsFn);
-        specialRules.forEach((state, rules) -> PreTickHook.run(
-                rules,
+
+        boolean firstTick = this.isFirstTick;
+        if (this.isFirstTick) {
+            this.isFirstTick = false;
+        }
+
+        Supplier<ImmutableList<BlockPos>> otherVillagerPositions = () -> town.getVillagerHandle().entities().stream()
+                                                                             .map(
+                                                                                     Entity::getOnPos)
+                                                                             .collect(ImmutableList.toImmutableList());
+        Supplier<BlockPos> randomWalkableTownPosition = () -> town.getRandomWanderTarget(entity.getOnPos());
+        BiConsumer<String, String> writeUnsafeDataToVillager = (k, v) -> town.getVillagerHandle()
+                                                                             .storeUnprotectedData(vme.getVUID(), k, v);
+
+        PreTickHook.run(
+                specialGlobalRules,
+                town::getServerLevel,
                 location,
                 heldItems,
                 fn -> rniot.set(fn.apply(rniot.get())),
-                bsFn
+                bsFn,
+                firstTick,
+                otherVillagerPositions,
+                randomWalkableTownPosition,
+                writeUnsafeDataToVillager
+        );
+        specialRules.forEach((state, rules) -> PreTickHook.run(
+                rules,
+                town::getServerLevel,
+                location,
+                heldItems,
+                fn -> rniot.set(fn.apply(rniot.get())),
+                bsFn,
+                firstTick,
+                otherVillagerPositions,
+                randomWalkableTownPosition,
+                writeUnsafeDataToVillager
         ));
 
         this.roomsNeedingIngredientsOrTools = new RoomsNeedingVillagerInput<>(rniot.get().get());
@@ -977,6 +1015,17 @@ public class DeclarativeJob extends
             Predicate<BlockPos> isJobBlock,
             Function<BlockPos, BlockPos> getRandomAdjacent
     ) {
+        // Call the new pre-hook before any logic
+        AtomicReference<WithReason<BlockPos>> override = new AtomicReference<>(null);
+        ca.bradj.questown.jobs.declarative.PreFindJobSiteHook.run(
+                getGlobalSpecialRules(),
+                (key) -> town.getVillagerHandle().getUnprotectedData(VillagerUUID.from(ownerUUID), key),
+                override::set
+        );
+        if (override.get() != null && override.get().value() != null) {
+            return override.get();
+        }
+
         Map<Integer, SupplyItemStatus> statusItems = getSupplyItemStatus();
         return JobsClean.findJobSite(
                 maxState,

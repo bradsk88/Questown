@@ -36,6 +36,7 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> BIOME_SCAN_RADIUS;
 
+    public static final ForgeConfigSpec.ConfigValue<Integer> CHANCE_OF_DOWNTIME;
     public static final ForgeConfigSpec.ConfigValue<Integer> WANDER_GIVEUP_TICKS;
 
     public static final ForgeConfigSpec.ConfigValue<Integer> FARMER_WEEDS_RARITY;
@@ -217,6 +218,9 @@ public class Config {
 
         // Villagers Config
         BUILDER.push("Villagers");
+        CHANCE_OF_DOWNTIME = BUILDER.comment(
+                "The chance (out of 100) that a villager will decide to take a break instead of working"
+        ).defineInRange("ChanceOfDowntime", 20, 1, 100);
         WANDER_GIVEUP_TICKS = BUILDER.comment(
                 "The limit of time that villagers will spend trying to reach their next destination"
         ).defineInRange("WanderGiveUpTicks", 2000, 1, 24000);

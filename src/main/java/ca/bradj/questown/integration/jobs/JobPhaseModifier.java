@@ -42,6 +42,10 @@ public abstract class JobPhaseModifier {
         public void beforeTick(BeforeTickEvent bxEvent) {
 
         }
+
+        @Override
+        public void beforeFindJobSite(BeforeFindJobSiteEvent event) {
+        }
     };
 
     // Return null if nothing happens.
@@ -88,6 +92,10 @@ public abstract class JobPhaseModifier {
 
     public void beforeInit(BeforeInitEvent bxEvent) {
 
+    }
+
+    public void beforeFindJobSite(BeforeFindJobSiteEvent event) {
+        // Default: do nothing
     }
 
     public boolean postJobBlockCheckPassed(

@@ -15,11 +15,14 @@ import java.util.function.Function;
 
 public record BeforeTickEvent(
         WorkLocation locInfo,
-        ImmutableList<MCHeldItem> heldItems,
+        java.util.function.Supplier<net.minecraft.server.level.ServerLevel> level, ImmutableList<MCHeldItem> heldItems,
         Consumer<Function<
                 RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos>,
                 RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos>
                 >> replaceRoomCheck,
-        Function<BlockPos, @NotNull State> getJobBlockState
+        Function<BlockPos, @NotNull State> getJobBlockState,
+        boolean firstTick, java.util.function.Supplier<ImmutableList<BlockPos>> otherVillagerPositions,
+        java.util.function.Supplier<BlockPos> randomWalkableTownPosition,
+        java.util.function.BiConsumer<String, String> writeUnsafeDataToVillager
 ) {
 }
