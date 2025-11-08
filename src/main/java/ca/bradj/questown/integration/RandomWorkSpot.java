@@ -74,12 +74,12 @@ public class RandomWorkSpot extends JobPhaseModifier {
     @Override
     public Void beforeMoveToNextState(BeforeMoveToNextStateEvent event) {
         Void unused = super.beforeMoveToNextState(event);
-        choosePosAndStoreOnVillager(
-                event.otherVillagerPositions(),
-                event.randomWalkableTownPosition(),
-                event.writeUnsafeDataToVillager(),
-                event.level().get()
-        );
+//        choosePosAndStoreOnVillager(
+//                event.otherVillagerPositions(),
+//                event.randomWalkableTownPosition(),
+//                event.writeUnsafeDataToVillager(),
+//                event.level().get()
+//        );
         return unused;
     }
 }

@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -33,6 +34,12 @@ public class WorkStates {
             ImmutableMap<Integer, Supplier<Integer>> timeRequired
     ) {
         this.maxState = maxState;
+        if (maxState >= ProductionStatus.firstNonCustomIndex) {
+            throw new IllegalStateException("WorkStates maxState exceeds hard-coded limit of "
+                    + ProductionStatus.firstNonCustomIndex + ". If you really need more states, "
+                    + "please open a ticket on https://github.com/bradsk88/questown/issues"
+            );
+        }
         this.ingredientsRequired = ingredientsRequired;
         this.ingredientQtyRequired = ingredientQtyRequired;
         this.toolsRequired = toolsRequired;

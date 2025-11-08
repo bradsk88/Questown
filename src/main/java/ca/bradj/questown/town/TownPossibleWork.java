@@ -32,6 +32,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
+import java.text.NumberFormat;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -69,12 +70,12 @@ public class TownPossibleWork {
         roots.forEach(root -> {
             List<JobPossibility> unfilteredJobs = getJobsSortedByPossibility(root, rjs, t);
             // TODO: Only log this if the player has enabled in-depth logging
-            QT.FLAG_LOGGER.debug("Possible jobs for root {}: [{}]", root,
+            QT.FLAG_LOGGER.debug("Possible jobs for root {}: [\n{}\n]", root,
                     Strings.join(
                             unfilteredJobs.stream()
                                           .map(JobPossibility::toString)
                                           .toList(),
-                            ","
+                            "\n"
                     )
             );
 
@@ -139,7 +140,7 @@ public class TownPossibleWork {
         public String toString() {
             return "JobPossibility{" +
                     "jobID=" + jobID +
-                    ", score=" + score +
+                    ", score=" + score.map(v -> NumberFormat.getNumberInstance().format(Math.round(v * 1000.0) / 1000.0)) +
                     '}';
         }
     }

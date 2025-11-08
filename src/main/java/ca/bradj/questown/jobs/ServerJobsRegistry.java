@@ -265,6 +265,7 @@ public class ServerJobsRegistry {
         b.add(SpecialJob.fromWork(DinerRawFoodWork::isDining, id -> DinerRawFoodWork.asWork(id.rootId())));
         b.add(SpecialJob.fromWork(ResterWork::isResting, id -> ResterWork.asWork(id.rootId())));
         b.add(SpecialJob.fromWork(BOPDepositorWork::matches, id -> BOPDepositorWork.asWork(id.rootId())));
+        b.add(SpecialJob.fromWork(DowntimeWork::matches, id -> DowntimeWork.asWork(id.rootId())));
 
         specialJobs = b.build();
     }
@@ -477,9 +478,19 @@ public class ServerJobsRegistry {
         return (items) -> ImmutableList.copyOf(w.get().needs.apply(items));
     }
 
-    private static Supplier<Work> getWorkSupplier(JobID p) {
-        //noinspection removal ServerJobsRegistry is the only entity who should use Works
-        return Works.get(p);
+    private static @Nullable Supplier<Work> getWorkSupplier(JobID p) {
+        Supplier<Work> workSupplier = Works.get(p);
+        if (workSupplier == null) {
+            QT.JOB_LOGGER.error("No work found for job ID: {}. Falling back to any job in the same root ID.", p);
+            ImmutableSet<Map.Entry<JobID, Supplier<Work>>> sameRoomFallback = Works.entrySet(p.rootId());
+            Iterator<Map.Entry<JobID, Supplier<Work>>> i = sameRoomFallback.iterator();
+            if (!i.hasNext()) {
+                QT.JOB_LOGGER.error("No fallback work found for root ID: {}", p.rootId());
+                return null;
+            }
+            return i.next().getValue();
+        }
+        return workSupplier;
     }
 
     public static ItemStack getDefaultWorkForNewWorker(JobID v) {
