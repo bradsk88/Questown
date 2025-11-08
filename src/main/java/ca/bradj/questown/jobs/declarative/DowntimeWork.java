@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.blocks.HospitalBedBlock;
+import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
@@ -8,8 +10,11 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.properties.BedPart;
 
 import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
 
@@ -30,8 +35,7 @@ public class DowntimeWork {
     public static final int BLOCK_STATE_SIX = 6;
     public static final int BLOCK_STATE_SEVEN = 7;
     public static final int BLOCK_STATE_EIGHT = 8;
-    public static final int BLOCK_STATE_NINE = 9;
-    public static final int BLOCK_STATE_DONE = 10;
+    public static final int BLOCK_STATE_DONE = 9;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
@@ -47,17 +51,16 @@ public class DowntimeWork {
             BLOCK_STATE_FIVE, 1,
             BLOCK_STATE_SIX, 1,
             BLOCK_STATE_SEVEN, 1,
-            BLOCK_STATE_EIGHT, 1,
-            BLOCK_STATE_NINE, 1
+            BLOCK_STATE_EIGHT, 1
 
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of();
     public static final int PAUSE_FOR_ACTION = 100;
 
-    // This all gets ignored in favor of RANDOM_WORKSPOT_PREFER_SOCIAL
+    // This is only used for work_state storage because of RANDOM_WORKSPOT_PREFER_SOCIAL
     public static final WorkLocation ARBITRARY_LOCATION = new WorkLocation(
-            (ctx) -> true,
-            (blockInfo, blockPos) -> true,
+            (ctx) -> isFlag(ctx.blockInfo(), ctx.blockPos()),
+            DowntimeWork::isFlag,
             SpecialQuests.TOWN_FLAG
     );
 
@@ -85,6 +88,8 @@ public class DowntimeWork {
                 new WorkSpecialRules(
                         ImmutableMap.of(), // No stage rules
                         ImmutableList.of(
+                                SpecialRules.ALWAYS_CONSIDER,
+                                SpecialRules.ALWAYS_POPULATE_JOBSITE,
                                 SpecialRules.RANDOM_WORKSPOT_PREFER_SOCIAL,
                                 SpecialRules.RANDOM_DOWNTIME_POSE,
                                 SpecialRules.WORK_IN_EVENING
@@ -95,7 +100,7 @@ public class DowntimeWork {
                         () -> Long.MAX_VALUE,
                         () -> Long.MAX_VALUE,
                         jobId -> jobId,
-                        Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
+                        Compat.configGet(Config.MAX_DOWNTIME_TICKS),
                         WorkSeekerJob::getIDForRoot
                 )
         );
@@ -105,7 +110,14 @@ public class DowntimeWork {
         return new JobID(rootId, ID);
     }
 
-    public static boolean isActive(JobID jobName) {
+    public static boolean matches(JobID jobName) {
         return ID.equals(jobName.jobId());
+    }
+
+    private static boolean isFlag(
+            WorkLocation.BlockInfo i,
+            BlockPos p
+    ) {
+        return WorkLocation.isBlock(TownFlagBlock.class).test(i, p);
     }
 }

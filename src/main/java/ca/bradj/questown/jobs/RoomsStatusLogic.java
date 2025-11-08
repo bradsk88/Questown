@@ -85,9 +85,7 @@ public class RoomsStatusLogic {
         }
         if (!requiresTools) {
             for (int i = 0; i < maxState; i++) {
-                Collection<MATCH> workable = roomsWithState(
-                        jobRooms, getJobBlockState, i, isJobBlock, State::hasWorkLeft
-                );
+                Collection<MATCH> workable = roomsWithState(jobRooms, getJobBlockState, i, isJobBlock, State::hasWorkLeft);
                 UtilClean.addAllOrInitializeList(b, i, workable.stream().map(v -> new NVIRoom<>(v, true)).toList());
             }
         }

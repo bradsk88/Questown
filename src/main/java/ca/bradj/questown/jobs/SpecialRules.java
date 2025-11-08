@@ -99,4 +99,8 @@ public class SpecialRules {
     // their next unit of work. About half the time, that random location will be
     // near other villagers.
     public static final String RANDOM_WORKSPOT_PREFER_SOCIAL = "random_workspot_prefer_social" ;
+
+    // Global rule. When enabled, the villager's job site will always be populated
+    // even if their status is not "going to jobsite".
+    public static final String ALWAYS_POPULATE_JOBSITE = "always_populate_jobsite";
 }

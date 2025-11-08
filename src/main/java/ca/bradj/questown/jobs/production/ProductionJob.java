@@ -332,12 +332,9 @@ public abstract class ProductionJob<
             STATUS status,
             @NotNull ServerLevel sl
     ) {
-        // TODO: Allow modders to short-circuit this and set another target (like PreStateChangeHook)
-        //  if (target = BeforeTargetSelection.run(...)) {
-        //    return target;
-        if (status.isGoingToJobsite()) {
+        if (status.isGoingToJobsite() || specialGlobalRules.contains(SpecialRules.ALWAYS_POPULATE_JOBSITE)) {
             BlockPos jobSite1 = getJobSite(town);
-            this.setLookTarget(jobSite1);
+            this.setLookTarget(jobSite1); // TODO[ASAP]: Use special rule to determine non-job look target
             return jobSite1;
         }
 
