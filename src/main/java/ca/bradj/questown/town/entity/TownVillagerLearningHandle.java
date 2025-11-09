@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
@@ -55,6 +56,9 @@ public class TownVillagerLearningHandle {
         ImmutableSet<JobID> representativeJobs = ServerJobsRegistry.getAllJobs();
         boolean changed = delegate.tick(representativeJobs);
         if (!changed) return;
+        if (!town.getUnsafe().isDebugLogEnabled(DebugLogArgument.AWARENESS_COMPUTE)) {
+            return;
+        }
         for (Map.Entry<JobID, ImmutableList<JobID>> pc : delegate.getNextJobAwarenesses().entrySet()) {
             QT.FLAG_LOGGER.debug(
                     "Computed next awareness for {}: {}",

@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.gui.Ingredients;
@@ -69,15 +70,9 @@ public class TownPossibleWork {
         ImmutableSet<Map.Entry<JobID, Supplier<Work>>> rjs = Works.regularJobs();
         roots.forEach(root -> {
             List<JobPossibility> unfilteredJobs = getJobsSortedByPossibility(root, rjs, t);
-            // TODO: Only log this if the player has enabled in-depth logging
-            QT.FLAG_LOGGER.debug("Possible jobs for root {}: [\n{}\n]", root,
-                    Strings.join(
-                            unfilteredJobs.stream()
-                                          .map(JobPossibility::toString)
-                                          .toList(),
-                            "\n"
-                    )
-            );
+            if (t.isDebugLogEnabled(DebugLogArgument.JOB_POSSIBILITIES_COMPUTE)) {
+                bigLog(root, unfilteredJobs);
+            }
 
             List<JobPossibility> jobs = unfilteredJobs.stream().filter(
                     v -> v.score.value > Config.PREFERRED_JOB_ACCEPTANCE.get()
@@ -99,6 +94,21 @@ public class TownPossibleWork {
             );
         });
         shouldRecompute = false;
+    }
+
+    private static void bigLog(
+            String root,
+            List<JobPossibility> unfilteredJobs
+    ) {
+        QT.FLAG_LOGGER.debug(
+                "Possible jobs for root {}: [\n{}\n]", root,
+                Strings.join(
+                        unfilteredJobs.stream()
+                                      .map(JobPossibility::toString)
+                                      .toList(),
+                        "\n"
+                )
+        );
     }
 
     private void registerUnmetNeeds(String root) {

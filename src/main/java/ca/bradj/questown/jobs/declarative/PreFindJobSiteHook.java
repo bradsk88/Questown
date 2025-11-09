@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.integration.SpecialRulesRegistry;
 import ca.bradj.questown.integration.jobs.BeforeFindJobSiteEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
+import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 
@@ -15,11 +16,11 @@ import static ca.bradj.questown.jobs.declarative.PrePostHooks.processMulti;
 public class PreFindJobSiteHook {
     public static void run(
             Collection<String> rules,
-            Function<String, String> getUnsafeDataFromVillager,
+            UnsafeVillagerData unsafeVillagerData,
             Consumer<WithReason<BlockPos>> applyWorkspotOverride
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
-        BeforeFindJobSiteEvent evt = new BeforeFindJobSiteEvent(getUnsafeDataFromVillager, applyWorkspotOverride);
+        BeforeFindJobSiteEvent evt = new BeforeFindJobSiteEvent(unsafeVillagerData, applyWorkspotOverride);
         processMulti(false, appliers, (o, a) -> {
             a.beforeFindJobSite(evt);
             return true;

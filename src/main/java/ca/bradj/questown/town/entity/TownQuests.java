@@ -3,6 +3,7 @@ package ca.bradj.questown.town.entity;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.init.TagsInit;
@@ -366,7 +367,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 }
         );
 
-        if (canGrowMore) {
+        if (canGrowMore && town.isDebugLogEnabled(DebugLogArgument.QUEST_BATCH_COMPUTE_NEXT)) {
             QT.QUESTS_LOGGER.debug(
                     "Batch after growth is: ({}/{})[{}]",
                     pop.getCostSoFar(),
