@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
@@ -601,27 +602,36 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
-    public ServerLevel storeUnprotectedData(
-            @Nullable VillagerUUID from,
-            String key,
-            String value
-    ) {
-        CompoundTag tag = UtilClean.getOrDefault(customData, from, new CompoundTag());
-        tag.putString(key, value);
-        customData.put(from, tag);
-        return null;
-    }
+    public UnsafeVillagerData getUnprotectedDataHandle(@Nullable VillagerUUID vuid) {
+        return new UnsafeVillagerData() {
+            @Override
+            public String get(String key) {
 
-    @Override
-    public @Nullable String getUnprotectedData(
-            @Nullable VillagerUUID from,
-            String key
-    ) {
-        CompoundTag tag = UtilClean.getOrDefault(customData, from, new CompoundTag());
-        if (!tag.contains(key)) {
-            return null;
-        }
-        return tag.getString(key);
+                CompoundTag tag = UtilClean.getOrDefault(customData, vuid, new CompoundTag());
+                if (!tag.contains(key)) {
+                    return null;
+                }
+                return tag.getString(key);
+            }
+
+            @Override
+            public void write(
+                    String key,
+                    String value
+            ) {
+
+                CompoundTag tag = UtilClean.getOrDefault(customData, vuid, new CompoundTag());
+                tag.putString(key, value);
+                customData.put(vuid, tag);
+            }
+
+            @Override
+            public void clear(String key) {
+                CompoundTag tag = UtilClean.getOrDefault(customData, vuid, new CompoundTag());
+                tag.remove(key);
+                customData.put(vuid, tag);
+            }
+        };
     }
 
     public ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs() {

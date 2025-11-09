@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.blocks.HospitalBedBlock;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.*;
@@ -12,9 +11,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.properties.BedPart;
 
 import static ca.bradj.questown.jobs.WorksBehaviour.productionWork;
 
@@ -90,7 +87,7 @@ public class DowntimeWork {
                         ImmutableList.of(
                                 SpecialRules.ALWAYS_CONSIDER,
                                 SpecialRules.ALWAYS_POPULATE_JOBSITE,
-                                SpecialRules.RANDOM_WORKSPOT_PREFER_SOCIAL,
+                                SpecialRules.RANDOM_SHORT_LIVED_WORKSPOT_PREFER_SOCIAL,
                                 SpecialRules.RANDOM_DOWNTIME_POSE,
                                 SpecialRules.WORK_IN_EVENING
                         )

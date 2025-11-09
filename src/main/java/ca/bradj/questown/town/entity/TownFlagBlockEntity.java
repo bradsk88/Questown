@@ -88,6 +88,8 @@ import static ca.bradj.questown.town.entity.TownFlagState.NBT_TIME_WARP_REFERENC
 public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>, TownPois.Listener {
 
+    private final Map<String, Boolean> logToggles = new HashMap<>();
+
     final TownKnownBiomes biomes = new TownKnownBiomes();
     TownHealingHandle healing = new TownHealingHandle();
     private final TownFlagInitialization initializer;
@@ -627,7 +629,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return null;
         }
         ImmutableList<MCRoom> allRooms = roomsHandle.getAllRoomsIncludingMetaAndFarms();
-        return pois.getWanderTarget(
+        BlockPos townPos = pois.getWanderTarget(
                 getServerLevel(), allRooms, (p, r) -> {
                     BlockPos pos = Positions.ToBlock(p, r.yCoord);
                     double dist = pos.distSqr(avoiding);
@@ -638,6 +640,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                     return false;
                 }, (p, r) -> Positions.ToBlock(p, r.yCoord)
         );
+        if (townPos == null) {
+            QT.FLAG_LOGGER.warn("Could not find wander target avoiding {}", avoiding);
+            return townPos;
+        }
+        return townPos;
     }
 
     public ImmutableSet<UUID> getVillagers() {
@@ -809,5 +816,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ItemStack stack = new ItemStack(Items.CARROT, 10);
         level.addFreshEntity(new ItemEntity(level, pos.getX(), pos.getY(), pos.getZ(), stack));
         givenBonusFood = true;
+    }
+
+    public void toggleDebugLog(String logId) {
+        logToggles.compute(logId, (k, v) -> v == null || !v);
+    }
+
+    @Override
+    public boolean isDebugLogEnabled(String logId) {
+        return logToggles.getOrDefault(logId, false);
     }
 }

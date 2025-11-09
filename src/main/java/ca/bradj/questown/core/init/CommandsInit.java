@@ -1,6 +1,7 @@
 package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.commands.JobArgument;
 import net.minecraft.commands.synchronization.ArgumentTypeInfo;
 import net.minecraft.commands.synchronization.ArgumentTypeInfos;
@@ -20,6 +21,10 @@ public class CommandsInit {
     public static final RegistryObject<ArgumentTypeInfo<JobArgument, ?>> SET_JOB = COMMAND_TYPES.register(
             "setjob",
             () -> ArgumentTypeInfos.registerByClass(JobArgument.class, SingletonArgumentInfo.contextAware(JobArgument::new))
+    );
+    public static final RegistryObject<ArgumentTypeInfo<DebugLogArgument, ?>> TOGGLE_DEBUG = COMMAND_TYPES.register(
+            "toggle_debug",
+            () -> ArgumentTypeInfos.registerByClass(DebugLogArgument.class, SingletonArgumentInfo.contextAware(DebugLogArgument::new))
     );
 
     public static void register(IEventBus bus) {

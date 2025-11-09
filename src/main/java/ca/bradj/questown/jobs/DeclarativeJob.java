@@ -10,6 +10,7 @@ import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.jobs.ItemCheckReplacer;
 import ca.bradj.questown.integration.jobs.JobCheckReplacer;
 import ca.bradj.questown.integration.jobs.SupplyRoomCheckReplacer;
+import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -330,12 +331,12 @@ public class DeclarativeJob extends
         }
 
         Supplier<ImmutableList<BlockPos>> otherVillagerPositions = () -> town.getVillagerHandle().entities().stream()
+                                                                             .filter(v -> !ownerUUID.equals(v.getUUID()))
                                                                              .map(
                                                                                      Entity::getOnPos)
                                                                              .collect(ImmutableList.toImmutableList());
         Supplier<BlockPos> randomWalkableTownPosition = () -> town.getRandomWanderTarget(entity.getOnPos());
-        BiConsumer<String, String> writeUnsafeDataToVillager = (k, v) -> town.getVillagerHandle()
-                                                                             .storeUnprotectedData(vme.getVUID(), k, v);
+        UnsafeVillagerData villagerData = town.getVillagerHandle().getUnprotectedDataHandle(vme.getVUID());
 
         PreTickHook.run(
                 specialGlobalRules,
@@ -347,7 +348,7 @@ public class DeclarativeJob extends
                 firstTick,
                 otherVillagerPositions,
                 randomWalkableTownPosition,
-                writeUnsafeDataToVillager
+                villagerData
         );
         specialRules.forEach((state, rules) -> PreTickHook.run(
                 rules,
@@ -359,7 +360,7 @@ public class DeclarativeJob extends
                 firstTick,
                 otherVillagerPositions,
                 randomWalkableTownPosition,
-                writeUnsafeDataToVillager
+                villagerData
         ));
 
         this.roomsNeedingIngredientsOrTools = new RoomsNeedingVillagerInput<>(rniot.get().get());
@@ -851,7 +852,7 @@ public class DeclarativeJob extends
         Map<Integer, List<WorkPosition<BlockPos>>> b = new HashMap<>();
         Consumer<BlockPos> tryAdd = bp -> tryAddSpot(town, bp, b, is, isJobBlock);
 
-        jobSite.room().getSpaces().stream().flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space).stream())
+        jobSite.room().getSpaces().stream().flatMap(space -> InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY).stream())
                .forEach(v -> {
                    BlockPos pos = Positions.ToBlock(v, jobSite.room().yCoord);
                    tryAdd.accept(pos);
@@ -1017,9 +1018,10 @@ public class DeclarativeJob extends
     ) {
         // Call the new pre-hook before any logic
         AtomicReference<WithReason<BlockPos>> override = new AtomicReference<>(null);
+        UnsafeVillagerData data = town.getVillagerHandle().getUnprotectedDataHandle(VillagerUUID.from(ownerUUID));
         ca.bradj.questown.jobs.declarative.PreFindJobSiteHook.run(
                 getGlobalSpecialRules(),
-                (key) -> town.getVillagerHandle().getUnprotectedData(VillagerUUID.from(ownerUUID), key),
+                data,
                 override::set
         );
         if (override.get() != null && override.get().value() != null) {

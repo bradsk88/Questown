@@ -81,6 +81,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     int getBlocksOfProgress();
 
+    boolean isDebugLogEnabled(String logId);
+
     interface MatchRecipe {
         boolean doesMatch(Block item);
     }

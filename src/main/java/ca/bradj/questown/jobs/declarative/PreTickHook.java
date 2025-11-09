@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.integration.SpecialRulesRegistry;
 import ca.bradj.questown.integration.jobs.BeforeTickEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
+import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.WorkLocation;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
@@ -37,7 +38,7 @@ public class PreTickHook {
             boolean firstTick,
             Supplier<ImmutableList<BlockPos>> otherVillagerPositions,
             Supplier<BlockPos> randomWalkableTownPosition,
-            BiConsumer<String, String> writeUnsafeDataToVillager
+            UnsafeVillagerData villagerData
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
         BeforeTickEvent bxEvent = new BeforeTickEvent(
@@ -49,7 +50,7 @@ public class PreTickHook {
                 firstTick,
                 otherVillagerPositions,
                 randomWalkableTownPosition,
-                writeUnsafeDataToVillager
+                villagerData
         );
         processMulti(false, appliers, (o, a) -> {
             a.beforeTick(bxEvent);

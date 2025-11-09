@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.PoseInPlace;
@@ -123,20 +124,5 @@ public interface VillagerHolder {
 
     boolean isUnlocked(JobID jobID);
 
-    /**
-     * Do not expect this data to survive a server restart. It might also get overwritten by other mods.
-     */
-    ServerLevel storeUnprotectedData(
-            @Nullable VillagerUUID from,
-            String key,
-            String value
-    );
-
-    /**
-     * Do not expect this data to survive a server restart. It might also get overwritten by other mods.
-     */
-    @Nullable String getUnprotectedData(
-            @Nullable VillagerUUID from,
-            String key
-    );
+    UnsafeVillagerData getUnprotectedDataHandle(@Nullable VillagerUUID vuid);
 }

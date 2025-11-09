@@ -1,8 +1,11 @@
 package ca.bradj.questown.jobs.production;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
+import ca.bradj.questown.integration.RandomShortLivedWorkSpot;
+import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -90,7 +93,7 @@ public abstract class ProductionJob<
     ) {
         // Don't recompute jobsite if we already have a target.
         // But DO retry every once in a while to account for "stuck villager" bugs
-        if (this.jobSite == null || Compat.nextRandomInt(town.getServerLevel(), 200) == 0) {
+        if (shouldFindJobSite(town)) {
             ServerLevel sl = town.getServerLevel();
             if (sl == null) {
                 return null;
@@ -113,6 +116,13 @@ public abstract class ProductionJob<
             }
         }
         return jobSite;
+    }
+
+    private boolean shouldFindJobSite(TownInterface town) {
+        if (this.jobSite == null) return true;
+        if (Compat.nextRandomInt(town.getServerLevel(), 200) == 0) return true;
+        UnsafeVillagerData data = town.getVillagerHandle().getUnprotectedDataHandle(VillagerUUID.from(ownerUUID));
+        return (RandomShortLivedWorkSpot.hasTargetChanged(data, this.jobSite));
     }
 
     protected abstract boolean isJobBlock(
@@ -332,7 +342,7 @@ public abstract class ProductionJob<
             STATUS status,
             @NotNull ServerLevel sl
     ) {
-        if (status.isGoingToJobsite() || specialGlobalRules.contains(SpecialRules.ALWAYS_POPULATE_JOBSITE)) {
+        if (shouldRefreshJobSite(status)) {
             BlockPos jobSite1 = getJobSite(town);
             this.setLookTarget(jobSite1); // TODO[ASAP]: Use special rule to determine non-job look target
             return jobSite1;
@@ -367,6 +377,12 @@ public abstract class ProductionJob<
         }
 
         return null;
+    }
+
+    private boolean shouldRefreshJobSite(STATUS status) {
+        if (status.isGoingToJobsite()) return true;
+        if (status.isDroppingLoot()) return false;
+        return specialGlobalRules.contains(SpecialRules.ALWAYS_POPULATE_JOBSITE);
     }
 
     protected @Nullable ContainerTarget<MCContainer, MCTownItem> getDropTargetForLoot(

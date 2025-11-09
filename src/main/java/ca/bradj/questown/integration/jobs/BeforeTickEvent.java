@@ -23,6 +23,6 @@ public record BeforeTickEvent(
         Function<BlockPos, @NotNull State> getJobBlockState,
         boolean firstTick, java.util.function.Supplier<ImmutableList<BlockPos>> otherVillagerPositions,
         java.util.function.Supplier<BlockPos> randomWalkableTownPosition,
-        java.util.function.BiConsumer<String, String> writeUnsafeDataToVillager
+        UnsafeVillagerData villagerData
 ) {
 }
