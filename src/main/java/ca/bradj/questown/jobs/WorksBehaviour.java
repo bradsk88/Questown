@@ -235,8 +235,8 @@ public class WorksBehaviour {
                 // rules will just fall back to original job, so it will
                 // effectively keep doing this job forever - even though it
                 // does technically "expire".
-                Config.MAX_INITIAL_TICKS_WITHOUT_SUPPLIES::get,
-                Config.MAX_TICKS_WITHOUT_SUPPLIES::get,
+                Config.MAX_INITIAL_TICKS_WITHOUT_SUPPLIES,
+                Config.MAX_TICKS_WITHOUT_SUPPLIES,
                 WorkSeekerJob::getIDForRoot,
                 () -> 3000L,
                 jobId -> jobId

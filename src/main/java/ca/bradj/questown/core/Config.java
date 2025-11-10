@@ -224,7 +224,7 @@ public class Config {
         ).defineInRange("ChanceOfDowntime", 20, 1, 100);
         MAX_DOWNTIME_TICKS = BUILDER.comment(
                 "The number of ticks that a villager will spend on downtime before they decide to go back to work"
-        ).defineInRange("MaxDowntimeTicks", 5000L, 1, 24000);
+        ).defineInRange("MaxDowntimeTicks", 1000L, 1, 24000);
         WANDER_GIVEUP_TICKS = BUILDER.comment(
                 "The limit of time that villagers will spend trying to reach their next destination"
         ).defineInRange("WanderGiveUpTicks", 2000, 1, 24000);
