@@ -617,6 +617,8 @@ public class DeclarativeJob extends
         return new JobLogic.JLWorld<>() {
             @Override
             public void changeJob(JobID id) {
+                UnsafeVillagerData data = town.getVillagerHandle().getUnprotectedDataHandle(entity.getVUID());
+                PreMaxTicksJobChangeHook.run(specialGlobalRules, data);
                 town.getVillagerHandle().changeJobForVillager(ownerUUID, id, false);
             }
 

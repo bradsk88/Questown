@@ -130,14 +130,9 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
     }
 
     @Override
-    public Void beforeMoveToNextState(BeforeMoveToNextStateEvent event) {
-        Void unused = super.beforeMoveToNextState(event);
-//        choosePosAndStoreOnVillager(
-//                event.otherVillagerPositions(),
-//                event.randomWalkableTownPosition(),
-//                event.writeUnsafeDataToVillager(),
-//                event.level().get()
-//        );
-        return unused;
+    public void beforeMaxTicksJobChange(BeforeMaxTicksJobChangeEvent ctx) {
+        super.beforeMaxTicksJobChange(ctx);
+        ctx.unsafeVillagerData().clear(DATA_KEY_WORKSPOT_OVERRIDE);
+        ctx.unsafeVillagerData().clear(DATA_KEY_WORKSPOT_OVERRIDE_UNTIL);
     }
 }

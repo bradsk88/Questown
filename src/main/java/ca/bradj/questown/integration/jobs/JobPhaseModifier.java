@@ -103,4 +103,8 @@ public abstract class JobPhaseModifier {
     ) {
         return true;
     }
+    public void beforeMaxTicksJobChange(
+            BeforeMaxTicksJobChangeEvent ctx
+    ) {
+    }
 }
