@@ -137,7 +137,9 @@ public class ClientSideThrowingJob implements Job<MCHeldItem, ImmutableSnapshot<
     }
 
     @Override
-    public boolean shouldStandStill() {
+    public boolean shouldStandStill(
+            TownInterface town,
+            BlockPos position) {
         return false;
     }
 

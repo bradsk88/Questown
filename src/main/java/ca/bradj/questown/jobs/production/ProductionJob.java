@@ -121,6 +121,10 @@ public abstract class ProductionJob<
     private boolean shouldFindJobSite(TownInterface town) {
         if (this.jobSite == null) return true;
         if (Compat.nextRandomInt(town.getServerLevel(), 200) == 0) return true;
+        return hasTargetOverrideChanged(town);
+    }
+
+    protected final boolean hasTargetOverrideChanged(TownInterface town) {
         UnsafeVillagerData data = town.getVillagerHandle().getUnprotectedDataHandle(VillagerUUID.from(ownerUUID));
         return (RandomShortLivedWorkSpot.hasTargetChanged(data, this.jobSite));
     }
@@ -153,6 +157,15 @@ public abstract class ProductionJob<
 
     protected void clearJobSite() {
         this.jobSite = null;
+    }
+
+    protected final boolean isCloseToJobSite(
+            BlockPos entityPos
+    ) {
+        if (this.jobSite == null) {
+            return false;
+        }
+        return isCloseTo(entityPos, this.jobSite);
     }
 
     public boolean isDropping() {

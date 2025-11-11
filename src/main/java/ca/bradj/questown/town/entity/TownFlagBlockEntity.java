@@ -552,18 +552,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
         }
 
-        long tick = Util.getTick(getServerLevel());
-        VillagerUUID ownerVUID = VillagerUUID.from(ownerUUID);
-        if (villagerHandle.isReadyForDowntime(ownerVUID, tick) && !DowntimeWork.matches(currentJob)) {
-            villagerHandle.changeJobForVillager(ownerUUID, DowntimeWork.getIdForRoot(currentJob.rootId()), false);
-            return true;
-        }
-
         if (villagerHandle.hasBlockOfProgress(ownerUUID)) {
             MCHeldItem bop = MCHeldItem.fromTown(ItemsInit.BLOCK_OF_PROGRESS.get());
             villager.tryGiveItem(bop, InventoryFullStrategy.REMOVE_FROM_WORLD);
             JobID depositor = BOPDepositorWork.getIdForRoot(currentJob.rootId());
             villagerHandle.changeJobForVillager(ownerUUID, depositor, false);
+            return true;
+        }
+
+        long tick = Util.getTick(getServerLevel());
+        VillagerUUID ownerVUID = VillagerUUID.from(ownerUUID);
+        if (villagerHandle.isReadyForDowntime(ownerVUID, tick) && !DowntimeWork.matches(currentJob)) {
+            villagerHandle.changeJobForVillager(ownerUUID, DowntimeWork.getIdForRoot(currentJob.rootId()), false);
             return true;
         }
 
