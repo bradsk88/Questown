@@ -253,7 +253,13 @@ public class DeclarativeJob extends
     }
 
     @Override
-    public boolean shouldStandStill() {
+    public boolean shouldStandStill(
+            TownInterface town,
+            BlockPos position) {
+        // TODO: Remove this hack and use a special rule instead
+        if (DowntimeWork.matches(jobId) && isCloseToJobSite(position) &&!hasTargetOverrideChanged(town)) {
+            return true;
+        }
         return this.logic.hasWorkedRecently();
     }
 

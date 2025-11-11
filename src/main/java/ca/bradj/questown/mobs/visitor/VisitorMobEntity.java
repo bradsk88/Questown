@@ -601,7 +601,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     private void trySetWalkTargetFromJob(Job<?, ?, ? extends IStatus<?>> j) {
-        if (j.shouldStandStill()) {
+        if (j.shouldStandStill(town, blockPosition())) {
             getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
             return;
         }
@@ -1408,7 +1408,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public boolean shouldStandStill() {
-        return job.get().shouldStandStill();
+        return job.get().shouldStandStill(town, blockPosition());
     }
 
     public boolean canStopWorkingAtAnyTime() {

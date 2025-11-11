@@ -79,7 +79,9 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     void removeStatusListener(StatusListener l);
 
-    boolean shouldStandStill();
+    boolean shouldStandStill(
+            TownInterface town,
+            BlockPos position);
 
     boolean canStopWorkingAtAnyTime();
 
