@@ -142,7 +142,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             SensorType.NEAREST_BED
     );
     private static final int inventoryCapacity = 6;
-    private static final float slowWalkSpeed = 0.2f;
+    private static final float slowWalkSpeed = 0.25f;
     private static final float walkSpeed = 0.3f;
     private static final float runSpeed = 0.4f;
     private final ArrayList<Integer> tickTimes = new ArrayList<>();
@@ -1114,6 +1114,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (nodeCount < 10) {
             return;
         }
+        if (job.get().getGlobalSpecialRules().contains(SpecialRules.SLOW_WALK)) {
+            getNavigation().setSpeedModifier(slowWalkSpeed);
+            return;
+        }
+
         if (vPath.getNextNodeIndex() > nodeCount * 0.75f) {
             getNavigation().setSpeedModifier(walkSpeed);
             return;

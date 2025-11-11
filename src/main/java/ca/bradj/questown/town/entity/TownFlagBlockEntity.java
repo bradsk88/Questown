@@ -552,10 +552,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
         }
 
-        if (Compat.nextRandomInt(getServerLevel(), 100) <= Config.CHANCE_OF_DOWNTIME.get() - 1) {
+        long tick = Util.getTick(getServerLevel());
+        VillagerUUID ownerVUID = VillagerUUID.from(ownerUUID);
+        if (villagerHandle.isReadyForDowntime(ownerVUID, tick) && !DowntimeWork.matches(currentJob)) {
             villagerHandle.changeJobForVillager(ownerUUID, DowntimeWork.getIdForRoot(currentJob.rootId()), false);
             return true;
-
         }
 
         if (villagerHandle.hasBlockOfProgress(ownerUUID)) {

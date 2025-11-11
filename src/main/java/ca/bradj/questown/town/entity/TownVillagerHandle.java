@@ -9,6 +9,7 @@ import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
+import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -22,7 +23,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -42,6 +42,7 @@ public class TownVillagerHandle implements VillagerHolder {
 
     public static final TownVillagerHandlerSerializer SERIALIZER = new TownVillagerHandlerSerializer();
     private final Map<VillagerUUID, CompoundTag> customData = new HashMap<>();
+    private final Map<VillagerUUID, Long> mostRecentDowntimeTick = new HashMap<>();
 
     public static void staticInit() {
         TownVillagerUIs.staticInit();
@@ -175,7 +176,7 @@ public class TownVillagerHandle implements VillagerHolder {
         int experienceNum = Util.getOrDefault(experience, uuid, 0);
         int experienceTarget = (int) getExpForCurrentLevel(uuid);
         return new VillagerStatsData(
-                // TODO: Track max fullness per villager based on their traits
+                // TODO[Traits]: Track max unique fullness level per villager
                 fullnessPercent, experienceNum, experienceTarget, moods.getMood(uuid), damagePercent);
     }
 
@@ -218,6 +219,10 @@ public class TownVillagerHandle implements VillagerHolder {
         if (f == null) {
             QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobID);
             return;
+        }
+
+        if (DowntimeWork.matches(f.getJobId())) {
+            registerMostRecentDowntime(VillagerUUID.from(visitorUUID), Util.getTick(town.getServerLevelUnsafe()));
         }
 
         doSetJob(visitorUUID, jobID, f);
@@ -668,5 +673,22 @@ public class TownVillagerHandle implements VillagerHolder {
         JobID newJob = shuffled.get(0);
         town.getUnsafe().getVillagerHandle().unlockJob(v.getUUID(), newJob);
         town.getUnsafe().getVillagerHandle().changeJobForVillager(v.getUUID(), newJob, true);
+    }
+
+    public boolean isReadyForDowntime(
+            VillagerUUID from,
+            long currentTick
+    ) {
+        // TODO[Traits]: Consider augmenting downtime frequency for individual villagers
+        Long maxTicksBeforeDowntime = Config.MAX_TICKS_BETWEEN_DOWNTIME.get();
+        Long mostRecent = UtilClean.getOrDefault(mostRecentDowntimeTick, from, -maxTicksBeforeDowntime);
+        return (currentTick - mostRecent) >= maxTicksBeforeDowntime;
+    }
+
+    public void registerMostRecentDowntime(
+            VillagerUUID ownerUUID,
+            long tick
+    ) {
+        mostRecentDowntimeTick.put(ownerUUID, tick);
     }
 }
