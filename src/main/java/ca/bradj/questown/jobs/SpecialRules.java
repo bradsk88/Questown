@@ -103,4 +103,7 @@ public class SpecialRules {
     // Global rule. When enabled, the villager's job site will always be populated
     // even if their status is not "going to jobsite".
     public static final String ALWAYS_POPULATE_JOBSITE = "always_populate_jobsite";
+
+    // Global rule. When enabled, the villager will walk slowly.
+    public static final String SLOW_WALK = "slow_walk";
 }

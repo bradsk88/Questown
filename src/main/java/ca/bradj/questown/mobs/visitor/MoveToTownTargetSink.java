@@ -187,7 +187,7 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
         }
 
         entityPrevPos = entityBlockPos;
-        if (reallyStuckTicks > 200) {
+        if (reallyStuckTicks > 500) {
             Direction unstickTarget = Compat.getRandomHorizontal(p_23617_);
             QT.JOB_LOGGER.debug("Unsticking from {} by pushing MORE in direction {}", entityBlockPos, unstickTarget);
             p_23618_.push(unstickTarget.getStepX() * 2, unstickTarget.getStepY() * 2, unstickTarget.getStepZ() * 2);
@@ -196,7 +196,7 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
             brain.eraseMemory(MemoryModuleType.PATH);
             return;
         }
-        if (stuckTicks > 100) {
+        if (stuckTicks > 200) {
             entityPrevPosLastUnstick = entityBlockPos;
             Direction unstickTarget = Compat.getRandomHorizontal(p_23617_);
             QT.JOB_LOGGER.debug("Unsticking from {} by pushing in direction {}", entityBlockPos, unstickTarget);

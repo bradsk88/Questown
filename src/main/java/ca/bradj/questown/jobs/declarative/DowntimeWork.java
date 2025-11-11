@@ -85,6 +85,8 @@ public class DowntimeWork {
                 new WorkSpecialRules(
                         ImmutableMap.of(), // No stage rules
                         ImmutableList.of(
+                                SpecialRules.NO_EXPERIENCE_GAINED,
+                                SpecialRules.SLOW_WALK,
                                 SpecialRules.ALWAYS_CONSIDER,
                                 SpecialRules.ALWAYS_POPULATE_JOBSITE,
                                 SpecialRules.RANDOM_SHORT_LIVED_WORKSPOT_PREFER_SOCIAL,
