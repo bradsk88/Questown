@@ -64,10 +64,6 @@ public class DevFlagDebugToggleCommand {
 
         tf.toggleDebugLog(logId);
 
-        tf.getVillagerHandle().entities().forEach(LivingEntity::kill);
-
-        source.getLevel().removeBlock(target, true);
-
         return 0;
     }
 }

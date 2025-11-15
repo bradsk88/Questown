@@ -367,8 +367,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 }
         );
 
-        if (canGrowMore && town.isDebugLogEnabled(DebugLogArgument.QUEST_BATCH_COMPUTE_NEXT)) {
-            QT.QUESTS_LOGGER.debug(
+        if (canGrowMore) {
+            town.getDebugLogger(QT.QUESTS_LOGGER, DebugLogArgument.QUEST_BATCH_COMPUTE_NEXT).log(
                     "Batch after growth is: ({}/{})[{}]",
                     pop.getCostSoFar(),
                     targetItemWeight,

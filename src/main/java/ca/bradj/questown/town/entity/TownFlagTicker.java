@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
@@ -12,6 +13,7 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractTownFlagTicker;
 import ca.bradj.questown.town.TownContainers;
+import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.Completable;
 import ca.bradj.questown.town.quests.Reward;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -142,7 +144,8 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
 
         if ((stateChanged || e.changed) && everScanned) {
             e.writeTownData(tag);
-            e.state.putStateOnTile(tag, e.getUUID());
+            TownInterface.DebugLogger loger = e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TOWN_STATE_CHANGES);
+            e.state.putStateOnTile(tag, e.getUUID(), loger);
             e.changed = false;
             BlockPos blockEntityPos = tickData.blockEntityPos();
             e.setChangedMC(sl, blockEntityPos, tickData.state());

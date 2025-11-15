@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.production;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
@@ -297,7 +298,7 @@ public abstract class ProductionJob<
             return false;
         }
         if (this.dropping) {
-            QT.JOB_LOGGER.debug(marker, "Trying to drop too quickly");
+            QT.JOB_LOGGER.warn("Trying to drop too quickly");
         }
         this.dropping = Jobs.tryDropLoot(this, entityPos, successTarget);
         if (this.dropping) {
@@ -491,7 +492,9 @@ public abstract class ProductionJob<
             this.suppliesTarget = st;
         }
         if (this.suppliesTarget != null) {
-            QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
+            town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
+                    "Located supplies at {}", this.suppliesTarget.getPosition()
+            );
         }
     }
 

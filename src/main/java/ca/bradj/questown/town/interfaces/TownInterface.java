@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.interfaces;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -18,10 +19,12 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 
 public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     TownPossibleWork getPossibleWork();
@@ -81,7 +84,11 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     int getBlocksOfProgress();
 
-    boolean isDebugLogEnabled(String logId);
+    interface DebugLogger {
+        void log(String message, Object... params);
+    }
+
+    DebugLogger getDebugLogger(QT.QTLogger logger, String logId);
 
     interface MatchRecipe {
         boolean doesMatch(Block item);

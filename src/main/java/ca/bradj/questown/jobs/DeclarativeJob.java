@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
@@ -90,6 +91,8 @@ public class DeclarativeJob extends
 
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
     private boolean isFirstTick = true;
+    @SuppressWarnings("removal")
+    private TownInterface.DebugLogger logger = QT.JOB_LOGGER::debug;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -315,6 +318,8 @@ public class DeclarativeJob extends
             LivingEntity entity,
             Direction facingPos
     ) {
+        this.logger = (p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a);
+
         WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
         AtomicReference<RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos>> rniot = new AtomicReference<>(
                 roomsNeedingIngredientsOrTools(
@@ -643,7 +648,12 @@ public class DeclarativeJob extends
                             new EntityCurrentJobSite<>(room.room, false),
                             bp -> isValidWalkTarget(town, bp),
                             bp -> location.shouldInitializeWorkState().test(info(sl), bp),
-                            bp -> bp.relative(Compat.getRandomHorizontal(sl))
+                            bp -> {
+                                town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
+                                        "choosing to approach job block from random side"
+                                );
+                                return bp.relative(Compat.getRandomHorizontal(sl));
+                            }
                     );
                     for (WorkPosition<BlockPos> p : UtilClean.getOrDefault(spots, 0, ImmutableList.of())) {
                         work.setJobBlockState(p.jobBlock(), State.fresh().setWorkLeft(workRequiredAtFirstState));
@@ -911,8 +921,6 @@ public class DeclarativeJob extends
         if (spot != null) {
             return spot;
         }
-
-        QT.JOB_LOGGER.trace("choosing to approach job block from random side");
         return getRandomAdjacent.apply(bp);
     }
 
@@ -1174,5 +1182,13 @@ public class DeclarativeJob extends
 
     public String getTool(@Nullable Integer integer) {
         return Util.orNull(initialTools.get(integer), Ingredients::toString);
+    }
+
+    @Override
+    public void log(
+            String s,
+            Object... args
+    ) {
+        logger.log(s, args);
     }
 }

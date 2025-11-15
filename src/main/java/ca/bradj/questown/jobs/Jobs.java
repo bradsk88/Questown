@@ -357,6 +357,11 @@ public class Jobs {
 
         boolean removeItem(I mct);
 
+        void log(
+                String s,
+                Object... args
+        );
+
     }
 
     public static boolean tryDropLoot(
@@ -366,7 +371,7 @@ public class Jobs {
     ) {
         UUID ownerUUID = dropper.UUID();
         if (!dropper.hasAnyLootToDrop()) {
-            QT.JOB_LOGGER.trace("{} is not dropping because they only have food", ownerUUID);
+            dropper.log("{} is not dropping because they only have food", ownerUUID);
             return false;
         }
 
@@ -379,7 +384,7 @@ public class Jobs {
             }
             // TODO: Unit tests of this logic!
             if (mct.isLocked()) {
-                QT.JOB_LOGGER.trace("Villager is not putting away {} because it is locked", mct.toShortString());
+                dropper.log("Villager is not putting away {} because it is locked", mct.toShortString());
                 continue;
             }
 
@@ -392,7 +397,7 @@ public class Jobs {
                 continue;
             }
 
-            QT.JOB_LOGGER.debug(
+            dropper.log(
                     "Villager {} is putting {} in {} [{}]",
                     UtilClean.truncateMiddle(ownerUUID.toString()),
                     mct.getShortName(),
@@ -412,7 +417,7 @@ public class Jobs {
                 }
             }
             if (!added) {
-                QT.JOB_LOGGER.debug("Nope. No space for {}", mct.toShortString());
+                dropper.log("Nope. No space for {}", mct.toShortString());
             }
         }
         return true;

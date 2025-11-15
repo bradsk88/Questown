@@ -1,6 +1,10 @@
 # Questown
 https://modrinth.com/mod/questown/
 
+### Environment Variables
+- ENABLE_DEV_COMMANDS : Set to "true" to enable developer commands under the `/_qt` namespace.
+- INVISIBLE_LOG_LEVEL : Set to "trace" to reduce log noise during development.
+
 ### Release Preparation
 Before a new version can be considered beta-ready, you must test
 - Starting from a brand new save
