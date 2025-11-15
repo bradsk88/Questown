@@ -24,6 +24,8 @@ public class DebugLogArgument implements ArgumentType<String> {
     public static final String TOWN_STATE_CHANGES;
     public static final String VILLAGER_NAVIGATION;
     public static final String JOB_LOGIC;
+    public static final String SAMPLING;
+    public static final String VILLAGER_STATS;
 
     static {
         ImmutableList.Builder<String> b = ImmutableList.builder();
@@ -34,6 +36,8 @@ public class DebugLogArgument implements ArgumentType<String> {
         TOWN_STATE_CHANGES = add(b, "town_state_changes");
         VILLAGER_NAVIGATION = add(b, "villager_navigation");
         JOB_LOGIC = add(b, "job_logic");
+        SAMPLING = add(b, "sampling");
+        VILLAGER_STATS = add(b, "villager_stats");
         debugLogIds = b.build();
     }
 

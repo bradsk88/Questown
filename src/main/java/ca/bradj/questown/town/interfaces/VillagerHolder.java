@@ -8,8 +8,8 @@ import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.VillagerStatsData;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
@@ -66,6 +66,16 @@ public interface VillagerHolder {
 
     ImmutableMap<VillagerUUID, JobID> getVillagerJobs();
 
+    void changeJobForVillager(
+            VillagerUUID villagerUUID,
+            JobID newJob,
+            boolean announce
+    );
+
+    /**
+     * @deprecated Use VillagerUUID version
+     */
+    @Deprecated(forRemoval = true)
     void changeJobForVillager(
             UUID villagerUUID,
             JobID newJob,
@@ -125,4 +135,13 @@ public interface VillagerHolder {
     boolean isUnlocked(JobID jobID);
 
     UnsafeVillagerData getUnprotectedDataHandle(@Nullable VillagerUUID vuid);
+
+    Optional<Entity> getLookTarget(@Nullable VillagerUUID vuid);
+
+    void setLookTarget(
+            @Nullable VillagerUUID vuid,
+            Entity entity,
+            long untilTick,
+            long thenNotUntilTick
+    );
 }
