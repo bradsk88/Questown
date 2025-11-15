@@ -357,9 +357,7 @@ public abstract class ProductionJob<
             @NotNull ServerLevel sl
     ) {
         if (shouldRefreshJobSite(status)) {
-            BlockPos jobSite1 = getJobSite(town);
-            this.setLookTarget(jobSite1); // TODO[ASAP]: Use special rule to determine non-job look target
-            return jobSite1;
+            return getJobSite(town);
         }
 
         if (status.isWorkingOnProduction() || status.isWaitingForTimers()) {

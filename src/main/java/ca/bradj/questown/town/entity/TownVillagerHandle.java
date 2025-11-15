@@ -45,6 +45,8 @@ public class TownVillagerHandle implements VillagerHolder {
     public static final TownVillagerHandlerSerializer SERIALIZER = new TownVillagerHandlerSerializer();
     private final Map<VillagerUUID, CompoundTag> customData = new HashMap<>();
     private final Map<VillagerUUID, Long> mostRecentDowntimeTick = new HashMap<>();
+    private final Map<VillagerUUID, LookTarget> lookTargets = new HashMap<>();
+    private final Map<VillagerUUID, LookTarget> mostRecentLookTarget = new HashMap<>();
 
     public static void staticInit() {
         TownVillagerUIs.staticInit();
@@ -56,6 +58,13 @@ public class TownVillagerHandle implements VillagerHolder {
     final Map<UUID, Integer> damage = new HashMap<>();
     final Map<UUID, PoseInPlace> requestedPose = new HashMap<>();
     final Map<UUID, Boolean> hasBlockOfProgress = new HashMap<>();
+
+
+    private record LookTarget(
+            Entity who,
+            Long untilTick
+    ) {}
+
     final TownVillagerMoods moods = new TownVillagerMoods();
 
     private final List<LivingEntity> entities = new ArrayList<>();
@@ -149,7 +158,9 @@ public class TownVillagerHandle implements VillagerHolder {
         Double boostedFactor = t.getHealingHandle().getHealFactor(e.blockPosition());
         Double hf = Math.min(bedFactor, boostedFactor);
         int i1 = (int) (i * hf);
-        QT.VILLAGER_LOGGER.debug("Healing by {} due to sleeping heal factor {} {}", i1, hf, e.getUUID());
+        t.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_STATS).log(
+            "Healing by {} due to sleeping heal factor {} {}", i1, hf, e.getUUID()
+        );
         return i1;
     }
 
@@ -209,37 +220,46 @@ public class TownVillagerHandle implements VillagerHolder {
         return ImmutableMap.copyOf(b);
     }
 
+    @SuppressWarnings("removal")
     @Override
-
     public void changeJobForVillager(
             UUID visitorUUID,
             JobID jobID,
             boolean announce
     ) {
+        changeJobForVillager(VillagerUUID.from(visitorUUID), jobID, announce);
+    }
+
+    @Override
+    public void changeJobForVillager(
+            VillagerUUID villagerUUID,
+            JobID newJob,
+            boolean announce
+    ) {
+
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
-        VisitorMobEntity f = getEntity(visitorUUID);
+        VisitorMobEntity f = getEntity(villagerUUID);
         if (f == null) {
-            QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", visitorUUID, jobID);
+            QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", villagerUUID, newJob);
             return;
         }
 
         if (DowntimeWork.matches(f.getJobId())) {
-            registerMostRecentDowntime(VillagerUUID.from(visitorUUID), Util.getTick(town.getServerLevelUnsafe()));
+            registerMostRecentDowntime(villagerUUID, Util.getTick(town.getServerLevelUnsafe()));
         }
 
-        doSetJob(visitorUUID, jobID, f);
+        doSetJob(villagerUUID, newJob, f);
         t.setChanged();
         if (announce) {
-            t.messages.jobChanged(jobID, visitorUUID);
+            t.messages.jobChanged(newJob, VillagerUUID.get(villagerUUID));
         }
 
         t.possibleWork.invalidate();
         f.setJobChangePending(false);
     }
 
-    @SuppressWarnings("deprecation")
     private void doSetJob(
-            UUID visitorUUID,
+            VillagerUUID visitorUUID,
             JobID jobName,
             VisitorMobEntity f
     ) {
@@ -247,7 +267,7 @@ public class TownVillagerHandle implements VillagerHolder {
                 town.getServerLevelUnsafe(),
                 jobName,
                 f.getJobJournalSnapshot().items(),
-                visitorUUID
+                VillagerUUID.get(visitorUUID)
         ));
     }
 
@@ -332,9 +352,10 @@ public class TownVillagerHandle implements VillagerHolder {
 
         learning.requestKnowledge(vEntity.getUUID(), defaultWork);
 
-        this.beds.claim(vEntity, town.getUnsafe());
+        TownFlagBlockEntity t = town.getUnsafe();
+        this.beds.claim(vEntity, t);
         vEntity.addSleepListener(e -> {
-            Double healFactor = town.getUnsafe().getHealingHandle().getHealFactor(e.bedPos());
+            Double healFactor = t.getHealingHandle().getHealFactor(e.bedPos());
             long ticksHealed = (long) (e.duration() * healFactor);
             damage.compute(
                     vEntity.getUUID(), (id, cur) -> {
@@ -342,7 +363,7 @@ public class TownVillagerHandle implements VillagerHolder {
                             return 0;
                         }
                         int newVal = Math.toIntExact(Math.max(0, cur - ticksHealed));
-                        QT.VILLAGER_LOGGER.debug(
+                        t.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_STATS).log(
                                 "Villager damage changed from {} to {} after {} ticks of sleep via bed at {} with heal factor {} [{}]",
                                 cur,
                                 newVal,
@@ -451,7 +472,7 @@ public class TownVillagerHandle implements VillagerHolder {
     public void recallVillagers() {
         final BlockPos visitorJoinPos = town.getUnsafe().getBlockPos();
         forEach(v -> {
-            QT.FLAG_LOGGER.debug("Moving {} to {} and hungerUpdater", v, visitorJoinPos);
+            QT.FLAG_LOGGER.info("Moving {} to {} and healing", v, visitorJoinPos);
             v.setPos(visitorJoinPos.getX(), visitorJoinPos.getY(), visitorJoinPos.getZ());
             v.setHealth(v.getMaxHealth());
         });
@@ -466,8 +487,17 @@ public class TownVillagerHandle implements VillagerHolder {
         visitorMobEntity.remove(Entity.RemovalReason.DISCARDED);
     }
 
+    /**
+     * @deprecated Use VillagerUUID version
+     */
+    @Deprecated(forRemoval = true)
     public VisitorMobEntity getEntity(UUID ownerUUID) {
-        Optional<LivingEntity> f = stream().filter(v -> ownerUUID.equals(v.getUUID())).findFirst();
+        //noinspection removal
+        return getEntity(VillagerUUID.from(ownerUUID));
+    }
+
+    public VisitorMobEntity getEntity(VillagerUUID ownerUUID) {
+        Optional<LivingEntity> f = stream().filter(v -> ownerUUID.matches(v.getUUID())).findFirst();
         if (f.isEmpty()) {
             QT.FLAG_LOGGER.error("No entities found for UUID: {}", ownerUUID);
             return null;
@@ -532,7 +562,7 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public void register(VisitorMobEntity vEntity) {
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
-        QT.FLAG_LOGGER.debug("Registered entity with town {}: {}", t.getUUID(), vEntity);
+        QT.FLAG_LOGGER.info("Registered entity with town {}: {}", t.getUUID(), vEntity);
         this.add(vEntity);
         vEntity.addChangeListener(() -> {
             TownInterface.DebugLogger logger = t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TOWN_STATE_CHANGES);
@@ -589,7 +619,7 @@ public class TownVillagerHandle implements VillagerHolder {
             return;
         }
         if (instant) {
-            QT.FLAG_LOGGER.debug(
+            QT.FLAG_LOGGER.info(
                     "Villager {} will change to a new job NOW (creative mode)",
                     UtilClean.truncateMiddle(villagerUUID)
             );
@@ -598,7 +628,7 @@ public class TownVillagerHandle implements VillagerHolder {
         }
 
         e.setJobChangePending(true);
-        QT.FLAG_LOGGER.debug(
+        town.getUnsafe().getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.JOB_LOGIC).log(
                 "Villager {} will change to a new job root in the morning.",
                 UtilClean.truncateMiddle(villagerUUID)
         );
@@ -642,6 +672,55 @@ public class TownVillagerHandle implements VillagerHolder {
         };
     }
 
+    @Override
+    public Optional<Entity> getLookTarget(@Nullable VillagerUUID vuid) {
+        LookTarget tar = lookTargets.get(vuid);
+        if (tar == null) {
+            return Optional.empty();
+        }
+        long currentTick = Util.getTick(town.getServerLevelUnsafe());
+        if (currentTick < tar.untilTick()) {
+            return Optional.of(tar.who);
+        }
+        town.getUnsafe().getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
+                "Look target for {} has expired at tick {} (current {})",
+                vuid,
+                tar.untilTick(),
+                currentTick
+        );
+        lookTargets.remove(vuid);
+        return Optional.empty();
+    }
+
+    @Override
+    public void setLookTarget(
+            @Nullable VillagerUUID vuid,
+            Entity entity,
+            long untilTick,
+            long thenNotUntilTick
+    ) {
+        LookTarget tar = mostRecentLookTarget.get(vuid);
+        if (tar != null && tar.who.equals(entity)) {
+            long currentTick = Util.getTick(town.getServerLevelUnsafe());
+            if (currentTick < tar.untilTick()) {
+                return;
+            }
+            mostRecentLookTarget.remove(vuid);
+        }
+        lookTargets.computeIfAbsent(vuid, (k) -> {
+            mostRecentLookTarget.put(k, new LookTarget(entity, thenNotUntilTick));
+            LookTarget lookTarget = new LookTarget(entity, untilTick);
+            town.getUnsafe().getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
+                    "Setting look target for {} to {} until tick {} (then not until {})",
+                    vuid,
+                    entity,
+                    untilTick,
+                    thenNotUntilTick
+            );
+            return lookTarget;
+        });
+    }
+
     public ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs() {
         return learning.getUnlockedJobs();
     }
@@ -675,7 +754,7 @@ public class TownVillagerHandle implements VillagerHolder {
         );
         JobID newJob = shuffled.get(0);
         town.getUnsafe().getVillagerHandle().unlockJob(v.getUUID(), newJob);
-        town.getUnsafe().getVillagerHandle().changeJobForVillager(v.getUUID(), newJob, true);
+        town.getUnsafe().getVillagerHandle().changeJobForVillager(v.getVUID(), newJob, true);
     }
 
     public boolean isReadyForDowntime(

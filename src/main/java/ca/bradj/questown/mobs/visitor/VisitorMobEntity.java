@@ -49,7 +49,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
@@ -63,7 +62,6 @@ import net.minecraft.world.entity.ai.behavior.*;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
-import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
@@ -80,23 +78,15 @@ import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.FluidState;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.level.pathfinder.Path;
-import net.minecraft.world.level.pathfinder.PathFinder;
-import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.tags.ITag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -108,6 +98,7 @@ import java.util.function.Supplier;
 
 import static net.minecraft.world.entity.Pose.SLEEPING;
 
+@SuppressWarnings("NullableProblems")
 public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public static final String DEFAULT_SCHEDULE_ID = "visitor_default_schedule";
@@ -137,6 +128,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             VisitorMobEntity.class, EntityDataSerializers.ITEM_STACK
     );
 
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
+
     private static final String NBT_TOWN_X = "town_x";
     private static final String NBT_TOWN_Y = "town_y";
     private static final String NBT_TOWN_Z = "town_z";
@@ -159,7 +154,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private final List<Consumer<VillagerSleptEvent>> sleepListeners = new ArrayList<>();
     private Signals.DayTime lastBedTime = new Signals.DayTime(Signals.NIGHT_START_TICK);
     private @Nullable Vec3 lastPos = null;
-    private Player playerLooking = null;
 
     public WorkToUndo getWorkToUndo() {
         return workToUndo;
@@ -191,6 +185,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             ingrListeners.forEach(l -> l.accept(ImmutableList.copyOf(ing)));
         });
     }
+
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
 
     public VisitorMobEntity(
             ServerLevel level,
@@ -237,16 +235,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             VisitorMobEntity entity
     ) {
         ImmutableList.Builder<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> b = ImmutableList.builder();
-//        b.add(Pair.of(2, new DoNothing(30, 60)));
         b.add(Pair.of(3, new LookAtWalkTarget()));
         b.add(Pair.of(99, new UpdateActivityFromSchedule()));
         return b.build();
     }
 
-//    public static boolean debuggerReleaseControl() {
-//        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-//        return true;
-//    }
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
 
     // TODO: Make this abstract or injectable
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -300,6 +296,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         jobChangePending = value;
     }
 
+    @SuppressWarnings("removal")
     public @Nullable VillagerUUID getVUID() {
         return VillagerUUID.from(getUUID());
     }
@@ -325,6 +322,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
     }
 
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
+
     /**
      * @deprecated Only the town block should call this. Everyone else should change villager jobs using
      * {@link TownInterface#changeJobForVisitorFromBoard(UUID, JobID)} instead.
@@ -345,7 +346,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> oldJob = job.get();
         job = () -> initializedJob;
         entityData.set(jobName, initializedJob.getJobName().translationKey());
-        QT.VILLAGER_LOGGER.debug("Job changed to {} for {} [from {}]", initializedJob.getId(), uuid, curJobName);
+        QT.VILLAGER_LOGGER.info("Job changed to {} for {} [from {}]", initializedJob.getId(), uuid, curJobName);
         Collection<? extends Runnable> newCleanup = oldJob.notifyListenersOfNewJob(l -> {
             Function<Void, Void> out = initializedJob.addStatusListener(l);
             return () -> out.apply(null);
@@ -360,7 +361,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 initializedJob.addStatusListener(getNotifiedOfJobStatusChanges())
         );
         this.cleanupJobListeners.add(initializedJob.addItemInsertionListener(
-                (bp, item) ->  this.workToUndo = WorkToUndo.and(this.workToUndo, initializedJob.getId(), bp, item)
+                (bp, item) -> this.workToUndo = WorkToUndo.and(this.workToUndo, initializedJob.getId(), bp, item)
         ));
         this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
                 id -> this.workToUndo = null
@@ -403,6 +404,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.entityData.define(lastHeldItem, ItemStack.EMPTY);
     }
 
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
+
     @NotNull
     private CompoundTag buildInitialSlotStatusesTag() {
         CompoundTag tag = new CompoundTag();
@@ -429,7 +434,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public void tick() {
         super.tick();
 
-        if (level.isClientSide()) {
+        if (!(level instanceof ServerLevel sl)) {
             return;
         }
 
@@ -449,14 +454,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
 
         long start = System.currentTimeMillis();
-        villagerTick();
+        villagerTick(sl);
         long end = System.currentTimeMillis();
 
         tickTimes.add((int) (end - start));
 
         Integer rate = Compat.configGet(Config.TICK_SAMPLING_RATE).get();
         if (rate != 0 && tickTimes.size() > rate) {
-            QT.VILLAGER_LOGGER.debug(
+            town.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.SAMPLING).log(
                     "VME Average tick length: {}",
                     tickTimes.stream()
                              .mapToInt(Integer::intValue)
@@ -466,22 +471,27 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
     }
 
-    private void villagerTick() {
-        slowDownForPlayers();
-        if (playerLooking != null) {
-            lookControl.setLookAt(playerLooking);
-        }
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
+
+    private void villagerTick(ServerLevel sl) {
+        detectNearbyDistractions(sl);
+        town.getVillagerHandle().getLookTarget(getVUID()).ifPresentOrElse(
+                lookControl::setLookAt,
+                this::setLookFromBrain
+        );
 
         if (ticksWithoutJobTarget > Compat.configGet(Config.MAX_TICKS_WITHOUT_SUPPLIES).get()) {
             JobID seeker = WorkSeekerJob.getIDForRoot(job.get().getId());
-            town.getVillagerHandle().changeJobForVillager(uuid, seeker, false);
+            town.getVillagerHandle().changeJobForVillager(getVUID(), seeker, false);
         }
-
-        nudgeForJobNav();
 
         if (isInWall()) {
             Vec3 nudged = position().add(-1.0 + (random.nextDouble() * 2.0), 0, -1.0 + (random.nextDouble() * 2.0));
-            QT.VILLAGER_LOGGER.debug("Villager is stuck in wall. Nudging to {}", nudged);
+            town.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
+                    "Villager is stuck in wall. Nudging to {}", nudged
+            );
             moveTo(nudged);
         }
 
@@ -496,8 +506,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
 
-        ServerLevel sl = (ServerLevel) level;
-
         town.getVillagerHandle().getRequestedPose(uuid).ifPresent(this::applyRequestedPose);
 
         trySetWalkTargetFromJob(j);
@@ -505,6 +513,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (town == null) {
             QT.VILLAGER_LOGGER.error("Visitor mob's parent could not be determined. Removing");
             remove(RemovalReason.DISCARDED);
+            return;
         } else {
             town.getVillagerHandle().validateEntity(this);
         }
@@ -553,6 +562,16 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.useNearbyGates();
     }
 
+    private void setLookFromBrain() {
+        brain.getMemory(MemoryModuleType.WALK_TARGET).ifPresent(
+                e -> lookControl.setLookAt(e.getTarget().currentPosition())
+        );
+    }
+
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
+
     private void applyRequestedPose(PoseInPlace pose) {
         switch (pose.pose()) {
             case SLEEPING -> getInBed(pose.place());
@@ -563,13 +582,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private void trackTarget() {
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
         IStatus<?> status1 = j.getStatus();
-        if (status1 == null) {
-            QT.VILLAGER_LOGGER.error("Null status");
-        }
         if (!j.isWorking()) {
             return;
         }
-        if (!status1.isCollectingSupplies()) {
+        if (status1 == null) {
+            QT.VILLAGER_LOGGER.error("Null status");
+        } else if (!status1.isCollectingSupplies()) {
             return;
         }
         BlockPos target = j.getTarget(blockPosition(), position(), town);
@@ -580,32 +598,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
     }
 
-    private void nudgeForJobNav() {
-//        BlockPos target = getWanderTarget();
-//        if (target != null) {
-//            if (Jobs.isOnTopOf(position(), target)) {
-//                return;
-//            }
-//
-//            if (lastPos != null) {
-//                if (lastPos.equals(position())) {
-//                    ticksStuckWithTarget++;
-//                }
-//            }
-//            lastPos = position();
-//        }
-//
-//        if (ticksStuckWithTarget > Config.MAX_STICK_TICKS_WITH_TARGET.get()) {
-//            ticksStuckWithTarget = 0;
-//            BlockPos bp = blockPosition();
-//            if (level.getBlockState(bp).getMaterial().isSolid()) {
-//                bp = bp.above();
-//            }
-//            moveTo(Vec3.atBottomCenterOf(bp));
-//            QT.VILLAGER_LOGGER.debug("Nudged from {} to {} to unstick navigation", lastPos, position());
-//        }
-    }
-
     private void trySetWalkTargetFromJob(Job<?, ?, ? extends IStatus<?>> j) {
         if (j.shouldStandStill(town, blockPosition())) {
             getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
@@ -614,19 +606,20 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         Optional<WalkTarget> curTarget = getBrain().getMemory(MemoryModuleType.WALK_TARGET);
         @Nullable BlockPos target = j.getTarget(blockPosition(), position(), town);
         if (target == null) {
-            // TODO: Check if villager can randomly wander
             return;
         }
         Boolean isTargetDifferent = curTarget.map(t -> t.getTarget().currentBlockPosition().equals(target))
                                              .orElse(true);
         if (isTargetDifferent) {
-            setWanderTarget(target);
+            setWalkTarget(target);
         }
     }
 
-    private void slowDownForPlayers() {
-        boolean wasLooking = playerLooking != null;
-        this.playerLooking = null;
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
+
+    private void detectNearbyDistractions(ServerLevel sl) {
         List<Player> ps = level.getNearbyPlayers(
                 TargetingConditions.forNonCombat(),
                 this,
@@ -634,13 +627,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         );
         for (Player p : ps) {
             if (isLookingAtMe(p)) {
-                this.playerLooking = p;
+                Long dur = Compat.configGet(Config.VILLAGER_DISTRACT_DURATION).get();
+                Long cooldown = Compat.configGet(Config.VILLAGER_DISTRACT_COOLDOWN).get();
+                long until = Util.getTick(sl) + dur;
+                town.getVillagerHandle().setLookTarget(getVUID(), p, until, until + cooldown);
                 return;
             }
-        }
-        if (wasLooking) {
-            // Just stopped being looked at
-            brain.eraseMemory(MemoryModuleType.PATH);
         }
     }
 
@@ -651,7 +643,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
         // if player is a few blocks away, don't consider them looking
         double v = p.distanceToSqr(this);
-        town.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log("Dist: {}", v);
         if (v > 10) {
             return false;
         }
@@ -661,8 +652,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         double d0 = vec31.length();
         vec31 = vec31.normalize();
         double d1 = vec3.dot(vec31);
-        town.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log("Sight: {}", d1);
-        return d1 > 0.95D - 0.025D / d0 ? p.hasLineOfSight(this) : false;
+        return d1 > 0.95D - 0.025D / d0 && p.hasLineOfSight(this);
     }
 
     private void useNearbyGates() {
@@ -705,6 +695,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             }
         }
     }
+
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
 
     @Override
     public void remove(RemovalReason p_146834_) {
@@ -771,6 +765,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return this.job.get();
     }
 
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
+
     @Override
     protected void pushEntities() {
         if (getJob().shouldBeNoClip(town, blockPosition())) {
@@ -784,8 +782,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             if (i > 0 && list.size() > i - 1 && this.random.nextInt(4) == 0) {
                 int j = 0;
 
-                for(int k = 0; k < list.size(); ++k) {
-                    if (!list.get(k).isPassenger()) {
+                for (Entity entity : list) {
+                    if (!entity.isPassenger()) {
                         ++j;
                     }
                 }
@@ -795,8 +793,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 }
             }
 
-            for(int l = 0; l < list.size(); ++l) {
-                Entity entity = list.get(l);
+            for (Entity entity : list) {
                 this.doPush(entity);
             }
         }
@@ -836,6 +833,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.getBrain()
             .setMemory(MemoryModuleType.PATH, Optional.empty());
     }
+
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
 
     @Override
     public ItemStack getMainHandItem() {
@@ -894,87 +895,13 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
     }
 
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
+
     @Override
     protected PathNavigation createNavigation(Level p_21480_) {
-        GroundPathNavigation gpn = new GroundPathNavigation(this, p_21480_) {
-            @Override
-            protected PathFinder createPathFinder(int p_26453_) {
-                this.nodeEvaluator = new WalkNodeEvaluator() {
-
-                    @Override
-                    public BlockPathTypes getBlockPathType(
-                            BlockGetter getr,
-                            int x,
-                            int y,
-                            int z
-                    ) {
-                        BlockPos pos = new BlockPos(x, y, z);
-                        FluidState fs = getr.getFluidState(pos);
-                        if (!fs.isEmpty()) {
-                            BlockState above = getr.getBlockState(pos.above());
-                            if (above.isAir()) {
-                                BlockState roof = getr.getBlockState(pos.above()
-                                                                        .above());
-                                if (!roof.isAir()) {
-                                    return BlockPathTypes.BLOCKED;
-                                }
-                            }
-                        }
-
-                        ITag<Block> gates = ForgeRegistries.BLOCKS.tags().getTag(BlockTags.FENCE_GATES);
-                        if (gates.contains(getr.getBlockState(pos).getBlock())) {
-                            return BlockPathTypes.DOOR_WOOD_CLOSED;
-                        }
-
-                        ITag<Block> fences = ForgeRegistries.BLOCKS.tags().getTag(BlockTags.FENCES);
-                        if (fences.contains(getr.getBlockState(pos).getBlock())) {
-                            return BlockPathTypes.BLOCKED;
-                        }
-                        if (fences.contains(getr.getBlockState(pos.below()).getBlock())) {
-                            return BlockPathTypes.BLOCKED;
-                        }
-
-                        return super.getBlockPathType(getr, x, y, z);
-                    }
-
-                    @Override
-                    protected BlockPathTypes evaluateBlockPathType(
-                            BlockGetter getr,
-                            boolean p_77615_,
-                            boolean p_77616_,
-                            BlockPos pos,
-                            BlockPathTypes defaultType
-                    ) {
-                        defaultType = super.evaluateBlockPathType(getr, p_77615_, p_77616_, pos, defaultType);
-
-                        if (defaultType == BlockPathTypes.FENCE && (getr.getBlockState(pos)
-                                                                        .getBlock() instanceof FenceGateBlock)) {
-                            return BlockPathTypes.DOOR_OPEN;
-                        }
-
-                        ITag<Block> fences = ForgeRegistries.BLOCKS.tags().getTag(BlockTags.FENCES);
-                        if (fences.contains(getr.getBlockState(pos).getBlock())) {
-                            return BlockPathTypes.BLOCKED;
-                        }
-                        if (fences.contains(getr.getBlockState(pos.below()).getBlock())) {
-                            return BlockPathTypes.BLOCKED;
-                        }
-
-                        return defaultType;
-                    }
-                };
-                this.nodeEvaluator.setCanPassDoors(true);
-                return new PathFinder(this.nodeEvaluator, p_26453_);
-            }
-        };
-        gpn.setCanOpenDoors(true);
-        gpn.setCanPassDoors(true);
-        return gpn;
-    }
-
-    @Override
-    public float getPathfindingMalus(BlockPathTypes p_21440_) {
-        return super.getPathfindingMalus(p_21440_);
+        return new VillagerPathNavigation(this, p_21480_);
     }
 
     @Override
@@ -1003,6 +930,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     protected Brain<?> makeBrain(Dynamic<?> p_21069_) {
+        //noinspection unchecked
         Brain<VisitorMobEntity> brain = (Brain<VisitorMobEntity>) super.makeBrain(p_21069_);
         brain.setSchedule(VisitorMobEntity.DEFAULT_SCHEDULE);
         brain.addActivity(Activity.IDLE, getIdlePackage(this));
@@ -1028,6 +956,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
         this.lastBedTime = Util.getDayTime(level);
     }
+
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
 
     private void getInBed(BlockPos p_21141_) {
         if (this.isPassenger()) {
@@ -1103,6 +1035,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return sleepingPos;
     }
 
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
+
     @Override
     public void aiStep() {
         this.updateSwingTime();
@@ -1113,6 +1049,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     protected void customServerAiStep() {
         this.level.getProfiler()
                   .push(String.format("%s_%s", Questown.MODID, "visitorBrain"));
+        //noinspection unchecked
         Brain<VisitorMobEntity> brain1 = (Brain<VisitorMobEntity>) this.getBrain();
         brain1.tick((ServerLevel) this.level, this);
         this.level.getProfiler()
@@ -1128,7 +1065,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
         Optional<Path> path = brain1.getMemory(MemoryModuleType.PATH);
-        if (!path.isPresent()) {
+        if (path.isEmpty()) {
             return;
         }
         Path vPath = path.get();
@@ -1136,7 +1073,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (nodeCount < 10) {
             return;
         }
-        if (playerLooking != null || job.get().getGlobalSpecialRules().contains(SpecialRules.SLOW_WALK)) {
+        if (job.get().getGlobalSpecialRules().contains(SpecialRules.SLOW_WALK)) {
             getNavigation().setSpeedModifier(slowWalkSpeed);
             return;
         }
@@ -1160,7 +1097,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return this.wanderTarget;
     }
 
-    public void setWanderTarget(BlockPos blockPos) {
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
+
+    public void setWalkTarget(BlockPos blockPos) {
         this.wanderTarget = blockPos;
         if (blockPos == null) {
             this.getBrain()
@@ -1184,7 +1125,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
         Integer rate = Compat.configGet(Config.TICK_SAMPLING_RATE).get();
         if (rate != 0 && targetTimes.size() > rate) {
-            QT.PROFILE_LOGGER.debug(
+            town.getDebugLogger(QT.PROFILE_LOGGER, DebugLogArgument.SAMPLING).log(
                     "VME Average target acquisition length: {}",
                     targetTimes.stream()
                                .mapToInt(Integer::intValue)
@@ -1194,10 +1135,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
 
         if (target != null) {
-            this.setWanderTarget(target);
+            this.setWalkTarget(target);
         } else {
 
-            this.setWanderTarget(town.getRandomWanderTarget(blockPosition()));
+            this.setWalkTarget(town.getRandomWanderTarget(blockPosition()));
         }
         return this.getWanderTarget();
     }
@@ -1211,7 +1152,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                           if (serverlevel != null) {
                               PoiManager poimanager = serverlevel.getPoiManager();
                               Optional<Holder<PoiType>> optional = poimanager.getType(p_186306_.pos());
-                    BiPredicate<VisitorMobEntity, Holder<PoiType>> bipredicate = POI_MEMORIES.get(p_35429_);
+                              BiPredicate<VisitorMobEntity, Holder<PoiType>> bipredicate = POI_MEMORIES.get(p_35429_);
                               if (optional.isPresent() && bipredicate.test(this, optional.get())) {
                                   poimanager.release(p_186306_.pos());
                                   DebugPackets.sendPoiTicketCountPacket(serverlevel, p_186306_.pos());
@@ -1231,6 +1172,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
         super.jumpFromGround();
     }
+
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
 
     @Override
     public InteractionResult interactAt(
@@ -1252,12 +1197,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
         return InteractionResult.sidedSuccess(isClientSide);
     }
-
-//    // If all else fails, we can use this
-//    @Override
-//    public boolean removeWhenFarAway(double p_21542_) {
-//        return false;
-//    }
 
     public Container getInventory() {
         return job.get().getInventory();
@@ -1285,6 +1224,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.get().getJournalSnapshot();
     }
 
+    @SuppressWarnings("rawtypes")
     public void initialize(
             TownInterface town,
             UUID uuid,
@@ -1301,6 +1241,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.setUUID(uuid);
         this.initialized = true;
     }
+
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
 
     public boolean isInitialized() {
         return this.initialized;
@@ -1335,7 +1279,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.changeListeners.add(cl);
     }
 
-    // TODO: Remove this
     @Override
     public boolean hurt(
             DamageSource p_21016_,
@@ -1374,6 +1317,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 //            p_21471_.discard();
 //        }
     }
+
+
+    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
+    // State management should be done via the town block. This entity should
+    // only handle cosmetic stuff like position, pose, etc.
 
     @Override
     public String toString() {

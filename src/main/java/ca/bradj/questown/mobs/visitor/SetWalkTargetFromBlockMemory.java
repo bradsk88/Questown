@@ -99,7 +99,7 @@ public class SetWalkTargetFromBlockMemory extends Behavior<VisitorMobEntity> {
                     Questown.LOGGER.error("No town exists. Cannot start.");
                     return;
                 }
-                ent.setWanderTarget(ent.town.getRandomWanderTarget(ent.blockPosition()));
+                ent.setWalkTarget(ent.town.getRandomWanderTarget(ent.blockPosition()));
             }
 
         });
