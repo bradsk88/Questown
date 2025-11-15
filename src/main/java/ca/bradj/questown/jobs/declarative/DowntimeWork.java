@@ -105,6 +105,10 @@ public class DowntimeWork {
         );
     }
 
+    public static JobID getIdFor(JobID rootId) {
+        return new JobID(rootId.rootId(), ID);
+    }
+
     public static JobID getIdForRoot(String rootId) {
         return new JobID(rootId, ID);
     }

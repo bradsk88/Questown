@@ -62,6 +62,9 @@ public class ServerJobsRegistry {
             JobID job,
             IStatus<?> status
     ) {
+        if (isSpecial(job)) {
+            return StatusArt.getTexture(job, status);
+        }
         try {
             Work work = getWork(job);
             if (work != null) {
@@ -74,6 +77,11 @@ public class ServerJobsRegistry {
             QT.JOB_LOGGER.error("Failed to apply status texture override");
         }
         return StatusArt.getTexture(job, status);
+    }
+
+    private static boolean isSpecial(JobID job) {
+        Optional<SpecialJob> first = specialJobs.stream().filter(id -> id.idTest.test(job)).findFirst();
+        return first.isPresent();
     }
 
     public static @NotNull ImmutableList<Component> getStatusText(
@@ -482,8 +490,8 @@ public class ServerJobsRegistry {
         Supplier<Work> workSupplier = Works.get(p);
         if (workSupplier == null) {
             QT.JOB_LOGGER.error("No work found for job ID: {}. Falling back to any job in the same root ID.", p);
-            ImmutableSet<Map.Entry<JobID, Supplier<Work>>> sameRoomFallback = Works.entrySet(p.rootId());
-            Iterator<Map.Entry<JobID, Supplier<Work>>> i = sameRoomFallback.iterator();
+            ImmutableSet<Map.Entry<JobID, Supplier<Work>>> sameRootFallback = Works.entrySet(p.rootId());
+            Iterator<Map.Entry<JobID, Supplier<Work>>> i = sameRootFallback.iterator();
             if (!i.hasNext()) {
                 QT.JOB_LOGGER.error("No fallback work found for root ID: {}", p.rootId());
                 return null;
