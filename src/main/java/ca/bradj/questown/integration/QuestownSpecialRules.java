@@ -119,7 +119,7 @@ public final class QuestownSpecialRules {
         );
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation(SpecialRules.RANDOM_SHORT_LIVED_WORKSPOT_PREFER_SOCIAL),
-                new RandomShortLivedWorkSpot(true, 200)
+                new RandomShortLivedWorkSpot(true, 100)
         );
 
         VanillaSpecialRules.register();

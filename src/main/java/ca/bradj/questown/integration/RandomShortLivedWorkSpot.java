@@ -2,6 +2,7 @@ package ca.bradj.questown.integration;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.jobs.*;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
@@ -33,7 +34,7 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
             BlockPos vsPos
     ) {
         if (currentPosSource.get("questown:work_spot_override") != null) {
-            @Nullable BlockPos ovr = getOverride(currentPosSource);
+            @Nullable BlockPos ovr = getOverride(currentPosSource, false);
             return ovr != null && !ovr.equals(vsPos);
         }
         return false;
@@ -44,7 +45,8 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
         super.beforeTick(bxEvent);
         UnsafeVillagerData villagerData = bxEvent.villagerData();
         ServerLevel serverLevel = bxEvent.level().get();
-        if (bxEvent.firstTick()) {
+        @Nullable BlockPos override = getOverride(villagerData, false);
+        if (override == null) {
             choosePosAndStoreOnVillager(
                     bxEvent.otherVillagerPositions(),
                     bxEvent.randomWalkableTownPosition(),
@@ -55,20 +57,15 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
         }
         String until = villagerData.get(DATA_KEY_WORKSPOT_OVERRIDE_UNTIL);
         if (until == null) {
-            setNewTimeout(serverLevel, villagerData);
+            if (Jobs.isCloseTo(bxEvent.position(), override)) {
+                setNewTimeout(serverLevel, villagerData);
+            }
             return;
         }
-        if (Util.getTick(serverLevel) < Long.parseLong(until)) {
-            return;
+        if (Util.getTick(serverLevel) >= Long.parseLong(until)) {
+            villagerData.clear(DATA_KEY_WORKSPOT_OVERRIDE);
+            villagerData.clear(DATA_KEY_WORKSPOT_OVERRIDE_UNTIL);
         }
-        // Time to pick a new spot.
-        choosePosAndStoreOnVillager(
-                bxEvent.otherVillagerPositions(),
-                bxEvent.randomWalkableTownPosition(),
-                villagerData::write,
-                serverLevel
-        );
-        setNewTimeout(serverLevel, villagerData);
     }
 
     private void setNewTimeout(
@@ -113,16 +110,21 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
     @Override
     public void beforeFindJobSite(BeforeFindJobSiteEvent event) {
         super.beforeFindJobSite(event);
-        BlockPos override = getOverride(event.unsafeVillagerData());
+        BlockPos override = getOverride(event.unsafeVillagerData(), true);
         if (override == null) return;
         event.applyWorkspotOverride()
              .accept(WithReason.always(override, "Overridden by " + this.getClass().getSimpleName()));
     }
 
-    private static @Nullable BlockPos getOverride(UnsafeVillagerData event) {
+    private static @Nullable BlockPos getOverride(
+            UnsafeVillagerData event,
+            boolean logMissing
+    ) {
         String posStr = event.get(DATA_KEY_WORKSPOT_OVERRIDE);
         if (posStr == null || posStr.isEmpty()) {
-            QT.logBug("RandomWorkSpot: No work spot override data found.");
+            if (logMissing) {
+                QT.logBug("RandomWorkSpot: No work spot override data found.");
+            }
             return null;
         }
         BlockPos override = BlockPos.of(Long.parseLong(posStr));
