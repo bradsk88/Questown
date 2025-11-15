@@ -3,6 +3,7 @@ package ca.bradj.questown.mobs.visitor;
 import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
@@ -66,6 +67,7 @@ import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
+import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
@@ -157,6 +159,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private final List<Consumer<VillagerSleptEvent>> sleepListeners = new ArrayList<>();
     private Signals.DayTime lastBedTime = new Signals.DayTime(Signals.NIGHT_START_TICK);
     private @Nullable Vec3 lastPos = null;
+    private Player playerLooking = null;
 
     public WorkToUndo getWorkToUndo() {
         return workToUndo;
@@ -465,6 +468,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     private void villagerTick() {
         slowDownForPlayers();
+        if (playerLooking != null) {
+            lookControl.setLookAt(playerLooking);
+        }
 
         if (ticksWithoutJobTarget > Compat.configGet(Config.MAX_TICKS_WITHOUT_SUPPLIES).get()) {
             JobID seeker = WorkSeekerJob.getIDForRoot(job.get().getId());
@@ -619,27 +625,43 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     private void slowDownForPlayers() {
-        // TODO: Add a way to easily slow down villagers
-//        List<Player> ps = level.getNearbyPlayers(
-//                TargetingConditions.forNonCombat(),
-//                this,
-//                this.getBoundingBox().inflate(16.0D, 64.0D, 16.0D)
-//        );
-//        for (Player p : ps) {
-//            if (isLookingAtMe(p)) {
-//                getNavigation().setSpeedModifier(slowWalkSpeed);
-//                return;
-//            }
-//        }
+        boolean wasLooking = playerLooking != null;
+        this.playerLooking = null;
+        List<Player> ps = level.getNearbyPlayers(
+                TargetingConditions.forNonCombat(),
+                this,
+                this.getBoundingBox().inflate(16.0D, 64.0D, 16.0D)
+        );
+        for (Player p : ps) {
+            if (isLookingAtMe(p)) {
+                this.playerLooking = p;
+                return;
+            }
+        }
+        if (wasLooking) {
+            // Just stopped being looked at
+            brain.eraseMemory(MemoryModuleType.PATH);
+        }
     }
 
     private boolean isLookingAtMe(Player p) {
+        if (p.isCrouching()) {
+            return false;
+        }
+
+        // if player is a few blocks away, don't consider them looking
+        double v = p.distanceToSqr(this);
+        town.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log("Dist: {}", v);
+        if (v > 10) {
+            return false;
+        }
+
         Vec3 vec3 = p.getViewVector(1.0F).normalize();
         Vec3 vec31 = new Vec3(this.getX() - p.getX(), this.getEyeY() - p.getEyeY(), this.getZ() - p.getZ());
         double d0 = vec31.length();
         vec31 = vec31.normalize();
         double d1 = vec3.dot(vec31);
-        QT.VILLAGER_LOGGER.debug("D1: {}", d1);
+        town.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log("Sight: {}", d1);
         return d1 > 0.95D - 0.025D / d0 ? p.hasLineOfSight(this) : false;
     }
 
@@ -1097,11 +1119,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                   .pop();
         super.customServerAiStep();
 
-        runLongPaths(brain1);
+        adjustSpeed(brain1);
 
     }
 
-    private void runLongPaths(Brain<VisitorMobEntity> brain1) {
+    private void adjustSpeed(Brain<VisitorMobEntity> brain1) {
         if (!brain1.hasMemoryValue(MemoryModuleType.PATH)) {
             return;
         }
@@ -1114,7 +1136,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (nodeCount < 10) {
             return;
         }
-        if (job.get().getGlobalSpecialRules().contains(SpecialRules.SLOW_WALK)) {
+        if (playerLooking != null || job.get().getGlobalSpecialRules().contains(SpecialRules.SLOW_WALK)) {
             getNavigation().setSpeedModifier(slowWalkSpeed);
             return;
         }
