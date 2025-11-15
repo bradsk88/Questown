@@ -69,7 +69,7 @@ public class WorkSeekerJob extends DeclarativeJob {
                 TIME_REQUIRED_AT_STATES,
                 ImmutableMap.of(),
                 WorksBehaviour.standardProductionRules().specialGlobalRules(),
-                ExpirationRules.never().withMaxTickLimit(100).withMaxTickFallback(DowntimeWork::getIdFor),
+                ExpirationRules.never().withMaxTickLimit(1000).withMaxTickFallback(DowntimeWork::getIdFor),
                 WorksBehaviour.noOutput(),
                 SoundInfo.guaranteed(SoundEvents.BOOK_PAGE_TURN.getLocation(), 100)
         );

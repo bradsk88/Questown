@@ -83,6 +83,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.entity.BedBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
@@ -433,6 +434,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @Override
     public void tick() {
         super.tick();
+
+        if (isSleeping()) {
+            return; // TODO: Confirm this is ok
+        }
 
         if (!(level instanceof ServerLevel sl)) {
             return;
@@ -962,6 +967,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // only handle cosmetic stuff like position, pose, etc.
 
     private void getInBed(BlockPos p_21141_) {
+        brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+        brain.eraseMemory(MemoryModuleType.PATH);
         if (this.isPassenger()) {
             this.stopRiding();
         }

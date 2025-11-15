@@ -36,6 +36,7 @@ public class PreTickHook {
                     >> roomsReplacer,
             Function<BlockPos, @NotNull State> state,
             boolean firstTick,
+            BlockPos position,
             Supplier<ImmutableList<BlockPos>> otherVillagerPositions,
             Supplier<BlockPos> randomWalkableTownPosition,
             UnsafeVillagerData villagerData
@@ -48,6 +49,7 @@ public class PreTickHook {
                 roomsReplacer,
                 state,
                 firstTick,
+                position,
                 otherVillagerPositions,
                 randomWalkableTownPosition,
                 villagerData

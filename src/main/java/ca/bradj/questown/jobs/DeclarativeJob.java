@@ -357,6 +357,7 @@ public class DeclarativeJob extends
                 fn -> rniot.set(fn.apply(rniot.get())),
                 bsFn,
                 firstTick,
+                entity.blockPosition(),
                 otherVillagerPositions,
                 randomWalkableTownPosition,
                 villagerData
@@ -369,6 +370,7 @@ public class DeclarativeJob extends
                 fn -> rniot.set(fn.apply(rniot.get())),
                 bsFn,
                 firstTick,
+                entity.blockPosition(),
                 otherVillagerPositions,
                 randomWalkableTownPosition,
                 villagerData
