@@ -4,6 +4,7 @@ import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
@@ -70,12 +71,16 @@ import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.EntityEvent;
 import net.minecraftforge.items.IItemHandler;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -569,7 +574,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();
         WorksBehaviour.TownData td = getTownData();
-        Predicate<JobID> canFit = p -> ServerJobsRegistry.canFit(uuid, p, Util.getDayTime(getServerLevel()));
+        Predicate<JobID> canFit = p -> {
+            if (ServerJobsRegistry.canFit(uuid, p, Util.getDayTime(getServerLevel()))) {
+                return true;
+            }
+            getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
+                    "Villager will not do {} because there is not enough time left in the day", p
+            );
+            return false;
+        };
         Predicate<JobID> canAlwaysStart = p -> ServerJobsRegistry.canAlwaysStart(uuid, p);
         JobID work = TownVillagers.chooseFromList(
                 canFit,
@@ -635,7 +648,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                     BlockPos pos = Positions.ToBlock(p, r.yCoord);
                     double dist = pos.distSqr(avoiding);
                     if (dist > 5) {
-                        QT.FLAG_LOGGER.trace("Target is {} blocks away from {}", dist, avoiding);
+                        getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
+                                "Target is {} blocks away from {}", dist, avoiding
+                        );
                         return true;
                     }
                     return false;
@@ -824,7 +839,23 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
-    public boolean isDebugLogEnabled(String logId) {
+    public DebugLogger getDebugLogger(
+            QT.QTLogger logger,
+            String logId
+    ) {
+        Marker marker = MarkerManager.getMarker(logId);
+        Logger wrapped = logger.unwrap();
+        if (isDebugLogEnabled(logId)) {
+            return (m, p) -> wrapped.info(marker, m, p);
+        }
+        String logLevel = System.getenv("INVISIBLE_LOG_LEVEL");
+        if ("trace".equalsIgnoreCase(logLevel)) {
+            return (m, p) -> wrapped.trace(marker, m, p);
+        }
+        return (m, p) -> wrapped.debug(marker, m, p);
+    }
+
+    private boolean isDebugLogEnabled(String logId) {
         return logToggles.getOrDefault(logId, false);
     }
 }

@@ -70,9 +70,7 @@ public class TownPossibleWork {
         ImmutableSet<Map.Entry<JobID, Supplier<Work>>> rjs = Works.regularJobs();
         roots.forEach(root -> {
             List<JobPossibility> unfilteredJobs = getJobsSortedByPossibility(root, rjs, t);
-            if (t.isDebugLogEnabled(DebugLogArgument.JOB_POSSIBILITIES_COMPUTE)) {
-                bigLog(root, unfilteredJobs);
-            }
+            bigLog(t, root, unfilteredJobs);
 
             List<JobPossibility> jobs = unfilteredJobs.stream().filter(
                     v -> v.score.value > Config.PREFERRED_JOB_ACCEPTANCE.get()
@@ -87,7 +85,7 @@ public class TownPossibleWork {
             if (jobs.isEmpty()) {
                 registerUnmetNeeds(root);
             }
-            QT.FLAG_LOGGER.debug(
+            t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
                     "Prepared for {}: [{}]",
                     root,
                     Strings.join(preselected.stream().map(JobID::jobId).toList(), ",")
@@ -97,10 +95,11 @@ public class TownPossibleWork {
     }
 
     private static void bigLog(
+            TownFlagBlockEntity t,
             String root,
             List<JobPossibility> unfilteredJobs
     ) {
-        QT.FLAG_LOGGER.debug(
+        t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
                 "Possible jobs for root {}: [\n{}\n]", root,
                 Strings.join(
                         unfilteredJobs.stream()
@@ -150,7 +149,8 @@ public class TownPossibleWork {
         public String toString() {
             return "JobPossibility{" +
                     "jobID=" + jobID +
-                    ", score=" + score.map(v -> NumberFormat.getNumberInstance().format(Math.round(v * 1000.0) / 1000.0)) +
+                    ", score=" + score.map(v -> NumberFormat.getNumberInstance()
+                                                            .format(Math.round(v * 1000.0) / 1000.0)) +
                     '}';
         }
     }
@@ -161,7 +161,8 @@ public class TownPossibleWork {
             TownFlagBlockEntity t
     ) {
         // FIXME: Only include jobs that are known by the villagers
-        List<Map.Entry<JobID, Supplier<Work>>> e = allJobs.stream().filter(v -> root.equals(v.getKey().rootId())).toList();
+        List<Map.Entry<JobID, Supplier<Work>>> e = allJobs.stream().filter(v -> root.equals(v.getKey().rootId()))
+                                                          .toList();
         ImmutableList.Builder<JobPossibility> b = ImmutableList.builder();
         for (Map.Entry<JobID, Supplier<Work>> w : e) {
             b.add(new JobPossibility(w.getKey(), getWorkPercentPossible(t, w)));
@@ -180,7 +181,7 @@ public class TownPossibleWork {
         }
 
         if (!ServerJobsRegistry.canFit(null, j.getId(), Util.getDayTime(t.getServerLevel()))) {
-            QT.FLAG_LOGGER.trace(
+            t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
                     "Villager will not do {} because there is not enough time left in the day",
                     j.getId().toNiceString()
             );

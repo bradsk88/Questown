@@ -1,6 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.commands.DebugLogArgument;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -61,7 +62,9 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         if (target == null) {
             return false;
         }
-        QT.VILLAGER_LOGGER.trace("Visitor has chosen {} as their target [{}]", target, e.getUUID());
+        e.town.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
+                "Visitor has chosen {} as their target [{}]", target, e.getUUID()
+        );
         return true;
     }
 
@@ -77,7 +80,9 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
         }
         long trying = level.getDayTime() - since.get();
         if (trying > PAUSE_TICKS) {
-            QT.VILLAGER_LOGGER.debug("Giving up on target because it took too long to get there");
+            entity.town.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
+                    "Giving up on target because it took too long to get there"
+            );
             return false;
         }
         return true;
@@ -104,7 +109,9 @@ public class TownWalk extends Behavior<VisitorMobEntity> {
             e.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(bp, speed, dist));
         }
         e.getBrain().eraseMemory(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM);
-        QT.VILLAGER_LOGGER.trace("{} navigating to {}", e.getUUID(), bp);
+        e.town.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
+                "{} navigating to {}", e.getUUID(), bp
+        );
         e.getBrain().setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, lvl.getDayTime());
     }
 }

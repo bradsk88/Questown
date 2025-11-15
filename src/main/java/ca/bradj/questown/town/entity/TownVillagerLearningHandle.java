@@ -11,6 +11,7 @@ import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.VillagerLearningHandle;
+import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -56,15 +57,11 @@ public class TownVillagerLearningHandle {
         ImmutableSet<JobID> representativeJobs = ServerJobsRegistry.getAllJobs();
         boolean changed = delegate.tick(representativeJobs);
         if (!changed) return;
-        if (!town.getUnsafe().isDebugLogEnabled(DebugLogArgument.AWARENESS_COMPUTE)) {
-            return;
-        }
+        String tag = DebugLogArgument.AWARENESS_COMPUTE;
+        TownInterface.DebugLogger logger = town.getUnsafe().getDebugLogger(QT.FLAG_LOGGER, tag);
         for (Map.Entry<JobID, ImmutableList<JobID>> pc : delegate.getNextJobAwarenesses().entrySet()) {
-            QT.FLAG_LOGGER.debug(
-                    "Computed next awareness for {}: {}",
-                    pc.getKey().toNiceString(),
-                    Jobs.getNiceString(pc.getValue())
-            );
+            String msg = "Computed next awareness for {}: {}";
+            logger.log(msg, pc.getKey().toNiceString(), Jobs.getNiceString(pc.getValue()));
         }
     }
 

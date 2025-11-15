@@ -2,6 +2,7 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
@@ -12,6 +13,7 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
 import ca.bradj.questown.town.Warper;
+import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
@@ -83,7 +85,7 @@ public class TownFlagState {
     ) {
         long dayTime = sl.getDayTime();
         if (e.advancedTimeOnTick == dayTime) { // TODO[Warp]: Plus or minus some ticks?
-            QT.FLAG_LOGGER.debug("Already advanced time on this tick. Skipping.");
+            e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Already advanced time on this tick. Skipping.");
             return null;
         }
 
@@ -95,7 +97,7 @@ public class TownFlagState {
                     Compat.getBlockStoredTagData(e).getCompound(NBT_TOWN_STATE),
                     sl, bp -> e.getWelcomeMats().contains(bp)
             );
-            QT.FLAG_LOGGER.trace("Loaded state from NBT: {}", storedState);
+            e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Loaded state from NBT: {}", storedState);
         } else {
             storedState = new MCTownState(
                     ImmutableList.of(),
@@ -107,7 +109,7 @@ public class TownFlagState {
                     ImmutableMap.of(),
                     0
             );
-            QT.FLAG_LOGGER.warn("NBT had no town state. That's probably a bug. Town state will reset");
+            QT.logBug("NBT had no town state. That's probably a bug. Town state will reset");
         }
 
 
@@ -118,7 +120,7 @@ public class TownFlagState {
             ticksPassed = optionalWarpDuration;
         }
         if (ticksPassed <= 0) {
-            QT.FLAG_LOGGER.debug("Time warp is not applicable");
+            QT.FLAG_LOGGER.info("Time warp is not applicable");
             return storedState;
         }
 
@@ -130,7 +132,7 @@ public class TownFlagState {
 
         for (int i = 0; i < villagers.size(); i++) {
             TownState.VillagerData<MCHeldItem> v = villagers.get(i);
-            QT.FLAG_LOGGER.trace(
+            e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log(
                     "[{}] Warping time by {} ticks, starting with journal: {}",
                     v.uuid,
                     ticksPassed,
@@ -162,10 +164,12 @@ public class TownFlagState {
 
         long after = System.currentTimeMillis();
 
-        if (Config.LOG_WARP_RESULT.get()) {
-            QT.FLAG_LOGGER.info("State after warp of {}: {}", ticksPassed, liveState);
-        }
-        QT.FLAG_LOGGER.debug("Warp took {} milliseconds", after - before);
+        TownInterface.DebugLogger logger =
+                Config.LOG_WARP_RESULT.get() ?
+                        QT.FLAG_LOGGER::info :
+                        e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP);
+        logger.log("State after warp of {}: {}", ticksPassed, liveState);
+        QT.FLAG_LOGGER.info("Warp took {} milliseconds", after - before);
 
         return new MCTownState(
                 liveState.villagers,
@@ -207,7 +211,7 @@ public class TownFlagState {
                 sl.addFreshEntity(recovered);
                 e.getVillagerHandle().register(recovered);
             }
-            QT.FLAG_LOGGER.trace("Loaded villager state from NBT: {}", villagers);
+            e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Loaded villager state from NBT: {}", villagers);
         }
     }
 
@@ -252,7 +256,7 @@ public class TownFlagState {
                 item -> true
         ).iterator();
 
-        boolean changes = checkForContainerChanges(level, matchIter);
+        boolean changes = checkForContainerChanges(e, level, matchIter);
         profileTick(start);
 
         return changes;
@@ -268,7 +272,7 @@ public class TownFlagState {
         try {
             MCTownState newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
             if (newState != null) {
-                QT.FLAG_LOGGER.trace("Storing state on {}: {}", e.getUUID(), newState);
+                e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Storing state on {}: {}", e.getUUID(), newState);
                 Compat.getBlockStoredTagData(e).put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
                 TownFlagState.recoverMobs(parent, level);
                 parent.getKnowledgeHandle().registerFoundLoots(newState.knowledge());
@@ -300,6 +304,7 @@ public class TownFlagState {
     }
 
     private boolean checkForContainerChanges(
+            TownFlagBlockEntity e,
             ServerLevel level,
             Iterator<ContainerTarget<MCContainer, MCTownItem>> matchIter
     ) {
@@ -324,7 +329,7 @@ public class TownFlagState {
             if (listenedBlocks.containsKey(bp)) {
                 Integer oldValue = listenedBlocks.get(bp);
                 if (!oldValue.equals(newValue)) {
-                    QT.FLAG_LOGGER.debug("Chest tags changed");
+                    e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TOWN_STATE_CHANGES).log("Chest tags changed");
                     containersChanged = true;
                 } else {
                     continue;
@@ -347,14 +352,15 @@ public class TownFlagState {
 
     void putStateOnTile(
             CompoundTag flagTag,
-            UUID uuid
+            UUID uuid,
+            TownInterface.DebugLogger logger
     ) {
         @Nullable MCTownState state = captureState();
         if (state == null) {
             QT.FLAG_LOGGER.warn("TownState was null. Will not store.");
             return;
         }
-        QT.FLAG_LOGGER.trace("[Tile] Storing state on {}: {}", uuid, state);
+        logger.log("[Tile] Storing state on {}: {}", uuid, state);
         CompoundTag cereal = TownStateSerializer.INSTANCE.store(state);
         flagTag.put(NBT_TOWN_STATE, cereal);
     }

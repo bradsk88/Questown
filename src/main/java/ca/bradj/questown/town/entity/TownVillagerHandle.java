@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
@@ -14,6 +15,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.*;
+import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -533,7 +535,8 @@ public class TownVillagerHandle implements VillagerHolder {
         QT.FLAG_LOGGER.debug("Registered entity with town {}: {}", t.getUUID(), vEntity);
         this.add(vEntity);
         vEntity.addChangeListener(() -> {
-            QT.FLAG_LOGGER.trace("Entity requests flag to be marked changed");
+            TownInterface.DebugLogger logger = t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TOWN_STATE_CHANGES);
+            logger.log("Entity requests flag to be marked changed");
             t.setChanged();
         });
         t.setChanged();

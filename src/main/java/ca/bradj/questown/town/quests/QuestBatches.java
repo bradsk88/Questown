@@ -260,7 +260,6 @@ public class QuestBatches<
                  .anyMatch(v -> room.equals(v.completedOn))
             ) {
                 QT.QUESTS_LOGGER.debug(
-                        marker,
                         "Quest was already marked complete: {} for door {}",
                         recipeId,
                         room.doorPos
