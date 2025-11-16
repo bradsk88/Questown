@@ -750,7 +750,7 @@ public class TownVillagerHandle implements VillagerHolder {
 
     private void changeJobRootNow(VisitorMobEntity v) {
         ImmutableSet<JobID> allRoots = ServerJobsRegistry.getAllRootJobs();
-        List<JobID> allOtherJobs = allRoots.stream().filter(z -> !v.getJobId().equals(z)).toList();
+        List<JobID> allOtherJobs = allRoots.stream().filter(z -> !v.getJobId().sameRoot(z)).toList();
         if (allOtherJobs.isEmpty()) {
             QT.FLAG_LOGGER.error("Only one job detected in town? This is a bug.");
             v.setJobChangePending(false);
