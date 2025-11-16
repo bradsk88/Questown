@@ -9,6 +9,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.DataSlot;
 
 import java.util.Collection;
 import java.util.UUID;
@@ -18,7 +19,7 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
 
     private static final int boxHeight = 18;
     final JobID jobId;
-    public boolean changeAlreadyPending;
+    final DataSlot alreadyPending;
 
     final BopTransactionSyncer tx = new BopTransactionSyncer(this::getSlot);
 
@@ -43,9 +44,9 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
         super(MenuTypesInit.CONFIRM_JOB_CHANGE.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
         gathererInventoryYOffset = 8;
         this.jobId = jobId;
-        this.changeAlreadyPending = alreadyPending;
-
         layoutSlots(gathererInv);
+        this.addDataSlot(this.alreadyPending = DataSlot.standalone());
+        this.alreadyPending.set(alreadyPending ? 1 : 0);
     }
 
     @Override

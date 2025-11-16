@@ -43,10 +43,15 @@ import java.util.stream.Stream;
 public class TownVillagerHandle implements VillagerHolder {
 
     public static final TownVillagerHandlerSerializer SERIALIZER = new TownVillagerHandlerSerializer();
+
+    // Unserialized
     private final Map<VillagerUUID, CompoundTag> customData = new HashMap<>();
     private final Map<VillagerUUID, Long> mostRecentDowntimeTick = new HashMap<>();
     private final Map<VillagerUUID, LookTarget> lookTargets = new HashMap<>();
     private final Map<VillagerUUID, LookTarget> mostRecentLookTarget = new HashMap<>();
+
+    // Serialized
+    private final Map<VillagerUUID, Boolean> jobChangesPending = new HashMap<>();
 
     public static void staticInit() {
         TownVillagerUIs.staticInit();
@@ -59,6 +64,9 @@ public class TownVillagerHandle implements VillagerHolder {
     final Map<UUID, PoseInPlace> requestedPose = new HashMap<>();
     final Map<UUID, Boolean> hasBlockOfProgress = new HashMap<>();
 
+    public ImmutableMap<VillagerUUID, Boolean> getJobChangesPending() {
+        return ImmutableMap.copyOf(jobChangesPending);
+    }
 
     private record LookTarget(
             Entity who,
@@ -83,7 +91,8 @@ public class TownVillagerHandle implements VillagerHolder {
             Map<UUID, ? extends ImmutableCollection<JobID>> unlockedJobs,
             Map<UUID, ? extends Map<JobID, ? extends ImmutableCollection<JobID>>> jobsKnownToExist,
             ImmutableMap<UUID, Integer> experience,
-            ImmutableMap<UUID, Integer> level
+            ImmutableMap<UUID, Integer> level,
+            ImmutableMap<VillagerUUID, Boolean> jobChangesPending
     ) {
         if (!this.fullness.isEmpty()) {
             throw new IllegalStateException("Attempting to initialize already initialized");
@@ -94,6 +103,7 @@ public class TownVillagerHandle implements VillagerHolder {
         this.learning.initialize(unlockedJobs, jobsKnownToExist);
         this.experience.putAll(experience);
         this.levels.putAll(level);
+        this.jobChangesPending.putAll(jobChangesPending);
     }
 
     public void tick(
@@ -255,7 +265,7 @@ public class TownVillagerHandle implements VillagerHolder {
         }
 
         t.possibleWork.invalidate();
-        f.setJobChangePending(false);
+        t.getVillagerHandle().setJobChangePending(f.getVUID(), false);
     }
 
     private void doSetJob(
@@ -568,6 +578,19 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
+    public void setJobChangePending(
+            @Nullable VillagerUUID vuid,
+            boolean value) {
+        jobChangesPending.put(vuid, value);
+        town.getUnsafe().setChanged();
+    }
+
+    @Override
+    public boolean isJobChangePending(VillagerUUID vuid) {
+        return UtilClean.getOrDefault(jobChangesPending, vuid, false);
+    }
+
+    @Override
     public void register(VisitorMobEntity vEntity) {
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         QT.FLAG_LOGGER.info("Registered entity with town {}: {}", t.getUUID(), vEntity);
@@ -635,11 +658,9 @@ public class TownVillagerHandle implements VillagerHolder {
             return;
         }
 
-        e.setJobChangePending(true);
-        town.getUnsafe().getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.JOB_LOGIC).log(
-                "Villager {} will change to a new job root in the morning.",
-                UtilClean.truncateMiddle(villagerUUID)
-        );
+        TownFlagBlockEntity t = town.getUnsafe();
+        t.getVillagerHandle().setJobChangePending(e.getVUID(), true);
+        t.messages.broadcastMessage("message.questown.villager.leveled_up", UtilClean.truncateMiddle(villagerUUID));
     }
 
     @Override
@@ -741,7 +762,7 @@ public class TownVillagerHandle implements VillagerHolder {
         forEach(LivingEntity::stopSleeping);
         makeAllTotallyHungry();
         forEach(v -> {
-            if (!v.isJobChangePending()) {
+            if (!isJobChangePending(v.getVUID())) {
                 return;
             }
             changeJobRootNow(v);
@@ -752,8 +773,8 @@ public class TownVillagerHandle implements VillagerHolder {
         ImmutableSet<JobID> allRoots = ServerJobsRegistry.getAllRootJobs();
         List<JobID> allOtherJobs = allRoots.stream().filter(z -> !v.getJobId().sameRoot(z)).toList();
         if (allOtherJobs.isEmpty()) {
-            QT.FLAG_LOGGER.error("Only one job detected in town? This is a bug.");
-            v.setJobChangePending(false);
+            QT.FLAG_LOGGER.error("Only one job root detected in town? This is likely a poorly configured data pack.");
+            jobChangesPending.put(v.getVUID(), false);
             return;
         }
         ImmutableList<JobID> shuffled = Compat.shuffle(
