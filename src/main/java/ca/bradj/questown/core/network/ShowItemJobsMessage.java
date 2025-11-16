@@ -21,14 +21,23 @@ public record ShowItemJobsMessage(
             ShowItemJobsMessage msg,
             FriendlyByteBuf buffer
     ) {
-        buffer.writeUtf(Ingredients.toString(msg.requestedItem));
+        String s = "";
+        if (!msg.requestedItem.isEmpty()) {
+            s = Ingredients.toString(msg.requestedItem);
+        }
+        buffer.writeUtf(s);
         buffer.writeCollection(msg.jobs, UIJob::toNetwork);
         buffer.writeBlockPos(msg.flagPos);
     }
 
     public static ShowItemJobsMessage decode(FriendlyByteBuf buffer) {
+        String block = buffer.readUtf();
+        Ingredient requestedItem = Ingredient.EMPTY;
+        if (!block.isEmpty()) {
+            requestedItem = Ingredients.fromString(block);
+        }
         return new ShowItemJobsMessage(
-                Ingredients.fromString(buffer.readUtf()),
+                requestedItem,
                 ImmutableList.copyOf(buffer.readList(UIJob::fromNetwork)),
                 buffer.readBlockPos()
         );

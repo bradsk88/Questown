@@ -1,6 +1,8 @@
 package ca.bradj.questown.gui.town.status;
 
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.network.OpenJobMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
@@ -124,11 +126,21 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int texWidth = 32;
         int texHeight = 32;
 
-        int destX = coords.rightXPadded() - drawWidth;
-        int destY = coords.topYPadded() - MED_PADDING;
+        int destX = getStatusX(coords);
+        int destY = getStatusY(coords);
         @NotNull StatusPacket status = getSmoothedStatus(uuid);
         RenderSystem.setShaderTexture(0, status.image());
         blit(stack, destX, destY, 0, 0, drawWidth, drawHeight, texWidth, texHeight);
+    }
+
+    private static int getStatusY(CardCoordinates coords) {
+        return coords.topYPadded() - MED_PADDING;
+    }
+
+    private static int getStatusX(
+            CardCoordinates coords
+    ) {
+        return coords.rightXPadded() - 32;
     }
 
     private @NotNull StatusPacket getSmoothedStatus(UUID villagerUUID) {
@@ -204,6 +216,19 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight()) / 2;
         tabs.mouseClicked(bgX, bgY, p_97748_, p_97749_);
+
+        for (Card<UUID> v : cards()) {
+            CardCoordinates coords = v.coords();
+            int x = getStatusX(coords);
+            int y = getStatusY(v.coords());
+            if (UtilClean.isCoordInBox(p_97748_, p_97749_, x, y, 32, 32)) {
+                QuestownNetwork.CHANNEL.sendToServer(new OpenJobMessage(
+                        menu.getFlagInfo().flagPos(), syncedData.getJob(v.data())
+                ));
+                return true;
+            }
+        };
+
         return super.mouseClicked(p_97748_, p_97749_, p_97750_);
     }
 

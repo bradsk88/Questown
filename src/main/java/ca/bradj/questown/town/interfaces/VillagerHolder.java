@@ -144,4 +144,9 @@ public interface VillagerHolder {
             long untilTick,
             long thenNotUntilTick
     );
+
+    void showJobUI(
+            ServerPlayer sender,
+            JobID jobToShow
+    );
 }

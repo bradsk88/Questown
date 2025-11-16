@@ -88,6 +88,12 @@ public class QuestownNetwork {
                 OpenItemJobsMessage::handle
         ).add();
         Compat.withConsumer(
+                registerMessage(OpenJobMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                        encoder(OpenJobMessage::encode).
+                        decoder(OpenJobMessage::decode),
+                OpenJobMessage::handle
+        ).add();
+        Compat.withConsumer(
                 registerMessage(UnlockJobMessage.class, NetworkDirection.PLAY_TO_SERVER).
                         encoder(UnlockJobMessage::encode).
                         decoder(UnlockJobMessage::decode),

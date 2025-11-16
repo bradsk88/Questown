@@ -1,11 +1,14 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.network.*;
 import ca.bradj.questown.gui.*;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -19,6 +22,7 @@ import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -29,6 +33,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.function.TriFunction;
@@ -117,13 +122,76 @@ public class TownVillagerUIs {
                 itemToShowJobsFor
         );
         for (JobID job : jubz.keySet()) {
-            Supplier<Work> w = Works.get(job);
-            Work gotWork = w.get();
-            Job<?, ?, ?> j = gotWork.jobFunc.apply(UUID.randomUUID());
+            Job<?, ?, ?> j = ServerJobsRegistry.getUninitializedJob(job, VillagerUUID.random()).getJob();
             if (!(j instanceof DeclarativeJob dj)) {
                 continue;
             }
 
+            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafeTown.getTownData(), job);
+            ImmutableList<Ingredient> roomRecipe = getRoomIngredients(dj, rMap);
+
+            b.add(new UIJob(
+                    j.getId(),
+                    ImmutableList.copyOf(vb.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())),
+                    ImmutableList.copyOf(dj.initialIngredients.values()),
+                    ImmutableList.copyOf(dj.initialTools.values()),
+                    dj.location().baseRoom(),
+                    roomRecipe,
+                    results.stream()
+                           .map(v -> v.get().getDefaultInstance())
+                           .collect(ImmutableList.toImmutableList())
+            ));
+        }
+        Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build(), unsafeTown.getTownFlagBasePos());
+        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
+    }
+
+    private static @NotNull ImmutableList<Ingredient> getRoomIngredients(
+            DeclarativeJob dj,
+            ImmutableMap<ResourceLocation, RoomRecipe> rMap
+    ) {
+        RoomRecipe r = rMap.get(dj.location().baseRoom());
+        ImmutableList<Ingredient> roomRecipe;
+        @Nullable ItemStack roomBlock = RoomBlock.getRoomBlock(dj.location().baseRoom());
+        if (roomBlock != null) {
+            roomRecipe = ImmutableList.of(Ingredient.of(roomBlock));
+        } else {
+            roomRecipe = r == null ? ImmutableList.of() : ImmutableList.copyOf(r.getIngredients());
+        }
+        return roomRecipe;
+    }
+
+    public static void showJobsWithSameRootUI(
+            ServerPlayer sender,
+            @NotNull TownFlagBlockEntity unsafe,
+            List<LivingEntity> entities,
+            JobID childJob
+    ) {
+        Map<JobID, List<UUID>> vb = new HashMap<>();
+        for (LivingEntity entity : entities) {
+            if (!(entity instanceof VisitorMobEntity vme)) {
+                continue;
+            }
+            UtilClean.addOrInitializeList(vb, vme.getJobId(), vme.getUUID());
+        }
+
+        ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
+        SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
+        sender.getLevel().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
+        ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
+
+        ImmutableList<JobID> jubz = ServerJobsRegistry.getAllJobs()
+                                                      .stream()
+                                                      .filter(v -> v.sameRoot(childJob))
+                                                      .collect(ImmutableList.toImmutableList());
+        ImmutableList.Builder<UIJob> b = ImmutableList.builder();
+        for (JobID job : jubz) {
+            Job<?, ?, ?> j = ServerJobsRegistry.getUninitializedJob(job, VillagerUUID.random()).getJob();
+            if (!(j instanceof DeclarativeJob dj)) {
+                continue;
+            }
+
+            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafe.getTownData(), job);
             RoomRecipe r = rMap.get(dj.location().baseRoom());
             b.add(new UIJob(
                     j.getId(),
@@ -131,12 +199,14 @@ public class TownVillagerUIs {
                     ImmutableList.copyOf(dj.initialIngredients.values()),
                     ImmutableList.copyOf(dj.initialTools.values()),
                     dj.location().baseRoom(),
-                    r == null ? ImmutableList.of() : ImmutableList.copyOf(r.getIngredients()),
-                    ImmutableList.copyOf(gotWork.results.apply(unsafeTown.getTownData()).stream()
-                                                        .map(v -> v.get().getDefaultInstance()).toList())
+                    getRoomIngredients(dj, rMap),
+                    results.stream()
+                           .map(v -> v.get().getDefaultInstance())
+                           .collect(ImmutableList.toImmutableList())
             ));
         }
-        Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build(), unsafeTown.getTownFlagBasePos());
+
+        Object msg = new ShowItemJobsMessage(Ingredient.of(ItemStack.EMPTY), b.build(), unsafe.getTownFlagBasePos());
         QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
     }
 

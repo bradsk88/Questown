@@ -1,9 +1,13 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.Pair;
+import ca.bradj.questown.gui.StatusArt;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -102,7 +106,16 @@ public class DowntimeWork {
                         Compat.configGet(Config.MAX_DOWNTIME_TICKS),
                         WorkSeekerJob::getIDForRoot
                 )
-        );
+        ).withOverrides(new Overrides(
+                ImmutableMap.of(
+                        ProductionStatus.NO_JOBSITE,
+                        StatusArt.getTexture(getIdForRoot("___"), ProductionStatus.IDLE)
+                ),
+                ImmutableMap.of(ProductionStatus.NO_JOBSITE, new Pair<>(
+                        "questown.tooltips.villagers.job_common.status_1.DOWNTIME",
+                        "questown.tooltips.villagers.job_common.click_to_learn"
+                ))
+        ));
     }
 
     public static JobID getIdFor(JobID rootId) {
