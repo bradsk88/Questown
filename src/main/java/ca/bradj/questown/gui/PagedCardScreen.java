@@ -21,6 +21,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import vazkii.patchouli.api.TriPredicate;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -30,6 +31,10 @@ public final class PagedCardScreen<D> {
 
     public int backgroundWidth() {
         return backgroundWidth;
+    }
+
+    public int getCurrentPageIndex() {
+        return currentPage;
     }
 
     public interface CardRenderer<D> {
@@ -59,7 +64,7 @@ public final class PagedCardScreen<D> {
     private final Consumer<D> setRenderColorForCard;
     private final CardRenderer<D> renderCardContent;
     private final Supplier<List<D>> cardsData;
-    private final int MAX_CARDS_PER_PAGE;
+    public final int MAX_CARDS_PER_PAGE;
     public final int cardHeight;
     private final int buttonY;
     private int currentPage = 0;
@@ -95,7 +100,7 @@ public final class PagedCardScreen<D> {
         this.setRenderColorForCard = setRenderColorForCard;
         this.renderCardContent = renderCardContent;
         this.cardHeight = UNSCALED_CARD_HEIGHT * heightScale;
-        this.MAX_CARDS_PER_PAGE = (backgroundHeight - BIG_PADDING) / (cardHeight + SMALL_PADDING);
+        this.MAX_CARDS_PER_PAGE = getCardsPerPage(backgroundHeight, cardHeight);
         this.buttonY = buttonY;
     }
 
@@ -113,7 +118,7 @@ public final class PagedCardScreen<D> {
         int y = bgY;
         int pageStringY = y + BIG_PADDING;
         y = pageStringY + BIG_PADDING;
-        int MAX_CARDS_PER_PAGE = (bgHeight - BIG_PADDING) / (cardHeight + SMALL_PADDING);
+        int MAX_CARDS_PER_PAGE = getCardsPerPage(bgHeight, cardHeight);
 
         int startIndex = currentPage * MAX_CARDS_PER_PAGE;
         int endIndex = Math.min(startIndex + MAX_CARDS_PER_PAGE, cardsData.size());
@@ -136,6 +141,10 @@ public final class PagedCardScreen<D> {
             b.add(new Card<>(i, coords, data));
         }
         return b.build();
+    }
+
+    public static int getCardsPerPage(int bgHeight, int cardHeight) {
+        return (bgHeight - BIG_PADDING) / (cardHeight + SMALL_PADDING);
     }
 
     private int getCardY(
@@ -233,7 +242,7 @@ public final class PagedCardScreen<D> {
         return tooltip;
     }
 
-    public Iterable<Card<D>> cards() {
+    public Collection<Card<D>> cards() {
         return getCardLayout(
                 width.get(),
                 height.get(),

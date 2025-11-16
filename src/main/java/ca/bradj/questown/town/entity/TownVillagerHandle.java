@@ -560,6 +560,14 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     @Override
+    public void showJobUI(
+            ServerPlayer sender,
+            JobID jobToShow
+    ) {
+        TownVillagerUIs.showJobsWithSameRootUI(sender, town.getUnsafe(), entities, jobToShow);
+    }
+
+    @Override
     public void register(VisitorMobEntity vEntity) {
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         QT.FLAG_LOGGER.info("Registered entity with town {}: {}", t.getUUID(), vEntity);

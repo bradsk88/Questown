@@ -52,12 +52,12 @@ public class Works {
         return b.build();
     }
 
-    public static ImmutableSet<Map.Entry<JobID, Supplier<Work>>> entrySet(String rootID) {
+    public static ImmutableSet<Map.Entry<JobID, Supplier<Work>>> entrySet(String rootForDining) {
         assert initialized;
         ImmutableSet.Builder<Map.Entry<JobID, Supplier<Work>>> b = ImmutableSet.builder();
         b.addAll(works.entrySet());
         if (Config.HUNGER_ENABLED.get()) {
-            b.add(new AbstractMap.SimpleEntry<>(DinerWork.getIdForRoot(rootID), () -> DinerWork.asWork(rootID)));
+            b.add(new AbstractMap.SimpleEntry<>(DinerWork.getIdForRoot(rootForDining), () -> DinerWork.asWork(rootForDining)));
         }
         return b.build();
     }

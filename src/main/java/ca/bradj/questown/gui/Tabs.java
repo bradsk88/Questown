@@ -56,7 +56,7 @@ public class Tabs {
         }
     }
 
-    public void mouseClicked(
+    public boolean mouseClicked(
             int bgX,
             int bgY,
             double mouseX,
@@ -67,9 +67,10 @@ public class Tabs {
             int tabLeftX = bgX + (unTab.getWidth() * i) + X_OFFSET;
             if (UtilClean.isCoordInBox(mouseX, mouseY, tabLeftX, tabsY, tab.getWidth(), unTab.getHeight())) {
                 tabs.get(i).onClick().run();
-                return;
+                return true;
             }
         }
+        return false;
 
     }
 }

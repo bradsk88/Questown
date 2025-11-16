@@ -5,7 +5,7 @@ import java.util.function.Consumer;
 public interface SubUI {
     void draw(RenderContext rc, int bgX, int bgY);
 
-    void mouseClicked(int bgX, int bgY, double x, double y);
+    boolean mouseClicked(int bgX, int bgY, double x, double y);
 
     boolean renderTooltip(int bgX, int bgY, int mouseX, int mouseY, Consumer<String> renderFn);
 
@@ -16,7 +16,8 @@ public interface SubUI {
         }
 
         @Override
-        public void mouseClicked(int bgX, int bgY, double x, double y) {
+        public boolean mouseClicked(int bgX, int bgY, double x, double y) {
+            return false;
         }
 
         @Override
