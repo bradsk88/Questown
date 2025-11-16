@@ -21,6 +21,7 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
 
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
+    private final VillagerTabs tabs;
 
     private final JEI.NineNine background;
     private final IDrawableStatic slot;
@@ -37,6 +38,7 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         super(menu, playerInv, title);
         this.background = JEI.getRecipeGuiBackground();
         this.slot = JEI.getSlotDrawable();
+        tabs = VillagerTabs.forMenu(menu);
     }
 
     @Override
@@ -63,14 +65,19 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
             Minecraft.getInstance().setScreen(null);
         }
         ));
-        this.addRenderableWidget(new Button(
-                maybeX + buttonWidth,
-                maybeY,
-                buttonWidth,
-                20,
-                Compat.translatable("menu.common.cancel"),
-                (p_96776_) -> Minecraft.getInstance().setScreen(null)
-        ));
+        if (menu.alreadyPending.get() == 0) {
+            this.addRenderableWidget(new Button(
+                    maybeX + buttonWidth,
+                    maybeY,
+                    buttonWidth,
+                    20,
+                    Compat.translatable("menu.common.cancel"),
+                    (p_96776_) -> Minecraft.getInstance().setScreen(null)
+            ));
+        } else {
+            unlockButton.visible = false;
+            unlockButton.active = false;
+        }
         this.textX = maybeX + slot.getWidth() + 8;
     }
 
@@ -84,17 +91,36 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         int jobIconX = bgX + 8 + slot.getWidth() + 4;
-        if (menu.changeAlreadyPending) {
-            renderStatusText(stack, bgX, bgY + menu.gathererInventoryYOffset);
+        super.renderBackground(stack);
+        super.render(stack, mouseX, mouseY, partialTicks);
+        if (menu.alreadyPending.get() == 1) {
+            renderStatusText(stack, bgX, bgY + menu.gathererInventoryYOffset + 24);
+            return;
         }
 
         if (unlockButton != null) {
             unlockButton.active = menu.tx.hasBlockOfProgress();
         }
-        super.renderBackground(stack);
-        super.render(stack, mouseX, mouseY, partialTicks);
         renderChangeText(stack, jobIconX, bgY + menu.gathererInventoryYOffset);
         this.renderTooltip(stack, mouseX, mouseY);
+    }
+
+    @Override
+    protected void renderTooltip(
+            PoseStack stack,
+            int mouseX,
+            int mouseY
+    ) {
+        super.renderTooltip(stack, mouseX, mouseY);
+        int x = (this.width - backgroundWidth) / 2;
+        int y = (this.height - backgroundHeight) / 2;
+        tabs.renderTooltip(
+                x,
+                y,
+                mouseX,
+                mouseY,
+                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
+        );
     }
 
     private void renderChangeText(
@@ -129,7 +155,7 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
                 textWidth
         );
         for (FormattedCharSequence part : parts) {
-            Compat.drawDarkText(font, stack, part, x, bgY);
+            drawCenteredString(stack, font, part, x + (textWidth/2), bgY, -1);
             bgY += 8;
         }
     }
@@ -144,6 +170,7 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
         renderInventory(stack);
     }
 
@@ -152,7 +179,11 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         int y = (this.height - backgroundHeight) / 2;
         int yCoord;
         gathererSlotY = Integer.MAX_VALUE;
-        for (int i = 0; i < menu.slots.size(); i++) {
+        int size = menu.slots.size();
+        if (menu.alreadyPending.get() == 1) {
+            size = size - 1;
+        }
+        for (int i = 0; i < size; i++) {
             Slot s = menu.slots.get(i);
             int xCoord = x - 1 + s.x;
             yCoord = y - 1 + s.y;
@@ -169,6 +200,9 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
+        if (tabs.mouseClicked(x, y, mouseX, mouseY)) {
+            return true;
+        }
         return super.mouseClicked(mouseX, mouseY, p_97750_);
     }
 

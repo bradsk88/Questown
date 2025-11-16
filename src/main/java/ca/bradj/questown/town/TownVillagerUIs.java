@@ -250,7 +250,8 @@ public class TownVillagerUIs {
                 flag::getEconomicsHandle,
                 unlockedJobs,
                 unlockableJobs,
-                villagerId
+                villagerId,
+                flag.getVillagerHandle().isJobChangePending(e.getVUID())
         );
         runnable.accept(d);
     }
@@ -272,7 +273,9 @@ public class TownVillagerUIs {
             VillagerStatsData stats, VillagerEconomicsData econ, Supplier<NoMCEconomics> econHandle,
             Map<UUID, ? extends Set<JobID>> unlockedJobs,
             Set<JobID> unlockableJobs,
-            UUID villagerId) {
+            UUID villagerId,
+            boolean jobChangePending
+    ) {
     }
 
     private static ImmutableMap<String, Consumer<ShowerData>> menuShow;
@@ -296,7 +299,7 @@ public class TownVillagerUIs {
                             );
                             x.connectToServer(e, d.sender());
                             return x;
-                        }, d.quests(), d.entity(), d.stats()
+                        }, d.quests(), d.entity(), d.stats(), d.jobChangePending()
                 )
         );
         b.put(
@@ -313,7 +316,8 @@ public class TownVillagerUIs {
                             ),
                             d.quests(),
                             e,
-                            d.stats()
+                            d.stats(),
+                            d.jobChangePending()
                     );
                 }
         );
@@ -331,7 +335,8 @@ public class TownVillagerUIs {
                             ),
                             d.quests(),
                             e,
-                            d.stats()
+                            d.stats(),
+                            d.jobChangePending()
                     );
                 }
         );
@@ -355,24 +360,22 @@ public class TownVillagerUIs {
                 }
         );
         b.put(
-                OpenVillagerMenuMessage.CHANGE_ROOT, (ShowerData d) -> {
-                    openMenu(
-                            d.sender(), (windowId, inv, p) -> new JobChangeConfirmMenu(
-                                    windowId,
-                                    new SimpleContainer(1) {
-                                        @Override
-                                        public int getMaxStackSize() {
-                                            return 1;
-                                        }
-                                    },
-                                    d.sender.getInventory(),
-                                    d.entity.getUUID(),
-                                    d.entity.getJobId(),
-                                    d.entity().getFlagPos(),
-                                    d.entity.isJobChangePending()
-                            ), d.quests(), d.entity(), d.stats()
-                    );
-                }
+                OpenVillagerMenuMessage.CHANGE_ROOT, (ShowerData d) -> openMenu(
+                        d.sender(), (windowId, inv, p) -> new JobChangeConfirmMenu(
+                                windowId,
+                                new SimpleContainer(1) {
+                                    @Override
+                                    public int getMaxStackSize() {
+                                        return 1;
+                                    }
+                                },
+                                d.sender.getInventory(),
+                                d.entity.getUUID(),
+                                d.entity.getJobId(),
+                                d.entity().getFlagPos(),
+                                d.jobChangePending()
+                        ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                )
         );
         b.put(
                 OpenVillagerMenuMessage.ECONOMICS, (ShowerData d) -> {
@@ -389,7 +392,7 @@ public class TownVillagerUIs {
                                     d.entity().getFlagPos(),
                                     d.econ(),
                                     d.entity().hasBlockOfProgress()
-                            ), d.quests(), d.entity(), d.stats()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
                     );
                 }
         );
@@ -406,7 +409,7 @@ public class TownVillagerUIs {
                                     windowId,
                                     d.entity().getUUID(),
                                     d.entity().getFlagPos()
-                            ), d.quests(), d.entity(), d.stats()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
                     );
                 }
         );
@@ -426,7 +429,8 @@ public class TownVillagerUIs {
             TriFunction<Integer, Inventory, Player, AbstractContainerMenu> shower,
             List<UIQuest> quests,
             VisitorMobEntity e,
-            VillagerStatsData stats
+            VillagerStatsData stats,
+            boolean isJobChangePending
     ) {
         Compat.openScreen(
                 sender, new MenuProvider() {
@@ -452,7 +456,7 @@ public class TownVillagerUIs {
                         stats,
                         new VillagerEconomicsData(ImmutableList.of()),
                         e.hasBlockOfProgress(),
-                        e.isJobChangePending()
+                        isJobChangePending
                 )
         );
     }

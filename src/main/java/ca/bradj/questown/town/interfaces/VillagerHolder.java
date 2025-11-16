@@ -110,7 +110,10 @@ public interface VillagerHolder {
 
     void showMultiStatusUI(ServerPlayer sender);
 
-    void showItemJobsUI(ServerPlayer sender, Ingredient itemToShowJobsFor);
+    void showItemJobsUI(
+            ServerPlayer sender,
+            Ingredient itemToShowJobsFor
+    );
 
     void register(VisitorMobEntity vEntity);
 
@@ -128,8 +131,9 @@ public interface VillagerHolder {
 
     void clearBlockOfProgress(UUID uuid);
 
-    void scheduleJobRootChange(UUID villagerUUID,
-                               boolean instant
+    void scheduleJobRootChange(
+            UUID villagerUUID,
+            boolean instant
     );
 
     boolean isUnlocked(JobID jobID);
@@ -149,4 +153,11 @@ public interface VillagerHolder {
             ServerPlayer sender,
             JobID jobToShow
     );
+
+    void setJobChangePending(
+            VillagerUUID vuid,
+            boolean value
+    );
+
+    boolean isJobChangePending(VillagerUUID vuid);
 }

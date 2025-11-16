@@ -83,7 +83,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
-import net.minecraft.world.level.block.entity.BedBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
@@ -287,14 +286,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public boolean hasBlockOfProgress() {
         Boolean hasBOP = this.entityData.get(VisitorMobEntity.hasBOP);
         return hasBOP;
-    }
-
-    public boolean isJobChangePending() {
-        return jobChangePending;
-    }
-
-    public void setJobChangePending(boolean value) {
-        jobChangePending = value;
     }
 
     @SuppressWarnings("removal")

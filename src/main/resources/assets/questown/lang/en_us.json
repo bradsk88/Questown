@@ -1,5 +1,6 @@
 {
   "itemGroup.questown": "Questown",
+  "message.questown.villager.leveled_up": "Villager %s will change to a new job root in the morning.",
   "message.questown.soup_pot.need_bowl": "You need a bowl to take soup from the pot",
   "message.questown.soup_pot.empty": "Villagers can add mushrooms to the pot to make stew",
   "message.questown.bonus_food_only_once": "The \"free food\" bonus can only be claimed one time",
