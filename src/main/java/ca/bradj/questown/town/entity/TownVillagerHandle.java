@@ -761,6 +761,8 @@ public class TownVillagerHandle implements VillagerHolder {
     public void handleMorning() {
         forEach(LivingEntity::stopSleeping);
         makeAllTotallyHungry();
+        long tick = Util.getTick(town.getServerLevelUnsafe());
+        forEach(v -> registerMostRecentDowntime(v.getVUID(), tick));
         forEach(v -> {
             if (!isJobChangePending(v.getVUID())) {
                 return;

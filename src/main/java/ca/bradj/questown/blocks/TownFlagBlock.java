@@ -31,12 +31,16 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.BlockHitResult;
@@ -56,6 +60,7 @@ public class TownFlagBlock extends BaseEntityBlock {
     public static final String ITEM_ID = "flag_base";
     public static final Item.Properties ITEM_PROPS = new Item.Properties().
             tab(ModItemGroup.QUESTOWN_GROUP);
+    public static final Property<Boolean> SLEEPING = BooleanProperty.create("sleeping");
     private Map<Player, Long> informedPlayers = new HashMap<>();
 
     public TownFlagBlock() {
@@ -64,6 +69,11 @@ public class TownFlagBlock extends BaseEntityBlock {
                                          .strength(10.0F, 1200.0F)
                                          .noOcclusion()
         );
+        this.registerDefaultState(this.stateDefinition.any().setValue(SLEEPING, false));
+    }
+
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
+        p_51385_.add(SLEEPING);
     }
 
     public static String itemId(WallType wallType) {

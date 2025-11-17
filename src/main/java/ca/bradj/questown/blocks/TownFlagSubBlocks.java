@@ -3,6 +3,8 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -10,6 +12,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
@@ -25,14 +28,19 @@ public final class TownFlagSubBlocks {
     private final Map<BlockPos, Integer> ticksWithoutChild = new HashMap<>();
     private final Map<BlockPos, OnOrphaned> runOnOrphaned = new HashMap<>();
     private final BlockPos flagPos;
-    private boolean parentIsUnloaded = false;
 
     public TownFlagSubBlocks(BlockPos blockPos) {
         this.flagPos = blockPos;
     }
 
-    public void parentTick(ServerLevel sl) {
-        parentIsUnloaded = false;
+    public void parentTick(ServerLevel sl,
+                           BlockPos blockPos
+    ) {
+        BlockEntity en = sl.getBlockEntity(blockPos);
+        if ((en instanceof TownFlagBlockEntity)) {
+            BlockState state = sl.getBlockState(blockPos);
+            sl.setBlockAndUpdate(blockPos, state.setValue(TownFlagBlock.SLEEPING, false));
+        }
         if (!pending.isEmpty()) {
             BlockPos popped = pending.pop();
             try {
@@ -51,7 +59,10 @@ public final class TownFlagSubBlocks {
         ImmutableMap.Builder<BlockPos, Integer> twoc = ImmutableMap.builder();
         ticksWithoutChild.forEach((bp, v) -> {
             if (v > Compat.configGet(Config.FLAG_SUB_BLOCK_REMOVED_TICKS).get()) {
-                runOnOrphaned.get(bp).run(sl, bp, flagPos);
+                OnOrphaned remove = runOnOrphaned.remove(bp);
+                if (remove != null) {
+                    remove.run(sl, bp, flagPos);
+                }
                 ticksWithoutParent.remove(bp);
                 return;
             }
@@ -65,7 +76,8 @@ public final class TownFlagSubBlocks {
             ServerLevel sl,
             BlockPos pos
     ) {
-        if (this.parentIsUnloaded) {
+        if (sl.getBlockState(flagPos).getValue(TownFlagBlock.SLEEPING)) {
+            ticksWithoutParent.put(pos, 0);
             return;
         }
 
@@ -76,9 +88,12 @@ public final class TownFlagSubBlocks {
         }
         ticksWithoutParent.put(pos, twop + 1);
         if (twop >= Compat.configGet(Config.FLAG_SUB_BLOCK_RETENTION_TICKS).get()) {
-            QT.BLOCK_LOGGER.debug("Parent has stopped ticking. Entity removed at {}", pos);
+            QT.BLOCK_LOGGER.debug("Parent has stopped ticking. Entity removed at {} on tick {}", pos, Util.getTick(sl));
             sl.removeBlock(pos, true);
-            runOnOrphaned.get(pos).run(sl, pos, flagPos);
+            OnOrphaned remove = runOnOrphaned.remove(pos);
+            if (remove != null) {
+                remove.run(sl, pos, flagPos);
+            }
         }
     }
 
@@ -124,9 +139,5 @@ public final class TownFlagSubBlocks {
 
     public void register(BlockPos matPos) {
         this.pending.push(matPos);
-    }
-
-    public void parentUnloaded() {
-        this.parentIsUnloaded = true;
     }
 }

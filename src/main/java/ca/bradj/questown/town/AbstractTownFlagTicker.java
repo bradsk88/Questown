@@ -41,14 +41,16 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
             if (alreadyStopped) {
                 return;
             }
-            notifySubBlocksOfUnload(data);
+            storeSleepingState(data);
         }
 
         long start = System.currentTimeMillis();
 
         // Must tick sub-blocks even with debug mode enabled,
         // because non-ticked sub-blocks will self-destruct.
-        notifySubBlocksOfTick(data);
+        if (!stopped) {
+            notifySubBlocksOfTick(data);
+        }
 
         if (runDebugTask()) {
             return;
@@ -189,7 +191,7 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
 
     protected abstract void notifySubBlocksOfTick(TICK_DATA data);
 
-    protected abstract void notifySubBlocksOfUnload(TICK_DATA data);
+    protected abstract void storeSleepingState(TICK_DATA data);
 
     protected abstract boolean allPlayersLeftArea(
             TICK_DATA data,
