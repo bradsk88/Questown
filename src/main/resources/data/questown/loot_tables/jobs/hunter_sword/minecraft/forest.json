@@ -6,6 +6,12 @@
       "entries": [
         {
           "type": "minecraft:item",
+          "name": "minecraft:mutton",
+          "weight": 30,
+          "functions": [{"function": "minecraft:set_count", "count": 1}]
+        },
+        {
+          "type": "minecraft:item",
           "name": "minecraft:porkchop",
           "weight": 30,
           "functions": [{"function": "minecraft:set_count", "count": 1}]

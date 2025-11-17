@@ -366,7 +366,7 @@ public abstract class ProductionJob<
                 this.setLookTarget(productionSpot.jobBlock());
                 return productionSpot.entityFeetPos();
             }
-            QT.JOB_LOGGER.debug("Production spot was null somehow");
+            town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log("Production spot was null somehow");
             return null;
         }
 

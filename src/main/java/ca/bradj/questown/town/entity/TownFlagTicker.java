@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.Pair;
@@ -174,12 +175,14 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
 
     @Override
     protected void notifySubBlocksOfTick(TickData tickData) {
-        tickData.entity().subBlocks.parentTick(tickData.level());
+        tickData.entity().subBlocks.parentTick(tickData.level(), tickData.entity().getBlockPos());
     }
 
     @Override
-    protected void notifySubBlocksOfUnload(TickData tickData) {
-        tickData.entity().subBlocks.parentUnloaded();
+    protected void storeSleepingState(TickData tickData) {
+        BlockState bs = tickData.state();
+        bs = bs.setValue(TownFlagBlock.SLEEPING, true);
+        tickData.level.setBlockAndUpdate(tickData.blockEntityPos, bs);
     }
 
     @Override

@@ -254,6 +254,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             TownQuests quests,
             @Nullable VillagerUUID visitorUUID
     ) {
+        // This function only defines the rewards and "requests" a new batch
+        // See "TownQuests.tick(TownInterface town)" to understand the batch generation
         @NotNull MCRewardList reward = defaultQuestCompletionRewards(town);
         quests.questRequests.add(new PendingReward(visitorUUID, reward));
     }
@@ -427,6 +429,16 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
 
         if (!questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE)) {
+            // Phase two: Get the player to hunter-gatherer status
+            addHunterGatherer(t);
+            return Tutorial.APPLIED;
+        }
+
+        if (town.getUnsafe().getVillagerHandle().entities().size() < 3) {
+            return Tutorial.SKIPPED;
+        }
+
+        if (!questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE)) {
             // Phase two: Ask the player to complete at least one job change
             addQuestsForJobChangeAndFood(t);
             return Tutorial.APPLIED;
@@ -515,7 +527,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     private static final ImmutableList<ResourceLocation> VILLAGER_KICKOFF_QUESTS = ImmutableList.of(
             SpecialQuests.TOWN_GATE,
-            SpecialQuests.BEDROOM,
             SpecialQuests.JOB_BOARD,
             SpecialQuests.STORE_ROOM_SMALL
     );
@@ -524,6 +535,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
         VILLAGER_KICKOFF_QUESTS.forEach(k -> q.addNewQuest(roomQuest(batchUUID, k)));
+        q.addNewQuest(MCQuest.item(batchUUID, null, Compat.getItemId(Items.IRON_SWORD), 1));
 
         MCQuestBatch qb = q.withRewardUponCompletion(new MCRewardList(
                 town,
@@ -539,6 +551,25 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             ResourceLocation roomId
     ) {
         return MCQuest.standalone(batchUUID, null, roomId);
+    }
+
+    private void addHunterGatherer(
+            TownFlagBlockEntity town
+    ) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        q.addNewQuest(MCQuest.item(batchUUID, null, Compat.getItemId(Items.MUTTON), 1));
+        q.addNewQuest(MCQuest.jobChange(batchUUID, null, new JobID("hunter", "sword")));
+        q.addNewQuest(MCQuest.standalone(batchUUID, null, SpecialQuests.BEDROOM));
+
+        @Nullable VillagerUUID nextVisitorUUID = VillagerUUID.random();
+        MCQuestBatch qq = q.withRewardUponCompletion(new MCRewardList(
+                town,
+                new SpawnVisitorReward(town, nextVisitorUUID),
+                new AddBatchOfQuestsForVisitorReward(town, VillagerUUID.get(nextVisitorUUID)))
+        );
+        questBatches.add(qq);
+        QT.QUESTS_LOGGER.debug("Tutorial batch #1.5 was added to town: {}", qq.toNiceString());
     }
 
     private void addQuestsForJobChangeAndFood(

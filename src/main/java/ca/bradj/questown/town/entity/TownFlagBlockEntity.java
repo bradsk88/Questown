@@ -642,9 +642,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (!isInitialized()) {
             return null;
         }
-        ImmutableList<MCRoom> allRooms = roomsHandle.getAllRoomsIncludingMetaAndFarms();
+        Collection<MCRoom> allRooms;
+        ServerLevel sl = getServerLevel();
+        if (sl == null) {
+            return null;
+        }
+
+        if (sl.isNight()) {
+            allRooms = roomsHandle.getRegisteredRooms().getAllRooms();
+        } else {
+            allRooms = roomsHandle.getAllRoomsIncludingMetaAndFarms();
+        }
         BlockPos townPos = pois.getWanderTarget(
-                getServerLevel(), allRooms, (p, r) -> {
+                sl, allRooms, (p, r) -> {
                     BlockPos pos = Positions.ToBlock(p, r.yCoord);
                     double dist = pos.distSqr(avoiding);
                     if (dist > 5) {
