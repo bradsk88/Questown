@@ -2,7 +2,6 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
-import ca.bradj.questown.jobs.declarative.PreMaxTicksJobChangeHook;
 import ca.bradj.questown.jobs.declarative.Preferred;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.ProductionStatus;

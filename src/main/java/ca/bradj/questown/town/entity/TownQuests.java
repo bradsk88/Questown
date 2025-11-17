@@ -402,6 +402,15 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         pendingQuests = pop; // Can't grow more (at the moment) and not needed. Push back for next tick.
     }
 
+    public boolean isWaitingForHunterGathererTutorial() {
+        if (questBatches.getAllBatches().size() > 3) {
+            return false;
+        }
+        return questBatches.getAll().stream()
+                           .filter(v -> Quest.QuestType.JOB_CHANGE.equals(v.getType()))
+                           .anyMatch(v -> v.getWantedId().equals(JobID.toRL(new JobID("hunter", "sword"))));
+    }
+
     private enum Tutorial {
         SKIPPED,
         APPLIED,
@@ -564,9 +573,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
         @Nullable VillagerUUID nextVisitorUUID = VillagerUUID.random();
         MCQuestBatch qq = q.withRewardUponCompletion(new MCRewardList(
-                town,
-                new SpawnVisitorReward(town, nextVisitorUUID),
-                new AddBatchOfQuestsForVisitorReward(town, VillagerUUID.get(nextVisitorUUID)))
+                        town,
+                        new MCDelayedReward(town, new SpawnVisitorReward(town, VillagerUUID.random())),
+                        new AddBatchOfQuestsForVisitorReward(town, VillagerUUID.get(nextVisitorUUID))
+                )
         );
         questBatches.add(qq);
         QT.QUESTS_LOGGER.debug("Tutorial batch #1.5 was added to town: {}", qq.toNiceString());

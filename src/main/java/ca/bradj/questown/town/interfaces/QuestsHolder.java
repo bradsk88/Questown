@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.MCReward;
@@ -10,10 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.AbstractMap;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public interface QuestsHolder {
     void requestRemovalOfQuestAtIndex(
@@ -42,4 +40,6 @@ public interface QuestsHolder {
             ResourceLocation itemId,
             int count
     );
+
+    Optional<JobID> overnightJobOverride();
 }

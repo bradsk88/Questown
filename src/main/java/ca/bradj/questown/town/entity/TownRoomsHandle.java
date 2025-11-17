@@ -365,11 +365,11 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         Collection<RoomRecipeMatch<MCRoom>> rooms = getMatches(m -> m.anyMatch(Questown.ResourceLocation("bedroom")));
         for (RoomRecipeMatch<MCRoom> room : rooms) {
             for (Map.Entry<BlockPos, Block> e : room.getContainedBlocks().entrySet()) {
-                if (!(e.getValue() instanceof BedBlock bb)) {
-                    continue;
-                }
                 ServerLevel sl = town.getServerLevelUnsafe();
                 BlockState oldBs = sl.getBlockState(e.getKey());
+                if (!(oldBs.getBlock() instanceof BedBlock bb)) {
+                    continue;
+                }
                 @SuppressWarnings("AccessStaticViaInstance") BlockState newBs = oldBs.setValue(bb.OCCUPIED, false);
                 List<LivingEntity> list = sl.getEntitiesOfClass(
                         LivingEntity.class,

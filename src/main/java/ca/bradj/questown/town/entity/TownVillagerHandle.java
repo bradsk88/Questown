@@ -772,6 +772,12 @@ public class TownVillagerHandle implements VillagerHolder {
     }
 
     private void changeJobRootNow(VisitorMobEntity v) {
+        Optional<JobID> override = town.getUnsafe().getQuestHandle().overnightJobOverride();
+        if (override.isPresent()) {
+            unlockAndChange(v, override.get());
+            return;
+        }
+
         ImmutableSet<JobID> allRoots = ServerJobsRegistry.getAllRootJobs();
         List<JobID> allOtherJobs = allRoots.stream().filter(z -> !v.getJobId().sameRoot(z)).toList();
         if (allOtherJobs.isEmpty()) {
@@ -784,6 +790,16 @@ public class TownVillagerHandle implements VillagerHolder {
                 town.getServerLevelUnsafe()
         );
         JobID newJob = shuffled.get(0);
+        if (v.getJobId().sameRoot(newJob)) {
+            QT.logBug("Root change resulted in same root. From {} to {}.", v.getJobId(), newJob);
+        }
+        unlockAndChange(v, newJob);
+    }
+
+    private void unlockAndChange(
+            VisitorMobEntity v,
+            JobID newJob
+    ) {
         town.getUnsafe().getVillagerHandle().unlockJob(v.getUUID(), newJob);
         town.getUnsafe().getVillagerHandle().changeJobForVillager(v.getVUID(), newJob, true);
     }
