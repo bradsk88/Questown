@@ -238,7 +238,9 @@ public class WorksBehaviour {
                 Config.MAX_INITIAL_TICKS_WITHOUT_SUPPLIES,
                 Config.MAX_TICKS_WITHOUT_SUPPLIES,
                 WorkSeekerJob::getIDForRoot,
-                () -> 3000L,
+                // FIXME: This should be 3000 to make sure crafters don't get stuck
+                //  Can we add this to the JSON definition spec?
+                () -> 6000L,
                 jobId -> jobId
         );
     }

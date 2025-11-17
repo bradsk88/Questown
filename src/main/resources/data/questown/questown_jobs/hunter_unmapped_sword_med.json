@@ -10,7 +10,7 @@
     "type": "biome_loot",
     "prefix": "jobs/hunter_sword",
     "default": "jobs/hunter_sword/default",
-    "attempts": 3
+    "attempts": 2
   },
   "block": "questown:welcome_mat_block",
   "room": "questown:special_quest.town_gate",

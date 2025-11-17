@@ -8,6 +8,7 @@ import ca.bradj.questown.gui.FlagMenus;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.TownRemoveQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.interfaces.QuestsHolder;
@@ -151,6 +152,14 @@ public class TownQuestsHandle implements QuestsHolder {
     ) {
         TownFlagBlockEntity t = unsafeGetTown();
         TownQuests.addItemQuest(t, t.quests, itemId, count);
+    }
+
+    @Override
+    public Optional<JobID> overnightJobOverride() {
+        if (town.getUnsafe().quests.isWaitingForHunterGathererTutorial()) {
+            return Optional.of(new JobID("hunter", "sword"));
+        }
+        return Optional.empty();
     }
 
     @Override
