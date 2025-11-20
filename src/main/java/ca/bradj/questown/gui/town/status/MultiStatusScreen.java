@@ -179,30 +179,15 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             return;
         }
 
-        bgY = bgY + BIG_PADDING + BIG_PADDING; // Accounting for pager
-        int leftX = bgX + backgroundWidth - 16 - 32;
-        int topY = bgY + 16;
-        int rightX = leftX + 32;
-        int botY = topY + 32;
-
-        ImmutableList<UUID> uuids = cardsData();
-        for (int i = 0; i < uuids.size(); i++) {
-            if (mouseX < leftX) {
-                continue;
+        for (Card<UUID> v : cards()) {
+            CardCoordinates coords = v.coords();
+            int x = getStatusX(coords);
+            int y = getStatusY(v.coords());
+            if (UtilClean.isCoordInBox(mouseX, mouseY, x, y, 32, 32)) {
+                @NotNull StatusPacket status = getSmoothedStatus(v.data());
+                super.renderTooltip(stack, status.texts(), Optional.empty(), mouseX, mouseY);
+                return;
             }
-            if (mouseX > rightX) {
-                continue;
-            }
-            if (mouseY < topY + (i * cardHeight)) {
-                continue;
-            }
-            if (mouseY > botY + (i * cardHeight)) {
-                continue;
-            }
-            UUID villagerUUID = uuids.get(i);
-            @NotNull StatusPacket status = getSmoothedStatus(villagerUUID);
-            super.renderTooltip(stack, status.texts(), Optional.empty(), mouseX, mouseY);
-            return;
         }
         super.renderTooltip(stack, mouseX, mouseY);
     }

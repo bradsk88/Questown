@@ -51,6 +51,8 @@ public class FlagDestroyCommand {
 
         tf.getVillagerHandle().entities().forEach(LivingEntity::kill);
 
+        source.getLevel().removeBlockEntity(target);
+
         source.getLevel().removeBlock(target, true);
 
         return 0;

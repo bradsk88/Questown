@@ -246,9 +246,9 @@ public class TownVillagerHandle implements VillagerHolder {
             JobID newJob,
             boolean announce
     ) {
-
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         VisitorMobEntity f = getEntity(villagerUUID);
+        JobID oldJob = f.getJobId();
         if (f == null) {
             QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", villagerUUID, newJob);
             return;
@@ -265,7 +265,9 @@ public class TownVillagerHandle implements VillagerHolder {
         }
 
         t.possibleWork.invalidate();
-        t.getVillagerHandle().setJobChangePending(f.getVUID(), false);
+        if (!newJob.sameRoot(oldJob)) {
+            jobChangesPending.put(f.getVUID(), false);
+        }
     }
 
     private void doSetJob(
@@ -624,7 +626,7 @@ public class TownVillagerHandle implements VillagerHolder {
         if (newExp >= target) {
             Integer newLvl = levels.compute(uuid, (x, cur) -> cur == null ? 2 : cur + 1);
             experience.put(uuid, newExp % target);
-            town.getUnsafe().messages.broadcastMessage("message.villager.leveled_up", uuid, newLvl);
+            town.getUnsafe().messages.broadcastMessage("message.villager.leveled_up", UtilClean.truncateMiddle(uuid), newLvl);
             hasBlockOfProgress.put(uuid, true);
         }
     }
@@ -658,9 +660,9 @@ public class TownVillagerHandle implements VillagerHolder {
             return;
         }
 
+        jobChangesPending.put(e.getVUID(), true);
         TownFlagBlockEntity t = town.getUnsafe();
-        t.getVillagerHandle().setJobChangePending(e.getVUID(), true);
-        t.messages.broadcastMessage("message.questown.villager.leveled_up", UtilClean.truncateMiddle(villagerUUID));
+        t.messages.broadcastMessage("message.questown.villager.change_job_in_morning", UtilClean.truncateMiddle(villagerUUID));
     }
 
     @Override
@@ -774,12 +776,14 @@ public class TownVillagerHandle implements VillagerHolder {
     private void changeJobRootNow(VisitorMobEntity v) {
         Optional<JobID> override = town.getUnsafe().getQuestHandle().overnightJobOverride();
         if (override.isPresent()) {
+            QT.FLAG_LOGGER.info("Overriding random job root change in favor of: {}", override.get());
             unlockAndChange(v, override.get());
             return;
         }
 
         ImmutableSet<JobID> allRoots = ServerJobsRegistry.getAllRootJobs();
         List<JobID> allOtherJobs = allRoots.stream().filter(z -> !v.getJobId().sameRoot(z)).toList();
+        QT.FLAG_LOGGER.info("Changing villager from {} to one of [{}]", v.getJobId().rootId(), String.join(", ", allRoots.stream().map(JobID::rootId).toList()));
         if (allOtherJobs.isEmpty()) {
             QT.FLAG_LOGGER.error("Only one job root detected in town? This is likely a poorly configured data pack.");
             jobChangesPending.put(v.getVUID(), false);
@@ -800,6 +804,7 @@ public class TownVillagerHandle implements VillagerHolder {
             VisitorMobEntity v,
             JobID newJob
     ) {
+        QT.FLAG_LOGGER.info("Changing villager from {} to {}", v.getJobId().rootId(), newJob);
         town.getUnsafe().getVillagerHandle().unlockJob(v.getUUID(), newJob);
         town.getUnsafe().getVillagerHandle().changeJobForVillager(v.getVUID(), newJob, true);
     }
