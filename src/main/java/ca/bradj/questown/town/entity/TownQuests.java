@@ -447,19 +447,19 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             return Tutorial.SKIPPED;
         }
 
-        if (!questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE)) {
-            // Phase two: Ask the player to complete at least one job change
+        if (questBatches.getAll().stream().filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE).count() < 2) {
+            // Phase two: Ask the player to complete at least two job changes
             addQuestsForJobChangeAndFood(t);
             return Tutorial.APPLIED;
         }
 
-        if (!questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE && q.isComplete())) {
+        if (questBatches.getAll().stream().filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE && q.isComplete()).count() < 2) {
             return Tutorial.SKIPPED;
         }
 
         @Nullable JobHaver jobToCreateRoomFor = getJobToCreateRoomFor();
         if (jobToCreateRoomFor != null) {
-            // Phase three: Ask the player to provide the room for the new job
+            // Phase three: Ask the player to provide the room for the second new (and random) job
             addQuestForNewJobRoom(t, jobToCreateRoomFor);
             return Tutorial.APPLIED;
         }
