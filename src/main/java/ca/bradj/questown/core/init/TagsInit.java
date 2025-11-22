@@ -14,6 +14,7 @@ public class TagsInit {
 
         public static final TagKey<Item> VILLAGER_FOOD = createTag("villager_food");
         public static final TagKey<Item> VILLAGER_RAW_FOOD = createTag("villager_raw_food");
+        public static final TagKey<Item> VILLAGER_SIMPLE_FURNACE_FOOD_RAW = createTag("villager_simple_furnace_food_raw");
         public static final TagKey<Item> AXES = createTag("axes");
         public static final TagKey<Item> PICKAXES = createTag("pickaxes");
         public static final TagKey<Item> SHOVELS = createTag("shovels");

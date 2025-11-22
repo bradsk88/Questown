@@ -26,16 +26,16 @@ public class SetJobCommand {
         );
         RequiredArgumentBuilder<CommandSourceStack, JobID> amtArg = Commands.argument("job_id", JobArgument.job(ctx));
 
-        LiteralArgumentBuilder<CommandSourceStack> subCmd = Commands.literal("villagers");
-        LiteralArgumentBuilder<CommandSourceStack> subSubCmd = Commands.literal("jobs");
-        LiteralArgumentBuilder<CommandSourceStack> subSubSubCmd = Commands.literal("set");
+        LiteralArgumentBuilder<CommandSourceStack> cmdVillagers = Commands.literal("villagers");
+        LiteralArgumentBuilder<CommandSourceStack> cmdVillagersJobs = Commands.literal("jobs");
+        LiteralArgumentBuilder<CommandSourceStack> cmdVillagersJobsSet = Commands.literal("set");
 
         // @formatter:off
         src.register(
             Commands.literal("qt").then(
-                subCmd.then(
-                subSubCmd.then(
-                subSubSubCmd
+                cmdVillagers.then(
+                cmdVillagersJobs.then(
+                cmdVillagersJobsSet
                     .requires(AddExperienceCommand::isCreative)
                     .then(entitiesArg
                     .then(amtArg
@@ -49,12 +49,12 @@ public class SetJobCommand {
 
 
         // Also expose it via the jobs tree
-        subCmd = Commands.literal("jobs");
-        subSubCmd = Commands.literal("set");
+        cmdVillagers = Commands.literal("jobs");
+        cmdVillagersJobs = Commands.literal("set");
         src.register(
             Commands.literal("qt").then(
-                subCmd.then(
-                subSubCmd
+                cmdVillagers.then(
+                cmdVillagersJobs
                     .requires(AddExperienceCommand::isCreative)
                     .then(entitiesArg
                     .then(amtArg

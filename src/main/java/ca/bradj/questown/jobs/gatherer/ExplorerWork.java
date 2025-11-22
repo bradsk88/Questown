@@ -120,7 +120,7 @@ public class ExplorerWork {
                 ItemsInit.GATHERER_MAP.get().getDefaultInstance(),
                 ID,
                 GathererUnmappedNoToolWorkQtrDay.ID,
-                WorksBehaviour.standardDescription(() -> RESULT),
+                WorksBehaviour.standardDescription(sl -> RESULT),
                 SpecialQuests.TOWN_GATE_LOCATION,
                 new WorkStates(
                         MAX_STATE,

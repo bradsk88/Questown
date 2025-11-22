@@ -86,18 +86,18 @@ public class WorksBehaviour {
     }
 
     public static Function<TownData, ImmutableSet<MCTownItem>> standardProductionResult(
-            Supplier<ItemStack> result
+            Function<ServerLevel, ItemStack> result
     ) {
         return (t) -> {
-            ItemStack i = result.get();
+            ItemStack i = result.apply(t.serverLevel());
             return i == null ? ImmutableSet.of() : ImmutableSet.of(MCTownItem.fromMCItemStack(i));
         };
     }
 
-    public static WorkDescription standardDescription(Supplier<@Nullable ItemStack> result) {
+    public static WorkDescription standardDescription(Function<ServerLevel, @Nullable ItemStack> result) {
         return new WorkDescription(
                 WorksBehaviour.standardProductionResult(result),
-                result.get()
+                result
         );
     }
 
@@ -119,6 +119,7 @@ public class WorksBehaviour {
     }
 
     public record TownData(
+            ServerLevel serverLevel,
             Function<GathererTools.LootTablePrefix, ImmutableSet<MCTownItem>> allKnownGatherItemsFn
     ) {
     }

@@ -398,6 +398,7 @@
   "questown.menu.needs_in_period_2": "times in the past %d days",
   "questown.menu.quests.job_change": "Villager job: %s",
   "#questown:villager_food": "Food",
+  "#questown:raw_ingredients": "Raw Ingredients",
   "#questown:axes": "Axes",
   "#questown:pickaxes": "Pickaxes",
   "#questown:hoes": "Hoes",

@@ -174,6 +174,9 @@ public class DeclarativeJob extends
     ) {
         Integer ii = need.timesInserted();
         if (ii != null) {
+            if (qtyRequiredAtStates.isEmpty()) {
+                return null;
+            }
             int actual = NoMCNeeds.getActualIndex(ii, qtyRequiredAtStates);
             return Util.orNull(ingredientsRequiredAtStates.get(actual + 1), Ingredients::toString);
         }
