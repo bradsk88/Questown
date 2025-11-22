@@ -5,7 +5,6 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
 import ca.bradj.questown.commands.DebugLogArgument;
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.advancements.RoomTrigger;
@@ -80,7 +79,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -612,10 +610,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public WorksBehaviour.TownData getTownData() {
-        return new WorksBehaviour.TownData(prefix -> knowledgeHandle.getAllKnownGatherResults(
-                biomes.getAllInTown(),
-                prefix
-        ));
+        return new WorksBehaviour.TownData(
+                getServerLevel(),
+                prefix -> knowledgeHandle.getAllKnownGatherResults(
+                        biomes.getAllInTown(),
+                        prefix
+                )
+        );
     }
 
     @Override

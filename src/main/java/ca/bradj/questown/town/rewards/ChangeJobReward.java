@@ -51,7 +51,7 @@ public class ChangeJobReward extends MCReward {
             town.getVillagerHandle().changeJobForVillager(visitorUUID, jobID, false);
             ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(jobID);
             defaultWork.forEach(v -> {
-                ItemStack output = ServerJobsRegistry.getDefaultWorkForNewWorker(v);
+                ItemStack output = ServerJobsRegistry.getDefaultWorkForNewWorker(town.getServerLevel(), v);
                 if (output.isEmpty()) {
                     return;
                 }

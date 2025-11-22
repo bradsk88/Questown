@@ -65,7 +65,7 @@ public class NewLeaverWork {
                 parentId,
                 new WorkDescription(
                         t -> t.allKnownGatherItemsFn().apply(lootTablePrefix),
-                        initialRequest
+                        sl -> initialRequest
                 ),
                 SpecialQuests.TOWN_GATE_LOCATION,
                 new WorkStates(

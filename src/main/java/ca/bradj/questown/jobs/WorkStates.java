@@ -111,4 +111,26 @@ public class WorkStates {
         this.realizedTime = Util.realize(this.timeRequired);
         return this.realizedTime;
     }
+
+    public WorkStates withIngredients(ImmutableMap<Integer, Supplier<Ingredient>> map) {
+        return new WorkStates(
+                maxState,
+                map,
+                ingredientQtyRequired,
+                toolsRequired,
+                workRequired,
+                timeRequired
+        );
+    }
+
+    public WorkStates withTools(ImmutableMap<Integer, Supplier<Ingredient>> map) {
+        return new WorkStates(
+                maxState,
+                ingredientsRequired,
+                ingredientQtyRequired,
+                map,
+                workRequired,
+                timeRequired
+        );
+    }
 }

@@ -153,7 +153,7 @@ public class ServerJobsRegistry {
                 continue;
             }
             ResourceLocation name = Compat.getItemId(w.icon.getItem());
-            if (wantedResult.test(w.initialRequest)) {
+            if (wantedResult.test(w.initialRequest.apply(data.serverLevel()))) {
                 b.put(w.id, Util.ifNull(name, Questown.ResourceLocationError));
                 continue;
             }
@@ -483,7 +483,7 @@ public class ServerJobsRegistry {
                 return true;
             }
         }
-        return requestedResult.test(work.initialRequest);
+        return requestedResult.test(work.initialRequest.apply(town.serverLevel()));
     }
 
     public static Function<List<MCHeldItem>, ImmutableList<Ingredient>> getWantedResourcesProvider(
@@ -526,7 +526,10 @@ public class ServerJobsRegistry {
         return workSupplier;
     }
 
-    public static ItemStack getDefaultWorkForNewWorker(JobID v) {
+    public static ItemStack getDefaultWorkForNewWorker(
+            ServerLevel sl,
+            JobID v
+    ) {
         if (isSeekingWork(v)) {
             return ItemStack.EMPTY;
         }
@@ -535,7 +538,7 @@ public class ServerJobsRegistry {
             QT.JOB_LOGGER.error("[Default Work Request] No recognized job for ID: {}", v);
             return ItemStack.EMPTY;
         }
-        return w.get().initialRequest;
+        return w.get().initialRequest.apply(sl);
     }
 
     public static ImmutableSet<Ingredient> getAllOutputs(WorksBehaviour.TownData t) {
@@ -543,8 +546,9 @@ public class ServerJobsRegistry {
                                          Work work = v.get();
                                          ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
                                          work.results.apply(t).forEach(z -> b.add(z.toMCItemStack()));
-                                         if (work.initialRequest != null) {
-                                             b.add(work.initialRequest);
+                                         ItemStack req = work.initialRequest.apply(t.serverLevel());
+                                         if (req != null) {
+                                             b.add(req);
                                          }
                                          return b.build();
                                      }).flatMap(Collection::stream).map(Ingredient::of).filter(v -> !v.isEmpty()).map(Ingredients::asWorkRequest)

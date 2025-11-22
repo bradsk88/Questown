@@ -76,7 +76,11 @@ public class TownPois {
     ) {
         R r = ImmutableList.copyOf(all).get(level.getRandom().nextInt(all.size()));
 
-        Collection<Position> allEnclosed = InclusiveSpaces.getPositions(r.getSpace(), InclusiveSpaces.PositionType.INTERIOR_ONLY);
+        Collection<Position> allEnclosed = r.getSpaces()
+                                            .stream()
+                                            .map(v -> InclusiveSpaces.getPositions(v, InclusiveSpaces.PositionType.INTERIOR_ONLY))
+                                            .flatMap(Collection::stream)
+                                            .toList();
 
         ImmutableList.Builder<P> b = ImmutableList.builder();
         for (Position p : allEnclosed) {
