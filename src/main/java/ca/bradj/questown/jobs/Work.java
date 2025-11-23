@@ -32,7 +32,7 @@ public class Work {
     public final ResourceLocation baseRoom;
     final IStatus<?> initialStatus;
     public final Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results;
-    final Function<ServerLevel, @Nullable ItemStack> initialRequest;
+    final Function<ServerLevel, @Nullable Ingredient> initialRequest;
     final Function<List<MCHeldItem>, Collection<Ingredient>> needs;
     private final Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper;
     final int priority;
@@ -50,7 +50,7 @@ public class Work {
             ResourceLocation baseRoom,
             IStatus<?> initialStatus,
             Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results,
-            Function<ServerLevel, @Nullable ItemStack> initialRequest,
+            Function<ServerLevel, @Nullable Ingredient> initialRequest,
             Function<List<MCHeldItem>, Collection<Ingredient>> needs,
             Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper,
             int priority,

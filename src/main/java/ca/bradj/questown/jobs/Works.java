@@ -34,9 +34,6 @@ public class Works {
         dataPackJobs.forEach((k, v) -> b.put(k, () -> v));
         b.put(ExplorerWork.ID, ExplorerWork::asWork);
         b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork::asWork);
-        b.put(GathererUnmappedPickaxeWorkQtrDay.ID, GathererUnmappedPickaxeWorkQtrDay::asWork);
-        b.put(GathererUnmappedPickaxeWorkHalfDay.ID, GathererUnmappedPickaxeWorkHalfDay::asWork);
-        b.put(GathererUnmappedPickaxeWorkFullDay.ID, GathererUnmappedPickaxeWorkFullDay::asWork);
         b.put(GathererUnmappedShovelWorkQtrDay.ID, GathererUnmappedShovelWorkQtrDay::asWork);
         b.put(GathererUnmappedShovelWorkHalfDay.ID, GathererUnmappedShovelWorkHalfDay::asWork);
         b.put(GathererUnmappedShovelWorkFullDay.ID, GathererUnmappedShovelWorkFullDay::asWork);

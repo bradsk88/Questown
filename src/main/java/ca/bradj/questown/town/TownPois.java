@@ -68,12 +68,15 @@ public class TownPois {
         );
     }
 
-    public <R extends Room, P> P getWanderTarget(
+    public <R extends Room, P> @Nullable P getWanderTarget(
             ServerLevel level,
             Collection<R> all,
             Filter<R> filter,
             PositionFactory<P, R> pFact
     ) {
+        if (all.isEmpty()) {
+            return null;
+        }
         R r = ImmutableList.copyOf(all).get(level.getRandom().nextInt(all.size()));
 
         Collection<Position> allEnclosed = r.getSpaces()

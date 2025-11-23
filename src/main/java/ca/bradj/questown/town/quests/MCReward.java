@@ -26,8 +26,6 @@ public abstract class MCReward extends Reward {
         return rType.id.toString();
     }
 
-    public abstract String toNiceString();
-
     public abstract boolean contains(@NotNull RewardType<?> reward);
 
     public static class Serializer {
