@@ -235,19 +235,20 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 p -> WallDetection.IsDoor(level, p.toPosition(), flagPos.getY() + p.scanLevel),
                 (scanLevel, rooms) -> {
                     getOrCreateRooms(scanLevel).update(rooms);
-                    registeredDoors.stream().map(v -> new Pair<>(v, rooms.values().stream()
-                                                                    .noneMatch(z -> z.isPresent() && v.toPosition()
-                                                                                                .equals(z.get().doorPos))))
-                                   .forEach(
-                                           nonRoomDoor -> doorsToDrop.compute(
-                                                   new TownPosition(
-                                                           nonRoomDoor.a().x,
-                                                           nonRoomDoor.a().z,
-                                                           scanLevel
-                                                   ), (door, ticks) -> nonRoomDoor.b() ? 0 : (ticks == null ? 1 : ticks + 1)
-                                           )
-                                   );
-                    dropDeadDoors(flagPos);
+                    // TODO[Performance]: Drop registered doors if they haven't been assigned to a room in 100 ticks
+//                    registeredDoors.stream().map(v -> new Pair<>(v, rooms.values().stream()
+//                                                                    .noneMatch(z -> z.isPresent() && v.toPosition()
+//                                                                                                .equals(z.get().doorPos))))
+//                                   .forEach(
+//                                           nonRoomDoor -> doorsToDrop.compute(
+//                                                   new TownPosition(
+//                                                           nonRoomDoor.a().x,
+//                                                           nonRoomDoor.a().z,
+//                                                           scanLevel
+//                                                   ), (door, ticks) -> nonRoomDoor.b() ? 0 : (ticks == null ? 1 : ticks + 1)
+//                                           )
+//                                   );
+//                    dropDeadDoors(flagPos);
                 },
                 activeRecipes::get,
                 ImmutableMap.copyOf(doorsAtLevel),

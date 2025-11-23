@@ -102,7 +102,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
                     stack, Compat.translatable(
                             "menu.common.stat_tooltip",
                             Compat.translatable("menu.villager_stats.hunger"),
-                            menu.getFullnessPercent() * 100,
+                            menu.getFullnessPercent(),
                             100
                     ), mouseX, mouseY
             );

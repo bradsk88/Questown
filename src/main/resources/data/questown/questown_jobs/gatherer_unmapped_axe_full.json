@@ -16,10 +16,10 @@
   "room": "questown:special_quest.town_gate",
   "work_states": [
     {
-      "tools": "#questown:axes"
-    }, {
+      "tools": "#questown:axes",
       "ingredients": "#questown:villager_food",
-      "quantity": 2
+      "work": 1,
+      "quantity": 1
     },
     {
       "time": 6000

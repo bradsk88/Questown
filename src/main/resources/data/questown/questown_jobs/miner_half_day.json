@@ -2,7 +2,7 @@
   "version": 1,
   "id": "miner/coal_half_day",
   "priority": "2000",
-  "parent": null,
+  "parent": "miner/coal",
   "icon": "minecraft:coal",
   "initial_request": "minecraft:coal",
   "result": {
@@ -15,11 +15,10 @@
   "room": "questown:block_room/block.questown.mineshaft",
   "work_states": [
     {
-      "tools": "#questown:pickaxes"
-    },
-    {
+      "tools": "#questown:pickaxes",
       "ingredients": "#questown:villager_food",
-      "quantity": 2
+      "work": 1,
+      "quantity": 1
     },
     {
       "time": 4000
@@ -40,6 +39,11 @@
       "type": "core_state",
       "state": "WAITING_FOR_TIMED_STATE",
       "rules": ["remove_from_world"]
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": ["hunger_fill_half"]
     }
   ],
   "status_texture_overrides": [

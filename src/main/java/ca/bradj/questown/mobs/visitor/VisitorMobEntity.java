@@ -37,6 +37,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
@@ -467,6 +469,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
     }
 
+
+    protected void addParticlesAroundSelf(ServerLevel sl, ParticleOptions p_35288_) {
+        double d0 = this.random.nextGaussian() * 0.02D;
+        double d1 = this.random.nextGaussian() * 0.02D;
+        double d2 = this.random.nextGaussian() * 0.02D;
+        sl.sendParticles(p_35288_, this.getRandomX(1.0D), this.getRandomY() + 1.0D, this.getRandomZ(1.0D), 2, 0, d0, d1, d2);
+    }
+
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
     // State management should be done via the town block. This entity should
     // only handle cosmetic stuff like position, pose, etc.
@@ -477,6 +487,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 lookControl::setLookAt,
                 this::setLookFromBrain
         );
+
+        boolean starving = town.getVillagerHandle().isStarving(getVUID());
+        setPose(starving ? Pose.CROUCHING : Pose.STANDING);
+        if (starving && Compat.getRandomInt(sl, 10) == 0) {
+            addParticlesAroundSelf(sl, ParticleTypes.EFFECT);
+        }
 
         if (ticksWithoutJobTarget > Compat.configGet(Config.MAX_TICKS_WITHOUT_SUPPLIES).get()) {
             JobID seeker = WorkSeekerJob.getIDForRoot(job.get().getId());

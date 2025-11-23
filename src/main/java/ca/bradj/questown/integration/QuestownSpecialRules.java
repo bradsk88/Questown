@@ -71,6 +71,10 @@ public final class QuestownSpecialRules {
                 Questown.ResourceLocation(SpecialRules.HUNGER_FILL_HALF),
                 new FillHungerSpecialRule(0.5f)
         );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.HUNGER_FILL),
+                new FillHungerSpecialRule(1f)
+        );
 
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation("switch_to_organizer_fetcher"),
