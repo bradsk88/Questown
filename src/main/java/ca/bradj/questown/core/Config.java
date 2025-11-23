@@ -78,6 +78,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUNGER_ENABLED;
     public static final ForgeConfigSpec.ConfigValue<Long> BLOCK_CLAIMS_TICK_LIMIT;
     public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_DINING_TABLE;
+    public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_FOOD;
     public static final ForgeConfigSpec.ConfigValue<Long> DAMAGE_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Long> MOOD_TICK_INTERVAL;
     public static final ForgeConfigSpec.ConfigValue<Integer> NEUTRAL_MOOD;
@@ -240,15 +241,18 @@ public class Config {
         BASE_FULLNESS = BUILDER.comment(
                 "The amount of fullness that a typical villager starts with. Fullness ticks down throughout the day. " +
                         "When it reaches zero, the villager will seek out food."
-        ).defineInRange("BaseFullness", 5000, 1, 24000);
+        ).defineInRange("BaseFullnessV3", 5000, 1, 24000);
         HUNGER_ENABLED = BUILDER.comment(
                 "Enables a hunger system. Villagers will get more hungry throughout the day and, upon reaching zero, will switch their job to \"dining\" and seek out a dining room to eat in."
-        ).define("HungerEnabledV2", false);
+        ).define("HungerEnabledV3", true);
         MAX_TICKS_WITHOUT_DINING_TABLE = BUILDER.comment(
                 "The maximum number of ticks that a hungry villager will spend trying to find a dinner plate to eat at. " +
                         "After these ticks expire, they will go to the town flag to eat - they will receive a work penalty " +
                         "for eating uncomfortably."
         ).defineInRange("MaxTicksWithoutDiningTableV2", 200L, 1L, 24000L);
+        MAX_TICKS_WITHOUT_FOOD = BUILDER.comment("The maximum number of ticks that a hungry villager will spend")
+                                        .comment(" trying find food before giving up and going back to work")
+                                        .defineInRange("MaxTicksWithoutFood", 2000L, 1L, 24000L);
         DAMAGE_TICKS = BUILDER.comment(
                 "The number of ticks that it will take for one point of damage to heal when no effects are present"
         ).defineInRange("DamageTicks", 1000L, 1L, 24000L);

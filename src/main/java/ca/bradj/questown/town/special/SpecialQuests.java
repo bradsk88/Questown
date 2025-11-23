@@ -2,6 +2,7 @@ package ca.bradj.questown.town.special;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.PlateBlock;
+import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.jobs.WorkLocation;
@@ -55,6 +56,11 @@ public class SpecialQuests {
             SpecialQuests::isWelcomeMat,
             SpecialQuests.TOWN_GATE
     );
+    public static final WorkLocation TOWN_FLAG_LOCATION = new WorkLocation(
+            ctx -> SpecialQuests.isFlag(ctx.blockInfo(), ctx.blockPos()),
+            SpecialQuests::isFlag,
+            SpecialQuests.TOWN_FLAG
+    );
     public static final WorkLocation DINING_ROOM_LOCATION = new WorkLocation(
             ctx -> WorkLocation.isBlock(PlateBlock.class).test(ctx.blockInfo(), ctx.blockPos()),
             (info, pos) -> WorkLocation.isBlock(PlateBlock.class).test(info, pos),
@@ -70,5 +76,11 @@ public class SpecialQuests {
             BlockPos pos
     ) {
         return WorkLocation.isBlock(WelcomeMatBlock.class).test(info, pos);
+    }
+    public static boolean isFlag(
+            WorkLocation.BlockInfo info,
+            BlockPos pos
+    ) {
+        return WorkLocation.isBlock(TownFlagBlock.class).test(info, pos);
     }
 }

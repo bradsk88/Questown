@@ -6,6 +6,7 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -49,7 +50,6 @@ public class DinerWork {
     );
 
     private static final Collection<ItemStack> RESULTS = ImmutableList.of(
-            EffectMetaItem.withConsumableEffect(EffectMetaItem.ConsumableEffects.FILL_HUNGER),
             EffectMetaItem.withLastingEffect(
                     EffectMetaItem.MoodEffects.COMFORTABLE_EATING,
                     Config.MOOD_EFFECT_DURATION_ATE_COMFORTABLY.get()
@@ -92,7 +92,10 @@ public class DinerWork {
                         }
                 ),
                 new WorkSpecialRules(
-                        ImmutableMap.of(), // No stage rules
+                        ImmutableMap.of(
+                                ProductionStatus.EXTRACTING_PRODUCT,
+                                ImmutableList.of(SpecialRules.HUNGER_FILL)
+                        ),
                         ImmutableList.of(
                                 SpecialRules.SHARED_WORK_STATUS,
                                 SpecialRules.CLAIM_SPOT,
@@ -101,9 +104,9 @@ public class DinerWork {
                 ),
                 new SoundInfo(SoundEvents.GENERIC_EAT.getLocation(), 10, null),
                 new ExpirationRules(
-                        () -> Long.MAX_VALUE,
-                        () -> Long.MAX_VALUE,
-                        jobId -> jobId,
+                        Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
+                        Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
+                        jobId -> DinerNoTableWork.getIdForRoot(jobId.rootId()),
                         Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
                         jobId -> DinerNoTableWork.getIdForRoot(jobId.rootId())
                 )

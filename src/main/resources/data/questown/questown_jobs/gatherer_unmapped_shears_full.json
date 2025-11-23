@@ -15,11 +15,10 @@
   "room": "questown:special_quest.town_gate",
   "work_states": [
     {
-      "tools": "minecraft:shears"
-    },
-    {
+      "tools": "minecraft:shears",
       "ingredients": "#questown:villager_food",
-      "quantity": 2
+      "work": 1,
+      "quantity": 1
     },
     {
       "time": 6000

@@ -15,6 +15,7 @@ public class CommandInit {
         DevQuestAddItemCommand.register(event.getDispatcher());
         DevQuestDeserializeCommand.register(event.getDispatcher());
         DevFlagDebugToggleCommand.register(event.getDispatcher(), event.getBuildContext());
+        DevMakeStarvingCommand.register(event.getDispatcher());
 
         // Player commands
         SetJobCommand.register(event.getDispatcher(), event.getBuildContext());

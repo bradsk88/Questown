@@ -160,4 +160,11 @@ public interface VillagerHolder {
     );
 
     boolean isJobChangePending(VillagerUUID vuid);
+
+    boolean isStarving(@Nullable VillagerUUID vuid);
+
+    void setStarving(
+            @Nullable VillagerUUID vuid,
+            boolean b
+    );
 }

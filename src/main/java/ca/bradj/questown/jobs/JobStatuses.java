@@ -189,28 +189,35 @@ public class JobStatuses {
                                                                                                 dTimerActive
                                                                                         ),
                                                                                         new LZCD<>(
-                                                                                                new Pair<>(ctx.jobId, "stop (nojobsite) when nowhere to work and town has items"),
-                                                                                                leaf(factory::noJobSite),
+                                                                                                new Pair<>(ctx.jobId, "extract results"),
+                                                                                                LZCDs.leaf(job::tryChoosingItemlessWork, Objects::isNull),
                                                                                                 ImmutableList.of(
-                                                                                                        dTownHasSupplies,
-                                                                                                        dInventoryEmpty
+                                                                                                        dStatusNotGoing
                                                                                                 ),
                                                                                                 new LZCD<>(
-                                                                                                        new Pair<>(ctx.jobId, "stop when no space and holding any items"),
-                                                                                                        leaf(factory::noSpace),
+                                                                                                        new Pair<>(ctx.jobId, "stop (nojobsite) when nowhere to work and town has items"),
+                                                                                                        leaf(factory::noJobSite),
                                                                                                         ImmutableList.of(
-                                                                                                                dHasAnyItems
+                                                                                                                dTownHasSupplies,
+                                                                                                                dInventoryEmpty
                                                                                                         ),
-
                                                                                                         new LZCD<>(
-                                                                                                                new Pair<>(ctx.jobId, "stop when no jobsite and no usable supplies in town"),
-                                                                                                                leaf(factory::noJobSite),
+                                                                                                                new Pair<>(ctx.jobId, "stop when no space and holding any items"),
+                                                                                                                leaf(factory::noSpace),
                                                                                                                 ImmutableList.of(
-                                                                                                                        dInventoryEmpty,
-                                                                                                                        dTownHasNoSupplies,
-                                                                                                                        dHasNoWorkableBlocks
+                                                                                                                        dHasAnyItems
                                                                                                                 ),
-                                                                                                                leaf(factory::noSupplies)
+
+                                                                                                                new LZCD<>(
+                                                                                                                        new Pair<>(ctx.jobId, "stop when no jobsite and no usable supplies in town"),
+                                                                                                                        leaf(factory::noJobSite),
+                                                                                                                        ImmutableList.of(
+                                                                                                                                dInventoryEmpty,
+                                                                                                                                dTownHasNoSupplies,
+                                                                                                                                dHasNoWorkableBlocks
+                                                                                                                        ),
+                                                                                                                        leaf(factory::noSupplies)
+                                                                                                                )
                                                                                                         )
                                                                                                 )
                                                                                         )

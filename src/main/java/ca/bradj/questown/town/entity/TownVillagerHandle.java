@@ -49,6 +49,7 @@ public class TownVillagerHandle implements VillagerHolder {
     private final Map<VillagerUUID, Long> mostRecentDowntimeTick = new HashMap<>();
     private final Map<VillagerUUID, LookTarget> lookTargets = new HashMap<>();
     private final Map<VillagerUUID, LookTarget> mostRecentLookTarget = new HashMap<>();
+    private final Map<VillagerUUID, Boolean> starving = new HashMap<>();
 
     // Serialized
     private final Map<VillagerUUID, Boolean> jobChangesPending = new HashMap<>();
@@ -71,7 +72,8 @@ public class TownVillagerHandle implements VillagerHolder {
     private record LookTarget(
             Entity who,
             Long untilTick
-    ) {}
+    ) {
+    }
 
     final TownVillagerMoods moods = new TownVillagerMoods();
 
@@ -104,6 +106,11 @@ public class TownVillagerHandle implements VillagerHolder {
         this.experience.putAll(experience);
         this.levels.putAll(level);
         this.jobChangesPending.putAll(jobChangesPending);
+        addHungryListener(e -> {
+            if (UtilClean.getOrDefault(fullness, e.getUUID(), Config.BASE_FULLNESS.get()) == 0) {
+                starving.put(e.getVUID(), true);
+            }
+        });
     }
 
     public void tick(
@@ -169,7 +176,7 @@ public class TownVillagerHandle implements VillagerHolder {
         Double hf = Math.min(bedFactor, boostedFactor);
         int i1 = (int) (i * hf);
         t.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_STATS).log(
-            "Healing by {} due to sleeping heal factor {} {}", i1, hf, e.getUUID()
+                "Healing by {} due to sleeping heal factor {} {}", i1, hf, e.getUUID()
         );
         return i1;
     }
@@ -318,7 +325,6 @@ public class TownVillagerHandle implements VillagerHolder {
 
     @Override
     public void fillHunger(UUID uuid) {
-        // TODO: Get max fullness from villager
         fillHunger(uuid, 1.0f);
     }
 
@@ -327,7 +333,13 @@ public class TownVillagerHandle implements VillagerHolder {
             UUID uuid,
             float percent
     ) {
-        fullness.put(uuid, (int) (percent * Config.BASE_FULLNESS.get()));
+        // TODO: Get max fullness from villager
+        int newHunger = (int) (percent * Config.BASE_FULLNESS.get());
+        QT.VILLAGER_LOGGER.info("Fullness changed from {} to {}", fullness.get(uuid), newHunger);
+        fullness.put(uuid, newHunger);
+        if (percent > 0) {
+            starving.put(VillagerUUID.from(uuid), false);
+        }
     }
 
     @Override
@@ -420,6 +432,7 @@ public class TownVillagerHandle implements VillagerHolder {
         entities.forEach(e -> {
             UUID u = e.getUUID();
             fullness.put(u, 1);
+            starving.put(VillagerUUID.from(u), true);
             // Listeners will be notified on next tick
         });
     }
@@ -582,7 +595,8 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public void setJobChangePending(
             @Nullable VillagerUUID vuid,
-            boolean value) {
+            boolean value
+    ) {
         jobChangesPending.put(vuid, value);
         town.getUnsafe().setChanged();
     }
@@ -590,6 +604,19 @@ public class TownVillagerHandle implements VillagerHolder {
     @Override
     public boolean isJobChangePending(VillagerUUID vuid) {
         return UtilClean.getOrDefault(jobChangesPending, vuid, false);
+    }
+
+    @Override
+    public boolean isStarving(@Nullable VillagerUUID vuid) {
+        return UtilClean.getOrDefault(starving, vuid, false);
+    }
+
+    @Override
+    public void setStarving(
+            @Nullable VillagerUUID vuid,
+            boolean b
+    ) {
+        starving.put(vuid, true);
     }
 
     @Override
@@ -626,7 +653,11 @@ public class TownVillagerHandle implements VillagerHolder {
         if (newExp >= target) {
             Integer newLvl = levels.compute(uuid, (x, cur) -> cur == null ? 2 : cur + 1);
             experience.put(uuid, newExp % target);
-            town.getUnsafe().messages.broadcastMessage("message.villager.leveled_up", UtilClean.truncateMiddle(uuid), newLvl);
+            town.getUnsafe().messages.broadcastMessage(
+                    "message.villager.leveled_up",
+                    UtilClean.truncateMiddle(uuid),
+                    newLvl
+            );
             hasBlockOfProgress.put(uuid, true);
         }
     }
@@ -662,7 +693,10 @@ public class TownVillagerHandle implements VillagerHolder {
 
         jobChangesPending.put(e.getVUID(), true);
         TownFlagBlockEntity t = town.getUnsafe();
-        t.messages.broadcastMessage("message.questown.villager.change_job_in_morning", UtilClean.truncateMiddle(villagerUUID));
+        t.messages.broadcastMessage(
+                "message.questown.villager.change_job_in_morning",
+                UtilClean.truncateMiddle(villagerUUID)
+        );
     }
 
     @Override
@@ -738,18 +772,20 @@ public class TownVillagerHandle implements VillagerHolder {
             }
             mostRecentLookTarget.remove(vuid);
         }
-        lookTargets.computeIfAbsent(vuid, (k) -> {
-            mostRecentLookTarget.put(k, new LookTarget(entity, thenNotUntilTick));
-            LookTarget lookTarget = new LookTarget(entity, untilTick);
-            town.getUnsafe().getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
-                    "Setting look target for {} to {} until tick {} (then not until {})",
-                    vuid,
-                    entity,
-                    untilTick,
-                    thenNotUntilTick
-            );
-            return lookTarget;
-        });
+        lookTargets.computeIfAbsent(
+                vuid, (k) -> {
+                    mostRecentLookTarget.put(k, new LookTarget(entity, thenNotUntilTick));
+                    LookTarget lookTarget = new LookTarget(entity, untilTick);
+                    town.getUnsafe().getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
+                            "Setting look target for {} to {} until tick {} (then not until {})",
+                            vuid,
+                            entity,
+                            untilTick,
+                            thenNotUntilTick
+                    );
+                    return lookTarget;
+                }
+        );
     }
 
     public ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs() {
@@ -783,7 +819,11 @@ public class TownVillagerHandle implements VillagerHolder {
 
         ImmutableSet<JobID> allRoots = ServerJobsRegistry.getAllRootJobs();
         List<JobID> allOtherJobs = allRoots.stream().filter(z -> !v.getJobId().sameRoot(z)).toList();
-        QT.FLAG_LOGGER.info("Changing villager from {} to one of [{}]", v.getJobId().rootId(), String.join(", ", allRoots.stream().map(JobID::rootId).toList()));
+        QT.FLAG_LOGGER.info(
+                "Changing villager from {} to one of [{}]",
+                v.getJobId().rootId(),
+                String.join(", ", allRoots.stream().map(JobID::rootId).toList())
+        );
         if (allOtherJobs.isEmpty()) {
             QT.FLAG_LOGGER.error("Only one job root detected in town? This is likely a poorly configured data pack.");
             jobChangesPending.put(v.getVUID(), false);

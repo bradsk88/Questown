@@ -67,6 +67,9 @@ public class SpecialRules {
     // If this rule is active during the extraction stage of a job, the
     // villager's hunger will be filled up by 50% from its current value.
     public static final String HUNGER_FILL_HALF = "hunger_fill_half";
+    // If this rule is active during the extraction stage of a job, the
+    // villager's hunger will be filled up to 100%.
+    public static final String HUNGER_FILL = "hunger_fill";
 
     // If this rule is active during the extraction stage of a job, the
     // villager will attempt to use their workspot as a container, adding
