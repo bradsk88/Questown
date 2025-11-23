@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.entity.TownRooms;
 import ca.bradj.questown.town.WallDetection;
@@ -234,16 +235,16 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 p -> WallDetection.IsDoor(level, p.toPosition(), flagPos.getY() + p.scanLevel),
                 (scanLevel, rooms) -> {
                     getOrCreateRooms(scanLevel).update(rooms);
-                    registeredDoors.stream().filter(v -> rooms.values().stream()
-                                                              .noneMatch(z -> z.isPresent() && v.toPosition()
-                                                                                                .equals(z.get().doorPos)))
+                    registeredDoors.stream().map(v -> new Pair<>(v, rooms.values().stream()
+                                                                    .noneMatch(z -> z.isPresent() && v.toPosition()
+                                                                                                .equals(z.get().doorPos))))
                                    .forEach(
                                            nonRoomDoor -> doorsToDrop.compute(
                                                    new TownPosition(
-                                                           nonRoomDoor.x,
-                                                           nonRoomDoor.z,
+                                                           nonRoomDoor.a().x,
+                                                           nonRoomDoor.a().z,
                                                            scanLevel
-                                                   ), (door, ticks) -> ticks == null ? 1 : ticks + 1
+                                                   ), (door, ticks) -> nonRoomDoor.b() ? 0 : (ticks == null ? 1 : ticks + 1)
                                            )
                                    );
                     dropDeadDoors(flagPos);

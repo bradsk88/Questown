@@ -1,6 +1,7 @@
 package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.core.init.TagsInit;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -39,6 +40,14 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
         this.quantity = quantity;
         this.item = item;
         this.nbt = nbt;
+    }
+
+    public static ImmutableSet<MCTownItem> fromIngredient(Ingredient i) {
+        ImmutableSet.Builder<MCTownItem> b = ImmutableSet.builder();
+        for (ItemStack item : i.getItems()) {
+            b.add(fromMCItemStack(item));
+        }
+        return b.build();
     }
 
     public MCTownItem copy() {

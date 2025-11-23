@@ -128,7 +128,7 @@ public class ResourceJobLoader {
             for (ItemStack item : ing.getItems()) {
                 Item iconItem = item.getItem();
                 // FIXME: Make "initial request" a function that provides recipe manager as input
-                Function<ServerLevel, Item> initReq = sl -> cooked(sl.getRecipeManager(), item.getItem());
+                Function<ServerLevel, Ingredient> initReq = sl -> Ingredient.of(cooked(sl.getRecipeManager(), item.getItem()));
                 WorkSpecialRules special = loadRulesV2(obj);
                 if (!obj.get("block").isJsonObject()) {
                     throw new IllegalArgumentException("block must be an object");
@@ -224,14 +224,14 @@ public class ResourceJobLoader {
                     "initial_request",
                     el -> el.isJsonNull() ? null : new ResourceLocation(el.getAsString())
             );
-            Function<ServerLevel, Item> initReq = sl -> null;
+            Function<ServerLevel, Ingredient> initReq = sl -> null;
             if (initialRequest != null) {
                 @Nullable Item r = ForgeRegistries.ITEMS.getValue(initialRequest);
                 if (r == null) {
                     throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
                                                                                                        .getAsString());
                 }
-                initReq = sl -> r;
+                initReq = sl -> Ingredient.of(r);
             }
             BiPredicate<WorkLocation.BlockInfo, BlockPos> isJobBlock = ResourceJobLoader.isJobBlock(object.get("block")
                                                                                                           .getAsString());
@@ -322,16 +322,11 @@ public class ResourceJobLoader {
             if (iconItem == null) {
                 throw new IllegalArgumentException("Icon image does not exist: " + obj.get("icon").getAsString());
             }
-            ResourceLocation initialRequest = optional(
+            @Nullable Ingredient initialRequest = optional(
                     obj,
                     "initial_request",
-                    el -> el.isJsonNull() ? null : new ResourceLocation(el.getAsString())
+                    el -> el.isJsonNull() ? null : getIngredient(el.getAsString())
             );
-            Item initReq = ForgeRegistries.ITEMS.getValue(initialRequest);
-            if (initReq == null) {
-                throw new IllegalArgumentException("Initial request item does not exist: " + obj.get("icon")
-                                                                                                .getAsString());
-            }
             WorkSpecialRules special = loadRulesV2(obj);
             if (!obj.get("block").isJsonObject()) {
                 throw new IllegalArgumentException("block must be an object");
@@ -351,7 +346,7 @@ public class ResourceJobLoader {
                         iconItem.getDefaultInstance(),
                         id,
                         JobID.fromJSON(Util.getOrDefault(obj, "parent", JsonElement::getAsString, null)),
-                        description(sl -> initReq, obj),
+                        description(sl -> initialRequest, obj),
                         new WorkLocation(isJobBlock, shouldInitWS, required(obj, "room")),
                         ResourceJobLoader.workStates(id, obj),
                         wwi,
@@ -440,7 +435,7 @@ public class ResourceJobLoader {
     }
 
     private static @NotNull WorkDescription description(
-            Function<ServerLevel, @Nullable Item> initReqFn,
+            Function<ServerLevel, @Nullable Ingredient> initReqFn,
             JsonObject object
     ) {
         if (!object.has("result")) {
@@ -451,16 +446,13 @@ public class ResourceJobLoader {
 
         return switch (type) {
             case "biome_loot" -> biomeDesc(initReqFn, rizz);
-            default -> WorksBehaviour.standardDescription(sl -> {
-                Item itemReq = initReqFn.apply(sl);
-                return itemReq == null ? null : itemReq.getDefaultInstance();
-            });
+            default -> WorksBehaviour.standardDescription(initReqFn);
         };
 
     }
 
     private static @NotNull WorkDescription biomeDesc(
-            Function<ServerLevel, @Nullable Item> initReqFn,
+            Function<ServerLevel, @Nullable Ingredient> initReqFn,
             JsonObject rizz
     ) {
         String resultPrefix = required(rizz, "prefix", JsonElement::getAsString);
@@ -468,10 +460,7 @@ public class ResourceJobLoader {
         // TODO: Validate that the initial request is present in the loot table
         return new WorkDescription(
                 t -> t.allKnownGatherItemsFn().apply(lootTablePrefix),
-                sl -> {
-                    Item initReq = initReqFn.apply(sl);
-                    return initReq == null ? null : initReq.getDefaultInstance();
-                }
+                initReqFn
         );
     }
 

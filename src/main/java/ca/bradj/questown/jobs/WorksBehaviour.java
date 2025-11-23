@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
@@ -86,15 +87,15 @@ public class WorksBehaviour {
     }
 
     public static Function<TownData, ImmutableSet<MCTownItem>> standardProductionResult(
-            Function<ServerLevel, ItemStack> result
+            Function<ServerLevel, Ingredient> result
     ) {
         return (t) -> {
-            ItemStack i = result.apply(t.serverLevel());
-            return i == null ? ImmutableSet.of() : ImmutableSet.of(MCTownItem.fromMCItemStack(i));
+            Ingredient i = result.apply(t.serverLevel());
+            return i == null ? ImmutableSet.of() : MCTownItem.fromIngredient(i);
         };
     }
 
-    public static WorkDescription standardDescription(Function<ServerLevel, @Nullable ItemStack> result) {
+    public static WorkDescription standardDescription(Function<ServerLevel, @Nullable Ingredient> result) {
         return new WorkDescription(
                 WorksBehaviour.standardProductionResult(result),
                 result
@@ -108,9 +109,10 @@ public class WorksBehaviour {
         );
     }
 
-    public interface JobFunc extends
-            Function<UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> {
+    public interface JobFunc {
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> apply(UUID owner);
 
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> get(VillagerUUID owner);
     }
 
     public interface SnapshotFunc extends
@@ -173,21 +175,7 @@ public class WorksBehaviour {
                 jobId,
                 parentID,
                 icon,
-                (UUID uuid) -> new DeclarativeJob(
-                        uuid, 6, // TODO: Add support for different inventory sizes
-                        jobId, location, states.maxState(),
-                        world.actionDuration(),
-                        states.ingredientsRequired(),
-                        states.ingredientQtyRequired(),
-                        states.toolsRequired(),
-                        states.workRequired(),
-                        states.timeRequired(),
-                        special.specialStatusRules(),
-                        special.specialGlobalRules(),
-                        expiration,
-                        world.resultGenerator()::generate,
-                        workSound
-                ),
+                getJobFunc(jobId, location, states, world, special, workSound, expiration),
                 productionJobSnapshot(jobId),
                 location.isJobBlock(),
                 location.shouldInitializeWorkState(),
@@ -215,6 +203,58 @@ public class WorksBehaviour {
                 1,
                 world.resultGenerator().isResultAlwaysEmpty()
         );
+    }
+
+    private static @NotNull JobFunc getJobFunc(
+            JobID jobId,
+            WorkLocation location,
+            WorkStates states,
+            WorkWorldInteractions world,
+            WorkSpecialRules special,
+            @Nullable SoundInfo workSound,
+            ExpirationRules expiration
+    ) {
+
+        return new JobFunc() {
+            @Override
+            public Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> apply(UUID owner) {
+                // TODO: Add support for different inventory sizes
+                return new DeclarativeJob(
+                        owner, 6,
+                        jobId, location, states.maxState(),
+                        world.actionDuration(),
+                        states.ingredientsRequired(),
+                        states.ingredientQtyRequired(),
+                        states.toolsRequired(),
+                        states.workRequired(),
+                        states.timeRequired(),
+                        special.specialStatusRules(),
+                        special.specialGlobalRules(),
+                        expiration,
+                        world.resultGenerator()::generate,
+                        workSound
+                );
+            }
+
+            @Override
+            public Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> get(VillagerUUID owner) {
+                return new DeclarativeJob(
+                        VillagerUUID.get(owner), 6,
+                        jobId, location, states.maxState(),
+                        world.actionDuration(),
+                        states.ingredientsRequired(),
+                        states.ingredientQtyRequired(),
+                        states.toolsRequired(),
+                        states.workRequired(),
+                        states.timeRequired(),
+                        special.specialStatusRules(),
+                        special.specialGlobalRules(),
+                        expiration,
+                        world.resultGenerator()::generate,
+                        workSound
+                );
+            }
+        };
     }
 
     private static @NotNull List<Ingredient> getProductionNeeds(

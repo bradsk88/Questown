@@ -492,7 +492,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                     continue;
                 }
                 if (batch.getOwner() == null) {
-                    QT.QUESTS_LOGGER.error("Job Change quest had no owner. This is likely a bug.");
+                    QT.logBug("Job Change quest had no owner.");
+                    continue;
                 }
                 jobToUseIfNoQuestsExist = new JobHaver(
                         batch.getOwner(),

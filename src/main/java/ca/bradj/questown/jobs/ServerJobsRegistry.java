@@ -153,7 +153,8 @@ public class ServerJobsRegistry {
                 continue;
             }
             ResourceLocation name = Compat.getItemId(w.icon.getItem());
-            if (wantedResult.test(w.initialRequest.apply(data.serverLevel()))) {
+            name = Util.ifNull(name, Questown.ResourceLocationError);
+            if (matches(wantedResult, w.initialRequest.apply(data.serverLevel()))) {
                 b.put(w.id, Util.ifNull(name, Questown.ResourceLocationError));
                 continue;
             }
@@ -168,11 +169,16 @@ public class ServerJobsRegistry {
         return b.build();
     }
 
-    public static Collection<JobID> getRandomNodesUnder(
-            JobID parentID,
-            Supplier<Integer> randomInt
+    private static boolean matches(
+            Ingredient wantedResult,
+            @Nullable Ingredient apply
     ) {
-        return null;
+        for (ItemStack item : apply.getItems()) {
+            if (wantedResult.test(item)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -218,6 +224,10 @@ public class ServerJobsRegistry {
             TriPredicate<JobID, Supplier<BlockState>, Pair<WorkLocation.BlockInfo, BlockPos>> shouldInit,
             BiFunction<JobID, List<MCHeldItem>, ImmutableList<Ingredient>> needs
     ) {
+
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getJob(JobID job, VillagerUUID owner) {
+            return jobFn.apply(job, VillagerUUID.get(owner));
+        }
 
         static SpecialJob fromWork(
                 Predicate<JobID> idTest,
@@ -483,7 +493,7 @@ public class ServerJobsRegistry {
                 return true;
             }
         }
-        return requestedResult.test(work.initialRequest.apply(town.serverLevel()));
+        return matches(requestedResult, work.initialRequest.apply(town.serverLevel()));
     }
 
     public static Function<List<MCHeldItem>, ImmutableList<Ingredient>> getWantedResourcesProvider(
@@ -538,7 +548,14 @@ public class ServerJobsRegistry {
             QT.JOB_LOGGER.error("[Default Work Request] No recognized job for ID: {}", v);
             return ItemStack.EMPTY;
         }
-        return w.get().initialRequest.apply(sl);
+        Ingredient apply = w.get().initialRequest.apply(sl);
+        if (apply == null) {
+            return ItemStack.EMPTY;
+        }
+        for (ItemStack item : apply.getItems()) {
+            return item;
+        }
+        return ItemStack.EMPTY;
     }
 
     public static ImmutableSet<Ingredient> getAllOutputs(WorksBehaviour.TownData t) {
@@ -546,9 +563,11 @@ public class ServerJobsRegistry {
                                          Work work = v.get();
                                          ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
                                          work.results.apply(t).forEach(z -> b.add(z.toMCItemStack()));
-                                         ItemStack req = work.initialRequest.apply(t.serverLevel());
+                                         @Nullable Ingredient req = work.initialRequest.apply(t.serverLevel());
                                          if (req != null) {
-                                             b.add(req);
+                                             for (ItemStack item : req.getItems()) {
+                                                 b.add(item);
+                                             }
                                          }
                                          return b.build();
                                      }).flatMap(Collection::stream).map(Ingredient::of).filter(v -> !v.isEmpty()).map(Ingredients::asWorkRequest)
@@ -648,12 +667,11 @@ public class ServerJobsRegistry {
             JobID jobName,
             VillagerUUID ownerVUID
     ) {
-        UUID ownerUUID = VillagerUUID.get(ownerVUID);
         BiFunction<ImmutableList<MCHeldItem>, @Nullable Snapshot<MCHeldItem>, Snapshot<MCHeldItem>> journal = null;
         Supplier<Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> j = null;
         for (SpecialJob sj : specialJobs) {
             if (sj.idTest.test(jobName)) {
-                j = () -> sj.jobFn.apply(jobName, ownerUUID);
+                j = () -> sj.getJob(jobName, ownerVUID);
                 journal = (items, jrn) -> sj.journalFn.apply(jobName, jrn, items);
                 break;
             }
@@ -662,10 +680,10 @@ public class ServerJobsRegistry {
             Supplier<Work> fn = getWorkSupplier(jobName);
             if (fn == null) {
                 QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
-                j = () -> getWorkSupplier(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc.apply(ownerUUID);
+                j = () -> getWorkSupplier(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc.get(ownerVUID);
             } else {
                 Work work = fn.get();
-                j = () -> work.jobFunc.apply(ownerUUID);
+                j = () -> work.jobFunc.get(ownerVUID);
                 journal = (items, jrn) -> newJournal(jobName, jrn, items, work);
             }
         }
