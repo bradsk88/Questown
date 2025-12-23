@@ -79,6 +79,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Long> BLOCK_CLAIMS_TICK_LIMIT;
     public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_DINING_TABLE;
     public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_FOOD;
+    public static final ForgeConfigSpec.ConfigValue<Long> BUFFER_TICKS_AFTER_FOOD_ATTEMPT;
     public static final ForgeConfigSpec.ConfigValue<Long> DAMAGE_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Long> MOOD_TICK_INTERVAL;
     public static final ForgeConfigSpec.ConfigValue<Integer> NEUTRAL_MOOD;
@@ -253,6 +254,9 @@ public class Config {
         MAX_TICKS_WITHOUT_FOOD = BUILDER.comment("The maximum number of ticks that a hungry villager will spend")
                                         .comment(" trying find food before giving up and going back to work")
                                         .defineInRange("MaxTicksWithoutFood", 2000L, 1L, 24000L);
+        BUFFER_TICKS_AFTER_FOOD_ATTEMPT = BUILDER.comment("The number of ticks that a hungry villager will spend")
+                                        .comment(" working after an unsuccessful search for food before trying again")
+                                        .defineInRange("BufferTicksAfterFoodAttempt", 500L, 1L, 24000L);
         DAMAGE_TICKS = BUILDER.comment(
                 "The number of ticks that it will take for one point of damage to heal when no effects are present"
         ).defineInRange("DamageTicks", 1000L, 1L, 24000L);

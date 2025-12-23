@@ -2,6 +2,7 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
@@ -79,14 +80,21 @@ public class TownFlagTileData {
         BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag = (tag, t) -> {
             TownRoomsMap registeredRooms = t.initializer().getRoomsHandle().getRegisteredRooms();
             TownRoomsMapSerializer.INSTANCE.deserialize(tag, t, registeredRooms);
-            QT.FLAG_LOGGER.debug("Initialized rooms from {}", tag);
+            logInit("Initialized rooms from {}", tag);
             return true;
         };
         Consumer<TownFlagBlockEntity> onPlace = t -> {
             t.roomsHandle.initializeNew(t);
-            QT.FLAG_LOGGER.debug("Initialized rooms for new flag");
+            logInit("Initialized rooms for new flag");
         };
         return new InitPair(fromTag, onPlace);
+    }
+
+    private static void logInit(
+            String s,
+            Object... tag
+    ) {
+        QT.FLAG_LOGGER.unwrap().debug(s, tag);
     }
 
     private static @NotNull InitPair initQuestBatches() {
@@ -97,13 +105,13 @@ public class TownFlagTileData {
                 t.initializer().setUpQuestsForNewlyPlacedFlag();
             }
             t.initializer().setInitializedQuests(true);
-            QT.FLAG_LOGGER.debug("Initialized quests from {}", tag);
+            logInit("Initialized quests from {}", tag);
             return true;
         };
         Consumer<TownFlagBlockEntity> onPlace = t -> {
             t.quests.initialize(t);
             t.initializer().getQuests().initialize(t);
-            QT.FLAG_LOGGER.debug("Initialized quests for new flag");
+            logInit("Initialized quests for new flag");
         };
         return new InitPair(fromTag, onPlace);
     }
@@ -112,10 +120,10 @@ public class TownFlagTileData {
         return new InitPair(
                 (tag, t) -> {
                     t.initializer().getMorningRewards().deserializeNbt(t, tag);
-                    QT.FLAG_LOGGER.debug("Initialized morning rewards from {}", tag);
+                    logInit("Initialized morning rewards from {}", tag);
                     return true;
                 }, t -> {
-            QT.FLAG_LOGGER.debug("Initialized morning rewards for new flag");
+            logInit("Initialized morning rewards for new flag");
         }
         );
     }
@@ -124,16 +132,16 @@ public class TownFlagTileData {
         BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag = (tag, t) -> {
             Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(tag, "mats");
             l.forEach(t.initializer().getPOIs()::registerWelcomeMat);
-            QT.FLAG_LOGGER.debug("Initialized welcome mats from {}", tag);
+            logInit("Initialized welcome mats from {}", tag);
             return true;
         };
-        Consumer<TownFlagBlockEntity> onPlace = t -> QT.FLAG_LOGGER.debug("Initialized welcome mats for new flag");
+        Consumer<TownFlagBlockEntity> onPlace = t -> logInit("Initialized welcome mats for new flag");
         return new InitPair(fromTag, onPlace);
     }
 
     private static @NotNull InitPair initBlockRooms() {
         BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag = (tag, t) -> t.initializer().initBlockRooms(tag, t);
-        Consumer<TownFlagBlockEntity> onPlace = t -> QT.FLAG_LOGGER.debug("Initialized block rooms for new flag");
+        Consumer<TownFlagBlockEntity> onPlace = t -> logInit("Initialized block rooms for new flag");
         return new InitPair(fromTag, onPlace);
     }
 
@@ -141,9 +149,9 @@ public class TownFlagTileData {
         return new InitPair(
                 (tag, t) -> {
                     TownWorkHandleSerializer.INSTANCE.deserializeNBT(tag, t.workHandle);
-                    QT.FLAG_LOGGER.debug("Initialized jobs from {}", tag);
+                    logInit("Initialized jobs from {}", tag);
                     return true;
-                }, t -> QT.FLAG_LOGGER.debug("Initialized jobs for new flag")
+                }, t -> logInit("Initialized jobs for new flag")
         );
     }
 
@@ -154,12 +162,12 @@ public class TownFlagTileData {
                 return false;
             }
             TownKnowledgeStoreSerializer.INSTANCE.deserializeNBT(tag, knowledge);
-            QT.FLAG_LOGGER.debug("Initialized knowledge from {}", tag);
+            logInit("Initialized knowledge from {}", tag);
             return true;
         };
         Consumer<TownFlagBlockEntity> onFlagPlace = t -> {
             t.initializer().getKnowledge().initialize(t);
-            QT.FLAG_LOGGER.debug("Initialized knowledge for new flag");
+            logInit("Initialized knowledge for new flag");
         };
         return new InitPair(fromTag, onFlagPlace);
     }
@@ -168,7 +176,7 @@ public class TownFlagTileData {
         BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag = (tag, t) -> {
             long currentTick = Util.getTick(t.getServerLevel());
             TownVillagerHandle.SERIALIZER.deserialize(tag, t.initializer().getVillagers(), currentTick);
-            QT.FLAG_LOGGER.debug("Initialized villagers from {}", tag);
+            logInit("Initialized villagers from {}", tag);
             return true;
         };
         Consumer<TownFlagBlockEntity> onPlace = t -> {
@@ -181,17 +189,20 @@ public class TownFlagTileData {
                 if (!t.getVillagerHandle().canDine(e.getUUID())) {
                     return;
                 }
+                if (!t.getVillagerHandle().gaveUpRecently(e.getVUID(), Util.getTick(t.getServerLevel()))) {
+                    return;
+                }
                 String rid = e.getJobId().rootId();
                 ResourceLocation diningRoom = DinerWork.asWork(rid).baseRoom;
                 Collection<RoomRecipeMatch<MCRoom>> diningRooms = t.roomsHandle.getRoomsMatching(diningRoom);
                 if (diningRooms.isEmpty()) {
-                    t.getVillagerHandle().changeJobForVillager(e.getUUID(), DinerNoTableWork.getIdForRoot(rid), false);
+                    t.getVillagerHandle().changeJobForVillager(e.getVUID(), DinerNoTableWork.getIdForRoot(rid), false);
                 } else {
-                    t.getVillagerHandle().changeJobForVillager(e.getUUID(), DinerWork.getIdForRoot(rid), false);
+                    t.getVillagerHandle().changeJobForVillager(e.getVUID(), DinerWork.getIdForRoot(rid), false);
                 }
             });
             villagerHandle.addStatsListener(s -> t.setChanged());
-            QT.FLAG_LOGGER.debug("Initialized villagers for new flag");
+            logInit("Villager handle associated on new flag");
         };
         return new InitPair(fromTag, onPlace);
     }
@@ -200,7 +211,7 @@ public class TownFlagTileData {
         return new InitPair(
                 (tag, town) -> {
                     TownHealingHandle.SERIALIZER.deserialize(tag, town.initializer().getHealing());
-                    QT.FLAG_LOGGER.debug("Initialized healing spots from {}", tag);
+                    logInit("Initialized healing spots from {}", tag);
                     return true;
                 }, (town) -> {
             town.initializer().getHealing().initialize(town);
