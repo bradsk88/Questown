@@ -50,7 +50,7 @@ public class TownVillagerUIs {
     public static void showMultiStatusUI(
             ServerPlayer player,
             FlagTabsEmbedding.FlagInfo townFlagBasePos,
-            Collection<LivingEntity> entities,
+            Collection<? extends LivingEntity> entities,
             Supplier<Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>>> questsSrc,
             int bopCount
     ) {
@@ -100,7 +100,7 @@ public class TownVillagerUIs {
     public static void showItemJobsUI(
             ServerPlayer sender,
             TownFlagBlockEntity unsafeTown,
-            Collection<LivingEntity> entities,
+            Collection<? extends LivingEntity> entities,
             Ingredient itemToShowJobsFor
     ) {
         Map<JobID, List<UUID>> vb = new HashMap<>();
@@ -164,7 +164,7 @@ public class TownVillagerUIs {
     public static void showJobsWithSameRootUI(
             ServerPlayer sender,
             @NotNull TownFlagBlockEntity unsafe,
-            List<LivingEntity> entities,
+            Collection<? extends LivingEntity> entities,
             JobID childJob
     ) {
         Map<JobID, List<UUID>> vb = new HashMap<>();
@@ -212,14 +212,16 @@ public class TownVillagerUIs {
 
     public static void showUI(
             ServerPlayer sender,
-            Collection<LivingEntity> entities,
+            Collection<? extends LivingEntity> entities,
             String type,
             UUID villagerId,
             Map<UUID, ? extends Set<JobID>> unlockedJobs,
             Set<JobID> unlockableJobs
     ) {
-        Optional<LivingEntity> f = entities.stream().filter(VisitorMobEntity.class::isInstance)
-                                           .filter(v -> villagerId.equals(v.getUUID())).findFirst();
+        Optional<VisitorMobEntity> f = entities.stream()
+                                               .filter(VisitorMobEntity.class::isInstance)
+                                               .map(v -> (VisitorMobEntity) v)
+                                               .filter(v -> villagerId.equals(v.getUUID())).findFirst();
         if (f.isEmpty()) {
             QT.FLAG_LOGGER.error("No villagers with ID {} while opening UI", villagerId);
             return;
@@ -227,7 +229,7 @@ public class TownVillagerUIs {
 
         syncWorkToClient(sender);
 
-        VisitorMobEntity e = (VisitorMobEntity) f.get();
+        VisitorMobEntity e = f.get();
 
         TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level, e.getFlagPos());
 

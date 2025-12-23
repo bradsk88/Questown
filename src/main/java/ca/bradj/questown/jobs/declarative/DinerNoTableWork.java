@@ -97,7 +97,8 @@ public class DinerNoTableWork {
                                 ImmutableList.of(SpecialRules.HUNGER_FILL)
                         ),
                         ImmutableList.of(
-                                SpecialRules.WORK_IN_EVENING
+                                SpecialRules.WORK_IN_EVENING,
+                                SpecialRules.NO_EXPERIENCE_GAINED
                         )
                 ),
                 new SoundInfo(SoundEvents.GENERIC_EAT.getLocation(), 10, null),

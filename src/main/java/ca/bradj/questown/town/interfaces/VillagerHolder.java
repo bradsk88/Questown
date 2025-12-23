@@ -167,4 +167,6 @@ public interface VillagerHolder {
             @Nullable VillagerUUID vuid,
             boolean b
     );
+
+    boolean gaveUpRecently(VillagerUUID uuid, long currentTick);
 }
