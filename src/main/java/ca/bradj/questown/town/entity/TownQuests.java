@@ -824,6 +824,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 if (q.getType() != Quest.QuestType.JOB_CHANGE) {
                     continue;
                 }
+                if (q.isComplete()) {
+                    continue;
+                }
                 JobID wantedJobId = JobID.fromRL(q.getWantedId());
 
                 if (batch.getOwner() != null) {

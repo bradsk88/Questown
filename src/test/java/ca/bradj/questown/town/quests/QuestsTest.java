@@ -81,6 +81,11 @@ class QuestsTest {
             }
         }, new Reward() {
             @Override
+            public String toNiceString() {
+                return getName() + " (nice)";
+            }
+
+            @Override
             protected String getName() {
                 return "Test reward";
             }

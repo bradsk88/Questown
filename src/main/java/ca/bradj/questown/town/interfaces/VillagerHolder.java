@@ -167,5 +167,5 @@ public interface VillagerHolder {
             boolean b
     );
 
-    boolean gaveUpRecently(VillagerUUID uuid, long currentTick);
+    boolean gaveUpDiningRecently(VillagerUUID uuid, long currentTick);
 }

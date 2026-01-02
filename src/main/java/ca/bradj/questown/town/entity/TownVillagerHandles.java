@@ -211,7 +211,7 @@ public class TownVillagerHandles {
                     UUID villagerUUID,
                     JobID id
             ) {
-                villagerHandle.delegate.unlockJob(villagerUUID, id);
+                villagerHandle.learning.unlockJob(villagerUUID, id);
             }
 
             @Override
@@ -243,7 +243,7 @@ public class TownVillagerHandles {
 
             @Override
             public boolean isUnlocked(JobID jobID) {
-                return villagerHandle.delegate.isUnlocked(jobID);
+                return villagerHandle.learning.isUnlocked(jobID);
             }
 
             @Override
@@ -301,11 +301,11 @@ public class TownVillagerHandles {
             }
 
             @Override
-            public boolean gaveUpRecently(
+            public boolean gaveUpDiningRecently(
                     VillagerUUID uuid,
                     long currentTick
             ) {
-                return villagerHandle.delegate.gaveUpRecently(getUUID(uuid), currentTick);
+                return villagerHandle.delegate.gaveUpDiningRecently(getUUID(uuid), currentTick);
             }
 
             @SuppressWarnings("removal")

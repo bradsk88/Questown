@@ -34,6 +34,11 @@ class QuestGardenTest {
         }
 
         @Override
+        protected boolean isOvergrown() {
+            return false;
+        }
+
+        @Override
         protected boolean hasBedAlready(List<String> strings) {
             return batch.contains("bed");
         }
