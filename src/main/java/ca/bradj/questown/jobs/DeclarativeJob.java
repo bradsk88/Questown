@@ -640,7 +640,7 @@ public class DeclarativeJob extends
 
             @Override
             public void changeToNextJob() {
-                town.getVillagerHandle().changeToNextJobForVillager(ownerUUID, getId());
+                town.changeJobForVisitorFromBoard(ownerUUID, getId());
             }
 
             @Override

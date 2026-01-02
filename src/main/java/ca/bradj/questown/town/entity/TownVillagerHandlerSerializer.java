@@ -144,9 +144,9 @@ public class TownVillagerHandlerSerializer {
 
         CompoundTag compound = new CompoundTag();
 
-        serializeMap(compound, NBT_FULLNESS, villagerHandle.fullness, simpleInt);
+        serializeMap(compound, NBT_FULLNESS, villagerHandle.getFullness(), simpleInt);
         serializeMap(
-                compound, NBT_MOOD_EFFECTS, villagerHandle.moods.getEffects(), (t, v) -> {
+                compound, NBT_MOOD_EFFECTS, villagerHandle.getMoodEffects(), (t, v) -> {
                     ListTag effectsList = new ListTag();
                     v.forEach(effect -> {
                         CompoundTag effectTag = new CompoundTag();
@@ -157,10 +157,10 @@ public class TownVillagerHandlerSerializer {
                     t.put(NBT_MOOD_EFFECTS, effectsList);
                 }
         );
-        serializeMap(compound, NBT_DAMAGE, villagerHandle.damage, simpleInt);
-        serializeMap(compound, NBT_EXP, villagerHandle.experience, simpleInt);
-        serializeMap(compound, NBT_LEVELS, villagerHandle.levels, simpleInt);
-        serializeMap(
+        serializeMap(compound, NBT_DAMAGE, villagerHandle.getDamage(), simpleInt);
+        serializeMap(compound, NBT_EXP, villagerHandle.getExperience(), simpleInt);
+        serializeMap(compound, NBT_LEVELS, villagerHandle.getLevels(), simpleInt);
+        serializeVMap(
                 compound,
                 NBT_UNLOCKED_JOBS,
                 villagerHandle.getUnlockedJobs(),
@@ -177,7 +177,7 @@ public class TownVillagerHandlerSerializer {
             );
             compoundTag.put(NBT_VALUE, compound1);
         };
-        serializeMap(compound, NBT_JOBS_KNOWN_TO_EXIST, villagerHandle.learning.jobsKnownToExist, bc);
+        serializeMap(compound, NBT_JOBS_KNOWN_TO_EXIST, villagerHandle.getJobsKnownToExist(), bc);
         serializeVMap(compound, NBT_PENDING_JOB_CHANGES, villagerHandle.getJobChangesPending(), simpleBool);
         return compound;
     }

@@ -10,13 +10,11 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.UnsafeTown;
-import ca.bradj.questown.town.VillagerLearningHandle;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import net.minecraft.world.entity.LivingEntity;
 
 import java.util.*;
 
@@ -24,9 +22,9 @@ public class TownVillagerLearningHandle {
 
     final Map<UUID, HashSet<JobID>> unlockedJobs = new HashMap<>();
     final Map<UUID, Map<JobID, Set<JobID>>> jobsKnownToExist = new HashMap<>();
-    private final UnsafeTown town = new UnsafeTown(TownVillagerLearningHandle.class);
+    private final UnsafeTown town = new UnsafeTown(getClass());
 
-    private final VillagerLearningHandle<JobID> delegate = new VillagerLearningHandle<>(
+    private final ca.bradj.questown.town.VillagerLearningHandle<JobID> delegate = new ca.bradj.questown.town.VillagerLearningHandle<>(
             ServerJobsRegistry::getAllJobs, v -> Compat.shuffle(v, town.getServerLevelUnsafe()), (p, c) -> {
         if (ServerJobsRegistry.isParentOf(p, c)) {
             return true;
@@ -37,7 +35,6 @@ public class TownVillagerLearningHandle {
     private long lastTicked;
     private long lastComputed;
 
-
     public TownVillagerLearningHandle() {
     }
 
@@ -46,7 +43,6 @@ public class TownVillagerLearningHandle {
     }
 
     public void tick(
-            ImmutableList<LivingEntity> livingEntities,
             long currentTick
     ) {
         this.lastTicked = currentTick;
@@ -70,7 +66,12 @@ public class TownVillagerLearningHandle {
             Map<UUID, ? extends Map<JobID, ? extends ImmutableCollection<JobID>>> jobsKnownToExist
     ) {
         for (Map.Entry<UUID, ? extends ImmutableCollection<JobID>> uuidEntry : unlockedJobs.entrySet()) {
-            UtilClean.addAllOrInitialize(this.unlockedJobs, uuidEntry.getKey(), new HashSet<>(uuidEntry.getValue()), HashSet::new);
+            UtilClean.addAllOrInitialize(
+                    this.unlockedJobs,
+                    uuidEntry.getKey(),
+                    new HashSet<>(uuidEntry.getValue()),
+                    HashSet::new
+            );
         }
         for (Map.Entry<UUID, ? extends Map<JobID, ? extends ImmutableCollection<JobID>>> ujs : jobsKnownToExist.entrySet()) {
             HashMap<JobID, Set<JobID>> m = new HashMap<>();
@@ -147,7 +148,7 @@ public class TownVillagerLearningHandle {
         ));
         UtilClean.addOrInitialize(villagerKnown, parentJob, jobsKnownToExist, HashSet::new);
         this.jobsKnownToExist.put(contributingVillager, villagerKnown);
-        QT.FLAG_LOGGER.debug(
+        town.getUnsafe().getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.KNOWLEDGE_RECORDS).log(
                 "Registering as known: {}->{} via {}",
                 parentJob.toNiceString(),
                 jobsKnownToExist.toNiceString(),
