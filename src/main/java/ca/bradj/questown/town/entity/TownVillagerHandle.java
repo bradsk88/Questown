@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
@@ -12,6 +13,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Effect;
+import ca.bradj.questown.town.TownVillagerMoods;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.VillagerStatsData;
 import com.google.common.collect.ImmutableCollection;
@@ -41,9 +43,24 @@ public final class TownVillagerHandle {
     private final UnsafeTown town = new UnsafeTown(getClass());
     private final TownVillagerSleepModule sleep = new TownVillagerSleepModule();
     private final HealingModule<VisitorMobEntity> healing = new TownVillagerHealingModule();
+    private final TownVillagerMoods moods = new TownVillagerMoods();
+    final TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
 
     TownVillagerHandle() {
-        this.delegate = new SimpleVillagerHandle<>(new SimpleVillagerHandle.Delegator<>() {
+        SimpleVillagerHandle.Configs config = new SimpleVillagerHandle.Configs(
+                Compat.configGet(Config.BASE_FULLNESS).get(),
+                Compat.configGet(Config.HUNGER_ENABLED).get(),
+                Compat.configGet(Config.FLAG_TICK_INTERVAL).get(),
+                Compat.configGet(Config.NORMAL_BED_HEAL_MULTIPLIER).get(),
+                Compat.configGet(Config.EXPERIENCE_REQUIRED_AT_LEVEL_1).get(),
+                Compat.configGet(Config.EXPERIENCE_RAMP_FACTOR).get(),
+                Compat.configGet(Config.DAMAGE_TICKS).get(),
+                Compat.configGet(Config.NEUTRAL_MOOD).get(),
+                Compat.configGet(Config.BUFFER_TICKS_AFTER_FOOD_ATTEMPT).get(),
+                Compat.configGet(Config.MAX_TICKS_BETWEEN_DOWNTIME).get()
+        );
+        this.delegate = new SimpleVillagerHandle<>(
+                new Delegator<>() {
             @Override
             public JobID getJobId(VisitorMobEntity vEntity) {
                 return vEntity.getJobId();
@@ -145,7 +162,50 @@ public final class TownVillagerHandle {
             public void discardEntity(VisitorMobEntity visitorMobEntity) {
                 visitorMobEntity.remove(Entity.RemovalReason.DISCARDED);
             }
-        });
+
+            @Override
+            public boolean isDining(VisitorMobEntity v) {
+                return ServerJobsRegistry.isDining(v.getJobId());
+            }
+
+            @Override
+            public boolean canStopWorkingAtAnyTime(VisitorMobEntity v) {
+                return v.canStopWorkingAtAnyTime();
+            }
+
+            @Override
+            public void freeze(
+                    VisitorMobEntity v,
+                    int ticks
+            ) {
+                v.freeze(ticks);
+            }
+
+            @Override
+            public float getMood(UUID uuid) {
+                return moods.getMood(uuid);
+            }
+
+            @Override
+            public void unlockJob(
+                    VisitorMobEntity v,
+                    JobID newJob
+            ) {
+                learning.unlockJob(v.getUUID(), newJob);
+            }
+
+            @Override
+            public ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs() {
+                return learning.getUnlockedJobs();
+            }
+
+            @Override
+            public ImmutableSet<JobID> getChildJobsKnownToExist(JobID jobId) {
+                return learning.getChildJobsKnownToExist(jobId);
+            }
+        },
+                config
+        );
         this.uis = new TownVillagerUIsHandle(delegate);
     }
 
@@ -163,6 +223,7 @@ public final class TownVillagerHandle {
 
     void associate(TownFlagBlockEntity t) {
         this.town.initialize(t);
+        this.learning.associate(t);
         delegate.associate(t);
         uis.init(t);
         sleep.associate(t);
@@ -179,16 +240,16 @@ public final class TownVillagerHandle {
             ImmutableMap<UUID, Integer> level,
             ImmutableMap<VillagerUUID, Boolean> jobChangesPending
     ) {
+        this.learning.initialize(unlockedJobs, jobsKnownToExist);
         delegate.initialize(
                 fullness,
-                moodEffects,
                 damage,
-                unlockedJobs,
-                jobsKnownToExist,
                 experience,
                 level,
-                UtilClean.mapKeys(jobChangesPending, TownVillagerHandle::getUuid)
+                UtilClean.mapKeys(jobChangesPending, TownVillagerHandle::getUuid),
+                Config.HUNGER_ENABLED.get()
         );
+        moods.initialize(moodEffects);
     }
 
     void recallVillagers() {
@@ -214,7 +275,7 @@ public final class TownVillagerHandle {
             delegate.fillHunger(uuid, 0.5f);
             return;
         }
-        delegate.moods.tryApplyEffect(effect, expireOnTick, uuid);
+        moods.tryApplyEffect(effect, expireOnTick, uuid);
     }
 
     ImmutableMap<UUID, Integer> getFullness() {
@@ -222,7 +283,7 @@ public final class TownVillagerHandle {
     }
 
     ImmutableMap<UUID, ImmutableList<Effect>> getMoodEffects() {
-        return ImmutableMap.copyOf(delegate.moods.getEffects());
+        return ImmutableMap.copyOf(moods.getEffects());
     }
 
     ImmutableMap<UUID, Integer> getDamage() {
@@ -238,7 +299,7 @@ public final class TownVillagerHandle {
     }
 
     ImmutableMap<UUID, Map<JobID, ? extends Collection<JobID>>> getJobsKnownToExist() {
-        return ImmutableMap.copyOf(delegate.learning.jobsKnownToExist);
+        return ImmutableMap.copyOf(learning.jobsKnownToExist);
     }
 
     long getTick() {
@@ -292,7 +353,9 @@ public final class TownVillagerHandle {
             long tick,
             Signals signals
     ) {
-        delegate.tick(tick, signals);
+        moods.tick(tick);
+        learning.tick(tick);
+        delegate.tick(signals);
     }
 
     Map<VillagerUUID, Boolean> getJobChangesPending() {
@@ -301,6 +364,12 @@ public final class TownVillagerHandle {
 
     void register(VisitorMobEntity visitorMobEntity) {
         delegate.register(visitorMobEntity);
+
+        ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(visitorMobEntity.getJobId());
+        for (JobID jobID : defaultWork) {
+            learning.unlockJob(visitorMobEntity.getUUID(), jobID);
+        }
+        learning.requestKnowledge(visitorMobEntity.getUUID(), defaultWork);
     }
 
     void addHungryListener(Consumer<VisitorMobEntity> o) {
@@ -312,7 +381,7 @@ public final class TownVillagerHandle {
     }
 
     ImmutableMap<VillagerUUID, ImmutableSet<JobID>> getUnlockedJobs() {
-        return UtilClean.mapKeys(delegate.getUnlockedJobs(), TownVillagerHandle::fromUuid);
+        return UtilClean.mapKeys(learning.getUnlockedJobs(), TownVillagerHandle::fromUuid);
     }
 
     UnsafeVillagerData getUnprotectedDataHandle(@Nullable UUID vuid) {
@@ -341,5 +410,17 @@ public final class TownVillagerHandle {
                 delegate.customData.put(vuid, tag);
             }
         };
+    }
+
+    public boolean isDining(UUID uuid) {
+        return delegate.isDining(uuid);
+    }
+
+    public boolean canDine(UUID uuid) {
+        return delegate.canDine(uuid);
+    }
+
+    public boolean gaveUpDiningRecently(@Nullable VillagerUUID vuid) {
+        return delegate.gaveUpDiningRecently(getUuid(vuid), getTick());
     }
 }

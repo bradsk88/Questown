@@ -2,7 +2,6 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
@@ -183,22 +182,22 @@ public class TownFlagTileData {
             TownVillagerHandle villagerHandle = t.initializer().getVillagers();
             villagerHandle.associate(t);
             villagerHandle.addHungryListener(e -> {
-                if (t.getVillagerHandle().isDining(e.getUUID())) {
+                if (t.villagerHandle.isDining(e.getUUID())) {
                     return;
                 }
-                if (!t.getVillagerHandle().canDine(e.getUUID())) {
+                if (!t.villagerHandle.canDine(e.getUUID())) {
                     return;
                 }
-                if (!t.getVillagerHandle().gaveUpRecently(e.getVUID(), Util.getTick(t.getServerLevel()))) {
+                if (t.villagerHandle.gaveUpDiningRecently(e.getVUID())) {
                     return;
                 }
                 String rid = e.getJobId().rootId();
                 ResourceLocation diningRoom = DinerWork.asWork(rid).baseRoom;
                 Collection<RoomRecipeMatch<MCRoom>> diningRooms = t.roomsHandle.getRoomsMatching(diningRoom);
                 if (diningRooms.isEmpty()) {
-                    t.getVillagerHandle().changeJobForVillager(e.getVUID(), DinerNoTableWork.getIdForRoot(rid), false);
+                    t.villagerHandle.changeJobForVillager(e.getVUID(), DinerNoTableWork.getIdForRoot(rid), false);
                 } else {
-                    t.getVillagerHandle().changeJobForVillager(e.getVUID(), DinerWork.getIdForRoot(rid), false);
+                    t.villagerHandle.changeJobForVillager(e.getVUID(), DinerWork.getIdForRoot(rid), false);
                 }
             });
             villagerHandle.addStatsListener(s -> t.setChanged());

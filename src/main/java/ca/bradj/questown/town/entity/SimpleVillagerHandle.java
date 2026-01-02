@@ -2,19 +2,17 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.commands.DebugLogArgument;
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
-import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.*;
+import ca.bradj.questown.town.PoseInPlace;
+import ca.bradj.questown.town.TownVillagerUIs;
+import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.rooms.TownPosition;
-import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -29,54 +27,16 @@ import java.util.stream.Stream;
 public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     private final Delegator<ENTITY> delegator;
+    private boolean hungerEnabled = false;
 
-    public interface Delegator<ENTITY> {
-        JobID getJobId(ENTITY vEntity);
+    private Configs configs;
 
-        UUID getUUID(ENTITY v);
+    public Map<UUID, ? extends Set<JobID>> getUnlockedJobs() {
+        return delegator.getUnlockedJobs();
+    }
 
-        void setJob(
-                UUID visitorUUID,
-                JobID jobName,
-                ENTITY f,
-                boolean announce
-        );
-
-        void setChanged();
-
-        VillagerSleepModule<ENTITY> getSleepModule();
-
-        void debug(
-                QT.QTLogger villagerLogger,
-                String category,
-                String s,
-                Object... args
-        );
-
-        boolean isUUID(
-                ENTITY v,
-                UUID ownerUUID
-        );
-
-        void invalidateCachedWorkPossibilities();
-
-        HealingModule<ENTITY> getHealingModule();
-
-        void addChangeListener(
-                ENTITY vEntity,
-                Runnable runnable
-        );
-
-        void broadcastMessage(
-                String s,
-                Object... args
-        );
-
-        ImmutableList<JobID> shuffle(ImmutableSet<JobID> jobIDS);
-
-        Optional<JobID> getOvernightJobOverride();
-
-        void discardEntity(VisitorMobEntity visitorMobEntity);
+    public Set<JobID> getChildJobsKnownToExist(JobID jobId) {
+        return delegator.getChildJobsKnownToExist(jobId);
     }
 
     // Unserialized
@@ -103,72 +63,79 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         return ImmutableMap.copyOf(jobChangesPending);
     }
 
-    final TownVillagerMoods moods = new TownVillagerMoods();
-
     private final List<ENTITY> entities = new ArrayList<>();
     private final List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
     private final List<Consumer<ENTITY>> hungryListeners = new ArrayList<>();
 
     private static final int TICK_FACTOR = 10;
-    final TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
+
+    public record Configs(
+            int baseFullness,
+            boolean hungerEnabled,
+            long flagTickInterval,
+            double normalBedHealMultiplier,
+            int expRequiredAtLevel1,
+            double expRampFactor,
+            long damageTicks,
+            float neutralMood,
+            long bufferTicksAfterFoodAttempt,
+            long maxTicksBeforeDowntime
+    ) {
+    }
 
     public SimpleVillagerHandle(
-            Delegator<ENTITY> del
+            Delegator<ENTITY> del,
+            Configs config
     ) {
         this.delegator = del;
+        this.configs = config;
     }
 
     public void initialize(
             Map<UUID, Integer> fullness,
-            Map<UUID, ? extends ImmutableCollection<Effect>> moodEffects,
             Map<UUID, Integer> damage,
-            Map<UUID, ? extends ImmutableCollection<JobID>> unlockedJobs,
-            Map<UUID, ? extends Map<JobID, ? extends ImmutableCollection<JobID>>> jobsKnownToExist,
             ImmutableMap<UUID, Integer> experience,
             ImmutableMap<UUID, Integer> level,
-            ImmutableMap<UUID, Boolean> jobChangesPending
+            ImmutableMap<UUID, Boolean> jobChangesPending,
+            boolean hungerEnabled
     ) {
         if (!this.fullness.isEmpty()) {
             throw new IllegalStateException("Attempting to initialize already initialized");
         }
         this.fullness.putAll(fullness);
-        this.moods.initialize(moodEffects);
         this.damage.putAll(damage);
-        this.learning.initialize(unlockedJobs, jobsKnownToExist);
         this.experience.putAll(experience);
         this.levels.putAll(level);
         this.jobChangesPending.putAll(jobChangesPending);
         addHungryListener(e -> {
-            if (UtilClean.getOrDefault(fullness, delegator.getUUID(e), Config.BASE_FULLNESS.get()) == 0) {
+            if (UtilClean.getOrDefault(fullness, delegator.getUUID(e), configs.baseFullness) == 0) {
                 starving.put(delegator.getUUID(e), true);
             }
         });
+        this.hungerEnabled = hungerEnabled;
     }
 
     public void tick(
-            long currentTick,
             Signals signals
     ) {
         if (signals != Signals.NIGHT) {
             tickHunger();
         }
         tickDamage();
-        moods.tick(currentTick);
-        learning.tick(currentTick);
         delegator.getSleepModule().tick(entities);
     }
 
     private void tickHunger() {
-        if (!Config.HUNGER_ENABLED.get()) {
+        if (!this.hungerEnabled) {
             entities.forEach(e -> {
                 logHunger("Hunger filled for {}", UtilClean.truncateMiddle(delegator.getUUID(e)));
-                fullness.put(delegator.getUUID(e), Config.BASE_FULLNESS.get());
+                fullness.put(delegator.getUUID(e), configs.baseFullness);
             });
             return;
         }
 
         Map<UUID, Integer> map = fullness;
-        Integer base = Config.BASE_FULLNESS.get();
+        int base = configs.baseFullness;
         BiConsumer<Integer, ENTITY> then = (newVal, e) -> {
             logHunger("Updating hunger level to {} for {}", newVal, UtilClean.truncateMiddle(delegator.getUUID(e)));
             if (Math.abs(newVal) % 10 == 0) {
@@ -176,7 +143,8 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
                 hungryListeners.forEach(l -> l.accept(e));
             }
         };
-        tickThing(map, base, e -> Math.toIntExact(Config.FLAG_TICK_INTERVAL.get()), -Integer.MAX_VALUE, then);
+        int min = -Integer.MAX_VALUE; // Hunger keeps ticking below zero to trigger dining
+        tickThing(map, base, e -> Math.toIntExact(configs.flagTickInterval), min, then);
     }
 
     private void logHunger(
@@ -200,7 +168,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         if (!delegator.getSleepModule().isSleeping(e)) {
             return input;
         }
-        Double bedFactor = Config.NORMAL_BED_HEAL_MULTIPLIER.get();
+        Double bedFactor = configs.normalBedHealMultiplier;
         Double boostedFactor = delegator.getHealingModule().getHealFactor(e);
         double hf = Math.min(bedFactor, boostedFactor);
         int i1 = (int) (input * hf);
@@ -231,29 +199,29 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     }
 
     public VillagerStatsData getStats(UUID uuid) {
-        Integer bf = Config.BASE_FULLNESS.get();
+        Integer bf = configs.baseFullness;
         float fullnessPercent = (float) Util.getOrDefault(fullness, uuid, bf) / bf;
         float damagePercent = getDamagePercent(uuid);
         int experienceNum = Util.getOrDefault(experience, uuid, 0);
         int experienceTarget = (int) getExpForCurrentLevel(uuid);
         return new VillagerStatsData(
                 // TODO[Traits]: Track max unique fullness level per villager
-                fullnessPercent, experienceNum, experienceTarget, moods.getMood(uuid), damagePercent);
+                fullnessPercent, experienceNum, experienceTarget, delegator.getMood(uuid), damagePercent);
     }
 
     private float getExpForCurrentLevel(UUID uuid) {
         Integer level = UtilClean.getOrDefault(levels, uuid, 1);
-        Integer baseExp = Config.EXPERIENCE_REQUIRED_AT_LEVEL_1.get();
-        Double rampFactor = Config.EXPERIENCE_RAMP_FACTOR.get();
+        Integer baseExp = configs.expRequiredAtLevel1;
+        Double rampFactor = configs.expRampFactor;
         return (float) (baseExp * Math.pow(rampFactor, level - 1));
     }
 
     public float getDamagePercent(UUID uuid) {
-        return (float) Util.getOrDefault(damage, uuid, 0) / (16 * Config.DAMAGE_TICKS.get() * TICK_FACTOR);
+        return (float) Util.getOrDefault(damage, uuid, 0) / (16 * configs.damageTicks * TICK_FACTOR);
     }
 
     public Collection<JobID> getJobs() {
-        return entities.stream().map(v -> ((VisitorMobEntity) v).getJobId()).toList();
+        return entities.stream().map(delegator::getJobId).toList();
     }
 
     public ImmutableMap<UUID, JobID> getVillagerJobs() {
@@ -318,7 +286,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             float percent
     ) {
         // TODO: Get max fullness from villager
-        int newHunger = (int) (percent * Config.BASE_FULLNESS.get());
+        int newHunger = (int) (percent * configs.baseFullness);
         QT.VILLAGER_LOGGER.info("Fullness changed from {} to {}", fullness.get(uuid), newHunger);
         fullness.put(uuid, newHunger);
         if (percent > 0) {
@@ -346,13 +314,6 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public void add(ENTITY vEntity) {
         this.entities.add(vEntity);
-
-        ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(delegator.getJobId(vEntity));
-        for (JobID jobID : defaultWork) {
-            unlockJob(delegator.getUUID(vEntity), jobID);
-        }
-
-        learning.requestKnowledge(delegator.getUUID(vEntity), defaultWork);
 
         delegator.getSleepModule().claimBed(vEntity);
         delegator.getSleepModule().addSleepListener(
@@ -383,7 +344,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         );
     }
 
-    public boolean exists(VisitorMobEntity visitorMobEntity) {
+    public boolean exists(ENTITY visitorMobEntity) {
         return entities.contains(visitorMobEntity);
     }
 
@@ -404,7 +365,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     }
 
     public void makeAllTotallyHungry() {
-        if (!Config.HUNGER_ENABLED.get()) {
+        if (!configs.hungerEnabled) {
             return;
         }
         entities.forEach(e -> {
@@ -417,37 +378,37 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public boolean isDining(UUID uuid) {
         return entities.stream().filter(v -> uuid.equals(delegator.getUUID(v)))
-                       .map(v -> ServerJobsRegistry.isDining(((VisitorMobEntity) v).getJobId())).findFirst()
+                       .map(delegator::isDining).findFirst()
                        .orElse(false);
     }
 
     public boolean canDine(UUID uuid) {
         return entities.stream().filter(v -> uuid.equals(delegator.getUUID(v)))
-                       .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime()).findFirst().orElse(false);
+                       .map(delegator::canStopWorkingAtAnyTime)
+                       .findFirst()
+                       .orElse(false);
     }
 
     public int getAffectedTime(
             UUID uuid,
             Integer timeToAugment
     ) {
-        float offset = ((Config.NEUTRAL_MOOD.get() / 100f) - moods.getMood(uuid));
+        float offset = ((configs.neutralMood / 100f) - delegator.getMood(uuid));
         return (int) ((1f + offset) * timeToAugment);
     }
 
     public int getWorkSpeed(UUID uuid) {
-        return (int) (moods.getMood(uuid) * 10);
+        return (int) (delegator.getMood(uuid) * 10);
     }
 
     public void associate(TownFlagBlockEntity t) {
-        this.learning.associate(t);
     }
 
     public void freezeVillagers(Integer ticks) {
-        stream().filter(VisitorMobEntity.class::isInstance).map(VisitorMobEntity.class::cast)
-                .forEach(v -> v.freeze(ticks));
+        stream().forEach(v -> delegator.freeze(v, ticks));
     }
 
-    public void validateEntity(VisitorMobEntity visitorMobEntity) {
+    public void validateEntity(ENTITY visitorMobEntity) {
         if (exists(visitorMobEntity)) {
             return;
         }
@@ -466,7 +427,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public void addDamage(UUID uuid) {
         Integer oldVal = Util.getOrDefault(damage, uuid, 0);
-        int addition = (int) (Config.DAMAGE_TICKS.get() * TICK_FACTOR);
+        int addition = (int) (configs.damageTicks * TICK_FACTOR);
         damage.put(uuid, oldVal + addition);
     }
 
@@ -512,13 +473,13 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         starving.put(vuid, true);
     }
 
-    public boolean gaveUpRecently(
+    public boolean gaveUpDiningRecently(
             UUID uuid,
             long currentTick
     ) {
         long giveUpTick = UtilClean.getOrDefault(mostRecentFoodAttempt, uuid, -1L);
         long ticksSince = currentTick - giveUpTick;
-        if (ticksSince > Compat.configGet(Config.BUFFER_TICKS_AFTER_FOOD_ATTEMPT).get()) {
+        if (ticksSince > configs.bufferTicksAfterFoodAttempt) {
             mostRecentFoodAttempt.remove(uuid);
             return false;
         }
@@ -539,13 +500,6 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
                 }
         );
         delegator.setChanged();
-    }
-
-    public void unlockJob(
-            UUID villagerUUID,
-            JobID id
-    ) {
-        learning.unlockJob(villagerUUID, id);
     }
 
     public void addExperience(
@@ -603,18 +557,6 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         );
     }
 
-    public boolean isUnlocked(JobID jobID) {
-        return learning.isUnlocked(jobID);
-    }
-
-    public ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs() {
-        return learning.getUnlockedJobs();
-    }
-
-    public ImmutableMap<UUID, ImmutableMap<JobID, ImmutableSet<JobID>>> getChildJobsKnownToExist() {
-        return learning.getChildJobsKnownToExist();
-    }
-
     public void handleMorning(long tick) {
         forEach(delegator.getSleepModule()::stopSleeping);
         makeAllTotallyHungry();
@@ -668,7 +610,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             long currentTick
     ) {
         QT.FLAG_LOGGER.info("Changing villager from {} to {}", delegator.getJobId(v).rootId(), newJob);
-        unlockJob(delegator.getUUID(v), newJob);
+        delegator.unlockJob(v, newJob);
         changeJobForVillager(delegator.getUUID(v), newJob, currentTick, true);
     }
 
@@ -677,7 +619,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             long currentTick
     ) {
         // TODO[Traits]: Consider augmenting downtime frequency for individual villagers
-        Long maxTicksBeforeDowntime = Config.MAX_TICKS_BETWEEN_DOWNTIME.get();
+        Long maxTicksBeforeDowntime = configs.maxTicksBeforeDowntime;
         Long mostRecent = UtilClean.getOrDefault(mostRecentDowntimeTick, from, -maxTicksBeforeDowntime);
         return (currentTick - mostRecent) >= maxTicksBeforeDowntime;
     }

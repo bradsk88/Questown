@@ -28,8 +28,8 @@ public class TownVillagerUIsHandle {
                 villagers.entities(),
                 type,
                 villagerId,
-                villagers.learning.getUnlockedJobs(),
-                villagers.learning.getChildJobsKnownToExist(villagers.getEntity(villagerId).getJobId())
+                villagers.getUnlockedJobs(),
+                villagers.getChildJobsKnownToExist(villagers.getEntity(villagerId).getJobId())
         );
     }
 
