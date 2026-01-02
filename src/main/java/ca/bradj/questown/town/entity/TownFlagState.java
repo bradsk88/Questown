@@ -4,6 +4,8 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
@@ -73,7 +75,7 @@ public class TownFlagState {
                 ImmutableMap.of(), // TODO: Store timers from world
                 parent.getWelcomeMats(),
                 ImmutableList.of(), // TODO: Should we pass in current knowledge?
-                ImmutableMap.copyOf(parent.villagerHandle.hasBlockOfProgress),
+                UtilClean.mapKeys(parent.villagerHandle.blockOfProgressMap(), VillagerUUID::get),
                 dayTime
         );
     }

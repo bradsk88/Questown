@@ -282,4 +282,13 @@ public class UtilClean {
         }
         return b.build();
     }
+
+    public static <X, Y, Z> ImmutableMap<Y, Z> mapKeys(
+            Map<X, Z> jobChangesPending,
+            Function<X, Y> get
+    ) {
+        ImmutableMap.Builder<Y, Z> b = ImmutableMap.builder();
+        jobChangesPending.forEach((k, v) -> b.put(get.apply(k), v));
+        return b.build();
+    }
 }

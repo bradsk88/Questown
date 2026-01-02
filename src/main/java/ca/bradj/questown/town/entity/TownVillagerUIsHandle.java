@@ -1,6 +1,5 @@
 package ca.bradj.questown.town.entity;
 
-import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownVillagerUIs;
@@ -12,10 +11,10 @@ import java.util.Collection;
 import java.util.UUID;
 
 public class TownVillagerUIsHandle {
-    private final SimpleVillagerHandle<Object, VisitorMobEntity> villagers;
+    private final SimpleVillagerHandle<?, VisitorMobEntity> villagers;
     private final UnsafeTown town = new UnsafeTown(getClass());
 
-    public TownVillagerUIsHandle(SimpleVillagerHandle<Object, VisitorMobEntity> villagers) {
+    public TownVillagerUIsHandle(SimpleVillagerHandle<?, VisitorMobEntity> villagers) {
         this.villagers = villagers;
     }
 
@@ -30,7 +29,7 @@ public class TownVillagerUIsHandle {
                 type,
                 villagerId,
                 villagers.learning.getUnlockedJobs(),
-                villagers.learning.getChildJobsKnownToExist(villagers.getEntity(VillagerUUID.from(villagerId)).getJobId())
+                villagers.learning.getChildJobsKnownToExist(villagers.getEntity(villagerId).getJobId())
         );
     }
 

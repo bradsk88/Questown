@@ -27,6 +27,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.Collection;
+import java.util.Objects;
 import java.util.function.Function;
 
 public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickData, VisitorMobEntity> {
@@ -253,8 +254,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
 
     @Override
     protected ImmutableList<VisitorMobEntity> getVillagers(TickData o) {
-        return o.entity.villagerHandle.entities().stream().filter(v -> v instanceof VisitorMobEntity)
-                                      .map(v -> (VisitorMobEntity) v).collect(ImmutableList.toImmutableList());
+        return o.entity.villagerHandle.stream().filter(Objects::nonNull).collect(ImmutableList.toImmutableList());
     }
 
     @Override
@@ -286,12 +286,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         super.tick(new TickData(sl, blockEntityPos, state, e));
     }
 
-    public record TickData(
-            ServerLevel level,
-            BlockPos blockEntityPos,
-            BlockState state,
-            TownFlagBlockEntity entity
-    ) {
+    public record TickData(ServerLevel level, BlockPos blockEntityPos, BlockState state, TownFlagBlockEntity entity) {
         public static TickData fromFlag(TownFlagBlockEntity e) {
             return new TickData(e.getServerLevel(), e.getBlockPos(), e.getBlockState(), e);
         }

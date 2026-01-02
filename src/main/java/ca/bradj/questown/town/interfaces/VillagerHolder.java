@@ -19,6 +19,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+/**
+ * @deprecated This interface has become a grab-bag of methods. Use more specific interfaces instead.
+ */
+@Deprecated(forRemoval = true)
 public interface VillagerHolder {
     long size();
 
@@ -80,11 +84,6 @@ public interface VillagerHolder {
             UUID villagerUUID,
             JobID newJob,
             boolean announce
-    );
-
-    void changeToNextJobForVillager(
-            UUID villagerUUID,
-            JobID currentJob
     );
 
     boolean canDine(UUID uuid);

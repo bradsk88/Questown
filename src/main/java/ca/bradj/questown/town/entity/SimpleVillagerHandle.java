@@ -4,9 +4,6 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
-import ca.bradj.questown.core.VillagerUUID;
-import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
@@ -16,15 +13,11 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.*;
-import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rooms.TownPosition;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import net.minecraft.core.GlobalPos;
-import net.minecraft.world.entity.Entity;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -45,29 +38,49 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         void setJob(
                 UUID visitorUUID,
                 JobID jobName,
-                ENTITY f
+                ENTITY f,
+                boolean announce
         );
 
         void setChanged();
 
-        void addSleepListener(BiConsumer<TownPosition, Long> listener);
-
-        void claimBed(ENTITY vEntity);
-
-        Double getHealFactor(TownPosition bedPos);
+        VillagerSleepModule<ENTITY> getSleepModule();
 
         void debug(
                 QT.QTLogger villagerLogger,
-                String villagerStats,
+                String category,
                 String s,
                 Object... args
         );
 
-        ENTITY checkType();
+        boolean isUUID(
+                ENTITY v,
+                UUID ownerUUID
+        );
+
+        void invalidateCachedWorkPossibilities();
+
+        HealingModule<ENTITY> getHealingModule();
+
+        void addChangeListener(
+                ENTITY vEntity,
+                Runnable runnable
+        );
+
+        void broadcastMessage(
+                String s,
+                Object... args
+        );
+
+        ImmutableList<JobID> shuffle(ImmutableSet<JobID> jobIDS);
+
+        Optional<JobID> getOvernightJobOverride();
+
+        void discardEntity(VisitorMobEntity visitorMobEntity);
     }
 
     // Unserialized
-    private final Map<UUID, DATA> customData = new HashMap<>();
+    final Map<UUID, DATA> customData = new HashMap<>();
     private final Map<UUID, Long> mostRecentDowntimeTick = new HashMap<>();
     private final Map<UUID, Long> mostRecentFoodAttempt = new HashMap<>();
     private final Map<UUID, Boolean> starving = new HashMap<>();
@@ -90,19 +103,17 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         return ImmutableMap.copyOf(jobChangesPending);
     }
 
-
     final TownVillagerMoods moods = new TownVillagerMoods();
 
     private final List<ENTITY> entities = new ArrayList<>();
     private final List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
-    private final List<Consumer<VisitorMobEntity>> hungryListeners = new ArrayList<>();
+    private final List<Consumer<ENTITY>> hungryListeners = new ArrayList<>();
 
     private static final int TICK_FACTOR = 10;
-    private final TownVillagerBedsHandle beds = new TownVillagerBedsHandle();
     final TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
 
     public SimpleVillagerHandle(
-            Delegator del
+            Delegator<ENTITY> del
     ) {
         this.delegator = del;
     }
@@ -115,7 +126,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             Map<UUID, ? extends Map<JobID, ? extends ImmutableCollection<JobID>>> jobsKnownToExist,
             ImmutableMap<UUID, Integer> experience,
             ImmutableMap<UUID, Integer> level,
-            ImmutableMap<VillagerUUID, Boolean> jobChangesPending
+            ImmutableMap<UUID, Boolean> jobChangesPending
     ) {
         if (!this.fullness.isEmpty()) {
             throw new IllegalStateException("Attempting to initialize already initialized");
@@ -128,8 +139,8 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         this.levels.putAll(level);
         this.jobChangesPending.putAll(jobChangesPending);
         addHungryListener(e -> {
-            if (UtilClean.getOrDefault(fullness, e.getUUID(), Config.BASE_FULLNESS.get()) == 0) {
-                starving.put(e.getVUID(), true);
+            if (UtilClean.getOrDefault(fullness, delegator.getUUID(e), Config.BASE_FULLNESS.get()) == 0) {
+                starving.put(delegator.getUUID(e), true);
             }
         });
     }
@@ -143,40 +154,36 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         }
         tickDamage();
         moods.tick(currentTick);
-        TownFlagBlockEntity t = town.getUnsafe();
-        beds.tick(t, ImmutableList.copyOf(entities));
-        learning.tick(ImmutableList.copyOf(entities), currentTick);
-        entities.forEach(e -> {
-            Optional<GlobalPos> bestBed = beds.getBestBed(t, e);
-            delegator.setHomeMemory(bestBed);
-        });
+        learning.tick(currentTick);
+        delegator.getSleepModule().tick(entities);
     }
 
     private void tickHunger() {
         if (!Config.HUNGER_ENABLED.get()) {
             entities.forEach(e -> {
-                logHunger("Hunger filled for {}", UtilClean.truncateMiddle(e.getUUID()));
-                fullness.put(e.getUUID(), Config.BASE_FULLNESS.get());
+                logHunger("Hunger filled for {}", UtilClean.truncateMiddle(delegator.getUUID(e)));
+                fullness.put(delegator.getUUID(e), Config.BASE_FULLNESS.get());
             });
             return;
         }
 
         Map<UUID, Integer> map = fullness;
         Integer base = Config.BASE_FULLNESS.get();
-        BiConsumer<Integer, LivingEntity> then = (newVal, e) -> {
-            logHunger("Updating hunger level to {} for {}", newVal, UtilClean.truncateMiddle(e.getUUID()));
+        BiConsumer<Integer, ENTITY> then = (newVal, e) -> {
+            logHunger("Updating hunger level to {} for {}", newVal, UtilClean.truncateMiddle(delegator.getUUID(e)));
             if (Math.abs(newVal) % 10 == 0) {
-                logHunger("Broadcasting starving status for {}", UtilClean.truncateMiddle(e.getUUID()));
-                hungryListeners.forEach(l -> l.accept((VisitorMobEntity) e));
+                logHunger("Broadcasting starving status for {}", UtilClean.truncateMiddle(delegator.getUUID(e)));
+                hungryListeners.forEach(l -> l.accept(e));
             }
         };
         tickThing(map, base, e -> Math.toIntExact(Config.FLAG_TICK_INTERVAL.get()), -Integer.MAX_VALUE, then);
     }
+
     private void logHunger(
             String s,
             Object... args
     ) {
-        town.getUnsafe().getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.HUNGER_UPDATES).log(s, args);
+        delegator.debug(QT.VILLAGER_LOGGER, DebugLogArgument.HUNGER_UPDATES, s, args);
     }
 
     private void tickDamage() {
@@ -187,26 +194,19 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     }
 
     private int applyHealFactor(
-            LivingEntity e,
-            int i
+            ENTITY e,
+            int input
     ) {
-        if (!(e instanceof VisitorMobEntity)) {
-            return i;
+        if (!delegator.getSleepModule().isSleeping(e)) {
+            return input;
         }
-        PoseInPlace pose = requestedPose.get(e.getUUID());
-        if (pose == null) {
-            return i;
-        }
-        if (!Pose.SLEEPING.equals(pose.pose())) {
-            return i;
-        }
-        @NotNull TownFlagBlockEntity t = town.getUnsafe();
         Double bedFactor = Config.NORMAL_BED_HEAL_MULTIPLIER.get();
-        Double boostedFactor = t.getHealingHandle().getHealFactor(e.blockPosition());
-        Double hf = Math.min(bedFactor, boostedFactor);
-        int i1 = (int) (i * hf);
-        t.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_STATS).log(
-                "Healing by {} due to sleeping heal factor {} {}", i1, hf, e.getUUID()
+        Double boostedFactor = delegator.getHealingModule().getHealFactor(e);
+        double hf = Math.min(bedFactor, boostedFactor);
+        int i1 = (int) (input * hf);
+        delegator.debug(
+                QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_STATS,
+                "Healing by {} due to sleeping heal factor {} {}", i1, hf, delegator.getUUID(e)
         );
         return i1;
     }
@@ -214,12 +214,12 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     private void tickThing(
             Map<UUID, Integer> map,
             Integer base,
-            Function<LivingEntity, Integer> amount,
+            Function<ENTITY, Integer> amount,
             int min,
-            BiConsumer<Integer, LivingEntity> then
+            BiConsumer<Integer, ENTITY> then
     ) {
         entities.forEach(e -> {
-            UUID u = e.getUUID();
+            UUID u = delegator.getUUID(e);
             int oldVal = map.getOrDefault(u, base);
             int newVal = Math.max(min, oldVal - amount.apply(e));
             map.put(u, newVal);
@@ -270,7 +270,6 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             Long currentTick,
             boolean announce
     ) {
-        @NotNull TownFlagBlockEntity t = town.getUnsafe();
         ENTITY f = getEntity(villagerUUID);
         if (f == null) {
             QT.FLAG_LOGGER.error("Could not find entity {} to apply job change: {}", villagerUUID, newJob);
@@ -284,13 +283,9 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             registerMostRecentFoodAttempt(villagerUUID, currentTick);
         }
 
-        doSetJob(villagerUUID, newJob, f);
-        t.setChanged();
-        if (announce) {
-            t.messages.jobChanged(newJob, villagerUUID);
-        }
+        doSetJob(villagerUUID, newJob, f, announce);
 
-        t.possibleWork.invalidate();
+        delegator.invalidateCachedWorkPossibilities();
         if (!newJob.sameRoot(oldJob)) {
             jobChangesPending.put(delegator.getUUID(f), false);
         }
@@ -299,9 +294,10 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     private void doSetJob(
             UUID visitorUUID,
             JobID jobName,
-            ENTITY f
+            ENTITY f,
+            boolean announce
     ) {
-        delegator.setJob(visitorUUID, jobName, f);
+        delegator.setJob(visitorUUID, jobName, f, announce);
     }
 
     public Stream<ENTITY> stream() {
@@ -332,9 +328,9 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     void forEach(Consumer<ENTITY> c) {
         List<ENTITY> villagers = this.entities.stream()
-                                                        .filter(v -> v instanceof ENTITY)
-                                                        .map(v -> (ENTITY) v)
-                                                        .toList();
+                                              .filter(v -> v instanceof ENTITY)
+                                              .map(v -> (ENTITY) v)
+                                              .toList();
         for (ENTITY villager : villagers) {
             c.accept(villager);
         }
@@ -358,31 +354,33 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
         learning.requestKnowledge(delegator.getUUID(vEntity), defaultWork);
 
-        delegator.claimBed(vEntity);
-        delegator.addSleepListener((TownPosition bedPos, Long duration) -> {
-            Double healFactor = delegator.getHealFactor(bedPos);
-            long ticksHealed = (long) (duration * healFactor);
-            damage.compute(
-                    delegator.getUUID(vEntity), (id, cur) -> {
-                        if (cur == null) {
-                            return 0;
-                        }
-                        int newVal = Math.toIntExact(Math.max(0, cur - ticksHealed));
-                        delegator.debug(
-                                QT.VILLAGER_LOGGER,
-                                DebugLogArgument.VILLAGER_STATS,
-                                "Villager damage changed from {} to {} after {} ticks of sleep via bed at {} with heal factor {} [{}]",
-                                cur,
-                                newVal,
-                                duration,
-                                bedPos,
-                                healFactor,
-                                delegator.getUUID(vEntity)
-                        );
-                        return newVal;
-                    }
-            );
-        });
+        delegator.getSleepModule().claimBed(vEntity);
+        delegator.getSleepModule().addSleepListener(
+                vEntity, (TownPosition bedPos, Long duration) -> {
+                    Double healFactor = delegator.getHealingModule().getHealFactor(vEntity);
+                    long ticksHealed = (long) (duration * healFactor);
+                    damage.compute(
+                            delegator.getUUID(vEntity), (id, cur) -> {
+                                if (cur == null) {
+                                    return 0;
+                                }
+                                int newVal = Math.toIntExact(Math.max(0, cur - ticksHealed));
+                                delegator.debug(
+                                        QT.VILLAGER_LOGGER,
+                                        DebugLogArgument.VILLAGER_STATS,
+                                        "Villager damage changed from {} to {} after {} ticks of sleep via bed at {} with heal factor {} [{}]",
+                                        cur,
+                                        newVal,
+                                        duration,
+                                        bedPos,
+                                        healFactor,
+                                        delegator.getUUID(vEntity)
+                                );
+                                return newVal;
+                            }
+                    );
+                }
+        );
     }
 
     public boolean exists(VisitorMobEntity visitorMobEntity) {
@@ -393,7 +391,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         this.listeners.add(l);
     }
 
-    public void addHungryListener(Consumer<VisitorMobEntity> l) {
+    public void addHungryListener(Consumer<ENTITY> l) {
         this.hungryListeners.add(l);
     }
 
@@ -428,23 +426,6 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
                        .map(v -> ((VisitorMobEntity) v).canStopWorkingAtAnyTime()).findFirst().orElse(false);
     }
 
-    public void applyEffect(
-            ResourceLocation effect,
-            Long expireOnTick,
-            UUID uuid
-    ) {
-        // TODO: Generalize
-        if (EffectMetaItem.ConsumableEffects.FILL_HUNGER.equals(effect)) {
-            fillHunger(uuid);
-            return;
-        }
-        if (EffectMetaItem.ConsumableEffects.FILL_HUNGER_HALF.equals(effect)) {
-            fillHunger(uuid, 0.5f);
-            return;
-        }
-        moods.tryApplyEffect(effect, expireOnTick, uuid);
-    }
-
     public int getAffectedTime(
             UUID uuid,
             Integer timeToAugment
@@ -471,11 +452,11 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             return;
         }
         QT.FLAG_LOGGER.error("Visitor mob's parent has no record of entity. Removing visitor");
-        visitorMobEntity.remove(Entity.RemovalReason.DISCARDED);
+        delegator.discardEntity(visitorMobEntity);
     }
 
-    public ENTITY getEntity(VillagerUUID ownerUUID) {
-        Optional<ENTITY> f = stream().filter(v -> ownerUUID.matches(delegator.getUUID(v))).findFirst();
+    public ENTITY getEntity(UUID ownerUUID) {
+        Optional<ENTITY> f = stream().filter(v -> delegator.isUUID(v, ownerUUID)).findFirst();
         if (f.isEmpty()) {
             QT.FLAG_LOGGER.error("No entities found for UUID: {}", ownerUUID);
             return null;
@@ -509,30 +490,30 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     }
 
     public void setJobChangePending(
-            @Nullable VillagerUUID vuid,
+            @Nullable UUID vuid,
             boolean value
     ) {
         jobChangesPending.put(vuid, value);
-        town.getUnsafe().setChanged();
+        delegator.setChanged();
     }
 
-    public boolean isJobChangePending(ENTITY vuid) {
+    public boolean isJobChangePending(UUID vuid) {
         return UtilClean.getOrDefault(jobChangesPending, vuid, false);
     }
 
-    public boolean isStarving(@Nullable VillagerUUID vuid) {
+    public boolean isStarving(@Nullable UUID vuid) {
         return UtilClean.getOrDefault(starving, vuid, false);
     }
 
     public void setStarving(
-            @Nullable VillagerUUID vuid,
+            @Nullable UUID vuid,
             boolean b
     ) {
         starving.put(vuid, true);
     }
 
     public boolean gaveUpRecently(
-            VillagerUUID uuid,
+            UUID uuid,
             long currentTick
     ) {
         long giveUpTick = UtilClean.getOrDefault(mostRecentFoodAttempt, uuid, -1L);
@@ -544,16 +525,20 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         return true;
     }
 
-    public void register(VisitorMobEntity vEntity) {
-        @NotNull TownFlagBlockEntity t = town.getUnsafe();
-        QT.FLAG_LOGGER.info("Registered entity with town {}: {}", t.getUUID(), vEntity);
+    public void register(ENTITY vEntity) {
+        QT.FLAG_LOGGER.info("Registered entity with town {}: {}", delegator.getUUID(vEntity), vEntity);
         this.add(vEntity);
-        vEntity.addChangeListener(() -> {
-            TownInterface.DebugLogger logger = t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TOWN_STATE_CHANGES);
-            logger.log("Entity requests flag to be marked changed");
-            t.setChanged();
-        });
-        t.setChanged();
+        delegator.addChangeListener(
+                vEntity, () -> {
+                    delegator.debug(
+                            QT.FLAG_LOGGER,
+                            DebugLogArgument.TOWN_STATE_CHANGES,
+                            "Entity requests flag to be marked changed"
+                    );
+                    delegator.setChanged();
+                }
+        );
+        delegator.setChanged();
     }
 
     public void unlockJob(
@@ -575,7 +560,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         if (newExp >= target) {
             Integer newLvl = levels.compute(uuid, (x, cur) -> cur == null ? 2 : cur + 1);
             experience.put(uuid, newExp % target);
-            town.getUnsafe().messages.broadcastMessage(
+            delegator.broadcastMessage(
                     "message.villager.leveled_up",
                     UtilClean.truncateMiddle(uuid),
                     newLvl
@@ -594,9 +579,10 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public void scheduleJobRootChange(
             UUID villagerUUID,
+            long currentTick,
             boolean instant
     ) {
-        VisitorMobEntity e = getEntity(villagerUUID);
+        ENTITY e = getEntity(villagerUUID);
         if (e == null) {
             QT.FLAG_LOGGER.error("Villager not found for job root change: {}", villagerUUID);
             return;
@@ -606,13 +592,12 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
                     "Villager {} will change to a new job NOW (creative mode)",
                     UtilClean.truncateMiddle(villagerUUID)
             );
-            changeJobRootNow(e);
+            changeJobRootNow(e, currentTick);
             return;
         }
 
-        jobChangesPending.put(e.getVUID(), true);
-        TownFlagBlockEntity t = town.getUnsafe();
-        t.messages.broadcastMessage(
+        jobChangesPending.put(delegator.getUUID(e), true);
+        delegator.broadcastMessage(
                 "message.questown.villager.change_job_in_morning",
                 UtilClean.truncateMiddle(villagerUUID)
         );
@@ -620,84 +605,6 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public boolean isUnlocked(JobID jobID) {
         return learning.isUnlocked(jobID);
-    }
-
-    public UnsafeVillagerData getUnprotectedDataHandle(@Nullable VillagerUUID vuid) {
-        return new UnsafeVillagerData() {
-            public String get(String key) {
-
-                CompoundTag tag = UtilClean.getOrDefault(customData, vuid, new CompoundTag());
-                if (!tag.contains(key)) {
-                    return null;
-                }
-                return tag.getString(key);
-            }
-
-            public void write(
-                    String key,
-                    String value
-            ) {
-
-                CompoundTag tag = UtilClean.getOrDefault(customData, vuid, new CompoundTag());
-                tag.putString(key, value);
-                customData.put(vuid, tag);
-            }
-
-            public void clear(String key) {
-                CompoundTag tag = UtilClean.getOrDefault(customData, vuid, new CompoundTag());
-                tag.remove(key);
-                customData.put(vuid, tag);
-            }
-        };
-    }
-
-    public Optional<Entity> getLookTarget(@Nullable VillagerUUID vuid) {
-        LookTarget tar = lookTargets.get(vuid);
-        if (tar == null) {
-            return Optional.empty();
-        }
-        long currentTick = Util.getTick(town.getServerLevelUnsafe());
-        if (currentTick < tar.untilTick()) {
-            return Optional.of(tar.who);
-        }
-        town.getUnsafe().getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
-                "Look target for {} has expired at tick {} (current {})",
-                vuid,
-                tar.untilTick(),
-                currentTick
-        );
-        lookTargets.remove(vuid);
-        return Optional.empty();
-    }
-
-    public void setLookTarget(
-            @Nullable VillagerUUID vuid,
-            Entity entity,
-            long untilTick,
-            long thenNotUntilTick
-    ) {
-        LookTarget tar = mostRecentLookTarget.get(vuid);
-        if (tar != null && tar.who.equals(entity)) {
-            long currentTick = Util.getTick(town.getServerLevelUnsafe());
-            if (currentTick < tar.untilTick()) {
-                return;
-            }
-            mostRecentLookTarget.remove(vuid);
-        }
-        lookTargets.computeIfAbsent(
-                vuid, (k) -> {
-                    mostRecentLookTarget.put(k, new LookTarget(entity, thenNotUntilTick));
-                    LookTarget lookTarget = new LookTarget(entity, untilTick);
-                    town.getUnsafe().getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
-                            "Setting look target for {} to {} until tick {} (then not until {})",
-                            vuid,
-                            entity,
-                            untilTick,
-                            thenNotUntilTick
-                    );
-                    return lookTarget;
-                }
-        );
     }
 
     public ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs() {
@@ -708,24 +615,28 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         return learning.getChildJobsKnownToExist();
     }
 
-    public void handleMorning() {
-        forEach(LivingEntity::stopSleeping);
+    public void handleMorning(long tick) {
+        forEach(delegator.getSleepModule()::stopSleeping);
         makeAllTotallyHungry();
-        long tick = Util.getTick(town.getServerLevelUnsafe());
-        forEach(v -> registerMostRecentDowntime(v, tick));
+//        long tick = Util.getTick(town.getServerLevelUnsafe());
+        forEach(v -> registerMostRecentDowntime(delegator.getUUID(v), tick));
         forEach(v -> {
-            if (!isJobChangePending(v)) {
+            if (!isJobChangePending(delegator.getUUID(v))) {
                 return;
             }
-            changeJobRootNow(v);
+            changeJobRootNow(v, tick);
         });
     }
 
-    private void changeJobRootNow(ENTITY v) {
-        Optional<JobID> override = town.getUnsafe().getQuestHandle().overnightJobOverride();
+    private void changeJobRootNow(
+            ENTITY v,
+            long currentTick
+    ) {
+//        Optional<JobID> override = town.getUnsafe().getQuestHandle().overnightJobOverride();
+        Optional<JobID> override = delegator.getOvernightJobOverride();
         if (override.isPresent()) {
             QT.FLAG_LOGGER.info("Overriding random job root change in favor of: {}", override.get());
-            unlockAndChange(v, override.get());
+            unlockAndChange(v, override.get(), currentTick);
             return;
         }
 
@@ -741,24 +652,24 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             jobChangesPending.put(delegator.getUUID(v), false);
             return;
         }
-        ImmutableList<JobID> shuffled = Compat.shuffle(
-                ImmutableSet.copyOf(allOtherJobs),
-                town.getServerLevelUnsafe()
+        ImmutableList<JobID> shuffled = delegator.shuffle(
+                ImmutableSet.copyOf(allOtherJobs)
         );
         JobID newJob = shuffled.get(0);
         if (delegator.getJobId(v).sameRoot(newJob)) {
             QT.logBug("Root change resulted in same root. From {} to {}.", delegator.getJobId(v), newJob);
         }
-        unlockAndChange(v, newJob);
+        unlockAndChange(v, newJob, currentTick);
     }
 
     private void unlockAndChange(
             ENTITY v,
-            JobID newJob
+            JobID newJob,
+            long currentTick
     ) {
         QT.FLAG_LOGGER.info("Changing villager from {} to {}", delegator.getJobId(v).rootId(), newJob);
         unlockJob(delegator.getUUID(v), newJob);
-        changeJobForVillager(delegator.getUUID(v), newJob, true);
+        changeJobForVillager(delegator.getUUID(v), newJob, currentTick, true);
     }
 
     public boolean isReadyForDowntime(
