@@ -16,7 +16,9 @@
   "room": "questown:special_quest.town_gate",
   "work_states": [
     {
-      "tools": "#questown:swords",
+      "tools": "#questown:swords"
+    },
+    {
       "work": 1
     },
     {

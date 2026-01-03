@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "When villagers complete tasks, they will learn from their experiences.$(br2)Maybe, with enough practice, they will learn ways to help even more!"
+      "text": "When villagers complete tasks, they will learn from their experiences.$(br2)Maybe, with enough practice, they will learn ways to help even more!$(br2)While we wait for that... I wonder if there are any new quests to complete?"
     },
     {
       "type": "patchouli:image",

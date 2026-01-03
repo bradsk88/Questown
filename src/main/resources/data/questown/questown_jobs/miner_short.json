@@ -15,7 +15,9 @@
   "room": "questown:block_room/block.questown.mineshaft",
   "work_states": [
     {
-      "tools": "#questown:pickaxes",
+      "tools": "#questown:pickaxes"
+    },
+    {
       "work": 1
     },
     {

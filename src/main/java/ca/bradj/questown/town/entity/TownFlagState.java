@@ -242,7 +242,7 @@ public class TownFlagState {
         long timeSinceWake = Math.max(
                 0,
                 gt - lastTick
-        ); // TODO: This means every time the player uses the "time set" command, a time warp will occur. Maybe make that a config option?
+        );
         boolean waking = timeSinceWake > 10 || !initialized;
         this.initialized = true;
 

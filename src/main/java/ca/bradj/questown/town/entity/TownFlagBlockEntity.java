@@ -224,7 +224,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         this.setChanged();
         villagerHandle.handleMorning(newTime);
         roomsHandle.handleMorning();
-        Compat.getBlockStoredTagData(this).putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
+        CompoundTag tag = Compat.getBlockStoredTagData(this);
+        tag.putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
+        TownInterface.DebugLogger loger = getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TOWN_STATE_CHANGES);
+        state.putStateOnTile(tag, getUUID(), loger);
+
     }
 
 //    public static boolean debuggerReleaseControl() {
