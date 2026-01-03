@@ -490,7 +490,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
         boolean starving = town.getVillagerHandle().isStarving(getVUID());
         setPose(starving ? Pose.CROUCHING : Pose.STANDING);
-        if (starving && Compat.getRandomInt(sl, 10) == 0) {
+        if (entityData.get(visible) && starving && Compat.getRandomInt(sl, 10) == 0) {
             addParticlesAroundSelf(sl, ParticleTypes.EFFECT);
         }
 

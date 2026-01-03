@@ -50,8 +50,8 @@ public class DrainTimersCommand {
             return -1;
         }
 
-        tfbe.getWorkStatusHandle(null).clearAllTimers();
-        tfbe.getVillagerHandle().entities().forEach(v -> tfbe.getWorkStatusHandle(v.getUUID()).clearAllTimers());
+        tfbe.getWorkStatusHandle(null).drainAllTimers();
+        tfbe.getVillagerHandle().entities().forEach(v -> tfbe.getWorkStatusHandle(v.getUUID()).drainAllTimers());
         return 0;
     }
 }

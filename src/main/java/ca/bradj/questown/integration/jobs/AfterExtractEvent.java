@@ -10,6 +10,7 @@ public record AfterExtractEvent<CONTEXT>(
         ServerLevel level,
         BlockPos workSpot,
         BlockPos townFlagPos,
-        BiFunction<CONTEXT, ImmutableMap<String, Integer>, CONTEXT> itemDataApplier
+        BiFunction<CONTEXT, ImmutableMap<String, Integer>, CONTEXT> itemDataApplier,
+        BiFunction<CONTEXT, Float, CONTEXT> hungerUpdater
 ) {
 }

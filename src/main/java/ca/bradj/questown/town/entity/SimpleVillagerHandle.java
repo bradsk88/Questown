@@ -138,7 +138,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         int base = configs.baseFullness;
         BiConsumer<Integer, ENTITY> then = (newVal, e) -> {
             logHunger("Updating hunger level to {} for {}", newVal, UtilClean.truncateMiddle(delegator.getUUID(e)));
-            if (Math.abs(newVal) % 10 == 0) {
+            if (newVal <= 0 && Math.abs(newVal) % 10 == 0) {
                 logHunger("Broadcasting starving status for {}", UtilClean.truncateMiddle(delegator.getUUID(e)));
                 hungryListeners.forEach(l -> l.accept(e));
             }
@@ -165,7 +165,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             ENTITY e,
             int input
     ) {
-        if (!delegator.getSleepModule().isSleeping(e)) {
+            if (!delegator.getSleepModule().isSleeping(e)) {
             return input;
         }
         Double bedFactor = configs.normalBedHealMultiplier;
@@ -463,6 +463,9 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     }
 
     public boolean isStarving(@Nullable UUID vuid) {
+        if (!configs.hungerEnabled) {
+            return false;
+        }
         return UtilClean.getOrDefault(starving, vuid, false);
     }
 
@@ -470,7 +473,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             @Nullable UUID vuid,
             boolean b
     ) {
-        starving.put(vuid, true);
+        starving.put(vuid, b);
     }
 
     public boolean gaveUpDiningRecently(

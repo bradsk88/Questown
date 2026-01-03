@@ -25,7 +25,6 @@ public class PreExtractHook {
             Collection<String> rules,
             ServerLevel level,
             TriFunction<TOWN, MCHeldItem, InventoryFullStrategy, TOWN> tryGiveItem,
-            BiFunction<TOWN, Float, TOWN> fillHunger,
             BlockPos position,
             Item lastInsertedItem,
             Runnable clearPoses
@@ -43,7 +42,7 @@ public class PreExtractHook {
             }
         };
         BeforeExtractEvent<TOWN> bxEvent = new BeforeExtractEvent<>(
-                level, itemAcceptor, position, lastInsertedItem, clearPoses, fillHunger
+                level, itemAcceptor, position, lastInsertedItem, clearPoses
         );
         return processMulti(town, appliers, (o, a) -> a.beforeExtract(o, bxEvent));
     }
