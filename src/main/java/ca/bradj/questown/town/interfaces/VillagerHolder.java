@@ -168,4 +168,6 @@ public interface VillagerHolder {
     );
 
     boolean gaveUpDiningRecently(VillagerUUID uuid, long currentTick);
+
+    void toggleHunger();
 }

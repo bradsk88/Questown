@@ -308,6 +308,11 @@ public class TownVillagerHandles {
                 return villagerHandle.delegate.gaveUpDiningRecently(getUUID(uuid), currentTick);
             }
 
+            @Override
+            public void toggleHunger() {
+                villagerHandle.delegate.toggleHunger();
+            }
+
             @SuppressWarnings("removal")
             private static UUID getUUID(VillagerUUID from) {
                 return VillagerUUID.get(from);
