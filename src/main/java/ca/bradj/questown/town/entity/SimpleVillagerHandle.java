@@ -69,6 +69,23 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     private static final int TICK_FACTOR = 10;
 
+    public void toggleHunger() {
+        configs = new Configs(
+                configs.baseFullness,
+                !configs.hungerEnabled,
+                configs.flagTickInterval,
+                configs.normalBedHealMultiplier,
+                configs.expRequiredAtLevel1,
+                configs.expRampFactor,
+                configs.damageTicks,
+                configs.neutralMood,
+                configs.bufferTicksAfterFoodAttempt,
+                configs.maxTicksBeforeDowntime
+        );
+        String word = configs.hungerEnabled ? "enabled" : "disabled";
+        delegator.broadcastMessage("Hunger has been " + word + ". To make this permanent, update server config.");
+    }
+
     public record Configs(
             int baseFullness,
             boolean hungerEnabled,
@@ -165,7 +182,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             ENTITY e,
             int input
     ) {
-            if (!delegator.getSleepModule().isSleeping(e)) {
+        if (!delegator.getSleepModule().isSleeping(e)) {
             return input;
         }
         Double bedFactor = configs.normalBedHealMultiplier;
