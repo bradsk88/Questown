@@ -109,7 +109,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     }
 
     @Override
-    public void clearAllTimers() {
+    public void drainAllTimers() {
         this.timeJobStatuses.keySet().forEach(k -> this.timeJobStatuses.put(k, 1L));
     }
 

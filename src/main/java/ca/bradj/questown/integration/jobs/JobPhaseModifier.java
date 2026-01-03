@@ -51,6 +51,7 @@ public abstract class JobPhaseModifier {
     // Return null if nothing happens.
     // Return either a modified input (via functions available on event) or the
     // original input if something happened.
+    // IMPORTANT: When a non-null value is returned, the default result generation is skipped.
     public <CONTEXT> @Nullable CONTEXT beforeExtract(
             CONTEXT ctxInput,
             BeforeExtractEvent<CONTEXT> event

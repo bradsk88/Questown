@@ -11,5 +11,5 @@ public interface WorkStatusHandle<POS, ITEM> extends ImmutableWorkStateContainer
 
     @Nullable Integer getTimeToNextState(POS bp);
 
-    void clearAllTimers();
+    void drainAllTimers();
 }

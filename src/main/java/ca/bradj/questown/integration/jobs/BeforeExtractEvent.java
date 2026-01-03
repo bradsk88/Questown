@@ -12,7 +12,6 @@ public record BeforeExtractEvent<TOWN>(
         ItemAcceptor<TOWN> entity,
         BlockPos workSpot,
         Item lastInsertedItem,
-        Runnable poseClearer,
-        BiFunction<TOWN, Float, TOWN> hungerUpdater
+        Runnable poseClearer
 ) {
 }

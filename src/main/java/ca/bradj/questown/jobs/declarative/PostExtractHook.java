@@ -21,11 +21,12 @@ public class PostExtractHook {
             Collection<String> rules,
             ServerLevel level,
             BlockPos position,
-            BiFunction<TOWN, ImmutableMap<String, Integer>, TOWN> itemDataApplier
+            BiFunction<TOWN, ImmutableMap<String, Integer>, TOWN> itemDataApplier,
+            BiFunction<TOWN, Float, TOWN> hungerUpdater
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
         AfterExtractEvent<TOWN> bxEvent = new AfterExtractEvent<>(
-                level, position, townPos, itemDataApplier
+                level, position, townPos, itemDataApplier, hungerUpdater
         );
         return processMulti(town, appliers, (o, a) -> a.afterExtract(o, bxEvent));
     }

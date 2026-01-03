@@ -223,5 +223,41 @@ class SimpleVillagerHandleTest {
         }
         Assertions.assertEquals(villager, hungryInformed.get());
     }
+    @Test
+    public void testTickHungerShouldNotNotifyHungerListenerOnTenthTick() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = new SimpleVillagerHandle<>(
+                t,
+                new SimpleVillagerHandle.Configs(
+                        100,
+                        true,
+                        1,
+                        1,
+                        100,
+                        10,
+                        100,
+                        0.5f,
+                        100,
+                        100
+                )
+        );
+        UUID villager = UUID.randomUUID();
+        ImmutableMap<UUID, Integer> fullness = ImmutableMap.of(
+                villager, 11 // Will be decreased by 1 on the first tick
+        );
+        handle.initialize(
+                fullness,
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                true
+        );
+        AtomicReference<UUID> hungryInformed = new AtomicReference<>(null);
+        handle.register(villager);
+        handle.addHungryListener(hungryInformed::set);
+        handle.tick(Signals.NOON);
+        Assertions.assertNull(hungryInformed.get());
+    }
 
 }

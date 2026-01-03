@@ -365,10 +365,6 @@ public class RealtimeWorldInteraction extends
                     inputs.entity().tryGiveItem(i, s);
                     return in;
                 },
-                (in, up) -> {
-                    inputs.town().getVillagerHandle().fillHunger(inputs.entity().getUUID(), up);
-                    return in;
-                },
                 position,
                 last(workToUndo),
                 () -> inputs.town().getVillagerHandle().clearPoseRequests(inputs.entity().getUUID())
@@ -404,6 +400,10 @@ public class RealtimeWorldInteraction extends
                     CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
                     itemData.forEach(t::putInt);
                     return town;
+                },
+                (in, up) -> {
+                    inputs.town().getVillagerHandle().fillHunger(inputs.entity().getUUID(), up);
+                    return in;
                 }
         );
     }
