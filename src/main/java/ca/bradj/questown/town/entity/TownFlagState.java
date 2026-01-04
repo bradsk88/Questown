@@ -87,7 +87,8 @@ public class TownFlagState {
     ) {
         long dayTime = sl.getDayTime();
         if (e.advancedTimeOnTick == dayTime) { // TODO[Warp]: Plus or minus some ticks?
-            e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Already advanced time on this tick. Skipping.");
+            e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP)
+             .log("Already advanced time on this tick. Skipping.");
             return null;
         }
 
@@ -145,12 +146,18 @@ public class TownFlagState {
             );
 
             final int ii = i;
-            vWarper.getTicks(dayTime, ticksPassed).forEach(
-                    tick -> warpSteps.add(new AbstractMap.SimpleEntry<>(
-                            tick.tick(),
-                            ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)
-                    ))
+            Collection<Warper.Tick> ticks = new ArrayList<>(vWarper.getTicks(dayTime, ticksPassed));
+
+            ServerJobsRegistry.JobInitPair job = ServerJobsRegistry.getUninitializedJob(
+                    v.journal.jobId(), v.getVUID()
             );
+            for (int j = 0; j < job.getJob().getTotalDuration(); j++) {
+                ticks.add(new Warper.Tick(dayTime + j, 1L));
+            }
+            ticks.forEach(tick -> warpSteps.add(new AbstractMap.SimpleEntry<>(
+                    tick.tick(),
+                    ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)
+            )));
         }
 
         warpSteps.sort(Map.Entry.comparingByKey());
@@ -213,7 +220,8 @@ public class TownFlagState {
                 sl.addFreshEntity(recovered);
                 e.getVillagerHandle().register(recovered);
             }
-            e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Loaded villager state from NBT: {}", villagers);
+            e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP)
+             .log("Loaded villager state from NBT: {}", villagers);
         }
     }
 
@@ -274,7 +282,8 @@ public class TownFlagState {
         try {
             MCTownState newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
             if (newState != null) {
-                e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Storing state on {}: {}", e.getUUID(), newState);
+                e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP)
+                 .log("Storing state on {}: {}", e.getUUID(), newState);
                 Compat.getBlockStoredTagData(e).put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
                 TownFlagState.recoverMobs(parent, level);
                 parent.getKnowledgeHandle().registerFoundLoots(newState.knowledge());

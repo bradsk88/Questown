@@ -319,4 +319,8 @@ public class TownVillagerHandles {
             }
         };
     }
+
+    public static Collection<JobID> getJobs(TownVillagerHandle villagersHandle) {
+        return villagersHandle.delegate.getJobs();
+    }
 }

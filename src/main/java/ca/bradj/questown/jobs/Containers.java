@@ -15,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 public class Containers {
     public static List<ContainerTarget<MCContainer, MCTownItem>> get(
@@ -32,7 +34,18 @@ public class Containers {
             boolean stopAfterOneFound
     ) {
         @Nullable ServerLevel sl = town.getServerLevel();
-        Collection<RoomRecipeMatch<MCRoom>> allContainers = town.getRoomHandle().getMatches(includeRoom);
+        Supplier<Collection<RoomRecipeMatch<MCRoom>>> x = () -> town.getRoomHandle().getMatches(includeRoom);
+        return get2(sl, x, isJobBlock, isJobSite, stopAfterOneFound);
+    }
+
+    public static @NotNull List<ContainerTarget<MCContainer, MCTownItem>> get2(
+            @Nullable ServerLevel sl,
+            Supplier<? extends Collection<RoomRecipeMatch<MCRoom>>> x,
+            Predicate<BlockPos> isJobBlock,
+            Predicate<ResourceLocation> isJobSite,
+            boolean stopAfterOneFound
+    ) {
+        Collection<RoomRecipeMatch<MCRoom>> allContainers = x.get();
         List<ContainerTarget<MCContainer, MCTownItem>> chests = new ArrayList<>();
         for (RoomRecipeMatch<MCRoom> c : allContainers) {
             for (Map.Entry<BlockPos, Block> block : c.getContainedBlocks().entrySet()) {

@@ -19,11 +19,12 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownVillagerHandles;
+import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
@@ -35,6 +36,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.text.NumberFormat;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -66,11 +68,60 @@ public class TownPossibleWork {
             return;
         }
         TownFlagBlockEntity t = town.getUnsafe();
-        Stream<String> roots = t.getVillagerHandle().getJobs().stream().map(JobID::rootId);
+        Stream<String> roots = TownVillagerHandles.getJobs(t.getVillagersHandle()).stream().map(JobID::rootId);
         ImmutableSet<Map.Entry<JobID, Supplier<Work>>> rjs = Works.regularJobs();
-        roots.forEach(root -> {
-            List<JobPossibility> unfilteredJobs = getJobsSortedByPossibility(root, rjs, t);
-            bigLog(t, root, unfilteredJobs);
+        recomputeNow(
+                t.getServerLevel(), new PossibilitySource() {
+                    @Override
+                    public State getWorkState(BlockPos bp) {
+                        return t.getWorkStatusHandle(null).getJobBlockState(bp);
+                    }
+
+                    @Override
+                    public Collection<RoomRecipeMatch<MCRoom>> getRoomsForJob(DeclarativeJob dj) {
+                        return t.getRoomHandle().getRoomsMatching(dj.location().baseRoom());
+                    }
+
+                    @Override
+                    public boolean townHasTool(IPredicateCollection<MCTownItem> tool) {
+                        boolean townHasTool = false;
+                        @Nullable ContainerTarget<MCContainer, MCTownItem> toolCont = t.findMatchingContainer(tool::test);
+                        if (toolCont != null) {
+                            townHasTool = true;
+                        }
+                        return townHasTool;
+                    }
+
+                    @Override
+                    public Collection<Item> uniqueItems() {
+                        return unique(t).get();
+                    }
+
+                    @Override
+                    public Collection<Map.Entry<JobID, Supplier<Work>>> allJobs() {
+                        return rjs;
+                    }
+
+                    @Override
+                    public Stream<String> roots() {
+                        return roots;
+                    }
+
+                    @Override
+                    public TownInterface.DebugLogger getDebugLogger(
+                            QT.QTLogger flagLogger,
+                            String jobPossibilitiesCompute
+                    ) {
+                        return t.getDebugLogger(flagLogger, jobPossibilitiesCompute);
+                    }
+                }
+        );
+    }
+
+    public void recomputeNow(ServerLevel sl, PossibilitySource src) {
+        src.roots().forEach(root -> {
+            List<JobPossibility> unfilteredJobs = getJobsSortedByPossibility(sl, root, src);
+            bigLog(src, root, unfilteredJobs);
 
             List<JobPossibility> jobs = unfilteredJobs.stream().filter(
                     v -> v.score.value > Config.PREFERRED_JOB_ACCEPTANCE.get()
@@ -85,7 +136,7 @@ public class TownPossibleWork {
             if (jobs.isEmpty()) {
                 registerUnmetNeeds(root);
             }
-            t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
+            src.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
                     "Prepared for {}: [{}]",
                     root,
                     Strings.join(preselected.stream().map(JobID::jobId).toList(), ",")
@@ -95,7 +146,7 @@ public class TownPossibleWork {
     }
 
     private static void bigLog(
-            TownFlagBlockEntity t,
+            PossibilitySource t,
             String root,
             List<JobPossibility> unfilteredJobs
     ) {
@@ -155,24 +206,40 @@ public class TownPossibleWork {
         }
     }
 
+    interface PossibilitySource {
+        State getWorkState(BlockPos bp);
+        Collection<RoomRecipeMatch<MCRoom>> getRoomsForJob(DeclarativeJob dj);
+        boolean townHasTool(IPredicateCollection<MCTownItem> tool);
+        Collection<Item> uniqueItems();
+        Collection<Map.Entry<JobID, Supplier<Work>>> allJobs();
+
+        Stream<String> roots();
+
+        TownInterface.DebugLogger getDebugLogger(
+                QT.QTLogger flagLogger,
+                String jobPossibilitiesCompute
+        );
+    }
+
     private static ImmutableList<JobPossibility> getJobsSortedByPossibility(
+            ServerLevel sl,
             String root,
-            ImmutableSet<Map.Entry<JobID, Supplier<Work>>> allJobs,
-            TownFlagBlockEntity t
+            PossibilitySource src
     ) {
         // FIXME: Only include jobs that are known by the villagers
-        List<Map.Entry<JobID, Supplier<Work>>> e = allJobs.stream().filter(v -> root.equals(v.getKey().rootId()))
+        List<Map.Entry<JobID, Supplier<Work>>> e = src.allJobs().stream().filter(v -> root.equals(v.getKey().rootId()))
                                                           .toList();
         ImmutableList.Builder<JobPossibility> b = ImmutableList.builder();
         for (Map.Entry<JobID, Supplier<Work>> w : e) {
-            b.add(new JobPossibility(w.getKey(), getWorkPercentPossible(t, w)));
+            b.add(new JobPossibility(w.getKey(), getWorkPercentPossible(sl, w, src)));
         }
         return b.build();
     }
 
     private static WithReason<Double> getWorkPercentPossible(
-            TownFlagBlockEntity t,
-            Map.Entry<JobID, Supplier<Work>> w
+            ServerLevel sl,
+            Map.Entry<JobID, Supplier<Work>> w,
+            PossibilitySource src
     ) {
         Work work = w.getValue().get();
         Job<?, ?, ?> j = work.jobFunc.apply(UUID.randomUUID());
@@ -180,17 +247,18 @@ public class TownPossibleWork {
             return WithReason.always(0.0, "Unsupported job class " + j.getClass().getName());
         }
 
-        if (!ServerJobsRegistry.canFit(null, j.getId(), Util.getDayTime(t.getServerLevel()))) {
-            t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
-                    "Villager will not do {} because there is not enough time left in the day",
-                    j.getId().toNiceString()
-            );
-            return WithReason.always(0.0, "Not enough time left in the day");
+        if (!ServerJobsRegistry.canFit(null, j.getId(), Util.getDayTime(sl))) {
+            return WithReason.always(0.0, "Not enough time left in the day for ", j.getId().toNiceString());
         }
 
-        WithReason<Integer> hps = getHighestPossibleState(t, dj);
+        WithReason<Integer> hps = getHighestPossibleState(
+                sl, dj, src,
+                (bp) -> dj.location().isJobBlock().test(
+                        new JobBlockTestContext(sl, info(sl), bp, ImmutableList::of, src::uniqueItems, false, false)
+                )
+        );
         double v = (double) hps.value / dj.getMaxState();
-        float shuffler = Compat.nextRandomInt(t.getServerLevel(), 100) / 10000f;
+        float shuffler = Compat.nextRandomInt(sl, 100) / 10000f;
         return WithReason.always(
                 v + shuffler,
                 "Highest possible job state: " + hps + " (out of " + dj.getMaxState() + ", with randomizer " + shuffler + ")"
@@ -198,26 +266,24 @@ public class TownPossibleWork {
     }
 
     private static WithReason<Integer> getHighestPossibleState(
-            TownFlagBlockEntity t,
-            DeclarativeJob dj
+            ServerLevel sl,
+            DeclarativeJob dj,
+            PossibilitySource src,
+            Predicate<BlockPos> isJobBlock
     ) {
         if (dj.specialGlobalRules.contains(SpecialRules.ALWAYS_CONSIDER)) {
             return WithReason.always(dj.getMaxState(), "Special rule ALWAYS_CONSIDER present");
         }
         boolean townHasJobSite = false;
-        ServerLevel sl = Preconditions.checkNotNull(t.getServerLevel());
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
-            WorkStatusHandle<BlockPos, MCHeldItem> ws = t.getWorkStatusHandle(null); // TODO: Nest
             ProductionStatus s = ProductionStatus.fromJobBlockStatus(ii);
             if (!UtilClean.getOrDefaultCollection(dj.specialRules, s, ImmutableList.of())
                           .contains(SpecialRules.CLAIM_SPOT)) {
-                Collection<RoomRecipeMatch<MCRoom>> rooms = t.getRoomHandle()
-                                                             .getRoomsMatching(dj.location().baseRoom());
                 Collection<RoomRecipeMatch<MCRoom>> roomsWS = Jobs.roomsWithState(
-                        rooms,
-                        (bp) -> isJobBlock(t, dj, bp, sl),
-                        (bp) -> Integer.valueOf(ii).equals(JobBlock.getState(ws::getJobBlockState, bp))
+                        src.getRoomsForJob(dj),
+                        isJobBlock,
+                        (bp) -> Integer.valueOf(ii).equals(JobBlock.getState(src::getWorkState, bp))
                 );
                 if (!roomsWS.isEmpty()) {
                     townHasJobSite = true;
@@ -234,10 +300,10 @@ public class TownPossibleWork {
             final IPredicateCollection<MCHeldItem> ing = dj.getChecks().getIngredientsForStep(ii);
             if (ing != null) {
                 townHasIngredient = false;
-                List<ContainerTarget<MCContainer, MCTownItem>> foundContainer = Containers.get(
-                        t,
-                        r -> true,
-                        bp -> isJobBlock(t, dj, bp, sl),
+                List<ContainerTarget<MCContainer, MCTownItem>> foundContainer = Containers.get2(
+                        sl,
+                        () -> src.getRoomsForJob(dj),
+                        isJobBlock,
                         js -> dj.location().baseRoom().equals(js),
                         false
                 );
@@ -252,11 +318,7 @@ public class TownPossibleWork {
             boolean townHasTool = true;
             final IPredicateCollection<MCTownItem> tool = dj.getChecks().getToolsForStep(ii);
             if (tool != null) {
-                townHasTool = false;
-                @Nullable ContainerTarget<MCContainer, MCTownItem> toolCont = t.findMatchingContainer(tool::test);
-                if (toolCont != null) {
-                    townHasTool = true;
-                }
+                townHasTool = src.townHasTool(tool);
             }
 
             if (!townHasIngredient || !townHasTool) {

@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
 import ca.bradj.questown.jobs.Item;
@@ -337,6 +338,11 @@ public abstract class TownState<
             });
             effects.removeAll(r.build());
             return b.build();
+        }
+
+        @SuppressWarnings("removal")
+        public VillagerUUID getVUID() {
+            return VillagerUUID.from(uuid);
         }
     }
 
