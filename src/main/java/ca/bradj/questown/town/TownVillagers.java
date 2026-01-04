@@ -1,6 +1,5 @@
 package ca.bradj.questown.town;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;

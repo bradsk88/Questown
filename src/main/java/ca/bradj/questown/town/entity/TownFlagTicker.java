@@ -106,7 +106,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
 
     @Override
     protected void tickPossibleWorkHandle(TickData tickData) {
-        tickData.entity().possibleWork.tick();
+        tickData.entity().startableWork.tick();
     }
 
     @Override
@@ -132,7 +132,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
     @Override
     protected void handleNewStoredData(TickData tickData) {
         TownFlagBlockEntity e = tickData.entity();
-        e.possibleWork.invalidate();
+        e.startableWork.invalidate();
         e.quests.processItemQuests(TownContainers.getAllStacks(e, e.getServerLevel()));
         e.quests.processJobChanges(e.getVillagerHandle().getVillagerJobs());
     }

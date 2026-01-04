@@ -8,10 +8,15 @@ import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.Signals;
+import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.PossibilitySources;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
 import ca.bradj.questown.town.Warper;
@@ -85,14 +90,14 @@ public class TownFlagState {
             ServerLevel sl,
             @Nullable Long optionalWarpDuration
     ) {
-        long dayTime = sl.getDayTime();
-        if (e.advancedTimeOnTick == dayTime) { // TODO[Warp]: Plus or minus some ticks?
+        long gameTick = Util.getTick(sl);
+        if (e.advancedTimeOnTick == gameTick) { // TODO[Warp]: Plus or minus some ticks?
             e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP)
              .log("Already advanced time on this tick. Skipping.");
             return null;
         }
 
-        e.advancedTimeOnTick = dayTime;
+        e.advancedTimeOnTick = gameTick;
 
         MCTownState storedState;
         if (Compat.getBlockStoredTagData(e).contains(NBT_TOWN_STATE)) {
@@ -118,7 +123,7 @@ public class TownFlagState {
 
         ArrayList<TownState.VillagerData<MCHeldItem>> villagers = new ArrayList<>(storedState.villagers);
 
-        long ticksPassed = dayTime - storedState.worldTimeAtSleep;
+        long ticksPassed = gameTick - storedState.worldTimeAtSleep;
         if (optionalWarpDuration != null) {
             ticksPassed = optionalWarpDuration;
         }
@@ -133,31 +138,47 @@ public class TownFlagState {
 
         final List<Map.Entry<Long, Function<MCTownState, MCTownState>>> warpSteps = new ArrayList<>();
 
+        Work w = new Work() {
+            @Override
+            public void recomputeNow() {
+                e.getStartableWork().recomputeNow(sl, PossibilitySources.from(e));
+            }
+
+            @Override
+            public @Nullable JobID getRandomFinishableWork(
+                    JobID jobID,
+                    Signals.DayTime dayTime
+            ) {
+                return e.getRandomFinishableWork(jobID, dayTime, false);
+            }
+
+            @Override
+            public long getTotalDuration(
+                    JobID jobID,
+                    VillagerUUID vuid
+            ) {
+                return ServerJobsRegistry.getUninitializedJob(jobID, vuid).getJob().getTotalDuration();
+            }
+        };
+
+        ImportantTicks.Config cfg = new ImportantTicks.Config(Config.MAX_DOWNTIME_TICKS.get());
         for (int i = 0; i < villagers.size(); i++) {
             TownState.VillagerData<MCHeldItem> v = villagers.get(i);
             e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log(
                     "[{}] Warping time by {} ticks, starting with journal: {}",
-                    v.uuid,
+                    UtilClean.truncateMiddle(v.uuid),
                     ticksPassed,
                     liveState
             );
-            Warper<ServerLevel, MCTownState> vWarper = ServerJobsRegistry.getWarper(
-                    i, v.journal.jobId()
+            ImmutableList<Warper.Tick> ticks = ImportantTicks.forVillager(
+                    w, v.getVUID(), v.journal.jobId(), DowntimeWork::matches, cfg, ticksPassed, gameTick
             );
-
-            final int ii = i;
-            Collection<Warper.Tick> ticks = new ArrayList<>(vWarper.getTicks(dayTime, ticksPassed));
-
-            ServerJobsRegistry.JobInitPair job = ServerJobsRegistry.getUninitializedJob(
-                    v.journal.jobId(), v.getVUID()
-            );
-            for (int j = 0; j < job.getJob().getTotalDuration(); j++) {
-                ticks.add(new Warper.Tick(dayTime + j, 1L));
-            }
-            ticks.forEach(tick -> warpSteps.add(new AbstractMap.SimpleEntry<>(
+            int ii = i;
+            Warper<ServerLevel, MCTownState> vWarper = ServerJobsRegistry.getWarper(i, v.journal.jobId());
+            ticks.stream().map(tick -> new AbstractMap.SimpleEntry<>(
                     tick.tick(),
-                    ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)
-            )));
+                    (Function<MCTownState, MCTownState>) ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)
+            )).forEach(warpSteps::add);
         }
 
         warpSteps.sort(Map.Entry.comparingByKey());
@@ -188,7 +209,20 @@ public class TownFlagState {
                 liveState.gates,
                 liveState.knowledge(),
                 liveState.blocksOfProgress,
-                dayTime
+                gameTick
+        );
+    }
+
+    public interface Work {
+        void recomputeNow();
+        @Nullable JobID getRandomFinishableWork(
+                JobID jobID,
+                Signals.DayTime dayTime
+        );
+
+        long getTotalDuration(
+                JobID jobID,
+                VillagerUUID vuid
         );
     }
 

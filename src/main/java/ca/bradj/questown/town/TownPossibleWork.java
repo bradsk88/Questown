@@ -19,26 +19,20 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
-import ca.bradj.questown.town.entity.TownVillagerHandles;
-import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
-import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
-import org.jetbrains.annotations.Nullable;
 
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 import static ca.bradj.questown.mc.Util.info;
 
@@ -68,54 +62,7 @@ public class TownPossibleWork {
             return;
         }
         TownFlagBlockEntity t = town.getUnsafe();
-        Stream<String> roots = TownVillagerHandles.getJobs(t.getVillagersHandle()).stream().map(JobID::rootId);
-        ImmutableSet<Map.Entry<JobID, Supplier<Work>>> rjs = Works.regularJobs();
-        recomputeNow(
-                t.getServerLevel(), new PossibilitySource() {
-                    @Override
-                    public State getWorkState(BlockPos bp) {
-                        return t.getWorkStatusHandle(null).getJobBlockState(bp);
-                    }
-
-                    @Override
-                    public Collection<RoomRecipeMatch<MCRoom>> getRoomsForJob(DeclarativeJob dj) {
-                        return t.getRoomHandle().getRoomsMatching(dj.location().baseRoom());
-                    }
-
-                    @Override
-                    public boolean townHasTool(IPredicateCollection<MCTownItem> tool) {
-                        boolean townHasTool = false;
-                        @Nullable ContainerTarget<MCContainer, MCTownItem> toolCont = t.findMatchingContainer(tool::test);
-                        if (toolCont != null) {
-                            townHasTool = true;
-                        }
-                        return townHasTool;
-                    }
-
-                    @Override
-                    public Collection<Item> uniqueItems() {
-                        return unique(t).get();
-                    }
-
-                    @Override
-                    public Collection<Map.Entry<JobID, Supplier<Work>>> allJobs() {
-                        return rjs;
-                    }
-
-                    @Override
-                    public Stream<String> roots() {
-                        return roots;
-                    }
-
-                    @Override
-                    public TownInterface.DebugLogger getDebugLogger(
-                            QT.QTLogger flagLogger,
-                            String jobPossibilitiesCompute
-                    ) {
-                        return t.getDebugLogger(flagLogger, jobPossibilitiesCompute);
-                    }
-                }
-        );
+        recomputeNow(t.getServerLevel(), PossibilitySources.from(t));
     }
 
     public void recomputeNow(ServerLevel sl, PossibilitySource src) {
@@ -204,21 +151,6 @@ public class TownPossibleWork {
                                                             .format(Math.round(v * 1000.0) / 1000.0)) +
                     '}';
         }
-    }
-
-    interface PossibilitySource {
-        State getWorkState(BlockPos bp);
-        Collection<RoomRecipeMatch<MCRoom>> getRoomsForJob(DeclarativeJob dj);
-        boolean townHasTool(IPredicateCollection<MCTownItem> tool);
-        Collection<Item> uniqueItems();
-        Collection<Map.Entry<JobID, Supplier<Work>>> allJobs();
-
-        Stream<String> roots();
-
-        TownInterface.DebugLogger getDebugLogger(
-                QT.QTLogger flagLogger,
-                String jobPossibilitiesCompute
-        );
     }
 
     private static ImmutableList<JobPossibility> getJobsSortedByPossibility(

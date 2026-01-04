@@ -18,6 +18,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
@@ -187,11 +188,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public final TownFlagMenus menus = new TownFlagMenus();
 
     @Override
-    public TownPossibleWork getPossibleWork() {
-        return possibleWork;
+    public TownPossibleWork getStartableWork() {
+        return startableWork;
     }
 
-    final TownPossibleWork possibleWork = new TownPossibleWork();
+    final TownPossibleWork startableWork = new TownPossibleWork();
 
     final TownVillagerHandle villagerHandle = new TownVillagerHandle();
     private final TownWorldInteraction world = new TownWorldInteraction();
@@ -239,7 +240,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (isInitialized()) {
             super.setChanged();
             this.changed = true;
-            possibleWork.invalidate();
+            startableWork.invalidate();
         }
     }
 
@@ -356,7 +357,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return true;
         });
         initializers.add(t -> {
-            t.possibleWork.initialize(t);
+            t.startableWork.initialize(t);
             return true;
         });
         initializers.add(t -> {
@@ -578,10 +579,24 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return true;
         }
 
+        JobID work = getRandomFinishableWork(currentJob, Util.getDayTime(getServerLevel()), true);
+        if (work != null) {
+            changeJob.accept(work);
+            return true;
+        }
+
+        return false;
+    }
+
+    public @Nullable JobID getRandomFinishableWork(
+            JobID currentJob,
+            Signals.DayTime startTime,
+            boolean allowUnrequestedWork
+    ) {
         ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();
         WorksBehaviour.TownData td = getTownData();
         Predicate<JobID> canFit = p -> {
-            if (ServerJobsRegistry.canFit(uuid, p, Util.getDayTime(getServerLevel()))) {
+            if (ServerJobsRegistry.canFit(uuid, p, startTime)) {
                 return true;
             }
             getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
@@ -595,26 +610,23 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 canAlwaysStart,
                 requestedResults,
                 td,
-                possibleWork.getFor(villager.getJobId())
+                startableWork.getFor(currentJob)
         );
         if (work != null) {
-            changeJob.accept(work);
-            return true;
+            return work;
+        }
+
+        if (!allowUnrequestedWork) { // E.g. Organizer
+            return null;
         }
 
         if (preferredBuffer < 100) {
             preferredBuffer++;
-            return false;
+            return null;
         }
         preferredBuffer = 0;
 
-        work = TownVillagers.getPreferredWork(villager.getJobId(), canFit, canAlwaysStart, requestedResults, td);
-        if (work != null) {
-            changeJob.accept(work);
-            return true;
-        }
-
-        return false;
+        return TownVillagers.getPreferredWork(currentJob, canFit, canAlwaysStart, requestedResults, td);
     }
 
     public WorksBehaviour.TownData getTownData() {

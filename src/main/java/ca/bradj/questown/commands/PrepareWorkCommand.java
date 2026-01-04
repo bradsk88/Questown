@@ -48,7 +48,7 @@ public class PrepareWorkCommand {
             return -1;
         }
 
-        tfbe.getPossibleWork().invalidate();
+        tfbe.getStartableWork().invalidate();
         return 0;
     }
 }

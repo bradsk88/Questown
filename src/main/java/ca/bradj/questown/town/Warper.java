@@ -18,9 +18,20 @@ public interface Warper<LOOT_SOURCE, TOWN extends TownState<?, ?, ?, ?, ?>> {
 
     Collection<Tick> getTicks(long referenceTick, long ticksPassed);
 
+    record TickBuilder(
+            long tick
+    ) {
+        public Tick after(long l) {
+            return new Tick(tick, l);
+        }
+    }
 
     record Tick(
             long tick,
             long ticksSincePrevious
-    ){}
+    ){
+        public static TickBuilder at(long l) {
+            return new TickBuilder(l);
+        }
+    }
 }

@@ -140,10 +140,10 @@ public class WorkSeekerJob extends DeclarativeJob {
                     if (town.getVillagerHandle().hasBlockOfProgress(ownerUUID)) {
                         town.changeJobForVisitorFromBoard(ownerUUID, getId());
                     }
-                    if (town.getPossibleWork().getFor(getId()).isEmpty()) {
+                    if (town.getStartableWork().getFor(getId()).isEmpty()) {
                         if (!registeredUnmet && !statusFactory.noWorkPossible().equals(journal.getStatus())) {
                             journal.changeStatus(statusFactory.noWorkPossible());
-                            town.getPossibleWork().invalidate();
+                            town.getStartableWork().invalidate();
                             registeredUnmet = true;
                         }
                         yield statusFactory.noWorkPossible();

@@ -8,8 +8,16 @@ public enum Signals {
     public record DayTime(
             long dayTime
     ) {
+        public static DayTime fromGameTime(long dayTime) {
+            return new DayTime(dayTime % 24000);
+        }
+
         public long ticksBeforeMidnight() {
             return 24000 - dayTime;
+        }
+
+        public DayTime plus(Long ticks) {
+            return new DayTime((dayTime + ticks) % 24000);
         }
     }
 

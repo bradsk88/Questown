@@ -121,7 +121,7 @@ public final class TownVillagerHandle {
 
             @Override
             public void invalidateCachedWorkPossibilities() {
-                town.getUnsafe().possibleWork.invalidate();
+                town.getUnsafe().startableWork.invalidate();
             }
 
             @Override
