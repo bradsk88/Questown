@@ -1,10 +1,10 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.jobs.IStatus;
-import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.core.Coordinate;
+import ca.bradj.questown.core.network.OpenJobMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
-import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -19,9 +19,6 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import static ca.bradj.questown.gui.InventoryAndStatusMenu.TE_INVENTORY_FIRST_SLOT_INDEX;
@@ -35,8 +32,8 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     private final IDrawableStatic slot;
     private final ResourceLocation lockTex;
     private final Tabs tabs;
+    private final StatusGraphic status;
 
-    private final EvictingQueue<IStatus<?>> statusSmoothingQueue = EvictingQueue.create(20);
     private final IngredientRenderer ingredientRenderer = new IngredientRenderer();
 
     public InventoryAndStatusScreen(
@@ -49,6 +46,14 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         this.slot = JEI.getSlotDrawable();
         this.lockTex = new ResourceLocation("questown", "textures/menu/gatherer/locked.png");
         this.tabs = VillagerTabs.forMenu(menu);
+        this.status = new StatusGraphic(
+                menu.jobId,
+                () -> new Coordinate(
+                        ((this.width - backgroundWidth) / 2) + backgroundWidth - 16 - 32,
+                        ((this.height - backgroundHeight) / 2) + 16
+                ),
+                menu::getStatus
+        );
     }
 
     @Override
@@ -103,12 +108,12 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
         this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
         renderInventory(stack);
+        status.render(stack);
     }
 
     private void renderInventory(PoseStack stack) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        renderStatus(stack);
         int yCoord = 0;
         for (int i = 0; i < menu.slots.size(); i++) {
             Slot s = menu.slots.get(i);
@@ -144,38 +149,6 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         blit(stack, x, y, srcX, srcY, drawWidth, drawHeight, texWidth, texHeight);
     }
 
-    private void renderStatus(
-            PoseStack stack
-    ) {
-        int x = (this.width - backgroundWidth) / 2;
-        int y = (this.height - backgroundHeight) / 2;
-        if (getSmoothedStatus()instanceof ProductionStatus ps) {
-            RenderSystem.setShaderTexture(0, ClientAccess.getArt(menu.jobId, ps));
-        }
-        int srcX = 0;
-        int srcY = 0;
-        int destX = x + backgroundWidth - 16 - 32;
-        int destY = y + 16;
-        int drawWidth = 32;
-        int drawHeight = 32;
-        int texWidth = 32;
-        int texHeight = 32;
-        blit(stack, destX, destY, srcX, srcY, drawWidth, drawHeight, texWidth, texHeight);
-    }
-
-    private @NotNull IStatus<?> getSmoothedStatus() {
-        statusSmoothingQueue.add(menu.getStatus());
-        HashMap<IStatus<?>, Integer> counter = new HashMap<>();
-        for (IStatus<?> iStatus : statusSmoothingQueue) {
-            counter.compute(iStatus, (ignored, oldCt) -> oldCt == null ? 1 : oldCt + 1);
-        }
-        return counter
-                .entrySet()
-                .stream()
-                .max(Comparator.comparingInt(Map.Entry::getValue))
-                .map(Map.Entry::getKey).orElseThrow();
-    }
-
     @Override
     protected void renderTooltip(
             @NotNull PoseStack stack,
@@ -184,13 +157,6 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        int leftX = x + backgroundWidth - 16 - 32;
-        int topY = y + 16;
-        int rightX = leftX + 32;
-        int botY = topY + 32;
-
-        String jobId = menu.getRootJobId();
-        Component jobName = Compat.translatable("jobs." + jobId);
 
         if (this.tabs.renderTooltip(
                 x, y, mouseX, mouseY,
@@ -199,13 +165,11 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             return;
         }
 
-        if (mouseX > leftX && mouseX < rightX) {
-            if (mouseY > topY && mouseY < botY) {
-                IStatus<?> status = getSmoothedStatus();
-                ImmutableList<Component> components = JobTooltips.get((ProductionStatus) status, menu.jobId);
-                super.renderTooltip(stack, components, Optional.empty(), mouseX, mouseY);
-                return;
-            }
+        if (status.renderTooltip(
+                mouseX, mouseY,
+                key -> super.renderTooltip(stack, key, Optional.empty(), mouseX, mouseY)
+        )) {
+            return;
         }
 
         int yCoord = y - 1;
@@ -238,7 +202,13 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.tabs.mouseClicked(x, y, mouseX, mouseY);
+        if (this.tabs.mouseClicked(x, y, mouseX, mouseY)) {
+            return true;
+        }
+        if (status.mouseClicked((int) mouseX, (int) mouseY)) {
+            QuestownNetwork.CHANNEL.sendToServer(new OpenJobMessage(menu.flagPos, menu.jobId));
+            return true;
+        }
         return super.mouseClicked(mouseX, mouseY, p_97750_);
     }
 

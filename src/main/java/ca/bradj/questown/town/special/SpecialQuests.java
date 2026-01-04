@@ -2,6 +2,7 @@ package ca.bradj.questown.town.special;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.PlateBlock;
+import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.jobs.WorkLocation;
@@ -47,12 +48,18 @@ public class SpecialQuests {
     );
     public static final ResourceLocation BEDROOM = Questown.ResourceLocation("bedroom");
     public static final ResourceLocation JOB_BOARD = Questown.ResourceLocation("job_board");
+    public static final ResourceLocation STORE_ROOM_SMALL = Questown.ResourceLocation("store_room");
     public static final ResourceLocation DINING_ROOM = Questown.ResourceLocation("dining_room");
     public static final ResourceLocation CLINIC = Questown.ResourceLocation("clinic");
     public static final WorkLocation TOWN_GATE_LOCATION = new WorkLocation(
             ctx -> SpecialQuests.isWelcomeMat(ctx.blockInfo(), ctx.blockPos()),
             SpecialQuests::isWelcomeMat,
             SpecialQuests.TOWN_GATE
+    );
+    public static final WorkLocation TOWN_FLAG_LOCATION = new WorkLocation(
+            ctx -> SpecialQuests.isFlag(ctx.blockInfo(), ctx.blockPos()),
+            SpecialQuests::isFlag,
+            SpecialQuests.TOWN_FLAG
     );
     public static final WorkLocation DINING_ROOM_LOCATION = new WorkLocation(
             ctx -> WorkLocation.isBlock(PlateBlock.class).test(ctx.blockInfo(), ctx.blockPos()),
@@ -69,5 +76,11 @@ public class SpecialQuests {
             BlockPos pos
     ) {
         return WorkLocation.isBlock(WelcomeMatBlock.class).test(info, pos);
+    }
+    public static boolean isFlag(
+            WorkLocation.BlockInfo info,
+            BlockPos pos
+    ) {
+        return WorkLocation.isBlock(TownFlagBlock.class).test(info, pos);
     }
 }

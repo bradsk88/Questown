@@ -1,8 +1,11 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.blocks.HospitalBedBlock;
+import ca.bradj.questown.town.econ.Economics;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -89,9 +92,9 @@ public class TownVillagerBedsHandle {
     }
 
     public Optional<GlobalPos> getBestBed(TownInterface town, LivingEntity ent) {
-        // TODO[ASAP]: Handle no beds left
         BlockPos bestBed = delegate.getBestBed(ent);
         if (bestBed == null) {
+            Economics.registerUnmetRoom(town, ent.getUUID(), SpecialQuests.BEDROOM);
             return Optional.empty();
         }
         return Optional.of(GlobalPos.of(town.getServerLevel().dimension(), bestBed));

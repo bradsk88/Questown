@@ -1,16 +1,18 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.core.Pair;
-import ca.bradj.questown.core.network.MultiStatusScreenSyncMessage;
+import ca.bradj.questown.gui.town.status.MultiStatusScreenSyncMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.gui.town.status.MultiStatusScreen;
 import ca.bradj.questown.jobs.IStatus;
-import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.StatusListener;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -42,7 +44,7 @@ public class FlagMenus {
             Collection<UIQuest> quests = VillagerQuestsContainer.readQuests(buf);
             BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
             int blocksOfProgress = TownBlockofProgressMenu.read(buf);
-            FlagTabsEmbedding.FlagInfo flagInfo = new FlagTabsEmbedding.FlagInfo(
+            FlagTabsEmbedding.FlagInfo flagInfo = FlagTabsEmbedding.FlagInfo.dumb(
                     flagPos,
                     blocksOfProgress > 0
             ); // TODO: Or maybe always show?
@@ -62,14 +64,14 @@ public class FlagMenus {
     }
 
     public static void writeAndLink(
-            FriendlyByteBuf data,
+            FriendlyByteBuf buf,
             List<UIQuest> quests,
             FlagTabsEmbedding.FlagInfo flagInfo,
             ServerPlayer player,
             Iterable<? extends VisitorMobEntity> es,
             int bopCount
     ) {
-        TownQuestsContainer.write(data, quests, flagInfo.flagPos());
+        TownQuestsContainer.write(buf, quests, flagInfo.flagPos());
         MultiStatusScreenSyncMessage msg = new MultiStatusScreenSyncMessage(makeSyncData(es));
         QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), msg);
         for (VisitorMobEntity e : es) {
@@ -89,17 +91,19 @@ public class FlagMenus {
                 }
             });
         }
-        TownBlockofProgressMenu.write(data, flagInfo, bopCount);
+        TownBlockofProgressMenu.write(buf, flagInfo, bopCount);
     }
 
     private static MultiStatusScreen.@NotNull SyncedData makeSyncData(Iterable<? extends VisitorMobEntity> es) {
-        HashMap<UUID, Pair<JobID, IStatus<?>>> b = new HashMap<>();
+        HashMap<UUID, StatusPacket> b = new HashMap<>();
         HashMap<UUID, ImmutableList<Item>> b2 = new HashMap<>();
         for (VisitorMobEntity v : es) {
-            if (b.containsKey(v.getUUID()) || b.containsKey(v.getUUID())) {
+            if (b.containsKey(v.getUUID()) || b2.containsKey(v.getUUID())) {
                 QT.FLAG_LOGGER.error("Villager {} detected twice. This is probably a bug!", v.getUUID());
             }
-            b.put(v.getUUID(), new Pair<>(v.getJobId(), v.getStatusForServer()));
+            IStatus<?> vStatus = v.getStatusForServer();
+            StatusPacket value = createStatusPacket(v, vStatus);
+            b.put(v.getUUID(), value);
             List<Item> list = v.getJobJournalSnapshot()
                                .items()
                                .stream()
@@ -109,6 +113,16 @@ public class FlagMenus {
         }
         MultiStatusScreen.SyncedData data1 = new MultiStatusScreen.SyncedData(b, b2);
         return data1;
+    }
+
+    private static @NotNull StatusPacket createStatusPacket(
+            VisitorMobEntity v,
+            IStatus<?> vStatus
+    ) {
+        ResourceLocation tex = ServerJobsRegistry.getTexture(v.getJobId(), vStatus);
+        ImmutableList<Component> texts = ServerJobsRegistry.getStatusText(v.getJobId(), vStatus);
+        StatusPacket value = new StatusPacket(v.getJobId(), texts, tex);
+        return value;
     }
 
     public void initQuestsMenuClientSide(

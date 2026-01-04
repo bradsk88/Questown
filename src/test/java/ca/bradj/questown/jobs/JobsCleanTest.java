@@ -12,7 +12,6 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collection;
 import java.util.function.Predicate;
 
 class JobsCleanTest {
@@ -73,15 +72,9 @@ class JobsCleanTest {
     }
 
     private static IRoomRecipeMatch<Room, String, Position, String> arbitaryRoomMatch1 = new IRoomRecipeMatch<Room, String, Position, String>() {
-
-        @Override
-        public String getRecipeID() {
-            return "test 1";
-        }
-
         @Override
         public ImmutableList<String> getRecipeIDs() {
-            return ImmutableList.of(getRecipeID());
+            return ImmutableList.of("test 1");
         }
 
         @Override
@@ -100,14 +93,13 @@ class JobsCleanTest {
                                                                                        .iterator().next();
 
 
-    private static IRoomRecipeMatch<Room, String, Position, String> arbitaryRoomMatch2 = new IRoomRecipeMatch<>() {
+    private static IRoomRecipeMatch<Room, String, Position, String> arbitaryRoomMatch2 = new IRoomRecipeMatch<Room, String, Position, String>() {
 
         @Override
         public ImmutableList<String> getRecipeIDs() {
             return ImmutableList.of(getRecipeID());
         }
 
-        @Override
         public String getRecipeID() {
             return "test 1";
         }

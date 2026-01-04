@@ -3,7 +3,7 @@
   "id": "cook/extract",
   "priority": 1000,
   "parent": null,
-  "icon": "minecraft:cooked_cod",
+  "icon": "minecraft:cooked_beef",
   "initial_request": "minecraft:cooked_cod",
   "note": "initial request is actually ignored due to 'always consider' in global rules",
   "result": {

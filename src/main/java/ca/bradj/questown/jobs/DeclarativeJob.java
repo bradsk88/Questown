@@ -2,13 +2,16 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.jobs.ItemCheckReplacer;
 import ca.bradj.questown.integration.jobs.JobCheckReplacer;
 import ca.bradj.questown.integration.jobs.SupplyRoomCheckReplacer;
+import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -45,6 +48,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.apache.logging.log4j.Marker;
@@ -86,6 +90,9 @@ public class DeclarativeJob extends
     private @Nullable Long secondLastSupplyTick = null;
 
     private final AbstractSupplyGetter<ProductionStatus, BlockPos, MCTownItem, MCHeldItem, MCRoom> getter = new AbstractSupplyGetter<>();
+    private boolean isFirstTick = true;
+    @SuppressWarnings("removal")
+    private TownInterface.DebugLogger logger = QT.JOB_LOGGER::debug;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -141,13 +148,14 @@ public class DeclarativeJob extends
                         return makeClaim(ownerUUID);
                     }
                     return null;
-                }, (x, i) -> {
-                    Integer ii = i.ingredientIndex();
-                    if (ii != null) {
-                        return Util.orNull(ingredientsRequiredAtStates.get(ii), Ingredients::toString);
-                    }
-                    return Util.orNull(toolsRequiredAtStates.get(i.toolIndex()), Ingredients::toString);
-                }, () -> location.baseRoom().toString(), workInterval, sound
+                },
+                (x, i) -> getUnmetNeed(
+                        ingredientsRequiredAtStates,
+                        ingredientsQtyRequiredAtStates,
+                        toolsRequiredAtStates,
+                        i
+                ),
+                () -> location.baseRoom().toString(), workInterval, sound
         );
         this.maxState = maxState;
         this.location = location;
@@ -156,6 +164,23 @@ public class DeclarativeJob extends
         this.logic = new JobLogic<>();
         this.workInterval = workInterval;
         this.recipe = buildRecipe(this);
+    }
+
+    private static @Nullable String getUnmetNeed(
+            ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Integer> qtyRequiredAtStates,
+            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates,
+            NeedsRegistrations.Need need
+    ) {
+        Integer ii = need.timesInserted();
+        if (ii != null) {
+            if (qtyRequiredAtStates.isEmpty()) {
+                return null;
+            }
+            int actual = NoMCNeeds.getActualIndex(ii, qtyRequiredAtStates);
+            return Util.orNull(ingredientsRequiredAtStates.get(actual + 1), Ingredients::toString);
+        }
+        return Util.orNull(toolsRequiredAtStates.get(need.toolIndex()), Ingredients::toString);
     }
 
     @Override
@@ -234,7 +259,13 @@ public class DeclarativeJob extends
     }
 
     @Override
-    public boolean shouldStandStill() {
+    public boolean shouldStandStill(
+            TownInterface town,
+            BlockPos position) {
+        // TODO: Remove this hack and use a special rule instead
+        if (DowntimeWork.matches(jobId) && isCloseToJobSite(position) &&!hasTargetOverrideChanged(town)) {
+            return true;
+        }
         return this.logic.hasWorkedRecently();
     }
 
@@ -290,6 +321,8 @@ public class DeclarativeJob extends
             LivingEntity entity,
             Direction facingPos
     ) {
+        this.logger = (p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a);
+
         WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
         AtomicReference<RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos>> rniot = new AtomicReference<>(
                 roomsNeedingIngredientsOrTools(
@@ -305,13 +338,45 @@ public class DeclarativeJob extends
                 p -> town.getWorkStatusHandle(ownerUUID).getJobBlockState(p),
                 State.fresh()
         );
-        PreTickHook.run(specialGlobalRules, location, heldItems, fn -> rniot.set(fn.apply(rniot.get())), bsFn);
-        specialRules.forEach((state, rules) -> PreTickHook.run(
-                rules,
+
+        boolean firstTick = this.isFirstTick;
+        if (this.isFirstTick) {
+            this.isFirstTick = false;
+        }
+
+        Supplier<ImmutableList<BlockPos>> otherVillagerPositions = () -> town.getVillagerHandle().entities().stream()
+                                                                             .filter(v -> !ownerUUID.equals(v.getUUID()))
+                                                                             .map(
+                                                                                     Entity::getOnPos)
+                                                                             .collect(ImmutableList.toImmutableList());
+        Supplier<BlockPos> randomWalkableTownPosition = () -> town.getRandomWanderTarget(entity.getOnPos());
+        UnsafeVillagerData villagerData = town.getVillagerHandle().getUnprotectedDataHandle(vme.getVUID());
+
+        PreTickHook.run(
+                specialGlobalRules,
+                town::getServerLevel,
                 location,
                 heldItems,
                 fn -> rniot.set(fn.apply(rniot.get())),
-                bsFn
+                bsFn,
+                firstTick,
+                entity.blockPosition(),
+                otherVillagerPositions,
+                randomWalkableTownPosition,
+                villagerData
+        );
+        specialRules.forEach((state, rules) -> PreTickHook.run(
+                rules,
+                town::getServerLevel,
+                location,
+                heldItems,
+                fn -> rniot.set(fn.apply(rniot.get())),
+                bsFn,
+                firstTick,
+                entity.blockPosition(),
+                otherVillagerPositions,
+                randomWalkableTownPosition,
+                villagerData
         ));
 
         this.roomsNeedingIngredientsOrTools = new RoomsNeedingVillagerInput<>(rniot.get().get());
@@ -568,12 +633,14 @@ public class DeclarativeJob extends
         return new JobLogic.JLWorld<>() {
             @Override
             public void changeJob(JobID id) {
+                UnsafeVillagerData data = town.getVillagerHandle().getUnprotectedDataHandle(entity.getVUID());
+                PreMaxTicksJobChangeHook.run(specialGlobalRules, data);
                 town.getVillagerHandle().changeJobForVillager(ownerUUID, id, false);
             }
 
             @Override
             public void changeToNextJob() {
-                town.getVillagerHandle().changeToNextJobForVillager(ownerUUID, getId());
+                town.changeJobForVisitorFromBoard(ownerUUID, getId());
             }
 
             @Override
@@ -586,7 +653,12 @@ public class DeclarativeJob extends
                             new EntityCurrentJobSite<>(room.room, false),
                             bp -> isValidWalkTarget(town, bp),
                             bp -> location.shouldInitializeWorkState().test(info(sl), bp),
-                            bp -> bp.relative(Compat.getRandomHorizontal(sl))
+                            bp -> {
+                                town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
+                                        "choosing to approach job block from random side"
+                                );
+                                return bp.relative(Compat.getRandomHorizontal(sl));
+                            }
                     );
                     for (WorkPosition<BlockPos> p : UtilClean.getOrDefault(spots, 0, ImmutableList.of())) {
                         work.setJobBlockState(p.jobBlock(), State.fresh().setWorkLeft(workRequiredAtFirstState));
@@ -630,9 +702,9 @@ public class DeclarativeJob extends
             public void registerUnmetNeeds(
                     ProductionStatus status,
                     @Nullable BlockPos workspot,
-                    boolean hasInserted
+                    int timesInserted
             ) {
-                world.registerUnmetNeeds(extra, workspot, hasInserted);
+                world.registerUnmetNeeds(extra, workspot, timesInserted);
             }
 
             @Override
@@ -641,8 +713,8 @@ public class DeclarativeJob extends
             }
 
             @Override
-            public boolean hasInsertedSupplies() {
-                return world.hasInserted(extra);
+            public int timesInserted() {
+                return world.timesInserted(extra);
             }
 
             @Override
@@ -803,7 +875,7 @@ public class DeclarativeJob extends
         Map<Integer, List<WorkPosition<BlockPos>>> b = new HashMap<>();
         Consumer<BlockPos> tryAdd = bp -> tryAddSpot(town, bp, b, is, isJobBlock);
 
-        jobSite.room().getSpaces().stream().flatMap(space -> InclusiveSpaces.getAllEnclosedPositions(space).stream())
+        jobSite.room().getSpaces().stream().flatMap(space -> InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY).stream())
                .forEach(v -> {
                    BlockPos pos = Positions.ToBlock(v, jobSite.room().yCoord);
                    tryAdd.accept(pos);
@@ -854,8 +926,6 @@ public class DeclarativeJob extends
         if (spot != null) {
             return spot;
         }
-
-        QT.JOB_LOGGER.trace("choosing to approach job block from random side");
         return getRandomAdjacent.apply(bp);
     }
 
@@ -967,6 +1037,18 @@ public class DeclarativeJob extends
             Predicate<BlockPos> isJobBlock,
             Function<BlockPos, BlockPos> getRandomAdjacent
     ) {
+        // Call the new pre-hook before any logic
+        AtomicReference<WithReason<BlockPos>> override = new AtomicReference<>(null);
+        UnsafeVillagerData data = town.getVillagerHandle().getUnprotectedDataHandle(VillagerUUID.from(ownerUUID));
+        ca.bradj.questown.jobs.declarative.PreFindJobSiteHook.run(
+                getGlobalSpecialRules(),
+                data,
+                override::set
+        );
+        if (override.get() != null && override.get().value() != null) {
+            return override.get();
+        }
+
         Map<Integer, SupplyItemStatus> statusItems = getSupplyItemStatus();
         return JobsClean.findJobSite(
                 maxState,
@@ -1105,5 +1187,13 @@ public class DeclarativeJob extends
 
     public String getTool(@Nullable Integer integer) {
         return Util.orNull(initialTools.get(integer), Ingredients::toString);
+    }
+
+    @Override
+    public void log(
+            String s,
+            Object... args
+    ) {
+        logger.log(s, args);
     }
 }

@@ -1,6 +1,5 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.*;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -10,6 +9,7 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -19,7 +19,6 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
@@ -82,18 +81,18 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
             return;
         }
         ResourceLocation tex = ServerJobsRegistry.getTexture(jobId, newStatus);
-        @Nullable Pair<String, String> text = ServerJobsRegistry.getStatusText(jobId, newStatus);
+        @NotNull ImmutableList<Component> text = ServerJobsRegistry.getStatusText(jobId, newStatus);
         if (newStatus instanceof ProductionStatus ps) {
             QuestownNetwork.CHANNEL.send(
                     PacketDistributor.PLAYER.with(() -> sp),
                     new SyncStatusArtMessage(jobId, ps, tex)
             );
-            if (text == null) {
+            if (text.isEmpty()) {
                 return;
             }
             QuestownNetwork.CHANNEL.send(
                     PacketDistributor.PLAYER.with(() -> sp),
-                    new SyncStatusTextMessage(jobId, ps, text.a(), text.b())
+                    new SyncStatusTextMessage(ps, new StatusPacket(jobId, text, tex))
             );
         }
 

@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.blacksmith.MapBackedWSC;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.TestWorldInteraction;
@@ -111,8 +110,8 @@ class JobLogicTest {
         }
 
         @Override
-        public boolean hasInsertedSupplies() {
-            return inserted;
+        public int timesInserted() {
+            return inserted ? 1 : 0;
         }
 
         @Override
@@ -124,8 +123,7 @@ class JobLogicTest {
         public void registerUnmetNeeds(
                 ProductionStatus status,
                 Position workspot,
-                boolean hasInserted
-                // TODO[Bugs]: Replace with number
+                int numInserted
         ) {
 
         }

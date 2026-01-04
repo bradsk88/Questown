@@ -3,6 +3,7 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.ModItemGroup;
@@ -10,8 +11,8 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.town.TownFlagBlockEntity;
-import ca.bradj.questown.town.rewards.AddBatchOfRandomQuestsForVisitorReward;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,12 +31,16 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.BlockHitResult;
@@ -55,6 +60,7 @@ public class TownFlagBlock extends BaseEntityBlock {
     public static final String ITEM_ID = "flag_base";
     public static final Item.Properties ITEM_PROPS = new Item.Properties().
             tab(ModItemGroup.QUESTOWN_GROUP);
+    public static final Property<Boolean> SLEEPING = BooleanProperty.create("sleeping");
     private Map<Player, Long> informedPlayers = new HashMap<>();
 
     public TownFlagBlock() {
@@ -63,6 +69,11 @@ public class TownFlagBlock extends BaseEntityBlock {
                                          .strength(10.0F, 1200.0F)
                                          .noOcclusion()
         );
+        this.registerDefaultState(this.stateDefinition.any().setValue(SLEEPING, false));
+    }
+
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
+        p_51385_.add(SLEEPING);
     }
 
     public static String itemId(WallType wallType) {
@@ -144,15 +155,20 @@ public class TownFlagBlock extends BaseEntityBlock {
 
     @Nullable
     private static InteractionResult convertItemInHand(
-            Level level,
-            Player player,
+            ServerLevel level,
+            ServerPlayer player,
             InteractionHand hand,
             TownFlagBlockEntity entity
     ) {
         ItemStack itemInHand = player.getItemInHand(hand);
 
+        if (itemInHand.getItem().equals(Items.DIRT)) {
+            entity.giveBonusFood(player);
+            return InteractionResult.CONSUME;
+        }
+
         if (itemInHand.getItem().equals(Items.DIAMOND)) {
-            for (UUID uuid : entity.getQuestHandle().getVillagersWithQuests()) {
+            for (VillagerUUID uuid : entity.getQuestHandle().getVillagersWithQuests()) {
                 entity.addImmediateReward(
                         new AddRandomUpgradeQuest(entity, uuid)
                 );
@@ -163,7 +179,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (itemInHand.getItem().equals(Items.GOLD_BLOCK)) {
             UUID randomVillager = entity.getRandomVillager();
             entity.addImmediateReward(
-                    new AddBatchOfRandomQuestsForVisitorReward(entity, randomVillager)
+                    new AddBatchOfQuestsForVisitorReward(entity, randomVillager)
             );
             return InteractionResult.sidedSuccess(false);
         }
@@ -200,12 +216,9 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         if (Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES).test(itemInHand)) {
             converted = ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance();
-            player.giveExperiencePoints(100);
-            // TODO: Advancement
         }
         if (Ingredient.of(ItemTags.DOORS).test(itemInHand)) {
             converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
-            // TODO: Advancement
         }
         if (itemInHand.getItem().equals(ItemsInit.TOWN_DOOR.get())) {
             converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
@@ -221,7 +234,6 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         if (Ingredient.of(Tags.Items.FENCE_GATES).test(itemInHand)) {
             converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();
-            // TODO: Advancement
         }
         if (itemInHand.getItem().equals(ItemsInit.TOWN_FENCE_GATE.get())) {
             converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();
@@ -360,7 +372,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             InteractionHand hand,
             BlockHitResult p_60508_
     ) {
-        if (level.isClientSide()) {
+        if (!(level instanceof ServerLevel sl)) {
             return InteractionResult.sidedSuccess(true);
         }
 
@@ -370,7 +382,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         TownFlagBlockEntity entity = oEntity.get();
 
-        InteractionResult sidedSuccess = convertItemInHand(level, player, hand, entity);
+        InteractionResult sidedSuccess = convertItemInHand(sl, (ServerPlayer) player, hand, entity);
         if (sidedSuccess != null) {
             return sidedSuccess;
         }

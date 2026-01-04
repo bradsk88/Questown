@@ -4,7 +4,6 @@ import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import java.util.Collection;
 import java.util.Map;
 
 public class TownNeedsMap<STATUS> {

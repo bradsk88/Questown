@@ -1,7 +1,8 @@
 package ca.bradj.questown.jobs.special;
 
-import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
+import ca.bradj.questown.integration.jobs.AfterExtractEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
+import org.jetbrains.annotations.Nullable;
 
 public class FillHungerSpecialRule extends
         JobPhaseModifier {
@@ -13,10 +14,10 @@ public class FillHungerSpecialRule extends
     }
 
     @Override
-    public <X> X beforeExtract(
-            X context,
-            BeforeExtractEvent<X> event
+    public <CONTEXT> @Nullable CONTEXT afterExtract(
+            CONTEXT ctxInput,
+            AfterExtractEvent<CONTEXT> event
     ) {
-        return event.hungerUpdater().apply(context, percent);
+        return event.hungerUpdater().apply(ctxInput, percent);
     }
 }

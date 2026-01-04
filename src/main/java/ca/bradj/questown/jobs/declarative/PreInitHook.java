@@ -23,10 +23,18 @@ public class PreInitHook {
             SupplyRoomCheckReplacer supplyRoomCheckReplacer
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
-        BeforeInitEvent bxEvent = new BeforeInitEvent(level, ingrReplacer, toolReplacer, jobBlockCheckReplacer, supplyRoomCheckReplacer);
-        processMulti(false, appliers, (o, a) -> {
-            a.beforeInit(bxEvent);
-            return true;
-        });
+        BeforeInitEvent bxEvent = new BeforeInitEvent(
+                level,
+                ingrReplacer,
+                toolReplacer,
+                jobBlockCheckReplacer,
+                supplyRoomCheckReplacer
+        );
+        processMulti(
+                false, appliers, (o, a) -> {
+                    a.beforeInit(bxEvent);
+                    return true;
+                }
+        );
     }
 }

@@ -1,0 +1,115 @@
+TODO:
+- After "DinerRawFood" gives up, there should be a buffer that
+  prevents them from going back to the diner chain of jobs.
+  - Currently, hungry villagers just get stuck wanting to eat
+    - They should be able to work (slowly)
+- Show warning on the main villager screen when starving
+
+Play Testing Nov 18
+- Farmer will never relax because he has "always" rule
+- People don't start relaxing at night
+- Miner possibly not producing coal?
+- Only first villager sleeps?
+  - Maybe its because bedroom has multiple spaces?
+- Duplicate villager detected?
+- Macaw stairs not pathfindable
+- Extra BOPs being earned for some reaosne
+
+Play Testing Nov 16
+- Probably good to have V+1 beds (so player can sleep) via quest progression
+- Add work request doesn't avoid duplicats
+- Campfire doesn't get detected if above or below level of flag
+- Cancelling the initial batch of quests puts the game into a soft lock
+- If job requires villager-crafted item, there should be some way for player to know this
+
+COOK:
+- cook_fuel only runs if the player has requested cooked_cod
+  - It should
+
+
+
+TODO:
+- Level Up Quest (to make "job change" quest even possible)
+- Job Change Quest
+
+Downtime:
+- Villagers should register "walkable positions" randomly as they work
+  - During downtime, this should be the seed for random walk targets
+    - This will allow villagers to relax outdoors
+      - Maybe prefer rooms if its raining
+- Poses
+  - Should villagers sit, crouch, or lie when they are relaxing?
+- Remove unnecessary 9 statuses. We only need one.
+
+Fundamentals
+- Questown (a.k.a. QTEngine) is the Engine, and has:
+  - Commands
+- Vanilla (a.k.a Questown) has:
+  - Onboarding
+  - Progression
+  - Leveling
+  - World Town Spawning
+
+Onboarding:
+- Do a job change (untested)
+- Build a job room (wip)
+- Achievement: Outfitters
+  - Have your villagers generate: food, armor, and a sword one time
+- Achivemenet: Business Partners
+  - Using villagers only: Generate an item and use that item to create a second thing
+- Achievement: Supply Chain
+  - Parent: "Business Partners"
+  - Use that second item to create a third thing
+- Achievement: Network
+  - Parent: "Business Partners"
+  - Using villagers only: Generate an item using two or more items that were produced by other villagers
+
+# Long Game Ideas:
+> What does the player "get" from QT that they can use in MC
+
+### Arena ###
+- Player inserts some number of Blocks of Progress to unlock different levels of "battles"
+- Maybe it teleports you to a new dimension (for cheat avoidance)
+- Spawn some pre-configured set of enemies depending on the level
+- Win a treasure with some amount of loot depending on the level
+
+Why: Allows players to get consistent access to dungeon loot.
+
+### Blacksmith, Armorer, Food Producers ###
+- Standard Jobs
+
+Why: Creates a "supply chain" to keep player adventuring
+
+### Enchanter ###
+- Standard Job
+
+Why: Creates a non-XP method for enchanting weapons
+
+### Mapped Gatherer ###
+- Standard Job
+
+Why: Creates a method for finding resources that are not nearby
+
+### Mysterious Stranger ###
+- Arrives every N days
+- Has three random items for trade (from "dungeon" loot table)
+- Give them a BOP to get the item(s)
+
+Why: Allows players to get consistent access to dungeon loot.
+
+### Trader ###
+- Spawns in Tavern
+- Has three items up for trade, all craftable
+  - Special files define the min/max range for item quantity
+    - By default: range is [1]
+
+Why: Allows players to get access to resources
+     (Beyond their own village's abilities)
+
+Ideas:
+- "New Town Checklist" - supplement or replacement for the journal
+  entries. Helps the player understand what the basic requires are for
+  a village.
+
+Later:
+- Rebooting server causes "morning villager" reward to be applied. It should still wait for morning.

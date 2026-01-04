@@ -18,9 +18,11 @@ public abstract class Reward {
         this.applied = true;
     }
 
+    public abstract String toNiceString();
+
     void claim() {
         if (this.applied) {
-            QT.LOGGER.error("Refusing to apply reward more than once: {}", this.getName());
+            QT.LOGGER.error("Refusing to apply reward more than once: {}", this.toNiceString());
             return;
         }
         this.getApplier().apply();
@@ -34,5 +36,7 @@ public abstract class Reward {
     protected abstract String getName();
 
     protected abstract @NotNull RewardApplier getApplier();
+
+    public abstract boolean addsQuestsWhenApplied();
 
 }

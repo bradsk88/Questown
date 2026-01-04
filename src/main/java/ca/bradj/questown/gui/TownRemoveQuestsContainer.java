@@ -4,7 +4,6 @@ import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.OpenQuestsMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.RemoveQuestFromUIMessage;
-import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;

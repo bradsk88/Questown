@@ -238,8 +238,7 @@ public class MCTownStateWorldInteraction extends
                 town, rules, inputs.level(), (ctx, i, s) -> {
                     Inputs in = new Inputs(ctx, inputs.level(), inputs.vUUID());
                     return tryGiveItems(in, ImmutableList.of(i), position);
-                }, (ctx, up) -> ctx.withHungerFilledBy(inputs.vUUID, up), position, insertedItem, () -> {
-                }
+                }, position, insertedItem, () -> {}
         );
     }
 
@@ -261,7 +260,8 @@ public class MCTownStateWorldInteraction extends
                     CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
                     itemData.forEach(t::putInt);
                     return ctx;
-                }
+                },
+                (in, up) -> in
         );
     }
 
@@ -345,9 +345,9 @@ public class MCTownStateWorldInteraction extends
     }
 
     @Override
-    public boolean hasInserted(Inputs inputs) {
+    public int timesInserted(Inputs inputs) {
         // TODO[Warp]: Implement
-        return false;
+        return 0;
     }
 
     @Override

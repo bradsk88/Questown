@@ -1,14 +1,19 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.network.*;
 import ca.bradj.questown.gui.*;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.econ.NoMCEconomics;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -17,6 +22,7 @@ import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -27,6 +33,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.function.TriFunction;
@@ -43,7 +50,7 @@ public class TownVillagerUIs {
     public static void showMultiStatusUI(
             ServerPlayer player,
             FlagTabsEmbedding.FlagInfo townFlagBasePos,
-            Collection<LivingEntity> entities,
+            Collection<? extends LivingEntity> entities,
             Supplier<Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>>> questsSrc,
             int bopCount
     ) {
@@ -93,7 +100,7 @@ public class TownVillagerUIs {
     public static void showItemJobsUI(
             ServerPlayer sender,
             TownFlagBlockEntity unsafeTown,
-            Collection<LivingEntity> entities,
+            Collection<? extends LivingEntity> entities,
             Ingredient itemToShowJobsFor
     ) {
         Map<JobID, List<UUID>> vb = new HashMap<>();
@@ -115,13 +122,76 @@ public class TownVillagerUIs {
                 itemToShowJobsFor
         );
         for (JobID job : jubz.keySet()) {
-            Supplier<Work> w = Works.get(job);
-            Work gotWork = w.get();
-            Job<?, ?, ?> j = gotWork.jobFunc.apply(UUID.randomUUID());
+            Job<?, ?, ?> j = ServerJobsRegistry.getUninitializedJob(job, VillagerUUID.random()).getJob();
             if (!(j instanceof DeclarativeJob dj)) {
                 continue;
             }
 
+            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafeTown.getTownData(), job);
+            ImmutableList<Ingredient> roomRecipe = getRoomIngredients(dj, rMap);
+
+            b.add(new UIJob(
+                    j.getId(),
+                    ImmutableList.copyOf(vb.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())),
+                    ImmutableList.copyOf(dj.initialIngredients.values()),
+                    ImmutableList.copyOf(dj.initialTools.values()),
+                    dj.location().baseRoom(),
+                    roomRecipe,
+                    results.stream()
+                           .map(v -> v.get().getDefaultInstance())
+                           .collect(ImmutableList.toImmutableList())
+            ));
+        }
+        Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build(), unsafeTown.getTownFlagBasePos());
+        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
+    }
+
+    private static @NotNull ImmutableList<Ingredient> getRoomIngredients(
+            DeclarativeJob dj,
+            ImmutableMap<ResourceLocation, RoomRecipe> rMap
+    ) {
+        RoomRecipe r = rMap.get(dj.location().baseRoom());
+        ImmutableList<Ingredient> roomRecipe;
+        @Nullable ItemStack roomBlock = RoomBlock.getRoomBlock(dj.location().baseRoom());
+        if (roomBlock != null) {
+            roomRecipe = ImmutableList.of(Ingredient.of(roomBlock));
+        } else {
+            roomRecipe = r == null ? ImmutableList.of() : ImmutableList.copyOf(r.getIngredients());
+        }
+        return roomRecipe;
+    }
+
+    public static void showJobsWithSameRootUI(
+            ServerPlayer sender,
+            @NotNull TownFlagBlockEntity unsafe,
+            Collection<? extends LivingEntity> entities,
+            JobID childJob
+    ) {
+        Map<JobID, List<UUID>> vb = new HashMap<>();
+        for (LivingEntity entity : entities) {
+            if (!(entity instanceof VisitorMobEntity vme)) {
+                continue;
+            }
+            UtilClean.addOrInitializeList(vb, vme.getJobId(), vme.getUUID());
+        }
+
+        ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
+        SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
+        sender.getLevel().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
+        ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
+
+        ImmutableList<JobID> jubz = ServerJobsRegistry.getAllJobs()
+                                                      .stream()
+                                                      .filter(v -> v.sameRoot(childJob))
+                                                      .collect(ImmutableList.toImmutableList());
+        ImmutableList.Builder<UIJob> b = ImmutableList.builder();
+        for (JobID job : jubz) {
+            Job<?, ?, ?> j = ServerJobsRegistry.getUninitializedJob(job, VillagerUUID.random()).getJob();
+            if (!(j instanceof DeclarativeJob dj)) {
+                continue;
+            }
+
+            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafe.getTownData(), job);
             RoomRecipe r = rMap.get(dj.location().baseRoom());
             b.add(new UIJob(
                     j.getId(),
@@ -129,25 +199,29 @@ public class TownVillagerUIs {
                     ImmutableList.copyOf(dj.initialIngredients.values()),
                     ImmutableList.copyOf(dj.initialTools.values()),
                     dj.location().baseRoom(),
-                    r == null ? ImmutableList.of() : ImmutableList.copyOf(r.getIngredients()),
-                    ImmutableList.copyOf(gotWork.results.apply(unsafeTown.getTownData()).stream()
-                                                        .map(v -> v.get().getDefaultInstance()).toList())
+                    getRoomIngredients(dj, rMap),
+                    results.stream()
+                           .map(v -> v.get().getDefaultInstance())
+                           .collect(ImmutableList.toImmutableList())
             ));
         }
-        Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build(), unsafeTown.getTownFlagBasePos());
+
+        Object msg = new ShowItemJobsMessage(Ingredient.of(ItemStack.EMPTY), b.build(), unsafe.getTownFlagBasePos());
         QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
     }
 
     public static void showUI(
             ServerPlayer sender,
-            Collection<LivingEntity> entities,
+            Collection<? extends LivingEntity> entities,
             String type,
             UUID villagerId,
             Map<UUID, ? extends Set<JobID>> unlockedJobs,
             Set<JobID> unlockableJobs
     ) {
-        Optional<LivingEntity> f = entities.stream().filter(VisitorMobEntity.class::isInstance)
-                                           .filter(v -> villagerId.equals(v.getUUID())).findFirst();
+        Optional<VisitorMobEntity> f = entities.stream()
+                                               .filter(VisitorMobEntity.class::isInstance)
+                                               .map(v -> (VisitorMobEntity) v)
+                                               .filter(v -> villagerId.equals(v.getUUID())).findFirst();
         if (f.isEmpty()) {
             QT.FLAG_LOGGER.error("No villagers with ID {} while opening UI", villagerId);
             return;
@@ -155,7 +229,7 @@ public class TownVillagerUIs {
 
         syncWorkToClient(sender);
 
-        VisitorMobEntity e = (VisitorMobEntity) f.get();
+        VisitorMobEntity e = f.get();
 
         TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level, e.getFlagPos());
 
@@ -178,7 +252,8 @@ public class TownVillagerUIs {
                 flag::getEconomicsHandle,
                 unlockedJobs,
                 unlockableJobs,
-                villagerId
+                villagerId,
+                flag.getVillagerHandle().isJobChangePending(e.getVUID())
         );
         runnable.accept(d);
     }
@@ -200,7 +275,9 @@ public class TownVillagerUIs {
             VillagerStatsData stats, VillagerEconomicsData econ, Supplier<NoMCEconomics> econHandle,
             Map<UUID, ? extends Set<JobID>> unlockedJobs,
             Set<JobID> unlockableJobs,
-            UUID villagerId) {
+            UUID villagerId,
+            boolean jobChangePending
+    ) {
     }
 
     private static ImmutableMap<String, Consumer<ShowerData>> menuShow;
@@ -224,7 +301,7 @@ public class TownVillagerUIs {
                             );
                             x.connectToServer(e, d.sender());
                             return x;
-                        }, d.quests(), d.entity(), d.stats()
+                        }, d.quests(), d.entity(), d.stats(), d.jobChangePending()
                 )
         );
         b.put(
@@ -241,7 +318,8 @@ public class TownVillagerUIs {
                             ),
                             d.quests(),
                             e,
-                            d.stats()
+                            d.stats(),
+                            d.jobChangePending()
                     );
                 }
         );
@@ -259,7 +337,8 @@ public class TownVillagerUIs {
                             ),
                             d.quests(),
                             e,
-                            d.stats()
+                            d.stats(),
+                            d.jobChangePending()
                     );
                 }
         );
@@ -283,24 +362,22 @@ public class TownVillagerUIs {
                 }
         );
         b.put(
-                OpenVillagerMenuMessage.CHANGE_ROOT, (ShowerData d) -> {
-                    openMenu(
-                            d.sender(), (windowId, inv, p) -> new JobChangeConfirmMenu(
-                                    windowId,
-                                    new SimpleContainer(1) {
-                                        @Override
-                                        public int getMaxStackSize() {
-                                            return 1;
-                                        }
-                                    },
-                                    d.sender.getInventory(),
-                                    d.entity.getUUID(),
-                                    d.entity.getJobId(),
-                                    d.entity().getFlagPos(),
-                                    d.entity.isJobChangePending()
-                            ), d.quests(), d.entity(), d.stats()
-                    );
-                }
+                OpenVillagerMenuMessage.CHANGE_ROOT, (ShowerData d) -> openMenu(
+                        d.sender(), (windowId, inv, p) -> new JobChangeConfirmMenu(
+                                windowId,
+                                new SimpleContainer(1) {
+                                    @Override
+                                    public int getMaxStackSize() {
+                                        return 1;
+                                    }
+                                },
+                                d.sender.getInventory(),
+                                d.entity.getUUID(),
+                                d.entity.getJobId(),
+                                d.entity().getFlagPos(),
+                                d.jobChangePending()
+                        ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                )
         );
         b.put(
                 OpenVillagerMenuMessage.ECONOMICS, (ShowerData d) -> {
@@ -317,7 +394,7 @@ public class TownVillagerUIs {
                                     d.entity().getFlagPos(),
                                     d.econ(),
                                     d.entity().hasBlockOfProgress()
-                            ), d.quests(), d.entity(), d.stats()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
                     );
                 }
         );
@@ -334,7 +411,7 @@ public class TownVillagerUIs {
                                     windowId,
                                     d.entity().getUUID(),
                                     d.entity().getFlagPos()
-                            ), d.quests(), d.entity(), d.stats()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
                     );
                 }
         );
@@ -354,7 +431,8 @@ public class TownVillagerUIs {
             TriFunction<Integer, Inventory, Player, AbstractContainerMenu> shower,
             List<UIQuest> quests,
             VisitorMobEntity e,
-            VillagerStatsData stats
+            VillagerStatsData stats,
+            boolean isJobChangePending
     ) {
         Compat.openScreen(
                 sender, new MenuProvider() {
@@ -380,7 +458,7 @@ public class TownVillagerUIs {
                         stats,
                         new VillagerEconomicsData(ImmutableList.of()),
                         e.hasBlockOfProgress(),
-                        e.isJobChangePending()
+                        isJobChangePending
                 )
         );
     }

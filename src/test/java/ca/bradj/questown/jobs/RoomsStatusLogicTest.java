@@ -20,8 +20,7 @@ class RoomsStatusLogicTest {
     @Test
     void compute_shouldReturnRoomWithState1_IfWorkRemains_AndNoToolsRequired() {
         Position ovenPos = new Position(0, 0);
-        Collection<IRoomRecipeMatch<String, String, Position, String>> jobRooms = ImmutableList.of(new IRoomRecipeMatch<>() {
-            @Override
+        Collection<IRoomRecipeMatch<String, String, Position, String>> jobRooms = ImmutableList.of(new IRoomRecipeMatch<String, String, Position, String>() {
             public String getRecipeID() {
                 return "bakery";
             }

@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.AddWorkFromUIMessage;
@@ -16,6 +17,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
@@ -26,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static ca.bradj.questown.core.network.AddWorkFromUIMessage.Action.CONFIRMED;
 import static ca.bradj.questown.core.network.AddWorkFromUIMessage.Action.REJECTED;
@@ -36,8 +39,9 @@ public class ItemJobsScreen extends Screen {
     public static final int EXTRA_HEIGHT = 56;
     private final List<UIJob> jobs;
     private final PagedCardScreen<UIJob> delegate;
-    private final Ingredient requestedItem;
+    private @NotNull Ingredient requestedItem;
     private final BlockPos flagPos;
+    private Button addButton;
 
     public ItemJobsScreen(
             Ingredient requestedItem,
@@ -63,8 +67,26 @@ public class ItemJobsScreen extends Screen {
     }
 
     private void send() {
-        AddWorkFromUIMessage m = new AddWorkFromUIMessage(requestedItem, flagPos, CONFIRMED);
+        ItemStack first = getFirst();
+        if (first.isEmpty()) {
+            QT.GUI_LOGGER.error("Cannot add work request for job with empty result");
+            return;
+        }
+        AddWorkFromUIMessage m = new AddWorkFromUIMessage(Ingredient.of(first), flagPos, CONFIRMED);
         QuestownNetwork.CHANNEL.sendToServer(m);
+    }
+
+    private ItemStack getFirst() {
+        UIJob j = jobs.get(delegate.getCurrentPageIndex());
+        ImmutableList<ItemStack> r = j.result();
+        if (r.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack first = r.get(0);
+        if (first.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        return first;
     }
 
     @Override
@@ -86,7 +108,7 @@ public class ItemJobsScreen extends Screen {
         int pageTopY = ((this.height - delegate.backgroundHeight)) / 2;
         int pageLeftX = ((this.width - backgroundWidth) / 2);
         int buttonHeight = (2 * font.lineHeight) + 2;
-        this.addRenderableWidget(
+        this.addButton = this.addRenderableWidget(
                 new Button(
                         pageLeftX + BIG_PADDING,
                         pageTopY + delegate.backgroundHeight - buttonHeight - BIG_PADDING,
@@ -106,6 +128,7 @@ public class ItemJobsScreen extends Screen {
             float partialTicks
     ) {
         this.renderBackground(stack);
+        this.addButton.visible = !getFirst().isEmpty();
         this.delegate.renderBg(stack, partialTicks, mouseX, mouseY);
         super.render(stack, mouseX, mouseY, partialTicks);
 
@@ -129,7 +152,8 @@ public class ItemJobsScreen extends Screen {
             int p_94697_
     ) {
         @NotNull ImmutableRect2i ta = getTitleArea();
-        if (UtilClean.isCoordInBox(x, y, ta.getX(), ta.getY(), ta.getWidth(), ta.getHeight())) {
+        Supplier<Boolean> in = () -> UtilClean.isCoordInBox(x, y, ta.getX(), ta.getY(), ta.getWidth(), ta.getHeight());
+        if (in.get() && !requestedItem.isEmpty()) {
             AddWorkFromUIMessage m = new AddWorkFromUIMessage(requestedItem, flagPos, REJECTED);
             QuestownNetwork.CHANNEL.sendToServer(m);
         }
@@ -258,6 +282,9 @@ public class ItemJobsScreen extends Screen {
 
     private List<Ingredient> putRequestedItemFirst(List<Ingredient> v) {
         if (Ingredients.isTag(requestedItem)) {
+            return v;
+        }
+        if (requestedItem.isEmpty()) {
             return v;
         }
         ImmutableList.Builder<Ingredient> b = ImmutableList.builder();

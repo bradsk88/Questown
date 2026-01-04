@@ -15,10 +15,9 @@ import java.util.stream.Stream;
 public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, REWARD extends Reward> {
 
     private final List<QUEST> quests = new ArrayList<>();
+    private final Quest.QuestFactory<KEY, ROOM, QUEST> questFactory;
     @NotNull
     protected REWARD reward;
-
-    private final Quest.QuestFactory<KEY, ROOM, QUEST> questFactory;
 
     // TODO: Support multiple?
     private ChangeListener<QUEST> changeListener = new ChangeListener<>() {
@@ -51,6 +50,14 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.batchUUID = batchUUID;
     }
 
+    public static <R extends Room, Q extends Quest<?, R>> Stream<Q> stream(QuestBatch<?, R, Q, ?> batch) {
+        return batch.quests.stream();
+    }
+
+    private static @Nullable UUID dep(@Nullable VillagerUUID ownerId) {
+        return VillagerUUID.get(ownerId);
+    }
+
     public void addChangeListener(ChangeListener<QUEST> changeListener) {
         this.changeListener = changeListener;
     }
@@ -63,7 +70,12 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
             @Nullable VillagerUUID ownerId,
             KEY id
     ) {
-        this.quests.add(this.questFactory.newQuest(VillagerUUID.get(ownerId), id));
+        this.quests.add(this.questFactory.newQuest(dep(ownerId), id));
+    }
+    public void addJobChangeQuest(
+            KEY id
+    ) {
+        this.quests.add(this.questFactory.newJobQuest(id));
     }
 
     public void addNewUpgradeQuest(
@@ -71,7 +83,7 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
             KEY fromID,
             KEY toID
     ) {
-        this.quests.add(this.questFactory.newUpgradeQuest(VillagerUUID.get(ownerId), fromID, toID));
+        this.quests.add(this.questFactory.newUpgradeQuest(dep(ownerId), fromID, toID));
     }
 
     public void addItemQuest(
@@ -79,7 +91,7 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
             KEY itemId,
             int count
     ) {
-        this.quests.add(this.questFactory.newItemQuest(VillagerUUID.get(ownerId), itemId, count));
+        this.quests.add(this.questFactory.newItemQuest(dep(ownerId), itemId, count));
     }
 
     public ImmutableList<QUEST> getAll() {
@@ -88,7 +100,7 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
 
     void initialize(
             @Nullable UUID batchUUID,
-            ImmutableList<QUEST> aqs,
+            Collection<QUEST> aqs,
             REWARD reward
     ) {
         if (!this.quests.isEmpty()) {
@@ -159,12 +171,12 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         return true;
     }
 
-    public static <R extends Room, Q extends Quest<?, R>> Stream<Q> stream(QuestBatch<?, R, Q, ?> batch) {
-        return batch.quests.stream();
-    }
-
     public REWARD getReward() {
         return reward;
+    }
+
+    public void setReward(REWARD reward) {
+        this.reward = reward;
     }
 
     public int size() {
@@ -248,17 +260,13 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         }
     }
 
-    public void setReward(REWARD reward) {
-        this.reward = reward;
-    }
-
     public UUID getBatchUUID() {
         return batchUUID;
     }
 
     public @Nullable String getCompletionMessage() {
         return null;
-    };
+    }
 
     public interface ChangeListener<QUEST extends Quest<?, ?>> {
         void questCompleted(QUEST quest);

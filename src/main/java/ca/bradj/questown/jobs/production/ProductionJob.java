@@ -1,12 +1,17 @@
 package ca.bradj.questown.jobs.production;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.commands.DebugLogArgument;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
+import ca.bradj.questown.integration.RandomShortLivedWorkSpot;
+import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
 import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
@@ -90,7 +95,7 @@ public abstract class ProductionJob<
     ) {
         // Don't recompute jobsite if we already have a target.
         // But DO retry every once in a while to account for "stuck villager" bugs
-        if (this.jobSite == null || Compat.nextInt(town.getServerLevel(), 200) == 0) {
+        if (shouldFindJobSite(town)) {
             ServerLevel sl = town.getServerLevel();
             if (sl == null) {
                 return null;
@@ -113,6 +118,17 @@ public abstract class ProductionJob<
             }
         }
         return jobSite;
+    }
+
+    private boolean shouldFindJobSite(TownInterface town) {
+        if (this.jobSite == null) return true;
+        if (Compat.nextRandomInt(town.getServerLevel(), 200) == 0) return true;
+        return hasTargetOverrideChanged(town);
+    }
+
+    protected final boolean hasTargetOverrideChanged(TownInterface town) {
+        UnsafeVillagerData data = town.getVillagerHandle().getUnprotectedDataHandle(VillagerUUID.from(ownerUUID));
+        return (RandomShortLivedWorkSpot.hasTargetChanged(data, this.jobSite));
     }
 
     protected abstract boolean isJobBlock(
@@ -143,6 +159,15 @@ public abstract class ProductionJob<
 
     protected void clearJobSite() {
         this.jobSite = null;
+    }
+
+    protected final boolean isCloseToJobSite(
+            BlockPos entityPos
+    ) {
+        if (this.jobSite == null) {
+            return false;
+        }
+        return isCloseTo(entityPos, this.jobSite);
     }
 
     public boolean isDropping() {
@@ -274,7 +299,7 @@ public abstract class ProductionJob<
             return false;
         }
         if (this.dropping) {
-            QT.JOB_LOGGER.debug(marker, "Trying to drop too quickly");
+            QT.JOB_LOGGER.warn("Trying to drop too quickly");
         }
         this.dropping = Jobs.tryDropLoot(this, entityPos, successTarget);
         if (this.dropping) {
@@ -332,13 +357,8 @@ public abstract class ProductionJob<
             STATUS status,
             @NotNull ServerLevel sl
     ) {
-        // TODO: Allow modders to short-circuit this and set another target (like PreStateChangeHook)
-        //  if (target = BeforeTargetSelection.run(...)) {
-        //    return target;
-        if (status.isGoingToJobsite()) {
-            BlockPos jobSite1 = getJobSite(town);
-            this.setLookTarget(jobSite1);
-            return jobSite1;
+        if (shouldRefreshJobSite(status)) {
+            return getJobSite(town);
         }
 
         if (status.isWorkingOnProduction() || status.isWaitingForTimers()) {
@@ -347,7 +367,7 @@ public abstract class ProductionJob<
                 this.setLookTarget(productionSpot.jobBlock());
                 return productionSpot.entityFeetPos();
             }
-            QT.JOB_LOGGER.debug("Production spot was null somehow");
+            town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log("Production spot was null somehow");
             return null;
         }
 
@@ -370,6 +390,12 @@ public abstract class ProductionJob<
         }
 
         return null;
+    }
+
+    private boolean shouldRefreshJobSite(STATUS status) {
+        if (status.isGoingToJobsite()) return true;
+        if (status.isDroppingLoot()) return false;
+        return specialGlobalRules.contains(SpecialRules.ALWAYS_POPULATE_JOBSITE);
     }
 
     protected @Nullable ContainerTarget<MCContainer, MCTownItem> getDropTargetForLoot(
@@ -465,7 +491,9 @@ public abstract class ProductionJob<
             this.suppliesTarget = st;
         }
         if (this.suppliesTarget != null) {
-            QT.JOB_LOGGER.trace(marker, "Located supplies at {}", this.suppliesTarget.getPosition());
+            town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
+                    "Located supplies at {}", this.suppliesTarget.getPosition()
+            );
         }
     }
 
@@ -629,6 +657,9 @@ public abstract class ProductionJob<
 
     @Override
     public boolean canStopWorkingAtAnyTime() {
+        if (BOPDepositorWork.matches(getId())) {
+            return false;
+        }
         STATUS status = getStatus();
         ImmutableList<Supplier<Boolean>> importantStauses = ImmutableList.of(
                 status::isExtractingProduct,

@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.town.entity.*;
 import ca.bradj.questown.town.quests.MCMorningRewards;
 import ca.bradj.questown.town.quests.MCQuestBatches;
 import net.minecraft.nbt.CompoundTag;
@@ -37,4 +38,12 @@ public interface TownFlagInitialization {
             CompoundTag tag,
             TownFlagBlockEntity t
     );
+
+    CompoundTag serializeBonusGiven();
+
+    boolean initEconomics(CompoundTag tag);
+
+    void initEconomicsForNewFlag();
+
+    CompoundTag serializeEconomics();
 }

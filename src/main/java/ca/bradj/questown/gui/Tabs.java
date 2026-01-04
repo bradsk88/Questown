@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
@@ -30,10 +31,7 @@ public class Tabs {
         int tabTopY = bgY - this.unTab.getHeight();
         for (int i = 0; i < tabs.size(); i++) {
             int tabLeftX = bgX + (unTab.getWidth() * i);
-            int tabRightX = tabLeftX + tab.getWidth();
-            int tabBotY = tabTopY + unTab.getHeight();
-            // TODO: Use UtilClean
-            if (mouseX > tabLeftX && mouseX < tabRightX && mouseY > tabTopY && mouseY < tabBotY) {
+            if (UtilClean.isCoordInBox(mouseX, mouseY, tabLeftX, tabTopY, tab.getWidth(), unTab.getHeight())) {
                 renderFn.accept(tabs.get(i).titleKey());
                 return true;
             }
@@ -58,7 +56,7 @@ public class Tabs {
         }
     }
 
-    public void mouseClicked(
+    public boolean mouseClicked(
             int bgX,
             int bgY,
             double mouseX,
@@ -67,13 +65,12 @@ public class Tabs {
         int tabsY = bgY - this.unTab.getHeight() + Y_OFFSET;
         for (int i = 0; i < tabs.size(); i++) {
             int tabLeftX = bgX + (unTab.getWidth() * i) + X_OFFSET;
-            int tabRightX = tabLeftX + tab.getWidth();
-            // TODO: Use UtilClean
-            if (mouseX > tabLeftX && mouseX < tabRightX && mouseY > tabsY && mouseY < tabsY + unTab.getHeight()) {
+            if (UtilClean.isCoordInBox(mouseX, mouseY, tabLeftX, tabsY, tab.getWidth(), unTab.getHeight())) {
                 tabs.get(i).onClick().run();
-                return;
+                return true;
             }
         }
+        return false;
 
     }
 }

@@ -7,7 +7,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Villagers usually need ingredients or tools to complete their tasks.$(br2)If they don't have what they need, they will leave town to gather supplies.$(br2)You can help them by providing the necessary items in the store room."
+      "text": "Villagers usually need ingredients or tools to complete their tasks.$(br2)If they don't have what they need, they will stand around doing nothing.$(br2)You can help them by providing the necessary items in the store room."
     },
     {
       "type": "patchouli:image",

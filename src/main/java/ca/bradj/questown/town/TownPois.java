@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+// TODO: Clarify the purpose of "POIs"
 public class TownPois {
 
     private final TownFlagSubBlocks subBlocks;
@@ -67,15 +68,22 @@ public class TownPois {
         );
     }
 
-    public <R extends Room, P> P getWanderTarget(
+    public <R extends Room, P> @Nullable P getWanderTarget(
             ServerLevel level,
             Collection<R> all,
             Filter<R> filter,
             PositionFactory<P, R> pFact
     ) {
+        if (all.isEmpty()) {
+            return null;
+        }
         R r = ImmutableList.copyOf(all).get(level.getRandom().nextInt(all.size()));
 
-        Collection<Position> allEnclosed = InclusiveSpaces.getAllEnclosedPositions(r.getSpace());
+        Collection<Position> allEnclosed = r.getSpaces()
+                                            .stream()
+                                            .map(v -> InclusiveSpaces.getPositions(v, InclusiveSpaces.PositionType.INTERIOR_ONLY))
+                                            .flatMap(Collection::stream)
+                                            .toList();
 
         ImmutableList.Builder<P> b = ImmutableList.builder();
         for (Position p : allEnclosed) {

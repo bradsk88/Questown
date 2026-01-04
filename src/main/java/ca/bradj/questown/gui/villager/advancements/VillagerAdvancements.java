@@ -27,7 +27,7 @@ public class VillagerAdvancements {
     }
 
     public static void registerOnClientSide(JobID id, JobID parentID) {
-        // TODO: audit performance
+        // TODO[Performance]: audit performance
         Supplier<JobID> lambda = () -> addToParentOrReturn(id, parentID, all);
         JobID notRegistered = lambda.get();
         if (notRegistered != null) {

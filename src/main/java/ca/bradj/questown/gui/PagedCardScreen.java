@@ -21,6 +21,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import vazkii.patchouli.api.TriPredicate;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -32,6 +33,10 @@ public final class PagedCardScreen<D> {
         return backgroundWidth;
     }
 
+    public int getCurrentPageIndex() {
+        return currentPage;
+    }
+
     public interface CardRenderer<D> {
         List<Component> renderAndReturnTooltip(
                 PoseStack poseStack,
@@ -40,15 +45,15 @@ public final class PagedCardScreen<D> {
         );
     }
 
-    protected static final int backgroundWidth = 176;
+    public static final int backgroundWidth = 176;
     public final int backgroundHeight;
-    protected static final int borderPadding = 6;
-    protected static final int buttonWidth = 13;
-    protected static final int SMALL_PADDING = 1;
-    protected static final int MED_PADDING = 5;
-    protected static final int BIG_PADDING = 10;
-    protected static final int UNSCALED_CARD_HEIGHT = 42;
-    protected static final int CARD_WIDTH = (backgroundWidth) - (BIG_PADDING * 2);
+    public static final int borderPadding = 6;
+    public static final int buttonWidth = 13;
+    public static final int SMALL_PADDING = 1;
+    public static final int MED_PADDING = 5;
+    public static final int BIG_PADDING = 10;
+    public static final int UNSCALED_CARD_HEIGHT = 42;
+    public static final int CARD_WIDTH = (backgroundWidth) - (BIG_PADDING * 2);
     public static final int buttonHeight = 13;
     private final Supplier<Integer> height;
     private final Supplier<Integer> width;
@@ -59,7 +64,7 @@ public final class PagedCardScreen<D> {
     private final Consumer<D> setRenderColorForCard;
     private final CardRenderer<D> renderCardContent;
     private final Supplier<List<D>> cardsData;
-    private final int MAX_CARDS_PER_PAGE;
+    public final int MAX_CARDS_PER_PAGE;
     public final int cardHeight;
     private final int buttonY;
     private int currentPage = 0;
@@ -70,7 +75,6 @@ public final class PagedCardScreen<D> {
             Supplier<List<D>> cardsData,
             Consumer<D> setRenderColorForCard,
             CardRenderer<D> renderCardContent,
-            // TODO: Replace Pair with Coordinate
             int heightScale,
             int buttonY,
             int extraHeight
@@ -96,7 +100,7 @@ public final class PagedCardScreen<D> {
         this.setRenderColorForCard = setRenderColorForCard;
         this.renderCardContent = renderCardContent;
         this.cardHeight = UNSCALED_CARD_HEIGHT * heightScale;
-        this.MAX_CARDS_PER_PAGE = (backgroundHeight - BIG_PADDING) / (cardHeight + SMALL_PADDING);
+        this.MAX_CARDS_PER_PAGE = getCardsPerPage(backgroundHeight, cardHeight);
         this.buttonY = buttonY;
     }
 
@@ -114,7 +118,7 @@ public final class PagedCardScreen<D> {
         int y = bgY;
         int pageStringY = y + BIG_PADDING;
         y = pageStringY + BIG_PADDING;
-        int MAX_CARDS_PER_PAGE = (bgHeight - BIG_PADDING) / (cardHeight + SMALL_PADDING);
+        int MAX_CARDS_PER_PAGE = getCardsPerPage(bgHeight, cardHeight);
 
         int startIndex = currentPage * MAX_CARDS_PER_PAGE;
         int endIndex = Math.min(startIndex + MAX_CARDS_PER_PAGE, cardsData.size());
@@ -137,6 +141,10 @@ public final class PagedCardScreen<D> {
             b.add(new Card<>(i, coords, data));
         }
         return b.build();
+    }
+
+    public static int getCardsPerPage(int bgHeight, int cardHeight) {
+        return (bgHeight - BIG_PADDING) / (cardHeight + SMALL_PADDING);
     }
 
     private int getCardY(
@@ -234,7 +242,7 @@ public final class PagedCardScreen<D> {
         return tooltip;
     }
 
-    public Iterable<Card<D>> cards() {
+    public Collection<Card<D>> cards() {
         return getCardLayout(
                 width.get(),
                 height.get(),

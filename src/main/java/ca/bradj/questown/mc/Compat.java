@@ -3,7 +3,7 @@ package ca.bradj.questown.mc;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.init.CommandsInit;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.rooms.TownPosition;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -139,7 +139,7 @@ public class Compat {
         return ImmutableList.copyOf(list);
     }
 
-    public static int nextInt(
+    public static int nextRandomInt(
             @Nullable ServerLevel server,
             int i
     ) {
@@ -168,9 +168,9 @@ public class Compat {
     public static void openScreen(
             ServerPlayer sender,
             MenuProvider menuProvider,
-            Consumer<FriendlyByteBuf> consumer
+            Consumer<FriendlyByteBuf> writer
     ) {
-        NetworkHooks.openScreen(sender, menuProvider, consumer);
+        NetworkHooks.openScreen(sender, menuProvider, writer);
     }
 
     public static DeferredRegister<MenuType<?>> CreateMenuRegister(String modid) {

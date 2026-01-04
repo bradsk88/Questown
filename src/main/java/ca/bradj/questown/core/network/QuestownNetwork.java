@@ -1,6 +1,7 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.gui.town.status.MultiStatusScreenSyncMessage;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkDirection;
@@ -85,6 +86,12 @@ public class QuestownNetwork {
                         encoder(OpenItemJobsMessage::encode).
                         decoder(OpenItemJobsMessage::decode),
                 OpenItemJobsMessage::handle
+        ).add();
+        Compat.withConsumer(
+                registerMessage(OpenJobMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                        encoder(OpenJobMessage::encode).
+                        decoder(OpenJobMessage::decode),
+                OpenJobMessage::handle
         ).add();
         Compat.withConsumer(
                 registerMessage(UnlockJobMessage.class, NetworkDirection.PLAY_TO_SERVER).

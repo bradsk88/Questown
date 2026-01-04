@@ -1,0 +1,68 @@
+
+{
+  "version": 1,
+  "id": "hunter/sword_half_day",
+  "priority": "1000",
+  "parent": "hunter/sword",
+  "icon": "minecraft:iron_sword",
+  "initial_request": "minecraft:mutton",
+  "result": {
+    "type": "biome_loot",
+    "prefix": "jobs/hunter_sword",
+    "default": "jobs/hunter_sword/default",
+    "attempts": 2
+  },
+  "block": "questown:welcome_mat_block",
+  "room": "questown:special_quest.town_gate",
+  "work_states": [
+    {
+      "tools": "#questown:swords"
+    },{
+      "ingredients": "#questown:villager_food",
+      "quantity": 1
+    },
+    {
+      "work": 1
+    },
+    {
+      "time": 4000
+    }
+  ],
+  "cooldown_ticks": 0,
+  "special": [
+    {
+      "type": "global",
+      "rules": []
+    },
+    {
+      "type": "processing_state",
+      "state": 1,
+      "rules": ["remove_from_world"]
+    },
+    {
+      "type": "core_state",
+      "state": "WAITING_FOR_TIMED_STATE",
+      "rules": ["remove_from_world"]
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": ["hunger_fill_half"]
+    }
+  ],
+  "status_texture_overrides": [
+    {
+      "type": "core_state",
+      "state": "WAITING_FOR_TIMED_STATE",
+      "new_texture": "questown:textures/menu/gatherer/gathering.png"
+    }
+  ],
+  "status_text_overrides": [
+    {
+      "type": "core_state",
+      "state": "WAITING_FOR_TIMED_STATE",
+      "new_key_1": "questown.vanilla.tooltips.villagers.job.hunter.status_1.HUNTING",
+      "new_key_2": "questown.vanilla.tooltips.villagers.job.hunter.status_2.HUNTING"
+    }
+  ]
+}

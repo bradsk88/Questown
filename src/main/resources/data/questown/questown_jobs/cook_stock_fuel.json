@@ -1,16 +1,18 @@
 {
-  "version": 1,
+  "version": 2,
   "id": "cook/stock_fuel",
   "priority": "20000",
   "parent": "cook/fuel",
   "icon": "minecraft:chest",
-  "initial_request": "minecraft:cooked_cod",
+  "initial_request": "#questown:villager_food",
   "note": "initial request is actually ignored due to 'always consider' in global rules",
   "result": {
     "type": "item",
     "item": "minecraft:air"
   },
-  "block": "#forge:chests",
+  "block": {
+    "id": "#forge:chests"
+  },
   "room": "questown:kitchen_stocked",
   "work_states": [
     {

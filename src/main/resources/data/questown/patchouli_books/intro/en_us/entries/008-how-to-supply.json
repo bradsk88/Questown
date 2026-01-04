@@ -11,7 +11,7 @@
     },
     {
       "type": "patchouli:text",
-      "text": "Hint: Place some basic food in the store room chest. The villager will take it."
+      "text": "Hint: Place some basic food in the store room chest. The villager will take it.$(br2)BONUS: To help get you started, try right-clicking on the flag base with a block of dirt in hand."
     }
   ]
 }

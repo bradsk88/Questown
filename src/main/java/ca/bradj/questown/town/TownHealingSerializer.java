@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.town.entity.TownVillagerHandle;
 import net.minecraft.nbt.CompoundTag;
 
 public class TownHealingSerializer {

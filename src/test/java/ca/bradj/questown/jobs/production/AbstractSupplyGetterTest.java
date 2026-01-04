@@ -49,7 +49,6 @@ class AbstractSupplyGetterTest {
             ImmutableMap.of(
                     0, ImmutableList.of(new RoomsNeedingVillagerInput.NVIRoom<>(
                             new IRoomRecipeMatch<Room, String, Position, Object>() {
-                                @Override
                                 public String getRecipeID() {
                                     return "test match";
                                 }

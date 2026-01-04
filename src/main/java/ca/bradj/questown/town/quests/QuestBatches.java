@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class QuestBatches<
@@ -44,6 +45,25 @@ public class QuestBatches<
 
     public boolean decline(BATCH b) {
         return batches.remove(b);
+    }
+
+    public boolean hasOneQuestOnly(Predicate<KEY> matches) {
+        if (batches.size() > 1) {
+            return false;
+        }
+        ImmutableList<QUEST> qs = batches.get(0).getAll();
+        if (qs.size() > 1) {
+            return false;
+        }
+        return matches.test(qs.get(0).getWantedId());
+    }
+
+    public boolean includes(Predicate<QUEST> matches) {
+        return batches.stream().anyMatch(b -> b.getAll().stream().anyMatch(matches));
+    }
+
+    public boolean isEmpty() {
+        return batches.isEmpty();
     }
 
     public interface Tracker<ITEM_KEY, ITEM, QUEST> {
@@ -157,10 +177,11 @@ public class QuestBatches<
             BATCH e = this.emptyBatch(v.getBatchUUID(), owner, v.reward);
             ImmutableList.Builder<QUEST> eqb = ImmutableList.builder();
             v.getAll().forEach(q -> {
-                if (q.getType() == Quest.QuestType.ITEM) {
-                    e.addItemQuest(owner, q.getWantedId(), q.getCountNeeded());
-                } else {
-                    e.addNewQuest(owner, q.getWantedId());
+                switch (q.getType()) {
+                    case ITEM -> e.addItemQuest(owner, q.getWantedId(), q.getCountNeeded());
+                    case ROOM -> e.addNewQuest(owner, q.getWantedId());
+                    case JOB_CHANGE -> e.addJobChangeQuest(q.getWantedId());
+                    case UNKNOWN -> QT.QUESTS_LOGGER.error("Unexpected type: {}. Skipping duplicate check.", q.getType());
                 }
                 IdIgnoring<QUEST> iq = new IdIgnoring<>(q);
                 if (completedQuests.contains(iq)) {
@@ -239,7 +260,6 @@ public class QuestBatches<
                  .anyMatch(v -> room.equals(v.completedOn))
             ) {
                 QT.QUESTS_LOGGER.debug(
-                        marker,
                         "Quest was already marked complete: {} for door {}",
                         recipeId,
                         room.doorPos

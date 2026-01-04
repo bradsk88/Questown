@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.Preferred;
 import ca.bradj.questown.jobs.declarative.WithReason;
@@ -60,10 +59,10 @@ public class JobLogic<EXTRA, TOWN, POS> {
         void registerUnmetNeeds(
                 ProductionStatus status,
                 @Nullable POS workspot,
-                boolean b
+                int timesInserted
         );
 
-        boolean hasInsertedSupplies();
+        int timesInserted();
 
         void registerUnmetRooms();
     }
@@ -128,7 +127,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
             // This is for handling villagers who get stuck as work seekers
             worldBeforeTick.registerUnmetNeeds(
                     status, Util.orNull(workSpot, WorkPosition::jobBlock),
-                    worldBeforeTick.hasInsertedSupplies()
+                    worldBeforeTick.timesInserted()
             );
         }
 
@@ -197,7 +196,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
                 worldBeforeTick.registerUnmetNeeds(
                         status,
                         Util.orNull(workSpot, WorkPosition::jobBlock),
-                        worldBeforeTick.hasInsertedSupplies()
+                        worldBeforeTick.timesInserted()
                 );
             } else if (status == ProductionStatus.NO_JOBSITE) {
                 worldBeforeTick.registerUnmetRooms();

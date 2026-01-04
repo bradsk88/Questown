@@ -1,24 +1,26 @@
 {
-  "version": 1,
+  "version": 2,
   "id": "cook/stock_ingredients",
   "priority": "15000",
   "parent": "cook/extract",
   "icon": "minecraft:chest",
-  "initial_request": "minecraft:cooked_cod",
+  "initial_request": "#questown:villager_food",
   "note": "initial request is actually ignored due to 'always consider' in global rules",
   "result": {
     "type": "item",
     "item": "minecraft:air"
   },
-  "block": "#forge:chests",
+  "block": {
+    "id": "#forge:chests"
+  },
   "room": "questown:kitchen_stocked",
   "work_states": [
     {
-      "tools": "#questown:raw_ingredients",
+      "tools": "#questown:villager_simple_furnace_food_raw",
       "work": 0.1
     },
     {
-      "ingredients": "#questown:raw_ingredients"
+      "ingredients": "#questown:villager_simple_furnace_food_raw"
     }
   ],
   "cooldown_ticks": 50,

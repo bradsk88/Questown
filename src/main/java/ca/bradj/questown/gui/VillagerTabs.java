@@ -6,16 +6,9 @@ import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiComponent;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.NotNull;
@@ -60,6 +53,21 @@ public class VillagerTabs extends Tabs implements SubUI {
         b.add(new Tab(
                 (rc, x, y) -> {
                     int txBefore = RenderSystem.getShaderTexture(0);
+                    Util.blitTab(rc.stack(), x, y, 0);
+                    RenderSystem.setShaderTexture(0, txBefore);
+                }, setScreen(econScreenFn), "tooltips.economics", econScreenFn == null
+        ));
+        b.add(new Tab(
+                (rc, x, y) -> {
+                    int txBefore = RenderSystem.getShaderTexture(0);
+                    RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
+                    GuiComponent.blit(rc.stack(), x + 13, y + 11, 0, 0, 0, 9, 9, 256, 256);
+                    RenderSystem.setShaderTexture(0, txBefore);
+                }, setScreen(sScreenFn), "tooltips.stats", sScreenFn == null
+        ));
+        b.add(new Tab(
+                (rc, x, y) -> {
+                    int txBefore = RenderSystem.getShaderTexture(0);
                     RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
                     PoseStack stack = rc.stack();
                     stack.pushPose();
@@ -84,21 +92,6 @@ public class VillagerTabs extends Tabs implements SubUI {
                 setScreen(qScreenFn),
                 "tooltips.quests",
                 qScreenFn == null
-        ));
-        b.add(new Tab(
-                (rc, x, y) -> {
-                    int txBefore = RenderSystem.getShaderTexture(0);
-                    RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
-                    GuiComponent.blit(rc.stack(), x + 13, y + 11, 0, 0, 0, 9, 9, 256, 256);
-                    RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(sScreenFn), "tooltips.stats", sScreenFn == null
-        ));
-        b.add(new Tab(
-                (rc, x, y) -> {
-                    int txBefore = RenderSystem.getShaderTexture(0);
-                    Util.blitTab(rc.stack(), x, y, 0);
-                    RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(econScreenFn), "tooltips.economics", econScreenFn == null
         ));
         if (showBopTab) {
             b.add(new Tab(

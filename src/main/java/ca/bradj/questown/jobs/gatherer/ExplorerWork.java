@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs.gatherer;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
@@ -121,7 +120,7 @@ public class ExplorerWork {
                 ItemsInit.GATHERER_MAP.get().getDefaultInstance(),
                 ID,
                 GathererUnmappedNoToolWorkQtrDay.ID,
-                WorksBehaviour.standardDescription(() -> RESULT),
+                WorksBehaviour.standardDescription(sl -> Ingredient.of(RESULT)),
                 SpecialQuests.TOWN_GATE_LOCATION,
                 new WorkStates(
                         MAX_STATE,

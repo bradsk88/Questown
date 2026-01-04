@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.quests;
 
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -10,7 +11,6 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
 import java.util.UUID;
 
 class QuestBatchesTest {
@@ -20,14 +20,28 @@ class QuestBatchesTest {
         public TestQuest newQuest(
                 @Nullable UUID ownerId, Integer recipeId
         ) {
-            return TestQuest.standalone(ownerId, recipeId, Quest.QuestStatus.ACTIVE);
+            return TestQuest.standalone(VillagerUUID.from(ownerId), recipeId, Quest.QuestStatus.ACTIVE);
         }
 
         @Override
         public TestQuest newUpgradeQuest(
                 @Nullable UUID ownerId, Integer oldRecipeId, Integer newRecipeId
         ) {
-            return TestQuest.upgrade(ownerId, newRecipeId, oldRecipeId, Quest.QuestStatus.ACTIVE);
+            return TestQuest.upgrade(VillagerUUID.from(ownerId), newRecipeId, oldRecipeId, Quest.QuestStatus.ACTIVE);
+        }
+
+        @Override
+        public TestQuest newItemQuest(
+                @Nullable UUID ownerId,
+                Integer itemId,
+                int count
+        ) {
+            throw new UnsupportedOperationException("Not Implemented");
+        }
+
+        @Override
+        public TestQuest newJobQuest(Integer id) {
+            throw new UnsupportedOperationException("Not implemented");
         }
 
         @Override
@@ -61,6 +75,11 @@ class QuestBatchesTest {
         TestQuestBatch() {
             super(factory, new Reward() {
                 @Override
+                public String toNiceString() {
+                    return getName() + " (nice)";
+                }
+
+                @Override
                 protected String getName() {
                     return "Test reward";
                 }
@@ -69,6 +88,11 @@ class QuestBatchesTest {
                 protected @NotNull Reward.RewardApplier getApplier() {
                     return () -> {
                     };
+                }
+
+                @Override
+                public boolean addsQuestsWhenApplied() {
+                    return false;
                 }
             }, UUID.randomUUID());
         }

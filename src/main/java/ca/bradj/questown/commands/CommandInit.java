@@ -14,13 +14,15 @@ public class CommandInit {
         // Dev commands
         DevQuestAddItemCommand.register(event.getDispatcher());
         DevQuestDeserializeCommand.register(event.getDispatcher());
+        DevFlagDebugToggleCommand.register(event.getDispatcher(), event.getBuildContext());
+        DevMakeStarvingCommand.register(event.getDispatcher());
 
         // Player commands
         SetJobCommand.register(event.getDispatcher(), event.getBuildContext());
         TimeWarpCommand.register(event.getDispatcher());
         FreezeCommand.register(event.getDispatcher());
-        ConfigCommand.register(event.getDispatcher());
         FlagCommand.register(event.getDispatcher());
+        FlagDestroyCommand.register(event.getDispatcher());
         DebugCommand.register(event.getDispatcher());
         DebugDoorsCommand.register(event.getDispatcher());
         DebugAllDoorsCommand.register(event.getDispatcher());
@@ -30,5 +32,6 @@ public class CommandInit {
         DrainTimersCommand.register(event.getDispatcher());
         PrepareWorkCommand.register(event.getDispatcher());
         LogDataCommand.register(event.getDispatcher());
+        ToggleHungerConfig.register(event.getDispatcher());
     }
 }

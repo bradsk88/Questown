@@ -36,7 +36,12 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> BIOME_SCAN_RADIUS;
 
+    public static final ForgeConfigSpec.ConfigValue<Long> MAX_DOWNTIME_TICKS;
+    public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_BETWEEN_DOWNTIME;
+
     public static final ForgeConfigSpec.ConfigValue<Integer> WANDER_GIVEUP_TICKS;
+    public static final ForgeConfigSpec.ConfigValue<Long> VILLAGER_DISTRACT_DURATION;
+    public static final ForgeConfigSpec.ConfigValue<Long> VILLAGER_DISTRACT_COOLDOWN;
 
     public static final ForgeConfigSpec.ConfigValue<Integer> FARMER_WEEDS_RARITY;
 
@@ -73,6 +78,8 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUNGER_ENABLED;
     public static final ForgeConfigSpec.ConfigValue<Long> BLOCK_CLAIMS_TICK_LIMIT;
     public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_DINING_TABLE;
+    public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_FOOD;
+    public static final ForgeConfigSpec.ConfigValue<Long> BUFFER_TICKS_AFTER_FOOD_ATTEMPT;
     public static final ForgeConfigSpec.ConfigValue<Long> DAMAGE_TICKS;
     public static final ForgeConfigSpec.ConfigValue<Long> MOOD_TICK_INTERVAL;
     public static final ForgeConfigSpec.ConfigValue<Integer> NEUTRAL_MOOD;
@@ -83,6 +90,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> EXPERIENCE_REQUIRED_AT_LEVEL_1;
     public static final ForgeConfigSpec.ConfigValue<Double> EXPERIENCE_RAMP_FACTOR;
     public static final ForgeConfigSpec.ConfigValue<Long> FLAG_TICK_INTERVAL;
+    public static final ForgeConfigSpec.ConfigValue<Integer> ECONOMIC_RECORDS_DEPTH;
     public static final ForgeConfigSpec.ConfigValue<Double> NORMAL_BED_HEAL_MULTIPLIER;
     public static final ForgeConfigSpec.ConfigValue<Double> HOSPITAL_BED_HEAL_MULTIPLIER;
     public static final ForgeConfigSpec.ConfigValue<Integer> JOB_TREE_GROWTH;
@@ -216,21 +224,39 @@ public class Config {
 
         // Villagers Config
         BUILDER.push("Villagers");
+        MAX_DOWNTIME_TICKS = BUILDER.comment(
+                "The number of ticks that a villager will spend on downtime before they decide to go back to work"
+        ).defineInRange("MaxDowntimeTicks", 1000L, 1, 24000);
+        MAX_TICKS_BETWEEN_DOWNTIME = BUILDER.comment(
+                "The minimum number of ticks that a villager may work constantly before stopping to relax"
+        ).defineInRange("MaxTicksBetweenDowntime", 4000L, 1, 24000);
         WANDER_GIVEUP_TICKS = BUILDER.comment(
                 "The limit of time that villagers will spend trying to reach their next destination"
         ).defineInRange("WanderGiveUpTicks", 2000, 1, 24000);
+        VILLAGER_DISTRACT_DURATION = BUILDER.comment(
+                "The number of ticks that a villager will be distracted by (i.e. look at) a nearby entity"
+        ).defineInRange("VillagerDistractDurationV0.2", 100L, 1, 24000);
+        VILLAGER_DISTRACT_COOLDOWN = BUILDER.comment(
+                "The number of ticks that a villager will avoid being re-distracted by the same entity"
+        ).defineInRange("VillagerDistractCooldownV0.1", 200L, 1, 24000);
         BASE_FULLNESS = BUILDER.comment(
                 "The amount of fullness that a typical villager starts with. Fullness ticks down throughout the day. " +
                         "When it reaches zero, the villager will seek out food."
-        ).defineInRange("BaseFullness", 5000, 1, 24000);
+        ).defineInRange("BaseFullnessV3", 5000, 1, 24000);
         HUNGER_ENABLED = BUILDER.comment(
                 "Enables a hunger system. Villagers will get more hungry throughout the day and, upon reaching zero, will switch their job to \"dining\" and seek out a dining room to eat in."
-        ).define("HungerEnabledV2", false);
+        ).define("HungerEnabledV3", true);
         MAX_TICKS_WITHOUT_DINING_TABLE = BUILDER.comment(
                 "The maximum number of ticks that a hungry villager will spend trying to find a dinner plate to eat at. " +
                         "After these ticks expire, they will go to the town flag to eat - they will receive a work penalty " +
                         "for eating uncomfortably."
         ).defineInRange("MaxTicksWithoutDiningTableV2", 200L, 1L, 24000L);
+        MAX_TICKS_WITHOUT_FOOD = BUILDER.comment("The maximum number of ticks that a hungry villager will spend")
+                                        .comment(" trying find food before giving up and going back to work")
+                                        .defineInRange("MaxTicksWithoutFood", 2000L, 1L, 24000L);
+        BUFFER_TICKS_AFTER_FOOD_ATTEMPT = BUILDER.comment("The number of ticks that a hungry villager will spend")
+                                        .comment(" working after an unsuccessful search for food before trying again")
+                                        .defineInRange("BufferTicksAfterFoodAttempt", 500L, 1L, 24000L);
         DAMAGE_TICKS = BUILDER.comment(
                 "The number of ticks that it will take for one point of damage to heal when no effects are present"
         ).defineInRange("DamageTicks", 1000L, 1L, 24000L);
@@ -317,6 +343,9 @@ public class Config {
         FLAG_TICK_INTERVAL = BUILDER.comment(
                 "The number of game ticks that pass for every tick that the town flag does"
         ).defineInRange("FlagTickInterval", 10L, 1L, 24000L);
+        ECONOMIC_RECORDS_DEPTH = BUILDER.comment(
+                "This essentially controls how \"far back\" the data goes on the \"Economics\" screens."
+        ).defineInRange("FlagTickInterval", 100, 1, 24000);
 
         // Time Warp
         BUILDER.push("TimeWarp").comment(

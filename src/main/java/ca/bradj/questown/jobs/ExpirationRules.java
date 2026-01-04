@@ -94,4 +94,24 @@ public class ExpirationRules {
                 maxTicksFallbackFn
         );
     }
+
+    public ExpirationRules withMaxTickLimit(long i) {
+        return new ExpirationRules(
+                maxInitialTicksWithoutSupplies,
+                maxTicksWithoutSupplies,
+                noSuppliesFallbackFn,
+                () -> i,
+                maxTicksFallbackFn
+        );
+    }
+
+    public ExpirationRules withMaxTickFallback(Function<JobID, JobID> idFn) {
+        return new ExpirationRules(
+                maxInitialTicksWithoutSupplies,
+                maxTicksWithoutSupplies,
+                noSuppliesFallbackFn,
+                maxTicks,
+                idFn
+        );
+    }
 }

@@ -56,11 +56,16 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
             MultiBufferSource buffer,
             int light
     ) {
+        this.setModelProperties(entity);
         if (entity.isSitting()) {
             this.renderSiting(entity, yaw, pTicks, stack, buffer, light);
             return;
         }
         super.render(entity, yaw, pTicks, stack, buffer, light);
+    }
+
+    private void setModelProperties(VisitorMobEntity entity) {
+        getModel().crouching = entity.isCrouching();
     }
 
     private void renderSiting(

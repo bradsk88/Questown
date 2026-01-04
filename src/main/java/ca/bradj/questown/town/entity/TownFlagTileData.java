@@ -1,0 +1,255 @@
+package ca.bradj.questown.town.entity;
+
+import ca.bradj.questown.QT;
+import ca.bradj.questown.Questown;
+import ca.bradj.questown.items.QTNBT;
+import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
+import ca.bradj.questown.jobs.declarative.DinerWork;
+import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.town.*;
+import ca.bradj.questown.town.quests.MCQuestBatches;
+import ca.bradj.questown.town.rooms.TownRoomsMap;
+import ca.bradj.questown.town.rooms.TownRoomsMapSerializer;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+
+public class TownFlagTileData {
+
+    private static final String NBT_QUEST_BATCHES = String.format("%s_quest_batches", Questown.MODID);
+    private static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
+    private static final String NBT_WELCOME_MATS = String.format("%s_welcome_mats", Questown.MODID);
+    private static final String NBT_ROOMS = String.format("%s_rooms", Questown.MODID);
+    private static final String NBT_JOBS = String.format("%s_jobs", Questown.MODID);
+    private static final String NBT_KNOWLEDGE = String.format("%s_knowledge", Questown.MODID);
+    private static final String NBT_VILLAGERS = String.format("%s_villagers", Questown.MODID);
+    private static final String NBT_HEALSPOTS = String.format("%s_heal_spots", Questown.MODID);
+    private static final String NBT_BLOCKS_OF_PROGRESS_STORED = String.format("%s_bops_stored", Questown.MODID);
+    private static final String NBT_BLOCK_ROOMS = QTNBT.keyify("block_rooms");
+    private static final String NBT_BONUS_GIVEN = QTNBT.keyify("bonus_given");
+    private static final String NBT_ECONOMICS = QTNBT.keyify("economics");
+
+    public static Map<String, InitPair> initialize() {
+
+        ImmutableMap.Builder<String, InitPair> b = ImmutableMap.builder();
+        b.put(NBT_ROOMS, initRooms());
+        b.put(NBT_QUEST_BATCHES, initQuestBatches());
+        b.put(NBT_MORNING_REWARDS, initMorningRewards());
+        b.put(NBT_WELCOME_MATS, initWelcomeMats());
+        b.put(NBT_JOBS, initJobs());
+        b.put(NBT_KNOWLEDGE, initKnowledge());
+        b.put(NBT_VILLAGERS, initVillagers());
+        b.put(NBT_HEALSPOTS, initHealSpots());
+        b.put(NBT_BLOCK_ROOMS, initBlockRooms());
+        b.put(NBT_BLOCKS_OF_PROGRESS_STORED, initBlocksOfProgress());
+        b.put(NBT_BONUS_GIVEN, initBonusGiven());
+        b.put(NBT_ECONOMICS, initEconomics());
+        return b.build();
+    }
+
+    private static InitPair initEconomics() {
+        return new InitPair(
+                (tag, flag) -> flag.initializer().initEconomics(tag),
+                flag -> flag.initializer().initEconomicsForNewFlag()
+        );
+    }
+
+    private static InitPair initBonusGiven() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.givenBonusFood = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> {
+                    flag.givenBonusFood = false;
+                }
+        );
+    }
+
+    private static @NotNull InitPair initRooms() {
+        BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag = (tag, t) -> {
+            TownRoomsMap registeredRooms = t.initializer().getRoomsHandle().getRegisteredRooms();
+            TownRoomsMapSerializer.INSTANCE.deserialize(tag, t, registeredRooms);
+            logInit("Initialized rooms from {}", tag);
+            return true;
+        };
+        Consumer<TownFlagBlockEntity> onPlace = t -> {
+            t.roomsHandle.initializeNew(t);
+            logInit("Initialized rooms for new flag");
+        };
+        return new InitPair(fromTag, onPlace);
+    }
+
+    private static void logInit(
+            String s,
+            Object... tag
+    ) {
+        QT.FLAG_LOGGER.unwrap().debug(s, tag);
+    }
+
+    private static @NotNull InitPair initQuestBatches() {
+        BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag = (tag, t) -> {
+            t.quests.initialize(t);
+            boolean inited = MCQuestBatches.SERIALIZER.deserializeNBT(t, tag, t.quests.questBatches);
+            if (!inited) {
+                t.initializer().setUpQuestsForNewlyPlacedFlag();
+            }
+            t.initializer().setInitializedQuests(true);
+            logInit("Initialized quests from {}", tag);
+            return true;
+        };
+        Consumer<TownFlagBlockEntity> onPlace = t -> {
+            t.quests.initialize(t);
+            t.initializer().getQuests().initialize(t);
+            logInit("Initialized quests for new flag");
+        };
+        return new InitPair(fromTag, onPlace);
+    }
+
+    private static @NotNull InitPair initMorningRewards() {
+        return new InitPair(
+                (tag, t) -> {
+                    t.initializer().getMorningRewards().deserializeNbt(t, tag);
+                    logInit("Initialized morning rewards from {}", tag);
+                    return true;
+                }, t -> {
+            logInit("Initialized morning rewards for new flag");
+        }
+        );
+    }
+
+    private static @NotNull InitPair initWelcomeMats() {
+        BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag = (tag, t) -> {
+            Collection<BlockPos> l = WelcomeMatsSerializer.INSTANCE.deserializeNBT(tag, "mats");
+            l.forEach(t.initializer().getPOIs()::registerWelcomeMat);
+            logInit("Initialized welcome mats from {}", tag);
+            return true;
+        };
+        Consumer<TownFlagBlockEntity> onPlace = t -> logInit("Initialized welcome mats for new flag");
+        return new InitPair(fromTag, onPlace);
+    }
+
+    private static @NotNull InitPair initBlockRooms() {
+        BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag = (tag, t) -> t.initializer().initBlockRooms(tag, t);
+        Consumer<TownFlagBlockEntity> onPlace = t -> logInit("Initialized block rooms for new flag");
+        return new InitPair(fromTag, onPlace);
+    }
+
+    private static @NotNull InitPair initJobs() {
+        return new InitPair(
+                (tag, t) -> {
+                    TownWorkHandleSerializer.INSTANCE.deserializeNBT(tag, t.workHandle);
+                    logInit("Initialized jobs from {}", tag);
+                    return true;
+                }, t -> logInit("Initialized jobs for new flag")
+        );
+    }
+
+    private static @NotNull InitPair initKnowledge() {
+        BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag = (tag, t) -> {
+            TownKnowledgeStore knowledge = t.initializer().getKnowledge();
+            if (!knowledge.isInitialized()) {
+                return false;
+            }
+            TownKnowledgeStoreSerializer.INSTANCE.deserializeNBT(tag, knowledge);
+            logInit("Initialized knowledge from {}", tag);
+            return true;
+        };
+        Consumer<TownFlagBlockEntity> onFlagPlace = t -> {
+            t.initializer().getKnowledge().initialize(t);
+            logInit("Initialized knowledge for new flag");
+        };
+        return new InitPair(fromTag, onFlagPlace);
+    }
+
+    private static @NotNull InitPair initVillagers() {
+        BiFunction<CompoundTag, TownFlagBlockEntity, Boolean> fromTag = (tag, t) -> {
+            long currentTick = Util.getTick(t.getServerLevel());
+            TownVillagerHandle.SERIALIZER.deserialize(tag, t.initializer().getVillagers(), currentTick);
+            logInit("Initialized villagers from {}", tag);
+            return true;
+        };
+        Consumer<TownFlagBlockEntity> onPlace = t -> {
+            TownVillagerHandle villagerHandle = t.initializer().getVillagers();
+            villagerHandle.associate(t);
+            villagerHandle.addHungryListener(e -> {
+                if (t.villagerHandle.isDining(e.getUUID())) {
+                    return;
+                }
+                if (!t.villagerHandle.canDine(e.getUUID())) {
+                    return;
+                }
+                if (t.villagerHandle.gaveUpDiningRecently(e.getVUID())) {
+                    return;
+                }
+                String rid = e.getJobId().rootId();
+                ResourceLocation diningRoom = DinerWork.asWork(rid).baseRoom;
+                Collection<RoomRecipeMatch<MCRoom>> diningRooms = t.roomsHandle.getRoomsMatching(diningRoom);
+                if (diningRooms.isEmpty()) {
+                    t.villagerHandle.changeJobForVillager(e.getVUID(), DinerNoTableWork.getIdForRoot(rid), false);
+                } else {
+                    t.villagerHandle.changeJobForVillager(e.getVUID(), DinerWork.getIdForRoot(rid), false);
+                }
+            });
+            villagerHandle.addStatsListener(s -> t.setChanged());
+            logInit("Villager handle associated on new flag");
+        };
+        return new InitPair(fromTag, onPlace);
+    }
+
+    private static InitPair initHealSpots() {
+        return new InitPair(
+                (tag, town) -> {
+                    TownHealingHandle.SERIALIZER.deserialize(tag, town.initializer().getHealing());
+                    logInit("Initialized healing spots from {}", tag);
+                    return true;
+                }, (town) -> {
+            town.initializer().getHealing().initialize(town);
+        }
+        );
+    }
+    private static InitPair initBlocksOfProgress() {
+        return new InitPair(
+                (tag, town) -> {
+                    town.initializer().initializeBOP(tag);
+                    return true;
+                }, (town) -> {}
+        );
+    }
+
+    public static void write(
+            Long currentTick,
+            CompoundTag t,
+            TownFlagInitialization flag
+    ) {
+        write(t, NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(flag.getQuestBatches()));
+        write(t, NBT_MORNING_REWARDS, flag.getMorningRewards().serializeNbt());
+        write(t, NBT_WELCOME_MATS, WelcomeMatsSerializer.INSTANCE.serializeNBT(flag.getPOIs().getWelcomeMats(), "mats"));
+        write(t, NBT_ROOMS, TownRoomsMapSerializer.INSTANCE.serializeNBT(flag.getRoomsHandle().getRegisteredRooms()));
+        write(t, NBT_JOBS, TownWorkHandleSerializer.INSTANCE.serializeNBT(flag.getWorkHandle()));
+        write(t, NBT_KNOWLEDGE, TownKnowledgeStoreSerializer.INSTANCE.serializeNBT(flag.getKnowledge()));
+        write(t, NBT_VILLAGERS, TownVillagerHandle.SERIALIZER.serialize(flag.getVillagers(), currentTick));
+        write(t, NBT_HEALSPOTS, TownHealingHandle.SERIALIZER.serialize(flag.getVillagers(), currentTick));
+        write(t, NBT_BLOCK_ROOMS, flag.serializeBlockRooms());
+        write(t, NBT_BLOCKS_OF_PROGRESS_STORED, flag.serializeBOP());
+        write(t, NBT_BONUS_GIVEN, flag.serializeBonusGiven());
+        write(t, NBT_ECONOMICS, flag.serializeEconomics());
+    }
+
+    private static void write(
+            CompoundTag target,
+            String key,
+            CompoundTag value
+    ) {
+        target.put(key, value);
+    }
+}

@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "id": "cook/simple_furnace_food",
+  "priority": 2000,
+  "parent": "cook/extract",
+  "icon": "minecraft:beef",
+  "initial_request": "minecraft:cooked_beef",
+  "result": {
+    "type": "item",
+    "item": "minecraft:air",
+    "quantity": 1
+  },
+  "block": {
+    "id": "minecraft:furnace",
+    "has_item_in_slot_initially": "0/minecraft:air"
+  },
+  "room": "questown:kitchen_small",
+  "work_states": [
+    {
+      "tools": "minecraft:beef",
+      "work": 0.1
+    },
+    {
+      "ingredients": "minecraft:beef"
+    }
+  ],
+  "cooldown_ticks": 50,
+  "sound": {
+    "id": "minecraft:block.slime_block.hit",
+    "chance": 100,
+    "duration": 100
+  },
+  "special": [
+    {
+      "type": "global",
+      "rules": []
+    },
+    {
+      "type": "processing_state",
+      "state": 1,
+      "rules": ["insert_into_slot_0"]
+    }
+  ]
+}

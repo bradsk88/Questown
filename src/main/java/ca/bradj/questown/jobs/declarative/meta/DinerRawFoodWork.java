@@ -1,12 +1,12 @@
 package ca.bradj.questown.jobs.declarative.meta;
 
-import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
+import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
@@ -42,8 +42,7 @@ public class DinerRawFoodWork {
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
             // Food is listed as a "tool" so the villager will render it in hand while they eat
-            BLOCK_STATE_NEED_EAT, Ingredient.of(TagsInit.Items.VILLAGER_RAW_FOOD),
-            BLOCK_STATE_CONSUME_FOOD, Ingredient.of(TagsInit.Items.VILLAGER_RAW_FOOD)
+            BLOCK_STATE_NEED_EAT, Ingredient.of(TagsInit.Items.VILLAGER_RAW_FOOD)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_EAT, 25,
@@ -76,7 +75,7 @@ public class DinerRawFoodWork {
                 Items.APPLE.getDefaultInstance(),
                 new JobID(rootId, ID),
                 WorksBehaviour.noResultDescription(),
-                SpecialQuests.DINING_ROOM_LOCATION,
+                SpecialQuests.TOWN_FLAG_LOCATION, // TODO: Allow villagers to eat raw food in dining room
                 new WorkStates(
                         MAX_STATE,
                         Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
@@ -108,16 +107,17 @@ public class DinerRawFoodWork {
                                 ImmutableList.of(SpecialRules.HUNGER_FILL_HALF)
                         ), // No stage rules
                         ImmutableList.of(
-                                SpecialRules.WORK_IN_EVENING
+                                SpecialRules.WORK_IN_EVENING,
+                                SpecialRules.NO_EXPERIENCE_GAINED
                         )
                 ),
                 new SoundInfo(SoundEvents.GENERIC_EAT.getLocation(), 10, null),
                 new ExpirationRules(
-                        () -> Long.MAX_VALUE,
-                        () -> Long.MAX_VALUE,
-                        jobId -> jobId,
-                        () -> Long.MAX_VALUE,
-                        jobId -> jobId
+                        Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
+                        Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
+                        jobId -> WorkSeekerJob.getIDForRoot(new JobID(rootId, ID)),
+                        Compat.configGet(Config.MAX_TICKS_WITHOUT_FOOD),
+                        jobId -> WorkSeekerJob.getIDForRoot(new JobID(rootId, ID))
                 )
         ).withNeeds((items) -> ImmutableList.of(INGREDIENTS));
     }

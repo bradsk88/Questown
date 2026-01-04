@@ -32,8 +32,8 @@ public class TestWorldInteraction extends
     private boolean inserted;
 
     @Override
-    public boolean hasInserted(Void unused) {
-        return inserted;
+    public int timesInserted(Void unused) {
+        return inserted ? 1 : 0;
     }
 
     public int degradedTool() {
@@ -152,6 +152,13 @@ public class TestWorldInteraction extends
     ) {
         extracted = true;
         return super.tryExtractProduct(unused, position);
+    }
+
+    @Override
+    protected void triggerCompletionAdvancement(
+            Void inputs,
+            Position position
+    ) {
     }
 
     @Override

@@ -16,10 +16,12 @@
   "work_states": [
     {
       "tools": "minecraft:shears"
+    },{
+      "ingredients": "#questown:villager_food",
+      "quantity": 1
     },
     {
-      "ingredients": "#questown:villager_food",
-      "quantity": 2
+      "work": 1
     },
     {
       "time": 6000

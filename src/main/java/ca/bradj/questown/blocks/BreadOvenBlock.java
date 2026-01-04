@@ -33,7 +33,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.Random;
 
 public class BreadOvenBlock extends HorizontalDirectionalBlock implements StatefulJobBlock {
     public static final String ITEM_ID = "bread_oven_block";

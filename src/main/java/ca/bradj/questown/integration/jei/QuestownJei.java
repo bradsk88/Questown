@@ -2,6 +2,7 @@ package ca.bradj.questown.integration.jei;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.*;
+import ca.bradj.questown.gui.town.status.MultiStatusScreen;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
@@ -76,7 +77,8 @@ public class QuestownJei implements IModPlugin {
                 return is;
             }
         });
-        registration.addGuiContainerHandler(MultiStatusScreen.class, new IGuiContainerHandler<>() {
+        registration.addGuiContainerHandler(
+                MultiStatusScreen.class, new IGuiContainerHandler<>() {
             @Override
             public List<Rect2i> getGuiExtraAreas(MultiStatusScreen containerScreen) {
                 return containerScreen.getExtraAreas();

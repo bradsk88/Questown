@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.nbt.CompoundTag;
 
 import java.util.function.BiFunction;

@@ -12,8 +12,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.BiPredicate;
@@ -32,7 +32,7 @@ public class Work {
     public final ResourceLocation baseRoom;
     final IStatus<?> initialStatus;
     public final Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results;
-    final @Nullable ItemStack initialRequest;
+    final Function<ServerLevel, @Nullable Ingredient> initialRequest;
     final Function<List<MCHeldItem>, Collection<Ingredient>> needs;
     private final Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper;
     final int priority;
@@ -50,7 +50,7 @@ public class Work {
             ResourceLocation baseRoom,
             IStatus<?> initialStatus,
             Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results,
-            @Nullable ItemStack initialRequest,
+            Function<ServerLevel, @Nullable Ingredient> initialRequest,
             Function<List<MCHeldItem>, Collection<Ingredient>> needs,
             Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper,
             int priority,
@@ -114,7 +114,7 @@ public class Work {
         );
     }
 
-    public @org.jetbrains.annotations.Nullable ResourceLocation applyStatusTextureOverride(IStatus<?> status) {
+    public @Nullable ResourceLocation applyStatusTextureOverride(IStatus<?> status) {
         return overrides.statusTextures().get(status);
     }
 

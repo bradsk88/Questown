@@ -5,6 +5,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
@@ -37,9 +38,7 @@ import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.CraftingRecipe;
-import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -88,6 +87,13 @@ public class ResourceJobLoader {
                     ResourceLocation id = entry.getKey();
                     JsonObject object = element.getAsJsonObject();
                     try {
+                        JobID jobId = JobID.fromJSON(Util.getOrDefault(object, "id", JsonElement::getAsString, null));
+                        if (new JobID("cook", "simple_furnace_food").equals(jobId)) {
+                            // TODO: Make this a special rule instead of hard-coding it in the resource job loader
+                            b.putAll(makeCookJobs(object));
+                            continue;
+                        }
+
                         int version = requiredInt(object, "version");
                         Work type = switch (version) {
                             case 1 -> workFromJsonV1(object);
@@ -116,6 +122,93 @@ public class ResourceJobLoader {
             this.jobs = b.build();
         }
 
+        private ImmutableMap<JobID, Work> makeCookJobs(JsonObject obj) {
+            ImmutableMap.Builder<JobID, Work> b = ImmutableMap.builder();
+            Ingredient ing = Ingredient.of(TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW);
+            for (ItemStack item : ing.getItems()) {
+                Item iconItem = item.getItem();
+                // FIXME: Make "initial request" a function that provides recipe manager as input
+                Function<ServerLevel, Ingredient> initReq = sl -> Ingredient.of(cooked(sl.getRecipeManager(), item.getItem()));
+                WorkSpecialRules special = loadRulesV2(obj);
+                if (!obj.get("block").isJsonObject()) {
+                    throw new IllegalArgumentException("block must be an object");
+                }
+
+                try {
+                    JsonObject block = obj.getAsJsonObject("block");
+                    Predicate<JobBlockTestContext> isJobBlock = ResourceJobLoader.isJobBlockV2(
+                            block,
+                            special
+                    );
+                    int cooldownTicks = requiredInt(obj, "cooldown_ticks");
+                    WorkWorldInteractions wwi = worldWorkInt(obj, cooldownTicks);
+                    JobID id = JobID.fromJSON(Util.getOrDefault(obj, "id", JsonElement::getAsString, null));
+                    BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitWS = shouldInitWS(block, special);
+                    WorkStates ws = ResourceJobLoader.workStates(id, obj);
+                    Predicate<Ingredient> isBeef = in -> in.getItems()[0].is(Items.BEEF);
+                    ws = ws.withIngredients(
+                            replaceWhen(ws.ingredientsRequired(), isBeef, () -> Ingredient.of(item.getItem()))
+                    ).withTools(
+                            replaceWhen(ws.toolsRequired(), isBeef, () -> Ingredient.of(item.getItem()))
+                    );
+                    JobID od = new JobID("cook", Compat.getItemId(item.getItem()).getPath());
+                    b.put(
+                            od,
+                            WorksBehaviour.productionWork(
+                                    iconItem.getDefaultInstance(),
+                                    od,
+                                    JobID.fromJSON(Util.getOrDefault(obj, "parent", JsonElement::getAsString, null)),
+                                    description(initReq, obj),
+                                    new WorkLocation(isJobBlock, shouldInitWS, required(obj, "room")),
+                                    ws,
+                                    wwi,
+                                    special,
+                                    loadSoundV1(obj)
+                            ).withPriority(requiredInt(obj, "priority"))
+                    );
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
+                }
+            }
+            return b.build();
+        }
+
+        private ImmutableMap<Integer, Supplier<Ingredient>> replaceWhen(
+                Map<Integer, Ingredient> m,
+                Predicate<Ingredient> when,
+                Supplier<Ingredient> replacement
+        ) {
+            ImmutableMap.Builder<Integer, Supplier<Ingredient>> b = ImmutableMap.builder();
+            for (Map.Entry<Integer, Ingredient> e : m.entrySet()) {
+                if (when.test(e.getValue())) {
+                    b.put(e.getKey(), replacement);
+                } else {
+                    b.put(e.getKey(), e::getValue);
+                }
+            }
+            return b.build();
+        }
+
+        private Item cooked(
+                RecipeManager rm,
+                Item iconItem
+        ) {
+            List<SmeltingRecipe> all = rm.getAllRecipesFor(RecipeType.SMELTING);
+            return all.stream()
+                      .filter(v -> isSingleItemRecipeMatch(iconItem, v))
+                      .findFirst().orElseThrow().getResultItem().getItem();
+        }
+
+        private static boolean isSingleItemRecipeMatch(
+                Item iconItem,
+                SmeltingRecipe v
+        ) {
+            if (v.getIngredients().size() != 1) {
+                return false;
+            }
+            return v.getIngredients().get(0).test(iconItem.getDefaultInstance());
+        }
+
         public void loadFromFiles(ResourceManager man) {
             Map<ResourceLocation, JsonElement> map = prepare(man, InactiveProfiler.INSTANCE);
             apply(map, man, InactiveProfiler.INSTANCE);
@@ -131,13 +224,14 @@ public class ResourceJobLoader {
                     "initial_request",
                     el -> el.isJsonNull() ? null : new ResourceLocation(el.getAsString())
             );
-            Item initReq = null;
+            Function<ServerLevel, Ingredient> initReq = sl -> null;
             if (initialRequest != null) {
-                initReq = ForgeRegistries.ITEMS.getValue(initialRequest);
-                if (initReq == null) {
+                @Nullable Item r = ForgeRegistries.ITEMS.getValue(initialRequest);
+                if (r == null) {
                     throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
                                                                                                        .getAsString());
                 }
+                initReq = sl -> Ingredient.of(r);
             }
             BiPredicate<WorkLocation.BlockInfo, BlockPos> isJobBlock = ResourceJobLoader.isJobBlock(object.get("block")
                                                                                                           .getAsString());
@@ -228,16 +322,11 @@ public class ResourceJobLoader {
             if (iconItem == null) {
                 throw new IllegalArgumentException("Icon image does not exist: " + obj.get("icon").getAsString());
             }
-            ResourceLocation initialRequest = optional(
+            @Nullable Ingredient initialRequest = optional(
                     obj,
                     "initial_request",
-                    el -> el.isJsonNull() ? null : new ResourceLocation(el.getAsString())
+                    el -> el.isJsonNull() ? null : getIngredient(el.getAsString())
             );
-            Item initReq = ForgeRegistries.ITEMS.getValue(initialRequest);
-            if (initReq == null) {
-                throw new IllegalArgumentException("Initial request item does not exist: " + obj.get("icon")
-                                                                                                .getAsString());
-            }
             WorkSpecialRules special = loadRulesV2(obj);
             if (!obj.get("block").isJsonObject()) {
                 throw new IllegalArgumentException("block must be an object");
@@ -257,7 +346,7 @@ public class ResourceJobLoader {
                         iconItem.getDefaultInstance(),
                         id,
                         JobID.fromJSON(Util.getOrDefault(obj, "parent", JsonElement::getAsString, null)),
-                        description(initReq, obj),
+                        description(sl -> initialRequest, obj),
                         new WorkLocation(isJobBlock, shouldInitWS, required(obj, "room")),
                         ResourceJobLoader.workStates(id, obj),
                         wwi,
@@ -346,7 +435,7 @@ public class ResourceJobLoader {
     }
 
     private static @NotNull WorkDescription description(
-            @Nullable Item initReq,
+            Function<ServerLevel, @Nullable Ingredient> initReqFn,
             JsonObject object
     ) {
         if (!object.has("result")) {
@@ -356,14 +445,14 @@ public class ResourceJobLoader {
         String type = rizz.get("type").getAsString();
 
         return switch (type) {
-            case "biome_loot" -> biomeDesc(initReq, rizz);
-            default -> WorksBehaviour.standardDescription(initReq == null ? () -> null : initReq::getDefaultInstance);
+            case "biome_loot" -> biomeDesc(initReqFn, rizz);
+            default -> WorksBehaviour.standardDescription(initReqFn);
         };
 
     }
 
     private static @NotNull WorkDescription biomeDesc(
-            @Nullable Item initReq,
+            Function<ServerLevel, @Nullable Ingredient> initReqFn,
             JsonObject rizz
     ) {
         String resultPrefix = required(rizz, "prefix", JsonElement::getAsString);
@@ -371,7 +460,7 @@ public class ResourceJobLoader {
         // TODO: Validate that the initial request is present in the loot table
         return new WorkDescription(
                 t -> t.allKnownGatherItemsFn().apply(lootTablePrefix),
-                initReq == null ? null : initReq.getDefaultInstance()
+                initReqFn
         );
     }
 
@@ -574,10 +663,6 @@ public class ResourceJobLoader {
         ImmutableMap.Builder<Integer, Supplier<Integer>> time = ImmutableMap.builder();
 
         JsonArray states = object.get("work_states").getAsJsonArray();
-
-        if (states.size() > 3) {
-            QT.INIT_LOGGER.warn("Jobs with more than 3 states are likely to have bugs ({})", id);
-        }
 
         int maxState = 0;
         for (int i = 0; i < states.size(); i++) {

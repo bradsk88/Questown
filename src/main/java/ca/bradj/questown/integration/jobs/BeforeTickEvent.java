@@ -8,18 +8,25 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public record BeforeTickEvent(
         WorkLocation locInfo,
-        ImmutableList<MCHeldItem> heldItems,
+        Supplier<ServerLevel> level, ImmutableList<MCHeldItem> heldItems,
         Consumer<Function<
                 RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos>,
                 RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos>
                 >> replaceRoomCheck,
-        Function<BlockPos, @NotNull State> getJobBlockState
+        Function<BlockPos, @NotNull State> getJobBlockState,
+        boolean firstTick,
+        BlockPos position,
+        Supplier<ImmutableList<BlockPos>> otherVillagerPositions,
+        Supplier<BlockPos> randomWalkableTownPosition,
+        UnsafeVillagerData villagerData
 ) {
 }

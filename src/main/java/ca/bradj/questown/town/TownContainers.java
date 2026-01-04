@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -299,8 +300,8 @@ public class TownContainers {
     }
 
     public static Collection<Item> getUniqueItems(TownInterface t) {
-        // TODO[Performance]: This should probably be stored on the TownFlagBlockEntity
-        //  until the containers change.
+        // TODO[Performance]: "All containers" should probably be stored on the
+        //  TownFlagBlockEntity until the containers change.
         List<ContainerTarget<MCContainer, MCTownItem>> all = getAllContainers(t, t.getServerLevel());
         Set<Item> uniqueItems = new HashSet<>();
         for (ContainerTarget<MCContainer, MCTownItem> container : all) {

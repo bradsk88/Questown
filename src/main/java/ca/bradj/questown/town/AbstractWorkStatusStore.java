@@ -11,7 +11,10 @@ import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -65,7 +68,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             POS pos,
             BiFunction<POS, State, State> mutator
     ) {
-        State newV = jobStatuses.compute(pos, (p, s) -> mutator.apply(p, s));
+        State newV = jobStatuses.compute(pos, mutator);
         QT.FLAG_LOGGER.debug("Job state set to {} at {}", newV.toShortString(), pos);
         if (cascading.containsKey(pos)) {
             if (!cascading.get(pos).apply(newV)) {
@@ -106,7 +109,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     }
 
     @Override
-    public void clearAllTimers() {
+    public void drainAllTimers() {
         this.timeJobStatuses.keySet().forEach(k -> this.timeJobStatuses.put(k, 1L));
     }
 
@@ -163,7 +166,13 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                             QT.BLOCK_LOGGER.debug("Timer at {} expired. Moving to next state", e.getKey());
                             modifyJobBlockState(
                                     e.getKey(),
-                                    (pos, state) -> state.incrProcessing()
+                                    (pos, state) -> {
+                                        if (state == null) {
+                                            QT.logBug("State was null after timer expired");
+                                            return State.fresh();
+                                        }
+                                        return state.incrProcessing();
+                                    }
                             );
                             timeJobStatuses.remove(e.getKey());
                         }

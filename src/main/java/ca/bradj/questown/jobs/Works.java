@@ -34,9 +34,6 @@ public class Works {
         dataPackJobs.forEach((k, v) -> b.put(k, () -> v));
         b.put(ExplorerWork.ID, ExplorerWork::asWork);
         b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork::asWork);
-        b.put(GathererUnmappedPickaxeWorkQtrDay.ID, GathererUnmappedPickaxeWorkQtrDay::asWork);
-        b.put(GathererUnmappedPickaxeWorkHalfDay.ID, GathererUnmappedPickaxeWorkHalfDay::asWork);
-        b.put(GathererUnmappedPickaxeWorkFullDay.ID, GathererUnmappedPickaxeWorkFullDay::asWork);
         b.put(GathererUnmappedShovelWorkQtrDay.ID, GathererUnmappedShovelWorkQtrDay::asWork);
         b.put(GathererUnmappedShovelWorkHalfDay.ID, GathererUnmappedShovelWorkHalfDay::asWork);
         b.put(GathererUnmappedShovelWorkFullDay.ID, GathererUnmappedShovelWorkFullDay::asWork);
@@ -52,12 +49,12 @@ public class Works {
         return b.build();
     }
 
-    public static ImmutableSet<Map.Entry<JobID, Supplier<Work>>> entrySet(String rootID) {
+    public static ImmutableSet<Map.Entry<JobID, Supplier<Work>>> entrySet(String rootForDining) {
         assert initialized;
         ImmutableSet.Builder<Map.Entry<JobID, Supplier<Work>>> b = ImmutableSet.builder();
         b.addAll(works.entrySet());
         if (Config.HUNGER_ENABLED.get()) {
-            b.add(new AbstractMap.SimpleEntry<>(DinerWork.getIdForRoot(rootID), () -> DinerWork.asWork(rootID)));
+            b.add(new AbstractMap.SimpleEntry<>(DinerWork.getIdForRoot(rootForDining), () -> DinerWork.asWork(rootForDining)));
         }
         return b.build();
     }
@@ -65,7 +62,7 @@ public class Works {
     /**
      * @deprecated Doesn't handle special jobs well. Try using ServerJobsRegistry instead.
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static Supplier<Work> get(JobID jobID) {
         if (!initialized) {
             throw new IllegalStateException("Works not initialized");

@@ -1,11 +1,9 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.core.init.RewardsInit;
-import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rewards.Registry;
 import ca.bradj.questown.town.rewards.RewardType;
-import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
@@ -27,8 +25,6 @@ public abstract class MCReward extends Reward {
     protected String getName() {
         return rType.id.toString();
     }
-
-    public abstract String toNiceString();
 
     public abstract boolean contains(@NotNull RewardType<?> reward);
 
@@ -63,8 +59,6 @@ public abstract class MCReward extends Reward {
             return tag;
         }
     }
-
-    public abstract boolean addsQuestsWhenApplied();
 
     protected abstract CompoundTag serializeNbt();
     protected abstract void deserializeNbt(TownInterface entity, CompoundTag tag);

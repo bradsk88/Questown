@@ -49,7 +49,7 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
 
     protected abstract ImmutableList<D> cardsData();
 
-    protected Iterable<PagedCardScreen.Card<D>> cards() {
+    protected Collection<PagedCardScreen.Card<D>> cards() {
         return delegate.cards();
     }
 

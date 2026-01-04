@@ -2,12 +2,10 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
-import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.NotNull;
 
@@ -22,7 +20,7 @@ public class FlagTabs extends Tabs implements SubUI {
             @Nullable Runnable villagerScreenFn,
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
-            boolean showBOPTab
+            FlagTabsEmbedding.FlagInfo showBOPTab
     ) {
         super(build(questsScreenFn, villagerScreenFn, econScreenFn, bopScreenFn, showBOPTab));
     }
@@ -32,34 +30,40 @@ public class FlagTabs extends Tabs implements SubUI {
             @Nullable Runnable villagerScreenFn,
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
-            boolean showBOPTab
+            FlagTabsEmbedding.FlagInfo fi
     ) {
         ImmutableList.Builder<Tab> b = ImmutableList.builder();
-        b.add(new Tab(
-                (rc, x, y) -> rc.itemRenderer()
-                                .renderAndDecorateItem(Items.PLAYER_HEAD.getDefaultInstance(), x + 10, y + 7),
-                setScreen(villagerScreenFn),
-                "tooltips.villagers",
-                villagerScreenFn == null
-        ));
-        b.add(new Tab(
-                (rc, x, y) -> rc.itemRenderer()
-                                .renderAndDecorateItem(Items.BOOK.getDefaultInstance(), x + 10, y + 7),
-                setScreen(questsScreenFn),
-                "tooltips.quests",
-                questsScreenFn == null
-        ));
-        b.add(new Tab(
-                (rc, x, y) -> {
-                    int txBefore = RenderSystem.getShaderTexture(0);
-                    Util.blitTab(rc.stack(), x, y, 0);
-                    RenderSystem.setShaderTexture(0, txBefore);
-                },
-                setScreen(econScreenFn),
-                "tooltips.economics",
-                econScreenFn == null
-        ));
-        if (showBOPTab) {
+        if (fi.showVillagersTab()) {
+            b.add(new Tab(
+                    (rc, x, y) -> rc.itemRenderer()
+                                    .renderAndDecorateItem(Items.PLAYER_HEAD.getDefaultInstance(), x + 10, y + 7),
+                    setScreen(villagerScreenFn),
+                    "tooltips.villagers",
+                    villagerScreenFn == null
+            ));
+        }
+        if (fi.showQuestsTab()) {
+            b.add(new Tab(
+                    (rc, x, y) -> rc.itemRenderer()
+                                    .renderAndDecorateItem(Items.BOOK.getDefaultInstance(), x + 10, y + 7),
+                    setScreen(questsScreenFn),
+                    "tooltips.quests",
+                    questsScreenFn == null
+            ));
+        }
+        if (fi.showEconTab()) {
+            b.add(new Tab(
+                    (rc, x, y) -> {
+                        int txBefore = RenderSystem.getShaderTexture(0);
+                        Util.blitTab(rc.stack(), x, y, 0);
+                        RenderSystem.setShaderTexture(0, txBefore);
+                    },
+                    setScreen(econScreenFn),
+                    "tooltips.economics",
+                    econScreenFn == null
+            ));
+        }
+        if (fi.showBlockOfProgressTab()) {
             b.add(new Tab(
                     (rc, x, y) -> RenderUtil.renderItemScaled(
                             rc.itemRenderer(),
@@ -106,7 +110,7 @@ public class FlagTabs extends Tabs implements SubUI {
                 factory.apply(OpenFlagMenuMessage.VILLAGERS),
                 factory.apply(OpenFlagMenuMessage.ECONOMICS),
                 factory.apply(OpenFlagMenuMessage.BOP),
-                menu.getFlagInfo().showBlockOfProgressTab()
+                menu.getFlagInfo()
         );
     }
 

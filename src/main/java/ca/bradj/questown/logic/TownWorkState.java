@@ -28,7 +28,7 @@ public class TownWorkState {
     ) {
         roomsWhereSpecialRulesApply.get().forEach(
                 (status, rooms) -> rooms.forEach(
-                        room -> InclusiveSpaces.getAllEnclosedPositions(room.getSpace()).forEach(
+                        room -> room.getSpaces().forEach(space -> InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY).forEach(
                                 block -> {
                                     if (isJobBlock.test(block, room)) {
                                         State jobBlockState = getState.apply(block, room);
@@ -50,7 +50,7 @@ public class TownWorkState {
                                         }
                                     }
                                 }
-                        )
+                        ))
                 )
         );
 

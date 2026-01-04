@@ -3,7 +3,7 @@ package ca.bradj.questown.core.init;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.blocks.entity.*;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;

@@ -4,7 +4,7 @@
   "priority": 10000,
   "parent": "cook/extract",
   "icon": "minecraft:furnace",
-  "initial_request": "minecraft:cooked_cod",
+  "initial_request": "#questown:villager_food",
   "result": {
     "type": "item",
     "item": "minecraft:air",

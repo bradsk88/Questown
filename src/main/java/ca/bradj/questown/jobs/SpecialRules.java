@@ -55,6 +55,11 @@ public class SpecialRules {
     // sleeping position on top of the workspot for the duration of that
     // state.
     public static final String LIE_ON_WORKSPOT = "lie_on_workspot";
+    // If this rule is active for a job state, the villager will assume a
+    // random position until the work cooldown has ended. This was added
+    // for "downtime" jobs where you want the villager to appear to be
+    // relaxing.
+    public static final String RANDOM_DOWNTIME_POSE = "random_downtime_pose";
     // If this rule is active for a job state, any requested poses will be
     // cleared. For example, LIE_ON_WORKSPOT sets the villager to the sleeping
     // pose on top of their workspot.
@@ -62,6 +67,9 @@ public class SpecialRules {
     // If this rule is active during the extraction stage of a job, the
     // villager's hunger will be filled up by 50% from its current value.
     public static final String HUNGER_FILL_HALF = "hunger_fill_half";
+    // If this rule is active during the extraction stage of a job, the
+    // villager's hunger will be filled up to 100%.
+    public static final String HUNGER_FILL = "hunger_fill";
 
     // If this rule is active during the extraction stage of a job, the
     // villager will attempt to use their workspot as a container, adding
@@ -75,7 +83,7 @@ public class SpecialRules {
 
     // Global rule. When enabled, the LAST item in the villager's inventory will
     // be rendered in their off-hand.
-    public static final String RENDER_LAST_ITEM_IN_OFF_HAND = "render_last_item_in_off_hand";
+    public static final String ONLY_RENDER_FIRST_ITEM_IN_HAND = "only_render_first_item_in_hand";
 
     // Global rule. If there is more than one item stack which matches the villagers
     // ingredient needs, they will choose one of those stacks randomly. When this rule
@@ -88,4 +96,17 @@ public class SpecialRules {
 
     // Global rule. Disabled experience gaining from this job.
     public static final String NO_EXPERIENCE_GAINED = "no_experience_gained";
+
+    // Global rule. When enabled, after finishing one unit of work, the villager
+    // will choose a random location in the village to walk to before starting
+    // their next unit of work. About half the time, that random location will be
+    // near other villagers.
+    public static final String RANDOM_SHORT_LIVED_WORKSPOT_PREFER_SOCIAL = "random_short_lived_workspot_prefer_social";
+
+    // Global rule. When enabled, the villager's job site will always be populated
+    // even if their status is not "going to jobsite".
+    public static final String ALWAYS_POPULATE_JOBSITE = "always_populate_jobsite";
+
+    // Global rule. When enabled, the villager will walk slowly.
+    public static final String SLOW_WALK = "slow_walk";
 }

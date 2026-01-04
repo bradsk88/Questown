@@ -42,11 +42,16 @@ public abstract class JobPhaseModifier {
         public void beforeTick(BeforeTickEvent bxEvent) {
 
         }
+
+        @Override
+        public void beforeFindJobSite(BeforeFindJobSiteEvent event) {
+        }
     };
 
     // Return null if nothing happens.
     // Return either a modified input (via functions available on event) or the
     // original input if something happened.
+    // IMPORTANT: When a non-null value is returned, the default result generation is skipped.
     public <CONTEXT> @Nullable CONTEXT beforeExtract(
             CONTEXT ctxInput,
             BeforeExtractEvent<CONTEXT> event
@@ -90,9 +95,17 @@ public abstract class JobPhaseModifier {
 
     }
 
+    public void beforeFindJobSite(BeforeFindJobSiteEvent event) {
+        // Default: do nothing
+    }
+
     public boolean postJobBlockCheckPassed(
             JobBlockTestContext ctx
     ) {
         return true;
+    }
+    public void beforeMaxTicksJobChange(
+            BeforeMaxTicksJobChangeEvent ctx
+    ) {
     }
 }

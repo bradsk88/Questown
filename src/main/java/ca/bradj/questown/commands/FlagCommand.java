@@ -3,7 +3,7 @@ package ca.bradj.questown.commands;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.BlocksInit;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -27,14 +27,14 @@ public class FlagCommand {
         // @formatter:off
         src.register(
             Commands.literal("qt").then(
-                subCmd.then(
-                    subSubCmd
-                        .requires(AddExperienceCommand::isCreative)
-                        .then(posArg
-                        .executes(css -> setBlock(
-                            css.getSource(),
-                            BlockPosArgument.getLoadedBlockPos(css, "pos")
-                        )))
+                subCmd
+                    .requires(AddExperienceCommand::isCreative)
+                    .then(posArg
+                        .then(subSubCmd
+                            .executes(css -> setBlock(
+                                css.getSource(),
+                                BlockPosArgument.getLoadedBlockPos(css, "pos")
+                            )))
                 )
             )
         );

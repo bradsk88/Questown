@@ -16,7 +16,10 @@
   "work_states": [
     {
       "ingredients": "#questown:villager_food",
-      "quantity": 2
+      "quantity": 1
+    },
+    {
+      "work": 1
     },
     {
       "time": 6000

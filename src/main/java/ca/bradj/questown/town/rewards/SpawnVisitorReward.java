@@ -2,6 +2,7 @@ package ca.bradj.questown.town.rewards;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
@@ -19,22 +20,21 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
-import java.util.UUID;
 
 public class SpawnVisitorReward extends MCReward {
 
     public static final String ID = "spawn_visitor_reward";
     private static final String NBT_VISITOR_UUID = "visitor_uuid";
     private final TownInterface town;
-    private UUID visitorUUID;
+    private VillagerUUID villagerUUID;
 
     public SpawnVisitorReward(
             RewardType<? extends MCReward> rType,
             @NotNull TownInterface entity,
-            @Nullable UUID visitorUUID
+            @Nullable VillagerUUID villagerUUID
     ) {
         super(rType);
-        this.visitorUUID = visitorUUID;
+        this.villagerUUID = villagerUUID;
         this.town = entity;
     }
 
@@ -44,19 +44,19 @@ public class SpawnVisitorReward extends MCReward {
 
     public SpawnVisitorReward(
             TownInterface entity,
-            UUID visitorUUID
+            VillagerUUID villagerUUID
     ) {
-        this(RewardsInit.VISITOR.get(), entity, visitorUUID);
+        this(RewardsInit.VISITOR.get(), entity, villagerUUID);
     }
 
     @Override
     protected @NotNull RewardApplier getApplier() {
-        return () -> spawnVisitorNearby(town, visitorUUID);
+        return () -> spawnVisitorNearby(town, villagerUUID);
     }
 
     private static void spawnVisitorNearby(
             TownInterface entity,
-            @Nullable UUID visitorUUID
+            @Nullable VillagerUUID villagerUUID
     ) {
         ServerLevel sl = entity.getServerLevel();
         if (sl == null) {
@@ -64,9 +64,9 @@ public class SpawnVisitorReward extends MCReward {
         }
 
         VisitorMobEntity vEntity = new VisitorMobEntity(sl, entity);
-        @Nullable UUID initUUID = visitorUUID;
+        @Nullable VillagerUUID initUUID = villagerUUID;
         if (initUUID == null) {
-            initUUID = vEntity.getUUID();
+            initUUID = vEntity.getVUID();
         }
         Vec3 vjp = entity.getVisitorJoinPos();
         ImmutableSnapshot<MCHeldItem, ?> initJournal = ServerJobsRegistry.getNewJournal(
@@ -76,7 +76,7 @@ public class SpawnVisitorReward extends MCReward {
                         Collections.nCopies(6, MCHeldItem.Air())
                 )
         );
-        vEntity.initialize(entity, initUUID, vjp.x, vjp.y, vjp.z, initJournal);
+        vEntity.initialize(entity, VillagerUUID.get(initUUID), vjp.x, vjp.y, vjp.z, initJournal);
         entity.getVillagerHandle().register(vEntity);
         sl.addFreshEntity(vEntity);
         QT.QUESTS_LOGGER.debug("Spawned visitor {} at {}", vEntity.getUUID(), vEntity.getOnPos());
@@ -86,7 +86,7 @@ public class SpawnVisitorReward extends MCReward {
     public String toString() {
         return "SpawnVisitorReward{" +
                 "town=" + town +
-                ", visitorUUID=" + visitorUUID +
+                ", visitorUUID=" + villagerUUID +
                 '}';
     }
 
@@ -98,8 +98,8 @@ public class SpawnVisitorReward extends MCReward {
     @Override
     protected CompoundTag serializeNbt() {
         CompoundTag tag = new CompoundTag();
-        if (this.visitorUUID != null) {
-            tag.putUUID(NBT_VISITOR_UUID, this.visitorUUID);
+        if (this.villagerUUID != null) {
+            villagerUUID.writeToNBT(tag, NBT_VISITOR_UUID);
         }
         return tag;
     }
@@ -110,13 +110,13 @@ public class SpawnVisitorReward extends MCReward {
             CompoundTag tag
     ) {
         if (tag.contains(NBT_VISITOR_UUID)) {
-            this.visitorUUID = tag.getUUID(NBT_VISITOR_UUID);
+            this.villagerUUID = VillagerUUID.fromNBT(tag, NBT_VISITOR_UUID);
         }
     }
 
     @Override
     public String toNiceString() {
-        return "SpawnNewVillager[" + UtilClean.truncateMiddle(visitorUUID.toString()) + "]";
+        return "SpawnNewVillager[" + UtilClean.truncateMiddle(villagerUUID.toString()) + "]";
     }
 
     @Override

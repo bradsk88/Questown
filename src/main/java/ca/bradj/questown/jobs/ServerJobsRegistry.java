@@ -5,9 +5,11 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.gui.JobTooltips;
 import ca.bradj.questown.gui.StatusArt;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -26,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -53,15 +56,19 @@ public class ServerJobsRegistry {
             UUID uuid,
             JobID p
     ) {
-        return Works.get(p).get().jobFunc.apply(uuid).getGlobalSpecialRules().contains(SpecialRules.ALWAYS_CONSIDER);
+        return getWorkSupplier(p).get().jobFunc.apply(uuid).getGlobalSpecialRules()
+                                               .contains(SpecialRules.ALWAYS_CONSIDER);
     }
 
     public static ResourceLocation getTexture(
             JobID job,
             IStatus<?> status
     ) {
+        if (isSeekingWork(job)) {
+            return StatusArt.getTexture(job, status);
+        }
         try {
-            Work work = getWork(job);
+            Work work = getWork(job, true);
             if (work != null) {
                 ResourceLocation tex = work.applyStatusTextureOverride(status);
                 if (tex != null) {
@@ -74,24 +81,49 @@ public class ServerJobsRegistry {
         return StatusArt.getTexture(job, status);
     }
 
-    public static @Nullable Pair<String, String> getStatusText(
+    private static boolean isSpecial(JobID job) {
+        Optional<SpecialJob> first = specialJobs.stream().filter(id -> id.idTest.test(job)).findFirst();
+        return first.isPresent();
+    }
+
+    public static @NotNull ImmutableList<Component> getStatusText(
             JobID job,
             IStatus<?> status
     ) {
-        try {
-            Work work = getWork(job);
-            if (work == null) {
-                return null;
-            }
-            return work.applyStatusTextOverride(status);
-        } catch (Exception e) {
-            QT.JOB_LOGGER.error("Failed to apply status tooltip override");
-            return null;
+        if (isSeekingWork(job)) {
+            return JobTooltips.buildStandardTooltipKeys(status, job);
         }
+
+        try {
+            Work work = getWork(job, true);
+            if (work == null) {
+                throw new IllegalStateException("No work found for job ID: " + job);
+            }
+            Pair<String, String> stringStringPair = work.applyStatusTextOverride(status);
+            if (stringStringPair != null) {
+                Component jobName = Compat.translatable("jobs." + job.rootId());
+                return Pair.toList(stringStringPair).stream().map(v -> Compat.translatable(v, jobName))
+                           .collect(ImmutableList.toImmutableList());
+            }
+        } catch (Exception e) {
+            QT.JOB_LOGGER.error("Failed to apply status tooltip override", e);
+        }
+        return JobTooltips.buildStandardTooltipKeys(status, job);
     }
 
-    private static @Nullable Work getWork(JobID job) {
-        Supplier<Work> workSupplier = Works.get(job);
+    private static @Nullable Work getWork(
+            JobID job,
+            boolean includeSpecial
+            // But not "seeking work"
+    ) {
+        Optional<SpecialJob> sj = specialJobs.stream().filter(v -> v.idTest.test(job)).findFirst();
+        if (sj.isPresent()) {
+            Work work = sj.get().reference().apply(job);
+            if (work != null) {
+                return work;
+            }
+        }
+        Supplier<Work> workSupplier = getWorkSupplier(job);
         if (workSupplier == null) {
             return null;
         }
@@ -106,7 +138,7 @@ public class ServerJobsRegistry {
             UUID villagerUUID
     ) {
         JobID initialID = GathererUnmappedNoToolWorkQtrDay.ID;
-        Work work = Works.get(initialID).get();
+        Work work = getWorkSupplier(initialID).get();
         return work.jobFunc.apply(villagerUUID);
     }
 
@@ -121,7 +153,8 @@ public class ServerJobsRegistry {
                 continue;
             }
             ResourceLocation name = Compat.getItemId(w.icon.getItem());
-            if (wantedResult.test(w.initialRequest)) {
+            name = Util.ifNull(name, Questown.ResourceLocationError);
+            if (matches(wantedResult, w.initialRequest.apply(data.serverLevel()))) {
                 b.put(w.id, Util.ifNull(name, Questown.ResourceLocationError));
                 continue;
             }
@@ -136,11 +169,16 @@ public class ServerJobsRegistry {
         return b.build();
     }
 
-    public static Collection<JobID> getRandomNodesUnder(
-            JobID parentID,
-            Supplier<Integer> randomInt
+    private static boolean matches(
+            Ingredient wantedResult,
+            @Nullable Ingredient apply
     ) {
-        return null;
+        for (ItemStack item : apply.getItems()) {
+            if (wantedResult.test(item)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -150,7 +188,7 @@ public class ServerJobsRegistry {
             JobID parent,
             JobID child
     ) {
-        @SuppressWarnings("DataFlowIssue") JobID parentID = getWork(child).parentID;
+        @SuppressWarnings("DataFlowIssue") JobID parentID = getWork(child, false).parentID;
         if (parentID == null) return false;
         return parentID.equals(parent);
     }
@@ -158,19 +196,38 @@ public class ServerJobsRegistry {
     public static ImmutableSet<JobID> getAllRootJobs() {
         ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
         for (JobID j : getAllJobs()) {
-            if (getWork(j).parentID == null) {
+            Work work = getWork(j, false);
+            if (work != null && work.parentID == null) {
                 b.add(j);
             }
         }
         return b.build();
     }
 
-    private record SpecialJob(Predicate<JobID> idTest,
-                              BiFunction<JobID, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> jobFn,
-                              TriFunction<JobID, @Nullable Snapshot<MCHeldItem>, @Nullable ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> journalFn,
-                              TriPredicate<JobID, Supplier<BlockState>, JobBlockTestContext> jobBlockTest,
-                              TriPredicate<JobID, Supplier<BlockState>, Pair<WorkLocation.BlockInfo, BlockPos>> shouldInit,
-                              BiFunction<JobID, List<MCHeldItem>, ImmutableList<Ingredient>> needs) {
+    public static ImmutableSet<MCTownItem> getResults(
+            WorksBehaviour.TownData data,
+            JobID job
+    ) {
+        @Nullable Work work = getWork(job, true);
+        if (work == null) {
+            return ImmutableSet.of();
+        }
+        return work.results.apply(data);
+    }
+
+    private record SpecialJob(
+            Function<JobID, @Nullable Work> reference,
+            Predicate<JobID> idTest,
+            BiFunction<JobID, UUID, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> jobFn,
+            TriFunction<JobID, @Nullable Snapshot<MCHeldItem>, @Nullable ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> journalFn,
+            TriPredicate<JobID, Supplier<BlockState>, JobBlockTestContext> jobBlockTest,
+            TriPredicate<JobID, Supplier<BlockState>, Pair<WorkLocation.BlockInfo, BlockPos>> shouldInit,
+            BiFunction<JobID, List<MCHeldItem>, ImmutableList<Ingredient>> needs
+    ) {
+
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getJob(JobID job, VillagerUUID owner) {
+            return jobFn.apply(job, VillagerUUID.get(owner));
+        }
 
         static SpecialJob fromWork(
                 Predicate<JobID> idTest,
@@ -187,6 +244,7 @@ public class ServerJobsRegistry {
                 return newOne;
             };
             return new SpecialJob(
+                    cached,
                     idTest,
                     (id, owner) -> cached.apply(id).jobFunc.apply(owner),
                     (id, snap, held) -> newJournal(id, snap, held, cached.apply(id)),
@@ -202,7 +260,8 @@ public class ServerJobsRegistry {
                             return null;
                         }
                     }, bp.blockPos(), bp.heldItems(), bp.townUniqueItems(), bp.jobBlockAlreadyUsed(),
-                    bp.jobActive())),
+                            bp.jobActive()
+                    )),
                     (id, bs, bp) -> cached.apply(id).shouldInitializeWorkState.test(
                             new WorkLocation.BlockInfo() {
                                 @Override
@@ -227,6 +286,7 @@ public class ServerJobsRegistry {
         ImmutableList.Builder<SpecialJob> b = ImmutableList.builder();
 
         b.add(new SpecialJob(
+                id -> null,
                 ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob::isSeekingWork,
                 (j, owner) -> new WorkSeekerJob(owner, 6, j.rootId()),
                 ServerJobsRegistry::newWorkSeekerJournal,
@@ -246,6 +306,7 @@ public class ServerJobsRegistry {
         b.add(SpecialJob.fromWork(DinerRawFoodWork::isDining, id -> DinerRawFoodWork.asWork(id.rootId())));
         b.add(SpecialJob.fromWork(ResterWork::isResting, id -> ResterWork.asWork(id.rootId())));
         b.add(SpecialJob.fromWork(BOPDepositorWork::matches, id -> BOPDepositorWork.asWork(id.rootId())));
+        b.add(SpecialJob.fromWork(DowntimeWork::matches, id -> DowntimeWork.asWork(id.rootId())));
 
         specialJobs = b.build();
     }
@@ -324,6 +385,13 @@ public class ServerJobsRegistry {
         return work.baseRoom;
     }
 
+    public static ResourceLocation getRoomForJobId(
+            JobID jobId
+    ) {
+        Supplier<Work> w = getWorkSupplier(jobId);
+        return w.get().baseRoom;
+    }
+
     public static Work getRandomWork(
             ServerLevel rand,
             String rootId,
@@ -336,9 +404,9 @@ public class ServerJobsRegistry {
                                                         .toList();
         if (x.isEmpty()) {
             QT.JOB_LOGGER.error("No jobs found for root ID: {}", rootId);
-            return Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get();
+            return getWorkSupplier(GathererUnmappedNoToolWorkQtrDay.ID).get();
         }
-        Work work = x.get(Compat.nextInt(rand, x.size())).getValue().get();
+        Work work = x.get(Compat.nextRandomInt(rand, x.size())).getValue().get();
         return work;
     }
 
@@ -409,7 +477,7 @@ public class ServerJobsRegistry {
             return false;
         }
 
-        Supplier<Work> w = Works.get(p);
+        Supplier<Work> w = getWorkSupplier(p);
         if (w == null) {
             QT.JOB_LOGGER.error("[Satisfaction check] No recognized job for ID: {}", p);
             return false;
@@ -425,7 +493,7 @@ public class ServerJobsRegistry {
                 return true;
             }
         }
-        return requestedResult.test(work.initialRequest);
+        return matches(requestedResult, work.initialRequest.apply(town.serverLevel()));
     }
 
     public static Function<List<MCHeldItem>, ImmutableList<Ingredient>> getWantedResourcesProvider(
@@ -443,7 +511,7 @@ public class ServerJobsRegistry {
             return (items) -> sj.get().needs().apply(p, items);
         }
 
-        Supplier<Work> w = Works.get(p);
+        Supplier<Work> w = getWorkSupplier(p);
         if (w == null) {
             QT.JOB_LOGGER.error("No recognized job for ID: {}", p);
             return (items) -> ImmutableList.of();
@@ -451,16 +519,43 @@ public class ServerJobsRegistry {
         return (items) -> ImmutableList.copyOf(w.get().needs.apply(items));
     }
 
-    public static ItemStack getDefaultWorkForNewWorker(JobID v) {
+    private static @Nullable Supplier<Work> getWorkSupplier(JobID p) {
+        Supplier<Work> workSupplier = Works.get(p);
+        if (workSupplier == null) {
+            QT.JOB_LOGGER.error("No work found for job ID: {}. Falling back to any job in the same root ID.", p);
+            ImmutableSet<Map.Entry<JobID, Supplier<Work>>> sameRootFallback = Works.entrySet(p.rootId());
+            Iterator<Map.Entry<JobID, Supplier<Work>>> i = sameRootFallback.stream()
+                                                                           .filter(v -> v.getKey().sameRoot(p))
+                                                                           .iterator();
+            if (!i.hasNext()) {
+                QT.JOB_LOGGER.error("No fallback work found for root ID: {}", p.rootId());
+                return null;
+            }
+            return i.next().getValue();
+        }
+        return workSupplier;
+    }
+
+    public static ItemStack getDefaultWorkForNewWorker(
+            ServerLevel sl,
+            JobID v
+    ) {
         if (isSeekingWork(v)) {
             return ItemStack.EMPTY;
         }
-        Supplier<Work> w = Works.get(v);
+        Supplier<Work> w = getWorkSupplier(v);
         if (w == null) {
             QT.JOB_LOGGER.error("[Default Work Request] No recognized job for ID: {}", v);
             return ItemStack.EMPTY;
         }
-        return w.get().initialRequest;
+        Ingredient apply = w.get().initialRequest.apply(sl);
+        if (apply == null) {
+            return ItemStack.EMPTY;
+        }
+        for (ItemStack item : apply.getItems()) {
+            return item;
+        }
+        return ItemStack.EMPTY;
     }
 
     public static ImmutableSet<Ingredient> getAllOutputs(WorksBehaviour.TownData t) {
@@ -468,8 +563,11 @@ public class ServerJobsRegistry {
                                          Work work = v.get();
                                          ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
                                          work.results.apply(t).forEach(z -> b.add(z.toMCItemStack()));
-                                         if (work.initialRequest != null) {
-                                             b.add(work.initialRequest);
+                                         @Nullable Ingredient req = work.initialRequest.apply(t.serverLevel());
+                                         if (req != null) {
+                                             for (ItemStack item : req.getItems()) {
+                                                 b.add(item);
+                                             }
                                          }
                                          return b.build();
                                      }).flatMap(Collection::stream).map(Ingredient::of).filter(v -> !v.isEmpty()).map(Ingredients::asWorkRequest)
@@ -486,7 +584,7 @@ public class ServerJobsRegistry {
             JobID p,
             Signals.DayTime currentTick
     ) {
-        Work w = Works.get(p).get();
+        Work w = getWorkSupplier(p).get();
         long jobDuration = w.jobFunc.apply(villagerID).getTotalDuration();
         long finalTick = currentTick.dayTime() + jobDuration;
         Signals nextSegment = Signals.fromDayTime(new Signals.DayTime(finalTick));
@@ -556,6 +654,57 @@ public class ServerJobsRegistry {
         return getInitializedJob(level, jobName, null, heldItems, ownerUUID);
     }
 
+    public interface JobInitPair {
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getJob();
+
+        Snapshot<MCHeldItem> newJournal(
+                ImmutableList<MCHeldItem> heldItems,
+                @Nullable Snapshot<MCHeldItem> seed
+        );
+    }
+
+    public static JobInitPair getUninitializedJob(
+            JobID jobName,
+            VillagerUUID ownerVUID
+    ) {
+        BiFunction<ImmutableList<MCHeldItem>, @Nullable Snapshot<MCHeldItem>, Snapshot<MCHeldItem>> journal = null;
+        Supplier<Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> j = null;
+        for (SpecialJob sj : specialJobs) {
+            if (sj.idTest.test(jobName)) {
+                j = () -> sj.getJob(jobName, ownerVUID);
+                journal = (items, jrn) -> sj.journalFn.apply(jobName, jrn, items);
+                break;
+            }
+        }
+        if (j == null) {
+            Supplier<Work> fn = getWorkSupplier(jobName);
+            if (fn == null) {
+                QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
+                j = () -> getWorkSupplier(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc.get(ownerVUID);
+            } else {
+                Work work = fn.get();
+                j = () -> work.jobFunc.get(ownerVUID);
+                journal = (items, jrn) -> newJournal(jobName, jrn, items, work);
+            }
+        }
+        BiFunction<ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>, Snapshot<MCHeldItem>> fJournal = journal;
+        Supplier<Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> fj = j;
+        return new JobInitPair() {
+            @Override
+            public Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getJob() {
+                return fj.get();
+            }
+
+            @Override
+            public Snapshot<MCHeldItem> newJournal(
+                    ImmutableList<MCHeldItem> heldItems,
+                    @Nullable Snapshot<MCHeldItem> seed
+            ) {
+                return fJournal.apply(heldItems, seed);
+            }
+        };
+    }
+
     private static Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitializedJob(
             ServerLevel level,
             JobID jobName,
@@ -563,25 +712,9 @@ public class ServerJobsRegistry {
             @Nullable ImmutableList<MCHeldItem> heldItems,
             UUID ownerUUID
     ) {
-        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = null;
-        for (SpecialJob sj : specialJobs) {
-            if (sj.idTest.test(jobName)) {
-                j = sj.jobFn.apply(jobName, ownerUUID);
-                journal = sj.journalFn.apply(jobName, journal, heldItems);
-                break;
-            }
-        }
-        if (j == null) {
-            Supplier<Work> fn = Works.get(jobName);
-            if (fn == null) {
-                QT.JOB_LOGGER.error("Unknown job name {}. Falling back to gatherer.", jobName);
-                j = Works.get(GathererUnmappedNoToolWorkQtrDay.ID).get().jobFunc.apply(ownerUUID);
-            } else {
-                Work work = fn.get();
-                j = work.jobFunc.apply(ownerUUID);
-                journal = newJournal(jobName, journal, heldItems, work);
-            }
-        }
+        JobInitPair u = getUninitializedJob(jobName, VillagerUUID.from(ownerUUID));
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = u.getJob();
+        journal = u.newJournal(heldItems, journal);
         if (journal != null) {
             j.initialize(level, journal);
         }
@@ -626,10 +759,10 @@ public class ServerJobsRegistry {
             return new SimpleSnapshot<>(job, ProductionStatus.fromNumber(status), heldItems);
         }
 
-        Supplier<Work> f = Works.get(job);
+        Supplier<Work> f = getWorkSupplier(job);
         if (f == null) {
             QT.JOB_LOGGER.error("No journal snapshot factory for {}. Falling back to Simple/Gatherer", job);
-            f = Works.get(GathererUnmappedNoToolWorkQtrDay.ID);
+            f = getWorkSupplier(GathererUnmappedNoToolWorkQtrDay.ID);
         }
         return f.get().snapshotFunc.apply(job, status, heldItems);
     }

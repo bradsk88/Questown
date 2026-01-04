@@ -7,14 +7,14 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "One villager is helpful, but more are better!$(br2)If we want to attract more people to our village, we should probably add some more amenities.$(br2)But what should we build?"
+      "text": "One villager is helpful, but more are better!$(br2)If we want to attract more people to our village, we should probably add some more amenities.$(br2)But what should we build?$(br2)Hint: Click the \"Quests\" tab from the flag menu. Complete the quests to get more villagers."
     },
     {
       "type": "patchouli:image",
       "images": [
         "questown:textures/guide/quests.png"
       ],
-      "text": "Hint: Click the \"Quests\" tab from the flag menu. Complete the quests to get more villagers."
+      "text": ""
     }
   ]
 }

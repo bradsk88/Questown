@@ -3,7 +3,7 @@ package ca.bradj.questown.items;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagBlock;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
@@ -11,6 +11,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * @deprecated Use Town Wand
+ */
+@Deprecated(forRemoval = true)
 public class TownFenceGateItem extends Item {
     public static final String ITEM_ID = "town_fence_gate";
 

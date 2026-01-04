@@ -1,12 +1,12 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -39,8 +39,7 @@ public class DinerNoTableWork {
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
             // Food is listed as a "tool" so the villager will render it in hand while they eat
-            BLOCK_STATE_NEED_EAT, Ingredient.of(TagsInit.Items.VILLAGER_FOOD),
-            BLOCK_STATE_CONSUME_FOOD, Ingredient.of(TagsInit.Items.VILLAGER_FOOD)
+            BLOCK_STATE_NEED_EAT, Ingredient.of(TagsInit.Items.VILLAGER_FOOD)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_EAT, 25,
@@ -54,7 +53,6 @@ public class DinerNoTableWork {
     );
 
     private static final Collection<ItemStack> RESULTS = ImmutableList.of(
-            EffectMetaItem.withConsumableEffect(EffectMetaItem.ConsumableEffects.FILL_HUNGER),
             EffectMetaItem.withLastingEffect(EffectMetaItem.MoodEffects.UNCOMFORTABLE_EATING, Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY.get())
     );
     public static final int PAUSE_FOR_ACTION = 10;
@@ -67,7 +65,7 @@ public class DinerNoTableWork {
                 Items.APPLE.getDefaultInstance(),
                 new JobID(rootId, ID),
                 WorksBehaviour.noResultDescription(),
-                SpecialQuests.DINING_ROOM_LOCATION,
+                SpecialQuests.TOWN_FLAG_LOCATION,
                 new WorkStates(
                         MAX_STATE,
                         Util.constant(INGREDIENTS_REQUIRED_AT_STATES),
@@ -94,18 +92,22 @@ public class DinerNoTableWork {
                         }
                 ),
                 new WorkSpecialRules(
-                        ImmutableMap.of(), // No stage rules
+                        ImmutableMap.of(
+                                ProductionStatus.EXTRACTING_PRODUCT,
+                                ImmutableList.of(SpecialRules.HUNGER_FILL)
+                        ),
                         ImmutableList.of(
-                                SpecialRules.WORK_IN_EVENING
+                                SpecialRules.WORK_IN_EVENING,
+                                SpecialRules.NO_EXPERIENCE_GAINED
                         )
                 ),
                 new SoundInfo(SoundEvents.GENERIC_EAT.getLocation(), 10, null),
                 new ExpirationRules(
-                        () -> Long.MAX_VALUE,
+                        Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
                         Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
                         jobId -> DinerRawFoodWork.getIdForRoot(jobId.rootId()),
-                        () -> Long.MAX_VALUE,
-                        jobId -> jobId
+                        Compat.configGet(Config.MAX_TICKS_WITHOUT_FOOD),
+                        jobId -> DinerRawFoodWork.getIdForRoot(jobId.rootId())
                 )
         ).withNeeds((items) -> ImmutableList.of(Ingredient.of(TagsInit.Items.VILLAGER_FOOD)));
     }

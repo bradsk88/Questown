@@ -257,4 +257,38 @@ public class UtilClean {
         }
         return null;
     }
+
+    public static <X, Y> ImmutableMap<X, Y> toMap(
+            Collection<X> collection,
+            Function<X, @NotNull Y> mapper
+    ) {
+
+        ImmutableMap.Builder<X, Y> b = ImmutableMap.builder();
+        for (X j : collection) {
+            b.put(j, mapper.apply(j));
+        }
+        return b.build();
+    }
+
+    public static <X, Y> ImmutableMap<X, Y> filterByValue(
+            Map<X, Y> map,
+            Predicate<Y> criteria
+    ) {
+        ImmutableMap.Builder<X, Y> b = ImmutableMap.builder();
+        for (Map.Entry<X, Y> jobroomEntry : map.entrySet()) {
+            if (criteria.test(jobroomEntry.getValue())) {
+                b.put(jobroomEntry);
+            }
+        }
+        return b.build();
+    }
+
+    public static <X, Y, Z> ImmutableMap<Y, Z> mapKeys(
+            Map<X, Z> jobChangesPending,
+            Function<X, Y> get
+    ) {
+        ImmutableMap.Builder<Y, Z> b = ImmutableMap.builder();
+        jobChangesPending.forEach((k, v) -> b.put(get.apply(k), v));
+        return b.build();
+    }
 }

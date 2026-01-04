@@ -75,4 +75,8 @@ public class AddWorkContainer extends AbstractContainerMenu {
         AddWorkFromUIMessage msg = new AddWorkFromUIMessage(item, flag, AddWorkFromUIMessage.Action.INQUIRED);
         QuestownNetwork.CHANNEL.sendToServer(msg);
     }
+
+    public boolean canRequest(Ingredient item) {
+        return AddWorkFromUIMessage.canEncode(item);
+    }
 }

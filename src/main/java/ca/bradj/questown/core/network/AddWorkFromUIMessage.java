@@ -6,7 +6,7 @@ import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -33,6 +33,16 @@ public final class AddWorkFromUIMessage {
         this.requested = requested;
         this.flagPos = flagPos;
         this.action = action;
+    }
+
+    public static boolean canEncode(Ingredient item) {
+        try {
+            Ingredients.toString(item);
+            return true;
+        } catch (Exception e) {
+            QT.GUI_LOGGER.error("Failed to encode ingredient {}: {}", item, e.getMessage());
+            return false;
+        }
     }
 
     public enum Action {

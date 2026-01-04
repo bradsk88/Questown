@@ -9,14 +9,17 @@
     "type": "biome_loot",
     "prefix": "jobs/gatherer_notool",
     "default": "jobs/gatherer_notool/default",
-    "attempts": 3
+    "attempts": 4
   },
   "block": "questown:welcome_mat_block",
   "room": "questown:special_quest.town_gate",
   "work_states": [
     {
       "ingredients": "#questown:villager_food",
-      "quantity": 2
+      "quantity": 1
+    },
+    {
+      "work": 1
     },
     {
       "time": 4000
@@ -37,6 +40,11 @@
       "type": "core_state",
       "state": "WAITING_FOR_TIMED_STATE",
       "rules": ["remove_from_world"]
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": ["hunger_fill_half"]
     }
   ],
   "status_texture_overrides": [

@@ -8,7 +8,6 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 public class JobRelationship implements Iterable<JobRelationship> {
 
@@ -32,7 +31,7 @@ public class JobRelationship implements Iterable<JobRelationship> {
             Predicate<JobRelationship> include
     ) {
         int i = 0;
-        int leafs = countLeafNodes(include); // TODO:: This is probably quite inefficient
+        int leafs = countLeafNodes(include); // TODO[Performance]: This is probably quite inefficient
         List<JobRelationship> jobz = jobs.stream().filter(include).toList();
         for (JobRelationship j : jobz) {
             X newWidget = fn.apply(j, new ContextualPosition(i, jobz.size(), leafs), parentWidget);

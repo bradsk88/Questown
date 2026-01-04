@@ -45,7 +45,6 @@ public class ResterWork {
             2000
     );
 
-    private static final Collection<ItemStack> RESULTS = ImmutableList.of(Items.AIR.getDefaultInstance());
     public static final int PAUSE_FOR_ACTION = 10;
 
     public static Work asWork(
@@ -70,20 +69,8 @@ public class ResterWork {
                         Util.constant(TIME_REQUIRED_AT_STATES)
                 ),
                 new WorkWorldInteractions(
-                        PAUSE_FOR_ACTION, new ResultGenerator<>() {
-                    @Override
-                    public Iterable<MCHeldItem> generate(
-                            ServerLevel level,
-                            Collection<MCHeldItem> heldItems
-                    ) {
-                        return MCHeldItem.fromMCItemStacks(RESULTS);
-                    }
-
-                    @Override
-                    public boolean isResultAlwaysEmpty() {
-                        return true;
-                    }
-                }
+                        PAUSE_FOR_ACTION,
+                        WorkWorldInteractions.ALWAYS_EMPTY_RESULT_GENERATOR
                 ),
                 new WorkSpecialRules(
                         ImmutableMap.of(

@@ -6,7 +6,6 @@ import ca.bradj.questown.jobs.WorkSpot;
 import ca.bradj.questown.jobs.WorkedSpot;
 import ca.bradj.questown.logic.MonoPredicateCollection;
 import ca.bradj.questown.logic.PredicateCollection;
-import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;

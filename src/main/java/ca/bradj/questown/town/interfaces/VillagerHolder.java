@@ -1,19 +1,28 @@
 package ca.bradj.questown.town.interfaces;
 
+import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.VillagerStatsData;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+/**
+ * @deprecated This interface has become a grab-bag of methods. Use more specific interfaces instead.
+ */
+@Deprecated(forRemoval = true)
 public interface VillagerHolder {
     long size();
 
@@ -59,15 +68,22 @@ public interface VillagerHolder {
 
     Collection<JobID> getJobs();
 
+    ImmutableMap<VillagerUUID, JobID> getVillagerJobs();
+
     void changeJobForVillager(
-            UUID villagerUUID,
+            VillagerUUID villagerUUID,
             JobID newJob,
             boolean announce
     );
 
-    void changeToNextJobForVillager(
+    /**
+     * @deprecated Use VillagerUUID version
+     */
+    @Deprecated(forRemoval = true)
+    void changeJobForVillager(
             UUID villagerUUID,
-            JobID currentJob
+            JobID newJob,
+            boolean announce
     );
 
     boolean canDine(UUID uuid);
@@ -93,7 +109,10 @@ public interface VillagerHolder {
 
     void showMultiStatusUI(ServerPlayer sender);
 
-    void showItemJobsUI(ServerPlayer sender, Ingredient itemToShowJobsFor);
+    void showItemJobsUI(
+            ServerPlayer sender,
+            Ingredient itemToShowJobsFor
+    );
 
     void register(VisitorMobEntity vEntity);
 
@@ -111,9 +130,44 @@ public interface VillagerHolder {
 
     void clearBlockOfProgress(UUID uuid);
 
-    void scheduleJobRootChange(UUID villagerUUID,
-                               boolean instant
+    void scheduleJobRootChange(
+            UUID villagerUUID,
+            boolean instant
     );
 
     boolean isUnlocked(JobID jobID);
+
+    UnsafeVillagerData getUnprotectedDataHandle(@Nullable VillagerUUID vuid);
+
+    Optional<Entity> getLookTarget(@Nullable VillagerUUID vuid);
+
+    void setLookTarget(
+            @Nullable VillagerUUID vuid,
+            Entity entity,
+            long untilTick,
+            long thenNotUntilTick
+    );
+
+    void showJobUI(
+            ServerPlayer sender,
+            JobID jobToShow
+    );
+
+    void setJobChangePending(
+            VillagerUUID vuid,
+            boolean value
+    );
+
+    boolean isJobChangePending(VillagerUUID vuid);
+
+    boolean isStarving(@Nullable VillagerUUID vuid);
+
+    void setStarving(
+            @Nullable VillagerUUID vuid,
+            boolean b
+    );
+
+    boolean gaveUpDiningRecently(VillagerUUID uuid, long currentTick);
+
+    void toggleHunger();
 }

@@ -48,12 +48,19 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
             return false;
         }
         this.ticksSoFar++;
+
+        if (isOvergrown()) {
+            return false;
+        }
+
         boolean added = doGrow(hasEnoughBeds, neededRooms, allRecipes);
         if (this.ticksSoFar > maxTicks) {
             return false;
         }
         return added;
     }
+
+    protected abstract boolean isOvergrown();
 
     private boolean doGrow(
             Supplier<Boolean> hasEnoughBeds,

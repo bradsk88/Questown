@@ -116,4 +116,23 @@ public class QTNBT {
     ) {
         return itemTag.getInt(keyify(key));
     }
+
+    public static void putBoolean(
+            CompoundTag orCreateTag,
+            String blessed,
+            boolean b
+    ) {
+        orCreateTag.putBoolean(keyify(blessed), b);
+    }
+
+    public static boolean getBoolean(
+            CompoundTag orCreateTag,
+            String blessed,
+            boolean ifNull
+    ) {
+        if (orCreateTag.contains(keyify(blessed))) {
+            return orCreateTag.getBoolean(keyify(blessed));
+        }
+        return ifNull;
+    }
 }

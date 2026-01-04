@@ -4,6 +4,7 @@ import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.gui.PagedCardScreen.Card;
 import ca.bradj.questown.gui.PagedCardScreen.CardCoordinates;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
@@ -161,6 +162,17 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 mouse
         );
 
+        return renderCardTooltip(card, removalTooltip, renderedHeadTooltip, renderedItemTooltip, mouse, recipe);
+    }
+
+    private static @Nullable List<Component> renderCardTooltip(
+            Card<UIQuest> card,
+            @Nullable Component removalTooltip,
+            @Nullable Component renderedHeadTooltip,
+            @Nullable List<Component> renderedItemTooltip,
+            Coordinate mouse,
+            UIQuest recipe
+    ) {
         if (removalTooltip != null) {
             return ImmutableList.of(removalTooltip);
         }
@@ -177,15 +189,26 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             return null;
         }
 
-        switch (recipe.getType()) {
-            case ITEM:
-                int size = recipe.getIngredients().size();
-                Component name = Compat.getItemName(recipe.getWantedId());
-                return ImmutableList.of(Compat.translatable("menu.quests.item_quest", size, name));
-            case ROOM:
-                return ImmutableList.of(Compat.translatable("menu.quests.room_quest"));
-        }
-        return null;
+        return switch (recipe.getType()) {
+            case ITEM -> renderItemQuestTooltip(recipe);
+            case ROOM -> ImmutableList.of(Compat.translatable("menu.quests.room_quest"));
+            case JOB_CHANGE -> renderJobQuestTooltip(recipe);
+            case UNKNOWN -> null;
+        };
+    }
+
+    private static ImmutableList<Component> renderItemQuestTooltip(UIQuest recipe) {
+        int size = recipe.getIngredients().size();
+        Component name = Compat.getItemName(recipe.getWantedId());
+        return ImmutableList.of(Compat.translatable("menu.quests.item_quest", size, name));
+    }
+
+    private static ImmutableList<Component> renderJobQuestTooltip(UIQuest recipe) {
+        JobID job = JobID.fromRL(recipe.getWantedId());
+        return ImmutableList.of(
+                Compat.translatable("menu.questown.quests.job_quest_1", job.jobId()),
+                Compat.translatable("menu.questown.quests.job_quest_2", job.rootId())
+        );
     }
 
     private @Nullable Component renderHead(

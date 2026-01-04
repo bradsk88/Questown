@@ -2,7 +2,7 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
-import ca.bradj.questown.town.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -30,7 +30,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import static net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
@@ -128,10 +127,20 @@ public class JobBoardBlock extends TownFlagSubBlock<JobBoardBlock.Entity> {
         }
 
         @Override
-        public Collection<ItemStack> dropWhenOrphaned(BlockPos flagPos) {
+        public Block getBlock() {
+            return getBlockState().getBlock();
+        }
+
+        @Override
+        public void runWhenOrphaned(
+                ServerLevel sl,
+                Block childBlock,
+                BlockPos childPos,
+                BlockPos flagPos
+        ) {
             ItemStack toDrop = Items.OAK_SIGN.getDefaultInstance();
             TownFlagBlock.StoreParentOnNBT(toDrop, flagPos);
-            return ImmutableList.of(toDrop);
+            TownFlagSubBlocks.dropDrops(sl, childPos, ImmutableList.of(toDrop));
         }
 
         @Override
