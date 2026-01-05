@@ -40,7 +40,7 @@ public class WorksBehaviour {
             JobID id,
             WarpInput warpInput,
             boolean prioritizeExtraction,
-            Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots,
+            Function<Inpoots<MCTownState>, Claim> claimSpots,
             int pauseForAction,
             WorkStates states,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
@@ -60,7 +60,7 @@ public class WorksBehaviour {
         return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction);
     }
 
-    private static DeclarativeJobChecks<MCTownStateWorldInteraction.Inputs, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> fromStates(WorkStates states) {
+    private static DeclarativeJobChecks<Inpoots<MCTownState>, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> fromStates(WorkStates states) {
         return new DeclarativeJobChecks<>(
                 Jobs.unMCHeld3(states.ingredientsRequired()),
                 states.ingredientQtyRequired(),
@@ -193,7 +193,7 @@ public class WorksBehaviour {
                             if (!special.containsGlobal(SpecialRules.CLAIM_SPOT)) {
                                 return null;
                             }
-                            return new Claim(inputs.vUUID(), Config.BLOCK_CLAIMS_TICK_LIMIT.get());
+                            return new Claim(inputs.villagerUUID(), Config.BLOCK_CLAIMS_TICK_LIMIT.get());
                         },
                         world.actionDuration(),
                         states,

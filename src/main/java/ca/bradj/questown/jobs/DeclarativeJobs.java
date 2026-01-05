@@ -6,19 +6,19 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.jobs.MCTownStateWorldInteraction.Inputs;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
-import ca.bradj.questown.jobs.production.ProductionStatuses;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput.NVIRoom;
 import ca.bradj.questown.logic.PredicateCollection;
-import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.rooms.TownPosition;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -26,8 +26,6 @@ import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -128,8 +126,6 @@ public class DeclarativeJobs {
         toolsRequiredAtStates.forEach(fn);
         return ImmutableMap.copyOf(b);
     }
-
-    private static ImmutableMap<ProductionStatus, Function<HandlerInputs, MCTownState>> handler;
 
     public static BiFunction<Integer, SignalSource, ProductionJournal<MCTownItem, MCHeldItem>> journalInitializer(JobID jobId) {
         return (capacity, signalSource) -> new ProductionJournal<>(
@@ -295,49 +291,13 @@ public class DeclarativeJobs {
         };
     }
 
-    private record HandlerInputs(MCTownStateWorldInteraction wi, MCTownStateWorldInteraction.Inputs inState,
-                                 ProductionStatus status, State workBlockState, Integer maxState, BlockPos fakePos) {
+
+    private record HandlerInputs(MCTownStateWorldInteraction wi, Inputs inState, ProductionStatus status,
+                                 State workBlockState, Integer maxState, BlockPos fakePos) {
     }
 
     public static void staticInitialize() {
-        ImmutableMap.Builder<ProductionStatus, Function<HandlerInputs, @Nullable MCTownState>> b = ImmutableMap.builder();
-        Function<HandlerInputs, @Nullable MCTownState> tryWorking = ii -> {
-            @Nullable WorkOutput<MCTownState, WorkPosition<BlockPos>> v = ii.wi.tryWorking(
-                    ii.inState,
-                    new WorkPosition<>(ii.fakePos, ii.fakePos)
-            );
-            if (v == null) {
-                return null;
-            }
-            return v.town();
-        };
-
-        for (int i = 0; i < ProductionStatus.firstNonCustomIndex; i++) {
-            b.put(
-                    ProductionStatus.fromJobBlockStatus(i), (
-                            HandlerInputs ii
-                    ) -> {
-                        if (!ii.status.isWorkingOnProduction()) {
-                            return ii.inState.town();
-                        }
-                        return tryWorking.apply(ii);
-                    }
-            );
-        }
-        b.put(ProductionStatus.EXTRACTING_PRODUCT, tryWorking);
-        b.put(ProductionStatus.DROPPING_LOOT, i -> i.wi.simulateDropLoot(i.inState.town(), i.status));
-        b.put(
-                ProductionStatus.COLLECTING_SUPPLIES,
-                i -> i.wi.simulateCollectSupplies(i.inState.town(), i.workBlockState.processingState())
-        );
-        b.put(ProductionStatus.RELAXING, i -> null);
-        b.put(ProductionStatus.WAITING_FOR_TIMED_STATE, i -> null);
-        b.put(ProductionStatus.NO_SPACE, i -> null);
-        b.put(ProductionStatus.GOING_TO_JOB, i -> null);
-        b.put(ProductionStatus.NO_SUPPLIES, i -> null);
-        b.put(ProductionStatus.IDLE, i -> null);
-        b.put(ProductionStatus.NO_JOBSITE, i -> null);
-        handler = b.build();
+        DeclarativeJobWarping.staticInitialize();
     }
 
     public static Warper<ServerLevel, MCTownState> warper(
@@ -345,14 +305,7 @@ public class DeclarativeJobs {
             int maxState,
             boolean prioritizeExtraction
     ) {
-        ImmutableSet<ProductionStatus> c = handler.keySet();
-        ImmutableSet<ProductionStatus> productionStatuses = ProductionStatus.allStatuses();
-        if (!c.containsAll(productionStatuses)) {
-            throw new IllegalStateException("Not all production states are handled. Difference: " + Sets.difference(
-                    ImmutableSet.copyOf(productionStatuses),
-                    ImmutableSet.copyOf(c)
-            ));
-        }
+        DeclarativeJobWarping.sanityCheck();
 
         return new Warper<>() {
             @Override
@@ -364,61 +317,58 @@ public class DeclarativeJobs {
                     int villagerNum
             ) {
                 BlockPos fakePos = new BlockPos(villagerNum, villagerNum, villagerNum);
-
-                MCTownState outState = inState;
-
-                State state = outState.workStates.get(fakePos);
-                if (state == null) {
-                    outState = outState.setJobBlockState(fakePos, State.fresh());
-                }
-
-                ProductionStatus status = ProductionStatus.FACTORY.idle();
-
-                final State ztate = outState.workStates.get(fakePos);
-
-                final MCTownStateWorldInteraction.Inputs fState = new MCTownStateWorldInteraction.Inputs(
-                        outState,
-                        level,
-                        inState.getVillager(villagerNum).uuid
-                );
-                wi.injectTicks((int) ticksPassed);
                 MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);
-                @Nullable ProductionStatus nuStatus = ProductionStatuses.getNewStatusFromSignal(
-                        status,
-                        Signals.fromDayTime(Util.getDayTime(level)),
-                        wi.asInventory(() -> wi.getHeldItems(fState, villagerNum), ztate::processingState),
-                        wi.asTownJobs(
-                                ztate,
-                                new RoomRecipeMatch<>(
-                                        fakeRoom,
-                                        ImmutableList.of(new ResourceLocation("fake")),
-                                        ImmutableList.of()
-                                ),
-                                fakePos,
-                                outState.containers
-                        ),
-                        DeclarativeJobs.alwaysInRoom(fakeRoom),
-                        STATUS_FACTORY,
-                        prioritizeExtraction
+                RoomRecipeMatch<MCRoom> fakeMatch = new RoomRecipeMatch<>(
+                        fakeRoom,
+                        ImmutableList.of(new ResourceLocation("fake")),
+                        ImmutableList.of()
                 );
-                if (nuStatus != null) {
-                    status = nuStatus;
-                }
-                MCTownState affectedState = handler.get(status).apply(new HandlerInputs(
-                        wi,
-                        fState,
-                        status,
-                        ztate,
-                        maxState,
-                        fakePos
-                ));
-                if (affectedState != null) {
-                    outState = affectedState;
-                }
+                DeclarativeJobWarping.WorkSpotStandIn<MCTownState> ws = new DeclarativeJobWarping.WorkSpotStandIn<>() {
+                    @Override
+                    public State getState(MCTownState mcTownState) {
+                        return inState.getJobBlockState(fakePos);
+                    }
 
-                outState = outState.withTimerReducedBy(fakePos, (int) ticksPassed);
+                    @Override
+                    public MCTownState setState(
+                            MCTownState outState,
+                            State newValue
+                    ) {
+                        return outState.setJobBlockState(fakePos, newValue);
+                    }
 
-                return outState;
+                    @Override
+                    public MCTownState withTimerReducedBy(
+                            MCTownState outState,
+                            int ticksPassed
+                    ) {
+                        return outState.withTimerReducedBy(fakePos, ticksPassed);
+                    }
+                };
+
+                Function<MCTownState, Inputs> inputs = zstate -> new Inputs(
+                        zstate,
+                        level,
+                        zstate.getVillager(villagerNum).uuid
+                );
+
+                AbstractStateInteraction<Inpoots<MCTownState>, TownPosition, ?, ?, MCTownState> wii = wi;
+                return DeclarativeJobWarping.<MCTownState, MCRoom>warp(
+                        villagerNum,
+                        ws,
+                        inState,
+                        Tick.at(currentTick).after(ticksPassed),
+                        zstate -> wi.asInventory(
+                                () -> wi.getHeldItems(moreSilly(inputs.apply(zstate)), villagerNum),
+                                () -> ws.getState(zstate).processingState()
+                        ),
+                        ztate -> wi.asTownJobs(ws.getState(ztate), fakeMatch, fakePos, ztate.containers),
+                        DeclarativeJobs.alwaysInRoom(fakeRoom),
+                        prioritizeExtraction,
+                        wii,
+                        t -> new Inpoots<>(t, level, t.getVillager(villagerNum).uuid),
+                        maxState
+                );
             }
 
             @Override
@@ -440,6 +390,10 @@ public class DeclarativeJobs {
                 return b.build();
             }
         };
+    }
+
+    private static Inpoots<MCTownState> moreSilly(Inputs apply) {
+        return new Inpoots<>(apply.town(), apply.level(), apply.vUUID());
     }
 
     private static EntityLocStateProvider<MCRoom> alwaysInRoom(
@@ -473,7 +427,7 @@ public class DeclarativeJobs {
 
         @Override
         public Populated<WithReason<@Nullable Boolean>> populate() {
-            // TODO[Performance]: Cache?
+            // TODO[Performance: Cache?
 //            if (value != null) {
 //                return value;
 //            }
