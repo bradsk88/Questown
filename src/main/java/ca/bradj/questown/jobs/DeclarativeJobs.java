@@ -18,7 +18,6 @@ import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
-import ca.bradj.questown.town.rooms.TownPosition;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -98,6 +97,9 @@ public class DeclarativeJobs {
         public ProductionStatus relaxing() {
             return ProductionStatus.FACTORY.relaxing();
         }
+    };
+
+    private static final AbstractDeclarativeJobWarper<MCTownState, MCRoom, BlockPos, ServerLevel> WARPER = new AbstractDeclarativeJobWarper<>() {
     };
 
     public static <INGREDIENT, ITEM extends Item<ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, ITEM>> Map<Integer, Boolean> getSupplyItemStatus(
@@ -297,7 +299,7 @@ public class DeclarativeJobs {
     }
 
     public static void staticInitialize() {
-        DeclarativeJobWarping.staticInitialize();
+        AbstractDeclarativeJobWarper.staticInitialize();
     }
 
     public static Warper<ServerLevel, MCTownState> warper(
@@ -305,7 +307,7 @@ public class DeclarativeJobs {
             int maxState,
             boolean prioritizeExtraction
     ) {
-        DeclarativeJobWarping.sanityCheck();
+        AbstractDeclarativeJobWarper.sanityCheck();
 
         return new Warper<>() {
             @Override
@@ -323,7 +325,12 @@ public class DeclarativeJobs {
                         ImmutableList.of(new ResourceLocation("fake")),
                         ImmutableList.of()
                 );
-                DeclarativeJobWarping.WorkSpotStandIn<MCTownState> ws = new DeclarativeJobWarping.WorkSpotStandIn<>() {
+                AbstractDeclarativeJobWarper.WorkSpotStandIn<MCTownState, BlockPos> ws = new AbstractDeclarativeJobWarper.WorkSpotStandIn<>() {
+                    @Override
+                    public BlockPos get() {
+                        return new BlockPos(villagerNum, villagerNum, villagerNum);
+                    }
+
                     @Override
                     public State getState(MCTownState mcTownState) {
                         return inState.getJobBlockState(fakePos);
@@ -352,9 +359,8 @@ public class DeclarativeJobs {
                         zstate.getVillager(villagerNum).uuid
                 );
 
-                AbstractStateInteraction<Inpoots<MCTownState>, TownPosition, ?, ?, MCTownState> wii = wi;
-                return DeclarativeJobWarping.<MCTownState, MCRoom>warp(
-                        villagerNum,
+                AbstractStateInteraction<Inpoots<MCTownState, ServerLevel>, BlockPos, ?, ?, MCTownState> wii = wi;
+                return DeclarativeJobs.WARPER.warp(
                         ws,
                         inState,
                         Tick.at(currentTick).after(ticksPassed),
@@ -392,7 +398,7 @@ public class DeclarativeJobs {
         };
     }
 
-    private static Inpoots<MCTownState> moreSilly(Inputs apply) {
+    private static Inpoots<MCTownState, ServerLevel> moreSilly(Inputs apply) {
         return new Inpoots<>(apply.town(), apply.level(), apply.vUUID());
     }
 

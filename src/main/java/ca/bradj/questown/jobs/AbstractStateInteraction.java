@@ -32,4 +32,17 @@ public abstract class AbstractStateInteraction<INPUTS, POS, ITEM extends Item<IT
             TOWN inState,
             int processingState
     );
+
+    @Override
+    protected boolean isEntityClose(
+            INPUTS inputs,
+            POS position
+    ) {
+        return true;
+    }
+
+    @Override
+    protected boolean isServerUpAndTownDataReadable(INPUTS inputs) {
+        return true;
+    }
 }

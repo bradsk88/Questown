@@ -4,7 +4,7 @@ import org.jetbrains.annotations.Nullable;
 
 public interface WorkStatusHandle<POS, ITEM> extends ImmutableWorkStateContainer<POS, Boolean> {
 
-    boolean canInsertItem(
+    boolean isWorkSpotReadyForItem(
             ITEM item,
             POS bp
     );

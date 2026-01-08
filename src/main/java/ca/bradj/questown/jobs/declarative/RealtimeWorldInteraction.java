@@ -160,7 +160,7 @@ public class RealtimeWorldInteraction extends
     }
 
     @Override
-    protected ArrayList<WorkPosition<BlockPos>> shuffle(
+    protected ArrayList<WorkPosition<BlockPos>> makeMutableShuffledCopy(
             MCExtra mcExtra,
             Collection<WorkPosition<BlockPos>> workSpots
     ) {
@@ -218,7 +218,7 @@ public class RealtimeWorldInteraction extends
     }
 
     @Override
-    protected boolean isMulti(MCTownItem mcTownItem) {
+    protected boolean isStacked(MCTownItem mcTownItem) {
         return mcTownItem.toQTItemStack().getCount() > 1;
     }
 
@@ -228,20 +228,20 @@ public class RealtimeWorldInteraction extends
     }
 
     @Override
-    protected Iterable<MCHeldItem> getResults(
+    protected ImmutableList<MCHeldItem> getResults(
             MCExtra inputs,
             Collection<MCHeldItem> mcHeldItems
     ) {
-        return resultGenerator.apply(inputs.town().getServerLevel(), mcHeldItems);
+        return ImmutableList.copyOf(resultGenerator.apply(inputs.town().getServerLevel(), mcHeldItems));
     }
 
     @Override
-    protected boolean canInsertItem(
+    protected boolean isWorkSpotReadyForItem(
             MCExtra mcExtra,
             MCHeldItem item,
             BlockPos bp
     ) {
-        return mcExtra.work().canInsertItem(item, bp);
+        return mcExtra.work().isWorkSpotReadyForItem(item, bp);
     }
 
     @Override
@@ -258,7 +258,7 @@ public class RealtimeWorldInteraction extends
     }
 
     @Override
-    protected WorkedSpot<BlockPos> getCurWorkedSpot(
+    protected WorkedSpot<BlockPos> getWorkedSpotWithUpToDateState(
             MCExtra mcExtra,
             Boolean stateSource,
             BlockPos workSpot
@@ -294,7 +294,7 @@ public class RealtimeWorldInteraction extends
     }
 
     @Override
-    protected boolean isReady(MCExtra extra) {
+    protected boolean isServerUpAndTownDataReadable(MCExtra extra) {
         return extra.town() != null && extra.town().getServerLevel() != null;
     }
 

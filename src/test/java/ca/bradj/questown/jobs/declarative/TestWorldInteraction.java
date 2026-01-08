@@ -25,7 +25,7 @@ public class TestWorldInteraction extends
         AbstractWorldInteraction<Void, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Boolean> {
 
     private final ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory;
-    private Iterable<GathererJournalTest.TestItem> results = ImmutableList.of();
+    private ImmutableList<GathererJournalTest.TestItem> results = ImmutableList.of();
     boolean extracted;
     private final ImmutableWorkStateContainer<Position, Boolean> workStatuses;
     private int degradedTool;
@@ -47,7 +47,7 @@ public class TestWorldInteraction extends
             ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> ingredientsRequiredAtStates,
             ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
             ImmutableMap<Integer, Integer> timeRequiredAtStates,
-            Iterable<GathererJournalTest.TestItem> results,
+            ImmutableList<GathererJournalTest.TestItem> results,
             ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory,
             ImmutableWorkStateContainer<Position, Boolean> workStatuses,
             Supplier<Claim> claim
@@ -246,7 +246,7 @@ public class TestWorldInteraction extends
     }
 
     @Override
-    protected boolean isMulti(GathererJournalTest.TestItem testItem) {
+    protected boolean isStacked(GathererJournalTest.TestItem testItem) {
         return false;
     }
 
@@ -256,7 +256,7 @@ public class TestWorldInteraction extends
     }
 
     @Override
-    protected Iterable<GathererJournalTest.TestItem> getResults(
+    protected ImmutableList<GathererJournalTest.TestItem> getResults(
             Void inputs,
             Collection<GathererJournalTest.TestItem> testItems
     ) {
@@ -272,7 +272,7 @@ public class TestWorldInteraction extends
     }
 
     @Override
-    protected boolean isReady(Void unused) {
+    protected boolean isServerUpAndTownDataReadable(Void unused) {
         return true;
     }
 
@@ -329,7 +329,7 @@ public class TestWorldInteraction extends
     }
 
     @Override
-    protected boolean canInsertItem(
+    protected boolean isWorkSpotReadyForItem(
             Void unused,
             GathererJournalTest.TestItem item,
             Position bp
@@ -351,7 +351,7 @@ public class TestWorldInteraction extends
     }
 
     @Override
-    protected ArrayList<WorkPosition<Position>> shuffle(
+    protected ArrayList<WorkPosition<Position>> makeMutableShuffledCopy(
             Void unused,
             Collection<WorkPosition<Position>> workSpots
     ) {
@@ -360,7 +360,7 @@ public class TestWorldInteraction extends
     }
 
     @Override
-    protected WorkedSpot<Position> getCurWorkedSpot(
+    protected WorkedSpot<Position> getWorkedSpotWithUpToDateState(
             Void unused,
             Boolean stateSource,
             Position workSpot

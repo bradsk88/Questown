@@ -122,7 +122,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     }
 
     @Override
-    public boolean canInsertItem(
+    public boolean isWorkSpotReadyForItem(
             ITEM item,
             POS bp
     ) {

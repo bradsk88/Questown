@@ -42,7 +42,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class MCTownStateWorldInteraction extends
-        AbstractStateInteraction<Inpoots<MCTownState>, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
+        AbstractStateInteraction<Inpoots<MCTownState, ServerLevel>, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
 
     private final BlockPos townPos;
 
@@ -57,9 +57,9 @@ public class MCTownStateWorldInteraction extends
             int villagerIndex,
             int interval,
             int maxState,
-            DeclarativeJobChecks<Inpoots<MCTownState>, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> checks,
+            DeclarativeJobChecks<Inpoots<MCTownState, ServerLevel>, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> checks,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
-            Function<Inpoots<MCTownState>, Claim> claimSpots,
+            Function<Inpoots<MCTownState, ServerLevel>, Claim> claimSpots,
             Map<ProductionStatus, Collection<String>> specialRules
     ) {
         super(jobId, villagerIndex, interval, maxState, checks, claimSpots, specialRules);
@@ -68,7 +68,7 @@ public class MCTownStateWorldInteraction extends
     }
 
     @Override
-    protected int getWorkSpeedOf10(Inpoots<MCTownState> inputs) {
+    protected int getWorkSpeedOf10(Inpoots<MCTownState, ServerLevel> inputs) {
         Collection<Effect> effects = inputs.town().getVillager(villagerIndex)
                                            .getEffectsAndClearExpired(Util.getTick(inputs.level()));
         return Math.max(TownVillagerMoods.compute(effects) / 10, 1);
@@ -76,13 +76,13 @@ public class MCTownStateWorldInteraction extends
 
     @Override
     protected int getAffectedTime(
-            Inpoots<MCTownState> inputs,
+            Inpoots<MCTownState, ServerLevel> inputs,
             Integer nextStepTime
     ) {
         return (int) (getTimeFactor(inputs) * nextStepTime);
     }
 
-    private float getTimeFactor(Inpoots<MCTownState> inputs) {
+    private float getTimeFactor(Inpoots<MCTownState, ServerLevel> inputs) {
         Collection<Effect> effects = inputs.town().getVillager(villagerIndex)
                                            .getEffectsAndClearExpired(Util.getTick(inputs.level()));
         return WorkEffects.calculateTimeFactor(effects);
@@ -90,7 +90,7 @@ public class MCTownStateWorldInteraction extends
 
     @Override
     protected MCTownState setHeldItem(
-            Inpoots<MCTownState> uxtra,
+            Inpoots<MCTownState, ServerLevel> uxtra,
             MCTownState tuwn,
             int villagerIndex,
             int itemIndex,
@@ -105,7 +105,7 @@ public class MCTownStateWorldInteraction extends
 
     @Override
     protected MCTownState degradeTool(
-            Inpoots<MCTownState> mcTownState,
+            Inpoots<MCTownState, ServerLevel> mcTownState,
             @Nullable MCTownState tuwn,
             PredicateCollection<MCTownItem, ?> isExpectedTool
     ) {
@@ -130,8 +130,8 @@ public class MCTownStateWorldInteraction extends
     }
 
     @Override
-    protected boolean canInsertItem(
-            Inpoots<MCTownState> mcTownState,
+    protected boolean isWorkSpotReadyForItem(
+            Inpoots<MCTownState, ServerLevel> mcTownState,
             MCHeldItem item,
             BlockPos bp
     ) {
@@ -140,30 +140,30 @@ public class MCTownStateWorldInteraction extends
 
     @Override
     protected ImmutableWorkStateContainer<BlockPos, MCTownState> getWorkStatuses(
-            Inpoots<MCTownState> mcTownState
+            Inpoots<MCTownState, ServerLevel> mcTownState
     ) {
         return mcTownState.town();
     }
 
     @Override
     protected WorkOutput<MCTownState, WorkPosition<BlockPos>> getWithSurfaceInteractionPos(
-            Inpoots<MCTownState> inputs,
+            Inpoots<MCTownState, ServerLevel> inputs,
             WorkOutput<MCTownState, WorkPosition<BlockPos>> v
     ) {
         return Util.workWithSurfaceInteractionPos(inputs.level(), v);
     }
 
     @Override
-    protected ArrayList<WorkPosition<BlockPos>> shuffle(
-            Inpoots<MCTownState> inputs,
+    protected ArrayList<WorkPosition<BlockPos>> makeMutableShuffledCopy(
+            Inpoots<MCTownState, ServerLevel> inputs,
             Collection<WorkPosition<BlockPos>> workSpots
     ) {
         return new ArrayList<>(Compat.shuffle(ImmutableList.copyOf(workSpots), inputs.level()));
     }
 
     @Override
-    protected WorkedSpot<BlockPos> getCurWorkedSpot(
-            Inpoots<MCTownState> inputs,
+    protected WorkedSpot<BlockPos> getWorkedSpotWithUpToDateState(
+            Inpoots<MCTownState, ServerLevel> inputs,
             MCTownState stateSource,
             BlockPos workSpot
     ) {
@@ -173,7 +173,7 @@ public class MCTownStateWorldInteraction extends
 
     @Override
     protected Collection<MCHeldItem> getHeldItems(
-            Inpoots<MCTownState> mcTownState,
+            Inpoots<MCTownState, ServerLevel> mcTownState,
             int villagerIndex
     ) {
         return ProductionTimeWarper.getHeldItems(mcTownState.town(), villagerIndex);
@@ -181,7 +181,7 @@ public class MCTownStateWorldInteraction extends
 
     @Override
     protected void triggerCompletionAdvancement(
-            Inpoots<MCTownState> inputs,
+            Inpoots<MCTownState, ServerLevel> inputs,
             BlockPos position
     ) {
         // Only trigger for realtime
@@ -191,7 +191,7 @@ public class MCTownStateWorldInteraction extends
     protected void preStateChangeHooks(
             @NotNull MCTownState ctx,
             Collection<String> rules,
-            Inpoots<MCTownState> inputs,
+            Inpoots<MCTownState, ServerLevel> inputs,
             WorkSpot<Integer, BlockPos> position
     ) {
         PreStateChangeHook.run(
@@ -206,7 +206,7 @@ public class MCTownStateWorldInteraction extends
     protected @NotNull MCTownState postInsertHook(
             @NotNull MCTownState mcTownState,
             Collection<String> rules,
-            Inpoots<MCTownState> inputs,
+            Inpoots<MCTownState, ServerLevel> inputs,
             WorkedSpot<BlockPos> position,
             MCHeldItem item
     ) {
@@ -222,7 +222,7 @@ public class MCTownStateWorldInteraction extends
     }
 
     @Override
-    protected BlockPos getTownPos(Inpoots<MCTownState> inputs) {
+    protected BlockPos getTownPos(Inpoots<MCTownState, ServerLevel> inputs) {
         return townPos;
     }
 
@@ -230,13 +230,13 @@ public class MCTownStateWorldInteraction extends
     protected @Nullable MCTownState preExtractHook(
             MCTownState town,
             Collection<String> rules,
-            Inpoots<MCTownState> inputs,
+            Inpoots<MCTownState, ServerLevel> inputs,
             BlockPos position
     ) {
         Item insertedItem = null; // TODO: Support inserted item history?
         return PreExtractHook.run(
                 town, rules, inputs.level(), (ctx, i, s) -> {
-                    Inpoots<MCTownState> in = new Inpoots<>(ctx, inputs.level(), inputs.villagerUUID());
+                    Inpoots<MCTownState, ServerLevel> in = new Inpoots<>(ctx, inputs.level(), inputs.villagerUUID());
                     return tryGiveItems(in, ImmutableList.of(i), position);
                 }, position, insertedItem, () -> {}
         );
@@ -246,7 +246,7 @@ public class MCTownStateWorldInteraction extends
     protected MCTownState postExtractHook(
             MCTownState mcTownState,
             Collection<String> rules,
-            Inpoots<MCTownState> inputs,
+            Inpoots<MCTownState, ServerLevel> inputs,
             BlockPos position,
             MCHeldItem extractedItem
     ) {
@@ -267,7 +267,7 @@ public class MCTownStateWorldInteraction extends
 
     @Override
     protected MCTownState setJobBlockState(
-            @NotNull Inpoots<MCTownState> inputs,
+            @NotNull Inpoots<MCTownState, ServerLevel> inputs,
             MCTownState ts,
             BlockPos position,
             State fresh
@@ -277,7 +277,7 @@ public class MCTownStateWorldInteraction extends
 
     @Override
     protected MCTownState withEffectApplied(
-            @NotNull Inpoots<MCTownState> inputs,
+            @NotNull Inpoots<MCTownState, ServerLevel> inputs,
             MCTownState ts,
             MCHeldItem newItem
     ) {
@@ -292,7 +292,7 @@ public class MCTownStateWorldInteraction extends
 
     @Override
     protected MCTownState withKnowledge(
-            @NotNull Inpoots<MCTownState> inputs,
+            @NotNull Inpoots<MCTownState, ServerLevel> inputs,
             MCTownState ts,
             MCHeldItem newItem
     ) {
@@ -308,58 +308,58 @@ public class MCTownStateWorldInteraction extends
     }
 
     @Override
-    protected boolean isMulti(MCTownItem mcTownItem) {
+    protected boolean isStacked(MCTownItem mcTownItem) {
         return mcTownItem.toQTItemStack().getCount() > 1;
     }
 
     @Override
-    protected MCTownState getTown(Inpoots<MCTownState> inputs) {
+    protected MCTownState getTown(Inpoots<MCTownState, ServerLevel> inputs) {
         return inputs.town();
     }
 
     @Override
-    protected Iterable<MCHeldItem> getResults(
-            Inpoots<MCTownState> inputs,
+    protected ImmutableList<MCHeldItem> getResults(
+            Inpoots<MCTownState, ServerLevel> inputs,
             Collection<MCHeldItem> mcHeldItems
     ) {
-        return resultGenerator.apply(inputs.level(), mcHeldItems);
+        return ImmutableList.copyOf(resultGenerator.apply(inputs.level(), mcHeldItems));
     }
 
     @Override
     protected boolean isEntityClose(
-            Inpoots<MCTownState> mcTownState,
+            Inpoots<MCTownState, ServerLevel> mcTownState,
             BlockPos position
     ) {
         return true;
     }
 
     @Override
-    protected boolean isReady(Inpoots<MCTownState> mcTownState) {
+    protected boolean isServerUpAndTownDataReadable(Inpoots<MCTownState, ServerLevel> mcTownState) {
         return true;
     }
 
     @Override
-    public boolean tryGrabbingInsertedSupplies(Inpoots<MCTownState> mcExtra) {
+    public boolean tryGrabbingInsertedSupplies(Inpoots<MCTownState, ServerLevel> mcExtra) {
         // TODO[Warp]: Implement
         return true;
     }
 
     @Override
-    public int timesInserted(Inpoots<MCTownState> inputs) {
+    public int timesInserted(Inpoots<MCTownState, ServerLevel> inputs) {
         // TODO[Warp]: Implement
         return 0;
     }
 
     @Override
     protected void registerUnmetNeed(
-            Inpoots<MCTownState> inputs,
+            Inpoots<MCTownState, ServerLevel> inputs,
             NeedsRegistrations.Need ingredientIndex
     ) {
         // TODO[WARP]: Implement tracking of needs
     }
 
     @Override
-    protected void registerUnmetRoom(Inpoots<MCTownState> inputs) {
+    protected void registerUnmetRoom(Inpoots<MCTownState, ServerLevel> inputs) {
         // TODO[WARP]: Implement tracking of needs
     }
 

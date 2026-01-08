@@ -40,7 +40,7 @@ public class WorksBehaviour {
             JobID id,
             WarpInput warpInput,
             boolean prioritizeExtraction,
-            Function<Inpoots<MCTownState>, Claim> claimSpots,
+            Function<Inpoots<MCTownState, ServerLevel>, Claim> claimSpots,
             int pauseForAction,
             WorkStates states,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
@@ -60,7 +60,7 @@ public class WorksBehaviour {
         return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction);
     }
 
-    private static DeclarativeJobChecks<Inpoots<MCTownState>, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> fromStates(WorkStates states) {
+    private static DeclarativeJobChecks<Inpoots<MCTownState, ServerLevel>, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> fromStates(WorkStates states) {
         return new DeclarativeJobChecks<>(
                 Jobs.unMCHeld3(states.ingredientsRequired()),
                 states.ingredientQtyRequired(),

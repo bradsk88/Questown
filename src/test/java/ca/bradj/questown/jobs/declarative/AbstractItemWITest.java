@@ -156,7 +156,7 @@ class AbstractItemWITest {
         }
 
         @Override
-        protected boolean canInsertItem(
+        protected boolean isWorkSpotReadyForItem(
                 Void unused,
                 GathererJournalTest.TestItem item,
                 Position bp

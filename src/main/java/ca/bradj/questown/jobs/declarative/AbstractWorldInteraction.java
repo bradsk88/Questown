@@ -102,12 +102,12 @@ public abstract class AbstractWorldInteraction<
             }
 
             @Override
-            protected boolean canInsertItem(
+            protected boolean isWorkSpotReadyForItem(
                     EXTRA extra,
                     HELD_ITEM item,
                     POS bp
             ) {
-                return self.canInsertItem(extra, item, bp);
+                return self.isWorkSpotReadyForItem(extra, item, bp);
             }
         };
 
@@ -249,7 +249,7 @@ public abstract class AbstractWorldInteraction<
                 continue;
             }
             HELD_ITEM newItem = stack.pop();
-            if (isMulti(newItem.get())) {
+            if (isStacked(newItem.get())) {
                 stack.push(newItem.shrink());
             }
             if (isInstanze(newItem.get(), KnowledgeMetaItem.class)) {
@@ -313,7 +313,7 @@ public abstract class AbstractWorldInteraction<
             PredicateCollection<INNER_ITEM, ?> heldItemBooleanFunction
     );
 
-    protected abstract boolean canInsertItem(
+    protected abstract boolean isWorkSpotReadyForItem(
             EXTRA extra,
             HELD_ITEM item,
             POS bp
@@ -328,7 +328,7 @@ public abstract class AbstractWorldInteraction<
             EXTRA extra,
             Preferred<WorkPosition<POS>> workSpots
     ) {
-        ArrayList<WorkPosition<POS>> shuffled = shuffle(extra, workSpots.alternates());
+        ArrayList<WorkPosition<POS>> shuffled = makeMutableShuffledCopy(extra, workSpots.alternates());
         if (workSpots.preferredValue() != null) {
             shuffled.removeIf(v -> v.equals(workSpots.preferredValue()));
             shuffled.add(0, workSpots.preferredValue());
@@ -354,7 +354,7 @@ public abstract class AbstractWorldInteraction<
             WorkOutput<TOWN, WorkPosition<POS>> v
     );
 
-    protected abstract ArrayList<WorkPosition<POS>> shuffle(
+    protected abstract ArrayList<WorkPosition<POS>> makeMutableShuffledCopy(
             EXTRA extra,
             Collection<WorkPosition<POS>> workSpots
     );
@@ -363,7 +363,7 @@ public abstract class AbstractWorldInteraction<
             EXTRA extra,
             WorkPosition<POS> workSpot
     ) {
-        if (!isReady(extra)) {
+        if (!isServerUpAndTownDataReadable(extra)) {
             return null;
         }
         boolean canClaim = getWorkStatuses(extra).canClaim(workSpot.jobBlock(), () -> this.claimSpots.apply(extra));
@@ -410,7 +410,7 @@ public abstract class AbstractWorldInteraction<
         TOWN initTown = getTown(extra);
         PredicateCollection<HELD_ITEM, HELD_ITEM> ingredientsForStep = this.checks.getIngredientsForStep(action);
         if (ingredientsForStep != null && !ingredientsForStep.isEmpty()) {
-            WorkedSpot<POS> wsBefore = getCurWorkedSpot(extra, initTown, workSpot.jobBlock());
+            WorkedSpot<POS> wsBefore = getWorkedSpotWithUpToDateState(extra, initTown, workSpot.jobBlock());
             InsertResult<TOWN, HELD_ITEM> o = itemWI.tryInsertIngredients(
                     extra,
                     ingredientsForStep,
@@ -427,7 +427,7 @@ public abstract class AbstractWorldInteraction<
                 @Nullable TOWN out = postInsertHook(
                         ctx,
                         extra,
-                        getCurWorkedSpot(extra, ctx, workSpot.jobBlock()).withBefore(wsBefore.state()),
+                        getWorkedSpotWithUpToDateState(extra, ctx, workSpot.jobBlock()).withBefore(wsBefore.state()),
                         item,
                         maxState
                 );
@@ -460,12 +460,12 @@ public abstract class AbstractWorldInteraction<
         // TODO: If workspot is waiting for time, return  null
 
         TOWN town = workWI.tryWork(
-                extra, getCurWorkedSpot(extra, initTown, workSpot.jobBlock()), jobBlockState.workLeft() <= 1
+                extra, getWorkedSpotWithUpToDateState(extra, initTown, workSpot.jobBlock()), jobBlockState.workLeft() <= 1
         );
         return new WorkOutput<>(town != null, town != null, town, workSpot);
     }
 
-    protected abstract WorkedSpot<POS> getCurWorkedSpot(
+    protected abstract WorkedSpot<POS> getWorkedSpotWithUpToDateState(
             EXTRA extra,
             TOWN stateSource,
             POS workSpot
@@ -500,7 +500,7 @@ public abstract class AbstractWorldInteraction<
             }
             if (town == null) {
                 Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
-                Iterable<HELD_ITEM> generatedResult = getResults(inputs, items);
+                ImmutableList<HELD_ITEM> generatedResult = getResults(inputs, items);
 
                 town = tryGiveItems(inputs, generatedResult, position);
 
@@ -625,11 +625,11 @@ public abstract class AbstractWorldInteraction<
             Class<?> clazz
     );
 
-    protected abstract boolean isMulti(INNER_ITEM innerItem);
+    protected abstract boolean isStacked(INNER_ITEM innerItem);
 
     protected abstract TOWN getTown(EXTRA inputs);
 
-    protected abstract Iterable<HELD_ITEM> getResults(
+    protected abstract ImmutableList<HELD_ITEM> getResults(
             EXTRA inputs,
             Collection<HELD_ITEM> items
     );
@@ -639,7 +639,7 @@ public abstract class AbstractWorldInteraction<
             POS position
     );
 
-    protected abstract boolean isReady(EXTRA extra);
+    protected abstract boolean isServerUpAndTownDataReadable(EXTRA extra);
 
     @Nullable
     State getJobBlockState(

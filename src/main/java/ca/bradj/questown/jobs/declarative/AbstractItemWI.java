@@ -82,7 +82,7 @@ public abstract class AbstractItemWI<
                 continue;
             }
             String name = item.getShortName();
-            if (!canInsertItem(extra, item, bp)) {
+            if (!isWorkSpotReadyForItem(extra, item, bp)) {
                 continue;
             }
             int nextStepWork = checks.getWorkForStep(curState + 1, 0);
@@ -200,7 +200,7 @@ public abstract class AbstractItemWI<
 
     protected abstract ImmutableWorkStateContainer<POS, TOWN> getWorkStatuses(EXTRA extra);
 
-    protected abstract boolean canInsertItem(
+    protected abstract boolean isWorkSpotReadyForItem(
             EXTRA extra,
             ITEM item,
             POS bp

@@ -72,57 +72,89 @@ public class StatusesProductionRoutineTest {
     }
 
     /**
-     * @deprecated Use TestJobTownWithTime
-     **/
+     * Smart test fixture that properly connects related concepts:
+     * - Derives workable blocks from rooms needing input
+     * - Properly uses hasSupplies in hasSuppliesV2()
+     */
     private record TestJobTown(
             boolean hasSupplies,
             boolean hasSpace,
             Collection<Room> roomsWithCompletedProduct,
-            RoomsNeedingVillagerInput<Room, String, Position> roomsNeedingIngredientsByState
+            RoomsNeedingVillagerInput<Room, String, Position> roomsNeedingIngredientsByState,
+            boolean isUnfinishedTimeWorkPresent,
+            Collection<Integer> statesWithUnfinishedItemlessWork
     ) implements JobTownProvider<Room> {
+
+        // Convenience constructor for common case
+        TestJobTown(
+                boolean hasSupplies,
+                boolean hasSpace,
+                Collection<Room> roomsWithCompletedProduct,
+                RoomsNeedingVillagerInput<Room, String, Position> roomsNeedingIngredientsByState
+        ) {
+            this(hasSupplies, hasSpace, roomsWithCompletedProduct,
+                    roomsNeedingIngredientsByState, false, ImmutableList.of());
+        }
+
         @Override
         public Map<Integer, LZCD.Dependency<Void>> roomsWithWorkableStatefulBlocks() {
-            return Map.of();
+            // Derive workable blocks from rooms needing input
+            ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
+            RoomsNeedingVillagerInput<Room, String, Position> needs = roomsNeedingIngredientsByState;
+            if (needs != null) {
+                Map<Integer, ?> floorMap = needs.floor().get();
+                for (Integer state : floorMap.keySet()) {
+                    var rooms = needs.floor().get(state);
+                    boolean hasWork = rooms != null && !rooms.isEmpty();
+                    b.put(state, new ConstantDep("workable at " + state, hasWork));
+                }
+            }
+            return b.build();
         }
 
         @Override
         public LZCD.Dependency<Void> hasSuppliesV2() {
-            return new SimpleDependency("test dep") {
+            boolean supplies = hasSupplies;
+            return new SimpleDependency("town has supplies") {
                 @Override
                 protected Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
                     return new Populated<>(
-                            "test",
-                            WithReason.always(stopOnTrue, "test dep"),
+                            "hasSupplies",
+                            WithReason.always(supplies, "test: hasSupplies=" + supplies),
                             ImmutableMap.of(),
                             null
                     ) {
                         @Override
                         protected String stringRep() {
-                            return "test";
+                            return "hasSupplies=" + supplies;
                         }
                     };
                 }
 
                 @Override
                 public String describe() {
-                    return "test dep";
+                    return "hasSupplies=" + supplies;
                 }
             };
         }
 
         @Override
-        public boolean isUnfinishedTimeWorkPresent() {
-            return false;
-        }
-
-        @Override
         public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
-            return ImmutableList.of();
+            return statesWithUnfinishedItemlessWork;
         }
 
         @Override
         public Collection<Room> roomsAtState(Integer state) {
-            return List.of();
+            if (roomsNeedingIngredientsByState == null) {
+                return List.of();
+            }
+            var rooms = roomsNeedingIngredientsByState.floor().get(state);
+            if (rooms == null) {
+                return List.of();
+            }
+            return rooms.stream()
+                    .map(nvi -> nvi.room().getRoom())
+                    .toList();
         }
     }
 
@@ -447,7 +479,9 @@ public class StatusesProductionRoutineTest {
 
     @Test
     void InMorning_StatusShouldBe_NoJobSite_WhenAllSitesFull_AndInJobSite() {
-        boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
+        // When there's no work AND no supplies, status should be NO_JOBSITE
+        // (If town had supplies, it would be COLLECTING_SUPPLIES instead)
+        boolean hasSupplies = false;
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.ITEM_WORK,
                 true,
@@ -462,7 +496,6 @@ public class StatusesProductionRoutineTest {
                         ImmutableList.of(), // No rooms have product to collect
                         new RoomsNeedingVillagerInput<>(ImmutableMap.of(
                                 // Empty map means no rooms have any work to do
-                                // PTestStatus.ITEM_WORK, ImmutableList.of(arbitraryRoom)
                         ))
                 ),
                 new FailProductionJob(), // Shouldn't do any non-standard work
@@ -473,7 +506,8 @@ public class StatusesProductionRoutineTest {
 
     @Test
     void InMorning_StatusShouldBe_NoJobSite_WhenAllSitesFull_AndOutOfJobSite() {
-        boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
+        // When there's no work AND no supplies, status should be NO_JOBSITE
+        boolean hasSupplies = false;
         PTestStatus s = JobStatuses.productionRoutine(
                 PTestStatus.ITEM_WORK,
                 true,
@@ -811,6 +845,9 @@ public class StatusesProductionRoutineTest {
         Assertions.assertEquals(PTestStatus.GOING_TO_JOB, s);
     }
 
+    /**
+     * @deprecated Use TestJobTown with isUnfinishedTimeWorkPresent parameter
+     */
     private record TestJobTownWithTime(
             boolean hasSupplies,
             boolean hasSpace,
@@ -820,30 +857,41 @@ public class StatusesProductionRoutineTest {
     ) implements JobTownProvider<Room> {
         @Override
         public Map<Integer, LZCD.Dependency<Void>> roomsWithWorkableStatefulBlocks() {
-            return Map.of();
+            // Derive workable blocks from rooms needing input
+            ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
+            if (roomsNeedingIngredientsByState != null) {
+                Map<Integer, ?> floorMap = roomsNeedingIngredientsByState.floor().get();
+                for (Integer state : floorMap.keySet()) {
+                    var rooms = roomsNeedingIngredientsByState.floor().get(state);
+                    boolean hasWork = rooms != null && !rooms.isEmpty();
+                    b.put(state, new ConstantDep("workable at " + state, hasWork));
+                }
+            }
+            return b.build();
         }
 
         @Override
         public LZCD.Dependency<Void> hasSuppliesV2() {
-            return new SimpleDependency("test") {
+            boolean supplies = hasSupplies;
+            return new SimpleDependency("town has supplies") {
                 @Override
                 protected Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
                     return new Populated<>(
-                            "test",
-                            WithReason.always(stopOnTrue, "test"),
+                            "hasSupplies",
+                            WithReason.always(supplies, "test: hasSupplies=" + supplies),
                             ImmutableMap.of(),
                             null
                     ) {
                         @Override
                         protected String stringRep() {
-                            return "test";
+                            return "hasSupplies=" + supplies;
                         }
                     };
                 }
 
                 @Override
                 public String describe() {
-                    return "test";
+                    return "hasSupplies=" + supplies;
                 }
             };
         }
@@ -861,7 +909,9 @@ public class StatusesProductionRoutineTest {
 
     @Test
     void StatusShouldBe_WaitingForNextStage_IfRoomNeedsTime() {
-        boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
+        // WAITING only triggers when no supplies available to collect
+        // (If supplies were available, villager would collect them while waiting)
+        boolean hasSupplies = false;
 
         Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
                 // Villager has no items (otherwise would choose status: dropping loot)
@@ -892,8 +942,9 @@ public class StatusesProductionRoutineTest {
     }
 
     @Test
-    void StatusShouldBe_CollectingSupplies_IfWorkIsNeededOnClaimedSpot_AndIngrRequiredOnUnclaimed() {
-        boolean hasSupplies = true; // Town has supplies, but there's nowhere to use them
+    void StatusShouldBe_WaitingForNextStage_IfWorkIsNeededOnClaimedSpot_AndIngrRequiredOnUnclaimed() {
+        // WAITING only triggers when no supplies available to collect
+        boolean hasSupplies = false;
 
         Map<Integer, Boolean> invItemsForWork = ImmutableMap.of(
                 // Villager has no items (otherwise would choose status: dropping loot)
@@ -921,6 +972,113 @@ public class StatusesProductionRoutineTest {
                 PTestStatus.FACTORY
         );
         Assertions.assertEquals(PTestStatus.WAITING, s);
+    }
+
+    @Test
+    void StatusShouldBe_DroppingLoot_WhenHasNonSupplyItems() {
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
+                true, // morning
+                new TestInventory(
+                        false,
+                        true, // <- Has non-supply items (loot to drop)
+                        ImmutableMap.of()
+                ),
+                new TestEntityLoc(arbitraryRoom),
+                new TestJobTown(
+                        true, true,
+                        ImmutableList.of(),
+                        new RoomsNeedingVillagerInput<>(ImmutableMap.of())
+                ),
+                new NoOpProductionJob(),
+                PTestStatus.FACTORY
+        );
+        Assertions.assertEquals(PTestStatus.DROPPING_LOOT, s);
+    }
+
+    @Test
+    void StatusShouldBe_CollectingSupplies_WhenTownHasSupplies_AndVillagerNeedsItems() {
+        Map<Integer, Boolean> needsSupplies = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, false // <- Villager needs ingredients
+        );
+        RoomsNeedingVillagerInput<Room, String, Position> workToBeDone = new RoomsNeedingVillagerInput<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryNVIMatch)
+                ));
+
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
+                true, // morning
+                new TestInventory(false, false, needsSupplies),
+                new TestEntityLoc(arbitraryRoom),
+                new TestJobTown(
+                        true, // <- Town has supplies
+                        true,
+                        ImmutableList.of(),
+                        workToBeDone
+                ),
+                new NoOpProductionJob(),
+                PTestStatus.FACTORY
+        );
+        Assertions.assertEquals(PTestStatus.COLLECTING_SUPPLIES, s);
+    }
+
+    @Test
+    void StatusShouldBe_NoSupplies_WhenTownLacksSupplies_AndWorkableBlocksExist() {
+        Map<Integer, Boolean> needsSupplies = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, false // <- Villager needs ingredients
+        );
+        // Having rooms that need work automatically creates workable blocks
+        // in the smart TestJobTown fixture
+        RoomsNeedingVillagerInput<Room, String, Position> workToBeDone = new RoomsNeedingVillagerInput<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryNVIMatch)
+                ));
+
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
+                true, // morning
+                new TestInventory(false, false, needsSupplies),
+                new TestEntityLoc(arbitraryRoom),
+                new TestJobTown(
+                        false, // <- Town has NO supplies
+                        true,
+                        ImmutableList.of(),
+                        workToBeDone
+                ),
+                new NoOpProductionJob(),
+                PTestStatus.FACTORY
+        );
+        Assertions.assertEquals(PTestStatus.NO_SUPPLIES, s);
+    }
+
+    @Test
+    void StatusShouldBe_ExtractingProduct_WhenPrioritizingExtraction_AndProductReady() {
+        Map<Integer, Boolean> hasItems = ImmutableMap.of(
+                BLOCK_READY_FOR_INGREDIENTS, true,
+                BLOCK_READY_FOR_WORK, true
+        );
+        RoomsNeedingVillagerInput<Room, String, Position> workToBeDone = new RoomsNeedingVillagerInput<>(
+                ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, ImmutableList.of(arbitraryNVIMatch),
+                        BLOCK_READY_FOR_WORK, ImmutableList.of(arbitraryNVIMatch)
+                ));
+
+        PTestStatus s = JobStatuses.productionRoutine(
+                PTestStatus.IDLE,
+                true,
+                new TestInventory(false, false, hasItems),
+                new TestEntityLoc(arbitraryRoom),
+                new TestJobTown(
+                        true, true,
+                        ImmutableList.of(arbitraryRoom), // <- Product ready to collect
+                        workToBeDone
+                ),
+                new NoOpProductionJob(),
+                PTestStatus.FACTORY
+        );
+        // Should prioritize extraction over other work
+        Assertions.assertEquals(PTestStatus.COLLECTING_PRODUCT, s);
     }
 
 }
