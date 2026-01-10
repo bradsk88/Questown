@@ -229,7 +229,8 @@ public class TownFlagTileData {
     public static void write(
             Long currentTick,
             CompoundTag t,
-            TownFlagInitialization flag
+            TownFlagInitialization flag,
+            boolean includeEconomicsData
     ) {
         write(t, NBT_QUEST_BATCHES, MCQuestBatches.SERIALIZER.serializeNBT(flag.getQuestBatches()));
         write(t, NBT_MORNING_REWARDS, flag.getMorningRewards().serializeNbt());
@@ -242,7 +243,9 @@ public class TownFlagTileData {
         write(t, NBT_BLOCK_ROOMS, flag.serializeBlockRooms());
         write(t, NBT_BLOCKS_OF_PROGRESS_STORED, flag.serializeBOP());
         write(t, NBT_BONUS_GIVEN, flag.serializeBonusGiven());
-        write(t, NBT_ECONOMICS, flag.serializeEconomics());
+        if (includeEconomicsData) {
+            write(t, NBT_ECONOMICS, flag.serializeEconomics());
+        }
     }
 
     private static void write(

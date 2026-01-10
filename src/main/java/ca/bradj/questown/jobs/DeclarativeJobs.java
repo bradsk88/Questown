@@ -333,7 +333,7 @@ public class DeclarativeJobs {
 
                     @Override
                     public State getState(MCTownState mcTownState) {
-                        return inState.getJobBlockState(fakePos);
+                        return mcTownState.getJobBlockState(fakePos);
                     }
 
                     @Override
@@ -382,20 +382,64 @@ public class DeclarativeJobs {
                     long referenceTick,
                     long ticksPassed
             ) {
-                ImmutableList.Builder<Tick> b = ImmutableList.builder();
-
-                long start = referenceTick;
-                long max = referenceTick + ticksPassed;
-
-                // TODO[WARP]: Factor in timers and "walk time"
-                int workInterval = wi.interval * 2; // Doubling as a heuristic to simulate walking
-                int stepInterval = Math.max(workInterval, 100); // 100 As a heuristic for walking time
-                for (long i = start; i <= max; i += stepInterval) {
-                    b.add(new Tick(i, stepInterval));
-                }
-                return b.build();
+                return computeWarpTicks(referenceTick, ticksPassed, wi.interval, wi.getMinTimerValue());
             }
         };
+    }
+
+    /**
+     * Computes the tick milestones for a time warp operation.
+     * This is a pure function extracted for testability.
+     *
+     * @param referenceTick The starting game tick
+     * @param ticksPassed   Total ticks to warp forward
+     * @param workInterval  The work interval from the world interaction
+     * @return Collection of tick milestones to process during warp
+     */
+    public static Collection<Warper.Tick> computeWarpTicks(
+            long referenceTick,
+            long ticksPassed,
+            int workInterval
+    ) {
+        return computeWarpTicks(referenceTick, ticksPassed, workInterval, null);
+    }
+
+    /**
+     * Computes the tick milestones for a time warp operation.
+     * This is a pure function extracted for testability.
+     *
+     * @param referenceTick  The starting game tick
+     * @param ticksPassed    Total ticks to warp forward
+     * @param workInterval   The work interval from the world interaction
+     * @param minTimerValue  The minimum timer value from job definition, or null if no timers
+     * @return Collection of tick milestones to process during warp
+     */
+    public static Collection<Warper.Tick> computeWarpTicks(
+            long referenceTick,
+            long ticksPassed,
+            int workInterval,
+            @Nullable Integer minTimerValue
+    ) {
+        ImmutableList.Builder<Warper.Tick> b = ImmutableList.builder();
+
+        long start = referenceTick;
+        long max = referenceTick + ticksPassed;
+
+        // Walk heuristic: double the work interval to account for travel time
+        int walkHeuristic = workInterval * 2;
+
+        // If timers exist, constrain step interval to catch timer completions
+        int timerConstraint = (minTimerValue != null && minTimerValue > 0)
+                ? minTimerValue
+                : Integer.MAX_VALUE;
+
+        // Use the smaller of walk heuristic or timer constraint, with 100 tick minimum
+        int stepInterval = Math.max(Math.min(walkHeuristic, timerConstraint), 100);
+
+        for (long i = start; i <= max; i += stepInterval) {
+            b.add(new Warper.Tick(i, stepInterval));
+        }
+        return b.build();
     }
 
     private static Inpoots<MCTownState, ServerLevel> moreSilly(Inputs apply) {

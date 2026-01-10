@@ -234,7 +234,7 @@ public class TownPossibleWork {
                 townHasIngredient = false;
                 List<ContainerTarget<MCContainer, MCTownItem>> foundContainer = Containers.get2(
                         sl,
-                        () -> src.getRoomsForJob(dj),
+                        src::getAllRooms,
                         isJobBlock,
                         js -> dj.location().baseRoom().equals(js),
                         false

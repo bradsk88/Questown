@@ -5,6 +5,8 @@ import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
+
 public class ProductionStatuses {
 
     public static @Nullable <ROOM extends Room> ProductionStatus getNewStatusFromSignal(
@@ -48,10 +50,19 @@ public class ProductionStatuses {
             ProductionStatus currentStatus,
             EntityInvStateProvider<Integer> inventory,
             JobTownProvider<ROOM> town,
-            IStatusFactory<ProductionStatus> factory
+            IProductionStatusFactory<ProductionStatus> factory
     ) {
         if (JobStatuses.hasItems(inventory)) {
             return nullIfUnchanged(currentStatus, factory.droppingLoot());
+        }
+
+        // Check if there's work in progress at any state > 0
+        // If so, continue working instead of relaxing (finish the current task)
+        for (Map.Entry<Integer, ? extends LZCD.Dependency<Void>> entry : town.roomsWithWorkableStatefulBlocks().entrySet()) {
+            if (entry.getKey() > 0 && entry.getValue().apply(() -> null).value()) {
+                // Work is in progress at a non-initial state - continue working
+                return nullIfUnchanged(currentStatus, factory.fromJobBlockState(entry.getKey()));
+            }
         }
 
         return nullIfUnchanged(currentStatus, factory.relaxing());

@@ -126,6 +126,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         QT.FLAG_LOGGER.info("Villagers:\n{}", Strings.join(entity.getVillagers(), '\n'));
         QT.FLAG_LOGGER.info("Villager Jobs:\n{}", Strings.join(entity.getVillagerHandle().getJobs(), '\n'));
         QT.FLAG_LOGGER.info("Room Recipes:\n{}", Strings.join(entity.getRoomHandle().getMatches(x -> true), '\n'));
+        QT.FLAG_LOGGER.info(
+                "Containers:\n{}",
+                Strings.join(TownContainers.getAllContainers(entity, entity.getServerLevel()), '\n'));
+
 
         String prettyJsonString = new GsonBuilder().setPrettyPrinting().create()
                                                    .toJson(JsonParser.parseString(tTag.toString()));
@@ -303,6 +307,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public void writeTownData(CompoundTag tag) {
+        writeTownData(tag, true);
+    }
+    public void writeTownData(CompoundTag tag, boolean includeEconomicsData) {
         if (level == null) {
             return;
         }
@@ -315,7 +322,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 //        if (roomsMap.numRecipes() > 0) {
 //            tag.put(NBT_ACTIVE_RECIPES, ActiveRecipesSerializer.INSTANCE.serializeNBT(roomsMap.getRecipes(0)));
 //        }
-        TownFlagTileData.write(Util.getTick(getServerLevel()), tag, this.initializer);
+        TownFlagTileData.write(Util.getTick(getServerLevel()), tag, this.initializer, includeEconomicsData);
         // TODO: Serialization for ASAPs
     }
 

@@ -21,6 +21,8 @@ public class DebugLogArgument implements ArgumentType<String> {
     public static final String JOB_POSSIBILITIES_COMPUTE;
     public static final String QUEST_BATCH_COMPUTE_NEXT;
     public static final String TIME_WARP;
+    public static final String TIME_WARP_DETAIL;
+    public static final String TIME_WARP_ITEMS;
     public static final String TOWN_STATE_CHANGES;
     public static final String VILLAGER_NAVIGATION;
     public static final String JOB_LOGIC;
@@ -36,6 +38,8 @@ public class DebugLogArgument implements ArgumentType<String> {
         JOB_POSSIBILITIES_COMPUTE = add(b, "job_possibilities_compute");
         QUEST_BATCH_COMPUTE_NEXT = add(b, "quest_batch_compute_next");
         TIME_WARP = add(b, "time_warp");
+        TIME_WARP_DETAIL = add(b, "time_warp_detail");
+        TIME_WARP_ITEMS = add(b, "time_warp_items");
         TOWN_STATE_CHANGES = add(b, "town_state_changes");
         VILLAGER_NAVIGATION = add(b, "villager_navigation");
         JOB_LOGIC = add(b, "job_logic");

@@ -88,6 +88,23 @@ public class MCTownStateWorldInteraction extends
         return WorkEffects.calculateTimeFactor(effects);
     }
 
+    /**
+     * Returns the minimum timer value from the job definition.
+     * Used by warp to ensure step intervals are small enough to catch timer completions.
+     *
+     * @return Minimum timer value, or null if no timers are defined
+     */
+    public @Nullable Integer getMinTimerValue() {
+        Map<Integer, Integer> timeReqs = checks.getAllRequiredTime();
+        if (timeReqs.isEmpty()) {
+            return null;
+        }
+        return timeReqs.values().stream()
+                .filter(v -> v != null && v > 0)
+                .min(Integer::compareTo)
+                .orElse(null);
+    }
+
     @Override
     protected MCTownState setHeldItem(
             Inpoots<MCTownState, ServerLevel> uxtra,
@@ -421,12 +438,28 @@ public class MCTownStateWorldInteraction extends
 
             @Override
             public Map<Integer, LZCD.Dependency<Void>> roomsWithWorkableStatefulBlocks() {
-                return Map.of(); // TODO[Warp]: Implement
+                // For warp: return a map indicating which states have workable blocks
+                // The current processing state is workable if we're at that state
+                ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
+                for (int state = 0; state < maxState; state++) {
+                    final int s = state;
+                    b.put(state, new ConstantDep(
+                            "room has workable blocks at state " + state + " [warp]",
+                            workStates.processingState() == s
+                    ));
+                }
+                return b.build();
             }
 
             @Override
             public LZCD.Dependency<Void> hasSuppliesV2() {
-                return null; // TODO[Warp]: Implement
+                // During warp, check if we still need supplies.
+                // If work is complete (processingState >= maxState), no supplies needed.
+                if (workStates.processingState() >= maxState) {
+                    return new ConstantDep("work complete, no supplies needed [warp]", false);
+                }
+                // Otherwise, assume supplies are available for collection.
+                return new ConstantDep("has supplies [warp]", true);
             }
 
             @Override

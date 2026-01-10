@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.declarative.nomc;
 
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.JobID;
+import org.jetbrains.annotations.NotNull;
 
 public class WorkSeekerJob {
     public static final String WORK_ID = "seeking_work";
@@ -16,7 +17,7 @@ public class WorkSeekerJob {
         return j;
     }
 
-    public static boolean isSeekingWork(JobID s) {
+    public static boolean isSeekingWork(@NotNull JobID s) {
         return WORK_ID.equals(s.jobId());
     }
 

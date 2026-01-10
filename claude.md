@@ -50,6 +50,14 @@ Hierarchical interaction handlers separate concerns:
 
 Complex jobs are built by composing simple, tested components rather than deep inheritance hierarchies. Validation logic lives in check objects (`ItemWorkChecks`), allowing easy swapping and testing.
 
+### Job Rooms vs Supply Sources
+
+Job rooms and supply sources are distinct concepts:
+- **Job rooms**: Where work is performed (e.g., town gate for gatherer). Use `getRoomsForJob(dj)`.
+- **Supply sources**: Where ingredients/tools are fetched from (any room with containers, e.g., store room). Use `getAllRooms()`.
+
+In `TownPossibleWork`, when checking ingredient availability, search ALL rooms - villagers fetch supplies from any town container, not just their job site.
+
 ## Code Style
 
 ### Line Length
@@ -64,6 +72,12 @@ Complex jobs are built by composing simple, tested components rather than deep i
 - Minimal comments (code should be self-documenting)
 - Extract complex conditionals into well-named methods
 - Avoid deep nesting
+
+### Null Handling
+
+- Prefer annotating parameters with `@NotNull` over adding defensive null checks
+- When a null value appears unexpectedly, investigate the root cause rather than adding guards
+- Defensive null checks can mask bugs; understanding why null occurred is more valuable
 
 ## Time Warp System
 
@@ -110,6 +124,33 @@ For each villager:
 - Timer reduction is clamped to zero (never negative)
 - Null states initialize to `State.fresh()`
 - Handler map is extensible via `staticInitialize()`
+
+### ProductionStatus Handlers
+
+Every `ProductionStatus` must have a corresponding handler in
+`AbstractDeclarativeJobWarper.staticInitialize()`. When adding a new status,
+register it with a `Hendlar` (use `NULL_HENDLAR` if no action needed during warp).
+
+**Current null-action statuses** (villager idles during warp):
+- `RELAXING`, `WAITING_FOR_TIMED_STATE`, `NO_SPACE`, `GOING_TO_JOB`
+- `NO_SUPPLIES`, `IDLE`, `NO_JOBSITE`, `NO_WORK_POSSIBLE`
+
+### NO_WORK_POSSIBLE Status
+
+Returned by `WorkSeekerJob.getStateComputer()` when:
+1. Time is MORNING, NOON, or UNDEFINED
+2. `town.getStartableWork().getFor(jobId).isEmpty()` - no startable work exists
+
+This occurs when a villager is at the job board seeking work but the town has
+no available jobs matching their skills. During time warp, this status does
+nothing (uses `NULL_HENDLAR`).
+
+### ImportantTicks and Null JobIDs
+
+`ImportantTicks.forVillager()` calls `getRandomFinishableWork()` which may return
+`null` when no finishable work is available (e.g., no requested work, not enough
+time left in day). When null is returned, the method returns early with only
+downtime ticks collected so far - no work progression occurs during the warp.
 
 ## Status Detection Architecture
 
@@ -250,3 +291,31 @@ Example: `TestJobTown` derives `roomsWithWorkableStatefulBlocks()`
 from `roomsNeedingIngredientsByState` - if rooms need input, they
 automatically become workable blocks. This prevents tests from
 accidentally creating impossible game states.
+
+## Current Work: Time Warp Revival
+
+**Status**: In Progress (WIP commit on branch `1.19.2-0.0.11-alpha.1`)
+
+**Plan**: See `docs/time-warp-plan.md` for the full task list.
+
+**Quick Summary**: The time warp feature simulates game time passage for
+villager jobs. Core infrastructure exists but simulation methods in
+`MCTownStateWorldInteraction` are stubbed out.
+
+**Approach**: Option B (bottom-up TDD) - Build simulation methods with
+tests first. Ensures each piece works before integration.
+
+**Completed**:
+- [x] Handler dispatch tests for all statuses (NO_SPACE, NO_JOBSITE, WAITING,
+      GOING_TO_JOB, NO_SUPPLIES, RELAXING, work states 0-9)
+- [x] Multi-warp scenario tests (timer accumulation, drop loot, collect supplies)
+- [x] Work progression tests (work reduces, clamps to zero, multiple warps)
+
+**Next Steps** (TDD order):
+1. Implement stub methods in `MCTownStateWorldInteraction.java` with tests:
+   - `tryGrabbingInsertedSupplies()` (line 343)
+   - `timesInserted()` (line 349)
+   - `roomsWithWorkableStatefulBlocks()` (line 424)
+   - `hasSuppliesV2()` (line 429)
+2. Implement `MutableEntityInvStateProvider.java` with tests
+3. Re-enable warpers in `ServerJobsRegistry.java:460` (integration)

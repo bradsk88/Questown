@@ -32,6 +32,8 @@ public class CommandInit {
         DrainTimersCommand.register(event.getDispatcher());
         PrepareWorkCommand.register(event.getDispatcher());
         LogDataCommand.register(event.getDispatcher());
+        WarpStatusCommand.register(event.getDispatcher());
+        WarpTestSetupCommand.register(event.getDispatcher());
         ToggleHungerConfig.register(event.getDispatcher());
     }
 }

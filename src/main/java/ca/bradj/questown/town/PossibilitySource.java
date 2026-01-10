@@ -23,6 +23,8 @@ public interface PossibilitySource {
 
     Collection<RoomRecipeMatch<MCRoom>> getRoomsForJob(DeclarativeJob dj);
 
+    Collection<RoomRecipeMatch<MCRoom>> getAllRooms();
+
     boolean townHasTool(IPredicateCollection<MCTownItem> tool);
 
     Collection<Item> uniqueItems();

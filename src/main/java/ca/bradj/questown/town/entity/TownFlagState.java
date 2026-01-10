@@ -173,8 +173,14 @@ public class TownFlagState {
             ImmutableList<Warper.Tick> ticks = ImportantTicks.forVillager(
                     w, v.getVUID(), v.journal.jobId(), DowntimeWork::matches, cfg, ticksPassed, gameTick
             );
+            e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP_DETAIL).log(
+                    "[{}] Computed {} important ticks for job {}",
+                    UtilClean.truncateMiddle(v.uuid),
+                    ticks.size(),
+                    v.journal.jobId()
+            );
             int ii = i;
-            Warper<ServerLevel, MCTownState> vWarper = ServerJobsRegistry.getWarper(i, v.journal.jobId());
+            Warper<ServerLevel, MCTownState> vWarper = ServerJobsRegistry.getWarper(i, v.journal.jobId(), e.getBlockPos());
             ticks.stream().map(tick -> new AbstractMap.SimpleEntry<>(
                     tick.tick(),
                     (Function<MCTownState, MCTownState>) ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)
@@ -182,14 +188,21 @@ public class TownFlagState {
         }
 
         warpSteps.sort(Map.Entry.comparingByKey());
+        e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP_DETAIL).log(
+                "Processing {} total warp steps across {} villagers",
+                warpSteps.size(),
+                villagers.size()
+        );
         // TODO: Return a collection of lambdas that process chunks of 500?
         long before = System.currentTimeMillis();
 
+        int stepNum = 0;
         for (Map.Entry<Long, Function<MCTownState, MCTownState>> warpStep : warpSteps) {
             MCTownState affectedState = warpStep.getValue().apply(liveState);
             if (affectedState != null) {
                 liveState = affectedState;
             }
+            stepNum++;
         }
 
         long after = System.currentTimeMillis();

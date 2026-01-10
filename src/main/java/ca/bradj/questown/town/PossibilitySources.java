@@ -41,6 +41,11 @@ public class PossibilitySources {
             }
 
             @Override
+            public Collection<RoomRecipeMatch<MCRoom>> getAllRooms() {
+                return t.getRoomHandle().getMatches(r -> true);
+            }
+
+            @Override
             public boolean townHasTool(IPredicateCollection<MCTownItem> tool) {
                 boolean townHasTool = false;
                 @Nullable ContainerTarget<MCContainer, MCTownItem> toolCont = t.findMatchingContainer(tool::test);

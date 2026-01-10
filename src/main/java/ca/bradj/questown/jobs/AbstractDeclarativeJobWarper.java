@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
 import ca.bradj.questown.town.Warper;
@@ -31,6 +32,7 @@ public abstract class AbstractDeclarativeJobWarper<TOWN, ROOM extends Room, POS,
     }
 
     private final StatusProvider<ROOM> statusProvider;
+    private final boolean strictMode;
 
     /**
      * Default constructor uses ProductionStatuses.getNewStatusFromSignal
@@ -40,7 +42,8 @@ public abstract class AbstractDeclarativeJobWarper<TOWN, ROOM extends Room, POS,
                 ProductionStatuses.getNewStatusFromSignal(
                         status, signal, inv, town, loc,
                         DeclarativeJobs.STATUS_FACTORY, prioritize
-                )
+                ),
+                false
         );
     }
 
@@ -48,7 +51,17 @@ public abstract class AbstractDeclarativeJobWarper<TOWN, ROOM extends Room, POS,
      * Constructor for dependency injection (useful for testing)
      */
     public AbstractDeclarativeJobWarper(StatusProvider<ROOM> statusProvider) {
+        this(statusProvider, false);
+    }
+
+    /**
+     * Constructor with strict mode flag.
+     * When strictMode is true, throws on invalid statuses like GOING_TO_JOB
+     * (since the warper assumes the worker is already at the jobsite).
+     */
+    public AbstractDeclarativeJobWarper(StatusProvider<ROOM> statusProvider, boolean strictMode) {
         this.statusProvider = statusProvider;
+        this.strictMode = strictMode;
     }
 
     private static final Hendlar NULL_HENDLAR = new Hendlar() {
@@ -104,6 +117,7 @@ public abstract class AbstractDeclarativeJobWarper<TOWN, ROOM extends Room, POS,
         b.put(ProductionStatus.NO_SUPPLIES, NULL_HENDLAR);
         b.put(ProductionStatus.IDLE, NULL_HENDLAR);
         b.put(ProductionStatus.NO_JOBSITE, NULL_HENDLAR);
+        b.put(ProductionStatus.NO_WORK_POSSIBLE, NULL_HENDLAR);
         handler = b.build();
     }
 
@@ -199,8 +213,22 @@ public abstract class AbstractDeclarativeJobWarper<TOWN, ROOM extends Room, POS,
             status = nuStatus;
         }
 
-        // TODO[Warp]: Test this part
-        TOWN affectedState = handler.get(status).hendle(new HendlarInpoots<>(
+        QT.JOB_LOGGER.debug(
+                "[WARP] tick={} status={} workState={}",
+                tick.tick(),
+                status,
+                workspot.getState(outState)
+        );
+
+        if (strictMode && status.equals(ProductionStatus.GOING_TO_JOB)) {
+            throw new IllegalStateException(
+                    "GOING_TO_JOB status during warp is invalid. " +
+                    "The warper assumes workers are already at their jobsite."
+            );
+        }
+
+        Hendlar hendlar = handler.get(status);
+        TOWN affectedState = hendlar.hendle(new HendlarInpoots<>(
                 wi,
                 inpoooots.apply(outState),
                 status,
@@ -209,6 +237,10 @@ public abstract class AbstractDeclarativeJobWarper<TOWN, ROOM extends Room, POS,
                 workspot.get()
         ));
         if (affectedState != null) {
+            QT.JOB_LOGGER.debug(
+                    "[WARP] handler={} stateChanged=true",
+                    hendlar.getClass().getSimpleName()
+            );
             outState = affectedState;
         }
 

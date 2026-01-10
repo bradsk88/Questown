@@ -23,7 +23,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-class DeclarativeJobWarpingTest {
+class IntDeclarativeJobWarpingTest {
 
     private static final Map<ProductionStatus, Collection<String>> NO_RULES =
             ImmutableMap.of();
@@ -206,6 +206,10 @@ class DeclarativeJobWarpingTest {
             TestWorkSpotStandIn town = extra.town();
             if (town.state != null && town.state.hasWorkLeft()) {
                 town.state = town.state.decrWork(10); // Apply max work
+                // Consume a supply item when work completes (realistic behavior)
+                if (!town.state.hasWorkLeft()) {
+                    heldItems.remove("supply_item");
+                }
             }
             return new WorkOutput<>(true, false, town, workSpot);
         }
@@ -282,6 +286,10 @@ class DeclarativeJobWarpingTest {
         TWarper(StatusProvider<Room> statusProvider) {
             super(statusProvider);
         }
+
+        TWarper(StatusProvider<Room> statusProvider, boolean strictMode) {
+            super(statusProvider, strictMode);
+        }
     }
 
     // --- Test Helpers ---
@@ -299,12 +307,25 @@ class DeclarativeJobWarpingTest {
     /**
      * Warp with explicit status injection - for handler dispatch tests
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
     private static TestWorkSpotStandIn warpWithStatus(
             TestWorkSpotStandIn workspot,
             int gameTick,
             @Nullable ProductionStatus status,
             @Nullable THandler handler
+    ) {
+        return warpWithStatus(workspot, gameTick, status, handler, false);
+    }
+
+    /**
+     * Warp with explicit status injection and strict mode flag
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static TestWorkSpotStandIn warpWithStatus(
+            TestWorkSpotStandIn workspot,
+            int gameTick,
+            @Nullable ProductionStatus status,
+            @Nullable THandler handler,
+            boolean strictMode
     ) {
         UUID villagerID = UUID.randomUUID();
         AbstractDeclarativeJobWarper.staticInitialize();
@@ -320,7 +341,7 @@ class DeclarativeJobWarpingTest {
                 ? (cur, sig, inv, town, loc, pri) -> status
                 : (cur, sig, inv, town, loc, pri) -> null; // null = no status change
 
-        return new TWarper(statusProvider).warp(
+        return new TWarper(statusProvider, strictMode).warp(
                 workspot,
                 workspot,
                 Warper.Tick.at(gameTick).after(gameTick),
@@ -433,6 +454,455 @@ class DeclarativeJobWarpingTest {
         Assertions.assertTrue(
                 handler.tryWorkingCalled,
                 "Expected tryWorking to be called for EXTRACTING_PRODUCT status"
+        );
+    }
+
+    @Test
+    public void whenNoSpaceStatus_shouldNotCallAnyHandler() {
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+
+        warpWithStatus(workspot, 100, ProductionStatus.NO_SPACE, handler);
+
+        Assertions.assertFalse(handler.dropLootCalled, "dropLoot should not be called");
+        Assertions.assertFalse(handler.collectSuppliesCalled, "collectSupplies should not be called");
+        Assertions.assertFalse(handler.tryWorkingCalled, "tryWorking should not be called");
+    }
+
+    @Test
+    public void whenNoJobsiteStatus_shouldNotCallAnyHandler() {
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+
+        warpWithStatus(workspot, 100, ProductionStatus.NO_JOBSITE, handler);
+
+        Assertions.assertFalse(handler.dropLootCalled, "dropLoot should not be called");
+        Assertions.assertFalse(handler.collectSuppliesCalled, "collectSupplies should not be called");
+        Assertions.assertFalse(handler.tryWorkingCalled, "tryWorking should not be called");
+    }
+
+    @Test
+    public void whenWaitingForTimedStateStatus_shouldNotCallAnyHandler() {
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+
+        warpWithStatus(workspot, 100, ProductionStatus.WAITING_FOR_TIMED_STATE, handler);
+
+        Assertions.assertFalse(handler.dropLootCalled, "dropLoot should not be called");
+        Assertions.assertFalse(handler.collectSuppliesCalled, "collectSupplies should not be called");
+        Assertions.assertFalse(handler.tryWorkingCalled, "tryWorking should not be called");
+    }
+
+    @Test
+    public void whenGoingToJobStatus_inStrictMode_shouldThrowException() {
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+
+        // GOING_TO_JOB is invalid during warp because the warper assumes
+        // workers are already at their jobsite
+        IllegalStateException exception = Assertions.assertThrows(
+                IllegalStateException.class,
+                () -> warpWithStatus(workspot, 100, ProductionStatus.GOING_TO_JOB, handler, true)
+        );
+
+        Assertions.assertTrue(
+                exception.getMessage().contains("GOING_TO_JOB"),
+                "Exception message should mention GOING_TO_JOB"
+        );
+    }
+
+    @Test
+    public void whenGoingToJobStatus_notStrictMode_shouldNotCallAnyHandler() {
+        // In non-strict mode (runtime), GOING_TO_JOB is a no-op to avoid crashes
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+
+        warpWithStatus(workspot, 100, ProductionStatus.GOING_TO_JOB, handler, false);
+
+        Assertions.assertFalse(handler.dropLootCalled, "dropLoot should not be called");
+        Assertions.assertFalse(handler.collectSuppliesCalled, "collectSupplies should not be called");
+        Assertions.assertFalse(handler.tryWorkingCalled, "tryWorking should not be called");
+    }
+
+    @Test
+    public void whenNoSuppliesStatus_shouldNotCallAnyHandler() {
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+
+        warpWithStatus(workspot, 100, ProductionStatus.NO_SUPPLIES, handler);
+
+        Assertions.assertFalse(handler.dropLootCalled, "dropLoot should not be called");
+        Assertions.assertFalse(handler.collectSuppliesCalled, "collectSupplies should not be called");
+        Assertions.assertFalse(handler.tryWorkingCalled, "tryWorking should not be called");
+    }
+
+    @Test
+    public void whenRelaxingStatus_shouldNotCallAnyHandler() {
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+
+        warpWithStatus(workspot, 100, ProductionStatus.RELAXING, handler);
+
+        Assertions.assertFalse(handler.dropLootCalled, "dropLoot should not be called");
+        Assertions.assertFalse(handler.collectSuppliesCalled, "collectSupplies should not be called");
+        Assertions.assertFalse(handler.tryWorkingCalled, "tryWorking should not be called");
+    }
+
+    @Test
+    public void whenNoWorkPossibleStatus_shouldNotCallAnyHandler() {
+        // NO_WORK_POSSIBLE occurs when a villager is at the job board seeking work
+        // but the town has no available jobs matching their skills.
+        // During time warp, this status should do nothing (uses NULL_HENDLAR).
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+
+        warpWithStatus(workspot, 100, ProductionStatus.NO_WORK_POSSIBLE, handler);
+
+        Assertions.assertFalse(handler.dropLootCalled, "dropLoot should not be called");
+        Assertions.assertFalse(handler.collectSuppliesCalled, "collectSupplies should not be called");
+        Assertions.assertFalse(handler.tryWorkingCalled, "tryWorking should not be called");
+    }
+
+    @Test
+    public void whenWorkState_shouldCallTryWorking() {
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+
+        // Work state 0 (first production state)
+        ProductionStatus workState = ProductionStatus.fromJobBlockStatus(0);
+        warpWithStatus(workspot, 100, workState, handler);
+
+        Assertions.assertTrue(
+                handler.tryWorkingCalled,
+                "Expected tryWorking to be called for work state 0"
+        );
+    }
+
+    // --- Multi-Warp Scenario Tests ---
+
+    @Test
+    public void multiWarp_shouldAccumulateTimerReductions() {
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.timer = 300;
+
+        // Warp three times
+        TestWorkSpotStandIn after1 = warp(workspot, 50);
+        TestWorkSpotStandIn after2 = warp(after1, 75);
+        TestWorkSpotStandIn after3 = warp(after2, 100);
+
+        // 300 - 50 - 75 - 100 = 75
+        Assertions.assertEquals(75, after3.timer);
+    }
+
+    @Test
+    public void multiWarp_shouldAccumulateDropLootEffects() {
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+        handler.heldItems = new ArrayList<>(List.of("result_item", "result_item", "other"));
+
+        // First drop
+        warpWithStatus(workspot, 100, ProductionStatus.DROPPING_LOOT, handler);
+        int afterFirst = handler.heldItems.size();
+
+        // Second drop
+        handler.heldItems.add("result_item");
+        warpWithStatus(workspot, 100, ProductionStatus.DROPPING_LOOT, handler);
+        int afterSecond = handler.heldItems.size();
+
+        // All "result_item" entries should be removed, only "other" remains
+        Assertions.assertEquals(1, afterFirst, "After first drop, only 'other' should remain");
+        Assertions.assertEquals(1, afterSecond, "After second drop, still only 'other'");
+    }
+
+    @Test
+    public void multiWarp_shouldAccumulateCollectSuppliesEffects() {
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+        handler.heldItems = new ArrayList<>();
+
+        // Collect supplies multiple times
+        warpWithStatus(workspot, 100, ProductionStatus.COLLECTING_SUPPLIES, handler);
+        warpWithStatus(workspot, 100, ProductionStatus.COLLECTING_SUPPLIES, handler);
+        warpWithStatus(workspot, 100, ProductionStatus.COLLECTING_SUPPLIES, handler);
+
+        // Should have accumulated 3 supply items
+        Assertions.assertEquals(3, handler.heldItems.size());
+        Assertions.assertTrue(handler.heldItems.stream().allMatch("supply_item"::equals));
+    }
+
+    // --- Work Progression Tests ---
+    // Note: State uses 10x internal scaling. setWorkLeft(N) stores N*10 internally.
+    // decrWork(10) reduces internal by 10 (max allowed per call).
+    // workLeft() returns ceil(internal/10).
+
+    @Test
+    public void workProgression_shouldReduceWorkWhenWorking() {
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.state = State.fresh().setWorkLeft(100);
+        THandler handler = makeHandler();
+        int initialWork = workspot.state.workLeft();
+
+        ProductionStatus workState = ProductionStatus.fromJobBlockStatus(0);
+        TestWorkSpotStandIn result = warpWithStatus(workspot, 100, workState, handler);
+
+        // THandler.tryWorking calls decrWork(10), reducing internal by 10
+        // Internal: 1000 -> 990, workLeft: 100 -> 99
+        Assertions.assertTrue(
+                result.state.workLeft() < initialWork,
+                "Work should decrease after working"
+        );
+        Assertions.assertEquals(99, result.state.workLeft());
+    }
+
+    @Test
+    public void workProgression_shouldNotReduceWorkBelowZero() {
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        // Set work to 1 (internal = 10), one decrWork(10) should reach 0
+        workspot.state = State.fresh().setWorkLeft(1);
+        THandler handler = makeHandler();
+
+        ProductionStatus workState = ProductionStatus.fromJobBlockStatus(0);
+        TestWorkSpotStandIn result = warpWithStatus(workspot, 100, workState, handler);
+
+        Assertions.assertEquals(0, result.state.workLeft(), "Work should reach zero");
+        Assertions.assertTrue(
+                result.state.workLeft() >= 0,
+                "Work should not go below zero"
+        );
+    }
+
+    @Test
+    public void workProgression_multipleWarps_shouldProgressWork() {
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        // Set work to 5 (internal = 50), need 5 decrWork(10) calls to reach 0
+        workspot.state = State.fresh().setWorkLeft(5);
+        THandler handler = makeHandler();
+
+        ProductionStatus workState = ProductionStatus.fromJobBlockStatus(0);
+
+        // Work 5 times (each decrWork(10) reduces internal by 10)
+        TestWorkSpotStandIn current = workspot;
+        for (int i = 0; i < 5; i++) {
+            current = warpWithStatus(current, 100, workState, handler);
+        }
+
+        // Internal: 50 - (5 * 10) = 0
+        Assertions.assertEquals(0, current.state.workLeft());
+    }
+
+    // --- Timer Reduction During Work State Tests ---
+
+    @Test
+    public void whenMidWorkWithActiveTimer_warpShouldReduceTimer() {
+        // Scenario from logs: villager at state=2, workLeft=0, timer=2000
+        // This represents a villager who has finished the work portion and is
+        // waiting for the timer to complete before advancing to next state.
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.state = State.fresh().setProcessing(2).setWorkLeft(0);
+        workspot.timer = 2000;
+        THandler handler = makeHandler();
+
+        // Warp with WAITING_FOR_TIMED_STATE (work done, waiting for timer)
+        TestWorkSpotStandIn result = warpWithStatus(
+                workspot, 500, ProductionStatus.WAITING_FOR_TIMED_STATE, handler
+        );
+
+        // Timer should be reduced by ticks passed
+        Assertions.assertEquals(1500, result.timer);
+        // No handler actions should be called
+        Assertions.assertFalse(handler.tryWorkingCalled);
+        Assertions.assertFalse(handler.dropLootCalled);
+        Assertions.assertFalse(handler.collectSuppliesCalled);
+    }
+
+    @Test
+    public void whenMidWorkWithActiveTimer_multipleWarps_shouldAccumulateTimerReduction() {
+        // Multiple warps should progressively reduce the timer
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.state = State.fresh().setProcessing(2).setWorkLeft(0);
+        workspot.timer = 2000;
+        THandler handler = makeHandler();
+
+        // Warp multiple times
+        TestWorkSpotStandIn after1 = warpWithStatus(
+                workspot, 500, ProductionStatus.WAITING_FOR_TIMED_STATE, handler
+        );
+        TestWorkSpotStandIn after2 = warpWithStatus(
+                after1, 750, ProductionStatus.WAITING_FOR_TIMED_STATE, handler
+        );
+        TestWorkSpotStandIn after3 = warpWithStatus(
+                after2, 500, ProductionStatus.WAITING_FOR_TIMED_STATE, handler
+        );
+
+        // 2000 - 500 - 750 - 500 = 250
+        Assertions.assertEquals(250, after3.timer);
+    }
+
+    @Test
+    public void whenMidWorkWithActiveTimer_warpExceedingTimer_shouldClampToZero() {
+        // If warp ticks exceed remaining timer, timer should clamp to zero
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.state = State.fresh().setProcessing(2).setWorkLeft(0);
+        workspot.timer = 500;
+        THandler handler = makeHandler();
+
+        // Warp more ticks than timer has remaining
+        TestWorkSpotStandIn result = warpWithStatus(
+                workspot, 1000, ProductionStatus.WAITING_FOR_TIMED_STATE, handler
+        );
+
+        // Timer should be clamped to zero, not negative
+        Assertions.assertEquals(0, result.timer);
+    }
+
+    // --- Full Cycle Tests ---
+    // These tests verify complete work cycles through multiple status transitions
+
+    @Test
+    public void fullCycle_collectSupplies_shouldAddItemToInventory() {
+        // Step 1 of cycle: Collect supplies from town containers
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+        handler.heldItems = new ArrayList<>();
+
+        // Collect supplies
+        warpWithStatus(workspot, 100, ProductionStatus.COLLECTING_SUPPLIES, handler);
+
+        // Verify supply was added to inventory
+        Assertions.assertEquals(1, handler.heldItems.size());
+        Assertions.assertEquals("supply_item", handler.heldItems.get(0));
+    }
+
+    @Test
+    public void fullCycle_workThenExtract_shouldProgressState() {
+        // Steps 2-3: Work on block, then extract product
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.state = State.fresh().setWorkLeft(1); // Minimal work
+        THandler handler = makeHandler();
+        handler.heldItems = new ArrayList<>(List.of("supply_item"));
+
+        // Work on block (state 0)
+        ProductionStatus workState = ProductionStatus.fromJobBlockStatus(0);
+        TestWorkSpotStandIn afterWork = warpWithStatus(workspot, 100, workState, handler);
+
+        // Verify work was done
+        Assertions.assertTrue(handler.tryWorkingCalled);
+        Assertions.assertEquals(0, afterWork.state.workLeft());
+
+        // Extract product
+        warpWithStatus(afterWork, 100, ProductionStatus.EXTRACTING_PRODUCT, handler);
+
+        // tryWorking is called for extraction too
+        Assertions.assertTrue(handler.tryWorkingCalled);
+    }
+
+    @Test
+    public void fullCycle_dropLoot_shouldRemoveResultFromInventory() {
+        // Step 4: Drop results to containers
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+        handler.heldItems = new ArrayList<>(List.of("result_item", "other_item"));
+
+        // Drop loot
+        warpWithStatus(workspot, 100, ProductionStatus.DROPPING_LOOT, handler);
+
+        // Verify result was dropped (removed from inventory)
+        Assertions.assertEquals(1, handler.heldItems.size());
+        Assertions.assertEquals("other_item", handler.heldItems.get(0));
+    }
+
+    @Test
+    public void fullCycle_completeSequence_shouldTransformSupplyToResult() {
+        // Complete cycle: collect -> work -> extract -> drop
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.state = State.fresh().setWorkLeft(1);
+        THandler handler = makeHandler();
+        handler.heldItems = new ArrayList<>();
+
+        // 1. Collect supplies
+        warpWithStatus(workspot, 100, ProductionStatus.COLLECTING_SUPPLIES, handler);
+        Assertions.assertEquals(1, handler.heldItems.size(), "Should have collected supply");
+
+        // 2. Work on block
+        ProductionStatus workState = ProductionStatus.fromJobBlockStatus(0);
+        TestWorkSpotStandIn afterWork = warpWithStatus(workspot, 100, workState, handler);
+        Assertions.assertEquals(0, afterWork.state.workLeft(), "Work should be complete");
+
+        // 3. Extract product (simulated - adds result_item)
+        handler.heldItems.add("result_item"); // Simulate extraction result
+        warpWithStatus(afterWork, 100, ProductionStatus.EXTRACTING_PRODUCT, handler);
+
+        // 4. Drop loot
+        warpWithStatus(afterWork, 100, ProductionStatus.DROPPING_LOOT, handler);
+
+        // Verify: supply_item was consumed during work, result_item was dropped
+        Assertions.assertFalse(
+                handler.heldItems.contains("supply_item"),
+                "Supply item should be consumed during work"
+        );
+        Assertions.assertFalse(
+                handler.heldItems.contains("result_item"),
+                "Result item should be dropped"
+        );
+        Assertions.assertTrue(
+                handler.heldItems.isEmpty(),
+                "Inventory should be empty after full cycle"
+        );
+    }
+
+    @Test
+    public void fullCycle_multipleWorkSteps_shouldProgressThroughStates() {
+        // Test progressing through multiple work states (0 -> 1 -> 2)
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.state = State.fresh().setWorkLeft(1);
+        THandler handler = makeHandler();
+
+        // Work at state 0
+        ProductionStatus state0 = ProductionStatus.fromJobBlockStatus(0);
+        TestWorkSpotStandIn after0 = warpWithStatus(workspot, 100, state0, handler);
+        Assertions.assertTrue(handler.tryWorkingCalled, "Should work at state 0");
+
+        // Advance to state 1 and work
+        after0.state = after0.state.setProcessing(1).setWorkLeft(1);
+        handler.tryWorkingCalled = false;
+        ProductionStatus state1 = ProductionStatus.fromJobBlockStatus(1);
+        TestWorkSpotStandIn after1 = warpWithStatus(after0, 100, state1, handler);
+        Assertions.assertTrue(handler.tryWorkingCalled, "Should work at state 1");
+
+        // Advance to state 2 and work
+        after1.state = after1.state.setProcessing(2).setWorkLeft(1);
+        handler.tryWorkingCalled = false;
+        ProductionStatus state2 = ProductionStatus.fromJobBlockStatus(2);
+        TestWorkSpotStandIn after2 = warpWithStatus(after1, 100, state2, handler);
+        Assertions.assertTrue(handler.tryWorkingCalled, "Should work at state 2");
+
+        // All states processed
+        Assertions.assertEquals(0, after2.state.workLeft());
+    }
+
+    @Test
+    public void itemFlow_collectMultipleThenDropAll_shouldAccumulate() {
+        // Collect multiple supplies, then drop all results
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        THandler handler = makeHandler();
+        handler.heldItems = new ArrayList<>();
+
+        // Collect supplies 3 times
+        for (int i = 0; i < 3; i++) {
+            warpWithStatus(workspot, 100, ProductionStatus.COLLECTING_SUPPLIES, handler);
+        }
+        Assertions.assertEquals(3, handler.heldItems.size(), "Should have 3 supplies");
+
+        // Add results and drop
+        handler.heldItems.add("result_item");
+        handler.heldItems.add("result_item");
+        warpWithStatus(workspot, 100, ProductionStatus.DROPPING_LOOT, handler);
+
+        // Only supplies should remain
+        Assertions.assertEquals(3, handler.heldItems.size());
+        Assertions.assertTrue(
+                handler.heldItems.stream().allMatch("supply_item"::equals),
+                "Only supply items should remain after dropping results"
         );
     }
 }

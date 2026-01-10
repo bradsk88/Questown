@@ -1,0 +1,59 @@
+TIME WARP QUICK REFERENCE
+=========================
+
+Purpose: Simulate game time passage when players leave town area.
+Entry: /qt warp <pos> <ticks> → TownFlagState.warp()
+
+ORCHESTRATION (TownFlagState.java:164)
+--------------------------------------
+1. Get warper per villager job type
+2. Compute important ticks (state-change moments only)
+3. Sort all tick events across villagers by game tick
+4. Process sequentially, accumulating state changes
+
+TICK CALCULATION (DeclarativeJobs.computeWarpTicks:399)
+-------------------------------------------------------
+stepInterval = max(min(workInterval*2, minTimerValue), 100)
+
+Factors: work intervals, walk time heuristic (2x interval), timer expirations
+
+LOCATION HEURISTIC
+------------------
+Fake position per villager: BlockPos(villagerNum, villagerNum, villagerNum)
+Assumes instant travel to any job site or container.
+
+SINGLE WARP STEP (AbstractDeclarativeJobWarper.warp)
+----------------------------------------------------
+1. Init: null state → State.fresh()
+2. Status: ProductionStatuses.getNewStatusFromSignal()
+3. Dispatch handler (see table)
+4. Reduce timers by ticksSincePrevious
+
+HANDLER TABLE
+-------------
+WORK_STATE_0..9        → tryWorkingProduction() [see work-loop.md]
+EXTRACTING_PRODUCT     → tryWorking() - harvest to inventory
+DROPPING_LOOT          → simulateDropLoot() - inventory → containers
+COLLECTING_SUPPLIES    → simulateCollectSupplies() - containers → inventory
+RELAXING               → no-op (evening)
+WAITING_FOR_TIMED_STATE→ no-op
+NO_SPACE               → no-op (containers full)
+GOING_TO_JOB           → no-op (throws in strict mode)
+NO_SUPPLIES            → no-op
+IDLE                   → no-op
+NO_JOBSITE             → no-op (throws in strict mode)
+
+CONTAINERS
+----------
+In-memory simulation during warp. Written back to MC world at end.
+
+KEY FILES
+---------
+DeclarativeJobs.java:399           computeWarpTicks()
+AbstractDeclarativeJobWarper.java  Core warp + handler dispatch
+TownFlagState.java:164             Orchestration
+MCTownStateWorldInteraction.java   MC-specific simulation
+ProductionTimeWarper.java          Drop loot / collect supplies
+Warper.java                        Interface
+
+See also: work-loop.md, time-warp-plan.md
