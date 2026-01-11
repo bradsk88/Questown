@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.GathererJournalTest;
+import ca.bradj.questown.jobs.WorkOutput;
 import ca.bradj.questown.jobs.WorkPosition;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.MonoPredicateCollection;
@@ -15,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.UUID;
@@ -25,6 +27,198 @@ import static ca.bradj.questown.jobs.declarative.AbstractItemWITest.alwaysFalse;
 import static ca.bradj.questown.jobs.declarative.AbstractItemWITest.alwaysTrue;
 
 class AbstractWorldInteractionTest {
+
+    // === Rate Limiter Tests ===
+    // These tests verify the interval-based rate limiting behavior that was
+    // causing warp to fail (tryWorking returning null on most ticks)
+
+    @Test
+    void tryWorking_ShouldNotDoWork_WhenIntervalNotReached() {
+        // Create a TestWorldInteraction with interval=10 (requires 10 ticks between actions)
+        TestWorldInteraction wi = withInterval(10);
+
+        // First call increments ticksSinceLastAction to 1, which is < 10
+        WorkOutput<Boolean, WorkPosition<Position>> result = wi.tryWorking(null, arbitrarySpot());
+
+        // Should return a WorkOutput with didWork=false because interval not reached
+        // (returns WorkOutput instead of null because canClaim is true in test)
+        Assertions.assertNotNull(result, "tryWorking should return WorkOutput when canClaim is true");
+        Assertions.assertFalse(result.worked(), "tryWorking should not do work when interval not reached");
+        Assertions.assertEquals(1, wi.getTicksSinceLastAction());
+        Assertions.assertFalse(wi.extracted);
+    }
+
+    @Test
+    void tryWorking_ShouldWork_WhenIntervalReached() {
+        TestWorldInteraction wi = withInterval(5);
+
+        // Call tryWorking 5 times to reach the interval
+        for (int i = 0; i < 5; i++) {
+            wi.tryWorking(null, arbitrarySpot());
+        }
+
+        // 5th call should have allowed work (ticksSinceLastAction reaches interval)
+        Assertions.assertEquals(0, wi.getTicksSinceLastAction(), "Should reset to 0 after work performed");
+    }
+
+    @Test
+    void injectTicks_ShouldBypassRateLimiter() {
+        TestWorldInteraction wi = withInterval(100);
+
+        // Inject enough ticks to bypass the rate limiter
+        wi.injectTicks(100);
+
+        // Now tryWorking should proceed (we're at interval threshold)
+        WorkOutput<Boolean, WorkPosition<Position>> result = wi.tryWorking(null, arbitrarySpot());
+
+        // After work, ticksSinceLastAction should reset to 0
+        Assertions.assertEquals(0, wi.getTicksSinceLastAction(),
+                "injectTicks should allow work to proceed, resetting counter");
+    }
+
+    @Test
+    void tryWorking_ShouldBlockMultipleTimes_UntilIntervalReached() {
+        TestWorldInteraction wi = withInterval(3);
+
+        // Call 1: ticksSinceLastAction becomes 1 (< 3), returns WorkOutput with didWork=false
+        WorkOutput<Boolean, WorkPosition<Position>> result1 = wi.tryWorking(null, arbitrarySpot());
+        Assertions.assertFalse(result1.worked(), "Should not do work on call 1");
+        Assertions.assertEquals(1, wi.getTicksSinceLastAction());
+
+        // Call 2: ticksSinceLastAction becomes 2 (< 3), returns WorkOutput with didWork=false
+        WorkOutput<Boolean, WorkPosition<Position>> result2 = wi.tryWorking(null, arbitrarySpot());
+        Assertions.assertFalse(result2.worked(), "Should not do work on call 2");
+        Assertions.assertEquals(2, wi.getTicksSinceLastAction());
+
+        // Call 3: ticksSinceLastAction becomes 3 (>= 3), work proceeds
+        WorkOutput<Boolean, WorkPosition<Position>> result3 = wi.tryWorking(null, arbitrarySpot());
+        Assertions.assertTrue(result3.worked(), "Should do work on call 3 when interval reached");
+        Assertions.assertEquals(0, wi.getTicksSinceLastAction(), "Counter should reset after work");
+    }
+
+    @Test
+    void injectTicks_ShouldAllowImmediateWork_WhenCalledBeforeTryWorking() {
+        // This is the pattern used during warp: inject ticks BEFORE each tryWorking call
+        TestWorldInteraction wi = withInterval(50);
+
+        // Inject interval ticks before calling tryWorking (simulates warp behavior)
+        wi.injectTicks(wi.getInterval());
+
+        // Now tryWorking should proceed immediately
+        wi.tryWorking(null, arbitrarySpot());
+
+        Assertions.assertEquals(0, wi.getTicksSinceLastAction(),
+                "Work should proceed and reset counter when ticks injected before call");
+    }
+
+    // === postExtractHook Null Handling Tests ===
+    // These tests verify that when postExtractHook returns null, items are still
+    // properly accumulated in the villager's inventory. The bug was:
+    //   ts = postExtractHook(inputs, unit);  // returns null
+    //   ts = setHeldItem(inputs, ts, ...);   // ts is null, falls back to original state
+    // This caused only the last item to be kept during multi-item extraction.
+
+    @Test
+    void tryGiveItems_ShouldPassNonNullTownToSetHeldItem_WhenExtractingMultipleItems() {
+        // This test verifies the fix for the postExtractHook null handling bug.
+        // When extracting multiple items, setHeldItem should receive non-null town
+        // state on all calls after the first (because the first call's result should
+        // be passed to subsequent calls).
+        //
+        // Before the fix: all calls to setHeldItem had null town (ts reset by null hookResult)
+        // After the fix: only first call has null town (ts preserved when hookResult is null)
+
+        ArrayList<GathererJournalTest.TestItem> inventoryList = new ArrayList<>();
+        inventoryList.add(new GathererJournalTest.TestItem("")); // Empty slot 1
+        inventoryList.add(new GathererJournalTest.TestItem("")); // Empty slot 2
+        inventoryList.add(new GathererJournalTest.TestItem("")); // Empty slot 3
+
+        InventoryHandle<GathererJournalTest.TestItem> inventoryHandle = new InventoryHandle<>() {
+            @Override
+            public Collection<GathererJournalTest.TestItem> getItems() {
+                return inventoryList;
+            }
+
+            @Override
+            public void set(int ii, GathererJournalTest.TestItem item) {
+                inventoryList.set(ii, item);
+            }
+        };
+
+        ImmutableWorkStateContainer<Position, Boolean> statuses = testWorkStateContainer();
+
+        // Create a TestWorldInteraction that extracts 3 items
+        TestWorldInteraction wi = new TestWorldInteraction(
+                0,
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableList.of(
+                        new GathererJournalTest.TestItem("bowl"),
+                        new GathererJournalTest.TestItem("bowl"),
+                        new GathererJournalTest.TestItem("bowl")
+                ),
+                ValidatedInventoryHandle.unvalidated(inventoryHandle),
+                statuses,
+                () -> new Claim(UUID.randomUUID(), 100)
+        );
+
+        // Set up job block state to be at extraction point (maxState with no work left)
+        wi.setJobBlockState(null, true, arbitrarySpot().jobBlock(), State.fresh());
+
+        // Reset tracking
+        wi.resetSetHeldItemTracking();
+
+        // Trigger extraction by calling tryWorking
+        wi.tryWorking(null, arbitrarySpot());
+
+        // Verify: When extracting 3 items, setHeldItem should be called 3 times.
+        // With the fix, only the first call should have null town (because getTown returns null).
+        // Calls 2 and 3 should have non-null town (the result from previous setHeldItem).
+        //
+        // Before the fix, ALL 3 calls would have null town because postExtractHook
+        // returning null would reset ts to null before each setHeldItem call.
+
+        Assertions.assertEquals(3, wi.getSetHeldItemCallsTotal(),
+                "Should call setHeldItem 3 times for 3 items");
+
+        // The key assertion: at most 1 call should have null town (the first one)
+        // If more than 1 call has null town, the bug exists.
+        Assertions.assertTrue(wi.getSetHeldItemCallsWithNullTown() <= 1,
+                "At most 1 setHeldItem call should have null town (the first one). " +
+                        "Got " + wi.getSetHeldItemCallsWithNullTown() + " null calls. " +
+                        "This indicates the postExtractHook null handling bug.");
+    }
+
+    private TestWorldInteraction withInterval(int interval) {
+        ImmutableWorkStateContainer<Position, Boolean> statuses = testWorkStateContainer();
+        InventoryHandle<GathererJournalTest.TestItem> inventoryHandle = new InventoryHandle<>() {
+            @Override
+            public Collection<GathererJournalTest.TestItem> getItems() {
+                return ImmutableList.of(new GathererJournalTest.TestItem(""));
+            }
+
+            @Override
+            public void set(int ii, GathererJournalTest.TestItem shrink) {
+            }
+        };
+
+        return new TestWorldInteraction(
+                0, // maxState
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ValidatedInventoryHandle.unvalidated(inventoryHandle),
+                statuses,
+                () -> new Claim(UUID.randomUUID(), 100),
+                interval
+        );
+    }
+
 
 
     public static TestWorldInteraction noMemoryInventory(

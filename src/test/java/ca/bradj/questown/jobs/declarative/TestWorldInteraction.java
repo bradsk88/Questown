@@ -30,6 +30,8 @@ public class TestWorldInteraction extends
     private final ImmutableWorkStateContainer<Position, Boolean> workStatuses;
     private int degradedTool;
     private boolean inserted;
+    private int setHeldItemCallsWithNullTown = 0;
+    private int setHeldItemCallsTotal = 0;
 
     @Override
     public int timesInserted(Void unused) {
@@ -77,10 +79,26 @@ public class TestWorldInteraction extends
             ImmutableWorkStateContainer<Position, Boolean> workStatuses,
             Supplier<Claim> claim
     ) {
+        this(maxState, toolsRequiredAtStates, workRequiredAtStates, ingredientsRequiredAtStates,
+                ingredientQuantityRequiredAtStates, timeRequiredAtStates, inventory, workStatuses, claim, 0);
+    }
+
+    public TestWorldInteraction(
+            int maxState,
+            ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> toolsRequiredAtStates,
+            ImmutableMap<Integer, Integer> workRequiredAtStates,
+            ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
+            ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory,
+            ImmutableWorkStateContainer<Position, Boolean> workStatuses,
+            Supplier<Claim> claim,
+            int interval
+    ) {
         super(
                 new JobID("test", "test"),
                 -1, // Not used
-                0,
+                interval,
                 maxState,
                 new DeclarativeJobChecks<>(
                         ingredientsRequiredAtStates,
@@ -314,8 +332,25 @@ public class TestWorldInteraction extends
             int itemIndex,
             GathererJournalTest.TestItem item
     ) {
+        setHeldItemCallsTotal++;
+        if (tuwn == null) {
+            setHeldItemCallsWithNullTown++;
+        }
         inventory.set(itemIndex, item);
         return true;
+    }
+
+    public int getSetHeldItemCallsWithNullTown() {
+        return setHeldItemCallsWithNullTown;
+    }
+
+    public int getSetHeldItemCallsTotal() {
+        return setHeldItemCallsTotal;
+    }
+
+    public void resetSetHeldItemTracking() {
+        setHeldItemCallsWithNullTown = 0;
+        setHeldItemCallsTotal = 0;
     }
 
     @Override
@@ -383,5 +418,18 @@ public class TestWorldInteraction extends
             Function<GathererJournalTest.TestItem, GathererJournalTest.TestItem> push
     ) {
         newItemsSource.forEach(push::apply);
+    }
+
+    // Test helpers for rate limiter verification
+    public void injectTicks(int ticks) {
+        ticksSinceLastAction += ticks;
+    }
+
+    public int getTicksSinceLastAction() {
+        return ticksSinceLastAction;
+    }
+
+    public int getInterval() {
+        return interval;
     }
 }
