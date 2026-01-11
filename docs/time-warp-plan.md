@@ -21,16 +21,22 @@ Optimized for visible in-game progress. After each step, run `/qt warp` to obser
 - **Observe**: Warp command does something (likely broken behavior)
 
 ### Step 2: Detect Workable Blocks
-- ⬜ `roomsWithWorkableStatefulBlocks()` :440
-- **Observe**: Villagers find work to do (instead of IDLE/NO_JOBSITE)
+- ✅ `roomsWithWorkableStatefulBlocks()` :440
+- **Fixed**: Now correctly reports workable blocks based on processing state
 
 ### Step 3: Detect Supplies
-- ⬜ `hasSuppliesV2()` :445
-- **Observe**: Villagers collect supplies and start working
+- ✅ `hasSuppliesV2()` :445
+- **Fixed**: Now checks if current state actually needs ingredients/tools before
+  returning true. Previously always returned true, causing crashes at states
+  that don't require supplies.
 
 ### Step 4: Verify Basic Cycle
-- ⬜ Test full cycle: collect → work → extract → drop loot
-- **Observe**: Items appear in town containers after warp
+- ✅ Test full cycle: collect → work → extract → drop loot
+- **Fixed**: `getEveningStatus()` in `ProductionStatuses.java` now checks for
+  `roomsWithCompletedProduct()` before returning RELAXING, enabling extraction
+  during evening time.
+- **Tests**: Added `ProductionStatusesTest.java` with 7 tests covering evening
+  status detection including extraction scenario.
 
 ### Step 5: Item Recovery
 - ⬜ Track inserted items in MCTownState

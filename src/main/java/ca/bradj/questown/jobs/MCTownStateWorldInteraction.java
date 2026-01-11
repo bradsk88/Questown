@@ -453,13 +453,18 @@ public class MCTownStateWorldInteraction extends
 
             @Override
             public LZCD.Dependency<Void> hasSuppliesV2() {
-                // During warp, check if we still need supplies.
-                // If work is complete (processingState >= maxState), no supplies needed.
-                if (workStates.processingState() >= maxState) {
+                int curState = workStates.processingState();
+                if (curState >= maxState) {
                     return new ConstantDep("work complete, no supplies needed [warp]", false);
                 }
-                // Otherwise, assume supplies are available for collection.
-                return new ConstantDep("has supplies [warp]", true);
+                // Check if current state actually requires ingredients or tools
+                boolean needsIngredients = checks.getIngredientsForStep(curState) != null;
+                boolean needsTools = checks.getToolsForStep(curState) != null;
+                if (!needsIngredients && !needsTools) {
+                    return new ConstantDep("state " + curState + " needs no supplies [warp]", false);
+                }
+                // State requires supplies - delegate to hasSupplies() for container check
+                return new ConstantDep("has supplies [warp]", hasSupplies());
             }
 
             @Override

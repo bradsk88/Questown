@@ -310,12 +310,16 @@ tests first. Ensures each piece works before integration.
       GOING_TO_JOB, NO_SUPPLIES, RELAXING, work states 0-9)
 - [x] Multi-warp scenario tests (timer accumulation, drop loot, collect supplies)
 - [x] Work progression tests (work reduces, clamps to zero, multiple warps)
+- [x] Steps 1-4 of warp implementation (warpers enabled, workable blocks, supplies,
+      basic cycle with extraction)
+- [x] Fixed `hasSuppliesV2()` to check if state needs ingredients/tools
+- [x] Fixed `getEveningStatus()` to extract products before relaxing
+- [x] Added `ProductionStatusesTest.java` with evening status tests
 
 **Next Steps** (TDD order):
-1. Implement stub methods in `MCTownStateWorldInteraction.java` with tests:
-   - `tryGrabbingInsertedSupplies()` (line 343)
-   - `timesInserted()` (line 349)
-   - `roomsWithWorkableStatefulBlocks()` (line 424)
-   - `hasSuppliesV2()` (line 429)
-2. Implement `MutableEntityInvStateProvider.java` with tests
-3. Re-enable warpers in `ServerJobsRegistry.java:460` (integration)
+1. Implement remaining stub methods in `MCTownStateWorldInteraction.java`:
+   - `tryGrabbingInsertedSupplies()` (line 359)
+   - `timesInserted()` (line 365)
+2. Step 5: Item Recovery - track inserted items, add recovery logic
+3. Step 6: World Containers - handle actual chest contents
+4. Step 7: Polish - MutableEntityInvStateProvider, load/save work states

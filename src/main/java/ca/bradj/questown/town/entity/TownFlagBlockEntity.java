@@ -586,7 +586,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return true;
         }
 
-        JobID work = getRandomFinishableWork(currentJob, Util.getDayTime(getServerLevel()), true);
+        JobID work = getRandomFinishableWork(currentJob, Util.getDayTime(getServerLevel()), true, 1);
         if (work != null) {
             changeJob.accept(work);
             return true;
@@ -598,7 +598,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public @Nullable JobID getRandomFinishableWork(
             JobID currentJob,
             Signals.DayTime startTime,
-            boolean allowUnrequestedWork
+            boolean allowUnrequestedWork,
+            long ticksElapsed
     ) {
         ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();
         WorksBehaviour.TownData td = getTownData();
@@ -628,12 +629,30 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
 
         if (preferredBuffer < 100) {
-            preferredBuffer++;
-            return null;
+            preferredBuffer += ticksElapsed;
+            // Only return null if buffer hasn't reached threshold yet
+            // This allows warp to proceed when ticksElapsed is large enough
+            if (preferredBuffer < 100) {
+                return null;
+            }
         }
         preferredBuffer = 0;
 
-        return TownVillagers.getPreferredWork(currentJob, canFit, canAlwaysStart, requestedResults, td);
+        JobID preferredWork = TownVillagers.getPreferredWork(currentJob, canFit, canAlwaysStart, requestedResults, td);
+        if (preferredWork != null) {
+            return preferredWork;
+        }
+
+        // No work requests matched - pick any preselected job (has supplies) that can fit in the day
+        // This enables villagers to work during warp even without explicit requests
+        // We use the preselected list because it's already filtered for jobs with available supplies
+        ImmutableList<JobID> preselected = startableWork.getFor(currentJob);
+        for (JobID p : preselected) {
+            if (canFit.test(p)) {
+                return p;
+            }
+        }
+        return null;
     }
 
     public WorksBehaviour.TownData getTownData() {

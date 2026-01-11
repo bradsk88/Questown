@@ -179,9 +179,11 @@ public class TownPossibleWork {
             return WithReason.always(0.0, "Unsupported job class " + j.getClass().getName());
         }
 
-        if (!ServerJobsRegistry.canFit(null, j.getId(), Util.getDayTime(sl))) {
-            return WithReason.always(0.0, "Not enough time left in the day for ", j.getId().toNiceString());
-        }
+        // Note: We intentionally don't check canFit() here. The precomputed job list
+        // should include all jobs that could potentially be done based on available
+        // ingredients/tools. The actual time-of-day check happens in
+        // TownFlagBlockEntity.getRandomFinishableWork() at job selection time.
+        // This is important for time warp where the server time is irrelevant.
 
         WithReason<Integer> hps = getHighestPossibleState(
                 sl, dj, src,

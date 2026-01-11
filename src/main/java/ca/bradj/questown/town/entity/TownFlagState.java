@@ -16,6 +16,7 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.PostDowntimeWarper;
 import ca.bradj.questown.town.PossibilitySources;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
@@ -147,9 +148,10 @@ public class TownFlagState {
             @Override
             public @Nullable JobID getRandomFinishableWork(
                     JobID jobID,
-                    Signals.DayTime dayTime
+                    Signals.DayTime dayTime,
+                    long ticksElapsed
             ) {
-                return e.getRandomFinishableWork(jobID, dayTime, false);
+                return e.getRandomFinishableWork(jobID, dayTime, true, ticksElapsed);
             }
 
             @Override
@@ -170,17 +172,25 @@ public class TownFlagState {
                     ticksPassed,
                     liveState
             );
-            ImmutableList<Warper.Tick> ticks = ImportantTicks.forVillager(
+            ImportantTicks.Result ticksResult = ImportantTicks.forVillager(
                     w, v.getVUID(), v.journal.jobId(), DowntimeWork::matches, cfg, ticksPassed, gameTick
             );
+            ImmutableList<Warper.Tick> ticks = ticksResult.ticks();
             e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP_DETAIL).log(
-                    "[{}] Computed {} important ticks for job {}",
+                    "[{}] Computed {} important ticks for job {} (dynamic={})",
                     UtilClean.truncateMiddle(v.uuid),
                     ticks.size(),
-                    v.journal.jobId()
+                    v.journal.jobId(),
+                    ticksResult.useDynamicResolution()
             );
             int ii = i;
-            Warper<ServerLevel, MCTownState> vWarper = ServerJobsRegistry.getWarper(i, v.journal.jobId(), e.getBlockPos());
+            Warper<ServerLevel, MCTownState> vWarper;
+            if (ticksResult.useDynamicResolution()) {
+                // Villager was on downtime - use warper that resolves job after downtime ends
+                vWarper = new PostDowntimeWarper(w, v.journal.jobId(), i, e.getBlockPos());
+            } else {
+                vWarper = ServerJobsRegistry.getWarper(i, v.journal.jobId(), e.getBlockPos());
+            }
             ticks.stream().map(tick -> new AbstractMap.SimpleEntry<>(
                     tick.tick(),
                     (Function<MCTownState, MCTownState>) ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)
@@ -230,7 +240,8 @@ public class TownFlagState {
         void recomputeNow();
         @Nullable JobID getRandomFinishableWork(
                 JobID jobID,
-                Signals.DayTime dayTime
+                Signals.DayTime dayTime,
+                long ticksElapsed
         );
 
         long getTotalDuration(

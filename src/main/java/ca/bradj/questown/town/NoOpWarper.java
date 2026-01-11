@@ -16,7 +16,8 @@ public class NoOpWarper {
                 long ticksPassed,
                 int villagerNum
         ) {
-            throw new UnsupportedOperationException("NoOpWarper should never be run");
+            // No-op: return state unchanged for jobs without warpers (e.g., downtime)
+            return liveState;
         }
 
         @Override

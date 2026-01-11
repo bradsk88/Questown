@@ -360,6 +360,9 @@ public class DeclarativeJobs {
                 );
 
                 AbstractStateInteraction<Inpoots<MCTownState, ServerLevel>, BlockPos, ?, ?, MCTownState> wii = wi;
+                // Inject ticks to bypass the rate limiter during warp
+                // Without this, tryWorking returns null on most ticks due to interval check
+                wi.injectTicks(wi.interval);
                 return DeclarativeJobs.WARPER.warp(
                         ws,
                         inState,

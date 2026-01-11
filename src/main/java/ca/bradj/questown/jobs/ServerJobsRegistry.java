@@ -462,7 +462,10 @@ public class ServerJobsRegistry {
             return NoOpWarper.INSTANCE;
         }
         Supplier<Work> w = Works.get(jobID);
-        assert w != null;
+        if (w == null) {
+            // Job not registered (e.g., downtime jobs) - no warp action needed
+            return NoOpWarper.INSTANCE;
+        }
         return w.get().warper(new WorksBehaviour.WarpInput(villagerIndex, townFlagPos));
     }
 

@@ -65,6 +65,11 @@ public class ProductionStatuses {
             }
         }
 
+        // Check if there's completed work to extract before relaxing
+        if (!town.roomsWithCompletedProduct().isEmpty()) {
+            return nullIfUnchanged(currentStatus, factory.extractingProduct());
+        }
+
         return nullIfUnchanged(currentStatus, factory.relaxing());
     }
 

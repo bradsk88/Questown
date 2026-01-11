@@ -258,7 +258,10 @@ public abstract class AbstractWorldInteraction<
                 ts = withEffectApplied(inputs, ts, newItem);
             } else {
                 HELD_ITEM unit = newItem.unit();
-                ts = postExtractHook(inputs, unit);
+                TOWN hookResult = postExtractHook(inputs, unit);
+                if (hookResult != null) {
+                    ts = hookResult;
+                }
                 ts = setHeldItem(inputs, ts, villagerIndex, i, unit);
                 QT.VILLAGER_LOGGER.debug("Villager took {}", unit.toShortString());
             }
