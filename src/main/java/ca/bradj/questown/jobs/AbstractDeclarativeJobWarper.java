@@ -15,6 +15,12 @@ import java.util.function.Function;
 
 public abstract class AbstractDeclarativeJobWarper<TOWN, ROOM extends Room, POS, LEVEL> {
 
+    // Virtual morning time for warp status computation.
+    // During warp, we use this instead of actual game time to ensure villagers
+    // are productive (not relaxing due to nighttime).
+    // 1000 ticks = ~1am in Minecraft time, plenty of daytime ahead.
+    private static final long VIRTUAL_MORNING_TICK = 1000;
+
     /**
      * Functional interface for computing the next ProductionStatus.
      * Inject a custom implementation for testing.
@@ -160,7 +166,8 @@ public abstract class AbstractDeclarativeJobWarper<TOWN, ROOM extends Room, POS,
             boolean prioritizeExtraction,
             AbstractStateInteraction<Inpoots<TOWN, LEVEL>, POS, ?, ?, TOWN> wi,
             Function<TOWN, Inpoots<TOWN, LEVEL>> inpoooots,
-            int maxState
+            int maxState,
+            @Nullable ProductionStatus initialStatus
     ) {
 
 //        BlockPos fakePos = new BlockPos(villagerNum, villagerNum, villagerNum);
@@ -182,35 +189,50 @@ public abstract class AbstractDeclarativeJobWarper<TOWN, ROOM extends Room, POS,
 //        );
 //        wi.injectTicks((int) ticksPassed);
 //        MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);
-        ProductionStatus status = ProductionStatus.FACTORY.idle();
-        @Nullable ProductionStatus nuStatus = statusProvider.computeStatus(
+        // Use the villager's current status if provided, otherwise start fresh
+        ProductionStatus status = initialStatus != null ? initialStatus : ProductionStatus.FACTORY.idle();
+
+        // If the villager is in WAITING_FOR_TIMED_STATE (e.g., gatherer out gathering),
+        // they need to complete their gathering trip before starting new cycles.
+        //
+        // Strategy: compute the normal status first. If the status would be
+        // COLLECTING_SUPPLIES, that means we're starting a new cycle and should
+        // let it proceed (with food consumption). Otherwise, if villager has no items
+        // and journal says WAITING_FOR_TIMED_STATE, force extraction.
+        EntityInvStateProvider<Integer> inventory = entityInventory.apply(outState);
+        boolean villagerHasNonSupplyItems = inventory.hasNonSupplyItems();
+        // Also check for supply items (like food) - if villager has food, they've already
+        // collected supplies and should proceed to consume them, not force extraction.
+        boolean villagerHasSupplyItems = inventory.getSupplyItemStatus().values().stream()
+                .anyMatch(supplyStatus -> supplyStatus == SupplyItemStatus.HAS_ITEM);
+
+        // Always compute the normal status first
+        @Nullable ProductionStatus computedStatus = statusProvider.computeStatus(
                 status,
-                Signals.fromDayTime(Signals.DayTime.fromGameTime(tick.tick())),
-                entityInventory.apply(outState),
+                Signals.fromDayTime(Signals.DayTime.fromGameTime(VIRTUAL_MORNING_TICK)),
+                inventory,
                 town.apply(outState),
                 entityLocation,
                 prioritizeExtraction
         );
-//        @Nullable ProductionStatus nuStatus = ProductionStatuses.getNewStatusFromSignal(
-//                status,
-//                Signals.fromDayTime(Signals.DayTime.fromGameTime(tick.tick())),
-//                entityInventory,
-//                wi.asTownJobs(
-//                        ztate,
-//                        new RoomRecipeMatch<>(
-//                                fakeRoom,
-//                                ImmutableList.of(new ResourceLocation("fake")),
-//                                ImmutableList.of()
-//                        ),
-//                        fakePos,
-//                        outState.containers
-//                ),
-//                ,
-//                STATUS_FACTORY,
-//                prioritizeExtraction
-//        );
-        if (nuStatus != null) {
-            status = nuStatus;
+
+        // Determine if we need to force extraction:
+        // - Journal says WAITING_FOR_TIMED_STATE (villager was out gathering)
+        // - No items in inventory (neither loot NOR supplies like food)
+        // - Computed status is NOT COLLECTING_SUPPLIES (if it is, we're starting a new cycle)
+        boolean wouldCollectSupplies = computedStatus != null && computedStatus.isCollectingSupplies();
+        boolean needsFirstExtraction = initialStatus != null
+                && initialStatus.isWaitingForTimers()
+                && !villagerHasNonSupplyItems
+                && !villagerHasSupplyItems
+                && !wouldCollectSupplies;
+
+        if (needsFirstExtraction) {
+            // Villager was out gathering and needs to extract their loot first.
+            status = ProductionStatus.EXTRACTING_PRODUCT;
+            outState = workspot.setState(outState, State.fresh().setProcessing(maxState));
+        } else if (computedStatus != null) {
+            status = computedStatus;
         }
 
         QT.JOB_LOGGER.debug(

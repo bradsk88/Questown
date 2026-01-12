@@ -351,7 +351,8 @@ class IntDeclarativeJobWarpingTest {
                 false,
                 wi,
                 s -> new TInputs(s, null, villagerID),
-                10
+                10,
+                null  // initialStatus - test injects status via statusProvider instead
         );
     }
 
@@ -1551,5 +1552,361 @@ class IntDeclarativeJobWarpingTest {
                 "Smelter: ingredient consumed");
         Assertions.assertTrue(smelterHandler.heldItems.contains("tool_item"),
                 "Smelter: tool NOT consumed");
+    }
+
+    // --- Mid-Work Warp Scenario Tests (Gatherer starting while "out gathering") ---
+    // These tests verify behavior when warp starts with a villager already in
+    // WAITING_FOR_TIMED_STATE (e.g., gatherer who left town before the player slept).
+    // The warp should complete their timer and transition to EXTRACTING_PRODUCT.
+
+    /**
+     * Warp with explicit initialStatus parameter - for testing mid-work scenarios
+     * where the villager's status is passed from their journal.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static TestWorkSpotStandIn warpWithInitialStatus(
+            TestWorkSpotStandIn workspot,
+            int gameTick,
+            @Nullable ProductionStatus initialStatus,
+            @Nullable THandler handler,
+            int maxState
+    ) {
+        UUID villagerID = UUID.randomUUID();
+        AbstractDeclarativeJobWarper.staticInitialize();
+        AbstractStateInteraction wi = handler != null ? handler : THandler.make(
+                new JobID("test", "job"), 0, 0, maxState,
+                EMPTY_CHECKS,
+                inpoots -> new Claim(villagerID, Long.MAX_VALUE),
+                NO_RULES
+        );
+
+        // Use default status provider - status transitions will be computed
+        // BUT initialStatus is passed to warp(), so WAITING_FOR_TIMED_STATE
+        // triggers special handling in warp() before status computation.
+        StatusProvider<Room> statusProvider = (cur, sig, inv, town, loc, pri) -> null;
+
+        return new TWarper(statusProvider, false).warp(
+                workspot,
+                workspot,
+                Warper.Tick.at(gameTick).after(gameTick),
+                t -> new TestInventoryProvider(),
+                t -> new TestTownProvider(),
+                NO_LOCATION,
+                false,
+                wi,
+                s -> new TInputs(s, null, villagerID),
+                maxState,
+                initialStatus  // Pass the actual initial status
+        );
+    }
+
+    @Test
+    public void whenStartingInWaitingForTimedState_shouldTransitionToExtractingProduct() {
+        // Scenario: Gatherer left town before player slept. When warp starts,
+        // the villager is in WAITING_FOR_TIMED_STATE. The warp should complete
+        // their timer and allow them to extract their loot.
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        // processingState = 0 simulates work state being reset (common for gatherers)
+        // Force extraction should still trigger because processingState != maxState
+        workspot.state = State.fresh().setProcessing(0);
+        workspot.timer = 2000; // Gatherer's gathering timer (unused in warp tracking)
+        THandler handler = makeHandler();
+
+        // Warp with initialStatus = WAITING_FOR_TIMED_STATE
+        // maxState = 10 (typical for gatherer jobs)
+        TestWorkSpotStandIn result = warpWithInitialStatus(
+                workspot, 100, ProductionStatus.WAITING_FOR_TIMED_STATE, handler, 10
+        );
+
+        // The warp should have:
+        // 1. Transitioned to EXTRACTING_PRODUCT
+        // 2. Set processingState to maxState (10) for extraction
+        // 3. Called tryWorking to collect loot
+        Assertions.assertTrue(
+                handler.tryWorkingCalled,
+                "When starting in WAITING_FOR_TIMED_STATE, warp should transition to " +
+                "EXTRACTING_PRODUCT and call tryWorking to collect loot"
+        );
+        Assertions.assertEquals(
+                10,
+                result.state.processingState(),
+                "Processing state should be set to maxState (10) for extraction"
+        );
+    }
+
+    @Test
+    public void whenStartingInWaitingForTimedState_shouldNotCallOtherHandlers() {
+        // When starting mid-work, only tryWorking (extraction) should be called
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        // processingState = 0, but force extraction should trigger because != maxState
+        workspot.state = State.fresh().setProcessing(0);
+        THandler handler = makeHandler();
+
+        warpWithInitialStatus(
+                workspot, 100, ProductionStatus.WAITING_FOR_TIMED_STATE, handler, 10
+        );
+
+        // Should call tryWorking for extraction
+        Assertions.assertTrue(handler.tryWorkingCalled, "tryWorking should be called");
+        // Should NOT call other handlers
+        Assertions.assertFalse(handler.dropLootCalled, "dropLoot should not be called yet");
+        Assertions.assertFalse(handler.collectSuppliesCalled, "collectSupplies should not be called");
+    }
+
+    @Test
+    public void whenStartingInWaitingForTimedState_stateReflectsExtraction() {
+        // Work state should be set up for extraction (processingState = maxState)
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.state = State.fresh().setProcessing(2); // Was at processing state 2
+        THandler handler = makeHandler();
+
+        // maxState = 5 for this test
+        TestWorkSpotStandIn result = warpWithInitialStatus(
+                workspot, 100, ProductionStatus.WAITING_FOR_TIMED_STATE, handler, 5
+        );
+
+        // The warp should reset the processing state to maxState for extraction
+        Assertions.assertEquals(
+                5,
+                result.state.processingState(),
+                "Processing state should be set to maxState for extraction"
+        );
+    }
+
+    @Test
+    public void whenStartingWithNullInitialStatus_shouldComputeStatusNormally() {
+        // When initialStatus is null (fresh start), status is computed from conditions
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.state = State.fresh();
+        THandler handler = makeHandler();
+
+        // null initialStatus = fresh start, let statusProvider compute
+        warpWithInitialStatus(workspot, 100, null, handler, 10);
+
+        // With null statusProvider return value, the warp defaults to IDLE
+        // which uses NULL_HENDLAR - no handler methods called
+        Assertions.assertFalse(handler.tryWorkingCalled, "No work with null status");
+        Assertions.assertFalse(handler.dropLootCalled, "No drop with null status");
+        Assertions.assertFalse(handler.collectSuppliesCalled, "No collect with null status");
+    }
+
+    @Test
+    public void whenStartingInWaitingForTimedState_gathererStyle_shouldCompleteGathering() {
+        // Full gatherer mid-work scenario:
+        // Gatherer left town (WAITING_FOR_TIMED_STATE) -> warp starts -> should get loot
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.state = State.fresh().setProcessing(3); // Gatherer was at time state
+        workspot.timer = 4000; // 4000 ticks of gathering time
+        THandler handler = makeHandler();
+        handler.heldItems = new ArrayList<>(); // Empty inventory (no loot yet)
+
+        // maxState = 10 (typical gatherer)
+        TestWorkSpotStandIn result = warpWithInitialStatus(
+                workspot, 100, ProductionStatus.WAITING_FOR_TIMED_STATE, handler, 10
+        );
+
+        // Should transition to extraction and call tryWorking
+        Assertions.assertTrue(
+                handler.tryWorkingCalled,
+                "Gatherer mid-work should complete and call tryWorking"
+        );
+
+        // State should be set for extraction
+        Assertions.assertEquals(
+                10,
+                result.state.processingState(),
+                "Should be at maxState for extraction"
+        );
+    }
+
+    @Test
+    public void whenStartingInIdle_shouldNotTriggerExtractionLogic() {
+        // Contrast test: starting in IDLE should NOT trigger the extraction path
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.state = State.fresh();
+        THandler handler = makeHandler();
+
+        // Pass IDLE as initialStatus (different from WAITING_FOR_TIMED_STATE)
+        warpWithInitialStatus(workspot, 100, ProductionStatus.IDLE, handler, 10);
+
+        // IDLE uses NULL_HENDLAR - nothing should be called
+        Assertions.assertFalse(handler.tryWorkingCalled, "IDLE should not call tryWorking");
+        // And state should NOT be changed to maxState
+        Assertions.assertEquals(
+                0,
+                workspot.state.processingState(),
+                "IDLE should not modify processingState"
+        );
+    }
+
+    /**
+     * Warp with explicit initialStatus AND custom inventory provider.
+     * Used to test behavior when villager already has items.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static TestWorkSpotStandIn warpWithInitialStatusAndInventory(
+            TestWorkSpotStandIn workspot,
+            int gameTick,
+            @Nullable ProductionStatus initialStatus,
+            @Nullable THandler handler,
+            int maxState,
+            EntityInvStateProvider<Integer> inventoryProvider
+    ) {
+        return warpWithInitialStatusInventoryAndStatusProvider(
+                workspot, gameTick, initialStatus, handler, maxState, inventoryProvider,
+                (cur, sig, inv, town, loc, pri) -> null
+        );
+    }
+
+    /**
+     * Warp with explicit initialStatus, custom inventory provider, AND custom status provider.
+     * Used to test specific status computation scenarios.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static TestWorkSpotStandIn warpWithInitialStatusInventoryAndStatusProvider(
+            TestWorkSpotStandIn workspot,
+            int gameTick,
+            @Nullable ProductionStatus initialStatus,
+            @Nullable THandler handler,
+            int maxState,
+            EntityInvStateProvider<Integer> inventoryProvider,
+            StatusProvider<Room> statusProvider
+    ) {
+        UUID villagerID = UUID.randomUUID();
+        AbstractDeclarativeJobWarper.staticInitialize();
+        AbstractStateInteraction wi = handler != null ? handler : THandler.make(
+                new JobID("test", "job"), 0, 0, maxState,
+                EMPTY_CHECKS,
+                inpoots -> new Claim(villagerID, Long.MAX_VALUE),
+                NO_RULES
+        );
+
+        return new TWarper(statusProvider, false).warp(
+                workspot,
+                workspot,
+                Warper.Tick.at(gameTick).after(gameTick),
+                t -> inventoryProvider,  // Use provided inventory
+                t -> new TestTownProvider(),
+                NO_LOCATION,
+                false,
+                wi,
+                s -> new TInputs(s, null, villagerID),
+                maxState,
+                initialStatus
+        );
+    }
+
+    @Test
+    public void whenStartingInWaitingForTimedState_withItems_shouldNotForceExtraction() {
+        // When villager is in WAITING_FOR_TIMED_STATE but ALREADY HAS items,
+        // should NOT force extraction - let normal status computation run.
+        // This allows the villager to drop items before starting a new cycle.
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.state = State.fresh().setProcessing(3);
+        THandler handler = makeHandler();
+
+        // Inventory provider that reports villager HAS items
+        EntityInvStateProvider<Integer> hasItemsInventory = new EntityInvStateProvider<>() {
+            @Override public boolean inventoryFull() { return false; }
+            @Override public boolean hasNonSupplyItems() { return true; }  // HAS ITEMS
+            @Override public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
+                return Map.of();
+            }
+        };
+
+        TestWorkSpotStandIn result = warpWithInitialStatusAndInventory(
+                workspot, 100, ProductionStatus.WAITING_FOR_TIMED_STATE, handler, 10,
+                hasItemsInventory
+        );
+
+        // Should NOT force extraction when villager has items
+        // Instead, normal status computation runs (returns null in test -> IDLE)
+        // IDLE uses NULL_HENDLAR, so tryWorking should NOT be called
+        Assertions.assertFalse(
+                handler.tryWorkingCalled,
+                "When villager has items, should NOT force extraction - let normal status run"
+        );
+
+        // Processing state should NOT be changed to maxState (no forced extraction)
+        Assertions.assertEquals(
+                3,
+                result.state.processingState(),
+                "Processing state should remain unchanged when not forcing extraction"
+        );
+    }
+
+    @Test
+    public void whenStartingInWaitingForTimedState_withoutItems_shouldForceExtraction() {
+        // Contrast: when villager has NO items, extraction SHOULD be forced
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        workspot.state = State.fresh().setProcessing(3);
+        THandler handler = makeHandler();
+
+        // Inventory provider that reports villager has NO items
+        EntityInvStateProvider<Integer> noItemsInventory = new EntityInvStateProvider<>() {
+            @Override public boolean inventoryFull() { return false; }
+            @Override public boolean hasNonSupplyItems() { return false; }  // NO ITEMS
+            @Override public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
+                return Map.of();
+            }
+        };
+
+        TestWorkSpotStandIn result = warpWithInitialStatusAndInventory(
+                workspot, 100, ProductionStatus.WAITING_FOR_TIMED_STATE, handler, 10,
+                noItemsInventory
+        );
+
+        // SHOULD force extraction when villager has no items
+        Assertions.assertTrue(
+                handler.tryWorkingCalled,
+                "When villager has no items, SHOULD force extraction"
+        );
+
+        // Processing state should be set to maxState for extraction
+        Assertions.assertEquals(
+                10,
+                result.state.processingState(),
+                "Processing state should be maxState when forcing extraction"
+        );
+    }
+
+    @Test
+    public void whenStartingInWaitingForTimedState_afterExtractionAlreadyDone_shouldNotForceAgain() {
+        // After extraction and dropping items, villager has no items but the
+        // status provider computes COLLECTING_SUPPLIES (ready for new cycle).
+        // This means extraction already happened and we should NOT force it again -
+        // let normal status run to start the new cycle with food consumption.
+        TestWorkSpotStandIn workspot = new TestWorkSpotStandIn();
+        // After dropping, processingState is reset to 0 by the dropLoot handler
+        workspot.state = State.fresh().setProcessing(0);
+        THandler handler = makeHandler();
+
+        // Inventory provider that reports villager has NO items (after dropping)
+        EntityInvStateProvider<Integer> noItemsInventory = new EntityInvStateProvider<>() {
+            @Override public boolean inventoryFull() { return false; }
+            @Override public boolean hasNonSupplyItems() { return false; }  // NO ITEMS
+            @Override public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
+                return Map.of();
+            }
+        };
+
+        // Status provider that returns COLLECTING_SUPPLIES (indicating new cycle ready)
+        StatusProvider<Room> collectingSuppliesProvider = (cur, sig, inv, town, loc, pri) ->
+                ProductionStatus.COLLECTING_SUPPLIES;
+
+        TestWorkSpotStandIn result = warpWithInitialStatusInventoryAndStatusProvider(
+                workspot, 100, ProductionStatus.WAITING_FOR_TIMED_STATE, handler, 10,
+                noItemsInventory, collectingSuppliesProvider
+        );
+
+        // Should NOT force extraction when status provider says COLLECTING_SUPPLIES.
+        // This means we're ready to start a new cycle, not finish an old one.
+        Assertions.assertFalse(
+                handler.tryWorkingCalled,
+                "When computed status is COLLECTING_SUPPLIES, should NOT force extraction"
+        );
+
+        // With COLLECTING_SUPPLIES, the collectSupplies handler runs which may
+        // modify state. The key assertion is that tryWorking was NOT called.
     }
 }
