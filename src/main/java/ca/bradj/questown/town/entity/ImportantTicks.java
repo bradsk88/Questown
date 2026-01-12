@@ -11,8 +11,19 @@ import java.util.Collection;
 import java.util.function.Predicate;
 
 public class ImportantTicks {
-    // Default work cycle duration when job is unknown (will be resolved dynamically)
-    private static final long DEFAULT_WORK_CYCLE_TICKS = 1000;
+    // Default work cycle duration when job is unknown (will be resolved dynamically).
+    // This accounts for real-time overhead: walking, pathfinding, container access, etc.
+    // Real-time observation: ~6 cycles in 10,000 ticks = ~1,666 ticks per cycle.
+    private static final long DEFAULT_WORK_CYCLE_TICKS = 1666;
+
+    // Default ticks per cycle for dynamic resolution (when job isn't known ahead of time).
+    // This should match typical crafting jobs to avoid over/under production.
+    // Most crafting jobs need:
+    // - Ingredient collection: 2-3 items
+    // - Work required: 5-10 work units
+    // - Overhead: 2 (extract + drop)
+    // Total: ~14 ticks per cycle is a reasonable default
+    private static final int DEFAULT_DYNAMIC_TICKS_PER_CYCLE = 14;
 
     public record Config(
             long MAX_DOWNTIME_TICKS
@@ -49,7 +60,8 @@ public class ImportantTicks {
             // For downtime villagers, generate ticks at default intervals
             // The DynamicJobWarper will resolve the actual job at each tick
             long totalDuration = DEFAULT_WORK_CYCLE_TICKS;
-            int ticksPerCycle = 5;
+            // Use higher default for dynamic resolution since we don't know the job's requirements
+            int ticksPerCycle = DEFAULT_DYNAMIC_TICKS_PER_CYCLE;
             long prev = 0;
             for (int j = 0; j <= ticksPassed; j += (int) totalDuration) {
                 long baseTick = j + totalDuration;
@@ -84,7 +96,8 @@ public class ImportantTicks {
             // Current job can't be completed and no alternative work found.
             // Fall back to dynamic resolution so villager can find other work during warp.
             long totalDuration = DEFAULT_WORK_CYCLE_TICKS;
-            int ticksPerCycle = 5;
+            // Use higher default for dynamic resolution since we don't know the job's requirements
+            int ticksPerCycle = DEFAULT_DYNAMIC_TICKS_PER_CYCLE;
             long prev = 0;
             for (int j = 0; j <= ticksPassed; j += (int) totalDuration) {
                 long baseTick = j + totalDuration;
@@ -119,9 +132,13 @@ public class ImportantTicks {
             totalDuration = DEFAULT_WORK_CYCLE_TICKS;
         }
         // Each work cycle needs multiple ticks for status transitions:
-        // COLLECTING_SUPPLIES, work states, EXTRACTING_PRODUCT, DROPPING_LOOT
-        // We add 5 ticks per cycle (spaced 1 tick apart) to ensure all transitions happen
-        int ticksPerCycle = 5;
+        // - Ingredient collection (1 tick per ingredient)
+        // - Work ticks (1 tick per work unit)
+        // - Extraction and dropping (2 ticks overhead)
+        // Use the job's calculated value instead of hardcoded 5
+        int ticksPerCycle = w.getWarpTicksPerCycle(resolvedJob, uuid);
+        // Ensure minimum of 5 ticks for safety
+        ticksPerCycle = Math.max(ticksPerCycle, 5);
         long prev = 0;
         for (int j = 0; j <= ticksPassed; j += (int) totalDuration) {
             long baseTick = j + totalDuration;

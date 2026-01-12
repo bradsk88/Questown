@@ -100,4 +100,14 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
     Collection<? extends Runnable> notifyListenersOfNewJob(Function<StatusListener, Runnable> listenToNewJob);
 
     int getExperienceEarned();
+
+    /**
+     * Returns the number of warp ticks needed per work cycle.
+     * This accounts for: ingredient collection, work required, extraction, and dropping.
+     * @return minimum ticks needed to complete one full work cycle during warp
+     */
+    default int getWarpTicksPerCycle() {
+        // Default: 5 ticks for basic jobs without ingredient/work tracking
+        return 5;
+    }
 }

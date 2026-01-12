@@ -161,6 +161,14 @@ public class TownFlagState {
             ) {
                 return ServerJobsRegistry.getUninitializedJob(jobID, vuid).getJob().getTotalDuration();
             }
+
+            @Override
+            public int getWarpTicksPerCycle(
+                    JobID jobID,
+                    VillagerUUID vuid
+            ) {
+                return ServerJobsRegistry.getUninitializedJob(jobID, vuid).getJob().getWarpTicksPerCycle();
+            }
         };
 
         ImportantTicks.Config cfg = new ImportantTicks.Config(Config.MAX_DOWNTIME_TICKS.get());
@@ -245,6 +253,11 @@ public class TownFlagState {
         );
 
         long getTotalDuration(
+                JobID jobID,
+                VillagerUUID vuid
+        );
+
+        int getWarpTicksPerCycle(
                 JobID jobID,
                 VillagerUUID vuid
         );

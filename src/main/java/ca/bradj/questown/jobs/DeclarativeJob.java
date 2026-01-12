@@ -1134,6 +1134,27 @@ public class DeclarativeJob extends
         return (int) timePart;
     }
 
+    @Override
+    public int getWarpTicksPerCycle() {
+        // Count ingredient collection ticks: sum of all ingredient quantities across states
+        int ingredientTicks = 0;
+        for (int state = 0; state <= maxState; state++) {
+            Integer qty = checks.getQuantityForStep(state, null);
+            if (qty != null && qty > 0) {
+                ingredientTicks += qty;
+            }
+        }
+
+        // Count work ticks: sum of all work required across states
+        int workTicks = initialWork.values().stream().reduce(0, Integer::sum);
+
+        // Overhead: 1 for extraction, 1 for dropping loot
+        int overhead = 2;
+
+        // Total ticks needed per cycle
+        return ingredientTicks + workTicks + overhead;
+    }
+
     public int getMaxState() {
         return maxState;
     }

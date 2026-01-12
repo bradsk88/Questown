@@ -363,6 +363,12 @@ public class DeclarativeJobs {
                 // Inject ticks to bypass the rate limiter during warp
                 // Without this, tryWorking returns null on most ticks due to interval check
                 wi.injectTicks(wi.interval);
+
+                // Get the villager's current status to continue from where they were
+                ProductionStatus currentStatus = ProductionStatus.fromNumber(
+                        inState.getVillager(villagerNum).journal.statusStringValue()
+                );
+
                 return DeclarativeJobs.WARPER.warp(
                         ws,
                         inState,
@@ -376,7 +382,8 @@ public class DeclarativeJobs {
                         prioritizeExtraction,
                         wii,
                         t -> new Inpoots<>(t, level, t.getVillager(villagerNum).uuid),
-                        maxState
+                        maxState,
+                        currentStatus
                 );
             }
 

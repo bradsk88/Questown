@@ -51,10 +51,6 @@ public class ToggleHungerConfig {
 
         tf.getVillagerHandle().toggleHunger();
 
-        source.getLevel().removeBlockEntity(target);
-
-        source.getLevel().removeBlock(target, true);
-
         return 0;
     }
 }
