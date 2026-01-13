@@ -16,6 +16,7 @@ import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
@@ -77,6 +78,10 @@ import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.util.Strings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -646,7 +651,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         // No work requests matched - pick any preselected job (has supplies) that can fit in the day
         // This enables villagers to work during warp even without explicit requests
         // We use the preselected list because it's already filtered for jobs with available supplies
-        ImmutableList<JobID> preselected = startableWork.getFor(currentJob);
+        // Shuffle to randomize job selection (enables job switching during warp)
+        List<JobID> preselected = new ArrayList<>(startableWork.getFor(currentJob));
+        Collections.shuffle(preselected);
         for (JobID p : preselected) {
             if (canFit.test(p)) {
                 return p;
@@ -836,8 +843,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         workHandle.openMenuRequested(sender, skipStraightToAdd);
     }
 
-    public void warpTime(int ticks) {
-        state.warp(this, Compat.getBlockStoredTagData(this), getServerLevel(), ticks);
+    public MCTownState warpTime(int ticks) {
+        return state.warp(this, Compat.getBlockStoredTagData(this), getServerLevel(), ticks);
+    }
+
+    public @Nullable MCTownState captureCurrentState() {
+        return state.captureState();
     }
 
     public VillagerHolder getVillagerHandle() {

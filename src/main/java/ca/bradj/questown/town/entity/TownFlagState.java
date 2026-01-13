@@ -192,13 +192,11 @@ public class TownFlagState {
                     ticksResult.useDynamicResolution()
             );
             int ii = i;
-            Warper<ServerLevel, MCTownState> vWarper;
-            if (ticksResult.useDynamicResolution()) {
-                // Villager was on downtime - use warper that resolves job after downtime ends
-                vWarper = new PostDowntimeWarper(w, v.journal.jobId(), i, e.getBlockPos());
-            } else {
-                vWarper = ServerJobsRegistry.getWarper(i, v.journal.jobId(), e.getBlockPos());
-            }
+            // Always use PostDowntimeWarper to enable job switching during warp.
+            // This allows villagers to switch between jobs of the same root (e.g., bowl ↔ stick)
+            // just like they do in realtime. getRandomFinishableWork() returns a random job
+            // from available options, so over many cycles the villager will produce variety.
+            Warper<ServerLevel, MCTownState> vWarper = new PostDowntimeWarper(w, v.journal.jobId(), i, e.getBlockPos());
             ticks.stream().map(tick -> new AbstractMap.SimpleEntry<>(
                     tick.tick(),
                     (Function<MCTownState, MCTownState>) ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)
@@ -343,15 +341,16 @@ public class TownFlagState {
         return changes;
     }
 
-    void warp(
+    @Nullable MCTownState warp(
             TownFlagBlockEntity e,
             CompoundTag flagTag,
             ServerLevel level,
             long timeSinceWake
     ) {
         long levelDayTime = level.getDayTime();
+        MCTownState newState = null;
         try {
-            MCTownState newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
+            newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
             if (newState != null) {
                 e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP)
                  .log("Storing state on {}: {}", e.getUUID(), newState);
@@ -368,6 +367,7 @@ public class TownFlagState {
         }
         // TODO: Make sure chests get filled/empty
         flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, levelDayTime);
+        return newState;
     }
 
     private void profileTick(long startTime) {
