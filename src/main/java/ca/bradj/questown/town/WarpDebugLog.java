@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -128,7 +129,7 @@ public class WarpDebugLog {
      * Format a villager's inventory for display
      */
     public static String formatVillagerInventory(TownState.VillagerData<MCHeldItem> villager) {
-        String uuid = villager.uuid.toString().substring(0, 8);
+        String uuid = UtilClean.truncateMiddle(villager.uuid);
         List<String> items = new ArrayList<>();
         for (MCHeldItem item : villager.journal.items()) {
             if (!item.isEmpty()) {
@@ -182,9 +183,11 @@ public class WarpDebugLog {
                     ? getVillagerItems(beforeState.villagers.get(i)) : Map.of();
             Map<String, Integer> after = i < afterState.villagers.size()
                     ? getVillagerItems(afterState.villagers.get(i)) : Map.of();
-            String uuid = i < afterState.villagers.size()
-                    ? afterState.villagers.get(i).uuid.toString().substring(0, 8)
-                    : beforeState.villagers.get(i).uuid.toString().substring(0, 8);
+            String uuid = UtilClean.truncateMiddle(
+                    i < afterState.villagers.size()
+                            ? afterState.villagers.get(i).uuid
+                            : beforeState.villagers.get(i).uuid
+            );
             String diff = diffItemCounts(before, after);
             if (!diff.isEmpty()) {
                 anyVillagerChanges = true;

@@ -1,6 +1,8 @@
 package ca.bradj.questown.commands;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.town.WarpDebugLog;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -66,17 +68,42 @@ public class TimeWarpCommand {
         // Log data to help with debugging time warps
         LogDataCommand.run(source, target, false);
 
+        WarpDebugLog debugLog = null;
         if (verbose) {
             // Enable detailed warp logging for this warp
             tfbe.toggleDebugLog(DebugLogArgument.TIME_WARP);
             tfbe.toggleDebugLog(DebugLogArgument.TIME_WARP_DETAIL);
             tfbe.toggleDebugLog(DebugLogArgument.TIME_WARP_ITEMS);
             QT.FLAG_LOGGER.info("Verbose warp logging enabled");
+
+            // Start verbose debug log
+            debugLog = WarpDebugLog.start();
+            MCTownState beforeState = tfbe.captureCurrentState();
+            if (beforeState != null) {
+                debugLog.captureBeforeState(beforeState);
+                QT.FLAG_LOGGER.info("=== BEFORE WARP ===");
+                QT.FLAG_LOGGER.info("Containers:\n{}", WarpDebugLog.formatAllContainers(beforeState.containers));
+            }
         }
 
-        tfbe.warpTime(ticks);
+        MCTownState afterState = tfbe.warpTime(ticks);
 
         if (verbose) {
+            // Output verbose summary
+            if (debugLog != null) {
+                QT.FLAG_LOGGER.info("=== WARP EVENTS ===");
+                QT.FLAG_LOGGER.info("{}", debugLog.formatEvents());
+
+                if (afterState != null) {
+                    QT.FLAG_LOGGER.info("=== AFTER WARP ===");
+                    QT.FLAG_LOGGER.info("Containers:\n{}", WarpDebugLog.formatAllContainers(afterState.containers));
+                    QT.FLAG_LOGGER.info("=== CHANGES ===");
+                    QT.FLAG_LOGGER.info("{}", debugLog.generateComparison(afterState));
+                }
+
+                WarpDebugLog.end();
+            }
+
             // Disable logging after warp completes
             tfbe.toggleDebugLog(DebugLogArgument.TIME_WARP);
             tfbe.toggleDebugLog(DebugLogArgument.TIME_WARP_DETAIL);

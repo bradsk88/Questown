@@ -1,9 +1,11 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.TownState;
 import ca.bradj.questown.town.VillagerDataCollectionHolder;
+import ca.bradj.questown.town.WarpDebugLog;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
@@ -36,7 +38,10 @@ public class ProductionTimeWarper {
             }
             for (int i = 0; i < container.size(); i++) {
                 if (container.getItem(i).isEmpty()) {
-                    container.setItem(i, stack.pop().get());
+                    H dropped = stack.pop();
+                    container.setItem(i, dropped.get());
+                    WarpDebugLog.event("Dropped %s to container at %s",
+                            dropped.getShortName(), container.getBlockPos());
                     if (stack.isEmpty()) {
                         break;
                     }
@@ -108,9 +113,13 @@ public class ProductionTimeWarper {
         }
 
         TOWN outState = removeResult.getKey();
+        I collectedItem = removeResult.getValue();
+
+        String villagerUuid = UtilClean.truncateMiddle(outState.villagers.get(villagerIndex).uuid);
+        WarpDebugLog.event("Villager %s collected %s", villagerUuid, collectedItem.getShortName());
 
         TownState.VillagerData<H> villager = outState.villagers.get(villagerIndex);
-        villager = villager.withAddedItem(grabber.apply(removeResult.getValue()));
+        villager = villager.withAddedItem(grabber.apply(collectedItem));
         if (villager == null) {
             return null; // No space in inventory - collection failed
         }
@@ -140,7 +149,9 @@ public class ProductionTimeWarper {
         if (foundEmpty.isPresent()) {
             int idx = heldItems.indexOf(foundEmpty.get());
             ArrayList<H> outItems = new ArrayList<>(heldItems);
-            outItems.set(idx, taker.copyFromTownWithoutRemoving(remover.get()));
+            I extracted = remover.get();
+            WarpDebugLog.event("Extracted product: %s", extracted.getShortName());
+            outItems.set(idx, taker.copyFromTownWithoutRemoving(extracted));
             return new Result<>(
                     status,
                     ImmutableList.copyOf(outItems)

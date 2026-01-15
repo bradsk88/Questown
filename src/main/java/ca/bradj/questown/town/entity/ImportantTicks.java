@@ -122,9 +122,9 @@ public class ImportantTicks {
             return new Result(ImmutableList.copyOf(ticks), true);
         }
 
-        // TODO[Warp]: Factor MAX_TICKS_BETWEEN_DOWNTIME into the section below
-        //  i.e. Every MAX_TICKS_BETWEEN_DOWNTIME, we should skip MAX_DOWNTIME_TICKS
-        //  to simulate villagers taking breaks.
+        // NOTE: Downtime is already accounted for in the totalDuration calculation
+        // which includes real-world overhead (walking, pathfinding, etc.).
+        // Explicit downtime simulation was tested but caused under-production vs real-time.
 
         long totalDuration = w.getTotalDuration(resolvedJob, uuid);
         // Guard against infinite loop if duration is 0 or negative

@@ -1909,4 +1909,5 @@ class IntDeclarativeJobWarpingTest {
         // With COLLECTING_SUPPLIES, the collectSupplies handler runs which may
         // modify state. The key assertion is that tryWorking was NOT called.
     }
+
 }
