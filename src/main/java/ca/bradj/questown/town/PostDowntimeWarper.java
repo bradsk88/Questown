@@ -41,6 +41,37 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
     private static final long VIRTUAL_MORNING_TICK = 1000; // ~1am, plenty of daytime ahead
 
     private boolean hasRecomputed = false;
+    private JobID cachedJob = null;
+
+    /**
+     * Resolves which job the villager should work on.
+     * Job stays consistent while villager has items (mid-cycle).
+     * When inventory is empty (cycle complete), a new job can be selected.
+     */
+    public JobID resolveJob(long ticksPassed, boolean villagerHasItems) {
+        if (!hasRecomputed) {
+            work.recomputeNow();
+            hasRecomputed = true;
+        }
+
+        // If villager has items, they're mid-cycle - stick with current job
+        if (cachedJob != null && villagerHasItems) {
+            return cachedJob;
+        }
+
+        // Villager inventory is empty - allow job re-evaluation
+        cachedJob = work.getRandomFinishableWork(
+                fallbackJobID,
+                new Signals.DayTime(VIRTUAL_MORNING_TICK),
+                Math.max(ticksPassed, 1000)
+        );
+        return cachedJob;
+    }
+
+    // For testing without MCTownState
+    public JobID resolveJob(long ticksPassed) {
+        return resolveJob(ticksPassed, cachedJob != null);
+    }
 
     @Override
     public MCTownState warp(
@@ -50,24 +81,17 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
             long ticksPassed,
             int villagerNum
     ) {
-        // Only recompute once per warp session, not on every tick
-        // This prevents the expensive job possibility computation from running hundreds of times
-        if (!hasRecomputed) {
-            work.recomputeNow();
-            hasRecomputed = true;
-        }
-
-        // Resolve what job the villager can do right now
-        // Use a virtual morning time to ensure canFit() doesn't reject jobs during warp.
-        // The actual game tick is irrelevant during simulation - we're fast-forwarding
-        // through time and want villagers to be productive.
-        // Pass a large ticksElapsed to bypass the preferredBuffer throttle in getRandomFinishableWork.
-        // During warp, we want immediate job resolution without the normal throttling.
-        JobID resolvedJob = work.getRandomFinishableWork(
-                fallbackJobID,
-                new Signals.DayTime(VIRTUAL_MORNING_TICK),
-                Math.max(ticksPassed, 1000) // Ensure buffer check passes immediately during warp
+        boolean villagerHasItems = liveState.villagers.get(villagerIndex).journal.items().stream()
+                .anyMatch(item -> !item.isEmpty());
+        QT.FLAG_LOGGER.debug(
+                "[PostDowntimeWarper] tick={} villagerHasItems={} cachedJob={} items={}",
+                currentTick, villagerHasItems, cachedJob,
+                liveState.villagers.get(villagerIndex).journal.items().stream()
+                        .filter(item -> !item.isEmpty())
+                        .map(item -> item.toShortString())
+                        .toList()
         );
+        JobID resolvedJob = resolveJob(ticksPassed, villagerHasItems);
 
         if (resolvedJob == null) {
             QT.FLAG_LOGGER.debug(
@@ -82,6 +106,7 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
                 resolvedJob,
                 currentTick
         );
+
 
         // Get the warper for the resolved job and delegate
         Warper<ServerLevel, MCTownState> jobWarper = ServerJobsRegistry.getWarper(

@@ -318,7 +318,10 @@ public class DeclarativeJobs {
                     long ticksPassed,
                     int villagerNum
             ) {
-                BlockPos fakePos = new BlockPos(villagerNum, villagerNum, villagerNum);
+                // Use job-specific position to prevent state pollution between different jobs
+                // Each job gets its own unique position based on villagerNum and jobId hash
+                int jobHash = wi.getJobId().hashCode();
+                BlockPos fakePos = new BlockPos(villagerNum, jobHash, villagerNum);
                 MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);
                 RoomRecipeMatch<MCRoom> fakeMatch = new RoomRecipeMatch<>(
                         fakeRoom,
@@ -328,7 +331,7 @@ public class DeclarativeJobs {
                 AbstractDeclarativeJobWarper.WorkSpotStandIn<MCTownState, BlockPos> ws = new AbstractDeclarativeJobWarper.WorkSpotStandIn<>() {
                     @Override
                     public BlockPos get() {
-                        return new BlockPos(villagerNum, villagerNum, villagerNum);
+                        return fakePos;
                     }
 
                     @Override

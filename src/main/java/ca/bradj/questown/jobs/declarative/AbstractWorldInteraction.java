@@ -32,7 +32,7 @@ public abstract class AbstractWorldInteraction<
     protected final int villagerIndex;
     private final Function<EXTRA, Claim> claimSpots;
     protected final DeclarativeJobChecks<EXTRA, HELD_ITEM, INNER_ITEM, ?, POS> checks;
-    private final JobID jobId;
+    protected final JobID jobId;
     protected int ticksSinceLastAction;
     public final int interval;
     protected final int maxState;
@@ -680,6 +680,10 @@ public abstract class AbstractWorldInteraction<
 
     public @Nullable WorkPosition<POS> getWorkSpot() {
         return workspot.value;
+    }
+
+    public JobID getJobId() {
+        return jobId;
     }
 
     public void setWorkSpot(WithReason<@Nullable WorkPosition<POS>> o) {
