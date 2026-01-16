@@ -33,6 +33,15 @@ public abstract class AbstractStateInteraction<INPUTS, POS, ITEM extends Item<IT
             int processingState
     );
 
+    /**
+     * Called when NO_SUPPLIES is encountered during warp.
+     * Should recover any items that were inserted and deposit them back to containers.
+     *
+     * @param inState The current town state
+     * @return Updated town state with items recovered, or null if no recovery was needed
+     */
+    public abstract @Nullable TOWN simulateRecoverInsertedItems(TOWN inState);
+
     @Override
     protected boolean isEntityClose(
             INPUTS inputs,

@@ -138,6 +138,12 @@ class IntDeclarativeJobWarpingTest {
         }
 
         @Override
+        public @Nullable TestWorkSpotStandIn simulateRecoverInsertedItems(TestWorkSpotStandIn s) {
+            // Test implementation: no-op (no items tracked in test)
+            return null;
+        }
+
+        @Override
         protected void iterate(
                 Iterable<GathererJournalTest.TestItem> src,
                 Function<GathererJournalTest.TestItem, GathererJournalTest.TestItem> push

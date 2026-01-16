@@ -552,10 +552,11 @@ public abstract class AbstractWorldInteraction<
     ) {
         ProductionStatus o = ProductionStatus.fromJobBlockStatus(position.previousState(), maxState);
         Collection<String> rules = specialRules.get(o);
-        if (rules == null || rules.isEmpty()) {
-            return ctx;
+        if (rules == null) {
+            rules = ImmutableList.of();
         }
-        return postInsertHook(getTown(inputs), rules, inputs, position, item);
+        // Always call the hook, even with empty rules - subclasses may need to track inserted items
+        return postInsertHook(ctx, rules, inputs, position, item);
     }
 
     protected abstract @Nullable TOWN postInsertHook(

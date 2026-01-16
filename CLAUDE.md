@@ -2,12 +2,12 @@
 
 ## Next Session Task (DO NOT ASK - JUST DO)
 
-Continue with **Step 7: Item Recovery** from `docs/time-warp-plan.md`:
+Continue with **Step 8: Non-Supply World Containers** from `docs/time-warp-plan.md`:
 
-- Track inserted items in MCTownState
-- Implement `timesInserted()` and `tryGrabbingInsertedSupplies()`
-- Add recovery logic to NO_SUPPLIES handler
-- **Goal**: Villagers who can't proceed should recover items and move to other work
+- Handle world containers (e.g., furnaces) during warp - `InsertIntoSlotSpecialRule.java:35`
+- Jobs like "cook" use real world blocks that players can see/interact with
+- For warp, may only need to ensure items are inserted into blocks on the final warp step
+- **Goal**: E.g. Furnace contains inserted item after warp step completes
 
 ## Development Approach
 
@@ -44,12 +44,13 @@ Time warp simulates villager work when the town is unloaded (player leaves) or w
 - Job switching: Villagers switch between jobs of same root (e.g., bowl ↔ stick)
 - Supply handling: No supplies dropped mid-cycle when switching jobs
 - Downtime: Already accounted for in `totalDuration` calculation (no extra logic needed)
+- Item recovery: If NO_SUPPLIES encountered, inserted items are recovered and returned to containers
 
 **Known limitation:**
 - Warp produces ~20% fewer items than real-time (12 vs 15 bowls in 10,000 ticks)
 - Likely due to starting state differences; accepted as tolerable variance
 
-**See `docs/time-warp-plan.md` for remaining steps (7, 8, 10).**
+**See `docs/time-warp-plan.md` for remaining steps (8, 10).**
 
 ### Key Solution
 

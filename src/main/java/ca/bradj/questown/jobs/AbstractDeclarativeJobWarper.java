@@ -107,6 +107,10 @@ public abstract class AbstractDeclarativeJobWarper<TOWN, ROOM extends Room, POS,
         return ii.wi().simulateCollectSupplies(ii.inState().town(), ii.workBlockState().processingState());
     }
 
+    private static <TOWN> TOWN recoverInsertedItems(HendlarInpoots<TOWN, ?, ?> ii) {
+        return ii.wi().simulateRecoverInsertedItems(ii.inState().town());
+    }
+
     public static void staticInitialize() {
         ImmutableMap.Builder<ProductionStatus, Hendlar> b = ImmutableMap.builder();
 
@@ -120,7 +124,7 @@ public abstract class AbstractDeclarativeJobWarper<TOWN, ROOM extends Room, POS,
         b.put(ProductionStatus.WAITING_FOR_TIMED_STATE, NULL_HENDLAR);
         b.put(ProductionStatus.NO_SPACE, NULL_HENDLAR);
         b.put(ProductionStatus.GOING_TO_JOB, NULL_HENDLAR);
-        b.put(ProductionStatus.NO_SUPPLIES, NULL_HENDLAR);
+        b.put(ProductionStatus.NO_SUPPLIES, AbstractDeclarativeJobWarper::recoverInsertedItems);
         b.put(ProductionStatus.IDLE, NULL_HENDLAR);
         b.put(ProductionStatus.NO_JOBSITE, NULL_HENDLAR);
         b.put(ProductionStatus.NO_WORK_POSSIBLE, NULL_HENDLAR);

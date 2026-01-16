@@ -227,7 +227,7 @@ public class MCTownStateWorldInteraction extends
             WorkedSpot<BlockPos> position,
             MCHeldItem item
     ) {
-        return PostInsertHook.run(
+        MCTownState afterHook = PostInsertHook.run(
                 mcTownState,
                 rules,
                 inputs.level(),
@@ -236,6 +236,12 @@ public class MCTownStateWorldInteraction extends
                 ts -> ts.withBOPCleared(inputs.villagerUUID()),
                 inputs.villagerUUID()
         );
+        // PostInsertHook.run() returns null if no rules were applied
+        if (afterHook == null) {
+            afterHook = mcTownState;
+        }
+        // Track the inserted item for potential recovery if NO_SUPPLIES is encountered later
+        return afterHook.withInsertedItem(villagerIndex, position.workPosition(), item);
     }
 
     @Override
@@ -357,14 +363,44 @@ public class MCTownStateWorldInteraction extends
 
     @Override
     public boolean tryGrabbingInsertedSupplies(Inpoots<MCTownState, ServerLevel> mcExtra) {
-        // TODO[Warp]: Implement
+        // For warp, item recovery is handled by the NO_SUPPLIES handler in the warper.
+        // This method returns true to indicate "nothing to recover" since we handle it elsewhere.
         return true;
     }
 
     @Override
     public int timesInserted(Inpoots<MCTownState, ServerLevel> inputs) {
-        // TODO[Warp]: Implement
-        return 0;
+        return inputs.town().getTotalInsertedItemsCount(villagerIndex);
+    }
+
+    /**
+     * Recovers inserted items for a villager and deposits them back to containers.
+     * Called by the warper when NO_SUPPLIES is encountered.
+     *
+     * @return Updated town state with items recovered and tracking cleared
+     */
+    public MCTownState recoverInsertedItems(MCTownState town) {
+        java.util.Map.Entry<MCTownState, ImmutableList<MCHeldItem>> result = town.withInsertedItemsCleared(villagerIndex);
+        MCTownState newState = result.getKey();
+        ImmutableList<MCHeldItem> recoveredItems = result.getValue();
+
+        if (recoveredItems.isEmpty()) {
+            return newState;
+        }
+
+        // Deposit recovered items back to containers
+        ImmutableList<MCHeldItem> notDeposited = newState.depositItems(recoveredItems);
+        if (!notDeposited.isEmpty()) {
+            // If containers are full, try to give items to villager
+            for (MCHeldItem item : notDeposited) {
+                TownState.VillagerData<MCHeldItem> vd = newState.getVillager(villagerIndex).withAddedItem(item);
+                if (vd != null) {
+                    newState = newState.withVillagerData(villagerIndex, vd);
+                }
+                // If villager inventory is also full, items are lost (edge case)
+            }
+        }
+        return newState;
     }
 
     @Override
@@ -573,6 +609,15 @@ public class MCTownStateWorldInteraction extends
                 tool,
                 MCHeldItem::fromTown
         );
+    }
+
+    @Override
+    public @Nullable MCTownState simulateRecoverInsertedItems(MCTownState inState) {
+        int insertedCount = inState.getTotalInsertedItemsCount(villagerIndex);
+        if (insertedCount == 0) {
+            return null; // Nothing to recover
+        }
+        return recoverInsertedItems(inState);
     }
 
     @Override

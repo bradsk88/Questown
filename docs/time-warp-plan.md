@@ -73,23 +73,18 @@ Optimized for visible in-game progress. After each step, run `/qt warp` to obser
 - **Future fix**: Only allow job switching after completing current cycle (after DROPPING_LOOT)
 
 ### Step 7: Item Recovery
-- ⬜ Track inserted items in MCTownState
-- ⬜ `timesInserted()` :365
-- ⬜ `tryGrabbingInsertedSupplies()` :359
-- ⬜ Add recovery logic to NO_SUPPLIES handler
-- **Observe**: Villagers who can't proceed recover items, move to other work
-- **Note**: Consider whether this is really required. For realtime functionality, 
-            the system allows villagers to start an N-state job if the first state's
-            supplies are available, even if later states lack supplies. Then they 
-            give up on the job if the 2nd state's supplies have not yet become available.
-            Given the multi-villager environment, it's possible that a villager may have
-            produced the supplies needed for that 2nd state by the time the villager has 
-            completed the first state and is ready to proceed to the 2nd state. With the 
-            warp system, we may be able to "predict" whether the supplies will be available
-            or not by looking at the queue of ticks and jobs that we prepare for processing.
-- ** Acceptable Solution ** If the note above is too complex to implement, we can simply 
-            prevent villagers from starting jobs where they can't complete all states due to
-            supply shortages. This would avoid the need for recovery logic entirely.
+- ✅ Track inserted items in MCTownState
+  - Added `insertedItems` map to MCTownState (villagerIndex -> workBlockPos -> items)
+  - `withInsertedItem()`, `getTotalInsertedItemsCount()`, `getInsertedItemsCount()`, `withInsertedItemsCleared()`
+- ✅ `timesInserted()` - returns count from MCTownState tracking
+- ✅ Item insertion tracking in `postInsertHook()` - records items when inserted during warp
+- ✅ Add recovery logic to NO_SUPPLIES handler
+  - `AbstractDeclarativeJobWarper`: Changed NO_SUPPLIES handler from NULL_HENDLAR to `recoverInsertedItems`
+  - `AbstractStateInteraction`: Added `simulateRecoverInsertedItems()` abstract method
+  - `MCTownStateWorldInteraction`: Implements recovery by clearing tracking and depositing items
+- **Implementation approach**: Full recovery logic (tracks items inserted, recovers on NO_SUPPLIES)
+- **How it works**: When NO_SUPPLIES is encountered during warp, any previously inserted items are
+  recovered (deposited back to containers or given to villager) so they aren't lost.
 
 ### Step 8: Non-Supply World Containers
 - ⬜ Handle world containers - `InsertIntoSlotSpecialRule.java:35`
