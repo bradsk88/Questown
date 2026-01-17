@@ -87,14 +87,16 @@ Optimized for visible in-game progress. After each step, run `/qt warp` to obser
   recovered (deposited back to containers or given to villager) so they aren't lost.
 
 ### Step 8: Non-Supply World Containers
-- ⬜ Handle world containers - `InsertIntoSlotSpecialRule.java:35`
-- **Observe**: E.g. Furnace contains inserted item after warp step
-- **Note**: This is a special rule for jobs like "cook" who actually 
-            use real world blocks (e.g. furnace) in a way that the 
-            player can see and interact with. For the sake of warp,
-            we may only need to ensure that items inserted into such
-            blocks on the final step of the warp. Rather than interacting 
-            with the real world container during the warp itself.
+- ✅ Fixed NPE crashes in special rules during warp
+  - `AddItemToContainerSpecialRule.java` - added null check for BlockEntity
+  - `InsertIntoSlotSpecialRule.java` - improved null check with debug logging
+  - `TakeFromSlotSpecialRule.java` - added null check for BlockEntity
+- ⚠️ **Known limitation**: Items consumed but NOT placed in world containers during warp
+  - Cook jobs consume beef from chest but furnace slot remains empty
+  - Items are effectively "lost" for jobs using `insert_into_slot` rules
+- **Future work**: Track pending world container insertions and sync after warp
+- **Workaround**: Cook jobs should be excluded from warp, or players should avoid
+  warping when cook villagers have pending work
 
 ### Step 10: All Jobs
 - **Observe**: All currently implemented jobs should function correctly

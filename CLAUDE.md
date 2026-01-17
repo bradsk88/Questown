@@ -1,14 +1,5 @@
 # Questown Project Guidelines
 
-## Next Session Task (DO NOT ASK - JUST DO)
-
-Continue with **Step 8: Non-Supply World Containers** from `docs/time-warp-plan.md`:
-
-- Handle world containers (e.g., furnaces) during warp - `InsertIntoSlotSpecialRule.java:35`
-- Jobs like "cook" use real world blocks that players can see/interact with
-- For warp, may only need to ensure items are inserted into blocks on the final warp step
-- **Goal**: E.g. Furnace contains inserted item after warp step completes
-
 ## Development Approach
 
 - Use TDD: test low-level behaviors before game integration testing
@@ -45,6 +36,7 @@ Time warp simulates villager work when the town is unloaded (player leaves) or w
 - Supply handling: No supplies dropped mid-cycle when switching jobs
 - Downtime: Already accounted for in `totalDuration` calculation (no extra logic needed)
 - Item recovery: If NO_SUPPLIES encountered, inserted items are recovered and returned to containers
+- Dynamic work evaluation: Re-evaluate available work each tick, don't pre-compute at start (supplies change as villagers produce items)
 
 **Known limitation:**
 - Warp produces ~20% fewer items than real-time (12 vs 15 bowls in 10,000 ticks)

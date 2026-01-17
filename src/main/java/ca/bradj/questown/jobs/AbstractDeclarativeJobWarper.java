@@ -239,11 +239,14 @@ public abstract class AbstractDeclarativeJobWarper<TOWN, ROOM extends Room, POS,
             status = computedStatus;
         }
 
-        QT.JOB_LOGGER.debug(
-                "[WARP] tick={} status={} workState={}",
+        QT.JOB_LOGGER.info(
+                "[WARP] tick={} status={} workState={} hasWorkItems={} hasWorkableBlocks={}",
                 tick.tick(),
                 status,
-                workspot.getState(outState)
+                workspot.getState(outState),
+                inventory.getSupplyItemStatus().containsValue(SupplyItemStatus.HAS_ITEM),
+                town.apply(outState).roomsWithWorkableStatefulBlocks().values().stream()
+                        .anyMatch(dep -> dep.apply(() -> null).value())
         );
 
         if (strictMode && status.equals(ProductionStatus.GOING_TO_JOB)) {

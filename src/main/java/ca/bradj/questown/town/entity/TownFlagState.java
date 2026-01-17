@@ -7,6 +7,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.integration.minecraft.*;
+import ca.bradj.questown.jobs.EagerCookResolver;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
@@ -121,9 +122,6 @@ public class TownFlagState {
             QT.logBug("NBT had no town state. That's probably a bug. Town state will reset");
         }
 
-
-        ArrayList<TownState.VillagerData<MCHeldItem>> villagers = new ArrayList<>(storedState.villagers);
-
         long ticksPassed = gameTick - storedState.worldTimeAtSleep;
         if (optionalWarpDuration != null) {
             ticksPassed = optionalWarpDuration;
@@ -135,10 +133,7 @@ public class TownFlagState {
 
         ticksPassed = Math.min(ticksPassed, Config.TIME_WARP_MAX_TICKS.get());
 
-        MCTownState liveState = storedState;
-
-        final List<Map.Entry<Long, Function<MCTownState, MCTownState>>> warpSteps = new ArrayList<>();
-
+        // Create the Work implementation that bridges to the job registry
         Work w = new Work() {
             @Override
             public void recomputeNow() {
@@ -171,75 +166,74 @@ public class TownFlagState {
             }
         };
 
-        ImportantTicks.Config cfg = new ImportantTicks.Config(Config.MAX_DOWNTIME_TICKS.get());
-        for (int i = 0; i < villagers.size(); i++) {
-            TownState.VillagerData<MCHeldItem> v = villagers.get(i);
-            e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log(
-                    "[{}] Warping time by {} ticks, starting with journal: {}",
-                    UtilClean.truncateMiddle(v.uuid),
-                    ticksPassed,
-                    liveState
-            );
-            ImportantTicks.Result ticksResult = ImportantTicks.forVillager(
-                    w, v.getVUID(), v.journal.jobId(), DowntimeWork::matches, cfg, ticksPassed, gameTick
-            );
-            ImmutableList<Warper.Tick> ticks = ticksResult.ticks();
-            e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP_DETAIL).log(
-                    "[{}] Computed {} important ticks for job {} (dynamic={})",
-                    UtilClean.truncateMiddle(v.uuid),
-                    ticks.size(),
-                    v.journal.jobId(),
-                    ticksResult.useDynamicResolution()
-            );
-            int ii = i;
-            // Always use PostDowntimeWarper to enable job switching during warp.
-            // This allows villagers to switch between jobs of the same root (e.g., bowl ↔ stick)
-            // just like they do in realtime. getRandomFinishableWork() returns a random job
-            // from available options, so over many cycles the villager will produce variety.
-            Warper<ServerLevel, MCTownState> vWarper = new PostDowntimeWarper(w, v.journal.jobId(), i, e.getBlockPos());
-            ticks.stream().map(tick -> new AbstractMap.SimpleEntry<>(
-                    tick.tick(),
-                    (Function<MCTownState, MCTownState>) ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)
-            )).forEach(warpSteps::add);
-        }
-
-        warpSteps.sort(Map.Entry.comparingByKey());
-        e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP_DETAIL).log(
-                "Processing {} total warp steps across {} villagers",
-                warpSteps.size(),
-                villagers.size()
+        // Delegate to the abstract implementation
+        MCAdvanceTime advancer = new MCAdvanceTime();
+        MCAdvanceTime.Result<MCTownState> result = advancer.advanceTime(
+                storedState,
+                ticksPassed,
+                gameTick,
+                adaptWork(w),
+                (work, fallbackJobID, villagerIndex) ->
+                        new PostDowntimeWarper(w, fallbackJobID, villagerIndex, e.getBlockPos()),
+                EagerCookResolver::resolveCooking,
+                sl,
+                DowntimeWork::matches,
+                Config.MAX_DOWNTIME_TICKS.get(),
+                createLogger(e)
         );
-        // TODO: Return a collection of lambdas that process chunks of 500?
-        long before = System.currentTimeMillis();
 
-        int stepNum = 0;
-        for (Map.Entry<Long, Function<MCTownState, MCTownState>> warpStep : warpSteps) {
-            MCTownState affectedState = warpStep.getValue().apply(liveState);
-            if (affectedState != null) {
-                liveState = affectedState;
+        return result.state();
+    }
+
+    /**
+     * Adapts TownFlagState.Work to AbstractAdvanceTime.Work.
+     */
+    private static ca.bradj.questown.town.AbstractAdvanceTime.Work adaptWork(Work w) {
+        return new ca.bradj.questown.town.AbstractAdvanceTime.Work() {
+            @Override
+            public void recomputeNow() {
+                w.recomputeNow();
             }
-            stepNum++;
-        }
 
-        long after = System.currentTimeMillis();
+            @Override
+            public @Nullable JobID getRandomFinishableWork(
+                    JobID jobID,
+                    Signals.DayTime dayTime,
+                    long ticksElapsed
+            ) {
+                return w.getRandomFinishableWork(jobID, dayTime, ticksElapsed);
+            }
 
-        TownInterface.DebugLogger logger =
-                Config.LOG_WARP_RESULT.get() ?
+            @Override
+            public long getTotalDuration(JobID jobID, VillagerUUID vuid) {
+                return w.getTotalDuration(jobID, vuid);
+            }
+
+            @Override
+            public int getWarpTicksPerCycle(JobID jobID, VillagerUUID vuid) {
+                return w.getWarpTicksPerCycle(jobID, vuid);
+            }
+        };
+    }
+
+    /**
+     * Creates a WarpLogger that respects the debug logging configuration.
+     */
+    private static ca.bradj.questown.town.AbstractAdvanceTime.WarpLogger createLogger(TownFlagBlockEntity e) {
+        return new ca.bradj.questown.town.AbstractAdvanceTime.WarpLogger() {
+            @Override
+            public void log(String message, Object... args) {
+                TownInterface.DebugLogger logger = Config.LOG_WARP_RESULT.get() ?
                         QT.FLAG_LOGGER::info :
                         e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP);
-        logger.log("State after warp of {}: {}", ticksPassed, liveState);
-        QT.FLAG_LOGGER.info("Warp took {} milliseconds", after - before);
+                logger.log(message, args);
+            }
 
-        return new MCTownState(
-                liveState.villagers,
-                liveState.containers,
-                liveState.workStates,
-                liveState.workTimers,
-                liveState.gates,
-                liveState.knowledge(),
-                liveState.blocksOfProgress,
-                gameTick
-        );
+            @Override
+            public void logDetail(String message, Object... args) {
+                e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP_DETAIL).log(message, args);
+            }
+        };
     }
 
     public interface Work {

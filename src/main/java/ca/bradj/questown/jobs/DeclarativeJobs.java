@@ -318,10 +318,11 @@ public class DeclarativeJobs {
                     long ticksPassed,
                     int villagerNum
             ) {
-                // Use job-specific position to prevent state pollution between different jobs
-                // Each job gets its own unique position based on villagerNum and jobId hash
-                int jobHash = wi.getJobId().hashCode();
-                BlockPos fakePos = new BlockPos(villagerNum, jobHash, villagerNum);
+                // Use root job ID for position so related jobs share the same virtual work block.
+                // For example, cook:beef (inserts) and cook:extract (removes) need to share
+                // the same virtual furnace during warp.
+                int rootJobHash = wi.getJobId().rootId().hashCode();
+                BlockPos fakePos = new BlockPos(villagerNum, rootJobHash, villagerNum);
                 MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);
                 RoomRecipeMatch<MCRoom> fakeMatch = new RoomRecipeMatch<>(
                         fakeRoom,

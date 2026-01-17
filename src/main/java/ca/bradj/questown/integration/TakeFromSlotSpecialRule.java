@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.mc.Util;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -24,8 +25,21 @@ public class TakeFromSlotSpecialRule extends JobPhaseModifier {
             CONTEXT ctxInput,
             BeforeExtractEvent<CONTEXT> event
     ) {
-        BlockEntity entity = event.level().getBlockEntity(event.workSpot());
-        CONTEXT ctxBefore = super.beforeExtract(ctxInput, event);
+        BlockPos workPos = event.workSpot();
+        BlockEntity entity = event.level().getBlockEntity(workPos);
+        CONTEXT ctxOut = super.beforeExtract(ctxInput, event);
+        // ctxOut is null if parent returns null (the default), use ctxInput in that case
+        CONTEXT ctxBefore = ctxOut != null ? ctxOut : ctxInput;
+        if (entity == null) {
+            // During warp, cooking is handled by EagerCookResolver at the start of warp.
+            // This rule is a no-op during warp - just return context unchanged.
+            QT.BLOCK_LOGGER.debug(
+                    "{}: BlockEntity at {} is null (during warp), cooking handled by EagerCookResolver.",
+                    getClass(),
+                    Util.getTinyString(workPos)
+            );
+            return ctxBefore;
+        }
         if (!(entity instanceof Container c)) {
             QT.BLOCK_LOGGER.error(
                     "{}: BlockEntity at {} is not a Container, cannot apply special rule.",

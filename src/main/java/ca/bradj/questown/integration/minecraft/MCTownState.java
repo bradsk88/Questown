@@ -106,6 +106,13 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
     }
 
     /**
+     * Returns the inserted items map (for state preservation during warp).
+     */
+    public ImmutableMap<Integer, ImmutableMap<BlockPos, ImmutableList<MCHeldItem>>> getInsertedItems() {
+        return insertedItems;
+    }
+
+    /**
      * Returns all inserted items for a villager (across all work blocks) and creates a new state with them cleared.
      */
     public java.util.Map.Entry<MCTownState, ImmutableList<MCHeldItem>> withInsertedItemsCleared(int villagerIndex) {
