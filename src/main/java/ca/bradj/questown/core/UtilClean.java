@@ -291,4 +291,19 @@ public class UtilClean {
         jobChangesPending.forEach((k, v) -> b.put(get.apply(k), v));
         return b.build();
     }
+
+    public static <X, Y> Y applyOrDefault(
+            X param,
+            Function<X, Y> fn,
+            Y defaultValue
+    ) {
+        if (param == null) {
+            return defaultValue;
+        }
+        Y v = fn.apply(param);
+        if (v == null) {
+            return defaultValue;
+        }
+        return v;
+    }
 }

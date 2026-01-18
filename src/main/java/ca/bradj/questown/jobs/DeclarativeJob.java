@@ -93,7 +93,7 @@ public class DeclarativeJob extends
     private boolean isFirstTick = true;
     @SuppressWarnings("removal")
     private TownInterface.DebugLogger logger = QT.JOB_LOGGER::debug;
-    private final DeclarativeJobTicker ticker;
+    private final DeclarativeJobTicker<BlockPos, MCHeldItem, MCRoom> ticker;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -165,7 +165,7 @@ public class DeclarativeJob extends
         this.logic = new JobLogic<>();
         this.workInterval = workInterval;
         this.recipe = buildRecipe(this);
-        ticker = new DeclarativeJobTicker();
+        ticker = new DeclarativeJobTicker<>(specialGlobalRules, specialStatusRules, location);
     }
 
     private static @Nullable String getUnmetNeed(
@@ -323,7 +323,87 @@ public class DeclarativeJob extends
             LivingEntity entity,
             Direction facingPos
     ) {
-        this.ticker.tick((p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a));
+        DeclarativeJob self = this;
+        VisitorMobEntity vme = (VisitorMobEntity) entity;
+        DeclarativeJobTicker.Dependencies<BlockPos, MCHeldItem, MCRoom> deps = new DeclarativeJobTicker.Dependencies<>() {
+            @Override
+            public WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle() {
+                return self.getWorkStatusHandle(town);
+            }
+
+            @Override
+            public RoomsNeedingVillagerInput<MCRoom, ?, BlockPos> computeRoomsNeedingInput(
+                    WorkStatusHandle<BlockPos, MCHeldItem> work
+            ) {
+                return self.roomsNeedingIngredientsOrTools(
+                        town,
+                        work::getJobBlockState,
+                        (BlockPos bp) -> work.canClaim(bp, claimSupplier)
+                );
+            }
+
+            @Override
+            public DeclarativeJobTicker.EntityHandle<BlockPos, MCHeldItem> getEntity() {
+                return new DeclarativeJobTicker.EntityHandle<>() {
+                    @Override
+                    public BlockPos getBlockPosition() {
+                        return entity.blockPosition();
+                    }
+
+                    @Override
+                    public ImmutableList<MCHeldItem> getHeldItems() {
+                        return vme.getJobJournalSnapshot().items();
+                    }
+                };
+            }
+
+            @Override
+            public Supplier<ImmutableList<BlockPos>> getOtherVillagerPositions() {
+                return () -> town.getVillagerHandle().entities().stream()
+                        .filter(v -> !ownerUUID.equals(v.getUUID()))
+                        .map(Entity::getOnPos)
+                        .collect(ImmutableList.toImmutableList());
+            }
+
+            @Override
+            public Supplier<BlockPos> getRandomWanderTarget(BlockPos avoiding) {
+                return () -> town.getRandomWanderTarget(avoiding);
+            }
+
+            @Override
+            public UnsafeVillagerData getVillagerData() {
+                return town.getVillagerHandle().getUnprotectedDataHandle(vme.getVUID());
+            }
+
+            @Override
+            public void runPreTickHook(
+                    Collection<String> rules,
+                    WorkLocation location,
+                    ImmutableList<MCHeldItem> heldItems,
+                    Consumer<Function<RoomsNeedingVillagerInput<MCRoom, ?, BlockPos>, RoomsNeedingVillagerInput<MCRoom, ?, BlockPos>>> roomsReplacer,
+                    Function<BlockPos, State> blockStateFunction,
+                    boolean firstTick,
+                    BlockPos entityPosition,
+                    Supplier<ImmutableList<BlockPos>> otherVillagerPositions,
+                    Supplier<BlockPos> randomWalkTarget,
+                    UnsafeVillagerData villagerData
+            ) {
+                PreTickHook.run(
+                        rules,
+                        town::getServerLevel,
+                        location,
+                        heldItems,
+                        roomsReplacer,
+                        blockStateFunction,
+                        firstTick,
+                        entityPosition,
+                        otherVillagerPositions,
+                        randomWalkTarget,
+                        villagerData
+                );
+            }
+        };
+        this.ticker.tick(deps, (p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a));
     }
 
 

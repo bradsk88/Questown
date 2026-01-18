@@ -443,15 +443,6 @@ public abstract class ProductionJob<
         return work;
     }
 
-    protected abstract void tick(
-            MCExtra extra,
-            WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
-            LivingEntity entity,
-            Direction facingPos,
-            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
-            IProductionStatusFactory<STATUS> statusFactory
-    );
-
     protected void setupForGetSupplies(
             TownInterface town,
             BlockPos pos,
