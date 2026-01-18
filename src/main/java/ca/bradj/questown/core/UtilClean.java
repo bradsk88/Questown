@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Function;
@@ -305,5 +306,21 @@ public class UtilClean {
             return defaultValue;
         }
         return v;
+    }
+
+    public static boolean sameUUID(
+            @Nullable UUID ownerUUID,
+            @Nullable UUID uuid
+    ) {
+        if (ownerUUID == null && uuid != null) {
+            return false;
+        }
+        if (ownerUUID != null && uuid == null) {
+            return false;
+        }
+        if (ownerUUID == null) {
+            return true;
+        }
+        return ownerUUID.equals(uuid);
     }
 }

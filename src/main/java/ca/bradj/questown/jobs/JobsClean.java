@@ -229,6 +229,7 @@ public class JobsClean {
 
     // TODO: Test "should not return null if entity is in room with finished product"
     public static <ROOM extends Room, RECIPE, POS> EntityCurrentJobSite<ROOM> getEntityCurrentJobSite(
+            // TODO: Consider y coordinate
             Position entityBlockPos,
             RoomsNeedingVillagerInput<ROOM, RECIPE, POS> roomsNeedingIngredientsOrTools,
             Collection<ROOM> roomsWithCompletedProduct,

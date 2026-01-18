@@ -1,27 +1,19 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.QT;
-import ca.bradj.questown.commands.DebugLogArgument;
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.jobs.declarative.MCExtra;
-import ca.bradj.questown.jobs.declarative.PreTickHook;
-import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
-import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
-import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.town.workstatus.State;
-import ca.bradj.roomrecipes.serialization.MCRoom;
+import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
+import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.Collection;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -29,14 +21,15 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM> {
+public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>> {
+
 
     public interface EntityHandle<POS, HELD_ITEM> {
         POS getBlockPosition();
         ImmutableList<HELD_ITEM> getHeldItems();
     }
 
-    public interface Dependencies<POS, HELD_ITEM, ROOM> {
+    public interface Dependencies<POS, HELD_ITEM, ROOM extends Room, MATCH extends IRoomRecipeMatch<ROOM, ?, ?, ?>> extends Dependencies2<ROOM, MATCH> {
         WorkStatusHandle<POS, HELD_ITEM> getWorkStatusHandle();
 
         RoomsNeedingVillagerInput<ROOM, ?, POS> computeRoomsNeedingInput(
@@ -51,17 +44,26 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM> {
 
         UnsafeVillagerData getVillagerData();
 
-        void runPreTickHook(
+        <X> void runPreTickHook(
                 Collection<String> rules,
                 WorkLocation location,
                 ImmutableList<HELD_ITEM> heldItems,
-                Consumer<Function<RoomsNeedingVillagerInput<ROOM, ?, POS>, RoomsNeedingVillagerInput<ROOM, ?, POS>>> roomsReplacer,
+                Consumer<Function<RoomsNeedingVillagerInput<ROOM, X, POS>, RoomsNeedingVillagerInput<ROOM, X, POS>>> roomsReplacer,
                 Function<POS, State> blockStateFunction,
                 boolean firstTick,
                 POS entityPosition,
                 Supplier<ImmutableList<POS>> otherVillagerPositions,
                 Supplier<POS> randomWalkTarget,
                 UnsafeVillagerData villagerData
+        );
+
+        void cacheRoomsNeedingInput(RoomsNeedingVillagerInput<ROOM, ?, POS> rniot2);
+
+        Position toPosition(POS blockPosition);
+
+        boolean isSimilarYCoord(
+                POS blockPosition,
+                ROOM room
         );
     }
 
@@ -81,7 +83,7 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM> {
     }
 
     public void tick(
-            Dependencies<POS, HELD_ITEM, ROOM> dependencies,
+            Dependencies<POS, HELD_ITEM, ROOM, MATCH> dependencies,
             BiConsumer<String, Object[]> logger
     ) {
         WorkStatusHandle<POS, HELD_ITEM> work = dependencies.getWorkStatusHandle();
@@ -131,15 +133,17 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM> {
         ));
 
         // TODO: Remaining lines need more abstraction
-//        this.roomsNeedingIngredientsOrTools = new RoomsNeedingVillagerInput<>(rniot.get().get());
+        RoomsNeedingVillagerInput<ROOM, ?, POS> rniot2 = new RoomsNeedingVillagerInput<>(rniot.get().get());
+        dependencies.cacheRoomsNeedingInput(rniot2);
 //
 //        MCExtra extra = new MCExtra(town, work, (VisitorMobEntity) entity);
-//        this.tick(extra, work, entity, facingPos, this.roomsNeedingIngredientsOrTools, statusFactory);
+        this.tick(dependencies, rniot2);
     }
 
     // TODO: Abstract parameters to remove MC dependencies
 //    @Override
-//    private void tick(
+    private void tick(
+            Dependencies<POS, ?, ROOM, MATCH> deps,
 //            MCExtra extra,
 //            WorkStatusHandle<BlockPos, MCHeldItem> work,
 //            LivingEntity entity,
@@ -147,14 +151,11 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM> {
 //            // Change this to a supplier whose value is cached for one tick
 //            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
 //            IProductionStatusFactory<ProductionStatus> statusFactory
-//    ) {
-//        JobTownProvider<MCRoom> jtp = makeTownProviderForTick(extra, work, roomsNeedingIngredientsOrTools);
+            RoomsNeedingVillagerInput<ROOM, ?, POS> rniot2
+    ) {
+        JobTownProvider<ROOM> jtp = new TickTownProvider<>(deps::getRoomsWithCompletedProduct);
 //
-//        EntityCurrentJobSite<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(
-//                entity.blockPosition(),
-//                roomsNeedingIngredientsOrTools,
-//                jtp.roomsWithCompletedProduct()
-//        );
+        EntityCurrentJobSite<ROOM> entityCurrentJobSite = getEntityCurrrentJobSite(deps, rniot2);
 //
 //        EntityLocStateProvider<MCRoom> elp = new EntityLocStateProvider<>() {
 //            @Override
@@ -199,5 +200,18 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM> {
 //                ),
 //                Config.WORKED_RECENTLY_TICKS.get().intValue()
 //        );
-//    }
+    }
+
+    private EntityCurrentJobSite<ROOM> getEntityCurrrentJobSite(
+            Dependencies<POS, ?, ROOM> deps,
+            RoomsNeedingVillagerInput<ROOM, ?, POS> roomsNeedingVillagerInput
+    ) {
+        return JobsClean.getEntityCurrentJobSite(
+                deps.toPosition(deps.getEntity().getBlockPosition()),
+                roomsNeedingVillagerInput,
+                deps.getRoomsWithCompletedProduct(),
+                room -> deps.isSimilarYCoord(deps.getEntity().getBlockPosition(), room),
+                deps::isFarm
+        );
+    }
 }

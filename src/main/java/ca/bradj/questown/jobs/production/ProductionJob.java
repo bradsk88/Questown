@@ -433,16 +433,6 @@ public abstract class ProductionJob<
             Predicate<BlockPos> canClaim
     );
 
-    protected WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
-        WorkStatusHandle<BlockPos, MCHeldItem> work;
-        if (this.specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS)) {
-            work = town.getWorkStatusHandle(null);
-        } else {
-            work = town.getWorkStatusHandle(ownerUUID);
-        }
-        return work;
-    }
-
     protected void setupForGetSupplies(
             TownInterface town,
             BlockPos pos,
