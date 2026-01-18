@@ -93,6 +93,7 @@ public class DeclarativeJob extends
     private boolean isFirstTick = true;
     @SuppressWarnings("removal")
     private TownInterface.DebugLogger logger = QT.JOB_LOGGER::debug;
+    private final DeclarativeJobTicker ticker;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -164,6 +165,7 @@ public class DeclarativeJob extends
         this.logic = new JobLogic<>();
         this.workInterval = workInterval;
         this.recipe = buildRecipe(this);
+        ticker = new DeclarativeJobTicker();
     }
 
     private static @Nullable String getUnmetNeed(
@@ -321,132 +323,9 @@ public class DeclarativeJob extends
             LivingEntity entity,
             Direction facingPos
     ) {
-        this.logger = (p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a);
-
-        WorkStatusHandle<BlockPos, MCHeldItem> work = getWorkStatusHandle(town);
-        AtomicReference<RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos>> rniot = new AtomicReference<>(
-                roomsNeedingIngredientsOrTools(
-                        town,
-                        work::getJobBlockState,
-                        (BlockPos bp) -> work.canClaim(bp, this.claimSupplier)
-                ));
-
-        VisitorMobEntity vme = (VisitorMobEntity) entity;
-        ImmutableList<MCHeldItem> heldItems = vme.getJobJournalSnapshot().items();
-        Function<BlockPos, @NotNull State> bsFn = bp -> Util.applyOrDefault(
-                bp,
-                p -> town.getWorkStatusHandle(ownerUUID).getJobBlockState(p),
-                State.fresh()
-        );
-
-        boolean firstTick = this.isFirstTick;
-        if (this.isFirstTick) {
-            this.isFirstTick = false;
-        }
-
-        Supplier<ImmutableList<BlockPos>> otherVillagerPositions = () -> town.getVillagerHandle().entities().stream()
-                                                                             .filter(v -> !ownerUUID.equals(v.getUUID()))
-                                                                             .map(
-                                                                                     Entity::getOnPos)
-                                                                             .collect(ImmutableList.toImmutableList());
-        Supplier<BlockPos> randomWalkableTownPosition = () -> town.getRandomWanderTarget(entity.getOnPos());
-        UnsafeVillagerData villagerData = town.getVillagerHandle().getUnprotectedDataHandle(vme.getVUID());
-
-        PreTickHook.run(
-                specialGlobalRules,
-                town::getServerLevel,
-                location,
-                heldItems,
-                fn -> rniot.set(fn.apply(rniot.get())),
-                bsFn,
-                firstTick,
-                entity.blockPosition(),
-                otherVillagerPositions,
-                randomWalkableTownPosition,
-                villagerData
-        );
-        specialRules.forEach((state, rules) -> PreTickHook.run(
-                rules,
-                town::getServerLevel,
-                location,
-                heldItems,
-                fn -> rniot.set(fn.apply(rniot.get())),
-                bsFn,
-                firstTick,
-                entity.blockPosition(),
-                otherVillagerPositions,
-                randomWalkableTownPosition,
-                villagerData
-        ));
-
-        this.roomsNeedingIngredientsOrTools = new RoomsNeedingVillagerInput<>(rniot.get().get());
-
-        MCExtra extra = new MCExtra(town, work, (VisitorMobEntity) entity);
-        this.tick(extra, work, entity, facingPos, this.roomsNeedingIngredientsOrTools, statusFactory);
+        this.ticker.tick((p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a));
     }
 
-    @Override
-    protected void tick(
-            MCExtra extra,
-            WorkStatusHandle<BlockPos, MCHeldItem> work,
-            LivingEntity entity,
-            Direction facingPos,
-            // Change this to a supplier whose value is cached for one tick
-            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
-            IProductionStatusFactory<ProductionStatus> statusFactory
-    ) {
-        JobTownProvider<MCRoom> jtp = makeTownProviderForTick(extra, work, roomsNeedingIngredientsOrTools);
-
-        EntityCurrentJobSite<MCRoom> entityCurrentJobSite = Jobs.getEntityCurrentJobSite(
-                entity.blockPosition(),
-                roomsNeedingIngredientsOrTools,
-                jtp.roomsWithCompletedProduct()
-        );
-
-        EntityLocStateProvider<MCRoom> elp = new EntityLocStateProvider<>() {
-            @Override
-            public @Nullable MCRoom getEntityCurrentJobSite() {
-                if (entityCurrentJobSite == null) {
-                    return null;
-                }
-                return entityCurrentJobSite.room();
-            }
-        };
-
-        Supplier<ProductionStatus> computeState = getStateComputer(extra.town(), statusFactory, jtp, elp);
-        this.signal = Signals.fromDayTime(Util.getDayTime(extra.town().getServerLevel()));
-        WorkPosition<BlockPos> workSpot = world.getWorkSpot();
-        BlockPos bp = Util.orNull(workSpot, WorkPosition::jobBlock);
-        int action = bp == null ? 0 : Util.withFallbackForNullInput(
-                work.getJobBlockState(bp),
-                State::processingState,
-                0
-        );
-        logic.tick(
-                extra,
-                computeState,
-                jobId,
-                entityCurrentJobSite != null,
-                WorkSeekerJob.isSeekingWork(jobId),
-                workSpot != null && hasInserted(action),
-                !inventory.isEmpty(),
-                expiration,
-                new JobLogic.JobDetails(maxState, checks.getWorkForStep(0), workInterval),
-                this.asLogicWorld(
-                        extra,
-                        work,
-                        (VisitorMobEntity) entity,
-                        entityCurrentJobSite,
-                        roomsNeedingIngredientsOrTools
-                ),
-                (tuwn, bpp) -> Util.withFallbackForNullInput(
-                        getWorkStatusHandle(extra.town()).getJobBlockState(bpp),
-                        State::processingState,
-                        0
-                ),
-                Config.WORKED_RECENTLY_TICKS.get().intValue()
-        );
-    }
 
     @Override
     protected boolean grabbedSuppliesRecently(Predicate<Long> isTickRecent) {
@@ -1040,7 +919,7 @@ public class DeclarativeJob extends
         // Call the new pre-hook before any logic
         AtomicReference<WithReason<BlockPos>> override = new AtomicReference<>(null);
         UnsafeVillagerData data = town.getVillagerHandle().getUnprotectedDataHandle(VillagerUUID.from(ownerUUID));
-        ca.bradj.questown.jobs.declarative.PreFindJobSiteHook.run(
+        PreFindJobSiteHook.run(
                 getGlobalSpecialRules(),
                 data,
                 override::set
