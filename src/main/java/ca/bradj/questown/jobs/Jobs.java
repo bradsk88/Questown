@@ -198,46 +198,29 @@ public class Jobs {
                       .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
     }
 
+    @Deprecated(forRemoval = true)
     public static boolean isUnfinishedTimeWorkPresent(
             RoomsHolder town,
             ResourceLocation workRoomId,
             Function<BlockPos, @Nullable Integer> ticksSource
     ) {
-        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(workRoomId);
-        return rooms.stream()
-                    .anyMatch(v -> {
-                        for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
-                            @Nullable Integer apply = ticksSource.apply(e.getKey());
-                            if (apply != null && apply > 0) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    });
+        return JobsClean.isUnfinishedTimeWorkPresent(
+                () -> ImmutableList.copyOf(town.getRoomsMatching(workRoomId)),
+                ticksSource
+        );
     }
 
+    @Deprecated(forRemoval = true)
     public static Collection<Integer> getStatesWithUnfinishedWork(
             Supplier<Collection<? extends Supplier<Collection<BlockPos>>>> town,
             Function<BlockPos, State> ticksSource,
             Predicate<BlockPos> canClaim
     ) {
-        Collection<? extends Supplier<Collection<BlockPos>>> rooms = town.get();
-        HashSet<Integer> b = new HashSet<>();
-        rooms.forEach(v -> {
-            for (BlockPos e : v.get()) {
-                if (!canClaim.test(e)) {
-                    continue;
-                }
-                @Nullable State apply = ticksSource.apply(e);
-                if (apply != null && apply.workLeft() > 0) {
-                    b.add(apply.processingState());
-                    return;
-                }
-            }
-        });
-        ArrayList<Integer> b2 = new ArrayList<>(b);
-        Collections.sort(b2);
-        return ImmutableList.copyOf(b2);
+        return JobsClean.getStatesWithUnfinishedWork(
+                town.get(),
+                ticksSource,
+                canClaim
+        );
     }
 
     // This name is just irony because there are so many "un" functions

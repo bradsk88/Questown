@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Pair;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput.NVIRoom;
@@ -18,6 +19,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.*;
+import java.util.stream.Stream;
 
 public class JobsClean {
 
@@ -320,6 +322,84 @@ public class JobsClean {
         }
 
         return new WithReason<>(null, "No job sites");
+    }
+
+    public static <POS, ROOM extends Room, RECIPE> ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks<POS>> rooms(
+            Supplier<ImmutableList<NVIRoom<ROOM, RECIPE, POS>>> jobSites,
+            Function<POS, State> jobBlockStates,
+            Predicate<POS> isJobBlock,
+            int maxState
+    ) {
+        ImmutableMap.Builder<Integer, RoomsWithWorkableStatefulBlocks<POS>> b = ImmutableMap.builder();
+        Supplier<Rooms<POS, ?>> e = () -> {
+            ImmutableMap.Builder<POS, Integer> spotStatuses = ImmutableMap.builder();
+            ImmutableMap.Builder<POS, Boolean> spotJBs = ImmutableMap.builder();
+            Map<ROOM, List<Integer>> roomStatuses = new HashMap<>();
+            Stream<NVIRoom<ROOM, RECIPE, POS>> rooms = jobSites.get().stream();
+
+            //TODO: Validate that this is actually needed
+            rooms = rooms.filter(v -> !v.dueToWorkOnly());
+
+            rooms.forEach(match -> {
+                for (Map.Entry<POS, ?> entry : match.room().getContainedBlocks().entrySet()) {
+                    POS bp = entry.getKey();
+                    State jobBlockState = jobBlockStates.apply(bp);
+                    if (jobBlockState == null) {
+                        continue;
+                    }
+                    int v = jobBlockState.processingState();
+                    spotStatuses.put(bp, v);
+                    UtilClean.addOrInitializeList(roomStatuses, match.room().getRoom(), v);
+                    spotJBs.put(bp, isJobBlock.test(bp));
+                }
+            });
+            return new Rooms<>(spotStatuses.build(), roomStatuses, spotJBs.build());
+        };
+
+        for (int i = 0; i < maxState; i++) {
+            b.put(i, new RoomsWithWorkableStatefulBlocks<>(i, e));
+        }
+        return b.build();
+    }
+
+    public static <POS, MATCH extends IRoomRecipeMatch<?, ?, POS, ?>> boolean isUnfinishedTimeWorkPresent(
+            Supplier<ImmutableList<MATCH>> roomSource,
+            Function<POS, Integer> ticksSource
+    ) {
+        ImmutableList<MATCH> rooms = roomSource.get();
+        return rooms.stream()
+                    .anyMatch(v -> {
+                        for (Map.Entry<POS, ?> e : v.getContainedBlocks().entrySet()) {
+                            @Nullable Integer apply = ticksSource.apply(e.getKey());
+                            if (apply != null && apply > 0) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+    }
+
+    public static <POS> Collection<Integer> getStatesWithUnfinishedWork(
+            Collection<? extends Supplier<Collection<POS>>> rooms,
+            Function<POS, State> getJobBlockState,
+            Predicate<POS> canClaim
+    ) {
+        HashSet<Integer> b = new HashSet<>();
+        rooms.forEach(v -> {
+            for (POS e : v.get()) {
+                if (!canClaim.test(e)) {
+                    continue;
+                }
+                @Nullable State apply = getJobBlockState.apply(e);
+                if (apply != null && apply.workLeft() > 0) {
+                    b.add(apply.processingState());
+                    return;
+                }
+            }
+        });
+        ArrayList<Integer> b2 = new ArrayList<>(b);
+        Collections.sort(b2);
+        return ImmutableList.copyOf(b2);
     }
 
     public interface SuppliesTarget<POS, TOWN_ITEM> {

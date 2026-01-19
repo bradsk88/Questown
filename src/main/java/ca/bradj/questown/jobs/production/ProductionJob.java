@@ -427,12 +427,6 @@ public abstract class ProductionJob<
             Function<BlockPos, BlockPos> getRandomAdjacent
     );
 
-    public abstract RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools(
-            TownInterface town,
-            Function<BlockPos, State> work,
-            Predicate<BlockPos> canClaim
-    );
-
     protected void setupForGetSupplies(
             TownInterface town,
             BlockPos pos,

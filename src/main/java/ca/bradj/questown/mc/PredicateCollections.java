@@ -51,27 +51,7 @@ public class PredicateCollections {
     }
 
     public static PredicateCollection<MCTownItem, ?> townify(PredicateCollection<MCHeldItem, ?> v) {
-        return PredicateCollection.wrap(
-                new IPredicateCollection<MCTownItem>() {
-                    @Override
-                    public boolean isEmpty() {
-                        return v.isEmpty();
-                    }
-
-                    @Override
-                    public boolean test(MCTownItem itemStack) {
-                        return v.test(MCHeldItem.fromTown(itemStack));
-                    }
-
-                    @Override
-                    public String toString() {
-                        return v.toString();
-                    }
-                },
-                IPredicateCollection::isEmpty,
-                Predicate::test,
-                "Town-as-Held"
-        );
+        return PredicateCollectionsClean.townify(v);
     }
 
     public static Map<Integer, PredicateCollection<MCHeldItem, ItemStack>> fromMCIngredientMap(ImmutableMap<Integer, Ingredient> in) {

@@ -4,6 +4,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.PredicateCollections;
+import ca.bradj.questown.mc.PredicateCollectionsClean;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -41,9 +42,10 @@ public class RoomsNeedingVillagerInput<ROOM, RECIPE, POS> {
         return inner;
     }
 
-    public ImmutableList<PredicateCollection<MCTownItem, ?>> cleanFns(
-            Function<Integer, PredicateCollection<MCHeldItem, ?>> items,
-            Function<Integer, PredicateCollection<MCTownItem, ?>> tools
+    public <ITEM, HELD_ITEM> ImmutableList<PredicateCollection<ITEM, ?>> cleanFns(
+            Function<Integer, PredicateCollection<HELD_ITEM, ?>> items,
+            Function<Integer, PredicateCollection<ITEM, ?>> tools,
+            Function<ITEM, HELD_ITEM> convert
     ) {
         // TODO: Be smarter? We're just finding the first room that needs stuff.
         Optional<Integer> first = inner.entrySet()
@@ -58,14 +60,14 @@ public class RoomsNeedingVillagerInput<ROOM, RECIPE, POS> {
         }
         int s = first.get();
 
-        ImmutableList.Builder<PredicateCollection<MCTownItem, ?>> bb = ImmutableList.builder();
-        PredicateCollection<MCHeldItem, ?> ingr = items.apply(s);
+        ImmutableList.Builder<PredicateCollection<ITEM, ?>> bb = ImmutableList.builder();
+        PredicateCollection<HELD_ITEM, ?> ingr = items.apply(s);
         if (ingr != null) {
-            bb.add(PredicateCollections.townify(ingr));
+            bb.add(PredicateCollectionsClean.townify(ingr, convert));
         }
         // Hold on to tools required for this state and all previous states
         for (int i = 0; i <= s; i++) {
-            PredicateCollection<MCTownItem, ?> tool = tools.apply(i);
+            PredicateCollection<ITEM, ?> tool = tools.apply(i);
             if (tool != null) {
                 bb.add(tool);
             }

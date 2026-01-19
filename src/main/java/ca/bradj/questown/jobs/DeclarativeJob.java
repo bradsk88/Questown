@@ -341,7 +341,7 @@ public class DeclarativeJob extends
 
     @Override
     protected Collection<? extends Predicate<MCTownItem>> cleanRooms() {
-        return roomsNeedingIngredientsOrTools.cleanFns(checks::getIngredientsForStep, checks::getToolsForStep);
+        return roomsNeedingIngredientsOrTools.cleanFns(checks::getIngredientsForStep, checks::getToolsForStep, MCHeldItem::fromTown);
     }
 
     private @NotNull JobTownProvider<MCRoom> makeTownProviderForTick(
@@ -351,7 +351,7 @@ public class DeclarativeJob extends
     ) {
         TownInterface town = extra.town();
         WorkLocation.BlockInfo info = info(town.getServerLevel());
-        Supplier<Map<Integer, DeclarativeJobs.RoomsWithWorkableStatefulBlocks>> roomsV2 = () -> DeclarativeJobs.rooms(
+        Supplier<Map<Integer, RoomsWithWorkableStatefulBlocks>> roomsV2 = () -> DeclarativeJobs.rooms(
                 maxState,
                 roomsNeedingIngredientsOrTools,
                 work,
@@ -424,16 +424,6 @@ public class DeclarativeJob extends
                 return roomsNeedingIngredientsOrTools.get().get(state).stream()
                                                      .map(RoomsNeedingVillagerInput.NVIRoom::room)
                                                      .map(IRoomRecipeMatch::getRoom).toList();
-            }
-
-            @Override
-            public boolean hasSupplies() {
-                RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> needs = roomsNeedingIngredientsByState();
-                ImmutableList<PredicateCollection<MCTownItem, ?>> neededItems = needs.cleanFns(
-                        checks::getIngredientsForStep,
-                        checks::getToolsForStep
-                );
-                return Jobs.townHasSupplies(town, journal, neededItems);
             }
 
             @Override
@@ -934,7 +924,6 @@ public class DeclarativeJob extends
         );
     }
 
-    @Override
     public RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools(
             TownInterface town,
             Function<BlockPos, State> work,
