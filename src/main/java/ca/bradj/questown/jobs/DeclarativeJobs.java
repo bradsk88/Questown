@@ -34,6 +34,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.*;
+import java.util.stream.Stream;
 
 public class DeclarativeJobs {
 
@@ -139,32 +140,75 @@ public class DeclarativeJobs {
     }
 
     // TODO: Unit test. This calculation is fairly sensitive and critical.
-    public static ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks> rooms(
+    public static ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks<BlockPos>> rooms(
             @NotNull Integer maxState,
             RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomHandle,
             WorkStatusHandle<BlockPos, MCHeldItem> work,
             Predicate<BlockPos> isJobBlock
     ) {
-        return JobsClean.rooms(
+        Stream<RoomsNeedingVillagerInput.NVIRoom<MCRoom, ResourceLocation, BlockPos>> rooms = roomHandle.getMatches()
+                                                                                                        .stream();
+        //TODO: Validate that this is actually needed
+        rooms = rooms.filter(v -> !v.dueToWorkOnly());
 
+        return JobsClean.<BlockPos, MCRoom, ResourceLocation>rooms(
+                () ->
+                        roomHandle.getMatches().stream()
+                                  .filter(v -> !v.dueToWorkOnly()) //TODO: Validate that this is actually needed
+                                  .collect(ImmutableList.toImmutableList()),
+                work::getJobBlockState,
+                isJobBlock,
+                maxState
         );
+
+//        ImmutableMap.Builder<Integer, RoomsWithWorkableStatefulBlocks> b = ImmutableMap.builder();
+//        Supplier<Rooms> e = () -> {
+//            ImmutableMap.Builder<BlockPos, Integer> spotStatuses = ImmutableMap.builder();
+//            ImmutableMap.Builder<BlockPos, Boolean> spotJBs = ImmutableMap.builder();
+//            Map<MCRoom, List<Integer>> roomStatuses = new HashMap<>();
+//            Stream<NVIRoom<MCRoom, ResourceLocation, BlockPos>> rooms = roomHandle.getMatches().stream();
+//
+//            //TODO: Validate that this is actually needed
+//            rooms = rooms.filter(v -> !v.dueToWorkOnly());
+//            return JobsClean.rooms(
+//
+//                    rooms.forEach(match -> {
+//                        for (Map.Entry<BlockPos, ?> entry : match.room().getContainedBlocks().entrySet()) {
+//                            BlockPos bp = entry.getKey();
+//                            State jobBlockState = work.getJobBlockState(bp);
+//                            if (jobBlockState == null) {
+//                                continue;
+//        );
     }
 
-    private static LZCD.Dependency<Void> supplies(
-            ServerLevel level,
-            Supplier<? extends Map<Integer, ? extends LZCD.Dependency<Void>>> roomsHaveWorkableBlocks,
-            TownInterface rooms,
-            Map<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredients,
-            Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> tools,
-            Predicate<RoomRecipeMatch<MCRoom>> shouldGetSuppliesFromRoom,
-            Predicate<BlockPos> isJobBlock,
-            Predicate<ResourceLocation> isJobSite
-    ) {
-        return new TownHasSupplies<>(
-                ingredients::get,
-                tools::get
-        );
-    }
+//    private static LZCD.Dependency<Void> supplies(
+//            ServerLevel level,
+//            Supplier<? extends Map<Integer, ? extends LZCD.Dependency<Void>>> roomsHaveWorkableBlocks,
+//            TownInterface rooms,
+//            Map<Integer, PredicateCollection<MCHeldItem, MCHeldItem>> ingredients,
+//            Map<Integer, PredicateCollection<MCTownItem, MCTownItem>> tools,
+//            Predicate<RoomRecipeMatch<MCRoom>> shouldGetSuppliesFromRoom,
+//            Predicate<BlockPos> isJobBlock,
+//            Predicate<ResourceLocation> isJobSite
+//    ) {
+//        return new TownHasSupplies<MCHeldItem, MCTownItem>(
+//                ingredients::get,
+//                tools::get,
+//                () -> rooms.getRoomHandle().getMatches(shouldGetSuppliesFromRoom).stream()
+//                           .map(v -> new ContainersClean.JobSite<MCContainer>() {
+//                               @Override
+//                               public ImmutableList<ContainersClean.Block<MCContainer>> getBlocks() {
+//                                   return null;
+//                               }
+//
+//                               @Override
+//                               public boolean isJobSite() {
+//                                   return false;
+//                               }
+//                           })
+//                           .collect(ImmutableList.toImmutableList())
+//        );
+//    }
 
     private record HandlerInputs(MCTownStateWorldInteraction wi, MCTownStateWorldInteraction.Inputs inState,
                                  ProductionStatus status, State workBlockState, Integer maxState, BlockPos fakePos) {

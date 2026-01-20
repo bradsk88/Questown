@@ -14,21 +14,24 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class TownHasSupplies<HELD, ITEM extends Item<ITEM>> extends SimpleDependency {
+public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerTarget<?, ITEM>> extends SimpleDependency {
 
     private final Function<Integer, PredicateCollection<HELD, HELD>> ingredients;
     private final Function<Integer, PredicateCollection<ITEM, ITEM>> tools;
-    private final Supplier<ImmutableList<ContainersClean.JobSite<ContainerTarget<?, ITEM>>>> rooms;
+    private final Supplier<ImmutableList<ContainersClean.JobSite<C>>> rooms;
+    private final Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks;
 
-    public <C extends ContainerTarget<?, ITEM>> TownHasSupplies(
+    public TownHasSupplies(
             Function<Integer, PredicateCollection<HELD, HELD>> ingredients,
             Function<Integer, PredicateCollection<ITEM, ITEM>> tools,
-            Supplier<ImmutableList<ContainersClean.JobSite<C>>> rooms
+            Supplier<ImmutableList<ContainersClean.JobSite<C>>> rooms,
+            Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks
     ) {
         super("town has supplies");
         this.ingredients = ingredients;
         this.tools = tools;
-        this.rooms = rooms;
+        this.rooms = () -> rooms.get().stream().collect(ImmutableList.toImmutableList());
+        this.roomsHaveWorkableBlocks = roomsHaveWorkableBlocks;
     }
 
     @Override
@@ -63,7 +66,7 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>> extends SimpleDepend
         b.put("relevant ingredients", neededIngredients);
         b.put("relevant tools", neededTools);
 
-        List<ContainerTarget<?, ITEM>> containers = ContainersClean.get(rooms.get(), false);
+        List<C> containers = ContainersClean.get(rooms.get(), false);
 
         b.put("containers", containers);
 

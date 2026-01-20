@@ -51,7 +51,7 @@ public class PredicateCollections {
     }
 
     public static PredicateCollection<MCTownItem, ?> townify(PredicateCollection<MCHeldItem, ?> v) {
-        return PredicateCollectionsClean.townify(v);
+        return PredicateCollectionsClean.townify(v, MCHeldItem::fromTown);
     }
 
     public static Map<Integer, PredicateCollection<MCHeldItem, ItemStack>> fromMCIngredientMap(ImmutableMap<Integer, Ingredient> in) {

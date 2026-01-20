@@ -13,6 +13,7 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -21,6 +22,7 @@ import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ChestBlock;
@@ -32,7 +34,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class DeclarativeJobTickerDependencies implements
-        DeclarativeJobTicker.Dependencies<BlockPos, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatches<MCRoom>> {
+        DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>> {
     private final TownInterface town;
     private final DeclarativeJob job;
     private final VisitorMobEntity entity;
@@ -48,7 +50,7 @@ public class DeclarativeJobTickerDependencies implements
     }
 
     @Override
-    public ImmutableList<RoomRecipeMatches<MCRoom>> getRoomsWithCompletedProduct() {
+    public ImmutableList<RoomRecipeMatch<MCRoom>> getRoomsWithCompletedProduct() {
         return ImmutableList.copyOf(job.roomsWithState.get(
                 job.roomsMatching(town),
                 DeclarativeJob.isCorrectBlock(town),
@@ -62,7 +64,7 @@ public class DeclarativeJobTickerDependencies implements
     }
 
     @Override
-    public ImmutableList<RoomRecipeMatches<MCRoom>> getJobSites() {
+    public ImmutableList<RoomRecipeMatch<MCRoom>> getJobSites() {
         return town.getRoomHandle()
                    .getMatches(m -> m.getRecipeIDs().contains(job.location().baseRoom()))
                    .stream()
@@ -238,5 +240,10 @@ public class DeclarativeJobTickerDependencies implements
             MCRoom room
     ) {
         return (room.yCoord > entityBlockPos.getY() - 5) && (room.yCoord < entityBlockPos.getY() + 5);
+    }
+
+    @Override
+    public boolean isFarm(ResourceLocation x) {
+        return SpecialQuests.FARM.equals(x);
     }
 }

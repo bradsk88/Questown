@@ -123,7 +123,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
 //                bp -> isJobBlock(bp),
 //                js -> location.baseRoom().equals(js)
 //        );
-        return new TownHasSupplies<>(items, tools, this::getJobSites);
+        return new TownHasSupplies<HELD_ITEM, TOWN_ITEM, CONTAINER>(items, tools, this::getJobSites, roomsV2);
     }
 
     private ImmutableList<ContainersClean.JobSite<CONTAINER>> getJobSites() {

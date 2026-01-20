@@ -449,28 +449,29 @@ public class MCTownStateWorldInteraction extends
                 return b.build();
             }
 
-            @Override
-            public boolean hasSupplies() {
-                // TODO: Reduce deuplication with DeclarativeJob.roomsNeedingIngredientsOrTools
-                int curState = workStates.processingState();
-                PredicateCollection<MCHeldItem, ?> ings = checks.getIngredientsForStep(curState);
-                if (ings != null) {
-                    for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
-                        if (container.hasItem(i -> ings.test(MCHeldItem.fromTown(i)))) {
-                            return true;
-                        }
-                    }
-                }
-                PredicateCollection<MCTownItem, ?> toolChk = checks.getToolsForStep(curState);
-                if (toolChk != null) {
-                    for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
-                        if (container.hasItem(toolChk::test)) {
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            }
+            // TODO[ASAP]: Confirm that hasSupplies is actually not used on 1.19.2 branch
+//            @Override
+//            public boolean hasSupplies() {
+//                // TODO: Reduce deuplication with DeclarativeJob.roomsNeedingIngredientsOrTools
+//                int curState = workStates.processingState();
+//                PredicateCollection<MCHeldItem, ?> ings = checks.getIngredientsForStep(curState);
+//                if (ings != null) {
+//                    for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
+//                        if (container.hasItem(i -> ings.test(MCHeldItem.fromTown(i)))) {
+//                            return true;
+//                        }
+//                    }
+//                }
+//                PredicateCollection<MCTownItem, ?> toolChk = checks.getToolsForStep(curState);
+//                if (toolChk != null) {
+//                    for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
+//                        if (container.hasItem(toolChk::test)) {
+//                            return true;
+//                        }
+//                    }
+//                }
+//                return false;
+//            }
 
             @Override
             public boolean hasSpace() {
