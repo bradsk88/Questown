@@ -518,7 +518,7 @@ public class DeclarativeJob extends
                 boolean didIt = false;
                 for (RoomRecipeMatch<MCRoom> room : town.getRoomHandle().getRoomsMatching(SpecialQuests.CLINIC)) {
                     Map<Integer, Collection<WorkPosition<BlockPos>>> spots = DeclarativeJob.this.listAllWorkSpots(
-                            getWorkStatusHandle(town)::getJobBlockState,
+                            work::getJobBlockState,
                             new EntityCurrentJobSite<>(room.room, false),
                             bp -> isValidWalkTarget(town, bp),
                             bp -> location.shouldInitializeWorkState().test(info(sl), bp),

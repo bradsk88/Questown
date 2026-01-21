@@ -31,6 +31,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
     private final Function<Integer, PredicateCollection<TOWN_ITEM, TOWN_ITEM>> tools;
     private final BiFunction<ROOM, POS, ContainersClean.Block<CONTAINER>> toBlock;
     private Function<TOWN_ITEM, HELD_ITEM> convert;
+    private final Supplier<Boolean> hasSpace;
 
     public <RECIPE> TickTownProvider(
             Supplier<ImmutableList<MATCH>> resultsFinder,
@@ -45,7 +46,8 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
             Function<Integer, PredicateCollection<TOWN_ITEM, TOWN_ITEM>> tools,
             Function<POS, String> stringify,
             int maxState,
-            Function<TOWN_ITEM, HELD_ITEM> convert
+            Function<TOWN_ITEM, HELD_ITEM> convert,
+            Supplier<Boolean> hasSpace
     ) {
         this.resultsFinder = resultsFinder;
         this.roomsFinder = roomsFinder;
@@ -65,6 +67,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
         this.items = items;
         this.tools = tools;
         this.toBlock = toBlock;
+        this.hasSpace = hasSpace;
     }
 
     @Override
@@ -150,6 +153,6 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
 
     @Override
     public boolean hasSpace() {
-        return Jobs.townHasSpace(town);
+        return hasSpace.get();
     }
 }

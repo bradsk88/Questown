@@ -180,7 +180,8 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
                         deps::tools,
                         deps::stringify,
                         maxState,
-                        deps::convert
+                        deps::convert,
+                        deps::hasSpace
                 );
 //
         EntityCurrentJobSite<ROOM> entityCurrentJobSite = getEntityCurrentJobSite(deps, rniot2);

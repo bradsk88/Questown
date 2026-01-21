@@ -131,6 +131,13 @@ public abstract class ProductionJob<
         return (RandomShortLivedWorkSpot.hasTargetChanged(data, this.jobSite));
     }
 
+    protected WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
+        if (specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS)) {
+            return town.getWorkStatusHandle(null);
+        }
+        return town.getWorkStatusHandle(ownerUUID);
+    }
+
     protected abstract boolean isJobBlock(
             BlockPos bp
     );

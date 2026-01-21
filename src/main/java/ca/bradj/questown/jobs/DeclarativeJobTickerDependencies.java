@@ -112,7 +112,7 @@ public class DeclarativeJobTickerDependencies implements
 
     @Override
     public boolean canClaim(BlockPos blockPos) {
-        return job;
+        return getWorkStatusHandle(town).canClaim(blockPos, job.getClaimSupplier());
     }
 
     @Override
@@ -255,5 +255,10 @@ public class DeclarativeJobTickerDependencies implements
     @Override
     public boolean isFarm(ResourceLocation x) {
         return SpecialQuests.FARM.equals(x);
+    }
+
+    @Override
+    public boolean hasSpace() {
+        return Jobs.townHasSpace(town);
     }
 }

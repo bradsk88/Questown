@@ -27,4 +27,6 @@ public interface Dependencies2<ROOM extends Room, MATCH extends IRoomRecipeMatch
     String stringify(POS pos);
 
     HELD_ITEM convert(TOWN_ITEM townItem);
+
+    boolean hasSpace();
 }
