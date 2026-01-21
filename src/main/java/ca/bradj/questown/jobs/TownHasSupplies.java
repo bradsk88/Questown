@@ -20,18 +20,21 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
     private final Function<Integer, PredicateCollection<ITEM, ITEM>> tools;
     private final Supplier<ImmutableList<ContainersClean.JobSite<C>>> rooms;
     private final Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks;
+    private final Function<ITEM, HELD> convert;
 
     public TownHasSupplies(
             Function<Integer, PredicateCollection<HELD, HELD>> ingredients,
             Function<Integer, PredicateCollection<ITEM, ITEM>> tools,
             Supplier<ImmutableList<ContainersClean.JobSite<C>>> rooms,
-            Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks
+            Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks,
+            Function<ITEM, HELD> convert
     ) {
         super("town has supplies");
         this.ingredients = ingredients;
         this.tools = tools;
         this.rooms = () -> rooms.get().stream().collect(ImmutableList.toImmutableList());
         this.roomsHaveWorkableBlocks = roomsHaveWorkableBlocks;
+        this.convert = convert;
     }
 
     @Override
@@ -84,7 +87,7 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
                 if (b2.get(dPos) != null && Boolean.TRUE.equals(b2.get(dPos))) {
                     continue;
                 }
-                HELD iHeld = HELD.fromTown(i);
+                HELD iHeld = convert.apply(i);
                 Optional<?> matchedIngredient = neededIngredients.stream().filter(ing -> ing.test(iHeld))
                                                                  .findFirst();
                 String result = matchedIngredient.map(Object::toString).orElse("No match");

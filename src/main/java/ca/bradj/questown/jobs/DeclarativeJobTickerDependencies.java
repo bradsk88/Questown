@@ -112,17 +112,27 @@ public class DeclarativeJobTickerDependencies implements
 
     @Override
     public boolean canClaim(BlockPos blockPos) {
-        return false;
+        return job;
     }
 
     @Override
-    public <HELD_ITEM> PredicateCollection<HELD_ITEM, HELD_ITEM> item(Integer integer) {
-        return null;
+    public PredicateCollection<MCHeldItem, MCHeldItem> item(Integer integer) {
+        return job.getChecks().getIngredientsForStep(integer);
     }
 
     @Override
-    public <TOWN_ITEM extends Item<TOWN_ITEM>> PredicateCollection<TOWN_ITEM, TOWN_ITEM> tools(Integer integer) {
-        return null;
+    public PredicateCollection<MCTownItem, MCTownItem> tools(Integer integer) {
+        return job.getChecks().getToolsForStep(integer);
+    }
+
+    @Override
+    public String stringify(BlockPos blockPos) {
+        return blockPos.toShortString();
+    }
+
+    @Override
+    public MCHeldItem convert(MCTownItem mcTownItem) {
+        return MCHeldItem.fromTown(mcTownItem);
     }
 
     private RoomRecipeMatches<MCRoom> pluralize(RoomRecipeMatch<MCRoom> v) {

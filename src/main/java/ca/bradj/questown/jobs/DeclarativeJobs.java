@@ -158,6 +158,7 @@ public class DeclarativeJobs {
                                   .collect(ImmutableList.toImmutableList()),
                 work::getJobBlockState,
                 isJobBlock,
+                BlockPos::toShortString,
                 maxState
         );
 

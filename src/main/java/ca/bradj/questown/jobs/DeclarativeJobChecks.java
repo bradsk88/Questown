@@ -112,7 +112,7 @@ public class DeclarativeJobChecks<EXTRA, HELD_ITEM, TOWN_ITEM, ROOM extends IRoo
     }
 
     @Override
-    public @Nullable PredicateCollection<TOWN_ITEM, ?> getToolsForStep(Integer curState) {
+    public @Nullable PredicateCollection<TOWN_ITEM, TOWN_ITEM> getToolsForStep(Integer curState) {
         return toolsRequiredAtStates.get(curState);
     }
 

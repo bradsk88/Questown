@@ -328,6 +328,7 @@ public class JobsClean {
             Supplier<ImmutableList<NVIRoom<ROOM, RECIPE, POS>>> jobSites,
             Function<POS, State> jobBlockStates,
             Predicate<POS> isJobBlock,
+            Function<POS, String> stringify,
             int maxState
     ) {
         ImmutableMap.Builder<Integer, RoomsWithWorkableStatefulBlocks<POS>> b = ImmutableMap.builder();
@@ -357,7 +358,7 @@ public class JobsClean {
         };
 
         for (int i = 0; i < maxState; i++) {
-            b.put(i, new RoomsWithWorkableStatefulBlocks<>(i, e));
+            b.put(i, new RoomsWithWorkableStatefulBlocks<>(i, e, stringify));
         }
         return b.build();
     }

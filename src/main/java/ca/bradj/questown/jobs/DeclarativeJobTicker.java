@@ -32,7 +32,7 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
     }
 
     public interface Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM extends Item<TOWN_ITEM>, ROOM extends Room, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>> extends
-            Dependencies2<ROOM, MATCH, POS, TOWN_ITEM>, Dependencies3<RECIPE> {
+            Dependencies2<ROOM, MATCH, POS, HELD_ITEM, TOWN_ITEM>, Dependencies3<RECIPE> {
         WorkStatusHandle<POS, HELD_ITEM> getWorkStatusHandle();
 
         <X> RoomsNeedingVillagerInput<ROOM, X, POS> computeRoomsNeedingInput(
@@ -155,7 +155,7 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
     // TODO: Abstract parameters to remove MC dependencies
 //    @Override
     private <TOWN_ITEM extends Item<TOWN_ITEM>, RECIPE> void tick(
-            Dependencies<POS, RECIPE, ?, TOWN_ITEM, ROOM, MATCH> deps,
+            Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH> deps,
 //            MCExtra extra,
             WorkStatusHandle<POS, HELD_ITEM> work,
 //            LivingEntity entity,
@@ -178,7 +178,9 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
                         deps::canClaim,
                         deps::item,
                         deps::tools,
-                        maxState
+                        deps::stringify,
+                        maxState,
+                        deps::convert
                 );
 //
         EntityCurrentJobSite<ROOM> entityCurrentJobSite = getEntityCurrentJobSite(deps, rniot2);

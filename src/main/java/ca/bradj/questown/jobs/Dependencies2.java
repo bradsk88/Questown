@@ -6,7 +6,7 @@ import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 
-public interface Dependencies2<ROOM extends Room, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>, POS, TOWN_ITEM extends Item<TOWN_ITEM>> {
+public interface Dependencies2<ROOM extends Room, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>, POS, HELD_ITEM, TOWN_ITEM extends Item<TOWN_ITEM>> {
     ImmutableList<MATCH> getRoomsWithCompletedProduct();
 
     boolean isJobBlock(POS pos);
@@ -20,7 +20,11 @@ public interface Dependencies2<ROOM extends Room, MATCH extends IRoomRecipeMatch
 
     boolean canClaim(POS pos);
 
-    <HELD_ITEM> PredicateCollection<HELD_ITEM,HELD_ITEM> item(Integer integer);
+    PredicateCollection<HELD_ITEM,HELD_ITEM> item(Integer integer);
 
-    <TOWN_ITEM extends Item<TOWN_ITEM>> PredicateCollection<TOWN_ITEM,TOWN_ITEM> tools(Integer integer);
+    PredicateCollection<TOWN_ITEM,TOWN_ITEM> tools(Integer integer);
+
+    String stringify(POS pos);
+
+    HELD_ITEM convert(TOWN_ITEM townItem);
 }

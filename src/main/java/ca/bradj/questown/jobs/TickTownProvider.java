@@ -30,6 +30,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
     private final Function<Integer, PredicateCollection<HELD_ITEM, HELD_ITEM>> items;
     private final Function<Integer, PredicateCollection<TOWN_ITEM, TOWN_ITEM>> tools;
     private final BiFunction<ROOM, POS, ContainersClean.Block<CONTAINER>> toBlock;
+    private Function<TOWN_ITEM, HELD_ITEM> convert;
 
     public <RECIPE> TickTownProvider(
             Supplier<ImmutableList<MATCH>> resultsFinder,
@@ -42,17 +43,21 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
             Predicate<POS> canClaim,
             Function<Integer, PredicateCollection<HELD_ITEM, HELD_ITEM>> items,
             Function<Integer, PredicateCollection<TOWN_ITEM, TOWN_ITEM>> tools,
-            int maxState
+            Function<POS, String> stringify,
+            int maxState,
+            Function<TOWN_ITEM, HELD_ITEM> convert
     ) {
         this.resultsFinder = resultsFinder;
         this.roomsFinder = roomsFinder;
         this.getJobBlockState = getJobBlockState;
         this.getTicksLeft = getTicksLeft;
         this.roomsNeedingVillagerInput = roomsNeedingIngredientsOrTools;
+        this.convert = convert;
         this.roomsV2 = () -> JobsClean.rooms(
                 roomsNeedingIngredientsOrTools::getMatches,
                 getJobBlockState,
                 isJobBlock,
+                stringify,
                 maxState
         );
         this.canClaim = canClaim;
@@ -123,7 +128,9 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
 //                bp -> isJobBlock(bp),
 //                js -> location.baseRoom().equals(js)
 //        );
-        return new TownHasSupplies<HELD_ITEM, TOWN_ITEM, CONTAINER>(items, tools, this::getJobSites, roomsV2);
+        return new TownHasSupplies<HELD_ITEM, TOWN_ITEM, CONTAINER>(
+                items, tools, this::getJobSites, roomsV2, convert
+        );
     }
 
     private ImmutableList<ContainersClean.JobSite<CONTAINER>> getJobSites() {

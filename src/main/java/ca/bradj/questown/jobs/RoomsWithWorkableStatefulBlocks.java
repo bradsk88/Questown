@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public final class RoomsWithWorkableStatefulBlocks<POS> implements LZCD.Dependency<Void> {
@@ -16,15 +17,18 @@ public final class RoomsWithWorkableStatefulBlocks<POS> implements LZCD.Dependen
     private final Supplier<Rooms<POS, ?>> inputs;
     private final String name;
     private final int state;
+    private final Function<POS, String> stringify;
     private Populated<WithReason<Boolean>> value;
 
     public RoomsWithWorkableStatefulBlocks(
             int state,
-            Supplier<Rooms<POS, ?>> inputs
+            Supplier<Rooms<POS, ?>> inputs,
+            Function<POS, String> stringify
     ) {
         this.inputs = inputs;
         this.name = NAME + " " + state;
         this.state = state;
+        this.stringify = stringify;
     }
 
     @Override
@@ -57,9 +61,9 @@ public final class RoomsWithWorkableStatefulBlocks<POS> implements LZCD.Dependen
         )).orElse(WithReason.always(false, "no spots found"));
 
         ImmutableMap.Builder<String, Object> css = ImmutableMap.builder();
-        spotStates.forEach((k, vv) -> css.put(k.toShortString(), vv));
+        spotStates.forEach((k, vv) -> css.put(stringify.apply(k), vv));
         ImmutableMap.Builder<String, Object> cjs = ImmutableMap.builder();
-        v.spotJobBlocks().forEach((k, vv) -> cjs.put(k.toShortString(), vv));
+        v.spotJobBlocks().forEach((k, vv) -> cjs.put(stringify.apply(k), vv));
         ImmutableMap.Builder<String, Object> crs = ImmutableMap.builder();
         v.roomStatuses().forEach((k, vv) -> crs.put(k.doorPos.getUIString(), vv));
 
