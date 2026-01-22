@@ -240,10 +240,7 @@ public class Util {
             @Nullable X input,
             Function<@NotNull X, Y> fn
     ) {
-        if (input == null) {
-            return null;
-        }
-        return fn.apply(input);
+        return UtilClean.orNull(input, fn);
     }
 
     public static <X> void ifNotNull(

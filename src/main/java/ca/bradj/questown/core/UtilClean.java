@@ -323,4 +323,14 @@ public class UtilClean {
         }
         return ownerUUID.equals(uuid);
     }
+
+    public static @Nullable <Y, X> Y orNull(
+            @Nullable X input,
+            Function<@NotNull X,Y> fn
+    ) {
+        if (input == null) {
+            return null;
+        }
+        return fn.apply(input);
+    }
 }

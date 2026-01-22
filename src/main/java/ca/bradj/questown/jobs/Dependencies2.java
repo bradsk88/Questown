@@ -29,4 +29,8 @@ public interface Dependencies2<ROOM extends Room, MATCH extends IRoomRecipeMatch
     HELD_ITEM convert(TOWN_ITEM townItem);
 
     boolean hasSpace();
+
+    WorkPosition<POS> getWorkSpot();
+
+    Signals.DayTime getDayTime();
 }

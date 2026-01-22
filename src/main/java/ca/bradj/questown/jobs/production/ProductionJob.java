@@ -610,32 +610,6 @@ public abstract class ProductionJob<
         journal.setItemsNoUpdateNoCheck(b.build());
     }
 
-    protected EntityInvStateProvider<Integer> defaultEntityInvProvider() {
-        return new EntityInvStateProvider<>() {
-            @Override
-            public boolean inventoryFull() {
-                return journal.isInventoryFull();
-            }
-
-            @Override
-            public boolean hasNonSupplyItems() {
-
-                Set<Integer> statesToFeed = roomsNeedingIngredientsOrTools.getNonEmptyStates();
-                ImmutableList<Predicate<MCTownItem>> allFillableRecipes = ImmutableList.copyOf(
-                        statesToFeed.stream()
-                                    .flatMap(v -> getRecipe(v)
-                                            .stream())
-                                    .toList()
-                );
-                return Jobs.hasNonSupplyItems(journal, allFillableRecipes);
-            }
-
-            @Override
-            public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
-                return ProductionJob.this.getSupplyItemStatus();
-            }
-        };
-    }
 
     @Override
     public boolean canStopWorkingAtAnyTime() {
