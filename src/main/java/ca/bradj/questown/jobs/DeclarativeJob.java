@@ -84,7 +84,7 @@ public class DeclarativeJob extends
     private boolean isFirstTick = true;
     @SuppressWarnings("removal")
     private TownInterface.DebugLogger logger = QT.JOB_LOGGER::debug;
-    private final DeclarativeJobTicker<BlockPos, MCHeldItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra, Void> ticker;
+    private final DeclarativeJobTicker<BlockPos, MCHeldItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra, Void, WorkLocation> ticker;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -318,7 +318,7 @@ public class DeclarativeJob extends
         DeclarativeJob self = this;
         VisitorMobEntity vme = (VisitorMobEntity) entity;
 //        DeclarativeJobTickerDependencies deps = new DeclarativeJobTickerDependencies(this, town,vme);
-        DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra> deps
+        DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra, WorkLocation> deps
                 = new DeclarativeJobTickerDependencies(this, town, vme);
         this.ticker.tick(deps, (p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a));
     }

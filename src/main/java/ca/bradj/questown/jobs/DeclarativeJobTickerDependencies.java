@@ -45,7 +45,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class DeclarativeJobTickerDependencies implements
-        DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra> {
+        DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra, WorkLocation> {
     private final TownInterface town;
     private final DeclarativeJob job;
     private final VisitorMobEntity entity;

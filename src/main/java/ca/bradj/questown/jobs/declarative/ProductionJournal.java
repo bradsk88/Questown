@@ -3,7 +3,7 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
-import ca.bradj.roomrecipes.serialization.MCRoom;
+import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -116,9 +116,9 @@ public class ProductionJournal<
         return capacity;
     }
 
-    public void tryUpdateStatus(
-            JobTownProvider<MCRoom> townState,
-            EntityLocStateProvider<MCRoom> entityState,
+    public <ROOM extends Room> void tryUpdateStatus(
+            JobTownProvider<ROOM> townState,
+            EntityLocStateProvider<ROOM> entityState,
             EntityInvStateProvider<Integer> inventory,
             IProductionStatusFactory<ProductionStatus> factory,
             boolean prioritizeExtraction

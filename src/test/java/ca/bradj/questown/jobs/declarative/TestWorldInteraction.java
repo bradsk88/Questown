@@ -40,6 +40,18 @@ public class TestWorldInteraction extends
         return degradedTool;
     }
 
+    public boolean wasExtracted() {
+        return extracted;
+    }
+
+    public DeclarativeJobChecks<Void, GathererJournalTest.TestItem, GathererJournalTest.TestItem, ?, Position> getChecks() {
+        return checks;
+    }
+
+    public void clearInsertedSupplies(Void unused) {
+        this.inserted = false;
+    }
+
     public TestWorldInteraction(
             int maxState,
             ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> toolsRequiredAtStates,
