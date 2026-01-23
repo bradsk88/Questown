@@ -33,10 +33,14 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
     private Function<TOWN_ITEM, HELD_ITEM> convert;
     private final Supplier<Signals.DayTime> dayTime;
     private final Supplier<Boolean> hasSpace;
+    private final Supplier<ImmutableList<MATCH>> supplyRoomsFinder;
+    private final Predicate<MATCH> isJobSitePredicate;
 
     public <RECIPE> TickTownProvider(
             Supplier<ImmutableList<MATCH>> resultsFinder,
             Supplier<ImmutableList<MATCH>> roomsFinder,
+            Supplier<ImmutableList<MATCH>> supplyRoomsFinder,
+            Predicate<MATCH> isJobSitePredicate,
             BiFunction<ROOM, POS, ContainersClean.Block<CONTAINER>> toBlock,
             Function<POS, State> getJobBlockState,
             Function<POS, Integer> getTicksLeft,
@@ -53,6 +57,8 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
     ) {
         this.resultsFinder = resultsFinder;
         this.roomsFinder = roomsFinder;
+        this.supplyRoomsFinder = supplyRoomsFinder;
+        this.isJobSitePredicate = isJobSitePredicate;
         this.getJobBlockState = getJobBlockState;
         this.getTicksLeft = getTicksLeft;
         this.roomsNeedingVillagerInput = roomsNeedingIngredientsOrTools;
@@ -127,25 +133,13 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
 
     @Override
     public LZCD.Dependency<Void> hasSuppliesV2() {
-//        return DeclarativeJobs.supplies(
-//                extra.town().getServerLevel(),
-//                town.getServerLevel(),
-//                roomsV2,
-//                extra.town(),
-//                town,
-//                checks.getAllRequiredIngredients(),
-//                checks.getAllRequiredTools(),
-//                checks::shouldCheckContainerForSupplies,
-//                bp -> isJobBlock(bp),
-//                js -> location.baseRoom().equals(js)
-//        );
         return new TownHasSupplies<HELD_ITEM, TOWN_ITEM, CONTAINER>(
-                items, tools, this::getJobSites, roomsV2, convert
+                items, tools, this::getSupplyRooms, roomsV2, convert
         );
     }
 
-    private ImmutableList<ContainersClean.JobSite<CONTAINER>> getJobSites() {
-        return roomsFinder.get().stream().map(v -> new ContainersClean.JobSite<CONTAINER>() {
+    private ImmutableList<ContainersClean.JobSite<CONTAINER>> getSupplyRooms() {
+        return supplyRoomsFinder.get().stream().map(v -> new ContainersClean.JobSite<CONTAINER>() {
             @Override
             public ImmutableList<ContainersClean.Block<CONTAINER>> getBlocks() {
                 return v.getContainedBlocks().keySet().stream().map(z -> toBlock.apply(v.getRoom(), z))
@@ -154,7 +148,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
 
             @Override
             public boolean isJobSite() {
-                return false;
+                return isJobSitePredicate.test(v);
             }
         }).collect(ImmutableList.toImmutableList());
     }

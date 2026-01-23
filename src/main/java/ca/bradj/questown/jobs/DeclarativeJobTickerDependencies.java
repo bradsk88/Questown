@@ -45,7 +45,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class DeclarativeJobTickerDependencies implements
-        DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>> {
+        DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra> {
     private final TownInterface town;
     private final DeclarativeJob job;
     private final VisitorMobEntity entity;
@@ -81,6 +81,21 @@ public class DeclarativeJobTickerDependencies implements
                    .stream()
                    .map(v -> new RoomRecipeMatches<>(v.room, v.getRecipeIDs(), v.containedBlocks.entrySet()))
                    .collect(ImmutableList.toImmutableList());
+    }
+
+    @Override
+    public ImmutableList<RoomRecipeMatch<MCRoom>> getRoomsForSupplyCheck() {
+        // Return ALL rooms - same as old behavior with predicate (r) -> true
+        return town.getRoomHandle()
+                   .getMatches(m -> true)
+                   .stream()
+                   .map(v -> new RoomRecipeMatches<>(v.room, v.getRecipeIDs(), v.containedBlocks.entrySet()))
+                   .collect(ImmutableList.toImmutableList());
+    }
+
+    @Override
+    public Predicate<RoomRecipeMatch<MCRoom>> isJobSitePredicate() {
+        return m -> m.getRecipeIDs().contains(job.location().baseRoom());
     }
 
     @Override
@@ -390,6 +405,11 @@ public class DeclarativeJobTickerDependencies implements
     @Override
     public boolean hasInserted(int action) {
         return job.hasInsertedForDeps(action);
+    }
+
+    @Override
+    public MCExtra getExtra() {
+        return new MCExtra(town, getWorkStatusHandle(), entity);
     }
 
     @Override

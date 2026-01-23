@@ -39,7 +39,7 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
         ImmutableList<HELD_ITEM> getHeldItems();
     }
 
-    public interface Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM extends Item<TOWN_ITEM>, ROOM extends Room, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>> extends
+    public interface Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM extends Item<TOWN_ITEM>, ROOM extends Room, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>, EXTRA> extends
             Dependencies2<ROOM, MATCH, POS, HELD_ITEM, TOWN_ITEM>, Dependencies3<RECIPE> {
         WorkStatusHandle<POS, HELD_ITEM> getWorkStatusHandle();
 
@@ -121,6 +121,12 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
                 RoomsNeedingVillagerInput<ROOM, RECIPE, POS> rniot,
                 @Nullable EntityCurrentJobSite<ROOM> entityCurrentJobSite
         );
+
+        /**
+         * Returns the "extra" context object used by AbstractWorldInteraction.
+         * For MC implementations, this is typically MCExtra.
+         */
+        EXTRA getExtra();
     }
 
     private final ImmutableList<String> specialGlobalRules;
@@ -156,7 +162,7 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
     }
 
     public <RECIPE> void tick(
-            Dependencies<POS, RECIPE, HELD_ITEM, ?, ROOM, MATCH> dependencies,
+            Dependencies<POS, RECIPE, HELD_ITEM, ?, ROOM, MATCH, EXTRA> dependencies,
             BiConsumer<String, Object[]> logger
     ) {
         WorkStatusHandle<POS, HELD_ITEM> work = dependencies.getWorkStatusHandle();
@@ -221,7 +227,7 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
     }
 
     private <TOWN_ITEM extends Item<TOWN_ITEM>, RECIPE> void tick(
-            Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH> deps,
+            Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA> deps,
             WorkStatusHandle<POS, HELD_ITEM> work,
             RoomsNeedingVillagerInput<ROOM, RECIPE, POS> rniot2
     ) {
@@ -230,6 +236,8 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
                 (
                         deps::getRoomsWithCompletedProduct,
                         deps::getJobSites,
+                        deps::getRoomsForSupplyCheck,
+                        deps.isJobSitePredicate(),
                         deps::toBlock,
                         work::getJobBlockState,
                         work::getTimeToNextState,
@@ -266,8 +274,9 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
                 0
         );
         JobID jobId = deps.getJobId();
+        EXTRA extra = deps.getExtra();
         logic.tick(
-                null, // EXTRA not used by JLWorld implementation
+                extra,
                 computeState,
                 jobId,
                 entityCurrentJobSite != null,
@@ -289,7 +298,7 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected <RECIPE, TOWN_ITEM extends Item<TOWN_ITEM>> @NotNull Supplier<ProductionStatus> getStateComputer(
-            Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH> deps,
+            Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA> deps,
             JobTownProvider<ROOM> jtp,
             EntityLocStateProvider<ROOM> elp
     ) {
@@ -306,7 +315,7 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected <RECIPE> EntityInvStateProvider<Integer> defaultEntityInvProvider(
-            Dependencies<POS, RECIPE, HELD_ITEM, ?, ROOM, MATCH> deps
+            Dependencies<POS, RECIPE, HELD_ITEM, ?, ROOM, MATCH, EXTRA> deps
     ) {
         return new EntityInvStateProvider<>() {
             @Override
@@ -334,7 +343,7 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
     }
 
     private <RECIPE> EntityCurrentJobSite<ROOM> getEntityCurrentJobSite(
-            Dependencies<POS, RECIPE, ?, ?, ROOM, ?> deps,
+            Dependencies<POS, RECIPE, ?, ?, ROOM, ?, EXTRA> deps,
             RoomsNeedingVillagerInput<ROOM, RECIPE, POS> roomsNeedingVillagerInput
     ) {
         return JobsClean.getEntityCurrentJobSite(

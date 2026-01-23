@@ -124,6 +124,11 @@ public class StatusesProductionRoutineTest {
         public Collection<Room> roomsAtState(Integer state) {
             return List.of();
         }
+
+        @Override
+        public Signals.DayTime getDayTime() {
+            return new Signals.DayTime(0);
+        }
     }
 
     private record TestEntityLoc(
@@ -856,6 +861,11 @@ public class StatusesProductionRoutineTest {
         @Override
         public Collection<Room> roomsAtState(Integer state) {
             return List.of();
+        }
+
+        @Override
+        public Signals.DayTime getDayTime() {
+            return new Signals.DayTime(0);
         }
     }
 
