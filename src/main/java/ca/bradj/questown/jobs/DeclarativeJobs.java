@@ -311,7 +311,8 @@ public class DeclarativeJobs {
                                         ImmutableList.of()
                                 ),
                                 fakePos,
-                                outState.containers
+                                outState.containers,
+                                () -> Util.getDayTime(level)
                         ),
                         DeclarativeJobs.alwaysInRoom(fakeRoom),
                         STATUS_FACTORY,

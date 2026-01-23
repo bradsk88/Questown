@@ -238,7 +238,8 @@ public class MCTownStateWorldInteraction extends
                 town, rules, inputs.level(), (ctx, i, s) -> {
                     Inputs in = new Inputs(ctx, inputs.level(), inputs.vUUID());
                     return tryGiveItems(in, ImmutableList.of(i), position);
-                }, position, insertedItem, () -> {}
+                }, position, insertedItem, () -> {
+                }
         );
     }
 
@@ -251,17 +252,11 @@ public class MCTownStateWorldInteraction extends
             MCHeldItem extractedItem
     ) {
         return PostExtractHook.run(
-                mcTownState,
-                townPos,
-                rules,
-                inputs.level(),
-                position,
-                (ctx, itemData) -> {
+                mcTownState, townPos, rules, inputs.level(), position, (ctx, itemData) -> {
                     CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
                     itemData.forEach(t::putInt);
                     return ctx;
-                },
-                (in, up) -> in
+                }, (in, up) -> in
         );
     }
 
@@ -371,7 +366,8 @@ public class MCTownStateWorldInteraction extends
             @NotNull State workStates,
             RoomRecipeMatch<MCRoom> mcRoom,
             BlockPos roomBlock,
-            @NotNull ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers
+            @NotNull ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers,
+            Supplier<Signals.DayTime> dayTime
     ) {
         return new JobTownProvider<MCRoom>() {
             @Override
@@ -388,6 +384,11 @@ public class MCTownStateWorldInteraction extends
                     return ImmutableList.of(mcRoom.room);
                 }
                 return ImmutableList.of();
+            }
+
+            @Override
+            public Signals.DayTime getDayTime() {
+                return dayTime.get();
             }
 
             @Override
@@ -477,9 +478,7 @@ public class MCTownStateWorldInteraction extends
             public boolean hasSpace() {
                 return containers.stream().anyMatch(v -> !v.isFull());
             }
-        }
-
-                ;
+        };
     }
 
     public EntityInvStateProvider<Integer> asInventory(

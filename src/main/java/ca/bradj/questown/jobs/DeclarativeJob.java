@@ -28,8 +28,6 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.TownInterface;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
-import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -78,7 +76,6 @@ public class DeclarativeJob extends
     public final ImmutableMap<Integer, Ingredient> initialIngredients;
     public final ImmutableMap<Integer, Ingredient> initialTools;
     private final ImmutableMap<Integer, Integer> initialWork;
-    private Signals signal;
 
     private @Nullable Long lastSupplyTick = null;
     private @Nullable Long secondLastSupplyTick = null;
@@ -87,7 +84,7 @@ public class DeclarativeJob extends
     private boolean isFirstTick = true;
     @SuppressWarnings("removal")
     private TownInterface.DebugLogger logger = QT.JOB_LOGGER::debug;
-    private final DeclarativeJobTicker<BlockPos, MCHeldItem, MCRoom, RoomRecipeMatch<MCRoom>> ticker;
+    private final DeclarativeJobTicker<BlockPos, MCHeldItem, MCRoom, RoomRecipeMatch<MCRoom>, Void, Void> ticker;
 
     public DeclarativeJob(
             UUID ownerUUID,
@@ -240,7 +237,7 @@ public class DeclarativeJob extends
     private boolean isJobBlock(
             JobBlockTestContext ctx
     ) {
-        return location.isJobBlock().test(ctx.withBlockAlreadyUsed(logic.hasWorkedRecently() || hasInserted(0))
+        return location.isJobBlock().test(ctx.withBlockAlreadyUsed(ticker.hasWorkedRecently() || hasInserted(0))
                                              .withJobAlreadyStarted(true));
     }
 
@@ -263,7 +260,7 @@ public class DeclarativeJob extends
         if (DowntimeWork.matches(jobId) && isCloseToJobSite(position) && !hasTargetOverrideChanged(town)) {
             return true;
         }
-        return this.logic.hasWorkedRecently();
+        return this.ticker.hasWorkedRecently();
     }
 
     @NotNull
@@ -688,11 +685,11 @@ public class DeclarativeJob extends
     }
 
     @Override
-    public Signals getSignal() {
+    public Signals getSignal(Signals.DayTime dayTime) {
         if (specialGlobalRules.contains(SpecialRules.WORK_IN_EVENING)) {
             return Signals.NOON;
         }
-        return signal;
+        return Signals.fromDayTime(dayTime);
     }
 
     @Override
@@ -726,7 +723,7 @@ public class DeclarativeJob extends
 
     @Override
     protected @Nullable WorkPosition<BlockPos> findProductionSpot(ServerLevel sl) {
-        return logic.workSpot();
+        return ticker.workSpot();
     }
 
     @Override
@@ -842,8 +839,67 @@ public class DeclarativeJob extends
         return location;
     }
 
+    public ExpirationRules getExpiration() {
+        return expiration;
+    }
+
+    public int getWorkInterval() {
+        return workInterval;
+    }
+
+    public RealtimeWorldInteraction getWorld() {
+        return world;
+    }
+
     public DeclarativeJobChecks<MCExtra, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> getChecks() {
         return checks;
+    }
+
+    // Package-accessible delegates for DeclarativeJobTickerDependencies
+
+    ProductionJournal<MCTownItem, MCHeldItem> getJournal() {
+        return journal;
+    }
+
+    // getRecipe is already defined as protected - no need for duplicate
+
+    Map<Integer, SupplyItemStatus> getSupplyItemStatusForDeps() {
+        return this.getSupplyItemStatus();
+    }
+
+    boolean tryDropLootForDeps(long tick, BlockPos entityBlockPos) {
+        return super.tryDropLoot(tick, entityBlockPos);
+    }
+
+    void tryGetSuppliesForDeps(
+            TownInterface town,
+            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingInput,
+            BlockPos entityBlockPos,
+            long currentTick
+    ) {
+        this.tryGetSupplies(town, roomsNeedingInput, entityBlockPos, currentTick);
+    }
+
+    boolean isValidWalkTargetForDeps(TownInterface town, BlockPos bp) {
+        return super.isValidWalkTarget(town, bp);
+    }
+
+    void setLookTargetForDeps(BlockPos position) {
+        super.setLookTarget(position);
+    }
+
+    // isJobBlock is already defined as protected - no need for duplicate
+
+    @Nullable ContainerTarget<MCContainer, MCTownItem> getSuccessTargetForDeps() {
+        return successTarget;
+    }
+
+    RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> getRoomsNeedingInputForDeps() {
+        return roomsNeedingIngredientsOrTools;
+    }
+
+    boolean hasInsertedForDeps(int action) {
+        return hasInserted(action);
     }
 
     @Override
@@ -907,5 +963,20 @@ public class DeclarativeJob extends
 
     public void cacheRoomsNeedingIngredientsOrTools(RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> rniot2) {
         this.roomsNeedingIngredientsOrTools = rniot2;
+    }
+
+    /**
+     * Override this method to provide a custom status computation for special jobs.
+     * Return null to use the default status computation logic.
+     *
+     * @param town The town interface
+     * @param statusFactory The status factory for creating statuses
+     * @return A ProductionStatus to override the default, or null for default behavior
+     */
+    protected @Nullable ProductionStatus getComputeStatusOverrideForSpecialJobs(
+            TownInterface town,
+            IProductionStatusFactory<ProductionStatus> statusFactory
+    ) {
+        return null; // Default: use standard status computation
     }
 }

@@ -43,7 +43,8 @@ public class Util {
     }
 
     public static Signals.DayTime getDayTime(Level serverLevel) {
-        return new Signals.DayTime(serverLevel.getDayTime() % 24000);
+        long dayTime = serverLevel.getDayTime();
+        return UtilClean.getDayTime(dayTime);
     }
 
     public static <X> ImmutableMap<Integer, Supplier<X>> constant(ImmutableMap<Integer, X> constant) {

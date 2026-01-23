@@ -1,5 +1,6 @@
 package ca.bradj.questown.core;
 
+import ca.bradj.questown.jobs.Signals;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -332,5 +333,9 @@ public class UtilClean {
             return null;
         }
         return fn.apply(input);
+    }
+
+    public static Signals.DayTime getDayTime(long dayTime) {
+        return new Signals.DayTime(dayTime % 24000);
     }
 }

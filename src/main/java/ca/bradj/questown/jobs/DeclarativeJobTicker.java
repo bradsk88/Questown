@@ -2,10 +2,12 @@ package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
+import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
-import ca.bradj.questown.jobs.production.ProductionJob;
+import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.jobs.ItemsHolder;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
@@ -13,7 +15,6 @@ import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
-import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
@@ -22,6 +23,7 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
@@ -74,6 +76,51 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
                 POS blockPosition,
                 ROOM room
         );
+
+        // Job identity and configuration
+        JobID getJobId();
+
+        ExpirationRules getExpiration();
+
+        int getWorkInterval();
+
+        int getWorkedRecentlyTicks();
+
+        // Entity and owner
+        UUID getOwnerUUID();
+
+        // State providers
+        boolean isInventoryEmpty();
+
+        @Nullable Integer getWorkForStep(int step);
+
+        ImmutableList<String> getSpecialGlobalRules();
+
+        boolean isLogicWrappingUp();
+
+        // World interaction
+        AbstractWorldInteraction<?, POS, ?, ?, ?> getWorldInteraction();
+
+        @Nullable ContainerTarget<?, ?> getSuccessTarget();
+
+        @Nullable EntityCurrentJobSite<ROOM> getEntityCurrentJobSite(
+                RoomsNeedingVillagerInput<ROOM, ?, POS> rniot
+        );
+
+        <X> RoomsNeedingVillagerInput<ROOM, X, POS> getCachedRoomsNeedingInput();
+
+        ImmutableList<? extends Predicate<?>> getRecipe(Integer state);
+
+        Map<Integer, SupplyItemStatus> getSupplyItemStatus();
+
+        boolean prioritizesExtraction();
+
+        boolean hasInserted(int action);
+
+        <RECIPE> DeclarativeLogicWorld.WorldDeps<POS, HELD_ITEM, ROOM> createWorldDependencies(
+                RoomsNeedingVillagerInput<ROOM, RECIPE, POS> rniot,
+                @Nullable EntityCurrentJobSite<ROOM> entityCurrentJobSite
+        );
     }
 
     private final ImmutableList<String> specialGlobalRules;
@@ -92,6 +139,20 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
         this.location = location;
         this.maxState = maxState;
         this.logic = new JobLogic<>();
+    }
+
+    // Expose logic state for DeclarativeJob
+
+    public boolean hasWorkedRecently() {
+        return logic.hasWorkedRecently();
+    }
+
+    public @Nullable WorkPosition<POS> workSpot() {
+        return logic.workSpot();
+    }
+
+    public boolean isWrappingUp() {
+        return logic.isWrappingUp();
     }
 
     public <RECIPE> void tick(
@@ -159,17 +220,9 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
         return (RoomsNeedingVillagerInput<ROOM, Y, POS>) rn;
     }
 
-    // TODO: Abstract parameters to remove MC dependencies
-//    @Override
     private <TOWN_ITEM extends Item<TOWN_ITEM>, RECIPE> void tick(
             Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH> deps,
-            EXTRA extra,
             WorkStatusHandle<POS, HELD_ITEM> work,
-//            LivingEntity entity,
-//            Direction facingPos,
-//            // Change this to a supplier whose value is cached for one tick
-//            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
-//            IProductionStatusFactory<ProductionStatus> statusFactory
             RoomsNeedingVillagerInput<ROOM, RECIPE, POS> rniot2
     ) {
         JobTownProvider<ROOM> jtp = new TickTownProvider
@@ -188,9 +241,10 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
                         deps::stringify,
                         maxState,
                         deps::convert,
-                        deps::hasSpace
+                        deps::hasSpace,
+                        deps::getDayTime
                 );
-//
+
         EntityCurrentJobSite<ROOM> entityCurrentJobSite = getEntityCurrentJobSite(deps, rniot2);
 
         EntityLocStateProvider<ROOM> elp = new EntityLocStateProvider<>() {
@@ -204,7 +258,6 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
         };
 
         Supplier<ProductionStatus> computeState = getStateComputer(deps, jtp, elp);
-        Signals signal = Signals.fromDayTime(deps.getDayTime());
         WorkPosition<POS> workSpot = deps.getWorkSpot();
         POS bp = UtilClean.orNull(workSpot, WorkPosition::jobBlock);
         int action = bp == null ? 0 : Util.withFallbackForNullInput(
@@ -212,82 +265,70 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
                 State::processingState,
                 0
         );
+        JobID jobId = deps.getJobId();
         logic.tick(
-                extra,
+                null, // EXTRA not used by JLWorld implementation
                 computeState,
                 jobId,
                 entityCurrentJobSite != null,
                 WorkSeekerJob.isSeekingWork(jobId),
-                workSpot != null && hasInserted(action),
-                !inventory.isEmpty(),
-                expiration,
-                new JobLogic.JobDetails(maxState, checks.getWorkForStep(0), workInterval),
-                new DeclarativeLogicWorld<>(town),
-//                this.asLogicWorld(
-//                        extra,
-//                        work,
-//                        (VisitorMobEntity) entity,
-//                        entityCurrentJobSite,
-//                        roomsNeedingIngredientsOrTools
-//                ),
-                (tuwn, bpp) -> Util.withFallbackForNullInput(
-                        getWorkStatusHandle(extra.town()).getJobBlockState(bpp),
+                workSpot != null && deps.hasInserted(action),
+                !deps.isInventoryEmpty(),
+                deps.getExpiration(),
+                new JobLogic.JobDetails(maxState, deps.getWorkForStep(0), deps.getWorkInterval()),
+                (JobLogic.JLWorld<EXTRA, TOWN, POS>) (Object) new DeclarativeLogicWorld<POS, HELD_ITEM, ROOM>(deps.createWorldDependencies(rniot2, entityCurrentJobSite)),
+                (unused, bpp) -> Util.withFallbackForNullInput(
+                        work.getJobBlockState((POS) bpp),
                         State::processingState,
                         0
                 ),
-                Config.WORKED_RECENTLY_TICKS.get().intValue()
+                deps.getWorkedRecentlyTicks()
         );
     }
 
 
-    protected @NotNull Supplier<ProductionStatus> getStateComputer(
-            Dependencies3<?> dep,
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    protected <RECIPE, TOWN_ITEM extends Item<TOWN_ITEM>> @NotNull Supplier<ProductionStatus> getStateComputer(
+            Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH> deps,
             JobTownProvider<ROOM> jtp,
             EntityLocStateProvider<ROOM> elp
     ) {
         return () -> {
-
-//            if (FetcherHack.isFetcher(jobId)) {
-//                ProductionStatus s = FetcherHack.computeStatus(town, journal.getItems());
-//                if (s != null) {
-//                    journal.changeStatus(s);
-//                    return s;
-//                }
-//            }
-
-            ProductionStatus s = dep.getComputeStatusOverrideForSpecialJobs();
+            ProductionStatus s = deps.getComputeStatusOverrideForSpecialJobs();
             if (s != null) {
                 return s;
             }
-            ProductionJournal<?, ?> journal = dep.getJournal();
-            journal.tryUpdateStatus(jtp, elp, defaultEntityInvProvider(), ProductionStatus.FACTORY, prioritizesExtraction());
+            ProductionJournal journal = deps.getJournal();
+            journal.tryUpdateStatus((JobTownProvider) jtp, (EntityLocStateProvider) elp, defaultEntityInvProvider(deps), DeclarativeJobs.STATUS_FACTORY, deps.prioritizesExtraction());
             return journal.getStatus();
         };
     }
 
-    protected EntityInvStateProvider<Integer> defaultEntityInvProvider() {
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    protected <RECIPE> EntityInvStateProvider<Integer> defaultEntityInvProvider(
+            Dependencies<POS, RECIPE, HELD_ITEM, ?, ROOM, MATCH> deps
+    ) {
         return new EntityInvStateProvider<>() {
             @Override
             public boolean inventoryFull() {
-                return journal.isInventoryFull();
+                return deps.getJournal().isInventoryFull();
             }
 
             @Override
             public boolean hasNonSupplyItems() {
-
+                RoomsNeedingVillagerInput<ROOM, RECIPE, POS> roomsNeedingIngredientsOrTools = deps.getCachedRoomsNeedingInput();
                 Set<Integer> statesToFeed = roomsNeedingIngredientsOrTools.getNonEmptyStates();
                 ImmutableList<Predicate<?>> allFillableRecipes = ImmutableList.copyOf(
                         statesToFeed.stream()
-                                    .flatMap(v -> getRecipe(v)
-                                            .stream())
+                                    .flatMap(v -> deps.getRecipe(v).stream())
                                     .toList()
                 );
-                return Jobs.hasNonSupplyItems(journal, allFillableRecipes);
+                return Jobs.hasNonSupplyItems((ItemsHolder) deps.getJournal(), (ImmutableList) allFillableRecipes);
             }
 
             @Override
             public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
-                return ProductionJob.this.getSupplyItemStatus();
+                return deps.getSupplyItemStatus();
             }
         };
     }

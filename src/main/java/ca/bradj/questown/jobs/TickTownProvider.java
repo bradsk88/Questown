@@ -31,6 +31,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
     private final Function<Integer, PredicateCollection<TOWN_ITEM, TOWN_ITEM>> tools;
     private final BiFunction<ROOM, POS, ContainersClean.Block<CONTAINER>> toBlock;
     private Function<TOWN_ITEM, HELD_ITEM> convert;
+    private final Supplier<Signals.DayTime> dayTime;
     private final Supplier<Boolean> hasSpace;
 
     public <RECIPE> TickTownProvider(
@@ -47,7 +48,8 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
             Function<POS, String> stringify,
             int maxState,
             Function<TOWN_ITEM, HELD_ITEM> convert,
-            Supplier<Boolean> hasSpace
+            Supplier<Boolean> hasSpace,
+            Supplier<Signals.DayTime> dayTime
     ) {
         this.resultsFinder = resultsFinder;
         this.roomsFinder = roomsFinder;
@@ -55,6 +57,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
         this.getTicksLeft = getTicksLeft;
         this.roomsNeedingVillagerInput = roomsNeedingIngredientsOrTools;
         this.convert = convert;
+        this.dayTime = dayTime;
         this.roomsV2 = () -> JobsClean.rooms(
                 roomsNeedingIngredientsOrTools::getMatches,
                 getJobBlockState,
@@ -115,6 +118,11 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
         return roomsNeedingVillagerInput.get().get(state).stream()
                                         .map(RoomsNeedingVillagerInput.NVIRoom::room)
                                         .map(IRoomRecipeMatch::getRoom).toList();
+    }
+
+    @Override
+    public Signals.DayTime getDayTime() {
+        return dayTime.get();
     }
 
     @Override
