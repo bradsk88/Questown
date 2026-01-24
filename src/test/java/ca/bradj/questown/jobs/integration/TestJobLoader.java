@@ -136,7 +136,13 @@ public class TestJobLoader {
 
         return switch (type) {
             case "item" -> result.has("item") ? result.get("item").getAsString() : "minecraft:air";
-            case "biome_loot", "loot", "crafting_table" -> "loot"; // Placeholder for dynamic results
+            case "biome_loot", "loot" -> "loot"; // Placeholder for dynamic results
+            case "crafting_table" -> {
+                JsonArray recipe = result.getAsJsonArray("recipe");
+                String recipeStr = recipe.size() > 0 ? recipe.get(0).getAsString() : "?";
+                String fallback = result.has("fallback") ? result.get("fallback").getAsString() : "unknown";
+                yield "craftedFrom[" + recipeStr + ":" + fallback + "]";
+            }
             default -> "minecraft:air";
         };
     }
