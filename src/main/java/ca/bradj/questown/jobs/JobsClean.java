@@ -230,6 +230,12 @@ public class JobsClean {
     }
 
     // TODO: Test "should not return null if entity is in room with finished product"
+    private static boolean isNearPosition(Position a, Position b, int maxDistance) {
+        int dx = Math.abs(a.x - b.x);
+        int dz = Math.abs(a.z - b.z);
+        return dx <= maxDistance && dz <= maxDistance;
+    }
+
     public static <ROOM extends Room, RECIPE, POS> EntityCurrentJobSite<ROOM> getEntityCurrentJobSite(
             // TODO: Consider y coordinate
             Position entityBlockPos,
@@ -239,7 +245,10 @@ public class JobsClean {
             Predicate<RECIPE> isFarm
     ) {
         for (ROOM room : roomsWithCompletedProduct) {
-            if (InclusiveSpaces.contains(room.getSpaces(), entityBlockPos)) {
+            boolean contains = InclusiveSpaces.contains(room.getSpaces(), entityBlockPos);
+            boolean atDoor = room.getDoorPos().equals(entityBlockPos);
+            boolean nearDoor = isNearPosition(entityBlockPos, room.getDoorPos(), 2);
+            if (contains || atDoor || nearDoor) {
                 return new EntityCurrentJobSite<>(room, false); // TODO: Add a check for farm
             }
         }

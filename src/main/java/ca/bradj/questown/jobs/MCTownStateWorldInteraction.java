@@ -41,6 +41,11 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+/**
+ * NOTE: This class is for TIME WARP functionality only.
+ * It is NOT used for realtime job execution logic.
+ * For realtime job execution, see {@link RealtimeWorldInteraction}, {@link TickTownProvider} and {@link DeclarativeJobTicker}.
+ */
 public class MCTownStateWorldInteraction extends
         AbstractWorldInteraction<MCTownStateWorldInteraction.Inputs, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
 

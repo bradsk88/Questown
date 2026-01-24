@@ -15,7 +15,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class DebugLogArgument implements ArgumentType<String> {
 
-    private static final ImmutableList<String> debugLogIds;
+    public static final ImmutableList<String> debugLogIds;
 
     public static final String AWARENESS_COMPUTE;
     public static final String JOB_POSSIBILITIES_COMPUTE;

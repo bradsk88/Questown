@@ -36,6 +36,9 @@ public class TestTickerDependencies implements
     private RoomsNeedingVillagerInput<Room, String, Position> cachedRoomsNeedingInput;
     // Entity position inside the room (walls are at x=0, z=0; inside starts at x=1, z=1)
     private Position entityPosition = new Position(2, 2);
+    // When true, getJobSites() returns empty to simulate the bug where getMatches()
+    // doesn't find farm rooms (they're in activeFarms, not activeRecipes)
+    private boolean simulateFarmRoomNotFoundBug = false;
 
     public TestTickerDependencies(
             JobDefinition definition,
@@ -43,14 +46,23 @@ public class TestTickerDependencies implements
             TestWorkStatusHandle workStatusHandle,
             TestWorldInteraction worldInteraction
     ) {
+        this(definition, inventory, workStatusHandle, worldInteraction, definition.jobId().rootId());
+    }
+
+    public TestTickerDependencies(
+            JobDefinition definition,
+            ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory,
+            TestWorkStatusHandle workStatusHandle,
+            TestWorldInteraction worldInteraction,
+            String roomRecipeId
+    ) {
         this.definition = definition;
         this.inventory = inventory;
         this.workStatusHandle = workStatusHandle;
         this.worldInteraction = worldInteraction;
 
-        // Create a default room matching the job
-        String baseRoom = definition.jobId().rootId();
-        this.jobSite = TestRoomMatch.defaultRoom(baseRoom);
+        // Create a room with the specified recipe ID
+        this.jobSite = TestRoomMatch.defaultRoom(roomRecipeId);
 
         // Initialize the journal
         this.journal = new TestProductionJournal(
@@ -58,6 +70,15 @@ public class TestTickerDependencies implements
                 inventory.getItems().size()
         );
         journal.initializeStatus(ProductionStatus.FACTORY.idle());
+    }
+
+    /**
+     * Enable simulation of the bug where getJobSites() returns empty for farm rooms.
+     * This happens because TownRoomsHandle.getMatches() doesn't have special handling
+     * for farms like getRoomsMatching() does.
+     */
+    public void setSimulateFarmRoomNotFoundBug(boolean simulate) {
+        this.simulateFarmRoomNotFoundBug = simulate;
     }
 
     // ========== Dependencies2 methods ==========
@@ -79,6 +100,11 @@ public class TestTickerDependencies implements
 
     @Override
     public ImmutableList<TestRoomMatch> getJobSites() {
+        if (simulateFarmRoomNotFoundBug) {
+            // Simulate the bug: getMatches() doesn't find farm rooms because
+            // they're in activeFarms, not activeRecipes
+            return ImmutableList.of();
+        }
         return ImmutableList.of(jobSite);
     }
 
@@ -332,6 +358,10 @@ public class TestTickerDependencies implements
 
     @Override
     public @Nullable EntityCurrentJobSite<Room> getEntityCurrentJobSite(RoomsNeedingVillagerInput<Room, ?, Position> rniot) {
+        if (simulateFarmRoomNotFoundBug) {
+            // Simulate the bug: can't find the job site
+            return null;
+        }
         return new EntityCurrentJobSite<>(jobSite.room, false);
     }
 

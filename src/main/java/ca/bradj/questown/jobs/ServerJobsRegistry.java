@@ -322,6 +322,13 @@ public class ServerJobsRegistry {
         }
         BlockState bs = state;
         Block b = bs.getBlock();
+        // Log dirt/grass blocks specifically to debug farm initialization
+        // TODO[Decup]: Remove
+        if (b == net.minecraft.world.level.block.Blocks.DIRT || b == net.minecraft.world.level.block.Blocks.GRASS_BLOCK) {
+            QT.BLOCK_LOGGER.info("Checking shouldInitializeWithState for tillable block {} at {}. Works has {} jobs.", b, pos, Works.values().size());
+            BlockState above = info.state(pos.above());
+            QT.BLOCK_LOGGER.info("Block above: {} (isAir: {})", above.getBlock(), above.isAir());
+        }
         JobID a = new JobID("temporary", "temporary"); // TODO: Add a way to get the jobBlockTest without an ID
         for (SpecialJob sj : specialJobs) {
             if (sj.shouldInit.test(a, () -> bs, new Pair<>(info, pos))) {
@@ -331,7 +338,14 @@ public class ServerJobsRegistry {
         boolean isWorkMatch = Works
                 .values()
                 .stream()
-                .anyMatch(v -> v.get().shouldInitializeWorkState.test(info, pos));
+                .anyMatch(v -> {
+                    // TODO[Decup]: Remove
+                    boolean result = v.get().shouldInitializeWorkState.test(info, pos);
+                    if (result) {
+                        QT.BLOCK_LOGGER.info("Block at {} ({}) matches job shouldInitializeWorkState", pos, b);
+                    }
+                    return result;
+                });
 
         // TODO: This might not be needed anymore
         if (Ingredient.of(ItemsInit.PLATE_BLOCK.get()).test(b.asItem().getDefaultInstance())) {

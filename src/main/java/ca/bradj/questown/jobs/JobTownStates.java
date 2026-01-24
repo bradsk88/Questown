@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableMap;
@@ -101,12 +102,12 @@ public class JobTownStates {
                     return cacheGet.value();
                 }
             }
-            return WithReason.always(
-                    Boolean.FALSE,
-                    "No rooms found with workable blocks at states [" +
-                            Strings.join(rooms.keySet().stream().map(Object::toString).toList(), ",") +
-                            "]"
-            );
+            String reason = "No rooms found with workable blocks at states [" +
+                    Strings.join(rooms.keySet().stream().map(Object::toString).toList(), ",") +
+                    "]";
+            // TODO[Decup]: Remove
+            QT.JOB_LOGGER.debug("containsWorkableBlocksAtAnyState returning FALSE: {}", reason);
+            return WithReason.always(Boolean.FALSE, reason);
         }
     }
 }

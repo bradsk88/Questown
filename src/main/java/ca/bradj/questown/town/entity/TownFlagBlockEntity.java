@@ -175,7 +175,24 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     boolean isInitializedQuests = false;
     boolean changed = false;
 
+    /**
+     * Global work status store (used when ownerID is null).
+     * Used by jobs with SHARED_WORK_STATUS special rule.
+     *
+     * IMPORTANT: Global and per-owner stores are INTENTIONALLY SEPARATE and should NOT interact.
+     * They track different work states for different purposes:
+     * - Global store: For shared work where any villager can continue another's work or work simultaneously
+     * - Per-owner stores: For jobs with CLAIM_SPOT rule where work is owned by a specific villager
+     */
     final TownWorkStatusStore jobHandle = new TownWorkStatusStore();
+    /**
+     * Per-owner work status stores (keyed by villager UUID).
+     * Used by jobs with CLAIM_SPOT special rule (which implies owned work states).
+     * Each villager gets their own isolated store so they can claim and work spots independently.
+     *
+     * IMPORTANT: Per-owner stores are INTENTIONALLY SEPARATE from the global store and from each other.
+     * Do NOT copy states between stores - they are meant to be isolated.
+     */
     final Map<UUID, TownWorkStatusStore> jobHandles = new HashMap<>();
 
     final TownWorkHandle workHandle = new TownWorkHandle(subBlocks, getBlockPos());
@@ -711,6 +728,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         jh = new TownWorkStatusStore();
         jobHandles.put(ownerIDOrNullForGlobal, jh);
+        // Initialize the new store immediately so work states are available
+        ServerLevel sl = getServerLevel();
+        if (sl != null) {
+            Collection<MCRoom> allRooms = roomsHandle.getAllRoomsIncludingMetaAndFarms();
+            jh.tick(sl, allRooms, 1);
+        }
         return jh;
     }
 
@@ -856,6 +879,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public void toggleDebugLog(String logId) {
         logToggles.compute(logId, (k, v) -> v == null || !v);
+    }
+    public void setDebugLog(String logId, boolean b) {
+        logToggles.put(logId, b);
     }
 
     @Override

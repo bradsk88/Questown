@@ -252,15 +252,19 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
                         deps::getDayTime
                 );
 
+        // Compute entityCurrentJobSite for uses that need a snapshot (e.g., logic.tick parameters)
         EntityCurrentJobSite<ROOM> entityCurrentJobSite = getEntityCurrentJobSite(deps, rniot2);
 
+        // Make EntityLocStateProvider compute the job site lazily on each call.
+        // This ensures roomsWithCompletedProduct is fresh when status is computed.
         EntityLocStateProvider<ROOM> elp = new EntityLocStateProvider<>() {
             @Override
             public @Nullable ROOM getEntityCurrentJobSite() {
-                if (entityCurrentJobSite == null) {
+                EntityCurrentJobSite<ROOM> current = DeclarativeJobTicker.this.getEntityCurrentJobSite(deps, rniot2);
+                if (current == null) {
                     return null;
                 }
-                return entityCurrentJobSite.room();
+                return current.room();
             }
         };
 

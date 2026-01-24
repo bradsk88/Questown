@@ -15,7 +15,9 @@
   "room": "questown:special_quest.farm",
   "work_states": [
     {
-      "tools": "#minecraft:saplings",
+      "tools": "#minecraft:saplings"
+    },
+    {
       "work": 3
     },
     {

@@ -182,6 +182,46 @@ class JobsCleanTest {
         Assertions.assertNull(site);
     }
 
+    /**
+     * Regression test: When a villager finishes work at a crafting table, they may step
+     * outside the room boundaries while the job site block is at maxState (completed product).
+     * The villager should still be considered "at" the job site for extraction purposes
+     * if they're near the room's door (within 2 blocks).
+     *
+     * BUG: Without the fix, the villager gets NO_JOBSITE status and gives up,
+     * never extracting the crafted item.
+     */
+    @Test
+    void getEntityCurrentJobSite_shouldReturnRoom_WhenEntityNearDoorOfRoomWithCompletedProduct() {
+        // Room with door at (0,0) and space from (-1,0) to (1,2)
+        Room roomWithCompletedProduct = arbitaryRoomMatch1.getRoom();
+        Position doorPos = roomWithCompletedProduct.getDoorPos(); // (0, 0)
+
+        // Entity is 2 blocks away from the door (outside the room but nearby)
+        Position entityNearDoor = new Position(doorPos.x + 2, doorPos.z);
+
+        // Verify entity is NOT inside the room (precondition)
+        Assertions.assertFalse(
+                roomWithCompletedProduct.getSpaces().stream()
+                        .anyMatch(space -> ca.bradj.roomrecipes.logic.InclusiveSpaces.contains(
+                                ImmutableList.of(space), entityNearDoor)),
+                "Test precondition: entity should NOT be inside the room"
+        );
+
+        EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
+                entityNearDoor,
+                new RoomsNeedingVillagerInput<>(ImmutableMap.of()),
+                ImmutableList.of(roomWithCompletedProduct), // Room has completed product
+                ONLY_CHECK_XZ_COORDINATES,
+                x -> false
+        );
+
+        // With the fix: entity near door should be considered "at" the job site
+        Assertions.assertNotNull(site,
+                "Entity near door of room with completed product should be considered at job site for extraction");
+        Assertions.assertEquals(roomWithCompletedProduct, site.room());
+    }
+
     @Test
     void getEntityCurrentJobSite_shouldReturnCorrectRoom_WhenRoomWithRequirementsExists_AndNoResultsAvailable_IfEntityInRoom() {
         EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(

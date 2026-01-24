@@ -134,7 +134,14 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             Collection<ROOM> allRooms,
             long ticksSinceLast
     ) {
-        rooms.addAll(allRooms);
+        // Initialize work states for new rooms immediately
+        for (ROOM room : allRooms) {
+            if (!rooms.contains(room)) {
+                rooms.add(room);
+                // Initialize work states for new room right away
+                this.doTick(tickSource, room, ticksSinceLast);
+            }
+        }
 
         if (rooms.isEmpty()) {
             return;
@@ -178,6 +185,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                         }
                 );
 
+        QT.BLOCK_LOGGER.debug("Work status store scanning room: {} with {} spaces", o.getDoorPos(), o.getSpaces().size());
         for (InclusiveSpace s : o.getSpaces()) {
             for (Position p : InclusiveSpaces.getAllEnclosedPositions(s)) {
                 posFactory.apply(o, p).forEach(pp -> {
@@ -190,6 +198,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                     }
                     State def = this.defaultStateFactory.apply(tickSource, pp);
                     if (def != null) {
+                        QT.BLOCK_LOGGER.debug("Initialized work state for block at {}", pp);
                         jobStatuses.put(pp, def);
                     }
 

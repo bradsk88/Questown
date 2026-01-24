@@ -62,11 +62,16 @@ public class DeclarativeJobTickerDependencies implements
 
     @Override
     public ImmutableList<RoomRecipeMatch<MCRoom>> getRoomsWithCompletedProduct() {
-        return ImmutableList.copyOf(job.roomsWithState.get(
+        var isCorrectBlock = DeclarativeJob.isCorrectBlock(town);
+        WorkStatusHandle<BlockPos, MCHeldItem> workHandle = getWorkStatusHandle(town);
+
+        Collection<RoomRecipeMatch<MCRoom>> result = job.roomsWithState.get(
                 job.roomsMatching(town),
-                DeclarativeJob.isCorrectBlock(town),
-                getWorkStatusHandle(town)::getJobBlockState
-        ).stream().map(this::pluralize).toList());
+                isCorrectBlock,
+                workHandle::getJobBlockState
+        );
+
+        return ImmutableList.copyOf(result.stream().map(this::pluralize).toList());
     }
 
     @Override
@@ -76,8 +81,10 @@ public class DeclarativeJobTickerDependencies implements
 
     @Override
     public ImmutableList<RoomRecipeMatch<MCRoom>> getJobSites() {
+        // Use getRoomsMatching() instead of getMatches() because it has
+        // special handling for farms (stored in activeFarms, not activeRecipes)
         return town.getRoomHandle()
-                   .getMatches(m -> m.getRecipeIDs().contains(job.location().baseRoom()))
+                   .getRoomsMatching(job.location().baseRoom())
                    .stream()
                    .map(v -> new RoomRecipeMatches<>(v.room, v.getRecipeIDs(), v.containedBlocks.entrySet()))
                    .collect(ImmutableList.toImmutableList());
@@ -169,6 +176,18 @@ public class DeclarativeJobTickerDependencies implements
         );
     }
 
+    /**
+     * Gets the appropriate work status handle for this job.
+     *
+     * Jobs with SHARED_WORK_STATUS use the global (null owner) store where any villager
+     * can continue work started by another.
+     *
+     * Jobs WITHOUT SHARED_WORK_STATUS (which includes jobs with CLAIM_SPOT) use per-owner
+     * stores where each villager has isolated work states.
+     *
+     * NOTE: Jobs with CLAIM_SPOT implicitly use per-owner stores because claiming a
+     * workspot only makes sense if the work state is isolated to that villager.
+     */
     private WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
         WorkStatusHandle<BlockPos, MCHeldItem> work;
         if (job.specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS)) {

@@ -40,6 +40,12 @@ import java.util.stream.Stream;
 
 import static ca.bradj.questown.mc.Util.info;
 
+/**
+ * NOTE: This class is ONLY used for determining what jobs a villager CAN take on.
+ * It has nothing to do with actual work logic or job execution.
+ * For actual job execution, see {@link DeclarativeJob} and {@link DeclarativeJobTicker}.
+ * For job status computation during execution, see {@link JobStatuses}.
+ */
 public class TownPossibleWork {
 
     private final UnsafeTown town = new UnsafeTown(getClass());
