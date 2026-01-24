@@ -46,8 +46,8 @@ import java.util.function.Supplier;
  * It is NOT used for realtime job execution logic.
  * For realtime job execution, see {@link RealtimeWorldInteraction}, {@link TickTownProvider} and {@link DeclarativeJobTicker}.
  */
-public class MCTownStateWorldInteraction extends
-        AbstractWorldInteraction<MCTownStateWorldInteraction.Inputs, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
+public class TimeWarpWorldInteraction extends
+        AbstractWorldInteraction<TimeWarpWorldInteraction.Inputs, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
 
     private final BlockPos townPos;
 
@@ -56,7 +56,7 @@ public class MCTownStateWorldInteraction extends
 
     private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
 
-    public MCTownStateWorldInteraction(
+    public TimeWarpWorldInteraction(
             BlockPos townPos,
             JobID jobId,
             int villagerIndex,
@@ -64,7 +64,7 @@ public class MCTownStateWorldInteraction extends
             int maxState,
             DeclarativeJobChecks<Inputs, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> checks,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
-            Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots,
+            Function<TimeWarpWorldInteraction.Inputs, Claim> claimSpots,
             Map<ProductionStatus, Collection<String>> specialRules
     ) {
         super(jobId, villagerIndex, interval, maxState, checks, claimSpots, specialRules);

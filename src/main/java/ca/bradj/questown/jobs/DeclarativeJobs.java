@@ -1,26 +1,18 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.core.Pair;
-import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.declarative.ProductionJournal;
-import ca.bradj.questown.jobs.declarative.WithReason;
-import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
-import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.Warper;
-import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
-import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -211,7 +203,7 @@ public class DeclarativeJobs {
 //        );
 //    }
 
-    private record HandlerInputs(MCTownStateWorldInteraction wi, MCTownStateWorldInteraction.Inputs inState,
+    private record HandlerInputs(TimeWarpWorldInteraction wi, TimeWarpWorldInteraction.Inputs inState,
                                  ProductionStatus status, State workBlockState, Integer maxState, BlockPos fakePos) {
     }
 
@@ -257,7 +249,7 @@ public class DeclarativeJobs {
     }
 
     public static Warper<ServerLevel, MCTownState> warper(
-            MCTownStateWorldInteraction wi,
+            TimeWarpWorldInteraction wi,
             int maxState,
             boolean prioritizeExtraction
     ) {
@@ -292,7 +284,7 @@ public class DeclarativeJobs {
 
                 final State ztate = outState.workStates.get(fakePos);
 
-                final MCTownStateWorldInteraction.Inputs fState = new MCTownStateWorldInteraction.Inputs(
+                final TimeWarpWorldInteraction.Inputs fState = new TimeWarpWorldInteraction.Inputs(
                         outState,
                         level,
                         inState.getVillager(villagerNum).uuid

@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class WorksBehaviour {
 
@@ -40,13 +39,13 @@ public class WorksBehaviour {
             JobID id,
             WarpInput warpInput,
             boolean prioritizeExtraction,
-            Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots,
+            Function<TimeWarpWorldInteraction.Inputs, Claim> claimSpots,
             int pauseForAction,
             WorkStates states,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Map<ProductionStatus, Collection<String>> specialRules
     ) {
-        MCTownStateWorldInteraction wi = new MCTownStateWorldInteraction(
+        TimeWarpWorldInteraction wi = new TimeWarpWorldInteraction(
                 townPos,
                 id,
                 warpInput.villagerIndex(),
@@ -60,7 +59,7 @@ public class WorksBehaviour {
         return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction);
     }
 
-    private static DeclarativeJobChecks<MCTownStateWorldInteraction.Inputs, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> fromStates(WorkStates states) {
+    private static DeclarativeJobChecks<TimeWarpWorldInteraction.Inputs, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> fromStates(WorkStates states) {
         return new DeclarativeJobChecks<>(
                 Jobs.unMCHeld3(states.ingredientsRequired()),
                 states.ingredientQtyRequired(),
