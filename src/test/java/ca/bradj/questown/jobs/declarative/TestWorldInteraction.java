@@ -9,6 +9,7 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -89,6 +90,34 @@ public class TestWorldInteraction extends
             ImmutableWorkStateContainer<Position, Boolean> workStatuses,
             Supplier<Claim> claim
     ) {
+        this(
+                maxState,
+                toolsRequiredAtStates,
+                workRequiredAtStates,
+                ingredientsRequiredAtStates,
+                ingredientQuantityRequiredAtStates,
+                timeRequiredAtStates,
+                ImmutableList.of(),
+                inventory,
+                workStatuses,
+                claim,
+                ImmutableMap.of()
+        );
+    }
+
+    public TestWorldInteraction(
+            int maxState,
+            ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> toolsRequiredAtStates,
+            ImmutableMap<Integer, Integer> workRequiredAtStates,
+            ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> ingredientsRequiredAtStates,
+            ImmutableMap<Integer, Integer> ingredientQuantityRequiredAtStates,
+            ImmutableMap<Integer, Integer> timeRequiredAtStates,
+            Iterable<GathererJournalTest.TestItem> results,
+            ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory,
+            ImmutableWorkStateContainer<Position, Boolean> workStatuses,
+            Supplier<Claim> claim,
+            ImmutableMap<Integer, Collection<String>> specialRulesPerState
+    ) {
         super(
                 new JobID("test", "test"),
                 -1, // Not used
@@ -104,10 +133,21 @@ public class TestWorldInteraction extends
                         block -> true
                 ),
                 (v) -> claim.get(),
-                ImmutableMap.of()
+                convertToProductionStatusKeys(specialRulesPerState)
         );
         this.workStatuses = workStatuses;
         this.inventory = inventory;
+        this.results = results;
+    }
+
+    private static ImmutableMap<ProductionStatus, Collection<String>> convertToProductionStatusKeys(
+            ImmutableMap<Integer, Collection<String>> specialRulesPerState
+    ) {
+        ImmutableMap.Builder<ProductionStatus, Collection<String>> b = ImmutableMap.builder();
+        specialRulesPerState.forEach((state, rules) ->
+                b.put(ProductionStatus.fromJobBlockStatus(state), rules)
+        );
+        return b.build();
     }
 
     public static TestWorldInteraction forDefinition(
@@ -115,6 +155,16 @@ public class TestWorldInteraction extends
             ValidatedInventoryHandle<GathererJournalTest.TestItem> inv,
             ImmutableWorkStateContainer<Position, Boolean> workStatuses,
             Supplier<Claim> claims
+    ) {
+        return forDefinition(d, inv, workStatuses, claims, ImmutableMap.of());
+    }
+
+    public static TestWorldInteraction forDefinition(
+            JobDefinition d,
+            ValidatedInventoryHandle<GathererJournalTest.TestItem> inv,
+            ImmutableWorkStateContainer<Position, Boolean> workStatuses,
+            Supplier<Claim> claims,
+            ImmutableMap<Integer, Collection<String>> specialRulesPerState
     ) {
         return new TestWorldInteraction(
                 d.maxState(),
@@ -124,8 +174,8 @@ public class TestWorldInteraction extends
                 d.ingredientQtyRequiredAtStates(),
                 d.timeRequiredAtStates(),
                 ImmutableList.of(new GathererJournalTest.TestItem(d.result())),
-                inv, workStatuses, claims
-
+                inv, workStatuses, claims,
+                specialRulesPerState
         );
     }
 

@@ -338,4 +338,11 @@ public class UtilClean {
     public static Signals.DayTime getDayTime(long dayTime) {
         return new Signals.DayTime(dayTime % 24000);
     }
+
+    public static <W, X> ImmutableList<X> getOrEmptyImmutable(
+            ImmutableMap<W, Collection<X>> map,
+            W key
+    ) {
+        return getOrDefaultCollection(map, key, ImmutableList.of());
+    }
 }

@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.integration;
 
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.TestWorldInteraction;
 import ca.bradj.questown.jobs.declarative.ValidatedInventoryHandle;
@@ -12,8 +13,6 @@ import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import java.util.Collection;
 
 /**
  * Integration tests that load real JSON job definitions and verify jobs complete correctly.
@@ -43,7 +42,8 @@ class JobIntegrationTest {
     private record TickerSetup(
             DeclarativeJobTicker<Position, GathererJournalTest.TestItem, Room, TestRoomMatch, Void, Void, String> ticker,
             TestTickerDependencies deps,
-            ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory
+            ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory,
+            TestWorldInteraction worldInteraction
     ) {}
 
     private TickerSetup createTicker(JobDefinition definition) {
@@ -60,7 +60,8 @@ class JobIntegrationTest {
                 definition,
                 inventory,
                 workStatusHandle,
-                () -> null
+                () -> null,
+                definition.specialRulesAtStates()
         );
 
         TestTickerDependencies deps = new TestTickerDependencies(
@@ -70,20 +71,16 @@ class JobIntegrationTest {
                 worldInteraction
         );
 
-        return new TickerSetup(newTicker(definition), deps, inventory);
+        return new TickerSetup(newTicker(definition), deps, inventory, worldInteraction);
     }
 
     private static @NotNull DeclarativeJobTicker<Position, GathererJournalTest.TestItem, Room, TestRoomMatch, Void, Void, String> newTicker(JobDefinition definition) {
-        ImmutableList<String> specialGlobalRules = ImmutableList.of();
-        ImmutableMap<Object, Collection<String>> specialRules = ImmutableMap.of();
-        DeclarativeJobTicker<Position, GathererJournalTest.TestItem, Room, TestRoomMatch, Void, Void, String> ticker =
-                new DeclarativeJobTicker<>(
-                        specialGlobalRules,
-                        specialRules,
-                        definition.jobId().rootId(),
-                        definition.maxState()
-                );
-        return ticker;
+        return new DeclarativeJobTicker<>(
+                ImmutableList.of(),  // specialGlobalRules
+                ImmutableMap.of(),   // specialRules
+                definition.jobId().rootId(),
+                definition.maxState()
+        );
     }
 
     // ========== JSON Loader Tests ==========
@@ -120,7 +117,7 @@ class JobIntegrationTest {
         Assertions.assertEquals(new JobID("baker", "stock_wheat"), definition.jobId());
         Assertions.assertEquals(2, definition.maxState());
         Assertions.assertEquals("minecraft:wheat", definition.toolsRequiredAtStates().get(0));
-        Assertions.assertEquals(Integer.valueOf(10), definition.workRequiredAtStates().get(0));
+        Assertions.assertEquals(Integer.valueOf(1), definition.workRequiredAtStates().get(0));
         Assertions.assertEquals("minecraft:wheat", definition.ingredientsRequiredAtStates().get(1));
         Assertions.assertEquals("minecraft:air", definition.result()); // Stocking job, no product
     }
@@ -132,7 +129,7 @@ class JobIntegrationTest {
         Assertions.assertEquals(new JobID("baker", "stock_coal"), definition.jobId());
         Assertions.assertEquals(2, definition.maxState());
         Assertions.assertEquals("#minecraft:coals", definition.toolsRequiredAtStates().get(0));
-        Assertions.assertEquals(Integer.valueOf(10), definition.workRequiredAtStates().get(0));
+        Assertions.assertEquals(Integer.valueOf(1), definition.workRequiredAtStates().get(0));
         Assertions.assertEquals("#minecraft:coals", definition.ingredientsRequiredAtStates().get(1));
         Assertions.assertEquals("minecraft:air", definition.result()); // Stocking job, no product
     }
@@ -330,10 +327,10 @@ class JobIntegrationTest {
         JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "arborist_plant_tree.json");
 
         Assertions.assertEquals(new JobID("arborist", "plant_sapling"), definition.jobId());
-        Assertions.assertEquals(2, definition.maxState());
+        Assertions.assertEquals(3, definition.maxState());
         Assertions.assertEquals("#minecraft:saplings", definition.toolsRequiredAtStates().get(0));
-        Assertions.assertEquals(Integer.valueOf(3), definition.workRequiredAtStates().get(0));
-        Assertions.assertEquals("#minecraft:saplings", definition.ingredientsRequiredAtStates().get(1));
+        Assertions.assertEquals(Integer.valueOf(3), definition.workRequiredAtStates().get(1));
+        Assertions.assertEquals("#minecraft:saplings", definition.ingredientsRequiredAtStates().get(2));
         Assertions.assertEquals("minecraft:air", definition.result());
     }
 
@@ -763,6 +760,89 @@ class JobIntegrationTest {
         boolean hasFishingStation = setup.inventory.getItems().stream()
                 .anyMatch(item -> item.value.equals("questown:fishing_station"));
         Assertions.assertTrue(hasFishingStation, "Should have fishing station. Got: " + setup.inventory.getItems());
+    }
+
+    // ========== Baker Stocking Job Ticker Tests ==========
+
+    /**
+     * Integration test for baker_stock_wheat job.
+     *
+     * Job flow:
+     * - State 0: Need tools (wheat) - checks inventory for wheat, do work
+     * - State 1: Need ingredients (wheat) - inserts wheat into target block
+     * - Result: minecraft:air (nothing produced)
+     *
+     * From Questown's perspective, the item is "inserted" into the job block.
+     * The add_item_to_container special rule causes MC to put the item in a chest.
+     */
+    @Test
+    void declarativeJobTicker_baker_stock_wheat_shouldCompleteJob() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_stock_wheat.json");
+
+        // Verify job is configured to insert into container at state 1
+        Assertions.assertTrue(
+                UtilClean.getOrEmptyImmutable(definition.specialRulesAtStates(), 1).contains("add_item_to_container"),
+                "Stocking job should have add_item_to_container rule at state 1"
+        );
+
+        TickerSetup setup = createTicker(definition);
+
+        // Give the villager wheat (used as both tool check and ingredient)
+        setup.inventory.set(0, new GathererJournalTest.TestItem("minecraft:wheat"));
+
+        runTicks(setup.deps, setup.ticker, 2);
+
+        // Verify wheat was consumed from inventory (ingredient was "inserted" into job block)
+        boolean hasWheat = setup.inventory.getItems().stream()
+                .anyMatch(item -> item.value.equals("minecraft:wheat"));
+        Assertions.assertFalse(hasWheat, "Wheat should be consumed. Got: " + setup.inventory.getItems());
+
+        // Verify item was "inserted" (from Questown's perspective)
+        Assertions.assertTrue(
+                setup.worldInteraction.timesInserted(null) > 0,
+                "Stocking job should have inserted the item"
+        );
+    }
+
+    /**
+     * Integration test for baker_stock_coal job.
+     *
+     * Job flow:
+     * - State 0: Need tools (coal) - checks inventory for coal, do work
+     * - State 1: Need ingredients (coal) - inserts coal into target block
+     * - Result: minecraft:air (nothing produced)
+     *
+     * From Questown's perspective, the item is "inserted" into the job block.
+     * The add_item_to_container special rule causes MC to put the item in a chest.
+     */
+    @Test
+    void declarativeJobTicker_baker_stock_coal_shouldCompleteJob() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_stock_coal.json");
+
+        // Verify job is configured to insert into container at state 1
+        Assertions.assertTrue(
+                UtilClean.getOrEmptyImmutable(definition.specialRulesAtStates(), 1).contains("add_item_to_container"),
+                "Stocking job should have add_item_to_container rule at state 1"
+        );
+
+        TickerSetup setup = createTicker(definition);
+
+        // Give the villager coal (used as both tool check and ingredient)
+        // Using the tag format since job uses #minecraft:coals
+        setup.inventory.set(0, new GathererJournalTest.TestItem("#minecraft:coals"));
+
+        runTicks(setup.deps, setup.ticker, 2);
+
+        // Verify coal was consumed from inventory (ingredient was "inserted" into job block)
+        boolean hasCoal = setup.inventory.getItems().stream()
+                .anyMatch(item -> item.value.equals("#minecraft:coals"));
+        Assertions.assertFalse(hasCoal, "Coal should be consumed. Got: " + setup.inventory.getItems());
+
+        // Verify item was "inserted" (from Questown's perspective)
+        Assertions.assertTrue(
+                setup.worldInteraction.timesInserted(null) > 0,
+                "Stocking job should have inserted the item"
+        );
     }
 
     // TODO: baker_bread ticker test needs special handling for time-based jobs

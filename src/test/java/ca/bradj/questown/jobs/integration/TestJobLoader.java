@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.integration;
 
 import ca.bradj.questown.jobs.JobDefinition;
 import ca.bradj.questown.jobs.JobID;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -12,6 +13,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * MC-free JSON parser that creates JobDefinition from questown_jobs JSON files.
@@ -85,6 +89,30 @@ public class TestJobLoader {
 
         String result = getResultItem(obj);
 
+        // Parse special rules
+        ImmutableList.Builder<String> globalRules = ImmutableList.builder();
+        ImmutableMap.Builder<Integer, Collection<String>> stateRules = ImmutableMap.builder();
+
+        if (obj.has("special")) {
+            JsonArray specialArray = obj.getAsJsonArray("special");
+            for (JsonElement elem : specialArray) {
+                JsonObject special = elem.getAsJsonObject();
+                String type = special.get("type").getAsString();
+                JsonArray rulesArray = special.getAsJsonArray("rules");
+                List<String> rules = new ArrayList<>();
+                for (JsonElement rule : rulesArray) {
+                    rules.add(rule.getAsString());
+                }
+
+                if ("global".equals(type)) {
+                    globalRules.addAll(rules);
+                } else if ("processing_state".equals(type)) {
+                    int state = special.get("state").getAsInt();
+                    stateRules.put(state, ImmutableList.copyOf(rules));
+                }
+            }
+        }
+
         return new JobDefinition(
                 jobId,
                 maxState,
@@ -93,7 +121,9 @@ public class TestJobLoader {
                 tools.build(),
                 work.build(),
                 time.build(),
-                result
+                result,
+                globalRules.build(),
+                stateRules.build()
         );
     }
 

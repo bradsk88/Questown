@@ -1,6 +1,9 @@
 package ca.bradj.questown.jobs;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+
+import java.util.Collection;
 
 public record JobDefinition(
         JobID jobId,
@@ -10,7 +13,8 @@ public record JobDefinition(
         ImmutableMap<Integer, String> toolsRequiredAtStates,
         ImmutableMap<Integer, Integer> workRequiredAtStates,
         ImmutableMap<Integer, Integer> timeRequiredAtStates,
-        String result
-
+        String result,
+        ImmutableList<String> globalSpecialRules,
+        ImmutableMap<Integer, Collection<String>> specialRulesAtStates
 ) {
 }

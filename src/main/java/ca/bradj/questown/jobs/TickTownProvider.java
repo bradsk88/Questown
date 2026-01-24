@@ -96,7 +96,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
 
     @Override
     public boolean isUnfinishedTimeWorkPresent() {
-        return JobsClean.isUnfinishedTimeWorkPresent(resultsFinder, getTicksLeft);
+        return JobsClean.isUnfinishedTimeWorkPresent(roomsFinder, getTicksLeft);
     }
 
     @Override
