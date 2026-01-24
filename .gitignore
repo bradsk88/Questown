@@ -6,3 +6,5 @@ bin
 /mcmodsrepo/ca/bradj/questown/Questown/
 out
 logs
+# Claude Code project config (versioned separately)
+.claude/
