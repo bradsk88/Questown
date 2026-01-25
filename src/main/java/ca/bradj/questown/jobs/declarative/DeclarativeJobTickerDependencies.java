@@ -1,4 +1,4 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.commands.DebugLogArgument;
@@ -9,7 +9,7 @@ import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.declarative.*;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
@@ -17,8 +17,9 @@ import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.TownContainers;
-import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.town.workstatus.State;
@@ -46,13 +47,13 @@ import java.util.function.Supplier;
 
 public class DeclarativeJobTickerDependencies implements
         DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra, WorkLocation> {
-    private final TownInterface town;
+    private final TownFlagBlockEntity town;
     private final DeclarativeJob job;
     private final VisitorMobEntity entity;
 
     public DeclarativeJobTickerDependencies(
             DeclarativeJob declarativeJob,
-            TownInterface town,
+            TownFlagBlockEntity town,
             VisitorMobEntity vme
     ) {
         this.town = town;
@@ -188,19 +189,19 @@ public class DeclarativeJobTickerDependencies implements
      * NOTE: Jobs with CLAIM_SPOT implicitly use per-owner stores because claiming a
      * workspot only makes sense if the work state is isolated to that villager.
      */
-    private WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
-        WorkStatusHandle<BlockPos, MCHeldItem> work;
+    private AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> getWorkStatusHandle(TownFlagBlockEntity town) {
+        AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> work;
         if (job.specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS)) {
-            work = town.getWorkStatusHandle(null);
+            work = town.getRealWorkStatusHandle(null);
         } else {
-            work = town.getWorkStatusHandle(job.getOwnerUUID());
+            work = town.getRealWorkStatusHandle(job.getOwnerUUID());
         }
         return work;
     }
 
     @Override
-    public WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle() {
-        return getWorkStatusHandle(town);
+    public AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> getWorkStatusHandle() {
+            return getWorkStatusHandle(town);
     }
 
     @SuppressWarnings("unchecked")
@@ -412,11 +413,6 @@ public class DeclarativeJobTickerDependencies implements
     }
 
     @Override
-    public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
-        return job.getSupplyItemStatusForDeps();
-    }
-
-    @Override
     public boolean prioritizesExtraction() {
         return job.prioritizesExtraction();
     }
@@ -429,6 +425,47 @@ public class DeclarativeJobTickerDependencies implements
     @Override
     public MCExtra getExtra() {
         return new MCExtra(town, getWorkStatusHandle(), entity);
+    }
+
+    @Override
+    public Supplier<ImmutableList<MCHeldItem>> getJournalItemsSupplier() {
+        return () -> job.getJournal().getItems();
+    }
+
+    @Override
+    public SupplyChecks<MCHeldItem> asChecks() {
+        final DeclarativeJobChecks<MCExtra, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> self = this.job.getChecks();
+        return new SupplyChecks<>() {
+            @Override
+            public Map<Integer, ? extends Predicate<MCHeldItem>> getIngredientsForStep() {
+                return self.getAllRequiredIngredients();
+            }
+
+            @Override
+            public Boolean isIngredientRequiredAtStep(Integer integer) {
+                return self.isIngredientRequiredAtStep(integer);
+            }
+
+            @Override
+            public Map<Integer, ? extends Predicate<MCHeldItem>> getToolsForStep() {
+                return Jobs.unTown(self.getAllRequiredTools());
+            }
+
+            @Override
+            public Boolean isToolRequiredAtStep(Integer integer) {
+                return self.isToolRequiredAtStep(integer);
+            }
+
+            @Override
+            public Map<Integer, Integer> getWorkRequiredAtStep() {
+                return self.getAllRequiredWork();
+            }
+        };
+    }
+
+    @Override
+    public int getMaxState() {
+        return job.getMaxState();
     }
 
     @Override

@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.jobs.declarative.ItemWorkChecks;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput.NVIRoom;
@@ -41,45 +42,6 @@ public class JobsClean {
         return journal.getItems().stream()
                       .filter(Predicates.not(Item::isEmpty))
                       .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
-    }
-
-    @NotNull
-    static <I extends Item<I>> ImmutableMap<Integer, SupplyItemStatus> getSupplyItemStatuses(
-            Supplier<Collection<I>> journal,
-            Map<Integer, ? extends Predicate<I>> ingredientsRequiredAtStates,
-            Function<Integer, Boolean> anyIngredientsRequiredAtStates,
-            Map<Integer, ? extends Predicate<I>> toolsRequiredAtStates,
-            Function<Integer, Boolean> anyToolsRequiredAtStates,
-            Map<Integer, Integer> workRequiredAtStates,
-            int maxState
-    ) {
-        HashMap<Integer, SupplyItemStatus> b = new HashMap<>();
-        BiConsumer<Integer, Predicate<I>> fn = (state, ingr) -> {
-            if (ingr == null) {
-                if (!b.containsKey(state)) {
-                    b.put(state, SupplyItemStatus.NOT_REQUIRED);
-                }
-                return;
-            }
-
-            // The check passes if the worker has ALL the ingredients needed for the state
-            boolean hasItem = journal.get().stream().anyMatch(ingr);
-            boolean neededOrUnknown = b.getOrDefault(state, SupplyItemStatus.NEEDS_ITEM) == SupplyItemStatus.NEEDS_ITEM;
-            if (neededOrUnknown) {
-                b.put(state, hasItem ? SupplyItemStatus.HAS_ITEM : SupplyItemStatus.NEEDS_ITEM);
-            }
-        };
-        ingredientsRequiredAtStates.forEach(fn);
-        toolsRequiredAtStates.forEach(fn);
-        for (Map.Entry<Integer, Integer> work : workRequiredAtStates.entrySet()) {
-            if (!anyIngredientsRequiredAtStates.apply(work.getKey()) && !anyToolsRequiredAtStates.apply(work.getKey())) {
-                b.put(work.getKey(), SupplyItemStatus.NOT_REQUIRED);
-            }
-        }
-        for (int i = 0; i < maxState; i++) {
-            fn.accept(i, null);
-        }
-        return ImmutableMap.copyOf(b);
     }
 
     public static <I extends Item<I>> boolean hasNonSupplyItems(

@@ -1,15 +1,12 @@
-package ca.bradj.questown.jobs.integration;
+package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
-import ca.bradj.questown.jobs.declarative.ProductionJournal;
-import ca.bradj.questown.jobs.declarative.TestWorldInteraction;
-import ca.bradj.questown.jobs.declarative.ValidatedInventoryHandle;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.logic.PredicateCollection;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.Room;
@@ -204,7 +201,7 @@ public class TestTickerDependencies implements
     // ========== Dependencies (main) methods ==========
 
     @Override
-    public WorkStatusHandle<Position, GathererJournalTest.TestItem> getWorkStatusHandle() {
+    public AbstractWorkStatusStore<Position, GathererJournalTest.TestItem, Room, ?> getWorkStatusHandle() {
         return workStatusHandle;
     }
 
@@ -380,16 +377,23 @@ public class TestTickerDependencies implements
         return ImmutableList.of();
     }
 
-    @Override
     public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
         // Compute supply item status based on what items are in inventory
+        // Must check BOTH ingredients AND tools (like the real implementation does)
         ImmutableMap.Builder<Integer, SupplyItemStatus> builder = ImmutableMap.builder();
         for (int state = 0; state < definition.maxState(); state++) {
             String requiredIngredient = definition.ingredientsRequiredAtStates().get(state);
+            String requiredTool = definition.toolsRequiredAtStates().get(state);
+
             if (requiredIngredient != null) {
                 boolean hasItem = inventory.getItems().stream()
                         .anyMatch(item -> item.value.equals(requiredIngredient));
                 builder.put(state, hasItem ? SupplyItemStatus.HAS_ITEM : SupplyItemStatus.NEEDS_ITEM);
+            } else if (requiredTool != null) {
+                // Tool check - villager must have the tool
+                boolean hasTool = inventory.getItems().stream()
+                        .anyMatch(item -> item.value.equals(requiredTool));
+                builder.put(state, hasTool ? SupplyItemStatus.HAS_ITEM : SupplyItemStatus.NEEDS_ITEM);
             } else {
                 builder.put(state, SupplyItemStatus.NOT_REQUIRED);
             }
@@ -410,6 +414,52 @@ public class TestTickerDependencies implements
     @Override
     public Void getExtra() {
         return null;
+    }
+
+    @Override
+    public Supplier<ImmutableList<GathererJournalTest.TestItem>> getJournalItemsSupplier() {
+        return () -> ImmutableList.copyOf(inventory.getItems());
+    }
+
+    private Map<Integer, Predicate<GathererJournalTest.TestItem>> buildPredicateMap(Map<Integer, String> tagMap) {
+        Map<Integer, Predicate<GathererJournalTest.TestItem>> result = new HashMap<>();
+        tagMap.forEach((state, tag) -> result.put(state, item -> item.value.equals(tag)));
+        return result;
+    }
+
+    @Override
+    public SupplyChecks<GathererJournalTest.TestItem> asChecks() {
+        return new SupplyChecks<>() {
+            @Override
+            public Map<Integer, ? extends Predicate<GathererJournalTest.TestItem>> getIngredientsForStep() {
+                return buildPredicateMap(definition.ingredientsRequiredAtStates());
+            }
+
+            @Override
+            public Boolean isIngredientRequiredAtStep(Integer state) {
+                return definition.ingredientsRequiredAtStates().containsKey(state);
+            }
+
+            @Override
+            public Map<Integer, ? extends Predicate<GathererJournalTest.TestItem>> getToolsForStep() {
+                return buildPredicateMap(definition.toolsRequiredAtStates());
+            }
+
+            @Override
+            public Boolean isToolRequiredAtStep(Integer state) {
+                return definition.toolsRequiredAtStates().containsKey(state);
+            }
+
+            @Override
+            public Map<Integer, Integer> getWorkRequiredAtStep() {
+                return definition.workRequiredAtStates();
+            }
+        };
+    }
+
+    @Override
+    public int getMaxState() {
+        return definition.maxState();
     }
 
     @Override

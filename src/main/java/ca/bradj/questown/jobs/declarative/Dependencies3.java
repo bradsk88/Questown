@@ -1,6 +1,5 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.jobs.declarative.ProductionJournal;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 
 public interface Dependencies3<RECIPE> {

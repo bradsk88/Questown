@@ -1,6 +1,9 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.jobs.EntityCurrentJobSite;
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
+import ca.bradj.questown.jobs.JobsClean;
+import ca.bradj.questown.jobs.SupplyItemStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
@@ -256,7 +259,7 @@ class JobsCleanTest {
 
     @Test
     void getSupplyItemStatuses_ShouldReturnCorrectResult_WhenSecondStateRequiresNothing_AndNoItemsHeld() {
-        @NotNull ImmutableMap<Integer, SupplyItemStatus> sis = JobsClean.<TestItem>getSupplyItemStatuses(
+        @NotNull ImmutableMap<Integer, SupplyItemStatus> sis = DeclarativeJobTicker.<TestItem>getSupplyItemStatuses(
                 ImmutableList::of,
                 ImmutableMap.of(
                         0, testItem -> "grapes".equals(testItem.value)
@@ -277,7 +280,7 @@ class JobsCleanTest {
 
     @Test
     void getSupplyItemStatuses_ShouldReturnCorrectResult_WhenSecondStateRequiresNothing_AndNoItemsHeld_AddWork() {
-        @NotNull ImmutableMap<Integer, SupplyItemStatus> sis = JobsClean.<TestItem>getSupplyItemStatuses(
+        @NotNull ImmutableMap<Integer, SupplyItemStatus> sis = DeclarativeJobTicker.<TestItem>getSupplyItemStatuses(
                 ImmutableList::of,
                 ImmutableMap.of(
                         0, testItem -> "grapes".equals(testItem.value)

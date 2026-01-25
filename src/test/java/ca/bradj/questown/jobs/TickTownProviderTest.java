@@ -1,6 +1,6 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.jobs.integration.TestRoomMatch;
+import ca.bradj.questown.jobs.declarative.TestRoomMatch;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.town.workstatus.State;

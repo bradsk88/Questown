@@ -1,4 +1,4 @@
-package ca.bradj.questown.jobs.integration;
+package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;

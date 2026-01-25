@@ -1,10 +1,7 @@
-package ca.bradj.questown.jobs.integration;
+package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.blacksmith.MapBackedWSC;
-import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
-import ca.bradj.questown.jobs.declarative.TestWorldInteraction;
-import ca.bradj.questown.jobs.declarative.ValidatedInventoryHandle;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;

@@ -286,8 +286,6 @@ public abstract class ProductionJob<
         return journal.removeItem(mct);
     }
 
-    protected abstract Map<Integer, SupplyItemStatus> getSupplyItemStatus();
-
     protected boolean tryDropLoot(
             Long currentTick,
             BlockPos entityPos

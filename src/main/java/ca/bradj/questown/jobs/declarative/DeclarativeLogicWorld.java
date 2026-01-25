@@ -1,6 +1,9 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
+import ca.bradj.questown.jobs.EntityCurrentJobSite;
+import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.JobLogic;
+import ca.bradj.questown.jobs.WorkPosition;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.town.workstatus.State;

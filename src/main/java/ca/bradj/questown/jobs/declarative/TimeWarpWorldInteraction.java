@@ -1,11 +1,11 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.items.EffectMetaItem;
-import ca.bradj.questown.jobs.declarative.*;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
@@ -509,7 +509,7 @@ public class TimeWarpWorldInteraction extends
 
             @Override
             public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
-                return JobsClean.getSupplyItemStatuses(
+                return DeclarativeJobTicker.getSupplyItemStatuses(
                         heldItems, checks.getAllRequiredIngredients(), (s) -> true, // TODO[WARP]: Implement this?
                         Jobs.unTown(checks.getAllRequiredTools()), (s) -> true, checks.getAllRequiredWork(), maxState
                 );

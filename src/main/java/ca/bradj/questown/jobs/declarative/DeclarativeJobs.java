@@ -1,9 +1,9 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.jobs.declarative.ProductionJournal;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionStatuses;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
@@ -172,6 +172,35 @@ public class DeclarativeJobs {
 //                            if (jobBlockState == null) {
 //                                continue;
 //        );
+    }
+
+    public static SupplyChecks<MCHeldItem> toSupplyChecks(DeclarativeJobChecks<MCExtra, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> checks) {
+        return new SupplyChecks<>() {
+            @Override
+            public Map<Integer, ? extends Predicate<MCHeldItem>> getIngredientsForStep() {
+                return checks.getAllRequiredIngredients();
+            }
+
+            @Override
+            public Boolean isIngredientRequiredAtStep(Integer integer) {
+                return checks.isIngredientRequiredAtStep(integer);
+            }
+
+            @Override
+            public Map<Integer, ? extends Predicate<MCHeldItem>> getToolsForStep() {
+                return Jobs.unTown(checks.getAllRequiredTools());
+            }
+
+            @Override
+            public Boolean isToolRequiredAtStep(Integer integer) {
+                return checks.isToolRequiredAtStep(integer);
+            }
+
+            @Override
+            public Map<Integer, Integer> getWorkRequiredAtStep() {
+                return checks.getAllRequiredWork();
+            }
+        };
     }
 
 //    private static LZCD.Dependency<Void> supplies(

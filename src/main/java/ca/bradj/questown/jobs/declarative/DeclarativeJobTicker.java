@@ -1,14 +1,44 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.declarative;
+
+/*
+ * ARCHITECTURAL NOTE: Declarative Job Consolidation
+ * ==================================================
+ *
+ * This package is intentionally package-private to encourage consolidation of
+ * declarative job logic. Historically, the codebase evolved with job logic spread
+ * across multiple utility classes, static methods, and interfaces (e.g., JobsClean,
+ * ContainersClean, various *WI classes) to enable isolated unit testing.
+ *
+ * While testability is valuable, this fragmentation led to:
+ * - Multiple implementations of the same logic
+ * - Unclear canonical behavior for declarative jobs
+ * - Complex dependency graphs between utility classes
+ *
+ * The goal is for DeclarativeJob to work EXACTLY ONE WAY, with all logic living
+ * in this package using CONCRETE implementations rather than:
+ * - Accepting interfaces that could have multiple implementations
+ * - Delegating to generic static utility methods
+ * - Allowing external code (e.g. unit tests) to modify core job behavior
+ *
+ * When adding new CORE functionality:
+ * - Prefer adding methods directly to classes in this package
+ * - Avoid creating new utility classes outside this package
+ * - Move existing scattered logic into this package over time
+ * - Use concrete types from DeclarativeJobTickerDependencies, not abstractions
+ *
+ * Testing should be done via integration tests that exercise the full job flow,
+ * in addition to unit tests of isolated utility methods.
+ */
 
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
-import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
-import ca.bradj.questown.jobs.declarative.ProductionJournal;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
@@ -19,14 +49,11 @@ import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
-public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>, EXTRA, TOWN, LOCATION> {
+class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends Room, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>, EXTRA, TOWN, LOCATION> {
 
 
     private final int maxState;
@@ -39,8 +66,8 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
     }
 
     public interface Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM extends Item<TOWN_ITEM>, ROOM extends Room, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>, EXTRA, LOCATION> extends
-            Dependencies2<ROOM, MATCH, POS, HELD_ITEM, TOWN_ITEM>, Dependencies3<RECIPE> {
-        WorkStatusHandle<POS, HELD_ITEM> getWorkStatusHandle();
+            Dependencies2<ROOM, MATCH, POS, HELD_ITEM, TOWN_ITEM>, Dependencies3<RECIPE>, Dependencies4<HELD_ITEM> {
+        AbstractWorkStatusStore<POS, HELD_ITEM, ROOM, ?> getWorkStatusHandle();
 
         <X> RoomsNeedingVillagerInput<ROOM, X, POS> computeRoomsNeedingInput(
                 WorkStatusHandle<POS, HELD_ITEM> work
@@ -91,7 +118,8 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
         // State providers
         boolean isInventoryEmpty();
 
-        @Nullable Integer getWorkForStep(int step);
+        @Nullable
+        Integer getWorkForStep(int step);
 
         ImmutableList<String> getSpecialGlobalRules();
 
@@ -100,17 +128,17 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
         // World interaction
         AbstractWorldInteraction<?, POS, ?, ?, ?> getWorldInteraction();
 
-        @Nullable ContainerTarget<?, ?> getSuccessTarget();
+        @Nullable
+        ContainerTarget<?, ?> getSuccessTarget();
 
-        @Nullable EntityCurrentJobSite<ROOM> getEntityCurrentJobSite(
+        @Nullable
+        EntityCurrentJobSite<ROOM> getEntityCurrentJobSite(
                 RoomsNeedingVillagerInput<ROOM, ?, POS> rniot
         );
 
         <X> RoomsNeedingVillagerInput<ROOM, X, POS> getCachedRoomsNeedingInput();
 
         ImmutableList<? extends Predicate<?>> getRecipe(Integer state);
-
-        Map<Integer, SupplyItemStatus> getSupplyItemStatus();
 
         boolean prioritizesExtraction();
 
@@ -340,9 +368,68 @@ public class DeclarativeJobTicker<POS, HELD_ITEM, ROOM extends Room, MATCH exten
 
             @Override
             public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
-                return deps.getSupplyItemStatus();
+                return DeclarativeJobTicker.getSupplyItemStatuses(deps);
             }
         };
+    }
+
+
+    static <I extends Item<I>> ImmutableMap<Integer, SupplyItemStatus> getSupplyItemStatuses(
+            Dependencies4<I> deps
+    ) {
+        SupplyChecks<I> checks = deps.asChecks();
+        return getSupplyItemStatuses(
+                deps.getJournalItemsSupplier(),
+                checks.getIngredientsForStep(),
+                checks::isIngredientRequiredAtStep,
+                checks.getToolsForStep(),
+                checks::isToolRequiredAtStep,
+                checks.getWorkRequiredAtStep(),
+                deps.getMaxState()
+        );
+    }
+
+    /**
+     * @deprecated Use version that takes Checks
+     */
+    @Deprecated(forRemoval = true)
+    @NotNull
+    static <I extends Item<I>> ImmutableMap<Integer, SupplyItemStatus> getSupplyItemStatuses(
+            Supplier<? extends Collection<I>> journal,
+            Map<Integer, ? extends Predicate<I>> ingredientsRequiredAtStates,
+            Function<Integer, Boolean> anyIngredientsRequiredAtStates,
+            Map<Integer, ? extends Predicate<I>> toolsRequiredAtStates,
+            Function<Integer, Boolean> anyToolsRequiredAtStates,
+            Map<Integer, Integer> workRequiredAtStates,
+            int maxState
+    ) {
+        HashMap<Integer, SupplyItemStatus> b = new HashMap<>();
+        BiConsumer<Integer, Predicate<I>> fn = (state, ingr) -> {
+            if (ingr == null) {
+                if (!b.containsKey(state)) {
+                    b.put(state, SupplyItemStatus.NOT_REQUIRED);
+                }
+                return;
+            }
+
+            // The check passes if the worker has ALL the ingredients needed for the state
+            boolean hasItem = journal.get().stream().anyMatch(ingr);
+            boolean neededOrUnknown = b.getOrDefault(state, SupplyItemStatus.NEEDS_ITEM) == SupplyItemStatus.NEEDS_ITEM;
+            if (neededOrUnknown) {
+                b.put(state, hasItem ? SupplyItemStatus.HAS_ITEM : SupplyItemStatus.NEEDS_ITEM);
+            }
+        };
+        ingredientsRequiredAtStates.forEach(fn);
+        toolsRequiredAtStates.forEach(fn);
+        for (Map.Entry<Integer, Integer> work : workRequiredAtStates.entrySet()) {
+            if (!anyIngredientsRequiredAtStates.apply(work.getKey()) && !anyToolsRequiredAtStates.apply(work.getKey())) {
+                b.put(work.getKey(), SupplyItemStatus.NOT_REQUIRED);
+            }
+        }
+        for (int i = 0; i < maxState; i++) {
+            fn.accept(i, null);
+        }
+        return ImmutableMap.copyOf(b);
     }
 
     private <RECIPE> EntityCurrentJobSite<ROOM> getEntityCurrentJobSite(

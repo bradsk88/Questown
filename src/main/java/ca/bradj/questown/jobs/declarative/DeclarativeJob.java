@@ -1,4 +1,4 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
@@ -15,7 +15,7 @@ import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.declarative.*;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.fetcher.FetcherHack;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.AbstractSupplyGetter;
@@ -27,6 +27,7 @@ import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -54,7 +55,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
-import static ca.bradj.questown.jobs.DeclarativeJobs.STATUS_FACTORY;
+import static ca.bradj.questown.jobs.declarative.DeclarativeJobs.STATUS_FACTORY;
 import static ca.bradj.questown.mc.Util.info;
 
 // TODO: Break ties to MC and unit test - Maybe reuse code from ProductionTimeWarper
@@ -319,7 +320,7 @@ public class DeclarativeJob extends
         VisitorMobEntity vme = (VisitorMobEntity) entity;
 //        DeclarativeJobTickerDependencies deps = new DeclarativeJobTickerDependencies(this, town,vme);
         DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra, WorkLocation> deps
-                = new DeclarativeJobTickerDependencies(this, town, vme);
+                = new DeclarativeJobTickerDependencies(this, (TownFlagBlockEntity) town, vme);
         this.ticker.tick(deps, (p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a));
     }
 
@@ -698,30 +699,6 @@ public class DeclarativeJob extends
     }
 
     @Override
-    protected Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
-        return JobsClean.getSupplyItemStatuses(
-                journal::getItems,
-                checks.getAllRequiredIngredients(),
-                s -> !UtilClean.getOrDefault(
-                        checks.getAllRequiredIngredients(),
-                        s,
-                        PredicateCollection.empty("no ingredient defined")
-                ).isEmpty(),
-                Jobs.unTown(checks.getAllRequiredTools()),
-                s -> {
-                    PredicateCollection<MCTownItem, MCTownItem> toool = UtilClean.getOrDefault(
-                            checks.getAllRequiredTools(),
-                            s,
-                            PredicateCollection.empty("no tool defined")
-                    );
-                    return !toool.isEmpty();
-                },
-                checks.getAllRequiredWork(),
-                maxState
-        );
-    }
-
-    @Override
     protected @Nullable WorkPosition<BlockPos> findProductionSpot(ServerLevel sl) {
         return ticker.workSpot();
     }
@@ -747,7 +724,7 @@ public class DeclarativeJob extends
             return override.get();
         }
 
-        Map<Integer, SupplyItemStatus> statusItems = getSupplyItemStatus();
+        Map<Integer, SupplyItemStatus> statusItems = DeclarativeJobTicker.getSupplyItemStatuses(getSupplyDeps());
         return JobsClean.findJobSite(
                 maxState,
                 prioritizesExtraction(),
@@ -759,6 +736,25 @@ public class DeclarativeJob extends
                 isJobBlock,
                 (block, room) -> findInteractionSpot(block, room, isValidWalkTarget, getRandomAdjacent)
         );
+    }
+
+    private Dependencies4<MCHeldItem> getSupplyDeps() {
+        return new Dependencies4<>() {
+            @Override
+            public Supplier<ImmutableList<MCHeldItem>> getJournalItemsSupplier() {
+                return journal::getItems;
+            }
+
+            @Override
+            public SupplyChecks<MCHeldItem> asChecks() {
+                return DeclarativeJobs.toSupplyChecks(checks);
+            }
+
+            @Override
+            public int getMaxState() {
+                return maxState;
+            }
+        };
     }
 
     public RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools(
@@ -862,10 +858,6 @@ public class DeclarativeJob extends
     }
 
     // getRecipe is already defined as protected - no need for duplicate
-
-    Map<Integer, SupplyItemStatus> getSupplyItemStatusForDeps() {
-        return this.getSupplyItemStatus();
-    }
 
     boolean tryDropLootForDeps(long tick, BlockPos entityBlockPos) {
         return super.tryDropLoot(tick, entityBlockPos);

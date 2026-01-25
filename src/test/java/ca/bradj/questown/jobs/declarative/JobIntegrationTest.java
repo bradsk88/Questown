@@ -1,9 +1,7 @@
-package ca.bradj.questown.jobs.integration;
+package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.jobs.declarative.TestWorldInteraction;
-import ca.bradj.questown.jobs.declarative.ValidatedInventoryHandle;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.Room;
@@ -51,7 +49,7 @@ class JobIntegrationTest {
         TestWorkStatusHandle workStatusHandle = new TestWorkStatusHandle();
         ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory = TestInventory.sized(6);
 
-        // Initialize work state at the job block position
+        // Initialize work state at the job block position - In-game, the town block handles this.
         workStatusHandle.setJobBlockState(
                 IntegrationTestWorld.DEFAULT_WORKSPOT_POS,
                 State.fresh().setWorkLeft(definition.workRequiredAtStates().getOrDefault(0, 0))
@@ -854,9 +852,131 @@ class JobIntegrationTest {
         );
     }
 
-    // TODO: baker_bread ticker test needs special handling for time-based jobs
-    // Time-based progression (using "time" field instead of "work") is not yet
-    // properly supported in the test harness. The loader test passes.
+    // ========== Baker Bread Ticker Tests ==========
+
+    /**
+     * Test baker_bread job - time-based baking job.
+     *
+     * Job flow:
+     * - State 0: Need ingredients (wheat, qty 2)
+     * - State 1: Need ingredients (coals, qty 1)
+     * - State 2: Time (1000 ticks) - baking in progress
+     * - maxState (3): Extract bread
+     */
+    @Test
+    void declarativeJobTicker_baker_bread_shouldConsumeIngredients() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_bread.json");
+        TickerSetup setup = createTicker(definition);
+
+        // Give the villager wheat and coal
+        setup.inventory.set(0, new GathererJournalTest.TestItem("minecraft:wheat"));
+        setup.inventory.set(1, new GathererJournalTest.TestItem("minecraft:wheat"));
+        setup.inventory.set(2, new GathererJournalTest.TestItem("#minecraft:coals"));
+
+        // Run ticks - should consume ingredients
+        runTicks(setup.deps, setup.ticker, 30);
+
+        // Verify wheat was consumed
+        long wheatCount = setup.inventory.getItems().stream()
+                .filter(item -> item.value.equals("minecraft:wheat"))
+                .count();
+        Assertions.assertTrue(wheatCount < 2, "Some wheat should be consumed. Got: " + setup.inventory.getItems());
+    }
+
+    /**
+     * Test baker_bread transitions to time state and sets timer when ingredients are inserted.
+     * The ticker should naturally progress: insert wheat → insert coal → start timer.
+     */
+    @Test
+    void declarativeJobTicker_baker_bread_shouldTransitionToTimeStateAndSetTimer() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_bread.json");
+
+        // Verify job has a time state
+        Assertions.assertFalse(definition.timeRequiredAtStates().isEmpty(),
+                "Baker bread job should have a time state");
+
+        // Find the time state (state 2 for baker_bread)
+        int timeState = -1;
+        for (int i = 0; i < definition.maxState(); i++) {
+            if (definition.timeRequiredAtStates().containsKey(i)) {
+                timeState = i;
+                break;
+            }
+        }
+        int expectedTime = definition.timeRequiredAtStates().get(timeState);
+
+        TickerSetup setup = createTicker(definition);
+        TestWorkStatusHandle workStatusHandle = (TestWorkStatusHandle) setup.deps.getWorkStatusHandle();
+
+        // Give the villager all ingredients needed (wheat x2, coal x1)
+        setup.inventory.set(0, new GathererJournalTest.TestItem("minecraft:wheat"));
+        setup.inventory.set(1, new GathererJournalTest.TestItem("minecraft:wheat"));
+        setup.inventory.set(2, new GathererJournalTest.TestItem("#minecraft:coals"));
+
+        // Run ticks - ticker should insert ingredients and transition to time state
+        runTicks(setup.deps, setup.ticker, 30);
+
+        // Verify the job reached time state and timer was set
+        State state = workStatusHandle.getJobBlockState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
+        Assertions.assertTrue(state.processingState() >= timeState,
+                "Job should have reached time state. Got: " + state.processingState());
+
+        // If still at time state, verify timer is set
+        if (state.processingState() == timeState) {
+            Integer timer = workStatusHandle.getTimeToNextState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
+            Assertions.assertNotNull(timer, "Timer should be set when at time state");
+            Assertions.assertTrue(timer > 0 && timer <= expectedTime,
+                    "Timer should be positive and <= " + expectedTime + ". Got: " + timer);
+        }
+    }
+
+    /**
+     * Test baker_bread extraction when baking timer expires.
+     * Sets timer to 1 tick, ticks the work status store, verifies state advances and extraction happens.
+     */
+    @Test
+    void declarativeJobTicker_baker_bread_shouldExtractWhenTimerExpires() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_bread.json");
+        TickerSetup setup = createTicker(definition);
+
+        // Find the time state
+        int timeState = -1;
+        for (int i = 0; i < definition.maxState(); i++) {
+            if (definition.timeRequiredAtStates().containsKey(i)) {
+                timeState = i;
+                break;
+            }
+        }
+
+        // Set job site to time state with timer about to expire (1 tick remaining)
+        TestWorkStatusHandle workStatusHandle = (TestWorkStatusHandle) setup.deps.getWorkStatusHandle();
+        workStatusHandle.setJobBlockStateWithTimer(
+                IntegrationTestWorld.DEFAULT_WORKSPOT_POS,
+                State.freshAtState(timeState),
+                1  // Timer about to expire
+        );
+
+        // Tick the work status store - timer expires, state advances to maxState
+        workStatusHandle.tick();
+
+        // Verify state advanced to maxState
+        State state = workStatusHandle.getJobBlockState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
+        Assertions.assertEquals(definition.maxState(), state.processingState(),
+                "State should advance to maxState when timer expires");
+
+        // Run ticker ticks - villager should extract the bread
+        runTicks(setup.deps, setup.ticker, 20);
+
+        // Check that the product was extracted
+        TestWorldInteraction twi = (TestWorldInteraction) setup.deps.getWorldInteraction();
+        Assertions.assertTrue(twi.wasExtracted(),
+                "Bread should be extracted when timer expires");
+
+        // Check inventory has the bread
+        boolean hasBread = setup.inventory.getItems().stream()
+                .anyMatch(item -> item.value.equals("minecraft:bread"));
+        Assertions.assertTrue(hasBread, "Should have bread. Got: " + setup.inventory.getItems());
+    }
 
     /**
      * Reproduction test for bug: Villager gets NO_JOBSITE status instead of EXTRACTING_PRODUCT
@@ -1126,5 +1246,252 @@ class JobIntegrationTest {
         // Note: Due to test harness complexity, we may not get exactly NO_JOBSITE,
         // but we verify the fix works by checking the first test passes.
         System.out.println("BUG test: Villager status after 50 ticks with bug simulated: " + actualStatus);
+    }
+
+    // ========== Gatherer Ticker Tests ==========
+    // Representative tests for gatherer jobs. GathererJobStructureTest verifies all
+    // gatherer jobs are structurally identical, so these tests cover the job family.
+
+    /**
+     * Test gatherer_unmapped_notool_short - representative for no-tool gatherer jobs.
+     *
+     * Job flow:
+     * - State 0: Need ingredients (villager_food) - villager eats food
+     * - State 1: Work (1 unit) - minimal work
+     * - State 2: Time (2000 ticks) - villager waits
+     * - maxState (3): Extract biome_loot result
+     */
+    @Test
+    void declarativeJobTicker_gatherer_notool_short_shouldConsumeFood() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "gatherer_unmapped_notool_short.json");
+        TickerSetup setup = createTicker(definition);
+
+        // Give the villager food
+        setup.inventory.set(0, new GathererJournalTest.TestItem("#questown:villager_food"));
+
+        // Run ticks - should consume food and progress through work state
+        runTicks(setup.deps, setup.ticker, 20);
+
+        // Verify food was consumed (villager "ate" the food)
+        boolean hasFood = setup.inventory.getItems().stream()
+                .anyMatch(item -> item.value.equals("#questown:villager_food"));
+        Assertions.assertFalse(hasFood, "Food should be consumed. Got: " + setup.inventory.getItems());
+    }
+
+    /**
+     * Test that gatherer job naturally transitions to time state after consuming food and completing work.
+     * The ticker should progress: insert food → do work → start timer.
+     */
+    @Test
+    void declarativeJobTicker_gatherer_notool_short_shouldTransitionToTimeStateAndSetTimer() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "gatherer_unmapped_notool_short.json");
+
+        // Verify job has a time state
+        Assertions.assertFalse(definition.timeRequiredAtStates().isEmpty(),
+                "Gatherer job should have a time state");
+
+        // Find the time state (state 2 for gatherer)
+        int timeState = -1;
+        for (int i = 0; i < definition.maxState(); i++) {
+            if (definition.timeRequiredAtStates().containsKey(i)) {
+                timeState = i;
+                break;
+            }
+        }
+        int expectedTime = definition.timeRequiredAtStates().get(timeState);
+
+        TickerSetup setup = createTicker(definition);
+        TestWorkStatusHandle workStatusHandle = (TestWorkStatusHandle) setup.deps.getWorkStatusHandle();
+
+        // Give the villager food (ingredient at state 0)
+        setup.inventory.set(0, new GathererJournalTest.TestItem("#questown:villager_food"));
+
+        // Run ticks - ticker should insert food, complete work, and transition to time state
+        runTicks(setup.deps, setup.ticker, 30);
+
+        // Verify the job reached time state and timer was set
+        State state = workStatusHandle.getJobBlockState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
+        Assertions.assertTrue(state.processingState() >= timeState,
+                "Job should have reached time state. Got: " + state.processingState());
+
+        // If still at time state, verify timer is set
+        if (state.processingState() == timeState) {
+            Integer timer = workStatusHandle.getTimeToNextState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
+            Assertions.assertNotNull(timer, "Timer should be set when at time state");
+            Assertions.assertTrue(timer > 0 && timer <= expectedTime,
+                    "Timer should be positive and <= " + expectedTime + ". Got: " + timer);
+        }
+    }
+
+    /**
+     * Test gatherer extraction when timer expires.
+     * Sets timer to 1 tick, ticks the work status store, verifies state advances and extraction happens.
+     */
+    @Test
+    void declarativeJobTicker_gatherer_notool_short_shouldExtractWhenTimerExpires() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "gatherer_unmapped_notool_short.json");
+        TickerSetup setup = createTicker(definition);
+
+        // Find the time state
+        int timeState = -1;
+        for (int i = 0; i < definition.maxState(); i++) {
+            if (definition.timeRequiredAtStates().containsKey(i)) {
+                timeState = i;
+                break;
+            }
+        }
+
+        // Set job site to time state with timer about to expire (1 tick remaining)
+        TestWorkStatusHandle workStatusHandle = (TestWorkStatusHandle) setup.deps.getWorkStatusHandle();
+        workStatusHandle.setJobBlockStateWithTimer(
+                IntegrationTestWorld.DEFAULT_WORKSPOT_POS,
+                State.freshAtState(timeState),
+                1  // Timer about to expire
+        );
+
+        // Tick the work status store - timer expires, state advances to maxState
+        workStatusHandle.tick();
+
+        // Verify state advanced to maxState
+        State state = workStatusHandle.getJobBlockState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
+        Assertions.assertEquals(definition.maxState(), state.processingState(),
+                "State should advance to maxState when timer expires");
+
+        // Run ticker ticks - villager should extract the product
+        runTicks(setup.deps, setup.ticker, 20);
+
+        // Check that the product was extracted
+        TestWorldInteraction twi = (TestWorldInteraction) setup.deps.getWorldInteraction();
+        Assertions.assertTrue(twi.wasExtracted(),
+                "Product should be extracted when timer expires");
+
+        // Check inventory has the loot result (placeholder "loot" for biome_loot)
+        boolean hasLoot = setup.inventory.getItems().stream()
+                .anyMatch(item -> item.value.equals("loot"));
+        Assertions.assertTrue(hasLoot, "Should have loot. Got: " + setup.inventory.getItems());
+    }
+
+    /**
+     * Test gatherer_unmapped_axe_short - representative for tool-based gatherer jobs.
+     *
+     * Job flow:
+     * - State 0: Need tools (axes) - villager must have axe
+     * - State 1: Work (1 unit) - minimal work
+     * - State 2: Time (2000 ticks) - villager waits
+     * - maxState (3): Extract biome_loot result
+     */
+    @Test
+    void declarativeJobTicker_gatherer_axe_short_shouldRequireTool() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "gatherer_unmapped_axe_short.json");
+
+        // Verify job requires axes as tools
+        Assertions.assertEquals("#questown:axes", definition.toolsRequiredAtStates().get(0),
+                "Axe gatherer should require axes");
+
+        TickerSetup setup = createTicker(definition);
+
+        // Give the villager an axe
+        setup.inventory.set(0, new GathererJournalTest.TestItem("#questown:axes"));
+
+        // Run ticks - should progress since tool is present
+        runTicks(setup.deps, setup.ticker, 10);
+
+        // Villager should still have the tool (tools aren't consumed, just checked)
+        boolean hasAxe = setup.inventory.getItems().stream()
+                .anyMatch(item -> item.value.equals("#questown:axes"));
+        Assertions.assertTrue(hasAxe, "Axe should still be in inventory (tools aren't consumed)");
+    }
+
+    /**
+     * Test that tool-based gatherer job naturally transitions to time state after tool check and work.
+     * The ticker should progress: check tool → do work → start timer.
+     */
+    @Test
+    void declarativeJobTicker_gatherer_axe_short_shouldTransitionToTimeStateAndSetTimer() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "gatherer_unmapped_axe_short.json");
+
+        // Verify job has a time state
+        Assertions.assertFalse(definition.timeRequiredAtStates().isEmpty(),
+                "Gatherer job should have a time state");
+
+        // Find the time state (state 2 for tool-based gatherer)
+        int timeState = -1;
+        for (int i = 0; i < definition.maxState(); i++) {
+            if (definition.timeRequiredAtStates().containsKey(i)) {
+                timeState = i;
+                break;
+            }
+        }
+        int expectedTime = definition.timeRequiredAtStates().get(timeState);
+
+        TickerSetup setup = createTicker(definition);
+        TestWorkStatusHandle workStatusHandle = (TestWorkStatusHandle) setup.deps.getWorkStatusHandle();
+
+        // Give the villager an axe (tool at state 0)
+        setup.inventory.set(0, new GathererJournalTest.TestItem("#questown:axes"));
+
+        // Run ticks - ticker should verify tool, complete work, and transition to time state
+        runTicks(setup.deps, setup.ticker, 30);
+
+        // Verify the job reached time state and timer was set
+        State state = workStatusHandle.getJobBlockState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
+        Assertions.assertTrue(state.processingState() >= timeState,
+                "Job should have reached time state. Got: " + state.processingState());
+
+        // If still at time state, verify timer is set
+        if (state.processingState() == timeState) {
+            Integer timer = workStatusHandle.getTimeToNextState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
+            Assertions.assertNotNull(timer, "Timer should be set when at time state");
+            Assertions.assertTrue(timer > 0 && timer <= expectedTime,
+                    "Timer should be positive and <= " + expectedTime + ". Got: " + timer);
+        }
+    }
+
+    /**
+     * Test tool-based gatherer extraction when timer expires.
+     * Sets timer to 1 tick, ticks the work status store, verifies state advances and extraction happens.
+     */
+    @Test
+    void declarativeJobTicker_gatherer_axe_short_shouldExtractWhenTimerExpires() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "gatherer_unmapped_axe_short.json");
+        TickerSetup setup = createTicker(definition);
+
+        // Find the time state
+        int timeState = -1;
+        for (int i = 0; i < definition.maxState(); i++) {
+            if (definition.timeRequiredAtStates().containsKey(i)) {
+                timeState = i;
+                break;
+            }
+        }
+
+        // Set job site to time state with timer about to expire (1 tick remaining)
+        TestWorkStatusHandle workStatusHandle = (TestWorkStatusHandle) setup.deps.getWorkStatusHandle();
+        workStatusHandle.setJobBlockStateWithTimer(
+                IntegrationTestWorld.DEFAULT_WORKSPOT_POS,
+                State.freshAtState(timeState),
+                1  // Timer about to expire
+        );
+
+        // Tick the work status store - timer expires, state advances to maxState
+        workStatusHandle.tick();
+
+        // Verify state advanced to maxState
+        State state = workStatusHandle.getJobBlockState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
+        Assertions.assertEquals(definition.maxState(), state.processingState(),
+                "State should advance to maxState when timer expires");
+
+        // Run ticker ticks - villager should extract the product
+        runTicks(setup.deps, setup.ticker, 20);
+
+        // Check that the product was extracted
+        TestWorldInteraction twi = (TestWorldInteraction) setup.deps.getWorldInteraction();
+        Assertions.assertTrue(twi.wasExtracted(),
+                "Product should be extracted when timer expires");
+
+        // Check inventory has the loot result
+        boolean hasLoot = setup.inventory.getItems().stream()
+                .anyMatch(item -> item.value.equals("loot"));
+        Assertions.assertTrue(hasLoot, "Should have loot. Got: " + setup.inventory.getItems());
     }
 }

@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.jobs.declarative.DeclarativeJobChecks;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput.NVIRoom;
 import ca.bradj.questown.logic.IPredicateCollection;

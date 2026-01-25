@@ -22,6 +22,7 @@ import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
+import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
@@ -719,22 +720,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(
             @Nullable UUID ownerIDOrNullForGlobal
     ) {
-        if (ownerIDOrNullForGlobal == null) {
-            return jobHandle;
-        }
-        TownWorkStatusStore jh = jobHandles.get(ownerIDOrNullForGlobal);
-        if (jh != null) {
-            return jh;
-        }
-        jh = new TownWorkStatusStore();
-        jobHandles.put(ownerIDOrNullForGlobal, jh);
-        // Initialize the new store immediately so work states are available
-        ServerLevel sl = getServerLevel();
-        if (sl != null) {
-            Collection<MCRoom> allRooms = roomsHandle.getAllRoomsIncludingMetaAndFarms();
-            jh.tick(sl, allRooms, 1);
-        }
-        return jh;
+        return getRealWorkStatusHandle(ownerIDOrNullForGlobal);
     }
 
     @Override
@@ -903,5 +889,24 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     private boolean isDebugLogEnabled(String logId) {
         return logToggles.getOrDefault(logId, false);
+    }
+
+    public AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> getRealWorkStatusHandle(UUID ownerIDOrNullForGlobal) {
+        if (ownerIDOrNullForGlobal == null) {
+            return jobHandle;
+        }
+        TownWorkStatusStore jh = jobHandles.get(ownerIDOrNullForGlobal);
+        if (jh != null) {
+            return jh;
+        }
+        jh = new TownWorkStatusStore();
+        jobHandles.put(ownerIDOrNullForGlobal, jh);
+        // Initialize the new store immediately so work states are available
+        ServerLevel sl = getServerLevel();
+        if (sl != null) {
+            Collection<MCRoom> allRooms = roomsHandle.getAllRoomsIncludingMetaAndFarms();
+            jh.tick(sl, allRooms, 1);
+        }
+        return jh;
     }
 }
