@@ -37,6 +37,8 @@ import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
+import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput.NVIRoom;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
@@ -68,10 +70,6 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
     public interface Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM extends Item<TOWN_ITEM>, ROOM extends Room, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>, EXTRA, LOCATION> extends
             Dependencies2<ROOM, MATCH, POS, HELD_ITEM, TOWN_ITEM>, Dependencies3<RECIPE>, Dependencies4<HELD_ITEM> {
         AbstractWorkStatusStore<POS, HELD_ITEM, ROOM, ?> getWorkStatusHandle();
-
-        <X> RoomsNeedingVillagerInput<ROOM, X, POS> computeRoomsNeedingInput(
-                WorkStatusHandle<POS, HELD_ITEM> work
-        );
 
         EntityHandle<POS, HELD_ITEM> getEntity();
 
@@ -149,6 +147,10 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
          * For MC implementations, this is typically MCExtra.
          */
         EXTRA getExtra();
+
+        Collection<POS> getContainedBlocks(MATCH match);
+
+        NVIRoom<ROOM, RECIPE, POS> makeNVIRoom(MATCH match, boolean dueToWorkOnly);
     }
 
     private final ImmutableList<String> specialGlobalRules;
@@ -183,13 +185,13 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         return logic.isWrappingUp();
     }
 
-    public <RECIPE> void tick(
-            Dependencies<POS, RECIPE, HELD_ITEM, ?, ROOM, MATCH, EXTRA, LOCATION> dependencies,
+    public <RECIPE, TOWN_ITEM extends Item<TOWN_ITEM>> void tick(
+            Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA, LOCATION> dependencies,
             BiConsumer<String, Object[]> logger
     ) {
         WorkStatusHandle<POS, HELD_ITEM> work = dependencies.getWorkStatusHandle();
         AtomicReference<RoomsNeedingVillagerInput<ROOM, RECIPE, POS>> rniot = new AtomicReference<>(
-                dependencies.computeRoomsNeedingInput(work)
+                computeRoomsNeedingInput(dependencies, work)
         );
 
         EntityHandle<POS, HELD_ITEM> entity = dependencies.getEntity();
@@ -259,6 +261,30 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                     State s = work.getJobBlockState(pos);
                     return s != null && maxState == s.processingState();
                 }
+        );
+    }
+
+    private <RECIPE, TOWN_ITEM extends Item<TOWN_ITEM>> RoomsNeedingVillagerInput<ROOM, RECIPE, POS> computeRoomsNeedingInput(
+            Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA, ?> deps,
+            WorkStatusHandle<POS, HELD_ITEM> work
+    ) {
+        Function<POS, State> getJobBlockState = pos -> work.getJobBlockState((POS) pos);
+        Predicate<POS> canClaim = pos -> deps.canClaim((POS) pos);
+        Predicate<POS> isJobBlock = pos -> deps.isJobBlock((POS) pos);
+        Function<Integer, PredicateCollection<HELD_ITEM, HELD_ITEM>> getIngredients = state -> deps.item((Integer) state);
+        Function<Integer, Integer> getQuantity = state -> deps.getQuantityForStep((Integer) state);
+        Function<Integer, PredicateCollection<TOWN_ITEM, TOWN_ITEM>> getTools = state -> deps.tools((Integer) state);
+        return RoomsStatusLogic.<RECIPE, POS, HELD_ITEM, TOWN_ITEM, ROOM, MATCH>compute(
+                deps.getJobSites(),
+                getJobBlockState,
+                canClaim,
+                isJobBlock,
+                getIngredients,
+                getQuantity,
+                getTools,
+                deps::getContainedBlocks,
+                deps::makeNVIRoom,
+                maxState
         );
     }
 

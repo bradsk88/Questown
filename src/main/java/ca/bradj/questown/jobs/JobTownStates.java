@@ -105,8 +105,6 @@ public class JobTownStates {
             String reason = "No rooms found with workable blocks at states [" +
                     Strings.join(rooms.keySet().stream().map(Object::toString).toList(), ",") +
                     "]";
-            // TODO[Decup]: Remove
-            QT.JOB_LOGGER.debug("containsWorkableBlocksAtAnyState returning FALSE: {}", reason);
             return WithReason.always(Boolean.FALSE, reason);
         }
     }

@@ -38,6 +38,7 @@ import net.minecraft.world.level.block.ChestBlock;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -141,6 +142,11 @@ public class DeclarativeJobTickerDependencies implements
     }
 
     @Override
+    public Integer getQuantityForStep(int state) {
+        return job.getChecks().getQuantityForStep(state, null);
+    }
+
+    @Override
     public PredicateCollection<MCTownItem, MCTownItem> tools(Integer integer) {
         return job.getChecks().getToolsForStep(integer);
     }
@@ -180,19 +186,6 @@ public class DeclarativeJobTickerDependencies implements
     @Override
     public AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> getWorkStatusHandle() {
             return getWorkStatusHandle(town);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    // TODO: Move logic into DeclarativeJobTicker
-    public <X> RoomsNeedingVillagerInput<MCRoom, X, BlockPos> computeRoomsNeedingInput(
-            WorkStatusHandle<BlockPos, MCHeldItem> work
-    ) {
-        return (RoomsNeedingVillagerInput<MCRoom, X, BlockPos>) job.roomsNeedingIngredientsOrTools(
-                town,
-                work::getJobBlockState,
-                (BlockPos bp) -> work.canClaim(bp, job.getClaimSupplier())
-        );
     }
 
     @Override
@@ -389,6 +382,19 @@ public class DeclarativeJobTickerDependencies implements
     @Override
     public MCExtra getExtra() {
         return new MCExtra(town, getWorkStatusHandle(), entity);
+    }
+
+    @Override
+    public Collection<BlockPos> getContainedBlocks(RoomRecipeMatch<MCRoom> match) {
+        return match.getContainedBlocks().keySet();
+    }
+
+    @Override
+    public RoomsNeedingVillagerInput.NVIRoom<MCRoom, ResourceLocation, BlockPos> makeNVIRoom(
+            RoomRecipeMatch<MCRoom> match,
+            boolean dueToWorkOnly
+    ) {
+        return new RoomsNeedingVillagerInput.NVIRoom<>(match, dueToWorkOnly);
     }
 
     @Override

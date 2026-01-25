@@ -7,12 +7,10 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
-import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -37,6 +35,7 @@ public class TestTickerDependencies implements
     // Entity position inside the room (walls are at x=0, z=0; inside starts at x=1, z=1)
     private Position entityPosition = new Position(2, 2);
     private boolean townHasJobSite = false;
+    private final UUID villagerUUID = UUID.randomUUID();
 
     public TestTickerDependencies(
             JobDefinition definition,
@@ -136,6 +135,11 @@ public class TestTickerDependencies implements
     }
 
     @Override
+    public Integer getQuantityForStep(int state) {
+        return worldInteraction.getChecks().getQuantityForStep(state, null);
+    }
+
+    @Override
     public PredicateCollection<GathererJournalTest.TestItem, GathererJournalTest.TestItem> tools(Integer state) {
         return worldInteraction.getChecks().getToolsForStep(state);
     }
@@ -187,27 +191,6 @@ public class TestTickerDependencies implements
     @Override
     public AbstractWorkStatusStore<Position, GathererJournalTest.TestItem, Room, ?> getWorkStatusHandle() {
         return workStatusHandle;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public <X> RoomsNeedingVillagerInput<Room, X, Position> computeRoomsNeedingInput(
-            WorkStatusHandle<Position, GathererJournalTest.TestItem> work
-    ) {
-        // Compute which rooms need villager input based on current state
-        Map<Integer, Collection<RoomsNeedingVillagerInput.NVIRoom<Room, String, Position>>> roomsMap = new HashMap<>();
-
-        State state = work.getJobBlockState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
-        int currentState = state == null ? 0 : state.processingState();
-
-        // If not at max state, room needs input at current state
-        if (currentState < definition.maxState()) {
-            RoomsNeedingVillagerInput.NVIRoom<Room, String, Position> nviRoom =
-                    new RoomsNeedingVillagerInput.NVIRoom<>(jobSite, false);
-            roomsMap.put(currentState, ImmutableList.of(nviRoom));
-        }
-
-        return (RoomsNeedingVillagerInput<Room, X, Position>) (Object) new RoomsNeedingVillagerInput<>(roomsMap);
     }
 
     @Override
@@ -304,7 +287,7 @@ public class TestTickerDependencies implements
 
     @Override
     public UUID getOwnerUUID() {
-        return UUID.randomUUID();
+        return villagerUUID;
     }
 
     @Override
@@ -350,30 +333,6 @@ public class TestTickerDependencies implements
             return ImmutableList.of(ingredients);
         }
         return ImmutableList.of();
-    }
-
-    public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
-        // Compute supply item status based on what items are in inventory
-        // Must check BOTH ingredients AND tools (like the real implementation does)
-        ImmutableMap.Builder<Integer, SupplyItemStatus> builder = ImmutableMap.builder();
-        for (int state = 0; state < definition.maxState(); state++) {
-            String requiredIngredient = definition.ingredientsRequiredAtStates().get(state);
-            String requiredTool = definition.toolsRequiredAtStates().get(state);
-
-            if (requiredIngredient != null) {
-                boolean hasItem = inventory.getItems().stream()
-                        .anyMatch(item -> item.value.equals(requiredIngredient));
-                builder.put(state, hasItem ? SupplyItemStatus.HAS_ITEM : SupplyItemStatus.NEEDS_ITEM);
-            } else if (requiredTool != null) {
-                // Tool check - villager must have the tool
-                boolean hasTool = inventory.getItems().stream()
-                        .anyMatch(item -> item.value.equals(requiredTool));
-                builder.put(state, hasTool ? SupplyItemStatus.HAS_ITEM : SupplyItemStatus.NEEDS_ITEM);
-            } else {
-                builder.put(state, SupplyItemStatus.NOT_REQUIRED);
-            }
-        }
-        return builder.build();
     }
 
     @Override
@@ -654,6 +613,19 @@ public class TestTickerDependencies implements
                 return 0;
             }
         };
+    }
+
+    @Override
+    public Collection<Position> getContainedBlocks(TestRoomMatch match) {
+        return match.getContainedBlocks().keySet();
+    }
+
+    @Override
+    public RoomsNeedingVillagerInput.NVIRoom<Room, String, Position> makeNVIRoom(
+            TestRoomMatch match,
+            boolean dueToWorkOnly
+    ) {
+        return new RoomsNeedingVillagerInput.NVIRoom<>(match, dueToWorkOnly);
     }
 
     // ========== Test helpers ==========

@@ -301,4 +301,31 @@ class JobsCleanTest {
         Assertions.assertEquals(SupplyItemStatus.NEEDS_ITEM, sis.get(0));
         Assertions.assertEquals(SupplyItemStatus.NOT_REQUIRED, sis.get(1));
     }
+
+    @Test
+    void hasNonSupplyItems_shouldFlagActualLoot_WhenAtStateRequiringIngredients() {
+        // Setup: State 2 requires bowl ingredient
+        ImmutableMap<Integer, Predicate<TestItem>> ingredientsRequired = ImmutableMap.of(
+                2, item -> "bowl".equals(item.value)  // State 2 requires bowl
+        );
+        ImmutableMap<Integer, Predicate<TestItem>> toolsRequired = ImmutableMap.of(
+                1, item -> "shovel".equals(item.value)  // State 1 requires shovel tool
+        );
+
+        // Villager has random loot (not a tool, not the needed ingredient)
+        ImmutableList<TestItem> villagerItems = ImmutableList.of(
+                new TestItem("random_loot")
+        );
+
+        // Random loot SHOULD be flagged as non-supply because it's not a tool or needed ingredient
+        boolean hasNonSupply = JobsClean.hasNonSupplyItems(
+                villagerItems,
+                2,  // Current state = 2 (needs bowl)
+                ingredientsRequired,
+                toolsRequired
+        );
+
+        Assertions.assertTrue(hasNonSupply,
+                "Random loot should be flagged as non-supply item");
+    }
 }

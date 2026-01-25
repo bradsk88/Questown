@@ -30,6 +30,8 @@ public interface Dependencies2<ROOM extends Room, MATCH extends IRoomRecipeMatch
 
     PredicateCollection<HELD_ITEM,HELD_ITEM> item(Integer integer);
 
+    Integer getQuantityForStep(int state);
+
     PredicateCollection<TOWN_ITEM,TOWN_ITEM> tools(Integer integer);
 
     String stringify(POS pos);

@@ -204,13 +204,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
     public ImmutableList<MCRoom> getAllRoomsIncludingMetaAndFarms() {
         ImmutableList.Builder<MCRoom> b = ImmutableList.builder();
         b.addAll(roomsMap.getAllRooms());
-        Collection<MCRoom> farms = roomsMap.getFarms();
-        // TODO[Decup]: Remove
-        QT.FLAG_LOGGER.info("getAllRoomsIncludingMetaAndFarms: getFarms() returned {} farms", farms.size());
-        for (MCRoom farm : farms) {
-            QT.FLAG_LOGGER.info("  Farm: doorPos={}, spaces={}", farm.getDoorPos(), farm.getSpaces().size());
-        }
-        b.addAll(farms);
+        b.addAll(roomsMap.getFarms());
         assert flagMetaRoom != null;
         b.add(flagMetaRoom);
         @NotNull TownFlagBlockEntity t = town.getUnsafe();

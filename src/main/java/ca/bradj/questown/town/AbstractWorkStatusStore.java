@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -134,10 +135,14 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             Collection<ROOM> allRooms,
             long ticksSinceLast
     ) {
+        // Track rooms that were just initialized this tick (to avoid double-ticking)
+        Set<ROOM> justInitialized = new HashSet<>();
+
         // Initialize work states for new rooms immediately
         for (ROOM room : allRooms) {
             if (!rooms.contains(room)) {
                 rooms.add(room);
+                justInitialized.add(room);
                 // Initialize work states for new room right away
                 this.doTick(tickSource, room, ticksSinceLast);
             }
@@ -149,7 +154,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
 
         curIdx = (curIdx + 1) % rooms.size();
 
-        this.doTick(tickSource, (ROOM) rooms.toArray()[curIdx], ticksSinceLast);
+        ROOM roomToTick = (ROOM) rooms.toArray()[curIdx];
+        // Skip if this room was just initialized (already ticked above)
+        if (!justInitialized.contains(roomToTick)) {
+            this.doTick(tickSource, roomToTick, ticksSinceLast);
+        }
     }
 
     private void doTick(
@@ -185,7 +194,6 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                         }
                 );
 
-        QT.BLOCK_LOGGER.debug("Work status store scanning room: {} with {} spaces", o.getDoorPos(), o.getSpaces().size());
         for (InclusiveSpace s : o.getSpaces()) {
             for (Position p : InclusiveSpaces.getAllEnclosedPositions(s)) {
                 posFactory.apply(o, p).forEach(pp -> {
@@ -198,7 +206,6 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                     }
                     State def = this.defaultStateFactory.apply(tickSource, pp);
                     if (def != null) {
-                        QT.BLOCK_LOGGER.debug("Initialized work state for block at {}", pp);
                         jobStatuses.put(pp, def);
                     }
 
