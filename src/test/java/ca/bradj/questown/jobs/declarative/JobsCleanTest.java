@@ -122,7 +122,7 @@ class JobsCleanTest {
 
     @Test
     void roomsWithState_shouldReturnAllRoomsIfBothChecksPass() {
-        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = JobsClean.roomsWithState(
+        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = DeclarativeJobs.roomsWithState(
                 ImmutableList.of(arbitaryRoomMatch1),
                 block -> true,
                 pos -> true
@@ -133,7 +133,7 @@ class JobsCleanTest {
 
     @Test
     void roomsWithState_shouldReturnNoRoomsIfJobBlockCheckFails() {
-        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = JobsClean.roomsWithState(
+        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = DeclarativeJobs.roomsWithState(
                 ImmutableList.of(arbitaryRoomMatch1),
                 block -> false,
                 pos -> true
@@ -143,7 +143,7 @@ class JobsCleanTest {
 
     @Test
     void roomsWithState_shouldReturnNoRoomsIfStateCheckFails() {
-        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = JobsClean.roomsWithState(
+        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = DeclarativeJobs.roomsWithState(
                 ImmutableList.of(arbitaryRoomMatch1),
                 block -> true,
                 pos -> false
@@ -153,7 +153,7 @@ class JobsCleanTest {
 
     @Test
     void roomsWithState_shouldReturnNoRoomsIfBothChecksFail() {
-        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = JobsClean.roomsWithState(
+        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = DeclarativeJobs.roomsWithState(
                 ImmutableList.of(arbitaryRoomMatch1),
                 block -> false,
                 pos -> false

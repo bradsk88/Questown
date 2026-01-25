@@ -20,6 +20,9 @@ import java.util.function.*;
 
 /**
  * Test implementation of DeclarativeJobTicker.Dependencies for integration tests.
+ * By default, this "test town" consists of a single room, which is both a (correct)
+ * jobsite and a storeroom. It has the right state for the worker to work in it, and
+ * it is occupied by the villager under test.
  */
 public class TestTickerDependencies implements
         DeclarativeJobTicker.Dependencies<Position, String, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Room, TestRoomMatch, Void, String> {
@@ -33,9 +36,7 @@ public class TestTickerDependencies implements
     private RoomsNeedingVillagerInput<Room, String, Position> cachedRoomsNeedingInput;
     // Entity position inside the room (walls are at x=0, z=0; inside starts at x=1, z=1)
     private Position entityPosition = new Position(2, 2);
-    // When true, getJobSites() returns empty to simulate the bug where getMatches()
-    // doesn't find farm rooms (they're in activeFarms, not activeRecipes)
-    private boolean simulateFarmRoomNotFoundBug = false;
+    private boolean townHasJobSite = false;
 
     public TestTickerDependencies(
             JobDefinition definition,
@@ -69,26 +70,11 @@ public class TestTickerDependencies implements
         journal.initializeStatus(ProductionStatus.FACTORY.idle());
     }
 
-    /**
-     * Enable simulation of the bug where getJobSites() returns empty for farm rooms.
-     * This happens because TownRoomsHandle.getMatches() doesn't have special handling
-     * for farms like getRoomsMatching() does.
-     */
-    public void setSimulateFarmRoomNotFoundBug(boolean simulate) {
-        this.simulateFarmRoomNotFoundBug = simulate;
+    public void setTownHasJobSite(boolean hasJobSite) {
+        this.townHasJobSite = hasJobSite;
     }
 
     // ========== Dependencies2 methods ==========
-
-    @Override
-    public ImmutableList<TestRoomMatch> getRoomsWithCompletedProduct() {
-        // Check if any workspot is at max state
-        State state = workStatusHandle.getJobBlockState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
-        if (state != null && state.processingState() >= definition.maxState()) {
-            return ImmutableList.of(jobSite);
-        }
-        return ImmutableList.of();
-    }
 
     @Override
     public boolean isJobBlock(Position pos) {
@@ -97,9 +83,7 @@ public class TestTickerDependencies implements
 
     @Override
     public ImmutableList<TestRoomMatch> getJobSites() {
-        if (simulateFarmRoomNotFoundBug) {
-            // Simulate the bug: getMatches() doesn't find farm rooms because
-            // they're in activeFarms, not activeRecipes
+        if (townHasJobSite) {
             return ImmutableList.of();
         }
         return ImmutableList.of(jobSite);
@@ -351,15 +335,6 @@ public class TestTickerDependencies implements
     @Override
     public @Nullable ContainerTarget<?, ?> getSuccessTarget() {
         return null;
-    }
-
-    @Override
-    public @Nullable EntityCurrentJobSite<Room> getEntityCurrentJobSite(RoomsNeedingVillagerInput<Room, ?, Position> rniot) {
-        if (simulateFarmRoomNotFoundBug) {
-            // Simulate the bug: can't find the job site
-            return null;
-        }
-        return new EntityCurrentJobSite<>(jobSite.room, false);
     }
 
     @SuppressWarnings("unchecked")

@@ -270,15 +270,6 @@ public class Jobs {
         input.forEach((k, v) -> b.put(k, z -> !z.isEmpty() && v.test(z.get())));
         return b.build();
     }
-    public static Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
-            Collection<? extends IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, Block>> rooms,
-            Predicate<BlockPos> isCorrectBlock,
-            Predicate<BlockPos> hasCorrectState
-    ) {
-        return JobsClean.roomsWithState(
-                rooms, isCorrectBlock, hasCorrectState
-        ).stream().map(RoomRecipeMatchUtils::unsafe).toList();
-    }
 
     public static ImmutableList<MCHeldItem> getHeldItems(
             Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> job

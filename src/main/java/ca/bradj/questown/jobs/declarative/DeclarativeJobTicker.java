@@ -131,11 +131,6 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         @Nullable
         ContainerTarget<?, ?> getSuccessTarget();
 
-        @Nullable
-        EntityCurrentJobSite<ROOM> getEntityCurrentJobSite(
-                RoomsNeedingVillagerInput<ROOM, ?, POS> rniot
-        );
-
         <X> RoomsNeedingVillagerInput<ROOM, X, POS> getCachedRoomsNeedingInput();
 
         ImmutableList<? extends Predicate<?>> getRecipe(Integer state);
@@ -253,15 +248,31 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         return (RoomsNeedingVillagerInput<ROOM, Y, POS>) rn;
     }
 
+    private <RECIPE> ImmutableList<MATCH> computeRoomsWithCompletedProduct(
+            Dependencies<POS, RECIPE, ?, ?, ROOM, MATCH, EXTRA, ?> deps,
+            WorkStatusHandle<POS, ?> work
+    ) {
+        return DeclarativeJobs.roomsWithState(
+                deps.getJobSites(),
+                deps::isJobBlock,
+                pos -> {
+                    State s = work.getJobBlockState(pos);
+                    return s != null && maxState == s.processingState();
+                }
+        );
+    }
+
     private <TOWN_ITEM extends Item<TOWN_ITEM>, RECIPE> void tick(
             Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA, ?> deps,
             WorkStatusHandle<POS, HELD_ITEM> work,
             RoomsNeedingVillagerInput<ROOM, RECIPE, POS> rniot2
     ) {
+        Supplier<ImmutableList<MATCH>> roomsWithCompletedProduct = () -> computeRoomsWithCompletedProduct(deps, work);
+
         JobTownProvider<ROOM> jtp = new TickTownProvider
                 <ROOM, POS, MATCH, HELD_ITEM, TOWN_ITEM, ContainerTarget<?, TOWN_ITEM>>
                 (
-                        deps::getRoomsWithCompletedProduct,
+                        roomsWithCompletedProduct,
                         deps::getJobSites,
                         deps::getRoomsForSupplyCheck,
                         deps.isJobSitePredicate(),
@@ -281,14 +292,14 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                 );
 
         // Compute entityCurrentJobSite for uses that need a snapshot (e.g., logic.tick parameters)
-        EntityCurrentJobSite<ROOM> entityCurrentJobSite = getEntityCurrentJobSite(deps, rniot2);
+        EntityCurrentJobSite<ROOM> entityCurrentJobSite = getEntityCurrentJobSite(deps, rniot2, work);
 
         // Make EntityLocStateProvider compute the job site lazily on each call.
         // This ensures roomsWithCompletedProduct is fresh when status is computed.
         EntityLocStateProvider<ROOM> elp = new EntityLocStateProvider<>() {
             @Override
             public @Nullable ROOM getEntityCurrentJobSite() {
-                EntityCurrentJobSite<ROOM> current = DeclarativeJobTicker.this.getEntityCurrentJobSite(deps, rniot2);
+                EntityCurrentJobSite<ROOM> current = DeclarativeJobTicker.this.getEntityCurrentJobSite(deps, rniot2, work);
                 if (current == null) {
                     return null;
                 }
@@ -433,13 +444,16 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
     }
 
     private <RECIPE> EntityCurrentJobSite<ROOM> getEntityCurrentJobSite(
-            Dependencies<POS, RECIPE, ?, ?, ROOM, ?, EXTRA, ?> deps,
-            RoomsNeedingVillagerInput<ROOM, RECIPE, POS> roomsNeedingVillagerInput
+            Dependencies<POS, RECIPE, ?, ?, ROOM, MATCH, EXTRA, ?> deps,
+            RoomsNeedingVillagerInput<ROOM, RECIPE, POS> roomsNeedingVillagerInput,
+            WorkStatusHandle<POS, ?> work
     ) {
+        ImmutableList<MATCH> roomsWithCompletedProduct = computeRoomsWithCompletedProduct(deps, work);
+
         return JobsClean.getEntityCurrentJobSite(
                 deps.toPosition(deps.getEntity().getBlockPosition()),
                 roomsNeedingVillagerInput,
-                deps.getRoomsWithCompletedProduct().stream().map(IRoomRecipeMatch::getRoom).toList(),
+                roomsWithCompletedProduct.stream().map(IRoomRecipeMatch::getRoom).toList(),
                 room -> deps.isSimilarYCoord(deps.getEntity().getBlockPosition(), room),
                 deps::isFarm
         );

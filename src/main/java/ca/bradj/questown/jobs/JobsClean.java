@@ -131,6 +131,10 @@ public class JobsClean {
         }
     }
 
+    /**
+     * @deprecated Use {@code DeclarativeJobs.roomsWithState()} or {@code DeclarativeJob.hasRoomsAtState()} instead.
+     */
+    @Deprecated(forRemoval = true)
     public static <ROOM, POS, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>> ImmutableList<MATCH> roomsWithState(
             Collection<MATCH> rooms,
             Predicate<POS> isCorrectBlock,

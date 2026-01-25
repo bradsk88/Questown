@@ -12,7 +12,9 @@ import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -389,6 +391,42 @@ public class DeclarativeJobs {
                 return fakeRoom;
             }
         };
+    }
+
+    /**
+     * Finds rooms that contain at least one block matching both predicates.
+     * Package-private to consolidate declarative job logic within this package.
+     *
+     * @param rooms           The rooms to search
+     * @param isJobBlock      Predicate to check if a position is a job block
+     * @param hasCorrectState Predicate to check if a position has the desired state
+     * @return Rooms containing at least one matching block
+     */
+    static <ROOM extends Room, POS, MATCH extends IRoomRecipeMatch<ROOM, ?, POS, ?>> ImmutableList<MATCH> roomsWithState(
+            Collection<MATCH> rooms,
+            Predicate<POS> isJobBlock,
+            Predicate<POS> hasCorrectState
+    ) {
+        ImmutableList.Builder<MATCH> result = ImmutableList.builder();
+        for (MATCH room : rooms) {
+            if (roomHasMatchingBlock(room, isJobBlock, hasCorrectState)) {
+                result.add(room);
+            }
+        }
+        return result.build();
+    }
+
+    private static <POS, MATCH extends IRoomRecipeMatch<?, ?, POS, ?>> boolean roomHasMatchingBlock(
+            MATCH room,
+            Predicate<POS> isJobBlock,
+            Predicate<POS> hasCorrectState
+    ) {
+        for (POS pos : room.getContainedBlocks().keySet()) {
+            if (isJobBlock.test(pos) && hasCorrectState.test(pos)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

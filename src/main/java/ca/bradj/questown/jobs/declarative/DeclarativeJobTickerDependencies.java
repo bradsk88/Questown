@@ -62,20 +62,6 @@ public class DeclarativeJobTickerDependencies implements
     }
 
     @Override
-    public ImmutableList<RoomRecipeMatch<MCRoom>> getRoomsWithCompletedProduct() {
-        var isCorrectBlock = DeclarativeJob.isCorrectBlock(town);
-        WorkStatusHandle<BlockPos, MCHeldItem> workHandle = getWorkStatusHandle(town);
-
-        Collection<RoomRecipeMatch<MCRoom>> result = job.roomsWithState.get(
-                job.roomsMatching(town),
-                isCorrectBlock,
-                workHandle::getJobBlockState
-        );
-
-        return ImmutableList.copyOf(result.stream().map(this::pluralize).toList());
-    }
-
-    @Override
     public boolean isJobBlock(BlockPos blockPos) {
         return job.isJobBlock(blockPos);
     }
@@ -167,14 +153,6 @@ public class DeclarativeJobTickerDependencies implements
     @Override
     public MCHeldItem convert(MCTownItem mcTownItem) {
         return MCHeldItem.fromTown(mcTownItem);
-    }
-
-    private RoomRecipeMatches<MCRoom> pluralize(RoomRecipeMatch<MCRoom> v) {
-        return new RoomRecipeMatches<>(
-                v.room,
-                v.getRecipeIDs(),
-                v.containedBlocks.entrySet()
-        );
     }
 
     /**
@@ -385,20 +363,6 @@ public class DeclarativeJobTickerDependencies implements
     @Override
     public @Nullable ContainerTarget<?, ?> getSuccessTarget() {
         return job.getSuccessTargetForDeps();
-    }
-
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    @Override
-    public @Nullable EntityCurrentJobSite<MCRoom> getEntityCurrentJobSite(
-            RoomsNeedingVillagerInput<MCRoom, ?, BlockPos> rniot
-    ) {
-        return JobsClean.getEntityCurrentJobSite(
-                toPosition(entity.blockPosition()),
-                (RoomsNeedingVillagerInput) rniot,
-                getRoomsWithCompletedProduct().stream().map(IRoomRecipeMatch::getRoom).toList(),
-                room -> isSimilarYCoord(entity.blockPosition(), room),
-                x -> isFarm((ResourceLocation) x)
-        );
     }
 
     @SuppressWarnings("unchecked")

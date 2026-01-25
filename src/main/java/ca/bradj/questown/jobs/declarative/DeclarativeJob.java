@@ -29,6 +29,7 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -157,7 +158,6 @@ public class DeclarativeJob extends
         this.workInterval = workInterval;
         this.recipe = buildRecipe(this);
         ticker = new DeclarativeJobTicker<>(specialGlobalRules, specialStatusRules, location, maxState);
-        roomsWithState = new RoomsWithMaxState<>(location, maxState);
     }
 
     private static @Nullable String getUnmetNeed(
@@ -465,11 +465,27 @@ public class DeclarativeJob extends
         return location.shouldInitializeWorkState().test(info, z);
     }
 
-    final RoomsWithMaxState<MCRoom, BlockPos, RoomRecipeMatch<MCRoom>, WorkLocation> roomsWithState;
-
     @Override
     protected boolean isJobBlock(BlockPos bp) {
         return checks.isJobBlock(bp);
+    }
+
+    /**
+     * Checks if any rooms have job blocks at the specified state.
+     * Used by TownPossibleWork to determine if work is available.
+     */
+    public boolean hasRoomsAtState(
+            TownFlagBlockEntity town,
+            int state
+    ) {
+        WorkStatusHandle<BlockPos, MCHeldItem> ws = town.getWorkStatusHandle(null);
+        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle()
+                .getRoomsMatching(location.baseRoom());
+        return !DeclarativeJobs.roomsWithState(
+                ImmutableList.copyOf(rooms),
+                this::isJobBlock,
+                bp -> Integer.valueOf(state).equals(JobBlock.getState(ws::getJobBlockState, bp))
+        ).isEmpty();
     }
 
     private boolean hasInserted(Integer action) {
@@ -725,11 +741,20 @@ public class DeclarativeJob extends
         }
 
         Map<Integer, SupplyItemStatus> statusItems = DeclarativeJobTicker.getSupplyItemStatuses(getSupplyDeps());
+        // Find rooms with completed product (at max state)
+        ImmutableList<RoomRecipeMatch<MCRoom>> roomsAtMaxState = DeclarativeJobs.roomsWithState(
+                roomsMatching(town).apply(location),
+                p -> isCorrectBlock(town).test(location, p),
+                bp -> {
+                    State jbs = work.apply(bp);
+                    return jbs != null && maxState.equals(jbs.processingState());
+                }
+        );
         return JobsClean.findJobSite(
                 maxState,
                 prioritizesExtraction(),
                 statusItems,
-                roomsWithState.get(roomsMatching(town), isCorrectBlock(town), work).stream().map(v -> v.room).toList(),
+                roomsAtMaxState.stream().map(v -> v.room).toList(),
                 (MCRoom room) -> Positions.ToBlock(room.getDoorPos(), room.yCoord),
                 blocksSrc,
                 work,

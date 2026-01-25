@@ -993,10 +993,10 @@ class JobIntegrationTest {
      * This test simulates that by manually advancing the job site to the extraction state
      * while the villager's inventory is empty.
      *
-     * NOTE: This test passes because TestTickerDependencies.getRoomsWithCompletedProduct()
-     * uses a simplified single-position check. The real game uses JobsClean.roomsWithState()
-     * which iterates through all blocks in matching rooms. The bug may be in that iteration
-     * logic or in how rooms/blocks are matched.
+     * NOTE: This test passes because the ticker now computes roomsWithCompletedProduct
+     * internally using DeclarativeJobs.roomsWithState(), which iterates through all blocks
+     * in matching rooms. The bug may be in that iteration logic or in how rooms/blocks
+     * are matched.
      *
      * Evidence from game logs:
      * - Job state IS set to [state=2, ingCount=0, workLeft=0.0]
@@ -1078,7 +1078,7 @@ class JobIntegrationTest {
     }
 
     /**
-     * Direct test of JobsClean.roomsWithState() to verify it correctly identifies
+     * Direct test of DeclarativeJobs.roomsWithState() to verify it correctly identifies
      * rooms with completed products.
      *
      * The real game uses this method to find rooms with products ready for extraction.
@@ -1086,7 +1086,7 @@ class JobIntegrationTest {
      * will get NO_JOBSITE status instead of EXTRACTING_PRODUCT.
      */
     @Test
-    void jobsClean_roomsWithState_shouldFindRoomWhenBlockAtMaxState() {
+    void declarativeJobs_roomsWithState_shouldFindRoomWhenBlockAtMaxState() {
         JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "crafter_bowl.json");
 
         // Create a room that contains the workspot position
@@ -1099,9 +1099,9 @@ class JobIntegrationTest {
                 State.freshAtState(definition.maxState())
         );
 
-        // Use JobsClean.roomsWithState() to find rooms with completed products
+        // Use DeclarativeJobs.roomsWithState() to find rooms with completed products
         // This is the same logic used by the real game
-        ImmutableList<TestRoomMatch> roomsWithProduct = JobsClean.roomsWithState(
+        ImmutableList<TestRoomMatch> roomsWithProduct = DeclarativeJobs.roomsWithState(
                 ImmutableList.of(room),
                 pos -> pos.equals(IntegrationTestWorld.DEFAULT_WORKSPOT_POS), // isCorrectBlock
                 pos -> {
@@ -1113,7 +1113,7 @@ class JobIntegrationTest {
         // The room should be found because it contains a block at maxState
         Assertions.assertFalse(
                 roomsWithProduct.isEmpty(),
-                "JobsClean.roomsWithState() should find room with block at maxState. " +
+                "DeclarativeJobs.roomsWithState() should find room with block at maxState. " +
                 "If this fails, it explains why villager gets NO_JOBSITE after work completes."
         );
     }
@@ -1223,7 +1223,7 @@ class JobIntegrationTest {
         // IMPORTANT: Enable the bug simulation.
         // This makes getJobSites() return empty, simulating how the real
         // getMatches() doesn't find farm rooms.
-        deps.setSimulateFarmRoomNotFoundBug(true);
+        deps.setTownHasJobSite(false);
 
         // Give the villager a sapling
         inventory.set(0, new GathererJournalTest.TestItem("#minecraft:saplings"));

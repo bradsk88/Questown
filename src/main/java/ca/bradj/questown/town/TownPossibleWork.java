@@ -212,21 +212,11 @@ public class TownPossibleWork {
             return WithReason.always(dj.getMaxState(), "Special rule ALWAYS_CONSIDER present");
         }
         boolean townHasJobSite = false;
-        ServerLevel sl = Preconditions.checkNotNull(t.getServerLevel());
         for (int i = 0; i < dj.getMaxState(); i++) {
-            int ii = i;
-            WorkStatusHandle<BlockPos, MCHeldItem> ws = t.getWorkStatusHandle(null); // TODO: Nest
-            ProductionStatus s = ProductionStatus.fromJobBlockStatus(ii);
+            ProductionStatus s = ProductionStatus.fromJobBlockStatus(i);
             if (!UtilClean.getOrDefaultCollection(dj.specialRules, s, ImmutableList.of())
                           .contains(SpecialRules.CLAIM_SPOT)) {
-                Collection<RoomRecipeMatch<MCRoom>> rooms = t.getRoomHandle()
-                                                             .getRoomsMatching(dj.location().baseRoom());
-                Collection<RoomRecipeMatch<MCRoom>> roomsWS = Jobs.roomsWithState(
-                        rooms,
-                        (bp) -> isJobBlock(t, dj, bp, sl),
-                        (bp) -> Integer.valueOf(ii).equals(JobBlock.getState(ws::getJobBlockState, bp))
-                );
-                if (!roomsWS.isEmpty()) {
+                if (dj.hasRoomsAtState(t, i)) {
                     townHasJobSite = true;
                     break;
                 }
@@ -235,6 +225,7 @@ public class TownPossibleWork {
         if (!townHasJobSite) {
             return WithReason.always(0, "Town lacks required job site (or descendant) of: " + dj.location().baseRoom());
         }
+        ServerLevel sl = Preconditions.checkNotNull(t.getServerLevel());
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
             boolean townHasIngredient = true;
