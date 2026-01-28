@@ -148,4 +148,8 @@ public class Work {
         return hasNoOutput;
     }
 
+    public Warper<ServerLevel, MCTownState> warper(WorksBehaviour.WarpInput input) {
+        return warper.apply(input);
+    }
+
 }

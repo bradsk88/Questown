@@ -215,7 +215,7 @@ public class TimeWarpWorldInteraction extends
             WorkedSpot<BlockPos> position,
             MCHeldItem item
     ) {
-        return PostInsertHook.run(
+        MCTownState afterHook = PostInsertHook.run(
                 mcTownState,
                 rules,
                 inputs.level(),
@@ -224,6 +224,12 @@ public class TimeWarpWorldInteraction extends
                 ts -> ts.withBOPCleared(inputs.vUUID),
                 inputs.vUUID
         );
+        // PostInsertHook.run() returns null if no rules were applied
+        if (afterHook == null) {
+            afterHook = mcTownState;
+        }
+        // Track the inserted item for potential recovery if NO_SUPPLIES is encountered later
+        return afterHook.withInsertedItem(villagerIndex, position.workPosition(), item);
     }
 
     @Override
@@ -427,12 +433,92 @@ public class TimeWarpWorldInteraction extends
 
             @Override
             public Map<Integer, LZCD.Dependency<Void>> roomsWithWorkableStatefulBlocks() {
-                return Map.of(); // TODO[Warp]: Implement
+                // For warp, we check if the fake room block is at each state
+                // and return a dependency that evaluates to true for the current state
+                ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
+                for (int state = 0; state <= maxState; state++) {
+                    final int s = state;
+                    b.put(state, new SimpleDependency("warp room has workable block at state " + state) {
+                        @Override
+                        protected Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
+                            boolean atState = workStates.processingState() == s;
+                            String reason = atState
+                                    ? "work block at state " + s
+                                    : "work block not at state " + s + " (actual: " + workStates.processingState() + ")";
+                            return new Populated<>(
+                                    "warp workable blocks at state " + s,
+                                    WithReason.always(atState, reason),
+                                    ImmutableMap.of(),
+                                    null
+                            ) {
+                                @Override
+                                protected String stringRep() {
+                                    return "WarpWorkableBlocks[" + s + "]=" + atState;
+                                }
+                            };
+                        }
+
+                        @Override
+                        public String describe() {
+                            return "warp room workable at state " + s;
+                        }
+                    });
+                }
+                return b.build();
             }
 
             @Override
             public LZCD.Dependency<Void> hasSuppliesV2() {
-                return null; // TODO[Warp]: Implement
+                return new SimpleDependency("town has supplies for warp") {
+                    @Override
+                    protected Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
+                        int curState = workStates.processingState();
+                        boolean hasSupplies = false;
+                        String reason = "no supplies found";
+
+                        PredicateCollection<MCHeldItem, ?> ings = checks.getIngredientsForStep(curState);
+                        if (ings != null) {
+                            for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
+                                if (container.hasItem(i -> ings.test(MCHeldItem.fromTown(i)))) {
+                                    hasSupplies = true;
+                                    reason = "container has ingredient for state " + curState;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!hasSupplies) {
+                            PredicateCollection<MCTownItem, ?> toolChk = checks.getToolsForStep(curState);
+                            if (toolChk != null) {
+                                for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
+                                    if (container.hasItem(toolChk::test)) {
+                                        hasSupplies = true;
+                                        reason = "container has tool for state " + curState;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        final boolean result = hasSupplies;
+                        final String finalReason = reason;
+                        return new Populated<>(
+                                "warp supplies check",
+                                WithReason.always(result, finalReason),
+                                ImmutableMap.of(),
+                                null
+                        ) {
+                            @Override
+                            protected String stringRep() {
+                                return "WarpSupplies [" + result + ": " + finalReason + "]";
+                            }
+                        };
+                    }
+
+                    @Override
+                    public String describe() {
+                        return "hasSuppliesV2 for warp";
+                    }
+                };
             }
 
             @Override
@@ -546,5 +632,51 @@ public class TimeWarpWorldInteraction extends
             Function<MCHeldItem, MCHeldItem> push
     ) {
         Util.iterate(newItemsSource, push::apply);
+    }
+
+    /**
+     * Recovers items that were inserted into a work block during warp.
+     * Called when NO_SUPPLIES is encountered, meaning the villager ran out of supplies mid-cycle.
+     * Items are deposited back to containers, or given to the villager if containers are full.
+     *
+     * @return Updated town state with items recovered and tracking cleared
+     */
+    public MCTownState recoverInsertedItems(MCTownState town) {
+        java.util.Map.Entry<MCTownState, ImmutableList<MCHeldItem>> result = town.withInsertedItemsCleared(villagerIndex);
+        MCTownState newState = result.getKey();
+        ImmutableList<MCHeldItem> recoveredItems = result.getValue();
+
+        if (recoveredItems.isEmpty()) {
+            return newState;
+        }
+
+        // Deposit recovered items back to containers
+        ImmutableList<MCHeldItem> notDeposited = newState.depositItems(recoveredItems);
+        if (!notDeposited.isEmpty()) {
+            // If containers are full, try to give items to villager
+            for (MCHeldItem item : notDeposited) {
+                TownState.VillagerData<MCHeldItem> vd = newState.getVillager(villagerIndex).withAddedItem(item);
+                if (vd != null) {
+                    newState = newState.withVillagerData(villagerIndex, vd);
+                }
+                // If villager inventory is also full, items are lost (edge case)
+            }
+        }
+        return newState;
+    }
+
+    /**
+     * Simulates recovering items that were inserted during warp.
+     * Used by the NO_SUPPLIES handler to recover items and reset state.
+     *
+     * @return Updated town state, or null if nothing to recover
+     */
+    public @Nullable MCTownState simulateRecoverInsertedItems(MCTownState inState) {
+        java.util.Map.Entry<MCTownState, ImmutableList<MCHeldItem>> result = inState.withInsertedItemsCleared(villagerIndex);
+        ImmutableList<MCHeldItem> recoveredItems = result.getValue();
+        if (recoveredItems.isEmpty()) {
+            return null; // Nothing to recover
+        }
+        return recoverInsertedItems(inState);
     }
 }

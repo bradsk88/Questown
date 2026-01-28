@@ -72,6 +72,14 @@ public class TownPossibleWork {
         if (buffer != 0) {
             return;
         }
+        recomputeNow();
+    }
+
+    /**
+     * Immediately recomputes possible jobs without rate limiting.
+     * Used during time warp when tick() won't be called.
+     */
+    public void recomputeNow() {
         TownFlagBlockEntity t = town.getUnsafe();
         Stream<String> roots = t.getVillagerHandle().getJobs().stream().map(JobID::rootId);
         ImmutableSet<Map.Entry<JobID, Supplier<Work>>> rjs = Works.regularJobs();
@@ -187,6 +195,8 @@ public class TownPossibleWork {
             return WithReason.always(0.0, "Unsupported job class " + j.getClass().getName());
         }
 
+        dj.initialize(t.getServerLevel(), dj.getJournalSnapshot());
+
         if (!ServerJobsRegistry.canFit(null, j.getId(), Util.getDayTime(t.getServerLevel()))) {
             t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
                     "Villager will not do {} because there is not enough time left in the day",
@@ -195,13 +205,30 @@ public class TownPossibleWork {
             return WithReason.always(0.0, "Not enough time left in the day");
         }
 
+        // Check if product is requested
+        String requestStatus = getRequestStatus(t, j.getId());
+
         WithReason<Integer> hps = getHighestPossibleState(t, dj);
         double v = (double) hps.value / dj.getMaxState();
         float shuffler = Compat.nextRandomInt(t.getServerLevel(), 100) / 10000f;
         return WithReason.always(
                 v + shuffler,
-                "Highest possible job state: " + hps + " (out of " + dj.getMaxState() + ", with randomizer " + shuffler + ")"
+                "Highest possible job state: " + hps + " (out of " + dj.getMaxState() + ", with randomizer " + shuffler + ")" + requestStatus
         );
+    }
+
+    private static String getRequestStatus(TownFlagBlockEntity t, JobID jobId) {
+        ImmutableList<ca.bradj.questown.jobs.requests.WorkRequest> requests = t.getWorkHandle().getRequestedResults();
+        if (requests.isEmpty()) {
+            return " [No items requested on job board]";
+        }
+        WorksBehaviour.TownData td = t.getTownData();
+        for (ca.bradj.questown.jobs.requests.WorkRequest r : requests) {
+            if (ServerJobsRegistry.canSatisfy(td, jobId, r.asIngredient())) {
+                return " [Satisfies request: " + r + "]";
+            }
+        }
+        return " [Product not requested]";
     }
 
     private static WithReason<Integer> getHighestPossibleState(
@@ -211,26 +238,29 @@ public class TownPossibleWork {
         if (dj.specialGlobalRules.contains(SpecialRules.ALWAYS_CONSIDER)) {
             return WithReason.always(dj.getMaxState(), "Special rule ALWAYS_CONSIDER present");
         }
+        WithReason<Boolean> lastRoomCheck = null;
         boolean townHasJobSite = false;
         for (int i = 0; i < dj.getMaxState(); i++) {
             ProductionStatus s = ProductionStatus.fromJobBlockStatus(i);
             if (!UtilClean.getOrDefaultCollection(dj.specialRules, s, ImmutableList.of())
                           .contains(SpecialRules.CLAIM_SPOT)) {
-                if (dj.hasRoomsAtState(t, i)) {
+                lastRoomCheck = dj.hasRoomsAtState(t, i);
+                if (lastRoomCheck.value()) {
                     townHasJobSite = true;
                     break;
                 }
             }
         }
         if (!townHasJobSite) {
-            return WithReason.always(0, "Town lacks required job site (or descendant) of: " + dj.location().baseRoom());
+            String roomReason = lastRoomCheck != null ? lastRoomCheck.reason() : "No states checked";
+            return WithReason.always(0, "Town lacks required job site (or descendant) of: " + dj.location().baseRoom() + " (" + roomReason + ")");
         }
         ServerLevel sl = Preconditions.checkNotNull(t.getServerLevel());
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
             boolean townHasIngredient = true;
             final IPredicateCollection<MCHeldItem> ing = dj.getChecks().getIngredientsForStep(ii);
-            if (ing != null) {
+            if (ing != null && !ing.isEmpty()) {
                 townHasIngredient = false;
                 List<ContainerTarget<MCContainer, MCTownItem>> foundContainer = Containers.get(
                         t,
@@ -249,7 +279,7 @@ public class TownPossibleWork {
 
             boolean townHasTool = true;
             final IPredicateCollection<MCTownItem> tool = dj.getChecks().getToolsForStep(ii);
-            if (tool != null) {
+            if (tool != null && !tool.isEmpty()) {
                 townHasTool = false;
                 @Nullable ContainerTarget<MCContainer, MCTownItem> toolCont = t.findMatchingContainer(tool::test);
                 if (toolCont != null) {

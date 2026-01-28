@@ -474,18 +474,25 @@ public class DeclarativeJob extends
      * Checks if any rooms have job blocks at the specified state.
      * Used by TownPossibleWork to determine if work is available.
      */
-    public boolean hasRoomsAtState(
+    public WithReason<Boolean> hasRoomsAtState(
             TownFlagBlockEntity town,
             int state
     ) {
         WorkStatusHandle<BlockPos, MCHeldItem> ws = town.getWorkStatusHandle(null);
         Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle()
                 .getRoomsMatching(location.baseRoom());
-        return !DeclarativeJobs.roomsWithState(
+        if (rooms.isEmpty()) {
+            return WithReason.always(false, "No rooms match base room " + location.baseRoom());
+        }
+        ImmutableList<RoomRecipeMatch<MCRoom>> roomsWithState = DeclarativeJobs.roomsWithState(
                 ImmutableList.copyOf(rooms),
                 this::isJobBlock,
                 bp -> Integer.valueOf(state).equals(JobBlock.getState(ws::getJobBlockState, bp))
-        ).isEmpty();
+        );
+        if (roomsWithState.isEmpty()) {
+            return WithReason.always(false, rooms.size() + " rooms match " + location.baseRoom() + " but none have job blocks at state " + state);
+        }
+        return WithReason.always(true, roomsWithState.size() + " rooms have job blocks at state " + state);
     }
 
     private boolean hasInserted(Integer action) {
@@ -829,6 +836,27 @@ public class DeclarativeJob extends
     @Override
     public long getTotalDuration() {
         return totalDuration;
+    }
+
+    @Override
+    public int getWarpTicksPerCycle() {
+        // Count ingredient collection ticks: sum of all ingredient quantities across states
+        int ingredientTicks = 0;
+        for (int state = 0; state <= maxState; state++) {
+            Integer qty = checks.getQuantityForStep(state, null);
+            if (qty != null && qty > 0) {
+                ingredientTicks += qty;
+            }
+        }
+
+        // Count work ticks: sum of all work required across states
+        int workTicks = initialWork.values().stream().reduce(0, Integer::sum);
+
+        // Overhead: 1 for extraction, 1 for dropping loot
+        int overhead = 2;
+
+        // Total ticks needed per cycle
+        return ingredientTicks + workTicks + overhead;
     }
 
     @Override

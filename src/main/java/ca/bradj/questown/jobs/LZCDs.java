@@ -110,6 +110,9 @@ public class LZCDs {
     }
 
     public static LZCD.Dependency<Void> invert(LZCD.Dependency<Void> voidDependency) {
+        if (voidDependency == null) {
+            return null;
+        }
         return new SimpleDependency(voidDependency.getName() + " (result inverted)") {
             @Override
             protected Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {

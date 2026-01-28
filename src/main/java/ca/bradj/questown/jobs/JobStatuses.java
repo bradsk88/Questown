@@ -238,6 +238,13 @@ public class JobStatuses {
     private static <STATUS extends IStatus<STATUS>> ILZCD<LZCD.Dependency<STATUS>> fromVoid(
             LZCD.Dependency<Void> dep
     ) {
+        if (dep == null) {
+            return LZCDs.noDeps(
+                    new Pair<>(new JobID("unknown", "unknown"), "null_dep"),
+                    () -> null,
+                    Objects::isNull
+            );
+        }
         //noinspection unchecked,rawtypes
         return LZCDs.noDeps(
                 new Pair(new JobID("unknown", "unknown"), dep.getName()),

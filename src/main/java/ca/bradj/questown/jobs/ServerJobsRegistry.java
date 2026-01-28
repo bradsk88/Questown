@@ -455,17 +455,18 @@ public class ServerJobsRegistry {
 
     public static Warper<ServerLevel, MCTownState> getWarper(
             int villagerIndex,
-            JobID jobID
+            JobID jobID,
+            BlockPos townFlagPos
     ) {
-        return NoOpWarper.INSTANCE;
-
-        // TODO: Bring back warpers
-//        if (isSeekingWork(jobID)) {
-//            return NoOpWarper.INSTANCE;
-//        }
-//        Supplier<Work> w = Works.get(jobID);
-//        assert w != null;
-//        return w.get().warper().apply(new WorksBehaviour.WarpInput(villagerIndex));
+        if (isSeekingWork(jobID)) {
+            return NoOpWarper.INSTANCE;
+        }
+        Supplier<Work> w = Works.get(jobID);
+        if (w == null) {
+            // Job not registered (e.g., downtime jobs) - no warp action needed
+            return NoOpWarper.INSTANCE;
+        }
+        return w.get().warper(new WorksBehaviour.WarpInput(villagerIndex, townFlagPos));
     }
 
     public static boolean canSatisfy(

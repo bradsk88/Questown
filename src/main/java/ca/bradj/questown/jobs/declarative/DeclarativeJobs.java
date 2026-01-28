@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
@@ -273,9 +274,10 @@ public class DeclarativeJobs {
         b.put(ProductionStatus.WAITING_FOR_TIMED_STATE, i -> null);
         b.put(ProductionStatus.NO_SPACE, i -> null);
         b.put(ProductionStatus.GOING_TO_JOB, i -> null);
-        b.put(ProductionStatus.NO_SUPPLIES, i -> null);
+        b.put(ProductionStatus.NO_SUPPLIES, i -> i.wi.simulateRecoverInsertedItems(i.inState.town()));
         b.put(ProductionStatus.IDLE, i -> null);
         b.put(ProductionStatus.NO_JOBSITE, i -> null);
+        b.put(ProductionStatus.NO_WORK_POSSIBLE, i -> null);
         handler = b.build();
     }
 
@@ -322,9 +324,12 @@ public class DeclarativeJobs {
                 );
                 wi.injectTicks((int) ticksPassed);
                 MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);
+                // Use virtual morning time during warp to ensure villagers work productively
+                // instead of relaxing due to actual game time being evening/night
+                final long VIRTUAL_MORNING_TICK = 1000; // ~1am in MC time, plenty of daytime
                 @Nullable ProductionStatus nuStatus = ProductionStatuses.getNewStatusFromSignal(
                         status,
-                        Signals.fromDayTime(Util.getDayTime(level)),
+                        Signals.fromDayTime(new Signals.DayTime(VIRTUAL_MORNING_TICK)),
                         wi.asInventory(() -> wi.getHeldItems(fState, villagerNum), ztate::processingState),
                         wi.asTownJobs(
                                 ztate,
@@ -344,6 +349,12 @@ public class DeclarativeJobs {
                 if (nuStatus != null) {
                     status = nuStatus;
                 }
+                QT.JOB_LOGGER.debug(
+                        "[WARP] tick={} status={} workState={}",
+                        currentTick,
+                        status,
+                        ztate
+                );
                 MCTownState affectedState = handler.get(status).apply(new HandlerInputs(
                         wi,
                         fState,
