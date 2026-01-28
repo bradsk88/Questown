@@ -369,8 +369,17 @@ public class TimeWarpWorldInteraction extends
         // TODO[WARP]: Implement tracking of needs
     }
 
-    public void injectTicks(int interval) {
-        ticksSinceLastAction += interval;
+    /**
+     * Injects ticks to simulate time passing during warp.
+     * Ensures ticksSinceLastAction is at least equal to the work interval
+     * so that work can happen on each warp tick.
+     */
+    public void injectTicks(int ticks) {
+        ticksSinceLastAction += ticks;
+        // Ensure we always have enough ticks to pass the interval check during warp
+        // This is necessary because each warp tick creates a new TimeWarpWorldInteraction
+        // with ticksSinceLastAction=0, and consecutive ticks have ticksSincePrevious=1
+        ticksSinceLastAction = Math.max(ticksSinceLastAction, interval);
     }
 
     public JobTownProvider<MCRoom> asTownJobs(

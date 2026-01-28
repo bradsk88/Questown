@@ -16,6 +16,7 @@ import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.Job;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
@@ -323,6 +324,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public void writeTownData(CompoundTag tag) {
+        writeTownData(tag, true);
+    }
+
+    public void writeTownData(CompoundTag tag, boolean includeEconomicsData) {
         if (level == null) {
             return;
         }
@@ -810,8 +815,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         workHandle.openMenuRequested(sender, skipStraightToAdd);
     }
 
-    public void warpTime(int ticks) {
-        state.warp(this, Compat.getBlockStoredTagData(this), getServerLevel(), ticks);
+    public MCTownState warpTime(int ticks) {
+        return state.warp(this, Compat.getBlockStoredTagData(this), getServerLevel(), ticks);
+    }
+
+    public @Nullable MCTownState captureCurrentState() {
+        return state.captureState();
     }
 
     public VillagerHolder getVillagerHandle() {

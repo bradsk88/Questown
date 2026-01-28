@@ -357,15 +357,16 @@ public class TownFlagState {
         return changes;
     }
 
-    void warp(
+    MCTownState warp(
             TownFlagBlockEntity e,
             CompoundTag flagTag,
             ServerLevel level,
             long timeSinceWake
     ) {
         long levelDayTime = level.getDayTime();
+        MCTownState newState = null;
         try {
-            MCTownState newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
+            newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
             if (newState != null) {
                 e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Storing state on {}: {}", e.getUUID(), newState);
                 Compat.getBlockStoredTagData(e).put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
@@ -381,6 +382,7 @@ public class TownFlagState {
         }
         // TODO: Make sure chests get filled/empty
         flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, levelDayTime);
+        return newState;
     }
 
     private void profileTick(long startTime) {

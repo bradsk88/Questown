@@ -33,7 +33,8 @@ public class LogDataCommand {
                         .then(posArg
                         .executes(css -> run(
                             css.getSource(),
-                            BlockPosArgument.getLoadedBlockPos(css, "pos")
+                            BlockPosArgument.getLoadedBlockPos(css, "pos"),
+                            true
                         )))
                 )
             )
@@ -42,9 +43,10 @@ public class LogDataCommand {
     }
 
 
-    private static int run(
+    static int run(
             CommandSourceStack source,
-            BlockPos target
+            BlockPos target,
+            boolean includeEconomicsData
     ) {
         @Nullable TownFlagBlockEntity tfbe = QTCommands.getFlagOrBroadcast(source, target);
         if (tfbe == null) {
@@ -52,7 +54,7 @@ public class LogDataCommand {
         }
 
         CompoundTag tTag = new CompoundTag();
-        tfbe.writeTownData(tTag);
+        tfbe.writeTownData(tTag, includeEconomicsData);
 
         TownFlagBlockEntity.logStoredData(tfbe, tTag);
 

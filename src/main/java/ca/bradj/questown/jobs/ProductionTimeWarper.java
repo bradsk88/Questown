@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.TownState;
@@ -27,8 +28,12 @@ public class ProductionTimeWarper {
     ) {
         Stack<H> stack = new Stack<>();
         itemz.stream().filter(v -> !v.isEmpty() && !v.isLocked()).forEach(stack::add);
+        QT.JOB_LOGGER.debug("[dropIntoContainers] Items to drop: {} (count={})",
+                stack.stream().map(h -> h.get().getShortName()).toList(), stack.size());
+        int droppedCount = 0;
         for (ContainerTarget<C, I> container : containers) {
             if (stack.isEmpty()) {
+                QT.JOB_LOGGER.debug("[dropIntoContainers] Dropped {} items total", droppedCount);
                 return ImmutableList.of();
             }
             if (container.isFull()) {
@@ -36,13 +41,17 @@ public class ProductionTimeWarper {
             }
             for (int i = 0; i < container.size(); i++) {
                 if (container.getItem(i).isEmpty()) {
-                    container.setItem(i, stack.pop().get());
+                    I item = stack.pop().get();
+                    container.setItem(i, item);
+                    droppedCount++;
+                    QT.JOB_LOGGER.debug("[dropIntoContainers] Dropped {} into slot {}", item.getShortName(), i);
                     if (stack.isEmpty()) {
                         break;
                     }
                 }
             }
         }
+        QT.JOB_LOGGER.debug("[dropIntoContainers] Dropped {} items total, {} not deposited", droppedCount, stack.size());
         if (stack.isEmpty()) {
             return ImmutableList.of();
         }
@@ -60,12 +69,16 @@ public class ProductionTimeWarper {
             Supplier<H> emptyFactory
     ) {
         Collection<H> items = getHeldItems(inState, villagerIndex);
+        QT.JOB_LOGGER.debug("[simulateDropLoot] Villager items before drop: {}",
+                items.stream().map(h -> h.isEmpty() ? "empty" : h.get().getShortName()).toList());
         ProductionTimeWarper.Result<H> r = new ProductionTimeWarper.Result<>(status, ImmutableList.copyOf(items));
         Function<ImmutableList<H>, Collection<H>> dropFn = itemz -> ProductionTimeWarper.dropIntoContainers(
                 itemz,
                 inState.containers
         );
         r = ProductionTimeWarper.simulateDropLoot(r, dropFn, emptyFactory);
+        QT.JOB_LOGGER.debug("[simulateDropLoot] Villager items after drop: {}",
+                r.items().stream().map(h -> h.isEmpty() ? "empty" : h.get().getShortName()).toList());
         return inState.withVillagerData(villagerIndex, inState.villagers.get(villagerIndex).withItems(r.items()));
     }
 

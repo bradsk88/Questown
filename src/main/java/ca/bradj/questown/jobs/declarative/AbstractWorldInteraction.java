@@ -231,6 +231,9 @@ public abstract class AbstractWorldInteraction<
         Stack<HELD_ITEM> stack = new Stack<>();
 
         iterate(newItemsSource, stack::push);
+        QT.JOB_LOGGER.debug("[tryGiveItems] Initial stack size: {}, items: {}",
+                stack.size(),
+                stack.stream().map(h -> h.get().quantity()).toList());
 
         TOWN ts = getTown(inputs);
         if (stack.isEmpty()) {
@@ -249,8 +252,12 @@ public abstract class AbstractWorldInteraction<
                 continue;
             }
             HELD_ITEM newItem = stack.pop();
+            QT.JOB_LOGGER.debug("[tryGiveItems] Popped item qty={}, isMulti={}",
+                    newItem.get().quantity(), isMulti(newItem.get()));
             if (isMulti(newItem.get())) {
-                stack.push(newItem.shrink());
+                HELD_ITEM shrunk = newItem.shrink();
+                QT.JOB_LOGGER.debug("[tryGiveItems] Pushing shrunk item qty={}", shrunk.get().quantity());
+                stack.push(shrunk);
             }
             if (isInstanze(newItem.get(), KnowledgeMetaItem.class)) {
                 ts = withKnowledge(inputs, ts, newItem);
@@ -258,7 +265,7 @@ public abstract class AbstractWorldInteraction<
                 ts = withEffectApplied(inputs, ts, newItem);
             } else {
                 HELD_ITEM unit = newItem.unit();
-                ts = postExtractHook(inputs, unit);
+                ts = postExtractHook(inputs, ts, unit);
                 ts = setHeldItem(inputs, ts, villagerIndex, i, unit);
                 QT.VILLAGER_LOGGER.debug("Villager took {}", unit.toShortString());
             }
@@ -575,13 +582,14 @@ public abstract class AbstractWorldInteraction<
     }
     private @Nullable TOWN postExtractHook(
             EXTRA inputs,
+            TOWN currentState,
             HELD_ITEM item
     ) {
         Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
         if (rules == null || rules.isEmpty()) {
-            return null;
+            return currentState;
         }
-        return postExtractHook(getTown(inputs), rules, inputs, getTownPos(inputs), item);
+        return postExtractHook(currentState, rules, inputs, getTownPos(inputs), item);
     }
 
     protected abstract POS getTownPos(EXTRA inputs);
