@@ -1245,7 +1245,6 @@ class JobIntegrationTest {
         // Check that we're NOT making progress (stuck due to bug)
         // Note: Due to test harness complexity, we may not get exactly NO_JOBSITE,
         // but we verify the fix works by checking the first test passes.
-        System.out.println("BUG test: Villager status after 50 ticks with bug simulated: " + actualStatus);
     }
 
     // ========== Gatherer Ticker Tests ==========

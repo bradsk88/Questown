@@ -22,6 +22,11 @@ import java.util.function.Supplier;
 
 public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements WorkStatusHandle<POS, ITEM> {
 
+    @FunctionalInterface
+    public interface DebugLogger {
+        void log(String message, Object... params);
+    }
+
     // Work status is generally only stored in this store. However, some
     // blocks support applying the status directly to the block (e.g. for
     // visual indication of progress). This map facilitates that.
@@ -37,6 +42,8 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     private final HashMap<POS, Long> timeJobStatuses = new HashMap<>();
     private final HashMap<POS, Claim> claims = new HashMap<>();
 
+    private final DebugLogger debugLogger;
+
     int curIdx = 0;
 
     public AbstractWorkStatusStore(
@@ -45,10 +52,21 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             BiFunction<TICK_SOURCE, POS, @Nullable State> defaultStateFactory,
             BiFunction<TICK_SOURCE, POS, @Nullable Function<State, Boolean>> cascadingBlockRevealer
     ) {
+        this(posFactory, airCheck, defaultStateFactory, cascadingBlockRevealer, null);
+    }
+
+    public AbstractWorkStatusStore(
+            BiFunction<ROOM, Position, Collection<POS>> posFactory,
+            BiFunction<TICK_SOURCE, POS, Boolean> airCheck,
+            BiFunction<TICK_SOURCE, POS, @Nullable State> defaultStateFactory,
+            BiFunction<TICK_SOURCE, POS, @Nullable Function<State, Boolean>> cascadingBlockRevealer,
+            @Nullable DebugLogger debugLogger
+    ) {
         this.posFactory = posFactory;
         this.airCheck = airCheck;
         this.defaultStateFactory = defaultStateFactory;
         this.cascadingBlockRevealer = cascadingBlockRevealer;
+        this.debugLogger = debugLogger != null ? debugLogger : (m, p) -> {};
     }
 
     @Override
@@ -70,7 +88,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             BiFunction<POS, State, State> mutator
     ) {
         State newV = jobStatuses.compute(pos, mutator);
-        QT.FLAG_LOGGER.debug("Job state set to {} at {}", newV.toShortString(), pos);
+        debugLogger.log("Job state set to {} at {}", newV.toShortString(), pos);
         if (cascading.containsKey(pos)) {
             if (!cascading.get(pos).apply(newV)) {
                 cascading.remove(pos);
@@ -90,7 +108,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             QT.FLAG_LOGGER.error("Clobbered time on block at {} from {} to {}", bp, cur, ticksToNextState);
         }
 
-        QT.BLOCK_LOGGER.debug("Timer added to {} at {} ({} to next state)", bs.toShortString(), bp, ticksToNextState);
+        debugLogger.log("Timer added to {} at {} ({} to next state)", bs.toShortString(), bp, ticksToNextState);
         this.timeJobStatuses.put(bp, (long) ticksToNextState);
         return true;
     }
@@ -99,7 +117,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     public Boolean clearState(POS bp) {
         this.timeJobStatuses.remove(bp);
         this.jobStatuses.remove(bp);
-        QT.BLOCK_LOGGER.debug("Removed state from {}", bp);
+        debugLogger.log("Removed state from {}", bp);
         return true;
     }
 
@@ -179,7 +197,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                 .filter((e) -> e.getValue() <= 0)
                 .forEach(
                         e -> {
-                            QT.BLOCK_LOGGER.debug("Timer at {} expired. Moving to next state", e.getKey());
+                            debugLogger.log("Timer at {} expired. Moving to next state", e.getKey());
                             modifyJobBlockState(
                                     e.getKey(),
                                     (pos, state) -> {
@@ -199,7 +217,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                 posFactory.apply(o, p).forEach(pp -> {
                     if (jobStatuses.containsKey(pp)) {
                         if (airCheck.apply(tickSource, pp)) {
-                            QT.BLOCK_LOGGER.debug("Block is gone from {}. Clearing status.", pp);
+                            debugLogger.log("Block is gone from {}. Clearing status.", pp);
                             jobStatuses.remove(pp);
                         }
                         return;
@@ -232,7 +250,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             Claim claim
     ) {
         if (doClaimSpot(bp, claim)) {
-            QT.JOB_LOGGER.debug("Spot {} claimed: {}", bp, claim);
+            debugLogger.log("Spot {} claimed: {}", bp, claim);
             return true;
         }
         return false;
@@ -257,7 +275,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     @Override
     public void clearClaim(POS position) {
         Claim claim = claims.remove(position);
-        QT.JOB_LOGGER.debug("Claim {} released: {}", position, claim);
+        debugLogger.log("Claim {} released: {}", position, claim);
     }
 
     @Override

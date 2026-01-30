@@ -185,7 +185,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
      * - Global store: For shared work where any villager can continue another's work or work simultaneously
      * - Per-owner stores: For jobs with CLAIM_SPOT rule where work is owned by a specific villager
      */
-    final TownWorkStatusStore jobHandle = new TownWorkStatusStore();
+    final TownWorkStatusStore jobHandle = new TownWorkStatusStore(
+            (m, p) -> this.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.WORK_STATUS).log(m, p)
+    );
     /**
      * Per-owner work status stores (keyed by villager UUID).
      * Used by jobs with CLAIM_SPOT special rule (which implies owned work states).
@@ -899,7 +901,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (jh != null) {
             return jh;
         }
-        jh = new TownWorkStatusStore();
+        jh = new TownWorkStatusStore(
+                (m, p) -> this.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.WORK_STATUS).log(m, p)
+        );
         jobHandles.put(ownerIDOrNullForGlobal, jh);
         // Initialize the new store immediately so work states are available
         ServerLevel sl = getServerLevel();

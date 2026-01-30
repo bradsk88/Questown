@@ -29,6 +29,7 @@ public class DebugLogArgument implements ArgumentType<String> {
     public static final String HUNGER_UPDATES;
     public static final String INITIALIZATION;
     public static final String KNOWLEDGE_RECORDS;
+    public static final String WORK_STATUS;
 
     static {
         ImmutableList.Builder<String> b = ImmutableList.builder();
@@ -44,6 +45,7 @@ public class DebugLogArgument implements ArgumentType<String> {
         HUNGER_UPDATES = add(b, "hunger_updates");
         INITIALIZATION = add(b, "initialization");
         KNOWLEDGE_RECORDS = add(b, "knowledge_records");
+        WORK_STATUS = add(b, "work_status");
         debugLogIds = b.build();
     }
 
