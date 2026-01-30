@@ -49,17 +49,16 @@ public class ImportantTicks {
     }
     // Default work cycle duration when job is unknown (will be resolved dynamically).
     // This accounts for real-time overhead: walking, pathfinding, container access, etc.
-    // Real-time observation: ~6 cycles in 10,000 ticks = ~1,666 ticks per cycle.
-    private static final long DEFAULT_WORK_CYCLE_TICKS = 1666;
+    // Real-time observation: ~4 cycles in 10,000 ticks = ~2,500 ticks per cycle.
+    private static final long DEFAULT_WORK_CYCLE_TICKS = 2500;
 
     // Default ticks per cycle for dynamic resolution (when job isn't known ahead of time).
-    // This should match typical crafting jobs to avoid over/under production.
-    // Most crafting jobs need:
-    // - Ingredient collection: 2-3 items (heuristic of 10 ticks to "walk back and forth", so 20-30)
-    // - Work required: 5-10 work units (each with a 10 tick "pause" in between, so 50-100)
-    // - Overhead: 2 (extract + drop) (heuristic: 20)
-    // Total: ~140 ticks per cycle is a reasonable default
-    private static final int DEFAULT_DYNAMIC_TICKS_PER_CYCLE = 140;
+    // Each substep can advance production state, so this controls how many state transitions
+    // happen per work cycle. Too high = overproduction, too low = underproduction.
+    // Real-time observation: ~4 cycles in 10,000 ticks with bowl crafting
+    // Bowl crafting needs: 2 ingredients + 10 work + 2 overhead = 14 steps per cycle
+    // With 4 cycle groups over 10,000 ticks, we need ~14 substeps per group (not 140)
+    private static final int DEFAULT_DYNAMIC_TICKS_PER_CYCLE = 28;
 
     public record Config(
             long MAX_DOWNTIME_TICKS
