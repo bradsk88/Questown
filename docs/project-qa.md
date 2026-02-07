@@ -48,7 +48,20 @@ A: The key systems are:
 
 ---
 
-## Special Rules
+## Minecraft-Agnostic Design
+
+To make this mod work in the absence of minecraft (for example, unit tests and 
+in-memory simulation during time travel), the "gold standard" in the project
+is a complete decoupling from minecraft code wherever possible.
+
+As mentioned, much of the incremental development that got us to where we are
+was done against running minecraft code. So, we ended up integrating directly
+against minecraft sometimes. But, this should be considered "tech debt" that
+we should attempt to move away from.
+
+---
+
+## "Special Rules" system
 
 **Q: What are "Special Rules" and how do they work?**
 
