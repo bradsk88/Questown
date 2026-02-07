@@ -89,7 +89,7 @@ sequenceDiagram
     Note over WarpWI: Phase 4: Drop Loot
     WarpWI->>Containers: dropIntoContainers(products)
     Containers-->>WarpWI: success/overflow
-    WarpWI->>Hooks: afterDropLoot()
+    WarpWI->>Hooks: PostDropHook.run()
 
     WarpWI->>JobState: advanceToNextState()
 ```
@@ -128,13 +128,13 @@ sequenceDiagram
         Logic->>Logic: incrementIngredientCount()
     end
 
-    alt Status == WORKING_ON_PRODUCTION
+    alt isWorkingOnProduction() (job-specific state 0-9)
         Logic->>World: getWorkSpot()
         World-->>Logic: currentJobSite
         Logic->>Logic: workLeft -= workSpeed
 
         alt workLeft == 0
-            Logic->>Logic: status = EXTRACTING
+            Logic->>Logic: status = EXTRACTING_PRODUCT
         end
     end
 
@@ -149,7 +149,7 @@ sequenceDiagram
         Logic->>World: tryDropLoot()
         World->>World: findResultContainer()
         World->>World: insertItem(product)
-        Logic->>Hooks: afterDropLoot()
+        Logic->>Hooks: PostDropHook.run()
     end
 
     Logic-->>Ticker: stateUpdated
@@ -236,7 +236,7 @@ sequenceDiagram
     end
 
     Note over Ticker: After Drop Loot
-    Ticker->>Hook: afterDropLoot()
+    Ticker->>Hook: PostDropHook.run()
     loop Each modifier
         Hook->>Modifier: afterDropLoot(context, event)
         Modifier->>World: cleanup() (optional)
@@ -298,12 +298,12 @@ sequenceDiagram
     Registry-->>Villagers: shuffled job list
 
     loop For each preferred job
-        Villagers->>Villagers: canAlwaysStart(job)?
+        Villagers->>Registry: canAlwaysStart(villagerID, job)?
         alt Job can always start
             Villagers-->>Town: return job
         end
 
-        Villagers->>Villagers: canFitInDay(job)?
+        Villagers->>Registry: canFit(villagerID, job, currentTick)?
         alt Job too long for remaining day
             Villagers->>Villagers: skip job
         end

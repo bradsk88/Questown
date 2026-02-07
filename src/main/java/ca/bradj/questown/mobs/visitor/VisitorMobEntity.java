@@ -22,7 +22,7 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
-import ca.bradj.questown.town.entity.TownVillagers;
+import ca.bradj.questown.town.entity.TownVillagerMobs;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCReward;
@@ -901,7 +901,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 // FIXME: This can fail with "Town has not been initialized on TownVillagerHandle"
                 //  This should either be retried multiple times, or this initialization
                 //  should be handled by the town flag
-                TownVillagers.assumeStateFromTown(flag, this);
+                TownVillagerMobs.assumeStateFromTown(flag, this);
                 this.initBrain();
             }
         }

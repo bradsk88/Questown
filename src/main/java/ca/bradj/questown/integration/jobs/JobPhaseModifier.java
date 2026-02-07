@@ -3,6 +3,11 @@ package ca.bradj.questown.integration.jobs;
 import ca.bradj.questown.jobs.JobBlockTestContext;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Allows modifying the behavior of job phases via injection through
+ * the SpecialRulesRegistry.
+ * @see ca.bradj.questown.jobs.declarative.PrePostHooks#processMulti
+ */
 public abstract class JobPhaseModifier {
 
     @SuppressWarnings("RedundantMethodOverride")

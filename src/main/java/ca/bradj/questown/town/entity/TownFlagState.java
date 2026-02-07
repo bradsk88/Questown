@@ -15,12 +15,11 @@ import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
-import ca.bradj.questown.town.TownVillagers;
+import ca.bradj.questown.town.TownVillagerData;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
-import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.base.Function;
@@ -203,7 +202,7 @@ public class TownFlagState {
                 Predicate<JobID> canAlwaysStart = p -> ServerJobsRegistry.canAlwaysStart(null, p);
 
                 // First try to choose from preselected jobs that match a request
-                JobID work = TownVillagers.chooseFromList(
+                JobID work = TownVillagerData.chooseFromList(
                         canFit,
                         canAlwaysStart,
                         requestedResults,
@@ -225,7 +224,7 @@ public class TownFlagState {
                 preferredBuffer = 0;
 
                 // Try preferred work (any job that can be done)
-                JobID preferredWork = TownVillagers.getPreferredWork(
+                JobID preferredWork = TownVillagerData.getPreferredWork(
                         currentJob, canFit, canAlwaysStart, requestedResults, td
                 );
                 if (preferredWork != null) {

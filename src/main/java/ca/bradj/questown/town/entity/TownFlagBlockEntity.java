@@ -17,13 +17,11 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.jobs.Job;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
-import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
@@ -33,7 +31,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.*;
-import ca.bradj.questown.town.TownVillagers;
+import ca.bradj.questown.town.TownVillagerData;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.questown.town.quests.*;
@@ -616,7 +614,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return false;
         };
         Predicate<JobID> canAlwaysStart = p -> ServerJobsRegistry.canAlwaysStart(uuid, p);
-        JobID work = TownVillagers.chooseFromList(
+        JobID work = TownVillagerData.chooseFromList(
                 canFit,
                 canAlwaysStart,
                 requestedResults,
@@ -634,7 +632,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         preferredBuffer = 0;
 
-        work = TownVillagers.getPreferredWork(villager.getJobId(), canFit, canAlwaysStart, requestedResults, td);
+        work = TownVillagerData.getPreferredWork(villager.getJobId(), canFit, canAlwaysStart, requestedResults, td);
         if (work != null) {
             changeJob.accept(work);
             return true;

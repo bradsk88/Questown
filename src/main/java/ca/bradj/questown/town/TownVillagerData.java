@@ -1,6 +1,5 @@
 package ca.bradj.questown.town;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
@@ -15,7 +14,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 
-public class TownVillagers {
+public class TownVillagerData {
     public static @Nullable JobID getPreferredWork(
             JobID villagerCurrentJob,
             Predicate<JobID> canFitInDay,
