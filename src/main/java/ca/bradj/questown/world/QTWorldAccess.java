@@ -37,6 +37,11 @@ public interface QTWorldAccess {
     void playSound(BlockPos pos, SoundEvent sound);
     void playSound(BlockPos pos, SoundEvent sound, SoundSource source);
 
-    // Escape hatch for non-migrated rules
+    /**
+     * Escape hatch for rules that cannot yet be expressed through QTWorldAccess methods.
+     * Returns null during time warp and in tests — callers must handle that gracefully.
+     * Prefer adding new methods to this interface instead of using this.
+     */
+    @Deprecated(forRemoval = true)
     @Nullable ServerLevel asServerLevel();
 }
