@@ -26,6 +26,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
+import ca.bradj.questown.world.MinecraftWorldAccess;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -360,7 +361,7 @@ public class RealtimeWorldInteraction extends
         return PreExtractHook.run(
                 didAnything,
                 rules,
-                inputs.town().getServerLevel(),
+                new MinecraftWorldAccess(inputs.town().getServerLevel()),
                 (in, i, s) -> {
                     inputs.entity().tryGiveItem(i, s);
                     return in;
@@ -394,7 +395,7 @@ public class RealtimeWorldInteraction extends
                 aBoolean,
                 inputs.town().getTownFlagBasePos(),
                 rules,
-                inputs.town().getServerLevel(),
+                new MinecraftWorldAccess(inputs.town().getServerLevel()),
                 position,
                 (town, itemData) -> {
                     CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
@@ -417,7 +418,7 @@ public class RealtimeWorldInteraction extends
             MCHeldItem item
     ) {
         return PostInsertHook.run(
-                aBoolean, rules, inputs.town().getServerLevel(), position, item.get().toMCItemStack(), (t) -> {
+                aBoolean, rules, new MinecraftWorldAccess(inputs.town().getServerLevel()), position, item.get().toMCItemStack(), (t) -> {
                     inputs.town().getVillagerHandle().clearBlockOfProgress(inputs.entity().getUUID());
                     return true;
                 }, inputs.entity().getUUID()

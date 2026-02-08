@@ -22,7 +22,7 @@ public class InsertIntoSlotSpecialRule extends JobPhaseModifier {
             AfterInsertItemEvent<CONTEXT> event
     ) {
         CONTEXT context = super.afterInsertItem(ctxInput, event);
-        BlockEntity entity = event.level().getBlockEntity(event.workSpot().workPosition());
+        BlockEntity entity = event.world().asServerLevel().getBlockEntity(event.workSpot().workPosition());
         if (!(entity instanceof Container c)) {
             QT.BLOCK_LOGGER.error(
                     "{}: BlockEntity at {} is not a Container, cannot apply special rule.",

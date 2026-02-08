@@ -4,16 +4,15 @@ import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.jobs.*;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.world.QTWorldAccess;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.ComposterBlock;
-import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
+import java.util.OptionalInt;
 
 public class CompostAtWorkspotSpecialRule extends
         JobPhaseModifier {
@@ -22,34 +21,32 @@ public class CompostAtWorkspotSpecialRule extends
             X context,
             BeforeExtractEvent<X> event
     ) {
+        QTWorldAccess world = event.world();
         BlockPos spot = event.workSpot();
-        ServerLevel level = event.level();
 
-        BlockState bs = level.getBlockState(spot);
-
-        if (!(bs.getBlock() instanceof ComposterBlock)) {
+        OptionalInt processingLevel = world.getBlockIntProperty(spot, "level");
+        if (processingLevel.isEmpty()) {
             QT.JOB_LOGGER.error("{} is not a composter. Special rule will fail: {}", spot, getClass().getName());
             return null;
         }
 
-        if (bs.getValue(ComposterBlock.LEVEL) == 8) {
-            MCHeldItem toGive = MCHeldItem.fromMCItemStack(Items.BONE_MEAL.getDefaultInstance());
-            X out = event.entity().tryGiveItem(context, toGive, InventoryFullStrategy.DROP_ON_GROUND);
-            bs = bs.setValue(ComposterBlock.LEVEL, 0);
-            level.setBlockAndUpdate(spot, bs);
-            Compat.playSound(event.level(), spot, SoundEvents.COMPOSTER_EMPTY, SoundSource.BLOCKS);
-            return out;
-        }
-
-        ItemStack stack = event.lastInsertedItem().getDefaultInstance();
-        BlockState blockstate = ComposterBlock.insertItem(bs, level, stack, spot);
-        if (stack.getCount() > 0) {
-            // didn't insert successfully
+        OptionalInt maxLevel = world.getMaxBlockIntProperty(spot, "level");
+        if (maxLevel.isPresent() && processingLevel.getAsInt() >= maxLevel.getAsInt()) {
+            Optional<ItemStack> product = world.extractCompostProduct(spot);
+            if (product.isPresent()) {
+                MCHeldItem toGive = MCHeldItem.fromMCItemStack(product.get());
+                X out = event.entity().tryGiveItem(context, toGive, InventoryFullStrategy.DROP_ON_GROUND);
+                world.playSound(spot, SoundEvents.COMPOSTER_EMPTY, SoundSource.BLOCKS);
+                return out;
+            }
             return null;
         }
 
-        level.setBlockAndUpdate(spot, blockstate);
-
+        ItemStack stack = event.lastInsertedItem().getDefaultInstance();
+        boolean inserted = world.compostItem(spot, stack);
+        if (!inserted) {
+            return null;
+        }
         return context;
     }
 

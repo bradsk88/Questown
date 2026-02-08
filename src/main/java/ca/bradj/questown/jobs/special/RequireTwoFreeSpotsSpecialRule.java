@@ -29,7 +29,7 @@ public class RequireTwoFreeSpotsSpecialRule extends
     public void beforeInit(BeforeInitEvent bxEvent) {
         super.beforeInit(bxEvent);
         bxEvent.jobBlockCheckReplacer().accept(before -> (ctx) -> {
-            BlockEntity entity = bxEvent.level().get().getBlockEntity(ctx.blockPos());
+            BlockEntity entity = bxEvent.world().get().asServerLevel().getBlockEntity(ctx.blockPos());
             if (entity == null) {
                 return false;
             }
@@ -57,7 +57,7 @@ public class RequireTwoFreeSpotsSpecialRule extends
                 if (!(b.getValue() instanceof ChestBlock cb)) {
                     continue;
                 }
-                ServerLevel serverLevel = bxEvent.level().get();
+                ServerLevel serverLevel = bxEvent.world().get().asServerLevel();
                 Container cont = ChestBlock.getContainer(
                         cb,
                         serverLevel.getBlockState(b.getKey()),

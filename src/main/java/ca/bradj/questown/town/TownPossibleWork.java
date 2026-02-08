@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
+import ca.bradj.questown.world.MinecraftWorldAccess;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
@@ -311,7 +312,7 @@ public class TownPossibleWork {
             ServerLevel sl
     ) {
         return dj.location().isJobBlock()
-                 .test(new JobBlockTestContext(sl, info(sl), bp, ImmutableList::of, unique(t), false, false));
+                 .test(new JobBlockTestContext(new MinecraftWorldAccess(sl), info(sl), bp, ImmutableList::of, unique(t), false, false));
     }
 
     private static Supplier<? extends Collection<Item>> unique(TownFlagBlockEntity t) {

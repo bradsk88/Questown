@@ -8,11 +8,11 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.WorkLocation;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.questown.world.QTWorldAccess;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
@@ -27,7 +27,7 @@ public class PreTickHook {
 
     public static void run(
             Collection<String> rules,
-            Supplier<ServerLevel> level,
+            Supplier<QTWorldAccess> world,
             WorkLocation location,
             ImmutableList<MCHeldItem> heldItems,
             Consumer<Function<
@@ -44,7 +44,7 @@ public class PreTickHook {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
         BeforeTickEvent bxEvent = new BeforeTickEvent(
                 location,
-                level,
+                world,
                 heldItems,
                 roomsReplacer,
                 state,

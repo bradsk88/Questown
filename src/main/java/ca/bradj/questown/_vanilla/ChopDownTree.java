@@ -21,7 +21,7 @@ public class ChopDownTree extends JobPhaseModifier {
     ) {
         CONTEXT context = super.beforeExtract(ctxInput, event);
         BlockPos treeTrunk = event.workSpot();
-        ServerLevel level = event.level();
+        ServerLevel level = event.world().asServerLevel();
         Block b = level.getBlockState(treeTrunk).getBlock();
         return removeBlock(context, level, treeTrunk, event.entity(), b);
     }

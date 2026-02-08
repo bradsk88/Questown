@@ -29,6 +29,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import ca.bradj.questown.world.MinecraftWorldAccess;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -218,7 +219,7 @@ public class TimeWarpWorldInteraction extends
         MCTownState afterHook = PostInsertHook.run(
                 mcTownState,
                 rules,
-                inputs.level(),
+                new MinecraftWorldAccess(inputs.level()),
                 position,
                 item.get().toMCItemStack(),
                 ts -> ts.withBOPCleared(inputs.vUUID),
@@ -246,7 +247,7 @@ public class TimeWarpWorldInteraction extends
     ) {
         Item insertedItem = null; // TODO: Support inserted item history?
         return PreExtractHook.run(
-                town, rules, inputs.level(), (ctx, i, s) -> {
+                town, rules, new MinecraftWorldAccess(inputs.level()), (ctx, i, s) -> {
                     Inputs in = new Inputs(ctx, inputs.level(), inputs.vUUID());
                     return tryGiveItems(in, ImmutableList.of(i), position);
                 }, position, insertedItem, () -> {
@@ -263,7 +264,7 @@ public class TimeWarpWorldInteraction extends
             MCHeldItem extractedItem
     ) {
         return PostExtractHook.run(
-                mcTownState, townPos, rules, inputs.level(), position, (ctx, itemData) -> {
+                mcTownState, townPos, rules, new MinecraftWorldAccess(inputs.level()), position, (ctx, itemData) -> {
                     CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
                     itemData.forEach(t::putInt);
                     return ctx;

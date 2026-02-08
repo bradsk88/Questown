@@ -24,7 +24,7 @@ public class TakeFromSlotSpecialRule extends JobPhaseModifier {
             CONTEXT ctxInput,
             BeforeExtractEvent<CONTEXT> event
     ) {
-        BlockEntity entity = event.level().getBlockEntity(event.workSpot());
+        BlockEntity entity = event.world().asServerLevel().getBlockEntity(event.workSpot());
         CONTEXT ctxBefore = super.beforeExtract(ctxInput, event);
         if (!(entity instanceof Container c)) {
             QT.BLOCK_LOGGER.error(

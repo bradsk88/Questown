@@ -5,13 +5,10 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.world.QTWorldAccess;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.BushBlock;
-import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -23,14 +20,13 @@ public class DestroyBushSpecialRule extends
             X context,
             BeforeExtractEvent<X> event
     ) {
-        ServerLevel level = event.level();
+        QTWorldAccess world = event.world();
         BlockPos pos = event.workSpot();
-        BlockState bs = level.getBlockState(pos);
-        if (!(bs.getBlock() instanceof BushBlock)) {
-            QT.JOB_LOGGER.error("Block at {} is not a bush. Special rule failed to apply. [{}]", pos, bs);
+        List<ItemStack> drops = world.getBlockDrops(pos, null);
+        if (drops.isEmpty()) {
+            QT.JOB_LOGGER.error("Block at {} produced no drops. Special rule failed to apply.", pos);
             return null;
         }
-        List<ItemStack> drops = BushBlock.getDrops(bs, level, pos, null);
         X nextContext = context;
         X outContext = null;
         for (ItemStack i : drops) {
@@ -44,8 +40,8 @@ public class DestroyBushSpecialRule extends
                 outContext = o;
             }
         }
-        level.removeBlock(pos, true);
-        Compat.playNeutralSound(level, pos, SoundEvents.GRASS_BREAK);
+        world.removeBlock(pos);
+        world.playSound(pos, SoundEvents.GRASS_BREAK);
         return outContext;
     }
 }

@@ -35,6 +35,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ChestBlock;
+import ca.bradj.questown.world.MinecraftWorldAccess;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -237,7 +238,7 @@ public class DeclarativeJobTickerDependencies implements
     ) {
         PreTickHook.run(
                 rules,
-                town::getServerLevel,
+                () -> new MinecraftWorldAccess(town.getServerLevel()),
                 location,
                 heldItems,
                 f -> roomsReplacer.accept((Function) f),
@@ -653,7 +654,7 @@ public class DeclarativeJobTickerDependencies implements
                 PostDropHook.run(
                         town,
                         job.specialGlobalRules,
-                        town.getServerLevel(),
+                        new MinecraftWorldAccess(town.getServerLevel()),
                         successTargetPos,
                         itemsBeforeDrop,
                         itemsAfterDrop,

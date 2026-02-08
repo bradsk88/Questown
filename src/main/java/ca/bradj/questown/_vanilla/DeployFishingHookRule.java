@@ -56,8 +56,8 @@ public class DeployFishingHookRule extends JobPhaseModifier {
             AfterInsertItemEvent<CONTEXT> event
     ) {
         CONTEXT ctx = super.afterInsertItem(ctxInput, event);
-        LivingEntity villager = (LivingEntity) event.level().getEntity(event.inserter());
-        @Nullable FishingHook deployed = deployHere(event.level(), event.workSpot().workPosition(), villager);
+        LivingEntity villager = (LivingEntity) event.world().asServerLevel().getEntity(event.inserter());
+        @Nullable FishingHook deployed = deployHere(event.world().asServerLevel(), event.workSpot().workPosition(), villager);
         if (deployed != null) {
             this.hooks.add(deployed);
         }

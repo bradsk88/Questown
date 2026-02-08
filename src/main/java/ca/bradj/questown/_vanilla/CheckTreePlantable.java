@@ -44,7 +44,7 @@ public class CheckTreePlantable extends JobPhaseModifier {
         BlockPos above = ctx.blockPos().above();
         Iterable<BlockPos> rg = BlockPos.betweenClosed(above.offset(-1, 0, -1), above.offset(1, 0, 1));
         for (BlockPos pos : rg) {
-            if (!ctx.level().getBlockState(pos).isAir()) {
+            if (!ctx.world().asServerLevel().getBlockState(pos).isAir()) {
                 return false;
             }
         }
@@ -81,7 +81,7 @@ public class CheckTreePlantable extends JobPhaseModifier {
             return false;
         }
 
-        ServerLevel level = ctx.level();
+        ServerLevel level = ctx.world().asServerLevel();
         return tree.place(config, new VoidLevel(level), null, level.random, above);
     }
 

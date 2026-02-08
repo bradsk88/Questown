@@ -27,7 +27,7 @@ public class AddItemToContainerSpecialRule extends
     ) {
         CONTEXT ctxOut = super.afterInsertItem(ctxInput, event);
         BlockPos ws = event.workSpot().workPosition();
-        BlockEntity be = event.level().getBlockEntity(ws);
+        BlockEntity be = event.world().asServerLevel().getBlockEntity(ws);
         LazyOptional<IItemHandler> cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER);
         if (cap == null || !cap.isPresent()) {
             QT.JOB_LOGGER.error("Work spot cannot accept items. " + getClass().getName() + " will not succeed.");

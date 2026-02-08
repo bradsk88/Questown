@@ -46,6 +46,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.crafting.Ingredient;
+import ca.bradj.questown.world.MinecraftWorldAccess;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.util.TriConsumer;
@@ -203,12 +204,12 @@ public class DeclarativeJob extends
         for (int i = 0; i <= maxState; i++) {
             ProductionStatus ss = ProductionStatus.fromJobBlockStatus(i);
             List<String> stageRules = UtilClean.getOrDefaultCollection(specialRules, ss, ImmutableList.of());
-            PreInitHook.run(stageRules, () -> level, ingr.get(i), tool.get(i), globalJCR, globalSRCR);
+            PreInitHook.run(stageRules, () -> new MinecraftWorldAccess(level), ingr.get(i), tool.get(i), globalJCR, globalSRCR);
         }
 
         PreInitHook.run(
                 specialGlobalRules,
-                () -> level,
+                () -> new MinecraftWorldAccess(level),
                 ItemCheckReplacer.doNotReplace(),
                 ItemCheckReplacer.doNotReplace(),
                 globalJCR,
@@ -223,7 +224,7 @@ public class DeclarativeJob extends
                 SupplyRoomCheckReplacer.withItems(globalSRCR, self.journal::getItems),
                 JobCheckReplacer.withContext(
                         globalJCR, new JobBlockTestContext(
-                                level,
+                                new MinecraftWorldAccess(level),
                                 info(level),
                                 BlockPos.ZERO,
                                 self.journal::getItems,

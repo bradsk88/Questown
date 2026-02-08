@@ -5,16 +5,14 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.world.QTWorldAccess;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.CropBlock;
-import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.OptionalInt;
 
 public class HarvestCropSpecialRule extends
         JobPhaseModifier {
@@ -23,18 +21,19 @@ public class HarvestCropSpecialRule extends
             X context,
             BeforeExtractEvent<X> event
     ) {
-        ServerLevel level = event.level();
-        BlockPos cropBlock = event.workSpot();
-        BlockState bs = level.getBlockState(cropBlock);
-        if (!(bs.getBlock() instanceof CropBlock cb)) {
-            QT.JOB_LOGGER.error("Block at {} is not a crop. Special rule failed to apply. [{}]", cropBlock, bs);
+        QTWorldAccess world = event.world();
+        BlockPos cropPos = event.workSpot();
+        OptionalInt stage = world.getBlockIntProperty(cropPos, "age");
+        if (stage.isEmpty()) {
+            QT.JOB_LOGGER.error("Block at {} is not a crop. Special rule failed to apply.", cropPos);
             return null;
         }
-        if (!cb.isMaxAge(bs)) {
-            QT.JOB_LOGGER.error("Crop block at {} is not full age. Special rule failed to apply. [{}]", cropBlock, bs);
+        OptionalInt maxStage = world.getMaxBlockIntProperty(cropPos, "age");
+        if (stage.getAsInt() != maxStage.getAsInt()) {
+            QT.JOB_LOGGER.error("Crop block at {} is not full age. Special rule failed to apply.", cropPos);
             return null;
         }
-        List<ItemStack> drops = CropBlock.getDrops(bs, level, cropBlock, null);
+        List<ItemStack> drops = world.getBlockDrops(cropPos, null);
         X nextContext = context;
         X outContext = null;
         for (ItemStack i : drops) {
@@ -48,9 +47,8 @@ public class HarvestCropSpecialRule extends
                 outContext = o;
             }
         }
-        bs = bs.setValue(CropBlock.AGE, 0);
-        level.setBlock(cropBlock, bs, 10);
-        Compat.playNeutralSound(level, cropBlock, SoundEvents.CROP_BREAK);
+        world.setBlockIntProperty(cropPos, "age", 0);
+        world.playSound(cropPos, SoundEvents.CROP_BREAK);
         return outContext;
     }
 }

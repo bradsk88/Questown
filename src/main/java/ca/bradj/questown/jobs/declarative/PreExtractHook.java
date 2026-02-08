@@ -6,9 +6,9 @@ import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.mobs.visitor.ItemAcceptor;
+import ca.bradj.questown.world.QTWorldAccess;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.Nullable;
@@ -23,7 +23,7 @@ public class PreExtractHook {
     public static <TOWN> TOWN run(
             TOWN town,
             Collection<String> rules,
-            ServerLevel level,
+            QTWorldAccess world,
             TriFunction<TOWN, MCHeldItem, InventoryFullStrategy, TOWN> tryGiveItem,
             BlockPos position,
             Item lastInsertedItem,
@@ -42,7 +42,7 @@ public class PreExtractHook {
             }
         };
         BeforeExtractEvent<TOWN> bxEvent = new BeforeExtractEvent<>(
-                level, itemAcceptor, position, lastInsertedItem, clearPoses
+                world, itemAcceptor, position, lastInsertedItem, clearPoses
         );
         return processMulti(town, appliers, (o, a) -> a.beforeExtract(o, bxEvent));
     }
