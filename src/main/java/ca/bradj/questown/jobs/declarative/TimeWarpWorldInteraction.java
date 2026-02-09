@@ -219,7 +219,7 @@ public class TimeWarpWorldInteraction extends
         MCTownState afterHook = PostInsertHook.run(
                 mcTownState,
                 rules,
-                new MinecraftWorldAccess(inputs.level()),
+                MinecraftWorldAccess.silent(inputs.level()),
                 position,
                 item.get().toMCItemStack(),
                 ts -> ts.withBOPCleared(inputs.vUUID),
@@ -247,7 +247,7 @@ public class TimeWarpWorldInteraction extends
     ) {
         Item insertedItem = null; // TODO: Support inserted item history?
         return PreExtractHook.run(
-                town, rules, new MinecraftWorldAccess(inputs.level()), (ctx, i, s) -> {
+                town, rules, MinecraftWorldAccess.silent(inputs.level()), (ctx, i, s) -> {
                     Inputs in = new Inputs(ctx, inputs.level(), inputs.vUUID());
                     return tryGiveItems(in, ImmutableList.of(i), position);
                 }, position, insertedItem, () -> {
@@ -264,7 +264,7 @@ public class TimeWarpWorldInteraction extends
             MCHeldItem extractedItem
     ) {
         return PostExtractHook.run(
-                mcTownState, townPos, rules, new MinecraftWorldAccess(inputs.level()), position, (ctx, itemData) -> {
+                mcTownState, townPos, rules, MinecraftWorldAccess.silent(inputs.level()), position, (ctx, itemData) -> {
                     CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
                     itemData.forEach(t::putInt);
                     return ctx;

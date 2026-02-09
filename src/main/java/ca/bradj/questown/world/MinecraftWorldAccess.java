@@ -29,9 +29,19 @@ import java.util.OptionalInt;
 public class MinecraftWorldAccess implements QTWorldAccess {
 
     private final ServerLevel level;
+    private final boolean silent;
 
     public MinecraftWorldAccess(ServerLevel level) {
+        this(level, false);
+    }
+
+    private MinecraftWorldAccess(ServerLevel level, boolean silent) {
         this.level = level;
+        this.silent = silent;
+    }
+
+    public static MinecraftWorldAccess silent(ServerLevel level) {
+        return new MinecraftWorldAccess(level, true);
     }
 
     @Nullable
@@ -143,11 +153,13 @@ public class MinecraftWorldAccess implements QTWorldAccess {
 
     @Override
     public void playSound(BlockPos pos, SoundEvent sound) {
+        if (silent) return;
         Compat.playNeutralSound(level, pos, sound);
     }
 
     @Override
     public void playSound(BlockPos pos, SoundEvent sound, SoundSource source) {
+        if (silent) return;
         Compat.playSound(level, pos, sound, source);
     }
 
