@@ -223,10 +223,8 @@ class FarmerRuleTest {
 
     @Test
     void compost_shouldExtractProduct_whenFull() {
-        ItemStack boneMeal = new ItemStack(Items.BONE_MEAL, 1);
         TestWorldAccess world = new TestWorldAccess()
-                .withBlockProperty(WORK_SPOT, "level", 8, 8)
-                .withCompostProduct(WORK_SPOT, boneMeal);
+                .withBlockProperty(WORK_SPOT, "level", 8, 8);
 
         TestItemAcceptor entity = new TestItemAcceptor();
         BeforeExtractEvent<Boolean> event = makeEvent(world, entity, Items.WHEAT_SEEDS);
@@ -243,8 +241,7 @@ class FarmerRuleTest {
     @Test
     void compost_shouldInsertItem_whenNotFull() {
         TestWorldAccess world = new TestWorldAccess()
-                .withBlockProperty(WORK_SPOT, "level", 3, 8)
-                .withCompostResult(WORK_SPOT, true);
+                .withBlockProperty(WORK_SPOT, "level", 3, 8);
 
         TestItemAcceptor entity = new TestItemAcceptor();
         BeforeExtractEvent<Boolean> event = makeEvent(world, entity, Items.WHEAT_SEEDS);
@@ -254,6 +251,21 @@ class FarmerRuleTest {
 
         Assertions.assertNotNull(result, "Should return context when compost item inserted");
         Assertions.assertEquals(4, world.getPropertyValue(WORK_SPOT, "level"), "Level should be incremented");
+    }
+
+    @Test
+    void compost_shouldSkipLevel7_whenAtLevel6() {
+        TestWorldAccess world = new TestWorldAccess()
+                .withBlockProperty(WORK_SPOT, "level", 6, 8);
+
+        TestItemAcceptor entity = new TestItemAcceptor();
+        BeforeExtractEvent<Boolean> event = makeEvent(world, entity, Items.WHEAT_SEEDS);
+
+        CompostAtWorkspotSpecialRule rule = new CompostAtWorkspotSpecialRule();
+        Boolean result = rule.beforeExtract(true, event);
+
+        Assertions.assertNotNull(result, "Should return context when compost item inserted");
+        Assertions.assertEquals(8, world.getPropertyValue(WORK_SPOT, "level"), "Level should skip 7 and jump to 8");
     }
 
     @Test

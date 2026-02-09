@@ -27,10 +27,6 @@ public class TestWorldAccess implements QTWorldAccess {
     private final Set<BlockPos> transformationsApplied = new HashSet<>();
     // Sounds played (for assertions)
     private final List<SoundEvent> soundsPlayed = new ArrayList<>();
-    // compostItem results (configurable)
-    private final Map<BlockPos, Boolean> compostResults = new HashMap<>();
-    // extractCompostProduct results (configurable)
-    private final Map<BlockPos, ItemStack> compostProducts = new HashMap<>();
     // Positions where useItemOnBlock was called (for assertions)
     private final Set<BlockPos> itemUsedOnBlock = new HashSet<>();
 
@@ -54,16 +50,6 @@ public class TestWorldAccess implements QTWorldAccess {
 
     public TestWorldAccess withToolTransformResult(BlockPos pos, boolean result) {
         toolTransformResults.put(pos, result);
-        return this;
-    }
-
-    public TestWorldAccess withCompostResult(BlockPos pos, boolean result) {
-        compostResults.put(pos, result);
-        return this;
-    }
-
-    public TestWorldAccess withCompostProduct(BlockPos pos, ItemStack product) {
-        compostProducts.put(pos, product);
         return this;
     }
 
@@ -133,39 +119,13 @@ public class TestWorldAccess implements QTWorldAccess {
     }
 
     @Override
-    public boolean canToolTransformBlock(BlockPos pos, String toolAction) {
+    public boolean canToolTransformBlock(BlockPos pos, QTToolAction toolAction) {
         return toolTransformResults.getOrDefault(pos, false);
     }
 
     @Override
-    public void applyToolTransformation(BlockPos pos, String toolAction) {
+    public void applyToolTransformation(BlockPos pos, QTToolAction toolAction) {
         transformationsApplied.add(pos);
-    }
-
-    @Override
-    public boolean compostItem(BlockPos pos, ItemStack item) {
-        boolean result = compostResults.getOrDefault(pos, false);
-        if (result) {
-            Map<String, Integer> props = blockProperties.get(pos);
-            if (props != null && props.containsKey("level")) {
-                props.put("level", props.get("level") + 1);
-            }
-        }
-        return result;
-    }
-
-    @Override
-    public Optional<ItemStack> extractCompostProduct(BlockPos pos) {
-        ItemStack product = compostProducts.get(pos);
-        if (product != null) {
-            // Reset level to 0
-            Map<String, Integer> props = blockProperties.get(pos);
-            if (props != null) {
-                props.put("level", 0);
-            }
-            return Optional.of(product);
-        }
-        return Optional.empty();
     }
 
     @Override

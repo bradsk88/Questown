@@ -8,7 +8,6 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.OptionalInt;
 
 public interface QTWorldAccess {
@@ -26,12 +25,8 @@ public interface QTWorldAccess {
     boolean useItemOnBlock(ItemStack item, BlockPos pos);
 
     // Tool transformation
-    boolean canToolTransformBlock(BlockPos pos, String toolAction);
-    void applyToolTransformation(BlockPos pos, String toolAction);
-
-    // Composting
-    boolean compostItem(BlockPos pos, ItemStack item);
-    Optional<ItemStack> extractCompostProduct(BlockPos pos);
+    boolean canToolTransformBlock(BlockPos pos, QTToolAction toolAction);
+    void applyToolTransformation(BlockPos pos, QTToolAction toolAction);
 
     // Sound
     void playSound(BlockPos pos, SoundEvent sound);

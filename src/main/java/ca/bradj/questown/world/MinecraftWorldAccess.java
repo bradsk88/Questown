@@ -12,7 +12,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.ComposterBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
@@ -20,11 +19,11 @@ import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ToolAction;
+import net.minecraftforge.common.ToolActions;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.OptionalInt;
 
 public class MinecraftWorldAccess implements QTWorldAccess {
@@ -91,18 +90,24 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         return result.consumesAction();
     }
 
-    private static ItemStack toolForAction(String toolAction) {
-        String toolType = toolAction.split("_")[0];
-        return switch (toolType) {
-            case "hoe" -> Items.WOODEN_HOE.getDefaultInstance();
-            case "axe" -> Items.WOODEN_AXE.getDefaultInstance();
-            case "shovel" -> Items.WOODEN_SHOVEL.getDefaultInstance();
-            case "pickaxe" -> Items.WOODEN_PICKAXE.getDefaultInstance();
-            default -> ItemStack.EMPTY;
+    private static ItemStack toolForAction(QTToolAction toolAction) {
+        return switch (toolAction) {
+            case HOE_TILL -> Items.WOODEN_HOE.getDefaultInstance();
+            case AXE_STRIP, AXE_SCRAPE -> Items.WOODEN_AXE.getDefaultInstance();
+            case SHOVEL_FLATTEN -> Items.WOODEN_SHOVEL.getDefaultInstance();
         };
     }
 
-    private UseOnContext toolContext(BlockPos pos, String toolAction) {
+    private static ToolAction forgeToolAction(QTToolAction toolAction) {
+        return switch (toolAction) {
+            case HOE_TILL -> ToolActions.HOE_TILL;
+            case AXE_STRIP -> ToolActions.AXE_STRIP;
+            case AXE_SCRAPE -> ToolActions.AXE_SCRAPE;
+            case SHOVEL_FLATTEN -> ToolActions.SHOVEL_FLATTEN;
+        };
+    }
+
+    private UseOnContext toolContext(BlockPos pos, QTToolAction toolAction) {
         BlockHitResult bhr = new BlockHitResult(
                 Vec3.atCenterOf(pos), Direction.UP, pos, false
         );
@@ -113,19 +118,19 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     }
 
     @Override
-    public boolean canToolTransformBlock(BlockPos pos, String toolAction) {
+    public boolean canToolTransformBlock(BlockPos pos, QTToolAction toolAction) {
         BlockState bs = level.getBlockState(pos);
         BlockState modified = bs.getToolModifiedState(
-                toolContext(pos, toolAction), ToolAction.get(toolAction), false
+                toolContext(pos, toolAction), forgeToolAction(toolAction), false
         );
         return modified != null;
     }
 
     @Override
-    public void applyToolTransformation(BlockPos pos, String toolAction) {
+    public void applyToolTransformation(BlockPos pos, QTToolAction toolAction) {
         BlockState bs = level.getBlockState(pos);
         BlockState modified = bs.getToolModifiedState(
-                toolContext(pos, toolAction), ToolAction.get(toolAction), false
+                toolContext(pos, toolAction), forgeToolAction(toolAction), false
         );
         if (modified != null) {
             IntegerProperty moisture = findIntProperty(modified, "moisture");
@@ -134,28 +139,6 @@ public class MinecraftWorldAccess implements QTWorldAccess {
             }
             level.setBlockAndUpdate(pos, modified);
         }
-    }
-
-    @Override
-    public boolean compostItem(BlockPos pos, ItemStack item) {
-        BlockState bs = level.getBlockState(pos);
-        BlockState result = ComposterBlock.insertItem(bs, level, item, pos);
-        if (item.getCount() > 0) {
-            return false;
-        }
-        level.setBlockAndUpdate(pos, result);
-        return true;
-    }
-
-    @Override
-    public Optional<ItemStack> extractCompostProduct(BlockPos pos) {
-        BlockState bs = level.getBlockState(pos);
-        if (bs.getBlock() instanceof ComposterBlock && bs.getValue(ComposterBlock.LEVEL) >= 8) {
-            bs = bs.setValue(ComposterBlock.LEVEL, 0);
-            level.setBlockAndUpdate(pos, bs);
-            return Optional.of(Items.BONE_MEAL.getDefaultInstance());
-        }
-        return Optional.empty();
     }
 
     @Override

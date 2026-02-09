@@ -8,10 +8,9 @@ import ca.bradj.questown.world.QTWorldAccess;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Optional;
 import java.util.OptionalInt;
 
 public class CompostAtWorkspotSpecialRule extends
@@ -32,21 +31,18 @@ public class CompostAtWorkspotSpecialRule extends
 
         OptionalInt maxLevel = world.getMaxBlockIntProperty(spot, "level");
         if (maxLevel.isPresent() && processingLevel.getAsInt() >= maxLevel.getAsInt()) {
-            Optional<ItemStack> product = world.extractCompostProduct(spot);
-            if (product.isPresent()) {
-                MCHeldItem toGive = MCHeldItem.fromMCItemStack(product.get());
-                X out = event.entity().tryGiveItem(context, toGive, InventoryFullStrategy.DROP_ON_GROUND);
-                world.playSound(spot, SoundEvents.COMPOSTER_EMPTY, SoundSource.BLOCKS);
-                return out;
-            }
-            return null;
+            world.setBlockIntProperty(spot, "level", 0);
+            MCHeldItem toGive = MCHeldItem.fromMCItemStack(Items.BONE_MEAL.getDefaultInstance());
+            X out = event.entity().tryGiveItem(context, toGive, InventoryFullStrategy.DROP_ON_GROUND);
+            world.playSound(spot, SoundEvents.COMPOSTER_EMPTY, SoundSource.BLOCKS);
+            return out;
         }
 
-        ItemStack stack = event.lastInsertedItem().getDefaultInstance();
-        boolean inserted = world.compostItem(spot, stack);
-        if (!inserted) {
-            return null;
+        int newLevel = processingLevel.getAsInt() + 1;
+        if (newLevel >= 7) {
+            newLevel = 8;
         }
+        world.setBlockIntProperty(spot, "level", newLevel);
         return context;
     }
 

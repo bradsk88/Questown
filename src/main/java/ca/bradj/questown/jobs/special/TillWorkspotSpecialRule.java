@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs.special;
 
 import ca.bradj.questown.integration.jobs.*;
+import ca.bradj.questown.world.QTToolAction;
 import ca.bradj.questown.world.QTWorldAccess;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
@@ -14,10 +15,10 @@ public class TillWorkspotSpecialRule extends
     ) {
         QTWorldAccess world = event.world();
         BlockPos groundPos = event.workSpot();
-        if (!world.canToolTransformBlock(groundPos, "hoe_till")) {
+        if (!world.canToolTransformBlock(groundPos, QTToolAction.HOE_TILL)) {
             return null;
         }
-        world.applyToolTransformation(groundPos, "hoe_till");
+        world.applyToolTransformation(groundPos, QTToolAction.HOE_TILL);
         return context;
     }
 
