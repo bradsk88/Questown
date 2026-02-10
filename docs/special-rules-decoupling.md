@@ -345,6 +345,75 @@ public interface QTWorldAccess {
 
 ---
 
+## Warp-Interleaved Hooks
+
+### Overview
+
+Some world-level effects (like crop growth) need to happen
+*between* villager warp steps during time warp, not as
+per-villager job actions. Rather than hardcoding these into the
+warp loop, jobs declare them as global rules that get interleaved
+automatically.
+
+### How It Works
+
+1. **Declaration**: Jobs add a rule to their `global` rules in
+   JSON — same as any other global rule like `claim_workspot`:
+
+```json
+"special": [
+  {"type": "global", "rules": [
+    "claim_workspot", "questown:crop_growth_warp"
+  ]}
+]
+```
+
+2. **Collection**: Before warp starts, `TownFlagState` collects
+   all global rules from active villagers' jobs and deduplicates
+   them. If 5 farmers all declare `crop_growth_warp`, it runs
+   once.
+
+3. **Execution**: The `AbstractAdvanceTime` warp loop calls a
+   `WarpTickCallback` at each distinct tick boundary (before
+   villager steps at that tick). The callback delegates to
+   `WarpTickHook.run()`, which resolves rules via
+   `SpecialRulesRegistry` and calls `onWarpTick()` on each
+   `JobPhaseModifier`.
+
+4. **Hook method**: `JobPhaseModifier.onWarpTick(X town,
+   WarpTickEvent event)` — same pattern as `beforeExtract`,
+   `beforeTick`, etc. Default returns town unchanged. Overrides
+   apply world-level effects.
+
+### Key Types
+
+| Type | Location | Purpose |
+|------|----------|---------|
+| `WarpTickEvent` | `integration/jobs/` | Event record: world, currentTick, tickDelta, workBlockPositions |
+| `WarpTickHook` | `jobs/declarative/` | Static hook utility (like PreTickHook) |
+| `WarpTickCallback` | `town/AbstractAdvanceTime` | Generic callback interface for the warp loop |
+| `GrowCropsWarpRule` | `jobs/special/` | First implementation: crop growth |
+
+### Writing a Warp-Interleaved Hook (For Modders)
+
+1. Create a class extending `JobPhaseModifier`
+2. Override `onWarpTick(X town, WarpTickEvent event)`
+3. Use `event.tickDelta()` to compute effects proportionally
+   — don't assume any particular call frequency
+4. Use `event.world()` (`QTWorldAccess`) for block operations
+5. Use `event.workBlockPositions()` for known job block positions
+6. Register via `SpecialRulesRegistry.registerSpecialRule()`
+7. Add the rule name to relevant jobs' `global` rules in JSON
+
+### Example: `GrowCropsWarpRule`
+
+Simulates crop growth during warp using vanilla random tick
+probability (3/4096 per tick per block). Iterates tracked work
+block positions, checks for `"age"` property, and advances it
+proportionally to `tickDelta`. Declared by all farmer jobs.
+
+---
+
 ## Open Questions
 
 1. **ItemStack type**: Should `QTWorldAccess` use Minecraft's `ItemStack` or a QT abstraction?
