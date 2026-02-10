@@ -109,4 +109,11 @@ public class SpecialRules {
 
     // Global rule. When enabled, the villager will walk slowly.
     public static final String SLOW_WALK = "slow_walk";
+
+    // Global rule (warp-interleaved). When declared by a job,
+    // crop blocks at tracked work positions will receive
+    // simulated random ticks during time warp, causing them
+    // to grow proportionally to the elapsed tick delta.
+    public static final String CROP_GROWTH_WARP =
+            "crop_growth_warp";
 }

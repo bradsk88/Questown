@@ -126,6 +126,15 @@ public final class QuestownSpecialRules {
                 new RandomShortLivedWorkSpot(true, 100)
         );
 
+        // Warp-interleaved hook: simulates crop growth during
+        // time warp. Effects are proportional to tickDelta.
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(
+                        SpecialRules.CROP_GROWTH_WARP
+                ),
+                new GrowCropsWarpRule()
+        );
+
         VanillaSpecialRules.register();
     }
 }
