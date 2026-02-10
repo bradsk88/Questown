@@ -11,8 +11,11 @@ import ca.bradj.questown.jobs.ImmutableSnapshot;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
+import ca.bradj.questown.jobs.Works;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
+import ca.bradj.questown.jobs.declarative.WarpTickHook;
+import ca.bradj.questown.world.MinecraftWorldAccess;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.town.TownVillagerData;
@@ -25,6 +28,7 @@ import ca.bradj.roomrecipes.adapter.Positions;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -39,6 +43,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 // This class is NOT encapsulated from MC
 
@@ -159,8 +164,31 @@ public class TownFlagState {
         // Create Work implementation that bridges to entity methods
         Work w = createWork(e, sl);
 
+        // Collect deduplicated global rules from active villagers
+        ImmutableSet.Builder<String> ruleIDs =
+                ImmutableSet.builder();
+        for (var v : storedState.villagers) {
+            Supplier<ca.bradj.questown.jobs.Work> ws =
+                    Works.get(v.journal.jobId());
+            if (ws != null) {
+                ruleIDs.addAll(
+                        ws.get().getSpecialGlobalRules()
+                );
+            }
+        }
+        ImmutableSet<String> rules = ruleIDs.build();
+
+        MCAdvanceTime.WarpTickCallback<MCTownState> warpCb =
+                (town, tick, delta) -> WarpTickHook.run(
+                        rules,
+                        MinecraftWorldAccess.silent(sl),
+                        town, tick, delta,
+                        () -> town.workStates.keySet()
+                );
+
         // Delegate to MCAdvanceTime (the testable implementation)
-        MCAdvanceTime advancer = new MCAdvanceTime(Config.MAX_DOWNTIME_TICKS.get());
+        MCAdvanceTime advancer =
+                new MCAdvanceTime(Config.MAX_DOWNTIME_TICKS.get());
         MCAdvanceTime.Result<MCTownState> result = advancer.advanceTime(
                 storedState,
                 ticksPassed,
@@ -168,7 +196,7 @@ public class TownFlagState {
                 ImportantTicks.adaptWork(w),
                 MCAdvanceTime.createWarperFactory(w, e.getBlockPos()),
                 null, // cookResolver - not yet implemented
-                null, // warpTickCallback - wired up in step 6
+                warpCb,
                 sl,
                 job -> DowntimeWork.matches(job),
                 Config.MAX_DOWNTIME_TICKS.get(),
