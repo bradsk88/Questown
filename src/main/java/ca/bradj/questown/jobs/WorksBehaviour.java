@@ -200,7 +200,8 @@ public class WorksBehaviour {
                         special.specialStatusRules()
                 ),
                 1,
-                world.resultGenerator().isResultAlwaysEmpty()
+                world.resultGenerator().isResultAlwaysEmpty(),
+                special.specialGlobalRules()
         );
     }
 

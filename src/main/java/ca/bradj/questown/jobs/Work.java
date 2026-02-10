@@ -5,6 +5,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.town.Warper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -36,6 +37,7 @@ public class Work {
     final Function<List<MCHeldItem>, Collection<Ingredient>> needs;
     private final Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper;
     final int priority;
+    private final ImmutableList<String> specialGlobalRules;
     private Overrides overrides;
     private boolean hasNoOutput;
 
@@ -54,7 +56,8 @@ public class Work {
             Function<List<MCHeldItem>, Collection<Ingredient>> needs,
             Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper,
             int priority,
-            boolean hasNoOutput
+            boolean hasNoOutput,
+            ImmutableList<String> specialGlobalRules
     ) {
         this.id = id;
         this.parentID = parentID;
@@ -70,8 +73,13 @@ public class Work {
         this.needs = needs;
         this.warper = warper;
         this.priority = priority;
+        this.specialGlobalRules = specialGlobalRules;
         this.overrides = Overrides.none();
         this.hasNoOutput = hasNoOutput;
+    }
+
+    public ImmutableList<String> getSpecialGlobalRules() {
+        return specialGlobalRules;
     }
 
     public Work withPriority(int priority) {
@@ -90,11 +98,14 @@ public class Work {
                 needs,
                 warper,
                 priority,
-                hasNoOutput
+                hasNoOutput,
+                specialGlobalRules
         );
     }
 
-    public Work withNeeds(Function<List<MCHeldItem>, Collection<Ingredient>> needz) {
+    public Work withNeeds(
+            Function<List<MCHeldItem>, Collection<Ingredient>> needz
+    ) {
         return new Work(
                 id,
                 parentID,
@@ -110,7 +121,8 @@ public class Work {
                 needz,
                 warper,
                 priority,
-                hasNoOutput
+                hasNoOutput,
+                specialGlobalRules
         );
     }
 
@@ -122,7 +134,9 @@ public class Work {
         return overrides.statusTextOverrides().get(status);
     }
 
-    public Work withOverrides(@NotNull Overrides overrides) {
+    public Work withOverrides(
+            @NotNull Overrides overrides
+    ) {
         Work work = new Work(
                 id,
                 parentID,
@@ -138,7 +152,8 @@ public class Work {
                 needs,
                 warper,
                 priority,
-                hasNoOutput
+                hasNoOutput,
+                specialGlobalRules
         );
         work.overrides = overrides;
         return work;
