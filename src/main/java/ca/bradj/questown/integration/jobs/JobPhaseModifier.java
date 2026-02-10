@@ -51,6 +51,11 @@ public abstract class JobPhaseModifier {
         @Override
         public void beforeFindJobSite(BeforeFindJobSiteEvent event) {
         }
+
+        @Override
+        public <X> X onWarpTick(X town, WarpTickEvent event) {
+            return town;
+        }
     };
 
     // Return null if nothing happens.
@@ -112,5 +117,20 @@ public abstract class JobPhaseModifier {
     public void beforeMaxTicksJobChange(
             BeforeMaxTicksJobChangeEvent ctx
     ) {
+    }
+
+    /**
+     * Called between villager warp steps during time warp.
+     * Default returns town unchanged (pass-through).
+     * Override to apply world-level effects like crop growth.
+     *
+     * Unlike beforeExtract (null = didn't handle), this
+     * always chains — every rule runs and the town state
+     * threads through via processMulti. Compute effects
+     * proportionally to {@code event.tickDelta()}, not
+     * assuming any particular call frequency.
+     */
+    public <X> X onWarpTick(X town, WarpTickEvent event) {
+        return town;
     }
 }
