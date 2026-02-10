@@ -78,6 +78,17 @@ public abstract class AbstractAdvanceTime<
     }
 
     /**
+     * Callback for world-level effects interleaved between
+     * villager warp steps. Called once per distinct tick
+     * boundary during the warp loop.
+     */
+    public interface WarpTickCallback<TOWN> {
+        TOWN onTick(
+                TOWN town, long currentTick, long tickDelta
+        );
+    }
+
+    /**
      * Interface for logging during warp.
      */
     public interface WarpLogger {
@@ -118,6 +129,8 @@ public abstract class AbstractAdvanceTime<
      * @param work             Work interface for job resolution
      * @param warperFactory    Factory for creating per-villager warpers
      * @param cookResolver     Optional cooking resolver (can be null)
+     * @param warpTickCallback Optional callback for world-level
+     *                         effects between warp steps (can be null)
      * @param level            Level/world for loot source
      * @param downtimeCheck    Predicate to check if a job is a downtime job
      * @param downtimeTicks    Number of ticks for downtime period
@@ -131,6 +144,7 @@ public abstract class AbstractAdvanceTime<
             Work work,
             WarperFactory<LEVEL, TOWN> warperFactory,
             @Nullable CookResolver<TOWN, LEVEL> cookResolver,
+            @Nullable WarpTickCallback<TOWN> warpTickCallback,
             LEVEL level,
             Predicate<JobID> downtimeCheck,
             long downtimeTicks,
@@ -204,9 +218,22 @@ public abstract class AbstractAdvanceTime<
 
         long before = System.currentTimeMillis();
 
-        // Execute all warp steps
-        for (Map.Entry<Long, Function<TOWN, TOWN>> warpStep : warpSteps) {
-            TOWN affectedState = warpStep.getValue().apply(liveState);
+        // Execute all warp steps, interleaving world-level
+        // hooks at tick boundaries
+        long lastHookTick = 0;
+        for (Map.Entry<Long, Function<TOWN, TOWN>> warpStep
+                : warpSteps) {
+            long stepTick = warpStep.getKey();
+            if (stepTick > lastHookTick
+                    && warpTickCallback != null) {
+                long tickDelta = stepTick - lastHookTick;
+                liveState = warpTickCallback.onTick(
+                        liveState, stepTick, tickDelta
+                );
+                lastHookTick = stepTick;
+            }
+            TOWN affectedState =
+                    warpStep.getValue().apply(liveState);
             if (affectedState != null) {
                 liveState = affectedState;
             }

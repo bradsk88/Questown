@@ -168,6 +168,7 @@ public class TownFlagState {
                 ImportantTicks.adaptWork(w),
                 MCAdvanceTime.createWarperFactory(w, e.getBlockPos()),
                 null, // cookResolver - not yet implemented
+                null, // warpTickCallback - wired up in step 6
                 sl,
                 job -> DowntimeWork.matches(job),
                 Config.MAX_DOWNTIME_TICKS.get(),
