@@ -25,7 +25,8 @@
       "type": "global",
       "rules": [
         "claim_workspot",
-        "shared_work_status"
+        "shared_work_status",
+        "questown:crop_growth_warp"
       ]
     },
     {

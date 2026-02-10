@@ -22,7 +22,7 @@
   "special": [
     {
       "type": "global",
-      "rules": []
+      "rules": ["questown:crop_growth_warp"]
     },
     {
       "type": "core_state",

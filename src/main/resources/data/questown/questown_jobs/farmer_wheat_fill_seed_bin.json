@@ -24,5 +24,10 @@
     }
   ],
   "cooldown_ticks": 1,
-  "special": []
+  "special": [
+    {
+      "type": "global",
+      "rules": ["questown:crop_growth_warp"]
+    }
+  ]
 }

@@ -23,7 +23,7 @@
   "special": [
     {
       "type": "global",
-      "rules": ["require_air_above", "shared_work_status"]
+      "rules": ["require_air_above", "shared_work_status", "questown:crop_growth_warp"]
     },
     {
       "type": "core_state",
