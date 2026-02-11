@@ -5,6 +5,7 @@ import ca.bradj.questown.integration.jobs.WarpTickEvent;
 import ca.bradj.questown.world.QTWorldAccess;
 import net.minecraft.core.BlockPos;
 
+import java.util.Collection;
 import java.util.OptionalInt;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -22,7 +23,8 @@ public class GrowCropsWarpRule extends JobPhaseModifier {
     public <X> X onWarpTick(X town, WarpTickEvent event) {
         QTWorldAccess world = event.world();
         long tickDelta = event.tickDelta();
-        for (BlockPos pos : event.workBlockPositions().get()) {
+        Collection<BlockPos> positions = event.workBlockPositions().get();
+        for (BlockPos pos : positions) {
             OptionalInt age =
                     world.getBlockIntProperty(pos, "age");
             if (age.isEmpty()) {

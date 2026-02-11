@@ -456,7 +456,8 @@ public class ServerJobsRegistry {
     public static Warper<ServerLevel, MCTownState> getWarper(
             int villagerIndex,
             JobID jobID,
-            BlockPos townFlagPos
+            BlockPos townFlagPos,
+            Collection<BlockPos> roomPositions
     ) {
         if (isSeekingWork(jobID)) {
             return NoOpWarper.INSTANCE;
@@ -466,7 +467,7 @@ public class ServerJobsRegistry {
             // Job not registered (e.g., downtime jobs) - no warp action needed
             return NoOpWarper.INSTANCE;
         }
-        return w.get().warper(new WorksBehaviour.WarpInput(villagerIndex, townFlagPos));
+        return w.get().warper(new WorksBehaviour.WarpInput(villagerIndex, townFlagPos, roomPositions));
     }
 
     public static boolean canSatisfy(

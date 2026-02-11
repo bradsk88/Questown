@@ -55,7 +55,8 @@ class FarmerRuleTest {
                 entity,
                 WORK_SPOT,
                 Items.WHEAT_SEEDS,
-                () -> {}
+                () -> {},
+                () -> java.util.Collections.singletonList(WORK_SPOT)
         );
     }
 
@@ -69,7 +70,8 @@ class FarmerRuleTest {
                 entity,
                 WORK_SPOT,
                 lastInsertedItem,
-                () -> {}
+                () -> {},
+                () -> java.util.Collections.singletonList(WORK_SPOT)
         );
     }
 

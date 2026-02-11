@@ -368,7 +368,8 @@ public class RealtimeWorldInteraction extends
                 },
                 position,
                 last(workToUndo),
-                () -> inputs.town().getVillagerHandle().clearPoseRequests(inputs.entity().getUUID())
+                () -> inputs.town().getVillagerHandle().clearPoseRequests(inputs.entity().getUUID()),
+                () -> ImmutableList.of(position)
         );
     }
 

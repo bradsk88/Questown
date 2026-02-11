@@ -25,6 +25,8 @@ import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -164,6 +166,21 @@ public class TownFlagState {
         // Create Work implementation that bridges to entity methods
         Work w = createWork(e, sl);
 
+        // Collect real room block positions for warp rules
+        ImmutableList.Builder<BlockPos> roomPosBuilder = ImmutableList.builder();
+        for (MCRoom room : e.roomsHandle.getAllRoomsIncludingMetaAndFarms()) {
+            room.getSpaces().stream()
+                    .flatMap(space -> InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY).stream())
+                    .forEach(v -> {
+                        BlockPos pos = Positions.ToBlock(v, room.yCoord);
+                        roomPosBuilder.add(pos);
+                        roomPosBuilder.add(pos.above());
+                    });
+        }
+
+        // TODO: Consider pre-allocating positions to jobIds based on JobBlock match
+        ImmutableList<BlockPos> roomPositions = roomPosBuilder.build();
+
         // Collect deduplicated global rules from active villagers
         ImmutableSet.Builder<String> ruleIDs =
                 ImmutableSet.builder();
@@ -171,9 +188,7 @@ public class TownFlagState {
             Supplier<ca.bradj.questown.jobs.Work> ws =
                     Works.get(v.journal.jobId());
             if (ws != null) {
-                ruleIDs.addAll(
-                        ws.get().getSpecialGlobalRules()
-                );
+                ruleIDs.addAll(ws.get().getSpecialGlobalRules());
             }
         }
         ImmutableSet<String> rules = ruleIDs.build();
@@ -183,7 +198,7 @@ public class TownFlagState {
                         rules,
                         MinecraftWorldAccess.silent(sl),
                         town, tick, delta,
-                        () -> town.workStates.keySet()
+                        () -> roomPositions
                 );
 
         // Delegate to MCAdvanceTime (the testable implementation)
@@ -194,7 +209,7 @@ public class TownFlagState {
                 ticksPassed,
                 dayTime,
                 ImportantTicks.adaptWork(w),
-                MCAdvanceTime.createWarperFactory(w, e.getBlockPos()),
+                MCAdvanceTime.createWarperFactory(w, e.getBlockPos(), roomPositions),
                 null, // cookResolver - not yet implemented
                 warpCb,
                 sl,
@@ -230,13 +245,15 @@ public class TownFlagState {
                 Predicate<JobID> canFit = p -> ServerJobsRegistry.canFit(null, p, dayTime);
                 Predicate<JobID> canAlwaysStart = p -> ServerJobsRegistry.canAlwaysStart(null, p);
 
+                List<JobID> possibleWork = e.getPossibleWork().getFor(currentJob);
+
                 // First try to choose from preselected jobs that match a request
                 JobID work = TownVillagerData.chooseFromList(
                         canFit,
                         canAlwaysStart,
                         requestedResults,
                         td,
-                        e.getPossibleWork().getFor(currentJob)
+                        possibleWork
                 );
                 if (work != null) {
                     return work;

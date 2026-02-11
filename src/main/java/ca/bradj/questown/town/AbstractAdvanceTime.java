@@ -239,6 +239,15 @@ public abstract class AbstractAdvanceTime<
             }
         }
 
+        // Final hook call for remaining ticks after last step
+        if (warpTickCallback != null
+                && ticksPassed > lastHookTick) {
+            long tickDelta = ticksPassed - lastHookTick;
+            liveState = warpTickCallback.onTick(
+                    liveState, ticksPassed, tickDelta
+            );
+        }
+
         long after = System.currentTimeMillis();
 
         logger.log("State after warp of {}: {}", ticksPassed, liveState);

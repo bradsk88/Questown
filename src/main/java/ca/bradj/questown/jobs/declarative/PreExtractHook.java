@@ -14,7 +14,7 @@ import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
-import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 import static ca.bradj.questown.jobs.declarative.PrePostHooks.processMulti;
 
@@ -27,7 +27,8 @@ public class PreExtractHook {
             TriFunction<TOWN, MCHeldItem, InventoryFullStrategy, TOWN> tryGiveItem,
             BlockPos position,
             Item lastInsertedItem,
-            Runnable clearPoses
+            Runnable clearPoses,
+            Supplier<Collection<BlockPos>> jobBlockPositions
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
         ItemAcceptor<TOWN> itemAcceptor = new ItemAcceptor<>() {
@@ -42,7 +43,7 @@ public class PreExtractHook {
             }
         };
         BeforeExtractEvent<TOWN> bxEvent = new BeforeExtractEvent<>(
-                world, itemAcceptor, position, lastInsertedItem, clearPoses
+                world, itemAcceptor, position, lastInsertedItem, clearPoses, jobBlockPositions
         );
         return processMulti(town, appliers, (o, a) -> a.beforeExtract(o, bxEvent));
     }

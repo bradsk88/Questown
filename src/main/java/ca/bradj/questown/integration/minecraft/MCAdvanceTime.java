@@ -11,6 +11,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
+import java.util.Collection;
 import java.util.function.Predicate;
 
 /**
@@ -36,15 +37,17 @@ public class MCAdvanceTime extends AbstractAdvanceTime<
      * Creates the WarperFactory implementation that uses PostDowntimeWarper.
      * This allows dynamic job resolution during warp.
      *
-     * @param townWork      The TownFlagState.Work for job resolution
-     * @param townFlagPos   Position of the town flag block
+     * @param townWork       The TownFlagState.Work for job resolution
+     * @param townFlagPos    Position of the town flag block
+     * @param roomPositions  Real block positions from town rooms
      */
     public static WarperFactory<ServerLevel, MCTownState> createWarperFactory(
             TownFlagState.Work townWork,
-            BlockPos townFlagPos
+            BlockPos townFlagPos,
+            Collection<BlockPos> roomPositions
     ) {
         return (work, fallbackJobID, villagerIndex) ->
-                new PostDowntimeWarper(townWork, fallbackJobID, villagerIndex, townFlagPos);
+                new PostDowntimeWarper(townWork, fallbackJobID, villagerIndex, townFlagPos, roomPositions);
     }
 
     @Override

@@ -22,17 +22,20 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
     private final JobID fallbackJobID;
     private final int villagerIndex;
     private final BlockPos townFlagPos;
+    private final Collection<BlockPos> roomPositions;
 
     public PostDowntimeWarper(
             TownFlagState.Work work,
             JobID fallbackJobID,
             int villagerIndex,
-            BlockPos townFlagPos
+            BlockPos townFlagPos,
+            Collection<BlockPos> roomPositions
     ) {
         this.work = work;
         this.fallbackJobID = fallbackJobID;
         this.villagerIndex = villagerIndex;
         this.townFlagPos = townFlagPos;
+        this.roomPositions = roomPositions;
     }
 
     // During warp simulation, we use a virtual morning time to ensure jobs aren't
@@ -111,7 +114,8 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
         Warper<ServerLevel, MCTownState> jobWarper = ServerJobsRegistry.getWarper(
                 villagerIndex,
                 resolvedJob,
-                townFlagPos
+                townFlagPos,
+                roomPositions
         );
 
         // If the resolved job also returns NoOpWarper, don't recurse infinitely

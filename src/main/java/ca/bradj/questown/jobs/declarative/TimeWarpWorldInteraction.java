@@ -51,6 +51,7 @@ public class TimeWarpWorldInteraction extends
         AbstractWorldInteraction<TimeWarpWorldInteraction.Inputs, BlockPos, MCTownItem, MCHeldItem, MCTownState> {
 
     private final BlockPos townPos;
+    private final Collection<BlockPos> roomPositions;
 
     public record Inputs(MCTownState town, ServerLevel level, UUID vUUID) {
     }
@@ -66,11 +67,13 @@ public class TimeWarpWorldInteraction extends
             DeclarativeJobChecks<Inputs, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> checks,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<TimeWarpWorldInteraction.Inputs, Claim> claimSpots,
-            Map<ProductionStatus, Collection<String>> specialRules
+            Map<ProductionStatus, Collection<String>> specialRules,
+            Collection<BlockPos> roomPositions
     ) {
         super(jobId, villagerIndex, interval, maxState, checks, claimSpots, specialRules);
         this.resultGenerator = resultGenerator;
         this.townPos = townPos;
+        this.roomPositions = roomPositions;
     }
 
     @Override
@@ -251,7 +254,8 @@ public class TimeWarpWorldInteraction extends
                     Inputs in = new Inputs(ctx, inputs.level(), inputs.vUUID());
                     return tryGiveItems(in, ImmutableList.of(i), position);
                 }, position, insertedItem, () -> {
-                }
+                },
+                () -> roomPositions
         );
     }
 

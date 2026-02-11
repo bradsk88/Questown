@@ -6,6 +6,10 @@ import ca.bradj.questown.world.QTWorldAccess;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 public class TillWorkspotSpecialRule extends
         JobPhaseModifier {
     @Override
@@ -16,7 +20,18 @@ public class TillWorkspotSpecialRule extends
         QTWorldAccess world = event.world();
         BlockPos groundPos = event.workSpot();
         if (!world.canToolTransformBlock(groundPos, QTToolAction.HOE_TILL)) {
-            return null;
+            // workSpot may be fake (warp). Try a random real job block.
+            List<BlockPos> candidates = new ArrayList<>(event.jobBlockPositions().get());
+            Collections.shuffle(candidates); // TODO: Shuffle via util
+            for (BlockPos candidate : candidates) {
+                if (world.canToolTransformBlock(candidate, QTToolAction.HOE_TILL)) {
+                    groundPos = candidate;
+                    break;
+                }
+            }
+            if (!world.canToolTransformBlock(groundPos, QTToolAction.HOE_TILL)) {
+                return null;
+            }
         }
         world.applyToolTransformation(groundPos, QTToolAction.HOE_TILL);
         return context;
