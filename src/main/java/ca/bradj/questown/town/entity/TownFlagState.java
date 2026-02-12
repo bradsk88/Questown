@@ -178,7 +178,7 @@ public class TownFlagState {
                     });
         }
 
-        // TODO: Consider pre-allocating positions to jobIds based on JobBlock match
+        // TODO: Consider pre-allocating roomPositions to jobIds based on JobBlock match and passing them in to advance time
         ImmutableList<BlockPos> roomPositions = roomPosBuilder.build();
 
         // Collect deduplicated global rules from active villagers

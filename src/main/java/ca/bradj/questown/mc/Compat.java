@@ -53,6 +53,11 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+/**
+ * Compat executes the "strangler" pattern. Putting all code that changes
+ * between minecraft versions in a centralized location to minimize the
+ * effort required for forward and back-porting this mod between versions.
+ */
 public class Compat {
     public static final RandomSource RANDOM = RandomSource.create();
     public static final IForgeRegistry<EntityType<?>> ENTITY_TYPES = ForgeRegistries.ENTITY_TYPES;

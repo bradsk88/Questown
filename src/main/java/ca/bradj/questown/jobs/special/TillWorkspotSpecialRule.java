@@ -22,7 +22,7 @@ public class TillWorkspotSpecialRule extends
         if (!world.canToolTransformBlock(groundPos, QTToolAction.HOE_TILL)) {
             // workSpot may be fake (warp). Try a random real job block.
             List<BlockPos> candidates = new ArrayList<>(event.jobBlockPositions().get());
-            Collections.shuffle(candidates); // TODO: Shuffle via util
+            Collections.shuffle(candidates); // TODO: Add a shuffle method to QTWorldAccess so we can use the Compat function
             for (BlockPos candidate : candidates) {
                 if (world.canToolTransformBlock(candidate, QTToolAction.HOE_TILL)) {
                     groundPos = candidate;

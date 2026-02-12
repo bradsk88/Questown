@@ -16,6 +16,8 @@ import java.util.concurrent.ThreadLocalRandom;
  *
  * Declared as a global rule in farmer job JSON files.
  * Effects are proportional to {@code event.tickDelta()}.
+ *
+ * FIXME: Doesn't seem to do anything if warp is only 1000 ticks
  */
 public class GrowCropsWarpRule extends JobPhaseModifier {
 
