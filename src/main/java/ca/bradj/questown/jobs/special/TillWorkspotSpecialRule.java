@@ -6,8 +6,6 @@ import ca.bradj.questown.world.QTWorldAccess;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class TillWorkspotSpecialRule extends
@@ -18,23 +16,29 @@ public class TillWorkspotSpecialRule extends
             BeforeExtractEvent<X> event
     ) {
         QTWorldAccess world = event.world();
-        BlockPos groundPos = event.workSpot();
-        if (!world.canToolTransformBlock(groundPos, QTToolAction.HOE_TILL)) {
-            // workSpot may be fake (warp). Try a random real job block.
-            List<BlockPos> candidates = new ArrayList<>(event.jobBlockPositions().get());
-            Collections.shuffle(candidates); // TODO: Add a shuffle method to QTWorldAccess so we can use the Compat function
-            for (BlockPos candidate : candidates) {
-                if (world.canToolTransformBlock(candidate, QTToolAction.HOE_TILL)) {
-                    groundPos = candidate;
-                    break;
-                }
-            }
-            if (!world.canToolTransformBlock(groundPos, QTToolAction.HOE_TILL)) {
-                return null;
+        BlockPos tillable = findTillableBlock(world, event);
+        if (tillable == null) {
+            return null;
+        }
+        world.applyToolTransformation(tillable, QTToolAction.HOE_TILL);
+        return context;
+    }
+
+    private static <X> @Nullable BlockPos findTillableBlock(
+            QTWorldAccess world,
+            BeforeExtractEvent<X> event
+    ) {
+        BlockPos workSpot = event.workSpot();
+        if (world.canToolTransformBlock(workSpot, QTToolAction.HOE_TILL)) {
+            return workSpot;
+        }
+        List<BlockPos> candidates = world.getShuffledCopy(event.jobBlockPositions().get());
+        for (BlockPos candidate : candidates) {
+            if (world.canToolTransformBlock(candidate, QTToolAction.HOE_TILL)) {
+                return candidate;
             }
         }
-        world.applyToolTransformation(groundPos, QTToolAction.HOE_TILL);
-        return context;
+        return null;
     }
 
     @Override

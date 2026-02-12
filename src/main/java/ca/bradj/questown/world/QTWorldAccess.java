@@ -7,6 +7,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.OptionalInt;
 
@@ -27,6 +28,9 @@ public interface QTWorldAccess {
     // Tool transformation
     boolean canToolTransformBlock(BlockPos pos, QTToolAction toolAction);
     void applyToolTransformation(BlockPos pos, QTToolAction toolAction);
+
+    // Randomness
+    <T> List<T> getShuffledCopy(Collection<T> items);
 
     // Sound
     void playSound(BlockPos pos, SoundEvent sound);

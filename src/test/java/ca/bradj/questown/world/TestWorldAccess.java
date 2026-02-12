@@ -129,6 +129,11 @@ public class TestWorldAccess implements QTWorldAccess {
     }
 
     @Override
+    public <T> List<T> getShuffledCopy(Collection<T> items) {
+        return new ArrayList<>(items);
+    }
+
+    @Override
     public void playSound(BlockPos pos, SoundEvent sound) {
         soundsPlayed.add(sound);
     }

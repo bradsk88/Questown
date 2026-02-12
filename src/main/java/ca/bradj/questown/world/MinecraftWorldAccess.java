@@ -22,6 +22,7 @@ import net.minecraftforge.common.ToolAction;
 import net.minecraftforge.common.ToolActions;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.OptionalInt;
@@ -142,13 +143,19 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         BlockState modified = bs.getToolModifiedState(
                 toolContext(pos, toolAction), forgeToolAction(toolAction), false
         );
-        if (modified != null) {
-            IntegerProperty moisture = findIntProperty(modified, "moisture");
-            if (moisture != null) {
-                modified = modified.setValue(moisture, 2);
-            }
-            level.setBlockAndUpdate(pos, modified);
+        if (modified == null) {
+            return;
         }
+        IntegerProperty moisture = findIntProperty(modified, "moisture");
+        if (moisture != null) {
+            modified = modified.setValue(moisture, 2);
+        }
+        level.setBlockAndUpdate(pos, modified);
+    }
+
+    @Override
+    public <T> List<T> getShuffledCopy(Collection<T> items) {
+        return Compat.shuffle(items.iterator(), level);
     }
 
     @Override
