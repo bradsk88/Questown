@@ -14,9 +14,12 @@ public class UseLastInsertedItemOnBlockSpecialRule extends
             X context,
             BeforeExtractEvent<X> event
     ) {
+        Item item = event.lastInsertedItem();
+        if (item == null) {
+            return null;
+        }
         BlockPos groundPos = event.workSpot();
         QTWorldAccess world = event.world();
-        Item item = event.lastInsertedItem();
         boolean success = world.useItemOnBlock(item.getDefaultInstance(), groundPos);
         if (!success) {
             QT.JOB_LOGGER.error("Failed to use item {} on block at {}", item, groundPos);

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -75,6 +76,21 @@ class FarmerRuleTest {
         );
     }
 
+    private static BeforeExtractEvent<Boolean> makeEvent(
+            TestWorldAccess world,
+            TestItemAcceptor entity,
+            Collection<BlockPos> jobBlockPositions
+    ) {
+        return new BeforeExtractEvent<>(
+                world,
+                entity,
+                WORK_SPOT,
+                Items.WHEAT_SEEDS,
+                () -> {},
+                () -> jobBlockPositions
+        );
+    }
+
     // ========== HarvestCropSpecialRule ==========
 
     @Test
@@ -121,6 +137,26 @@ class FarmerRuleTest {
         Boolean result = rule.beforeExtract(true, event);
 
         Assertions.assertNull(result, "Should return null when crop is not full age");
+    }
+
+    @Test
+    void harvestCrop_shouldFallBackToJobBlockPositions_whenWorkSpotNotReady() {
+        BlockPos otherCrop = new BlockPos(20, 64, 20);
+        TestWorldAccess world = new TestWorldAccess()
+                .withBlockProperty(WORK_SPOT, "age", 3, 7)
+                .withBlockProperty(otherCrop, "age", 7, 7)
+                .withDrops(otherCrop, List.of(new ItemStack(Items.WHEAT, 1)));
+
+        TestItemAcceptor entity = new TestItemAcceptor();
+        BeforeExtractEvent<Boolean> event = makeEvent(world, entity, List.of(WORK_SPOT, otherCrop));
+
+        HarvestCropSpecialRule rule = new HarvestCropSpecialRule();
+        Boolean result = rule.beforeExtract(true, event);
+
+        Assertions.assertNotNull(result, "Should harvest from fallback position");
+        Assertions.assertEquals(1, entity.givenItems.size(), "Should give 1 item");
+        Assertions.assertEquals(0, world.getPropertyValue(otherCrop, "age"), "Fallback crop age should be reset to 0");
+        Assertions.assertEquals(3, world.getPropertyValue(WORK_SPOT, "age"), "Work spot crop should be unchanged");
     }
 
     // ========== DestroyBushSpecialRule ==========

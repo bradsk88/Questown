@@ -181,17 +181,7 @@ public class TownFlagState {
         // TODO: Consider pre-allocating roomPositions to jobIds based on JobBlock match and passing them in to advance time
         ImmutableList<BlockPos> roomPositions = roomPosBuilder.build();
 
-        // Collect deduplicated global rules from active villagers
-        ImmutableSet.Builder<String> ruleIDs =
-                ImmutableSet.builder();
-        for (var v : storedState.villagers) {
-            Supplier<ca.bradj.questown.jobs.Work> ws =
-                    Works.get(v.journal.jobId());
-            if (ws != null) {
-                ruleIDs.addAll(ws.get().getSpecialGlobalRules());
-            }
-        }
-        ImmutableSet<String> rules = ruleIDs.build();
+        ImmutableSet<String> rules = collectGlobalRulesForAllVillagerRoots(storedState);
 
         MCAdvanceTime.WarpTickCallback<MCTownState> warpCb =
                 (town, tick, delta) -> WarpTickHook.run(
@@ -219,6 +209,25 @@ public class TownFlagState {
         );
 
         return result.state();
+    }
+
+    private static ImmutableSet<String> collectGlobalRulesForAllVillagerRoots(
+            MCTownState storedState
+    ) {
+        ImmutableSet<String> activeRoots = storedState.villagers.stream()
+                .map(v -> v.journal.jobId().rootId())
+                .collect(ImmutableSet.toImmutableSet());
+        ImmutableSet.Builder<String> ruleIDs = ImmutableSet.builder();
+        for (JobID id : Works.ids()) {
+            if (!activeRoots.contains(id.rootId())) {
+                continue;
+            }
+            Supplier<ca.bradj.questown.jobs.Work> ws = Works.get(id);
+            if (ws != null) {
+                ruleIDs.addAll(ws.get().getSpecialGlobalRules());
+            }
+        }
+        return ruleIDs.build();
     }
 
     /**

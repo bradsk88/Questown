@@ -22,15 +22,8 @@ public class HarvestCropSpecialRule extends
             BeforeExtractEvent<X> event
     ) {
         QTWorldAccess world = event.world();
-        BlockPos cropPos = event.workSpot();
-        OptionalInt stage = world.getBlockIntProperty(cropPos, "age");
-        if (stage.isEmpty()) {
-            QT.JOB_LOGGER.error("Block at {} is not a crop. Special rule failed to apply.", cropPos);
-            return null;
-        }
-        OptionalInt maxStage = world.getMaxBlockIntProperty(cropPos, "age");
-        if (stage.getAsInt() != maxStage.getAsInt()) {
-            QT.JOB_LOGGER.error("Crop block at {} is not full age. Special rule failed to apply.", cropPos);
+        BlockPos cropPos = findHarvestableCrop(world, event);
+        if (cropPos == null) {
             return null;
         }
         List<ItemStack> drops = world.getBlockDrops(cropPos, null);
@@ -50,5 +43,31 @@ public class HarvestCropSpecialRule extends
         world.setBlockIntProperty(cropPos, "age", 0);
         world.playSound(cropPos, SoundEvents.CROP_BREAK);
         return outContext;
+    }
+
+    private static <X> @Nullable BlockPos findHarvestableCrop(
+            QTWorldAccess world,
+            BeforeExtractEvent<X> event
+    ) {
+        BlockPos workSpot = event.workSpot();
+        if (isFullyGrown(world, workSpot)) {
+            return workSpot;
+        }
+        List<BlockPos> candidates = world.getShuffledCopy(event.jobBlockPositions().get());
+        for (BlockPos candidate : candidates) {
+            if (isFullyGrown(world, candidate)) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isFullyGrown(QTWorldAccess world, BlockPos pos) {
+        OptionalInt stage = world.getBlockIntProperty(pos, "age");
+        if (stage.isEmpty()) {
+            return false;
+        }
+        OptionalInt maxStage = world.getMaxBlockIntProperty(pos, "age");
+        return maxStage.isPresent() && stage.getAsInt() == maxStage.getAsInt();
     }
 }
