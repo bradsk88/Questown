@@ -110,6 +110,9 @@ public class ProductionTimeWarper {
             if (toolchk == null) {
                 throw new IllegalStateException("No ingredients or tools required at state " + processingState + ". We shouldn't be collecting.");
             }
+            if (villagerAlreadyHolds(inState, villagerIndex, toolchk)) {
+                return inState;
+            }
             ingr = toolchk;
         }
 
@@ -129,6 +132,19 @@ public class ProductionTimeWarper {
         }
 
         return outState.withVillagerData(villagerIndex, villager);
+    }
+
+    private static <
+            I extends Item<I>,
+            H extends HeldItem<H, I>,
+            TOWN extends TownState<?, I, H, ?, TOWN>
+            > boolean villagerAlreadyHolds(
+            TOWN inState,
+            int villagerIndex,
+            Predicate<H> matcher
+    ) {
+        Collection<H> items = getHeldItems(inState, villagerIndex);
+        return items.stream().filter(h -> !h.isEmpty()).anyMatch(matcher);
     }
 
     public record JobNeeds<I>(
