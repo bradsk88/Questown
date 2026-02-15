@@ -15,38 +15,7 @@ public class TestResultChecker {
 
     public record Result(boolean passed, String summary, List<String> details) {}
 
-    public static Result check(
-            MCTownState before,
-            MCTownState after,
-            TestExpectation expectation
-    ) {
-        Map<String, Integer> beforeCounts = countAllItems(before);
-        Map<String, Integer> afterCounts = countAllItems(after);
-
-        List<String> details = new ArrayList<>();
-        boolean allPassed = true;
-
-        for (TestExpectation.ExpectedProduct product : expectation.products()) {
-            int beforeCount = beforeCounts.getOrDefault(product.itemRegistryName(), 0);
-            int afterCount = afterCounts.getOrDefault(product.itemRegistryName(), 0);
-            int delta = afterCount - beforeCount;
-
-            boolean productPassed = delta >= product.minQuantity();
-            String status = productPassed ? "PASS" : "FAIL";
-            details.add(String.format(
-                    "[%s] %s: expected >= %d, got %d (before=%d, after=%d)",
-                    status, product.itemRegistryName(), product.minQuantity(), delta, beforeCount, afterCount
-            ));
-            if (!productPassed) {
-                allPassed = false;
-            }
-        }
-
-        String summary = allPassed ? "All expectations met" : "Some expectations failed";
-        return new Result(allPassed, summary, details);
-    }
-
-    private static Map<String, Integer> countAllItems(MCTownState state) {
+    public static Map<String, Integer> snapshotItemCounts(MCTownState state) {
         Map<String, Integer> counts = new HashMap<>();
 
         for (TownState.VillagerData<MCHeldItem> villager : state.villagers) {
@@ -69,6 +38,37 @@ public class TestResultChecker {
         }
 
         return counts;
+    }
+
+    public static Result check(
+            Map<String, Integer> beforeCounts,
+            Map<String, Integer> afterCounts,
+            TestExpectation expectation
+    ) {
+        List<String> details = new ArrayList<>();
+        details.add("Before: " + beforeCounts);
+        details.add("After: " + afterCounts);
+
+        boolean allPassed = true;
+
+        for (TestExpectation.ExpectedProduct product : expectation.products()) {
+            int beforeCount = beforeCounts.getOrDefault(product.itemRegistryName(), 0);
+            int afterCount = afterCounts.getOrDefault(product.itemRegistryName(), 0);
+            int delta = afterCount - beforeCount;
+
+            boolean productPassed = delta >= product.minQuantity();
+            String status = productPassed ? "PASS" : "FAIL";
+            details.add(String.format(
+                    "[%s] %s: expected >= %d, got %d (before=%d, after=%d)",
+                    status, product.itemRegistryName(), product.minQuantity(), delta, beforeCount, afterCount
+            ));
+            if (!productPassed) {
+                allPassed = false;
+            }
+        }
+
+        String summary = allPassed ? "All expectations met" : "Some expectations failed";
+        return new Result(allPassed, summary, details);
     }
 
     private static String itemRegistryName(MCTownItem item) {

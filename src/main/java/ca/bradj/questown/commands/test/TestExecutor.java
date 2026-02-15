@@ -16,6 +16,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import java.util.Map;
+
 public class TestExecutor {
 
     private enum Phase {
@@ -32,6 +34,7 @@ public class TestExecutor {
         SETTLE,
         CAPTURE_BEFORE,
         RUN_WARP,
+        SETTLE_AFTER_WARP,
         CHECK_RESULTS,
         BROADCAST,
         START_MONITOR,
@@ -51,7 +54,7 @@ public class TestExecutor {
     private int maxWaitTicks = 0;
     private BlockPos flagPos;
     private TownFlagBlockEntity tfbe;
-    private MCTownState beforeState;
+    private Map<String, Integer> beforeCounts;
     private long monitorEndTick;
     private int lastReportedPercent = 0;
 
@@ -89,6 +92,7 @@ public class TestExecutor {
             case SETTLE -> settle();
             case CAPTURE_BEFORE -> captureBefore();
             case RUN_WARP -> runWarp();
+            case SETTLE_AFTER_WARP -> settleAfterWarp();
             case CHECK_RESULTS -> checkResults();
             case BROADCAST -> { /* handled in checkResults */ }
             case START_MONITOR -> startMonitor();
@@ -251,8 +255,9 @@ public class TestExecutor {
     }
 
     private void captureBefore() {
-        beforeState = tfbe.captureCurrentState();
-        if (beforeState != null) {
+        MCTownState state = tfbe.captureCurrentState();
+        if (state != null) {
+            beforeCounts = TestResultChecker.snapshotItemCounts(state);
             msg("State captured, starting warp of " + warpAmount + " ticks...");
             phase = Phase.RUN_WARP;
             return;
@@ -266,20 +271,38 @@ public class TestExecutor {
     }
 
     private void runWarp() {
-        MCTownState afterState = tfbe.warpTime(warpAmount);
-        if (afterState == null) {
+        MCTownState warpState = tfbe.warpTime(warpAmount);
+        if (warpState == null) {
             error("Warp returned null state");
             phase = Phase.DONE;
             return;
         }
-        msg("Warp complete. Checking results...");
-        TestResultChecker.Result result = TestResultChecker.check(beforeState, afterState, blueprint.expectation());
-        broadcastResult(result);
-        phase = Phase.START_MONITOR;
+        msg("Warp complete. Letting world settle...");
+        phase = Phase.SETTLE_AFTER_WARP;
+        waitTicks = 0;
+        maxWaitTicks = 40;
+    }
+
+    private void settleAfterWarp() {
+        if (tickTimeout(null)) {
+            phase = Phase.CHECK_RESULTS;
+            return;
+        }
+        waitTicks++;
     }
 
     private void checkResults() {
-        // handled inline in runWarp
+        msg("Checking results...");
+        MCTownState afterState = tfbe.captureCurrentState();
+        if (afterState == null) {
+            error("Failed to capture state after warp");
+            phase = Phase.DONE;
+            return;
+        }
+        Map<String, Integer> afterCounts = TestResultChecker.snapshotItemCounts(afterState);
+        TestResultChecker.Result result = TestResultChecker.check(beforeCounts, afterCounts, blueprint.expectation());
+        broadcastResult(result);
+        phase = Phase.START_MONITOR;
     }
 
     private void broadcastResult(TestResultChecker.Result result) {
