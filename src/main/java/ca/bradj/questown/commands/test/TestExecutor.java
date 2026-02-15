@@ -41,7 +41,7 @@ public class TestExecutor {
 
     private final ServerLevel level;
     private final ServerPlayer player;
-    private final BlockPos origin;
+    private BlockPos origin;
     private final JobID jobId;
     private final int warpAmount;
     private final TestBlueprint blueprint;
@@ -100,6 +100,7 @@ public class TestExecutor {
 
     private void destroyNearbyFlags() {
         int destroyed = 0;
+        BlockPos firstFlagPos = null;
         for (int x = -7; x <= 7; x++) {
             for (int z = -7; z <= 7; z++) {
                 for (int y = -1; y <= 4; y++) {
@@ -107,6 +108,9 @@ public class TestExecutor {
                     BlockEntity be = level.getBlockEntity(pos);
                     if (!(be instanceof TownFlagBlockEntity tf)) {
                         continue;
+                    }
+                    if (firstFlagPos == null) {
+                        firstFlagPos = pos;
                     }
                     tf.getVillagerHandle().entities().forEach(LivingEntity::kill);
                     level.removeBlockEntity(pos);
@@ -117,6 +121,10 @@ public class TestExecutor {
         }
         if (destroyed > 0) {
             msg("Destroyed " + destroyed + " nearby flag(s)");
+        }
+        if (firstFlagPos != null) {
+            origin = firstFlagPos;
+            msg("Using existing flag position as origin: " + origin.toShortString());
         }
         phase = Phase.FLATTEN;
     }

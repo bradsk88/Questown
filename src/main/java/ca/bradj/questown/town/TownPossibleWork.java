@@ -198,14 +198,6 @@ public class TownPossibleWork {
 
         dj.initialize(t.getServerLevel(), dj.getJournalSnapshot());
 
-        if (!ServerJobsRegistry.canFit(null, j.getId(), Util.getDayTime(t.getServerLevel()))) {
-            t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
-                    "Villager will not do {} because there is not enough time left in the day",
-                    j.getId().toNiceString()
-            );
-            return WithReason.always(0.0, "Not enough time left in the day");
-        }
-
         // Check if product is requested
         String requestStatus = getRequestStatus(t, j.getId());
 

@@ -204,6 +204,11 @@ class ImportantTicksTest {
             }
 
             @Override
+            public java.util.List<JobID> getPreselectedJobs(JobID currentJob) {
+                return java.util.List.of(TEST_JOB);
+            }
+
+            @Override
             public long getTotalDuration(JobID jobID, VillagerUUID vuid) {
                 return 500;
             }

@@ -4,17 +4,24 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
-import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.town.entity.TownFlagState;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Warper for villagers who were in downtime when warp started.
  * At each warp tick, resolves what work is available and delegates to that job's warper.
+ *
+ * Uses deterministic cycling through preselected jobs instead of random selection,
+ * ensuring every sub-job gets a turn before any repeats.
  */
 public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
 
@@ -38,42 +45,65 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
         this.roomPositions = roomPositions;
     }
 
-    // During warp simulation, we use a virtual morning time to ensure jobs aren't
-    // rejected due to "not enough time left in the day". The actual game time when
-    // warp happens is irrelevant - we're simulating work across a period of time.
-    private static final long VIRTUAL_MORNING_TICK = 1000; // ~1am, plenty of daytime ahead
+    private static final int MAX_STICKY_TICKS = 5;
 
-    private boolean hasRecomputed = false;
+    private List<JobID> cycleJobs = null;
+    private int cycleIndex = 0;
     private JobID cachedJob = null;
+    private int stickyTicks = 0;
+    private @Nullable BlockPos assignedFurnace;
+    private boolean furnaceSearched = false;
 
-    /**
-     * Resolves which job the villager should work on.
-     * Job stays consistent while villager has items (mid-cycle).
-     * When inventory is empty (cycle complete), a new job can be selected.
-     */
     public JobID resolveJob(long ticksPassed, boolean villagerHasItems) {
-        if (!hasRecomputed) {
+        if (cycleJobs == null) {
             work.recomputeNow();
-            hasRecomputed = true;
+            cycleJobs = new ArrayList<>(work.getPreselectedJobs(fallbackJobID));
+            Collections.shuffle(cycleJobs);
+            cycleIndex = 0;
         }
 
-        // If villager has items, they're mid-cycle - stick with current job
-        if (cachedJob != null && villagerHasItems) {
+        if (cachedJob != null && villagerHasItems && stickyTicks < MAX_STICKY_TICKS) {
+            stickyTicks++;
             return cachedJob;
         }
 
-        // Villager inventory is empty - allow job re-evaluation
-        cachedJob = work.getRandomFinishableWork(
-                fallbackJobID,
-                new Signals.DayTime(VIRTUAL_MORNING_TICK),
-                Math.max(ticksPassed, 1000)
-        );
+        stickyTicks = 0;
+
+        if (cycleJobs.isEmpty()) {
+            cachedJob = fallbackJobID;
+            return cachedJob;
+        }
+
+        cachedJob = cycleJobs.get(cycleIndex % cycleJobs.size());
+        cycleIndex++;
         return cachedJob;
     }
 
     // For testing without MCTownState
     public JobID resolveJob(long ticksPassed) {
         return resolveJob(ticksPassed, cachedJob != null);
+    }
+
+    private @Nullable BlockPos findAssignedFurnace(ServerLevel level) {
+        if (furnaceSearched) {
+            return assignedFurnace;
+        }
+        furnaceSearched = true;
+        List<BlockPos> furnaces = new ArrayList<>();
+        for (BlockPos pos : roomPositions) {
+            if (level.getBlockEntity(pos) instanceof AbstractFurnaceBlockEntity) {
+                furnaces.add(pos);
+            }
+        }
+        if (furnaces.isEmpty()) {
+            return null;
+        }
+        assignedFurnace = furnaces.get(villagerIndex % furnaces.size());
+        QT.FLAG_LOGGER.debug(
+                "[PostDowntimeWarper] Assigned furnace {} to villager {} (of {} furnaces)",
+                assignedFurnace, villagerIndex, furnaces.size()
+        );
+        return assignedFurnace;
     }
 
     @Override
@@ -110,12 +140,12 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
                 currentTick
         );
 
-        // Get the warper for the resolved job and delegate
         Warper<ServerLevel, MCTownState> jobWarper = ServerJobsRegistry.getWarper(
                 villagerIndex,
                 resolvedJob,
                 townFlagPos,
-                roomPositions
+                roomPositions,
+                findAssignedFurnace(level)
         );
 
         // If the resolved job also returns NoOpWarper, don't recurse infinitely

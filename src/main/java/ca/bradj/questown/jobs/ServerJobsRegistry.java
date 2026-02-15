@@ -457,17 +457,17 @@ public class ServerJobsRegistry {
             int villagerIndex,
             JobID jobID,
             BlockPos townFlagPos,
-            Collection<BlockPos> roomPositions
+            Collection<BlockPos> roomPositions,
+            @Nullable BlockPos assignedWorkBlock
     ) {
         if (isSeekingWork(jobID)) {
             return NoOpWarper.INSTANCE;
         }
         Supplier<Work> w = Works.get(jobID);
         if (w == null) {
-            // Job not registered (e.g., downtime jobs) - no warp action needed
             return NoOpWarper.INSTANCE;
         }
-        return w.get().warper(new WorksBehaviour.WarpInput(villagerIndex, townFlagPos, roomPositions));
+        return w.get().warper(new WorksBehaviour.WarpInput(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock));
     }
 
     public static boolean canSatisfy(

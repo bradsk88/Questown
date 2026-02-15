@@ -55,7 +55,8 @@ public class WorksBehaviour {
                 resultGenerator,
                 claimSpots,
                 specialRules,
-                warpInput.roomPositions()
+                warpInput.roomPositions(),
+                warpInput.assignedWorkBlock()
         );
         return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction);
     }
@@ -130,8 +131,12 @@ public class WorksBehaviour {
     public record WarpInput(
             int villagerIndex,
             BlockPos townFlagPos,
-            Collection<BlockPos> roomPositions
+            Collection<BlockPos> roomPositions,
+            @Nullable BlockPos assignedWorkBlock
     ) {
+        public WarpInput(int villagerIndex, BlockPos townFlagPos, Collection<BlockPos> roomPositions) {
+            this(villagerIndex, townFlagPos, roomPositions, null);
+        }
     }
 
     public static Work productionWork(

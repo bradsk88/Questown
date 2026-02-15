@@ -6,8 +6,7 @@
   "icon": "minecraft:wheat_seeds",
   "initial_request": "minecraft:wheat",
   "result": {
-    "type": "item",
-    "item": "minecraft:air"
+    "type": "uses_special_rules"
   },
   "block": {
     "id": "minecraft:farmland"

@@ -7,8 +7,7 @@
   "initial_request": "#questown:villager_food",
   "note": "initial request is actually ignored due to 'always consider' in global rules",
   "result": {
-    "type": "item",
-    "item": "minecraft:air"
+    "type": "uses_special_rules"
   },
   "block": {
     "id": "#forge:chests"

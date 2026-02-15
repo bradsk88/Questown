@@ -52,6 +52,8 @@ public class TimeWarpWorldInteraction extends
 
     private final BlockPos townPos;
     private final Collection<BlockPos> roomPositions;
+    private final @Nullable BlockPos assignedWorkBlock;
+    private final Map<ProductionStatus, Collection<String>> specialRulesMap;
 
     public record Inputs(MCTownState town, ServerLevel level, UUID vUUID) {
     }
@@ -68,12 +70,28 @@ public class TimeWarpWorldInteraction extends
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Function<TimeWarpWorldInteraction.Inputs, Claim> claimSpots,
             Map<ProductionStatus, Collection<String>> specialRules,
-            Collection<BlockPos> roomPositions
+            Collection<BlockPos> roomPositions,
+            @Nullable BlockPos assignedWorkBlock
     ) {
         super(jobId, villagerIndex, interval, maxState, checks, claimSpots, specialRules);
         this.resultGenerator = resultGenerator;
         this.townPos = townPos;
         this.roomPositions = roomPositions;
+        this.assignedWorkBlock = assignedWorkBlock;
+        this.specialRulesMap = specialRules;
+    }
+
+    public boolean shouldUseRealWorkBlock() {
+        if (assignedWorkBlock == null) {
+            return false;
+        }
+        return specialRulesMap.values().stream()
+                .flatMap(Collection::stream)
+                .anyMatch(rule -> rule.contains("slot"));
+    }
+
+    public @Nullable BlockPos getAssignedWorkBlock() {
+        return assignedWorkBlock;
     }
 
     @Override

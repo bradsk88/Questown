@@ -559,7 +559,7 @@ public abstract class AbstractWorldInteraction<
         if (rules == null || rules.isEmpty()) {
             return ctx;
         }
-        return postInsertHook(getTown(inputs), rules, inputs, position, item);
+        return postInsertHook(ctx, rules, inputs, position, item);
     }
 
     protected abstract @Nullable TOWN postInsertHook(

@@ -95,6 +95,39 @@ It means "bypass supply abundance checks" — NOT "always select this job first.
 - `src/main/java/ca/bradj/questown/town/PostDowntimeWarper.java` — warp job caching/resolution
 - `src/main/java/ca/bradj/questown/jobs/declarative/TimeWarpWorldInteraction.java` — debug logging (cleanup)
 
+# Warp-specific findings (2026-02-15)
+
+## Bugs found during warp cook investigation
+
+(The changes from this investigation were reverted because we ultimately did not fix the problem of "no cooked food produced", so we're starting over)
+
+### 1. `postInsertHook` discards state advancement (FIXED)
+**File:** `AbstractWorldInteraction.java` line 568
+**Bug:** `postInsertHook(getTown(inputs), rules, ...)` passes the **original** unmodified state instead of `ctx` (the state after ingredient insertion). This means the `insert_into_slot_0` hook operates on stale state, discarding the `processingState` advancement (e.g., `state:1` → `state:2` gets lost).
+**Fix:** Change to `postInsertHook(ctx, rules, ...)`.
+**Impact:** Affects both realtime and warp. In realtime, this may be masked by the furnace doing the actual work. In warp, it's fatal — the job state never advances past the insertion step.
+
+### 2. `canFit` in preselection uses real server time (FIXED)
+**File:** `TownPossibleWork.java` line 201
+**Bug:** `getWorkPercentPossible()` calls `ServerJobsRegistry.canFit()` with real server time. During warp, `PostDowntimeWarper` uses `VIRTUAL_MORNING_TICK=1000`. Mismatch causes time-sensitive jobs to get score 0 and be excluded from the preselected list.
+**Fix:** Remove the `canFit` check from preselection. Time filtering is handled downstream.
+
+### 3. Cook result generator returns `minecraft:air` (Likely a flawed agent assumption)
+**File:** `ResourceJobLoader.java` `makeCookJobs()`
+**Bug:** `makeCookJobs` calls `worldWorkInt(obj, cooldownTicks)` which reads the template JSON's `"result": {"item": "minecraft:air"}`. The template uses `air` as a placeholder (realtime cooking uses the actual furnace to produce cooked items). But warp relies on the result generator to produce the output since there's no real furnace at `fakePos`.
+**Attempted fix:** Created `smeltingResultWorkInt()` that looks up the smelting recipe to produce the correct cooked item. **However**, the extraction often runs under a *different* sub-job's warper (see #4), so the correct result generator isn't always active.
+
+### 4. Warp extraction runs under wrong sub-job's warper (NOT YET FIXED - Use farmer as a reference for utilizing REAL positions)
+**Root cause:** All cook sub-jobs share the same `fakePos` work block state. When `cook:beef` advances `processingState` to `maxState` (ready for extraction), the warp handler only processes **one status per tick**. On the next tick, `PostDowntimeWarper` cycles to a different sub-job (e.g., `cook:stock_ingredients`). That job's warper sees `processingState >= maxState` and does extraction with the **wrong result generator**.
+**Attempted fix:** Added immediate extraction in `DeclarativeJobs.warper()` — after the handler advances state to maxState, immediately run the EXTRACTING_PRODUCT handler in the same tick. **This needs more testing** — unclear if the result generator is correctly invoked, or if other state (villager items, etc.) is consistent for the follow-up extraction.
+
+## Architecture observations for warp cook path
+
+- **Realtime cook flow:** villager → insert beef into real furnace → furnace smelts (Minecraft ticks) → villager extracts cooked_beef from furnace. The result generator is irrelevant; the furnace does the work.
+- **Warp cook flow (intended):** villager → `insert_into_slot_0` hook → `furnace_smelt_warp` global rule advances furnace → `take_from_slot_2` hook extracts. But all of these operate on real-world `BlockPos`, and warp uses `fakePos` with no real furnace.
+- **Warp cook flow (actual):** The `insert_into_slot_0` hook silently fails (no furnace at fakePos). The `furnace_smelt_warp` rule calls `advanceProcessing(pos, ticks)` on work block positions, but these may also be fake/wrong. Extraction falls through to the result generator, which returns `air` (template default).
+- **What needs to happen:** Either (a) the warp needs to use real furnace positions instead of fakePos, or (b) the result generator for cook jobs needs to produce the smelted output directly, AND extraction must happen under the correct job's warper (the one that inserted the ingredient).
+
 # Human Notes
 
 ## Special Rule: "Always Consider"
@@ -133,3 +166,15 @@ I want the time warp to replicate this. However, given how quickly the warp move
 tick) it may be acceptable to simple cycle through every job in order, assuming the result is comparable.
 
 Remember that a single warp tick might "unlock" the ability for a job to be possible on a subsequent warp tick.
+
+## Cook's "multi-job" flow
+Because the cook interacts with real-world ticking block entities (a nascent concept for questown, so it bends some of 
+the architecture but still works well in realtime) a cook's work is done via multiple jobs.
+
+Cook:Insert_ingredients (places an ingredient in a furnace - Job done, "takes" its "air" result and moves to next job)
+Cook:Insert_fuel (basically the same, just uses a different item tag and its special rule inserts via a different slot)
+Cook:Extract (if the minecraft ticked entity has finished smelting, this job takes the result from the slot)
+
+The intent is to get the same sort of result as the baker, who inserts coal and bread, waits for a timer, and then 
+extracts bread (all as one job) - but eliminating the downside of the bread_oven_block, which players are not allowed
+to interact with, in favor of a block that players and villagers can interact with - potentially collaboratively.

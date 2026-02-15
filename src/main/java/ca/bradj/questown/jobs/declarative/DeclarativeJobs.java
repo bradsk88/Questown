@@ -236,7 +236,7 @@ public class DeclarativeJobs {
 //    }
 
     private record HandlerInputs(TimeWarpWorldInteraction wi, TimeWarpWorldInteraction.Inputs inState,
-                                 ProductionStatus status, State workBlockState, Integer maxState, BlockPos fakePos) {
+                                 ProductionStatus status, State workBlockState, Integer maxState, BlockPos workPos) {
     }
 
     public static void staticInitialize() {
@@ -244,7 +244,7 @@ public class DeclarativeJobs {
         Function<HandlerInputs, @Nullable MCTownState> tryWorking = ii -> {
             @Nullable WorkOutput<MCTownState, WorkPosition<BlockPos>> v = ii.wi.tryWorking(
                     ii.inState,
-                    new WorkPosition<>(ii.fakePos, ii.fakePos)
+                    new WorkPosition<>(ii.workPos, ii.workPos)
             );
             if (v == null) {
                 return null;
@@ -304,18 +304,20 @@ public class DeclarativeJobs {
                     long ticksPassed,
                     int villagerNum
             ) {
-                BlockPos fakePos = new BlockPos(villagerNum, villagerNum, villagerNum);
+                BlockPos workPos = wi.shouldUseRealWorkBlock()
+                        ? wi.getAssignedWorkBlock()
+                        : new BlockPos(villagerNum, villagerNum, villagerNum);
 
                 MCTownState outState = inState;
 
-                State state = outState.workStates.get(fakePos);
+                State state = outState.workStates.get(workPos);
                 if (state == null) {
-                    outState = outState.setJobBlockState(fakePos, State.fresh());
+                    outState = outState.setJobBlockState(workPos, State.fresh());
                 }
 
                 ProductionStatus status = ProductionStatus.FACTORY.idle();
 
-                final State ztate = outState.workStates.get(fakePos);
+                final State ztate = outState.workStates.get(workPos);
 
                 final TimeWarpWorldInteraction.Inputs fState = new TimeWarpWorldInteraction.Inputs(
                         outState,
@@ -323,10 +325,8 @@ public class DeclarativeJobs {
                         inState.getVillager(villagerNum).uuid
                 );
                 wi.injectTicks((int) ticksPassed);
-                MCRoom fakeRoom = Spaces.metaRoomAround(fakePos, 1);
-                // Use virtual morning time during warp to ensure villagers work productively
-                // instead of relaxing due to actual game time being evening/night
-                final long VIRTUAL_MORNING_TICK = 1000; // ~1am in MC time, plenty of daytime
+                MCRoom fakeRoom = Spaces.metaRoomAround(workPos, 1);
+                final long VIRTUAL_MORNING_TICK = 1000;
                 @Nullable ProductionStatus nuStatus = ProductionStatuses.getNewStatusFromSignal(
                         status,
                         Signals.fromDayTime(new Signals.DayTime(VIRTUAL_MORNING_TICK)),
@@ -338,7 +338,7 @@ public class DeclarativeJobs {
                                         ImmutableList.of(new ResourceLocation("fake")),
                                         ImmutableList.of()
                                 ),
-                                fakePos,
+                                workPos,
                                 outState.containers,
                                 () -> Util.getDayTime(level)
                         ),
@@ -361,13 +361,29 @@ public class DeclarativeJobs {
                         status,
                         ztate,
                         maxState,
-                        fakePos
+                        workPos
                 ));
                 if (affectedState != null) {
                     outState = affectedState;
                 }
 
-                outState = outState.withTimerReducedBy(fakePos, (int) ticksPassed);
+                State afterState = outState.workStates.get(workPos);
+                if (afterState != null
+                        && afterState.processingState() >= maxState
+                        && afterState.workLeft() == 0
+                        && !status.isExtractingProduct()) {
+                    TimeWarpWorldInteraction.Inputs extractInputs =
+                            new TimeWarpWorldInteraction.Inputs(outState, level, inState.getVillager(villagerNum).uuid);
+                    MCTownState extracted = handler.get(ProductionStatus.EXTRACTING_PRODUCT).apply(new HandlerInputs(
+                            wi, extractInputs, ProductionStatus.EXTRACTING_PRODUCT,
+                            afterState, maxState, workPos
+                    ));
+                    if (extracted != null) {
+                        outState = extracted;
+                    }
+                }
+
+                outState = outState.withTimerReducedBy(workPos, (int) ticksPassed);
 
                 return outState;
             }

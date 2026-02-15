@@ -6,9 +6,7 @@
   "icon": "minecraft:cod",
   "initial_request": "minecraft:cooked_cod",
   "result": {
-    "type": "item",
-    "item": "minecraft:air",
-    "quantity": 1
+    "type": "uses_special_rules"
   },
   "block": {
     "id": "minecraft:furnace",

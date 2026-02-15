@@ -65,6 +65,10 @@ public class TownFlagState {
                 long ticksElapsed
         );
 
+        java.util.List<ca.bradj.questown.jobs.JobID> getPreselectedJobs(
+                ca.bradj.questown.jobs.JobID currentJob
+        );
+
         long getTotalDuration(
                 ca.bradj.questown.jobs.JobID jobID,
                 ca.bradj.questown.core.VillagerUUID vuid
@@ -297,6 +301,11 @@ public class TownFlagState {
 
                 // No work available - return null to signal PostDowntimeWarper to skip
                 return null;
+            }
+
+            @Override
+            public List<JobID> getPreselectedJobs(JobID currentJob) {
+                return e.getPossibleWork().getFor(currentJob);
             }
 
             @Override

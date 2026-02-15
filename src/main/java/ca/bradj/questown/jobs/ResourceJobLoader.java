@@ -141,7 +141,7 @@ public class ResourceJobLoader {
                             special
                     );
                     int cooldownTicks = requiredInt(obj, "cooldown_ticks");
-                    WorkWorldInteractions wwi = worldWorkInt(obj, cooldownTicks);
+                    WorkWorldInteractions wwi = smeltingResultWorkInt(cooldownTicks, item.getItem());
                     JobID id = JobID.fromJSON(Util.getOrDefault(obj, "id", JsonElement::getAsString, null));
                     BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitWS = shouldInitWS(block, special);
                     WorkStates ws = ResourceJobLoader.workStates(id, obj);
@@ -413,6 +413,25 @@ public class ResourceJobLoader {
             return new SoundInfo(rl, chance, duration);
         }
 
+        private WorkWorldInteractions smeltingResultWorkInt(
+                int cooldownTicks,
+                Item rawItem
+        ) {
+            ResultGenerator<MCHeldItem> g = new ResultGenerator<>() {
+                @Override
+                public Iterable<MCHeldItem> generate(ServerLevel level, Collection<MCHeldItem> heldItems) {
+                    Item cookedItem = cooked(level.getRecipeManager(), rawItem);
+                    return ImmutableList.of(MCHeldItem.fromMCItemStack(cookedItem.getDefaultInstance()));
+                }
+
+                @Override
+                public boolean isResultAlwaysEmpty() {
+                    return false;
+                }
+            };
+            return new WorkWorldInteractions(cooldownTicks, g);
+        }
+
         private WorkWorldInteractions worldWorkInt(
                 JsonObject object,
                 int cooldownTicks
@@ -427,6 +446,7 @@ public class ResourceJobLoader {
                 case "biome_loot" -> biomeLootResult(rizz);
                 case "loot" -> lootResult(rizz);
                 case "crafting_table" -> craftingTableResult(rizz);
+                case "uses_special_rules" -> ResultGenerator.alwaysEmpty();
                 default -> throw new IllegalArgumentException("Unexpected result type: " + type);
             };
             return new WorkWorldInteractions(cooldownTicks, g);
