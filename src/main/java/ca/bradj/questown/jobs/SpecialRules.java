@@ -123,4 +123,6 @@ public class SpecialRules {
     // proportional to the elapsed tick delta.
     public static final String FURNACE_SMELT_WARP =
             "furnace_smelt_warp";
+
+    public static final String EXCLUDE_FROM_WARP = "exclude_from_warp";
 }

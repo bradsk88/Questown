@@ -52,6 +52,12 @@ import static ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.isSeekingWor
 
 public class ServerJobsRegistry {
 
+    public static boolean isExcludedFromWarp(JobID jobID) {
+        Supplier<Work> w = Works.get(jobID);
+        if (w == null) return false;
+        return w.get().getSpecialGlobalRules().contains(SpecialRules.EXCLUDE_FROM_WARP);
+    }
+
     public static boolean canAlwaysStart(
             UUID uuid,
             JobID p

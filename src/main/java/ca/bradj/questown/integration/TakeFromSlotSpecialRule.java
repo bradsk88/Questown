@@ -23,6 +23,9 @@ public class TakeFromSlotSpecialRule extends JobPhaseModifier {
             BeforeExtractEvent<CONTEXT> event
     ) {
         CONTEXT ctxBefore = super.beforeExtract(ctxInput, event);
+        if (ctxBefore == null) {
+            ctxBefore = ctxInput;
+        }
         ItemStack extracted = event.world().extractFromSlot(event.workSpot(), slotIndex, 1);
         if (extracted.isEmpty()) {
             QT.BLOCK_LOGGER.error(

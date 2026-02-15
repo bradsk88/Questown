@@ -58,6 +58,7 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
         if (cycleJobs == null) {
             work.recomputeNow();
             cycleJobs = new ArrayList<>(work.getPreselectedJobs(fallbackJobID));
+            cycleJobs.removeIf(ServerJobsRegistry::isExcludedFromWarp);
             Collections.shuffle(cycleJobs);
             cycleIndex = 0;
         }
@@ -140,20 +141,43 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
                 currentTick
         );
 
+        @Nullable BlockPos furnace = findAssignedFurnace(level);
+
         Warper<ServerLevel, MCTownState> jobWarper = ServerJobsRegistry.getWarper(
                 villagerIndex,
                 resolvedJob,
                 townFlagPos,
                 roomPositions,
-                findAssignedFurnace(level)
+                furnace
         );
 
-        // If the resolved job also returns NoOpWarper, don't recurse infinitely
         if (jobWarper instanceof NoOpWarper) {
             return liveState;
         }
 
+        if ("cook".equals(resolvedJob.rootId())) {
+            return runToCompletion(jobWarper, level, liveState, currentTick, ticksPassed, villagerNum);
+        }
+
         return jobWarper.warp(level, liveState, currentTick, ticksPassed, villagerNum);
+    }
+
+    private static MCTownState runToCompletion(
+            Warper<ServerLevel, MCTownState> warper,
+            ServerLevel level,
+            MCTownState state,
+            long currentTick,
+            long ticksPassed,
+            int villagerNum
+    ) {
+        for (int i = 0; i < 6; i++) {
+            MCTownState next = warper.warp(level, state, currentTick, ticksPassed, villagerNum);
+            if (next == state) {
+                break;
+            }
+            state = next;
+        }
+        return state;
     }
 
     @Override
