@@ -12,12 +12,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 public class TestExecutor {
 
     private enum Phase {
+        DESTROY_NEARBY_FLAGS,
         FLATTEN,
         PLACE_FLAG,
         WAIT_FOR_INIT,
@@ -44,7 +46,7 @@ public class TestExecutor {
     private final int warpAmount;
     private final TestBlueprint blueprint;
 
-    private Phase phase = Phase.FLATTEN;
+    private Phase phase = Phase.DESTROY_NEARBY_FLAGS;
     private int waitTicks = 0;
     private int maxWaitTicks = 0;
     private BlockPos flagPos;
@@ -74,6 +76,7 @@ public class TestExecutor {
      */
     public boolean tick() {
         switch (phase) {
+            case DESTROY_NEARBY_FLAGS -> destroyNearbyFlags();
             case FLATTEN -> flatten();
             case PLACE_FLAG -> placeFlag();
             case WAIT_FOR_INIT -> waitForInit();
@@ -93,6 +96,29 @@ public class TestExecutor {
             case DONE -> { return true; }
         }
         return phase == Phase.DONE;
+    }
+
+    private void destroyNearbyFlags() {
+        int destroyed = 0;
+        for (int x = -7; x <= 7; x++) {
+            for (int z = -7; z <= 7; z++) {
+                for (int y = -1; y <= 4; y++) {
+                    BlockPos pos = origin.offset(x, y, z);
+                    BlockEntity be = level.getBlockEntity(pos);
+                    if (!(be instanceof TownFlagBlockEntity tf)) {
+                        continue;
+                    }
+                    tf.getVillagerHandle().entities().forEach(LivingEntity::kill);
+                    level.removeBlockEntity(pos);
+                    level.removeBlock(pos, true);
+                    destroyed++;
+                }
+            }
+        }
+        if (destroyed > 0) {
+            msg("Destroyed " + destroyed + " nearby flag(s)");
+        }
+        phase = Phase.FLATTEN;
     }
 
     private void flatten() {
