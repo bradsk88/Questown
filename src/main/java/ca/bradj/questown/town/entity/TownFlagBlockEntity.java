@@ -614,12 +614,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return false;
         };
         Predicate<JobID> canAlwaysStart = p -> ServerJobsRegistry.canAlwaysStart(uuid, p);
-        JobID work = TownVillagerData.chooseFromList(
-                canFit,
+        JobID work = possibleWork.nextForVillager(
+                ownerUUID,
+                villager.getJobId(),
                 canAlwaysStart,
+                canFit,
                 requestedResults,
-                td,
-                possibleWork.getFor(villager.getJobId())
+                td
         );
         if (work != null) {
             changeJob.accept(work);

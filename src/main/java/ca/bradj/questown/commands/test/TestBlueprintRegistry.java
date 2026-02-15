@@ -139,7 +139,8 @@ public class TestBlueprintRegistry {
 
         List<ItemStack> supplies = List.of(
                 new ItemStack(Items.BEEF, 16),
-                new ItemStack(Items.COAL, 16)
+                new ItemStack(Items.COAL, 16),
+                new ItemStack(Items.STICK, 2)
         );
 
         TestExpectation expectation = new TestExpectation(

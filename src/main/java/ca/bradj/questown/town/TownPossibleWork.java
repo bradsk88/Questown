@@ -11,6 +11,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.DeclarativeJob;
+import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -37,6 +38,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.text.NumberFormat;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -53,6 +55,7 @@ public class TownPossibleWork {
     private final UnsafeTown town = new UnsafeTown(getClass());
 
     private final Map<String, List<JobID>> preselectedJobs = new HashMap<>();
+    private final Map<UUID, JobCycler> villagerCyclers = new HashMap<>();
     private boolean shouldRecompute = true;
     private int buffer;
 
@@ -313,6 +316,18 @@ public class TownPossibleWork {
 
     public ImmutableList<JobID> getFor(JobID jobId) {
         return UtilClean.getOrDefaultCollection(preselectedJobs, jobId.rootId(), ImmutableList.of());
+    }
+
+    public @Nullable JobID nextForVillager(
+            UUID villagerUUID,
+            JobID currentJob,
+            Predicate<JobID> canAlwaysStart,
+            Predicate<JobID> canFitInDay,
+            ImmutableList<WorkRequest> requestedResults,
+            WorksBehaviour.TownData td
+    ) {
+        JobCycler cycler = villagerCyclers.computeIfAbsent(villagerUUID, k -> new JobCycler());
+        return cycler.nextValid(getFor(currentJob), canAlwaysStart, canFitInDay, requestedResults, td);
     }
 
     public void invalidate() {

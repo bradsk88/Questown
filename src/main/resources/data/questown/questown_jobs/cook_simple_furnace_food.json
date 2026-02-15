@@ -6,7 +6,8 @@
   "icon": "minecraft:beef",
   "initial_request": "minecraft:cooked_beef",
   "result": {
-    "type": "uses_special_rules"
+    "type": "via_other_job",
+    "jobs": ["cook/extract"]
   },
   "block": {
     "id": "minecraft:furnace",

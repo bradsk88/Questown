@@ -141,7 +141,7 @@ public class ResourceJobLoader {
                             special
                     );
                     int cooldownTicks = requiredInt(obj, "cooldown_ticks");
-                    WorkWorldInteractions wwi = smeltingResultWorkInt(cooldownTicks, item.getItem());
+                    WorkWorldInteractions wwi = worldWorkInt(obj, cooldownTicks);
                     JobID id = JobID.fromJSON(Util.getOrDefault(obj, "id", JsonElement::getAsString, null));
                     BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitWS = shouldInitWS(block, special);
                     WorkStates ws = ResourceJobLoader.workStates(id, obj);
@@ -446,7 +446,7 @@ public class ResourceJobLoader {
                 case "biome_loot" -> biomeLootResult(rizz);
                 case "loot" -> lootResult(rizz);
                 case "crafting_table" -> craftingTableResult(rizz);
-                case "uses_special_rules" -> ResultGenerator.alwaysEmpty();
+                case "uses_special_rules", "via_other_job" -> ResultGenerator.alwaysEmpty();
                 default -> throw new IllegalArgumentException("Unexpected result type: " + type);
             };
             return new WorkWorldInteractions(cooldownTicks, g);
