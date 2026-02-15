@@ -32,9 +32,20 @@ public interface QTWorldAccess {
     // Randomness
     <T> List<T> getShuffledCopy(Collection<T> items);
 
+    // Container operations
+    boolean isContainer(BlockPos pos);
+    int getContainerSlotCount(BlockPos pos);
+    ItemStack getContainerSlot(BlockPos pos, int slot);
+    boolean insertIntoSlot(BlockPos pos, int slot, ItemStack item);
+    ItemStack extractFromSlot(BlockPos pos, int slot, int count);
+    boolean insertIntoContainer(BlockPos pos, ItemStack item);
+
     // Sound
     void playSound(BlockPos pos, SoundEvent sound);
     void playSound(BlockPos pos, SoundEvent sound, SoundSource source);
+
+    // Processing block advancement (furnaces, etc.)
+    void advanceProcessing(BlockPos pos, int ticks);
 
     /**
      * Escape hatch for rules that cannot yet be expressed through QTWorldAccess methods.

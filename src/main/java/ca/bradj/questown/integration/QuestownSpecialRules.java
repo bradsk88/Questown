@@ -135,6 +135,15 @@ public final class QuestownSpecialRules {
                 new GrowCropsWarpRule()
         );
 
+        // Warp-interleaved hook: advances furnace smelting
+        // during time warp.
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(
+                        SpecialRules.FURNACE_SMELT_WARP
+                ),
+                new SmeltFurnaceWarpRule()
+        );
+
         VanillaSpecialRules.register();
     }
 }

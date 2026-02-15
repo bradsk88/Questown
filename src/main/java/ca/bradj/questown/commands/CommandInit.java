@@ -34,5 +34,6 @@ public class CommandInit {
         PrepareWorkCommand.register(event.getDispatcher());
         LogDataCommand.register(event.getDispatcher());
         ToggleHungerConfig.register(event.getDispatcher());
+        TestCommand.register(event.getDispatcher(), event.getBuildContext());
     }
 }

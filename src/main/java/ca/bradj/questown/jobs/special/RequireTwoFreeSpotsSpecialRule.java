@@ -2,20 +2,13 @@ package ca.bradj.questown.jobs.special;
 
 import ca.bradj.questown.integration.jobs.BeforeInitEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
-import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.world.QTWorldAccess;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.ChestBlock;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 
 public class RequireTwoFreeSpotsSpecialRule extends
@@ -29,46 +22,29 @@ public class RequireTwoFreeSpotsSpecialRule extends
     public void beforeInit(BeforeInitEvent bxEvent) {
         super.beforeInit(bxEvent);
         bxEvent.jobBlockCheckReplacer().accept(before -> (ctx) -> {
-            BlockEntity entity = bxEvent.world().get().asServerLevel().getBlockEntity(ctx.blockPos());
-            if (entity == null) {
+            QTWorldAccess world = bxEvent.world().get();
+            if (!world.isContainer(ctx.blockPos())) {
                 return false;
             }
-            LazyOptional<IItemHandler> itemHandler = entity.getCapability(Compat.ITEM_HANDLER);
-            if (!itemHandler.isPresent()) {
-                return false;
-            }
-            Optional<IItemHandler> resolve = itemHandler.resolve();
-            if (resolve.isEmpty()) {
-                return false;
-            }
-            IItemHandler handler = resolve.get();
-            if (hasTwoFreeSlots(handler.getSlots(), handler::getStackInSlot)) {
+            int slots = world.getContainerSlotCount(ctx.blockPos());
+            if (hasTwoFreeSlots(slots, i -> world.getContainerSlot(ctx.blockPos(), i))) {
                 return before.test(ctx);
             }
             return false;
         });
         bxEvent.supplyRoomCheckReplacer().accept(before -> (heldItems, room) -> {
             @Nullable BlockPos jBlock = WorkSpotFromHeldItemSpecialRule
-                    .getJobBlockPositionFromHeldItems(heldItems); // TODO: If holding stock request, skip this rule
+                    .getJobBlockPositionFromHeldItems(heldItems);
             for (Map.Entry<BlockPos, Block> b : room.getContainedBlocks().entrySet()) {
                 if (jBlock != null && !jBlock.equals(b.getKey())) {
                     return before.test(heldItems, room);
                 }
-                if (!(b.getValue() instanceof ChestBlock cb)) {
+                QTWorldAccess world = bxEvent.world().get();
+                if (!world.isContainer(b.getKey())) {
                     continue;
                 }
-                ServerLevel serverLevel = bxEvent.world().get().asServerLevel();
-                Container cont = ChestBlock.getContainer(
-                        cb,
-                        serverLevel.getBlockState(b.getKey()),
-                        serverLevel,
-                        b.getKey(),
-                        true
-                );
-                if (cont == null) {
-                    continue;
-                }
-                if (hasTwoFreeSlots(cont.getContainerSize(), cont::getItem)) {
+                int slots = world.getContainerSlotCount(b.getKey());
+                if (hasTwoFreeSlots(slots, i -> world.getContainerSlot(b.getKey(), i))) {
                     return before.test(heldItems, room);
                 }
             }

@@ -1,5 +1,6 @@
 package ca.bradj.questown.world;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -8,10 +9,15 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
@@ -20,6 +26,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ToolAction;
 import net.minecraftforge.common.ToolActions;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -168,6 +177,130 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     public void playSound(BlockPos pos, SoundEvent sound, SoundSource source) {
         if (silent) return;
         Compat.playSound(level, pos, sound, source);
+    }
+
+    @Nullable
+    private Container resolveContainer(BlockPos pos) {
+        BlockState bs = level.getBlockState(pos);
+        if (bs.getBlock() instanceof ChestBlock cb) {
+            return ChestBlock.getContainer(cb, bs, level, pos, true);
+        }
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof Container c) {
+            return c;
+        }
+        return null;
+    }
+
+    @Nullable
+    private IItemHandler resolveItemHandler(BlockPos pos) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be == null) {
+            return null;
+        }
+        LazyOptional<IItemHandler> cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER);
+        return cap.resolve().orElse(null);
+    }
+
+    @Override
+    public boolean isContainer(BlockPos pos) {
+        return resolveContainer(pos) != null || resolveItemHandler(pos) != null;
+    }
+
+    @Override
+    public int getContainerSlotCount(BlockPos pos) {
+        IItemHandler handler = resolveItemHandler(pos);
+        if (handler != null) {
+            return handler.getSlots();
+        }
+        Container c = resolveContainer(pos);
+        if (c != null) {
+            return c.getContainerSize();
+        }
+        return 0;
+    }
+
+    @Override
+    public ItemStack getContainerSlot(BlockPos pos, int slot) {
+        IItemHandler handler = resolveItemHandler(pos);
+        if (handler != null) {
+            return handler.getStackInSlot(slot);
+        }
+        Container c = resolveContainer(pos);
+        if (c != null) {
+            return c.getItem(slot);
+        }
+        return ItemStack.EMPTY;
+    }
+
+    @Override
+    public boolean insertIntoSlot(BlockPos pos, int slot, ItemStack item) {
+        Container c = resolveContainer(pos);
+        if (c == null) {
+            return false;
+        }
+        c.setItem(slot, item);
+        return true;
+    }
+
+    @Override
+    public ItemStack extractFromSlot(BlockPos pos, int slot, int count) {
+        Container c = resolveContainer(pos);
+        if (c == null) {
+            return ItemStack.EMPTY;
+        }
+        return c.removeItem(slot, count);
+    }
+
+    @Override
+    public boolean insertIntoContainer(BlockPos pos, ItemStack item) {
+        IItemHandler handler = resolveItemHandler(pos);
+        if (handler == null) {
+            return false;
+        }
+        return Compat.insertInNextOpenSlot(handler, item, 1);
+    }
+
+    // A full stack (64) at 200 ticks/item = 12,800 ticks.
+    // Cap higher to allow some headroom but prevent
+    // runaway loops from huge tick deltas.
+    private static final int MAX_PROCESSING_TICKS = 13_000;
+
+    @Override
+    public void advanceProcessing(BlockPos pos, int ticks) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (!(be instanceof AbstractFurnaceBlockEntity furnace)) {
+            return;
+        }
+        QT.FLAG_LOGGER.debug(
+                "advanceProcessing at {} for {} ticks. Slot0={}, Slot1={}, Slot2={}",
+                pos.toShortString(), ticks,
+                furnace.getItem(0), furnace.getItem(1), furnace.getItem(2)
+        );
+        int capped = Math.min(ticks, MAX_PROCESSING_TICKS);
+        int ticksRun = 0;
+        for (int i = 0; i < capped; i++) {
+            BlockState bs = level.getBlockState(pos);
+            AbstractFurnaceBlockEntity.serverTick(level, pos, bs, furnace);
+            ticksRun++;
+            if (noSmeltingPossible(furnace, pos)) {
+                break;
+            }
+        }
+        QT.FLAG_LOGGER.debug(
+                "advanceProcessing done after {} ticks. Slot0={}, Slot1={}, Slot2={}",
+                ticksRun,
+                furnace.getItem(0), furnace.getItem(1), furnace.getItem(2)
+        );
+    }
+
+    private boolean noSmeltingPossible(AbstractFurnaceBlockEntity furnace, BlockPos pos) {
+        if (furnace.getItem(0).isEmpty()) {
+            return true;
+        }
+        BlockState bs = level.getBlockState(pos);
+        boolean lit = bs.hasProperty(AbstractFurnaceBlock.LIT) && bs.getValue(AbstractFurnaceBlock.LIT);
+        return !lit && furnace.getItem(1).isEmpty();
     }
 
     @Override

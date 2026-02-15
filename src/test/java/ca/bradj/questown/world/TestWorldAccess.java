@@ -29,6 +29,8 @@ public class TestWorldAccess implements QTWorldAccess {
     private final List<SoundEvent> soundsPlayed = new ArrayList<>();
     // Positions where useItemOnBlock was called (for assertions)
     private final Set<BlockPos> itemUsedOnBlock = new HashSet<>();
+    // Container contents: pos -> list of slots (each slot is an ItemStack)
+    private final Map<BlockPos, List<ItemStack>> containers = new HashMap<>();
 
     // --- Builder-style setup methods ---
 
@@ -50,6 +52,24 @@ public class TestWorldAccess implements QTWorldAccess {
 
     public TestWorldAccess withToolTransformResult(BlockPos pos, boolean result) {
         toolTransformResults.put(pos, result);
+        return this;
+    }
+
+    public TestWorldAccess withContainer(BlockPos pos, int slotCount) {
+        List<ItemStack> slots = new ArrayList<>();
+        for (int i = 0; i < slotCount; i++) {
+            slots.add(ItemStack.EMPTY);
+        }
+        containers.put(pos, slots);
+        return this;
+    }
+
+    public TestWorldAccess withContainerSlot(BlockPos pos, int slot, ItemStack item) {
+        List<ItemStack> slots = containers.get(pos);
+        if (slots == null) {
+            throw new IllegalStateException("No container at " + pos + ". Call withContainer first.");
+        }
+        slots.set(slot, item);
         return this;
     }
 
@@ -75,6 +95,19 @@ public class TestWorldAccess implements QTWorldAccess {
 
     public boolean wasItemUsedOnBlock(BlockPos pos) {
         return itemUsedOnBlock.contains(pos);
+    }
+
+    public ItemStack getSlotContents(BlockPos pos, int slot) {
+        List<ItemStack> slots = containers.get(pos);
+        if (slots == null) {
+            return ItemStack.EMPTY;
+        }
+        return slots.get(slot);
+    }
+
+    public int getContainerSize(BlockPos pos) {
+        List<ItemStack> slots = containers.get(pos);
+        return slots != null ? slots.size() : 0;
     }
 
     // --- QTWorldAccess implementation ---
@@ -141,6 +174,78 @@ public class TestWorldAccess implements QTWorldAccess {
     @Override
     public void playSound(BlockPos pos, SoundEvent sound, SoundSource source) {
         soundsPlayed.add(sound);
+    }
+
+    @Override
+    public boolean isContainer(BlockPos pos) {
+        return containers.containsKey(pos);
+    }
+
+    @Override
+    public int getContainerSlotCount(BlockPos pos) {
+        List<ItemStack> slots = containers.get(pos);
+        return slots != null ? slots.size() : 0;
+    }
+
+    @Override
+    public ItemStack getContainerSlot(BlockPos pos, int slot) {
+        List<ItemStack> slots = containers.get(pos);
+        if (slots == null) {
+            return ItemStack.EMPTY;
+        }
+        return slots.get(slot);
+    }
+
+    @Override
+    public boolean insertIntoSlot(BlockPos pos, int slot, ItemStack item) {
+        List<ItemStack> slots = containers.get(pos);
+        if (slots == null) {
+            return false;
+        }
+        slots.set(slot, item);
+        return true;
+    }
+
+    @Override
+    public ItemStack extractFromSlot(BlockPos pos, int slot, int count) {
+        List<ItemStack> slots = containers.get(pos);
+        if (slots == null) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack existing = slots.get(slot);
+        if (existing.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack extracted = existing.split(count);
+        if (existing.isEmpty()) {
+            slots.set(slot, ItemStack.EMPTY);
+        }
+        return extracted;
+    }
+
+    @Override
+    public boolean insertIntoContainer(BlockPos pos, ItemStack item) {
+        List<ItemStack> slots = containers.get(pos);
+        if (slots == null) {
+            return false;
+        }
+        for (int i = 0; i < slots.size(); i++) {
+            ItemStack existing = slots.get(i);
+            if (existing.isEmpty()) {
+                slots.set(i, item.copy());
+                return true;
+            }
+            if (existing.sameItem(item) && existing.getCount() < existing.getMaxStackSize()) {
+                existing.grow(item.getCount());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void advanceProcessing(BlockPos pos, int ticks) {
+        // No-op: tests don't have real furnaces
     }
 
     @Override

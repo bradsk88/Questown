@@ -116,4 +116,11 @@ public class SpecialRules {
     // to grow proportionally to the elapsed tick delta.
     public static final String CROP_GROWTH_WARP =
             "crop_growth_warp";
+
+    // Global rule (warp-interleaved). When declared by a job,
+    // furnace-type blocks at tracked work positions will have
+    // their smelting progress advanced during time warp,
+    // proportional to the elapsed tick delta.
+    public static final String FURNACE_SMELT_WARP =
+            "furnace_smelt_warp";
 }

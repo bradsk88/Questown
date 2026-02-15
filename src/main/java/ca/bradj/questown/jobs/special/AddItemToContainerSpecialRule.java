@@ -3,15 +3,8 @@ package ca.bradj.questown.jobs.special;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.jobs.AfterInsertItemEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
-import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Optional;
 
 public class AddItemToContainerSpecialRule extends
         JobPhaseModifier {
@@ -27,19 +20,7 @@ public class AddItemToContainerSpecialRule extends
     ) {
         CONTEXT ctxOut = super.afterInsertItem(ctxInput, event);
         BlockPos ws = event.workSpot().workPosition();
-        BlockEntity be = event.world().asServerLevel().getBlockEntity(ws);
-        LazyOptional<IItemHandler> cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER);
-        if (cap == null || !cap.isPresent()) {
-            QT.JOB_LOGGER.error("Work spot cannot accept items. " + getClass().getName() + " will not succeed.");
-            return ctxOut;
-        }
-        Optional<IItemHandler> res = cap.resolve();
-        if (res.isEmpty()) {
-            QT.JOB_LOGGER.error("Work spot cannot accept items. " + getClass().getName() + " will not succeed. (2)");
-            return ctxOut;
-        }
-        int amount = 1; // TODO: Implement "stacker"
-        if (!Compat.insertInNextOpenSlot(res.get(), event.inserted(), amount)) {
+        if (!event.world().insertIntoContainer(ws, event.inserted())) {
             QT.JOB_LOGGER.error("Item lost due to not enough space in target container @ {}: {}", ws, event.inserted());
         }
         return ctxOut;

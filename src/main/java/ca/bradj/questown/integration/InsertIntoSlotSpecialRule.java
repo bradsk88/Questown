@@ -4,8 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.jobs.AfterInsertItemEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.mc.Util;
-import net.minecraft.world.Container;
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 public class InsertIntoSlotSpecialRule extends JobPhaseModifier {
@@ -22,19 +21,14 @@ public class InsertIntoSlotSpecialRule extends JobPhaseModifier {
             AfterInsertItemEvent<CONTEXT> event
     ) {
         CONTEXT context = super.afterInsertItem(ctxInput, event);
-        BlockEntity entity = event.world().asServerLevel().getBlockEntity(event.workSpot().workPosition());
-        if (!(entity instanceof Container c)) {
+        BlockPos pos = event.workSpot().workPosition();
+        if (!event.world().insertIntoSlot(pos, slotIndex, event.inserted())) {
             QT.BLOCK_LOGGER.error(
-                    "{}: BlockEntity at {} is not a Container, cannot apply special rule.",
+                    "{}: No container at {}, cannot apply special rule.",
                     getClass(),
-                    Util.getTinyString(event.workSpot().workPosition())
+                    Util.getTinyString(pos)
             );
-            return context;
         }
-
-        // TODO[WARP]: Ensure world containers get filled/emptied after time warp
-        c.setItem(slotIndex, event.inserted());
-
         return context;
     }
 }

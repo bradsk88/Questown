@@ -33,7 +33,7 @@
   "special": [
     {
       "type": "global",
-      "rules": []
+      "rules": ["furnace_smelt_warp"]
     },
     {
       "type": "processing_state",
