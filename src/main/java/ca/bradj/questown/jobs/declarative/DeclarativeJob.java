@@ -674,7 +674,7 @@ public class DeclarativeJob extends
         return null;
     }
 
-    private Direction getDoorDirectionFromCenter(Room jobSite) {
+    public static Direction getDoorDirectionFromCenter(Room jobSite) {
         Optional<XWall> backXWall = jobSite.getBackXWall();
         if (backXWall.isPresent() && backXWall.get().getZ() > jobSite.doorPos.z) {
             return Direction.NORTH;

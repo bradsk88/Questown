@@ -5,6 +5,7 @@ import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.StockRequestItem;
+import ca.bradj.questown.jobs.declarative.DeclarativeJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
@@ -170,9 +171,14 @@ public class TownContainers {
         Position interactPos = position;
 
         BlockState blockState = level.getBlockState(p);
-        Optional<Direction> facing = blockState.getOptionalValue(BlockStateProperties.HORIZONTAL_FACING);
-        if (facing.isPresent()) {
-            interactPos = Positions.FromBlockPos(p.relative(facing.get()));
+        if (room != null) {
+            Direction doorDirection = DeclarativeJob.getDoorDirectionFromCenter(room);
+            interactPos = Positions.FromBlockPos(p.relative(doorDirection));
+        } else {
+            Optional<Direction> facing = blockState.getOptionalValue(BlockStateProperties.HORIZONTAL_FACING);
+            if (facing.isPresent()) {
+                interactPos = Positions.FromBlockPos(p.relative(facing.get()));
+            }
         }
 
         if (blockState.isAir()) {
