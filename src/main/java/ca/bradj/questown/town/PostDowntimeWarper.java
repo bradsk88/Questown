@@ -155,14 +155,11 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
             return liveState;
         }
 
-        if ("cook".equals(resolvedJob.rootId())) {
-            return runToCompletion(jobWarper, level, liveState, currentTick, ticksPassed, villagerNum);
-        }
-
-        return jobWarper.warp(level, liveState, currentTick, ticksPassed, villagerNum);
+        return runToCompletion(resolvedJob, jobWarper, level, liveState, currentTick, ticksPassed, villagerNum);
     }
 
     private static MCTownState runToCompletion(
+            JobID jobId,
             Warper<ServerLevel, MCTownState> warper,
             ServerLevel level,
             MCTownState state,
@@ -170,12 +167,23 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
             long ticksPassed,
             int villagerNum
     ) {
-        for (int i = 0; i < 6; i++) {
+        int steps = 0;
+        for (int i = 0; i < 64; i++) {
             MCTownState next = warper.warp(level, state, currentTick, ticksPassed, villagerNum);
             if (next == state) {
                 break;
             }
             state = next;
+            steps++;
+            if (warper.isCycleComplete()) {
+                break;
+            }
+        }
+        if (steps > 0) {
+            QT.FLAG_LOGGER.info(
+                    "[PostDowntimeWarper] {} completed {} step(s) at tick {} (delta={})",
+                    jobId, steps, currentTick, ticksPassed
+            );
         }
         return state;
     }

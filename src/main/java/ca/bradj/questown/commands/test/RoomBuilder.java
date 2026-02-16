@@ -18,7 +18,7 @@ public class RoomBuilder {
         placeChest(level, flagPos, blueprint);
     }
 
-    private static void placeChest(ServerLevel level, BlockPos flagPos, TestBlueprint blueprint) {
+    public static void placeChest(ServerLevel level, BlockPos flagPos, TestBlueprint blueprint) {
         BlockPos chestPos = flagPos.offset(blueprint.chestOffset());
         level.setBlockAndUpdate(chestPos, Blocks.CHEST.defaultBlockState());
 

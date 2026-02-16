@@ -16,6 +16,8 @@ public interface Warper<LOOT_SOURCE, TOWN extends TownState<?, ?, ?, ?, ?>> {
             int villagerNum
     );
 
+    default boolean isCycleComplete() { return false; }
+
     Collection<Tick> getTicks(long referenceTick, long ticksPassed);
 
 

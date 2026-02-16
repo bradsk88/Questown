@@ -78,7 +78,7 @@ public class TestBlueprintRegistry {
         );
 
         TestExpectation expectation = new TestExpectation(
-                List.of(new ExpectedProduct("minecraft:wheat", 1)),
+                List.of(new ExpectedProduct("minecraft:wheat", 1, -1)),
                 1,
                 100
         );
@@ -138,13 +138,17 @@ public class TestBlueprintRegistry {
         BlockPos chestOffset = new BlockPos(ox + 3, 0, oz + 1);
 
         List<ItemStack> supplies = List.of(
-                new ItemStack(Items.BEEF, 16),
-                new ItemStack(Items.COAL, 16),
-                new ItemStack(Items.STICK, 2)
+                new ItemStack(Items.BEEF, 32),
+                new ItemStack(Items.COAL, 32),
+                new ItemStack(Items.STICK, 16)
         );
 
         TestExpectation expectation = new TestExpectation(
-                List.of(new ExpectedProduct("minecraft:cooked_beef", 1)),
+                List.of(
+                        new ExpectedProduct("minecraft:cooked_beef", 3, 4),
+                        new ExpectedProduct("minecraft:beef", -4, -3),
+                        new ExpectedProduct("minecraft:coal", -4, -3)
+                ),
                 1,
                 100
         );

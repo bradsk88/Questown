@@ -97,12 +97,11 @@ public class ImportantTicks {
             long totalDuration = DEFAULT_WORK_CYCLE_TICKS;
             // Use higher default for dynamic resolution since we don't know the job's requirements
             int ticksPerCycle = DEFAULT_DYNAMIC_TICKS_PER_CYCLE;
+            long stepSpacing = Math.max(1, totalDuration / ticksPerCycle);
             long prev = 0;
             for (int j = 0; j <= ticksPassed; j += (int) totalDuration) {
-                long baseTick = j + totalDuration;
-
                 for (int step = 0; step < ticksPerCycle; step++) {
-                    long tickOffset = Math.min(baseTick + step, ticksPassed);
+                    long tickOffset = Math.min(j + (long) step * stepSpacing, ticksPassed);
                     if (tickOffset > ticksPassed) {
                         break;
                     }
@@ -113,7 +112,7 @@ public class ImportantTicks {
                     }
                 }
 
-                if (baseTick >= ticksPassed) {
+                if (j + totalDuration > ticksPassed) {
                     break;
                 }
             }
@@ -133,12 +132,11 @@ public class ImportantTicks {
             long totalDuration = DEFAULT_WORK_CYCLE_TICKS;
             // Use higher default for dynamic resolution since we don't know the job's requirements
             int ticksPerCycle = DEFAULT_DYNAMIC_TICKS_PER_CYCLE;
+            long stepSpacing = Math.max(1, totalDuration / ticksPerCycle);
             long prev = 0;
             for (int j = 0; j <= ticksPassed; j += (int) totalDuration) {
-                long baseTick = j + totalDuration;
-
                 for (int step = 0; step < ticksPerCycle; step++) {
-                    long tickOffset = Math.min(baseTick + step, ticksPassed);
+                    long tickOffset = Math.min(j + (long) step * stepSpacing, ticksPassed);
                     if (tickOffset > ticksPassed) {
                         break;
                     }
@@ -149,7 +147,7 @@ public class ImportantTicks {
                     }
                 }
 
-                if (baseTick >= ticksPassed) {
+                if (j + totalDuration > ticksPassed) {
                     break;
                 }
             }
@@ -174,12 +172,11 @@ public class ImportantTicks {
         int ticksPerCycle = w.getWarpTicksPerCycle(resolvedJob, uuid);
         // Ensure minimum of 5 ticks for safety
         ticksPerCycle = Math.max(ticksPerCycle, 5);
+        long stepSpacing = Math.max(1, totalDuration / ticksPerCycle);
         long prev = 0;
         for (int j = 0; j <= ticksPassed; j += (int) totalDuration) {
-            long baseTick = j + totalDuration;
-
             for (int step = 0; step < ticksPerCycle; step++) {
-                long tickOffset = Math.min(baseTick + step, ticksPassed);
+                long tickOffset = Math.min(j + (long) step * stepSpacing, ticksPassed);
                 if (tickOffset > ticksPassed) {
                     break;
                 }
@@ -190,7 +187,7 @@ public class ImportantTicks {
                 }
             }
 
-            if (baseTick >= ticksPassed) {
+            if (j + totalDuration > ticksPassed) {
                 break;
             }
         }

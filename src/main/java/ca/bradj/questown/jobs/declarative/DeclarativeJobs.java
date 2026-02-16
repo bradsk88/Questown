@@ -296,6 +296,13 @@ public class DeclarativeJobs {
         }
 
         return new Warper<>() {
+            boolean cycleCompleted = false;
+
+            @Override
+            public boolean isCycleComplete() {
+                return cycleCompleted;
+            }
+
             @Override
             public MCTownState warp(
                     ServerLevel level,
@@ -349,12 +356,6 @@ public class DeclarativeJobs {
                 if (nuStatus != null) {
                     status = nuStatus;
                 }
-                QT.JOB_LOGGER.debug(
-                        "[WARP] tick={} status={} workState={}",
-                        currentTick,
-                        status,
-                        ztate
-                );
                 MCTownState affectedState = handler.get(status).apply(new HandlerInputs(
                         wi,
                         fState,
@@ -365,6 +366,9 @@ public class DeclarativeJobs {
                 ));
                 if (affectedState != null) {
                     outState = affectedState;
+                    if (status.isExtractingProduct()) {
+                        cycleCompleted = true;
+                    }
                 }
 
                 State afterState = outState.workStates.get(workPos);
@@ -380,6 +384,7 @@ public class DeclarativeJobs {
                     ));
                     if (extracted != null) {
                         outState = extracted;
+                        cycleCompleted = true;
                     }
                 }
 

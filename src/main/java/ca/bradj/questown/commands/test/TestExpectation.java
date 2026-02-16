@@ -9,6 +9,7 @@ public record TestExpectation(
 ) {
     public record ExpectedProduct(
             String itemRegistryName,
-            int minQuantity
+            int minQuantity,
+            int maxQuantity  // -1 means no upper bound
     ) {}
 }

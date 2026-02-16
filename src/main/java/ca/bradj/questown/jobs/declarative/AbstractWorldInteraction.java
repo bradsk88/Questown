@@ -499,12 +499,6 @@ public abstract class AbstractWorldInteraction<
         if (s != null && s.processingState() >= maxState) {
 
             TOWN town = preExtractHook(inputs, position);
-            if (town != null) {
-                Function<TOWN, TOWN> resetFunc = getResetFunc(inputs, position);
-                town = resetFunc.apply(town);
-            } else {
-                getResetFunc(inputs, position).apply(getTown(inputs));
-            }
             if (town == null) {
                 Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
                 Iterable<HELD_ITEM> generatedResult = getResults(inputs, items);
@@ -516,6 +510,7 @@ public abstract class AbstractWorldInteraction<
                 }
             }
             if (town != null) {
+                town = getResetFunc(inputs, position).apply(town);
                 triggerCompletionAdvancement(inputs, position);
                 jobCompletedListeners.forEach(r -> r.accept(jobId));
             }

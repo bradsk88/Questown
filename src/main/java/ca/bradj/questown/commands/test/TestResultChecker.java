@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class TestResultChecker {
 
-    public record Result(boolean passed, String summary, List<String> details) {}
+    public record Result(boolean passed, String summary, List<String> details, Map<String, Integer> deltas) {}
 
     public static Map<String, Integer> snapshotItemCounts(MCTownState state) {
         Map<String, Integer> counts = new HashMap<>();
@@ -46,6 +46,7 @@ public class TestResultChecker {
             TestExpectation expectation
     ) {
         List<String> details = new ArrayList<>();
+        Map<String, Integer> deltas = new HashMap<>();
         details.add("Before: " + beforeCounts);
         details.add("After: " + afterCounts);
 
@@ -55,12 +56,17 @@ public class TestResultChecker {
             int beforeCount = beforeCounts.getOrDefault(product.itemRegistryName(), 0);
             int afterCount = afterCounts.getOrDefault(product.itemRegistryName(), 0);
             int delta = afterCount - beforeCount;
+            deltas.put(product.itemRegistryName(), delta);
 
-            boolean productPassed = delta >= product.minQuantity();
+            boolean productPassed = delta >= product.minQuantity()
+                    && (product.maxQuantity() < 0 || delta <= product.maxQuantity());
             String status = productPassed ? "PASS" : "FAIL";
+            String expectedRange = product.maxQuantity() < 0
+                    ? ">= " + product.minQuantity()
+                    : product.minQuantity() + ".." + product.maxQuantity();
             details.add(String.format(
-                    "[%s] %s: expected >= %d, got %d (before=%d, after=%d)",
-                    status, product.itemRegistryName(), product.minQuantity(), delta, beforeCount, afterCount
+                    "[%s] %s: expected %s, got %d (before=%d, after=%d)",
+                    status, product.itemRegistryName(), expectedRange, delta, beforeCount, afterCount
             ));
             if (!productPassed) {
                 allPassed = false;
@@ -68,7 +74,7 @@ public class TestResultChecker {
         }
 
         String summary = allPassed ? "All expectations met" : "Some expectations failed";
-        return new Result(allPassed, summary, details);
+        return new Result(allPassed, summary, details, deltas);
     }
 
     private static String itemRegistryName(MCTownItem item) {
