@@ -239,7 +239,7 @@ public class TownFlagState {
      */
     private static Work createWork(TownFlagBlockEntity e, ServerLevel sl) {
         return new Work() {
-            private int preferredBuffer = 0;
+            private final TownVillagerData.FallbackSelector fallbackSelector = new TownVillagerData.FallbackSelector();
 
             @Override
             public void recomputeNow() {
@@ -272,34 +272,17 @@ public class TownFlagState {
                     return work;
                 }
 
-                // Add buffer to avoid constant job switching, but allow warp to proceed
-                // when ticksElapsed is large enough
-                if (preferredBuffer < 100) {
-                    preferredBuffer += ticksElapsed;
-                    if (preferredBuffer < 100) {
-                        return currentJob; // Keep current job during buffer
-                    }
-                }
-                preferredBuffer = 0;
-
-                // Try preferred work (any job that can be done)
-                JobID preferredWork = TownVillagerData.getPreferredWork(
-                        currentJob, canFit, canAlwaysStart, requestedResults, td
+                JobID fallback = fallbackSelector.tryFallback(
+                        (int) ticksElapsed, currentJob, canFit, canAlwaysStart, requestedResults, td,
+                        e.getPossibleWork().getFor(currentJob),
+                        jobs -> Compat.shuffle(jobs.iterator(), sl)
                 );
-                if (preferredWork != null) {
-                    return preferredWork;
+                if (fallback != null) {
+                    return fallback;
                 }
-
-                // Fall back to any preselected job that can fit
-                List<JobID> preselected = new ArrayList<>(e.getPossibleWork().getFor(currentJob));
-                Collections.shuffle(preselected);
-                for (JobID p : preselected) {
-                    if (canFit.test(p)) {
-                        return p;
-                    }
+                if (fallbackSelector.isBuffering()) {
+                    return currentJob;
                 }
-
-                // No work available - return null to signal PostDowntimeWarper to skip
                 return null;
             }
 

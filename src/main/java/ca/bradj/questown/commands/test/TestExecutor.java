@@ -137,11 +137,13 @@ public class TestExecutor {
         msg("Flattening 15x15 area...");
         for (int x = -7; x <= 7; x++) {
             for (int z = -7; z <= 7; z++) {
+                for (int y = 4; y >= 0; y--) {
+                    BlockPos pos = origin.offset(x, y, z);
+                    level.removeBlockEntity(pos);
+                    level.removeBlock(pos, false);
+                }
                 BlockPos groundPos = origin.offset(x, -1, z);
                 level.setBlockAndUpdate(groundPos, Blocks.COBBLESTONE.defaultBlockState());
-                for (int y = 0; y <= 4; y++) {
-                    level.setBlockAndUpdate(origin.offset(x, y, z), Blocks.AIR.defaultBlockState());
-                }
             }
         }
         phase = Phase.PLACE_FLAG;
@@ -314,6 +316,12 @@ public class TestExecutor {
     }
 
     private void startMonitor() {
+        long dayTime = level.getDayTime() % 24000;
+        if (dayTime > 12000) {
+            long ticksUntilDay = 24000 - dayTime;
+            level.setDayTime(level.getDayTime() + ticksUntilDay);
+            msg("Set time to day");
+        }
         monitorEndTick = level.getGameTime() + warpAmount;
         lastReportedPercent = 0;
         msg("Monitoring real-time effects for " + warpAmount + " ticks...");

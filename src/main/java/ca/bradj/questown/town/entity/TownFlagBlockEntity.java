@@ -99,7 +99,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final TownKnownBiomes biomes = new TownKnownBiomes();
     TownHealingHandle healing = new TownHealingHandle();
     private final TownFlagInitialization initializer;
-    private int preferredBuffer;
+    private final TownVillagerData.FallbackSelector fallbackSelector = new TownVillagerData.FallbackSelector();
     private final NoMCEconomics economics = new NoMCEconomics();
     final TownFlagTicker ticker = new TownFlagTicker();
 
@@ -627,18 +627,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return true;
         }
 
-        if (preferredBuffer < 100) {
-            preferredBuffer++;
-            return false;
-        }
-        preferredBuffer = 0;
-
-        work = TownVillagerData.getPreferredWork(villager.getJobId(), canFit, canAlwaysStart, requestedResults, td);
-        if (work != null) {
-            changeJob.accept(work);
+        JobID fallback = fallbackSelector.tryFallback(
+                1, villager.getJobId(), canFit, canAlwaysStart, requestedResults, td,
+                possibleWork.getFor(villager.getJobId()),
+                jobs -> Compat.shuffle(jobs.iterator(), getServerLevel())
+        );
+        if (fallback != null) {
+            changeJob.accept(fallback);
             return true;
         }
-
         return false;
     }
 
