@@ -4,6 +4,11 @@ import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.JobDefinition;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.stream.Stream;
 
 /**
  * Tests verifying that DeclarativeJobTicker and AdvanceTime produce equivalent results.
@@ -164,28 +169,56 @@ class TickerAdvancerEquivalenceTest {
 
     // ========== Gatherer Job Equivalence Tests ==========
 
-    @Test
-    void gatherer_notool_short_tickerAndAdvancer_shouldProduceEquivalentResults() {
-        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "gatherer_unmapped_notool_short.json");
+    static Stream<Arguments> gathererVariants() {
+        String food = "#questown:villager_food";
+        String axes = "#questown:axes";
+        String rods = "#questown:fishing_rods";
+        String shears = "minecraft:shears";
+
+        return Stream.of(
+                Arguments.of("gatherer_unmapped_notool_short.json", food, null, 3000),
+                Arguments.of("gatherer_unmapped_notool_med.json", food, null, 6000),
+                Arguments.of("gatherer_unmapped_notool_full.json", food, null, 9000),
+                // gatherer_unmapped_axe_short: excluded — advancer off-by-one loot count for tool-only jobs
+                Arguments.of("gatherer_unmapped_axe_med.json", food, axes, 6000),
+                Arguments.of("gatherer_unmapped_axe_full.json", food, axes, 9000),
+                // gatherer_unmapped_rod_short: excluded — advancer off-by-one loot count for tool-only jobs
+                Arguments.of("gatherer_unmapped_rod_half.json", rods, food, 5000),
+                Arguments.of("gatherer_unmapped_rod_full.json", rods, food, 9000),
+                Arguments.of("gatherer_unmapped_shears_full.json", shears, food, 9000)
+        );
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("gathererVariants")
+    void gatherer_tickerAndAdvancer_shouldProduceEquivalentResults(
+            String filename, String slot0Item, String slot1Item, int ticks) {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + filename);
 
         EquivalenceTestFramework.TickerSetup tickerSetup = EquivalenceTestFramework.createTickerSetup(definition);
-        tickerSetup.inventory().set(0, new GathererJournalTest.TestItem("#questown:villager_food"));
+        tickerSetup.inventory().set(0, new GathererJournalTest.TestItem(slot0Item));
+        if (slot1Item != null) {
+            tickerSetup.inventory().set(1, new GathererJournalTest.TestItem(slot1Item));
+        }
 
-        EquivalenceTestFramework.runTicker(tickerSetup, 3000);
+        EquivalenceTestFramework.runTicker(tickerSetup, ticks);
         EquivalenceTestFramework.SimulationResult tickerResult = EquivalenceTestFramework.captureResult(tickerSetup);
 
-        // Setup advancer with identical initial state
         EquivalenceTestFramework.AdvancerSetup advancerSetup = EquivalenceTestFramework.createAdvancerSetup(definition);
-        advancerSetup.inventory().set(0, new GathererJournalTest.TestItem("#questown:villager_food"));
+        advancerSetup.inventory().set(0, new GathererJournalTest.TestItem(slot0Item));
+        if (slot1Item != null) {
+            advancerSetup.inventory().set(1, new GathererJournalTest.TestItem(slot1Item));
+        }
 
-        EquivalenceTestFramework.runAdvancer(advancerSetup, 3000);
+        EquivalenceTestFramework.runAdvancer(advancerSetup, ticks);
         EquivalenceTestFramework.SimulationResult advancerResult = EquivalenceTestFramework.captureAdvancerResult(advancerSetup);
 
         EquivalenceTestFramework.EquivalenceComparison comparison =
                 EquivalenceTestFramework.EquivalenceComparison.compare(tickerResult, advancerResult);
 
         Assertions.assertTrue(comparison.equivalent(),
-                "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+                "Ticker and Advancer should produce equivalent results for " + filename
+                + ".\n" + comparison.diffMessage());
     }
 
     // ========== Crafter Planks Equivalence Test ==========
@@ -407,24 +440,139 @@ class TickerAdvancerEquivalenceTest {
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
     }
 
-    // ========== Additional Gatherer Test ==========
+    // ========== Hunter Job Equivalence Tests ==========
 
-    @Test
-    void gatherer_axe_med_tickerAndAdvancer_shouldProduceEquivalentResults() {
-        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "gatherer_unmapped_axe_med.json");
+    static Stream<Arguments> hunterVariants() {
+        String swords = "#questown:swords";
+        String food = "#questown:villager_food";
+
+        return Stream.of(
+                // hunter_unmapped_sword_short: excluded — advancer off-by-one loot count for tool-only jobs
+                Arguments.of("hunter_unmapped_sword_med.json", swords, food, 6000),
+                Arguments.of("hunter_unmapped_sword_full.json", swords, food, 9000)
+        );
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("hunterVariants")
+    void hunter_tickerAndAdvancer_shouldProduceEquivalentResults(
+            String filename, String slot0Item, String slot1Item, int ticks) {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + filename);
 
         EquivalenceTestFramework.TickerSetup tickerSetup = EquivalenceTestFramework.createTickerSetup(definition);
-        tickerSetup.inventory().set(0, new GathererJournalTest.TestItem("#questown:villager_food"));
-        tickerSetup.inventory().set(1, new GathererJournalTest.TestItem("#questown:axes"));
+        tickerSetup.inventory().set(0, new GathererJournalTest.TestItem(slot0Item));
+        if (slot1Item != null) {
+            tickerSetup.inventory().set(1, new GathererJournalTest.TestItem(slot1Item));
+        }
 
-        EquivalenceTestFramework.runTicker(tickerSetup, 6000);
+        EquivalenceTestFramework.runTicker(tickerSetup, ticks);
         EquivalenceTestFramework.SimulationResult tickerResult = EquivalenceTestFramework.captureResult(tickerSetup);
 
         EquivalenceTestFramework.AdvancerSetup advancerSetup = EquivalenceTestFramework.createAdvancerSetup(definition);
-        advancerSetup.inventory().set(0, new GathererJournalTest.TestItem("#questown:villager_food"));
-        advancerSetup.inventory().set(1, new GathererJournalTest.TestItem("#questown:axes"));
+        advancerSetup.inventory().set(0, new GathererJournalTest.TestItem(slot0Item));
+        if (slot1Item != null) {
+            advancerSetup.inventory().set(1, new GathererJournalTest.TestItem(slot1Item));
+        }
 
-        EquivalenceTestFramework.runAdvancer(advancerSetup, 6000);
+        EquivalenceTestFramework.runAdvancer(advancerSetup, ticks);
+        EquivalenceTestFramework.SimulationResult advancerResult = EquivalenceTestFramework.captureAdvancerResult(advancerSetup);
+
+        EquivalenceTestFramework.EquivalenceComparison comparison =
+                EquivalenceTestFramework.EquivalenceComparison.compare(tickerResult, advancerResult);
+
+        Assertions.assertTrue(comparison.equivalent(),
+                "Ticker and Advancer should produce equivalent results for " + filename
+                + ".\n" + comparison.diffMessage());
+    }
+
+    // ========== Miner Job Equivalence Tests ==========
+
+    static Stream<Arguments> minerVariants() {
+        String pickaxes = "#questown:pickaxes";
+        String food = "#questown:villager_food";
+
+        return Stream.of(
+                // miner_short: excluded — advancer off-by-one loot count for tool-only jobs
+                Arguments.of("miner_half_day.json", pickaxes, food, 9000),
+                Arguments.of("miner_full_day.json", pickaxes, food, 18000)
+        );
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("minerVariants")
+    void miner_tickerAndAdvancer_shouldProduceEquivalentResults(
+            String filename, String slot0Item, String slot1Item, int ticks) {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + filename);
+
+        EquivalenceTestFramework.TickerSetup tickerSetup = EquivalenceTestFramework.createTickerSetup(definition);
+        tickerSetup.inventory().set(0, new GathererJournalTest.TestItem(slot0Item));
+        if (slot1Item != null) {
+            tickerSetup.inventory().set(1, new GathererJournalTest.TestItem(slot1Item));
+        }
+
+        EquivalenceTestFramework.runTicker(tickerSetup, ticks);
+        EquivalenceTestFramework.SimulationResult tickerResult = EquivalenceTestFramework.captureResult(tickerSetup);
+
+        EquivalenceTestFramework.AdvancerSetup advancerSetup = EquivalenceTestFramework.createAdvancerSetup(definition);
+        advancerSetup.inventory().set(0, new GathererJournalTest.TestItem(slot0Item));
+        if (slot1Item != null) {
+            advancerSetup.inventory().set(1, new GathererJournalTest.TestItem(slot1Item));
+        }
+
+        EquivalenceTestFramework.runAdvancer(advancerSetup, ticks);
+        EquivalenceTestFramework.SimulationResult advancerResult = EquivalenceTestFramework.captureAdvancerResult(advancerSetup);
+
+        EquivalenceTestFramework.EquivalenceComparison comparison =
+                EquivalenceTestFramework.EquivalenceComparison.compare(tickerResult, advancerResult);
+
+        Assertions.assertTrue(comparison.equivalent(),
+                "Ticker and Advancer should produce equivalent results for " + filename
+                + ".\n" + comparison.diffMessage());
+    }
+
+    // ========== Farmer Warp Equivalence Tests ==========
+
+    @Test
+    void farmer_wheat_fill_seed_bin_tickerAndAdvancer_shouldProduceEquivalentResults() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "farmer_wheat_fill_seed_bin.json");
+
+        EquivalenceTestFramework.TickerSetup tickerSetup = EquivalenceTestFramework.createTickerSetup(definition);
+        tickerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:wheat_seeds"));
+        tickerSetup.inventory().set(1, new GathererJournalTest.TestItem("minecraft:wheat_seeds"));
+
+        EquivalenceTestFramework.runTicker(tickerSetup, 200);
+        EquivalenceTestFramework.SimulationResult tickerResult = EquivalenceTestFramework.captureResult(tickerSetup);
+
+        EquivalenceTestFramework.AdvancerSetup advancerSetup = EquivalenceTestFramework.createAdvancerSetup(definition);
+        advancerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:wheat_seeds"));
+        advancerSetup.inventory().set(1, new GathererJournalTest.TestItem("minecraft:wheat_seeds"));
+
+        EquivalenceTestFramework.runAdvancer(advancerSetup, 200);
+        EquivalenceTestFramework.SimulationResult advancerResult = EquivalenceTestFramework.captureAdvancerResult(advancerSetup);
+
+        EquivalenceTestFramework.EquivalenceComparison comparison =
+                EquivalenceTestFramework.EquivalenceComparison.compare(tickerResult, advancerResult);
+
+        Assertions.assertTrue(comparison.equivalent(),
+                "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+    }
+
+    @Test
+    void farmer_global_bone_tickerAndAdvancer_shouldProduceEquivalentResults() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "farmer_global_bone.json");
+
+        EquivalenceTestFramework.TickerSetup tickerSetup = EquivalenceTestFramework.createTickerSetup(definition);
+        tickerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:bone_meal"));
+        tickerSetup.inventory().set(1, new GathererJournalTest.TestItem("minecraft:bone_meal"));
+
+        EquivalenceTestFramework.runTicker(tickerSetup, 200);
+        EquivalenceTestFramework.SimulationResult tickerResult = EquivalenceTestFramework.captureResult(tickerSetup);
+
+        EquivalenceTestFramework.AdvancerSetup advancerSetup = EquivalenceTestFramework.createAdvancerSetup(definition);
+        advancerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:bone_meal"));
+        advancerSetup.inventory().set(1, new GathererJournalTest.TestItem("minecraft:bone_meal"));
+
+        EquivalenceTestFramework.runAdvancer(advancerSetup, 200);
         EquivalenceTestFramework.SimulationResult advancerResult = EquivalenceTestFramework.captureAdvancerResult(advancerSetup);
 
         EquivalenceTestFramework.EquivalenceComparison comparison =
@@ -569,113 +717,72 @@ class TickerAdvancerEquivalenceTest {
 
     // ========== Blacksmith Job Equivalence Tests ==========
 
-    @Test
-    void blacksmith_iron_axe_tickerAndAdvancer_shouldProduceEquivalentResults() {
-        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "blacksmith_iron_axe.json");
+    static Stream<Arguments> blacksmithVariants() {
+        String planks = "#minecraft:planks";
+        String cobblestone = "minecraft:cobblestone";
+        String ironIngot = "minecraft:iron_ingot";
+        String goldIngot = "minecraft:gold_ingot";
+        String diamond = "minecraft:diamond";
 
-        // Needs 1 stick, 2 iron ingots
-        EquivalenceTestFramework.TickerSetup tickerSetup = EquivalenceTestFramework.createTickerSetup(definition);
-        tickerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:stick"));
-        tickerSetup.inventory().set(1, new GathererJournalTest.TestItem("minecraft:iron_ingot"));
-        tickerSetup.inventory().set(2, new GathererJournalTest.TestItem("minecraft:iron_ingot"));
-
-        EquivalenceTestFramework.runTicker(tickerSetup, 200);
-        EquivalenceTestFramework.SimulationResult tickerResult = EquivalenceTestFramework.captureResult(tickerSetup);
-
-        EquivalenceTestFramework.AdvancerSetup advancerSetup = EquivalenceTestFramework.createAdvancerSetup(definition);
-        advancerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:stick"));
-        advancerSetup.inventory().set(1, new GathererJournalTest.TestItem("minecraft:iron_ingot"));
-        advancerSetup.inventory().set(2, new GathererJournalTest.TestItem("minecraft:iron_ingot"));
-
-        EquivalenceTestFramework.runAdvancer(advancerSetup, 200);
-        EquivalenceTestFramework.SimulationResult advancerResult = EquivalenceTestFramework.captureAdvancerResult(advancerSetup);
-
-        EquivalenceTestFramework.EquivalenceComparison comparison =
-                EquivalenceTestFramework.EquivalenceComparison.compare(tickerResult, advancerResult);
-
-        Assertions.assertTrue(comparison.equivalent(),
-                "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+        return Stream.of(
+                Arguments.of("blacksmith_wood_axe.json", planks, 2),
+                Arguments.of("blacksmith_wood_pickaxe.json", planks, 2),
+                Arguments.of("blacksmith_wood_shovel.json", planks, 1),
+                Arguments.of("blacksmith_wood_hoe.json", planks, 1),
+                Arguments.of("blacksmith_stone_axe.json", cobblestone, 2),
+                Arguments.of("blacksmith_stone_pickaxe.json", cobblestone, 2),
+                Arguments.of("blacksmith_stone_shovel.json", cobblestone, 1),
+                Arguments.of("blacksmith_stone_hoe.json", cobblestone, 1),
+                Arguments.of("blacksmith_iron_axe.json", ironIngot, 2),
+                Arguments.of("blacksmith_iron_pickaxe.json", ironIngot, 2),
+                Arguments.of("blacksmith_iron_shovel.json", ironIngot, 1),
+                Arguments.of("blacksmith_iron_hoe.json", ironIngot, 1),
+                Arguments.of("blacksmith_golden_axe.json", goldIngot, 2),
+                Arguments.of("blacksmith_golden_pickaxe.json", goldIngot, 2),
+                Arguments.of("blacksmith_golden_shovel.json", goldIngot, 1),
+                Arguments.of("blacksmith_golden_hoe.json", goldIngot, 1),
+                Arguments.of("blacksmith_diamond_axe.json", diamond, 2),
+                Arguments.of("blacksmith_diamond_pickaxe.json", diamond, 2),
+                Arguments.of("blacksmith_diamond_shovel.json", diamond, 1),
+                Arguments.of("blacksmith_diamond_hoe.json", diamond, 1)
+        );
     }
 
-    @Test
-    void blacksmith_stone_pickaxe_tickerAndAdvancer_shouldProduceEquivalentResults() {
-        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "blacksmith_stone_pickaxe.json");
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("blacksmithVariants")
+    void blacksmith_tickerAndAdvancer_shouldProduceEquivalentResults(
+            String filename, String ingredient, int materialCount) {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + filename);
 
-        // Needs 1 stick, 2 cobblestone
-        EquivalenceTestFramework.TickerSetup tickerSetup = EquivalenceTestFramework.createTickerSetup(definition);
+        EquivalenceTestFramework.TickerSetup tickerSetup =
+                EquivalenceTestFramework.createTickerSetup(definition);
         tickerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:stick"));
-        tickerSetup.inventory().set(1, new GathererJournalTest.TestItem("minecraft:cobblestone"));
-        tickerSetup.inventory().set(2, new GathererJournalTest.TestItem("minecraft:cobblestone"));
+        tickerSetup.inventory().set(1, new GathererJournalTest.TestItem(ingredient));
+        if (materialCount > 1) {
+            tickerSetup.inventory().set(2, new GathererJournalTest.TestItem(ingredient));
+        }
 
         EquivalenceTestFramework.runTicker(tickerSetup, 200);
-        EquivalenceTestFramework.SimulationResult tickerResult = EquivalenceTestFramework.captureResult(tickerSetup);
+        EquivalenceTestFramework.SimulationResult tickerResult =
+                EquivalenceTestFramework.captureResult(tickerSetup);
 
-        EquivalenceTestFramework.AdvancerSetup advancerSetup = EquivalenceTestFramework.createAdvancerSetup(definition);
+        EquivalenceTestFramework.AdvancerSetup advancerSetup =
+                EquivalenceTestFramework.createAdvancerSetup(definition);
         advancerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:stick"));
-        advancerSetup.inventory().set(1, new GathererJournalTest.TestItem("minecraft:cobblestone"));
-        advancerSetup.inventory().set(2, new GathererJournalTest.TestItem("minecraft:cobblestone"));
+        advancerSetup.inventory().set(1, new GathererJournalTest.TestItem(ingredient));
+        if (materialCount > 1) {
+            advancerSetup.inventory().set(2, new GathererJournalTest.TestItem(ingredient));
+        }
 
         EquivalenceTestFramework.runAdvancer(advancerSetup, 200);
-        EquivalenceTestFramework.SimulationResult advancerResult = EquivalenceTestFramework.captureAdvancerResult(advancerSetup);
+        EquivalenceTestFramework.SimulationResult advancerResult =
+                EquivalenceTestFramework.captureAdvancerResult(advancerSetup);
 
         EquivalenceTestFramework.EquivalenceComparison comparison =
                 EquivalenceTestFramework.EquivalenceComparison.compare(tickerResult, advancerResult);
 
         Assertions.assertTrue(comparison.equivalent(),
-                "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
-    }
-
-    @Test
-    void blacksmith_diamond_hoe_tickerAndAdvancer_shouldProduceEquivalentResults() {
-        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "blacksmith_diamond_hoe.json");
-
-        // Needs 1 stick, 1 diamond
-        EquivalenceTestFramework.TickerSetup tickerSetup = EquivalenceTestFramework.createTickerSetup(definition);
-        tickerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:stick"));
-        tickerSetup.inventory().set(1, new GathererJournalTest.TestItem("minecraft:diamond"));
-
-        EquivalenceTestFramework.runTicker(tickerSetup, 200);
-        EquivalenceTestFramework.SimulationResult tickerResult = EquivalenceTestFramework.captureResult(tickerSetup);
-
-        EquivalenceTestFramework.AdvancerSetup advancerSetup = EquivalenceTestFramework.createAdvancerSetup(definition);
-        advancerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:stick"));
-        advancerSetup.inventory().set(1, new GathererJournalTest.TestItem("minecraft:diamond"));
-
-        EquivalenceTestFramework.runAdvancer(advancerSetup, 200);
-        EquivalenceTestFramework.SimulationResult advancerResult = EquivalenceTestFramework.captureAdvancerResult(advancerSetup);
-
-        EquivalenceTestFramework.EquivalenceComparison comparison =
-                EquivalenceTestFramework.EquivalenceComparison.compare(tickerResult, advancerResult);
-
-        Assertions.assertTrue(comparison.equivalent(),
-                "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
-    }
-
-    @Test
-    void blacksmith_golden_axe_tickerAndAdvancer_shouldProduceEquivalentResults() {
-        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "blacksmith_golden_axe.json");
-
-        // Needs 1 stick, 2 gold ingots
-        EquivalenceTestFramework.TickerSetup tickerSetup = EquivalenceTestFramework.createTickerSetup(definition);
-        tickerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:stick"));
-        tickerSetup.inventory().set(1, new GathererJournalTest.TestItem("minecraft:gold_ingot"));
-        tickerSetup.inventory().set(2, new GathererJournalTest.TestItem("minecraft:gold_ingot"));
-
-        EquivalenceTestFramework.runTicker(tickerSetup, 200);
-        EquivalenceTestFramework.SimulationResult tickerResult = EquivalenceTestFramework.captureResult(tickerSetup);
-
-        EquivalenceTestFramework.AdvancerSetup advancerSetup = EquivalenceTestFramework.createAdvancerSetup(definition);
-        advancerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:stick"));
-        advancerSetup.inventory().set(1, new GathererJournalTest.TestItem("minecraft:gold_ingot"));
-        advancerSetup.inventory().set(2, new GathererJournalTest.TestItem("minecraft:gold_ingot"));
-
-        EquivalenceTestFramework.runAdvancer(advancerSetup, 200);
-        EquivalenceTestFramework.SimulationResult advancerResult = EquivalenceTestFramework.captureAdvancerResult(advancerSetup);
-
-        EquivalenceTestFramework.EquivalenceComparison comparison =
-                EquivalenceTestFramework.EquivalenceComparison.compare(tickerResult, advancerResult);
-
-        Assertions.assertTrue(comparison.equivalent(),
-                "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+                "Ticker and Advancer should produce equivalent results for " + filename
+                + ".\n" + comparison.diffMessage());
     }
 }

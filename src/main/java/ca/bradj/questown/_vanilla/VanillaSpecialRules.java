@@ -4,6 +4,8 @@ import ca.bradj.questown.integration.SpecialRulesRegistry;
 
 public class VanillaSpecialRules {
     public static void register() {
+
+        // This is purely for visual effect. The fisher uses simple loot-based result generation.
         SpecialRulesRegistry.registerSpecialRule(
                 Vanilla.ResourceLocation("deploy_and_retract_fishing_hook"),
                 new DeployFishingHookRule()
