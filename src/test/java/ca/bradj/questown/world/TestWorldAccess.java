@@ -31,6 +31,10 @@ public class TestWorldAccess implements QTWorldAccess {
     private final Set<BlockPos> itemUsedOnBlock = new HashSet<>();
     // Container contents: pos -> list of slots (each slot is an ItemStack)
     private final Map<BlockPos, List<ItemStack>> containers = new HashMap<>();
+    // Smelting simulation
+    private final Map<net.minecraft.world.item.Item, net.minecraft.world.item.Item> smeltRecipes = new HashMap<>();
+    private final Map<BlockPos, Integer> smeltProgress = new HashMap<>();
+    private static final int SMELT_TICKS = 200;
 
     // --- Builder-style setup methods ---
 
@@ -52,6 +56,11 @@ public class TestWorldAccess implements QTWorldAccess {
 
     public TestWorldAccess withToolTransformResult(BlockPos pos, boolean result) {
         toolTransformResults.put(pos, result);
+        return this;
+    }
+
+    public TestWorldAccess withSmeltRecipe(net.minecraft.world.item.Item input, net.minecraft.world.item.Item output) {
+        smeltRecipes.put(input, output);
         return this;
     }
 
@@ -245,7 +254,37 @@ public class TestWorldAccess implements QTWorldAccess {
 
     @Override
     public void advanceProcessing(BlockPos pos, int ticks) {
-        // No-op: tests don't have real furnaces
+        List<ItemStack> slots = containers.get(pos);
+        if (slots == null || slots.size() < 3) {
+            return;
+        }
+        ItemStack input = slots.get(0);
+        ItemStack fuel = slots.get(1);
+        if (input.isEmpty() || fuel.isEmpty()) {
+            return;
+        }
+        net.minecraft.world.item.Item output = smeltRecipes.get(input.getItem());
+        if (output == null) {
+            return;
+        }
+        int progress = smeltProgress.getOrDefault(pos, 0) + ticks;
+        while (progress >= SMELT_TICKS) {
+            progress -= SMELT_TICKS;
+            ItemStack resultSlot = slots.get(2);
+            if (resultSlot.isEmpty()) {
+                slots.set(2, new ItemStack(output, 1));
+            } else if (resultSlot.getItem() == output && resultSlot.getCount() < resultSlot.getMaxStackSize()) {
+                resultSlot.grow(1);
+            } else {
+                break;
+            }
+            input.shrink(1);
+            if (input.isEmpty()) {
+                slots.set(0, ItemStack.EMPTY);
+                break;
+            }
+        }
+        smeltProgress.put(pos, progress);
     }
 
     @Override

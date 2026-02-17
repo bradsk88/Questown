@@ -4,9 +4,11 @@ import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.JobDefinition;
 import ca.bradj.questown.jobs.TestInventory;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.questown.world.TestWorldAccess;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -119,6 +121,10 @@ public class EquivalenceTestFramework {
      * This is the same as JobIntegrationTest.createTicker but exposed for reuse.
      */
     public static TickerSetup createTickerSetup(JobDefinition definition) {
+        return createTickerSetup(definition, null);
+    }
+
+    public static TickerSetup createTickerSetup(JobDefinition definition, @Nullable TestWorldAccess worldAccess) {
         TestWorkStatusHandle workStatusHandle = new TestWorkStatusHandle();
         ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory = TestInventory.sized(6);
 
@@ -127,13 +133,13 @@ public class EquivalenceTestFramework {
                 State.fresh().setWorkLeft(definition.workRequiredAtStates().getOrDefault(0, 0))
         );
 
-        TestWorldInteraction worldInteraction = TestWorldInteraction.forDefinition(
-                definition,
-                inventory,
-                workStatusHandle,
-                () -> null,
-                definition.specialRulesAtStates()
-        );
+        TestWorldInteraction worldInteraction = worldAccess != null
+                ? TestWorldInteraction.forDefinition(
+                        definition, inventory, workStatusHandle, () -> null,
+                        definition.specialRulesAtStates(), worldAccess)
+                : TestWorldInteraction.forDefinition(
+                        definition, inventory, workStatusHandle, () -> null,
+                        definition.specialRulesAtStates());
 
         TestTickerDependencies deps = new TestTickerDependencies(
                 definition,
@@ -192,6 +198,10 @@ public class EquivalenceTestFramework {
      * the ticker at each of those ticks instead of every tick.
      */
     public static AdvancerSetup createAdvancerSetup(JobDefinition definition) {
+        return createAdvancerSetup(definition, null);
+    }
+
+    public static AdvancerSetup createAdvancerSetup(JobDefinition definition, @Nullable TestWorldAccess worldAccess) {
         TestWorkStatusHandle workStatusHandle = new TestWorkStatusHandle();
         ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory = TestInventory.sized(6);
 
@@ -200,13 +210,13 @@ public class EquivalenceTestFramework {
                 State.fresh().setWorkLeft(definition.workRequiredAtStates().getOrDefault(0, 0))
         );
 
-        TestWorldInteraction worldInteraction = TestWorldInteraction.forDefinition(
-                definition,
-                inventory,
-                workStatusHandle,
-                () -> null,
-                definition.specialRulesAtStates()
-        );
+        TestWorldInteraction worldInteraction = worldAccess != null
+                ? TestWorldInteraction.forDefinition(
+                        definition, inventory, workStatusHandle, () -> null,
+                        definition.specialRulesAtStates(), worldAccess)
+                : TestWorldInteraction.forDefinition(
+                        definition, inventory, workStatusHandle, () -> null,
+                        definition.specialRulesAtStates());
 
         TestTickerDependencies deps = new TestTickerDependencies(
                 definition,

@@ -109,6 +109,11 @@ public class TestJobLoader {
                 } else if ("processing_state".equals(type)) {
                     int state = special.get("state").getAsInt();
                     stateRules.put(state, ImmutableList.copyOf(rules));
+                } else if ("core_state".equals(type)) {
+                    String state = special.get("state").getAsString();
+                    if ("EXTRACTING_PRODUCT".equals(state)) {
+                        stateRules.put(maxState, ImmutableList.copyOf(rules));
+                    }
                 }
             }
         }

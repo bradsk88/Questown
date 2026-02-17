@@ -26,6 +26,11 @@ public class SpecialRulesRegistry {
         registry.put(id, result);
     }
 
+    public static void resetForTesting() {
+        registry = ImmutableMap.builder();
+        listeners = ImmutableMap.of();
+    }
+
     public static ImmutableList<JobPhaseModifier> getRuleAppliers(Collection<String> ruleIDs) {
         List<ResourceLocation> rules = ruleIDs.stream()
                                             .map(v -> v.contains(":") ? new ResourceLocation(v) : Questown.ResourceLocation(

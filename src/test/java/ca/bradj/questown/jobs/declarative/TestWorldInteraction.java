@@ -2,6 +2,7 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.MonoPredicateCollection;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -9,15 +10,20 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
-import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.world.TestWorldAccess;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -31,6 +37,8 @@ public class TestWorldInteraction extends
     private final ImmutableWorkStateContainer<Position, Boolean> workStatuses;
     private int degradedTool;
     private boolean inserted;
+    private @Nullable TestWorldAccess worldAccess;
+    private final int maxState;
 
     @Override
     public int timesInserted(Void unused) {
@@ -133,19 +141,21 @@ public class TestWorldInteraction extends
                         block -> true
                 ),
                 (v) -> claim.get(),
-                convertToProductionStatusKeys(specialRulesPerState)
+                convertToProductionStatusKeys(specialRulesPerState, maxState)
         );
+        this.maxState = maxState;
         this.workStatuses = workStatuses;
         this.inventory = inventory;
         this.results = results;
     }
 
     private static ImmutableMap<ProductionStatus, Collection<String>> convertToProductionStatusKeys(
-            ImmutableMap<Integer, Collection<String>> specialRulesPerState
+            ImmutableMap<Integer, Collection<String>> specialRulesPerState,
+            int maxState
     ) {
         ImmutableMap.Builder<ProductionStatus, Collection<String>> b = ImmutableMap.builder();
         specialRulesPerState.forEach((state, rules) ->
-                b.put(ProductionStatus.fromJobBlockStatus(state), rules)
+                b.put(ProductionStatus.fromJobBlockStatus(state, maxState), rules)
         );
         return b.build();
     }
@@ -177,6 +187,19 @@ public class TestWorldInteraction extends
                 inv, workStatuses, claims,
                 specialRulesPerState
         );
+    }
+
+    public static TestWorldInteraction forDefinition(
+            JobDefinition d,
+            ValidatedInventoryHandle<GathererJournalTest.TestItem> inv,
+            ImmutableWorkStateContainer<Position, Boolean> workStatuses,
+            Supplier<Claim> claims,
+            ImmutableMap<Integer, Collection<String>> specialRulesPerState,
+            TestWorldAccess worldAccess
+    ) {
+        TestWorldInteraction twi = forDefinition(d, inv, workStatuses, claims, specialRulesPerState);
+        twi.worldAccess = worldAccess;
+        return twi;
     }
 
     private static ImmutableMap<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>> itemPred(
@@ -242,7 +265,29 @@ public class TestWorldInteraction extends
             GathererJournalTest.TestItem item
     ) {
         this.inserted = true;
+        if (worldAccess != null && !rules.isEmpty()) {
+            BlockPos blockPos = new BlockPos(position.workPosition().x, 0, position.workPosition().z);
+            ItemStack itemStack = itemStackFromTestItem(item);
+            WorkedSpot<BlockPos> bpSpot = new WorkedSpot<>(blockPos, position.state());
+            PostInsertHook.run(
+                    aBoolean, rules, worldAccess, bpSpot, itemStack,
+                    t -> t, UUID.randomUUID()
+            );
+        }
         return null;
+    }
+
+    private static ItemStack itemStackFromTestItem(GathererJournalTest.TestItem item) {
+        String value = item.value;
+        if (value.startsWith("#")) {
+            value = value.substring(1);
+        }
+        ResourceLocation rl = new ResourceLocation(value);
+        net.minecraft.world.item.Item mcItem = ForgeRegistries.ITEMS.getValue(rl);
+        if (mcItem == null) {
+            return ItemStack.EMPTY;
+        }
+        return new ItemStack(mcItem);
     }
 
     @Override
@@ -257,6 +302,30 @@ public class TestWorldInteraction extends
             Void inputs,
             Position position
     ) {
+        if (worldAccess != null && !rules.isEmpty()) {
+            BlockPos blockPos = new BlockPos(position.x, 0, position.z);
+            return PreExtractHook.run(
+                    aBoolean, rules, worldAccess,
+                    (town, mcHeldItem, strategy) -> {
+                        ResourceLocation itemRL = ForgeRegistries.ITEMS.getKey(mcHeldItem.get().get());
+                        if (itemRL == null) {
+                            return town;
+                        }
+                        GathererJournalTest.TestItem testItem = new GathererJournalTest.TestItem(itemRL.toString());
+                        int slot = 0;
+                        for (GathererJournalTest.TestItem existing : inventory.getItems()) {
+                            if (existing.isEmpty()) {
+                                inventory.set(slot, testItem);
+                                return town;
+                            }
+                            slot++;
+                        }
+                        return town;
+                    },
+                    blockPos, null, () -> {},
+                    () -> ImmutableList.of(blockPos)
+            );
+        }
         return null;
     }
 
