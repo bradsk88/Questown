@@ -715,6 +715,31 @@ class TickerAdvancerEquivalenceTest {
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
     }
 
+    // ========== Fisher Job Equivalence Tests ==========
+
+    @Test
+    void fisher_fish_tickerAndAdvancer_shouldProduceEquivalentResults() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "fisher_fish.json");
+
+        EquivalenceTestFramework.TickerSetup tickerSetup = EquivalenceTestFramework.createTickerSetup(definition);
+        tickerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:string"));
+
+        EquivalenceTestFramework.runTicker(tickerSetup, 3000);
+        EquivalenceTestFramework.SimulationResult tickerResult = EquivalenceTestFramework.captureResult(tickerSetup);
+
+        EquivalenceTestFramework.AdvancerSetup advancerSetup = EquivalenceTestFramework.createAdvancerSetup(definition);
+        advancerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:string"));
+
+        EquivalenceTestFramework.runAdvancer(advancerSetup, 3000);
+        EquivalenceTestFramework.SimulationResult advancerResult = EquivalenceTestFramework.captureAdvancerResult(advancerSetup);
+
+        EquivalenceTestFramework.EquivalenceComparison comparison =
+                EquivalenceTestFramework.EquivalenceComparison.compare(tickerResult, advancerResult);
+
+        Assertions.assertTrue(comparison.equivalent(),
+                "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+    }
+
     // ========== Blacksmith Job Equivalence Tests ==========
 
     static Stream<Arguments> blacksmithVariants() {
