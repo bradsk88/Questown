@@ -58,11 +58,11 @@ public class JobCycler {
             ImmutableList<WorkRequest> requestedResults,
             WorksBehaviour.TownData td
     ) {
-        if (canAlwaysStart.test(candidate)) {
-            return true;
-        }
-        if (!canFitInDay.test(candidate)) {
+        if (!canAlwaysStart.test(candidate) && !canFitInDay.test(candidate)) {
             return false;
+        }
+        if (requestedResults.isEmpty()) {
+            return true;
         }
         for (WorkRequest request : requestedResults) {
             Ingredient ingredient = request.asIngredient();

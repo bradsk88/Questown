@@ -1,4 +1,4 @@
-# Bug: `always_consider` Jobs Monopolizing Warp Selection
+# Bug: `always_consider` Jobs Monopolizing Warp Selection — FIXED
 
 The following are notes written by the claude agent. Read them through completely, then read the human-written note at
 the bottom of this doc.

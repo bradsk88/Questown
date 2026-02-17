@@ -5,7 +5,6 @@
   "parent": "cook/fuel",
   "icon": "minecraft:chest",
   "initial_request": "#questown:villager_food",
-  "note": "initial request is actually ignored due to 'always consider' in global rules",
   "note_warp": "Excluded from warp: stock jobs just move items between containers, which the warper handles automatically via simulateCollectSupplies",
   "result": {
     "type": "uses_special_rules"
