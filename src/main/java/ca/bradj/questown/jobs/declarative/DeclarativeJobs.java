@@ -24,6 +24,7 @@ import com.google.common.collect.Sets;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -284,7 +285,8 @@ public class DeclarativeJobs {
     public static Warper<ServerLevel, MCTownState> warper(
             TimeWarpWorldInteraction wi,
             int maxState,
-            boolean prioritizeExtraction
+            boolean prioritizeExtraction,
+            @Nullable SlotPrecondition slotPrecondition
     ) {
         ImmutableSet<ProductionStatus> c = handler.keySet();
         ImmutableSet<ProductionStatus> productionStatuses = ProductionStatus.allStatuses();
@@ -320,6 +322,16 @@ public class DeclarativeJobs {
                 State state = outState.workStates.get(workPos);
                 if (state == null) {
                     outState = outState.setJobBlockState(workPos, State.fresh());
+                }
+
+                boolean freshCycle = outState.workStates.get(workPos).processingState() == 0;
+                if (freshCycle
+                        && slotPrecondition != null
+                        && wi.shouldUseRealWorkBlock()) {
+                    BlockEntity entity = level.getBlockEntity(workPos);
+                    if (entity != null && !slotPrecondition.test(entity)) {
+                        return inState;
+                    }
                 }
 
                 ProductionStatus status = ProductionStatus.FACTORY.idle();

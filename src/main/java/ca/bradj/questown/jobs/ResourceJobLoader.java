@@ -152,20 +152,22 @@ public class ResourceJobLoader {
                             replaceWhen(ws.toolsRequired(), isBeef, () -> Ingredient.of(item.getItem()))
                     );
                     JobID od = new JobID("cook", Compat.getItemId(item.getItem()).getPath());
-                    b.put(
+                    Optional<SlotPrecondition> slotPrecondition = getSlotComparator(block);
+                    Work cookWork = WorksBehaviour.productionWork(
+                            iconItem.getDefaultInstance(),
                             od,
-                            WorksBehaviour.productionWork(
-                                    iconItem.getDefaultInstance(),
-                                    od,
-                                    JobID.fromJSON(Util.getOrDefault(obj, "parent", JsonElement::getAsString, null)),
-                                    description(initReq, obj),
-                                    new WorkLocation(isJobBlock, shouldInitWS, required(obj, "room")),
-                                    ws,
-                                    wwi,
-                                    special,
-                                    loadSoundV1(obj)
-                            ).withPriority(requiredInt(obj, "priority"))
-                    );
+                            JobID.fromJSON(Util.getOrDefault(obj, "parent", JsonElement::getAsString, null)),
+                            description(initReq, obj),
+                            new WorkLocation(isJobBlock, shouldInitWS, required(obj, "room")),
+                            ws,
+                            wwi,
+                            special,
+                            loadSoundV1(obj)
+                    ).withPriority(requiredInt(obj, "priority"));
+                    if (slotPrecondition.isPresent()) {
+                        cookWork = cookWork.withSlotPrecondition(slotPrecondition.get());
+                    }
+                    b.put(od, cookWork);
                 } catch (Exception e) {
                     throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
                 }
@@ -342,7 +344,8 @@ public class ResourceJobLoader {
                 WorkWorldInteractions wwi = worldWorkInt(obj, cooldownTicks);
                 JobID id = JobID.fromJSON(Util.getOrDefault(obj, "id", JsonElement::getAsString, null));
                 BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitWS = shouldInitWS(block, special);
-                return WorksBehaviour.productionWork(
+                Optional<SlotPrecondition> slotPrecondition = getSlotComparator(block);
+                Work work = WorksBehaviour.productionWork(
                         iconItem.getDefaultInstance(),
                         id,
                         JobID.fromJSON(Util.getOrDefault(obj, "parent", JsonElement::getAsString, null)),
@@ -353,6 +356,10 @@ public class ResourceJobLoader {
                         special,
                         loadSoundV1(obj)
                 ).withPriority(requiredInt(obj, "priority"));
+                if (slotPrecondition.isPresent()) {
+                    work = work.withSlotPrecondition(slotPrecondition.get());
+                }
+                return work;
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
             }
@@ -752,16 +759,6 @@ public class ResourceJobLoader {
                     .findFirst();
     }
 
-    private static Optional<ItemStack> getSlotValue(
-            BlockEntity state,
-            int slot
-    ) {
-        if (!(state instanceof Container c)) {
-            return Optional.empty();
-        }
-        return Optional.of(c.getItem(slot));
-    }
-
     private static BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitWS(
             JsonObject block,
             WorkSpecialRules special
@@ -769,7 +766,7 @@ public class ResourceJobLoader {
         Predicate<BlockState> baseTest = getBlockCheck(required(block, "id", JsonElement::getAsString));
 
         Optional<BlockStateComparator> stateComparator = getStateComparator(block);
-        Optional<BlockSlotComparator> slotComparator = getSlotComparator(block);
+        Optional<SlotPrecondition> slotComparator = getSlotComparator(block);
 
         boolean requireAirAbove = special.containsGlobal(SpecialRules.REQUIRE_AIR_ABOVE);
 
@@ -789,7 +786,7 @@ public class ResourceJobLoader {
         Predicate<BlockState> baseTest = getBlockCheck(required(block, "id", JsonElement::getAsString));
 
         Optional<BlockStateComparator> stateComparator = getStateComparator(block);
-        Optional<BlockSlotComparator> slotComparator = getSlotComparator(block);
+        Optional<SlotPrecondition> slotComparator = getSlotComparator(block);
 
         boolean requireAirAbove = special.containsGlobal(SpecialRules.REQUIRE_AIR_ABOVE);
 
@@ -850,9 +847,9 @@ public class ResourceJobLoader {
         return stateStr == null ? Optional.empty() : BlockStateComparator.parse(stateStr);
     }
 
-    private static Optional<BlockSlotComparator> getSlotComparator(JsonObject block) {
+    private static Optional<SlotPrecondition> getSlotComparator(JsonObject block) {
         String stateStr = optional(block, "has_item_in_slot_initially", JsonElement::getAsString);
-        return stateStr == null ? Optional.empty() : BlockSlotComparator.parse(stateStr);
+        return SlotPrecondition.parse(stateStr);
     }
 
     private static class BlockStateComparator {
@@ -891,38 +888,6 @@ public class ResourceJobLoader {
                         value -> value.compareTo(Integer.parseInt(gt[1])) > 0
                 ));
             }
-            return Optional.empty();
-        }
-    }
-
-    private static class BlockSlotComparator {
-        private final int slotIndex;
-        private final Function<ItemStack, Boolean> compare;
-
-        public BlockSlotComparator(
-                int slot,
-                Function<ItemStack, Boolean> compare
-        ) {
-            this.slotIndex = slot;
-            this.compare = compare;
-        }
-
-        public boolean test(BlockEntity entity) {
-            return getSlotValue(entity, slotIndex).map(compare).orElse(true);
-        }
-
-        public static Optional<BlockSlotComparator> parse(String stateStr) {
-            String[] eq = stateStr.split("/");
-            if (eq.length > 1) {
-                int slot = Integer.parseInt(eq[0]);
-                // Not using getIngredient because "empty" is valid here
-                Predicate<ItemStack> check = ItemStack::isEmpty;
-                if (!eq[1].equals("minecraft:air")) {
-                    check = Ingredients.fromString(eq[1]);
-                }
-                return Optional.of(new BlockSlotComparator(slot, check::test));
-            }
-
             return Optional.empty();
         }
     }

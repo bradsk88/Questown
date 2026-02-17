@@ -120,7 +120,7 @@ public class ProductionTimeWarper {
 
         @Nullable Map.Entry<TOWN, I> removeResult = inState.withContainerItemRemoved(i -> fingr.test(grabber.apply(i)));
         if (removeResult == null) {
-            return null; // Item does not exist - collection failed
+            return null;
         }
 
         TOWN outState = removeResult.getKey();

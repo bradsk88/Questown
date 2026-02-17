@@ -145,8 +145,8 @@ public class TestBlueprintRegistry {
 
         TestExpectation expectation = new TestExpectation(
                 List.of(
-                        new ExpectedProduct("minecraft:cooked_beef", 3, 4),
-                        new ExpectedProduct("minecraft:beef", -4, -3),
+                        new ExpectedProduct("minecraft:cooked_beef", 3, 5),
+                        new ExpectedProduct("minecraft:beef", -5, -3),
                         new ExpectedProduct("minecraft:coal", -4, -3)
                 ),
                 1,

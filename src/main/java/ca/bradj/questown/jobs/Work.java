@@ -40,6 +40,7 @@ public class Work {
     private final ImmutableList<String> specialGlobalRules;
     private Overrides overrides;
     private boolean hasNoOutput;
+    private @Nullable SlotPrecondition slotPrecondition;
 
     public Work(
             JobID id,
@@ -159,12 +160,27 @@ public class Work {
         return work;
     }
 
+    public Work withSlotPrecondition(@NotNull SlotPrecondition sp) {
+        Work work = new Work(
+                id, parentID, icon, jobFunc, snapshotFunc, isJobBlock,
+                shouldInitializeWorkState, baseRoom, initialStatus, results,
+                initialRequest, needs, warper, priority, hasNoOutput, specialGlobalRules
+        );
+        work.overrides = this.overrides;
+        work.slotPrecondition = sp;
+        return work;
+    }
+
+    public @Nullable SlotPrecondition getSlotPrecondition() {
+        return slotPrecondition;
+    }
+
     public boolean hasNoOutput() {
         return hasNoOutput;
     }
 
     public Warper<ServerLevel, MCTownState> warper(WorksBehaviour.WarpInput input) {
-        return warper.apply(input);
+        return warper.apply(input.withSlotPrecondition(slotPrecondition));
     }
 
 }

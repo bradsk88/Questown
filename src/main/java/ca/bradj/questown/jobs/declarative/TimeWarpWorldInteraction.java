@@ -147,6 +147,9 @@ public class TimeWarpWorldInteraction extends
                 continue;
             }
             ItemStack itemStack = item.get().toQTItemStack();
+            if (!itemStack.isDamageableItem()) {
+                return tuwn;
+            }
             itemStack.hurt(1, mcTownState.level.getRandom(), null);
             if (itemStack.getDamageValue() >= itemStack.getMaxDamage()) {
                 itemStack = ItemStack.EMPTY;

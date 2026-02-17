@@ -239,6 +239,9 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         if (c == null) {
             return false;
         }
+        if (!c.getItem(slot).isEmpty()) {
+            return false;
+        }
         c.setItem(slot, item);
         return true;
     }

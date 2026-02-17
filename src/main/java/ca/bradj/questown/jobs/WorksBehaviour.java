@@ -58,7 +58,7 @@ public class WorksBehaviour {
                 warpInput.roomPositions(),
                 warpInput.assignedWorkBlock()
         );
-        return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction);
+        return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction, warpInput.slotPrecondition());
     }
 
     private static DeclarativeJobChecks<TimeWarpWorldInteraction.Inputs, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> fromStates(WorkStates states) {
@@ -132,10 +132,19 @@ public class WorksBehaviour {
             int villagerIndex,
             BlockPos townFlagPos,
             Collection<BlockPos> roomPositions,
-            @Nullable BlockPos assignedWorkBlock
+            @Nullable BlockPos assignedWorkBlock,
+            @Nullable SlotPrecondition slotPrecondition
     ) {
         public WarpInput(int villagerIndex, BlockPos townFlagPos, Collection<BlockPos> roomPositions) {
-            this(villagerIndex, townFlagPos, roomPositions, null);
+            this(villagerIndex, townFlagPos, roomPositions, null, null);
+        }
+
+        public WarpInput(int villagerIndex, BlockPos townFlagPos, Collection<BlockPos> roomPositions, @Nullable BlockPos assignedWorkBlock) {
+            this(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock, null);
+        }
+
+        public WarpInput withSlotPrecondition(@Nullable SlotPrecondition sp) {
+            return new WarpInput(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock, sp);
         }
     }
 

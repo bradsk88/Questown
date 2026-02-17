@@ -117,29 +117,11 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
     ) {
         boolean villagerHasItems = liveState.villagers.get(villagerIndex).journal.items().stream()
                 .anyMatch(item -> !item.isEmpty());
-        QT.FLAG_LOGGER.debug(
-                "[PostDowntimeWarper] tick={} villagerHasItems={} cachedJob={} items={}",
-                currentTick, villagerHasItems, cachedJob,
-                liveState.villagers.get(villagerIndex).journal.items().stream()
-                        .filter(item -> !item.isEmpty())
-                        .map(item -> item.toShortString())
-                        .toList()
-        );
         JobID resolvedJob = resolveJob(ticksPassed, villagerHasItems);
 
         if (resolvedJob == null) {
-            QT.FLAG_LOGGER.debug(
-                    "[PostDowntimeWarper] No finishable work found at tick {}, skipping",
-                    currentTick
-            );
             return liveState;
         }
-
-        QT.FLAG_LOGGER.debug(
-                "[PostDowntimeWarper] Resolved job {} at tick {}",
-                resolvedJob,
-                currentTick
-        );
 
         @Nullable BlockPos furnace = findAssignedFurnace(level);
 
@@ -155,7 +137,11 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
             return liveState;
         }
 
-        return runToCompletion(resolvedJob, jobWarper, level, liveState, currentTick, ticksPassed, villagerNum);
+        MCTownState result = runToCompletion(resolvedJob, jobWarper, level, liveState, currentTick, ticksPassed, villagerNum);
+        if (result == liveState) {
+            stickyTicks = MAX_STICKY_TICKS;
+        }
+        return result;
     }
 
     private static MCTownState runToCompletion(
@@ -167,23 +153,15 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
             long ticksPassed,
             int villagerNum
     ) {
-        int steps = 0;
         for (int i = 0; i < 64; i++) {
             MCTownState next = warper.warp(level, state, currentTick, ticksPassed, villagerNum);
             if (next == state) {
                 break;
             }
             state = next;
-            steps++;
             if (warper.isCycleComplete()) {
                 break;
             }
-        }
-        if (steps > 0) {
-            QT.FLAG_LOGGER.info(
-                    "[PostDowntimeWarper] {} completed {} step(s) at tick {} (delta={})",
-                    jobId, steps, currentTick, ticksPassed
-            );
         }
         return state;
     }

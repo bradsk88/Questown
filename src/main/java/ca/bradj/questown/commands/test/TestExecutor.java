@@ -410,7 +410,7 @@ public class TestExecutor {
     }
 
     private void startMonitor() {
-        setDaytime();
+        level.setDayTime(1000);
         monitorEndTick = level.getGameTime() + warpAmount;
         lastReportedPercent = 0;
         msg("Monitoring real-time effects for " + warpAmount + " ticks...");
