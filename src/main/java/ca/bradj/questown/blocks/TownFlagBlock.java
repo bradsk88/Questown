@@ -60,7 +60,7 @@ public class TownFlagBlock extends BaseEntityBlock {
     public static final String ITEM_ID = "flag_base";
     public static final Item.Properties ITEM_PROPS = new Item.Properties().
             tab(ModItemGroup.QUESTOWN_GROUP);
-    public static final Property<Boolean> SLEEPING = BooleanProperty.create("sleeping");
+    public static final Property<Boolean> INACTIVE = BooleanProperty.create("inactive");
     private Map<Player, Long> informedPlayers = new HashMap<>();
 
     public TownFlagBlock() {
@@ -69,11 +69,11 @@ public class TownFlagBlock extends BaseEntityBlock {
                                          .strength(10.0F, 1200.0F)
                                          .noOcclusion()
         );
-        this.registerDefaultState(this.stateDefinition.any().setValue(SLEEPING, false));
+        this.registerDefaultState(this.stateDefinition.any().setValue(INACTIVE, false));
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(SLEEPING);
+        p_51385_.add(INACTIVE);
     }
 
     public static String itemId(WallType wallType) {

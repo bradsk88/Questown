@@ -180,9 +180,9 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
     }
 
     @Override
-    protected void storeSleepingState(TickData tickData) {
+    protected void storeInactiveState(TickData tickData) {
         BlockState bs = tickData.state();
-        bs = bs.setValue(TownFlagBlock.SLEEPING, true);
+        bs = bs.setValue(TownFlagBlock.INACTIVE, true);
         tickData.level.setBlockAndUpdate(tickData.blockEntityPos, bs);
     }
 

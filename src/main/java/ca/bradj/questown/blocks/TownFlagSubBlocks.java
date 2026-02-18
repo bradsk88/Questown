@@ -39,7 +39,7 @@ public final class TownFlagSubBlocks {
         BlockEntity en = sl.getBlockEntity(blockPos);
         if ((en instanceof TownFlagBlockEntity)) {
             BlockState state = sl.getBlockState(blockPos);
-            sl.setBlockAndUpdate(blockPos, state.setValue(TownFlagBlock.SLEEPING, false));
+            sl.setBlockAndUpdate(blockPos, state.setValue(TownFlagBlock.INACTIVE, false));
         }
         if (!pending.isEmpty()) {
             BlockPos popped = pending.pop();
@@ -77,10 +77,10 @@ public final class TownFlagSubBlocks {
             BlockPos pos
     ) {
         BlockState flagState = sl.getBlockState(flagPos);
-        if (!flagState.hasProperty(TownFlagBlock.SLEEPING)) {
+        if (!flagState.hasProperty(TownFlagBlock.INACTIVE)) {
             return;
         }
-        if (flagState.getValue(TownFlagBlock.SLEEPING)) {
+        if (flagState.getValue(TownFlagBlock.INACTIVE)) {
             ticksWithoutParent.put(pos, 0);
             return;
         }
