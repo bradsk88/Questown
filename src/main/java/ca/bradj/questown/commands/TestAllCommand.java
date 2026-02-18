@@ -1,13 +1,9 @@
 package ca.bradj.questown.commands;
 
-import ca.bradj.questown.commands.test.TestBlueprint;
-import ca.bradj.questown.commands.test.TestBlueprintRegistry;
-import ca.bradj.questown.commands.test.TestExecutor;
-import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.commands.test.TestAllExecutor;
 import ca.bradj.questown.mc.Compat;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -19,35 +15,26 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-public class TestCommand {
+public class TestAllCommand {
 
     public static void register(
             CommandDispatcher<CommandSourceStack> src,
             CommandBuildContext ctx
     ) {
-        RequiredArgumentBuilder<CommandSourceStack, JobID> jobArg = Commands.argument(
-                "job_id", JobArgument.job(ctx)
-        );
-        RequiredArgumentBuilder<CommandSourceStack, Integer> warpArg = Commands.argument(
-                "warp_amount", IntegerArgumentType.integer(1)
-        );
-
         // @formatter:off
         src.register(
             Commands.literal("_qtdev").then(
-                Commands.literal("test")
+                Commands.literal("testall")
                     .requires(AddExperienceCommand::isCreative)
-                    .then(jobArg
-                    .then(warpArg
+                    .then(Commands.argument("warp_amount", IntegerArgumentType.integer(1))
                         .executes(css -> warn(css.getSource()))
                         .then(Commands.literal("destroy")
                             .executes(css -> run(
                                 css.getSource(),
-                                JobArgument.getJob(css, "job_id"),
                                 IntegerArgumentType.getInteger(css, "warp_amount")
                             ))
                         )
-                    ))
+                    )
             )
         );
         // @formatter:on
@@ -57,7 +44,7 @@ public class TestCommand {
         try {
             ServerPlayer player = source.getPlayerOrException();
             Compat.sendMessage(player, Component.literal(
-                    "[qt test] This will destroy a 15x15 area near you. Add 'destroy' to confirm."
+                    "[_qtdev testall] This will destroy a 15x15 area near you. Add 'destroy' to confirm."
             ));
         } catch (Exception e) {
             return -1;
@@ -65,7 +52,7 @@ public class TestCommand {
         return 0;
     }
 
-    private static int run(CommandSourceStack source, JobID jobId, int warpAmount) {
+    private static int run(CommandSourceStack source, int warpAmount) {
         ServerPlayer player;
         try {
             player = source.getPlayerOrException();
@@ -73,18 +60,10 @@ public class TestCommand {
             return -1;
         }
 
-        TestBlueprint blueprint = TestBlueprintRegistry.get(jobId);
-        if (blueprint == null) {
-            Compat.sendMessage(player, Component.literal(
-                    "[qt test] No tests available for job: " + jobId.rootId() + ":" + jobId.jobId()
-            ));
-            return 0;
-        }
-
         ServerLevel level = source.getLevel();
         BlockPos origin = new BlockPos(player.blockPosition());
 
-        TestExecutor executor = new TestExecutor(level, player, origin, jobId, warpAmount, blueprint);
+        TestAllExecutor executor = new TestAllExecutor(level, player, origin, warpAmount);
 
         Object[] listener = new Object[1];
         listener[0] = new Object() {
@@ -101,8 +80,7 @@ public class TestCommand {
         MinecraftForge.EVENT_BUS.register(listener[0]);
 
         Compat.sendMessage(player, Component.literal(
-                "[qt test] Starting test for " + jobId.rootId() + ":" + jobId.jobId() +
-                        " with warp=" + warpAmount
+                "[_qtdev testall] Starting all tests with warp=" + warpAmount
         ));
 
         return 1;

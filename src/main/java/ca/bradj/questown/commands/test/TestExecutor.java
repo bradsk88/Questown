@@ -56,6 +56,7 @@ public class TestExecutor {
     private final JobID jobId;
     private final int warpAmount;
     private final TestBlueprint blueprint;
+    private final boolean warpOnly;
 
     private Phase phase = Phase.DESTROY_NEARBY_FLAGS;
     private int waitTicks = 0;
@@ -67,6 +68,7 @@ public class TestExecutor {
     private Map<String, Integer> beforeRealtimeCounts;
     private long monitorEndTick;
     private int lastReportedPercent = 0;
+    private boolean warpPassed = false;
 
     public TestExecutor(
             ServerLevel level,
@@ -76,12 +78,33 @@ public class TestExecutor {
             int warpAmount,
             TestBlueprint blueprint
     ) {
+        this(level, player, origin, jobId, warpAmount, blueprint, false);
+    }
+
+    public TestExecutor(
+            ServerLevel level,
+            ServerPlayer player,
+            BlockPos origin,
+            JobID jobId,
+            int warpAmount,
+            TestBlueprint blueprint,
+            boolean warpOnly
+    ) {
         this.level = level;
         this.player = player;
         this.origin = origin;
         this.jobId = jobId;
         this.warpAmount = warpAmount;
         this.blueprint = blueprint;
+        this.warpOnly = warpOnly;
+    }
+
+    public boolean getWarpPassed() {
+        return warpPassed;
+    }
+
+    public JobID getJobId() {
+        return jobId;
     }
 
     /**
@@ -203,13 +226,29 @@ public class TestExecutor {
     }
 
     private void registerRoom() {
-        BlockPos doorWorldPos = flagPos.offset(blueprint.doorOrGateOffset());
-        if (blueprint.roomType() == TestBlueprint.RoomType.FARM) {
-            tfbe.getRoomHandle().registerFenceGate(doorWorldPos);
-            msg("Registered fence gate at " + doorWorldPos.toShortString());
-        } else {
-            tfbe.getRoomHandle().registerDoor(doorWorldPos);
-            msg("Registered door at " + doorWorldPos.toShortString());
+        BlockPos offsetWorldPos = flagPos.offset(blueprint.doorOrGateOffset());
+        switch (blueprint.roomType()) {
+            case FARM -> {
+                tfbe.getRoomHandle().registerFenceGate(offsetWorldPos);
+                msg("Registered fence gate at " + offsetWorldPos.toShortString());
+            }
+            case WELCOME_MAT -> {
+                tfbe.registerWelcomeMat(offsetWorldPos);
+                msg("Registered welcome mat at " + offsetWorldPos.toShortString());
+            }
+            case BLOCK_ROOM -> {
+                tfbe.getRoomHandle().registerBlockAsRoom(blueprint.roomId(), offsetWorldPos);
+                msg("Registered block room at " + offsetWorldPos.toShortString());
+            }
+            default -> {
+                tfbe.getRoomHandle().registerDoor(offsetWorldPos);
+                msg("Registered door at " + offsetWorldPos.toShortString());
+            }
+        }
+        if (blueprint.supplyDoorOffset() != null) {
+            BlockPos supplyDoorWorldPos = flagPos.offset(blueprint.supplyDoorOffset());
+            tfbe.getRoomHandle().registerDoor(supplyDoorWorldPos);
+            msg("Registered supply room door at " + supplyDoorWorldPos.toShortString());
         }
         phase = Phase.WAIT_FOR_ROOM;
         waitTicks = 0;
@@ -339,7 +378,12 @@ public class TestExecutor {
         Map<String, Integer> afterCounts = TestResultChecker.snapshotItemCounts(afterState);
         TestResultChecker.Result result = TestResultChecker.check(beforeCounts, afterCounts, blueprint.expectation());
         warpDeltas = result.deltas();
+        warpPassed = result.passed();
         broadcastResult("WARP", result);
+        if (warpOnly) {
+            phase = Phase.DONE;
+            return;
+        }
         phase = Phase.KILL_FOR_INSPECT;
     }
 
@@ -488,12 +532,12 @@ public class TestExecutor {
     }
 
     private void msg(String text) {
-        Compat.sendMessage(player, Component.literal("[qt test] " + text));
-        QT.FLAG_LOGGER.info("[qt test] {}", text);
+        Compat.sendMessage(player, Component.literal("[_qtdev test] " + text));
+        QT.FLAG_LOGGER.info("[_qtdev test] {}", text);
     }
 
     private void error(String text) {
-        Compat.sendMessage(player, Component.literal("[qt test ERROR] " + text));
-        QT.FLAG_LOGGER.error("[qt test] {}", text);
+        Compat.sendMessage(player, Component.literal("[_qtdev test ERROR] " + text));
+        QT.FLAG_LOGGER.error("[_qtdev test] {}", text);
     }
 }

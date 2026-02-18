@@ -76,7 +76,11 @@ public final class TownFlagSubBlocks {
             ServerLevel sl,
             BlockPos pos
     ) {
-        if (sl.getBlockState(flagPos).getValue(TownFlagBlock.SLEEPING)) {
+        BlockState flagState = sl.getBlockState(flagPos);
+        if (!flagState.hasProperty(TownFlagBlock.SLEEPING)) {
+            return;
+        }
+        if (flagState.getValue(TownFlagBlock.SLEEPING)) {
             ticksWithoutParent.put(pos, 0);
             return;
         }

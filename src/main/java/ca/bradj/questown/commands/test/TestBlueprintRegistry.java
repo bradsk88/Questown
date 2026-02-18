@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.commands.test.TestBlueprint.BlockPlacement;
 import ca.bradj.questown.commands.test.TestBlueprint.RoomType;
 import ca.bradj.questown.commands.test.TestExpectation.ExpectedProduct;
+import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.special.SpecialQuests;
 import net.minecraft.core.BlockPos;
@@ -11,14 +12,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.ComposterBlock;
 import net.minecraft.world.level.block.CropBlock;
-import net.minecraft.world.level.block.FenceGateBlock;
-import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class TestBlueprintRegistry {
 
@@ -29,47 +29,84 @@ public class TestBlueprintRegistry {
         if ("cook".equals(jobId.rootId())) {
             return cookBlueprint();
         }
+        if ("baker".equals(jobId.rootId())) {
+            return bakerBlueprint();
+        }
+        if ("crafter".equals(jobId.rootId())) {
+            return crafterBlueprint();
+        }
+        if ("smelter".equals(jobId.rootId())) {
+            return smelterBlueprint();
+        }
+        if ("soup_cook".equals(jobId.rootId())) {
+            return soupCookBlueprint();
+        }
+        if ("gatherer".equals(jobId.rootId())) {
+            return gathererBlueprint();
+        }
+        if ("hunter".equals(jobId.rootId())) {
+            return hunterBlueprint();
+        }
+        if ("miner".equals(jobId.rootId())) {
+            return minerBlueprint();
+        }
+        if ("fisher".equals(jobId.rootId())) {
+            return fisherBlueprint();
+        }
         return null;
+    }
+
+    public static List<Map.Entry<JobID, TestBlueprint>> getTestableJobs() {
+        List<Map.Entry<JobID, TestBlueprint>> jobs = new ArrayList<>();
+        jobs.add(entry(new JobID("farmer", "harvest_wheat"), farmerBlueprint()));
+        jobs.add(entry(new JobID("cook", "simple_furnace_food"), cookBlueprint()));
+        jobs.add(entry(new JobID("baker", "bread"), bakerBlueprint()));
+        jobs.add(entry(new JobID("crafter", "stick"), crafterBlueprint()));
+        jobs.add(entry(new JobID("crafter", "wooden_axe"), blacksmithBlueprint()));
+        jobs.add(entry(new JobID("smelter", "process_ore"), smelterBlueprint()));
+        jobs.add(entry(new JobID("soup_cook", "one_mushroom_stew"), soupCookBlueprint()));
+        jobs.add(entry(new JobID("gatherer", "axe"), gathererBlueprint()));
+        jobs.add(entry(new JobID("hunter", "sword"), hunterBlueprint()));
+        jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
+        jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
+        return jobs;
+    }
+
+    private static Map.Entry<JobID, TestBlueprint> entry(JobID id, TestBlueprint bp) {
+        return new AbstractMap.SimpleImmutableEntry<>(id, bp);
     }
 
     private static TestBlueprint farmerBlueprint() {
         List<BlockPlacement> blocks = new ArrayList<>();
 
-        // 7x7 fenced farm. Flag is at (0,0,0), farm starts at offset (+4,0,-3)
         int ox = 4;
         int oz = -3;
 
-        // Oak fence perimeter
         for (int x = 0; x < 7; x++) {
             for (int z = 0; z < 7; z++) {
                 boolean isEdge = x == 0 || x == 6 || z == 0 || z == 6;
                 BlockPos offset = new BlockPos(ox + x, 0, oz + z);
                 if (isEdge) {
-                    // South-side gate at center (x=3, z=6)
                     if (x == 3 && z == 6) {
                         blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE_GATE.defaultBlockState()));
                     } else {
                         blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE.defaultBlockState()));
                     }
                 } else {
-                    // Interior: farmland below + wheat(age=7) on top
                     blocks.add(new BlockPlacement(offset.below(), Blocks.FARMLAND.defaultBlockState()));
                     blocks.add(new BlockPlacement(offset, Blocks.WHEAT.defaultBlockState().setValue(CropBlock.AGE, 7)));
                 }
             }
         }
 
-        // Replace one interior wheat with composter (at ox+2, 0, oz+2)
         BlockPos composterOffset = new BlockPos(ox + 2, 0, oz + 2);
         blocks.removeIf(bp -> bp.offset().equals(composterOffset));
         blocks.add(new BlockPlacement(composterOffset, Blocks.COMPOSTER.defaultBlockState()));
 
-        // Chest offset inside fence (at ox+1, 0, oz+5)
         BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 5);
         blocks.removeIf(bp -> bp.offset().equals(chestOffset));
         blocks.add(new BlockPlacement(chestOffset.below(), Blocks.DIRT.defaultBlockState()));
 
-        // Fence gate offset
         BlockPos gateOffset = new BlockPos(ox + 3, 0, oz + 6);
 
         List<ItemStack> supplies = List.of(
@@ -97,11 +134,9 @@ public class TestBlueprintRegistry {
     private static TestBlueprint cookBlueprint() {
         List<BlockPlacement> blocks = new ArrayList<>();
 
-        // 5x5 cobblestone room. Flag at (0,0,0), room starts at offset (+4,0,-2)
         int ox = 4;
         int oz = -2;
 
-        // Walls, floor, ceiling
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
                 boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
@@ -109,18 +144,15 @@ public class TestBlueprintRegistry {
                 blocks.add(new BlockPlacement(floorOffset, Blocks.COBBLESTONE.defaultBlockState()));
 
                 if (isEdge) {
-                    // 2-block-high walls
                     blocks.add(new BlockPlacement(new BlockPos(ox + x, 0, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
                     blocks.add(new BlockPlacement(new BlockPos(ox + x, 1, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
                 }
 
-                // Ceiling
                 BlockPos ceilOffset = new BlockPos(ox + x, 2, oz + z);
                 blocks.add(new BlockPlacement(ceilOffset, Blocks.COBBLESTONE.defaultBlockState()));
             }
         }
 
-        // Door on south side center (x=2, z=4) - replace wall blocks with door
         BlockPos doorLower = new BlockPos(ox + 2, 0, oz + 4);
         BlockPos doorUpper = new BlockPos(ox + 2, 1, oz + 4);
         blocks.removeIf(bp -> bp.offset().equals(doorLower) || bp.offset().equals(doorUpper));
@@ -130,11 +162,9 @@ public class TestBlueprintRegistry {
                 net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
         )));
 
-        // Furnace inside at offset (+5, 0, -1) from flag = (ox+1, 0, oz+1) inside room
         BlockPos furnaceOffset = new BlockPos(ox + 1, 0, oz + 1);
         blocks.add(new BlockPlacement(furnaceOffset, Blocks.FURNACE.defaultBlockState()));
 
-        // Chest inside room
         BlockPos chestOffset = new BlockPos(ox + 3, 0, oz + 1);
 
         List<ItemStack> supplies = List.of(
@@ -161,6 +191,285 @@ public class TestBlueprintRegistry {
                 chestOffset,
                 new ResourceLocation(Questown.MODID, "kitchen_small"),
                 expectation
+        );
+    }
+
+    private static TestBlueprint bakerBlueprint() {
+        return indoorRoomBlueprint(
+                BlocksInit.BREAD_OVEN_BLOCK.get().defaultBlockState(),
+                null,
+                List.of(
+                        new ItemStack(Items.WHEAT, 32),
+                        new ItemStack(Items.COAL, 16)
+                ),
+                new ResourceLocation(Questown.MODID, "breadmaker"),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:bread", 1, -1)),
+                        1, 100
+                )
+        );
+    }
+
+    private static TestBlueprint crafterBlueprint() {
+        return indoorRoomBlueprint(
+                Blocks.CRAFTING_TABLE.defaultBlockState(),
+                null,
+                List.of(new ItemStack(Items.OAK_SAPLING, 16)),
+                new ResourceLocation(Questown.MODID, "crafting_room"),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:stick", 1, -1)),
+                        1, 100
+                )
+        );
+    }
+
+    private static TestBlueprint blacksmithBlueprint() {
+        return indoorRoomBlueprint(
+                BlocksInit.BLACKSMITHS_TABLE_BLOCK.get().defaultBlockState(),
+                Blocks.TORCH.defaultBlockState(),
+                List.of(
+                        new ItemStack(Items.STICK, 16),
+                        new ItemStack(Items.OAK_PLANKS, 32)
+                ),
+                new ResourceLocation(Questown.MODID, "smithy"),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:wooden_axe", 1, -1)),
+                        1, 100
+                )
+        );
+    }
+
+    private static TestBlueprint smelterBlueprint() {
+        return indoorRoomBlueprint(
+                BlocksInit.ORE_PROCESSING_BLOCK.get().defaultBlockState(),
+                null,
+                List.of(
+                        new ItemStack(Items.IRON_ORE, 16),
+                        new ItemStack(Items.STONE_PICKAXE, 1)
+                ),
+                new ResourceLocation(Questown.MODID, "smeltery"),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:raw_iron", 1, -1)),
+                        1, 100
+                )
+        );
+    }
+
+    private static TestBlueprint soupCookBlueprint() {
+        return indoorRoomBlueprint(
+                BlocksInit.SOUP_POT_SMALL.get().defaultBlockState(),
+                null,
+                List.of(
+                        new ItemStack(Items.RED_MUSHROOM, 16),
+                        new ItemStack(Items.BOWL, 16),
+                        new ItemStack(Items.WOODEN_SHOVEL, 1)
+                ),
+                new ResourceLocation(Questown.MODID, "soup_kitchen_small"),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:mushroom_stew", 1, -1)),
+                        1, 100
+                )
+        );
+    }
+
+    private static TestBlueprint indoorRoomBlueprint(
+            net.minecraft.world.level.block.state.BlockState workBlock,
+            @Nullable net.minecraft.world.level.block.state.BlockState extraBlock,
+            List<ItemStack> supplies,
+            ResourceLocation roomId,
+            TestExpectation expectation
+    ) {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        int ox = 4;
+        int oz = -2;
+
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
+                BlockPos floorOffset = new BlockPos(ox + x, -1, oz + z);
+                blocks.add(new BlockPlacement(floorOffset, Blocks.COBBLESTONE.defaultBlockState()));
+
+                if (isEdge) {
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 0, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 1, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                }
+
+                BlockPos ceilOffset = new BlockPos(ox + x, 2, oz + z);
+                blocks.add(new BlockPlacement(ceilOffset, Blocks.COBBLESTONE.defaultBlockState()));
+            }
+        }
+
+        BlockPos doorLower = new BlockPos(ox + 2, 0, oz + 4);
+        BlockPos doorUpper = new BlockPos(ox + 2, 1, oz + 4);
+        blocks.removeIf(bp -> bp.offset().equals(doorLower) || bp.offset().equals(doorUpper));
+        blocks.add(new BlockPlacement(doorLower, Blocks.OAK_DOOR.defaultBlockState()));
+        blocks.add(new BlockPlacement(doorUpper, Blocks.OAK_DOOR.defaultBlockState().setValue(
+                net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
+        )));
+
+        blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 1), workBlock));
+
+        if (extraBlock != null) {
+            blocks.add(new BlockPlacement(new BlockPos(ox + 3, 0, oz + 1), extraBlock));
+        }
+
+        BlockPos chestOffset = new BlockPos(ox + 3, 0, oz + 3);
+
+        return new TestBlueprint(
+                RoomType.INDOOR,
+                blocks,
+                supplies,
+                doorLower,
+                chestOffset,
+                roomId,
+                expectation
+        );
+    }
+
+    private static TestBlueprint gathererBlueprint() {
+        return welcomeMatBlueprint(
+                List.of(
+                        new ItemStack(Items.STONE_AXE, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                )
+        );
+    }
+
+    private static TestBlueprint hunterBlueprint() {
+        return welcomeMatBlueprint(
+                List.of(
+                        new ItemStack(Items.STONE_SWORD, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                )
+        );
+    }
+
+    private static TestBlueprint welcomeMatBlueprint(List<ItemStack> supplies) {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        BlockPos matOffset = new BlockPos(3, 0, 0);
+        blocks.add(new BlockPlacement(matOffset, BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState()));
+
+        SupplyRoom sr = buildSupplyRoom(4, -2);
+        blocks.addAll(sr.blocks);
+
+        return new TestBlueprint(
+                RoomType.WELCOME_MAT,
+                blocks,
+                supplies,
+                matOffset,
+                sr.chestOffset,
+                SpecialQuests.TOWN_GATE,
+                wildcardExpectation(),
+                sr.doorOffset
+        );
+    }
+
+    private static TestBlueprint minerBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        BlockPos blockOffset = new BlockPos(3, 0, 0);
+        blocks.add(new BlockPlacement(blockOffset, BlocksInit.MINESHAFT.get().defaultBlockState()));
+
+        SupplyRoom sr = buildSupplyRoom(4, -2);
+        blocks.addAll(sr.blocks);
+
+        return new TestBlueprint(
+                RoomType.BLOCK_ROOM,
+                blocks,
+                List.of(
+                        new ItemStack(Items.STONE_PICKAXE, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                ),
+                blockOffset,
+                sr.chestOffset,
+                Questown.ResourceLocation("block_room/block.questown.mineshaft"),
+                wildcardExpectation(),
+                sr.doorOffset
+        );
+    }
+
+    private static TestBlueprint fisherBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        BlockPos blockOffset = new BlockPos(3, 0, 0);
+        blocks.add(new BlockPlacement(blockOffset, BlocksInit.FISHING_STATION_BLOCK.get().defaultBlockState()));
+
+        for (int x = -1; x <= 1; x++) {
+            for (int z = -1; z <= 1; z++) {
+                BlockPos waterPos = new BlockPos(3 + x, -1, -2 + z);
+                blocks.add(new BlockPlacement(waterPos, Blocks.WATER.defaultBlockState()));
+            }
+        }
+
+        SupplyRoom sr = buildSupplyRoom(4, -2);
+        blocks.addAll(sr.blocks);
+
+        return new TestBlueprint(
+                RoomType.BLOCK_ROOM,
+                blocks,
+                List.of(new ItemStack(Items.STRING, 16)),
+                blockOffset,
+                sr.chestOffset,
+                Questown.ResourceLocation("block_room/block.questown.fishing_station"),
+                wildcardExpectation(),
+                sr.doorOffset
+        );
+    }
+
+    private record SupplyRoom(
+            List<BlockPlacement> blocks,
+            BlockPos chestOffset,
+            BlockPos doorOffset
+    ) {}
+
+    private static SupplyRoom buildSupplyRoom(int ox, int oz) {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
+                blocks.add(new BlockPlacement(
+                        new BlockPos(ox + x, -1, oz + z),
+                        Blocks.COBBLESTONE.defaultBlockState()
+                ));
+                if (isEdge) {
+                    blocks.add(new BlockPlacement(
+                            new BlockPos(ox + x, 0, oz + z),
+                            Blocks.COBBLESTONE.defaultBlockState()
+                    ));
+                    blocks.add(new BlockPlacement(
+                            new BlockPos(ox + x, 1, oz + z),
+                            Blocks.COBBLESTONE.defaultBlockState()
+                    ));
+                }
+                blocks.add(new BlockPlacement(
+                        new BlockPos(ox + x, 2, oz + z),
+                        Blocks.COBBLESTONE.defaultBlockState()
+                ));
+            }
+        }
+
+        BlockPos doorLower = new BlockPos(ox + 2, 0, oz + 4);
+        BlockPos doorUpper = new BlockPos(ox + 2, 1, oz + 4);
+        blocks.removeIf(bp -> bp.offset().equals(doorLower) || bp.offset().equals(doorUpper));
+        blocks.add(new BlockPlacement(doorLower, Blocks.OAK_DOOR.defaultBlockState()));
+        blocks.add(new BlockPlacement(doorUpper, Blocks.OAK_DOOR.defaultBlockState().setValue(
+                net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
+        )));
+
+        BlockPos chestOffset = new BlockPos(ox + 2, 0, oz + 1);
+
+        return new SupplyRoom(blocks, chestOffset, doorLower);
+    }
+
+    private static TestExpectation wildcardExpectation() {
+        return new TestExpectation(
+                List.of(new ExpectedProduct("*", 1, -1)),
+                1, 100
         );
     }
 }

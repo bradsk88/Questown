@@ -53,6 +53,28 @@ public class TestResultChecker {
         boolean allPassed = true;
 
         for (TestExpectation.ExpectedProduct product : expectation.products()) {
+            if ("*".equals(product.itemRegistryName())) {
+                int beforeTotal = beforeCounts.values().stream().mapToInt(Integer::intValue).sum();
+                int afterTotal = afterCounts.values().stream().mapToInt(Integer::intValue).sum();
+                int delta = afterTotal - beforeTotal;
+                deltas.put("*", delta);
+
+                boolean productPassed = delta >= product.minQuantity()
+                        && (product.maxQuantity() < 0 || delta <= product.maxQuantity());
+                String status = productPassed ? "PASS" : "FAIL";
+                String expectedRange = product.maxQuantity() < 0
+                        ? ">= " + product.minQuantity()
+                        : product.minQuantity() + ".." + product.maxQuantity();
+                details.add(String.format(
+                        "[%s] %s: expected %s, got %d (before=%d, after=%d)",
+                        status, "*", expectedRange, delta, beforeTotal, afterTotal
+                ));
+                if (!productPassed) {
+                    allPassed = false;
+                }
+                continue;
+            }
+
             int beforeCount = beforeCounts.getOrDefault(product.itemRegistryName(), 0);
             int afterCount = afterCounts.getOrDefault(product.itemRegistryName(), 0);
             int delta = afterCount - beforeCount;
