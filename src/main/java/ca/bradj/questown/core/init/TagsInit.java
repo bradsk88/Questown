@@ -25,6 +25,7 @@ public class TagsInit {
         public static final TagKey<Item> COMPOSTABLE = createTag("compostable");
         public static final TagKey<Item> JOB_BOARD_INPUTS = createTag("job_board_inputs");
         public static final TagKey<Item> SOUP_POTS = createTag("soup_pots");
+        public static final TagKey<Item> ARMOR_MATERIALS = createTag("armor_materials");
 
         // BLOCKS
         public static final TagKey<Block> TILLABLES = createBlockTag("tillables");

@@ -1,0 +1,11 @@
+{
+  "type": "roomrecipes:room",
+  "recipe_strength": 1,
+  "ingredients": [
+    {"item": "questown:blacksmiths_table"},
+    {"tag": "forge:chests"},
+    {"tag": "forge:chests"},
+    {"tag": "forge:chests"},
+    {"tag": "forge:chests"}
+  ]
+}

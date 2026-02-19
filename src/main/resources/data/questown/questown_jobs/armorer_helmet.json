@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "id": "armorer/helmet",
+  "unlocks_title": "armorer",
+  "priority": "2999",
+  "parent": "crafter/stick",
+  "icon": "minecraft:leather_helmet",
+  "initial_request": "minecraft:leather_helmet",
+  "result": {
+    "type": "crafting_table",
+    "recipe": ["XXX", "X X"],
+    "fallback": "minecraft:leather_helmet",
+    "quantity": 1
+  },
+  "block": "questown:blacksmiths_table",
+  "room": "questown:armory",
+  "work_states": [
+    {
+      "ingredients": "minecraft:leather",
+      "quantity": 2
+    },
+    {
+      "work": 40
+    }
+  ],
+  "cooldown_ticks": 25,
+  "sound": {
+    "id": "minecraft:item.armor.equip_leather",
+    "chance": "100",
+    "duration": 5
+  }
+}

@@ -93,6 +93,10 @@ public class ResourceJobLoader {
                             b.putAll(makeCookJobs(object));
                             continue;
                         }
+                        if ("armorer".equals(jobId.rootId())) {
+                            b.putAll(makeArmorerJobs(object));
+                            continue;
+                        }
 
                         int version = requiredInt(object, "version");
                         Work type = switch (version) {
@@ -173,6 +177,116 @@ public class ResourceJobLoader {
                 }
             }
             return b.build();
+        }
+
+        private static final Map<Item, String> ARMOR_MATERIAL_PREFIXES = Map.of(
+                Items.LEATHER, "leather",
+                Items.IRON_INGOT, "iron",
+                Items.GOLD_INGOT, "golden",
+                Items.DIAMOND, "diamond"
+        );
+
+        private static final String[] ARMOR_PIECE_ORDER = {"boots", "helmet", "leggings", "chestplate"};
+
+        private ImmutableMap<JobID, Work> makeArmorerJobs(JsonObject obj) {
+            ImmutableMap.Builder<JobID, Work> b = ImmutableMap.builder();
+            String templatePiece = JobID.fromJSON(
+                    Util.getOrDefault(obj, "id", JsonElement::getAsString, null)
+            ).jobId();
+
+            Ingredient materials = Ingredient.of(TagsInit.Items.ARMOR_MATERIALS);
+            for (ItemStack materialStack : materials.getItems()) {
+                Item materialItem = materialStack.getItem();
+                String prefix = ARMOR_MATERIAL_PREFIXES.get(materialItem);
+                if (prefix == null) {
+                    continue;
+                }
+
+                JobID expandedId = new JobID("crafter", prefix + "_" + templatePiece);
+                JobID parentId = deriveArmorerParent(prefix, templatePiece);
+
+                BiPredicate<WorkLocation.BlockInfo, BlockPos> isJobBlock =
+                        ResourceJobLoader.isJobBlock(obj.get("block").getAsString());
+                int cooldownTicks = requiredInt(obj, "cooldown_ticks");
+
+                JsonObject resultObj = obj.get("result").getAsJsonObject();
+                ResultGenerator<MCHeldItem> resultGen = craftingTableResult(resultObj, materialItem);
+                WorkWorldInteractions wwi = new WorkWorldInteractions(cooldownTicks, resultGen);
+
+                Function<ServerLevel, Ingredient> initReq = sl -> {
+                    JsonArray recipe = resultObj.getAsJsonArray("recipe");
+                    ItemStack crafted = assembleCraftingResult(sl, recipe, materialItem);
+                    if (crafted.isEmpty()) {
+                        String fb = optional(resultObj, "fallback", JsonElement::getAsString);
+                        if (fb != null) {
+                            Item fbItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation(fb));
+                            if (fbItem != null) {
+                                return Ingredient.of(fbItem);
+                            }
+                        }
+                        return Ingredient.of(materialItem);
+                    }
+                    return Ingredient.of(crafted.getItem());
+                };
+
+                WorkStates ws = ResourceJobLoader.workStates(expandedId, obj);
+                Predicate<Ingredient> isLeather = in -> in.getItems()[0].is(Items.LEATHER);
+                ws = ws.withIngredients(
+                        replaceWhen(ws.ingredientsRequired(), isLeather, () -> Ingredient.of(materialItem))
+                );
+
+                String armorItemId = "minecraft:" + prefix + "_" + templatePiece;
+                Item iconItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation(armorItemId));
+                if (iconItem == null) {
+                    iconItem = materialItem;
+                }
+
+                Work armorerWork = WorksBehaviour.productionWork(
+                        iconItem.getDefaultInstance(),
+                        expandedId,
+                        parentId,
+                        description(initReq, obj),
+                        new WorkLocation(
+                                (ctx) -> isJobBlock.test(ctx.blockInfo(), ctx.blockPos()),
+                                isJobBlock,
+                                required(obj, "room")
+                        ),
+                        ws,
+                        wwi,
+                        loadRulesV1(obj),
+                        loadSoundV1(obj)
+                ).withPriority(requiredInt(obj, "priority"));
+                b.put(expandedId, armorerWork);
+            }
+            return b.build();
+        }
+
+        private static JobID deriveArmorerParent(String materialPrefix, String piece) {
+            if ("leather".equals(materialPrefix)) {
+                return parentWithinLeatherTier(piece);
+            }
+            int pieceIndex = indexOfPiece(piece);
+            if (pieceIndex == 0) {
+                return new JobID("crafter", "leather_" + piece);
+            }
+            return new JobID("crafter", materialPrefix + "_" + ARMOR_PIECE_ORDER[pieceIndex - 1]);
+        }
+
+        private static JobID parentWithinLeatherTier(String piece) {
+            int pieceIndex = indexOfPiece(piece);
+            if (pieceIndex == 0) {
+                return new JobID("crafter", "stick");
+            }
+            return new JobID("crafter", "leather_" + ARMOR_PIECE_ORDER[pieceIndex - 1]);
+        }
+
+        private static int indexOfPiece(String piece) {
+            for (int i = 0; i < ARMOR_PIECE_ORDER.length; i++) {
+                if (ARMOR_PIECE_ORDER[i].equals(piece)) {
+                    return i;
+                }
+            }
+            return 0;
         }
 
         private ImmutableMap<Integer, Supplier<Ingredient>> replaceWhen(
@@ -618,6 +732,13 @@ public class ResourceJobLoader {
     private static @NotNull ResultGenerator<MCHeldItem> craftingTableResult(
             JsonObject rizz
     ) {
+        return craftingTableResult(rizz, null);
+    }
+
+    private static @NotNull ResultGenerator<MCHeldItem> craftingTableResult(
+            JsonObject rizz,
+            @Nullable Item fillItem
+    ) {
         JsonArray ingredientChar = required(rizz, "recipe", JsonElement::getAsJsonArray);
         @Nullable String fallback = optional(rizz, "fallback", JsonElement::getAsString);
         int qty = requiredInt(rizz, "quantity");
@@ -627,48 +748,13 @@ public class ResourceJobLoader {
                     ServerLevel l,
                     Collection<MCHeldItem> heldItems
             ) {
-                ItemStack itemstack = ItemStack.EMPTY;
-                CraftingContainer cc = new CraftingContainer(
-                        new AbstractContainerMenu(null, 0) {
-                            @Override
-                            public ItemStack quickMoveStack(
-                                    Player player,
-                                    int i
-                            ) {
-                                return ItemStack.EMPTY;
-                            }
-
-                            @Override
-                            public boolean stillValid(Player p_38874_) {
-                                return false;
-                            }
-                        }, 3, 3
-                );
-
-                for (int j = 0; j < ingredientChar.size(); j++) {
-                    String rowStr = ingredientChar.get(j).getAsString();
-                    for (int k = 0; k < rowStr.length(); k++) {
-                        if (Character.isWhitespace(rowStr.charAt(k))) {
-                            continue;
-                        }
-                        // TODO: Actually get the item from the character
-                        ItemStack itemFromChar = Items.OAK_LOG.getDefaultInstance();
-                        cc.setItem((j + 1) * k, itemFromChar);
-                    }
-                }
-
-                Optional<CraftingRecipe> optional = l.getServer().getRecipeManager()
-                                                     .getRecipeFor(RecipeType.CRAFTING, cc, l);
-                if (optional.isPresent()) {
-                    CraftingRecipe craftingrecipe = optional.get();
-                    itemstack = craftingrecipe.assemble(cc);
-                }
+                Item itemForGrid = resolveGridItem(fillItem, heldItems);
+                ItemStack itemstack = assembleCraftingResult(l, ingredientChar, itemForGrid);
                 if (itemstack.isEmpty() && fallback != null) {
                     itemstack = ForgeRegistries.ITEMS.getValue(new ResourceLocation(fallback)).getDefaultInstance();
                 }
                 itemstack.setCount(1);
                 return ImmutableList.copyOf(Collections.nCopies(qty, MCHeldItem.fromMCItemStack(itemstack)));
-
             }
 
             @Override
@@ -676,6 +762,58 @@ public class ResourceJobLoader {
                 return false;
             }
         };
+    }
+
+    private static Item resolveGridItem(
+            @Nullable Item fillItem,
+            Collection<MCHeldItem> heldItems
+    ) {
+        if (fillItem != null) {
+            return fillItem;
+        }
+        for (MCHeldItem held : heldItems) {
+            if (!held.isEmpty()) {
+                return held.get().toMCItemStack().getItem();
+            }
+        }
+        return Items.AIR;
+    }
+
+    private static ItemStack assembleCraftingResult(
+            ServerLevel level,
+            JsonArray recipe,
+            Item gridItem
+    ) {
+        CraftingContainer cc = new CraftingContainer(
+                new AbstractContainerMenu(null, 0) {
+                    @Override
+                    public ItemStack quickMoveStack(Player player, int i) {
+                        return ItemStack.EMPTY;
+                    }
+
+                    @Override
+                    public boolean stillValid(Player p) {
+                        return false;
+                    }
+                }, 3, 3
+        );
+
+        for (int row = 0; row < recipe.size(); row++) {
+            String rowStr = recipe.get(row).getAsString();
+            for (int col = 0; col < rowStr.length(); col++) {
+                if (Character.isWhitespace(rowStr.charAt(col))) {
+                    continue;
+                }
+                cc.setItem(row * 3 + col, gridItem.getDefaultInstance());
+            }
+        }
+
+        Optional<CraftingRecipe> match = level.getServer().getRecipeManager()
+                                              .getRecipeFor(RecipeType.CRAFTING, cc, level);
+        if (match.isPresent()) {
+            return match.get().assemble(cc);
+        }
+        return ItemStack.EMPTY;
     }
 
     private static WorkStates workStates(

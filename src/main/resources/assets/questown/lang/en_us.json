@@ -413,5 +413,8 @@
   "#forge:chests": "Chest",
   "#forge:mushrooms": "Mushrooms",
   "#minecraft:beds": "Bed",
-  "#minecraft:coals": "Coal"
+  "#minecraft:coals": "Coal",
+  "#questown:armor_materials": "Armor Materials",
+  "room.armory": "Armory",
+  "jobs.armorer": "Armorer"
 }

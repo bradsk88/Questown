@@ -740,6 +740,53 @@ class TickerAdvancerEquivalenceTest {
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
     }
 
+    // ========== Armorer Job Equivalence Tests ==========
+
+    static Stream<Arguments> armorerVariants() {
+        String leather = "minecraft:leather";
+
+        return Stream.of(
+                Arguments.of("armorer_boots.json", leather, 1),
+                Arguments.of("armorer_helmet.json", leather, 2),
+                Arguments.of("armorer_leggings.json", leather, 2),
+                Arguments.of("armorer_chestplate.json", leather, 3)
+        );
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("armorerVariants")
+    void armorer_tickerAndAdvancer_shouldProduceEquivalentResults(
+            String filename, String ingredient, int materialCount) {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + filename);
+
+        EquivalenceTestFramework.TickerSetup tickerSetup =
+                EquivalenceTestFramework.createTickerSetup(definition);
+        for (int i = 0; i < materialCount; i++) {
+            tickerSetup.inventory().set(i, new GathererJournalTest.TestItem(ingredient));
+        }
+
+        EquivalenceTestFramework.runTicker(tickerSetup, 200);
+        EquivalenceTestFramework.SimulationResult tickerResult =
+                EquivalenceTestFramework.captureResult(tickerSetup);
+
+        EquivalenceTestFramework.AdvancerSetup advancerSetup =
+                EquivalenceTestFramework.createAdvancerSetup(definition);
+        for (int i = 0; i < materialCount; i++) {
+            advancerSetup.inventory().set(i, new GathererJournalTest.TestItem(ingredient));
+        }
+
+        EquivalenceTestFramework.runAdvancer(advancerSetup, 200);
+        EquivalenceTestFramework.SimulationResult advancerResult =
+                EquivalenceTestFramework.captureAdvancerResult(advancerSetup);
+
+        EquivalenceTestFramework.EquivalenceComparison comparison =
+                EquivalenceTestFramework.EquivalenceComparison.compare(tickerResult, advancerResult);
+
+        Assertions.assertTrue(comparison.equivalent(),
+                "Ticker and Advancer should produce equivalent results for " + filename
+                + ".\n" + comparison.diffMessage());
+    }
+
     // ========== Blacksmith Job Equivalence Tests ==========
 
     static Stream<Arguments> blacksmithVariants() {

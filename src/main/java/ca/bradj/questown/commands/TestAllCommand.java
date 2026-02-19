@@ -65,24 +65,31 @@ public class TestAllCommand {
 
         TestAllExecutor executor = new TestAllExecutor(level, player, origin, warpAmount);
 
-        Object[] listener = new Object[1];
-        listener[0] = new Object() {
-            @SubscribeEvent
-            public void onTick(TickEvent.ServerTickEvent event) {
-                if (event.phase != TickEvent.Phase.END) {
-                    return;
-                }
-                if (executor.tick()) {
-                    MinecraftForge.EVENT_BUS.unregister(listener[0]);
-                }
-            }
-        };
-        MinecraftForge.EVENT_BUS.register(listener[0]);
+        TestAllTickListener listener = new TestAllTickListener(executor);
+        MinecraftForge.EVENT_BUS.register(listener);
 
         Compat.sendMessage(player, Component.literal(
                 "[_qtdev testall] Starting all tests with warp=" + warpAmount
         ));
 
         return 1;
+    }
+
+    static class TestAllTickListener {
+        private final TestAllExecutor executor;
+
+        TestAllTickListener(TestAllExecutor executor) {
+            this.executor = executor;
+        }
+
+        @SubscribeEvent
+        public void onTick(TickEvent.ServerTickEvent event) {
+            if (event.phase != TickEvent.Phase.END) {
+                return;
+            }
+            if (executor.tick()) {
+                MinecraftForge.EVENT_BUS.unregister(this);
+            }
+        }
     }
 }

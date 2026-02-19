@@ -33,6 +33,9 @@ public class TestBlueprintRegistry {
             return bakerBlueprint();
         }
         if ("crafter".equals(jobId.rootId())) {
+            if (isArmorerJob(jobId)) {
+                return armorerBlueprint();
+            }
             return crafterBlueprint();
         }
         if ("smelter".equals(jobId.rootId())) {
@@ -69,6 +72,7 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("hunter", "sword"), hunterBlueprint()));
         jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
         jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
+        jobs.add(entry(new JobID("crafter", "leather_boots"), armorerBlueprint()));
         return jobs;
     }
 
@@ -207,6 +211,71 @@ public class TestBlueprintRegistry {
                         List.of(new ExpectedProduct("minecraft:bread", 1, -1)),
                         1, 100
                 )
+        );
+    }
+
+    private static boolean isArmorerJob(JobID jobId) {
+        String j = jobId.jobId();
+        return j.endsWith("_boots") || j.endsWith("_helmet")
+                || j.endsWith("_leggings") || j.endsWith("_chestplate");
+    }
+
+    private static TestBlueprint armorerBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        int ox = 4;
+        int oz = -2;
+
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
+                BlockPos floorOffset = new BlockPos(ox + x, -1, oz + z);
+                blocks.add(new BlockPlacement(floorOffset, Blocks.COBBLESTONE.defaultBlockState()));
+
+                if (isEdge) {
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 0, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 1, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                }
+
+                BlockPos ceilOffset = new BlockPos(ox + x, 2, oz + z);
+                blocks.add(new BlockPlacement(ceilOffset, Blocks.COBBLESTONE.defaultBlockState()));
+            }
+        }
+
+        BlockPos doorLower = new BlockPos(ox + 2, 0, oz + 4);
+        BlockPos doorUpper = new BlockPos(ox + 2, 1, oz + 4);
+        blocks.removeIf(bp -> bp.offset().equals(doorLower) || bp.offset().equals(doorUpper));
+        blocks.add(new BlockPlacement(doorLower, Blocks.OAK_DOOR.defaultBlockState()));
+        blocks.add(new BlockPlacement(doorUpper, Blocks.OAK_DOOR.defaultBlockState().setValue(
+                net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
+        )));
+
+        blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 1), BlocksInit.BLACKSMITHS_TABLE_BLOCK.get().defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(ox + 3, 0, oz + 1), Blocks.CHEST.defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 3), Blocks.CHEST.defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(ox + 3, 0, oz + 3), Blocks.CHEST.defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(ox + 2, 0, oz + 1), Blocks.CHEST.defaultBlockState()));
+
+        BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 3);
+
+        List<ItemStack> supplies = List.of(
+                new ItemStack(Items.LEATHER, 32)
+        );
+
+        TestExpectation expectation = new TestExpectation(
+                List.of(new ExpectedProduct("minecraft:leather_boots", 1, -1)),
+                1, 100
+        );
+
+        return new TestBlueprint(
+                RoomType.INDOOR,
+                blocks,
+                supplies,
+                doorLower,
+                chestOffset,
+                new ResourceLocation(Questown.MODID, "armory"),
+                expectation
         );
     }
 

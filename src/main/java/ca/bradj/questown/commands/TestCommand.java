@@ -86,19 +86,8 @@ public class TestCommand {
 
         TestExecutor executor = new TestExecutor(level, player, origin, jobId, warpAmount, blueprint);
 
-        Object[] listener = new Object[1];
-        listener[0] = new Object() {
-            @SubscribeEvent
-            public void onTick(TickEvent.ServerTickEvent event) {
-                if (event.phase != TickEvent.Phase.END) {
-                    return;
-                }
-                if (executor.tick()) {
-                    MinecraftForge.EVENT_BUS.unregister(listener[0]);
-                }
-            }
-        };
-        MinecraftForge.EVENT_BUS.register(listener[0]);
+        TestTickListener listener = new TestTickListener(executor);
+        MinecraftForge.EVENT_BUS.register(listener);
 
         Compat.sendMessage(player, Component.literal(
                 "[qt test] Starting test for " + jobId.rootId() + ":" + jobId.jobId() +
@@ -106,5 +95,23 @@ public class TestCommand {
         ));
 
         return 1;
+    }
+
+    static class TestTickListener {
+        private final TestExecutor executor;
+
+        TestTickListener(TestExecutor executor) {
+            this.executor = executor;
+        }
+
+        @SubscribeEvent
+        public void onTick(TickEvent.ServerTickEvent event) {
+            if (event.phase != TickEvent.Phase.END) {
+                return;
+            }
+            if (executor.tick()) {
+                MinecraftForge.EVENT_BUS.unregister(this);
+            }
+        }
     }
 }
