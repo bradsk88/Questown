@@ -6,6 +6,7 @@ import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
+import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
@@ -30,8 +31,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
+import ca.bradj.questown.town.quests.MCQuest;
+import ca.bradj.questown.town.quests.Quest;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -162,6 +167,18 @@ public class TownFlagBlock extends BaseEntityBlock {
     ) {
         ItemStack itemInHand = player.getItemInHand(hand);
 
+        if (Ingredient.of(ItemTags.LOGS).test(itemInHand) && !entity.isFlagpoleBuilt()) {
+            if (hasActiveExoticWoodQuest(entity, itemInHand)) {
+                itemInHand.shrink(1);
+                BlockPos above = entity.getBlockPos().above();
+                level.setBlock(above, Blocks.OAK_FENCE.defaultBlockState(), 3);
+                level.setBlock(above.above(), Blocks.OAK_FENCE.defaultBlockState(), 3);
+                entity.setFlagpoleBuilt(true);
+                entity.setChanged();
+                return InteractionResult.CONSUME;
+            }
+        }
+
         if (itemInHand.getItem().equals(Items.DIRT)) {
             entity.giveBonusFood(player);
             return InteractionResult.CONSUME;
@@ -281,6 +298,38 @@ public class TownFlagBlock extends BaseEntityBlock {
         return null;
     }
 
+    private static boolean shouldPreSelectBopTab(TownFlagBlockEntity entity, ServerPlayer player) {
+        if (entity.getBlocksOfProgress() <= 0) {
+            return false;
+        }
+        // Pre-select BOP tab if the player hasn't viewed it yet
+        ResourceLocation advId = new ResourceLocation(Questown.MODID, "first_bop_view");
+        net.minecraft.advancements.Advancement adv = player.getServer().getAdvancements().getAdvancement(advId);
+        if (adv == null) {
+            return true;
+        }
+        return !player.getAdvancements().getOrStartProgress(adv).isDone();
+    }
+
+    private static boolean hasActiveExoticWoodQuest(TownFlagBlockEntity entity, ItemStack itemInHand) {
+        ResourceLocation heldItemId = Compat.getItemId(itemInHand.getItem());
+        for (Quest<ResourceLocation, ?> q : entity.getAllQuests()) {
+            if (q.getType() != Quest.QuestType.ITEM) {
+                continue;
+            }
+            if (q.isComplete()) {
+                continue;
+            }
+            if (q.getFlavorText() == null || !q.getFlavorText().contains("flagpole")) {
+                continue;
+            }
+            if (heldItemId.equals(q.getWantedId())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static void StoreParentOnNBT(
             ItemStack itemInHand,
             BlockPos p
@@ -388,7 +437,16 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         if (oEntity.get().isInitialized()) {
-            oEntity.get().getVillagerHandle().showMultiStatusUI((ServerPlayer) player);
+            if (shouldPreSelectBopTab(entity, (ServerPlayer) player)) {
+                entity.menus.showUI(
+                        (ServerPlayer) player,
+                        OpenFlagMenuMessage.BOP,
+                        entity.getInfo(),
+                        entity.getBlocksOfProgress()
+                );
+            } else {
+                oEntity.get().getVillagerHandle().showMultiStatusUI((ServerPlayer) player);
+            }
         } else {
             if (!oEntity.get().isInitializing()) {
                 oEntity.get().initializeFreshFlag(true);

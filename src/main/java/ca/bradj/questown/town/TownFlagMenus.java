@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.advancements.RoomTrigger;
+import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.network.EconomicsUpdate;
@@ -42,14 +43,13 @@ public class TownFlagMenus {
     public void showUI(
             ServerPlayer sender,
             String type,
-            FlagTabsEmbedding.FlagInfo flagInfo,
+            FlagTabsEmbedding.FlagInfo inputFlagInfo,
             int blocksOfProgress
     ) {
-        // TODO: Make it possible to change villager jobs from the flag?
-//        syncWorkToClient(sender);
-
-        BlockPos flagPos = flagInfo.flagPos();
-        TownInterface flag = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(flagPos);
+        BlockPos flagPos = inputFlagInfo.flagPos();
+        TownFlagBlockEntity flagEntity = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(flagPos);
+        TownInterface flag = flagEntity;
+        FlagTabsEmbedding.FlagInfo realFlagInfo = flagEntity.getInfo();
 
         @SuppressWarnings("DataFlowIssue")
         ImmutableList<AbstractMap.SimpleEntry<MCQuest, MCReward>> quests = flag.getQuestHandle()
@@ -64,15 +64,15 @@ public class TownFlagMenus {
                     triggerAdvancementForAnyFarms(sender, UtilClean.keys(quests));
                     openMenu(
                             sender, (windowId, inv, p) -> new TownQuestsContainer(
-                                    windowId, uiQuests, flagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
-                            ), uiQuests, flagInfo, entities, flag.getBlocksOfProgress()
+                                    windowId, uiQuests, realFlagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
+                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress()
                     );
                 },
                 OpenFlagMenuMessage.VILLAGERS,
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
-                                windowId, flagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
-                        ), uiQuests, flagInfo, entities, flag.getBlocksOfProgress()
+                                windowId, realFlagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
+                        ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress()
                 ),
                 OpenFlagMenuMessage.ECONOMICS,
                 () -> {
@@ -82,18 +82,25 @@ public class TownFlagMenus {
                     );
                     openMenu(
                             sender, (windowId, inv, p) -> new TownEconomicsMenu(
-                                    windowId, flagInfo
-                            ), uiQuests, flagInfo, entities, flag.getBlocksOfProgress()
+                                    windowId, realFlagInfo
+                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress()
                     );
                 },
                 OpenFlagMenuMessage.BOP,
                 () -> {
                     openMenu(
                             sender, (windowId, inv, p) -> new TownBlockofProgressMenu(
-                                    windowId, flagInfo, blocksOfProgress
-                            ), uiQuests, flagInfo, entities, flag.getBlocksOfProgress()
+                                    windowId, realFlagInfo, blocksOfProgress
+                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress()
                     );
-                }
+                    AdvancementsInit.TUTORIAL_TRIGGER.trigger(sender, TutorialTrigger.Triggers.FirstBopView);
+                },
+                OpenFlagMenuMessage.CRAFTING,
+                () -> openMenu(
+                        sender, (windowId, inv, p) -> new FlagCraftingMenu(
+                                windowId, realFlagInfo
+                        ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress()
+                )
         );
 
         Runnable runnable = showers.get(type);

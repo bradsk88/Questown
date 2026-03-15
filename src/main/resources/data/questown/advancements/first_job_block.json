@@ -1,11 +1,11 @@
 {
   "display": {
     "title": {
-      "text": "TO-DO",
+      "text": "Open for Business",
       "color": "white"
     },
     "description": {
-      "text": "Place a block which a villager can use to do work"
+      "text": "Place a work block that a villager can use"
     },
     "icon": {
       "item": "crafting_table"

@@ -30,6 +30,7 @@ public class FlagMenus {
     MultiStatusMenu villagersMenu;
     TownEconomicsMenu econMenu;
     TownBlockofProgressMenu bopMenu;
+    FlagCraftingMenu craftingMenu;
 
     public FlagMenus() {
     }
@@ -43,11 +44,9 @@ public class FlagMenus {
             // Buffer reads - order must match write()
             Collection<UIQuest> quests = VillagerQuestsContainer.readQuests(buf);
             BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
-            int blocksOfProgress = TownBlockofProgressMenu.read(buf);
-            FlagTabsEmbedding.FlagInfo flagInfo = FlagTabsEmbedding.FlagInfo.dumb(
-                    flagPos,
-                    blocksOfProgress > 0
-            ); // TODO: Or maybe always show?
+            TownBlockofProgressMenu.ReadResult bopResult = TownBlockofProgressMenu.readWithFlagInfo(buf);
+            int blocksOfProgress = bopResult.blocksOfProgress();
+            FlagTabsEmbedding.FlagInfo flagInfo = bopResult.flagInfo();
 
             FlagMenus menus = new FlagMenus();
             // Never provide these initializers with the entity, itself. Instead, pass the entity's UUID.
@@ -56,6 +55,7 @@ public class FlagMenus {
             menus.initMultiVillagerStatusMenuClientSide(windowId, flagInfo);
             menus.initEconClientSide(windowId, flagInfo);
             menus.initBlocksOfProgress(windowId, flagInfo, blocksOfProgress);
+            menus.initCrafting(windowId, flagInfo);
             return menus;
         } catch (Exception e) {
             QT.GUI_LOGGER.error("Failed to open town quests container: {}", e.getMessage());
@@ -159,5 +159,12 @@ public class FlagMenus {
             int blocksOfProgress
     ) {
         bopMenu = new TownBlockofProgressMenu(windowId, flagPos, blocksOfProgress);
+    }
+
+    private void initCrafting(
+            int windowId,
+            FlagTabsEmbedding.FlagInfo flagInfo
+    ) {
+        craftingMenu = new FlagCraftingMenu(windowId, flagInfo);
     }
 }

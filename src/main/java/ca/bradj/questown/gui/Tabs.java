@@ -3,7 +3,9 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
+import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
+import net.minecraft.client.gui.GuiComponent;
 
 import java.util.function.Consumer;
 
@@ -53,7 +55,15 @@ public class Tabs {
             int tabY = bgY - tab.getHeight();
             tab.draw(rc.stack(), tabX + X_OFFSET, tabY + Y_OFFSET);
             tabs.get(i).renderFunc().accept(rc, tabX, tabY);
+            if (tabs.get(i).hasNotification()) {
+                drawNotificationDot(rc.stack(), tabX + tab.getWidth() - 2, tabY + Y_OFFSET + 2);
+            }
         }
+    }
+
+    private void drawNotificationDot(PoseStack stack, int x, int y) {
+        int red = 0xFFFF3333;
+        GuiComponent.fill(stack, x, y, x + 4, y + 4, red);
     }
 
     public boolean mouseClicked(

@@ -1,0 +1,17 @@
+{
+  "sortnum": 8,
+  "name": "The Crafter's Workshop",
+  "icon": "minecraft:book",
+  "category": "questown:lessons",
+  "advancement": "questown:tutorial_complete",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The crafter automates crafting at scale. Bowls, shears, fishing rods, ladders, paper -- your crafter makes them so you don't have to.$(br2)And some items are crafter-exclusive: fishing stations can ONLY be made by a crafter villager."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "The crafter skill tree branches from sticks into specialized tools. Unlock fishing_rod before you can unlock fishing_station."
+    }
+  ]
+}

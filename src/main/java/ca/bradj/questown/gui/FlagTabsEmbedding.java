@@ -13,17 +13,21 @@ public interface FlagTabsEmbedding {
             boolean showVillagersTab,
             boolean showQuestsTab,
             boolean showEconTab,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean hasIncompleteQuests
     ) {
         public static FlagInfo dumb(BlockPos flagPos, boolean showBOP) {
-            // Assumes that we should always show all tabs (except BOP)
-            // TODO: Player onboarding might be improved by hiding some tabs initially
-            return new FlagInfo(flagPos, true, true, true, showBOP);
+            return new FlagInfo(flagPos, true, true, true, showBOP, false);
+        }
+
+        public static FlagInfo withQuestNotification(BlockPos flagPos, boolean showBOP, boolean hasIncompleteQuests) {
+            return new FlagInfo(flagPos, true, true, true, showBOP, hasIncompleteQuests);
         }
 
         public static FlagInfo read(FriendlyByteBuf buf) {
             return new FlagInfo(
                     buf.readBlockPos(),
+                    buf.readBoolean(),
                     buf.readBoolean(),
                     buf.readBoolean(),
                     buf.readBoolean(),
@@ -37,6 +41,7 @@ public interface FlagTabsEmbedding {
             data.writeBoolean(showQuestsTab);
             data.writeBoolean(showEconTab);
             data.writeBoolean(showBlockOfProgressTab);
+            data.writeBoolean(hasIncompleteQuests);
         }
     }
 

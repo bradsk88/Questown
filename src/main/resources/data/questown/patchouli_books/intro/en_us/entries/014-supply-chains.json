@@ -1,0 +1,13 @@
+{
+  "sortnum": 14,
+  "name": "14: Supply Chains",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:second_job_type",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Your villagers feed each other's work. Try this: set up a farmer, then unlock and build a baker. Watch the baker turn your farmer's wheat into bread automatically.$(br2)The store room is the hub -- everyone deposits and picks up from there. If someone is idle, check whether their supplier is keeping up."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "sortnum": 9,
+  "name": "Room Upgrades",
+  "icon": "minecraft:book",
+  "category": "questown:lessons",
+  "advancement": "questown:first_room_upgrade",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Add blocks to upgrade rooms. Don't demolish -- just add. Quests tell you what to build next."
+    }
+  ]
+}

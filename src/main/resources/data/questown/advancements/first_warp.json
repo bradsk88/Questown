@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "While You Were Away",
+      "color": "white"
+    },
+    "description": {
+      "text": "Leave town for at least one day and return to see what your villagers produced"
+    },
+    "icon": {
+      "item": "minecraft:compass"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:tutorial_trigger",
+      "conditions": {
+        "context": "first_warp"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  },
+  "parent": "questown:second_job_type"
+}

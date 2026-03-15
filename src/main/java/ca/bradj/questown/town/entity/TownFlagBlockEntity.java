@@ -104,6 +104,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final TownFlagTicker ticker = new TownFlagTicker();
 
     int bopCount = 0;
+    boolean tutorialBopGranted = false;
+    int completedProceduralBatches = 0;
+    private boolean flagpoleBuilt = false;
 
     private final LazyOptional<IItemHandler> itemHandler = LazyOptional.of(() -> new TownFlagBOPItemHandler(this));
     boolean givenBonusFood;
@@ -155,6 +158,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public int getBlocksOfProgress() {
         return bopCount;
     }
+
+    public boolean isFlagpoleBuilt() {
+        return flagpoleBuilt;
+    }
+
+    public void setFlagpoleBuilt(boolean built) {
+        this.flagpoleBuilt = built;
+    }
+
 
     private static Map<String, InitPair> initPairs;
 
@@ -844,7 +856,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public FlagTabsEmbedding.FlagInfo getInfo() {
-        return FlagTabsEmbedding.FlagInfo.dumb(getBlockPos(), bopCount > 0);
+        boolean hasIncomplete = quests.getAll().stream().anyMatch(q -> !q.isComplete());
+        return FlagTabsEmbedding.FlagInfo.withQuestNotification(getBlockPos(), bopCount > 0, hasIncomplete);
     }
 
     public void ejectBlockOfProgress(ServerPlayer sender) {

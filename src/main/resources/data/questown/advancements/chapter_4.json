@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "The Growing Town",
+      "color": "white"
+    },
+    "description": {
+      "text": "Complete 20 procedural quest batches"
+    },
+    "icon": {
+      "item": "questown:town_flag_block"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:tutorial_trigger",
+      "conditions": {
+        "context": "chapter_4"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 500
+  },
+  "parent": "questown:chapter_3"
+}

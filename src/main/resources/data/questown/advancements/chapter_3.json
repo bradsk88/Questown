@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "Tools of the Trade",
+      "color": "white"
+    },
+    "description": {
+      "text": "Complete 10 procedural quest batches"
+    },
+    "icon": {
+      "item": "minecraft:iron_pickaxe"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:tutorial_trigger",
+      "conditions": {
+        "context": "chapter_3"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 300
+  },
+  "parent": "questown:chapter_2"
+}

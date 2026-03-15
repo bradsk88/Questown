@@ -110,6 +110,7 @@ public class Questown {
         MenuScreens.register(MenuTypesInit.CONFIRM_JOB_CHANGE.get(), JobChangeConfirmScreen::new);
         MenuScreens.register(MenuTypesInit.VILLAGER_BLOCKS_OF_PROGRESS.get(), VillagerBlockofProgressScreen::new);
         MenuScreens.register(MenuTypesInit.TOWN_BLOCKS_OF_PROGRESS.get(), TownBlockofProgressScreen::new);
+        MenuScreens.register(MenuTypesInit.FLAG_CRAFTING.get(), FlagCraftingScreen::new);
         event.enqueueWork(() -> EntityRenderers.register(
                 EntitiesInit.VISITOR.get(),
                 VisitorMobRenderer::new

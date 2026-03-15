@@ -1,11 +1,11 @@
 {
   "display": {
     "title": {
-      "text": "TO-DO",
+      "text": "Magic Stick",
       "color": "white"
     },
     "description": {
-      "text": "Acquire a wand from a Town Flag"
+      "text": "Acquire a Town Wand from the flag's crafting tab"
     },
     "icon": {
       "item": "questown:town_wand"

@@ -6,6 +6,8 @@ import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.core.advancements.TutorialTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
 import ca.bradj.questown.jobs.JobID;
@@ -33,9 +35,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.LazyOptional;
@@ -410,6 +415,10 @@ public class TownFlagState {
             long timeSinceWake
     ) {
         long levelDayTime = level.getDayTime();
+
+        // Snapshot container contents before warp for summary
+        Map<ResourceLocation, Integer> beforeItems = snapshotContainerItems(e, level);
+
         MCTownState newState = null;
         try {
             newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
@@ -418,6 +427,8 @@ public class TownFlagState {
                 Compat.getBlockStoredTagData(e).put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
                 TownFlagState.recoverMobs(parent, level);
                 parent.getKnowledgeHandle().registerFoundLoots(newState.knowledge());
+
+                sendWarpSummary(e, level, timeSinceWake, beforeItems);
             }
         } catch (Exception ex) {
             if (Config.CRASH_ON_FAILED_WARP.get()) {
@@ -429,6 +440,78 @@ public class TownFlagState {
         // TODO: Make sure chests get filled/empty
         flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, levelDayTime);
         return newState;
+    }
+
+    private Map<ResourceLocation, Integer> snapshotContainerItems(TownFlagBlockEntity e, ServerLevel level) {
+        Map<ResourceLocation, Integer> snapshot = new HashMap<>();
+        ImmutableList<MCTownItem> allStacks = TownContainers.getAllStacks(e, level);
+        for (MCTownItem stack : allStacks) {
+            if (stack.isEmpty()) {
+                continue;
+            }
+            ResourceLocation id = Compat.getItemId(stack.get());
+            snapshot.merge(id, stack.toMCItemStack().getCount(), Integer::sum);
+        }
+        return snapshot;
+    }
+
+    private void sendWarpSummary(
+            TownFlagBlockEntity e,
+            ServerLevel level,
+            long timeSinceWake,
+            Map<ResourceLocation, Integer> beforeItems
+    ) {
+        // Only show summary for meaningful absences (at least half a MC day)
+        if (timeSinceWake < 12000) {
+            return;
+        }
+
+        Map<ResourceLocation, Integer> afterItems = snapshotContainerItems(e, level);
+
+        // Compute deltas (new items produced)
+        Map<ResourceLocation, Integer> deltas = new HashMap<>();
+        for (Map.Entry<ResourceLocation, Integer> entry : afterItems.entrySet()) {
+            int before = beforeItems.getOrDefault(entry.getKey(), 0);
+            int delta = entry.getValue() - before;
+            if (delta > 0) {
+                deltas.put(entry.getKey(), delta);
+            }
+        }
+
+        if (deltas.isEmpty()) {
+            return;
+        }
+
+        long daysAway = timeSinceWake / 24000;
+        String dayStr = daysAway == 1 ? "1 day" : daysAway + " days";
+
+        StringBuilder items = new StringBuilder();
+        int count = 0;
+        for (Map.Entry<ResourceLocation, Integer> entry : deltas.entrySet()) {
+            if (count > 0) {
+                items.append(", ");
+            }
+            String itemName = entry.getKey().getPath().replace("_", " ");
+            items.append(entry.getValue()).append(" ").append(itemName);
+            count++;
+            if (count >= 5) {
+                int remaining = deltas.size() - 5;
+                if (remaining > 0) {
+                    items.append(", and ").append(remaining).append(" more");
+                }
+                break;
+            }
+        }
+
+        String message = "While you were away (" + dayStr + "): " + items;
+        e.messages.broadcastMessage(message);
+
+        // Fire FirstWarp advancement if away for 1+ MC day
+        if (daysAway >= 1) {
+            AdvancementsInit.TUTORIAL_TRIGGER.triggerForNearestPlayer(
+                    level, TutorialTrigger.Triggers.FirstWarp, e.getBlockPos()
+            );
+        }
     }
 
     private void profileTick(long startTime) {
@@ -464,7 +547,7 @@ public class TownFlagState {
                 QT.FLAG_LOGGER.error("Entity is null at {}, but was expected to be a container", bp);
                 continue;
             }
-            LazyOptional<IItemHandler> cap = entity.getCapability(Compat.ITEM_HANDLER);
+            LazyOptional<IItemHandler> cap = entity.getCapability(Compat.itemHandler());
             if (!cap.isPresent()) {
                 continue;
             }

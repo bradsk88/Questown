@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "Supply Chain",
+      "color": "white"
+    },
+    "description": {
+      "text": "Have multiple job types working simultaneously"
+    },
+    "icon": {
+      "item": "minecraft:bread"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:tutorial_trigger",
+      "conditions": {
+        "context": "second_job_type"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  },
+  "parent": "questown:tutorial_complete"
+}

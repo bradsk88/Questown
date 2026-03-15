@@ -9,3 +9,4 @@ logs
 # Claude Code project config (versioned separately)
 .claude/
 /.claude.json
+CLAUDE.md

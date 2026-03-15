@@ -455,6 +455,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         villagerTick(sl);
         long end = System.currentTimeMillis();
 
+        spawnIdleParticlesIfNeeded(sl);
+
         tickTimes.add((int) (end - start));
 
         Integer rate = Compat.configGet(Config.TICK_SAMPLING_RATE).get();
@@ -469,6 +471,20 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
     }
 
+
+    private void spawnIdleParticlesIfNeeded(ServerLevel sl) {
+        if (sl.getGameTime() % 40 != 0) {
+            return;
+        }
+        IStatus<?> s = getStatusForServer();
+        if (s == null) {
+            return;
+        }
+        if (!s.name().equals("NO_SUPPLIES")) {
+            return;
+        }
+        addParticlesAroundSelf(sl, ParticleTypes.ANGRY_VILLAGER);
+    }
 
     protected void addParticlesAroundSelf(ServerLevel sl, ParticleOptions p_35288_) {
         double d0 = this.random.nextGaussian() * 0.02D;

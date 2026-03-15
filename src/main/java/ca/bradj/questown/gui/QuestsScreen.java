@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.gui.PagedCardScreen.Card;
@@ -16,11 +17,13 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
+import vazkii.patchouli.api.PatchouliAPI;
 
 import java.util.*;
 
@@ -137,6 +140,11 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         int idX = card.coords().leftXPadded();
         int idY = card.coords().topYPadded();
         this.font.draw(poseStack, recipeName.getString(), idX, card.coords().topYPadded(), TEXT_COLOR);
+        if (recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()) {
+            int flavorY = card.coords().topYPadded() + 10;
+            String flavorTruncated = truncateFlavorText(recipe.getFlavorText(), card.coords().rightX() - card.coords().leftX() - 8);
+            this.font.draw(poseStack, flavorTruncated, idX, flavorY, 0x808080);
+        }
         String vID = recipe.villagerUUID();
         String jobName = recipe.jobName();
 
@@ -193,6 +201,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             case ITEM -> renderItemQuestTooltip(recipe);
             case ROOM -> ImmutableList.of(Compat.translatable("menu.quests.room_quest"));
             case JOB_CHANGE -> renderJobQuestTooltip(recipe);
+            case CONCURRENT_JOBS -> ImmutableList.of(Compat.literal("Have all listed jobs active at the same time"));
             case UNKNOWN -> null;
         };
     }
@@ -207,7 +216,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         JobID job = JobID.fromRL(recipe.getWantedId());
         return ImmutableList.of(
                 Compat.translatable("menu.questown.quests.job_quest_1", job.jobId()),
-                Compat.translatable("menu.questown.quests.job_quest_2", job.rootId())
+                Compat.translatable("menu.questown.quests.job_quest_2", job.rootId()),
+                Compat.literal("Click for more info")
         );
     }
 
@@ -320,6 +330,9 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 return true;
             }
         }
+        if (openLessonForClickedCard(x, y)) {
+            return true;
+        }
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         this.tabs.mouseClicked(bgX, bgY, x, y);
@@ -364,6 +377,49 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    private static final ResourceLocation BOOK_ID = new ResourceLocation(Questown.MODID, "intro");
+
+    private boolean openLessonForClickedCard(double mouseX, double mouseY) {
+        for (Card<UIQuest> card : cards()) {
+            CardCoordinates c = card.coords();
+            if (mouseX < c.leftX() || mouseX > c.rightX() || mouseY < c.topY() || mouseY > c.bottomY()) {
+                continue;
+            }
+            UIQuest quest = quests.get(card.index());
+            if (quest == null) {
+                continue;
+            }
+            ResourceLocation entry = lessonEntryForQuestType(quest.getType());
+            if (entry == null) {
+                continue;
+            }
+            PatchouliAPI.get().openBookEntry(BOOK_ID, entry, 0);
+            return true;
+        }
+        return false;
+    }
+
+    private static @Nullable ResourceLocation lessonEntryForQuestType(Quest.QuestType type) {
+        return switch (type) {
+            case JOB_CHANGE -> new ResourceLocation(Questown.MODID, "lesson_bop");
+            case ROOM -> new ResourceLocation(Questown.MODID, "lesson_room_recipes");
+            case ITEM -> new ResourceLocation(Questown.MODID, "lesson_needs");
+            case CONCURRENT_JOBS -> new ResourceLocation(Questown.MODID, "014-supply-chains");
+            default -> null;
+        };
+    }
+
+    private String truncateFlavorText(String text, int maxWidth) {
+        if (this.font.width(text) <= maxWidth) {
+            return text;
+        }
+        String ellipsis = "...";
+        while (text.length() > 3 && this.font.width(text + ellipsis) > maxWidth) {
+            text = text.substring(0, text.length() - 1);
+        }
+        return text + ellipsis;
     }
 
     public List<Rect2i> getExtraAreas() {

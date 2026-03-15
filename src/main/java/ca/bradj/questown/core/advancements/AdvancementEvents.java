@@ -26,7 +26,16 @@ public class AdvancementEvents {
             RoomTrigger.Triggers.FirstJobBoard.getID(),
             RoomTrigger.Triggers.FirstStoreRoom.getID(),
             RoomTrigger.Triggers.FirstWelcomeMat.getID(),
-            RoomTrigger.Triggers.FirstOpenFlagMenu.getID()
+            RoomTrigger.Triggers.FirstOpenFlagMenu.getID(),
+            TutorialTrigger.Triggers.TutorialComplete.getID(),
+            TutorialTrigger.Triggers.SecondJobType.getID(),
+            TutorialTrigger.Triggers.FirstWarp.getID(),
+            TutorialTrigger.Triggers.FirstRoomUpgrade.getID(),
+            TutorialTrigger.Triggers.FirstBopView.getID(),
+            TutorialTrigger.Triggers.FirstBopSpend.getID(),
+            TutorialTrigger.Triggers.Chapter2.getID(),
+            TutorialTrigger.Triggers.Chapter3.getID(),
+            TutorialTrigger.Triggers.Chapter4.getID()
     );
 
 

@@ -1,0 +1,13 @@
+{
+  "sortnum": 15,
+  "name": "15: While You Were Away",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:first_warp",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Your village ran itself while you were gone. Travel far away, explore, adventure. When you come back, check the store room -- your villagers kept producing.$(br2)Make sure they have supplies and storage before you leave."
+    }
+  ]
+}

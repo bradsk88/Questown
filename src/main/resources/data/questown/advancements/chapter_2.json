@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "Feeding the Village",
+      "color": "white"
+    },
+    "description": {
+      "text": "Complete 5 procedural quest batches after the tutorial"
+    },
+    "icon": {
+      "item": "minecraft:bread"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:tutorial_trigger",
+      "conditions": {
+        "context": "chapter_2"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 200
+  },
+  "parent": "questown:first_warp"
+}

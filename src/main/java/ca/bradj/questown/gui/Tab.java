@@ -6,6 +6,7 @@ public record Tab(
         TriConsumer<RenderContext, Integer, Integer> renderFunc,
         Runnable onClick,
         String titleKey,
-        boolean selected
+        boolean selected,
+        boolean hasNotification
 ) {
 }

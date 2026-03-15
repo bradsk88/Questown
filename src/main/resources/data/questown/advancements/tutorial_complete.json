@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "Tutorial Complete",
+      "color": "white"
+    },
+    "description": {
+      "text": "Complete all tutorial quests and unlock the crafter"
+    },
+    "icon": {
+      "item": "minecraft:writable_book"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:tutorial_trigger",
+      "conditions": {
+        "context": "tutorial_complete"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 100
+  },
+  "parent": "questown:first_job_done"
+}

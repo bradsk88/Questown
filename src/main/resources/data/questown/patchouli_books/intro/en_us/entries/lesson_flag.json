@@ -1,0 +1,13 @@
+{
+  "sortnum": 6,
+  "name": "The Flag",
+  "icon": "minecraft:book",
+  "category": "questown:lessons",
+  "advancement": "questown:first_open_flag_menu",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Right-click the flag to open the town menu. From here you can see your villagers, quests, economics, and BOP tabs.$(br2)The flag also converts items: hold a stick and right-click to get a town wand, or hold a pressure plate to get a welcome mat."
+    }
+  ]
+}

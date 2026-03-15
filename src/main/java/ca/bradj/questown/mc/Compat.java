@@ -60,8 +60,19 @@ import java.util.function.Supplier;
  */
 public class Compat {
     public static final RandomSource RANDOM = RandomSource.create();
-    public static final IForgeRegistry<EntityType<?>> ENTITY_TYPES = ForgeRegistries.ENTITY_TYPES;
-    public static final @NotNull Capability<IItemHandler> ITEM_HANDLER = ForgeCapabilities.ITEM_HANDLER;
+
+    private static class ForgeRefs {
+        static final IForgeRegistry<EntityType<?>> ENTITY_TYPES = ForgeRegistries.ENTITY_TYPES;
+        static final @NotNull Capability<IItemHandler> ITEM_HANDLER = ForgeCapabilities.ITEM_HANDLER;
+    }
+
+    public static IForgeRegistry<EntityType<?>> entityTypes() {
+        return ForgeRefs.ENTITY_TYPES;
+    }
+
+    public static @NotNull Capability<IItemHandler> itemHandler() {
+        return ForgeRefs.ITEM_HANDLER;
+    }
 
     public static void playNeutralSound(
             ServerLevel serverLevel,

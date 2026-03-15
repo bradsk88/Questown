@@ -111,6 +111,12 @@ public class QuestownNetwork {
                         decoder(GiveBOPMessage::decode),
                 GiveBOPMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(FlagCraftMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                        encoder(FlagCraftMessage::encode).
+                        decoder(FlagCraftMessage::decode),
+                FlagCraftMessage::handle
+        ).add();
     }
 
     private static void initMessagesToClient() {
