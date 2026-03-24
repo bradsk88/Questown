@@ -751,20 +751,20 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
 
-        MCQuest gateQuest = roomQuest(batchUUID, SpecialQuests.TOWN_GATE);
-        gateQuest.setFlavorText("Build a fence gate entrance for your town. Villagers need a way in.");
-        q.addNewQuest(gateQuest);
-
         MCQuest jobBoardQuest = roomQuest(batchUUID, SpecialQuests.JOB_BOARD);
-        jobBoardQuest.setFlavorText("Place a lectern in a room and register the door. This is how villagers find work.");
+        jobBoardQuest.setFlavorText("Place a wooden sign in a registered room. It will become a Job Board — this is how villagers find work.");
         q.addNewQuest(jobBoardQuest);
 
         MCQuest storeRoomQuest = roomQuest(batchUUID, SpecialQuests.STORE_ROOM_SMALL);
         storeRoomQuest.setFlavorText("Place a chest in a room and register the door. Villagers store their work here.");
         q.addNewQuest(storeRoomQuest);
 
+        MCQuest gateQuest = roomQuest(batchUUID, SpecialQuests.TOWN_GATE);
+        gateQuest.setFlavorText("Build a fence gate entrance for your town. Villagers need a way in.");
+        q.addNewQuest(gateQuest);
+
         MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.WOODEN_SWORD), 1);
-        swordQuest.setFlavorText("Craft a wooden sword and toss it near the town flag. Your villager will need it.");
+        swordQuest.setFlavorText("Craft a wooden sword and place it in your store room chest. Your villager will need it.");
         q.addNewQuest(swordQuest);
 
         MCQuestBatch qb = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_KICKOFF));
@@ -784,11 +784,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
 
         MCQuest muttonQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.MUTTON), 1);
-        muttonQuest.setFlavorText("Hunt a sheep and toss the mutton near the flag. Your villagers need food.");
+        muttonQuest.setFlavorText("Hunt a sheep and place the mutton in a store room chest. Your villagers need food.");
         q.addNewQuest(muttonQuest);
 
         MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.STONE_SWORD), 1);
-        swordQuest.setFlavorText("Upgrade your villager's weapon. Craft a stone sword and toss it near the flag.");
+        swordQuest.setFlavorText("Upgrade your villager's weapon. Craft a stone sword and place it in a store room chest.");
         q.addNewQuest(swordQuest);
 
         MCQuest hunterQuest = MCQuest.jobChange(batchUUID, null, new JobID("hunter", "sword"));
@@ -810,7 +810,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         JobID jc = view.chooseJobForTutorial(questBatches);
 
         MCQuest appleQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.APPLE), 10);
-        appleQuest.setFlavorText("Gather apples and toss them near the flag. A growing village needs supplies.");
+        appleQuest.setFlavorText("Gather apples and place them in a store room chest. A growing village needs supplies.");
         q.addNewQuest(appleQuest);
 
         MCQuest jobQuest = MCQuest.jobChange(batchUUID, null, jc);
