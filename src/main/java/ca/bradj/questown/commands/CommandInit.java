@@ -4,7 +4,6 @@ import ca.bradj.questown.Questown;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.server.command.ConfigCommand;
 
 @Mod.EventBusSubscriber(modid = Questown.MODID)
 public class CommandInit {

@@ -1,9 +1,9 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.gui.town.status.MultiStatusScreenSyncMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.town.status.MultiStatusScreen;
+import ca.bradj.questown.gui.town.status.MultiStatusScreenSyncMessage;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.StatusListener;

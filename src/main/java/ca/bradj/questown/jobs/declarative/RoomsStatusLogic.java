@@ -8,7 +8,6 @@ import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.jetbrains.annotations.NotNull;

@@ -2,6 +2,8 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.core.network.ShowTutorialToastMessage;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
@@ -13,6 +15,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
@@ -39,6 +42,19 @@ public class TownMessages {
                                    .getPlayerList()
                                    .getPlayers()) {
             p.displayClientMessage(Compat.translatable(key, args), false);
+        }
+    }
+
+    void broadcastTutorialToast(String titleKey, String descriptionKey) {
+        if (level == null) {
+            QT.FLAG_LOGGER.debug("Skipping tutorial toast before TownMessages was initialized: {} {}", titleKey, descriptionKey);
+            return;
+        }
+        for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
+            QuestownNetwork.CHANNEL.send(
+                    PacketDistributor.PLAYER.with(() -> p),
+                    new ShowTutorialToastMessage(titleKey, descriptionKey)
+            );
         }
     }
 

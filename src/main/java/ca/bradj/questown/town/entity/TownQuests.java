@@ -6,6 +6,7 @@ import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TagsInit;
@@ -14,17 +15,15 @@ import ca.bradj.questown.gui.ItemEconomicsData;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
-import ca.bradj.questown.jobs.WorksBehaviour;
-import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.town.CoreProgression;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.*;
 import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
@@ -424,99 +423,121 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             return Tutorial.SKIPPED;
         }
 
+        Tutorial r;
+        r = tryPhase1_campfireToKickoff(view);       if (r != null) return r;
+        r = tryPhase2_hunterGatherer(view);           if (r != null) return r;
+        r = tryPhase2_5_jobChangeAndFood(view);       if (r != null) return r;
+        r = tryPhase3_newJobRoom(view);               if (r != null) return r;
+        r = tryPhase4_crafter(view);                  if (r != null) return r;
+        r = tryPhase5_supplyChain(view);              if (r != null) return r;
+        r = tryPhase6_storageUpgrade(view);           if (r != null) return r;
+        r = tryPhase7_exoticWood(view);               if (r != null) return r;
+        return Tutorial.DONE;
+    }
+
+    private @Nullable Tutorial tryPhase1_campfireToKickoff(TutorialTownView view) {
         if (questBatches.hasOneQuestOnly(SpecialQuests.CAMPFIRE::equals)) {
-            // Phase one: Ask for the bare essentials (bedroom, storeroom, job board, gate)
             addQuestsForVillagerKickoff(view);
-            return Tutorial.APPLIED;
-        }
-
-        if (!allVillagerKickoffQuestsDone()) {
-            return Tutorial.SKIPPED;
-        }
-
-        if (view.villagerCount() < 2) {
-            return Tutorial.SKIPPED;
-        }
-
-        if (!questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE)) {
-            // Phase two: Get the player to hunter-gatherer status
-            grantTutorialBop(view);
-            addHunterGatherer(view);
+            view.broadcastTutorialToast(
+                    "tutorial.visitor_arrived.title",
+                    "tutorial.visitor_arrived.description"
+            );
             notifyNewQuests(view);
             return Tutorial.APPLIED;
         }
+        if (!allVillagerKickoffQuestsDone()) {
+            return Tutorial.SKIPPED;
+        }
+        return null;
+    }
 
+    private @Nullable Tutorial tryPhase2_hunterGatherer(TutorialTownView view) {
+        if (view.villagerCount() < 2) {
+            return Tutorial.SKIPPED;
+        }
+        if (questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE)) {
+            return null;
+        }
+        grantTutorialBop(view);
+        addHunterGatherer(view);
+        notifyNewQuests(view);
+        return Tutorial.APPLIED;
+    }
+
+    private @Nullable Tutorial tryPhase2_5_jobChangeAndFood(TutorialTownView view) {
         if (view.villagerCount() < 3) {
             return Tutorial.SKIPPED;
         }
-
         if (questBatches.getAll().stream().filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE).count() < 2) {
-            // Phase two: Ask the player to complete at least two job changes
             addQuestsForJobChangeAndFood(view);
             notifyNewQuests(view);
             return Tutorial.APPLIED;
         }
-
         if (questBatches.getAll().stream().filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE && q.isComplete()).count() < 2) {
             return Tutorial.SKIPPED;
         }
+        return null;
+    }
 
+    private @Nullable Tutorial tryPhase3_newJobRoom(TutorialTownView view) {
         @Nullable JobHaver jobToCreateRoomFor = getJobToCreateRoomFor(view);
-        if (jobToCreateRoomFor != null) {
-            // Phase three: Ask the player to provide the room for the second new (and random) job
-            addQuestForNewJobRoom(view, jobToCreateRoomFor);
-            notifyNewQuests(view);
-            return Tutorial.APPLIED;
+        if (jobToCreateRoomFor == null) {
+            return null;
         }
+        addQuestForNewJobRoom(view, jobToCreateRoomFor);
+        notifyNewQuests(view);
+        return Tutorial.APPLIED;
+    }
 
-        // Phase 4 gate: all phase 3 quests complete
+    private @Nullable Tutorial tryPhase4_crafter(TutorialTownView view) {
         if (!phase4Started()) {
             view.fireTutorialTrigger(TutorialTrigger.Triggers.TutorialComplete);
             addPhase4CrafterQuests(view);
             notifyNewQuests(view);
             return Tutorial.APPLIED;
         }
-
         if (!phase4Complete()) {
             return Tutorial.SKIPPED;
         }
+        return null;
+    }
 
-        // Phase 5 gate: crafter/bowl JOB_CHANGE quest is complete
+    private @Nullable Tutorial tryPhase5_supplyChain(TutorialTownView view) {
         if (!phase5Started()) {
             addPhase5SupplyChainQuests(view);
             notifyNewQuests(view);
             return Tutorial.APPLIED;
         }
-
         if (!phase5Complete()) {
             return Tutorial.SKIPPED;
         }
+        return null;
+    }
 
-        // Phase 6 gate: Phase 5 CONCURRENT_JOBS complete
+    private @Nullable Tutorial tryPhase6_storageUpgrade(TutorialTownView view) {
         if (!phase6Started()) {
             view.fireTutorialTrigger(TutorialTrigger.Triggers.SecondJobType);
             addPhase6StorageUpgradeQuest(view);
             notifyNewQuests(view);
             return Tutorial.APPLIED;
         }
-
         if (!phase6Complete()) {
             return Tutorial.SKIPPED;
         }
+        return null;
+    }
 
-        // Phase 7 gate: Phase 6 ROOM complete
+    private @Nullable Tutorial tryPhase7_exoticWood(TutorialTownView view) {
         if (!phase7Started()) {
             view.fireTutorialTrigger(TutorialTrigger.Triggers.FirstRoomUpgrade);
             addPhase7ExoticWoodQuest(view);
             notifyNewQuests(view);
             return Tutorial.APPLIED;
         }
-
         if (!phase7Complete()) {
             return Tutorial.SKIPPED;
         }
-
-        return Tutorial.DONE;
+        return null;
     }
 
     private static final ResourceLocation CRAFTER_STICK_JOB = JobID.toRL(new JobID("crafter", "stick"));
@@ -526,6 +547,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private static final ResourceLocation CRAFTING_ROOM = new ResourceLocation("questown", "crafting_room");
     private static final ResourceLocation KITCHEN_SMALL = new ResourceLocation("questown", "kitchen_small");
     private static final ResourceLocation STORE_ROOM_MEDIUM = new ResourceLocation("questown", "store_room_medium");
+
+    static final String PHASE_7_FLAVOR_KEYWORD = "flagpole";
 
     private boolean phase4Started() {
         return questBatches.includes(q -> CRAFTER_STICK_JOB.equals(q.getWantedId()) && q.getType() == Quest.QuestType.JOB_CHANGE);
@@ -552,11 +575,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     private boolean phase7Started() {
-        return questBatches.includes(q -> q.getType() == Quest.QuestType.ITEM && q.getFlavorText() != null && q.getFlavorText().contains("flagpole"));
+        return questBatches.includes(q -> q.getType() == Quest.QuestType.ITEM && q.getFlavorText() != null && q.getFlavorText().contains(PHASE_7_FLAVOR_KEYWORD));
     }
 
     private boolean phase7Complete() {
-        return questBatches.includes(q -> q.getType() == Quest.QuestType.ITEM && q.getFlavorText() != null && q.getFlavorText().contains("flagpole") && q.isComplete());
+        return questBatches.includes(q -> q.getType() == Quest.QuestType.ITEM && q.getFlavorText() != null && q.getFlavorText().contains(PHASE_7_FLAVOR_KEYWORD) && q.isComplete());
     }
 
     private void grantTutorialBop(TutorialTownView view) {
@@ -585,7 +608,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         craftingRoomQuest.setFlavorText("The crafter needs a workshop. Place a crafting table in a room and register the door with your wand.");
         batchA.addNewQuest(craftingRoomQuest);
 
-        MCQuestBatch batchAQ = batchA.withRewardUponCompletion(view.makeReward("phase4a"));
+        MCQuestBatch batchAQ = batchA.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_4A));
         questBatches.add(batchAQ);
 
         // Batch B: Specialize crafter to bowl
@@ -596,7 +619,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         bowlJobQuest.setFlavorText("Unlock Bowl Crafting on the skill tree. It costs another Block of Progress -- check the flag's BOP tab if you need more.");
         batchB.addNewQuest(bowlJobQuest);
 
-        MCQuestBatch batchBQ = batchB.withRewardUponCompletion(view.makeReward("phase4b"));
+        MCQuestBatch batchBQ = batchB.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_4B));
         questBatches.add(batchBQ);
 
         QT.QUESTS_LOGGER.info("Tutorial phase 4 quests added (crafter + bowl)");
@@ -616,7 +639,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         kitchenQuest.setFlavorText("Your baker needs a kitchen. Place a furnace in a room and register the door.");
         q.addNewQuest(kitchenQuest);
 
-        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward("phase5"));
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_5));
         questBatches.add(qq);
         QT.QUESTS_LOGGER.info("Tutorial phase 5 quests added (supply chain)");
     }
@@ -629,7 +652,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         upgradeQuest.setFlavorText("Storage fills fast. Upgrade before production stops.");
         q.addNewQuest(upgradeQuest);
 
-        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward("phase6"));
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_6));
         questBatches.add(qq);
         QT.QUESTS_LOGGER.info("Tutorial phase 6 quest added (storage upgrade)");
     }
@@ -641,10 +664,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
         MCQuest woodQuest = MCQuest.item(batchUUID, null, exoticWood, 1);
         String woodName = exoticWood.getPath().replace("_", " ");
-        woodQuest.setFlavorText("Your village deserves a proper flagpole. Bring back " + woodName + " from the lands beyond.");
+        woodQuest.setFlavorText("Your village deserves a proper " + PHASE_7_FLAVOR_KEYWORD + ". Bring back " + woodName + " from the lands beyond.");
         q.addNewQuest(woodQuest);
 
-        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward("phase7"));
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_7));
         questBatches.add(qq);
         QT.QUESTS_LOGGER.info("Tutorial phase 7 quest added (exotic wood: {})", exoticWood);
     }
@@ -727,10 +750,24 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private void addQuestsForVillagerKickoff(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
-        VILLAGER_KICKOFF_QUESTS.forEach(k -> q.addNewQuest(roomQuest(batchUUID, k)));
-        q.addNewQuest(MCQuest.item(batchUUID, null, Compat.getItemId(Items.WOODEN_SWORD), 1));
 
-        MCQuestBatch qb = q.withRewardUponCompletion(view.makeReward("kickoff"));
+        MCQuest gateQuest = roomQuest(batchUUID, SpecialQuests.TOWN_GATE);
+        gateQuest.setFlavorText("Build a fence gate entrance for your town. Villagers need a way in.");
+        q.addNewQuest(gateQuest);
+
+        MCQuest jobBoardQuest = roomQuest(batchUUID, SpecialQuests.JOB_BOARD);
+        jobBoardQuest.setFlavorText("Place a lectern in a room and register the door. This is how villagers find work.");
+        q.addNewQuest(jobBoardQuest);
+
+        MCQuest storeRoomQuest = roomQuest(batchUUID, SpecialQuests.STORE_ROOM_SMALL);
+        storeRoomQuest.setFlavorText("Place a chest in a room and register the door. Villagers store their work here.");
+        q.addNewQuest(storeRoomQuest);
+
+        MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.WOODEN_SWORD), 1);
+        swordQuest.setFlavorText("Craft a wooden sword and toss it near the town flag. Your villager will need it.");
+        q.addNewQuest(swordQuest);
+
+        MCQuestBatch qb = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_KICKOFF));
         questBatches.add(qb);
         QT.QUESTS_LOGGER.debug("Tutorial quests added to town: {}", qb.toNiceString());
     }
@@ -745,14 +782,24 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private void addHunterGatherer(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
-        q.addNewQuest(MCQuest.item(batchUUID, null, Compat.getItemId(Items.MUTTON), 1));
-        q.addNewQuest(MCQuest.item(batchUUID, null, Compat.getItemId(Items.STONE_SWORD), 1));
+
+        MCQuest muttonQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.MUTTON), 1);
+        muttonQuest.setFlavorText("Hunt a sheep and toss the mutton near the flag. Your villagers need food.");
+        q.addNewQuest(muttonQuest);
+
+        MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.STONE_SWORD), 1);
+        swordQuest.setFlavorText("Upgrade your villager's weapon. Craft a stone sword and toss it near the flag.");
+        q.addNewQuest(swordQuest);
+
         MCQuest hunterQuest = MCQuest.jobChange(batchUUID, null, new JobID("hunter", "sword"));
         hunterQuest.setFlavorText("Right-click a villager and use Blocks of Progress");
         q.addNewQuest(hunterQuest);
-        q.addNewQuest(MCQuest.standalone(batchUUID, null, SpecialQuests.BEDROOM));
 
-        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward("hunterGatherer"));
+        MCQuest bedroomQuest = MCQuest.standalone(batchUUID, null, SpecialQuests.BEDROOM);
+        bedroomQuest.setFlavorText("Place a bed in a room and register the door. Villagers need rest.");
+        q.addNewQuest(bedroomQuest);
+
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_HUNTER_GATHERER));
         questBatches.add(qq);
         QT.QUESTS_LOGGER.debug("Tutorial batch #1.5 was added to town: {}", qq.toNiceString());
     }
@@ -761,10 +808,16 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
         JobID jc = view.chooseJobForTutorial(questBatches);
-        q.addNewQuest(MCQuest.item(batchUUID, null, Compat.getItemId(Items.APPLE), 10));
-        q.addNewQuest(MCQuest.jobChange(batchUUID, null, jc));
 
-        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward("jobChangeAndFood"));
+        MCQuest appleQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.APPLE), 10);
+        appleQuest.setFlavorText("Gather apples and toss them near the flag. A growing village needs supplies.");
+        q.addNewQuest(appleQuest);
+
+        MCQuest jobQuest = MCQuest.jobChange(batchUUID, null, jc);
+        jobQuest.setFlavorText("Your town needs variety. Open a villager's skill tree and assign a new job.");
+        q.addNewQuest(jobQuest);
+
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_JOB_CHANGE_FOOD));
         questBatches.add(qq);
         QT.QUESTS_LOGGER.debug("Tutorial batch #2 was added to town: {}", qq.toNiceString());
     }
@@ -778,7 +831,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         ResourceLocation room = view.getRoomForJob(job.job());
         q.addNewQuest(MCQuest.standalone(batchUUID, job.villager(), room));
 
-        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward("newJobRoom"));
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_NEW_JOB_ROOM));
         questBatches.add(qq);
         QT.QUESTS_LOGGER.debug("Tutorial batch #3 was added to town: {}", qq.toNiceString());
     }
@@ -920,7 +973,33 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             RoomRecipeMatch<MCRoom> match
     ) {
         ServerLevel l = town.getServerLevelUnsafe();
-        runForTopMatch(this::recipesFromLevel, match, r -> markQuestAsComplete(room, r));
+        runForTopMatch(this::recipesFromLevel, match, r -> {
+            markQuestAsComplete(room, r);
+            if (isWorkBlockRoom(r)) {
+                AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
+                        l,
+                        RoomTrigger.Triggers.FirstJobBlock,
+                        Positions.ToBlock(room.getDoorPos(), room.yCoord)
+                );
+            }
+        });
+    }
+
+    private static final ImmutableSet<ResourceLocation> NON_WORK_ROOMS = ImmutableSet.of(
+            SpecialQuests.CAMPFIRE,
+            SpecialQuests.BROKEN,
+            SpecialQuests.TOWN_GATE,
+            SpecialQuests.TOWN_FLAG,
+            SpecialQuests.FARM,
+            SpecialQuests.BEDROOM,
+            SpecialQuests.STORE_ROOM_SMALL,
+            SpecialQuests.JOB_BOARD,
+            SpecialQuests.DINING_ROOM,
+            SpecialQuests.CLINIC
+    );
+
+    private static boolean isWorkBlockRoom(ResourceLocation recipeId) {
+        return !SpecialQuests.isSpecialQuest(recipeId) && !NON_WORK_ROOMS.contains(recipeId);
     }
 
     private Map<ResourceLocation, RoomRecipe> recipesFromLevel() {

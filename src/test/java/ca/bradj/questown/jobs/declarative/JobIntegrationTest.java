@@ -1,7 +1,10 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.core.UtilClean;
-import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.GathererJournalTest;
+import ca.bradj.questown.jobs.JobDefinition;
+import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.TestInventory;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.Room;

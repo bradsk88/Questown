@@ -1,6 +1,5 @@
 package ca.bradj.questown.town.entity;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
@@ -70,6 +69,11 @@ class TownFlagTutorialAdapter implements TutorialTownView {
     }
 
     @Override
+    public void broadcastTutorialToast(String titleKey, String descriptionKey) {
+        flag.messages.broadcastTutorialToast(titleKey, descriptionKey);
+    }
+
+    @Override
     public void fireTutorialTrigger(TutorialTrigger.Triggers trigger) {
         if (!(flag.getLevel() instanceof ServerLevel sl)) {
             return;
@@ -108,12 +112,12 @@ class TownFlagTutorialAdapter implements TutorialTownView {
     @Override
     public MCReward makeReward(String phaseName) {
         return switch (phaseName) {
-            case "kickoff" -> new MCRewardList(
+            case TutorialTownView.PHASE_KICKOFF -> new MCRewardList(
                     flag,
                     new MCDelayedReward(flag, new SpawnVisitorReward(flag, VillagerUUID.random())),
                     new MCInstantReward(flag, new AddBatchOfQuestsForVisitorReward(flag, null))
             );
-            case "hunterGatherer" -> {
+            case TutorialTownView.PHASE_HUNTER_GATHERER -> {
                 VillagerUUID nextVisitorUUID = VillagerUUID.random();
                 yield new MCRewardList(
                         flag,
@@ -121,7 +125,8 @@ class TownFlagTutorialAdapter implements TutorialTownView {
                         new AddBatchOfQuestsForVisitorReward(flag, VillagerUUID.get(nextVisitorUUID))
                 );
             }
-            case "newJobRoom", "phase7" -> new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
+            case TutorialTownView.PHASE_NEW_JOB_ROOM, TutorialTownView.PHASE_7 ->
+                    new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
             default -> new AddBatchOfQuestsForVisitorReward(flag, null);
         };
     }
@@ -145,16 +150,7 @@ class TownFlagTutorialAdapter implements TutorialTownView {
         return ca.bradj.questown.gui.Ingredients.fromString(v.ingredientKey()).test(z.toMCItemStack());
     }
 
-    private static ResourceLocation getExoticWoodForTown(TownFlagBlockEntity t) {
-        if (!(t.getLevel() instanceof ServerLevel sl)) {
-            return Compat.getItemId(Items.DARK_OAK_LOG);
-        }
-
-        ResourceLocation biomeName = sl.getBiome(t.getBlockPos()).unwrapKey()
-                                        .map(k -> k.location())
-                                        .orElse(new ResourceLocation("minecraft", "plains"));
-        String biome = biomeName.getPath();
-
+    static ResourceLocation chooseExoticWood(String biomePath) {
         Map<String, ResourceLocation> nativeWoods = Map.of(
                 "forest", Compat.getItemId(Items.OAK_LOG),
                 "birch", Compat.getItemId(Items.BIRCH_LOG),
@@ -176,7 +172,7 @@ class TownFlagTutorialAdapter implements TutorialTownView {
 
         ResourceLocation nativeWood = null;
         for (Map.Entry<String, ResourceLocation> entry : nativeWoods.entrySet()) {
-            if (biome.contains(entry.getKey())) {
+            if (biomePath.contains(entry.getKey())) {
                 nativeWood = entry.getValue();
                 break;
             }
@@ -189,5 +185,15 @@ class TownFlagTutorialAdapter implements TutorialTownView {
         }
 
         return Compat.getItemId(Items.DARK_OAK_LOG);
+    }
+
+    private static ResourceLocation getExoticWoodForTown(TownFlagBlockEntity t) {
+        if (!(t.getLevel() instanceof ServerLevel sl)) {
+            return Compat.getItemId(Items.DARK_OAK_LOG);
+        }
+        String biome = sl.getBiome(t.getBlockPos()).unwrapKey()
+                          .map(k -> k.location().getPath())
+                          .orElse("plains");
+        return chooseExoticWood(biome);
     }
 }

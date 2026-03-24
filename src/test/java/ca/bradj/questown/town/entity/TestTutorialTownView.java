@@ -17,6 +17,7 @@ class TestTutorialTownView implements TutorialTownView {
     private int bopGranted;
     private final List<String> messagesSent = new ArrayList<>();
     private final List<TutorialTrigger.Triggers> triggersFired = new ArrayList<>();
+    private final List<String> rewardPhaseNames = new ArrayList<>();
     private ResourceLocation exoticWood;
     private JobID jobForTutorial;
     private ResourceLocation roomForJob;
@@ -54,6 +55,11 @@ class TestTutorialTownView implements TutorialTownView {
     }
 
     @Override
+    public void broadcastTutorialToast(String titleKey, String descriptionKey) {
+        messagesSent.add(titleKey + ":" + descriptionKey);
+    }
+
+    @Override
     public void fireTutorialTrigger(TutorialTrigger.Triggers trigger) {
         triggersFired.add(trigger);
     }
@@ -76,6 +82,7 @@ class TestTutorialTownView implements TutorialTownView {
 
     @Override
     public MCReward makeReward(String phaseName) {
+        rewardPhaseNames.add(phaseName);
         return new NoOpReward();
     }
 
@@ -89,6 +96,10 @@ class TestTutorialTownView implements TutorialTownView {
 
     int getBopGranted() {
         return bopGranted;
+    }
+
+    List<String> getRewardPhaseNames() {
+        return rewardPhaseNames;
     }
 
     static class Builder {

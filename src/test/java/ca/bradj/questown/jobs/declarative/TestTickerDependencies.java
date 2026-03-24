@@ -13,8 +13,14 @@ import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
-import java.util.function.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * Test implementation of DeclarativeJobTicker.Dependencies for integration tests.

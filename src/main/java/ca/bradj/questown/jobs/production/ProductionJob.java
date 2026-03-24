@@ -3,8 +3,6 @@ package ca.bradj.questown.jobs.production;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.VillagerUUID;
-import ca.bradj.questown.core.advancements.RoomTrigger;
-import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.integration.RandomShortLivedWorkSpot;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.integration.minecraft.MCContainer;
@@ -106,13 +104,6 @@ public abstract class ProductionJob<
                     bp -> bp.relative(Compat.getRandomHorizontal(sl))
             );
             this.jobSite = js.value();
-            if (this.jobSite != null) {
-                AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
-                        town.getServerLevel(),
-                        RoomTrigger.Triggers.FirstJobBlock,
-                        this.jobSite
-                );
-            }
         }
         return jobSite;
     }

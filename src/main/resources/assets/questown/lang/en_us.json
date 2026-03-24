@@ -416,5 +416,7 @@
   "#minecraft:coals": "Coal",
   "#questown:armor_materials": "Armor Materials",
   "room.armory": "Armory",
-  "jobs.armorer": "Armorer"
+  "jobs.armorer": "Armorer",
+  "tutorial.visitor_arrived.title": "A visitor has arrived!",
+  "tutorial.visitor_arrived.description": "Right-click them to say hello"
 }

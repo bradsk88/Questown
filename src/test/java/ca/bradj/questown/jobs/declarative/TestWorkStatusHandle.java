@@ -2,14 +2,10 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
-import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
-import org.jetbrains.annotations.Nullable;
-
-import java.util.Collection;
 
 /**
  * Test implementation of WorkStatusHandle that extends AbstractWorkStatusStore

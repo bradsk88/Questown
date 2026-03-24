@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.roomrecipes.core.Room;
 import com.google.common.collect.ImmutableMap;

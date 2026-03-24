@@ -1,9 +1,6 @@
 package ca.bradj.questown.jobs.production;
 
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.logic.PredicateCollection;
-import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.questown.mc.PredicateCollectionsClean;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import com.google.common.collect.ImmutableList;

@@ -198,6 +198,12 @@ public class QuestownNetwork {
                         decoder(SyncStatusTextMessage::decode),
                 SyncStatusTextMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(ShowTutorialToastMessage.class, NetworkDirection.PLAY_TO_CLIENT).
+                        encoder(ShowTutorialToastMessage::encode).
+                        decoder(ShowTutorialToastMessage::decode),
+                ShowTutorialToastMessage::handle
+        ).add();
     }
 
     public static <T> SimpleChannel.MessageBuilder<T> registerMessage(

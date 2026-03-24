@@ -5,8 +5,8 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
-import ca.bradj.questown.town.quests.QuestBatch;
 import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.quests.QuestBatch;
 import ca.bradj.questown.town.special.SpecialQuests;
 import net.minecraft.SharedConstants;
 import net.minecraft.resources.ResourceLocation;
@@ -16,7 +16,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.UUID;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -508,6 +508,39 @@ class TutorialPhaseGateTest {
 
         quests.addTutorialBatches(view);
         assertEquals(0, view.getBopGranted());
+    }
+
+    @Test
+    void allPhaseNamesAreFromKnownConstants() {
+        Set<String> knownPhaseNames = Set.of(
+                TutorialTownView.PHASE_KICKOFF,
+                TutorialTownView.PHASE_HUNTER_GATHERER,
+                TutorialTownView.PHASE_JOB_CHANGE_FOOD,
+                TutorialTownView.PHASE_NEW_JOB_ROOM,
+                TutorialTownView.PHASE_4A,
+                TutorialTownView.PHASE_4B,
+                TutorialTownView.PHASE_5,
+                TutorialTownView.PHASE_6,
+                TutorialTownView.PHASE_7
+        );
+
+        // Run through all phases to completion and collect phase names
+        TownQuests quests = questsAtPhase7();
+        ResourceLocation exoticWood = new ResourceLocation("minecraft", "jungle_log");
+        TestTutorialTownView view = TestTutorialTownView.builder()
+                .villagerCount(3)
+                .exoticWood(exoticWood)
+                .build();
+        quests.addTutorialBatches(view);
+        quests.questBatches.markRecipeAsComplete(null, exoticWood);
+        quests.addTutorialBatches(view);
+
+        List<String> collectedNames = view.getRewardPhaseNames();
+        assertFalse(collectedNames.isEmpty(), "Should have collected at least one phase name");
+        for (String name : collectedNames) {
+            assertTrue(knownPhaseNames.contains(name),
+                    "Phase name '" + name + "' is not in the known constants set");
+        }
     }
 
     @Test

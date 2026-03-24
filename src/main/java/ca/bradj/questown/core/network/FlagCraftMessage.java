@@ -2,8 +2,6 @@ package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.items.ItemsInit;
-import ca.bradj.questown.blocks.WelcomeMatBlock;
-import ca.bradj.questown.items.TownWand;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;

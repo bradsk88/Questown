@@ -1,6 +1,5 @@
 package ca.bradj.questown.town.special;
 
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.PlateBlock;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.blocks.WelcomeMatBlock;
