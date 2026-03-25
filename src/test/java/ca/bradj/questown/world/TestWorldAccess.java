@@ -288,6 +288,19 @@ public class TestWorldAccess implements QTWorldAccess {
     }
 
     @Override
+    public boolean isAir(BlockPos pos) {
+        // NOTE: isAir is not configured in TestWorldAccess. Returns false by default.
+        return false;
+    }
+
+    @Override
+    public List<ItemStack> chopTree(BlockPos trunkPos) {
+        // NOTE: chopTree is not yet implemented in TestWorldAccess.
+        // Add implementation here when arborist rules are tested.
+        throw new UnsupportedOperationException("chopTree not implemented in TestWorldAccess");
+    }
+
+    @Override
     @Deprecated(forRemoval = true)
     public @Nullable ServerLevel asServerLevel() {
         return null;

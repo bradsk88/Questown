@@ -27,6 +27,7 @@ import net.minecraftforge.common.ToolActions;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Function;
 
 /**
  * An in-memory implementation of QTWorldAccess for use during time warp.
@@ -39,7 +40,10 @@ import java.util.*;
  */
 public class WarpWorldAccess implements QTWorldAccess {
 
-    // Keeps a private level for complex operations (drops, recipe lookup, tool transforms)
+    /** Simplified smelting result used internally and in tests. */
+    record SmeltResult(ItemStack result, int cookingTime) {}
+
+    // Keeps a private level for complex operations (drops, tool transforms)
     // but does NOT expose it via asServerLevel().
     private final ServerLevel level;
 
@@ -48,16 +52,45 @@ public class WarpWorldAccess implements QTWorldAccess {
     // cookProgress[0] = cookTime, cookProgress[1] = litTime
     private final Map<BlockPos, int[]> cookProgress = new HashMap<>();
 
-    private final Set<BlockPos> dirtyBlocks = new HashSet<>();
-    private final Set<BlockPos> dirtyContainers = new HashSet<>();
+    final Set<BlockPos> dirtyBlocks = new HashSet<>();
+    final Set<BlockPos> dirtyContainers = new HashSet<>();
+
+    private final Function<ItemStack, Optional<SmeltResult>> recipeResolver;
+    private final Function<ItemStack, Integer> fuelTimeProvider;
 
     private static final int MAX_PROCESSING_TICKS = 13_000;
 
     public WarpWorldAccess(ServerLevel level, Collection<BlockPos> positions) {
         this.level = level;
+        this.recipeResolver = ingredient -> level.getRecipeManager()
+                .getRecipeFor(RecipeType.SMELTING, new net.minecraft.world.SimpleContainer(ingredient), level)
+                .map(r -> new SmeltResult(r.getResultItem().copy(), r.getCookingTime()));
+        this.fuelTimeProvider = fuel -> ForgeHooks.getBurnTime(fuel, RecipeType.SMELTING);
         for (BlockPos pos : positions) {
             blockStates.put(pos, level.getBlockState(pos));
             snapshotContainer(pos);
+        }
+    }
+
+    /**
+     * Test constructor — initializes from pre-built maps with injected recipe and fuel resolvers.
+     * Only for use in unit tests; does not snapshot from a real ServerLevel.
+     */
+    WarpWorldAccess(
+            Map<BlockPos, BlockState> blockStates,
+            Map<BlockPos, List<ItemStack>> containerSlots,
+            Function<ItemStack, Optional<SmeltResult>> recipeResolver,
+            Function<ItemStack, Integer> fuelTimeProvider
+    ) {
+        this.level = null;
+        this.recipeResolver = recipeResolver;
+        this.fuelTimeProvider = fuelTimeProvider;
+        this.blockStates.putAll(blockStates);
+        for (Map.Entry<BlockPos, List<ItemStack>> e : containerSlots.entrySet()) {
+            List<ItemStack> copy = new ArrayList<>();
+            for (ItemStack s : e.getValue()) copy.add(s.copy());
+            this.containerSlots.put(e.getKey(), copy);
+            this.cookProgress.put(e.getKey(), new int[]{0, 0});
         }
     }
 
@@ -111,27 +144,37 @@ public class WarpWorldAccess implements QTWorldAccess {
 
     @Override
     public OptionalInt getBlockIntProperty(BlockPos pos, String propertyName) {
-        BlockState bs = blockStates.getOrDefault(pos, level.getBlockState(pos));
+        BlockState bs = resolveBlockState(pos);
+        if (bs == null) return OptionalInt.empty();
         IntegerProperty ip = findIntProperty(bs, propertyName);
         return ip != null ? OptionalInt.of(bs.getValue(ip)) : OptionalInt.empty();
     }
 
     @Override
     public OptionalInt getMaxBlockIntProperty(BlockPos pos, String propertyName) {
-        BlockState bs = blockStates.getOrDefault(pos, level.getBlockState(pos));
+        BlockState bs = resolveBlockState(pos);
+        if (bs == null) return OptionalInt.empty();
         IntegerProperty ip = findIntProperty(bs, propertyName);
         return ip != null ? OptionalInt.of(Collections.max(ip.getPossibleValues())) : OptionalInt.empty();
     }
 
     @Override
     public void setBlockIntProperty(BlockPos pos, String propertyName, int value) {
-        BlockState bs = blockStates.getOrDefault(pos, level.getBlockState(pos));
+        BlockState bs = resolveBlockState(pos);
+        if (bs == null) return;
         IntegerProperty ip = findIntProperty(bs, propertyName);
         if (ip == null) {
             return;
         }
         blockStates.put(pos, bs.setValue(ip, value));
         dirtyBlocks.add(pos);
+    }
+
+    @Nullable
+    private BlockState resolveBlockState(BlockPos pos) {
+        if (blockStates.containsKey(pos)) return blockStates.get(pos);
+        if (level != null) return level.getBlockState(pos);
+        return null;
     }
 
     @Nullable
@@ -150,14 +193,14 @@ public class WarpWorldAccess implements QTWorldAccess {
 
     @Override
     public boolean isAir(BlockPos pos) {
-        return blockStates.getOrDefault(pos, level.getBlockState(pos)).isAir();
+        BlockState bs = resolveBlockState(pos);
+        return bs == null || bs.isAir();
     }
 
     @Override
     public List<ItemStack> getBlockDrops(BlockPos pos, @Nullable ItemStack tool) {
-        // Drops are computed from the current in-memory block state using the real level
-        // for loot context (this doesn't mutate the world).
-        BlockState bs = blockStates.getOrDefault(pos, level.getBlockState(pos));
+        BlockState bs = resolveBlockState(pos);
+        if (bs == null || level == null) return List.of();
         return Block.getDrops(bs, level, pos, null);
     }
 
@@ -362,20 +405,16 @@ public class WarpWorldAccess implements QTWorldAccess {
             }
 
             // Look up recipe for current ingredient
-            var recipeOpt = level.getRecipeManager().getRecipeFor(
-                    RecipeType.SMELTING,
-                    new net.minecraft.world.SimpleContainer(ingredient),
-                    level
-            );
+            Optional<SmeltResult> recipeOpt = recipeResolver.apply(ingredient);
             if (recipeOpt.isEmpty()) {
                 break;
             }
-            var recipe = recipeOpt.get();
+            SmeltResult recipe = recipeOpt.get();
 
             // Consume fuel if needed
             if (litTime <= 0) {
                 ItemStack fuel = slots.get(1);
-                int burnTime = ForgeHooks.getBurnTime(fuel, RecipeType.SMELTING);
+                int burnTime = fuelTimeProvider.apply(fuel);
                 if (burnTime <= 0) {
                     break;
                 }
@@ -389,9 +428,9 @@ public class WarpWorldAccess implements QTWorldAccess {
             litTime--;
             cookTime++;
 
-            if (cookTime >= recipe.getCookingTime()) {
+            if (cookTime >= recipe.cookingTime()) {
                 // Produce output
-                ItemStack output = recipe.getResultItem().copy();
+                ItemStack output = recipe.result().copy();
                 ItemStack existingOutput = slots.get(2);
                 if (existingOutput.isEmpty()) {
                     slots.set(2, output);
@@ -400,7 +439,7 @@ public class WarpWorldAccess implements QTWorldAccess {
                     existingOutput.grow(output.getCount());
                 } else {
                     // Output slot full — can't produce
-                    cookTime = recipe.getCookingTime(); // don't overflow
+                    cookTime = recipe.cookingTime(); // don't overflow
                     break;
                 }
                 ingredient.shrink(1);

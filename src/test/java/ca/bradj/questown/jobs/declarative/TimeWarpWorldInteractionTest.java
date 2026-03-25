@@ -74,7 +74,8 @@ class TimeWarpWorldInteractionTest {
                 inputs -> null, // claimSpots
                 ImmutableMap.of(), // specialRules
                 ImmutableList.of(), // roomPositions
-                null // assignedWorkBlock
+                null, // assignedWorkBlock
+                null  // warpWorld
         );
     }
 
