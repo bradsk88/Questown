@@ -1,3 +1,4 @@
-Both the farmer jobs and the cook job added code to gain access to real world blocks.
-
-Check and make sure this code is not building the same thing twice. Identify any overlap which can be combined. 
+**Status: Resolved** — both farmer and cook rules now access the world
+exclusively through `QTWorldAccess` (`MinecraftWorldAccess` in production,
+`WarpWorldAccess` during time warp). The abstraction is the consolidation:
+there is no separate farmer-path or cook-path for world access.

@@ -281,38 +281,43 @@ public interface QTWorldAccess {
 
 ## Implementation Strategy
 
-### Phase 1: Create Interface and MC Implementation
+### Phase 1: Create Interface and MC Implementation — **Done**
 
-1. Define `QTWorldAccess` interface with methods for highest-priority jobs (farmer)
-2. Create `MinecraftWorldAccess implements QTWorldAccess` that delegates to real world
-3. Inject `QTWorldAccess` into special rule constructors/events
+1. ✅ Define `QTWorldAccess` interface with methods for highest-priority jobs (farmer)
+2. ✅ Create `MinecraftWorldAccess implements QTWorldAccess` that delegates to real world
+3. ✅ Inject `QTWorldAccess` into special rule constructors/events
 
-### Phase 2: Migrate Farmer Rules
+### Phase 2: Migrate Farmer Rules — **Done**
 
-1. `HarvestCropSpecialRule` → use `getGrowthStage`, `getBlockDrops`, `setGrowthStage`
-2. `UseLastInsertedItemOnBlockSpecialRule` → use `useItemOnBlock`
-3. `DestroyBushSpecialRule` → use `getBlockDrops`, `removeBlock`
-4. `TillWorkspotSpecialRule` → use `applyToolTransformation`
-5. `CompostAtWorkspotSpecialRule` → use processing level methods
+1. ✅ `HarvestCropSpecialRule` → use `getGrowthStage`, `getBlockDrops`, `setGrowthStage`
+2. ✅ `UseLastInsertedItemOnBlockSpecialRule` → use `useItemOnBlock`
+3. ✅ `DestroyBushSpecialRule` → use `getBlockDrops`, `removeBlock`
+4. ✅ `TillWorkspotSpecialRule` → use `applyToolTransformation`
+5. ✅ `CompostAtWorkspotSpecialRule` → use processing level methods
 
-### Phase 3: Create Warp Implementation
+### Phase 3: Create Warp Implementation — **Done**
 
-1. Create `WarpWorldAccess implements QTWorldAccess`
-2. Backed by in-memory state snapshots
-3. Reads from snapshot, writes to delta buffer
-4. After warp, apply deltas to real world via `MinecraftWorldAccess`
+1. ✅ Created `WarpWorldAccess implements QTWorldAccess`
+2. ✅ Backed by in-memory block state and container slot snapshots
+3. ✅ Mutations tracked in dirty sets; `applyTo(ServerLevel)` writes back atomically
+4. ✅ Used by all hook calls (PostInsertHook, PreExtractHook, PostExtractHook) and
+   the warp-interleaved callback (WarpTickHook)
 
-### Phase 4: Migrate Remaining Rules
+### Phase 4: Migrate Remaining Rules — **Partially done**
 
-1. Container rules → container methods
-2. Tree rules → tree methods
-3. Fishing rules → fishing session methods
+1. ✅ Container rules — `InsertIntoSlotSpecialRule`, `TakeFromSlotSpecialRule`,
+   `AddItemToContainerSpecialRule` all use QTWorldAccess container methods;
+   `WarpWorldAccess` handles them in-memory
+2. ⬜ Tree rules — `chopTree` and `useItemOnBlock` in `WarpWorldAccess` still
+   delegate to the real world (out of scope during Phase 3)
+3. ✅ Fishing rules — `deploy_and_retract_fishing_hook` is visual-only; already
+   warp-compatible via null-guard on `asServerLevel()`
 
-### Phase 5: Third-Party Support
+### Phase 5: Third-Party Support — **Not started**
 
-1. Document tier system for modders
-2. Add startup validation for mixed-tier jobs
-3. Add warp-time logging for skipped Tier 2 jobs
+1. ⬜ Document tier system for modders
+2. ⬜ Add startup validation for mixed-tier jobs (jobs calling `asServerLevel()`)
+3. ⬜ Add warp-time logging for skipped Tier 2 jobs
 
 ---
 

@@ -21,7 +21,7 @@
 
 ## TODO / Future Work
 
-- **[todo/farmer-cook-code-redundancy.md](todo/farmer-cook-code-redundancy.md)** — Identify and consolidate overlapping code between farmer and cook jobs for accessing world blocks.
+- **[todo/farmer-cook-code-redundancy.md](todo/farmer-cook-code-redundancy.md)** — ~~Identify and consolidate overlapping code between farmer and cook jobs for accessing world blocks.~~ RESOLVED by QTWorldAccess abstraction.
 - **[todo/special_rule_result.md](todo/special_rule_result.md)** — Support special result values in job JSON instead of `minecraft:air` for jobs fully dependent on special rules.
 - **[todo/test-command-improvement.md](todo/test-command-improvement.md)** — ~~Use existing flag position as origin for `/qt test` command instead of player position.~~ DONE
 - **[bugs/fishing-station-missing-facing-crash.md](bugs/fishing-station-missing-facing-crash.md)** — FishingStationBlock.getAttachPoint crashed when block at work position lacked FACING property during warp.

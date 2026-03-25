@@ -1,7 +1,8 @@
 # Decision: Silent World Access for Simulation
 
 **Date:** 2026-02-12
-**Status:** Active
+**Status:** Superseded for warp by `WarpWorldAccess` (2026-03-25).
+Still active for the realtime path.
 **Revisit when:** A presentation side effect causes visible
 bugs during warp, or when adding particles/chat/animations
 to QTWorldAccess
@@ -23,13 +24,28 @@ realtime and warp without duplicating rule implementations.
 
 ---
 
-## Decision
+## Decision (Original)
 
 `MinecraftWorldAccess.silent(level)` returns an instance where
 presentation methods (`playSound`) are no-ops while all
 state-mutating methods delegate to the real `ServerLevel`.
 Rules don't know or care whether they're running in silent
 mode.
+
+## Evolution
+
+`WarpWorldAccess` (added 2026-03-25) replaced
+`MinecraftWorldAccess.silent()` as the world access used
+during time warp. It keeps the "no sounds" property but adds
+full in-memory state — block property changes and container
+slot mutations go to in-memory maps and are applied back to
+the real world atomically after warp succeeds. This resolved
+the "particle leaks" and "state mutations visible mid-warp"
+risks described below.
+
+`MinecraftWorldAccess.silent()` is now only used in the
+realtime path (where the level is real but sounds should be
+suppressed during certain non-player-triggered operations).
 
 ---
 
@@ -49,16 +65,16 @@ mode.
 
 ## Risks
 
-**Particle leaks.** Some methods like `useItemOnBlock` call
-vanilla MC code (`Item.useOn()`) which may fire particle
-packets internally. The `silent` flag only gates methods we
-control (`playSound`), not side effects buried inside vanilla
-calls. This could send spurious particle packets to nearby
-players during warp.
+**Particle leaks.** *(Partially mitigated by WarpWorldAccess.)*
+Some methods like `useItemOnBlock` still delegate to the real
+world in `WarpWorldAccess` (tree chopping, item-on-block).
+Those may fire particle packets. Rules that operate purely
+through in-memory maps (crop growth, container slots) no
+longer risk this.
 
 **Channel sprawl.** As `QTWorldAccess` gains more presentation
 methods (particles, chat, animations), each needs its own
-`if (silent) return;` guard. Forgetting one may leak effects.
+no-op in `WarpWorldAccess`. Forgetting one may leak effects.
 
 **Sound-as-physics.** Vanilla's sculk sensor reacts to sounds.
 If a rule plays a sound that a sculk sensor should detect,
