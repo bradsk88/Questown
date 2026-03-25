@@ -35,6 +35,10 @@ public class TestWorldAccess implements QTWorldAccess {
     private final Map<net.minecraft.world.item.Item, net.minecraft.world.item.Item> smeltRecipes = new HashMap<>();
     private final Map<BlockPos, Integer> smeltProgress = new HashMap<>();
     private static final int SMELT_TICKS = 200;
+    // Tree blocks: pos -> block type (for chopTree simulation)
+    private final Map<BlockPos, net.minecraft.world.level.block.Block> treeBlocks = new HashMap<>();
+    // Positions where chopTree removed blocks (for assertions)
+    private final Set<BlockPos> choppedBlocks = new HashSet<>();
 
     // --- Builder-style setup methods ---
 
@@ -57,6 +61,15 @@ public class TestWorldAccess implements QTWorldAccess {
     public TestWorldAccess withToolTransformResult(BlockPos pos, boolean result) {
         toolTransformResults.put(pos, result);
         return this;
+    }
+
+    public TestWorldAccess withTreeBlock(BlockPos pos, net.minecraft.world.level.block.Block block) {
+        treeBlocks.put(pos, block);
+        return this;
+    }
+
+    public boolean wasBlockChopped(BlockPos pos) {
+        return choppedBlocks.contains(pos);
     }
 
     public TestWorldAccess withSmeltRecipe(net.minecraft.world.item.Item input, net.minecraft.world.item.Item output) {
@@ -295,9 +308,37 @@ public class TestWorldAccess implements QTWorldAccess {
 
     @Override
     public List<ItemStack> chopTree(BlockPos trunkPos) {
-        // NOTE: chopTree is not yet implemented in TestWorldAccess.
-        // Add implementation here when arborist rules are tested.
-        throw new UnsupportedOperationException("chopTree not implemented in TestWorldAccess");
+        net.minecraft.world.level.block.Block trunkBlock = treeBlocks.get(trunkPos);
+        if (trunkBlock == null) {
+            return List.of();
+        }
+        List<ItemStack> drops = new ArrayList<>();
+        chopTreeInTest(trunkPos.immutable(), trunkBlock, drops, new HashSet<>());
+        return drops;
+    }
+
+    private void chopTreeInTest(
+            BlockPos center,
+            net.minecraft.world.level.block.Block matchBlock,
+            List<ItemStack> drops,
+            Set<BlockPos> visited
+    ) {
+        for (BlockPos adjacent : BlockPos.betweenClosed(
+                center.offset(-1, 0, -1), center.offset(1, 1, 1)
+        )) {
+            BlockPos immutable = adjacent.immutable();
+            if (visited.contains(immutable)) {
+                continue;
+            }
+            if (treeBlocks.get(immutable) != matchBlock) {
+                continue;
+            }
+            visited.add(immutable);
+            treeBlocks.remove(immutable);
+            choppedBlocks.add(immutable);
+            drops.add(matchBlock.asItem().getDefaultInstance());
+            chopTreeInTest(immutable, matchBlock, drops, visited);
+        }
     }
 
     @Override

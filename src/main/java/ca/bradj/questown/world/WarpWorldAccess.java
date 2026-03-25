@@ -212,8 +212,37 @@ public class WarpWorldAccess implements QTWorldAccess {
 
     @Override
     public List<ItemStack> chopTree(BlockPos trunkPos) {
-        // Tree chopping directly modifies the real world (out of scope for in-memory simulation)
-        return new MinecraftWorldAccess(level).chopTree(trunkPos);
+        BlockState trunkState = resolveBlockState(trunkPos);
+        if (trunkState == null || trunkState.isAir()) {
+            return List.of();
+        }
+        Block trunkBlock = trunkState.getBlock();
+        List<ItemStack> drops = new ArrayList<>();
+        chopTreeInMemory(trunkPos.immutable(), trunkBlock, drops, new HashSet<>());
+        return drops;
+    }
+
+    private void chopTreeInMemory(
+            BlockPos center, Block matchBlock,
+            List<ItemStack> drops, Set<BlockPos> visited
+    ) {
+        for (BlockPos adjacent : BlockPos.betweenClosed(
+                center.offset(-1, 0, -1), center.offset(1, 1, 1)
+        )) {
+            BlockPos immutable = adjacent.immutable();
+            if (visited.contains(immutable)) {
+                continue;
+            }
+            BlockState bs = resolveBlockState(immutable);
+            if (bs == null || !bs.is(matchBlock)) {
+                continue;
+            }
+            visited.add(immutable);
+            blockStates.put(immutable, Blocks.AIR.defaultBlockState());
+            dirtyBlocks.add(immutable);
+            drops.add(matchBlock.asItem().getDefaultInstance());
+            chopTreeInMemory(immutable, matchBlock, drops, visited);
+        }
     }
 
     @Override

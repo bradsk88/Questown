@@ -282,6 +282,94 @@ class WarpWorldAccessTest {
     }
 
     // -------------------------------------------------------------------------
+    // chopTree
+    // -------------------------------------------------------------------------
+
+    @Test
+    void chopTree_removesConnectedBlocks_andReturnsDrops() {
+        // 3-block vertical trunk: base, mid, top
+        BlockPos base = new BlockPos(0, 64, 0);
+        BlockPos mid  = new BlockPos(0, 65, 0);
+        BlockPos top  = new BlockPos(0, 66, 0);
+        BlockState log = Blocks.OAK_LOG.defaultBlockState();
+
+        Map<BlockPos, BlockState> blocks = new HashMap<>();
+        blocks.put(base, log);
+        blocks.put(mid, log);
+        blocks.put(top, log);
+
+        WarpWorldAccess world = new WarpWorldAccess(blocks, new HashMap<>(), i -> Optional.empty(), i -> 0);
+        List<ItemStack> drops = world.chopTree(base);
+
+        assertEquals(3, drops.size());
+        assertTrue(drops.stream().allMatch(s -> s.is(Items.OAK_LOG)));
+
+        assertTrue(world.dirtyBlocks.contains(base));
+        assertTrue(world.dirtyBlocks.contains(mid));
+        assertTrue(world.dirtyBlocks.contains(top));
+
+        // All positions should now be AIR in the in-memory state
+        assertTrue(world.isAir(base));
+        assertTrue(world.isAir(mid));
+        assertTrue(world.isAir(top));
+    }
+
+    @Test
+    void chopTree_doesNotRemoveNonMatchingAdjacentBlock() {
+        BlockPos trunk = new BlockPos(0, 64, 0);
+        BlockPos stone = new BlockPos(1, 64, 0);
+
+        Map<BlockPos, BlockState> blocks = new HashMap<>();
+        blocks.put(trunk, Blocks.OAK_LOG.defaultBlockState());
+        blocks.put(stone, Blocks.STONE.defaultBlockState());
+
+        WarpWorldAccess world = new WarpWorldAccess(blocks, new HashMap<>(), i -> Optional.empty(), i -> 0);
+        List<ItemStack> drops = world.chopTree(trunk);
+
+        assertEquals(1, drops.size());
+        assertFalse(world.isAir(stone));
+        assertFalse(world.dirtyBlocks.contains(stone));
+    }
+
+    @Test
+    void chopTree_returnsEmpty_whenTrunkPosIsAir() {
+        Map<BlockPos, BlockState> blocks = new HashMap<>();
+        blocks.put(FIELD, Blocks.AIR.defaultBlockState());
+
+        WarpWorldAccess world = new WarpWorldAccess(blocks, new HashMap<>(), i -> Optional.empty(), i -> 0);
+        List<ItemStack> drops = world.chopTree(FIELD);
+
+        assertTrue(drops.isEmpty());
+    }
+
+    @Test
+    void chopTree_returnsEmpty_forUnknownPosition() {
+        WarpWorldAccess world = new WarpWorldAccess(
+                new HashMap<>(), new HashMap<>(), i -> Optional.empty(), i -> 0
+        );
+        // No level, no blockStates entry — resolveBlockState returns null
+        List<ItemStack> drops = world.chopTree(new BlockPos(99, 64, 99));
+        assertTrue(drops.isEmpty());
+    }
+
+    @Test
+    void chopTree_doesNotLoopInfinitely_onDenseCluster() {
+        // 2x2x2 cube of oak logs — all connected to each other
+        Map<BlockPos, BlockState> blocks = new HashMap<>();
+        BlockState log = Blocks.OAK_LOG.defaultBlockState();
+        for (int x = 0; x <= 1; x++) {
+            for (int y = 64; y <= 65; y++) {
+                for (int z = 0; z <= 1; z++) {
+                    blocks.put(new BlockPos(x, y, z), log);
+                }
+            }
+        }
+        WarpWorldAccess world = new WarpWorldAccess(blocks, new HashMap<>(), i -> Optional.empty(), i -> 0);
+        List<ItemStack> drops = world.chopTree(new BlockPos(0, 64, 0));
+        assertEquals(8, drops.size());
+    }
+
+    // -------------------------------------------------------------------------
     // asServerLevel
     // -------------------------------------------------------------------------
 
