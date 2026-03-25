@@ -11,6 +11,7 @@ import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.NonNullList;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
@@ -23,6 +24,7 @@ import java.util.function.Supplier;
 public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLocation> {
 
     private final ServerLevel level;
+    private final int completedProceduralBatches;
 
     public MCQuestBatch get(
             MCReward rw,
@@ -36,10 +38,12 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
     public QuestBatchSeed(
             ServerLevel level,
             UUID batchUUID,
-            int targetItemWeight
+            int targetItemWeight,
+            int completedProceduralBatches
     ) {
         super(Config.IDEAL_QUEST_THRESHOLD_TICKS.get(), Config.QUEST_GENERATION_MAX_TICKS.get(), targetItemWeight);
         this.level = level;
+        this.completedProceduralBatches = completedProceduralBatches;
         this.batch = new MCQuestBatch(batchUUID, null, null);
     }
 
@@ -103,6 +107,12 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
             ResourceLocation next
     ) {
         mcQuestBatch.addNewQuest(null, next);
+        if (completedProceduralBatches < 3) {
+            List<MCQuest> all = mcQuestBatch.getAll();
+            MCQuest quest = all.get(all.size() - 1);
+            Component roomName = RoomRecipes.getName(next);
+            quest.setFlavorText(String.format("Your village needs a %s. Build one to keep production flowing.", roomName.getString()));
+        }
     }
 
     @Override

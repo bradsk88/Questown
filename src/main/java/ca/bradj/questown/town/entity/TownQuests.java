@@ -346,7 +346,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         //  If it has, discard the pending quests and start over.
         if (pendingQuests == null) {
             QT.QUESTS_LOGGER.debug("Preparing quest batch with target weight: {}", targetItemWeight);
-            pendingQuests = new QuestBatchSeed(level, UUID.randomUUID(), targetItemWeight);
+            pendingQuests = new QuestBatchSeed(level, UUID.randomUUID(), targetItemWeight, this.town.getUnsafe().completedProceduralBatches);
         }
 
         QuestBatchSeed pop = pendingQuests;
@@ -902,7 +902,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private void fireChapterMilestonesIfNeeded() {
         TownFlagBlockEntity t = town.getUnsafe();
         t.completedProceduralBatches++;
-        if (t.completedProceduralBatches == 5) {
+        if (t.completedProceduralBatches == 1) {
+            t.messages.broadcastMessage("messages.tutorial.complete");
+        } else if (t.completedProceduralBatches == 5) {
             fireChapterTrigger(t, TutorialTrigger.Triggers.Chapter2);
         } else if (t.completedProceduralBatches == 10) {
             fireChapterTrigger(t, TutorialTrigger.Triggers.Chapter3);

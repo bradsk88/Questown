@@ -585,33 +585,28 @@ This extends the tutorial's teaching pattern into the procedural phase.
 ========================================================================
 
 
-SECTION 4: PRIORITY RANKING
-=============================
+SECTION 4: STATUS
+===================
 
-These suggestions are ranked by impact-to-effort ratio:
-
-  HIGH IMPACT, LOW EFFORT (text-only fixes):
+  DONE:
     #1  Fix item quest flavor text ("toss" → "place in store room")
     #2  Fix job board quest flavor text ("lectern" → sign mechanic)
     #5  Reorder quest batch to match journal sequence
-
-  HIGH IMPACT, MEDIUM EFFORT:
     #4  BOP earning chat notification (message when BOP earned)
+    #7  Chat message at tutorial end (first procedural batch)
+    #7  Flavor text on first 3 procedural batches
+    #3  Room registration feedback documented (success feedback exists;
+        failure feedback → TODO/dead-door-detection.md)
 
-  MEDIUM IMPACT, LOW EFFORT:
-    #7  Advancement toast at true tutorial end (Phase 7 completion)
-    #7  Flavor text on first 2–3 procedural quests
-
-  MEDIUM IMPACT, MEDIUM EFFORT:
-    #9  Room type in wand feedback message
-    #8  Flag speech bubble quest hint (Option B)
-
-  HIGH IMPACT, HIGH EFFORT:
-    #6  Supply cache mission (replaces item quests + adds exploration)
-
-  MEDIUM IMPACT, HIGH EFFORT:
-    #4  BOP progress indicator in flag UI (the progress bar part)
-    #8  Boss bar quest indicator with disable toggle (Option A)
+  TODO FILES (future work):
+    TODO/supply-cache-mission.md     — replace item quests with map-
+                                       driven exploration (#6)
+    TODO/flag-speech-bubble.md       — diegetic quest hint on flag (#8)
+    TODO/bop-progress-indicator.md   — progress bar in flag UI (#4)
+    TODO/dead-door-detection.md      — failure feedback for invalid
+                                       room registration (#3)
+    TODO/procedural-quest-room-recipes.md — key block names in
+                                       procedural quest flavor text (#9)
 
   ALREADY PLANNED (from v4):
     Flag UI crafting tab (v4 Section 4G)
@@ -632,31 +627,20 @@ follows the journal will complete the Phase 1 batch in order without
 getting stuck on any mechanic — wand, room registration, job board, and
 welcome mat are all taught in sequence with visual diagrams.
 
-The biggest issues are textual contradictions between the quest flavor
-text and the actual mechanics:
+The following issues have been addressed:
 
-  1. Item quest flavor text says "toss near the flag" but items must go
-     in containers in registered rooms. The instructions describe a
-     mechanic that doesn't exist.
-  2. Job board quest flavor text says "lectern" but the mechanic (and
-     journal) uses a sign placed in a room. The quest and journal
-     contradict each other.
-  3. The quest list presents the town gate first, but the journal
-     sequences it last. The two channels pull in opposite directions.
+  1. Item quest flavor text fixed: "toss near the flag" → "place in
+     store room chest" (4 strings updated)
+  2. Job board quest flavor text fixed: "lectern" → sign mechanic
+  3. Quest list reordered to match journal sequence (job board first,
+     town gate after store room)
+  4. BOP earning chat notification added (broadcasts when deposited)
+  5. Tutorial-end chat message added (first procedural batch completion)
+  6. First 3 procedural batches now include flavor text naming the
+     needed room type
 
-These are all low-effort text fixes that would eliminate the main
-sources of player confusion during onboarding.
-
-Beyond the text fixes, two enhancements stand out:
-
-  - Supply cache mission (#6) — replacing the broken "toss" item quests
-    with a map-driven exploration quest tied to the gatherer's first
-    expedition. This is higher effort but solves the item quest problem
-    at the root, introduces an early exploration beat, and teaches
-    players that villagers produce useful things. It would replace
-    critiques #1 and #6 with a single cohesive mechanic.
-
-The post-tutorial transition is also worth addressing: procedural quests
-arrive with no flavor text and no signal that the tutorial is over. A
-brief transition toast and flavor text on the first few procedural quests
-would ease the shift from guided to self-directed play.
+Remaining work is tracked in TODO/ files. The largest remaining
+opportunity is the supply cache mission (TODO/supply-cache-mission.md)
+— replacing item quests with a map-driven exploration mechanic that
+would introduce an early exploration beat and teach players that
+villagers produce useful things.

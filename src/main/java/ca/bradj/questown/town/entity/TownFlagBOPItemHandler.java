@@ -71,6 +71,7 @@ public class TownFlagBOPItemHandler implements IItemHandler {
         if (!simulate) {
             town.bopCount++;
             QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", town.bopCount);
+            town.messages.broadcastMessage("messages.bop.earned");
         }
         return itemStack;
     }
