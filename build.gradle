@@ -85,6 +85,9 @@ minecraft {
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
 
+            jvmArg '-Dquestown.autotest=' + System.getProperty('questown.autotest', 'false')
+            jvmArg '-Dquestown.autotest.warp=' + System.getProperty('questown.autotest.warp', '24000')
+
             mods {
                 questown {
                     source sourceSets.main

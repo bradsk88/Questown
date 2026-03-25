@@ -30,6 +30,7 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -88,6 +89,11 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     }
 
     @Override
+    public boolean isAir(BlockPos pos) {
+        return level.getBlockState(pos).isAir();
+    }
+
+    @Override
     public List<ItemStack> getBlockDrops(BlockPos pos, @Nullable ItemStack tool) {
         BlockState bs = level.getBlockState(pos);
         return Block.getDrops(bs, level, pos, null);
@@ -96,6 +102,25 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     @Override
     public void removeBlock(BlockPos pos) {
         level.removeBlock(pos, true);
+    }
+
+    @Override
+    public List<ItemStack> chopTree(BlockPos trunkPos) {
+        Block trunkBlock = level.getBlockState(trunkPos).getBlock();
+        List<ItemStack> drops = new ArrayList<>();
+        chopTreeRecursive(trunkPos, trunkBlock, drops);
+        return drops;
+    }
+
+    private void chopTreeRecursive(BlockPos center, Block matchBlock, List<ItemStack> drops) {
+        for (BlockPos adjacent : BlockPos.betweenClosed(center.offset(-1, 0, -1), center.offset(1, 1, 1))) {
+            if (!level.getBlockState(adjacent).is(matchBlock)) {
+                continue;
+            }
+            level.removeBlock(adjacent, true);
+            drops.add(matchBlock.asItem().getDefaultInstance());
+            chopTreeRecursive(adjacent.immutable(), matchBlock, drops);
+        }
     }
 
     @Override

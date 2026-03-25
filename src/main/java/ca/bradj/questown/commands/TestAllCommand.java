@@ -1,6 +1,7 @@
 package ca.bradj.questown.commands;
 
 import ca.bradj.questown.commands.test.TestAllExecutor;
+import ca.bradj.questown.commands.test.PlayerTestOutput;
 import ca.bradj.questown.mc.Compat;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -62,8 +63,9 @@ public class TestAllCommand {
 
         ServerLevel level = source.getLevel();
         BlockPos origin = new BlockPos(player.blockPosition());
+        PlayerTestOutput output = new PlayerTestOutput(player, "_qtdev testall");
 
-        TestAllExecutor executor = new TestAllExecutor(level, player, origin, warpAmount);
+        TestAllExecutor executor = new TestAllExecutor(level, output, origin, warpAmount);
 
         TestAllTickListener listener = new TestAllTickListener(executor);
         MinecraftForge.EVENT_BUS.register(listener);

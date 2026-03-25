@@ -1,18 +1,14 @@
 package ca.bradj.questown.commands.test;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -24,6 +20,7 @@ public class TestExecutor {
     private enum Phase {
         DESTROY_NEARBY_FLAGS,
         FLATTEN,
+        SETTLE_BEFORE_PLACE,
         PLACE_FLAG,
         WAIT_FOR_INIT,
         BUILD_ROOM,
@@ -51,7 +48,7 @@ public class TestExecutor {
     }
 
     private final ServerLevel level;
-    private final ServerPlayer player;
+    private final TestOutput output;
     private BlockPos origin;
     private final JobID jobId;
     private final int warpAmount;
@@ -72,18 +69,18 @@ public class TestExecutor {
 
     public TestExecutor(
             ServerLevel level,
-            ServerPlayer player,
+            TestOutput output,
             BlockPos origin,
             JobID jobId,
             int warpAmount,
             TestBlueprint blueprint
     ) {
-        this(level, player, origin, jobId, warpAmount, blueprint, false);
+        this(level, output, origin, jobId, warpAmount, blueprint, false);
     }
 
     public TestExecutor(
             ServerLevel level,
-            ServerPlayer player,
+            TestOutput output,
             BlockPos origin,
             JobID jobId,
             int warpAmount,
@@ -91,12 +88,27 @@ public class TestExecutor {
             boolean warpOnly
     ) {
         this.level = level;
-        this.player = player;
+        this.output = output;
         this.origin = origin;
         this.jobId = jobId;
         this.warpAmount = warpAmount;
         this.blueprint = blueprint;
         this.warpOnly = warpOnly;
+    }
+
+    private int effectiveWarpAmount() {
+        if (blueprint.warpAmountOverride() != null) {
+            return blueprint.warpAmountOverride();
+        }
+        return warpAmount;
+    }
+
+    private void setStartTimeIfNeeded() {
+        if (blueprint.startTimeTick() == null) {
+            return;
+        }
+        level.setDayTime(blueprint.startTimeTick());
+        msg("Set world time to " + blueprint.startTimeTick() + " before warp");
     }
 
     public boolean getWarpPassed() {
@@ -114,6 +126,7 @@ public class TestExecutor {
         switch (phase) {
             case DESTROY_NEARBY_FLAGS -> destroyNearbyFlags();
             case FLATTEN -> flatten();
+            case SETTLE_BEFORE_PLACE -> settleBeforePlace();
             case PLACE_FLAG -> placeFlag();
             case WAIT_FOR_INIT -> waitForInit();
             case BUILD_ROOM -> buildRoom();
@@ -157,8 +170,7 @@ public class TestExecutor {
                         firstFlagPos = pos;
                     }
                     tf.getVillagerHandle().entities().forEach(LivingEntity::kill);
-                    level.removeBlockEntity(pos);
-                    level.removeBlock(pos, true);
+                    level.destroyBlock(pos, false);
                     destroyed++;
                 }
             }
@@ -179,14 +191,23 @@ public class TestExecutor {
             for (int z = -7; z <= 7; z++) {
                 for (int y = 4; y >= 0; y--) {
                     BlockPos pos = origin.offset(x, y, z);
-                    level.removeBlockEntity(pos);
-                    level.removeBlock(pos, false);
+                    level.destroyBlock(pos, false);
                 }
                 BlockPos groundPos = origin.offset(x, -1, z);
                 level.setBlockAndUpdate(groundPos, Blocks.COBBLESTONE.defaultBlockState());
             }
         }
-        phase = Phase.PLACE_FLAG;
+        phase = Phase.SETTLE_BEFORE_PLACE;
+        waitTicks = 0;
+        maxWaitTicks = 5;
+    }
+
+    private void settleBeforePlace() {
+        if (tickTimeout(null)) {
+            phase = Phase.PLACE_FLAG;
+            return;
+        }
+        waitTicks++;
     }
 
     private void placeFlag() {
@@ -268,16 +289,20 @@ public class TestExecutor {
     }
 
     private void spawnVillager() {
-        msg("Spawning villager...");
-        tfbe.addImmediateReward(new SpawnVisitorReward(tfbe));
+        int count = blueprint.effectiveVillagerCount();
+        msg("Spawning " + count + " villager(s)...");
+        for (int i = 0; i < count; i++) {
+            tfbe.addImmediateReward(new SpawnVisitorReward(tfbe));
+        }
         phase = Phase.WAIT_FOR_VILLAGER;
         waitTicks = 0;
-        maxWaitTicks = 100;
+        maxWaitTicks = 100 * blueprint.effectiveVillagerCount();
     }
 
     private void waitForVillager() {
-        if (tfbe.getVillagerHandle().size() > 0) {
-            msg("Villager spawned");
+        int expected = blueprint.effectiveVillagerCount();
+        if (tfbe.getVillagerHandle().size() >= expected) {
+            msg(expected + " villager(s) spawned");
             phase = Phase.ASSIGN_JOB;
             return;
         }
@@ -288,17 +313,12 @@ public class TestExecutor {
     }
 
     private void assignJob() {
-        VillagerUUID vuid = tfbe.getVillagerHandle().getVillagerJobs().keySet().stream()
-                .findFirst()
-                .orElse(null);
-        if (vuid == null) {
-            error("No villager found to assign job");
-            phase = Phase.DONE;
-            return;
+        for (VillagerUUID vuid : tfbe.getVillagerHandle().getVillagerJobs().keySet()) {
+            tfbe.getVillagerHandle().changeJobForVillager(vuid, jobId, false);
+            tfbe.getVillagerHandle().unlockJob(VillagerUUID.get(vuid), jobId);
         }
-        tfbe.getVillagerHandle().changeJobForVillager(vuid, jobId, false);
-        tfbe.getVillagerHandle().unlockJob(VillagerUUID.get(vuid), jobId);
-        msg("Assigned job " + jobId.rootId() + ":" + jobId.jobId() + " to villager");
+        msg("Assigned job " + jobId.rootId() + ":" + jobId.jobId() + " to " +
+                blueprint.effectiveVillagerCount() + " villager(s)");
         phase = Phase.SETTLE;
         waitTicks = 0;
         maxWaitTicks = 10;
@@ -316,7 +336,7 @@ public class TestExecutor {
         MCTownState state = tfbe.captureCurrentState();
         if (state != null) {
             beforeCounts = TestResultChecker.snapshotItemCounts(state);
-            msg("State captured, starting warp of " + warpAmount + " ticks...");
+            msg("State captured, starting warp of " + effectiveWarpAmount() + " ticks...");
             phase = Phase.RUN_WARP;
             return;
         }
@@ -329,7 +349,8 @@ public class TestExecutor {
     }
 
     private void runWarp() {
-        MCTownState warpState = tfbe.warpTime(warpAmount);
+        setStartTimeIfNeeded();
+        MCTownState warpState = tfbe.warpTime(effectiveWarpAmount());
         if (warpState == null) {
             error("Warp returned null state");
             phase = Phase.DONE;
@@ -430,16 +451,15 @@ public class TestExecutor {
     }
 
     private void reassignJob() {
-        VillagerUUID vuid = tfbe.getVillagerHandle().getVillagerJobs().keySet().stream()
-                .findFirst()
-                .orElse(null);
-        if (vuid == null) {
+        if (tfbe.getVillagerHandle().getVillagerJobs().isEmpty()) {
             error("No villager to reassign");
             phase = Phase.DONE;
             return;
         }
-        tfbe.getVillagerHandle().changeJobForVillager(vuid, jobId, false);
-        tfbe.getVillagerHandle().unlockJob(VillagerUUID.get(vuid), jobId);
+        for (VillagerUUID vuid : tfbe.getVillagerHandle().getVillagerJobs().keySet()) {
+            tfbe.getVillagerHandle().changeJobForVillager(vuid, jobId, false);
+            tfbe.getVillagerHandle().unlockJob(VillagerUUID.get(vuid), jobId);
+        }
         msg("Reassigned job " + jobId.rootId() + ":" + jobId.jobId());
         phase = Phase.REFILL_CHEST;
     }
@@ -455,9 +475,10 @@ public class TestExecutor {
 
     private void startMonitor() {
         level.setDayTime(1000);
-        monitorEndTick = level.getGameTime() + warpAmount;
+        int rt = blueprint.effectiveRealtimeTicks(effectiveWarpAmount());
+        monitorEndTick = level.getGameTime() + rt;
         lastReportedPercent = 0;
-        msg("Monitoring real-time effects for " + warpAmount + " ticks...");
+        msg("Monitoring real-time effects for " + rt + " ticks (extrapolating to " + effectiveWarpAmount() + ")...");
         phase = Phase.MONITORING;
     }
 
@@ -468,12 +489,13 @@ public class TestExecutor {
             phase = Phase.CHECK_REALTIME_RESULTS;
             return;
         }
-        long elapsed = currentTick - (monitorEndTick - warpAmount);
-        int percent = (int) (elapsed * 100L / warpAmount);
+        int rt = blueprint.effectiveRealtimeTicks(effectiveWarpAmount());
+        long elapsed = currentTick - (monitorEndTick - rt);
+        int percent = (int) (elapsed * 100L / rt);
         int threshold = (percent / 10) * 10;
         if (threshold > lastReportedPercent && threshold <= 100) {
             lastReportedPercent = threshold;
-            msg("Monitor: " + threshold + "% (" + elapsed + "/" + warpAmount + " ticks)");
+            msg("Monitor: " + threshold + "% (" + elapsed + "/" + rt + " ticks)");
         }
     }
 
@@ -502,21 +524,35 @@ public class TestExecutor {
             return;
         }
         Map<String, Integer> afterCounts = TestResultChecker.snapshotItemCounts(afterState);
-        TestResultChecker.Result result = TestResultChecker.check(beforeRealtimeCounts, afterCounts, blueprint.expectation());
-        broadcastResult("REALTIME", result);
-        compareWarpVsRealtime(result.deltas());
+        Map<String, Integer> rawDeltas = TestResultChecker.computeDeltas(beforeRealtimeCounts, afterCounts);
+        Map<String, Integer> scaledDeltas = scaleDeltas(rawDeltas);
+        TestResultChecker.Result result = TestResultChecker.checkDeltas(scaledDeltas, blueprint.expectation());
+        broadcastResult("REALTIME (extrapolated)", result);
+        compareWarpVsRealtime(scaledDeltas);
         phase = Phase.DONE;
     }
 
-    private void compareWarpVsRealtime(Map<String, Integer> realtimeDeltas) {
-        msg("--- WARP vs REALTIME comparison ---");
+    private Map<String, Integer> scaleDeltas(Map<String, Integer> raw) {
+        int rt = blueprint.effectiveRealtimeTicks(effectiveWarpAmount());
+        int warp = effectiveWarpAmount();
+        if (rt == warp) {
+            return raw;
+        }
+        double scale = (double) warp / rt;
+        Map<String, Integer> scaled = new java.util.HashMap<>();
+        raw.forEach((k, v) -> scaled.put(k, (int) Math.round(v * scale)));
+        return scaled;
+    }
+
+    private void compareWarpVsRealtime(Map<String, Integer> scaledRealtimeDeltas) {
+        msg("--- WARP vs REALTIME comparison (realtime extrapolated to " + effectiveWarpAmount() + " ticks) ---");
         for (TestExpectation.ExpectedProduct product : blueprint.expectation().products()) {
             String item = product.itemRegistryName();
             int warpDelta = warpDeltas.getOrDefault(item, 0);
-            int rtDelta = realtimeDeltas.getOrDefault(item, 0);
+            int rtDelta = scaledRealtimeDeltas.getOrDefault(item, 0);
             int diff = Math.abs(warpDelta - rtDelta);
             String status = diff == 0 ? "[EXACT]" : diff <= 1 ? "[CLOSE]" : "[DIFF]";
-            msg(String.format("  %s %s: warp=%d, realtime=%d, diff=%d", status, item, warpDelta, rtDelta, diff));
+            msg(String.format("  %s %s: warp=%d, realtime(scaled)=%d, diff=%d", status, item, warpDelta, rtDelta, diff));
         }
     }
 
@@ -532,12 +568,10 @@ public class TestExecutor {
     }
 
     private void msg(String text) {
-        Compat.sendMessage(player, Component.literal("[_qtdev test] " + text));
-        QT.FLAG_LOGGER.info("[_qtdev test] {}", text);
+        output.msg(text);
     }
 
     private void error(String text) {
-        Compat.sendMessage(player, Component.literal("[_qtdev test ERROR] " + text));
-        QT.FLAG_LOGGER.error("[_qtdev test] {}", text);
+        output.error(text);
     }
 }

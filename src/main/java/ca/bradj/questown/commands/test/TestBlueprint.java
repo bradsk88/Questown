@@ -16,7 +16,12 @@ public record TestBlueprint(
         BlockPos chestOffset,
         ResourceLocation roomId,
         TestExpectation expectation,
-        @Nullable BlockPos supplyDoorOffset
+        @Nullable BlockPos supplyDoorOffset,
+        @Nullable Integer warpAmountOverride,
+        @Nullable Long startTimeTick,
+        @Nullable Integer villagerCount,
+        boolean realtimePhase,
+        @Nullable Integer realtimeTicks
 ) {
     public TestBlueprint(
             RoomType roomType,
@@ -28,7 +33,29 @@ public record TestBlueprint(
             TestExpectation expectation
     ) {
         this(roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
-             roomId, expectation, null);
+             roomId, expectation, null, null, null, null, false, null);
+    }
+
+    public TestBlueprint(
+            RoomType roomType,
+            Collection<BlockPlacement> blocks,
+            Collection<ItemStack> supplyItems,
+            BlockPos doorOrGateOffset,
+            BlockPos chestOffset,
+            ResourceLocation roomId,
+            TestExpectation expectation,
+            @Nullable BlockPos supplyDoorOffset
+    ) {
+        this(roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
+             roomId, expectation, supplyDoorOffset, null, null, null, false, null);
+    }
+
+    public int effectiveVillagerCount() {
+        return villagerCount != null ? villagerCount : 1;
+    }
+
+    public int effectiveRealtimeTicks(int warpTicks) {
+        return realtimeTicks != null ? realtimeTicks : warpTicks;
     }
 
     public enum RoomType { FARM, INDOOR, WELCOME_MAT, BLOCK_ROOM }

@@ -40,6 +40,26 @@ public class TestResultChecker {
         return counts;
     }
 
+    public static Map<String, Integer> computeDeltas(
+            Map<String, Integer> beforeCounts,
+            Map<String, Integer> afterCounts
+    ) {
+        Map<String, Integer> deltas = new HashMap<>();
+        for (String key : afterCounts.keySet()) {
+            deltas.put(key, afterCounts.get(key) - beforeCounts.getOrDefault(key, 0));
+        }
+        for (String key : beforeCounts.keySet()) {
+            if (!afterCounts.containsKey(key)) {
+                deltas.put(key, -beforeCounts.get(key));
+            }
+        }
+        return deltas;
+    }
+
+    public static Result checkDeltas(Map<String, Integer> deltas, TestExpectation expectation) {
+        return check(new HashMap<>(), deltas, expectation);
+    }
+
     public static Result check(
             Map<String, Integer> beforeCounts,
             Map<String, Integer> afterCounts,

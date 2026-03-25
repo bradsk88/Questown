@@ -1,2 +1,1 @@
-We recently implemented time warp for cooks. We call a smelting function on the furnace block entity so it produces
-results during warp. Does it also use up fuel realistically?
+**CONFIRMED** — `MinecraftWorldAccess.advanceProcessing()` calls `AbstractFurnaceBlockEntity.serverTick()` in a loop, which is the real vanilla furnace tick. Fuel (slot 1) is consumed naturally by that tick logic. The loop exits early via `noSmeltingPossible()` when slot 0 is empty or the furnace is unlit with no fuel remaining. No bug.

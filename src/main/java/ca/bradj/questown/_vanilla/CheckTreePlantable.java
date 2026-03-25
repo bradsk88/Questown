@@ -44,7 +44,7 @@ public class CheckTreePlantable extends JobPhaseModifier {
         BlockPos above = ctx.blockPos().above();
         Iterable<BlockPos> rg = BlockPos.betweenClosed(above.offset(-1, 0, -1), above.offset(1, 0, 1));
         for (BlockPos pos : rg) {
-            if (!ctx.world().asServerLevel().getBlockState(pos).isAir()) {
+            if (!ctx.world().isAir(pos)) {
                 return false;
             }
         }
@@ -81,6 +81,10 @@ public class CheckTreePlantable extends JobPhaseModifier {
             return false;
         }
 
+        // TreeFeature.place() is inherently MC-coupled (runs world-gen logic to test
+        // plantability). There is no QTWorldAccess abstraction for this — it intentionally
+        // stays as an asServerLevel() call. During warp, asServerLevel() returns null and
+        // this check is skipped (handled by the null guard above).
         ServerLevel level = ctx.world().asServerLevel();
         return tree.place(config, new VoidLevel(level), null, level.random, above);
     }

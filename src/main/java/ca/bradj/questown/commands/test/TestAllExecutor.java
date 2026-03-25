@@ -1,25 +1,20 @@
 package ca.bradj.questown.commands.test;
 
-import ca.bradj.questown.QT;
-import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.commands.test.TestBlueprintRegistry.TestEntry;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class TestAllExecutor {
 
     private final ServerLevel level;
-    private final ServerPlayer player;
+    private final TestOutput output;
     private final BlockPos origin;
     private final int warpAmount;
 
-    private final List<Map.Entry<JobID, TestBlueprint>> jobs;
+    private final List<TestEntry> jobs;
     private int currentIndex = 0;
     private TestExecutor currentExecutor;
     private final List<String> results = new ArrayList<>();
@@ -27,12 +22,12 @@ public class TestAllExecutor {
 
     public TestAllExecutor(
             ServerLevel level,
-            ServerPlayer player,
+            TestOutput output,
             BlockPos origin,
             int warpAmount
     ) {
         this.level = level;
-        this.player = player;
+        this.output = output;
         this.origin = origin;
         this.warpAmount = warpAmount;
         this.jobs = TestBlueprintRegistry.getTestableJobs();
@@ -53,28 +48,26 @@ public class TestAllExecutor {
             return true;
         }
 
-        Map.Entry<JobID, TestBlueprint> entry = jobs.get(currentIndex);
-        JobID jobId = entry.getKey();
-        TestBlueprint blueprint = entry.getValue();
+        TestEntry entry = jobs.get(currentIndex);
 
         msg("=== Test " + (currentIndex + 1) + "/" + jobs.size() + ": " +
-                jobId.rootId() + "/" + jobId.jobId() + " ===");
+                entry.name() + " ===");
 
+        boolean warpOnly = !entry.blueprint().realtimePhase();
         currentExecutor = new TestExecutor(
-                level, player, origin, jobId, warpAmount, blueprint, true
+                level, output, origin, entry.jobId(), warpAmount, entry.blueprint(), warpOnly
         );
 
         return false;
     }
 
     private void recordResult() {
-        JobID jobId = currentExecutor.getJobId();
-        String label = jobId.rootId() + "/" + jobId.jobId();
+        TestEntry entry = jobs.get(currentIndex);
         if (currentExecutor.getWarpPassed()) {
-            results.add("[PASS] " + label);
+            results.add("[PASS] " + entry.name());
             passed++;
         } else {
-            results.add("[FAIL] " + label + ": Some expectations failed");
+            results.add("[FAIL] " + entry.name() + ": Some expectations failed");
         }
     }
 
@@ -88,8 +81,15 @@ public class TestAllExecutor {
         msg("========================================");
     }
 
+    public int getPassed() {
+        return passed;
+    }
+
+    public int getTotal() {
+        return jobs.size();
+    }
+
     private void msg(String text) {
-        Compat.sendMessage(player, Component.literal("[_qtdev testall] " + text));
-        QT.FLAG_LOGGER.info("[_qtdev testall] {}", text);
+        output.msg(text);
     }
 }

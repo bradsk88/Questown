@@ -3,6 +3,7 @@ package ca.bradj.questown.commands;
 import ca.bradj.questown.commands.test.TestBlueprint;
 import ca.bradj.questown.commands.test.TestBlueprintRegistry;
 import ca.bradj.questown.commands.test.TestExecutor;
+import ca.bradj.questown.commands.test.PlayerTestOutput;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import com.mojang.brigadier.CommandDispatcher;
@@ -83,8 +84,9 @@ public class TestCommand {
 
         ServerLevel level = source.getLevel();
         BlockPos origin = new BlockPos(player.blockPosition());
+        PlayerTestOutput output = new PlayerTestOutput(player, "_qtdev test");
 
-        TestExecutor executor = new TestExecutor(level, player, origin, jobId, warpAmount, blueprint);
+        TestExecutor executor = new TestExecutor(level, output, origin, jobId, warpAmount, blueprint);
 
         TestTickListener listener = new TestTickListener(executor);
         MinecraftForge.EVENT_BUS.register(listener);

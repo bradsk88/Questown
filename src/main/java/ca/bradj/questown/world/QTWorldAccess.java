@@ -18,9 +18,15 @@ public interface QTWorldAccess {
     OptionalInt getMaxBlockIntProperty(BlockPos pos, String propertyName);
     void setBlockIntProperty(BlockPos pos, String propertyName, int value);
 
+    // Block queries
+    boolean isAir(BlockPos pos);
+
     // Block drops & removal
     List<ItemStack> getBlockDrops(BlockPos pos, @Nullable ItemStack tool);
     void removeBlock(BlockPos pos);
+
+    // Tree chopping — removes all connected blocks of the same type and returns drops
+    List<ItemStack> chopTree(BlockPos trunkPos);
 
     // Item use on block (planting, bone meal)
     boolean useItemOnBlock(ItemStack item, BlockPos pos);

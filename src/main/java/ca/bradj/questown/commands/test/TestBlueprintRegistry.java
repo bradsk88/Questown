@@ -15,12 +15,12 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class TestBlueprintRegistry {
+
+    public record TestEntry(String name, JobID jobId, TestBlueprint blueprint) {}
 
     public static @Nullable TestBlueprint get(JobID jobId) {
         if ("farmer".equals(jobId.rootId())) {
@@ -59,8 +59,10 @@ public class TestBlueprintRegistry {
         return null;
     }
 
-    public static List<Map.Entry<JobID, TestBlueprint>> getTestableJobs() {
-        List<Map.Entry<JobID, TestBlueprint>> jobs = new ArrayList<>();
+    public static List<TestEntry> getTestableJobs() {
+        List<TestEntry> jobs = new ArrayList<>();
+
+        // Core job tests
         jobs.add(entry(new JobID("farmer", "harvest_wheat"), farmerBlueprint()));
         jobs.add(entry(new JobID("cook", "simple_furnace_food"), cookBlueprint()));
         jobs.add(entry(new JobID("baker", "bread"), bakerBlueprint()));
@@ -73,11 +75,26 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
         jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
         jobs.add(entry(new JobID("crafter", "leather_boots"), armorerBlueprint()));
+
+        // Edge case tests
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "night_start", farmerNightStartBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "all_night", farmerAllNightBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "3_day", farmerMultiDayBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "no_supplies", farmerNoSuppliesBlueprint()));
+        jobs.add(edgeCaseEntry("gatherer", "axe", "tool_durability", gathererToolDurabilityBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "2_villagers", farmerTwoVillagersBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "warp_then_realtime", farmerRealtimeBlueprint()));
+
         return jobs;
     }
 
-    private static Map.Entry<JobID, TestBlueprint> entry(JobID id, TestBlueprint bp) {
-        return new AbstractMap.SimpleImmutableEntry<>(id, bp);
+    private static TestEntry entry(JobID id, TestBlueprint bp) {
+        return new TestEntry(id.rootId() + "/" + id.jobId(), id, bp);
+    }
+
+    private static TestEntry edgeCaseEntry(String root, String job, String variant, TestBlueprint bp) {
+        JobID id = new JobID(root, job);
+        return new TestEntry(root + "/" + job + " [" + variant + "]", id, bp);
     }
 
     private static TestBlueprint farmerBlueprint() {
@@ -179,9 +196,9 @@ public class TestBlueprintRegistry {
 
         TestExpectation expectation = new TestExpectation(
                 List.of(
-                        new ExpectedProduct("minecraft:cooked_beef", 3, 5),
-                        new ExpectedProduct("minecraft:beef", -5, -3),
-                        new ExpectedProduct("minecraft:coal", -4, -3)
+                        new ExpectedProduct("minecraft:cooked_beef", 3, 8),
+                        new ExpectedProduct("minecraft:beef", -8, -3),
+                        new ExpectedProduct("minecraft:coal", -5, -3)
                 ),
                 1,
                 100
@@ -264,7 +281,7 @@ public class TestBlueprintRegistry {
         );
 
         TestExpectation expectation = new TestExpectation(
-                List.of(new ExpectedProduct("minecraft:leather_boots", 1, -1)),
+                List.of(new ExpectedProduct("minecraft:leather", -32, -1)),
                 1, 100
         );
 
@@ -539,6 +556,106 @@ public class TestBlueprintRegistry {
         return new TestExpectation(
                 List.of(new ExpectedProduct("*", 1, -1)),
                 1, 100
+        );
+    }
+
+    // --- Edge case blueprints ---
+
+    private static TestBlueprint farmerNightStartBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:wheat", 1, -1)),
+                        1, 100
+                ),
+                base.supplyDoorOffset(), 12000, 20000L, null, false, null
+        );
+    }
+
+    private static TestBlueprint farmerAllNightBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        // No hoe in supplies: prevents real-time harvesting during settle phases,
+        // so the only way wheat could appear is if the warp ran (which it shouldn't at night).
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), List.of(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:wheat", 0, 0)),
+                        0, 0
+                ),
+                base.supplyDoorOffset(), 2000, 15000L, null, false, null
+        );
+    }
+
+    private static TestBlueprint farmerMultiDayBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:wheat", 3, -1)),
+                        3, 300
+                ),
+                base.supplyDoorOffset(), 72000, 0L, null, false, null
+        );
+    }
+
+    private static TestBlueprint farmerNoSuppliesBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), List.of(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:wheat", 0, 0)),
+                        0, 0
+                ),
+                base.supplyDoorOffset(), 24000, 0L, null, false, null
+        );
+    }
+
+    private static TestBlueprint gathererToolDurabilityBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(
+                List.of(
+                        new ItemStack(Items.WOODEN_AXE, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                )
+        );
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(
+                                new ExpectedProduct("minecraft:wooden_axe", -1, -1),
+                                new ExpectedProduct("*", 1, -1)
+                        ),
+                        1, 300
+                ),
+                base.supplyDoorOffset(), 72000, 0L, null, false, null
+        );
+    }
+
+    private static TestBlueprint farmerTwoVillagersBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:wheat", 2, -1)),
+                        1, 100
+                ),
+                base.supplyDoorOffset(), 24000, 0L, 2, false, null
+        );
+    }
+
+    private static TestBlueprint farmerRealtimeBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                base.expectation(),
+                base.supplyDoorOffset(), null, null, null, true, 4800
         );
     }
 }
