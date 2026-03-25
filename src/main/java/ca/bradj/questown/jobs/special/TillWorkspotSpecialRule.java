@@ -7,9 +7,10 @@ import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
 public class TillWorkspotSpecialRule extends
-        JobPhaseModifier {
+        JobPhaseModifier implements QTNativeRule {
     @Override
     public <X> @Nullable X beforeExtract(
             X context,

@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.concurrent.ThreadLocalRandom;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
 /**
  * Warp-interleaved hook that simulates crop growth during
@@ -29,7 +30,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * The "lore" for this is: Farmers tend the crops while the
  * player is away from town, so they grow (slightly) better.
  */
-public class GrowCropsWarpRule extends JobPhaseModifier {
+public class GrowCropsWarpRule extends JobPhaseModifier implements QTNativeRule {
 
     private static final int RANDOM_TICK_NUMERATOR = 3;
     private static final int RANDOM_TICK_DENOMINATOR = 4096;

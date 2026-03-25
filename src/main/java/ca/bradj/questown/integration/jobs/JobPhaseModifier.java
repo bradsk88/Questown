@@ -6,7 +6,22 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Allows modifying the behavior of job phases via injection through
  * the SpecialRulesRegistry.
+ *
+ * <h3>Tier system</h3>
+ * Rules fall into one of two tiers:
+ * <ul>
+ *   <li><b>Tier 1 (QT-native)</b>: accesses the world only through
+ *       {@code QTWorldAccess} methods. Works correctly during time warp
+ *       and in unit tests. Implement {@link QTNativeRule} to declare this.</li>
+ *   <li><b>Tier 2 (MC-native)</b>: calls
+ *       {@code event.world().asServerLevel()} to reach Minecraft APIs.
+ *       Must handle a {@code null} return gracefully (warp/test context).
+ *       Do <em>not</em> implement {@link QTNativeRule}.</li>
+ * </ul>
+ * Tier 2 rules are logged at startup by {@link ca.bradj.questown.integration.SpecialRulesRegistry}.
+ *
  * @see ca.bradj.questown.jobs.declarative.PrePostHooks#processMulti
+ * @see QTNativeRule
  */
 public abstract class JobPhaseModifier {
 

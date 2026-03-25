@@ -313,11 +313,16 @@ public interface QTWorldAccess {
 3. ✅ Fishing rules — `deploy_and_retract_fishing_hook` is visual-only; already
    warp-compatible via null-guard on `asServerLevel()`
 
-### Phase 5: Third-Party Support — **Not started**
+### Phase 5: Third-Party Support — **Done**
 
-1. ⬜ Document tier system for modders
-2. ⬜ Add startup validation for mixed-tier jobs (jobs calling `asServerLevel()`)
-3. ⬜ Add warp-time logging for skipped Tier 2 jobs
+1. ✅ `QTNativeRule` marker interface in `ca.bradj.questown.integration.jobs` —
+   full javadoc explaining the tier system for modders
+2. ✅ 20 Tier 1 rules implement `QTNativeRule`; 3 Tier 2 rules do not
+   (`RandomShortLivedWorkSpot`, `CheckTreePlantable`, `DeployFishingHookRule`)
+3. ✅ `SpecialRulesRegistry.finalizeForServer()` logs all Tier 2 rules at
+   startup so the count and names are visible in the server log
+4. ✅ `JobPhaseModifier` javadoc explains the tier system and links to
+   `QTNativeRule`
 
 ---
 

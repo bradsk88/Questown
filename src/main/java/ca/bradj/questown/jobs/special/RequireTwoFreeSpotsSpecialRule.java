@@ -10,9 +10,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.function.Function;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
 public class RequireTwoFreeSpotsSpecialRule extends
-        JobPhaseModifier {
+        JobPhaseModifier implements QTNativeRule {
 
     public RequireTwoFreeSpotsSpecialRule() {
 

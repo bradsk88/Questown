@@ -8,8 +8,9 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.mc.Util;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
-public class TakeFromSlotSpecialRule extends JobPhaseModifier {
+public class TakeFromSlotSpecialRule extends JobPhaseModifier implements QTNativeRule {
     private final int slotIndex;
 
     public TakeFromSlotSpecialRule(int i) {

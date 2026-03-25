@@ -8,8 +8,9 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
-public class ChopDownTree extends JobPhaseModifier {
+public class ChopDownTree extends JobPhaseModifier implements QTNativeRule {
 
     @Override
     public <CONTEXT> @Nullable CONTEXT beforeExtract(

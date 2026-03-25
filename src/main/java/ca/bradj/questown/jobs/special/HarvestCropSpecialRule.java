@@ -12,9 +12,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.OptionalInt;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
 public class HarvestCropSpecialRule extends
-        JobPhaseModifier {
+        JobPhaseModifier implements QTNativeRule {
     @Override
     public <X> X beforeExtract(
             X context,

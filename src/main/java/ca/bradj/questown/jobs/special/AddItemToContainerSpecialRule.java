@@ -5,9 +5,10 @@ import ca.bradj.questown.integration.jobs.AfterInsertItemEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
 public class AddItemToContainerSpecialRule extends
-        JobPhaseModifier {
+        JobPhaseModifier implements QTNativeRule {
 
     public AddItemToContainerSpecialRule() {
 

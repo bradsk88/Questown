@@ -6,8 +6,9 @@ import ca.bradj.questown.integration.jobs.WarpTickEvent;
 import net.minecraft.core.BlockPos;
 
 import java.util.Collection;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
-public class SmeltFurnaceWarpRule extends JobPhaseModifier {
+public class SmeltFurnaceWarpRule extends JobPhaseModifier implements QTNativeRule {
 
     @Override
     public <X> X onWarpTick(X town, WarpTickEvent event) {

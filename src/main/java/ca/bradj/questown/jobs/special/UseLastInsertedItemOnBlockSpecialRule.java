@@ -6,9 +6,10 @@ import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.world.QTWorldAccess;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.Item;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
 public class UseLastInsertedItemOnBlockSpecialRule extends
-        JobPhaseModifier {
+        JobPhaseModifier implements QTNativeRule {
     @Override
     public <X> X beforeExtract(
             X context,

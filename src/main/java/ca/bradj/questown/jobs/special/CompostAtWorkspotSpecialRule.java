@@ -12,9 +12,10 @@ import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.OptionalInt;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
 public class CompostAtWorkspotSpecialRule extends
-        JobPhaseModifier {
+        JobPhaseModifier implements QTNativeRule {
     @Override
     public <X> @Nullable X beforeExtract(
             X context,

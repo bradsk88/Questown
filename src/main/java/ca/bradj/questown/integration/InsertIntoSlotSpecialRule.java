@@ -6,8 +6,9 @@ import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.mc.Util;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
-public class InsertIntoSlotSpecialRule extends JobPhaseModifier {
+public class InsertIntoSlotSpecialRule extends JobPhaseModifier implements QTNativeRule {
     private final int slotIndex;
 
     public InsertIntoSlotSpecialRule(int i) {
