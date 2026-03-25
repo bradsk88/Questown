@@ -197,24 +197,17 @@ complex results.
 **Jobs affected:**
 - `fisher/fish` - uses `questown_vanilla:deploy_and_retract_fishing_hook`
 
-**Current MC coupling:**
-- Custom `FishingHook` entity spawning
-- `ServerLevel.addFreshEntity()`, entity removal
-- Position/vector math for hook placement
+**Status: Already warp-compatible. No QTWorldAccess changes needed.**
 
-**Proposed QTWorldAccess methods:**
+`deploy_and_retract_fishing_hook` spawns a `FishingHook` entity as a
+**visual-only** effect. It does not determine what fish are caught — the
+job result comes from the normal result generator. The rule already skips
+entity deployment when `asServerLevel()` returns null (warp/test contexts),
+so fishing works correctly during warp without modification.
 
-```java
-interface QTWorldAccess {
-    // Fishing abstraction
-    FishingSession startFishing(BlockPos stationPos, UUID villagerID);
-    Optional<List<ItemStack>> checkFishingResult(FishingSession session, long ticksElapsed);
-    void endFishing(FishingSession session);
-}
-```
-
-**Note**: Fishing is heavily entity-based. The abstraction hides entity management
-entirely, treating it as a stateful "session" that produces results over time.
+See `DeployFishingHookRule.afterInsertItem()` and
+`docs/todo/post-warp-visuals.md` for the post-warp visual restoration
+consideration (low priority).
 
 ---
 
@@ -337,7 +330,7 @@ public interface QTWorldAccess {
 | cook/* | insert_into_slot_*, take_from_slot_* | Tier 1 | container slot methods |
 | arborist/plant_sapling | check_tree_plantable, use_item | Tier 1 | canTreeGrowAt, useItemOnBlock |
 | arborist/cut_trees | chop_down_tree | Tier 1 | chopTreeAt |
-| fisher/fish | deploy_and_retract_fishing_hook | Tier 1 | fishing session methods |
+| fisher/fish | deploy_and_retract_fishing_hook | Tier 1 | (already compatible — hook is visual-only, skipped during warp) |
 | gatherer/* | remove_from_world, hunger_fill | Tier 1 | (already compatible) |
 | hunter/* | remove_from_world, hunger_fill | Tier 1 | (already compatible) |
 | miner/* | remove_from_world, hunger_fill | Tier 1 | (already compatible) |
