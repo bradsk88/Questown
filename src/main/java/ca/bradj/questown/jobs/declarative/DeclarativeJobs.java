@@ -329,9 +329,16 @@ public class DeclarativeJobs {
                 if (freshCycle
                         && slotPrecondition != null
                         && wi.shouldUseRealWorkBlock()) {
-                    BlockEntity entity = level.getBlockEntity(workPos);
-                    if (entity != null && !slotPrecondition.test(entity)) {
-                        return inState;
+                    ca.bradj.questown.world.QTWorldAccess ww = wi.getWarpWorld();
+                    if (ww != null) {
+                        if (!slotPrecondition.test(ww, workPos)) {
+                            return inState;
+                        }
+                    } else {
+                        BlockEntity entity = level.getBlockEntity(workPos);
+                        if (entity != null && !slotPrecondition.test(entity)) {
+                            return inState;
+                        }
                     }
                 }
 

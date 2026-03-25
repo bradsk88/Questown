@@ -21,6 +21,7 @@ import ca.bradj.questown.town.TownState;
 import ca.bradj.questown.town.TownVillagerData;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.world.MinecraftWorldAccess;
+import ca.bradj.questown.world.WarpWorldAccess;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -191,10 +192,12 @@ public class TownFlagState {
 
         ImmutableSet<String> rules = collectGlobalRulesForAllVillagerRoots(storedState);
 
+        WarpWorldAccess warpWorld = new WarpWorldAccess(sl, roomPositions);
+
         MCAdvanceTime.WarpTickCallback<MCTownState> warpCb =
                 (town, tick, delta) -> WarpTickHook.run(
                         rules,
-                        MinecraftWorldAccess.silent(sl),
+                        warpWorld,
                         town, tick, delta,
                         () -> roomPositions
                 );
@@ -207,7 +210,7 @@ public class TownFlagState {
                 ticksPassed,
                 dayTime,
                 ImportantTicks.adaptWork(w),
-                MCAdvanceTime.createWarperFactory(w, e.getBlockPos(), roomPositions),
+                MCAdvanceTime.createWarperFactory(w, e.getBlockPos(), roomPositions, warpWorld),
                 null, // cookResolver - not yet implemented
                 warpCb,
                 sl,
@@ -215,6 +218,10 @@ public class TownFlagState {
                 Config.MAX_DOWNTIME_TICKS.get(),
                 createLogger(e)
         );
+
+        if (result.state() != null) {
+            warpWorld.applyTo(sl);
+        }
 
         return result.state();
     }

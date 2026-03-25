@@ -35,7 +35,7 @@ smelting — every mechanic must be simulated.
 | 5 | Cook sub-jobs clobber shared processingState | **Fixed** | Was causing wrong items in wrong slots |
 | 6 | `TakeFromSlotSpecialRule` null context | **Fixed** | Was NPE during extraction |
 | 7 | Warp extraction under wrong sub-job | **Partially fixed** | Reduced by runToCompletion loop |
-| 8 | Global warp rule dropped on phase change | **Dormant** | No container global rules exist yet |
+| 8 | Global warp rule dropped on phase change | **Fixed** | Collection and SmeltFurnaceWarpRule in place |
 | 9 | Auxiliary jobs monopolize via re-evaluation | **Fixed** | Beef gets ~20% chance per shuffle |
 
 ---
@@ -187,15 +187,10 @@ Global warp rules are collected once at warp start by reading `getSpecialGlobalR
 from each villager's current job ID. If a rule is declared on only one cook sub-job, it
 would disappear when the villager transitions to a different phase.
 
-**Current code is actually correct:** `collectGlobalRulesForAllVillagerRoots()` collects
-from ALL jobs sharing a root with active villagers, not just the current job. So
-`furnace_smelt_warp` declared on `cook/extract` is collected even when the villager is on
-`cook/fuel`.
-
-**Still dormant:** No container-specific global warp rules have been implemented yet. The
-existing `furnace_smelt_warp` rule string is declared in JSON but has no warp-interleaved
-implementation (only `GrowCropsWarpRule` implements `onWarpTick()`). When a furnace
-smelting warp rule is added, the collection mechanism should work correctly.
+**Fixed:** `collectGlobalRulesForAllVillagerRoots()` collects from ALL jobs sharing a root
+with active villagers. `SmeltFurnaceWarpRule` implements `onWarpTick()` and is registered
+in `QuestownSpecialRules`. It calls `event.world().advanceProcessing(pos, ticks)`, which
+is implemented in `MinecraftWorldAccess`.
 
 **Remaining risk:** Rules are collected once at warp start and never refreshed. If a
 villager changes job root during warp (unlikely but possible), the new root's rules won't
@@ -234,8 +229,7 @@ support the main job rather than replacing it.
 4. **Verify warp result generator** (Bug 7) — confirm that `cook/extract` uses the
    correct smelting recipe lookup, not the template's `minecraft:air`.
 
-5. **Implement furnace smelting warp rule** (Bug 8) — needed for proper warp parity, but
-   blocked on container rule migration (Phase 4 of decoupling).
+5. ~~**Implement furnace smelting warp rule** (Bug 8)~~ — Done: `SmeltFurnaceWarpRule` registered and `advanceProcessing` implemented.
 
 ---
 

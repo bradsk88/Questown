@@ -1,6 +1,8 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.world.QTWorldAccess;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -24,6 +26,11 @@ public class SlotPrecondition {
 
     public boolean test(@Nullable BlockEntity entity) {
         return getSlotValue(entity, slotIndex).map(compare).orElse(true);
+    }
+
+    public boolean test(QTWorldAccess world, BlockPos pos) {
+        ItemStack slot = world.getContainerSlot(pos, slotIndex);
+        return compare.apply(slot);
     }
 
     private static Optional<ItemStack> getSlotValue(

@@ -5,6 +5,7 @@ import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.town.entity.TownFlagState;
+import ca.bradj.questown.world.QTWorldAccess;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -30,19 +31,22 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
     private final int villagerIndex;
     private final BlockPos townFlagPos;
     private final Collection<BlockPos> roomPositions;
+    private final @Nullable QTWorldAccess warpWorld;
 
     public PostDowntimeWarper(
             TownFlagState.Work work,
             JobID fallbackJobID,
             int villagerIndex,
             BlockPos townFlagPos,
-            Collection<BlockPos> roomPositions
+            Collection<BlockPos> roomPositions,
+            @Nullable QTWorldAccess warpWorld
     ) {
         this.work = work;
         this.fallbackJobID = fallbackJobID;
         this.villagerIndex = villagerIndex;
         this.townFlagPos = townFlagPos;
         this.roomPositions = roomPositions;
+        this.warpWorld = warpWorld;
     }
 
     private static final int MAX_STICKY_TICKS = 5;
@@ -130,7 +134,8 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
                 resolvedJob,
                 townFlagPos,
                 roomPositions,
-                furnace
+                furnace,
+                warpWorld
         );
 
         if (jobWarper instanceof NoOpWarper) {

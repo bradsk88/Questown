@@ -1,8 +1,10 @@
 # Bug: Cook's Global Warp Rule Dropped After Job Phase Change
 
 **Severity:** Medium (affects warp correctness for container jobs)
-**Status:** Open — not yet affecting gameplay (container rules
-not yet migrated to QTWorldAccess)
+**Status:** Fixed — `collectGlobalRulesForAllVillagerRoots()` collects from
+all sub-jobs sharing a root (e.g., all `cook/*`), and `SmeltFurnaceWarpRule`
+implements `onWarpTick()` via `advanceProcessing`. `WarpWorldAccess` now
+routes hook calls through in-memory state, so `asServerLevel()` returns null.
 **Related decision:** `docs/decision-declare-and-collect-global-rules.md`
 
 ---

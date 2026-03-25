@@ -54,6 +54,7 @@ public class TimeWarpWorldInteraction extends
     private final Collection<BlockPos> roomPositions;
     private final @Nullable BlockPos assignedWorkBlock;
     private final Map<ProductionStatus, Collection<String>> specialRulesMap;
+    private final @Nullable ca.bradj.questown.world.QTWorldAccess warpWorld;
 
     public record Inputs(MCTownState town, ServerLevel level, UUID vUUID) {
     }
@@ -71,7 +72,8 @@ public class TimeWarpWorldInteraction extends
             Function<TimeWarpWorldInteraction.Inputs, Claim> claimSpots,
             Map<ProductionStatus, Collection<String>> specialRules,
             Collection<BlockPos> roomPositions,
-            @Nullable BlockPos assignedWorkBlock
+            @Nullable BlockPos assignedWorkBlock,
+            @Nullable ca.bradj.questown.world.QTWorldAccess warpWorld
     ) {
         super(jobId, villagerIndex, interval, maxState, checks, claimSpots, specialRules);
         this.resultGenerator = resultGenerator;
@@ -79,6 +81,14 @@ public class TimeWarpWorldInteraction extends
         this.roomPositions = roomPositions;
         this.assignedWorkBlock = assignedWorkBlock;
         this.specialRulesMap = specialRules;
+        this.warpWorld = warpWorld;
+    }
+
+    private ca.bradj.questown.world.QTWorldAccess resolveWorld(Inputs inputs) {
+        if (warpWorld != null) {
+            return warpWorld;
+        }
+        return MinecraftWorldAccess.silent(inputs.level());
     }
 
     public boolean shouldUseRealWorkBlock() {
@@ -92,6 +102,10 @@ public class TimeWarpWorldInteraction extends
 
     public @Nullable BlockPos getAssignedWorkBlock() {
         return assignedWorkBlock;
+    }
+
+    public @Nullable ca.bradj.questown.world.QTWorldAccess getWarpWorld() {
+        return warpWorld;
     }
 
     @Override
@@ -243,7 +257,7 @@ public class TimeWarpWorldInteraction extends
         MCTownState afterHook = PostInsertHook.run(
                 mcTownState,
                 rules,
-                MinecraftWorldAccess.silent(inputs.level()),
+                resolveWorld(inputs),
                 position,
                 item.get().toMCItemStack(),
                 ts -> ts.withBOPCleared(inputs.vUUID),
@@ -271,7 +285,7 @@ public class TimeWarpWorldInteraction extends
     ) {
         Item insertedItem = null; // TODO: Support inserted item history?
         return PreExtractHook.run(
-                town, rules, MinecraftWorldAccess.silent(inputs.level()), (ctx, i, s) -> {
+                town, rules, resolveWorld(inputs), (ctx, i, s) -> {
                     Inputs in = new Inputs(ctx, inputs.level(), inputs.vUUID());
                     return tryGiveItems(in, ImmutableList.of(i), position);
                 }, position, insertedItem, () -> {
@@ -289,7 +303,7 @@ public class TimeWarpWorldInteraction extends
             MCHeldItem extractedItem
     ) {
         return PostExtractHook.run(
-                mcTownState, townPos, rules, MinecraftWorldAccess.silent(inputs.level()), position, (ctx, itemData) -> {
+                mcTownState, townPos, rules, resolveWorld(inputs), position, (ctx, itemData) -> {
                     CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
                     itemData.forEach(t::putInt);
                     return ctx;

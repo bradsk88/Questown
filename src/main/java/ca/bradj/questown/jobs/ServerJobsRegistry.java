@@ -23,6 +23,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.NoOpWarper;
 import ca.bradj.questown.town.Warper;
+import ca.bradj.questown.world.QTWorldAccess;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -464,7 +465,8 @@ public class ServerJobsRegistry {
             JobID jobID,
             BlockPos townFlagPos,
             Collection<BlockPos> roomPositions,
-            @Nullable BlockPos assignedWorkBlock
+            @Nullable BlockPos assignedWorkBlock,
+            @Nullable QTWorldAccess warpWorld
     ) {
         if (isSeekingWork(jobID)) {
             return NoOpWarper.INSTANCE;
@@ -473,7 +475,10 @@ public class ServerJobsRegistry {
         if (w == null) {
             return NoOpWarper.INSTANCE;
         }
-        return w.get().warper(new WorksBehaviour.WarpInput(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock));
+        return w.get().warper(
+                new WorksBehaviour.WarpInput(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock)
+                        .withWarpWorld(warpWorld)
+        );
     }
 
     public static boolean canSatisfy(

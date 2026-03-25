@@ -7,9 +7,11 @@ import ca.bradj.questown.town.PostDowntimeWarper;
 import ca.bradj.questown.town.Warper;
 import ca.bradj.questown.town.entity.ImportantTicks;
 import ca.bradj.questown.town.entity.TownFlagState;
+import ca.bradj.questown.world.QTWorldAccess;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.function.Predicate;
@@ -44,10 +46,11 @@ public class MCAdvanceTime extends AbstractAdvanceTime<
     public static WarperFactory<ServerLevel, MCTownState> createWarperFactory(
             TownFlagState.Work townWork,
             BlockPos townFlagPos,
-            Collection<BlockPos> roomPositions
+            Collection<BlockPos> roomPositions,
+            @Nullable QTWorldAccess warpWorld
     ) {
         return (work, fallbackJobID, villagerIndex) ->
-                new PostDowntimeWarper(townWork, fallbackJobID, villagerIndex, townFlagPos, roomPositions);
+                new PostDowntimeWarper(townWork, fallbackJobID, villagerIndex, townFlagPos, roomPositions, warpWorld);
     }
 
     @Override

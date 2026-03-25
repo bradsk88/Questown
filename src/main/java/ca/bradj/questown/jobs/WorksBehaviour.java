@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.world.QTWorldAccess;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.declarative.*;
@@ -56,7 +57,8 @@ public class WorksBehaviour {
                 claimSpots,
                 specialRules,
                 warpInput.roomPositions(),
-                warpInput.assignedWorkBlock()
+                warpInput.assignedWorkBlock(),
+                warpInput.warpWorld()
         );
         return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction, warpInput.slotPrecondition());
     }
@@ -133,18 +135,23 @@ public class WorksBehaviour {
             BlockPos townFlagPos,
             Collection<BlockPos> roomPositions,
             @Nullable BlockPos assignedWorkBlock,
-            @Nullable SlotPrecondition slotPrecondition
+            @Nullable SlotPrecondition slotPrecondition,
+            @Nullable QTWorldAccess warpWorld
     ) {
         public WarpInput(int villagerIndex, BlockPos townFlagPos, Collection<BlockPos> roomPositions) {
-            this(villagerIndex, townFlagPos, roomPositions, null, null);
+            this(villagerIndex, townFlagPos, roomPositions, null, null, null);
         }
 
         public WarpInput(int villagerIndex, BlockPos townFlagPos, Collection<BlockPos> roomPositions, @Nullable BlockPos assignedWorkBlock) {
-            this(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock, null);
+            this(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock, null, null);
         }
 
         public WarpInput withSlotPrecondition(@Nullable SlotPrecondition sp) {
-            return new WarpInput(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock, sp);
+            return new WarpInput(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock, sp, warpWorld);
+        }
+
+        public WarpInput withWarpWorld(@Nullable QTWorldAccess world) {
+            return new WarpInput(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock, slotPrecondition, world);
         }
     }
 
