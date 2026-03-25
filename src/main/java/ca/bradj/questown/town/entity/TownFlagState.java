@@ -165,6 +165,12 @@ public class TownFlagState {
 
         ticksPassed = Math.min(ticksPassed, Config.TIME_WARP_MAX_TICKS.get());
 
+        ticksPassed = Signals.calculateProductiveTicks(dayTime, ticksPassed);
+        if (ticksPassed <= 0) {
+            QT.FLAG_LOGGER.info("Time warp contained no productive ticks (all nighttime)");
+            return storedState;
+        }
+
         // Create Work implementation that bridges to entity methods
         Work w = createWork(e, sl);
 

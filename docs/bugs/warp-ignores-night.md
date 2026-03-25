@@ -1,11 +1,8 @@
-Villagers do not work at night. But the warp, regardelss of when it starts, "pretends" that it is daytime.
+**RESOLVED** — Fixed via `Signals.calculateProductiveTicks()`.
 
-The purpose of warp is to _simulate_ real productivity while the player is away from town, rather than ticking it.
+Villagers do not work at night. The warp now subtracts evening/night ticks (11500-24000 per day cycle)
+from the warp duration before simulating. Only ticks in the productive window (0-11500, i.e. MORNING+NOON)
+count toward villager work.
 
-This means that a player who leaves at night and returns in the morning will (assuming I'm correct about this bug) see
-a bunch of productivity results even though the villagers should have been relaxing/sleeping.
-
-Possible Solution:
-- When a warp of (e.g.) 20000 ticks is requested, first calculate the amount of "night time" that would pass between 
-  "now" and the next morning and subtract that from the number of requested ticks. Then run a warp on the result of the
-  subtraction.
+The fix lives in `TownFlagState.advanceTime()` — a single call to `Signals.calculateProductiveTicks(dayTime, ticksPassed)`
+after capping to `TIME_WARP_MAX_TICKS`. If the entire warp falls during nighttime, no simulation runs.
