@@ -1,7 +1,12 @@
-Some jobs (e.g. fisher) have special rules which cause a visual change to the world (i.e. deploy a fishing hook entity)
-but that visual change does not impact the work in any way. Because of this, we exclude deploying that entity from the
-time warp logic. However, we should consider another step that runs just after the warp to apply any visual changes that 
-should happen. For example, if the warp ends with the fisher half-way through their job, this step should place them at
-their work spot and deploy the hook.
+**Status: Done.**
 
-Priority: Low
+`JobPhaseModifier.afterWarpRecovery(ServerLevel, LivingEntity, BlockPos)` is called
+after warp completes and mobs are recovered, once per active work block
+(processingState > 0). The nearest villager entity is passed as the owner.
+
+`DeployFishingHookRule.afterWarpRecovery` deploys the fishing hook if the work block
+is a `FishingStationBlock`, restoring the visual when the fisher is mid-job at warp end.
+The hook is added to the instance's list so `beforeExtract` cleans it up normally.
+
+Other rules inherit the default no-op. New visual-only rules override
+`afterWarpRecovery` following the same pattern.

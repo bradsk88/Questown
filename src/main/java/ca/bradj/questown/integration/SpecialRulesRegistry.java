@@ -52,6 +52,10 @@ public class SpecialRulesRegistry {
         listeners = ImmutableMap.of();
     }
 
+    public static ImmutableList<JobPhaseModifier> getAllInstances() {
+        return ImmutableList.copyOf(listeners.values());
+    }
+
     public static ImmutableList<JobPhaseModifier> getRuleAppliers(Collection<String> ruleIDs) {
         List<ResourceLocation> rules = ruleIDs.stream()
                                             .map(v -> v.contains(":") ? new ResourceLocation(v) : Questown.ResourceLocation(

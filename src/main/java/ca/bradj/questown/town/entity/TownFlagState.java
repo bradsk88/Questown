@@ -20,6 +20,8 @@ import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
 import ca.bradj.questown.town.TownVillagerData;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.integration.SpecialRulesRegistry;
+import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.world.MinecraftWorldAccess;
 import ca.bradj.questown.world.WarpWorldAccess;
 import ca.bradj.roomrecipes.adapter.Positions;
@@ -432,6 +434,7 @@ public class TownFlagState {
                 e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Storing state on {}: {}", e.getUUID(), newState);
                 Compat.getBlockStoredTagData(e).put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
                 TownFlagState.recoverMobs(parent, level);
+                TownFlagState.restoreWarpVisuals(level, newState);
                 parent.getKnowledgeHandle().registerFoundLoots(newState.knowledge());
 
                 sendWarpSummary(e, level, timeSinceWake, beforeItems);
@@ -446,6 +449,46 @@ public class TownFlagState {
         // TODO: Make sure chests get filled/empty
         flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, levelDayTime);
         return newState;
+    }
+
+    private static void restoreWarpVisuals(ServerLevel level, MCTownState state) {
+        ImmutableList<JobPhaseModifier> rules = SpecialRulesRegistry.getAllInstances();
+        for (var blockEntry : state.workStates.entrySet()) {
+            if (blockEntry.getValue().processingState() == 0) {
+                continue;
+            }
+            BlockPos workBlock = blockEntry.getKey();
+            net.minecraft.world.entity.LivingEntity nearest = findNearestVillager(level, state, workBlock);
+            if (nearest == null) {
+                continue;
+            }
+            for (JobPhaseModifier rule : rules) {
+                rule.afterWarpRecovery(level, nearest, workBlock);
+            }
+        }
+    }
+
+    private static net.minecraft.world.entity.LivingEntity findNearestVillager(
+            ServerLevel level,
+            MCTownState state,
+            BlockPos workBlock
+    ) {
+        net.minecraft.world.entity.LivingEntity nearest = null;
+        double nearestDist = Double.MAX_VALUE;
+        for (TownState.VillagerData<?> vData : state.villagers) {
+            net.minecraft.world.entity.Entity entity = level.getEntity(vData.uuid);
+            if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) {
+                continue;
+            }
+            double dist = workBlock.distSqr(new BlockPos(
+                    (int) vData.xPosition, (int) vData.yPosition, (int) vData.zPosition
+            ));
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = living;
+            }
+        }
+        return nearest;
     }
 
     private Map<ResourceLocation, Integer> snapshotContainerItems(TownFlagBlockEntity e, ServerLevel level) {

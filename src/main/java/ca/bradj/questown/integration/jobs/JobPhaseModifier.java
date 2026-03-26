@@ -71,6 +71,14 @@ public abstract class JobPhaseModifier {
         public <X> X onWarpTick(X town, WarpTickEvent event) {
             return town;
         }
+
+        @Override
+        public void afterWarpRecovery(
+                net.minecraft.server.level.ServerLevel level,
+                net.minecraft.world.entity.LivingEntity villager,
+                net.minecraft.core.BlockPos workBlock
+        ) {
+        }
     };
 
     // Return null if nothing happens.
@@ -147,5 +155,24 @@ public abstract class JobPhaseModifier {
      */
     public <X> X onWarpTick(X town, WarpTickEvent event) {
         return town;
+    }
+
+    /**
+     * Called once after time warp completes and villager entities have been
+     * recovered, for each work block that was in active use (processingState > 0)
+     * at warp end.
+     * <p>
+     * Override to restore visual-only effects that were skipped during warp
+     * (e.g. cosmetic entities). The default no-op is appropriate for most rules.
+     *
+     * @param level      the server level (never null — this fires after recovery)
+     * @param villager   the nearest recovered villager entity for this work block
+     * @param workBlock  the active work block position
+     */
+    public void afterWarpRecovery(
+            net.minecraft.server.level.ServerLevel level,
+            net.minecraft.world.entity.LivingEntity villager,
+            net.minecraft.core.BlockPos workBlock
+    ) {
     }
 }
