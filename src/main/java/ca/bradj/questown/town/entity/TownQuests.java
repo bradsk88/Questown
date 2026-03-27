@@ -889,6 +889,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         t.setChanged();
     }
 
+    static boolean isProceduralBatch(QuestBatch<?, ?, ?, ?> batch) {
+        return batch.getAll().stream().anyMatch(q -> {
+            Object id = q.getWantedId();
+            return !(id instanceof ResourceLocation rl) || !SpecialQuests.isSpecialQuestId(rl);
+        });
+    }
+
     @Override
     public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
         town.getUnsafe().setChanged();
@@ -896,7 +903,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         if (completionMessage != null && !completionMessage.isBlank()) {
             town.getUnsafe().messages.broadcastMessage(completionMessage);
         }
-        fireChapterMilestonesIfNeeded();
+        if (isProceduralBatch(quest)) {
+            fireChapterMilestonesIfNeeded();
+        }
     }
 
     private void fireChapterMilestonesIfNeeded() {

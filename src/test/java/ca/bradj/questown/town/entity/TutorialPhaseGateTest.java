@@ -558,4 +558,16 @@ class TutorialPhaseGateTest {
         assertFalse(view.getMessagesSent().isEmpty());
         assertTrue(view.getMessagesSent().get(0).contains("New quests"));
     }
+
+    // ===== Milestone: "Your village is thriving" =====
+
+    @Test
+    void campfireBatch_isNotProceduralBatch() {
+        // Regression: placing a campfire (the very first step) was instantly
+        // broadcasting "your village is thriving" because campfire batch
+        // completion was counted as a procedural batch milestone.
+        MCQuestBatch campfireBatch = new MCQuestBatch(null, null, new NoOpReward());
+        campfireBatch.addNewQuest(null, SpecialQuests.CAMPFIRE);
+        assertFalse(TownQuests.isProceduralBatch(campfireBatch));
+    }
 }

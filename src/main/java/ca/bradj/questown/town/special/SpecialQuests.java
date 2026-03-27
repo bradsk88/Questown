@@ -14,6 +14,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Map;
+import java.util.Set;
 
 public class SpecialQuests {
 
@@ -97,6 +98,14 @@ public class SpecialQuests {
             (info, pos) -> WorkLocation.isBlock(PlateBlock.class).test(info, pos),
             SpecialQuests.DINING_ROOM
     );
+
+    private static final Set<ResourceLocation> SPECIAL_QUEST_IDS = new java.util.HashSet<>(java.util.Arrays.asList(
+            BROKEN, CAMPFIRE, TOWN_GATE, TOWN_FLAG, FARM
+    ));
+
+    public static boolean isSpecialQuestId(ResourceLocation id) {
+        return SPECIAL_QUEST_IDS.contains(id);
+    }
 
     public static boolean isSpecialQuest(ResourceLocation id) {
         return SPECIAL_QUESTS.containsKey(id);
