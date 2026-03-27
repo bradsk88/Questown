@@ -374,6 +374,7 @@
   "menu.quests.confirm_remove_bottom": "More will come after sleeping",
   "menu.quests.item_quest": "Add %d %s to town storage (Can be done by villagers or players)",
   "menu.quests.room_quest": "Build a room containing the blocks shown here",
+  "menu.quests.campfire_quest": "Place a campfire near the town flag",
   "menu.questown.quests.job_quest_1": "Assign one of your villagers to the job: %s",
   "menu.questown.quests.job_quest_2": "This is part of the career: %s",
   "menu.jobs": "Jobs",

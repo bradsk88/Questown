@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.gui.PagedCardScreen.Card;
@@ -199,7 +200,12 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
         return switch (recipe.getType()) {
             case ITEM -> renderItemQuestTooltip(recipe);
-            case ROOM -> ImmutableList.of(Compat.translatable("menu.quests.room_quest"));
+            case ROOM -> {
+                if (SpecialQuests.CAMPFIRE.equals(recipe.getWantedId())) {
+                    yield ImmutableList.of(Compat.translatable("menu.quests.campfire_quest"));
+                }
+                yield ImmutableList.of(Compat.translatable("menu.quests.room_quest"));
+            }
             case JOB_CHANGE -> renderJobQuestTooltip(recipe);
             case CONCURRENT_JOBS -> ImmutableList.of(Compat.literal("Have all listed jobs active at the same time"));
             case UNKNOWN -> null;

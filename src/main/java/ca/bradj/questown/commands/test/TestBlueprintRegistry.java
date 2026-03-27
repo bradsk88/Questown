@@ -8,7 +8,9 @@ import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.special.SpecialQuests;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -17,10 +19,20 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 public class TestBlueprintRegistry {
 
-    public record TestEntry(String name, JobID jobId, TestBlueprint blueprint) {}
+    public interface AnyTestEntry {
+        String name();
+        String category();
+    }
+
+    public record TestEntry(String name, JobID jobId, TestBlueprint blueprint, String category)
+            implements AnyTestEntry {}
+
+    public record WorldgenCheck(String name, String category, Function<ServerLevel, Boolean> check)
+            implements AnyTestEntry {}
 
     public static @Nullable TestBlueprint get(JobID jobId) {
         if ("farmer".equals(jobId.rootId())) {
@@ -59,8 +71,8 @@ public class TestBlueprintRegistry {
         return null;
     }
 
-    public static List<TestEntry> getTestableJobs() {
-        List<TestEntry> jobs = new ArrayList<>();
+    public static List<AnyTestEntry> getTestableJobs() {
+        List<AnyTestEntry> jobs = new ArrayList<>();
 
         // Core job tests
         jobs.add(entry(new JobID("farmer", "harvest_wheat"), farmerBlueprint()));
@@ -85,16 +97,26 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "2_villagers", farmerTwoVillagersBlueprint()));
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "warp_then_realtime", farmerRealtimeBlueprint()));
 
+        // Worldgen tests
+        jobs.add(emptyTownStructureCheck());
+        jobs.add(emptyTownStructureSetCheck());
+
         return jobs;
     }
 
+    public static List<AnyTestEntry> getTestsByCategory(String category) {
+        return getTestableJobs().stream()
+                .filter(e -> category.equals(e.category()))
+                .toList();
+    }
+
     private static TestEntry entry(JobID id, TestBlueprint bp) {
-        return new TestEntry(id.rootId() + "/" + id.jobId(), id, bp);
+        return new TestEntry(id.rootId() + "/" + id.jobId(), id, bp, "warp");
     }
 
     private static TestEntry edgeCaseEntry(String root, String job, String variant, TestBlueprint bp) {
         JobID id = new JobID(root, job);
-        return new TestEntry(root + "/" + job + " [" + variant + "]", id, bp);
+        return new TestEntry(root + "/" + job + " [" + variant + "]", id, bp, "warp");
     }
 
     private static TestBlueprint farmerBlueprint() {
@@ -656,6 +678,30 @@ public class TestBlueprintRegistry {
                 base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
                 base.expectation(),
                 base.supplyDoorOffset(), null, null, null, true, 4800
+        );
+    }
+
+    // --- Worldgen checks ---
+
+    private static WorldgenCheck emptyTownStructureCheck() {
+        return new WorldgenCheck(
+                "worldgen/empty_town_structure",
+                "worldgen",
+                level -> level.registryAccess()
+                        .registry(Registry.STRUCTURE_REGISTRY)
+                        .map(r -> r.containsKey(new ResourceLocation("questown", "empty_town")))
+                        .orElse(false)
+        );
+    }
+
+    private static WorldgenCheck emptyTownStructureSetCheck() {
+        return new WorldgenCheck(
+                "worldgen/empty_town_structure_set",
+                "worldgen",
+                level -> level.registryAccess()
+                        .registry(Registry.STRUCTURE_SET_REGISTRY)
+                        .map(r -> r.containsKey(new ResourceLocation("questown", "empty_town")))
+                        .orElse(false)
         );
     }
 }

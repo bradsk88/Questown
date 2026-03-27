@@ -10,3 +10,4 @@ logs
 .claude/
 /.claude.json
 CLAUDE.md
+/.env

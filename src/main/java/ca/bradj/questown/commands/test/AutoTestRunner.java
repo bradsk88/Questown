@@ -15,12 +15,15 @@ import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class AutoTestRunner {
 
     private static final String SYSPROP = "questown.autotest";
+    private static final String SYSPROP_WARP = "questown.autotest.warp";
+    private static final String ENV_CATEGORY = "QUESTOWN_AUTOTEST_CATEGORY";
     private static final int DEFAULT_WARP = 24000;
     private static final BlockPos ORIGIN = new BlockPos(0, 64, 0);
 
@@ -51,17 +54,19 @@ public class AutoTestRunner {
         QT.FLAG_LOGGER.info("[autotest] Spawned fake player at origin");
 
         int warpAmount = parseWarpAmount();
-        QT.FLAG_LOGGER.info("[autotest] Starting automated test suite (warp={}, origin={})", warpAmount, ORIGIN.toShortString());
+        String category = parseCategory();
+        String scope = category != null ? "category=" + category : "all";
+        QT.FLAG_LOGGER.info("[autotest] Starting automated test suite ({}, warp={}, origin={})", scope, warpAmount, ORIGIN.toShortString());
 
         LogTestOutput output = new LogTestOutput("autotest");
-        TestAllExecutor executor = new TestAllExecutor(overworld, output, ORIGIN, warpAmount);
+        TestAllExecutor executor = new TestAllExecutor(overworld, output, ORIGIN, warpAmount, category);
 
         AutoTestTickListener listener = new AutoTestTickListener(server, executor);
         MinecraftForge.EVENT_BUS.register(listener);
     }
 
     private static int parseWarpAmount() {
-        String val = System.getProperty("questown.autotest.warp");
+        String val = System.getProperty(SYSPROP_WARP);
         if (val != null) {
             try {
                 return Integer.parseInt(val);
@@ -70,6 +75,15 @@ public class AutoTestRunner {
             }
         }
         return DEFAULT_WARP;
+    }
+
+    @Nullable
+    private static String parseCategory() {
+        String val = System.getenv(ENV_CATEGORY);
+        if (val == null || val.isBlank()) {
+            return null;
+        }
+        return val;
     }
 
     static class AutoTestTickListener {
