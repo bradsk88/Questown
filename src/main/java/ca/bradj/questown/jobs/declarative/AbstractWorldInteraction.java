@@ -237,10 +237,8 @@ public abstract class AbstractWorldInteraction<
 
         TOWN ts = getTown(inputs);
         if (stack.isEmpty()) {
-            QT.JOB_LOGGER.error(
-                    "No results during extraction phase. That's probably a bug. Town State: {}",
-                    ts
-            );
+            QT.JOB_LOGGER.debug("[tryGiveItems] No result items during extraction — firing hooks with null item");
+            ts = postExtractHook(inputs, ts, null);
             return reset.apply(ts);
         }
 
@@ -575,10 +573,10 @@ public abstract class AbstractWorldInteraction<
         }
         return preExtractHook(getTown(inputs), rules, inputs, position);
     }
-    private @Nullable TOWN postExtractHook(
+    protected @Nullable TOWN postExtractHook(
             EXTRA inputs,
             TOWN currentState,
-            HELD_ITEM item
+            @Nullable HELD_ITEM item
     ) {
         Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
         if (rules == null || rules.isEmpty()) {
@@ -601,7 +599,7 @@ public abstract class AbstractWorldInteraction<
             Collection<String> rules,
             EXTRA inputs,
             POS position,
-            HELD_ITEM extractedItem
+            @Nullable HELD_ITEM extractedItem
     );
 
     protected abstract TOWN setJobBlockState(
@@ -676,6 +674,10 @@ public abstract class AbstractWorldInteraction<
             EXTRA mcExtra
     );
 
+    public void tryExtractWithNoItem(EXTRA inputs) {
+        postExtractHook(inputs, getTown(inputs), null);
+    }
+
     public abstract int timesInserted(EXTRA extra);
 
     public @Nullable WorkPosition<POS> getWorkSpot() {
@@ -714,3 +716,5 @@ public abstract class AbstractWorldInteraction<
             EXTRA extra
     );
 }
+ 
+ 

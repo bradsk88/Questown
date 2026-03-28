@@ -510,6 +510,11 @@ public class TestTickerDependencies implements
             }
 
             @Override
+            public void tryExtractWithNoItem() {
+                // No-op for tests
+            }
+
+            @Override
             public void registerUnmetNeeds(Position workspot, int timesInserted) {
                 // No-op for tests
             }

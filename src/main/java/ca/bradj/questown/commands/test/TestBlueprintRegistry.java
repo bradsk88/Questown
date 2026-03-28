@@ -97,6 +97,12 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "2_villagers", farmerTwoVillagersBlueprint()));
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "warp_then_realtime", farmerRealtimeBlueprint()));
 
+        // Eating tests
+        jobs.add(eatingEntry("eat_no_table", eatNoTableBlueprint()));
+        jobs.add(eatingEntry("dine_at_time", dineAtTimeBlueprint()));
+        jobs.add(eatingEntry("eat_raw_food", eatRawFoodBlueprint()));
+        jobs.add(eatingEntryDirect("eat_direct", eatDirectBlueprint()));
+
         // Worldgen tests
         jobs.add(emptyTownStructureCheck());
         jobs.add(emptyTownStructureSetCheck());
@@ -112,6 +118,16 @@ public class TestBlueprintRegistry {
 
     private static TestEntry entry(JobID id, TestBlueprint bp) {
         return new TestEntry(id.rootId() + "/" + id.jobId(), id, bp, "warp");
+    }
+
+    private static TestEntry eatingEntry(String name, TestBlueprint bp) {
+        JobID id = new JobID("gatherer", "axe");
+        return new TestEntry("eating/" + name, id, bp, "eating");
+    }
+
+    private static TestEntry eatingEntryDirect(String name, TestBlueprint bp) {
+        JobID id = new JobID("gatherer", "dining_no_table");
+        return new TestEntry("eating/" + name, id, bp, "eating");
     }
 
     private static TestEntry edgeCaseEntry(String root, String job, String variant, TestBlueprint bp) {
@@ -592,7 +608,8 @@ public class TestBlueprintRegistry {
                         List.of(new ExpectedProduct("minecraft:wheat", 1, -1)),
                         1, 100
                 ),
-                base.supplyDoorOffset(), 12000, 20000L, null, false, null
+                base.supplyDoorOffset(), 12000, 20000L, null, false, null,
+                false, false, null, null, null, null, null
         );
     }
 
@@ -607,7 +624,8 @@ public class TestBlueprintRegistry {
                         List.of(new ExpectedProduct("minecraft:wheat", 0, 0)),
                         0, 0
                 ),
-                base.supplyDoorOffset(), 2000, 15000L, null, false, null
+                base.supplyDoorOffset(), 2000, 15000L, null, false, null,
+                false, false, null, null, null, null, null
         );
     }
 
@@ -620,7 +638,8 @@ public class TestBlueprintRegistry {
                         List.of(new ExpectedProduct("minecraft:wheat", 3, -1)),
                         3, 300
                 ),
-                base.supplyDoorOffset(), 72000, 0L, null, false, null
+                base.supplyDoorOffset(), 72000, 0L, null, false, null,
+                false, false, null, null, null, null, null
         );
     }
 
@@ -633,7 +652,8 @@ public class TestBlueprintRegistry {
                         List.of(new ExpectedProduct("minecraft:wheat", 0, 0)),
                         0, 0
                 ),
-                base.supplyDoorOffset(), 24000, 0L, null, false, null
+                base.supplyDoorOffset(), 24000, 0L, null, false, null,
+                false, false, null, null, null, null, null
         );
     }
 
@@ -654,7 +674,8 @@ public class TestBlueprintRegistry {
                         ),
                         1, 300
                 ),
-                base.supplyDoorOffset(), 72000, 0L, null, false, null
+                base.supplyDoorOffset(), 72000, 0L, null, false, null,
+                false, false, null, null, null, null, null
         );
     }
 
@@ -667,7 +688,8 @@ public class TestBlueprintRegistry {
                         List.of(new ExpectedProduct("minecraft:wheat", 2, -1)),
                         1, 100
                 ),
-                base.supplyDoorOffset(), 24000, 0L, 2, false, null
+                base.supplyDoorOffset(), 24000, 0L, 2, false, null,
+                false, false, null, null, null, null, null
         );
     }
 
@@ -677,7 +699,108 @@ public class TestBlueprintRegistry {
                 base.roomType(), base.blocks(), base.supplyItems(),
                 base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
                 base.expectation(),
-                base.supplyDoorOffset(), null, null, null, true, 4800
+                base.supplyDoorOffset(), null, null, null, true, 4800,
+                false, false, null, null, null, null, null
+        );
+    }
+
+    // --- Eating tests ---
+
+    /**
+     * Villager eats cooked food at the town flag (no dining room).
+     * DinerNoTableWork path: hungry -> get food from supply -> eat at flag -> fullness 100%.
+     * Fullness cycles between 0-100% during monitoring; threshold reflects end-of-window value.
+     */
+    private static TestBlueprint eatNoTableBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(
+                new ItemStack(Items.BREAD, 16)
+        ));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 0),
+                base.supplyDoorOffset(), null, null, null, true, 800,
+                true, true,
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:bread", -16, -1)),
+                        1, 1
+                ),
+                // fullness check omitted: hunger cycles every ~150 ticks, final value at 800t is timing-dependent
+                null, null, null,
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1)
+        );
+    }
+
+    /**
+     * Villager eats at a dining room (plate block present).
+     * DinerWork path: hungry -> get food from supply -> eat at plate block -> fullness 100%.
+     */
+    private static TestBlueprint dineAtTimeBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(
+                new ItemStack(Items.BREAD, 16)
+        ));
+        BlockPos plateOffset = new BlockPos(1, 0, 0);
+        List<BlockPlacement> blocks = new ArrayList<>(base.blocks());
+        blocks.add(new BlockPlacement(plateOffset, BlocksInit.PLATE_BLOCK.get().defaultBlockState()));
+        return new TestBlueprint(
+                base.roomType(), blocks, base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 0),
+                base.supplyDoorOffset(), null, null, null, true, 800,
+                true, true,
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:bread", -16, -1)),
+                        1, 1
+                ),
+                0.25f, plateOffset, SpecialQuests.DINING_ROOM,
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1)
+        );
+    }
+
+    /**
+     * Villager eats raw food at the town flag (no cooked food available).
+     * DinerRawFoodWork path: hungry -> no cooked food -> eat raw food -> fullness ~50%.
+     * Requires more realtime ticks because DinerNoTableWork must time out first.
+     */
+    private static TestBlueprint eatRawFoodBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(
+                new ItemStack(Items.BEEF, 16)
+        ));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 0),
+                base.supplyDoorOffset(), null, null, null, true, 2000,
+                true, true,
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:beef", -16, -1)),
+                        1, 1
+                ),
+                0.3f, null, null,
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:beef", 0, 1)), 0, 1)
+        );
+    }
+
+    /**
+     * Directly assigns dining_no_table job (bypassing the hunger trigger).
+     * Tests that the eating job itself works: collects food from supply and restores fullness.
+     */
+    private static TestBlueprint eatDirectBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(
+                new ItemStack(Items.BREAD, 16)
+        ));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 0),
+                base.supplyDoorOffset(), null, null, null, true, 600,
+                false, true,
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:bread", -16, -1)),
+                        1, 1
+                ),
+                0.25f, null, null,
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1)
         );
     }
 

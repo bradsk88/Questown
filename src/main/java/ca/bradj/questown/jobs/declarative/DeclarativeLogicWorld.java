@@ -62,6 +62,7 @@ public class DeclarativeLogicWorld<POS, HELD_ITEM, ROOM extends Room> implements
         WorkPosition<POS> getWorldWorkSpot();
         boolean tryGrabbingInsertedSupplies();
         void clearInsertedSupplies();
+        void tryExtractWithNoItem();
         void registerUnmetNeeds(POS workspot, int timesInserted);
         void registerUnmetRooms();
         int timesInserted();
@@ -110,6 +111,7 @@ public class DeclarativeLogicWorld<POS, HELD_ITEM, ROOM extends Room> implements
                 ImmutableList<HELD_ITEM> itemsAfterDrop,
                 Consumer<POS> clearState
         );
+
 
         // Get current tick
         long getCurrentTick();
@@ -185,6 +187,11 @@ public class DeclarativeLogicWorld<POS, HELD_ITEM, ROOM extends Room> implements
     @Override
     public void clearInsertedSupplies() {
         deps.clearInsertedSupplies();
+    }
+
+    @Override
+    public void tryExtractWithNoItem() {
+        deps.tryExtractWithNoItem();
     }
 
     @Override

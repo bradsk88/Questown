@@ -15,6 +15,19 @@ public class TestResultChecker {
 
     public record Result(boolean passed, String summary, List<String> details, Map<String, Integer> deltas) {}
 
+    public static Map<String, Integer> snapshotVillagerHeldCounts(MCTownState state) {
+        Map<String, Integer> counts = new HashMap<>();
+        for (TownState.VillagerData<MCHeldItem> villager : state.villagers) {
+            for (MCHeldItem item : villager.journal.items()) {
+                if (item.isEmpty()) {
+                    continue;
+                }
+                counts.merge(item.getShortName(), 1, Integer::sum);
+            }
+        }
+        return counts;
+    }
+
     public static Map<String, Integer> snapshotItemCounts(MCTownState state) {
         Map<String, Integer> counts = new HashMap<>();
 

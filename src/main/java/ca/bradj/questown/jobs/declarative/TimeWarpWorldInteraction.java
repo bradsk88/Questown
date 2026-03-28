@@ -300,10 +300,13 @@ public class TimeWarpWorldInteraction extends
             Collection<String> rules,
             Inputs inputs,
             BlockPos position,
-            MCHeldItem extractedItem
+            @Nullable MCHeldItem extractedItem
     ) {
         return PostExtractHook.run(
                 mcTownState, townPos, rules, resolveWorld(inputs), position, (ctx, itemData) -> {
+                    if (extractedItem == null || extractedItem.isEmpty()) {
+                        return ctx;
+                    }
                     CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
                     itemData.forEach(t::putInt);
                     return ctx;

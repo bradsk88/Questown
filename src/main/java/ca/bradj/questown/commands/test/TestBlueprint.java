@@ -21,7 +21,15 @@ public record TestBlueprint(
         @Nullable Long startTimeTick,
         @Nullable Integer villagerCount,
         boolean realtimePhase,
-        @Nullable Integer realtimeTicks
+        @Nullable Integer realtimeTicks,
+        // Eating test support
+        boolean drainHungerBeforeTest,
+        boolean skipWarp,
+        @Nullable TestExpectation realtimeExpectation,
+        @Nullable Float minExpectedFullnessAfter,
+        @Nullable BlockPos extraBlockRoomOffset,
+        @Nullable ResourceLocation extraBlockRoomId,
+        @Nullable TestExpectation expectedVillagerHeld
 ) {
     public TestBlueprint(
             RoomType roomType,
@@ -33,7 +41,8 @@ public record TestBlueprint(
             TestExpectation expectation
     ) {
         this(roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
-             roomId, expectation, null, null, null, null, false, null);
+             roomId, expectation, null, null, null, null, false, null,
+             false, false, null, null, null, null, null);
     }
 
     public TestBlueprint(
@@ -47,7 +56,8 @@ public record TestBlueprint(
             @Nullable BlockPos supplyDoorOffset
     ) {
         this(roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
-             roomId, expectation, supplyDoorOffset, null, null, null, false, null);
+             roomId, expectation, supplyDoorOffset, null, null, null, false, null,
+             false, false, null, null, null, null, null);
     }
 
     public int effectiveVillagerCount() {

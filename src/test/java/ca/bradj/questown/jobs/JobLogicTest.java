@@ -112,6 +112,10 @@ class JobLogicTest {
         }
 
         @Override
+        public void tryExtractWithNoItem() {
+        }
+
+        @Override
         public int timesInserted() {
             return inserted ? 1 : 0;
         }

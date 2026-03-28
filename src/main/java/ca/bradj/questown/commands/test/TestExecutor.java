@@ -5,6 +5,8 @@ import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import net.minecraft.core.BlockPos;
@@ -12,8 +14,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.AABB;
 
 import java.util.Map;
+import java.util.UUID;
 
 public class TestExecutor {
 
@@ -61,11 +65,12 @@ public class TestExecutor {
     private BlockPos flagPos;
     private TownFlagBlockEntity tfbe;
     private Map<String, Integer> beforeCounts;
-    private Map<String, Integer> warpDeltas;
+    private Map<String, Integer> warpDeltas = new java.util.HashMap<>();
     private Map<String, Integer> beforeRealtimeCounts;
     private long monitorEndTick;
     private int lastReportedPercent = 0;
     private boolean warpPassed = false;
+    private boolean realtimePassed = false;
 
     public TestExecutor(
             ServerLevel level,
@@ -112,7 +117,7 @@ public class TestExecutor {
     }
 
     public boolean getWarpPassed() {
-        return warpPassed;
+        return blueprint.skipWarp() ? realtimePassed : warpPassed;
     }
 
     public JobID getJobId() {
@@ -174,6 +179,16 @@ public class TestExecutor {
                     destroyed++;
                 }
             }
+        }
+        // Kill any stray VisitorMobEntity in the test area that may have lost their flag reference
+        AABB area = new AABB(origin.offset(-20, -5, -20), origin.offset(20, 10, 20));
+        int stray = 0;
+        for (VisitorMobEntity e : level.getEntitiesOfClass(VisitorMobEntity.class, area)) {
+            e.kill();
+            stray++;
+        }
+        if (stray > 0) {
+            msg("Killed " + stray + " stray visitor(s)");
         }
         if (destroyed > 0) {
             msg("Destroyed " + destroyed + " nearby flag(s)");
@@ -271,6 +286,11 @@ public class TestExecutor {
             tfbe.getRoomHandle().registerDoor(supplyDoorWorldPos);
             msg("Registered supply room door at " + supplyDoorWorldPos.toShortString());
         }
+        if (blueprint.extraBlockRoomOffset() != null && blueprint.extraBlockRoomId() != null) {
+            BlockPos extraWorldPos = flagPos.offset(blueprint.extraBlockRoomOffset());
+            tfbe.getRoomHandle().registerBlockAsRoom(blueprint.extraBlockRoomId(), extraWorldPos);
+            msg("Registered extra block room " + blueprint.extraBlockRoomId() + " at " + extraWorldPos.toShortString());
+        }
         phase = Phase.WAIT_FOR_ROOM;
         waitTicks = 0;
         maxWaitTicks = 300;
@@ -325,11 +345,21 @@ public class TestExecutor {
     }
 
     private void settle() {
-        if (tickTimeout(null)) {
-            phase = Phase.CAPTURE_BEFORE;
+        if (!tickTimeout(null)) {
+            waitTicks++;
             return;
         }
-        waitTicks++;
+        if (blueprint.drainHungerBeforeTest()) {
+            drainHunger();
+        }
+        phase = blueprint.skipWarp() ? Phase.CAPTURE_BEFORE_REALTIME : Phase.CAPTURE_BEFORE;
+    }
+
+    private void drainHunger() {
+        for (VillagerUUID vuid : tfbe.getVillagerHandle().getVillagerJobs().keySet()) {
+            tfbe.getVillagerHandle().fillHunger(VillagerUUID.get(vuid), 0.0f);
+        }
+        msg("Drained villager hunger to 0");
     }
 
     private void captureBefore() {
@@ -525,11 +555,56 @@ public class TestExecutor {
         }
         Map<String, Integer> afterCounts = TestResultChecker.snapshotItemCounts(afterState);
         Map<String, Integer> rawDeltas = TestResultChecker.computeDeltas(beforeRealtimeCounts, afterCounts);
-        Map<String, Integer> scaledDeltas = scaleDeltas(rawDeltas);
-        TestResultChecker.Result result = TestResultChecker.checkDeltas(scaledDeltas, blueprint.expectation());
-        broadcastResult("REALTIME (extrapolated)", result);
-        compareWarpVsRealtime(scaledDeltas);
+
+        boolean itemsPassed;
+        if (blueprint.realtimeExpectation() != null) {
+            TestResultChecker.Result result = TestResultChecker.checkDeltas(rawDeltas, blueprint.realtimeExpectation());
+            broadcastResult("REALTIME", result);
+            itemsPassed = result.passed();
+        } else {
+            Map<String, Integer> scaledDeltas = scaleDeltas(rawDeltas);
+            TestResultChecker.Result result = TestResultChecker.checkDeltas(scaledDeltas, blueprint.expectation());
+            broadcastResult("REALTIME (extrapolated)", result);
+            itemsPassed = result.passed();
+            if (!blueprint.skipWarp()) {
+                compareWarpVsRealtime(scaledDeltas);
+            }
+        }
+
+        boolean fullnessPassed = checkFullnessIfNeeded();
+        boolean heldPassed = checkVillagerHeldIfNeeded(afterState);
+        realtimePassed = itemsPassed && fullnessPassed && heldPassed;
         phase = Phase.DONE;
+    }
+
+    private boolean checkVillagerHeldIfNeeded(MCTownState afterState) {
+        TestExpectation expectation = blueprint.expectedVillagerHeld();
+        if (expectation == null) {
+            return true;
+        }
+        Map<String, Integer> held = TestResultChecker.snapshotVillagerHeldCounts(afterState);
+        TestResultChecker.Result result = TestResultChecker.checkDeltas(held, expectation);
+        broadcastResult("VILLAGER HELD", result);
+        return result.passed();
+    }
+
+    private boolean checkFullnessIfNeeded() {
+        Float minFullness = blueprint.minExpectedFullnessAfter();
+        if (minFullness == null) {
+            return true;
+        }
+        boolean allPassed = true;
+        for (Map.Entry<VillagerUUID, JobID> entry : tfbe.getVillagerHandle().getVillagerJobs().entrySet()) {
+            VillagerUUID vuid = entry.getKey();
+            UUID uuid = VillagerUUID.get(vuid);
+            VillagerStatsData stats = tfbe.getVillagerHandle().getStats(uuid);
+            float fullness = stats.fullnessPercent();
+            boolean passed = fullness >= minFullness;
+            if (!passed) allPassed = false;
+            msg(String.format("[%s] Villager fullness: %.0f%% (min: %.0f%%)",
+                    passed ? "PASS" : "FAIL", fullness * 100, minFullness * 100));
+        }
+        return allPassed;
     }
 
     private Map<String, Integer> scaleDeltas(Map<String, Integer> raw) {

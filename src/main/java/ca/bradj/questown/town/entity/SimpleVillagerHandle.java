@@ -106,6 +106,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     ) {
         this.delegator = del;
         this.configs = config;
+        this.hungerEnabled = config.hungerEnabled;
     }
 
     public void initialize(

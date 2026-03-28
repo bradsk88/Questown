@@ -196,6 +196,10 @@ public class IntegrationTestWorld implements JobLogic.JLWorld<Void, Boolean, Pos
     }
 
     @Override
+    public void tryExtractWithNoItem() {
+    }
+
+    @Override
     public int timesInserted() {
         return insertedSupplies ? 1 : 0;
     }

@@ -10,6 +10,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
@@ -547,6 +548,11 @@ public class DeclarativeJobTickerDependencies implements
             }
 
             @Override
+            public void tryExtractWithNoItem() {
+                job.getWorld().tryExtractWithNoItem(extra);
+            }
+
+            @Override
             public void registerUnmetNeeds(BlockPos workspot, int timesInserted) {
                 job.getWorld().registerUnmetNeeds(extra, workspot, timesInserted);
             }
@@ -665,4 +671,7 @@ public class DeclarativeJobTickerDependencies implements
             }
         };
     }
+
 }
+ 
+ 

@@ -390,7 +390,7 @@ public class RealtimeWorldInteraction extends
             Collection<String> rules,
             MCExtra inputs,
             BlockPos position,
-            MCHeldItem extractedItem
+            @Nullable MCHeldItem extractedItem
     ) {
         return PostExtractHook.run(
                 aBoolean,
@@ -399,6 +399,9 @@ public class RealtimeWorldInteraction extends
                 new MinecraftWorldAccess(inputs.town().getServerLevel()),
                 position,
                 (town, itemData) -> {
+                    if (extractedItem == null || extractedItem.isEmpty()) {
+                        return town;
+                    }
                     CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
                     itemData.forEach(t::putInt);
                     return town;
