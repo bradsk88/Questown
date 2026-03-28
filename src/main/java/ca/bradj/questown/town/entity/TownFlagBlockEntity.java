@@ -458,7 +458,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return getBlockPos();
     }
 
-    @Override
+    public boolean hasVillagerArrivingInMorning() {
+        return morningRewards.hasPendingSpawnVisitor();
+    }
+
     public void addMorningReward(MCReward ev) {
         this.morningRewards.add(ev);
         this.setChanged();
@@ -871,15 +874,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         setChanged(sl, blockEntityPos, state);
     }
 
-    public void giveBonusFood(ServerPlayer sp) {
+    public boolean giveBonusFood(ServerPlayer sp) {
         if (givenBonusFood) {
             Compat.sendMessage(sp, Component.translatable("message.questown.bonus_food_only_once"));
-            return;
+            return false;
         }
         BlockPos pos = getBlockPos();
         ItemStack stack = new ItemStack(Items.CARROT, 10);
         level.addFreshEntity(new ItemEntity(level, pos.getX(), pos.getY(), pos.getZ(), stack));
         givenBonusFood = true;
+        return true;
     }
 
     public void toggleDebugLog(String logId) {

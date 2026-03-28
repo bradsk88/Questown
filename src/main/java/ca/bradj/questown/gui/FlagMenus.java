@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class FlagMenus {
     TownQuestsContainer questsMenu;
@@ -69,10 +70,11 @@ public class FlagMenus {
             FlagTabsEmbedding.FlagInfo flagInfo,
             ServerPlayer player,
             Iterable<? extends VisitorMobEntity> es,
-            int bopCount
+            int bopCount,
+            Supplier<Boolean> morningSpawnPending
     ) {
         TownQuestsContainer.write(buf, quests, flagInfo.flagPos());
-        MultiStatusScreenSyncMessage msg = new MultiStatusScreenSyncMessage(makeSyncData(es));
+        MultiStatusScreenSyncMessage msg = new MultiStatusScreenSyncMessage(makeSyncData(es, morningSpawnPending.get()));
         QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), msg);
         for (VisitorMobEntity e : es) {
             e.addStatusListener(new StatusListener() {
@@ -83,7 +85,7 @@ public class FlagMenus {
 
                 @Override
                 public void statusChanged(IStatus<?> newStatus) {
-                    MultiStatusScreen.SyncedData data1 = makeSyncData(es);
+                    MultiStatusScreen.SyncedData data1 = makeSyncData(es, morningSpawnPending.get());
                     QuestownNetwork.CHANNEL.send(
                             PacketDistributor.PLAYER.with(() -> player),
                             new MultiStatusScreenSyncMessage(data1)
@@ -94,7 +96,10 @@ public class FlagMenus {
         TownBlockofProgressMenu.write(buf, flagInfo, bopCount);
     }
 
-    private static MultiStatusScreen.@NotNull SyncedData makeSyncData(Iterable<? extends VisitorMobEntity> es) {
+    private static MultiStatusScreen.@NotNull SyncedData makeSyncData(
+            Iterable<? extends VisitorMobEntity> es,
+            boolean morningSpawnPending
+    ) {
         HashMap<UUID, StatusPacket> b = new HashMap<>();
         HashMap<UUID, ImmutableList<Item>> b2 = new HashMap<>();
         for (VisitorMobEntity v : es) {
@@ -111,8 +116,7 @@ public class FlagMenus {
                                .toList();
             b2.put(v.getUUID(), ImmutableList.copyOf(list));
         }
-        MultiStatusScreen.SyncedData data1 = new MultiStatusScreen.SyncedData(b, b2);
-        return data1;
+        return new MultiStatusScreen.SyncedData(b, b2, morningSpawnPending);
     }
 
     private static @NotNull StatusPacket createStatusPacket(

@@ -12,6 +12,7 @@ import ca.bradj.questown.gui.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import java.util.function.Supplier;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCReward;
@@ -65,14 +66,16 @@ public class TownFlagMenus {
                     openMenu(
                             sender, (windowId, inv, p) -> new TownQuestsContainer(
                                     windowId, uiQuests, realFlagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
-                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress()
+                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                            () -> flagEntity.hasVillagerArrivingInMorning()
                     );
                 },
                 OpenFlagMenuMessage.VILLAGERS,
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
                                 windowId, realFlagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
-                        ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress()
+                        ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                        () -> flagEntity.hasVillagerArrivingInMorning()
                 ),
                 OpenFlagMenuMessage.ECONOMICS,
                 () -> {
@@ -83,7 +86,8 @@ public class TownFlagMenus {
                     openMenu(
                             sender, (windowId, inv, p) -> new TownEconomicsMenu(
                                     windowId, realFlagInfo
-                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress()
+                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                            () -> flagEntity.hasVillagerArrivingInMorning()
                     );
                 },
                 OpenFlagMenuMessage.BOP,
@@ -91,7 +95,8 @@ public class TownFlagMenus {
                     openMenu(
                             sender, (windowId, inv, p) -> new TownBlockofProgressMenu(
                                     windowId, realFlagInfo, blocksOfProgress
-                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress()
+                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                            () -> flagEntity.hasVillagerArrivingInMorning()
                     );
                     AdvancementsInit.TUTORIAL_TRIGGER.trigger(sender, TutorialTrigger.Triggers.FirstBopView);
                 },
@@ -99,7 +104,8 @@ public class TownFlagMenus {
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new FlagCraftingMenu(
                                 windowId, realFlagInfo
-                        ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress()
+                        ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                        () -> flagEntity.hasVillagerArrivingInMorning()
                 )
         );
 
@@ -139,7 +145,8 @@ public class TownFlagMenus {
             List<UIQuest> quests,
             FlagTabsEmbedding.FlagInfo flagPos,
             Iterable<? extends VisitorMobEntity> entities,
-            int bopCount
+            int bopCount,
+            Supplier<Boolean> morningSpawnPending
     ) {
         Compat.openScreen(
                 sender, new MenuProvider() {
@@ -156,7 +163,7 @@ public class TownFlagMenus {
                     ) {
                         return shower.apply(windowId, inv, p);
                     }
-                }, data -> FlagMenus.writeAndLink(data, quests, flagPos, sender, entities, bopCount)
+                }, data -> FlagMenus.writeAndLink(data, quests, flagPos, sender, entities, bopCount, morningSpawnPending)
         );
     }
 

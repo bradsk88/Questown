@@ -53,7 +53,8 @@ public class TownVillagerUIs {
             FlagTabsEmbedding.FlagInfo townFlagBasePos,
             Collection<? extends LivingEntity> entities,
             Supplier<Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>>> questsSrc,
-            int bopCount
+            int bopCount,
+            Supplier<Boolean> morningSpawnPending
     ) {
         List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
 
@@ -93,7 +94,7 @@ public class TownVillagerUIs {
                             player.getLevel(),
                             questsSrc.get()
                     );
-                    FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es, bopCount);
+                    FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es, bopCount, morningSpawnPending);
                 }
         );
     }
