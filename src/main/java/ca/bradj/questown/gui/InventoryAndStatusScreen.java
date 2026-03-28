@@ -65,6 +65,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     @Override
     protected void init() {
         super.init();
+        ClientAccess.dismissTutorialToast();
         int maybeX = (this.width / 2) + 32;
         int maybeY = ((this.height - backgroundHeight) / 2) + 32 + 16 + 8;
 

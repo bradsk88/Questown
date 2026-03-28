@@ -179,8 +179,10 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         if (itemInHand.getItem().equals(Items.DIRT)) {
-            entity.giveBonusFood(player);
-            return InteractionResult.CONSUME;
+            if (entity.giveBonusFood(player)) {
+                return InteractionResult.CONSUME;
+            }
+            return null; // already claimed — fall through to open the flag UI
         }
 
         if (itemInHand.getItem().equals(Items.DIAMOND)) {
@@ -232,9 +234,6 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         if (Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES).test(itemInHand)) {
             converted = ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance();
-        }
-        if (Ingredient.of(ItemTags.DOORS).test(itemInHand)) {
-            converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
         }
         if (itemInHand.getItem().equals(ItemsInit.TOWN_DOOR.get())) {
             converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();

@@ -141,11 +141,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         int idX = card.coords().leftXPadded();
         int idY = card.coords().topYPadded();
         this.font.draw(poseStack, recipeName.getString(), idX, card.coords().topYPadded(), TEXT_COLOR);
-        if (recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()) {
-            int flavorY = card.coords().topYPadded() + 10;
-            String flavorTruncated = truncateFlavorText(recipe.getFlavorText(), card.coords().rightX() - card.coords().leftX() - 8);
-            this.font.draw(poseStack, flavorTruncated, idX, flavorY, 0x808080);
-        }
         String vID = recipe.villagerUUID();
         String jobName = recipe.jobName();
 
@@ -196,6 +191,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
         if (!UtilClean.isCoordInBox(mouse, card.coords().topLeft(), card.coords().bottomRight())) {
             return null;
+        }
+
+        if (recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()) {
+            return ImmutableList.of(Compat.literal(recipe.getFlavorText()));
         }
 
         return switch (recipe.getType()) {
@@ -415,17 +414,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             case CONCURRENT_JOBS -> new ResourceLocation(Questown.MODID, "014-supply-chains");
             default -> null;
         };
-    }
-
-    private String truncateFlavorText(String text, int maxWidth) {
-        if (this.font.width(text) <= maxWidth) {
-            return text;
-        }
-        String ellipsis = "...";
-        while (text.length() > 3 && this.font.width(text + ellipsis) > maxWidth) {
-            text = text.substring(0, text.length() - 1);
-        }
-        return text + ellipsis;
     }
 
     public List<Rect2i> getExtraAreas() {
