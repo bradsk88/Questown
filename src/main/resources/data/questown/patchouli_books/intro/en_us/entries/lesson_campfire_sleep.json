@@ -1,0 +1,13 @@
+{
+  "sortnum": 12,
+  "name": "Roughing It",
+  "icon": "minecraft:campfire",
+  "category": "questown:lessons",
+  "advancement": "questown:first_campfire_sleep",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Hold your Town Wand and right-click the campfire at night to sleep there.$(br2)You won't set a spawn point. You'll wake up groggy: Mining Fatigue and Weakness for a few minutes.$(br2)Drink milk to clear the effects early."
+    }
+  ]
+}

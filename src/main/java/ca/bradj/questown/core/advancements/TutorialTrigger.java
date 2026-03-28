@@ -47,7 +47,8 @@ public class TutorialTrigger extends SimpleCriterionTrigger<TutorialTrigger.Inst
         FirstBopSpend,
         Chapter2,
         Chapter3,
-        Chapter4;
+        Chapter4,
+        FirstCampfireSleep;
 
         private static final BiMap<Triggers, String> stringVals = ImmutableBiMap.<Triggers, String>builder()
                 .put(Triggers.TutorialComplete, "tutorial_complete")
@@ -59,6 +60,7 @@ public class TutorialTrigger extends SimpleCriterionTrigger<TutorialTrigger.Inst
                 .put(Triggers.Chapter2, "chapter_2")
                 .put(Triggers.Chapter3, "chapter_3")
                 .put(Triggers.Chapter4, "chapter_4")
+                .put(Triggers.FirstCampfireSleep, "first_campfire_sleep")
                 .build();
 
         public static Triggers fromJSON(JsonElement element) {

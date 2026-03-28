@@ -21,6 +21,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -63,6 +64,12 @@ public class TownWand extends Item {
             ItemStack itemInHand
     ) {
         TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(level, itemInHand);
+
+        if (level.getBlockState(clickedPos).is(Blocks.CAMPFIRE)) {
+            CampfireSleepHandler.beginCampfireSleep(player.get(), level, clickedPos, parent);
+            return;
+        }
+
         for (ClickHandler handler : handlers) {
             if (handler.handle(level, clickedPos, parent)) {
                 return;
@@ -79,6 +86,9 @@ public class TownWand extends Item {
             return InteractionResult.CONSUME;
         }
         ServerLevel level = (ServerLevel) p_41427_.getLevel();
+        if (level.getBlockState(p_41427_.getClickedPos()).is(Blocks.CAMPFIRE)) {
+            return InteractionResult.CONSUME;
+        }
         for (ClickHandler handler : handlers) {
             if (handler.getEffectivePosition(level, p_41427_.getClickedPos()) != null) {
                 return InteractionResult.CONSUME;
