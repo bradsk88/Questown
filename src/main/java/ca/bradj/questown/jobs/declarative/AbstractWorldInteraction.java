@@ -238,8 +238,8 @@ public abstract class AbstractWorldInteraction<
         TOWN ts = getTown(inputs);
         if (stack.isEmpty()) {
             QT.JOB_LOGGER.debug("[tryGiveItems] No result items during extraction — firing hooks with null item");
-            ts = postExtractHook(inputs, ts, null);
-            return reset.apply(ts);
+            TOWN hooked = postExtractHook(inputs, ts, null);
+            return reset.apply(hooked != null ? hooked : ts);
         }
 
         boolean gotAll = false;
@@ -263,8 +263,8 @@ public abstract class AbstractWorldInteraction<
                 ts = withEffectApplied(inputs, ts, newItem);
             } else {
                 HELD_ITEM unit = newItem.unit();
-                ts = postExtractHook(inputs, ts, unit);
-                ts = setHeldItem(inputs, ts, villagerIndex, i, unit);
+                TOWN hooked = postExtractHook(inputs, ts, unit);
+                ts = setHeldItem(inputs, hooked != null ? hooked : ts, villagerIndex, i, unit);
                 QT.VILLAGER_LOGGER.debug("Villager took {}", unit.toShortString());
             }
 

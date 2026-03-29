@@ -174,7 +174,7 @@ public class TestBlueprintRegistry {
         );
 
         TestExpectation expectation = new TestExpectation(
-                List.of(new ExpectedProduct("minecraft:wheat", 1, -1)),
+                List.of(new ExpectedProduct("minecraft:wheat", 1, null)),
                 1,
                 100
         );
@@ -263,7 +263,7 @@ public class TestBlueprintRegistry {
                 ),
                 new ResourceLocation(Questown.MODID, "breadmaker"),
                 new TestExpectation(
-                        List.of(new ExpectedProduct("minecraft:bread", 1, -1)),
+                        List.of(new ExpectedProduct("minecraft:bread", 1, null)),
                         1, 100
                 )
         );
@@ -319,8 +319,8 @@ public class TestBlueprintRegistry {
         );
 
         TestExpectation expectation = new TestExpectation(
-                List.of(new ExpectedProduct("minecraft:leather", -32, -1)),
-                1, 100
+                List.of(new ExpectedProduct("minecraft:leather", -32, null)),
+                0, 0
         );
 
         return new TestBlueprint(
@@ -341,7 +341,7 @@ public class TestBlueprintRegistry {
                 List.of(new ItemStack(Items.OAK_SAPLING, 16)),
                 new ResourceLocation(Questown.MODID, "crafting_room"),
                 new TestExpectation(
-                        List.of(new ExpectedProduct("minecraft:stick", 1, -1)),
+                        List.of(new ExpectedProduct("minecraft:stick", 1, null)),
                         1, 100
                 )
         );
@@ -357,7 +357,12 @@ public class TestBlueprintRegistry {
                 ),
                 new ResourceLocation(Questown.MODID, "smithy"),
                 new TestExpectation(
-                        List.of(new ExpectedProduct("minecraft:wooden_axe", 1, -1)),
+                        List.of(
+                                new ExpectedProduct("minecraft:wooden_axe", 0, null),
+                                new ExpectedProduct("minecraft:wooden_pickaxe", 0, null),
+                                new ExpectedProduct("minecraft:wooden_hoe", 0, null),
+                                new ExpectedProduct("minecraft:wooden_shovel", 0, null)
+                        ),
                         1, 100
                 )
         );
@@ -373,7 +378,7 @@ public class TestBlueprintRegistry {
                 ),
                 new ResourceLocation(Questown.MODID, "smeltery"),
                 new TestExpectation(
-                        List.of(new ExpectedProduct("minecraft:raw_iron", 1, -1)),
+                        List.of(new ExpectedProduct("minecraft:raw_iron", 1, null)),
                         1, 100
                 )
         );
@@ -390,7 +395,7 @@ public class TestBlueprintRegistry {
                 ),
                 new ResourceLocation(Questown.MODID, "soup_kitchen_small"),
                 new TestExpectation(
-                        List.of(new ExpectedProduct("minecraft:mushroom_stew", 1, -1)),
+                        List.of(new ExpectedProduct("minecraft:mushroom_stew", 1, null)),
                         1, 100
                 )
         );
@@ -592,7 +597,7 @@ public class TestBlueprintRegistry {
 
     private static TestExpectation wildcardExpectation() {
         return new TestExpectation(
-                List.of(new ExpectedProduct("*", 1, -1)),
+                List.of(new ExpectedProduct("*", 1, null)),
                 1, 100
         );
     }
@@ -605,7 +610,7 @@ public class TestBlueprintRegistry {
                 base.roomType(), base.blocks(), base.supplyItems(),
                 base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
                 new TestExpectation(
-                        List.of(new ExpectedProduct("minecraft:wheat", 1, -1)),
+                        List.of(new ExpectedProduct("minecraft:wheat", 1, null)),
                         1, 100
                 ),
                 base.supplyDoorOffset(), 12000, 20000L, null, false, null,
@@ -635,7 +640,7 @@ public class TestBlueprintRegistry {
                 base.roomType(), base.blocks(), base.supplyItems(),
                 base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
                 new TestExpectation(
-                        List.of(new ExpectedProduct("minecraft:wheat", 3, -1)),
+                        List.of(new ExpectedProduct("minecraft:wheat", 3, null)),
                         3, 300
                 ),
                 base.supplyDoorOffset(), 72000, 0L, null, false, null,
@@ -670,7 +675,7 @@ public class TestBlueprintRegistry {
                 new TestExpectation(
                         List.of(
                                 new ExpectedProduct("minecraft:wooden_axe", -1, -1),
-                                new ExpectedProduct("*", 1, -1)
+                                new ExpectedProduct("*", 1, null)
                         ),
                         1, 300
                 ),
@@ -685,7 +690,7 @@ public class TestBlueprintRegistry {
                 base.roomType(), base.blocks(), base.supplyItems(),
                 base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
                 new TestExpectation(
-                        List.of(new ExpectedProduct("minecraft:wheat", 2, -1)),
+                        List.of(new ExpectedProduct("minecraft:wheat", 2, null)),
                         1, 100
                 ),
                 base.supplyDoorOffset(), 24000, 0L, 2, false, null,
@@ -722,7 +727,7 @@ public class TestBlueprintRegistry {
                 base.supplyDoorOffset(), null, null, null, true, 800,
                 true, true,
                 new TestExpectation(
-                        List.of(new ExpectedProduct("minecraft:bread", -16, -1)),
+                        List.of(new ExpectedProduct("minecraft:bread", -16, null)),
                         1, 1
                 ),
                 // fullness check omitted: hunger cycles every ~150 ticks, final value at 800t is timing-dependent
@@ -749,7 +754,7 @@ public class TestBlueprintRegistry {
                 base.supplyDoorOffset(), null, null, null, true, 800,
                 true, true,
                 new TestExpectation(
-                        List.of(new ExpectedProduct("minecraft:bread", -16, -1)),
+                        List.of(new ExpectedProduct("minecraft:bread", -16, null)),
                         1, 1
                 ),
                 0.25f, plateOffset, SpecialQuests.DINING_ROOM,
@@ -773,7 +778,7 @@ public class TestBlueprintRegistry {
                 base.supplyDoorOffset(), null, null, null, true, 2000,
                 true, true,
                 new TestExpectation(
-                        List.of(new ExpectedProduct("minecraft:beef", -16, -1)),
+                        List.of(new ExpectedProduct("minecraft:beef", -16, null)),
                         1, 1
                 ),
                 0.3f, null, null,
@@ -796,7 +801,7 @@ public class TestBlueprintRegistry {
                 base.supplyDoorOffset(), null, null, null, true, 600,
                 false, true,
                 new TestExpectation(
-                        List.of(new ExpectedProduct("minecraft:bread", -16, -1)),
+                        List.of(new ExpectedProduct("minecraft:bread", -16, null)),
                         1, 1
                 ),
                 0.25f, null, null,

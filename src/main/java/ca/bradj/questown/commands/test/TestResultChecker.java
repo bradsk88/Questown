@@ -92,12 +92,10 @@ public class TestResultChecker {
                 int delta = afterTotal - beforeTotal;
                 deltas.put("*", delta);
 
-                boolean productPassed = delta >= product.minQuantity()
-                        && (product.maxQuantity() < 0 || delta <= product.maxQuantity());
+                boolean productPassed = (product.minDelta() == null || delta >= product.minDelta())
+                        && (product.maxDelta() == null || delta <= product.maxDelta());
                 String status = productPassed ? "PASS" : "FAIL";
-                String expectedRange = product.maxQuantity() < 0
-                        ? ">= " + product.minQuantity()
-                        : product.minQuantity() + ".." + product.maxQuantity();
+                String expectedRange = formatExpectedRange(product);
                 details.add(String.format(
                         "[%s] %s: expected %s, got %d (before=%d, after=%d)",
                         status, "*", expectedRange, delta, beforeTotal, afterTotal
@@ -113,12 +111,10 @@ public class TestResultChecker {
             int delta = afterCount - beforeCount;
             deltas.put(product.itemRegistryName(), delta);
 
-            boolean productPassed = delta >= product.minQuantity()
-                    && (product.maxQuantity() < 0 || delta <= product.maxQuantity());
+            boolean productPassed = (product.minDelta() == null || delta >= product.minDelta())
+                    && (product.maxDelta() == null || delta <= product.maxDelta());
             String status = productPassed ? "PASS" : "FAIL";
-            String expectedRange = product.maxQuantity() < 0
-                    ? ">= " + product.minQuantity()
-                    : product.minQuantity() + ".." + product.maxQuantity();
+            String expectedRange = formatExpectedRange(product);
             details.add(String.format(
                     "[%s] %s: expected %s, got %d (before=%d, after=%d)",
                     status, product.itemRegistryName(), expectedRange, delta, beforeCount, afterCount
@@ -128,8 +124,37 @@ public class TestResultChecker {
             }
         }
 
+        boolean hasOptionalProduct = expectation.products().stream()
+                .anyMatch(p -> (p.minDelta() == null || p.minDelta() == 0) && !"*".equals(p.itemRegistryName()));
+        if (expectation.minCyclesExpected() > 0 && hasOptionalProduct) {
+            int totalProduction = deltas.values().stream().filter(d -> d > 0).mapToInt(Integer::intValue).sum();
+            boolean cyclePassed = totalProduction >= expectation.minCyclesExpected()
+                    && (expectation.maxCyclesExpected() < 0 || totalProduction <= expectation.maxCyclesExpected());
+            String status = cyclePassed ? "PASS" : "FAIL";
+            details.add(String.format(
+                    "[%s] total production: expected >= %d, got %d",
+                    status, expectation.minCyclesExpected(), totalProduction
+            ));
+            if (!cyclePassed) {
+                allPassed = false;
+            }
+        }
+
         String summary = allPassed ? "All expectations met" : "Some expectations failed";
         return new Result(allPassed, summary, details, deltas);
+    }
+
+    private static String formatExpectedRange(TestExpectation.ExpectedProduct product) {
+        if (product.minDelta() != null && product.maxDelta() != null) {
+            return product.minDelta() + ".." + product.maxDelta();
+        }
+        if (product.minDelta() != null) {
+            return ">= " + product.minDelta();
+        }
+        if (product.maxDelta() != null) {
+            return "<= " + product.maxDelta();
+        }
+        return "any";
     }
 
     private static String itemRegistryName(MCTownItem item) {
