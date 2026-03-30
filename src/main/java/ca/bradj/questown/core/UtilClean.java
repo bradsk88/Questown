@@ -1,9 +1,11 @@
 package ca.bradj.questown.core;
 
+import ca.bradj.questown.jobs.Signals;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Function;
@@ -290,5 +292,57 @@ public class UtilClean {
         ImmutableMap.Builder<Y, Z> b = ImmutableMap.builder();
         jobChangesPending.forEach((k, v) -> b.put(get.apply(k), v));
         return b.build();
+    }
+
+    public static <X, Y> Y applyOrDefault(
+            X param,
+            Function<X, Y> fn,
+            Y defaultValue
+    ) {
+        if (param == null) {
+            return defaultValue;
+        }
+        Y v = fn.apply(param);
+        if (v == null) {
+            return defaultValue;
+        }
+        return v;
+    }
+
+    public static boolean sameUUID(
+            @Nullable UUID ownerUUID,
+            @Nullable UUID uuid
+    ) {
+        if (ownerUUID == null && uuid != null) {
+            return false;
+        }
+        if (ownerUUID != null && uuid == null) {
+            return false;
+        }
+        if (ownerUUID == null) {
+            return true;
+        }
+        return ownerUUID.equals(uuid);
+    }
+
+    public static @Nullable <Y, X> Y orNull(
+            @Nullable X input,
+            Function<@NotNull X,Y> fn
+    ) {
+        if (input == null) {
+            return null;
+        }
+        return fn.apply(input);
+    }
+
+    public static Signals.DayTime getDayTime(long dayTime) {
+        return new Signals.DayTime(dayTime % 24000);
+    }
+
+    public static <W, X> ImmutableList<X> getOrEmptyImmutable(
+            ImmutableMap<W, Collection<X>> map,
+            W key
+    ) {
+        return getOrDefaultCollection(map, key, ImmutableList.of());
     }
 }

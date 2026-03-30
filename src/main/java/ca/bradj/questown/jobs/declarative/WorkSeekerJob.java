@@ -5,6 +5,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -127,31 +128,26 @@ public class WorkSeekerJob extends DeclarativeJob {
     }
 
     @Override
-    protected @NotNull Supplier<ProductionStatus> getStateComputer(
+    protected @Nullable ProductionStatus getComputeStatusOverrideForSpecialJobs(
             TownInterface town,
-            IProductionStatusFactory<ProductionStatus> statusFactory,
-            JobTownProvider<MCRoom> jtp,
-            EntityLocStateProvider<MCRoom> elp
+            IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
-        return () -> {
-            Supplier<ProductionStatus> sc = super.getStateComputer(town, statusFactory, jtp, elp);
-            return switch (super.getSignal()) {
-                case MORNING, NOON, UNDEFINED -> {
-                    if (town.getVillagerHandle().hasBlockOfProgress(ownerUUID)) {
-                        town.changeJobForVisitorFromBoard(ownerUUID, getId());
-                    }
-                    if (town.getPossibleWork().getFor(getId()).isEmpty()) {
-                        if (!registeredUnmet && !statusFactory.noWorkPossible().equals(journal.getStatus())) {
-                            journal.changeStatus(statusFactory.noWorkPossible());
-                            town.getPossibleWork().invalidate();
-                            registeredUnmet = true;
-                        }
-                        yield statusFactory.noWorkPossible();
-                    }
-                    yield sc.get();
+        return switch (super.getSignal(Util.getDayTime(town.getServerLevel()))) {
+            case MORNING, NOON, UNDEFINED -> {
+                if (town.getVillagerHandle().hasBlockOfProgress(ownerUUID)) {
+                    town.changeJobForVisitorFromBoard(ownerUUID, getId());
                 }
-                case EVENING, NIGHT -> sc.get();
-            };
+                if (town.getPossibleWork().getFor(getId()).isEmpty()) {
+                    if (!registeredUnmet && !statusFactory.noWorkPossible().equals(journal.getStatus())) {
+                        journal.changeStatus(statusFactory.noWorkPossible());
+                        town.getPossibleWork().invalidate();
+                        registeredUnmet = true;
+                    }
+                    yield statusFactory.noWorkPossible();
+                }
+                yield null; // Use standard status computation
+            }
+            case EVENING, NIGHT -> null; // Use standard status computation
         };
     }
 }

@@ -1,5 +1,4 @@
-package ca.bradj.questown.jobs;
-
+package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.questown.town.workstatus.State;

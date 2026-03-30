@@ -1,15 +1,15 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.world.QTWorldAccess;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 
 import java.util.Collection;
 import java.util.function.Supplier;
 
 public record JobBlockTestContext(
-        ServerLevel level,
+        QTWorldAccess world,
         WorkLocation.BlockInfo blockInfo,
         BlockPos blockPos,
         Supplier<Collection<MCHeldItem>> heldItems,
@@ -18,12 +18,12 @@ public record JobBlockTestContext(
         boolean jobActive
 ) {
     public JobBlockTestContext withPos(BlockPos p) {
-        return new JobBlockTestContext(level, blockInfo, p, heldItems, townUniqueItems, jobBlockAlreadyUsed, jobActive);
+        return new JobBlockTestContext(world, blockInfo, p, heldItems, townUniqueItems, jobBlockAlreadyUsed, jobActive);
     }
 
     public JobBlockTestContext withBlockAlreadyUsed(boolean b) {
         return new JobBlockTestContext(
-                level,
+                world,
                 blockInfo,
                 blockPos,
                 heldItems,
@@ -34,7 +34,7 @@ public record JobBlockTestContext(
     }
     public JobBlockTestContext withJobAlreadyStarted(boolean b) {
         return new JobBlockTestContext(
-                level,
+                world,
                 blockInfo,
                 blockPos,
                 heldItems,

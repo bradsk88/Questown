@@ -48,7 +48,9 @@ class JobLogicTest {
                     STATE_NEED_WORK, 1
             ),
             ImmutableMap.of(),
-            "gold nugget"
+            "gold nugget",
+            ImmutableList.of(),
+            ImmutableMap.of()
     );
 
     private static final JobLogic.JobDetails DEFAULT_DETAILS = new JobLogic.JobDetails(
@@ -107,6 +109,10 @@ class JobLogicTest {
         @Override
         public void clearInsertedSupplies() {
             this.inserted = false;
+        }
+
+        @Override
+        public void tryExtractWithNoItem() {
         }
 
         @Override
@@ -499,7 +505,9 @@ class JobLogicTest {
                 ImmutableMap.of(
                         // No timers
                 ),
-                "gold nugget"
+                "gold nugget",
+                ImmutableList.of(),
+                ImmutableMap.of()
         );
 
         TestLogicWorld world = new TestLogicWorld(definition);
@@ -555,7 +563,9 @@ class JobLogicTest {
                 ImmutableMap.of(
                         // No timers
                 ),
-                "gold nugget"
+                "gold nugget",
+                ImmutableList.of(),
+                ImmutableMap.of()
         );
 
         TestLogicWorld world = new TestLogicWorld(definition);
@@ -628,7 +638,9 @@ class JobLogicTest {
                 ImmutableMap.of(
                         // No timers
                 ),
-                "soup"
+                "soup",
+                ImmutableList.of(),
+                ImmutableMap.of()
         );
 
         TestLogicWorld world = new TestLogicWorld(definition);
@@ -714,7 +726,9 @@ class JobLogicTest {
                 ImmutableMap.of(
                         // No timers
                 ),
-                "air"
+                "air",
+                ImmutableList.of(),
+                ImmutableMap.of()
         );
 
         TestLogicWorld world = new TestLogicWorld(definition);

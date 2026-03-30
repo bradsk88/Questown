@@ -84,6 +84,7 @@ public class Questown {
 
     private void setup(final FMLCommonSetupEvent event) {
         event.enqueueWork(QuestownNetwork::init);
+        ca.bradj.questown.jobs.declarative.DeclarativeJobs.staticInitialize();
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {
