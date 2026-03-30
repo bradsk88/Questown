@@ -6,9 +6,8 @@
   "icon": "minecraft:beef",
   "initial_request": "minecraft:cooked_beef",
   "result": {
-    "type": "item",
-    "item": "minecraft:air",
-    "quantity": 1
+    "type": "via_other_job",
+    "jobs": ["cook/extract"]
   },
   "block": {
     "id": "minecraft:furnace",
@@ -33,7 +32,7 @@
   "special": [
     {
       "type": "global",
-      "rules": []
+      "rules": ["furnace_smelt_warp"]
     },
     {
       "type": "processing_state",

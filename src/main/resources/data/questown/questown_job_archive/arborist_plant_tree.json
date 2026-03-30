@@ -1,0 +1,45 @@
+{
+  "version": 2,
+  "id": "arborist/plant_sapling",
+  "priority": "10000",
+  "parent": "arborist/cut_trees",
+  "icon": "minecraft:oak_sapling",
+  "initial_request": "minecraft:oak_log",
+  "result": {
+    "type": "item",
+    "item": "minecraft:air"
+  },
+  "block": {
+    "id": "#questown:tillables"
+  },
+  "room": "questown:special_quest.farm",
+  "work_states": [
+    {
+      "tools": "#minecraft:saplings"
+    },
+    {
+      "work": 3
+    },
+    {
+      "ingredients": "#minecraft:saplings",
+      "quantity": 1
+    }
+  ],
+  "cooldown_ticks": 10,
+  "sound": {
+    "id": "minecraft:item.shovel.place",
+    "chance": "100",
+    "duration": 5
+  },
+  "special": [
+    {
+      "type": "global",
+      "rules": ["questown_vanilla:check_tree_plantable","claim_workspot", "require_air_above"]
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": ["questown:use_last_inserted_item_on_block"]
+    }
+  ]
+}

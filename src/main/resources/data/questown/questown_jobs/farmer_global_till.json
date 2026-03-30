@@ -6,8 +6,7 @@
   "icon": "minecraft:wooden_hoe",
   "initial_request": "minecraft:wheat",
   "result": {
-    "type": "item",
-    "item": "minecraft:air"
+    "type": "uses_special_rules"
   },
   "block": {
     "id": "#questown:tillables"
@@ -23,7 +22,7 @@
   "special": [
     {
       "type": "global",
-      "rules": ["require_air_above", "shared_work_status"]
+      "rules": ["require_air_above", "shared_work_status", "questown:crop_growth_warp"]
     },
     {
       "type": "core_state",

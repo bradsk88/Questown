@@ -6,8 +6,7 @@
   "icon": "minecraft:tall_grass",
   "initial_request": "minecraft:wheat_seeds",
   "result": {
-    "type": "item",
-    "item": "minecraft:air"
+    "type": "uses_special_rules"
   },
   "block": {
     "id": "#questown:weeds"
@@ -25,7 +24,8 @@
       "type": "global",
       "rules": [
         "claim_workspot",
-        "shared_work_status"
+        "shared_work_status",
+        "questown:crop_growth_warp"
       ]
     },
     {

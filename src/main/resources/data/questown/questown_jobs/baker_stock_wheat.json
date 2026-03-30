@@ -14,13 +14,13 @@
   "work_states": [
     {
       "tools": "minecraft:wheat",
-      "work": 10
+      "work": 1
     },
     {
       "ingredients": "minecraft:wheat"
     }
   ],
-  "cooldown_ticks": 5,
+  "cooldown_ticks": 50,
   "special": [
     {
       "type": "global",

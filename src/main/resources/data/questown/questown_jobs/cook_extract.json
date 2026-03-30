@@ -5,11 +5,8 @@
   "parent": null,
   "icon": "minecraft:cooked_beef",
   "initial_request": "minecraft:cooked_cod",
-  "note": "initial request is actually ignored due to 'always consider' in global rules",
   "result": {
-    "type": "item",
-    "item": "minecraft:air",
-    "quantity": 1
+    "type": "uses_special_rules"
   },
   "block": {
     "id": "minecraft:furnace",
@@ -32,7 +29,7 @@
   "special": [
     {
       "type": "global",
-      "rules": ["always_consider"]
+      "rules": ["always_consider", "furnace_smelt_warp"]
     },
     {
       "type": "core_state",
