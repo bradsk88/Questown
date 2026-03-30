@@ -16,7 +16,7 @@ import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.jobs.Job;
+import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
@@ -31,7 +31,6 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.*;
-import ca.bradj.questown.town.TownVillagers;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.questown.town.quests.*;
@@ -99,7 +98,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final TownKnownBiomes biomes = new TownKnownBiomes();
     TownHealingHandle healing = new TownHealingHandle();
     private final TownFlagInitialization initializer;
-    private int preferredBuffer; // TODO: Replace with TownVillagerData.FallbackSelector
+    private final TownVillagerData.FallbackSelector fallbackSelector = new TownVillagerData.FallbackSelector();
     private final NoMCEconomics economics = new NoMCEconomics();
     final TownFlagTicker ticker = new TownFlagTicker();
 
@@ -175,7 +174,26 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     boolean isInitializedQuests = false;
     boolean changed = false;
 
-    final TownWorkStatusStore jobHandle = new TownWorkStatusStore();
+    /**
+     * Global work status store (used when ownerID is null).
+     * Used by jobs with SHARED_WORK_STATUS special rule.
+     *
+     * IMPORTANT: Global and per-owner stores are INTENTIONALLY SEPARATE and should NOT interact.
+     * They track different work states for different purposes:
+     * - Global store: For shared work where any villager can continue another's work or work simultaneously
+     * - Per-owner stores: For jobs with CLAIM_SPOT rule where work is owned by a specific villager
+     */
+    final TownWorkStatusStore jobHandle = new TownWorkStatusStore(
+            (m, p) -> this.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.WORK_STATUS).log(m, p)
+    );
+    /**
+     * Per-owner work status stores (keyed by villager UUID).
+     * Used by jobs with CLAIM_SPOT special rule (which implies owned work states).
+     * Each villager gets their own isolated store so they can claim and work spots independently.
+     *
+     * IMPORTANT: Per-owner stores are INTENTIONALLY SEPARATE from the global store and from each other.
+     * Do NOT copy states between stores - they are meant to be isolated.
+     */
     final Map<UUID, TownWorkStatusStore> jobHandles = new HashMap<>();
 
     final TownWorkHandle workHandle = new TownWorkHandle(subBlocks, getBlockPos());
@@ -303,6 +321,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public void writeTownData(CompoundTag tag) {
+        writeTownData(tag, true);
+    }
+
+    public void writeTownData(CompoundTag tag, boolean includeEconomicsData) {
         if (level == null) {
             return;
         }
@@ -424,7 +446,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return getBlockPos();
     }
 
-    @Override
+    public boolean hasVillagerArrivingInMorning() {
+        return morningRewards.hasPendingSpawnVisitor();
+    }
+
     public void addMorningReward(MCReward ev) {
         this.morningRewards.add(ev);
         this.setChanged();
@@ -591,30 +616,28 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return false;
         };
         Predicate<JobID> canAlwaysStart = p -> ServerJobsRegistry.canAlwaysStart(uuid, p);
-        JobID work = TownVillagers.chooseFromList(
-                canFit,
+        JobID work = possibleWork.nextForVillager(
+                ownerUUID,
+                villager.getJobId(),
                 canAlwaysStart,
+                canFit,
                 requestedResults,
-                td,
-                possibleWork.getFor(villager.getJobId())
+                td
         );
         if (work != null) {
             changeJob.accept(work);
             return true;
         }
 
-        if (preferredBuffer < 100) {
-            preferredBuffer++;
-            return false;
-        }
-        preferredBuffer = 0;
-
-        work = TownVillagers.getPreferredWork(villager.getJobId(), canFit, canAlwaysStart, requestedResults, td);
-        if (work != null) {
-            changeJob.accept(work);
+        JobID fallback = fallbackSelector.tryFallback(
+                1, villager.getJobId(), canFit, canAlwaysStart, requestedResults, td,
+                possibleWork.getFor(villager.getJobId()),
+                jobs -> Compat.shuffle(jobs.iterator(), getServerLevel())
+        );
+        if (fallback != null) {
+            changeJob.accept(fallback);
             return true;
         }
-
         return false;
     }
 
@@ -702,16 +725,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(
             @Nullable UUID ownerIDOrNullForGlobal
     ) {
-        if (ownerIDOrNullForGlobal == null) {
-            return jobHandle;
-        }
-        TownWorkStatusStore jh = jobHandles.get(ownerIDOrNullForGlobal);
-        if (jh != null) {
-            return jh;
-        }
-        jh = new TownWorkStatusStore();
-        jobHandles.put(ownerIDOrNullForGlobal, jh);
-        return jh;
+        return getRealWorkStatusHandle(ownerIDOrNullForGlobal);
     }
 
     @Override
@@ -799,8 +813,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         workHandle.openMenuRequested(sender, skipStraightToAdd);
     }
 
-    public void warpTime(int ticks) {
-        state.warp(this, Compat.getBlockStoredTagData(this), getServerLevel(), ticks);
+    public MCTownState warpTime(int ticks) {
+        return state.warp(this, Compat.getBlockStoredTagData(this), getServerLevel(), ticks);
+    }
+
+    public @Nullable MCTownState captureCurrentState() {
+        return state.captureState();
     }
 
     public VillagerHolder getVillagerHandle() {
@@ -828,7 +846,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public FlagTabsEmbedding.FlagInfo getInfo() {
-        return FlagTabsEmbedding.FlagInfo.dumb(getBlockPos(), bopCount > 0);
+        boolean hasIncomplete = quests.getAll().stream().anyMatch(q -> !q.isComplete());
+        return FlagTabsEmbedding.FlagInfo.withQuestNotification(getBlockPos(), bopCount > 0, hasIncomplete);
     }
 
     public void ejectBlockOfProgress(ServerPlayer sender) {
@@ -843,19 +862,23 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         setChanged(sl, blockEntityPos, state);
     }
 
-    public void giveBonusFood(ServerPlayer sp) {
+    public boolean giveBonusFood(ServerPlayer sp) {
         if (givenBonusFood) {
             Compat.sendMessage(sp, Component.translatable("message.questown.bonus_food_only_once"));
-            return;
+            return false;
         }
         BlockPos pos = getBlockPos();
         ItemStack stack = new ItemStack(Items.CARROT, 10);
         level.addFreshEntity(new ItemEntity(level, pos.getX(), pos.getY(), pos.getZ(), stack));
         givenBonusFood = true;
+        return true;
     }
 
     public void toggleDebugLog(String logId) {
         logToggles.compute(logId, (k, v) -> v == null || !v);
+    }
+    public void setDebugLog(String logId, boolean b) {
+        logToggles.put(logId, b);
     }
 
     @Override
@@ -877,5 +900,26 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     private boolean isDebugLogEnabled(String logId) {
         return logToggles.getOrDefault(logId, false);
+    }
+
+    public AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> getRealWorkStatusHandle(UUID ownerIDOrNullForGlobal) {
+        if (ownerIDOrNullForGlobal == null) {
+            return jobHandle;
+        }
+        TownWorkStatusStore jh = jobHandles.get(ownerIDOrNullForGlobal);
+        if (jh != null) {
+            return jh;
+        }
+        jh = new TownWorkStatusStore(
+                (m, p) -> this.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.WORK_STATUS).log(m, p)
+        );
+        jobHandles.put(ownerIDOrNullForGlobal, jh);
+        // Initialize the new store immediately so work states are available
+        ServerLevel sl = getServerLevel();
+        if (sl != null) {
+            Collection<MCRoom> allRooms = roomsHandle.getAllRoomsIncludingMetaAndFarms();
+            jh.tick(sl, allRooms, 1);
+        }
+        return jh;
     }
 }

@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.TownState;
@@ -27,8 +28,12 @@ public class ProductionTimeWarper {
     ) {
         Stack<H> stack = new Stack<>();
         itemz.stream().filter(v -> !v.isEmpty() && !v.isLocked()).forEach(stack::add);
+        QT.JOB_LOGGER.debug("[dropIntoContainers] Items to drop: {} (count={})",
+                stack.stream().map(h -> h.get().getShortName()).toList(), stack.size());
+        int droppedCount = 0;
         for (ContainerTarget<C, I> container : containers) {
             if (stack.isEmpty()) {
+                QT.JOB_LOGGER.debug("[dropIntoContainers] Dropped {} items total", droppedCount);
                 return ImmutableList.of();
             }
             if (container.isFull()) {
@@ -36,13 +41,17 @@ public class ProductionTimeWarper {
             }
             for (int i = 0; i < container.size(); i++) {
                 if (container.getItem(i).isEmpty()) {
-                    container.setItem(i, stack.pop().get());
+                    I item = stack.pop().get();
+                    container.setItem(i, item);
+                    droppedCount++;
+                    QT.JOB_LOGGER.debug("[dropIntoContainers] Dropped {} into slot {}", item.getShortName(), i);
                     if (stack.isEmpty()) {
                         break;
                     }
                 }
             }
         }
+        QT.JOB_LOGGER.debug("[dropIntoContainers] Dropped {} items total, {} not deposited", droppedCount, stack.size());
         if (stack.isEmpty()) {
             return ImmutableList.of();
         }
@@ -60,12 +69,16 @@ public class ProductionTimeWarper {
             Supplier<H> emptyFactory
     ) {
         Collection<H> items = getHeldItems(inState, villagerIndex);
+        QT.JOB_LOGGER.debug("[simulateDropLoot] Villager items before drop: {}",
+                items.stream().map(h -> h.isEmpty() ? "empty" : h.get().getShortName()).toList());
         ProductionTimeWarper.Result<H> r = new ProductionTimeWarper.Result<>(status, ImmutableList.copyOf(items));
         Function<ImmutableList<H>, Collection<H>> dropFn = itemz -> ProductionTimeWarper.dropIntoContainers(
                 itemz,
                 inState.containers
         );
         r = ProductionTimeWarper.simulateDropLoot(r, dropFn, emptyFactory);
+        QT.JOB_LOGGER.debug("[simulateDropLoot] Villager items after drop: {}",
+                r.items().stream().map(h -> h.isEmpty() ? "empty" : h.get().getShortName()).toList());
         return inState.withVillagerData(villagerIndex, inState.villagers.get(villagerIndex).withItems(r.items()));
     }
 
@@ -97,6 +110,9 @@ public class ProductionTimeWarper {
             if (toolchk == null) {
                 throw new IllegalStateException("No ingredients or tools required at state " + processingState + ". We shouldn't be collecting.");
             }
+            if (villagerAlreadyHolds(inState, villagerIndex, toolchk)) {
+                return inState;
+            }
             ingr = toolchk;
         }
 
@@ -104,7 +120,7 @@ public class ProductionTimeWarper {
 
         @Nullable Map.Entry<TOWN, I> removeResult = inState.withContainerItemRemoved(i -> fingr.test(grabber.apply(i)));
         if (removeResult == null) {
-            return null; // Item does not exist - collection failed
+            return null;
         }
 
         TOWN outState = removeResult.getKey();
@@ -116,6 +132,19 @@ public class ProductionTimeWarper {
         }
 
         return outState.withVillagerData(villagerIndex, villager);
+    }
+
+    private static <
+            I extends Item<I>,
+            H extends HeldItem<H, I>,
+            TOWN extends TownState<?, I, H, ?, TOWN>
+            > boolean villagerAlreadyHolds(
+            TOWN inState,
+            int villagerIndex,
+            Predicate<H> matcher
+    ) {
+        Collection<H> items = getHeldItems(inState, villagerIndex);
+        return items.stream().filter(h -> !h.isEmpty()).anyMatch(matcher);
     }
 
     public record JobNeeds<I>(

@@ -7,21 +7,31 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.integration.minecraft.*;
-import ca.bradj.questown.jobs.ImmutableSnapshot;
-import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.DowntimeWork;
+import ca.bradj.questown.jobs.declarative.WarpTickHook;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.TownState;
-import ca.bradj.questown.town.Warper;
+import ca.bradj.questown.town.TownVillagerData;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.integration.SpecialRulesRegistry;
+import ca.bradj.questown.integration.jobs.JobPhaseModifier;
+import ca.bradj.questown.world.MinecraftWorldAccess;
+import ca.bradj.questown.world.WarpWorldAccess;
 import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -33,10 +43,43 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 // This class is NOT encapsulated from MC
 
 public class TownFlagState {
+
+    private static final long MINIMUM_ABSENCE_FOR_SUMMARY = 12000;
+
+    /**
+     * Interface for work-related operations during warp.
+     * This bridges to the job registry and town state.
+     */
+    public interface Work {
+        void recomputeNow();
+
+        @Nullable
+        ca.bradj.questown.jobs.JobID getRandomFinishableWork(
+                ca.bradj.questown.jobs.JobID jobID,
+                ca.bradj.questown.jobs.Signals.DayTime dayTime,
+                long ticksElapsed
+        );
+
+        java.util.List<ca.bradj.questown.jobs.JobID> getPreselectedJobs(
+                ca.bradj.questown.jobs.JobID currentJob
+        );
+
+        long getTotalDuration(
+                ca.bradj.questown.jobs.JobID jobID,
+                ca.bradj.questown.core.VillagerUUID vuid
+        );
+
+        int getWarpTicksPerCycle(
+                ca.bradj.questown.jobs.JobID jobID,
+                ca.bradj.questown.core.VillagerUUID vuid
+        );
+    }
     static final String NBT_TIME_WARP_REFERENCE_TICK = String.format("%s_last_tick", Questown.MODID);
     static final String NBT_TOWN_STATE = String.format("%s_town_state", Questown.MODID);
     private final TownFlagBlockEntity parent;
@@ -114,9 +157,6 @@ public class TownFlagState {
             QT.logBug("NBT had no town state. That's probably a bug. Town state will reset");
         }
 
-
-        ArrayList<TownState.VillagerData<MCHeldItem>> villagers = new ArrayList<>(storedState.villagers);
-
         long ticksPassed = dayTime - storedState.worldTimeAtSleep;
         if (optionalWarpDuration != null) {
             ticksPassed = optionalWarpDuration;
@@ -128,61 +168,170 @@ public class TownFlagState {
 
         ticksPassed = Math.min(ticksPassed, Config.TIME_WARP_MAX_TICKS.get());
 
-        MCTownState liveState = storedState;
-
-        final List<Map.Entry<Long, Function<MCTownState, MCTownState>>> warpSteps = new ArrayList<>();
-
-        for (int i = 0; i < villagers.size(); i++) {
-            TownState.VillagerData<MCHeldItem> v = villagers.get(i);
-            e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log(
-                    "[{}] Warping time by {} ticks, starting with journal: {}",
-                    v.uuid,
-                    ticksPassed,
-                    liveState
-            );
-            Warper<ServerLevel, MCTownState> vWarper = ServerJobsRegistry.getWarper(
-                    i, v.journal.jobId()
-            );
-
-            final int ii = i;
-            vWarper.getTicks(dayTime, ticksPassed).forEach(
-                    tick -> warpSteps.add(new AbstractMap.SimpleEntry<>(
-                            tick.tick(),
-                            ts -> vWarper.warp(sl, ts, tick.tick(), tick.ticksSincePrevious(), ii)
-                    ))
-            );
+        ticksPassed = Signals.calculateProductiveTicks(dayTime, ticksPassed);
+        if (ticksPassed <= 0) {
+            QT.FLAG_LOGGER.info("Time warp contained no productive ticks (all nighttime)");
+            return storedState;
         }
 
-        warpSteps.sort(Map.Entry.comparingByKey());
-        // TODO: Return a collection of lambdas that process chunks of 500?
-        long before = System.currentTimeMillis();
+        Work w = createWork(e, sl);
 
-        for (Map.Entry<Long, Function<MCTownState, MCTownState>> warpStep : warpSteps) {
-            MCTownState affectedState = warpStep.getValue().apply(liveState);
-            if (affectedState != null) {
-                liveState = affectedState;
+        ImmutableList.Builder<BlockPos> roomPosBuilder = ImmutableList.builder();
+        for (MCRoom room : e.roomsHandle.getAllRoomsIncludingMetaAndFarms()) {
+            room.getSpaces().stream()
+                    .flatMap(space -> InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY).stream())
+                    .forEach(v -> {
+                        BlockPos pos = Positions.ToBlock(v, room.yCoord);
+                        roomPosBuilder.add(pos);
+                        roomPosBuilder.add(pos.above());
+                    });
+        }
+
+        // TODO: Consider pre-allocating roomPositions to jobIds based on JobBlock match and passing them in to advance time
+        ImmutableList<BlockPos> roomPositions = roomPosBuilder.build();
+
+        ImmutableSet<String> rules = collectGlobalRulesForAllVillagerRoots(storedState);
+
+        WarpWorldAccess warpWorld = new WarpWorldAccess(sl, roomPositions);
+
+        MCAdvanceTime.WarpTickCallback<MCTownState> warpCb =
+                (town, tick, delta) -> WarpTickHook.run(
+                        rules,
+                        warpWorld,
+                        town, tick, delta,
+                        () -> roomPositions
+                );
+
+        MCAdvanceTime advancer =
+                new MCAdvanceTime(Config.MAX_DOWNTIME_TICKS.get());
+        MCAdvanceTime.Result<MCTownState> result = advancer.advanceTime(
+                storedState,
+                ticksPassed,
+                dayTime,
+                ImportantTicks.adaptWork(w),
+                MCAdvanceTime.createWarperFactory(w, e.getBlockPos(), roomPositions, warpWorld),
+                null,
+                warpCb,
+                sl,
+                job -> DowntimeWork.matches(job),
+                Config.MAX_DOWNTIME_TICKS.get(),
+                createLogger(e)
+        );
+
+        if (result.state() != null) {
+            warpWorld.applyTo(sl);
+        }
+
+        return result.state();
+    }
+
+    private static ImmutableSet<String> collectGlobalRulesForAllVillagerRoots(
+            MCTownState storedState
+    ) {
+        ImmutableSet<String> activeRoots = storedState.villagers.stream()
+                .map(v -> v.journal.jobId().rootId())
+                .collect(ImmutableSet.toImmutableSet());
+        ImmutableSet.Builder<String> ruleIDs = ImmutableSet.builder();
+        for (JobID id : Works.ids()) {
+            if (!activeRoots.contains(id.rootId())) {
+                continue;
+            }
+            Supplier<ca.bradj.questown.jobs.Work> ws = Works.get(id);
+            if (ws != null) {
+                ruleIDs.addAll(ws.get().getSpecialGlobalRules());
             }
         }
+        return ruleIDs.build();
+    }
 
-        long after = System.currentTimeMillis();
+    /**
+     * Creates the Work implementation that bridges to the TownFlagBlockEntity.
+     */
+    private static Work createWork(TownFlagBlockEntity e, ServerLevel sl) {
+        return new Work() {
+            private final TownVillagerData.FallbackSelector fallbackSelector = new TownVillagerData.FallbackSelector();
 
-        TownInterface.DebugLogger logger =
-                Config.LOG_WARP_RESULT.get() ?
+            @Override
+            public void recomputeNow() {
+                e.getPossibleWork().recomputeNow();
+            }
+
+            @Override
+            public @Nullable JobID getRandomFinishableWork(
+                    JobID currentJob,
+                    Signals.DayTime dayTime,
+                    long ticksElapsed
+            ) {
+                ImmutableList<WorkRequest> requestedResults = e.getWorkHandle().getRequestedResults();
+                WorksBehaviour.TownData td = e.getTownData();
+
+                Predicate<JobID> canFit = p -> ServerJobsRegistry.canFit(null, p, dayTime);
+                Predicate<JobID> canAlwaysStart = p -> ServerJobsRegistry.canAlwaysStart(null, p);
+
+                List<JobID> possibleWork = e.getPossibleWork().getFor(currentJob);
+
+                // First try to choose from preselected jobs that match a request
+                JobID work = TownVillagerData.chooseFromList(
+                        canFit,
+                        canAlwaysStart,
+                        requestedResults,
+                        td,
+                        possibleWork
+                );
+                if (work != null) {
+                    return work;
+                }
+
+                JobID fallback = fallbackSelector.tryFallback(
+                        (int) ticksElapsed, currentJob, canFit, canAlwaysStart, requestedResults, td,
+                        e.getPossibleWork().getFor(currentJob),
+                        jobs -> Compat.shuffle(jobs.iterator(), sl)
+                );
+                if (fallback != null) {
+                    return fallback;
+                }
+                if (fallbackSelector.isBuffering()) {
+                    return currentJob;
+                }
+                return null;
+            }
+
+            @Override
+            public List<JobID> getPreselectedJobs(JobID currentJob) {
+                return e.getPossibleWork().getFor(currentJob);
+            }
+
+            @Override
+            public long getTotalDuration(JobID jobID, VillagerUUID vuid) {
+                return ServerJobsRegistry.getUninitializedJob(jobID, vuid).getJob().getTotalDuration();
+            }
+
+            @Override
+            public int getWarpTicksPerCycle(JobID jobID, VillagerUUID vuid) {
+                return ServerJobsRegistry.getUninitializedJob(jobID, vuid).getJob().getWarpTicksPerCycle();
+            }
+        };
+    }
+
+    /**
+     * Creates a WarpLogger that respects the debug logging configuration.
+     */
+    private static MCAdvanceTime.WarpLogger createLogger(TownFlagBlockEntity e) {
+        return new MCAdvanceTime.WarpLogger() {
+            @Override
+            public void log(String message, Object... args) {
+                TownInterface.DebugLogger logger = Config.LOG_WARP_RESULT.get() ?
                         QT.FLAG_LOGGER::info :
                         e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP);
-        logger.log("State after warp of {}: {}", ticksPassed, liveState);
-        QT.FLAG_LOGGER.info("Warp took {} milliseconds", after - before);
+                logger.log(message, args);
+            }
 
-        return new MCTownState(
-                liveState.villagers,
-                liveState.containers,
-                liveState.workStates,
-                liveState.workTimers,
-                liveState.gates,
-                liveState.knowledge(),
-                liveState.blocksOfProgress,
-                dayTime
-        );
+            @Override
+            public void logDetail(String message, Object... args) {
+                // Use TIME_WARP for detail logs as well
+                e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log(message, args);
+            }
+        };
     }
 
     static void recoverMobs(
@@ -264,20 +413,27 @@ public class TownFlagState {
         return changes;
     }
 
-    void warp(
+    MCTownState warp(
             TownFlagBlockEntity e,
             CompoundTag flagTag,
             ServerLevel level,
             long timeSinceWake
     ) {
         long levelDayTime = level.getDayTime();
+
+        Map<ResourceLocation, Integer> beforeItems = snapshotContainerItems(e, level);
+
+        MCTownState newState = null;
         try {
-            MCTownState newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
+            newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
             if (newState != null) {
                 e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Storing state on {}: {}", e.getUUID(), newState);
                 Compat.getBlockStoredTagData(e).put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
                 TownFlagState.recoverMobs(parent, level);
+                TownFlagState.restoreWarpVisuals(level, newState);
                 parent.getKnowledgeHandle().registerFoundLoots(newState.knowledge());
+
+                sendWarpSummary(e, level, timeSinceWake, beforeItems);
             }
         } catch (Exception ex) {
             if (Config.CRASH_ON_FAILED_WARP.get()) {
@@ -288,6 +444,110 @@ public class TownFlagState {
         }
         // TODO: Make sure chests get filled/empty
         flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, levelDayTime);
+        return newState;
+    }
+
+    private static void restoreWarpVisuals(ServerLevel level, MCTownState state) {
+        ImmutableList<JobPhaseModifier> rules = SpecialRulesRegistry.getAllInstances();
+        for (var blockEntry : state.workStates.entrySet()) {
+            if (blockEntry.getValue().processingState() == 0) {
+                continue;
+            }
+            BlockPos workBlock = blockEntry.getKey();
+            net.minecraft.world.entity.LivingEntity nearest = findNearestVillager(level, state, workBlock);
+            if (nearest == null) {
+                continue;
+            }
+            for (JobPhaseModifier rule : rules) {
+                rule.afterWarpRecovery(level, nearest, workBlock);
+            }
+        }
+    }
+
+    private static net.minecraft.world.entity.LivingEntity findNearestVillager(
+            ServerLevel level,
+            MCTownState state,
+            BlockPos workBlock
+    ) {
+        net.minecraft.world.entity.LivingEntity nearest = null;
+        double nearestDist = Double.MAX_VALUE;
+        for (TownState.VillagerData<?> vData : state.villagers) {
+            net.minecraft.world.entity.Entity entity = level.getEntity(vData.uuid);
+            if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) {
+                continue;
+            }
+            double dist = workBlock.distSqr(new BlockPos(
+                    (int) vData.xPosition, (int) vData.yPosition, (int) vData.zPosition
+            ));
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = living;
+            }
+        }
+        return nearest;
+    }
+
+    private Map<ResourceLocation, Integer> snapshotContainerItems(TownFlagBlockEntity e, ServerLevel level) {
+        Map<ResourceLocation, Integer> snapshot = new HashMap<>();
+        ImmutableList<MCTownItem> allStacks = TownContainers.getAllStacks(e, level);
+        for (MCTownItem stack : allStacks) {
+            if (stack.isEmpty()) {
+                continue;
+            }
+            ResourceLocation id = Compat.getItemId(stack.get());
+            snapshot.merge(id, stack.toMCItemStack().getCount(), Integer::sum);
+        }
+        return snapshot;
+    }
+
+    private void sendWarpSummary(
+            TownFlagBlockEntity e,
+            ServerLevel level,
+            long timeSinceWake,
+            Map<ResourceLocation, Integer> beforeItems
+    ) {
+        if (timeSinceWake < MINIMUM_ABSENCE_FOR_SUMMARY) {
+            return;
+        }
+
+        Map<ResourceLocation, Integer> afterItems = snapshotContainerItems(e, level);
+        Map<ResourceLocation, Integer> deltas = new HashMap<>();
+        for (Map.Entry<ResourceLocation, Integer> entry : afterItems.entrySet()) {
+            int before = beforeItems.getOrDefault(entry.getKey(), 0);
+            int delta = entry.getValue() - before;
+            if (delta > 0) {
+                deltas.put(entry.getKey(), delta);
+            }
+        }
+
+        if (deltas.isEmpty()) {
+            return;
+        }
+
+        long daysAway = timeSinceWake / 24000;
+        String dayStr = daysAway == 1 ? "1 day" : daysAway + " days";
+
+        StringBuilder items = new StringBuilder();
+        int count = 0;
+        for (Map.Entry<ResourceLocation, Integer> entry : deltas.entrySet()) {
+            if (count > 0) {
+                items.append(", ");
+            }
+            String itemName = entry.getKey().getPath().replace("_", " ");
+            items.append(entry.getValue()).append(" ").append(itemName);
+            count++;
+            if (count >= 5) {
+                int remaining = deltas.size() - 5;
+                if (remaining > 0) {
+                    items.append(", and ").append(remaining).append(" more");
+                }
+                break;
+            }
+        }
+
+        String message = "While you were away (" + dayStr + "): " + items;
+        e.messages.broadcastMessage(message);
+
     }
 
     private void profileTick(long startTime) {
@@ -323,7 +583,7 @@ public class TownFlagState {
                 QT.FLAG_LOGGER.error("Entity is null at {}, but was expected to be a container", bp);
                 continue;
             }
-            LazyOptional<IItemHandler> cap = entity.getCapability(Compat.ITEM_HANDLER);
+            LazyOptional<IItemHandler> cap = entity.getCapability(Compat.itemHandler());
             if (!cap.isPresent()) {
                 continue;
             }
