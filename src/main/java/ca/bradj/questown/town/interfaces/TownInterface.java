@@ -19,12 +19,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.UUID;
-import java.util.function.BiConsumer;
 
 public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     TownPossibleWork getPossibleWork();

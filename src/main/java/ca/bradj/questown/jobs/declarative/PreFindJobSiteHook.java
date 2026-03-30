@@ -9,7 +9,6 @@ import net.minecraft.core.BlockPos;
 
 import java.util.Collection;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import static ca.bradj.questown.jobs.declarative.PrePostHooks.processMulti;
 

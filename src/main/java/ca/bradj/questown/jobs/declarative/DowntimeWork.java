@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.Pair;
