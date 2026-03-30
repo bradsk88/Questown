@@ -11,9 +11,10 @@ import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
 public class IngredientsFromHeldItemSpecialRule extends
-        JobPhaseModifier {
+        JobPhaseModifier implements QTNativeRule {
 
     private final boolean isTool;
 

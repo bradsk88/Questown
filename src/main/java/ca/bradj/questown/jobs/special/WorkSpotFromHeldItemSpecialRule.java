@@ -22,9 +22,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
 public class WorkSpotFromHeldItemSpecialRule extends
-        JobPhaseModifier {
+        JobPhaseModifier implements QTNativeRule {
 
     @Override
     public void beforeTick(BeforeTickEvent bxEvent) {

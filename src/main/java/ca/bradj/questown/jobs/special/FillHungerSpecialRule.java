@@ -3,9 +3,10 @@ package ca.bradj.questown.jobs.special;
 import ca.bradj.questown.integration.jobs.AfterExtractEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import org.jetbrains.annotations.Nullable;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
 public class FillHungerSpecialRule extends
-        JobPhaseModifier {
+        JobPhaseModifier implements QTNativeRule {
 
     private final float percent;
 

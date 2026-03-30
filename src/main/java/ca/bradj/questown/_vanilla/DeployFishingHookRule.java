@@ -56,8 +56,15 @@ public class DeployFishingHookRule extends JobPhaseModifier {
             AfterInsertItemEvent<CONTEXT> event
     ) {
         CONTEXT ctx = super.afterInsertItem(ctxInput, event);
-        LivingEntity villager = (LivingEntity) event.level().getEntity(event.inserter());
-        @Nullable FishingHook deployed = deployHere(event.level(), event.workSpot().workPosition(), villager);
+        ServerLevel sl = event.world().asServerLevel();
+        // The FishingHook entity is cosmetic - it does not affect what fish are caught.
+        // During warp and tests, asServerLevel() returns null, so we skip spawning it.
+        // This is intentional: fishing produces correct results without the visual hook.
+        if (sl == null) {
+            return ctx;
+        }
+        LivingEntity villager = (LivingEntity) sl.getEntity(event.inserter());
+        @Nullable FishingHook deployed = deployHere(sl, event.workSpot().workPosition(), villager);
         if (deployed != null) {
             this.hooks.add(deployed);
         }
@@ -70,7 +77,10 @@ public class DeployFishingHookRule extends JobPhaseModifier {
             BeforeExtractEvent<CONTEXT> event
     ) {
         CONTEXT context = super.beforeExtract(ctxInput, event);
-        hooks.forEach(h -> h.remove(Entity.RemovalReason.DISCARDED));
+        if (!hooks.isEmpty()) {
+            hooks.forEach(h -> h.remove(Entity.RemovalReason.DISCARDED));
+            hooks.clear();
+        }
         return context;
     }
 }

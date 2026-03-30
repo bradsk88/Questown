@@ -4,8 +4,9 @@ import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.integration.jobs.AfterExtractEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import org.jetbrains.annotations.Nullable;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
-public class AssociateItemWithTownSpecialRule extends JobPhaseModifier {
+public class AssociateItemWithTownSpecialRule extends JobPhaseModifier implements QTNativeRule {
 
     @Override
     public <CONTEXT> @Nullable CONTEXT afterExtract(

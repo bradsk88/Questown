@@ -44,7 +44,7 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
     public void beforeTick(BeforeTickEvent bxEvent) {
         super.beforeTick(bxEvent);
         UnsafeVillagerData villagerData = bxEvent.villagerData();
-        ServerLevel serverLevel = bxEvent.level().get();
+        ServerLevel serverLevel = bxEvent.world().get().asServerLevel();
         @Nullable BlockPos override = getOverride(villagerData, false);
         if (override == null) {
             choosePosAndStoreOnVillager(

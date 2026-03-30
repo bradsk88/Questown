@@ -3,38 +3,27 @@ package ca.bradj.questown.jobs.special;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
+import ca.bradj.questown.world.QTWorldAccess;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
 public class UseLastInsertedItemOnBlockSpecialRule extends
-        JobPhaseModifier {
+        JobPhaseModifier implements QTNativeRule {
     @Override
     public <X> X beforeExtract(
             X context,
             BeforeExtractEvent<X> event
     ) {
-        BlockPos groundPos = event.workSpot();
-        ServerLevel level = event.level();
-
-        BlockHitResult bhr = new BlockHitResult(
-                Vec3.atCenterOf(groundPos), Direction.UP,
-                groundPos, false
-        );
         Item item = event.lastInsertedItem();
-        InteractionResult result = item.useOn(new UseOnContext(
-                level, null, InteractionHand.MAIN_HAND,
-                item.getDefaultInstance(), bhr
-        ));
-        if (!result.consumesAction()) {
-            String msg = "Failed to use item {} on block at {}";
-            QT.JOB_LOGGER.error(msg, item, groundPos);
+        if (item == null) {
+            return null;
+        }
+        BlockPos groundPos = event.workSpot();
+        QTWorldAccess world = event.world();
+        boolean success = world.useItemOnBlock(item.getDefaultInstance(), groundPos);
+        if (!success) {
+            QT.JOB_LOGGER.error("Failed to use item {} on block at {}", item, groundPos);
         }
         return null;
     }
