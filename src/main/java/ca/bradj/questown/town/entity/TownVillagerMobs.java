@@ -12,7 +12,7 @@ import java.util.Optional;
 
 import static ca.bradj.questown.town.entity.TownFlagState.NBT_TOWN_STATE;
 
-public class TownVillagers {
+public class TownVillagerMobs {
     public static void assumeStateFromTown(
             TownFlagBlockEntity town,
             VisitorMobEntity visitorMobEntity

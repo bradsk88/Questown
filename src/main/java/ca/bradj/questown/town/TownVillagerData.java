@@ -1,6 +1,5 @@
 package ca.bradj.questown.town;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
@@ -13,9 +12,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
-public class TownVillagers {
+public class TownVillagerData {
     public static @Nullable JobID getPreferredWork(
             JobID villagerCurrentJob,
             Predicate<JobID> canFitInDay,
@@ -45,28 +45,64 @@ public class TownVillagers {
         Collections.shuffle(preference);
 
         for (JobID p : preference) {
-            if (canAlwaysStart.test(p)) {
-                return p;
-            }
-            if (!canFitInDay.test(p)) {
+            if (!canAlwaysStart.test(p) && !canFitInDay.test(p)) {
                 continue;
             }
-
+            if (requestedResults.isEmpty()) {
+                return p;
+            }
             List<Ingredient> i = requestedResults.stream()
                                                  .map(WorkRequest::asIngredient)
                                                  .toList();
             for (Ingredient requestedResult : i) {
-                // TODO: Think about how work chains work.
-                //  E.g. If a blacksmith needs iron ingots to do a requested job,
-                //  but none of the other villagers produce that resource, the
-                //  blacksmith should light up red to indicate a broken chain and
-                //  that the player will need to contribute in order for the
-                //  blacksmith to work, rather than everything being automated.
                 if (ServerJobsRegistry.canSatisfy(td, p, requestedResult)) {
                     return p;
                 }
             }
         }
         return null;
+    }
+
+    public static class FallbackSelector {
+        private int preferredBuffer = 0;
+        private boolean buffering = false;
+
+        public boolean isBuffering() {
+            return buffering;
+        }
+
+        public @Nullable JobID tryFallback(
+                int bufferIncrement,
+                JobID currentJob,
+                Predicate<JobID> canFit,
+                Predicate<JobID> canAlwaysStart,
+                ImmutableList<WorkRequest> requestedResults,
+                WorksBehaviour.TownData td,
+                Iterable<JobID> preselectedJobs,
+                Function<Iterable<JobID>, ImmutableList<JobID>> shuffler
+        ) {
+            if (preferredBuffer < 100) {
+                preferredBuffer += bufferIncrement;
+                if (preferredBuffer < 100) {
+                    buffering = true;
+                    return null;
+                }
+            }
+            preferredBuffer = 0;
+            buffering = false;
+
+            JobID preferred = getPreferredWork(currentJob, canFit, canAlwaysStart, requestedResults, td);
+            if (preferred != null) {
+                return preferred;
+            }
+
+            ImmutableList<JobID> shuffled = shuffler.apply(preselectedJobs);
+            for (JobID p : shuffled) {
+                if (canFit.test(p)) {
+                    return p;
+                }
+            }
+            return null;
+        }
     }
 }

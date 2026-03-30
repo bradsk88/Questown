@@ -2,9 +2,6 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
-import ca.bradj.questown.core.network.OpenItemJobsMessage;
-import ca.bradj.questown.core.network.OpenJobMessage;
-import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.production.ProductionStatus;

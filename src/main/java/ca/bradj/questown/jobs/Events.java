@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.jobs.declarative.DeclarativeJobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownVillagerHandle;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
