@@ -4,9 +4,10 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.jobs.AfterInsertItemEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import org.jetbrains.annotations.Nullable;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 
 public class ClearBOPSpecialRule extends
-        JobPhaseModifier {
+        JobPhaseModifier implements QTNativeRule {
 
     public ClearBOPSpecialRule() {
 

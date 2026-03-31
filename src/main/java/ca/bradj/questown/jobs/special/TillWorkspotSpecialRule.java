@@ -1,32 +1,45 @@
 package ca.bradj.questown.jobs.special;
 
 import ca.bradj.questown.integration.jobs.*;
+import ca.bradj.questown.world.QTToolAction;
+import ca.bradj.questown.world.QTWorldAccess;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.level.block.FarmBlock;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.ToolActions;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
+
 public class TillWorkspotSpecialRule extends
-        JobPhaseModifier {
+        JobPhaseModifier implements QTNativeRule {
     @Override
     public <X> @Nullable X beforeExtract(
             X context,
             BeforeExtractEvent<X> event
     ) {
-        ServerLevel level = event.level();
-        BlockPos groundPos = event.workSpot();
-        BlockState bs = getTilledState(level, groundPos);
-        if (bs == null) return null;
-        level.setBlockAndUpdate(groundPos, bs);
+        QTWorldAccess world = event.world();
+        BlockPos tillable = findTillableBlock(world, event);
+        if (tillable == null) {
+            return null;
+        }
+        world.applyToolTransformation(tillable, QTToolAction.HOE_TILL);
         return context;
+    }
+
+    private static <X> @Nullable BlockPos findTillableBlock(
+            QTWorldAccess world,
+            BeforeExtractEvent<X> event
+    ) {
+        BlockPos workSpot = event.workSpot();
+        if (world.canToolTransformBlock(workSpot, QTToolAction.HOE_TILL)) {
+            return workSpot;
+        }
+        List<BlockPos> candidates = world.getShuffledCopy(event.jobBlockPositions().get());
+        for (BlockPos candidate : candidates) {
+            if (world.canToolTransformBlock(candidate, QTToolAction.HOE_TILL)) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -45,32 +58,5 @@ public class TillWorkspotSpecialRule extends
     @Override
     public void beforeTick(BeforeTickEvent bxEvent) {
 
-    }
-
-
-    @Nullable
-    public static BlockState getTilledState(
-            ServerLevel level,
-            BlockPos groundPos
-    ) {
-        BlockState bs = level.getBlockState(groundPos);
-        BlockHitResult bhr = new BlockHitResult(
-                Vec3.atCenterOf(groundPos), Direction.UP,
-                groundPos, false
-        );
-        bs = bs.getToolModifiedState(new UseOnContext(
-                level, null, InteractionHand.MAIN_HAND,
-                // TODO: Determine tool from held item
-                Items.WOODEN_HOE.getDefaultInstance(), bhr
-        ), ToolActions.HOE_TILL, false);
-
-        if (bs != null) {
-            BlockState moistened = bs.setValue(FarmBlock.MOISTURE, 2);
-            if (!moistened.equals(bs)) {
-                return moistened;
-            }
-        }
-
-        return null;
     }
 }
