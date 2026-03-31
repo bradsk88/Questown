@@ -48,7 +48,7 @@ class WarpWorldAccessTest {
     }
 
     // -------------------------------------------------------------------------
-    // advanceProcessing - basic production
+    // advanceProcessing — basic production
     // -------------------------------------------------------------------------
 
     @Test
@@ -76,7 +76,7 @@ class WarpWorldAccessTest {
     }
 
     // -------------------------------------------------------------------------
-    // advanceProcessing - output slot full
+    // advanceProcessing — output slot full
     // -------------------------------------------------------------------------
 
     @Test
@@ -94,7 +94,7 @@ class WarpWorldAccessTest {
     }
 
     // -------------------------------------------------------------------------
-    // advanceProcessing - no fuel
+    // advanceProcessing — no fuel
     // -------------------------------------------------------------------------
 
     @Test
@@ -110,7 +110,7 @@ class WarpWorldAccessTest {
     }
 
     // -------------------------------------------------------------------------
-    // advanceProcessing - no ingredient
+    // advanceProcessing — no ingredient
     // -------------------------------------------------------------------------
 
     @Test
@@ -125,7 +125,7 @@ class WarpWorldAccessTest {
     }
 
     // -------------------------------------------------------------------------
-    // advanceProcessing - cook progress accumulates across calls
+    // advanceProcessing — cook progress accumulates across calls
     // -------------------------------------------------------------------------
 
     @Test
@@ -133,11 +133,11 @@ class WarpWorldAccessTest {
         WarpWorldAccess world = furnaceWorld(
                 new ItemStack(Items.BEEF), new ItemStack(Items.COAL), ItemStack.EMPTY
         );
-        // 100 ticks - not enough to finish (needs 200)
+        // 100 ticks — not enough to finish (needs 200)
         world.advanceProcessing(FURNACE, 100);
         assertTrue(world.getContainerSlot(FURNACE, 2).isEmpty(), "Should not produce after 100 ticks");
 
-        // Another 100 ticks - now 200 total, should complete
+        // Another 100 ticks — now 200 total, should complete
         world.advanceProcessing(FURNACE, 100);
         assertFalse(world.getContainerSlot(FURNACE, 2).isEmpty(), "Should produce after 200 ticks total");
         assertEquals(Items.COOKED_BEEF, world.getContainerSlot(FURNACE, 2).getItem());
@@ -158,7 +158,7 @@ class WarpWorldAccessTest {
     }
 
     // -------------------------------------------------------------------------
-    // advanceProcessing - unrecognised ingredient
+    // advanceProcessing — unrecognised ingredient
     // -------------------------------------------------------------------------
 
     @Test
@@ -171,7 +171,7 @@ class WarpWorldAccessTest {
     }
 
     // -------------------------------------------------------------------------
-    // advanceProcessing - position without container
+    // advanceProcessing — position without container
     // -------------------------------------------------------------------------
 
     @Test
@@ -347,14 +347,14 @@ class WarpWorldAccessTest {
         WarpWorldAccess world = new WarpWorldAccess(
                 new HashMap<>(), new HashMap<>(), i -> Optional.empty(), i -> 0
         );
-        // No level, no blockStates entry - resolveBlockState returns null
+        // No level, no blockStates entry — resolveBlockState returns null
         List<ItemStack> drops = world.chopTree(new BlockPos(99, 64, 99));
         assertTrue(drops.isEmpty());
     }
 
     @Test
     void chopTree_doesNotLoopInfinitely_onDenseCluster() {
-        // 2x2x2 cube of oak logs - all connected to each other
+        // 2x2x2 cube of oak logs — all connected to each other
         Map<BlockPos, BlockState> blocks = new HashMap<>();
         BlockState log = Blocks.OAK_LOG.defaultBlockState();
         for (int x = 0; x <= 1; x++) {

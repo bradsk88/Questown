@@ -82,7 +82,7 @@ public class CheckTreePlantable extends JobPhaseModifier {
         }
 
         // TreeFeature.place() is inherently MC-coupled (runs world-gen logic to test
-        // plantability). There is no QTWorldAccess abstraction for this - it intentionally
+        // plantability). There is no QTWorldAccess abstraction for this — it intentionally
         // stays as an asServerLevel() call. During warp, asServerLevel() returns null and
         // this check is skipped (handled by the null guard above).
         ServerLevel level = ctx.world().asServerLevel();

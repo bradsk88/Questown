@@ -79,72 +79,102 @@ public class ImportantTicks {
             long startingAtGameTime
     ) {
         Collection<Warper.Tick> ticks = new ArrayList<>();
+        boolean wasOnDowntime = isDowntime.test(jobID);
 
-        if (isDowntime.test(jobID)) {
-            return forDowntimeVillager(ticks, config, ticksPassed, startingAtGameTime);
-        }
+        if (wasOnDowntime) {
+            // Skip downtime period
+            startingAtGameTime += config.MAX_DOWNTIME_TICKS;
+            ticksPassed -= config.MAX_DOWNTIME_TICKS;
+            ticks.add(new Warper.Tick(config.MAX_DOWNTIME_TICKS, config.MAX_DOWNTIME_TICKS));
 
-        w.recomputeNow();
-        JobID resolvedJob = w.getRandomFinishableWork(
-                jobID, Signals.DayTime.virtualMorning(), ticksPassed
-        );
+            if (ticksPassed <= 0) {
+                // Only downtime, no work time remaining
+                return new Result(ImmutableList.copyOf(ticks), true);
+            }
 
-        if (resolvedJob == null) {
-            return withDefaultTickSpacing(ticks, ticksPassed, startingAtGameTime, true);
-        }
+            // For downtime villagers, generate ticks at default intervals
+            // The DynamicJobWarper will resolve the actual job at each tick
+            long totalDuration = DEFAULT_WORK_CYCLE_TICKS;
+            // Use higher default for dynamic resolution since we don't know the job's requirements
+            int ticksPerCycle = DEFAULT_DYNAMIC_TICKS_PER_CYCLE;
+            long stepSpacing = Math.max(1, totalDuration / ticksPerCycle);
+            long prev = 0;
+            for (int j = 0; j <= ticksPassed; j += (int) totalDuration) {
+                for (int step = 0; step < ticksPerCycle; step++) {
+                    long tickOffset = Math.min(j + (long) step * stepSpacing, ticksPassed);
+                    if (tickOffset > ticksPassed) {
+                        break;
+                    }
+                    long ticksSince = tickOffset - prev;
+                    if (ticksSince > 0) {
+                        ticks.add(new Warper.Tick(startingAtGameTime + tickOffset, ticksSince));
+                        prev = tickOffset;
+                    }
+                }
 
-        // totalDuration includes real-world overhead (walking, pathfinding, etc.).
-        // Explicit downtime simulation was tested but caused under-production vs real-time.
-        long totalDuration = w.getTotalDuration(resolvedJob, uuid);
-        if (totalDuration <= 0) {
-            totalDuration = DEFAULT_WORK_CYCLE_TICKS;
-        }
-        int ticksPerCycle = Math.max(w.getWarpTicksPerCycle(resolvedJob, uuid), 5);
-
-        generateTicks(ticks, ticksPassed, startingAtGameTime, totalDuration, ticksPerCycle);
-        return new Result(ImmutableList.copyOf(ticks), false);
-    }
-
-    private static Result forDowntimeVillager(
-            Collection<Warper.Tick> ticks,
-            Config config,
-            long ticksPassed,
-            long startingAtGameTime
-    ) {
-        startingAtGameTime += config.MAX_DOWNTIME_TICKS;
-        ticksPassed -= config.MAX_DOWNTIME_TICKS;
-        ticks.add(new Warper.Tick(config.MAX_DOWNTIME_TICKS, config.MAX_DOWNTIME_TICKS));
-
-        if (ticksPassed <= 0) {
+                if (j + totalDuration > ticksPassed) {
+                    break;
+                }
+            }
             return new Result(ImmutableList.copyOf(ticks), true);
         }
 
-        generateTicks(ticks, ticksPassed, startingAtGameTime,
-                DEFAULT_WORK_CYCLE_TICKS, DEFAULT_DYNAMIC_TICKS_PER_CYCLE);
-        return new Result(ImmutableList.copyOf(ticks), true);
-    }
+        // Not on downtime - use existing job to compute tick spacing
+        w.recomputeNow();
+        // Pass a large ticksElapsed to bypass the preferredBuffer check during warp.
+        // Use a virtual morning time to ensure canFit() doesn't reject jobs during warp.
+        // The actual game tick when warp happens is irrelevant for tick spacing calculation.
+        JobID resolvedJob = w.getRandomFinishableWork(jobID, new Signals.DayTime(1000), ticksPassed);
 
-    private static Result withDefaultTickSpacing(
-            Collection<Warper.Tick> ticks,
-            long ticksPassed,
-            long startingAtGameTime,
-            boolean useDynamicResolution
-    ) {
-        generateTicks(ticks, ticksPassed, startingAtGameTime,
-                DEFAULT_WORK_CYCLE_TICKS, DEFAULT_DYNAMIC_TICKS_PER_CYCLE);
-        return new Result(ImmutableList.copyOf(ticks), useDynamicResolution);
-    }
+        if (resolvedJob == null) {
+            // Current job can't be completed and no alternative work found.
+            // Fall back to dynamic resolution so villager can find other work during warp.
+            long totalDuration = DEFAULT_WORK_CYCLE_TICKS;
+            // Use higher default for dynamic resolution since we don't know the job's requirements
+            int ticksPerCycle = DEFAULT_DYNAMIC_TICKS_PER_CYCLE;
+            long stepSpacing = Math.max(1, totalDuration / ticksPerCycle);
+            long prev = 0;
+            for (int j = 0; j <= ticksPassed; j += (int) totalDuration) {
+                for (int step = 0; step < ticksPerCycle; step++) {
+                    long tickOffset = Math.min(j + (long) step * stepSpacing, ticksPassed);
+                    if (tickOffset > ticksPassed) {
+                        break;
+                    }
+                    long ticksSince = tickOffset - prev;
+                    if (ticksSince > 0) {
+                        ticks.add(new Warper.Tick(startingAtGameTime + tickOffset, ticksSince));
+                        prev = tickOffset;
+                    }
+                }
 
-    private static void generateTicks(
-            Collection<Warper.Tick> ticks,
-            long ticksPassed,
-            long startingAtGameTime,
-            long cycleDuration,
-            int ticksPerCycle
-    ) {
-        long stepSpacing = Math.max(1, cycleDuration / ticksPerCycle);
+                if (j + totalDuration > ticksPassed) {
+                    break;
+                }
+            }
+            // Use dynamic resolution since we couldn't find work with the current job
+            return new Result(ImmutableList.copyOf(ticks), true);
+        }
+
+        // NOTE: Downtime is already accounted for in the totalDuration calculation
+        // which includes real-world overhead (walking, pathfinding, etc.).
+        // Explicit downtime simulation was tested but caused under-production vs real-time.
+
+        long totalDuration = w.getTotalDuration(resolvedJob, uuid);
+        // Guard against infinite loop if duration is 0 or negative
+        if (totalDuration <= 0) {
+            totalDuration = DEFAULT_WORK_CYCLE_TICKS;
+        }
+        // Each work cycle needs multiple ticks for status transitions:
+        // - Ingredient collection (1 tick per ingredient)
+        // - Work ticks (1 tick per work unit)
+        // - Extraction and dropping (2 ticks overhead)
+        // Use the job's calculated value instead of hardcoded 5
+        int ticksPerCycle = w.getWarpTicksPerCycle(resolvedJob, uuid);
+        // Ensure minimum of 5 ticks for safety
+        ticksPerCycle = Math.max(ticksPerCycle, 5);
+        long stepSpacing = Math.max(1, totalDuration / ticksPerCycle);
         long prev = 0;
-        for (int j = 0; j <= ticksPassed; j += (int) cycleDuration) {
+        for (int j = 0; j <= ticksPassed; j += (int) totalDuration) {
             for (int step = 0; step < ticksPerCycle; step++) {
                 long tickOffset = Math.min(j + (long) step * stepSpacing, ticksPassed);
                 if (tickOffset > ticksPassed) {
@@ -156,9 +186,11 @@ public class ImportantTicks {
                     prev = tickOffset;
                 }
             }
-            if (j + cycleDuration > ticksPassed) {
+
+            if (j + totalDuration > ticksPassed) {
                 break;
             }
         }
+        return new Result(ImmutableList.copyOf(ticks), false);
     }
 }

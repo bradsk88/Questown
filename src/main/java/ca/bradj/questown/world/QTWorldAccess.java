@@ -25,7 +25,7 @@ public interface QTWorldAccess {
     List<ItemStack> getBlockDrops(BlockPos pos, @Nullable ItemStack tool);
     void removeBlock(BlockPos pos);
 
-    // Tree chopping - removes all connected blocks of the same type and returns drops
+    // Tree chopping — removes all connected blocks of the same type and returns drops
     List<ItemStack> chopTree(BlockPos trunkPos);
 
     // Item use on block (planting, bone meal)
@@ -55,7 +55,7 @@ public interface QTWorldAccess {
 
     /**
      * Escape hatch for rules that cannot yet be expressed through QTWorldAccess methods.
-     * Returns null during time warp and in tests - callers must handle that gracefully.
+     * Returns null during time warp and in tests — callers must handle that gracefully.
      * Prefer adding new methods to this interface instead of using this.
      */
     @Deprecated(forRemoval = true)

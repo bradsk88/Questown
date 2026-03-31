@@ -57,7 +57,7 @@ public class DeployFishingHookRule extends JobPhaseModifier {
     ) {
         CONTEXT ctx = super.afterInsertItem(ctxInput, event);
         ServerLevel sl = event.world().asServerLevel();
-        // The FishingHook entity is cosmetic - it does not affect what fish are caught.
+        // The FishingHook entity is cosmetic — it does not affect what fish are caught.
         // During warp and tests, asServerLevel() returns null, so we skip spawning it.
         // This is intentional: fishing produces correct results without the visual hook.
         if (sl == null) {

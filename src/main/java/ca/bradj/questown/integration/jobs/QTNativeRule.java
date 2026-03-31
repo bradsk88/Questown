@@ -2,7 +2,7 @@ package ca.bradj.questown.integration.jobs;
 
 /**
  * Marker interface declaring that a {@link JobPhaseModifier} rule is
- * <strong>Tier 1 (QT-native)</strong> - it uses only {@code QTWorldAccess}
+ * <strong>Tier 1 (QT-native)</strong> — it uses only {@code QTWorldAccess}
  * methods and never calls {@link ca.bradj.questown.world.QTWorldAccess#asServerLevel()}.
  *
  * <h3>Tier system</h3>
@@ -23,7 +23,7 @@ package ca.bradj.questown.integration.jobs;
  * through the {@code QTWorldAccess} parameter on the event (e.g.
  * {@code event.world().getBlockIntProperty(...)},
  * {@code event.world().insertIntoContainer(...)}). If your rule calls
- * {@code asServerLevel()} to reach Minecraft APIs, it is Tier 2 - leave
+ * {@code asServerLevel()} to reach Minecraft APIs, it is Tier 2 — leave
  * out this interface and ensure it gracefully handles a null return from
  * {@code asServerLevel()} (which occurs during time warp and in tests).</p>
  *

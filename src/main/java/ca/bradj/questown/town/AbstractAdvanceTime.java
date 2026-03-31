@@ -161,11 +161,52 @@ public abstract class AbstractAdvanceTime<
         TOWN liveState = storedState;
         List<TownState.VillagerData<H>> villagers = new ArrayList<>(storedState.villagers);
 
-        List<Map.Entry<Long, Function<TOWN, TOWN>>> warpSteps = collectWarpSteps(
-                villagers, ticksPassed, currentTick, work, warperFactory,
-                level, downtimeCheck, downtimeTicks, logger
-        );
+        // Collect all warp steps across all villagers
+        final List<Map.Entry<Long, Function<TOWN, TOWN>>> warpSteps = new ArrayList<>();
 
+        for (int i = 0; i < villagers.size(); i++) {
+            TownState.VillagerData<H> v = villagers.get(i);
+            logger.log(
+                    "[{}] Warping time by {} ticks, starting with journal: {}",
+                    UtilClean.truncateMiddle(v.uuid),
+                    ticksPassed,
+                    liveState
+            );
+
+            ImmutableList<Warper.Tick> ticks = computeImportantTicks(
+                    work,
+                    VillagerUUID.from(v.uuid),
+                    v.journal.jobId(),
+                    downtimeCheck,
+                    downtimeTicks,
+                    ticksPassed,
+                    currentTick
+            );
+
+            logger.logDetail(
+                    "[{}] Computed {} important ticks for job {}",
+                    UtilClean.truncateMiddle(v.uuid),
+                    ticks.size(),
+                    v.journal.jobId()
+            );
+
+            int villagerIndex = i;
+            Warper<LEVEL, TOWN> vWarper = warperFactory.createWarper(
+                    work,
+                    v.journal.jobId(),
+                    villagerIndex
+            );
+
+            // Create warp steps for this villager
+            for (Warper.Tick tick : ticks) {
+                warpSteps.add(new AbstractMap.SimpleEntry<>(
+                        tick.tick(),
+                        ts -> vWarper.warp(level, ts, tick.tick(), tick.ticksSincePrevious(), villagerIndex)
+                ));
+            }
+        }
+
+        // Sort all warp steps by tick (chronological order)
         warpSteps.sort(Map.Entry.comparingByKey());
         logger.logDetail(
                 "Processing {} total warp steps across {} villagers",
@@ -173,12 +214,43 @@ public abstract class AbstractAdvanceTime<
                 villagers.size()
         );
 
+        // Resolve cooking before processing warp steps
         if (cookResolver != null) {
             liveState = cookResolver.resolveCooking(liveState, level, 0, ticksPassed);
         }
 
         long before = System.currentTimeMillis();
-        liveState = executeWarpStepsWithHooks(liveState, warpSteps, warpTickCallback, ticksPassed);
+
+        // Execute all warp steps, interleaving world-level
+        // hooks at tick boundaries
+        long lastHookTick = 0;
+        for (Map.Entry<Long, Function<TOWN, TOWN>> warpStep
+                : warpSteps) {
+            long stepTick = warpStep.getKey();
+            if (stepTick > lastHookTick
+                    && warpTickCallback != null) {
+                long tickDelta = stepTick - lastHookTick;
+                liveState = warpTickCallback.onTick(
+                        liveState, stepTick, tickDelta
+                );
+                lastHookTick = stepTick;
+            }
+            TOWN affectedState =
+                    warpStep.getValue().apply(liveState);
+            if (affectedState != null) {
+                liveState = affectedState;
+            }
+        }
+
+        // Final hook call for remaining ticks after last step
+        if (warpTickCallback != null
+                && ticksPassed > lastHookTick) {
+            long tickDelta = ticksPassed - lastHookTick;
+            liveState = warpTickCallback.onTick(
+                    liveState, ticksPassed, tickDelta
+            );
+        }
+
         long after = System.currentTimeMillis();
 
         logger.log("State after warp of {}: {}", ticksPassed, liveState);
@@ -191,79 +263,9 @@ public abstract class AbstractAdvanceTime<
         );
     }
 
-    private List<Map.Entry<Long, Function<TOWN, TOWN>>> collectWarpSteps(
-            List<TownState.VillagerData<H>> villagers,
-            long ticksPassed,
-            long currentTick,
-            Work work,
-            WarperFactory<LEVEL, TOWN> warperFactory,
-            LEVEL level,
-            Predicate<JobID> downtimeCheck,
-            long downtimeTicks,
-            WarpLogger logger
-    ) {
-        List<Map.Entry<Long, Function<TOWN, TOWN>>> warpSteps = new ArrayList<>();
-
-        for (int i = 0; i < villagers.size(); i++) {
-            TownState.VillagerData<H> v = villagers.get(i);
-            logger.log(
-                    "[{}] Warping time by {} ticks, starting with journal: {}",
-                    UtilClean.truncateMiddle(v.uuid),
-                    ticksPassed,
-                    v.journal
-            );
-
-            ImmutableList<Warper.Tick> ticks = computeImportantTicks(
-                    work, VillagerUUID.from(v.uuid), v.journal.jobId(),
-                    downtimeCheck, downtimeTicks, ticksPassed, currentTick
-            );
-
-            logger.logDetail(
-                    "[{}] Computed {} important ticks for job {}",
-                    UtilClean.truncateMiddle(v.uuid), ticks.size(), v.journal.jobId()
-            );
-
-            int villagerIndex = i;
-            Warper<LEVEL, TOWN> vWarper = warperFactory.createWarper(
-                    work, v.journal.jobId(), villagerIndex
-            );
-
-            for (Warper.Tick tick : ticks) {
-                warpSteps.add(new AbstractMap.SimpleEntry<>(
-                        tick.tick(),
-                        ts -> vWarper.warp(level, ts, tick.tick(), tick.ticksSincePrevious(), villagerIndex)
-                ));
-            }
-        }
-
-        return warpSteps;
-    }
-
-    private TOWN executeWarpStepsWithHooks(
-            TOWN state,
-            List<Map.Entry<Long, Function<TOWN, TOWN>>> warpSteps,
-            @Nullable WarpTickCallback<TOWN> warpTickCallback,
-            long ticksPassed
-    ) {
-        long lastHookTick = 0;
-        for (Map.Entry<Long, Function<TOWN, TOWN>> warpStep : warpSteps) {
-            long stepTick = warpStep.getKey();
-            if (stepTick > lastHookTick && warpTickCallback != null) {
-                state = warpTickCallback.onTick(state, stepTick, stepTick - lastHookTick);
-                lastHookTick = stepTick;
-            }
-            TOWN affectedState = warpStep.getValue().apply(state);
-            if (affectedState != null) {
-                state = affectedState;
-            }
-        }
-
-        if (warpTickCallback != null && ticksPassed > lastHookTick) {
-            state = warpTickCallback.onTick(state, ticksPassed, ticksPassed - lastHookTick);
-        }
-
-        return state;
-    }
-
+    /**
+     * Finalizes the state after warp, e.g., updating the world time reference.
+     * Subclasses should override to add specific finalization logic.
+     */
     protected abstract TOWN finalizeState(TOWN state, long currentTick);
 }

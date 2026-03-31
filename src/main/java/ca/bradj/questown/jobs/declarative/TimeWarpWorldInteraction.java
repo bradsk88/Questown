@@ -228,6 +228,7 @@ public class TimeWarpWorldInteraction extends
             Inputs inputs,
             BlockPos position
     ) {
+        // Only trigger for realtime
     }
 
     @Override
@@ -240,6 +241,7 @@ public class TimeWarpWorldInteraction extends
         PreStateChangeHook.run(
                 rules, (pose) -> {
                 }, (job) -> {
+                    // TODO[Warp]: Set Job
                 }
         );
     }
@@ -261,9 +263,11 @@ public class TimeWarpWorldInteraction extends
                 ts -> ts.withBOPCleared(inputs.vUUID),
                 inputs.vUUID
         );
+        // PostInsertHook.run() returns null if no rules were applied
         if (afterHook == null) {
             afterHook = mcTownState;
         }
+        // Track the inserted item for potential recovery if NO_SUPPLIES is encountered later
         return afterHook.withInsertedItem(villagerIndex, position.workPosition(), item);
     }
 
@@ -385,11 +389,13 @@ public class TimeWarpWorldInteraction extends
 
     @Override
     public boolean tryGrabbingInsertedSupplies(Inputs mcExtra) {
+        // TODO[Warp]: Implement
         return true;
     }
 
     @Override
     public int timesInserted(Inputs inputs) {
+        // TODO[Warp]: Implement
         return 0;
     }
 
@@ -398,10 +404,12 @@ public class TimeWarpWorldInteraction extends
             Inputs inputs,
             NeedsRegistrations.Need ingredientIndex
     ) {
+        // TODO[WARP]: Implement tracking of needs
     }
 
     @Override
     protected void registerUnmetRoom(Inputs inputs) {
+        // TODO[WARP]: Implement tracking of needs
     }
 
     /**
@@ -411,6 +419,9 @@ public class TimeWarpWorldInteraction extends
      */
     public void injectTicks(int ticks) {
         ticksSinceLastAction += ticks;
+        // Ensure we always have enough ticks to pass the interval check during warp
+        // This is necessary because each warp tick creates a new TimeWarpWorldInteraction
+        // with ticksSinceLastAction=0, and consecutive ticks have ticksSincePrevious=1
         ticksSinceLastAction = Math.max(ticksSinceLastAction, interval);
     }
 
@@ -474,6 +485,8 @@ public class TimeWarpWorldInteraction extends
 
             @Override
             public Map<Integer, LZCD.Dependency<Void>> roomsWithWorkableStatefulBlocks() {
+                // For warp, we check if the fake room block is at each state
+                // and return a dependency that evaluates to true for the current state
                 ImmutableMap.Builder<Integer, LZCD.Dependency<Void>> b = ImmutableMap.builder();
                 for (int state = 0; state <= maxState; state++) {
                     final int s = state;
@@ -580,6 +593,30 @@ public class TimeWarpWorldInteraction extends
                 return b.build();
             }
 
+            // TODO[ASAP]: Confirm that hasSupplies is actually not used on 1.19.2 branch
+//            @Override
+//            public boolean hasSupplies() {
+//                // TODO: Reduce deuplication with DeclarativeJob.roomsNeedingIngredientsOrTools
+//                int curState = workStates.processingState();
+//                PredicateCollection<MCHeldItem, ?> ings = checks.getIngredientsForStep(curState);
+//                if (ings != null) {
+//                    for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
+//                        if (container.hasItem(i -> ings.test(MCHeldItem.fromTown(i)))) {
+//                            return true;
+//                        }
+//                    }
+//                }
+//                PredicateCollection<MCTownItem, ?> toolChk = checks.getToolsForStep(curState);
+//                if (toolChk != null) {
+//                    for (ContainerTarget<MCContainer, MCTownItem> container : containers) {
+//                        if (container.hasItem(toolChk::test)) {
+//                            return true;
+//                        }
+//                    }
+//                }
+//                return false;
+//            }
+
             @Override
             public boolean hasSpace() {
                 return containers.stream().anyMatch(v -> !v.isFull());
@@ -611,7 +648,7 @@ public class TimeWarpWorldInteraction extends
             @Override
             public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
                 return DeclarativeJobTicker.getSupplyItemStatuses(
-                        heldItems, checks.getAllRequiredIngredients(), (s) -> true,
+                        heldItems, checks.getAllRequiredIngredients(), (s) -> true, // TODO[WARP]: Implement this?
                         Jobs.unTown(checks.getAllRequiredTools()), (s) -> true, checks.getAllRequiredWork(), maxState
                 );
             }
@@ -665,14 +702,16 @@ public class TimeWarpWorldInteraction extends
             return newState;
         }
 
+        // Deposit recovered items back to containers
         ImmutableList<MCHeldItem> notDeposited = newState.depositItems(recoveredItems);
-        if (notDeposited.isEmpty()) {
-            return newState;
-        }
-        for (MCHeldItem item : notDeposited) {
-            TownState.VillagerData<MCHeldItem> vd = newState.getVillager(villagerIndex).withAddedItem(item);
-            if (vd != null) {
-                newState = newState.withVillagerData(villagerIndex, vd);
+        if (!notDeposited.isEmpty()) {
+            // If containers are full, try to give items to villager
+            for (MCHeldItem item : notDeposited) {
+                TownState.VillagerData<MCHeldItem> vd = newState.getVillager(villagerIndex).withAddedItem(item);
+                if (vd != null) {
+                    newState = newState.withVillagerData(villagerIndex, vd);
+                }
+                // If villager inventory is also full, items are lost (edge case)
             }
         }
         return newState;
@@ -688,7 +727,7 @@ public class TimeWarpWorldInteraction extends
         java.util.Map.Entry<MCTownState, ImmutableList<MCHeldItem>> result = inState.withInsertedItemsCleared(villagerIndex);
         ImmutableList<MCHeldItem> recoveredItems = result.getValue();
         if (recoveredItems.isEmpty()) {
-            return null;
+            return null; // Nothing to recover
         }
         return recoverInsertedItems(inState);
     }
