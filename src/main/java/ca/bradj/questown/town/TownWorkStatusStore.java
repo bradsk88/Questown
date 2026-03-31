@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> {
-    public TownWorkStatusStore() {
+    public TownWorkStatusStore(DebugLogger debugLogger) {
         super(
                 (room, pos) -> {
                     ImmutableList.Builder<BlockPos> builder = ImmutableList.builder();
@@ -49,7 +49,8 @@ public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHel
                         };
                     }
                     return null;
-                }
+                },
+                debugLogger
         );
     }
 }

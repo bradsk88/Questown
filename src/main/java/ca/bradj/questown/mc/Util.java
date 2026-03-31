@@ -43,7 +43,8 @@ public class Util {
     }
 
     public static Signals.DayTime getDayTime(Level serverLevel) {
-        return new Signals.DayTime(serverLevel.getDayTime() % 24000);
+        long dayTime = serverLevel.getDayTime();
+        return UtilClean.getDayTime(dayTime);
     }
 
     public static <X> ImmutableMap<Integer, Supplier<X>> constant(ImmutableMap<Integer, X> constant) {
@@ -240,10 +241,7 @@ public class Util {
             @Nullable X input,
             Function<@NotNull X, Y> fn
     ) {
-        if (input == null) {
-            return null;
-        }
-        return fn.apply(input);
+        return UtilClean.orNull(input, fn);
     }
 
     public static <X> void ifNotNull(
