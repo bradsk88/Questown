@@ -5,6 +5,7 @@ import ca.bradj.questown._vanilla.CheckTreePlantable;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.JobBlockTestContext;
 import ca.bradj.questown.jobs.WorkLocation;
+import ca.bradj.questown.world.MinecraftWorldAccess;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -52,7 +53,7 @@ public class SaplingTesterBlock extends Block {
             return super.use(p_60503_, level, blockPos, player, p_60507_, p_60508_);
         }
         boolean allowed = new CheckTreePlantable().postJobBlockCheckPassed(new JobBlockTestContext(
-                sl, new WorkLocation.BlockInfo() {
+                new MinecraftWorldAccess(sl), new WorkLocation.BlockInfo() {
             @Override
             public BlockState state(BlockPos bp) {
                 return level.getBlockState(bp);

@@ -59,6 +59,9 @@ public class MenuTypesInit {
     public static RegistryObject<MenuType<TownBlockofProgressMenu>> TOWN_BLOCKS_OF_PROGRESS = MENUS.register(
             "town_blocks_of_progress", () -> IForgeMenuType.create(TownBlockofProgressMenu::ForClientSide)
     );
+    public static RegistryObject<MenuType<FlagCraftingMenu>> FLAG_CRAFTING = MENUS.register(
+            "flag_crafting", () -> IForgeMenuType.create(FlagCraftingMenu::ForClientSide)
+    );
 
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);
