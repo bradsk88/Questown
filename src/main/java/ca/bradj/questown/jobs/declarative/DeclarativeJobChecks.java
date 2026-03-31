@@ -1,10 +1,10 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.core.UtilClean;
-import ca.bradj.questown.jobs.declarative.ItemWorkChecks;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
@@ -112,15 +112,27 @@ public class DeclarativeJobChecks<EXTRA, HELD_ITEM, TOWN_ITEM, ROOM extends IRoo
     }
 
     @Override
-    public @Nullable PredicateCollection<TOWN_ITEM, ?> getToolsForStep(Integer curState) {
+    public @Nullable PredicateCollection<TOWN_ITEM, TOWN_ITEM> getToolsForStep(Integer curState) {
         return toolsRequiredAtStates.get(curState);
     }
 
     @Override
     public boolean isWorkRequiredAtStep(int action) {
-        Integer workForStep = getWorkForStep(action);
-        return workForStep != null && workForStep > 0;
+        return isRequired(getWorkForStep(action), x -> x == 0);
     }
+
+    public boolean isIngredientRequiredAtStep(int action) {
+        return isRequired(getIngredientsForStep(action), PredicateCollection::isEmpty);
+    }
+
+    public boolean isToolRequiredAtStep(int action) {
+        return isRequired(getToolsForStep(action), PredicateCollection::isEmpty);
+    }
+
+    public <X> boolean isRequired(@Nullable X map, Predicate<@NotNull X> isEmpty) {
+        return map != null && !isEmpty.test(map);
+    }
+
 
     public Map<Integer, PredicateCollection<HELD_ITEM, HELD_ITEM>> getAllRequiredIngredients() {
         return ingredientsRequiredAtStates;

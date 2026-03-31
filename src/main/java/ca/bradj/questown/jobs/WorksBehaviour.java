@@ -3,9 +3,10 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.world.QTWorldAccess;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.jobs.declarative.SoundInfo;
+import ca.bradj.questown.jobs.declarative.*;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.fetcher.FetcherHack;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
@@ -31,7 +32,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class WorksBehaviour {
 
@@ -40,13 +40,13 @@ public class WorksBehaviour {
             JobID id,
             WarpInput warpInput,
             boolean prioritizeExtraction,
-            Function<MCTownStateWorldInteraction.Inputs, Claim> claimSpots,
+            Function<TimeWarpWorldInteraction.Inputs, Claim> claimSpots,
             int pauseForAction,
             WorkStates states,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
             Map<ProductionStatus, Collection<String>> specialRules
     ) {
-        MCTownStateWorldInteraction wi = new MCTownStateWorldInteraction(
+        TimeWarpWorldInteraction wi = new TimeWarpWorldInteraction(
                 townPos,
                 id,
                 warpInput.villagerIndex(),
@@ -55,12 +55,15 @@ public class WorksBehaviour {
                 fromStates(states),
                 resultGenerator,
                 claimSpots,
-                specialRules
+                specialRules,
+                warpInput.roomPositions(),
+                warpInput.assignedWorkBlock(),
+                warpInput.warpWorld()
         );
-        return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction);
+        return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction, warpInput.slotPrecondition());
     }
 
-    private static DeclarativeJobChecks<MCTownStateWorldInteraction.Inputs, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> fromStates(WorkStates states) {
+    private static DeclarativeJobChecks<TimeWarpWorldInteraction.Inputs, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> fromStates(WorkStates states) {
         return new DeclarativeJobChecks<>(
                 Jobs.unMCHeld3(states.ingredientsRequired()),
                 states.ingredientQtyRequired(),
@@ -129,8 +132,27 @@ public class WorksBehaviour {
 
     public record WarpInput(
             int villagerIndex,
-            BlockPos townFlagPos
+            BlockPos townFlagPos,
+            Collection<BlockPos> roomPositions,
+            @Nullable BlockPos assignedWorkBlock,
+            @Nullable SlotPrecondition slotPrecondition,
+            @Nullable QTWorldAccess warpWorld
     ) {
+        public WarpInput(int villagerIndex, BlockPos townFlagPos, Collection<BlockPos> roomPositions) {
+            this(villagerIndex, townFlagPos, roomPositions, null, null, null);
+        }
+
+        public WarpInput(int villagerIndex, BlockPos townFlagPos, Collection<BlockPos> roomPositions, @Nullable BlockPos assignedWorkBlock) {
+            this(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock, null, null);
+        }
+
+        public WarpInput withSlotPrecondition(@Nullable SlotPrecondition sp) {
+            return new WarpInput(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock, sp, warpWorld);
+        }
+
+        public WarpInput withWarpWorld(@Nullable QTWorldAccess world) {
+            return new WarpInput(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock, slotPrecondition, world);
+        }
     }
 
     public static Work productionWork(
@@ -201,7 +223,8 @@ public class WorksBehaviour {
                         special.specialStatusRules()
                 ),
                 1,
-                world.resultGenerator().isResultAlwaysEmpty()
+                world.resultGenerator().isResultAlwaysEmpty(),
+                special.specialGlobalRules()
         );
     }
 

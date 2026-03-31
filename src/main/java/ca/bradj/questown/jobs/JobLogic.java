@@ -56,6 +56,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         void clearInsertedSupplies();
 
+        void tryExtractWithNoItem();
+
         void registerUnmetNeeds(
                 ProductionStatus status,
                 @Nullable POS workspot,
@@ -161,6 +163,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 
         if (this.grabbedInsertedSupplies) {
+            worldBeforeTick.tryExtractWithNoItem();
             worldBeforeTick.changeToNextJob();
             ticksWithoutNextJob++;
             return;

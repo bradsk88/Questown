@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.TakeFn;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
@@ -21,9 +20,7 @@ import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.town.workstatus.State;
-import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.Positions;
-import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
@@ -39,11 +36,13 @@ import net.minecraft.world.Container;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -198,46 +197,29 @@ public class Jobs {
                       .anyMatch(Predicates.not(v -> recipe.stream().anyMatch(z -> z.test(v.get()))));
     }
 
+    @Deprecated(forRemoval = true)
     public static boolean isUnfinishedTimeWorkPresent(
             RoomsHolder town,
             ResourceLocation workRoomId,
             Function<BlockPos, @Nullable Integer> ticksSource
     ) {
-        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomsMatching(workRoomId);
-        return rooms.stream()
-                    .anyMatch(v -> {
-                        for (Map.Entry<BlockPos, Block> e : v.getContainedBlocks().entrySet()) {
-                            @Nullable Integer apply = ticksSource.apply(e.getKey());
-                            if (apply != null && apply > 0) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    });
+        return JobsClean.isUnfinishedTimeWorkPresent(
+                () -> ImmutableList.copyOf(town.getRoomsMatching(workRoomId)),
+                ticksSource
+        );
     }
 
+    @Deprecated(forRemoval = true)
     public static Collection<Integer> getStatesWithUnfinishedWork(
             Supplier<Collection<? extends Supplier<Collection<BlockPos>>>> town,
             Function<BlockPos, State> ticksSource,
             Predicate<BlockPos> canClaim
     ) {
-        Collection<? extends Supplier<Collection<BlockPos>>> rooms = town.get();
-        HashSet<Integer> b = new HashSet<>();
-        rooms.forEach(v -> {
-            for (BlockPos e : v.get()) {
-                if (!canClaim.test(e)) {
-                    continue;
-                }
-                @Nullable State apply = ticksSource.apply(e);
-                if (apply != null && apply.workLeft() > 0) {
-                    b.add(apply.processingState());
-                    return;
-                }
-            }
-        });
-        ArrayList<Integer> b2 = new ArrayList<>(b);
-        Collections.sort(b2);
-        return ImmutableList.copyOf(b2);
+        return JobsClean.getStatesWithUnfinishedWork(
+                town.get(),
+                ticksSource,
+                canClaim
+        );
     }
 
     // This name is just irony because there are so many "un" functions
@@ -286,15 +268,6 @@ public class Jobs {
         ImmutableMap.Builder<Integer, Predicate<MCHeldItem>> b = ImmutableMap.builder();
         input.forEach((k, v) -> b.put(k, z -> !z.isEmpty() && v.test(z.get())));
         return b.build();
-    }
-    public static Collection<RoomRecipeMatch<MCRoom>> roomsWithState(
-            Collection<? extends IRoomRecipeMatch<MCRoom, ResourceLocation, BlockPos, Block>> rooms,
-            Predicate<BlockPos> isCorrectBlock,
-            Predicate<BlockPos> hasCorrectState
-    ) {
-        return JobsClean.roomsWithState(
-                rooms, isCorrectBlock, hasCorrectState
-        ).stream().map(RoomRecipeMatchUtils::unsafe).toList();
     }
 
     public static ImmutableList<MCHeldItem> getHeldItems(

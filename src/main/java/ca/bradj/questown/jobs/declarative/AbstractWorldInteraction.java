@@ -231,14 +231,15 @@ public abstract class AbstractWorldInteraction<
         Stack<HELD_ITEM> stack = new Stack<>();
 
         iterate(newItemsSource, stack::push);
+        QT.JOB_LOGGER.debug("[tryGiveItems] Initial stack size: {}, items: {}",
+                stack.size(),
+                stack.stream().map(h -> h.get().quantity()).toList());
 
         TOWN ts = getTown(inputs);
         if (stack.isEmpty()) {
-            QT.JOB_LOGGER.error(
-                    "No results during extraction phase. That's probably a bug. Town State: {}",
-                    ts
-            );
-            return reset.apply(ts);
+            QT.JOB_LOGGER.debug("[tryGiveItems] No result items during extraction — firing hooks with null item");
+            TOWN hooked = postExtractHook(inputs, ts, null);
+            return reset.apply(hooked != null ? hooked : ts);
         }
 
         boolean gotAll = false;
@@ -249,8 +250,12 @@ public abstract class AbstractWorldInteraction<
                 continue;
             }
             HELD_ITEM newItem = stack.pop();
+            QT.JOB_LOGGER.debug("[tryGiveItems] Popped item qty={}, isMulti={}",
+                    newItem.get().quantity(), isMulti(newItem.get()));
             if (isMulti(newItem.get())) {
-                stack.push(newItem.shrink());
+                HELD_ITEM shrunk = newItem.shrink();
+                QT.JOB_LOGGER.debug("[tryGiveItems] Pushing shrunk item qty={}", shrunk.get().quantity());
+                stack.push(shrunk);
             }
             if (isInstanze(newItem.get(), KnowledgeMetaItem.class)) {
                 ts = withKnowledge(inputs, ts, newItem);
@@ -258,8 +263,8 @@ public abstract class AbstractWorldInteraction<
                 ts = withEffectApplied(inputs, ts, newItem);
             } else {
                 HELD_ITEM unit = newItem.unit();
-                ts = postExtractHook(inputs, unit);
-                ts = setHeldItem(inputs, ts, villagerIndex, i, unit);
+                TOWN hooked = postExtractHook(inputs, ts, unit);
+                ts = setHeldItem(inputs, hooked != null ? hooked : ts, villagerIndex, i, unit);
                 QT.VILLAGER_LOGGER.debug("Villager took {}", unit.toShortString());
             }
 
@@ -492,12 +497,6 @@ public abstract class AbstractWorldInteraction<
         if (s != null && s.processingState() >= maxState) {
 
             TOWN town = preExtractHook(inputs, position);
-            if (town != null) {
-                Function<TOWN, TOWN> resetFunc = getResetFunc(inputs, position);
-                town = resetFunc.apply(town);
-            } else {
-                getResetFunc(inputs, position).apply(getTown(inputs));
-            }
             if (town == null) {
                 Collection<HELD_ITEM> items = getHeldItems(inputs, villagerIndex);
                 Iterable<HELD_ITEM> generatedResult = getResults(inputs, items);
@@ -509,6 +508,7 @@ public abstract class AbstractWorldInteraction<
                 }
             }
             if (town != null) {
+                town = getResetFunc(inputs, position).apply(town);
                 triggerCompletionAdvancement(inputs, position);
                 jobCompletedListeners.forEach(r -> r.accept(jobId));
             }
@@ -552,7 +552,7 @@ public abstract class AbstractWorldInteraction<
         if (rules == null || rules.isEmpty()) {
             return ctx;
         }
-        return postInsertHook(getTown(inputs), rules, inputs, position, item);
+        return postInsertHook(ctx, rules, inputs, position, item);
     }
 
     protected abstract @Nullable TOWN postInsertHook(
@@ -573,15 +573,16 @@ public abstract class AbstractWorldInteraction<
         }
         return preExtractHook(getTown(inputs), rules, inputs, position);
     }
-    private @Nullable TOWN postExtractHook(
+    protected @Nullable TOWN postExtractHook(
             EXTRA inputs,
-            HELD_ITEM item
+            TOWN currentState,
+            @Nullable HELD_ITEM item
     ) {
         Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
         if (rules == null || rules.isEmpty()) {
-            return null;
+            return currentState;
         }
-        return postExtractHook(getTown(inputs), rules, inputs, getTownPos(inputs), item);
+        return postExtractHook(currentState, rules, inputs, getTownPos(inputs), item);
     }
 
     protected abstract POS getTownPos(EXTRA inputs);
@@ -598,7 +599,7 @@ public abstract class AbstractWorldInteraction<
             Collection<String> rules,
             EXTRA inputs,
             POS position,
-            HELD_ITEM extractedItem
+            @Nullable HELD_ITEM extractedItem
     );
 
     protected abstract TOWN setJobBlockState(
@@ -673,6 +674,10 @@ public abstract class AbstractWorldInteraction<
             EXTRA mcExtra
     );
 
+    public void tryExtractWithNoItem(EXTRA inputs) {
+        postExtractHook(inputs, getTown(inputs), null);
+    }
+
     public abstract int timesInserted(EXTRA extra);
 
     public @Nullable WorkPosition<POS> getWorkSpot() {
@@ -711,3 +716,5 @@ public abstract class AbstractWorldInteraction<
             EXTRA extra
     );
 }
+ 
+ 

@@ -1,6 +1,9 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.jobs.EntityCurrentJobSite;
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
+import ca.bradj.questown.jobs.JobsClean;
+import ca.bradj.questown.jobs.SupplyItemStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
 import ca.bradj.roomrecipes.core.Room;
@@ -119,7 +122,7 @@ class JobsCleanTest {
 
     @Test
     void roomsWithState_shouldReturnAllRoomsIfBothChecksPass() {
-        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = JobsClean.roomsWithState(
+        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = DeclarativeJobs.roomsWithState(
                 ImmutableList.of(arbitaryRoomMatch1),
                 block -> true,
                 pos -> true
@@ -130,7 +133,7 @@ class JobsCleanTest {
 
     @Test
     void roomsWithState_shouldReturnNoRoomsIfJobBlockCheckFails() {
-        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = JobsClean.roomsWithState(
+        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = DeclarativeJobs.roomsWithState(
                 ImmutableList.of(arbitaryRoomMatch1),
                 block -> false,
                 pos -> true
@@ -140,7 +143,7 @@ class JobsCleanTest {
 
     @Test
     void roomsWithState_shouldReturnNoRoomsIfStateCheckFails() {
-        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = JobsClean.roomsWithState(
+        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = DeclarativeJobs.roomsWithState(
                 ImmutableList.of(arbitaryRoomMatch1),
                 block -> true,
                 pos -> false
@@ -150,7 +153,7 @@ class JobsCleanTest {
 
     @Test
     void roomsWithState_shouldReturnNoRoomsIfBothChecksFail() {
-        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = JobsClean.roomsWithState(
+        ImmutableList<IRoomRecipeMatch<Room, String, Position, String>> out = DeclarativeJobs.roomsWithState(
                 ImmutableList.of(arbitaryRoomMatch1),
                 block -> false,
                 pos -> false
@@ -180,6 +183,46 @@ class JobsCleanTest {
                 x -> false
         );
         Assertions.assertNull(site);
+    }
+
+    /**
+     * Regression test: When a villager finishes work at a crafting table, they may step
+     * outside the room boundaries while the job site block is at maxState (completed product).
+     * The villager should still be considered "at" the job site for extraction purposes
+     * if they're near the room's door (within 2 blocks).
+     *
+     * BUG: Without the fix, the villager gets NO_JOBSITE status and gives up,
+     * never extracting the crafted item.
+     */
+    @Test
+    void getEntityCurrentJobSite_shouldReturnRoom_WhenEntityNearDoorOfRoomWithCompletedProduct() {
+        // Room with door at (0,0) and space from (-1,0) to (1,2)
+        Room roomWithCompletedProduct = arbitaryRoomMatch1.getRoom();
+        Position doorPos = roomWithCompletedProduct.getDoorPos(); // (0, 0)
+
+        // Entity is 2 blocks away from the door (outside the room but nearby)
+        Position entityNearDoor = new Position(doorPos.x + 2, doorPos.z);
+
+        // Verify entity is NOT inside the room (precondition)
+        Assertions.assertFalse(
+                roomWithCompletedProduct.getSpaces().stream()
+                        .anyMatch(space -> ca.bradj.roomrecipes.logic.InclusiveSpaces.contains(
+                                ImmutableList.of(space), entityNearDoor)),
+                "Test precondition: entity should NOT be inside the room"
+        );
+
+        EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
+                entityNearDoor,
+                new RoomsNeedingVillagerInput<>(ImmutableMap.of()),
+                ImmutableList.of(roomWithCompletedProduct), // Room has completed product
+                ONLY_CHECK_XZ_COORDINATES,
+                x -> false
+        );
+
+        // With the fix: entity near door should be considered "at" the job site
+        Assertions.assertNotNull(site,
+                "Entity near door of room with completed product should be considered at job site for extraction");
+        Assertions.assertEquals(roomWithCompletedProduct, site.room());
     }
 
     @Test
@@ -216,7 +259,7 @@ class JobsCleanTest {
 
     @Test
     void getSupplyItemStatuses_ShouldReturnCorrectResult_WhenSecondStateRequiresNothing_AndNoItemsHeld() {
-        @NotNull ImmutableMap<Integer, SupplyItemStatus> sis = JobsClean.<TestItem>getSupplyItemStatuses(
+        @NotNull ImmutableMap<Integer, SupplyItemStatus> sis = DeclarativeJobTicker.<TestItem>getSupplyItemStatuses(
                 ImmutableList::of,
                 ImmutableMap.of(
                         0, testItem -> "grapes".equals(testItem.value)
@@ -237,7 +280,7 @@ class JobsCleanTest {
 
     @Test
     void getSupplyItemStatuses_ShouldReturnCorrectResult_WhenSecondStateRequiresNothing_AndNoItemsHeld_AddWork() {
-        @NotNull ImmutableMap<Integer, SupplyItemStatus> sis = JobsClean.<TestItem>getSupplyItemStatuses(
+        @NotNull ImmutableMap<Integer, SupplyItemStatus> sis = DeclarativeJobTicker.<TestItem>getSupplyItemStatuses(
                 ImmutableList::of,
                 ImmutableMap.of(
                         0, testItem -> "grapes".equals(testItem.value)
@@ -257,5 +300,32 @@ class JobsCleanTest {
         );
         Assertions.assertEquals(SupplyItemStatus.NEEDS_ITEM, sis.get(0));
         Assertions.assertEquals(SupplyItemStatus.NOT_REQUIRED, sis.get(1));
+    }
+
+    @Test
+    void hasNonSupplyItems_shouldFlagActualLoot_WhenAtStateRequiringIngredients() {
+        // Setup: State 2 requires bowl ingredient
+        ImmutableMap<Integer, Predicate<TestItem>> ingredientsRequired = ImmutableMap.of(
+                2, item -> "bowl".equals(item.value)  // State 2 requires bowl
+        );
+        ImmutableMap<Integer, Predicate<TestItem>> toolsRequired = ImmutableMap.of(
+                1, item -> "shovel".equals(item.value)  // State 1 requires shovel tool
+        );
+
+        // Villager has random loot (not a tool, not the needed ingredient)
+        ImmutableList<TestItem> villagerItems = ImmutableList.of(
+                new TestItem("random_loot")
+        );
+
+        // Random loot SHOULD be flagged as non-supply because it's not a tool or needed ingredient
+        boolean hasNonSupply = JobsClean.hasNonSupplyItems(
+                villagerItems,
+                2,  // Current state = 2 (needs bowl)
+                ingredientsRequired,
+                toolsRequired
+        );
+
+        Assertions.assertTrue(hasNonSupply,
+                "Random loot should be flagged as non-supply item");
     }
 }

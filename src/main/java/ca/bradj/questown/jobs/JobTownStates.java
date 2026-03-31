@@ -101,12 +101,10 @@ public class JobTownStates {
                     return cacheGet.value();
                 }
             }
-            return WithReason.always(
-                    Boolean.FALSE,
-                    "No rooms found with workable blocks at states [" +
-                            Strings.join(rooms.keySet().stream().map(Object::toString).toList(), ",") +
-                            "]"
-            );
+            String reason = "No rooms found with workable blocks at states [" +
+                    Strings.join(rooms.keySet().stream().map(Object::toString).toList(), ",") +
+                    "]";
+            return WithReason.always(Boolean.FALSE, reason);
         }
     }
 }
