@@ -1,7 +1,7 @@
 {
   "version": 1,
   "id": "crafter/planks",
-  "priority": "1000",
+  "priority": "10000",
   "parent": "crafter/stick",
   "icon": "minecraft:oak_planks",
   "initial_request": "minecraft:oak_planks",
@@ -11,7 +11,7 @@
       "0"
     ],
     "fallback": "minecraft:oak_planks",
-    "quantity": 1
+    "quantity": 5
   },
   "block": "minecraft:crafting_table",
   "room": "questown:crafting_room",
@@ -24,9 +24,9 @@
       "work": 20
     }
   ],
-  "cooldown_ticks": 50,
+  "cooldown_ticks": 5,
   "sound": {
-    "id": "minecraft:block.wood.hit",
+    "id": "minecraft:item.axe.scrape",
     "chance": "100",
     "duration": 5
   }

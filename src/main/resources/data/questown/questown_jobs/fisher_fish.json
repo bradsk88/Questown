@@ -31,11 +31,13 @@
     {
       "type": "processing_state",
       "state": 0,
+      "note": "purely for visual effect",
       "rules": ["questown_vanilla:deploy_and_retract_fishing_hook"]
     },
     {
       "type": "core_state",
       "state": "EXTRACTING_PRODUCT",
+      "note": "purely for visual effect",
       "rules": ["questown_vanilla:deploy_and_retract_fishing_hook"]
     }
   ]

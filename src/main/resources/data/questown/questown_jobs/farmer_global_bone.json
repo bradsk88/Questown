@@ -6,8 +6,7 @@
   "icon": "minecraft:bone_meal",
   "initial_request": "minecraft:bone_meal",
   "result": {
-    "type": "item",
-    "item": "minecraft:air"
+    "type": "uses_special_rules"
   },
   "block": {
     "id": "#minecraft:crops",
@@ -27,7 +26,7 @@
   "special": [
     {
       "type": "global",
-      "rules": ["claim_workspot", "shared_work_status"]
+      "rules": ["claim_workspot", "shared_work_status", "questown:crop_growth_warp"]
     },
     {
       "type": "core_state",

@@ -72,6 +72,21 @@ public class DeployFishingHookRule extends JobPhaseModifier {
     }
 
     @Override
+    public void afterWarpRecovery(
+            ServerLevel level,
+            LivingEntity villager,
+            BlockPos workBlock
+    ) {
+        if (!(level.getBlockState(workBlock).getBlock() instanceof FishingStationBlock)) {
+            return;
+        }
+        FishingHook hook = deployHere(level, workBlock, villager);
+        if (hook != null) {
+            this.hooks.add(hook);
+        }
+    }
+
+    @Override
     public <CONTEXT> @Nullable CONTEXT beforeExtract(
             CONTEXT ctxInput,
             BeforeExtractEvent<CONTEXT> event

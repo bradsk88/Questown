@@ -5,10 +5,9 @@
   "parent": "cook/extract",
   "icon": "minecraft:chest",
   "initial_request": "#questown:villager_food",
-  "note": "initial request is actually ignored due to 'always consider' in global rules",
+  "note_warp": "Excluded from warp: stock jobs just move items between containers, which the warper handles automatically via simulateCollectSupplies",
   "result": {
-    "type": "item",
-    "item": "minecraft:air"
+    "type": "uses_special_rules"
   },
   "block": {
     "id": "#forge:chests"
@@ -27,7 +26,7 @@
   "special": [
     {
       "type": "global",
-      "rules": ["claim_workspot", "always_consider"]
+      "rules": ["claim_workspot", "always_consider", "exclude_from_warp"]
     },
     {
       "type": "processing_state",
