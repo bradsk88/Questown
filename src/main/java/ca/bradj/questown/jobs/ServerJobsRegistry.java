@@ -23,6 +23,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.NoOpWarper;
 import ca.bradj.questown.town.Warper;
+import ca.bradj.questown.world.QTWorldAccess;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -51,6 +52,12 @@ import java.util.stream.Collectors;
 import static ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.isSeekingWork;
 
 public class ServerJobsRegistry {
+
+    public static boolean isExcludedFromWarp(JobID jobID) {
+        Supplier<Work> w = Works.get(jobID);
+        if (w == null) return false;
+        return w.get().getSpecialGlobalRules().contains(SpecialRules.EXCLUDE_FROM_WARP);
+    }
 
     public static boolean canAlwaysStart(
             UUID uuid,
@@ -455,17 +462,23 @@ public class ServerJobsRegistry {
 
     public static Warper<ServerLevel, MCTownState> getWarper(
             int villagerIndex,
-            JobID jobID
+            JobID jobID,
+            BlockPos townFlagPos,
+            Collection<BlockPos> roomPositions,
+            @Nullable BlockPos assignedWorkBlock,
+            @Nullable QTWorldAccess warpWorld
     ) {
-        return NoOpWarper.INSTANCE;
-
-        // TODO: Bring back warpers
-//        if (isSeekingWork(jobID)) {
-//            return NoOpWarper.INSTANCE;
-//        }
-//        Supplier<Work> w = Works.get(jobID);
-//        assert w != null;
-//        return w.get().warper().apply(new WorksBehaviour.WarpInput(villagerIndex));
+        if (isSeekingWork(jobID)) {
+            return NoOpWarper.INSTANCE;
+        }
+        Supplier<Work> w = Works.get(jobID);
+        if (w == null) {
+            return NoOpWarper.INSTANCE;
+        }
+        return w.get().warper(
+                new WorksBehaviour.WarpInput(villagerIndex, townFlagPos, roomPositions, assignedWorkBlock)
+                        .withWarpWorld(warpWorld)
+        );
     }
 
     public static boolean canSatisfy(
