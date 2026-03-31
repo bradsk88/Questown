@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.advancements.RoomTrigger;
+import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.network.EconomicsUpdate;
@@ -11,6 +12,7 @@ import ca.bradj.questown.gui.*;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import java.util.function.Supplier;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCReward;
@@ -42,14 +44,13 @@ public class TownFlagMenus {
     public void showUI(
             ServerPlayer sender,
             String type,
-            FlagTabsEmbedding.FlagInfo flagInfo,
+            FlagTabsEmbedding.FlagInfo inputFlagInfo,
             int blocksOfProgress
     ) {
-        // TODO: Make it possible to change villager jobs from the flag?
-//        syncWorkToClient(sender);
-
-        BlockPos flagPos = flagInfo.flagPos();
-        TownInterface flag = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(flagPos);
+        BlockPos flagPos = inputFlagInfo.flagPos();
+        TownFlagBlockEntity flagEntity = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(flagPos);
+        TownInterface flag = flagEntity;
+        FlagTabsEmbedding.FlagInfo realFlagInfo = flagEntity.getInfo();
 
         @SuppressWarnings("DataFlowIssue")
         ImmutableList<AbstractMap.SimpleEntry<MCQuest, MCReward>> quests = flag.getQuestHandle()
@@ -64,15 +65,17 @@ public class TownFlagMenus {
                     triggerAdvancementForAnyFarms(sender, UtilClean.keys(quests));
                     openMenu(
                             sender, (windowId, inv, p) -> new TownQuestsContainer(
-                                    windowId, uiQuests, flagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
-                            ), uiQuests, flagInfo, entities, flag.getBlocksOfProgress()
+                                    windowId, uiQuests, realFlagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
+                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                            () -> flagEntity.hasVillagerArrivingInMorning()
                     );
                 },
                 OpenFlagMenuMessage.VILLAGERS,
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
-                                windowId, flagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
-                        ), uiQuests, flagInfo, entities, flag.getBlocksOfProgress()
+                                windowId, realFlagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
+                        ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                        () -> flagEntity.hasVillagerArrivingInMorning()
                 ),
                 OpenFlagMenuMessage.ECONOMICS,
                 () -> {
@@ -82,18 +85,28 @@ public class TownFlagMenus {
                     );
                     openMenu(
                             sender, (windowId, inv, p) -> new TownEconomicsMenu(
-                                    windowId, flagInfo
-                            ), uiQuests, flagInfo, entities, flag.getBlocksOfProgress()
+                                    windowId, realFlagInfo
+                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                            () -> flagEntity.hasVillagerArrivingInMorning()
                     );
                 },
                 OpenFlagMenuMessage.BOP,
                 () -> {
                     openMenu(
                             sender, (windowId, inv, p) -> new TownBlockofProgressMenu(
-                                    windowId, flagInfo, blocksOfProgress
-                            ), uiQuests, flagInfo, entities, flag.getBlocksOfProgress()
+                                    windowId, realFlagInfo, blocksOfProgress
+                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                            () -> flagEntity.hasVillagerArrivingInMorning()
                     );
-                }
+                    AdvancementsInit.TUTORIAL_TRIGGER.trigger(sender, TutorialTrigger.Triggers.FirstBopView);
+                },
+                OpenFlagMenuMessage.CRAFTING,
+                () -> openMenu(
+                        sender, (windowId, inv, p) -> new FlagCraftingMenu(
+                                windowId, realFlagInfo
+                        ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                        () -> flagEntity.hasVillagerArrivingInMorning()
+                )
         );
 
         Runnable runnable = showers.get(type);
@@ -132,7 +145,8 @@ public class TownFlagMenus {
             List<UIQuest> quests,
             FlagTabsEmbedding.FlagInfo flagPos,
             Iterable<? extends VisitorMobEntity> entities,
-            int bopCount
+            int bopCount,
+            Supplier<Boolean> morningSpawnPending
     ) {
         Compat.openScreen(
                 sender, new MenuProvider() {
@@ -149,7 +163,7 @@ public class TownFlagMenus {
                     ) {
                         return shower.apply(windowId, inv, p);
                     }
-                }, data -> FlagMenus.writeAndLink(data, quests, flagPos, sender, entities, bopCount)
+                }, data -> FlagMenus.writeAndLink(data, quests, flagPos, sender, entities, bopCount, morningSpawnPending)
         );
     }
 

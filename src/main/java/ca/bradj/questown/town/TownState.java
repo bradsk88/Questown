@@ -237,8 +237,9 @@ public abstract class TownState<
         );
     }
 
+    @SuppressWarnings("unchecked")
     protected final SELF unchanged() {
-        return newTownState(villagers, containers, workStates, workTimers, gates, blocksOfProgress, worldTimeAtSleep);
+        return (SELF) this; // TODO: This is a bit sus. We SHOULD be creating a copy. But maybe that copy is not exhaustive enough?
     }
 
     public SELF withBOPCleared(UUID vUUID) {

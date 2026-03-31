@@ -39,7 +39,8 @@ public class TownVillagerUIsHandle {
                 town.getUnsafe().getInfo(),
                 entities,
                 () -> town.getUnsafe().getAllQuestsWithRewards(),
-                town.getUnsafe().getBlocksOfProgress()
+                town.getUnsafe().getBlocksOfProgress(),
+                () -> town.getUnsafe().hasVillagerArrivingInMorning()
         );
     }
 

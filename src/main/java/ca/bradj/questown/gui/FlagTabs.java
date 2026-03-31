@@ -20,9 +20,10 @@ public class FlagTabs extends Tabs implements SubUI {
             @Nullable Runnable villagerScreenFn,
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
+            @Nullable Runnable craftingScreenFn,
             FlagTabsEmbedding.FlagInfo showBOPTab
     ) {
-        super(build(questsScreenFn, villagerScreenFn, econScreenFn, bopScreenFn, showBOPTab));
+        super(build(questsScreenFn, villagerScreenFn, econScreenFn, bopScreenFn, craftingScreenFn, showBOPTab));
     }
 
     private static @NotNull ImmutableList<Tab> build(
@@ -30,6 +31,7 @@ public class FlagTabs extends Tabs implements SubUI {
             @Nullable Runnable villagerScreenFn,
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
+            @Nullable Runnable craftingScreenFn,
             FlagTabsEmbedding.FlagInfo fi
     ) {
         ImmutableList.Builder<Tab> b = ImmutableList.builder();
@@ -39,7 +41,8 @@ public class FlagTabs extends Tabs implements SubUI {
                                     .renderAndDecorateItem(Items.PLAYER_HEAD.getDefaultInstance(), x + 10, y + 7),
                     setScreen(villagerScreenFn),
                     "tooltips.villagers",
-                    villagerScreenFn == null
+                    villagerScreenFn == null,
+                    false
             ));
         }
         if (fi.showQuestsTab()) {
@@ -48,7 +51,8 @@ public class FlagTabs extends Tabs implements SubUI {
                                     .renderAndDecorateItem(Items.BOOK.getDefaultInstance(), x + 10, y + 7),
                     setScreen(questsScreenFn),
                     "tooltips.quests",
-                    questsScreenFn == null
+                    questsScreenFn == null,
+                    fi.hasIncompleteQuests()
             ));
         }
         if (fi.showEconTab()) {
@@ -60,7 +64,8 @@ public class FlagTabs extends Tabs implements SubUI {
                     },
                     setScreen(econScreenFn),
                     "tooltips.economics",
-                    econScreenFn == null
+                    econScreenFn == null,
+                    false
             ));
         }
         if (fi.showBlockOfProgressTab()) {
@@ -74,9 +79,18 @@ public class FlagTabs extends Tabs implements SubUI {
                     ),
                     setScreen(bopScreenFn),
                     "tooltips.blocks_of_progress",
-                    bopScreenFn == null
+                    bopScreenFn == null,
+                    true
             ));
         }
+        b.add(new Tab(
+                (rc, x, y) -> rc.itemRenderer()
+                                .renderAndDecorateItem(Items.CRAFTING_TABLE.getDefaultInstance(), x + 10, y + 7),
+                setScreen(craftingScreenFn),
+                "tooltips.crafting",
+                craftingScreenFn == null,
+                false
+        ));
         return b.build();
     }
 
@@ -110,8 +124,21 @@ public class FlagTabs extends Tabs implements SubUI {
                 factory.apply(OpenFlagMenuMessage.VILLAGERS),
                 factory.apply(OpenFlagMenuMessage.ECONOMICS),
                 factory.apply(OpenFlagMenuMessage.BOP),
+                factory.apply(OpenFlagMenuMessage.CRAFTING),
                 menu.getFlagInfo()
         );
+    }
+
+    public record TabDecision(String titleKey, boolean visible, boolean hasNotification) {}
+
+    public static ImmutableList<TabDecision> computeTabDecisions(FlagTabsEmbedding.FlagInfo fi) {
+        ImmutableList.Builder<TabDecision> b = ImmutableList.builder();
+        b.add(new TabDecision("tooltips.villagers", fi.showVillagersTab(), false));
+        b.add(new TabDecision("tooltips.quests", fi.showQuestsTab(), fi.hasIncompleteQuests()));
+        b.add(new TabDecision("tooltips.economics", fi.showEconTab(), false));
+        b.add(new TabDecision("tooltips.blocks_of_progress", fi.showBlockOfProgressTab(), true));
+        b.add(new TabDecision("tooltips.crafting", true, false));
+        return b.build();
     }
 
     public static Collection<String> allExcept(String except) {
@@ -119,7 +146,8 @@ public class FlagTabs extends Tabs implements SubUI {
                 OpenFlagMenuMessage.VILLAGERS,
                 OpenFlagMenuMessage.QUESTS,
                 OpenFlagMenuMessage.ECONOMICS,
-                OpenFlagMenuMessage.BOP
+                OpenFlagMenuMessage.BOP,
+                OpenFlagMenuMessage.CRAFTING
         );
         return ImmutableList.copyOf(all.stream().filter(v -> !v.equals(except)).toList());
     }

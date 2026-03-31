@@ -48,12 +48,21 @@ public class TownBlockofProgressMenu extends AbstractContainerMenu implements Fl
 
     public static int read(FriendlyByteBuf buf) {
         try {
-            FlagInfo.read(buf);
+            FlagInfo.read(buf); // consumed but FlagInfo reconstructed separately
             return buf.readInt();
         } catch (Exception e) {
             QT.GUI_LOGGER.error("Failed to read bops", e);
             throw e;
         }
+    }
+
+    public static ReadResult readWithFlagInfo(FriendlyByteBuf buf) {
+        FlagInfo fi = FlagInfo.read(buf);
+        int bop = buf.readInt();
+        return new ReadResult(fi, bop);
+    }
+
+    public record ReadResult(FlagInfo flagInfo, int blocksOfProgress) {
     }
 
     @Override
