@@ -1,26 +1,26 @@
 {
   "display": {
     "title": {
-      "text": "Magic Stick",
+      "text": "While You Were Away",
       "color": "white"
     },
     "description": {
-      "text": "Acquire a Town Wand from the flag's crafting tab"
+      "text": "Leave town for at least one day and return to see what your villagers produced"
     },
     "icon": {
-      "item": "questown:town_wand"
+      "item": "minecraft:compass"
     },
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,
-    "hidden": false,
+    "hidden": true,
     "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
   },
   "criteria": {
     "Trigger": {
-      "trigger": "questown:room_trigger",
+      "trigger": "questown:tutorial_trigger",
       "conditions": {
-        "context": "wand_get"
+        "context": "first_warp"
       }
     }
   },
@@ -32,5 +32,5 @@
   "rewards": {
     "experience": 100
   },
-  "parent": "questown:first_visitor"
+  "parent": "questown:second_job_type"
 }

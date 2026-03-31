@@ -1,6 +1,5 @@
 package ca.bradj.questown.town.special;
 
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.PlateBlock;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.blocks.WelcomeMatBlock;
@@ -15,42 +14,75 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Map;
+import java.util.Set;
 
 public class SpecialQuests {
 
-    public static final ResourceLocation CAMPFIRE = new ResourceLocation(Questown.MODID, "special_quest.campfire");
-    public static final ResourceLocation BROKEN = new ResourceLocation(Questown.MODID, "special_quest.broken");
-    public static final ResourceLocation TOWN_GATE = new ResourceLocation(Questown.MODID, "special_quest.town_gate");
-    public static final ResourceLocation TOWN_FLAG = new ResourceLocation(Questown.MODID, "special_quest.town_flag");
-    public static final ResourceLocation FARM = new ResourceLocation(Questown.MODID, "special_quest.farm");
+    private static final String MOD = "questown";
 
-    public static final Map<ResourceLocation, RoomRecipe> SPECIAL_QUESTS = ImmutableMap.of(
-            BROKEN,
-            new RoomRecipe(BROKEN, NonNullList.create(), Integer.MAX_VALUE, false),
-            CAMPFIRE,
-            new RoomRecipe(CAMPFIRE, NonNullList.withSize(1, Ingredient.of(Items.CAMPFIRE)), Integer.MAX_VALUE, false),
-            TOWN_GATE,
-            new RoomRecipe(
+    public static final ResourceLocation CAMPFIRE = new ResourceLocation(MOD, "special_quest.campfire");
+    public static final ResourceLocation BROKEN = new ResourceLocation(MOD, "special_quest.broken");
+    public static final ResourceLocation TOWN_GATE = new ResourceLocation(MOD, "special_quest.town_gate");
+    public static final ResourceLocation TOWN_FLAG = new ResourceLocation(MOD, "special_quest.town_flag");
+    public static final ResourceLocation FARM = new ResourceLocation(MOD, "special_quest.farm");
+    public static final ResourceLocation BEDROOM = new ResourceLocation(MOD, "bedroom");
+    public static final ResourceLocation JOB_BOARD = new ResourceLocation(MOD, "job_board");
+    public static final ResourceLocation STORE_ROOM_SMALL = new ResourceLocation(MOD, "store_room");
+    public static final ResourceLocation DINING_ROOM = new ResourceLocation(MOD, "dining_room");
+    public static final ResourceLocation CLINIC = new ResourceLocation(MOD, "clinic");
+
+    private static volatile Map<ResourceLocation, RoomRecipe> specialQuestsCache;
+
+    public static Map<ResourceLocation, RoomRecipe> getSpecialQuests() {
+        if (specialQuestsCache == null) {
+            specialQuestsCache = ImmutableMap.of(
+                    BROKEN,
+                    new RoomRecipe(BROKEN, NonNullList.create(), Integer.MAX_VALUE, false),
+                    CAMPFIRE,
+                    new RoomRecipe(CAMPFIRE, NonNullList.withSize(1, Ingredient.of(Items.CAMPFIRE)), Integer.MAX_VALUE, false),
                     TOWN_GATE,
-                    NonNullList.withSize(1, Ingredient.of(ItemsInit.WELCOME_MAT_BLOCK.get())),
-                    Integer.MAX_VALUE,
-                    false
-            ),
-            TOWN_FLAG,
-            new RoomRecipe(
+                    new RoomRecipe(
+                            TOWN_GATE,
+                            NonNullList.withSize(1, Ingredient.of(ItemsInit.WELCOME_MAT_BLOCK.get())),
+                            Integer.MAX_VALUE,
+                            false
+                    ),
                     TOWN_FLAG,
-                    NonNullList.withSize(1, Ingredient.of(ItemsInit.TOWN_FLAG_BLOCK.get())),
-                    Integer.MAX_VALUE,
-                    false
-            ),
-            FARM,
-            new RoomRecipe(FARM, NonNullList.withSize(1, Ingredient.of(Items.DIRT)), Integer.MAX_VALUE, true)
-    );
-    public static final ResourceLocation BEDROOM = Questown.ResourceLocation("bedroom");
-    public static final ResourceLocation JOB_BOARD = Questown.ResourceLocation("job_board");
-    public static final ResourceLocation STORE_ROOM_SMALL = Questown.ResourceLocation("store_room");
-    public static final ResourceLocation DINING_ROOM = Questown.ResourceLocation("dining_room");
-    public static final ResourceLocation CLINIC = Questown.ResourceLocation("clinic");
+                    new RoomRecipe(
+                            TOWN_FLAG,
+                            NonNullList.withSize(1, Ingredient.of(ItemsInit.TOWN_FLAG_BLOCK.get())),
+                            Integer.MAX_VALUE,
+                            false
+                    ),
+                    FARM,
+                    new RoomRecipe(FARM, NonNullList.withSize(1, Ingredient.of(Items.DIRT)), Integer.MAX_VALUE, true)
+            );
+        }
+        return specialQuestsCache;
+    }
+
+    @Deprecated
+    public static final Map<ResourceLocation, RoomRecipe> SPECIAL_QUESTS = new java.util.AbstractMap<>() {
+        @Override
+        public java.util.Set<Entry<ResourceLocation, RoomRecipe>> entrySet() {
+            return getSpecialQuests().entrySet();
+        }
+
+        @Override
+        public RoomRecipe get(Object key) {
+            return getSpecialQuests().get(key);
+        }
+
+        @Override
+        public boolean containsKey(Object key) {
+            return getSpecialQuests().containsKey(key);
+        }
+
+        @Override
+        public int size() {
+            return getSpecialQuests().size();
+        }
+    };
     public static final WorkLocation TOWN_GATE_LOCATION = new WorkLocation(
             ctx -> SpecialQuests.isWelcomeMat(ctx.blockInfo(), ctx.blockPos()),
             SpecialQuests::isWelcomeMat,
@@ -66,6 +98,14 @@ public class SpecialQuests {
             (info, pos) -> WorkLocation.isBlock(PlateBlock.class).test(info, pos),
             SpecialQuests.DINING_ROOM
     );
+
+    private static final Set<ResourceLocation> SPECIAL_QUEST_IDS = new java.util.HashSet<>(java.util.Arrays.asList(
+            BROKEN, CAMPFIRE, TOWN_GATE, TOWN_FLAG, FARM
+    ));
+
+    public static boolean isSpecialQuestId(ResourceLocation id) {
+        return SPECIAL_QUEST_IDS.contains(id);
+    }
 
     public static boolean isSpecialQuest(ResourceLocation id) {
         return SPECIAL_QUESTS.containsKey(id);

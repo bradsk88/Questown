@@ -2,7 +2,7 @@
   "sortnum": 11,
   "name": "Villager Needs",
   "icon": "minecraft:writable_book",
-  "category": "questown:entries",
+  "category": "questown:lessons",
   "advancement": "questown:first_unmet_needs",
   "pages": [
     {

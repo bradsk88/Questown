@@ -1,0 +1,13 @@
+{
+  "sortnum": 13,
+  "name": "13: The Crafter",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:tutorial_complete",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "You can craft bowls, shears, and fishing rods yourself at a crafting table. But your crafter does it for you at scale -- freeing you to explore while your village keeps producing.$(br2)More importantly, the crafter makes things you CAN'T: fishing stations are only obtainable from a crafter villager. Prioritize unlocking crafter jobs on the skill tree."
+    }
+  ]
+}
