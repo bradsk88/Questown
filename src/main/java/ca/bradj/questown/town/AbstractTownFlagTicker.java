@@ -41,7 +41,7 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
             if (alreadyStopped) {
                 return;
             }
-            storeSleepingState(data);
+            storeInactiveState(data);
         }
 
         long start = System.currentTimeMillis();
@@ -191,7 +191,7 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
 
     protected abstract void notifySubBlocksOfTick(TICK_DATA data);
 
-    protected abstract void storeSleepingState(TICK_DATA data);
+    protected abstract void storeInactiveState(TICK_DATA data);
 
     protected abstract boolean allPlayersLeftArea(
             TICK_DATA data,

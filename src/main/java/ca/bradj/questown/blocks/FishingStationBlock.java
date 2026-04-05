@@ -107,11 +107,14 @@ public class FishingStationBlock extends RoomBlock {
         return InteractionResult.CONSUME;
     }
 
-    public static Vec3 getAttachPoint(
+    public static @Nullable Vec3 getAttachPoint(
             BlockPos p_60505_,
             ServerLevel sl
     ) {
         BlockState bs = sl.getBlockState(p_60505_);
+        if (!bs.hasProperty(FACING)) {
+            return null;
+        }
         Direction v = bs.getValue(FACING).getOpposite();
         Vec3 b = Vec3.atBottomCenterOf(p_60505_);
         Vec3 tip = Compat.relative(b.add(0, 1, 0), v, 0.5);

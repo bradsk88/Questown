@@ -10,14 +10,17 @@ import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
+import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
@@ -32,6 +35,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -60,7 +64,7 @@ public class TownFlagBlock extends BaseEntityBlock {
     public static final String ITEM_ID = "flag_base";
     public static final Item.Properties ITEM_PROPS = new Item.Properties().
             tab(ModItemGroup.QUESTOWN_GROUP);
-    public static final Property<Boolean> SLEEPING = BooleanProperty.create("sleeping");
+    public static final Property<Boolean> INACTIVE = BooleanProperty.create("inactive");
     private Map<Player, Long> informedPlayers = new HashMap<>();
 
     public TownFlagBlock() {
@@ -69,11 +73,11 @@ public class TownFlagBlock extends BaseEntityBlock {
                                          .strength(10.0F, 1200.0F)
                                          .noOcclusion()
         );
-        this.registerDefaultState(this.stateDefinition.any().setValue(SLEEPING, false));
+        this.registerDefaultState(this.stateDefinition.any().setValue(INACTIVE, false));
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(SLEEPING);
+        p_51385_.add(INACTIVE);
     }
 
     public static String itemId(WallType wallType) {
@@ -162,9 +166,23 @@ public class TownFlagBlock extends BaseEntityBlock {
     ) {
         ItemStack itemInHand = player.getItemInHand(hand);
 
+        if (Ingredient.of(ItemTags.LOGS).test(itemInHand) && !entity.isFlagpoleBuilt()) {
+            if (hasActiveExoticWoodQuest(entity, itemInHand)) {
+                itemInHand.shrink(1);
+                BlockPos above = entity.getBlockPos().above();
+                level.setBlock(above, Blocks.OAK_FENCE.defaultBlockState(), 3);
+                level.setBlock(above.above(), Blocks.OAK_FENCE.defaultBlockState(), 3);
+                entity.setFlagpoleBuilt(true);
+                entity.setChanged();
+                return InteractionResult.CONSUME;
+            }
+        }
+
         if (itemInHand.getItem().equals(Items.DIRT)) {
-            entity.giveBonusFood(player);
-            return InteractionResult.CONSUME;
+            if (entity.giveBonusFood(player)) {
+                return InteractionResult.CONSUME;
+            }
+            return null; // already claimed — fall through to open the flag UI
         }
 
         if (itemInHand.getItem().equals(Items.DIAMOND)) {
@@ -216,9 +234,6 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         if (Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES).test(itemInHand)) {
             converted = ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance();
-        }
-        if (Ingredient.of(ItemTags.DOORS).test(itemInHand)) {
-            converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
         }
         if (itemInHand.getItem().equals(ItemsInit.TOWN_DOOR.get())) {
             converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
@@ -279,6 +294,38 @@ public class TownFlagBlock extends BaseEntityBlock {
             return InteractionResult.sidedSuccess(false);
         }
         return null;
+    }
+
+    private static boolean shouldPreSelectBopTab(TownFlagBlockEntity entity, ServerPlayer player) {
+        if (entity.getBlocksOfProgress() <= 0) {
+            return false;
+        }
+        // Pre-select BOP tab if the player hasn't viewed it yet
+        ResourceLocation advId = new ResourceLocation(Questown.MODID, "first_bop_view");
+        net.minecraft.advancements.Advancement adv = player.getServer().getAdvancements().getAdvancement(advId);
+        if (adv == null) {
+            return true;
+        }
+        return !player.getAdvancements().getOrStartProgress(adv).isDone();
+    }
+
+    private static boolean hasActiveExoticWoodQuest(TownFlagBlockEntity entity, ItemStack itemInHand) {
+        ResourceLocation heldItemId = Compat.getItemId(itemInHand.getItem());
+        for (Quest<ResourceLocation, ?> q : entity.getAllQuests()) {
+            if (q.getType() != Quest.QuestType.ITEM) {
+                continue;
+            }
+            if (q.isComplete()) {
+                continue;
+            }
+            if (q.getFlavorText() == null || !q.getFlavorText().contains("flagpole")) {
+                continue;
+            }
+            if (heldItemId.equals(q.getWantedId())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static void StoreParentOnNBT(
@@ -388,7 +435,16 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         if (oEntity.get().isInitialized()) {
-            oEntity.get().getVillagerHandle().showMultiStatusUI((ServerPlayer) player);
+            if (shouldPreSelectBopTab(entity, (ServerPlayer) player)) {
+                entity.menus.showUI(
+                        (ServerPlayer) player,
+                        OpenFlagMenuMessage.BOP,
+                        entity.getInfo(),
+                        entity.getBlocksOfProgress()
+                );
+            } else {
+                oEntity.get().getVillagerHandle().showMultiStatusUI((ServerPlayer) player);
+            }
         } else {
             if (!oEntity.get().isInitializing()) {
                 oEntity.get().initializeFreshFlag(true);

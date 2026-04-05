@@ -1,0 +1,14 @@
+{
+  "structures": [
+    {
+      "structure": "questown:empty_town",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 48,
+    "separation": 32,
+    "salt": 835770375
+  }
+}
