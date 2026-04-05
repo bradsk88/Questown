@@ -91,6 +91,11 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     long getTotalDuration();
 
+    default int getWarpTicksPerCycle() {
+        // Default: 5 ticks for basic jobs without ingredient/work tracking
+        return 5;
+    }
+
     BlockPos getLook();
 
     boolean isWorking();
