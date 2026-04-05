@@ -18,4 +18,6 @@ public interface JobTownProvider<ROOM> extends TownProvider {
     Collection<Integer> getStatesWithUnfinishedItemlessWork();
 
     Collection<ROOM> roomsAtState(Integer state);
+
+    Signals.DayTime getDayTime();
 }

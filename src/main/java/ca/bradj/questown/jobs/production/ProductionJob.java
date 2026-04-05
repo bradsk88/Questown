@@ -3,8 +3,6 @@ package ca.bradj.questown.jobs.production;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.VillagerUUID;
-import ca.bradj.questown.core.advancements.RoomTrigger;
-import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.integration.RandomShortLivedWorkSpot;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.integration.minecraft.MCContainer;
@@ -12,7 +10,6 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
-import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -29,13 +26,11 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
@@ -109,13 +104,6 @@ public abstract class ProductionJob<
                     bp -> bp.relative(Compat.getRandomHorizontal(sl))
             );
             this.jobSite = js.value();
-            if (this.jobSite != null) {
-                AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
-                        town.getServerLevel(),
-                        RoomTrigger.Triggers.FirstJobBlock,
-                        this.jobSite
-                );
-            }
         }
         return jobSite;
     }
@@ -129,6 +117,13 @@ public abstract class ProductionJob<
     protected final boolean hasTargetOverrideChanged(TownInterface town) {
         UnsafeVillagerData data = town.getVillagerHandle().getUnprotectedDataHandle(VillagerUUID.from(ownerUUID));
         return (RandomShortLivedWorkSpot.hasTargetChanged(data, this.jobSite));
+    }
+
+    protected WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
+        if (specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS)) {
+            return town.getWorkStatusHandle(null);
+        }
+        return town.getWorkStatusHandle(ownerUUID);
     }
 
     protected abstract boolean isJobBlock(
@@ -155,7 +150,7 @@ public abstract class ProductionJob<
     private BlockPos jobSite;
 
     @Override
-    public abstract Signals getSignal();
+    public abstract Signals getSignal(Signals.DayTime dayTime);
 
     protected void clearJobSite() {
         this.jobSite = null;
@@ -281,8 +276,6 @@ public abstract class ProductionJob<
     public boolean removeItem(MCHeldItem mct) {
         return journal.removeItem(mct);
     }
-
-    protected abstract Map<Integer, SupplyItemStatus> getSupplyItemStatus();
 
     protected boolean tryDropLoot(
             Long currentTick,
@@ -425,31 +418,6 @@ public abstract class ProductionJob<
             Predicate<BlockPos> isEmpty,
             Predicate<BlockPos> isJobBlock,
             Function<BlockPos, BlockPos> getRandomAdjacent
-    );
-
-    public abstract RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools(
-            TownInterface town,
-            Function<BlockPos, State> work,
-            Predicate<BlockPos> canClaim
-    );
-
-    protected WorkStatusHandle<BlockPos, MCHeldItem> getWorkStatusHandle(TownInterface town) {
-        WorkStatusHandle<BlockPos, MCHeldItem> work;
-        if (this.specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS)) {
-            work = town.getWorkStatusHandle(null);
-        } else {
-            work = town.getWorkStatusHandle(ownerUUID);
-        }
-        return work;
-    }
-
-    protected abstract void tick(
-            MCExtra extra,
-            WorkStatusHandle<BlockPos, MCHeldItem> workStatus,
-            LivingEntity entity,
-            Direction facingPos,
-            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
-            IProductionStatusFactory<STATUS> statusFactory
     );
 
     protected void setupForGetSupplies(
@@ -628,32 +596,6 @@ public abstract class ProductionJob<
         journal.setItemsNoUpdateNoCheck(b.build());
     }
 
-    protected EntityInvStateProvider<Integer> defaultEntityInvProvider() {
-        return new EntityInvStateProvider<>() {
-            @Override
-            public boolean inventoryFull() {
-                return journal.isInventoryFull();
-            }
-
-            @Override
-            public boolean hasNonSupplyItems() {
-
-                Set<Integer> statesToFeed = roomsNeedingIngredientsOrTools.getNonEmptyStates();
-                ImmutableList<Predicate<MCTownItem>> allFillableRecipes = ImmutableList.copyOf(
-                        statesToFeed.stream()
-                                    .flatMap(v -> getRecipe(v)
-                                            .stream())
-                                    .toList()
-                );
-                return Jobs.hasNonSupplyItems(journal, allFillableRecipes);
-            }
-
-            @Override
-            public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
-                return ProductionJob.this.getSupplyItemStatus();
-            }
-        };
-    }
 
     @Override
     public boolean canStopWorkingAtAnyTime() {

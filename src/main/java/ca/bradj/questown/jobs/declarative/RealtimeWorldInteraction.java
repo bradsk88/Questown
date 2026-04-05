@@ -17,6 +17,7 @@ import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.questown.world.MinecraftWorldAccess;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
@@ -360,14 +361,15 @@ public class RealtimeWorldInteraction extends
         return PreExtractHook.run(
                 didAnything,
                 rules,
-                inputs.town().getServerLevel(),
+                new MinecraftWorldAccess(inputs.town().getServerLevel()),
                 (in, i, s) -> {
                     inputs.entity().tryGiveItem(i, s);
                     return in;
                 },
                 position,
                 last(workToUndo),
-                () -> inputs.town().getVillagerHandle().clearPoseRequests(inputs.entity().getUUID())
+                () -> inputs.town().getVillagerHandle().clearPoseRequests(inputs.entity().getUUID()),
+                () -> ImmutableList.of(position)
         );
     }
 
@@ -388,15 +390,18 @@ public class RealtimeWorldInteraction extends
             Collection<String> rules,
             MCExtra inputs,
             BlockPos position,
-            MCHeldItem extractedItem
+            @Nullable MCHeldItem extractedItem
     ) {
         return PostExtractHook.run(
                 aBoolean,
                 inputs.town().getTownFlagBasePos(),
                 rules,
-                inputs.town().getServerLevel(),
+                new MinecraftWorldAccess(inputs.town().getServerLevel()),
                 position,
                 (town, itemData) -> {
+                    if (extractedItem == null || extractedItem.isEmpty()) {
+                        return town;
+                    }
                     CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
                     itemData.forEach(t::putInt);
                     return town;
@@ -417,7 +422,7 @@ public class RealtimeWorldInteraction extends
             MCHeldItem item
     ) {
         return PostInsertHook.run(
-                aBoolean, rules, inputs.town().getServerLevel(), position, item.get().toMCItemStack(), (t) -> {
+                aBoolean, rules, new MinecraftWorldAccess(inputs.town().getServerLevel()), position, item.get().toMCItemStack(), (t) -> {
                     inputs.town().getVillagerHandle().clearBlockOfProgress(inputs.entity().getUUID());
                     return true;
                 }, inputs.entity().getUUID()

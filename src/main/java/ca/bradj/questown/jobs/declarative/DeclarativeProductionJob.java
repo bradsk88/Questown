@@ -1,6 +1,7 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.questown.jobs.production.ProductionJob;
 import ca.bradj.questown.town.Claim;
