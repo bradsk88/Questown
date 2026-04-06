@@ -18,6 +18,7 @@ public record OpenFlagMenuMessage(FlagTabsEmbedding.FlagInfo flag, String type) 
     public static final String VILLAGERS = "villagers";
     public static final String ECONOMICS = "economics";
     public static final String BOP = "blocks_of_progress";
+    public static final String CRAFTING = "crafting";
 
     public static void encode(
             OpenFlagMenuMessage msg,

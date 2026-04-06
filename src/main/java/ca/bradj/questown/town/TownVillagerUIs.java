@@ -10,6 +10,7 @@ import ca.bradj.questown.core.network.*;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.jobs.declarative.DeclarativeJob;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.econ.NoMCEconomics;
@@ -52,7 +53,8 @@ public class TownVillagerUIs {
             FlagTabsEmbedding.FlagInfo townFlagBasePos,
             Collection<? extends LivingEntity> entities,
             Supplier<Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>>> questsSrc,
-            int bopCount
+            int bopCount,
+            Supplier<Boolean> morningSpawnPending
     ) {
         List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
 
@@ -92,7 +94,7 @@ public class TownVillagerUIs {
                             player.getLevel(),
                             questsSrc.get()
                     );
-                    FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es, bopCount);
+                    FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es, bopCount, morningSpawnPending);
                 }
         );
     }

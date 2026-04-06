@@ -40,6 +40,7 @@ public class UIQuest implements Comparable<UIQuest> {
             Quest.QuestStatus.ACTIVE,
             null,
             null,
+            null,
             null
     );
     public final Quest.QuestStatus status;
@@ -50,6 +51,8 @@ public class UIQuest implements Comparable<UIQuest> {
     private final VillagerUUID villagerUUID;
     private final UUID batchUUID;
     private final String jobName;
+    @Nullable
+    private final String flavorText;
     public final boolean isBroken;
 
     public UIQuest(
@@ -60,7 +63,8 @@ public class UIQuest implements Comparable<UIQuest> {
             Quest.QuestStatus status,
             @Nullable ResourceLocation fromRecipe,
             @Nullable VillagerUUID jobRecipientUUID,
-            @Nullable String jobName
+            @Nullable String jobName,
+            @Nullable String flavorText
     ) {
         this.isBroken = SpecialQuests.BROKEN.equals(wantedId) || ingredients == null;
         this.wantedId = wantedId;
@@ -70,6 +74,7 @@ public class UIQuest implements Comparable<UIQuest> {
         this.fromRecipe = fromRecipe;
         this.villagerUUID = jobRecipientUUID;
         this.jobName = jobName;
+        this.flavorText = flavorText;
         this.batchUUID = batchUUID;
     }
 
@@ -120,7 +125,8 @@ public class UIQuest implements Comparable<UIQuest> {
                     v.getStatus(),
                     v.fromRecipeID().orElse(null),
                     jobRecipientUUID,
-                    job
+                    job,
+                    v.getFlavorText()
             );
         }).toList();
     }
@@ -134,6 +140,7 @@ public class UIQuest implements Comparable<UIQuest> {
             case ROOM -> getRoomIngredients(v, rMap);
             case ITEM -> Collections.nCopies(v.getCountNeeded(), Ingredient.of(reg.getValue(v.getWantedId())));
             case JOB_CHANGE -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
+            case CONCURRENT_JOBS -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case UNKNOWN -> ImmutableList.of();
         };
     }
@@ -194,8 +201,14 @@ public class UIQuest implements Comparable<UIQuest> {
             case ROOM -> RoomRecipes.getName(wantedId);
             case ITEM -> Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size());
             case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractJobName());
+            case CONCURRENT_JOBS -> Compat.literal("Multiple Jobs Active");
             case UNKNOWN -> Compat.literal("ERROR");
         };
+    }
+
+    @Nullable
+    public String getFlavorText() {
+        return flavorText;
     }
 
     private String extractJobName() {
@@ -240,6 +253,7 @@ public class UIQuest implements Comparable<UIQuest> {
             }
             buf.writeUtf(jobName);
             buf.writeUtf(p_44102_.batchUUID == null ? "" : p_44102_.batchUUID.toString());
+            buf.writeUtf(p_44102_.flavorText == null ? "" : p_44102_.flavorText);
         }
 
         @Nullable
@@ -263,7 +277,11 @@ public class UIQuest implements Comparable<UIQuest> {
             if (!maybeBatchUUID.isEmpty()) {
                 batchUUID = UUID.fromString(maybeBatchUUID);
             }
-            return new UIQuest(batchUUID, wanteId, type, ingrs, status, from, villagerUUID, jobName);
+            String flavorText = buf.readUtf();
+            if (flavorText.isEmpty()) {
+                flavorText = null;
+            }
+            return new UIQuest(batchUUID, wanteId, type, ingrs, status, from, villagerUUID, jobName, flavorText);
         }
     }
 }

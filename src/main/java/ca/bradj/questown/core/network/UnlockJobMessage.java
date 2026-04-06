@@ -1,6 +1,8 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.advancements.TutorialTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.gui.BopTransactionSyncer;
 import ca.bradj.questown.gui.JobUnlockConfirmMenu;
@@ -85,6 +87,7 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
             }
 
             BopTransactionSyncer.syncConsumedBOP(sender);
+            AdvancementsInit.TUTORIAL_TRIGGER.trigger(sender, TutorialTrigger.Triggers.FirstBopSpend);
             unlockJob(flag, sender);
         });
         ctx.get().setPacketHandled(true);

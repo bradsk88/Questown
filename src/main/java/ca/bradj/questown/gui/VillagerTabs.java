@@ -48,14 +48,15 @@ public class VillagerTabs extends Tabs implements SubUI {
                 (rc, x, y) -> rc.itemRenderer().renderAndDecorateItem(Items.CHEST.getDefaultInstance(), x + 10, y + 7),
                 setScreen(invScreenFn),
                 "tooltips.inventory",
-                invScreenFn == null
+                invScreenFn == null,
+                false
         ));
         b.add(new Tab(
                 (rc, x, y) -> {
                     int txBefore = RenderSystem.getShaderTexture(0);
                     Util.blitTab(rc.stack(), x, y, 0);
                     RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(econScreenFn), "tooltips.economics", econScreenFn == null
+                }, setScreen(econScreenFn), "tooltips.economics", econScreenFn == null, false
         ));
         b.add(new Tab(
                 (rc, x, y) -> {
@@ -63,7 +64,7 @@ public class VillagerTabs extends Tabs implements SubUI {
                     RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
                     GuiComponent.blit(rc.stack(), x + 13, y + 11, 0, 0, 0, 9, 9, 256, 256);
                     RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(sScreenFn), "tooltips.stats", sScreenFn == null
+                }, setScreen(sScreenFn), "tooltips.stats", sScreenFn == null, false
         ));
         b.add(new Tab(
                 (rc, x, y) -> {
@@ -78,20 +79,21 @@ public class VillagerTabs extends Tabs implements SubUI {
                     stack.popPose();
 
                     RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(skillScreenFn), "tooltips.skills", skillScreenFn == null
+                }, setScreen(skillScreenFn), "tooltips.skills", skillScreenFn == null, false
         ));
         b.add(new Tab(
                 (rc, x, y) -> {
                     int txBefore = RenderSystem.getShaderTexture(0);
                     Util.blitTab(rc.stack(), x, y, 1);
                     RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(changeRootScreenFn), "tooltips.change_root", skillScreenFn == null
+                }, setScreen(changeRootScreenFn), "tooltips.change_root", skillScreenFn == null, false
         ));
         b.add(new Tab(
                 (rc, x, y) -> rc.itemRenderer().renderAndDecorateItem(Items.BOOK.getDefaultInstance(), x + 10, y + 7),
                 setScreen(qScreenFn),
                 "tooltips.quests",
-                qScreenFn == null
+                qScreenFn == null,
+                false
         ));
         if (showBopTab) {
             b.add(new Tab(
@@ -101,7 +103,7 @@ public class VillagerTabs extends Tabs implements SubUI {
                             ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
                             x + 10,
                             y + 7
-                    ), setScreen(bopScreenFn), "tooltips.blocks_of_progress", bopScreenFn == null
+                    ), setScreen(bopScreenFn), "tooltips.blocks_of_progress", bopScreenFn == null, true
             ));
         }
         return b.build();

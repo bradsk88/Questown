@@ -35,6 +35,7 @@ public record MultiStatusScreenSyncMessage(
                 msg.data.items(), FriendlyByteBuf::writeUUID, (b, v) ->
                         b.writeCollection(v, (bb, item) -> bb.writeResourceLocation(Compat.getItemId(item)))
         );
+        buffer.writeBoolean(msg.data.villagerArrivingInMorning());
     }
 
     public static MultiStatusScreenSyncMessage decode(FriendlyByteBuf buffer) {
@@ -48,8 +49,9 @@ public record MultiStatusScreenSyncMessage(
                 FriendlyByteBuf::readUUID,
                 MultiStatusScreenSyncMessage::readItemsFromBuffer
         );
+        boolean arrivingInMorning = buffer.readBoolean();
         return new MultiStatusScreenSyncMessage(new MultiStatusScreen.SyncedData(
-                data, data2
+                data, data2, arrivingInMorning
         ));
     }
 
@@ -73,7 +75,8 @@ public record MultiStatusScreenSyncMessage(
                 Dist.CLIENT,
                 () -> () -> MultiStatusScreen.syncedData = new MultiStatusScreen.SyncedData(
                         ImmutableMap.copyOf(data.villagerStatuses()),
-                        UtilClean.deepCopy(data.items())
+                        UtilClean.deepCopy(data.items()),
+                        data.villagerArrivingInMorning()
                 )
         )).exceptionally(MultiStatusScreenSyncMessage::logError);
         ctx.get().setPacketHandled(true);

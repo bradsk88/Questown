@@ -23,17 +23,20 @@ import static ca.bradj.questown.gui.PagedCardScreen.*;
 
 public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, UUID> {
 
+    private static final UUID MORNING_ARRIVAL_SENTINEL = new UUID(0, 0);
+
     private final Map<UUID, Collection<StatusPacket>> statusSmoothingQueue = new HashMap<>();
     private final FlagTabs tabs;
 
     public record SyncedData(Map<UUID, StatusPacket> villagerStatuses,
-                             Map<UUID, ImmutableList<net.minecraft.world.item.Item>> items) {
+                             Map<UUID, ImmutableList<net.minecraft.world.item.Item>> items,
+                             boolean villagerArrivingInMorning) {
         public JobID getJob(UUID uuid) {
             return Util.orNull(villagerStatuses.get(uuid), StatusPacket::jobId);
         }
     }
 
-    static SyncedData syncedData = new SyncedData(new HashMap<>(), new HashMap<>());
+    static SyncedData syncedData = new SyncedData(new HashMap<>(), new HashMap<>(), false);
 
     public MultiStatusScreen(
             MultiStatusMenu menu,
@@ -68,7 +71,11 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
 
     @Override
     protected ImmutableList<UUID> cardsData() {
-        return ImmutableList.copyOf(syncedData.villagerStatuses.keySet());
+        ImmutableList<UUID> villagers = ImmutableList.copyOf(syncedData.villagerStatuses.keySet());
+        if (!syncedData.villagerArrivingInMorning()) {
+            return villagers;
+        }
+        return ImmutableList.<UUID>builder().addAll(villagers).add(MORNING_ARRIVAL_SENTINEL).build();
     }
 
     @Override
@@ -78,6 +85,11 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             int mouseX,
             int mouseY
     ) {
+        if (MORNING_ARRIVAL_SENTINEL.equals(card.data())) {
+            font.draw(poseStack, Compat.translatable("gui.status.villager_arriving_morning"),
+                    card.coords().leftXPadded(), card.coords().topYPadded(), 0x808080);
+            return null;
+        }
         renderStatus(poseStack, card.coords(), card.data());
         renderInventory(card.coords(), card.data());
         renderFace(poseStack, card.coords(), card.data());
@@ -180,6 +192,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         }
 
         for (Card<UUID> v : cards()) {
+            if (MORNING_ARRIVAL_SENTINEL.equals(v.data())) continue;
             CardCoordinates coords = v.coords();
             int x = getStatusX(coords);
             int y = getStatusY(v.coords());
@@ -203,6 +216,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         tabs.mouseClicked(bgX, bgY, p_97748_, p_97749_);
 
         for (Card<UUID> v : cards()) {
+            if (MORNING_ARRIVAL_SENTINEL.equals(v.data())) continue;
             CardCoordinates coords = v.coords();
             int x = getStatusX(coords);
             int y = getStatusY(v.coords());

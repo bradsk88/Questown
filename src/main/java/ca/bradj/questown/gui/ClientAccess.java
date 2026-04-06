@@ -75,6 +75,25 @@ public class ClientAccess {
         Minecraft.getInstance().gui.setOverlayMessage(c, false);
     }
 
+    @Nullable
+    private static net.minecraft.client.gui.components.toasts.TutorialToast activeTutorialToast;
+
+    public static void showTutorialToast(Component title, Component description) {
+        Minecraft mc = Minecraft.getInstance();
+        activeTutorialToast = new net.minecraft.client.gui.components.toasts.TutorialToast(
+                net.minecraft.client.gui.components.toasts.TutorialToast.Icons.RIGHT_CLICK,
+                title, description, false
+        );
+        mc.getToasts().addToast(activeTutorialToast);
+    }
+
+    public static void dismissTutorialToast() {
+        if (activeTutorialToast != null) {
+            activeTutorialToast.hide();
+            activeTutorialToast = null;
+        }
+    }
+
     public static void closeScreens() {
         Minecraft.getInstance().setScreen(null);
     }
