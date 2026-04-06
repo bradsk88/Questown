@@ -6,6 +6,8 @@ import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.core.advancements.TutorialTrigger;
+import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
@@ -49,8 +51,6 @@ import java.util.function.Supplier;
 // This class is NOT encapsulated from MC
 
 public class TownFlagState {
-
-    private static final long MINIMUM_ABSENCE_FOR_SUMMARY = 12000;
 
     /**
      * Interface for work-related operations during warp.
@@ -174,8 +174,10 @@ public class TownFlagState {
             return storedState;
         }
 
+        // Create Work implementation that bridges to entity methods
         Work w = createWork(e, sl);
 
+        // Collect real room block positions for warp rules
         ImmutableList.Builder<BlockPos> roomPosBuilder = ImmutableList.builder();
         for (MCRoom room : e.roomsHandle.getAllRoomsIncludingMetaAndFarms()) {
             room.getSpaces().stream()
@@ -202,6 +204,7 @@ public class TownFlagState {
                         () -> roomPositions
                 );
 
+        // Delegate to MCAdvanceTime (the testable implementation)
         MCAdvanceTime advancer =
                 new MCAdvanceTime(Config.MAX_DOWNTIME_TICKS.get());
         MCAdvanceTime.Result<MCTownState> result = advancer.advanceTime(
@@ -210,7 +213,7 @@ public class TownFlagState {
                 dayTime,
                 ImportantTicks.adaptWork(w),
                 MCAdvanceTime.createWarperFactory(w, e.getBlockPos(), roomPositions, warpWorld),
-                null,
+                null, // cookResolver - not yet implemented
                 warpCb,
                 sl,
                 job -> DowntimeWork.matches(job),
@@ -421,6 +424,7 @@ public class TownFlagState {
     ) {
         long levelDayTime = level.getDayTime();
 
+        // Snapshot container contents before warp for summary
         Map<ResourceLocation, Integer> beforeItems = snapshotContainerItems(e, level);
 
         MCTownState newState = null;
@@ -506,11 +510,14 @@ public class TownFlagState {
             long timeSinceWake,
             Map<ResourceLocation, Integer> beforeItems
     ) {
-        if (timeSinceWake < MINIMUM_ABSENCE_FOR_SUMMARY) {
+        // Only show summary for meaningful absences (at least half a MC day)
+        if (timeSinceWake < 12000) {
             return;
         }
 
         Map<ResourceLocation, Integer> afterItems = snapshotContainerItems(e, level);
+
+        // Compute deltas (new items produced)
         Map<ResourceLocation, Integer> deltas = new HashMap<>();
         for (Map.Entry<ResourceLocation, Integer> entry : afterItems.entrySet()) {
             int before = beforeItems.getOrDefault(entry.getKey(), 0);
@@ -548,6 +555,12 @@ public class TownFlagState {
         String message = "While you were away (" + dayStr + "): " + items;
         e.messages.broadcastMessage(message);
 
+        // Fire FirstWarp advancement if away for 1+ MC day
+        if (daysAway >= 1) {
+            AdvancementsInit.TUTORIAL_TRIGGER.triggerForNearestPlayer(
+                    level, TutorialTrigger.Triggers.FirstWarp, e.getBlockPos()
+            );
+        }
     }
 
     private void profileTick(long startTime) {

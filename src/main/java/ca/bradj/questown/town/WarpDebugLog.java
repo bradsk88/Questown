@@ -22,6 +22,7 @@ import java.util.*;
  */
 public class WarpDebugLog {
 
+    // Thread-local instance for logging events from deep in the call stack
     private static final ThreadLocal<WarpDebugLog> CURRENT = new ThreadLocal<>();
 
     private final List<String> events = new ArrayList<>();
@@ -91,7 +92,8 @@ public class WarpDebugLog {
             MCTownItem item = container.getItem(i);
             if (!item.isEmpty()) {
                 String name = item.getShortName();
-                String itemName = extractItemName(name);
+                // getShortName returns "NxItem" format, extract just item name for grouping
+                String itemName = name.contains("x") ? name.substring(name.indexOf("x") + 1) : name;
                 int qty = item.quantity();
                 itemCounts.merge(itemName, qty, Integer::sum);
             }
@@ -150,6 +152,7 @@ public class WarpDebugLog {
 
         StringBuilder sb = new StringBuilder();
 
+        // Compare container contents
         sb.append("Container Changes:\n");
         Map<BlockPos, Map<String, Integer>> beforeContents = getContainerContents(beforeState.containers);
         Map<BlockPos, Map<String, Integer>> afterContents = getContainerContents(afterState.containers);
@@ -172,6 +175,7 @@ public class WarpDebugLog {
             sb.append("  (no changes)\n");
         }
 
+        // Compare villager inventories
         sb.append("Villager Inventory Changes:\n");
         boolean anyVillagerChanges = false;
         for (int i = 0; i < Math.max(beforeState.villagers.size(), afterState.villagers.size()); i++) {
@@ -194,6 +198,7 @@ public class WarpDebugLog {
             sb.append("  (no changes)\n");
         }
 
+        // Compare work states
         sb.append("Work State Changes:\n");
         boolean anyWorkChanges = false;
         Set<BlockPos> allWorkPositions = new HashSet<>();
@@ -246,6 +251,7 @@ public class WarpDebugLog {
         events.clear();
     }
 
+    // Helper: extract container contents as position -> (itemName -> count) map
     private static Map<BlockPos, Map<String, Integer>> getContainerContents(
             ImmutableList<ContainerTarget<MCContainer, MCTownItem>> containers
     ) {
@@ -266,6 +272,7 @@ public class WarpDebugLog {
         return result;
     }
 
+    // Helper: extract villager items as itemName -> count map
     private static Map<String, Integer> getVillagerItems(TownState.VillagerData<MCHeldItem> villager) {
         Map<String, Integer> items = new LinkedHashMap<>();
         for (MCHeldItem item : villager.journal.items()) {
@@ -278,10 +285,7 @@ public class WarpDebugLog {
         return items;
     }
 
-    private static String extractItemName(String shortName) {
-        return shortName.contains("x") ? shortName.substring(shortName.indexOf("x") + 1) : shortName;
-    }
-
+    // Helper: compute diff between two item count maps
     private static String diffItemCounts(Map<String, Integer> before, Map<String, Integer> after) {
         Set<String> allItems = new HashSet<>();
         allItems.addAll(before.keySet());

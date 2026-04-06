@@ -4,7 +4,6 @@ import ca.bradj.questown.Questown;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.server.command.ConfigCommand;
 
 @Mod.EventBusSubscriber(modid = Questown.MODID)
 public class CommandInit {
@@ -16,6 +15,7 @@ public class CommandInit {
         DevQuestDeserializeCommand.register(event.getDispatcher());
         DevFlagDebugToggleCommand.register(event.getDispatcher(), event.getBuildContext());
         DevMakeStarvingCommand.register(event.getDispatcher());
+        DevFlagDebugTurboCommand.register(event.getDispatcher());
 
         // Player commands
         SetJobCommand.register(event.getDispatcher(), event.getBuildContext());
@@ -33,5 +33,7 @@ public class CommandInit {
         PrepareWorkCommand.register(event.getDispatcher());
         LogDataCommand.register(event.getDispatcher());
         ToggleHungerConfig.register(event.getDispatcher());
+        TestCommand.register(event.getDispatcher(), event.getBuildContext());
+        TestAllCommand.register(event.getDispatcher(), event.getBuildContext());
     }
 }

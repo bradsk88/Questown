@@ -148,7 +148,7 @@ public abstract class JobPhaseModifier {
      * Override to apply world-level effects like crop growth.
      *
      * Unlike beforeExtract (null = didn't handle), this
-     * always chains - every rule runs and the town state
+     * always chains — every rule runs and the town state
      * threads through via processMulti. Compute effects
      * proportionally to {@code event.tickDelta()}, not
      * assuming any particular call frequency.
@@ -165,7 +165,7 @@ public abstract class JobPhaseModifier {
      * Override to restore visual-only effects that were skipped during warp
      * (e.g. cosmetic entities). The default no-op is appropriate for most rules.
      *
-     * @param level      the server level (never null - this fires after recovery)
+     * @param level      the server level (never null — this fires after recovery)
      * @param villager   the nearest recovered villager entity for this work block
      * @param workBlock  the active work block position
      */

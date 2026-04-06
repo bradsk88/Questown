@@ -12,6 +12,14 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 
+// Load .env file if present (gitignored — store secrets like MODRINTH_TOKEN here)
+def dotEnv = new Properties()
+def dotEnvFile = file('.env')
+if (dotEnvFile.exists()) {
+    dotEnvFile.withInputStream { dotEnv.load(it) }
+    dotEnv.each { k, v -> ext.set(k as String, v as String) }
+}
+
 group = 'ca.bradj.questown' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'questown'
 
@@ -84,6 +92,9 @@ minecraft {
             property 'forge.logging.console.level', 'debug'
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+
+            jvmArg '-Dquestown.autotest=' + System.getProperty('questown.autotest', 'false')
+            jvmArg '-Dquestown.autotest.warp=' + System.getProperty('questown.autotest.warp', '24000')
 
             mods {
                 questown {
@@ -200,6 +211,29 @@ publishing {
     repositories {
         maven {
             url "file:///${project.projectDir}/mcmodsrepo"
+        }
+    }
+}
+
+publish.dependsOn('publishModrinth')
+
+task publishModrinth(dependsOn: 'reobfJar') {
+    group = 'publishing'
+    mustRunAfter('publishToMavenLocal', 'publishMavenJavaPublicationToMavenRepository')
+    doLast {
+        def token = project.findProperty("MODRINTH_TOKEN") ?: System.getenv("MODRINTH_TOKEN") ?: ""
+        def changelog = (project.findProperty("CHANGELOG") ?: System.getenv("CHANGELOG") ?: "").replace('"', '\\"').replace('\n', '\\n')
+        def jarPath = jar.archivePath.absolutePath
+        def cleanVersion = "git rev-parse --abbrev-ref HEAD".execute().text.trim()
+        def versionType = cleanVersion.contains("alpha") ? "alpha" : cleanVersion.contains("beta") ? "beta" : "release"
+        def projectId = project.findProperty("MODRINTH_PROJECT_ID") ?: System.getenv("MODRINTH_PROJECT_ID") ?: "QY0XuBVZ"
+        def data = """{"name":"Questown ${cleanVersion}","version_number":"${cleanVersion}","version_type":"${versionType}","featured":false,"game_versions":["1.19.2"],"loaders":["forge"],"project_id":"${projectId}","changelog":"${changelog}","dependencies":[],"file_parts":["file"],"primary_file":"file"}"""
+        exec {
+            commandLine 'curl', '--fail', '-s', '-X', 'POST',
+                    'https://api.modrinth.com/v2/version',
+                    '-H', "Authorization: ${token}",
+                    '-F', "data=${data}",
+                    '-F', "file=@${jarPath}"
         }
     }
 }

@@ -1,0 +1,1 @@
+If a map mod is installed, rooms and villaers should render on it in a nice way.

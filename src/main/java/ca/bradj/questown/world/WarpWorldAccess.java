@@ -36,7 +36,7 @@ import java.util.function.Function;
  * time. All mutations go to in-memory maps. After warp succeeds, call
  * {@link #applyTo(ServerLevel)} to write changes back to the real world atomically.
  * <p>
- * {@link #asServerLevel()} returns {@code null} - warp rules must not rely on it.
+ * {@link #asServerLevel()} returns {@code null} — warp rules must not rely on it.
  */
 public class WarpWorldAccess implements QTWorldAccess {
 
@@ -73,7 +73,7 @@ public class WarpWorldAccess implements QTWorldAccess {
     }
 
     /**
-     * Test constructor - initializes from pre-built maps with injected recipe and fuel resolvers.
+     * Test constructor — initializes from pre-built maps with injected recipe and fuel resolvers.
      * Only for use in unit tests; does not snapshot from a real ServerLevel.
      */
     WarpWorldAccess(
@@ -107,7 +107,7 @@ public class WarpWorldAccess implements QTWorldAccess {
         containerSlots.put(pos, slots);
 
         if (be instanceof AbstractFurnaceBlockEntity) {
-            // Cook progress starts at 0 - any mid-cook state is restarted during warp simulation.
+            // Cook progress starts at 0 — any mid-cook state is restarted during warp simulation.
             cookProgress.put(pos, new int[]{0, 0});
         }
     }
@@ -391,7 +391,7 @@ public class WarpWorldAccess implements QTWorldAccess {
     }
 
     // -------------------------------------------------------------------------
-    // Sound - no-op during warp
+    // Sound — no-op during warp
     // -------------------------------------------------------------------------
 
     @Override
@@ -467,7 +467,7 @@ public class WarpWorldAccess implements QTWorldAccess {
                         && existingOutput.getCount() < existingOutput.getMaxStackSize()) {
                     existingOutput.grow(output.getCount());
                 } else {
-                    // Output slot full - can't produce
+                    // Output slot full — can't produce
                     cookTime = recipe.cookingTime(); // don't overflow
                     break;
                 }
@@ -490,7 +490,7 @@ public class WarpWorldAccess implements QTWorldAccess {
     }
 
     // -------------------------------------------------------------------------
-    // Escape hatch - intentionally null
+    // Escape hatch — intentionally null
     // -------------------------------------------------------------------------
 
     @Override

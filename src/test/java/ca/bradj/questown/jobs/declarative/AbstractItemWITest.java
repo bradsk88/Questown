@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.jobs.DeclarativeJobChecks;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkedSpot;
 import ca.bradj.questown.logic.IPredicateCollection;

@@ -5,6 +5,15 @@ https://modrinth.com/mod/questown/
 - ENABLE_DEV_COMMANDS : Set to "true" to enable developer commands under the `/_qt` namespace.
 - INVISIBLE_LOG_LEVEL : Set to "trace" to reduce log noise during development.
 
+### Automated Testing
+Run all 12 job tests on a headless server:
+```
+JAVA_HOME=/home/retro/.gradle/jdks/jdk-17.0.18+8 ./gradlew runServer -Dquestown.autotest=true -Dquestown.autotest.warp=24000
+```
+- Requires JDK 17 (Gradle auto-provisions it at the path above on first build).
+- Exit code 0 = all pass, 1 = failures.
+- Results in `run/logs/latest.log` — grep for `[autotest]`.
+
 ### Release Preparation
 Before a new version can be considered beta-ready, you must test
 - Starting from a brand new save

@@ -13,10 +13,6 @@ public enum Signals {
         public long ticksBeforeMidnight() {
             return FULL_DAY_TICKS - dayTime;
         }
-
-        public static DayTime virtualMorning() {
-            return new DayTime(1000);
-        }
     }
 
     public static Signals fromDayTime(DayTime gameTime) {

@@ -1,0 +1,835 @@
+package ca.bradj.questown.commands.test;
+
+import ca.bradj.questown.Questown;
+import ca.bradj.questown.commands.test.TestBlueprint.BlockPlacement;
+import ca.bradj.questown.commands.test.TestBlueprint.RoomType;
+import ca.bradj.questown.commands.test.TestExpectation.ExpectedProduct;
+import ca.bradj.questown.core.init.BlocksInit;
+import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.town.special.SpecialQuests;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CropBlock;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Function;
+
+public class TestBlueprintRegistry {
+
+    public interface AnyTestEntry {
+        String name();
+        String category();
+    }
+
+    public record TestEntry(String name, JobID jobId, TestBlueprint blueprint, String category)
+            implements AnyTestEntry {}
+
+    public record WorldgenCheck(String name, String category, Function<ServerLevel, Boolean> check)
+            implements AnyTestEntry {}
+
+    public static @Nullable TestBlueprint get(JobID jobId) {
+        if ("farmer".equals(jobId.rootId())) {
+            return farmerBlueprint();
+        }
+        if ("cook".equals(jobId.rootId())) {
+            return cookBlueprint();
+        }
+        if ("baker".equals(jobId.rootId())) {
+            return bakerBlueprint();
+        }
+        if ("crafter".equals(jobId.rootId())) {
+            if (isArmorerJob(jobId)) {
+                return armorerBlueprint();
+            }
+            return crafterBlueprint();
+        }
+        if ("smelter".equals(jobId.rootId())) {
+            return smelterBlueprint();
+        }
+        if ("soup_cook".equals(jobId.rootId())) {
+            return soupCookBlueprint();
+        }
+        if ("gatherer".equals(jobId.rootId())) {
+            return gathererBlueprint();
+        }
+        if ("hunter".equals(jobId.rootId())) {
+            return hunterBlueprint();
+        }
+        if ("miner".equals(jobId.rootId())) {
+            return minerBlueprint();
+        }
+        if ("fisher".equals(jobId.rootId())) {
+            return fisherBlueprint();
+        }
+        return null;
+    }
+
+    public static List<AnyTestEntry> getTestableJobs() {
+        List<AnyTestEntry> jobs = new ArrayList<>();
+
+        // Core job tests
+        jobs.add(entry(new JobID("farmer", "harvest_wheat"), farmerBlueprint()));
+        jobs.add(entry(new JobID("cook", "simple_furnace_food"), cookBlueprint()));
+        jobs.add(entry(new JobID("baker", "bread"), bakerBlueprint()));
+        jobs.add(entry(new JobID("crafter", "stick"), crafterBlueprint()));
+        jobs.add(entry(new JobID("crafter", "wooden_axe"), blacksmithBlueprint()));
+        jobs.add(entry(new JobID("smelter", "process_ore"), smelterBlueprint()));
+        jobs.add(entry(new JobID("soup_cook", "one_mushroom_stew"), soupCookBlueprint()));
+        jobs.add(entry(new JobID("gatherer", "axe"), gathererBlueprint()));
+        jobs.add(entry(new JobID("hunter", "sword"), hunterBlueprint()));
+        jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
+        jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
+        jobs.add(entry(new JobID("crafter", "leather_boots"), armorerBlueprint()));
+
+        // Edge case tests
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "night_start", farmerNightStartBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "all_night", farmerAllNightBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "3_day", farmerMultiDayBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "no_supplies", farmerNoSuppliesBlueprint()));
+        jobs.add(edgeCaseEntry("gatherer", "axe", "tool_durability", gathererToolDurabilityBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "2_villagers", farmerTwoVillagersBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "warp_then_realtime", farmerRealtimeBlueprint()));
+
+        // Eating tests
+        jobs.add(eatingEntry("eat_no_table", eatNoTableBlueprint()));
+        jobs.add(eatingEntry("dine_at_time", dineAtTimeBlueprint()));
+        jobs.add(eatingEntry("eat_raw_food", eatRawFoodBlueprint()));
+        jobs.add(eatingEntryDirect("eat_direct", eatDirectBlueprint()));
+
+        // Worldgen tests
+        jobs.add(emptyTownStructureCheck());
+        jobs.add(emptyTownStructureSetCheck());
+
+        return jobs;
+    }
+
+    public static List<AnyTestEntry> getTestsByCategory(String category) {
+        return getTestableJobs().stream()
+                .filter(e -> category.equals(e.category()))
+                .toList();
+    }
+
+    private static TestEntry entry(JobID id, TestBlueprint bp) {
+        return new TestEntry(id.rootId() + "/" + id.jobId(), id, bp, "warp");
+    }
+
+    private static TestEntry eatingEntry(String name, TestBlueprint bp) {
+        JobID id = new JobID("gatherer", "axe");
+        return new TestEntry("eating/" + name, id, bp, "eating");
+    }
+
+    private static TestEntry eatingEntryDirect(String name, TestBlueprint bp) {
+        JobID id = new JobID("gatherer", "dining_no_table");
+        return new TestEntry("eating/" + name, id, bp, "eating");
+    }
+
+    private static TestEntry edgeCaseEntry(String root, String job, String variant, TestBlueprint bp) {
+        JobID id = new JobID(root, job);
+        return new TestEntry(root + "/" + job + " [" + variant + "]", id, bp, "warp");
+    }
+
+    private static TestBlueprint farmerBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        int ox = 4;
+        int oz = -3;
+
+        for (int x = 0; x < 7; x++) {
+            for (int z = 0; z < 7; z++) {
+                boolean isEdge = x == 0 || x == 6 || z == 0 || z == 6;
+                BlockPos offset = new BlockPos(ox + x, 0, oz + z);
+                if (isEdge) {
+                    if (x == 3 && z == 6) {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE_GATE.defaultBlockState()));
+                    } else {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE.defaultBlockState()));
+                    }
+                } else {
+                    blocks.add(new BlockPlacement(offset.below(), Blocks.FARMLAND.defaultBlockState()));
+                    blocks.add(new BlockPlacement(offset, Blocks.WHEAT.defaultBlockState().setValue(CropBlock.AGE, 7)));
+                }
+            }
+        }
+
+        BlockPos composterOffset = new BlockPos(ox + 2, 0, oz + 2);
+        blocks.removeIf(bp -> bp.offset().equals(composterOffset));
+        blocks.add(new BlockPlacement(composterOffset, Blocks.COMPOSTER.defaultBlockState()));
+
+        BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 5);
+        blocks.removeIf(bp -> bp.offset().equals(chestOffset));
+        blocks.add(new BlockPlacement(chestOffset.below(), Blocks.DIRT.defaultBlockState()));
+
+        BlockPos gateOffset = new BlockPos(ox + 3, 0, oz + 6);
+
+        List<ItemStack> supplies = List.of(
+                new ItemStack(Items.WOODEN_HOE, 1),
+                new ItemStack(Items.WHEAT_SEEDS, 32)
+        );
+
+        TestExpectation expectation = new TestExpectation(
+                List.of(new ExpectedProduct("minecraft:wheat", 1, null)),
+                1,
+                100
+        );
+
+        return new TestBlueprint(
+                RoomType.FARM,
+                blocks,
+                supplies,
+                gateOffset,
+                chestOffset,
+                SpecialQuests.FARM,
+                expectation
+        );
+    }
+
+    private static TestBlueprint cookBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        int ox = 4;
+        int oz = -2;
+
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
+                BlockPos floorOffset = new BlockPos(ox + x, -1, oz + z);
+                blocks.add(new BlockPlacement(floorOffset, Blocks.COBBLESTONE.defaultBlockState()));
+
+                if (isEdge) {
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 0, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 1, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                }
+
+                BlockPos ceilOffset = new BlockPos(ox + x, 2, oz + z);
+                blocks.add(new BlockPlacement(ceilOffset, Blocks.COBBLESTONE.defaultBlockState()));
+            }
+        }
+
+        BlockPos doorLower = new BlockPos(ox + 2, 0, oz + 4);
+        BlockPos doorUpper = new BlockPos(ox + 2, 1, oz + 4);
+        blocks.removeIf(bp -> bp.offset().equals(doorLower) || bp.offset().equals(doorUpper));
+        blocks.add(new BlockPlacement(doorLower, Blocks.OAK_DOOR.defaultBlockState()));
+        blocks.add(new BlockPlacement(doorUpper, Blocks.OAK_DOOR.defaultBlockState().setValue(
+                net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
+        )));
+
+        BlockPos furnaceOffset = new BlockPos(ox + 1, 0, oz + 1);
+        blocks.add(new BlockPlacement(furnaceOffset, Blocks.FURNACE.defaultBlockState()));
+
+        BlockPos chestOffset = new BlockPos(ox + 3, 0, oz + 1);
+
+        List<ItemStack> supplies = List.of(
+                new ItemStack(Items.BEEF, 32),
+                new ItemStack(Items.COAL, 32),
+                new ItemStack(Items.STICK, 16)
+        );
+
+        TestExpectation expectation = new TestExpectation(
+                List.of(
+                        new ExpectedProduct("minecraft:cooked_beef", 3, 8),
+                        new ExpectedProduct("minecraft:beef", -8, -3),
+                        new ExpectedProduct("minecraft:coal", -5, -3)
+                ),
+                1,
+                100
+        );
+
+        return new TestBlueprint(
+                RoomType.INDOOR,
+                blocks,
+                supplies,
+                doorLower,
+                chestOffset,
+                new ResourceLocation(Questown.MODID, "kitchen_small"),
+                expectation
+        );
+    }
+
+    private static TestBlueprint bakerBlueprint() {
+        return indoorRoomBlueprint(
+                BlocksInit.BREAD_OVEN_BLOCK.get().defaultBlockState(),
+                null,
+                List.of(
+                        new ItemStack(Items.WHEAT, 32),
+                        new ItemStack(Items.COAL, 16)
+                ),
+                new ResourceLocation(Questown.MODID, "breadmaker"),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:bread", 1, null)),
+                        1, 100
+                )
+        );
+    }
+
+    private static boolean isArmorerJob(JobID jobId) {
+        String j = jobId.jobId();
+        return j.endsWith("_boots") || j.endsWith("_helmet")
+                || j.endsWith("_leggings") || j.endsWith("_chestplate");
+    }
+
+    private static TestBlueprint armorerBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        int ox = 4;
+        int oz = -2;
+
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
+                BlockPos floorOffset = new BlockPos(ox + x, -1, oz + z);
+                blocks.add(new BlockPlacement(floorOffset, Blocks.COBBLESTONE.defaultBlockState()));
+
+                if (isEdge) {
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 0, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 1, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                }
+
+                BlockPos ceilOffset = new BlockPos(ox + x, 2, oz + z);
+                blocks.add(new BlockPlacement(ceilOffset, Blocks.COBBLESTONE.defaultBlockState()));
+            }
+        }
+
+        BlockPos doorLower = new BlockPos(ox + 2, 0, oz + 4);
+        BlockPos doorUpper = new BlockPos(ox + 2, 1, oz + 4);
+        blocks.removeIf(bp -> bp.offset().equals(doorLower) || bp.offset().equals(doorUpper));
+        blocks.add(new BlockPlacement(doorLower, Blocks.OAK_DOOR.defaultBlockState()));
+        blocks.add(new BlockPlacement(doorUpper, Blocks.OAK_DOOR.defaultBlockState().setValue(
+                net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
+        )));
+
+        blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 1), BlocksInit.BLACKSMITHS_TABLE_BLOCK.get().defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(ox + 3, 0, oz + 1), Blocks.CHEST.defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 3), Blocks.CHEST.defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(ox + 3, 0, oz + 3), Blocks.CHEST.defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(ox + 2, 0, oz + 1), Blocks.CHEST.defaultBlockState()));
+
+        BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 3);
+
+        List<ItemStack> supplies = List.of(
+                new ItemStack(Items.LEATHER, 32)
+        );
+
+        TestExpectation expectation = new TestExpectation(
+                List.of(new ExpectedProduct("minecraft:leather", -32, null)),
+                0, 0
+        );
+
+        return new TestBlueprint(
+                RoomType.INDOOR,
+                blocks,
+                supplies,
+                doorLower,
+                chestOffset,
+                new ResourceLocation(Questown.MODID, "armory"),
+                expectation
+        );
+    }
+
+    private static TestBlueprint crafterBlueprint() {
+        return indoorRoomBlueprint(
+                Blocks.CRAFTING_TABLE.defaultBlockState(),
+                null,
+                List.of(new ItemStack(Items.OAK_SAPLING, 16)),
+                new ResourceLocation(Questown.MODID, "crafting_room"),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:stick", 1, null)),
+                        1, 100
+                )
+        );
+    }
+
+    private static TestBlueprint blacksmithBlueprint() {
+        return indoorRoomBlueprint(
+                BlocksInit.BLACKSMITHS_TABLE_BLOCK.get().defaultBlockState(),
+                Blocks.TORCH.defaultBlockState(),
+                List.of(
+                        new ItemStack(Items.STICK, 16),
+                        new ItemStack(Items.OAK_PLANKS, 32)
+                ),
+                new ResourceLocation(Questown.MODID, "smithy"),
+                new TestExpectation(
+                        List.of(
+                                new ExpectedProduct("minecraft:wooden_axe", 0, null),
+                                new ExpectedProduct("minecraft:wooden_pickaxe", 0, null),
+                                new ExpectedProduct("minecraft:wooden_hoe", 0, null),
+                                new ExpectedProduct("minecraft:wooden_shovel", 0, null)
+                        ),
+                        1, 100
+                )
+        );
+    }
+
+    private static TestBlueprint smelterBlueprint() {
+        return indoorRoomBlueprint(
+                BlocksInit.ORE_PROCESSING_BLOCK.get().defaultBlockState(),
+                null,
+                List.of(
+                        new ItemStack(Items.IRON_ORE, 16),
+                        new ItemStack(Items.STONE_PICKAXE, 1)
+                ),
+                new ResourceLocation(Questown.MODID, "smeltery"),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:raw_iron", 1, null)),
+                        1, 100
+                )
+        );
+    }
+
+    private static TestBlueprint soupCookBlueprint() {
+        return indoorRoomBlueprint(
+                BlocksInit.SOUP_POT_SMALL.get().defaultBlockState(),
+                null,
+                List.of(
+                        new ItemStack(Items.RED_MUSHROOM, 16),
+                        new ItemStack(Items.BOWL, 16),
+                        new ItemStack(Items.WOODEN_SHOVEL, 1)
+                ),
+                new ResourceLocation(Questown.MODID, "soup_kitchen_small"),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:mushroom_stew", 1, null)),
+                        1, 100
+                )
+        );
+    }
+
+    private static TestBlueprint indoorRoomBlueprint(
+            net.minecraft.world.level.block.state.BlockState workBlock,
+            @Nullable net.minecraft.world.level.block.state.BlockState extraBlock,
+            List<ItemStack> supplies,
+            ResourceLocation roomId,
+            TestExpectation expectation
+    ) {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        int ox = 4;
+        int oz = -2;
+
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
+                BlockPos floorOffset = new BlockPos(ox + x, -1, oz + z);
+                blocks.add(new BlockPlacement(floorOffset, Blocks.COBBLESTONE.defaultBlockState()));
+
+                if (isEdge) {
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 0, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 1, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                }
+
+                BlockPos ceilOffset = new BlockPos(ox + x, 2, oz + z);
+                blocks.add(new BlockPlacement(ceilOffset, Blocks.COBBLESTONE.defaultBlockState()));
+            }
+        }
+
+        BlockPos doorLower = new BlockPos(ox + 2, 0, oz + 4);
+        BlockPos doorUpper = new BlockPos(ox + 2, 1, oz + 4);
+        blocks.removeIf(bp -> bp.offset().equals(doorLower) || bp.offset().equals(doorUpper));
+        blocks.add(new BlockPlacement(doorLower, Blocks.OAK_DOOR.defaultBlockState()));
+        blocks.add(new BlockPlacement(doorUpper, Blocks.OAK_DOOR.defaultBlockState().setValue(
+                net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
+        )));
+
+        blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 1), workBlock));
+
+        if (extraBlock != null) {
+            blocks.add(new BlockPlacement(new BlockPos(ox + 3, 0, oz + 1), extraBlock));
+        }
+
+        BlockPos chestOffset = new BlockPos(ox + 3, 0, oz + 3);
+
+        return new TestBlueprint(
+                RoomType.INDOOR,
+                blocks,
+                supplies,
+                doorLower,
+                chestOffset,
+                roomId,
+                expectation
+        );
+    }
+
+    private static TestBlueprint gathererBlueprint() {
+        return welcomeMatBlueprint(
+                List.of(
+                        new ItemStack(Items.STONE_AXE, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                )
+        );
+    }
+
+    private static TestBlueprint hunterBlueprint() {
+        return welcomeMatBlueprint(
+                List.of(
+                        new ItemStack(Items.STONE_SWORD, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                )
+        );
+    }
+
+    private static TestBlueprint welcomeMatBlueprint(List<ItemStack> supplies) {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        BlockPos matOffset = new BlockPos(3, 0, 0);
+        blocks.add(new BlockPlacement(matOffset, BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState()));
+
+        SupplyRoom sr = buildSupplyRoom(4, -2);
+        blocks.addAll(sr.blocks);
+
+        return new TestBlueprint(
+                RoomType.WELCOME_MAT,
+                blocks,
+                supplies,
+                matOffset,
+                sr.chestOffset,
+                SpecialQuests.TOWN_GATE,
+                wildcardExpectation(),
+                sr.doorOffset
+        );
+    }
+
+    private static TestBlueprint minerBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        BlockPos blockOffset = new BlockPos(3, 0, 0);
+        blocks.add(new BlockPlacement(blockOffset, BlocksInit.MINESHAFT.get().defaultBlockState()));
+
+        SupplyRoom sr = buildSupplyRoom(4, -2);
+        blocks.addAll(sr.blocks);
+
+        return new TestBlueprint(
+                RoomType.BLOCK_ROOM,
+                blocks,
+                List.of(
+                        new ItemStack(Items.STONE_PICKAXE, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                ),
+                blockOffset,
+                sr.chestOffset,
+                Questown.ResourceLocation("block_room/block.questown.mineshaft"),
+                wildcardExpectation(),
+                sr.doorOffset
+        );
+    }
+
+    private static TestBlueprint fisherBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        BlockPos blockOffset = new BlockPos(3, 0, 0);
+        blocks.add(new BlockPlacement(blockOffset, BlocksInit.FISHING_STATION_BLOCK.get().defaultBlockState()));
+
+        for (int x = -1; x <= 1; x++) {
+            for (int z = -1; z <= 1; z++) {
+                BlockPos waterPos = new BlockPos(3 + x, -1, -2 + z);
+                blocks.add(new BlockPlacement(waterPos, Blocks.WATER.defaultBlockState()));
+            }
+        }
+
+        SupplyRoom sr = buildSupplyRoom(4, -2);
+        blocks.addAll(sr.blocks);
+
+        return new TestBlueprint(
+                RoomType.BLOCK_ROOM,
+                blocks,
+                List.of(new ItemStack(Items.STRING, 16)),
+                blockOffset,
+                sr.chestOffset,
+                Questown.ResourceLocation("block_room/block.questown.fishing_station"),
+                wildcardExpectation(),
+                sr.doorOffset
+        );
+    }
+
+    private record SupplyRoom(
+            List<BlockPlacement> blocks,
+            BlockPos chestOffset,
+            BlockPos doorOffset
+    ) {}
+
+    private static SupplyRoom buildSupplyRoom(int ox, int oz) {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
+                blocks.add(new BlockPlacement(
+                        new BlockPos(ox + x, -1, oz + z),
+                        Blocks.COBBLESTONE.defaultBlockState()
+                ));
+                if (isEdge) {
+                    blocks.add(new BlockPlacement(
+                            new BlockPos(ox + x, 0, oz + z),
+                            Blocks.COBBLESTONE.defaultBlockState()
+                    ));
+                    blocks.add(new BlockPlacement(
+                            new BlockPos(ox + x, 1, oz + z),
+                            Blocks.COBBLESTONE.defaultBlockState()
+                    ));
+                }
+                blocks.add(new BlockPlacement(
+                        new BlockPos(ox + x, 2, oz + z),
+                        Blocks.COBBLESTONE.defaultBlockState()
+                ));
+            }
+        }
+
+        BlockPos doorLower = new BlockPos(ox + 2, 0, oz + 4);
+        BlockPos doorUpper = new BlockPos(ox + 2, 1, oz + 4);
+        blocks.removeIf(bp -> bp.offset().equals(doorLower) || bp.offset().equals(doorUpper));
+        blocks.add(new BlockPlacement(doorLower, Blocks.OAK_DOOR.defaultBlockState()));
+        blocks.add(new BlockPlacement(doorUpper, Blocks.OAK_DOOR.defaultBlockState().setValue(
+                net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
+        )));
+
+        BlockPos chestOffset = new BlockPos(ox + 2, 0, oz + 1);
+
+        return new SupplyRoom(blocks, chestOffset, doorLower);
+    }
+
+    private static TestExpectation wildcardExpectation() {
+        return new TestExpectation(
+                List.of(new ExpectedProduct("*", 1, null)),
+                1, 100
+        );
+    }
+
+    // --- Edge case blueprints ---
+
+    private static TestBlueprint farmerNightStartBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:wheat", 1, null)),
+                        1, 100
+                ),
+                base.supplyDoorOffset(), 12000, 20000L, null, false, null,
+                false, false, null, null, null, null, null
+        );
+    }
+
+    private static TestBlueprint farmerAllNightBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        // No hoe in supplies: prevents real-time harvesting during settle phases,
+        // so the only way wheat could appear is if the warp ran (which it shouldn't at night).
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), List.of(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:wheat", 0, 0)),
+                        0, 0
+                ),
+                base.supplyDoorOffset(), 2000, 15000L, null, false, null,
+                false, false, null, null, null, null, null
+        );
+    }
+
+    private static TestBlueprint farmerMultiDayBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:wheat", 3, null)),
+                        3, 300
+                ),
+                base.supplyDoorOffset(), 72000, 0L, null, false, null,
+                false, false, null, null, null, null, null
+        );
+    }
+
+    private static TestBlueprint farmerNoSuppliesBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), List.of(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:wheat", 0, 0)),
+                        0, 0
+                ),
+                base.supplyDoorOffset(), 24000, 0L, null, false, null,
+                false, false, null, null, null, null, null
+        );
+    }
+
+    private static TestBlueprint gathererToolDurabilityBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(
+                List.of(
+                        new ItemStack(Items.WOODEN_AXE, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                )
+        );
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(
+                                new ExpectedProduct("minecraft:wooden_axe", -1, -1),
+                                new ExpectedProduct("*", 1, null)
+                        ),
+                        1, 300
+                ),
+                base.supplyDoorOffset(), 72000, 0L, null, false, null,
+                false, false, null, null, null, null, null
+        );
+    }
+
+    private static TestBlueprint farmerTwoVillagersBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:wheat", 2, null)),
+                        1, 100
+                ),
+                base.supplyDoorOffset(), 24000, 0L, 2, false, null,
+                false, false, null, null, null, null, null
+        );
+    }
+
+    private static TestBlueprint farmerRealtimeBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                base.expectation(),
+                base.supplyDoorOffset(), null, null, null, true, 4800,
+                false, false, null, null, null, null, null
+        );
+    }
+
+    // --- Eating tests ---
+
+    /**
+     * Villager eats cooked food at the town flag (no dining room).
+     * DinerNoTableWork path: hungry -> get food from supply -> eat at flag -> fullness 100%.
+     * Fullness cycles between 0-100% during monitoring; threshold reflects end-of-window value.
+     */
+    private static TestBlueprint eatNoTableBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(
+                new ItemStack(Items.BREAD, 16)
+        ));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 0),
+                base.supplyDoorOffset(), null, null, null, true, 800,
+                true, true,
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:bread", -16, null)),
+                        1, 1
+                ),
+                // fullness check omitted: hunger cycles every ~150 ticks, final value at 800t is timing-dependent
+                null, null, null,
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1)
+        );
+    }
+
+    /**
+     * Villager eats at a dining room (plate block present).
+     * DinerWork path: hungry -> get food from supply -> eat at plate block -> fullness 100%.
+     */
+    private static TestBlueprint dineAtTimeBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(
+                new ItemStack(Items.BREAD, 16)
+        ));
+        BlockPos plateOffset = new BlockPos(1, 0, 0);
+        List<BlockPlacement> blocks = new ArrayList<>(base.blocks());
+        blocks.add(new BlockPlacement(plateOffset, BlocksInit.PLATE_BLOCK.get().defaultBlockState()));
+        return new TestBlueprint(
+                base.roomType(), blocks, base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 0),
+                base.supplyDoorOffset(), null, null, null, true, 800,
+                true, true,
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:bread", -16, null)),
+                        1, 1
+                ),
+                0.25f, plateOffset, SpecialQuests.DINING_ROOM,
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1)
+        );
+    }
+
+    /**
+     * Villager eats raw food at the town flag (no cooked food available).
+     * DinerRawFoodWork path: hungry -> no cooked food -> eat raw food -> fullness ~50%.
+     * Requires more realtime ticks because DinerNoTableWork must time out first.
+     */
+    private static TestBlueprint eatRawFoodBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(
+                new ItemStack(Items.BEEF, 16)
+        ));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 0),
+                base.supplyDoorOffset(), null, null, null, true, 2000,
+                true, true,
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:beef", -16, null)),
+                        1, 1
+                ),
+                0.3f, null, null,
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:beef", 0, 1)), 0, 1)
+        );
+    }
+
+    /**
+     * Directly assigns dining_no_table job (bypassing the hunger trigger).
+     * Tests that the eating job itself works: collects food from supply and restores fullness.
+     */
+    private static TestBlueprint eatDirectBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(
+                new ItemStack(Items.BREAD, 16)
+        ));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 0),
+                base.supplyDoorOffset(), null, null, null, true, 600,
+                false, true,
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:bread", -16, null)),
+                        1, 1
+                ),
+                0.25f, null, null,
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1)
+        );
+    }
+
+    // --- Worldgen checks ---
+
+    private static WorldgenCheck emptyTownStructureCheck() {
+        return new WorldgenCheck(
+                "worldgen/empty_town_structure",
+                "worldgen",
+                level -> level.registryAccess()
+                        .registry(Registry.STRUCTURE_REGISTRY)
+                        .map(r -> r.containsKey(new ResourceLocation("questown", "empty_town")))
+                        .orElse(false)
+        );
+    }
+
+    private static WorldgenCheck emptyTownStructureSetCheck() {
+        return new WorldgenCheck(
+                "worldgen/empty_town_structure_set",
+                "worldgen",
+                level -> level.registryAccess()
+                        .registry(Registry.STRUCTURE_SET_REGISTRY)
+                        .map(r -> r.containsKey(new ResourceLocation("questown", "empty_town")))
+                        .orElse(false)
+        );
+    }
+}

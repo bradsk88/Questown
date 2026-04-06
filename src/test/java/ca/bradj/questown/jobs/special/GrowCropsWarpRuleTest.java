@@ -152,7 +152,7 @@ class GrowCropsWarpRuleTest {
     void shouldSkipNonGrowableBlocks() {
         TestWorldAccess world = new TestWorldAccess()
                 .withBlockProperty(POS_1, "age", 0, 7);
-        // POS_2 has no age property - not growable
+        // POS_2 has no age property — not growable
 
         WarpTickEvent event = makeEvent(world, 4096, List.of(POS_1, POS_2));
 

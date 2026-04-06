@@ -91,7 +91,7 @@ class ContainerRuleTest {
         );
 
         InsertIntoSlotSpecialRule rule = new InsertIntoSlotSpecialRule(0);
-        // Should not throw - just logs an error
+        // Should not throw — just logs an error
         rule.afterInsertItem(true, event);
     }
 
@@ -185,7 +185,7 @@ class ContainerRuleTest {
         );
 
         AddItemToContainerSpecialRule rule = new AddItemToContainerSpecialRule();
-        // Should not throw - just logs an error about lost item
+        // Should not throw — just logs an error about lost item
         rule.afterInsertItem(true, event);
     }
 
