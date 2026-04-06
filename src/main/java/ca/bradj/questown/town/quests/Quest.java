@@ -22,6 +22,8 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     private int count;
     @Nullable
     KEY fromRecipeID;
+    @Nullable
+    private String flavorText;
 
     Quest() {
         this(null, null, null, null, null, 1);
@@ -116,6 +118,15 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         return count;
     }
 
+    @Nullable
+    public String getFlavorText() {
+        return flavorText;
+    }
+
+    public void setFlavorText(@Nullable String flavorText) {
+        this.flavorText = flavorText;
+    }
+
     public enum QuestStatus {
         UNSET(""),
         ACTIVE("active"),
@@ -143,7 +154,7 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     }
 
     public enum QuestType {
-        ITEM, ROOM, JOB_CHANGE, UNKNOWN;
+        ITEM, ROOM, JOB_CHANGE, CONCURRENT_JOBS, UNKNOWN;
     }
 
     protected interface QuestFactory<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>> {

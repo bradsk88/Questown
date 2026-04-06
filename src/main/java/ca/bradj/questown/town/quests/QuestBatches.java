@@ -181,6 +181,7 @@ public class QuestBatches<
                     case ITEM -> e.addItemQuest(owner, q.getWantedId(), q.getCountNeeded());
                     case ROOM -> e.addNewQuest(owner, q.getWantedId());
                     case JOB_CHANGE -> e.addJobChangeQuest(q.getWantedId());
+                    case CONCURRENT_JOBS -> e.addNewQuest(owner, q.getWantedId());
                     case UNKNOWN -> QT.QUESTS_LOGGER.error("Unexpected type: {}. Skipping duplicate check.", q.getType());
                 }
                 IdIgnoring<QUEST> iq = new IdIgnoring<>(q);

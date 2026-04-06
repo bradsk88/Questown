@@ -1,26 +1,26 @@
 {
   "display": {
     "title": {
-      "text": "Magic Stick",
+      "text": "Roughing It",
       "color": "white"
     },
     "description": {
-      "text": "Acquire a Town Wand from the flag's crafting tab"
+      "text": "Sleep by the town campfire"
     },
     "icon": {
-      "item": "questown:town_wand"
+      "item": "minecraft:campfire"
     },
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,
-    "hidden": false,
+    "hidden": true,
     "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
   },
   "criteria": {
     "Trigger": {
-      "trigger": "questown:room_trigger",
+      "trigger": "questown:tutorial_trigger",
       "conditions": {
-        "context": "wand_get"
+        "context": "first_campfire_sleep"
       }
     }
   },
@@ -30,7 +30,7 @@
     ]
   ],
   "rewards": {
-    "experience": 100
+    "experience": 50
   },
-  "parent": "questown:first_visitor"
+  "parent": "questown:root"
 }

@@ -3,6 +3,7 @@ package ca.bradj.questown.core.advancements;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.AdvancementEvent;
@@ -12,6 +13,8 @@ import vazkii.patchouli.api.PatchouliAPI;
 
 @Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class AdvancementEvents {
+
+    private static final ResourceLocation BOOK_ID = new ResourceLocation(Questown.MODID, "intro");
 
     public static final ImmutableList<String> ADVANCEMENTS_WITH_PAGES = ImmutableList.of(
             VisitorTrigger.Triggers.FirstVisitor.getID(),
@@ -26,9 +29,42 @@ public class AdvancementEvents {
             RoomTrigger.Triggers.FirstJobBoard.getID(),
             RoomTrigger.Triggers.FirstStoreRoom.getID(),
             RoomTrigger.Triggers.FirstWelcomeMat.getID(),
-            RoomTrigger.Triggers.FirstOpenFlagMenu.getID()
+            RoomTrigger.Triggers.FirstOpenFlagMenu.getID(),
+            TutorialTrigger.Triggers.TutorialComplete.getID(),
+            TutorialTrigger.Triggers.SecondJobType.getID(),
+            TutorialTrigger.Triggers.FirstWarp.getID(),
+            TutorialTrigger.Triggers.FirstRoomUpgrade.getID(),
+            TutorialTrigger.Triggers.FirstBopView.getID(),
+            TutorialTrigger.Triggers.FirstBopSpend.getID(),
+            TutorialTrigger.Triggers.Chapter2.getID(),
+            TutorialTrigger.Triggers.Chapter3.getID(),
+            TutorialTrigger.Triggers.Chapter4.getID(),
+            TutorialTrigger.Triggers.FirstCampfireSleep.getID()
     );
 
+    // Maps advancement path → journal entry path to open automatically when the advancement fires.
+    // Entries without a mapping fall back to a chat notification only.
+    private static final ImmutableMap<String, String> ADVANCEMENT_TO_ENTRY = ImmutableMap.<String, String>builder()
+            .put(VisitorTrigger.Triggers.FirstVisitor.getID(),         "002-how-to-start")
+            .put(RoomTrigger.Triggers.WandGet.getID(),                 "003-how-to-register")
+            .put(RoomTrigger.Triggers.FirstRoom.getID(),               "004-job-board")
+            .put(RoomTrigger.Triggers.FirstJobBoard.getID(),           "005-requests")
+            .put(VisitorTrigger.Triggers.FirstJobRequest.getID(),      "006-town-gate")
+            .put(RoomTrigger.Triggers.FirstWelcomeMat.getID(),         "007-storage")
+            .put(RoomTrigger.Triggers.FirstStoreRoom.getID(),          "008-how-to-supply")
+            .put(VisitorTrigger.Triggers.FirstLeaveToGather.getID(),   "009-how-to-monitor")
+            .put(RoomTrigger.Triggers.FirstOpenFlagMenu.getID(),       "010-how-to-progress")
+            .put(VisitorTrigger.Triggers.FirstJobDone.getID(),         "011-how-to-level")
+            // FirstJobQuest fires right after FirstJobDone; omitting it here so 011 isn't immediately overridden
+            .put(VisitorTrigger.Triggers.FirstUnmetNeeds.getID(),      "lesson_needs")
+            .put(RoomTrigger.Triggers.FirstJobBlock.getID(),           "lesson_room_recipes")
+            .put(TutorialTrigger.Triggers.TutorialComplete.getID(),    "013-the-crafter")
+            .put(TutorialTrigger.Triggers.SecondJobType.getID(),       "014-supply-chains")
+            .put(TutorialTrigger.Triggers.FirstWarp.getID(),           "015-while-you-were-away")
+            .put(TutorialTrigger.Triggers.FirstRoomUpgrade.getID(),    "lesson_upgrades")
+            .put(TutorialTrigger.Triggers.FirstBopView.getID(),        "lesson_bop")
+            .put(TutorialTrigger.Triggers.FirstCampfireSleep.getID(),  "lesson_campfire_sleep")
+            .build();
 
     @SubscribeEvent
     public static void entityAttrEvent(AdvancementEvent event) {
@@ -41,10 +77,16 @@ public class AdvancementEvents {
         String path = event.getAdvancement().getId().getPath();
         if ("root".equals(path)) {
             Compat.sendMessage(sp, Compat.translatable("messages.town_flag.first_visit_journal"));
-            sp.addItem(PatchouliAPI.get().getBookStack(new ResourceLocation(Questown.MODID, "intro")));
+            sp.addItem(PatchouliAPI.get().getBookStack(BOOK_ID));
             return;
         }
-        if (ADVANCEMENTS_WITH_PAGES.contains(path)) {
+        if (!ADVANCEMENTS_WITH_PAGES.contains(path)) {
+            return;
+        }
+        String entry = ADVANCEMENT_TO_ENTRY.get(path);
+        if (entry != null) {
+            PatchouliAPI.get().openBookEntry(sp, BOOK_ID, new ResourceLocation(Questown.MODID, entry), 0);
+        } else {
             Compat.sendMessage(sp, Compat.translatable("messages.town_flag.journal_page"));
         }
     }

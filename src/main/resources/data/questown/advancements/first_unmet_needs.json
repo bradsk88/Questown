@@ -11,9 +11,9 @@
       "item": "minecraft:bone"
     },
     "frame": "goal",
-    "show_toast": false,
-    "announce_to_chat": false,
-    "hidden": true,
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
     "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
   },
   "criteria": {

@@ -11,11 +11,14 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class MCQuest extends Quest<ResourceLocation, MCRoom> {
     public static final Serializer SERIALIZER = new Serializer();
 
+    @Nullable String concurrentJobIdsEncoded;
 
     MCQuest() {
         super();
@@ -84,6 +87,31 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return new MCQuest(batchUUID, ownerId, jobId, null, QuestType.JOB_CHANGE, 1);
     }
 
+    public static MCQuest concurrentJobs(
+            UUID batchUUID,
+            Collection<ResourceLocation> jobIds
+    ) {
+        String encoded = jobIds.stream().map(ResourceLocation::toString).collect(Collectors.joining(","));
+        ResourceLocation encodedRL = new ResourceLocation("questown", "concurrent_jobs");
+        MCQuest quest = new MCQuest(batchUUID, null, encodedRL, null, QuestType.CONCURRENT_JOBS, 1);
+        quest.concurrentJobIdsEncoded = encoded;
+        return quest;
+    }
+
+    public Collection<ResourceLocation> getConcurrentJobIds() {
+        if (getType() != QuestType.CONCURRENT_JOBS) {
+            return ImmutableList.of();
+        }
+        if (concurrentJobIdsEncoded == null || concurrentJobIdsEncoded.isEmpty()) {
+            return ImmutableList.of();
+        }
+        ImmutableList.Builder<ResourceLocation> b = ImmutableList.builder();
+        for (String s : concurrentJobIdsEncoded.split(",")) {
+            b.add(new ResourceLocation(s));
+        }
+        return b.build();
+    }
+
     // TODO: Consider changing this to a door instead of a room, since the room can change shape easily
     //  and when the door is removed, the quest is invalidated anyway.
     public MCQuest completed(@Nullable MCRoom room) {
@@ -98,6 +126,8 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.ownerUUID = this.ownerUUID;
         q.status = QuestStatus.COMPLETED;
         q.completedOn = room;
+        q.setFlavorText(this.getFlavorText());
+        q.concurrentJobIdsEncoded = this.concurrentJobIdsEncoded;
         return q;
     }
 
@@ -123,6 +153,8 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         private static final String NBT_COUNT = "count";
         private static final String NBT_RECIPE_ID = "recipe_id";
         private static final String NBT_FROM_RECIPE_ID = "from_recipe_id";
+        private static final String NBT_FLAVOR_TEXT = "flavor_text";
+        private static final String NBT_CONCURRENT_JOB_IDS = "concurrent_job_ids";
         private static final String NBT_STATUS = "status";
         private static final String NBT_COMPLETED_ON_DOORPOS_X = "doorpos_x";
         private static final String NBT_COMPLETED_ON_DOORPOS_Y = "doorpos_y";
@@ -152,6 +184,12 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
 
             if (quest.fromRecipeID().isPresent()) {
                 ct.putString(NBT_FROM_RECIPE_ID, quest.fromRecipeID().get().toString());
+            }
+            if (quest.getFlavorText() != null) {
+                ct.putString(NBT_FLAVOR_TEXT, quest.getFlavorText());
+            }
+            if (quest instanceof MCQuest mcq && mcq.concurrentJobIdsEncoded != null) {
+                ct.putString(NBT_CONCURRENT_JOB_IDS, mcq.concurrentJobIdsEncoded);
             }
             return ct;
         }
@@ -201,6 +239,12 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
                     new MCRoom(doorPos, ImmutableList.of(space), doorY),
                     fromRecipeId
             );
+            if (nbt.contains(NBT_FLAVOR_TEXT)) {
+                quest.setFlavorText(nbt.getString(NBT_FLAVOR_TEXT));
+            }
+            if (nbt.contains(NBT_CONCURRENT_JOB_IDS)) {
+                quest.concurrentJobIdsEncoded = nbt.getString(NBT_CONCURRENT_JOB_IDS);
+            }
             return quest;
         }
 

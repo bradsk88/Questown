@@ -1,0 +1,13 @@
+{
+  "sortnum": 7,
+  "name": "Blocks of Progress",
+  "icon": "minecraft:book",
+  "category": "questown:lessons",
+  "advancement": "questown:job_quest",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "You spent a BOP to unlock a new job. As your villagers work, they'll earn more. Use them to branch deeper into each skill tree.$(br2)Choose wisely early on -- they're scarce at first."
+    }
+  ]
+}

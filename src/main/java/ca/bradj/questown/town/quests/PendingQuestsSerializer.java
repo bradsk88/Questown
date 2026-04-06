@@ -48,7 +48,7 @@ public class PendingQuestsSerializer {
             CompoundTag tag = aq.getCompound(i);
             MCQuestBatch b = MCQuestBatch.SERIALIZER.deserializeNBT(town, tag);
             int threshold = tag.getInt(NBT_WEIGHT_THRESHOLD);
-            QuestBatchSeed pendingQuests = new QuestBatchSeed(town.getServerLevel(), b.getBatchUUID(), threshold);
+            QuestBatchSeed pendingQuests = new QuestBatchSeed(town.getServerLevel(), b.getBatchUUID(), threshold, Integer.MAX_VALUE);
             for (Quest<ResourceLocation, MCRoom> q : b.getAll()) {
                 pendingQuests.batch.addNewQuest(q.getUUID(), q.getWantedId());
             }

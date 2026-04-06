@@ -1,14 +1,14 @@
 {
   "display": {
     "title": {
-      "text": "Magic Stick",
+      "text": "Feeding the Village",
       "color": "white"
     },
     "description": {
-      "text": "Acquire a Town Wand from the flag's crafting tab"
+      "text": "Complete 5 procedural quest batches after the tutorial"
     },
     "icon": {
-      "item": "questown:town_wand"
+      "item": "minecraft:bread"
     },
     "frame": "goal",
     "show_toast": true,
@@ -18,9 +18,9 @@
   },
   "criteria": {
     "Trigger": {
-      "trigger": "questown:room_trigger",
+      "trigger": "questown:tutorial_trigger",
       "conditions": {
-        "context": "wand_get"
+        "context": "chapter_2"
       }
     }
   },
@@ -30,7 +30,7 @@
     ]
   ],
   "rewards": {
-    "experience": 100
+    "experience": 200
   },
-  "parent": "questown:first_visitor"
+  "parent": "questown:first_warp"
 }

@@ -1,16 +1,16 @@
 {
   "display": {
     "title": {
-      "text": "Magic Stick",
+      "text": "The Growing Town",
       "color": "white"
     },
     "description": {
-      "text": "Acquire a Town Wand from the flag's crafting tab"
+      "text": "Complete 20 procedural quest batches"
     },
     "icon": {
-      "item": "questown:town_wand"
+      "item": "questown:town_flag_block"
     },
-    "frame": "goal",
+    "frame": "challenge",
     "show_toast": true,
     "announce_to_chat": true,
     "hidden": false,
@@ -18,9 +18,9 @@
   },
   "criteria": {
     "Trigger": {
-      "trigger": "questown:room_trigger",
+      "trigger": "questown:tutorial_trigger",
       "conditions": {
-        "context": "wand_get"
+        "context": "chapter_4"
       }
     }
   },
@@ -30,7 +30,7 @@
     ]
   ],
   "rewards": {
-    "experience": 100
+    "experience": 500
   },
-  "parent": "questown:first_visitor"
+  "parent": "questown:chapter_3"
 }

@@ -1,26 +1,26 @@
 {
   "display": {
     "title": {
-      "text": "Magic Stick",
+      "text": "Tutorial Complete",
       "color": "white"
     },
     "description": {
-      "text": "Acquire a Town Wand from the flag's crafting tab"
+      "text": "Complete all tutorial quests and unlock the crafter"
     },
     "icon": {
-      "item": "questown:town_wand"
+      "item": "minecraft:writable_book"
     },
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,
-    "hidden": false,
+    "hidden": true,
     "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
   },
   "criteria": {
     "Trigger": {
-      "trigger": "questown:room_trigger",
+      "trigger": "questown:tutorial_trigger",
       "conditions": {
-        "context": "wand_get"
+        "context": "tutorial_complete"
       }
     }
   },
@@ -32,5 +32,5 @@
   "rewards": {
     "experience": 100
   },
-  "parent": "questown:first_visitor"
+  "parent": "questown:first_job_done"
 }

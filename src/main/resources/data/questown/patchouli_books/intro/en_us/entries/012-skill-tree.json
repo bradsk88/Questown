@@ -1,0 +1,13 @@
+{
+  "sortnum": 12,
+  "name": "12: The Skill Tree",
+  "icon": "minecraft:writable_book",
+  "category": "questown:entries",
+  "advancement": "questown:job_quest",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Each villager has a skill tree. Open their menu and check the Skills tab.$(br2)Locked jobs need a Block of Progress to unlock. Your villagers earn these as they work -- check the flag menu's BOP tab."
+    }
+  ]
+}

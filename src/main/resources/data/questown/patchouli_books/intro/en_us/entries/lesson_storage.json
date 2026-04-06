@@ -1,0 +1,17 @@
+{
+  "sortnum": 4,
+  "name": "Storage Tiers",
+  "icon": "minecraft:book",
+  "category": "questown:lessons",
+  "advancement": "questown:first_store_room",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "When storage fills up, production stops. Upgrade before you need it.$(br2)Villagers can't stack items. Each item takes one slot. This means storage fills up faster than you'd expect -- plan for more chests than you think you need."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Storage progression: start with one chest, then add more to upgrade your store room to a warehouse. Don't demolish -- just add."
+    }
+  ]
+}

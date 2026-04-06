@@ -1,0 +1,13 @@
+{
+  "sortnum": 3,
+  "name": "Room Recipes",
+  "icon": "minecraft:book",
+  "category": "questown:lessons",
+  "advancement": "questown:first_job_done",
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "What you put inside a room defines its purpose. Furnace = kitchen. Crafting table = crafting room.$(br2)Quests tell you what to build -- but you can experiment by adding blocks to see what a room becomes."
+    }
+  ]
+}

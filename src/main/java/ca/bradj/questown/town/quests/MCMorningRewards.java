@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 
@@ -32,6 +33,10 @@ public class MCMorningRewards extends MCRewardList {
     @Override
     public Collection<MCReward> getChildren() {
         return ImmutableList.copyOf(this.currentChildren);
+    }
+
+    public boolean hasPendingSpawnVisitor() {
+        return currentChildren.stream().anyMatch(r -> r instanceof SpawnVisitorReward);
     }
 
     public Collection<MCReward> popChildren() {
