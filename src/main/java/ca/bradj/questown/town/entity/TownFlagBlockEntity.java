@@ -829,6 +829,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return state.warp(this, Compat.getBlockStoredTagData(this), getServerLevel(), ticks);
     }
 
+    public void freezeWarpReferenceTick() {
+        CompoundTag tag = Compat.getBlockStoredTagData(this);
+        tag.putLong(NBT_TIME_WARP_REFERENCE_TICK, getServerLevel().getDayTime());
+    }
+
     public @Nullable MCTownState captureCurrentState() {
         return state.captureState();
     }

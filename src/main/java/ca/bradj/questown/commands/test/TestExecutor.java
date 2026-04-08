@@ -36,6 +36,8 @@ public class TestExecutor {
         SETTLE,
         CAPTURE_BEFORE,
         RUN_WARP,
+        NATURAL_WARP_FREEZE,
+        NATURAL_WARP_WAIT,
         SETTLE_AFTER_WARP,
         CHECK_RESULTS,
         KILL_FOR_INSPECT,
@@ -143,6 +145,8 @@ public class TestExecutor {
             case SETTLE -> settle();
             case CAPTURE_BEFORE -> captureBefore();
             case RUN_WARP -> runWarp();
+            case NATURAL_WARP_FREEZE -> naturalWarpFreeze();
+            case NATURAL_WARP_WAIT -> naturalWarpWait();
             case SETTLE_AFTER_WARP -> settleAfterWarp();
             case CHECK_RESULTS -> checkResults();
             case KILL_FOR_INSPECT -> killForInspect();
@@ -366,8 +370,13 @@ public class TestExecutor {
         MCTownState state = tfbe.captureCurrentState();
         if (state != null) {
             beforeCounts = TestResultChecker.snapshotItemCounts(state);
-            msg("State captured, starting warp of " + effectiveWarpAmount() + " ticks...");
-            phase = Phase.RUN_WARP;
+            if (blueprint.useNaturalWarp()) {
+                msg("State captured, simulating " + effectiveWarpAmount() + " ticks of player absence...");
+                phase = Phase.NATURAL_WARP_FREEZE;
+            } else {
+                msg("State captured, starting warp of " + effectiveWarpAmount() + " ticks...");
+                phase = Phase.RUN_WARP;
+            }
             return;
         }
         if (waitTicks >= 50) {
@@ -391,6 +400,30 @@ public class TestExecutor {
         phase = Phase.SETTLE_AFTER_WARP;
         waitTicks = 0;
         maxWaitTicks = 40;
+    }
+
+    private void naturalWarpFreeze() {
+        setStartTimeIfNeeded();
+        tfbe.freezeWarpReferenceTick();
+        long currentTime = level.getDayTime();
+        long targetTime = currentTime + effectiveWarpAmount();
+        level.setDayTime(targetTime);
+        msg("Froze warp reference at tick " + currentTime + ", advanced world to " + targetTime);
+        msg("Next flag tick will detect " + effectiveWarpAmount() + " tick gap and trigger natural warp...");
+        phase = Phase.NATURAL_WARP_WAIT;
+        waitTicks = 0;
+        maxWaitTicks = 40;
+    }
+
+    private void naturalWarpWait() {
+        if (tickTimeout(null)) {
+            msg("Natural warp complete. Letting world settle...");
+            phase = Phase.SETTLE_AFTER_WARP;
+            waitTicks = 0;
+            maxWaitTicks = 40;
+            return;
+        }
+        waitTicks++;
     }
 
     private void logWarpContents(MCTownState state) {

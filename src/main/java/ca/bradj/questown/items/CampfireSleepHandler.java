@@ -8,6 +8,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.material.Material;
@@ -27,6 +28,7 @@ public class CampfireSleepHandler {
     private static final Set<UUID> campfireSleepers = Collections.synchronizedSet(new HashSet<>());
     private static final Map<UUID, BlockPos> tempBedPositions = new ConcurrentHashMap<>();
     private static final Map<UUID, Direction> tempBedFacings = new ConcurrentHashMap<>();
+    private static final Map<UUID, BlockPos> campfirePositions = new ConcurrentHashMap<>();
 
     public static void beginCampfireSleep(
             ServerPlayer player,
@@ -34,6 +36,12 @@ public class CampfireSleepHandler {
             BlockPos campfirePos,
             TownFlagBlockEntity parent
     ) {
+        BlockState campfireState = level.getBlockState(campfirePos);
+        if (!campfireState.hasProperty(CampfireBlock.LIT) || !campfireState.getValue(CampfireBlock.LIT)) {
+            Util.onScreenText(() -> player, "message.wand.campfire.not_lit");
+            return;
+        }
+
         boolean campfireRegistered = TownCycle.findCampfire(parent.getBlockPos(), level)
                                               .filter(campfirePos::equals)
                                               .isPresent();
@@ -48,7 +56,7 @@ public class CampfireSleepHandler {
             return;
         }
 
-        Direction facing = findBedFacing(level, headPos);
+        Direction facing = findBedFacing(headPos, campfirePos);
         if (facing == null) {
             Util.onScreenText(() -> player, "message.wand.campfire.no_safe_position");
             return;
@@ -58,6 +66,7 @@ public class CampfireSleepHandler {
         campfireSleepers.add(uuid);
         tempBedPositions.put(uuid, headPos);
         tempBedFacings.put(uuid, facing);
+        campfirePositions.put(uuid, campfirePos);
 
         placeTempBed(level, headPos, facing);
 
@@ -68,23 +77,29 @@ public class CampfireSleepHandler {
             campfireSleepers.remove(uuid);
             tempBedPositions.remove(uuid);
             tempBedFacings.remove(uuid);
+            campfirePositions.remove(uuid);
             removeTempBed(level, headPos, facing);
         });
     }
 
     static @Nullable BlockPos findSafeSleepPosition(Level level, BlockPos campfirePos) {
         for (Direction dir : Direction.Plane.HORIZONTAL) {
-            BlockPos candidate = campfirePos.relative(dir);
-            BlockPos below = candidate.below();
-            if (!level.getBlockState(below).isFaceSturdy(level, below, Direction.UP)) {
+            BlockPos footCandidate = campfirePos.relative(dir);
+            BlockPos headCandidate = footCandidate.relative(dir);
+            if (!isSafeToLieOn(level, footCandidate) || !isSafeToLieOn(level, headCandidate)) {
                 continue;
             }
-            if (!isClearForSleep(level, candidate) || !isClearForSleep(level, candidate.above())) {
-                continue;
-            }
-            return candidate;
+            return headCandidate;
         }
         return null;
+    }
+
+    private static boolean isSafeToLieOn(Level level, BlockPos pos) {
+        BlockPos below = pos.below();
+        if (!level.getBlockState(below).isFaceSturdy(level, below, Direction.UP)) {
+            return false;
+        }
+        return isClearForSleep(level, pos) && isClearForSleep(level, pos.above());
     }
 
     private static boolean isClearForSleep(Level level, BlockPos pos) {
@@ -96,14 +111,10 @@ public class CampfireSleepHandler {
         return !mat.isLiquid() && mat != Material.FIRE;
     }
 
-    private static @Nullable Direction findBedFacing(Level level, BlockPos headPos) {
-        for (Direction dir : Direction.Plane.HORIZONTAL) {
-            BlockPos footPos = headPos.relative(dir.getOpposite());
-            if (level.getBlockState(footPos).getMaterial().isReplaceable()) {
-                return dir;
-            }
-        }
-        return null;
+    private static @Nullable Direction findBedFacing(BlockPos headPos, BlockPos campfirePos) {
+        int dx = Integer.signum(headPos.getX() - campfirePos.getX());
+        int dz = Integer.signum(headPos.getZ() - campfirePos.getZ());
+        return Direction.fromNormal(dx, 0, dz);
     }
 
     private static void placeTempBed(Level level, BlockPos headPos, Direction facing) {
@@ -138,5 +149,20 @@ public class CampfireSleepHandler {
         if (headPos != null && facing != null) {
             removeTempBed(player.level, headPos, facing);
         }
+        BlockPos firePos = campfirePositions.remove(uuid);
+        if (firePos != null) {
+            extinguishCampfire(player.level, firePos);
+        }
+    }
+
+    private static void extinguishCampfire(Level level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (!state.hasProperty(CampfireBlock.LIT)) {
+            return;
+        }
+        if (!state.getValue(CampfireBlock.LIT)) {
+            return;
+        }
+        level.setBlockAndUpdate(pos, state.setValue(CampfireBlock.LIT, false));
     }
 }

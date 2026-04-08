@@ -96,6 +96,9 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("gatherer", "axe", "tool_durability", gathererToolDurabilityBlueprint()));
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "2_villagers", farmerTwoVillagersBlueprint()));
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "warp_then_realtime", farmerRealtimeBlueprint()));
+        jobs.add(edgeCaseEntry("gatherer", "axe", "short_absence", gathererShortAbsenceBlueprint()));
+        jobs.add(edgeCaseEntry("gatherer", "axe", "sleep_jump", gathererSleepJumpBlueprint()));
+        jobs.add(edgeCaseEntry("gatherer", "axe", "absence_then_sleep", gathererAbsenceThenSleepBlueprint()));
 
         // Eating tests
         jobs.add(eatingEntry("eat_no_table", eatNoTableBlueprint()));
@@ -236,7 +239,7 @@ public class TestBlueprintRegistry {
                 List.of(
                         new ExpectedProduct("minecraft:cooked_beef", 3, 8),
                         new ExpectedProduct("minecraft:beef", -8, -3),
-                        new ExpectedProduct("minecraft:coal", -5, -3)
+                        new ExpectedProduct("minecraft:coal", -5, -2)
                 ),
                 1,
                 100
@@ -614,7 +617,7 @@ public class TestBlueprintRegistry {
                         1, 100
                 ),
                 base.supplyDoorOffset(), 12000, 20000L, null, false, null,
-                false, false, null, null, null, null, null
+                false, false, null, null, null, null, null, false
         );
     }
 
@@ -630,7 +633,7 @@ public class TestBlueprintRegistry {
                         0, 0
                 ),
                 base.supplyDoorOffset(), 2000, 15000L, null, false, null,
-                false, false, null, null, null, null, null
+                false, false, null, null, null, null, null, false
         );
     }
 
@@ -644,7 +647,7 @@ public class TestBlueprintRegistry {
                         3, 300
                 ),
                 base.supplyDoorOffset(), 72000, 0L, null, false, null,
-                false, false, null, null, null, null, null
+                false, false, null, null, null, null, null, false
         );
     }
 
@@ -658,7 +661,7 @@ public class TestBlueprintRegistry {
                         0, 0
                 ),
                 base.supplyDoorOffset(), 24000, 0L, null, false, null,
-                false, false, null, null, null, null, null
+                false, false, null, null, null, null, null, false
         );
     }
 
@@ -674,13 +677,13 @@ public class TestBlueprintRegistry {
                 base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
                 new TestExpectation(
                         List.of(
-                                new ExpectedProduct("minecraft:wooden_axe", -1, -1),
+                                new ExpectedProduct("minecraft:wooden_axe", -1, 0),
                                 new ExpectedProduct("*", 1, null)
                         ),
                         1, 300
                 ),
-                base.supplyDoorOffset(), 72000, 0L, null, false, null,
-                false, false, null, null, null, null, null
+                base.supplyDoorOffset(), 240000, 0L, null, false, null,
+                false, false, null, null, null, null, null, false
         );
     }
 
@@ -694,7 +697,7 @@ public class TestBlueprintRegistry {
                         1, 100
                 ),
                 base.supplyDoorOffset(), 24000, 0L, 2, false, null,
-                false, false, null, null, null, null, null
+                false, false, null, null, null, null, null, false
         );
     }
 
@@ -705,7 +708,76 @@ public class TestBlueprintRegistry {
                 base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
                 base.expectation(),
                 base.supplyDoorOffset(), null, null, null, true, 4800,
-                false, false, null, null, null, null, null
+                false, false, null, null, null, null, null, false
+        );
+    }
+
+    private static TestBlueprint gathererShortAbsenceBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(
+                List.of(
+                        new ItemStack(Items.STONE_AXE, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                )
+        );
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("*", 0, 14)),
+                        0, 100
+                ),
+                base.supplyDoorOffset(), 2000, 0L, null, false, null,
+                false, false, null, null, null, null, null, true
+        );
+    }
+
+    /**
+     * Simulates the campfire sleep scenario: player is in town at evening,
+     * sleeps through night, dayTime jumps ~11000 ticks to morning.
+     * The flag was ticking normally before sleep, so its reference tick is
+     * current. The dayTime jump should NOT cause a massive warp.
+     * startTimeTick=12000 (evening), warpAmount=11000 (jump to next morning).
+     */
+    private static TestBlueprint gathererSleepJumpBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(
+                List.of(
+                        new ItemStack(Items.STONE_AXE, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                )
+        );
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("*", 0, 14)),
+                        0, 100
+                ),
+                base.supplyDoorOffset(), 11000, 12000L, null, false, null,
+                false, false, null, null, null, null, null, true
+        );
+    }
+
+    /**
+     * Simulates: player was briefly away (tp'd back after dying), then slept.
+     * Combined effect: short real absence + sleep time jump.
+     * startTimeTick=10000 (afternoon), warpAmount=14000 (past next morning).
+     */
+    private static TestBlueprint gathererAbsenceThenSleepBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(
+                List.of(
+                        new ItemStack(Items.STONE_AXE, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                )
+        );
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("*", 0, 14)),
+                        0, 100
+                ),
+                base.supplyDoorOffset(), 14000, 10000L, null, false, null,
+                false, false, null, null, null, null, null, true
         );
     }
 
@@ -732,7 +804,8 @@ public class TestBlueprintRegistry {
                 ),
                 // fullness check omitted: hunger cycles every ~150 ticks, final value at 800t is timing-dependent
                 null, null, null,
-                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1)
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1),
+                false
         );
     }
 
@@ -758,7 +831,8 @@ public class TestBlueprintRegistry {
                         1, 1
                 ),
                 0.25f, plateOffset, SpecialQuests.DINING_ROOM,
-                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1)
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1),
+                false
         );
     }
 
@@ -782,7 +856,8 @@ public class TestBlueprintRegistry {
                         1, 1
                 ),
                 0.3f, null, null,
-                new TestExpectation(List.of(new ExpectedProduct("minecraft:beef", 0, 1)), 0, 1)
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:beef", 0, 1)), 0, 1),
+                false
         );
     }
 
@@ -805,7 +880,8 @@ public class TestBlueprintRegistry {
                         1, 1
                 ),
                 0.25f, null, null,
-                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1)
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1),
+                false
         );
     }
 

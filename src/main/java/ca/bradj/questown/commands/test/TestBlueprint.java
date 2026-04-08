@@ -29,7 +29,8 @@ public record TestBlueprint(
         @Nullable Float minExpectedFullnessAfter,
         @Nullable BlockPos extraBlockRoomOffset,
         @Nullable ResourceLocation extraBlockRoomId,
-        @Nullable TestExpectation expectedVillagerHeld
+        @Nullable TestExpectation expectedVillagerHeld,
+        boolean useNaturalWarp
 ) {
     public TestBlueprint(
             RoomType roomType,
@@ -42,7 +43,7 @@ public record TestBlueprint(
     ) {
         this(roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
              roomId, expectation, null, null, null, null, false, null,
-             false, false, null, null, null, null, null);
+             false, false, null, null, null, null, null, false);
     }
 
     public TestBlueprint(
@@ -57,7 +58,7 @@ public record TestBlueprint(
     ) {
         this(roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
              roomId, expectation, supplyDoorOffset, null, null, null, false, null,
-             false, false, null, null, null, null, null);
+             false, false, null, null, null, null, null, false);
     }
 
     public int effectiveVillagerCount() {

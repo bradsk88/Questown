@@ -33,7 +33,8 @@ public enum Signals {
             return 0;
         }
 
-        long cursor = currentWorldTime % FULL_DAY_TICKS;
+        long startTime = currentWorldTime - totalTicks;
+        long cursor = ((startTime % FULL_DAY_TICKS) + FULL_DAY_TICKS) % FULL_DAY_TICKS;
 
         long firstCycleRemaining = FULL_DAY_TICKS - cursor;
         if (totalTicks <= firstCycleRemaining) {

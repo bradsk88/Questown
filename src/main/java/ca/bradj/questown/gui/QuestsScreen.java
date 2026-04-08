@@ -408,10 +408,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
     private static @Nullable ResourceLocation lessonEntryForQuestType(Quest.QuestType type) {
         return switch (type) {
-            case JOB_CHANGE -> new ResourceLocation(Questown.MODID, "lesson_bop");
-            case ROOM -> new ResourceLocation(Questown.MODID, "lesson_room_recipes");
-            case ITEM -> new ResourceLocation(Questown.MODID, "lesson_needs");
-            case CONCURRENT_JOBS -> new ResourceLocation(Questown.MODID, "014-supply-chains");
+            case JOB_CHANGE -> new ResourceLocation(Questown.MODID, "lessons/lesson_bop");
+            case ROOM -> new ResourceLocation(Questown.MODID, "lessons/lesson_room_recipes");
+            case ITEM -> new ResourceLocation(Questown.MODID, "lessons/lesson_needs");
+            case CONCURRENT_JOBS -> new ResourceLocation(Questown.MODID, "entries/014-supply-chains");
             default -> null;
         };
     }

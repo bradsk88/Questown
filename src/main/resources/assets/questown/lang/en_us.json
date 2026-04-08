@@ -427,5 +427,6 @@
   "message.wand.campfire.sleep_hint": "Right-click to sleep (no spawn set, wake up groggy)",
   "message.wand.campfire.day_hint": "Sleep here at nightfall",
   "message.wand.campfire.not_registered": "This campfire is not registered with a town",
+  "message.wand.campfire.not_lit": "The campfire must be lit",
   "message.wand.campfire.no_safe_position": "No safe place to sleep near this campfire"
 }

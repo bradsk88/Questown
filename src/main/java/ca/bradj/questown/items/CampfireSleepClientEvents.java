@@ -5,6 +5,8 @@ import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraftforge.api.distmarker.Dist;
@@ -38,13 +40,20 @@ public final class CampfireSleepClientEvents {
         if (!(hit instanceof BlockHitResult bhr)) {
             return;
         }
-        if (!mc.level.getBlockState(bhr.getBlockPos()).is(Blocks.CAMPFIRE)) {
+        BlockState campfireState = mc.level.getBlockState(bhr.getBlockPos());
+        if (!campfireState.is(Blocks.CAMPFIRE)) {
             return;
         }
 
-        String key = mc.level.isNight()
-                ? "message.wand.campfire.sleep_hint"
-                : "message.wand.campfire.day_hint";
+        boolean lit = campfireState.hasProperty(CampfireBlock.LIT) && campfireState.getValue(CampfireBlock.LIT);
+        String key;
+        if (!lit) {
+            key = "message.wand.campfire.not_lit";
+        } else if (mc.level.isNight()) {
+            key = "message.wand.campfire.sleep_hint";
+        } else {
+            key = "message.wand.campfire.day_hint";
+        }
         ClientAccess.showHint(Compat.translatable(key));
         hintCooldown = 40;
     }
