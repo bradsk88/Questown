@@ -97,6 +97,9 @@ public class TownVillagerUIs {
                     FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es, bopCount, morningSpawnPending);
                 }
         );
+        ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations.markFlagUiOpened(
+                player.getLevel(), townFlagBasePos.flagPos()
+        );
     }
 
     public static void showItemJobsUI(
@@ -463,6 +466,11 @@ public class TownVillagerUIs {
                         isJobChangePending
                 )
         );
+        if (e.getFlagPos() != null) {
+            ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations.markVillagerUiOpened(
+                    sender.getLevel(), e.getFlagPos()
+            );
+        }
     }
 
 }

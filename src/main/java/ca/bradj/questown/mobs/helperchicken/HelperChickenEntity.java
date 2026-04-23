@@ -1,5 +1,6 @@
 package ca.bradj.questown.mobs.helperchicken;
 
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -81,9 +82,16 @@ public class HelperChickenEntity extends Chicken {
     }
 
     /**
-     * Forge calls this when the player right-clicks the chicken. We dispatch to
-     * the same hint-text path used by left-click so both clicks surface the
-     * current beat's guidance without damage.
+     * Forge calls this when the player right-clicks the chicken.
+     *
+     * <p>Two paths:
+     * <ul>
+     *   <li>Holding Worldly Seeds in the clicked hand AND beat state is
+     *       {@link ChickenBeatState#AWAITING_WORLDLY_SEEDS_DELIVERY}: consume
+     *       one seed, run the statue transform, end the arc.</li>
+     *   <li>Anything else: dispatch to the hint-text path so the click
+     *       surfaces the current beat's guidance without damage.</li>
+     * </ul>
      */
     @Override
     public InteractionResult interactAt(
@@ -97,11 +105,35 @@ public class HelperChickenEntity extends Chicken {
         if (this.ownerFlagPos == null) {
             return super.interactAt(player, vec, hand);
         }
-        if (this.level.getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag) {
-            ChickenArcController.onPlayerClickedChicken(sp, flag);
+        if (!(this.level.getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag)) {
+            return super.interactAt(player, vec, hand);
+        }
+        ItemStack held = player.getItemInHand(hand);
+        if (tryDeliverWorldlySeeds(sp, flag, held)) {
             return InteractionResult.sidedSuccess(this.level.isClientSide);
         }
-        return super.interactAt(player, vec, hand);
+        ChickenArcController.onPlayerClickedChicken(sp, flag);
+        return InteractionResult.sidedSuccess(this.level.isClientSide);
+    }
+
+    private boolean tryDeliverWorldlySeeds(
+            ServerPlayer player,
+            TownFlagBlockEntity flag,
+            ItemStack held
+    ) {
+        if (flag.getChickenBeatState() != ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY) {
+            return false;
+        }
+        if (!held.is(ItemsInit.WORLDLY_SEEDS.get())) {
+            return false;
+        }
+        held.shrink(1);
+        if (!player.getAbilities().instabuild) {
+            player.getInventory().setChanged();
+        }
+        flag.setChickenObservedSeedsGiven(true);
+        ChickenStatueTransformHandler.transform(this, flag);
+        return true;
     }
 
     /**

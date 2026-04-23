@@ -1,5 +1,10 @@
 package ca.bradj.questown.mobs.helperchicken;
 
+import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -170,8 +175,29 @@ public class HelperChickenBeatPeckGoal extends Goal {
             return null;
         }
         ChickenBeatState state = flag.getChickenBeatState();
+        if (state == ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY) {
+            return findSeedsContainerPos(flag);
+        }
         Rotation rotation = flag.getChickenStructureRotation();
         return HelperChickenBeatOffsets.resolveTarget(state, flagPos, rotation);
+    }
+
+    /**
+     * F4 step 4: walk to whichever registered town container is currently
+     * holding Worldly Seeds. Returns null until a container has them, which
+     * happens when the first gatherer deposits (U7).
+     */
+    private BlockPos findSeedsContainerPos(TownFlagBlockEntity flag) {
+        ServerLevel level = flag.getServerLevel();
+        if (level == null) {
+            return null;
+        }
+        for (ContainerTarget<MCContainer, MCTownItem> ct : TownContainers.getAllContainers(flag, level)) {
+            if (ct.hasItem(item -> item.get() == ItemsInit.WORLDLY_SEEDS.get())) {
+                return ct.getBlockPos();
+            }
+        }
+        return null;
     }
 
     private boolean isTargetPermanentlyInvalid() {
