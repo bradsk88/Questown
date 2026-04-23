@@ -254,6 +254,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             TownFlagBlockEntity e
     ) {
         e.ticker.tick(level, blockEntityPos, state, e);
+        if (level instanceof ServerLevel) {
+            ca.bradj.questown.town.HelperChickenRotationDetector.detectIfNeeded(e);
+            ca.bradj.questown.town.HelperChickenSpawnController.tick(e);
+        }
     }
 
 
