@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
@@ -300,12 +299,23 @@ class ChickenScaffoldingNbtEditorTest {
     // -------------------------------------------------------------------------
 
     /**
-     * Opt-in run that mutates the real committed {@code empty_town.nbt}. Enabled
-     * only when the Gradle alias passes {@code -DenableEditor=true}. The developer
-     * or agent commits the resulting file change manually.
+     * Opt-in run that mutates the real committed {@code empty_town.nbt}. Kept
+     * {@code @Disabled} by default so {@code ./gradlew test} stays side-effect-free.
+     *
+     * <p>To apply: temporarily remove the {@code @Disabled} annotation, run
+     * {@code ./gradlew test --tests
+     * "ca.bradj.questown.devtools.ChickenScaffoldingNbtEditorTest.applyToRealStructure"},
+     * commit the resulting change to {@code empty_town.nbt}, then restore
+     * {@code @Disabled}.
+     *
+     * <p>A Gradle system-property gate was the original design, but Gradle 7.2 +
+     * Groovy 3.0 + the ForgeGradle dependency cache hits a class-version-65 bug
+     * when {@code test {}} references {@code System.getProperty} or
+     * {@code project.findProperty} — see
+     * {@code docs/conventions/editing-empty-town-nbt.md}.
      */
     @Test
-    @EnabledIfSystemProperty(named = "enableEditor", matches = "true")
+    @Disabled("On-demand tool; remove @Disabled to apply ChickenScaffoldingLayout to empty_town.nbt.")
     void applyToRealStructure() throws IOException {
         int exit = ChickenScaffoldingNbtEditor.run(
                 ChickenScaffoldingNbtEditor.DEFAULT_STRUCTURE_PATH,
