@@ -120,6 +120,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             net.minecraft.world.level.block.Rotation.NONE;
     boolean chickenRotationDetected = false;
 
+    // Ephemeral observation flags consumed by ChickenArcController (U4). These are
+    // intentionally NOT persisted — they fire once during a single server session
+    // and are cleared by the controller after driving the matching transition.
+    // A save/quit mid-observation resets them, which is acceptable: the player
+    // can always reproduce the trigger (sleep again, open the UI again).
+    private transient boolean chickenObservedSleepSinceSunset = false;
+    private transient boolean chickenObservedVillagerUiOpen = false;
+    private transient boolean chickenObservedFlagUiOpen = false;
+    private transient boolean chickenObservedSeedsGiven = false;
+
     @Override
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap) {
         if (!ForgeCapabilities.ITEM_HANDLER.equals(cap)) {
@@ -257,6 +267,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (level instanceof ServerLevel) {
             ca.bradj.questown.town.HelperChickenRotationDetector.detectIfNeeded(e);
             ca.bradj.questown.town.HelperChickenSpawnController.tick(e);
+            ca.bradj.questown.mobs.helperchicken.ChickenArcController.tick(e);
         }
     }
 
@@ -939,6 +950,38 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public void setChickenRotationDetected(boolean v) {
         this.chickenRotationDetected = v;
+    }
+
+    public boolean getChickenObservedSleepSinceSunset() {
+        return chickenObservedSleepSinceSunset;
+    }
+
+    public void setChickenObservedSleepSinceSunset(boolean v) {
+        this.chickenObservedSleepSinceSunset = v;
+    }
+
+    public boolean getChickenObservedVillagerUiOpen() {
+        return chickenObservedVillagerUiOpen;
+    }
+
+    public void setChickenObservedVillagerUiOpen(boolean v) {
+        this.chickenObservedVillagerUiOpen = v;
+    }
+
+    public boolean getChickenObservedFlagUiOpen() {
+        return chickenObservedFlagUiOpen;
+    }
+
+    public void setChickenObservedFlagUiOpen(boolean v) {
+        this.chickenObservedFlagUiOpen = v;
+    }
+
+    public boolean getChickenObservedSeedsGiven() {
+        return chickenObservedSeedsGiven;
+    }
+
+    public void setChickenObservedSeedsGiven(boolean v) {
+        this.chickenObservedSeedsGiven = v;
     }
 
     public boolean giveBonusFood(ServerPlayer sp) {

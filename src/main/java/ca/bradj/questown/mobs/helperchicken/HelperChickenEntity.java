@@ -5,6 +5,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -14,6 +17,7 @@ import net.minecraft.world.entity.animal.Chicken;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -68,7 +72,50 @@ public class HelperChickenEntity extends Chicken {
             float amount
     ) {
         // v1 invulnerability — the helper chicken cannot be damaged by any source.
+        // When a player attacks we convert the swing into a hint-text delivery
+        // so the player gets positive feedback instead of a silent no-op.
+        if (source.getEntity() instanceof ServerPlayer sp) {
+            onPlayerLeftClick(sp);
+        }
         return false;
+    }
+
+    /**
+     * Forge calls this when the player right-clicks the chicken. We dispatch to
+     * the same hint-text path used by left-click so both clicks surface the
+     * current beat's guidance without damage.
+     */
+    @Override
+    public InteractionResult interactAt(
+            Player player,
+            Vec3 vec,
+            InteractionHand hand
+    ) {
+        if (!(player instanceof ServerPlayer sp)) {
+            return super.interactAt(player, vec, hand);
+        }
+        if (this.ownerFlagPos == null) {
+            return super.interactAt(player, vec, hand);
+        }
+        if (this.level.getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag) {
+            ChickenArcController.onPlayerClickedChicken(sp, flag);
+            return InteractionResult.sidedSuccess(this.level.isClientSide);
+        }
+        return super.interactAt(player, vec, hand);
+    }
+
+    /**
+     * Routes left-click (attack) to the hint-text handler. Damage is already
+     * suppressed by {@link #hurt}; this adds the visible feedback so the player
+     * sees the chicken "teach them" rather than silently ignoring the swing.
+     */
+    public void onPlayerLeftClick(ServerPlayer player) {
+        if (this.ownerFlagPos == null) {
+            return;
+        }
+        if (this.level.getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag) {
+            ChickenArcController.onPlayerClickedChicken(player, flag);
+        }
     }
 
     public ItemStack getBubbleIconA() {
