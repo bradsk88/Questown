@@ -151,4 +151,25 @@ class BeatOffsetsRotationTest {
                 )
         );
     }
+
+    /**
+     * The CAMPFIRE anchor doubles as the rotation-detection target. Its four
+     * rotated candidate positions must all differ, otherwise the detector
+     * sees multiple matches and force-forfeits the arc. Guards against the
+     * structure author accidentally picking a symmetric offset like
+     * {@code (3, 0, 3)}.
+     */
+    @Test
+    void campfireAnchor_isAsymmetricUnderAllFourRotations() {
+        java.util.Set<BlockPos> rotated = new java.util.HashSet<>();
+        for (Rotation r : Rotation.values()) {
+            rotated.add(HelperChickenBeatOffsets.CAMPFIRE_OFFSET.rotate(r));
+        }
+        Assertions.assertEquals(
+                4,
+                rotated.size(),
+                "CAMPFIRE_OFFSET must produce 4 distinct positions under the 4 rotations — " +
+                        "otherwise rotation detection is ambiguous and force-forfeits."
+        );
+    }
 }

@@ -22,25 +22,21 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class HelperChickenBeatOffsets {
 
-    // TODO[U5]: Author the real structure-local offset for the unlit campfire in empty_town.nbt.
-    //           Must be asymmetric (not on the flag's diagonals/axes) so rotation detection
-    //           can disambiguate the 4 candidate positions.
-    public static final BlockPos CAMPFIRE_OFFSET = BlockPos.ZERO;
+    // Provisional offsets (U5). Values here encode the structural shape the
+    // helper chicken arc targets; the authored empty_town.nbt edit must place
+    // the matching blocks at these coordinates in the structure-local frame.
+    // See docs/conventions/editing-empty-town-nbt.md for the round-trip process.
+    //
+    // CAMPFIRE_OFFSET doubles as the rotation-detection anchor. The chosen
+    // value is asymmetric under all four rotations so scanning the 4 rotated
+    // candidate positions disambiguates cleanly.
 
-    // TODO[U5]: Author the real structure-local offset for the single missing wall block.
-    public static final BlockPos WALL_BLOCK_OFFSET = BlockPos.ZERO;
-
-    // TODO[U5]: Author the real structure-local offset for the door gap in the cobblestone room.
-    public static final BlockPos DOOR_OFFSET = BlockPos.ZERO;
-
-    // TODO[U5]: Author the real structure-local offset for the sign position inside the room.
-    public static final BlockPos SIGN_OFFSET = BlockPos.ZERO;
-
-    // TODO[U5]: Author the real structure-local offset for the chest position inside the room.
-    public static final BlockPos CHEST_OFFSET = BlockPos.ZERO;
-
-    // TODO[U5]: Author the real structure-local offset for the gate center (between the two columns).
-    public static final BlockPos GATE_CENTER_OFFSET = BlockPos.ZERO;
+    public static final BlockPos CAMPFIRE_OFFSET = new BlockPos(3, 0, 5);
+    public static final BlockPos WALL_BLOCK_OFFSET = new BlockPos(6, 0, 3);
+    public static final BlockPos DOOR_OFFSET = new BlockPos(6, 0, 2);
+    public static final BlockPos SIGN_OFFSET = new BlockPos(7, 0, 4);
+    public static final BlockPos CHEST_OFFSET = new BlockPos(8, 0, 4);
+    public static final BlockPos GATE_CENTER_OFFSET = new BlockPos(2, 0, 9);
 
     private HelperChickenBeatOffsets() {
     }
