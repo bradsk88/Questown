@@ -16,6 +16,8 @@
   "message.questown.chicken.hint.villager_ui": "The chicken looks toward the villager. Try talking to them.",
   "message.questown.chicken.hint.flag_ui": "The chicken looks at the flag. Try opening its menu.",
   "message.questown.chicken.hint.worldly_seeds": "The chicken pecks urgently at a chest. It wants the Worldly Seeds.",
+  "messages.chicken.remove.not_a_flag": "No town flag found at that position.",
+  "messages.chicken.remove.done": "Helper chicken arc forfeited. %s chicken entity(ies) despawned.",
   "message.questown.mineshaft.use": "Villagers can mine here. Somehow, it seems very deep...",
   "message.questown.room_block.how_to_flag": "Right-click with Town Wand to activate this block",
   "messages.building.room_created": "A new room was constructed at location %s",

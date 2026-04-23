@@ -35,5 +35,6 @@ public class CommandInit {
         ToggleHungerConfig.register(event.getDispatcher());
         TestCommand.register(event.getDispatcher(), event.getBuildContext());
         TestAllCommand.register(event.getDispatcher(), event.getBuildContext());
+        ChickenRemoveCommand.register(event.getDispatcher());
     }
 }

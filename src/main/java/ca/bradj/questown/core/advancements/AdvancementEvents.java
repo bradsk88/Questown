@@ -76,8 +76,10 @@ public class AdvancementEvents {
         }
         String path = event.getAdvancement().getId().getPath();
         if ("root".equals(path)) {
+            // R20/R21: journal is no longer handed out on first visit — the helper
+            // chicken is the onboarding guide now. The chat line stays as flavour,
+            // and Patchouli entries still unlock through openBookEntry below.
             Compat.sendMessage(sp, Compat.translatable("messages.town_flag.first_visit_journal"));
-            sp.addItem(PatchouliAPI.get().getBookStack(BOOK_ID));
             return;
         }
         if (!ADVANCEMENTS_WITH_PAGES.contains(path)) {

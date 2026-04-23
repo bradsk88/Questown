@@ -20,12 +20,16 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import ca.bradj.questown.logic.TownCycle;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -65,8 +69,9 @@ public class TownWand extends Item {
     ) {
         TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(level, itemInHand);
 
-        if (level.getBlockState(clickedPos).is(Blocks.CAMPFIRE)) {
-            CampfireSleepHandler.beginCampfireSleep(player.get(), level, clickedPos, parent);
+        BlockState clickedState = level.getBlockState(clickedPos);
+        if (clickedState.is(Blocks.CAMPFIRE)) {
+            handleCampfireClick(player, level, clickedPos, clickedState, parent);
             return;
         }
 
@@ -77,6 +82,44 @@ public class TownWand extends Item {
         }
         BlockPos bp = parent.getTownFlagBasePos();
         Util.onScreenText(player, "message.wand.clicked_away", bp.getX(), bp.getY(), bp.getZ());
+    }
+
+    /**
+     * Wand-on-campfire has two branches sharing one flag-radius gate:
+     * <ul>
+     *   <li>unlit + registered → light it (R14 addition; no sleep).</li>
+     *   <li>lit + registered   → fall through to the existing sleep path.</li>
+     * </ul>
+     * Outside a town's registered campfire the wand is inert on campfires —
+     * this is a behavior change from prior builds, which previously let any
+     * campfire anywhere trigger the sleep attempt and rejected it inside the
+     * handler. Now both paths gate up front and share the same rejection.
+     */
+    private void handleCampfireClick(
+            Supplier<ServerPlayer> player,
+            ServerLevel level,
+            BlockPos clickedPos,
+            BlockState clickedState,
+            TownFlagBlockEntity parent
+    ) {
+        boolean registered = TownCycle.findCampfire(parent.getBlockPos(), level)
+                                      .filter(clickedPos::equals)
+                                      .isPresent();
+        if (!registered) {
+            Util.onScreenText(player, "message.wand.campfire.not_registered");
+            return;
+        }
+        boolean lit = clickedState.hasProperty(CampfireBlock.LIT) && clickedState.getValue(CampfireBlock.LIT);
+        if (!lit) {
+            level.setBlockAndUpdate(clickedPos, clickedState.setValue(CampfireBlock.LIT, true));
+            level.playSound(
+                    null, clickedPos,
+                    SoundEvents.FLINTANDSTEEL_USE, SoundSource.BLOCKS,
+                    1.0F, level.getRandom().nextFloat() * 0.4F + 0.8F
+            );
+            return;
+        }
+        CampfireSleepHandler.beginCampfireSleep(player.get(), level, clickedPos, parent);
     }
 
     @Override

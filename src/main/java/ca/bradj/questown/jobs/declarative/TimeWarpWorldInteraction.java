@@ -371,7 +371,21 @@ public class TimeWarpWorldInteraction extends
             Inputs inputs,
             Collection<MCHeldItem> mcHeldItems
     ) {
-        return resultGenerator.apply(inputs.level, mcHeldItems);
+        Iterable<MCHeldItem> base = resultGenerator.apply(inputs.level, mcHeldItems);
+        return ca.bradj.questown.mobs.helperchicken.ChickenArcLootGuarantee.maybePrepend(
+                resolveFlagAtTownPos(inputs), base
+        );
+    }
+
+    private ca.bradj.questown.town.entity.TownFlagBlockEntity resolveFlagAtTownPos(Inputs inputs) {
+        if (inputs.level == null) {
+            return null;
+        }
+        if (inputs.level.getBlockEntity(this.townPos)
+                instanceof ca.bradj.questown.town.entity.TownFlagBlockEntity flag) {
+            return flag;
+        }
+        return null;
     }
 
     @Override

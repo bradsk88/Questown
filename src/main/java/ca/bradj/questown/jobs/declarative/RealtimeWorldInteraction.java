@@ -233,7 +233,25 @@ public class RealtimeWorldInteraction extends
             MCExtra inputs,
             Collection<MCHeldItem> mcHeldItems
     ) {
-        return resultGenerator.apply(inputs.town().getServerLevel(), mcHeldItems);
+        Iterable<MCHeldItem> base = resultGenerator.apply(inputs.town().getServerLevel(), mcHeldItems);
+        return ca.bradj.questown.mobs.helperchicken.ChickenArcLootGuarantee.maybePrepend(
+                resolveFlagFromTown(inputs), base
+        );
+    }
+
+    private static ca.bradj.questown.town.entity.TownFlagBlockEntity resolveFlagFromTown(MCExtra inputs) {
+        if (inputs.town() instanceof ca.bradj.questown.town.entity.TownFlagBlockEntity flag) {
+            return flag;
+        }
+        net.minecraft.server.level.ServerLevel level = inputs.town().getServerLevel();
+        if (level == null) {
+            return null;
+        }
+        net.minecraft.core.BlockPos flagPos = inputs.town().getTownFlagBasePos();
+        if (level.getBlockEntity(flagPos) instanceof ca.bradj.questown.town.entity.TownFlagBlockEntity flag) {
+            return flag;
+        }
+        return null;
     }
 
     @Override
