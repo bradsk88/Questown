@@ -24,6 +24,7 @@ public class AutoTestRunner {
     private static final String SYSPROP = "questown.autotest";
     private static final String SYSPROP_WARP = "questown.autotest.warp";
     private static final String ENV_CATEGORY = "QUESTOWN_AUTOTEST_CATEGORY";
+    private static final String CATEGORY_CHICKEN = ChickenArcBlueprintRegistry.CATEGORY;
     private static final int DEFAULT_WARP = 24000;
     private static final BlockPos ORIGIN = new BlockPos(0, 64, 0);
 
@@ -40,6 +41,8 @@ public class AutoTestRunner {
             server.halt(false);
             return;
         }
+
+        QT.FLAG_LOGGER.info("[autotest] BOOT_OK");
 
         // Force-load the test chunk so block entity tickers run without a player
         ChunkPos chunkPos = new ChunkPos(ORIGIN);
@@ -59,10 +62,41 @@ public class AutoTestRunner {
         QT.FLAG_LOGGER.info("[autotest] Starting automated test suite ({}, warp={}, origin={})", scope, warpAmount, ORIGIN.toShortString());
 
         LogTestOutput output = new LogTestOutput("autotest");
-        TestAllExecutor executor = new TestAllExecutor(overworld, output, ORIGIN, warpAmount, category);
 
-        AutoTestTickListener listener = new AutoTestTickListener(server, executor);
+        boolean runChicken = shouldRunChickenTrack(category);
+        boolean runJobs = shouldRunJobsTrack(category);
+
+        TestAllExecutor jobsExecutor = runJobs
+                ? new TestAllExecutor(overworld, output, ORIGIN, warpAmount, category)
+                : null;
+        ChickenArcAllExecutor chickenExecutor = runChicken
+                ? new ChickenArcAllExecutor(
+                overworld,
+                server,
+                fakePlayer,
+                ORIGIN,
+                output,
+                ChickenArcBlueprintRegistry.all())
+                : null;
+
+        AutoTestTickListener listener = new AutoTestTickListener(
+                server, jobsExecutor, chickenExecutor
+        );
         MinecraftForge.EVENT_BUS.register(listener);
+    }
+
+    private static boolean shouldRunChickenTrack(@Nullable String category) {
+        if (category == null) {
+            return true;
+        }
+        return CATEGORY_CHICKEN.equals(category);
+    }
+
+    private static boolean shouldRunJobsTrack(@Nullable String category) {
+        if (category == null) {
+            return true;
+        }
+        return !CATEGORY_CHICKEN.equals(category);
     }
 
     private static int parseWarpAmount() {
@@ -88,11 +122,21 @@ public class AutoTestRunner {
 
     static class AutoTestTickListener {
         private final MinecraftServer server;
-        private final TestAllExecutor executor;
+        private final @Nullable TestAllExecutor jobsExecutor;
+        private final @Nullable ChickenArcAllExecutor chickenExecutor;
+        private boolean jobsSuiteStartAnnounced;
+        private boolean jobsDone;
+        private boolean chickenSuiteStartAnnounced;
+        private boolean chickenDone;
 
-        AutoTestTickListener(MinecraftServer server, TestAllExecutor executor) {
+        AutoTestTickListener(
+                MinecraftServer server,
+                @Nullable TestAllExecutor jobsExecutor,
+                @Nullable ChickenArcAllExecutor chickenExecutor
+        ) {
             this.server = server;
-            this.executor = executor;
+            this.jobsExecutor = jobsExecutor;
+            this.chickenExecutor = chickenExecutor;
         }
 
         @SubscribeEvent
@@ -100,17 +144,50 @@ public class AutoTestRunner {
             if (event.phase != TickEvent.Phase.END) {
                 return;
             }
-            if (!executor.tick()) {
-                return;
+            if (!jobsDone) {
+                if (jobsExecutor == null) {
+                    jobsDone = true;
+                } else {
+                    if (!jobsSuiteStartAnnounced) {
+                        QT.FLAG_LOGGER.info("[autotest] jobs:SUITE_START");
+                        jobsSuiteStartAnnounced = true;
+                    }
+                    if (!jobsExecutor.tick()) {
+                        return;
+                    }
+                    jobsDone = true;
+                }
+            }
+            if (!chickenDone) {
+                if (chickenExecutor == null) {
+                    chickenDone = true;
+                } else {
+                    if (!chickenSuiteStartAnnounced) {
+                        QT.FLAG_LOGGER.info("[autotest] chicken-arc:SUITE_START");
+                        chickenSuiteStartAnnounced = true;
+                    }
+                    if (!chickenExecutor.tick()) {
+                        return;
+                    }
+                    chickenDone = true;
+                }
             }
             MinecraftForge.EVENT_BUS.unregister(this);
             reportAndShutdown();
         }
 
         private void reportAndShutdown() {
-            int passed = executor.getPassed();
-            int total = executor.getTotal();
-            boolean allPassed = passed == total;
+            int passed = 0;
+            int total = 0;
+            if (jobsExecutor != null) {
+                passed += jobsExecutor.getPassed();
+                total += jobsExecutor.getTotal();
+            }
+            if (chickenExecutor != null) {
+                passed += chickenExecutor.getPassed();
+                total += chickenExecutor.getTotal();
+            }
+            boolean allPassed = total > 0 && passed == total;
 
             QT.FLAG_LOGGER.info("[autotest] ========================================");
             QT.FLAG_LOGGER.info("[autotest] RESULT: {}/{} passed ({})",
