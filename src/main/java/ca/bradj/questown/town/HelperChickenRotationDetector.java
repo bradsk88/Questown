@@ -41,6 +41,17 @@ public final class HelperChickenRotationDetector {
     private HelperChickenRotationDetector() {
     }
 
+    /**
+     * Clears the per-flag retry counter map. Intended only for test-arena cleanup
+     * between scenarios in {@code TestArenaPreparer} so back-to-back chicken-arc
+     * scenarios cannot pollute one another's retry budget. Not part of the
+     * production-runtime contract — production finalizes naturally on match /
+     * ambiguity / timeout.
+     */
+    public static void clearRetryCounters() {
+        RETRY_COUNTERS.clear();
+    }
+
     public static void detectIfNeeded(TownFlagBlockEntity flag) {
         if (flag.getChickenRotationDetected()) {
             return;

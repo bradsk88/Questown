@@ -81,11 +81,16 @@ public class TestAllExecutor {
     }
 
     private void recordResult(String name, boolean passed) {
+        String line = AutotestLogFormatter.format(
+                AutotestLogFormatter.TRACK_JOBS,
+                name,
+                passed,
+                "scenario",
+                passed ? "all expectations met" : "some expectations failed"
+        );
+        results.add(line);
         if (passed) {
-            results.add("[PASS] " + name);
             this.passed++;
-        } else {
-            results.add("[FAIL] " + name + ": Some expectations failed");
         }
     }
 

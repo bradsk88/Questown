@@ -5,16 +5,13 @@ import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.phys.AABB;
 
 import java.util.Map;
 import java.util.UUID;
@@ -165,40 +162,17 @@ public class TestExecutor {
     }
 
     private void destroyNearbyFlags() {
-        int destroyed = 0;
-        BlockPos firstFlagPos = null;
-        for (int x = -7; x <= 7; x++) {
-            for (int z = -7; z <= 7; z++) {
-                for (int y = -1; y <= 4; y++) {
-                    BlockPos pos = origin.offset(x, y, z);
-                    BlockEntity be = level.getBlockEntity(pos);
-                    if (!(be instanceof TownFlagBlockEntity tf)) {
-                        continue;
-                    }
-                    if (firstFlagPos == null) {
-                        firstFlagPos = pos;
-                    }
-                    tf.getVillagerHandle().entities().forEach(LivingEntity::kill);
-                    level.destroyBlock(pos, false);
-                    destroyed++;
-                }
-            }
+        TestArenaPreparer.PreparerResult result = TestArenaPreparer.destroyNearbyFlags(
+                level, origin, TestArenaPreparer.PreparerOptions.jobsTrackDefaults(), null
+        );
+        if (result.strayVisitorsKilled() > 0) {
+            msg("Killed " + result.strayVisitorsKilled() + " stray visitor(s)");
         }
-        // Kill any stray VisitorMobEntity in the test area that may have lost their flag reference
-        AABB area = new AABB(origin.offset(-20, -5, -20), origin.offset(20, 10, 20));
-        int stray = 0;
-        for (VisitorMobEntity e : level.getEntitiesOfClass(VisitorMobEntity.class, area)) {
-            e.kill();
-            stray++;
+        if (result.flagsDestroyed() > 0) {
+            msg("Destroyed " + result.flagsDestroyed() + " nearby flag(s)");
         }
-        if (stray > 0) {
-            msg("Killed " + stray + " stray visitor(s)");
-        }
-        if (destroyed > 0) {
-            msg("Destroyed " + destroyed + " nearby flag(s)");
-        }
-        if (firstFlagPos != null) {
-            origin = firstFlagPos;
+        if (result.newOrigin() != null) {
+            origin = result.newOrigin();
             msg("Using existing flag position as origin: " + origin.toShortString());
         }
         phase = Phase.FLATTEN;
@@ -206,16 +180,7 @@ public class TestExecutor {
 
     private void flatten() {
         msg("Flattening 15x15 area...");
-        for (int x = -7; x <= 7; x++) {
-            for (int z = -7; z <= 7; z++) {
-                for (int y = 4; y >= 0; y--) {
-                    BlockPos pos = origin.offset(x, y, z);
-                    level.destroyBlock(pos, false);
-                }
-                BlockPos groundPos = origin.offset(x, -1, z);
-                level.setBlockAndUpdate(groundPos, Blocks.COBBLESTONE.defaultBlockState());
-            }
-        }
+        TestArenaPreparer.flatten(level, origin, TestArenaPreparer.PreparerOptions.jobsTrackDefaults());
         phase = Phase.SETTLE_BEFORE_PLACE;
         waitTicks = 0;
         maxWaitTicks = 5;
@@ -472,11 +437,20 @@ public class TestExecutor {
     }
 
     private void broadcastResult(String phaseLabel, TestResultChecker.Result result) {
-        String tag = result.passed() ? "[PASS]" : "[FAIL]";
-        msg(tag + " " + phaseLabel + ": " + result.summary());
+        msg(AutotestLogFormatter.format(
+                AutotestLogFormatter.TRACK_JOBS,
+                testName(),
+                result.passed(),
+                phaseLabel,
+                result.summary()
+        ));
         for (String detail : result.details()) {
             msg("  " + detail);
         }
+    }
+
+    private String testName() {
+        return jobId.rootId() + ":" + jobId.jobId();
     }
 
     private void killForInspect() {
