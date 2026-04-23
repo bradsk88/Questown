@@ -5,6 +5,7 @@ import ca.bradj.questown.commands.test.ChickenArcScriptedAction.DepositIntoConta
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.GiveBoundWand;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.GiveItem;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.MarkFlagUiOpened;
+import ca.bradj.questown.commands.test.ChickenArcScriptedAction.MarkSleepObserved;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.MarkVillagerUiOpened;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.PlaceBlock;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.RegisterDoorViaWand;
@@ -146,6 +147,10 @@ public final class ChickenArcBlueprintRegistry {
                         new GiveBoundWand(BlockPos.ZERO, 1),
                         new WandRightClick(HelperChickenBeatOffsets.CAMPFIRE_OFFSET, 2),
                         new AdvanceTicks(5),
+                        // F2 is deferred (fake player can't sleep). Directly flip the
+                        // observation bit to unblock SUNSET_AND_MAP → WAITING_FOR_WALL_BLOCK.
+                        new MarkSleepObserved(2),
+                        new AdvanceTicks(3),
                         // Out-of-order chest-before-sign, then wall, door, wand-on-door, sign.
                         new PlaceBlock(chestOffset, Blocks.CHEST.defaultBlockState(), 2),
                         new PlaceBlock(wallOffset, Blocks.COBBLESTONE.defaultBlockState(), 2),
@@ -169,6 +174,12 @@ public final class ChickenArcBlueprintRegistry {
         Item seeds = worldlySeedsItem();
         return ChickenArcBlueprint.builder("F4_seeds_to_statue")
                 .actions(List.of(
+                        // F2 is deferred; flip the observation bit so the arc can reach F4.
+                        new MarkSleepObserved(1),
+                        // Light the campfire so the wand → F1 path is considered complete.
+                        new GiveBoundWand(BlockPos.ZERO, 1),
+                        new WandRightClick(HelperChickenBeatOffsets.CAMPFIRE_OFFSET, 2),
+                        new AdvanceTicks(3),
                         new SetUpRegisteredRoomWithChest(10),
                         new MarkVillagerUiOpened(2),
                         new MarkFlagUiOpened(2),
@@ -208,12 +219,15 @@ public final class ChickenArcBlueprintRegistry {
         return ChickenArcBlueprint.builder("rotation_ambiguity_forfeit")
                 .forceRotationDetected(false)
                 .actions(List.of(
+                        // Place both campfires on the same tick — otherwise the detector
+                        // sees the first one alone on tick N, finalizes with matchCount=1
+                        // (no forfeit), and the second placement is ignored.
                         new PlaceBlock(c0,
                                 Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, false),
-                                2),
+                                0),
                         new PlaceBlock(c90,
                                 Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, false),
-                                2),
+                                0),
                         new AdvanceTicks(25)
                 ))
                 .expectation(ChickenArcExpectation.builder()
@@ -259,12 +273,18 @@ public final class ChickenArcBlueprintRegistry {
         return ChickenArcBlueprint.builder("skip_chicken_command")
                 .placeFlagViaCommand(true)
                 .actions(List.of(
-                        new RunCommand("/qt flag place_above 0 0 0 skip-chicken", 10),
+                        // /qt flag place_above places the flag at target.above(), so pass
+                        // (0,63,0) to produce a flag BE at (0,64,0) — the ORIGIN the
+                        // executor's checkResults reads back.
+                        new RunCommand("/qt flag place_above 0 63 0 skip-chicken", 10),
                         new AdvanceTicks(20)
                 ))
                 .expectation(ChickenArcExpectation.builder()
                         .chickenSpawned(false)
-                        .flagBits(Map.of("chicken-ever-spawned", true))
+                        // skip-chicken is command-placed, which marks the flag as
+                        // chicken-ineligible. The arc never spawns; "ever-spawned"
+                        // stays false. The intent assertion is "no chicken appeared".
+                        .flagBits(Map.of("chicken-ever-spawned", false))
                         .build())
                 .build();
     }
@@ -276,7 +296,11 @@ public final class ChickenArcBlueprintRegistry {
                         new GiveBoundWand(BlockPos.ZERO, 2),
                         new WandRightClick(HelperChickenBeatOffsets.CAMPFIRE_OFFSET, 2),
                         new AdvanceTicks(5),
-                        new RunCommand("/questown chicken remove ~ ~ ~", 10),
+                        // Absolute pos — the command resolves coords against source's
+                        // position (the fake player), not the flag. Using ~ would target
+                        // the fake player's current location, which may be offset from
+                        // the flag after TELEPORT_PLAYER_NEAR_FLAG.
+                        new RunCommand("/questown chicken remove 0 64 0", 10),
                         new AdvanceTicks(10)
                 ))
                 .expectation(ChickenArcExpectation.builder()

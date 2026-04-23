@@ -124,4 +124,15 @@ public sealed interface ChickenArcScriptedAction {
             String command,
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
+
+    /**
+     * Directly flip {@code chicken-observed-sleep-since-sunset} on the flag BE.
+     * The helper-chicken plan's F2 (sunset + sleep) relies on a real campfire
+     * sleep cycle, which is out-of-reach for a fake player. The plan's risks
+     * table explicitly calls this out as the F3-unblocking workaround:
+     * F1/F3/F4 do not require sleep semantics, only the observation flag.
+     */
+    record MarkSleepObserved(
+            int postActionWaitTicks
+    ) implements ChickenArcScriptedAction {}
 }

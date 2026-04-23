@@ -304,7 +304,22 @@ public final class ChickenArcTestExecutor {
             handleRunCommand(a);
             return;
         }
+        if (action instanceof ChickenArcScriptedAction.MarkSleepObserved) {
+            handleMarkSleepObserved();
+            return;
+        }
         failAction(action.getClass().getSimpleName(), "no dispatch handler registered");
+    }
+
+    private void handleMarkSleepObserved() {
+        if (flag == null) {
+            failAction("MarkSleepObserved", "no flag BE");
+            return;
+        }
+        flag.setChickenObservedSleepSinceSunset(true);
+        CompoundTag tag = Compat.getBlockStoredTagData(flag);
+        flag.writeTownData(tag);
+        flag.setChanged();
     }
 
     private void handleGiveItem(ChickenArcScriptedAction.GiveItem a) {
@@ -465,8 +480,12 @@ public final class ChickenArcTestExecutor {
             failAction("RunCommand", "fake player or server is null");
             return;
         }
+        // Elevate to permission level 4 (admin) so commands gated by
+        // isCreative / hasPermission(2) pass. The source still carries the
+        // fake player reference so handlers that dereference source.getPlayer()
+        // (e.g. FlagCommand.setBlock → APPROACH_TOWN_TRIGGER.trigger) don't NPE.
         server.getCommands().performPrefixedCommand(
-                fakePlayer.createCommandSourceStack(),
+                fakePlayer.createCommandSourceStack().withPermission(4),
                 a.command()
         );
     }
