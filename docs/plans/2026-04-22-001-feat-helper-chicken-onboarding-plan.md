@@ -249,7 +249,7 @@ Beat sequencing is a linear state machine (ChickenBeatState enum) with out-of-or
 
 ## Implementation Units
 
-- [ ] U1. **Entity, item, block, enum, and BE-state foundations**
+- [x] U1. **Entity, item, block, enum, and BE-state foundations**
 
 **Goal:** Register the new custom entity, block, item, enums, and flag-BE persistent fields. No gameplay-visible behavior yet — this is the scaffolding every other unit depends on.
 
@@ -309,7 +309,7 @@ Beat sequencing is a linear state machine (ChickenBeatState enum) with out-of-or
 
 ---
 
-- [ ] U2. **Speech bubble renderer, layer, and icon assets**
+- [x] U2. **Speech bubble renderer, layer, and icon assets**
 
 **Goal:** Render the world-space speech bubble above the helper chicken's head, with distance-proximity visibility, alternating-icon cadence, through-walls rendering when the flag BE reports Worldly-Seeds-in-container, and dynamic item-icon content (no pre-authored compound sprites).
 
@@ -390,7 +390,7 @@ HelperChickenBubbleLayer.render(...):
 
 ---
 
-- [ ] U3. **Chicken AI goals, lifecycle hooks, and beat-offset constants**
+- [x] U3. **Chicken AI goals, lifecycle hooks, and beat-offset constants**
 
 **Goal:** Install the chicken's follow AI (adapted `TemptGoal` with flag-radius predicate), despawn/respawn-on-player-proximity (matching villager behavior), spawn gate on worldgen-only + `chicken-ever-spawned` BE bit, and the hardcoded beat-offset constants keyed to `empty_town.nbt` (offsets authored alongside U5's structure edit).
 
@@ -465,7 +465,7 @@ HelperChickenBubbleLayer.render(...):
 
 ---
 
-- [ ] U4. **Chicken arc controller — beat state transitions and observable-condition driver**
+- [x] U4. **Chicken arc controller — beat state transitions and observable-condition driver**
 
 **Goal:** Implement the per-flag `ChickenArcController` that observes world conditions, drives `ChickenBeatState` transitions in the flag BE, updates chicken `SynchedEntityData` (bubble icons + through-walls bit), and is the integration point for F1/F2/F3/F4 beat sequencing.
 
@@ -519,7 +519,7 @@ HelperChickenBubbleLayer.render(...):
 
 ---
 
-- [ ] U5. **`empty_town.nbt` augmentation and offset coupling**
+- [x] U5. **`empty_town.nbt` augmentation and offset coupling**
 
 **Goal:** Edit the `empty_town.nbt` structure template to include the chicken's scaffolding (unlit campfire, mostly-built cobblestone room with one missing wall and no door, two gate columns). Produce the `BlockPos` offset constants in `HelperChickenBeatOffsets` (from U3) that match the authored layout.
 
@@ -557,7 +557,7 @@ HelperChickenBubbleLayer.render(...):
 
 ---
 
-- [ ] U6. **Curriculum beat wiring — F1, F2, F3, F4 sequencing**
+- [x] U6. **Curriculum beat wiring — F1, F2, F3, F4 sequencing**
 
 **Goal:** Wire each origin flow's beats to the `ChickenArcController` observations + bubble mappings. This unit exists to deliver F1 (stick → wand → campfire-lit), F2 (sunset → sleep), F3 (room → door → registration → sign → chest → welcome mat), and F4 (villager UI → flag UI → Worldly Seeds → statue) as a complete playable experience.
 
@@ -627,7 +627,7 @@ FORFEIT                        → (terminal — /questown chicken remove was in
 
 ---
 
-- [ ] U7. **Wand expansion, first-gatherer loot override, advancement suppression, and commands**
+- [x] U7. **Wand expansion, first-gatherer loot override, advancement suppression, and commands**
 
 **Goal:** Implement the supporting integrations that are independent of the chicken entity itself: wand lights unlit campfires + flag-radius gate on the sleep path; first-gatherer first-fetch Worldly Seeds guarantee (realtime + warp); journal no longer handed to the player on `root` advancement; `skip-chicken` flag-placement argument + `/questown chicken remove` admin command.
 
