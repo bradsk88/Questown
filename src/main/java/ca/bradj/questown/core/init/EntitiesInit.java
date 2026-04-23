@@ -1,6 +1,7 @@
 package ca.bradj.questown.core.init;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.mobs.helperchicken.HelperChickenEntity;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
@@ -26,6 +27,13 @@ public class EntitiesInit {
                     )
                     .sized(0.6f, 1.6f)
                     .build(new ResourceLocation(Questown.MODID, "visitor").toString())
+    );
+
+    public static final RegistryObject<EntityType<HelperChickenEntity>> HELPER_CHICKEN = ENTITY_TYPES.register(
+            "helper_chicken",
+            () -> EntityType.Builder.of(HelperChickenEntity::new, MobCategory.CREATURE)
+                    .sized(0.4f, 0.7f)
+                    .build(new ResourceLocation(Questown.MODID, "helper_chicken").toString())
     );
 
     public static void register(IEventBus bus) {

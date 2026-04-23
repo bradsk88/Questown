@@ -1,0 +1,6 @@
+{
+  "parent": "block/cube_all",
+  "textures": {
+    "all": "questown:blocks/stone_chicken_statue"
+  }
+}

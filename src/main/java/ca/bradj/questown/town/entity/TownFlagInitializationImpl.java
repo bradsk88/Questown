@@ -177,4 +177,46 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     public CompoundTag serializeEconomics() {
         return TownEconomicsSerializer.INSTANCE.serialize(flag.getEconomicsHandle());
     }
+
+    @Override
+    public CompoundTag serializeChickenEverSpawned() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.getChickenEverSpawned());
+        return t;
+    }
+
+    @Override
+    public CompoundTag serializeChickenBeatState() {
+        CompoundTag t = new CompoundTag();
+        t.putString("value", flag.getChickenBeatState().name());
+        return t;
+    }
+
+    @Override
+    public CompoundTag serializeChickenFirstGatherWorldlySeedsFired() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.getChickenFirstGatherWorldlySeedsFired());
+        return t;
+    }
+
+    @Override
+    public CompoundTag serializeChickenArcForfeit() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.getChickenArcForfeit());
+        return t;
+    }
+
+    @Override
+    public CompoundTag serializeChickenStructureRotation() {
+        CompoundTag t = new CompoundTag();
+        t.putString("value", flag.getChickenStructureRotation().name());
+        return t;
+    }
+
+    @Override
+    public CompoundTag serializeChickenRotationDetected() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.getChickenRotationDetected());
+        return t;
+    }
 }

@@ -183,6 +183,16 @@ public class ItemsInit {
             () -> new HospitalBedItem(BlocksInit.HOSPITAL_BED.get(), Questown.DEFAULT_ITEM_PROPS.stacksTo(1))
     );
 
+    public static final RegistryObject<Item> STONE_CHICKEN_STATUE = ITEMS.register(
+            StoneChickenStatue.ITEM_ID,
+            () -> new BlockItem(BlocksInit.STONE_CHICKEN_STATUE.get(), Questown.DEFAULT_ITEM_PROPS)
+    );
+
+    public static final RegistryObject<Item> WORLDLY_SEEDS = ITEMS.register(
+            WorldlySeeds.ITEM_ID,
+            WorldlySeeds::new
+    );
+
     // Vanilla items
 
     public static final RegistryObject<Item> SAPLING_TESTER_BLOCK = ITEMS.register(

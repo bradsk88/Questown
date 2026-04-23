@@ -77,6 +77,10 @@ public class BlocksInit {
             MineshaftBlock.ITEM_ID, MineshaftBlock::new
     ));
 
+    public static final RegistryObject<Block> STONE_CHICKEN_STATUE = BLOCKS.register(
+            StoneChickenStatue.ITEM_ID, StoneChickenStatue::new
+    );
+
     // Vanilla Blocks
 
     public static final RegistryObject<Block> SAPLING_TESTER_BLOCK = BLOCKS.register(

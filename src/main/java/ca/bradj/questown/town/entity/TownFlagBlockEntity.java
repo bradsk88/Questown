@@ -110,6 +110,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final LazyOptional<IItemHandler> itemHandler = LazyOptional.of(() -> new TownFlagBOPItemHandler(this));
     boolean givenBonusFood;
 
+    // Helper-chicken onboarding arc state (U1). Storage only — logic lives in ChickenArcController (U3+).
+    boolean chickenEverSpawned = false;
+    ca.bradj.questown.mobs.helperchicken.ChickenBeatState chickenBeatState =
+            ca.bradj.questown.mobs.helperchicken.ChickenBeatState.WAITING_FOR_STICK;
+    boolean chickenFirstGatherWorldlySeedsFired = false;
+    boolean chickenArcForfeit = false;
+    net.minecraft.world.level.block.Rotation chickenStructureRotation =
+            net.minecraft.world.level.block.Rotation.NONE;
+    boolean chickenRotationDetected = false;
+
     @Override
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap) {
         if (!ForgeCapabilities.ITEM_HANDLER.equals(cap)) {
@@ -877,6 +887,54 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             BlockState state
     ) {
         setChanged(sl, blockEntityPos, state);
+    }
+
+    public boolean getChickenEverSpawned() {
+        return chickenEverSpawned;
+    }
+
+    public void setChickenEverSpawned(boolean v) {
+        this.chickenEverSpawned = v;
+    }
+
+    public ca.bradj.questown.mobs.helperchicken.ChickenBeatState getChickenBeatState() {
+        return chickenBeatState;
+    }
+
+    public void setChickenBeatState(ca.bradj.questown.mobs.helperchicken.ChickenBeatState v) {
+        this.chickenBeatState = v;
+    }
+
+    public boolean getChickenFirstGatherWorldlySeedsFired() {
+        return chickenFirstGatherWorldlySeedsFired;
+    }
+
+    public void setChickenFirstGatherWorldlySeedsFired(boolean v) {
+        this.chickenFirstGatherWorldlySeedsFired = v;
+    }
+
+    public boolean getChickenArcForfeit() {
+        return chickenArcForfeit;
+    }
+
+    public void setChickenArcForfeit(boolean v) {
+        this.chickenArcForfeit = v;
+    }
+
+    public net.minecraft.world.level.block.Rotation getChickenStructureRotation() {
+        return chickenStructureRotation;
+    }
+
+    public void setChickenStructureRotation(net.minecraft.world.level.block.Rotation v) {
+        this.chickenStructureRotation = v;
+    }
+
+    public boolean getChickenRotationDetected() {
+        return chickenRotationDetected;
+    }
+
+    public void setChickenRotationDetected(boolean v) {
+        this.chickenRotationDetected = v;
     }
 
     public boolean giveBonusFood(ServerPlayer sp) {
