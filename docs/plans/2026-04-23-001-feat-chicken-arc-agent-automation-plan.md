@@ -230,7 +230,7 @@ The user explicitly asked: "modify the nbt file yourself" + "use the existing te
 
 ## Implementation Units
 
-- [ ] U1. **NBT editor — `ChickenScaffoldingNbtEditor` + Gradle task**
+- [x] U1. **NBT editor — `ChickenScaffoldingNbtEditor` + Gradle task**
 
 **Goal:** Provide a one-shot, idempotent tool that reads `src/main/resources/data/questown/structures/empty_town.nbt`, inserts the chicken-arc scaffolding blocks at the coordinates `HelperChickenBeatOffsets` already encodes, and writes the file back. The developer (or agent) runs it once; the updated `.nbt` is committed.
 
@@ -298,7 +298,7 @@ main():
 
 ---
 
-- [ ] U6. **`ChickenScaffoldingLayout` shared utility**
+- [x] U6. **`ChickenScaffoldingLayout` shared utility**
 
 **Goal:** Extract the per-rotation scaffolding block list into a standalone static utility so both U1's NBT editor and U3's in-world PLACE_SCAFFOLDING phase consume the same source of truth. This decouples U3's landing from U1's gradle task being complete.
 
@@ -331,7 +331,7 @@ main():
 
 ---
 
-- [ ] U2. **`ChickenArcBlueprint` + `ChickenArcExpectation` record types**
+- [x] U2. **`ChickenArcBlueprint` + `ChickenArcExpectation` record types**
 
 **Goal:** Define the data shape of a chicken-arc scenario — what actions to script, what to assert, what warp amount to apply — without coupling to `TestBlueprint`'s job-centric fields.
 
@@ -393,7 +393,7 @@ main():
 
 ---
 
-- [ ] U3. **`ChickenArcTestExecutor` + phase machine**
+- [x] U3. **`ChickenArcTestExecutor` + phase machine**
 
 **Goal:** Execute one `ChickenArcBlueprint` end-to-end inside `AutoTestRunner`'s tick loop: reset arena, place flag, force rotation-detected state, place scaffolding, spawn chicken, run scripted actions with tick-settles between them, advance warp if requested, evaluate expectations, log per-assertion pass/fail, clean up.
 
@@ -485,7 +485,7 @@ ChickenArcTestExecutor.tick():
 
 ---
 
-- [ ] U4. **`ChickenArcBlueprintRegistry` + scenarios + AutoTestRunner integration**
+- [x] U4. **`ChickenArcBlueprintRegistry` + scenarios + AutoTestRunner integration**
 
 **Goal:** Register the actual scenarios — F1, F3, F4, skip-chicken, `/questown chicken remove`, rotation-CLOCKWISE_90, realtime+warp Worldly-Seeds guarantee — and wire them into `AutoTestRunner` so they run under the same `-Dquestown.autotest=true` invocation as the existing job tests.
 
@@ -539,7 +539,7 @@ ChickenArcTestExecutor.tick():
 
 ---
 
-- [ ] U5. **Agent runbook + log-parsing contract**
+- [x] U5. **Agent runbook + log-parsing contract**
 
 **Goal:** Give the agent a single doc that says "here is how you run the verification loop" — the exact command, the log-parse regex, the exit-code semantics, known failure modes, and what to do when a scenario fails. Remove the remaining human-verification TODOs from the chicken-arc test files.
 

@@ -193,6 +193,15 @@ public final class ChickenArcTestExecutor {
     }
 
     private void placeScaffolding() {
+        // Scenarios with forceRotationDetected=false exercise the real
+        // HelperChickenRotationDetector against anchors they place themselves.
+        // Placing the default layout here would seed the arena with a campfire
+        // at CAMPFIRE_OFFSET, which breaks zero-match-forfeit and biases the
+        // ambiguity scenario. Skip the default placement for those scenarios.
+        if (!blueprint.forceRotationDetected()) {
+            phase = Phase.TELEPORT_PLAYER_NEAR_FLAG;
+            return;
+        }
         List<ChickenScaffoldingLayout.BlockPlacement> layout =
                 ChickenScaffoldingLayout.forRotation(blueprint.startRotation());
         for (ChickenScaffoldingLayout.BlockPlacement p : layout) {
@@ -319,7 +328,9 @@ public final class ChickenArcTestExecutor {
         ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
         BlockPos targetFlagPos = flagPos.offset(a.boundFlagOffset().rotate(blueprint.startRotation()));
         TownFlagBlock.StoreParentOnNBT(wand, targetFlagPos);
-        fakePlayer.getInventory().add(wand);
+        // Intentionally skip Inventory.add() — in 1.19.2 it mutates the input stack
+        // to empty while distributing it across slots. setItemInHand on the selected
+        // hotbar slot is sufficient; getMainHandItem() reads from the same slot.
         fakePlayer.setItemInHand(InteractionHand.MAIN_HAND, wand);
     }
 
