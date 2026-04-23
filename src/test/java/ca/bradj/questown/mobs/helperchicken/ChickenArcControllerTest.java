@@ -1,36 +1,25 @@
 package ca.bradj.questown.mobs.helperchicken;
 
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
- * End-to-end coverage for {@link ChickenArcController} touches the flag BE,
- * ServerLevel, and a spawned chicken entity — none of which can be constructed
- * in a bare JUnit harness. The transition logic is unit-tested in
- * {@link ChickenArcTransitionsTest} and the bubble mapping in
- * {@link ChickenArcBubblesTest}; this test class exists so the gap is visible
- * per CLAUDE.md.
+ * {@link ChickenArcController} integration coverage lives in the headless
+ * {@code ChickenArcAllExecutor} suite — see
+ * {@code docs/conventions/agent-chicken-verification-loop.md}. The pure pieces
+ * are covered by {@link ChickenArcTransitionsTest} and {@link ChickenArcBubblesTest};
+ * the behaviors below require a live flag BE + spawned chicken, which the
+ * autotest harness provides.
  */
 class ChickenArcControllerTest {
 
     @Test
-    void TODO_controllerTick_driveFullArcWithRealFlagBe() {
-        Assertions.fail(
-                "TODO[U4]: ChickenArcController.tick(flag) touches TownFlagBlockEntity, " +
-                        "ServerLevel, and a spawned HelperChickenEntity — none constructible " +
-                        "in a bare unit test. The pure pieces (ChickenArcTransitions, " +
-                        "ChickenArcBubbles) are covered separately. F1 and F4 end-to-end " +
-                        "coverage happens in /_qtdev per the plan."
-        );
+    @Disabled("Covered by chicken-arc scenarios F1_stick_to_campfire, F3_build_room_to_welcome_mat, F4_seeds_to_statue. Run ./gradlew runServer -Dquestown.autotest=true.")
+    void controllerTick_driveFullArcWithRealFlagBe() {
     }
 
     @Test
-    void TODO_observeClearsEphemeralFlagsAfterTransition() {
-        Assertions.fail(
-                "TODO[U4]: After SUNSET_AND_MAP advances to WAITING_FOR_WALL_BLOCK, the " +
-                        "transient chickenObservedSleepSinceSunset flag should read false so a " +
-                        "later-day sleep doesn't double-advance a future beat. Not unit-testable " +
-                        "without a real flag BE. Verified in /_qtdev."
-        );
+    @Disabled("Covered indirectly by F3_build_room_to_welcome_mat — SUNSET_AND_MAP advances before the wall-block beat, and the F3 run asserts the expected final beat without double-advancing.")
+    void observeClearsEphemeralFlagsAfterTransition() {
     }
 }

@@ -33,6 +33,8 @@ When changing authored offsets (`HelperChickenBeatOffsets`), update `ChickenScaf
 
 > **Why not a Gradle convenience task?** An `./gradlew editEmptyTownNbt` alias was drafted, but every variant (`type: Test`, `type: Exec`, bare `task X {}` with a `doLast { exec {...} }`) trips a Groovy 3.0 / ForgeGradle classpath scan that hits Java 21 bytecode in a cached dependency JAR and fails to parse the build script. The direct `./gradlew test` invocation above is the supported entry point until the toolchain upgrades.
 
+> Related: agent verification loop at `docs/conventions/agent-chicken-verification-loop.md` — run the chicken-arc scenarios headlessly after editing this file.
+
 ## Round-trip workflow
 
 1. Run a dev client (`./gradlew runClient`).

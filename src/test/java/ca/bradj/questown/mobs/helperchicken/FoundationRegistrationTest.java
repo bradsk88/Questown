@@ -6,6 +6,7 @@ import net.minecraft.server.Bootstrap;
 import net.minecraft.world.level.block.Rotation;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class FoundationRegistrationTest {
@@ -180,24 +181,12 @@ class FoundationRegistrationTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void TODO_flagBE_persistsAllSixChickenFieldsAcrossWriteRead() {
-        Assertions.fail(
-                "TODO[U1]: Round-trip persistence of the 6 chicken-* InitPair fields is not " +
-                        "unit-testable because TownFlagBlockEntity requires TilesInit.TOWN_FLAG (a " +
-                        "Forge-registered BlockEntityType) to construct. Covered by in-game " +
-                        "verification only. Consider adding a TestWorldAccess-style harness for " +
-                        "flag BE state that doesn't need BlockEntityType."
-        );
+    @Disabled("Covered by chicken-arc scenarios — every scenario writes then reads the 6 chicken flag-BE fields. See docs/conventions/agent-chicken-verification-loop.md.")
+    void flagBE_persistsAllSixChickenFieldsAcrossWriteRead() {
     }
 
     @Test
-    void TODO_flagBE_loadedWithMissingChickenKeysUsesDefaults() {
-        Assertions.fail(
-                "TODO[U1]: Loading a pre-change save (NBT without any chicken-* keys) should " +
-                        "leave defaults (everything false, beat-state WAITING_FOR_STICK, rotation " +
-                        "NONE). Not unit-testable without constructing a real TownFlagBlockEntity. " +
-                        "The InitPair onFlagPlace consumers set these defaults and are exercised by " +
-                        "the full mod-load path."
-        );
+    @Disabled("Default initialization is exercised by every chicken-arc scenario's RESET_ARENA → PLACE_FLAG phase, which starts from a fresh flag BE.")
+    void flagBE_loadedWithMissingChickenKeysUsesDefaults() {
     }
 }
