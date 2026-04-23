@@ -7,7 +7,31 @@ date: 2026-04-23
 
 # Editing `empty_town.nbt`
 
-`src/main/resources/data/questown/structures/empty_town.nbt` is the jigsaw template spawned by worldgen around every new town flag. Editing it requires a Structure Block round-trip — there is no build-time tooling in the repo.
+`src/main/resources/data/questown/structures/empty_town.nbt` is the jigsaw template spawned by worldgen around every new town flag.
+
+Two authored paths exist:
+
+1. **Code-authored scaffolding** (`ChickenScaffoldingNbtEditor` + `ChickenScaffoldingLayout`). Preferred for the helper-chicken scaffolding blocks — unlit campfire, cobblestone room perimeter, gate columns — because re-running the tool stays tag-equivalent with the in-world test arena. See "Agent-authored path" below.
+2. **Structure-Block round-trip.** Documented below; use for anything outside the chicken-arc scaffolding (terrain, decorative blocks, schematic-level edits) where authoring in code would be overkill.
+
+## Agent-authored path (`ChickenScaffoldingNbtEditor`)
+
+The helper-chicken scaffolding lives in code as `ChickenScaffoldingLayout` (one source of truth shared with the in-world test arena). The editor reads that layout, removes any existing blocks at the target offsets, appends missing palette entries, and rewrites `empty_town.nbt`. Re-runs produce tag-equivalent output (`NbtUtils.compareNbt(a, b, true)` — gzip bytes vary across JVMs, so byte-equality is not the contract).
+
+To apply:
+
+```sh
+./gradlew test \
+    --tests "ca.bradj.questown.devtools.ChickenScaffoldingNbtEditorTest.applyToRealStructure" \
+    -DenableEditor=true \
+    --rerun-tasks
+```
+
+The editor writes a sibling `empty_town.nbt.bak` before mutating. Verify the resulting change with `git diff` + `/locate structure questown:empty_town` in a fresh dev world, then commit.
+
+When changing authored offsets (`HelperChickenBeatOffsets`), update `ChickenScaffoldingLayout` in the same commit and re-run the editor — the three must stay in sync.
+
+> **Why not a Gradle convenience task?** An `./gradlew editEmptyTownNbt` alias was drafted, but every variant (`type: Test`, `type: Exec`, bare `task X {}` with a `doLast { exec {...} }`) trips a Groovy 3.0 / ForgeGradle classpath scan that hits Java 21 bytecode in a cached dependency JAR and fails to parse the build script. The direct `./gradlew test` invocation above is the supported entry point until the toolchain upgrades.
 
 ## Round-trip workflow
 
