@@ -12,6 +12,7 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.gui.town.status.MultiStatusScreen;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mobs.helperchicken.HelperChickenRenderer;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import ca.bradj.questown.render.FishingHookRenderer;
 import net.minecraft.client.gui.screens.MenuScreens;
@@ -114,6 +115,10 @@ public class Questown {
         event.enqueueWork(() -> EntityRenderers.register(
                 EntitiesInit.VISITOR.get(),
                 VisitorMobRenderer::new
+        ));
+        event.enqueueWork(() -> EntityRenderers.register(
+                EntitiesInit.HELPER_CHICKEN.get(),
+                HelperChickenRenderer::new
         ));
         event.enqueueWork(() -> BlockEntityRenderers.register(
                 TilesInit.PLATE.get(),
