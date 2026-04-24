@@ -10,6 +10,7 @@ logs
 .claude/
 /.claude.json
 CLAUDE.md
+.context/
 /.env
 /META-INF/MANIFEST.MF
 /vazkii/patchouli/api/stub/package-info.class

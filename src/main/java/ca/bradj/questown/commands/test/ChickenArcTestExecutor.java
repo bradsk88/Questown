@@ -401,7 +401,7 @@ public final class ChickenArcTestExecutor {
         // WelcomeMatBlock registers itself via getStateForPlacement's item-context
         // path, which setBlockAndUpdate bypasses. Mirror the side effect here so
         // the F3 welcome-mat beat can advance without a wand-placement shim.
-        if (a.blockState().is(ca.bradj.questown.core.init.BlocksInit.WELCOME_MAT_BLOCK.get())
+        if (a.blockState().is(BlocksInit.WELCOME_MAT_BLOCK.get())
                 && flag != null) {
             flag.registerWelcomeMat(pos);
         }
@@ -452,15 +452,15 @@ public final class ChickenArcTestExecutor {
         // subset; walls overlap harmlessly.
         BlockPos doorOffset = HelperChickenBeatOffsets.DOOR_OFFSET;
         BlockPos chestOffset = HelperChickenBeatOffsets.CHEST_OFFSET;
+        // CHEST_OFFSET (8,0,4) is interior to this 9x5 footprint, so the
+        // perimeter filter already excludes it — no explicit chest-column skip
+        // is needed. The door column is on the perimeter and must be skipped.
         for (int x = 2; x <= 10; x++) {
             for (int z = 2; z <= 6; z++) {
                 boolean onPerimeter = (x == 2 || x == 10 || z == 2 || z == 6);
                 if (!onPerimeter) continue;
                 if (x == doorOffset.getX() && z == doorOffset.getZ()) {
-                    continue; // door column
-                }
-                if (x == chestOffset.getX() && z == chestOffset.getZ()) {
-                    continue; // chest column — chest goes here
+                    continue;
                 }
                 for (int y = 0; y <= 1; y++) {
                     BlockPos local = new BlockPos(x, y, z);
@@ -483,15 +483,14 @@ public final class ChickenArcTestExecutor {
         // Direct JOB_BOARD_BLOCK placement (sign→job-board conversion is an
         // item-use side-effect that setBlockAndUpdate bypasses).
         level.setBlockAndUpdate(signWorld,
-                ca.bradj.questown.core.init.BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState());
+                BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState());
         // Welcome mat + direct registerWelcomeMat call (normal block placement
         // side-effects don't fire through setBlockAndUpdate).
         level.setBlockAndUpdate(welcomeMatWorld,
-                ca.bradj.questown.core.init.BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState());
+                BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState());
         if (flag != null) {
             flag.registerWelcomeMat(welcomeMatWorld);
         }
-        // Wand-register the door.
         handleRegisterDoorViaWand(new ChickenArcScriptedAction.RegisterDoorViaWand(doorOffset, 0));
     }
 

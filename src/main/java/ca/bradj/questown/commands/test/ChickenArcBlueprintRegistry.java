@@ -13,6 +13,7 @@ import ca.bradj.questown.commands.test.ChickenArcScriptedAction.RightClickChicke
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.RunCommand;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.SetUpRegisteredRoomWithChest;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.WandRightClick;
+import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.mobs.helperchicken.ChickenBeatState;
 import ca.bradj.questown.mobs.helperchicken.HelperChickenBeatOffsets;
@@ -23,6 +24,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -72,17 +74,31 @@ public final class ChickenArcBlueprintRegistry {
         }
     }
 
-    private static net.minecraft.world.level.block.state.BlockState welcomeMatBlockState() {
+    /**
+     * Resolve {@code BlocksInit.WELCOME_MAT_BLOCK} at server runtime, falling
+     * back to {@link Blocks#STONE_PRESSURE_PLATE} in JUnit where the Forge
+     * registry never ran. The fallback is safe at test time only — structural
+     * tests enumerate blueprints without placing blocks, and runtime scenarios
+     * always hit the real registry because {@code AutoTestRunner.onServerStarted}
+     * fires after Forge registration.
+     */
+    private static BlockState welcomeMatBlockState() {
         try {
-            return ca.bradj.questown.core.init.BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState();
+            return BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState();
         } catch (NullPointerException | IllegalStateException e) {
             return Blocks.STONE_PRESSURE_PLATE.defaultBlockState();
         }
     }
 
-    private static net.minecraft.world.level.block.state.BlockState jobBoardBlockState() {
+    /**
+     * Resolve {@code BlocksInit.JOB_BOARD_BLOCK} at server runtime, falling
+     * back to {@link Blocks#OAK_SIGN} in JUnit where the Forge registry never
+     * ran. The fallback is safe at test time only — see
+     * {@link #welcomeMatBlockState()} for the parallel rationale.
+     */
+    private static BlockState jobBoardBlockState() {
         try {
-            return ca.bradj.questown.core.init.BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState();
+            return BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState();
         } catch (NullPointerException | IllegalStateException e) {
             return Blocks.OAK_SIGN.defaultBlockState();
         }

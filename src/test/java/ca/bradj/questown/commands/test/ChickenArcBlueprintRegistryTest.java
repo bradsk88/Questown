@@ -134,6 +134,47 @@ class ChickenArcBlueprintRegistryTest {
     }
 
     @Test
+    void skipChickenCommand_runCommandUsesPosBeforeLiteral() {
+        // Brigadier tree is `qt flag <pos> place_above [skip-chicken]`. The
+        // original blueprint put place_above before the pos and regressed to a
+        // runtime parse failure. Pin the corrected order so a future edit can
+        // not silently break it again.
+        ChickenArcBlueprint bp = findByName("skip_chicken_command");
+        ChickenArcScriptedAction.RunCommand cmd = bp.scriptedActions().stream()
+                .filter(a -> a instanceof ChickenArcScriptedAction.RunCommand)
+                .map(a -> (ChickenArcScriptedAction.RunCommand) a)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "skip_chicken_command must include a RunCommand action"));
+        Assertions.assertTrue(
+                cmd.command().matches("^/qt flag -?\\d+ -?\\d+ -?\\d+ place_above( skip-chicken)?$"),
+                "skip_chicken_command must invoke `/qt flag <x> <y> <z> place_above [skip-chicken]` "
+                        + "(pos before literal); got: " + cmd.command()
+        );
+    }
+
+    @Test
+    void firstGatherWorldlySeeds_realtimeAndWarpDifferInWarpAmount() {
+        // Scenario 11 asserts seed-guarantee via realtime ticks; scenario 12
+        // asserts warp-parity under a day of warp. If both carry the same
+        // warpAmount the parity claim is vacuous.
+        ChickenArcBlueprint realtime = findByName("first_gather_worldly_seeds_realtime");
+        ChickenArcBlueprint warp = findByName("first_gather_worldly_seeds_warp");
+        Assertions.assertEquals(
+                0, realtime.warpAmount(),
+                "first_gather_worldly_seeds_realtime must run with warpAmount=0"
+        );
+        Assertions.assertTrue(
+                warp.warpAmount() > 0,
+                "first_gather_worldly_seeds_warp must run with a non-zero warpAmount to cover the warp path"
+        );
+        Assertions.assertNotEquals(
+                realtime.warpAmount(), warp.warpAmount(),
+                "realtime and warp variants must differ in warpAmount for the parity claim to be meaningful"
+        );
+    }
+
+    @Test
     void rotationForfeits_disableForceRotationDetected() {
         for (String name : List.of(
                 "rotation_ambiguity_forfeit",
