@@ -116,11 +116,11 @@ Names are stable — the runbook greps them verbatim; CI integrations key off th
 | 8 | `two_flags_independent_arcs` | AE6 | Per-flag independence (setup-gap: needs executor second-flag support) |
 | 9 | `skip_chicken_command` | AE7 | `/qt flag place_above skip-chicken` |
 | 10 | `forfeit_remove_command` | — | `/questown chicken remove` |
-| 11 | `first_gather_worldly_seeds_realtime` | AE5 | Gatherer loot guarantee, no warp (setup-gap: needs villager-spawn action) |
-| 12 | `first_gather_worldly_seeds_warp` | — | Warp parity with scenario 11 (setup-gap as above) |
+| 11 | `first_gather_worldly_seeds_realtime` | AE5 | Direct chest-deposit exercises `ChickenArcConditions.maybeFlipFirstGatherBit`; villager-driven half stays follow-up |
+| 12 | `first_gather_worldly_seeds_warp` | — | Same observation path as scenario 11 under a warp advance |
 | 13 | `wand_on_unlit_campfire_outside_flag` | AE4 (no-op) | Radius-gate rejects click |
 
-Scenarios 8, 11, 12 currently emit a `[FAIL] setup` line because the `ChickenArcTestExecutor` lacks the actions they need (second flag, villager spawn). They're registered under their canonical names so future work can flip them to passing without touching the runbook.
+Scenario 8 still carries a setup-gap: the executor only spawns one flag, so the assertion is "primary flag's chicken spawned" rather than end-to-end per-flag independence. Scenarios 11 and 12 cover the worldly-seeds observation path via direct chest-deposit; a villager-driven variant is still outstanding.
 
 ## When to re-run
 
