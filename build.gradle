@@ -95,6 +95,11 @@ minecraft {
 
             jvmArg '-Dquestown.autotest=' + System.getProperty('questown.autotest', 'false')
             jvmArg '-Dquestown.autotest.warp=' + System.getProperty('questown.autotest.warp', '24000')
+            // Forward the category/scenario filters to the forked server JVM so the
+            // runbook's documented -D invocations reach AutoTestRunner.parseCategory.
+            if (System.getProperty('QUESTOWN_AUTOTEST_CATEGORY') != null) {
+                jvmArg '-DQUESTOWN_AUTOTEST_CATEGORY=' + System.getProperty('QUESTOWN_AUTOTEST_CATEGORY')
+            }
 
             mods {
                 questown {

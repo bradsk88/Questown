@@ -357,38 +357,27 @@ public final class ChickenArcBlueprintRegistry {
                 .build();
     }
 
-    // Scenario 11 — the plan wants a real gatherer villager producing seeds on
-    // its first fetch, which needs a SpawnVillagerAndAssignJob scripted action
-    // the executor doesn't yet have. This scenario approximates the guarantee
-    // at the observation-logic level: deposit WORLDLY_SEEDS directly into a
-    // registered chest, and assert that ChickenArcConditions.observe flips the
-    // first-gather bit. That covers ChickenArcConditions.maybeFlipFirstGatherBit
-    // end-to-end; the villager-driven half stays follow-up work.
+    // Scenarios 11 and 12 — the plan wants a real gatherer villager producing
+    // seeds on its first fetch, which needs a SpawnVillagerAndAssignJob scripted
+    // action the executor doesn't yet have. These scenarios approximate the
+    // guarantee at the observation-logic level: deposit WORLDLY_SEEDS directly
+    // into a registered chest, and assert that ChickenArcConditions.observe
+    // flips the first-gather bit. That covers maybeFlipFirstGatherBit end-to-end;
+    // the villager-driven half stays follow-up work.
+    //
+    // Scenario 11 runs realtime (warpAmount=0). Scenario 12 re-runs the same
+    // observation path under a day of warp to cover the warp code path.
     private static ChickenArcBlueprint firstGatherWorldlySeedsRealtime() {
-        Item seeds = worldlySeedsItem();
-        return ChickenArcBlueprint.builder("first_gather_worldly_seeds_realtime")
-                .actions(List.of(
-                        new MarkSleepObserved(1),
-                        new GiveBoundWand(BlockPos.ZERO, 1),
-                        new WandRightClick(HelperChickenBeatOffsets.CAMPFIRE_OFFSET, 2),
-                        new AdvanceTicks(3),
-                        new SetUpRegisteredRoomWithChest(10),
-                        new DepositIntoContainer(new ItemStack(seeds, 1), 5),
-                        new AdvanceTicks(10)
-                ))
-                .expectation(ChickenArcExpectation.builder()
-                        .chickenSpawned(true)
-                        .flagBits(Map.of("chicken-first-gather-worldly-seeds-fired", true))
-                        .build())
-                .build();
+        return firstGatherWorldlySeedsBlueprint("first_gather_worldly_seeds_realtime", 0);
     }
 
-    // Scenario 12 — warp-parity of scenario 11. Same observation path; the
-    // warp amount covers a day's worth of ticks, which should flip the same bit.
     private static ChickenArcBlueprint firstGatherWorldlySeedsWarp() {
+        return firstGatherWorldlySeedsBlueprint("first_gather_worldly_seeds_warp", GATHERER_WARP_TICKS);
+    }
+
+    private static ChickenArcBlueprint firstGatherWorldlySeedsBlueprint(String name, int warpAmount) {
         Item seeds = worldlySeedsItem();
-        return ChickenArcBlueprint.builder("first_gather_worldly_seeds_warp")
-                .warpAmount(GATHERER_WARP_TICKS)
+        ChickenArcBlueprint.Builder builder = ChickenArcBlueprint.builder(name)
                 .actions(List.of(
                         new MarkSleepObserved(1),
                         new GiveBoundWand(BlockPos.ZERO, 1),
@@ -401,8 +390,11 @@ public final class ChickenArcBlueprintRegistry {
                 .expectation(ChickenArcExpectation.builder()
                         .chickenSpawned(true)
                         .flagBits(Map.of("chicken-first-gather-worldly-seeds-fired", true))
-                        .build())
-                .build();
+                        .build());
+        if (warpAmount > 0) {
+            builder.warpAmount(warpAmount);
+        }
+        return builder.build();
     }
 
     // Scenario 13 — wand click on a campfire far outside the flag's radius

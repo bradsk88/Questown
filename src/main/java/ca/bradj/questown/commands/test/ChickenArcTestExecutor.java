@@ -450,11 +450,21 @@ public final class ChickenArcTestExecutor {
         // TownContainers.getAllContainers to find the chest during
         // DepositIntoContainer. The chicken scaffolding's authored 5×5 is a
         // subset; walls overlap harmlessly.
+        buildRegisteredRoomPerimeter();
+        placeRegisteredRoomFurnishings();
+        registerRoomFixtures();
+    }
+
+    private void buildRegisteredRoomPerimeter() {
         BlockPos doorOffset = HelperChickenBeatOffsets.DOOR_OFFSET;
-        BlockPos chestOffset = HelperChickenBeatOffsets.CHEST_OFFSET;
         // CHEST_OFFSET (8,0,4) is interior to this 9x5 footprint, so the
         // perimeter filter already excludes it — no explicit chest-column skip
         // is needed. The door column is on the perimeter and must be skipped.
+        // Loop iterates in LOCAL coords; rotation is applied only when
+        // computing world position. The door skip compares against the local
+        // doorOffset, which is correct: whichever local (x,z) we skip, its
+        // rotated world position matches doorOffset.rotate(startRotation),
+        // which is where the door will later be placed.
         for (int x = 2; x <= 10; x++) {
             for (int z = 2; z <= 6; z++) {
                 boolean onPerimeter = (x == 2 || x == 10 || z == 2 || z == 6);
@@ -469,28 +479,30 @@ public final class ChickenArcTestExecutor {
                 }
             }
         }
+    }
+
+    private void placeRegisteredRoomFurnishings() {
+        BlockPos doorOffset = HelperChickenBeatOffsets.DOOR_OFFSET;
+        BlockPos chestOffset = HelperChickenBeatOffsets.CHEST_OFFSET;
         BlockPos signOffset = HelperChickenBeatOffsets.SIGN_OFFSET;
         BlockPos gateCenter = HelperChickenBeatOffsets.GATE_CENTER_OFFSET;
-        BlockPos doorWorld = flagPos.offset(doorOffset.rotate(blueprint.startRotation()));
+        handlePlaceBlock(new ChickenArcScriptedAction.PlaceBlock(
+                doorOffset, Blocks.OAK_DOOR.defaultBlockState(), 0));
         BlockPos chestWorld = flagPos.offset(chestOffset.rotate(blueprint.startRotation()));
-        BlockPos signWorld = flagPos.offset(signOffset.rotate(blueprint.startRotation()));
-        BlockPos welcomeMatWorld = flagPos.offset(gateCenter.rotate(blueprint.startRotation()));
-        level.setBlockAndUpdate(doorWorld,
-                Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
-        level.setBlockAndUpdate(doorWorld.above(),
-                Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
         level.setBlockAndUpdate(chestWorld, Blocks.CHEST.defaultBlockState());
-        // Direct JOB_BOARD_BLOCK placement (sign→job-board conversion is an
-        // item-use side-effect that setBlockAndUpdate bypasses).
-        level.setBlockAndUpdate(signWorld,
-                BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState());
-        // Welcome mat + direct registerWelcomeMat call (normal block placement
-        // side-effects don't fire through setBlockAndUpdate).
-        level.setBlockAndUpdate(welcomeMatWorld,
-                BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState());
-        if (flag != null) {
-            flag.registerWelcomeMat(welcomeMatWorld);
-        }
+        // Direct JOB_BOARD_BLOCK and WELCOME_MAT_BLOCK placement — the
+        // sign→job-board conversion and welcome-mat registration are
+        // item-use side-effects that setBlockAndUpdate bypasses, so we
+        // place the target blocks directly and mirror registerWelcomeMat
+        // below in registerRoomFixtures.
+        handlePlaceBlock(new ChickenArcScriptedAction.PlaceBlock(
+                signOffset, BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState(), 0));
+        handlePlaceBlock(new ChickenArcScriptedAction.PlaceBlock(
+                gateCenter, BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState(), 0));
+    }
+
+    private void registerRoomFixtures() {
+        BlockPos doorOffset = HelperChickenBeatOffsets.DOOR_OFFSET;
         handleRegisterDoorViaWand(new ChickenArcScriptedAction.RegisterDoorViaWand(doorOffset, 0));
     }
 
