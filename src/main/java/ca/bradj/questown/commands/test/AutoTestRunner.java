@@ -113,7 +113,13 @@ public class AutoTestRunner {
 
     @Nullable
     private static String parseCategory() {
+        // Prefer the env var (documented contract) but fall back to the matching
+        // -D system property so the runbook's `-DQUESTOWN_AUTOTEST_CATEGORY=...`
+        // invocation works without passing through a shell-env layer.
         String val = System.getenv(ENV_CATEGORY);
+        if (val == null || val.isBlank()) {
+            val = System.getProperty(ENV_CATEGORY);
+        }
         if (val == null || val.isBlank()) {
             return null;
         }
