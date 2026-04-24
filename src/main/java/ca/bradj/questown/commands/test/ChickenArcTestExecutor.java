@@ -23,7 +23,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -146,7 +148,15 @@ public final class ChickenArcTestExecutor {
         );
         TestArenaPreparer.destroyNearbyFlags(level, origin, opts, fakePlayer);
         TestArenaPreparer.flatten(level, origin, opts);
-        phase = blueprint.placeFlagViaCommand() ? Phase.RUN_ACTIONS_LOOP : Phase.PLACE_FLAG;
+        if (blueprint.placeFlagViaCommand()) {
+            // Seed flagPos to origin so CHECK_RESULTS can look up the command-placed
+            // flag BE. The command (/qt flag place_above) lands the flag at the
+            // target coord's above(), and scenarios pass a coord one-below origin.
+            flagPos = origin;
+            phase = Phase.RUN_ACTIONS_LOOP;
+        } else {
+            phase = Phase.PLACE_FLAG;
+        }
     }
 
     private void placeFlag() {
@@ -237,14 +247,22 @@ public final class ChickenArcTestExecutor {
             settleTicks--;
             return;
         }
-        if (actionIndex >= blueprint.scriptedActions().size()) {
-            phase = Phase.WARP;
-            return;
+        // Dispatch every action whose postActionWaitTicks == 0 in the same server
+        // tick — otherwise the flag BE's detector tick runs between them and can
+        // finalize state off of partial placements (e.g. rotation_ambiguity_forfeit
+        // needs both campfires visible in the same scan). Stop at the first action
+        // that declares a wait so later actions still settle.
+        while (actionIndex < blueprint.scriptedActions().size()) {
+            ChickenArcScriptedAction action = blueprint.scriptedActions().get(actionIndex);
+            actionIndex++;
+            dispatchAction(action);
+            int wait = Math.max(0, action.postActionWaitTicks());
+            if (wait > 0) {
+                settleTicks = wait;
+                return;
+            }
         }
-        ChickenArcScriptedAction action = blueprint.scriptedActions().get(actionIndex);
-        actionIndex++;
-        dispatchAction(action);
-        settleTicks = Math.max(0, action.postActionWaitTicks());
+        phase = Phase.WARP;
     }
 
     /**
@@ -369,7 +387,24 @@ public final class ChickenArcTestExecutor {
 
     private void handlePlaceBlock(ChickenArcScriptedAction.PlaceBlock a) {
         BlockPos pos = flagPos.offset(a.offset().rotate(blueprint.startRotation()));
+        if (a.blockState().getBlock() instanceof DoorBlock) {
+            // Doors are 2-high; setBlockAndUpdate alone only fills the lower
+            // half. Place upper half so the block is a complete door the room
+            // detector recognizes.
+            level.setBlockAndUpdate(pos,
+                    a.blockState().setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+            level.setBlockAndUpdate(pos.above(),
+                    a.blockState().setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+            return;
+        }
         level.setBlockAndUpdate(pos, a.blockState());
+        // WelcomeMatBlock registers itself via getStateForPlacement's item-context
+        // path, which setBlockAndUpdate bypasses. Mirror the side effect here so
+        // the F3 welcome-mat beat can advance without a wand-placement shim.
+        if (a.blockState().is(ca.bradj.questown.core.init.BlocksInit.WELCOME_MAT_BLOCK.get())
+                && flag != null) {
+            flag.registerWelcomeMat(pos);
+        }
     }
 
     private void handleRegisterDoorViaWand(ChickenArcScriptedAction.RegisterDoorViaWand a) {
@@ -409,28 +444,53 @@ public final class ChickenArcTestExecutor {
     }
 
     private void handleSetUpRegisteredRoomWithChest(ChickenArcScriptedAction.SetUpRegisteredRoomWithChest a) {
-        // Place the 5x5 cobblestone perimeter (matches ChickenScaffoldingLayout's room
-        // footprint), put an oak door in the DOOR_OFFSET gap, place a sign (auto-converts
-        // to a job board when near a flag), plant a chest at CHEST_OFFSET, then wand-register
-        // the door so TownContainers.getAllContainers finds the chest.
-        for (int x = 2; x <= 6; x++) {
-            for (int z = 2; z <= 6; z++) {
-                boolean onPerimeter = (x == 2 || x == 6 || z == 2 || z == 6);
-                if (!onPerimeter) continue;
-                BlockPos local = new BlockPos(x, 0, z);
-                BlockPos world = flagPos.offset(local.rotate(blueprint.startRotation()));
-                level.setBlockAndUpdate(world, Blocks.COBBLESTONE.defaultBlockState());
-            }
-        }
+        // Build a 9×5 perimeter (x=2..10, z=2..6) at 2-high so the authored
+        // CHEST_OFFSET (8,0,4) lands INSIDE the room — required for the
+        // store_room recipe to match (via the chest) and for
+        // TownContainers.getAllContainers to find the chest during
+        // DepositIntoContainer. The chicken scaffolding's authored 5×5 is a
+        // subset; walls overlap harmlessly.
         BlockPos doorOffset = HelperChickenBeatOffsets.DOOR_OFFSET;
         BlockPos chestOffset = HelperChickenBeatOffsets.CHEST_OFFSET;
+        for (int x = 2; x <= 10; x++) {
+            for (int z = 2; z <= 6; z++) {
+                boolean onPerimeter = (x == 2 || x == 10 || z == 2 || z == 6);
+                if (!onPerimeter) continue;
+                if (x == doorOffset.getX() && z == doorOffset.getZ()) {
+                    continue; // door column
+                }
+                if (x == chestOffset.getX() && z == chestOffset.getZ()) {
+                    continue; // chest column — chest goes here
+                }
+                for (int y = 0; y <= 1; y++) {
+                    BlockPos local = new BlockPos(x, y, z);
+                    BlockPos world = flagPos.offset(local.rotate(blueprint.startRotation()));
+                    level.setBlockAndUpdate(world, Blocks.COBBLESTONE.defaultBlockState());
+                }
+            }
+        }
         BlockPos signOffset = HelperChickenBeatOffsets.SIGN_OFFSET;
+        BlockPos gateCenter = HelperChickenBeatOffsets.GATE_CENTER_OFFSET;
         BlockPos doorWorld = flagPos.offset(doorOffset.rotate(blueprint.startRotation()));
         BlockPos chestWorld = flagPos.offset(chestOffset.rotate(blueprint.startRotation()));
         BlockPos signWorld = flagPos.offset(signOffset.rotate(blueprint.startRotation()));
-        level.setBlockAndUpdate(doorWorld, Blocks.OAK_DOOR.defaultBlockState());
+        BlockPos welcomeMatWorld = flagPos.offset(gateCenter.rotate(blueprint.startRotation()));
+        level.setBlockAndUpdate(doorWorld,
+                Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorWorld.above(),
+                Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
         level.setBlockAndUpdate(chestWorld, Blocks.CHEST.defaultBlockState());
-        level.setBlockAndUpdate(signWorld, Blocks.OAK_SIGN.defaultBlockState());
+        // Direct JOB_BOARD_BLOCK placement (sign→job-board conversion is an
+        // item-use side-effect that setBlockAndUpdate bypasses).
+        level.setBlockAndUpdate(signWorld,
+                ca.bradj.questown.core.init.BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState());
+        // Welcome mat + direct registerWelcomeMat call (normal block placement
+        // side-effects don't fire through setBlockAndUpdate).
+        level.setBlockAndUpdate(welcomeMatWorld,
+                ca.bradj.questown.core.init.BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState());
+        if (flag != null) {
+            flag.registerWelcomeMat(welcomeMatWorld);
+        }
         // Wand-register the door.
         handleRegisterDoorViaWand(new ChickenArcScriptedAction.RegisterDoorViaWand(doorOffset, 0));
     }
@@ -465,12 +525,19 @@ public final class ChickenArcTestExecutor {
                 flagPos.offset(-hw, -5, -hw),
                 flagPos.offset(hw, 10, hw)
         );
-        List<HelperChickenEntity> chickens = level.getEntitiesOfClass(HelperChickenEntity.class, area);
-        if (chickens.isEmpty()) {
-            failAction("RightClickChickenWithHand", "no chicken in arena");
+        // Filter by ownerFlagPos — prior-scenario chickens may wander in.
+        HelperChickenEntity chicken = null;
+        for (HelperChickenEntity e : level.getEntitiesOfClass(HelperChickenEntity.class, area)) {
+            if (e.isAlive() && flagPos.equals(e.getOwnerFlagPos())) {
+                chicken = e;
+                break;
+            }
+        }
+        if (chicken == null) {
+            failAction("RightClickChickenWithHand",
+                    "no chicken bound to this flag in arena (check spawn + ownerFlagPos)");
             return;
         }
-        HelperChickenEntity chicken = chickens.get(0);
         fakePlayer.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(a.item()));
         chicken.interactAt(fakePlayer, Vec3.ZERO, InteractionHand.MAIN_HAND);
     }

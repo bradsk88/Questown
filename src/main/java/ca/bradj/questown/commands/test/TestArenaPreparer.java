@@ -113,8 +113,16 @@ public final class TestArenaPreparer {
         }
         int chickens = 0;
         if (options.killHelperChickens()) {
-            for (HelperChickenEntity e : level.getEntitiesOfClass(HelperChickenEntity.class, area)) {
-                e.kill();
+            // Chickens wander; prior-scenario survivors routinely drift 20+ blocks
+            // from origin. Use a wide sweep so later scenarios start clean, and
+            // additionally discard any entity bound to this origin via ownerFlagPos
+            // so wanderers outside the bounds still get cleaned up.
+            AABB wide = new AABB(
+                    origin.offset(-128, -16, -128),
+                    origin.offset(128, 32, 128)
+            );
+            for (HelperChickenEntity e : level.getEntitiesOfClass(HelperChickenEntity.class, wide)) {
+                e.discard();
                 chickens++;
             }
         }
