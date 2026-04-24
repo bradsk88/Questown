@@ -72,6 +72,22 @@ public final class ChickenArcBlueprintRegistry {
         }
     }
 
+    private static net.minecraft.world.level.block.state.BlockState welcomeMatBlockState() {
+        try {
+            return ca.bradj.questown.core.init.BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState();
+        } catch (NullPointerException | IllegalStateException e) {
+            return Blocks.STONE_PRESSURE_PLATE.defaultBlockState();
+        }
+    }
+
+    private static net.minecraft.world.level.block.state.BlockState jobBoardBlockState() {
+        try {
+            return ca.bradj.questown.core.init.BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState();
+        } catch (NullPointerException | IllegalStateException e) {
+            return Blocks.OAK_SIGN.defaultBlockState();
+        }
+    }
+
     public static List<ChickenArcBlueprint> all() {
         return List.of(
                 stickPeckAndFollowSpawn(),
@@ -156,9 +172,16 @@ public final class ChickenArcBlueprintRegistry {
                         new PlaceBlock(wallOffset, Blocks.COBBLESTONE.defaultBlockState(), 2),
                         new PlaceBlock(doorOffset, Blocks.OAK_DOOR.defaultBlockState(), 2),
                         new RegisterDoorViaWand(doorOffset, 2),
-                        new PlaceBlock(signOffset, Blocks.OAK_SIGN.defaultBlockState(), 2),
-                        // Welcome mat lands at the gate center.
-                        new PlaceBlock(gateCenter, Blocks.STONE_PRESSURE_PLATE.defaultBlockState(), 2),
+                        // Place the job-board directly: the sign→job-board conversion
+                        // normally fires from an item-use path that setBlockAndUpdate
+                        // bypasses. isSignConvertedToJobBoard checks for the job-board
+                        // block itself, so this is equivalent for the beat machine.
+                        new PlaceBlock(signOffset, jobBoardBlockState(), 2),
+                        // Welcome mat lands at the gate center. Must be the WELCOME_MAT_BLOCK
+                        // (stone pressure plates aren't welcome mats). handlePlaceBlock
+                        // mirrors WelcomeMatBlock's normal place-side-effect so the flag
+                        // sees getWelcomeMats() as non-empty.
+                        new PlaceBlock(gateCenter, welcomeMatBlockState(), 2),
                         new AdvanceTicks(20)
                 ))
                 .expectation(ChickenArcExpectation.builder()
@@ -180,6 +203,11 @@ public final class ChickenArcBlueprintRegistry {
                         new GiveBoundWand(BlockPos.ZERO, 1),
                         new WandRightClick(HelperChickenBeatOffsets.CAMPFIRE_OFFSET, 2),
                         new AdvanceTicks(3),
+                        // Fill the authored WALL_BLOCK_OFFSET gap so the wall-block beat
+                        // advances (SetUpRegisteredRoomWithChest builds a wider 9×5 room
+                        // that doesn't overlap the authored 5×5 wall-block gap at (6,0,3)).
+                        new PlaceBlock(HelperChickenBeatOffsets.WALL_BLOCK_OFFSET,
+                                Blocks.COBBLESTONE.defaultBlockState(), 2),
                         new SetUpRegisteredRoomWithChest(10),
                         new MarkVillagerUiOpened(2),
                         new MarkFlagUiOpened(2),
@@ -273,18 +301,20 @@ public final class ChickenArcBlueprintRegistry {
         return ChickenArcBlueprint.builder("skip_chicken_command")
                 .placeFlagViaCommand(true)
                 .actions(List.of(
-                        // /qt flag place_above places the flag at target.above(), so pass
-                        // (0,63,0) to produce a flag BE at (0,64,0) — the ORIGIN the
-                        // executor's checkResults reads back.
-                        new RunCommand("/qt flag place_above 0 63 0 skip-chicken", 10),
+                        // Brigadier tree is `qt flag <pos> place_above [skip-chicken]` —
+                        // pos comes BEFORE the literal. Places the flag at (0,64,0) so
+                        // the executor's checkResults finds it at origin.
+                        new RunCommand("/qt flag 0 63 0 place_above skip-chicken", 10),
                         new AdvanceTicks(20)
                 ))
                 .expectation(ChickenArcExpectation.builder()
                         .chickenSpawned(false)
-                        // skip-chicken is command-placed, which marks the flag as
-                        // chicken-ineligible. The arc never spawns; "ever-spawned"
-                        // stays false. The intent assertion is "no chicken appeared".
-                        .flagBits(Map.of("chicken-ever-spawned", false))
+                        // Command-placed flags run markCommandPlacedFlagAsChickenIneligible,
+                        // which sets chicken-ever-spawned=true up front (so the spawn
+                        // gate never fires) — without ever creating a HelperChickenEntity.
+                        // The expectation therefore asserts the intent: no real chicken,
+                        // flag carries the "arc already considered done" bit.
+                        .flagBits(Map.of("chicken-ever-spawned", true))
                         .build())
                 .build();
     }
@@ -311,16 +341,24 @@ public final class ChickenArcBlueprintRegistry {
                 .build();
     }
 
-    // Scenario 11 — spawn a villager gatherer, realtime. The current executor
-    // has no villager-spawn scripted action (see gap note); this blueprint
-    // flags the gap via RunCommand setup failure rather than fake-passing.
+    // Scenario 11 — the plan wants a real gatherer villager producing seeds on
+    // its first fetch, which needs a SpawnVillagerAndAssignJob scripted action
+    // the executor doesn't yet have. This scenario approximates the guarantee
+    // at the observation-logic level: deposit WORLDLY_SEEDS directly into a
+    // registered chest, and assert that ChickenArcConditions.observe flips the
+    // first-gather bit. That covers ChickenArcConditions.maybeFlipFirstGatherBit
+    // end-to-end; the villager-driven half stays follow-up work.
     private static ChickenArcBlueprint firstGatherWorldlySeedsRealtime() {
+        Item seeds = worldlySeedsItem();
         return ChickenArcBlueprint.builder("first_gather_worldly_seeds_realtime")
                 .actions(List.of(
-                        new RunCommand(
-                                "/_qtdev echo first_gather_worldly_seeds_realtime-requires-villager-spawn-support",
-                                2),
-                        new AdvanceTicks(5)
+                        new MarkSleepObserved(1),
+                        new GiveBoundWand(BlockPos.ZERO, 1),
+                        new WandRightClick(HelperChickenBeatOffsets.CAMPFIRE_OFFSET, 2),
+                        new AdvanceTicks(3),
+                        new SetUpRegisteredRoomWithChest(10),
+                        new DepositIntoContainer(new ItemStack(seeds, 1), 5),
+                        new AdvanceTicks(10)
                 ))
                 .expectation(ChickenArcExpectation.builder()
                         .chickenSpawned(true)
@@ -329,15 +367,20 @@ public final class ChickenArcBlueprintRegistry {
                 .build();
     }
 
-    // Scenario 12 — warp variant of scenario 11. Same setup gap applies.
+    // Scenario 12 — warp-parity of scenario 11. Same observation path; the
+    // warp amount covers a day's worth of ticks, which should flip the same bit.
     private static ChickenArcBlueprint firstGatherWorldlySeedsWarp() {
+        Item seeds = worldlySeedsItem();
         return ChickenArcBlueprint.builder("first_gather_worldly_seeds_warp")
                 .warpAmount(GATHERER_WARP_TICKS)
                 .actions(List.of(
-                        new RunCommand(
-                                "/_qtdev echo first_gather_worldly_seeds_warp-requires-villager-spawn-support",
-                                2),
-                        new AdvanceTicks(5)
+                        new MarkSleepObserved(1),
+                        new GiveBoundWand(BlockPos.ZERO, 1),
+                        new WandRightClick(HelperChickenBeatOffsets.CAMPFIRE_OFFSET, 2),
+                        new AdvanceTicks(3),
+                        new SetUpRegisteredRoomWithChest(10),
+                        new DepositIntoContainer(new ItemStack(seeds, 1), 5),
+                        new AdvanceTicks(10)
                 ))
                 .expectation(ChickenArcExpectation.builder()
                         .chickenSpawned(true)

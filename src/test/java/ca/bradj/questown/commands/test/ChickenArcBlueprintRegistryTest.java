@@ -119,13 +119,13 @@ class ChickenArcBlueprintRegistryTest {
     }
 
     @Test
-    void skipChickenCommand_expectsNoSpawnAndEverSpawnedFalse() {
+    void skipChickenCommand_expectsNoSpawnAndEverSpawnedTrue() {
         ChickenArcBlueprint bp = findByName("skip_chicken_command");
         Assertions.assertFalse(bp.expectation().expectChickenSpawned());
         Assertions.assertEquals(
-                Boolean.FALSE,
+                Boolean.TRUE,
                 bp.expectation().expectedFlagBits().get("chicken-ever-spawned"),
-                "skip_chicken_command: command-placed flag is chicken-ineligible, so chicken-ever-spawned stays false"
+                "skip_chicken_command: markCommandPlacedFlagAsChickenIneligible sets ever-spawned=true up front to gate future spawns"
         );
         Assertions.assertTrue(
                 bp.placeFlagViaCommand(),
