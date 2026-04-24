@@ -144,7 +144,18 @@ public final class ChickenArcConditions {
     }
 
     public static boolean isRoomRegistered(TownFlagBlockEntity flag) {
-        return !flag.getRoomHandle().getMatches(x -> true).isEmpty();
+        // WAITING_FOR_WAND_ON_DOOR advances on this condition. At that beat the
+        // player has wand-clicked the door but hasn't yet placed a sign (→ job
+        // board), chest, or any other recipe-matching block — so no entry
+        // exists in getMatches() (which filters to recipe-matched rooms). The
+        // semantic the beat machine wants is "a door has been wand-registered",
+        // not "a furnished room exists". Checking registered doors avoids the
+        // deadlock and lets later beats (WAITING_FOR_SIGN, WAITING_FOR_CHEST)
+        // actually add recipe blocks inside the registered perimeter.
+        if (!flag.getRoomHandle().getMatches(x -> true).isEmpty()) {
+            return true;
+        }
+        return !flag.getRoomHandle().getAllRegisteredDoors().isEmpty();
     }
 
     public static boolean isSignConvertedToJobBoard(

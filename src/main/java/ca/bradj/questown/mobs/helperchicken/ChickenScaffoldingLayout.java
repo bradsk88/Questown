@@ -87,17 +87,27 @@ public final class ChickenScaffoldingLayout {
         BlockPos wallGap = HelperChickenBeatOffsets.WALL_BLOCK_OFFSET;
         BlockPos doorGap = HelperChickenBeatOffsets.DOOR_OFFSET;
 
+        // Walls are 2-high so the RoomRecipes detector can register the room
+        // once the player places the last wall block and a door. Gaps:
+        //   - WALL_BLOCK_OFFSET (y=0 only) — the player's "missing wall"
+        //   - DOOR_OFFSET (y=0 AND y=1)   — where the 2-high oak door goes
         for (int x = 2; x <= 6; x++) {
             for (int z = 2; z <= 6; z++) {
                 boolean onPerimeter = (x == 2 || x == 6 || z == 2 || z == 6);
                 if (!onPerimeter) {
                     continue;
                 }
-                BlockPos pos = new BlockPos(x, 0, z);
-                if (pos.equals(wallGap) || pos.equals(doorGap)) {
-                    continue;
+                for (int y = 0; y <= 1; y++) {
+                    BlockPos pos = new BlockPos(x, y, z);
+                    if (y == 0 && pos.equals(wallGap)) {
+                        continue;
+                    }
+                    if (pos.getX() == doorGap.getX() && pos.getZ() == doorGap.getZ()) {
+                        // Both halves of the door column stay open.
+                        continue;
+                    }
+                    out.add(new BlockPlacement(pos, cobble));
                 }
-                out.add(new BlockPlacement(pos, cobble));
             }
         }
     }

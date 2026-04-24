@@ -101,11 +101,12 @@ class ChickenScaffoldingLayoutTest {
                 .filter(p -> p.blockState().is(Blocks.COBBLESTONE))
                 .count();
 
-        // 5x5 footprint perimeter = 16 positions, minus WALL_BLOCK_OFFSET and DOOR_OFFSET = 14.
+        // 5x5 footprint perimeter = 16 columns × 2 rows (y=0, y=1) = 32 positions,
+        // minus WALL_BLOCK_OFFSET (1 gap at y=0) and DOOR_OFFSET column (2 gaps, y=0 and y=1) = 29.
         Assertions.assertEquals(
-                14L,
+                29L,
                 cobbleCount,
-                "room perimeter is a 5x5 footprint (16 perimeter blocks) minus wall gap and door gap"
+                "2-high perimeter (32 blocks) minus 1 wall gap at y=0 and 2 door-column gaps"
         );
     }
 
@@ -126,8 +127,39 @@ class ChickenScaffoldingLayoutTest {
             );
             Assertions.assertTrue(pos.getX() >= 2 && pos.getX() <= 6);
             Assertions.assertTrue(pos.getZ() >= 2 && pos.getZ() <= 6);
-            Assertions.assertEquals(0, pos.getY(), "walls are authored at y=0");
+            Assertions.assertTrue(pos.getY() == 0 || pos.getY() == 1,
+                    "walls are authored at y=0 and y=1 (2-high for RoomRecipes registration)");
         }
+    }
+
+    @Test
+    void forRotation_none_wallGapAtY0ButTopAtY1Present() {
+        List<ChickenScaffoldingLayout.BlockPlacement> base =
+                ChickenScaffoldingLayout.forRotation(Rotation.NONE);
+        BlockPos wallGap = HelperChickenBeatOffsets.WALL_BLOCK_OFFSET;
+        Assertions.assertNull(
+                findAt(base, wallGap),
+                "player-fills gap at WALL_BLOCK_OFFSET (y=0)"
+        );
+        Assertions.assertNotNull(
+                findAt(base, new BlockPos(wallGap.getX(), 1, wallGap.getZ())),
+                "the top (y=1) at the wall-gap column must still be present — player only fills y=0"
+        );
+    }
+
+    @Test
+    void forRotation_none_doorColumnBothHalvesEmpty() {
+        List<ChickenScaffoldingLayout.BlockPlacement> base =
+                ChickenScaffoldingLayout.forRotation(Rotation.NONE);
+        BlockPos doorGap = HelperChickenBeatOffsets.DOOR_OFFSET;
+        Assertions.assertNull(
+                findAt(base, doorGap),
+                "door gap at y=0 must be open"
+        );
+        Assertions.assertNull(
+                findAt(base, new BlockPos(doorGap.getX(), 1, doorGap.getZ())),
+                "door gap at y=1 must also be open (oak door is 2-high)"
+        );
     }
 
     @Test
