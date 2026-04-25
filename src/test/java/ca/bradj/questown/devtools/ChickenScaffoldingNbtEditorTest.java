@@ -43,8 +43,9 @@ class ChickenScaffoldingNbtEditorTest {
         List<ChickenScaffoldingLayout.BlockPlacement> plan =
                 ChickenScaffoldingLayout.forRotation(Rotation.NONE);
         ListTag blocks = result.getList("blocks", Tag.TAG_COMPOUND);
-        Assertions.assertEquals(plan.size(), blocks.size(),
-                "every planned placement lands as one block entry");
+        // freshStructureTag seeds 1 flag block; layout adds plan.size() more.
+        Assertions.assertEquals(plan.size() + 1, blocks.size(),
+                "every planned placement lands as one block entry (plus the seed flag)");
 
         for (ChickenScaffoldingLayout.BlockPlacement placement : plan) {
             Assertions.assertTrue(
@@ -266,7 +267,7 @@ class ChickenScaffoldingNbtEditorTest {
         List<ChickenScaffoldingLayout.BlockPlacement> plan =
                 ChickenScaffoldingLayout.forRotation(Rotation.NONE);
         Assertions.assertEquals(
-                plan.size(),
+                plan.size() + 1, // +1 for the seeded flag in freshStructureTag
                 reloaded.getList("blocks", Tag.TAG_COMPOUND).size()
         );
     }
@@ -344,8 +345,28 @@ class ChickenScaffoldingNbtEditorTest {
 
     private static CompoundTag freshStructureTag() {
         CompoundTag tag = new CompoundTag();
-        tag.put("palette", new ListTag());
-        tag.put("blocks", new ListTag());
+        // Palette entry 0: questown:cobblestone_flag_base — the editor's
+        // findFlagAnchor scans for this so it can translate flag-relative
+        // layout offsets into structure-local positions. Placing the flag at
+        // structure-local (0,0,0) means flag-relative == structure-local for
+        // all subsequent assertions in this test class.
+        ListTag palette = new ListTag();
+        CompoundTag flagPaletteEntry = new CompoundTag();
+        flagPaletteEntry.putString("Name", "questown:cobblestone_flag_base");
+        palette.add(flagPaletteEntry);
+        tag.put("palette", palette);
+
+        ListTag blocks = new ListTag();
+        CompoundTag flagBlock = new CompoundTag();
+        flagBlock.putInt("state", 0);
+        ListTag flagPos = new ListTag();
+        flagPos.add(IntTag.valueOf(0));
+        flagPos.add(IntTag.valueOf(0));
+        flagPos.add(IntTag.valueOf(0));
+        flagBlock.put("pos", flagPos);
+        blocks.add(flagBlock);
+        tag.put("blocks", blocks);
+
         ListTag size = new ListTag();
         size.add(IntTag.valueOf(16));
         size.add(IntTag.valueOf(4));

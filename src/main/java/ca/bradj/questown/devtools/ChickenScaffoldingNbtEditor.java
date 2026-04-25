@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -102,7 +103,17 @@ public final class ChickenScaffoldingNbtEditor {
         CompoundTag updated = applyScaffolding(tag);
 
         if (mode == Mode.CHECK) {
-            boolean matches = NbtUtils.compareNbt(tag, updated, true);
+            // Compare input's blocks/palette state to the post-scaffolding state.
+            // NbtUtils.compareNbt is subset-matching ("standard ⊆ actual"), which
+            // returns true whenever the input is a subset of the updated tag —
+            // including when the updated tag has many more blocks. We need true
+            // equality on the structurally-relevant fields (palette + blocks +
+            // size), so compare them directly.
+            ListTag inputBlocks = tag.getList(BLOCKS_KEY, Tag.TAG_COMPOUND);
+            ListTag updatedBlocks = updated.getList(BLOCKS_KEY, Tag.TAG_COMPOUND);
+            boolean matches = inputBlocks.size() == updatedBlocks.size()
+                    && NbtUtils.compareNbt(inputBlocks, updatedBlocks, true)
+                    && NbtUtils.compareNbt(updatedBlocks, inputBlocks, true);
             if (matches) {
                 System.out.println("[ChickenScaffoldingNbtEditor] up to date: " + path);
                 return 0;
@@ -141,17 +152,61 @@ public final class ChickenScaffoldingNbtEditor {
             root.put(BLOCKS_KEY, blocks);
         }
 
+        // ChickenScaffoldingLayout returns offsets RELATIVE TO THE FLAG. The
+        // structure NBT stores positions in structure-local coords (origin at
+        // the structure's bounding-box corner, not the flag). Translate every
+        // layout offset by the flag's structure-local position before writing.
+        BlockPos flagAnchor = findFlagAnchor(palette, blocks);
+        if (flagAnchor == null) {
+            throw new IllegalStateException(
+                    "empty_town.nbt has no questown:*_flag_base block — cannot anchor chicken scaffolding"
+            );
+        }
+
         List<ChickenScaffoldingLayout.BlockPlacement> plan =
                 ChickenScaffoldingLayout.forRotation(Rotation.NONE);
 
         for (ChickenScaffoldingLayout.BlockPlacement placement : plan) {
-            removeBlocksAt(blocks, placement.offset());
+            BlockPos structurePos = flagAnchor.offset(placement.offset());
+            removeBlocksAt(blocks, structurePos);
             int paletteIdx = ensurePaletteEntry(palette, placement.blockState());
-            blocks.add(newBlockEntry(paletteIdx, placement.offset()));
+            blocks.add(newBlockEntry(paletteIdx, structurePos));
         }
 
-        expandSizeIfNeeded(root, plan);
+        expandSizeIfNeeded(root, plan, flagAnchor);
         return root;
+    }
+
+    /**
+     * Locates the town flag block in the structure and returns its
+     * structure-local position. Returns null when no flag is present (which is
+     * a programmer error for empty_town.nbt — the chicken scaffolding has no
+     * meaningful anchor without it).
+     */
+    private static BlockPos findFlagAnchor(ListTag palette, ListTag blocks) {
+        List<Integer> flagPaletteIndices = new ArrayList<>();
+        for (int i = 0; i < palette.size(); i++) {
+            CompoundTag entry = palette.getCompound(i);
+            String name = entry.getString("Name");
+            if (name.endsWith("_flag_base") && name.startsWith("questown:")) {
+                flagPaletteIndices.add(i);
+            }
+        }
+        if (flagPaletteIndices.isEmpty()) {
+            return null;
+        }
+        for (int i = 0; i < blocks.size(); i++) {
+            CompoundTag entry = blocks.getCompound(i);
+            int stateIdx = entry.getInt(STATE_KEY);
+            if (!flagPaletteIndices.contains(stateIdx)) {
+                continue;
+            }
+            BlockPos pos = readBlockPos(entry);
+            if (pos != null) {
+                return pos;
+            }
+        }
+        return null;
     }
 
     private static void removeBlocksAt(ListTag blocks, BlockPos target) {
@@ -211,13 +266,15 @@ public final class ChickenScaffoldingNbtEditor {
 
     private static void expandSizeIfNeeded(
             CompoundTag root,
-            List<ChickenScaffoldingLayout.BlockPlacement> plan
+            List<ChickenScaffoldingLayout.BlockPlacement> plan,
+            BlockPos flagAnchor
     ) {
         int maxX = 0, maxY = 0, maxZ = 0;
         for (ChickenScaffoldingLayout.BlockPlacement p : plan) {
-            maxX = Math.max(maxX, p.offset().getX() + 1);
-            maxY = Math.max(maxY, p.offset().getY() + 1);
-            maxZ = Math.max(maxZ, p.offset().getZ() + 1);
+            BlockPos abs = flagAnchor.offset(p.offset());
+            maxX = Math.max(maxX, abs.getX() + 1);
+            maxY = Math.max(maxY, abs.getY() + 1);
+            maxZ = Math.max(maxZ, abs.getZ() + 1);
         }
 
         ListTag size = root.getList(SIZE_KEY, Tag.TAG_INT);
