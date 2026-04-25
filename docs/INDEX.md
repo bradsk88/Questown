@@ -19,6 +19,14 @@
 - **[bugs/realtime-villagers-job-loop.md](bugs/realtime-villagers-job-loop.md)** — How villagers cycle through jobs in real-time using shuffled selection.
 - **[bugs/warp-ignores-night.md](bugs/warp-ignores-night.md)** — Warp simulation always assumes daytime regardless of when the warp was initiated.
 
+## Solutions
+
+`docs/solutions/` — documented solutions to past problems (bugs, conventions, design patterns, best practices), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`, `component`, `severity`). Relevant when implementing or debugging in documented areas.
+
+- **[solutions/conventions/setblockandupdate-side-effect-bypass-2026-04-24.md](solutions/conventions/setblockandupdate-side-effect-bypass-2026-04-24.md)** — `Level.setBlockAndUpdate` bypasses item-use side-effects (welcome-mat registration, sign→job-board conversion, 2-high door upper half). When test harness code places these blocks, mirror the side-effect manually or place the target block directly.
+- **[solutions/design-patterns/cross-scenario-entity-pollution-two-layer-fix-2026-04-24.md](solutions/design-patterns/cross-scenario-entity-pollution-two-layer-fix-2026-04-24.md)** — Sequential autotest scenarios sharing one `ServerLevel` need both a wide `discard()`-based teardown sweep AND an `ownerFlagPos` filter on read-side queries to prevent cross-scenario entity pollution. Either layer alone is insufficient.
+- **[solutions/best-practices/verify-brigadier-arg-order-and-flag-bit-semantics-2026-04-24.md](solutions/best-practices/verify-brigadier-arg-order-and-flag-bit-semantics-2026-04-24.md)** — Verify `RunCommand` strings against the actual Brigadier `register()` chain (left-to-right traversal) before authoring blueprints. Verify flag-bit semantics against the production handler, not the bit name — bits can be repurposed as gates.
+
 ## TODO / Future Work
 
 - **[todo/farmer-cook-code-redundancy.md](todo/farmer-cook-code-redundancy.md)** — ~~Identify and consolidate overlapping code between farmer and cook jobs for accessing world blocks.~~ RESOLVED by QTWorldAccess abstraction.
