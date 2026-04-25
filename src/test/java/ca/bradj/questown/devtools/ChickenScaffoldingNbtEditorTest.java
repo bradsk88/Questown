@@ -25,6 +25,16 @@ import java.util.List;
 
 class ChickenScaffoldingNbtEditorTest {
 
+    /**
+     * Structure-local position the synthetic flag is seeded at. Deliberately
+     * non-origin AND non-zero on Y so tests exercise the editor's flag-anchor
+     * translation path. A regression that wrote layout offsets directly to
+     * structure-local (the original bug) would land the campfire at (3,0,5)
+     * instead of FLAG_ANCHOR + (3,0,5), and every position assertion below
+     * would fail.
+     */
+    private static final BlockPos FLAG_ANCHOR = new BlockPos(5, 1, 7);
+
     @BeforeAll
     static void bootstrap() {
         SharedConstants.tryDetectVersion();
@@ -48,9 +58,11 @@ class ChickenScaffoldingNbtEditorTest {
                 "every planned placement lands as one block entry (plus the seed flag)");
 
         for (ChickenScaffoldingLayout.BlockPlacement placement : plan) {
+            BlockPos expected = FLAG_ANCHOR.offset(placement.offset());
             Assertions.assertTrue(
-                    containsBlockAt(blocks, placement.offset()),
-                    "missing planned block at " + placement.offset()
+                    containsBlockAt(blocks, expected),
+                    "missing planned block at " + expected
+                            + " (= flag " + FLAG_ANCHOR + " + layout " + placement.offset() + ")"
             );
         }
     }
@@ -63,8 +75,10 @@ class ChickenScaffoldingNbtEditorTest {
         ListTag palette = result.getList("palette", Tag.TAG_COMPOUND);
         ListTag blocks = result.getList("blocks", Tag.TAG_COMPOUND);
 
-        CompoundTag campfireEntry = findBlockAt(blocks, new BlockPos(3, 0, 5));
-        Assertions.assertNotNull(campfireEntry, "campfire must be present in blocks list");
+        BlockPos campfirePos = FLAG_ANCHOR.offset(3, 0, 5);
+        CompoundTag campfireEntry = findBlockAt(blocks, campfirePos);
+        Assertions.assertNotNull(campfireEntry,
+                "campfire must be present at flag + CAMPFIRE_OFFSET = " + campfirePos);
         int stateIdx = campfireEntry.getInt("state");
         Assertions.assertTrue(
                 stateIdx >= 0 && stateIdx < palette.size(),
@@ -76,6 +90,42 @@ class ChickenScaffoldingNbtEditorTest {
                 campfireState.getString("Name"),
                 "palette entry for campfire must have Name=minecraft:campfire"
         );
+    }
+
+    // -------------------------------------------------------------------------
+    // Anchor translation — regression guard for the structure-local vs
+    // flag-relative bug. ChickenScaffoldingLayout.forRotation returns offsets
+    // RELATIVE TO THE FLAG; structure NBT stores positions in structure-local
+    // coords (origin at the bounding box corner). The editor must translate.
+    // -------------------------------------------------------------------------
+
+    @Test
+    void applyScaffolding_translatesEveryLayoutOffsetByFlagAnchor() {
+        CompoundTag tag = freshStructureTag();
+        CompoundTag result = ChickenScaffoldingNbtEditor.applyScaffolding(tag);
+
+        ListTag blocks = result.getList("blocks", Tag.TAG_COMPOUND);
+        List<ChickenScaffoldingLayout.BlockPlacement> plan =
+                ChickenScaffoldingLayout.forRotation(Rotation.NONE);
+
+        for (ChickenScaffoldingLayout.BlockPlacement placement : plan) {
+            BlockPos translated = FLAG_ANCHOR.offset(placement.offset());
+            BlockPos untranslated = placement.offset();
+            Assertions.assertNotNull(
+                    findBlockAt(blocks, translated),
+                    "layout offset " + untranslated + " must land at FLAG_ANCHOR + offset = " + translated
+            );
+            // Regression guard: the untranslated coordinate must NOT be in the
+            // blocks list (unless it happens to coincide with another planned
+            // placement, which the test's FLAG_ANCHOR=(5,1,7) is chosen to avoid).
+            if (!translated.equals(untranslated)) {
+                Assertions.assertNull(
+                        findBlockAt(blocks, untranslated),
+                        "regression: editor wrote layout offset " + untranslated
+                                + " at structure-local instead of translating by flag anchor"
+                );
+            }
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -161,15 +211,16 @@ class ChickenScaffoldingNbtEditorTest {
         ListTag palette = tag.getList("palette", Tag.TAG_COMPOUND);
         ListTag blocks = tag.getList("blocks", Tag.TAG_COMPOUND);
 
+        BlockPos campfirePos = FLAG_ANCHOR.offset(3, 0, 5);
         // Seed: a dirt block already sits where the campfire will go.
         palette.add(NbtUtils.writeBlockState(Blocks.DIRT.defaultBlockState()));
         int dirtIdx = palette.size() - 1;
         CompoundTag existing = new CompoundTag();
         existing.putInt("state", dirtIdx);
         ListTag pos = new ListTag();
-        pos.add(IntTag.valueOf(3));
-        pos.add(IntTag.valueOf(0));
-        pos.add(IntTag.valueOf(5));
+        pos.add(IntTag.valueOf(campfirePos.getX()));
+        pos.add(IntTag.valueOf(campfirePos.getY()));
+        pos.add(IntTag.valueOf(campfirePos.getZ()));
         existing.put("pos", pos);
         blocks.add(existing);
 
@@ -181,13 +232,13 @@ class ChickenScaffoldingNbtEditorTest {
         for (int i = 0; i < finalBlocks.size(); i++) {
             CompoundTag entry = finalBlocks.getCompound(i);
             BlockPos p = readPos(entry);
-            if (new BlockPos(3, 0, 5).equals(p)) {
+            if (campfirePos.equals(p)) {
                 blocksAtCampfire++;
                 finalStateIdx = entry.getInt("state");
             }
         }
         Assertions.assertEquals(1, blocksAtCampfire,
-                "exactly one block entry must occupy CAMPFIRE_OFFSET after apply");
+                "exactly one block entry must occupy flag + CAMPFIRE_OFFSET after apply");
         Assertions.assertEquals(
                 "minecraft:campfire",
                 result.getList("palette", Tag.TAG_COMPOUND)
@@ -219,11 +270,15 @@ class ChickenScaffoldingNbtEditorTest {
         int sy = finalSize.getInt(1);
         int sz = finalSize.getInt(2);
 
-        // The authored layout includes GATE_CENTER_OFFSET at (2, 0, 9) with columns
-        // at x=1 and x=3 — max x is 4 (pos.x+1), max z is 10.
-        Assertions.assertTrue(sx >= 4, "sx=" + sx + " must enclose authored x");
-        Assertions.assertTrue(sy >= 1, "sy=" + sy + " must enclose authored y");
-        Assertions.assertTrue(sz >= 10, "sz=" + sz + " must enclose authored z");
+        // Layout max coords (flag-relative): x=6 (wall), y=1 (2-high walls), z=9 (gate fence).
+        // Translated by FLAG_ANCHOR (5,1,7): structure-local max x=11, y=2, z=16.
+        // size = max + 1.
+        int absMaxX = FLAG_ANCHOR.getX() + 6 + 1;
+        int absMaxY = FLAG_ANCHOR.getY() + 1 + 1;
+        int absMaxZ = FLAG_ANCHOR.getZ() + 9 + 1;
+        Assertions.assertTrue(sx >= absMaxX, "sx=" + sx + " must enclose authored x (>=" + absMaxX + ")");
+        Assertions.assertTrue(sy >= absMaxY, "sy=" + sy + " must enclose authored y (>=" + absMaxY + ")");
+        Assertions.assertTrue(sz >= absMaxZ, "sz=" + sz + " must enclose authored z (>=" + absMaxZ + ")");
     }
 
     @Test
@@ -346,10 +401,9 @@ class ChickenScaffoldingNbtEditorTest {
     private static CompoundTag freshStructureTag() {
         CompoundTag tag = new CompoundTag();
         // Palette entry 0: questown:cobblestone_flag_base — the editor's
-        // findFlagAnchor scans for this so it can translate flag-relative
-        // layout offsets into structure-local positions. Placing the flag at
-        // structure-local (0,0,0) means flag-relative == structure-local for
-        // all subsequent assertions in this test class.
+        // findFlagAnchor scans for this. The flag is placed at FLAG_ANCHOR
+        // (non-origin) so tests fail if the editor regresses to writing
+        // layout offsets directly to structure-local without translating.
         ListTag palette = new ListTag();
         CompoundTag flagPaletteEntry = new CompoundTag();
         flagPaletteEntry.putString("Name", "questown:cobblestone_flag_base");
@@ -360,17 +414,17 @@ class ChickenScaffoldingNbtEditorTest {
         CompoundTag flagBlock = new CompoundTag();
         flagBlock.putInt("state", 0);
         ListTag flagPos = new ListTag();
-        flagPos.add(IntTag.valueOf(0));
-        flagPos.add(IntTag.valueOf(0));
-        flagPos.add(IntTag.valueOf(0));
+        flagPos.add(IntTag.valueOf(FLAG_ANCHOR.getX()));
+        flagPos.add(IntTag.valueOf(FLAG_ANCHOR.getY()));
+        flagPos.add(IntTag.valueOf(FLAG_ANCHOR.getZ()));
         flagBlock.put("pos", flagPos);
         blocks.add(flagBlock);
         tag.put("blocks", blocks);
 
         ListTag size = new ListTag();
-        size.add(IntTag.valueOf(16));
-        size.add(IntTag.valueOf(4));
-        size.add(IntTag.valueOf(16));
+        size.add(IntTag.valueOf(32));
+        size.add(IntTag.valueOf(8));
+        size.add(IntTag.valueOf(32));
         tag.put("size", size);
         tag.putInt("DataVersion", 3120); // 1.19.2
         return tag;
