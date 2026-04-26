@@ -102,9 +102,18 @@ public class TownWand extends Item {
             BlockState clickedState,
             TownFlagBlockEntity parent
     ) {
-        boolean registered = TownCycle.findCampfire(parent.getBlockPos(), level)
-                                      .filter(clickedPos::equals)
-                                      .isPresent();
+        // Registered = the clicked campfire is within the flag's campfire-search
+        // radius. We don't require it to be the SAME one findCampfire happens to
+        // return first (worlds generated across multiple structure revisions can
+        // legitimately have more than one campfire near a flag).
+        BlockPos flagPos = parent.getBlockPos();
+        int radius = ca.bradj.questown.mc.Compat.configGet(
+                ca.bradj.questown.core.Config.CAMPFIRE_SEARCH_RADIUS
+        ).get();
+        int dx = Math.abs(clickedPos.getX() - flagPos.getX());
+        int dz = Math.abs(clickedPos.getZ() - flagPos.getZ());
+        boolean registered = clickedPos.getY() == flagPos.getY()
+                && dx < radius && dz < radius;
         if (!registered) {
             Util.onScreenText(player, "message.wand.campfire.not_registered");
             return;

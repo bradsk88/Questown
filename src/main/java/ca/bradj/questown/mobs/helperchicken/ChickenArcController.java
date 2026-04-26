@@ -152,10 +152,27 @@ public final class ChickenArcController {
                 search,
                 e -> flagPos.equals(e.getOwnerFlagPos())
         );
-        if (matches.isEmpty()) {
+        if (!matches.isEmpty()) {
+            return matches.get(0);
+        }
+        // Recovery path: chickens saved before ownerFlagPos was persisted have
+        // a null owner. Adopt any nearby orphan whose owner is unset rather
+        // than spawning a duplicate — this also covers /kill+respawn.
+        List<HelperChickenEntity> orphans = level.getEntitiesOfClass(
+                HelperChickenEntity.class,
+                search,
+                e -> e.getOwnerFlagPos() == null
+        );
+        if (orphans.isEmpty()) {
             return null;
         }
-        return matches.get(0);
+        HelperChickenEntity adopted = orphans.get(0);
+        adopted.setOwnerFlagPos(flagPos);
+        QT.JOB_LOGGER.info(
+                "[chicken-arc] adopted orphan chicken {} for flag at {}",
+                adopted.getUUID(), flagPos
+        );
+        return adopted;
     }
 
     /**

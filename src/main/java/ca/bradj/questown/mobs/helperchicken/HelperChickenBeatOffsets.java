@@ -31,7 +31,19 @@ public final class HelperChickenBeatOffsets {
     // value is asymmetric under all four rotations so scanning the 4 rotated
     // candidate positions disambiguates cleanly.
 
-    public static final BlockPos CAMPFIRE_OFFSET = new BlockPos(3, 0, 5);
+    // Placed west of the flag and OUTSIDE the room footprint (room perimeter
+    // occupies x∈[2..6], z∈[2..6]). Asymmetric under all four rotations so the
+    // detector can disambiguate; verified non-colliding with the flag origin
+    // and the gate fence columns at (1,0,9)/(3,0,9).
+    public static final BlockPos CAMPFIRE_OFFSET = new BlockPos(-2, 0, 1);
+
+    /**
+     * Flag base offset — the flag block sits at the structure origin. Used as the
+     * peck target for {@link ChickenBeatState#WAITING_FOR_STICK}: the player's
+     * next action is right-clicking the flag with a stick to mint a town wand,
+     * so the chicken stands at and pecks the flag rather than the campfire.
+     */
+    public static final BlockPos FLAG_OFFSET = new BlockPos(0, 0, 0);
     public static final BlockPos WALL_BLOCK_OFFSET = new BlockPos(6, 0, 3);
     public static final BlockPos DOOR_OFFSET = new BlockPos(6, 0, 2);
     public static final BlockPos SIGN_OFFSET = new BlockPos(7, 0, 4);
@@ -65,7 +77,8 @@ public final class HelperChickenBeatOffsets {
     @Nullable
     private static BlockPos localOffsetForState(ChickenBeatState state) {
         return switch (state) {
-            case WAITING_FOR_STICK, WAITING_FOR_WAND_ON_CAMPFIRE -> CAMPFIRE_OFFSET;
+            case WAITING_FOR_STICK -> FLAG_OFFSET;
+            case WAITING_FOR_WAND_ON_CAMPFIRE -> CAMPFIRE_OFFSET;
             case WAITING_FOR_WALL_BLOCK -> WALL_BLOCK_OFFSET;
             case WAITING_FOR_DOOR, WAITING_FOR_WAND_ON_DOOR -> DOOR_OFFSET;
             case WAITING_FOR_SIGN -> SIGN_OFFSET;

@@ -196,6 +196,24 @@ public class HelperChickenEntity extends Chicken {
         this.ownerFlagPos = pos;
     }
 
+    private static final String NBT_OWNER_FLAG_POS = "questown_owner_flag_pos";
+
+    @Override
+    public void addAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        if (this.ownerFlagPos != null) {
+            tag.put(NBT_OWNER_FLAG_POS, net.minecraft.nbt.NbtUtils.writeBlockPos(this.ownerFlagPos));
+        }
+    }
+
+    @Override
+    public void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        if (tag.contains(NBT_OWNER_FLAG_POS)) {
+            this.ownerFlagPos = net.minecraft.nbt.NbtUtils.readBlockPos(tag.getCompound(NBT_OWNER_FLAG_POS));
+        }
+    }
+
     /**
      * Resolves the current beat state from the owning flag BE, or returns
      * {@link ChickenBeatState#FORFEIT} if the flag BE cannot be found. Used by

@@ -67,7 +67,9 @@ public final class ChickenArcBubbles {
     public static Bubble forState(ChickenBeatState state, boolean playerHasRequiredItem) {
         return switch (state) {
             case WAITING_FOR_STICK -> playerHasRequiredItem
-                    ? Bubble.alternating(new ItemStack(Items.STICK), new ItemStack(Items.CAMPFIRE))
+                    ? Bubble.alternating(
+                            new ItemStack(Items.STICK),
+                            new ItemStack(BlocksInit.COBBLESTONE_TOWN_FLAG.get()))
                     : Bubble.single(new ItemStack(Items.STICK));
             case WAITING_FOR_WAND_ON_CAMPFIRE -> playerHasRequiredItem
                     ? Bubble.alternating(

@@ -264,7 +264,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             TownFlagBlockEntity e
     ) {
         e.ticker.tick(level, blockEntityPos, state, e);
-        if (level instanceof ServerLevel) {
+        // Gate chicken-arc on isInitialized: until the load queue drains, the
+        // arc fields (chickenEverSpawned, chickenRotationDetected, ...) still
+        // hold their default values. Running detector/spawner here pre-init
+        // would re-detect rotation and writeTownData() the defaults back over
+        // the saved persistent tag — losing chickenEverSpawned=true and
+        // re-spawning a fresh helper chicken on every world load.
+        if (level instanceof ServerLevel && e.isInitialized()) {
             ca.bradj.questown.town.HelperChickenRotationDetector.detectIfNeeded(e);
             ca.bradj.questown.town.HelperChickenSpawnController.tick(e);
             ca.bradj.questown.mobs.helperchicken.ChickenArcController.tick(e);
