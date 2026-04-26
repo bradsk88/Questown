@@ -77,6 +77,9 @@ public class HelperChickenEntity extends Chicken {
         this.goalSelector.addGoal(2, new HelperChickenSunsetChestGoal(this, this::getOwnerFlagPos));
         this.goalSelector.addGoal(2, new HelperChickenBeatPeckGoal(this, this::getOwnerFlagPos));
         this.goalSelector.addGoal(3, new HelperChickenFollowNearFlagGoal(this, 1.0D, this::getOwnerFlagPos));
+        // SUNSET_AND_MAP phase-2 wander, only active when the follow goal stands
+        // down (same priority tier — they're mutually exclusive by canUse gate).
+        this.goalSelector.addGoal(3, new HelperChickenWanderNearFlagGoal(this, this::getOwnerFlagPos));
         this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
     }

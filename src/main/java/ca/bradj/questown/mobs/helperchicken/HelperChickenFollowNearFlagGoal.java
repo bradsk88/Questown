@@ -111,15 +111,26 @@ public class HelperChickenFollowNearFlagGoal extends Goal {
     }
 
     private boolean isArcActive(BlockPos flagPos) {
-        ChickenBeatState state = readBeatState(flagPos);
-        return state != ChickenBeatState.COMPLETE && state != ChickenBeatState.FORFEIT;
+        TownFlagBlockEntity flag = readFlag(flagPos);
+        if (flag == null) {
+            return false;
+        }
+        ChickenBeatState state = flag.getChickenBeatState();
+        if (state == ChickenBeatState.COMPLETE || state == ChickenBeatState.FORFEIT) {
+            return false;
+        }
+        // Phase 2 of SUNSET_AND_MAP (post-chest-spawn): the chicken should
+        // wander near the flag while the player goes off to use the map / sleep,
+        // not trail them around. The wander-near-flag goal takes over.
+        return !(state == ChickenBeatState.SUNSET_AND_MAP && flag.getChickenSunsetChestSpawned());
     }
 
-    private ChickenBeatState readBeatState(BlockPos flagPos) {
+    @org.jetbrains.annotations.Nullable
+    private TownFlagBlockEntity readFlag(BlockPos flagPos) {
         if (this.chicken.level.getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
-            return flag.getChickenBeatState();
+            return flag;
         }
-        return ChickenBeatState.FORFEIT;
+        return null;
     }
 
     private boolean isPlayerNearFlag(

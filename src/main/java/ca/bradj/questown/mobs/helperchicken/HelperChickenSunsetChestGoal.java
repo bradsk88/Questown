@@ -199,7 +199,25 @@ public class HelperChickenSunsetChestGoal extends Goal {
         }
         sl.setBlockAndUpdate(chestPos, Blocks.CHEST.defaultBlockState());
         if (sl.getBlockEntity(chestPos) instanceof ChestBlockEntity chestBe) {
-            chestBe.setItem(0, new ItemStack(Items.MAP));
+            // Pre-fill the map for THIS area: the player may walk away before
+            // ever right-clicking it, in which case an empty map would be
+            // useless. A filled map already shows the village location.
+            ItemStack filledMap = net.minecraft.world.item.MapItem.create(
+                    sl,
+                    chestPos.getX(),
+                    chestPos.getZ(),
+                    (byte) 1,
+                    true,
+                    false
+            );
+            net.minecraft.world.item.MapItem.renderBiomePreviewMap(sl, filledMap);
+            net.minecraft.world.level.saveddata.maps.MapItemSavedData.addTargetDecoration(
+                    filledMap,
+                    flag.getTownFlagBasePos(),
+                    "+",
+                    net.minecraft.world.level.saveddata.maps.MapDecoration.Type.TARGET_X
+            );
+            chestBe.setItem(0, filledMap);
             chestBe.setItem(1, new ItemStack(Items.WOODEN_AXE));
         }
         sl.sendParticles(

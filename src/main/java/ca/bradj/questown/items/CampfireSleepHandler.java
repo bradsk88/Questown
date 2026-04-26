@@ -1,6 +1,5 @@
 package ca.bradj.questown.items;
 
-import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
@@ -29,6 +28,12 @@ public class CampfireSleepHandler {
     private static final Map<UUID, BlockPos> tempBedPositions = new ConcurrentHashMap<>();
     private static final Map<UUID, Direction> tempBedFacings = new ConcurrentHashMap<>();
     private static final Map<UUID, BlockPos> campfirePositions = new ConcurrentHashMap<>();
+    /**
+     * Flag BE position the campfire-sleeper was bound to at sleep start. Used by
+     * {@link #onWake} to advance the helper-chicken arc's
+     * {@code chickenObservedSleepSinceSunset} bit on the right flag.
+     */
+    private static final Map<UUID, BlockPos> sleepingFlagPositions = new ConcurrentHashMap<>();
 
     public static void beginCampfireSleep(
             ServerPlayer player,
@@ -42,13 +47,10 @@ public class CampfireSleepHandler {
             return;
         }
 
-        boolean campfireRegistered = TownCycle.findCampfire(parent.getBlockPos(), level)
-                                              .filter(campfirePos::equals)
-                                              .isPresent();
-        if (!campfireRegistered) {
-            Util.onScreenText(() -> player, "message.wand.campfire.not_registered");
-            return;
-        }
+        // Registration was already validated up front in TownWand.handleCampfireClick
+        // (radius/Y check). Re-validating here with the strict findCampfire equality
+        // breaks worlds that legitimately have more than one campfire within the
+        // flag's search radius.
 
         BlockPos headPos = findSafeSleepPosition(level, campfirePos);
         if (headPos == null) {
@@ -67,6 +69,7 @@ public class CampfireSleepHandler {
         tempBedPositions.put(uuid, headPos);
         tempBedFacings.put(uuid, facing);
         campfirePositions.put(uuid, campfirePos);
+        sleepingFlagPositions.put(uuid, parent.getBlockPos());
 
         placeTempBed(level, headPos, facing);
 
@@ -78,6 +81,7 @@ public class CampfireSleepHandler {
             tempBedPositions.remove(uuid);
             tempBedFacings.remove(uuid);
             campfirePositions.remove(uuid);
+            sleepingFlagPositions.remove(uuid);
             removeTempBed(level, headPos, facing);
         });
     }
@@ -152,6 +156,11 @@ public class CampfireSleepHandler {
         BlockPos firePos = campfirePositions.remove(uuid);
         if (firePos != null) {
             extinguishCampfire(player.level, firePos);
+        }
+        BlockPos flagPos = sleepingFlagPositions.remove(uuid);
+        if (flagPos != null
+                && player.level.getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
+            flag.setChickenObservedSleepSinceSunset(true);
         }
     }
 

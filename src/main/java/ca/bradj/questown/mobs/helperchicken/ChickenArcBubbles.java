@@ -76,7 +76,15 @@ public final class ChickenArcBubbles {
     }
 
     public static Bubble forState(ChickenBeatState state, boolean playerHasRequiredItem) {
-        return forState(state, playerHasRequiredItem, false);
+        return forState(state, playerHasRequiredItem, false, false);
+    }
+
+    public static Bubble forState(
+            ChickenBeatState state,
+            boolean playerHasRequiredItem,
+            boolean sunsetChestSpawned
+    ) {
+        return forState(state, playerHasRequiredItem, sunsetChestSpawned, false);
     }
 
     /**
@@ -89,15 +97,20 @@ public final class ChickenArcBubbles {
      * sunset, seeds-delivery, and terminal states ignore the flag.
      */
     /**
-     * Three-arg overload. {@code sunsetChestSpawned} switches the
-     * SUNSET_AND_MAP beat from its phase-1 hint (chest icon — chicken is about
-     * to spawn a chest) to its phase-2 hint (sunset texture — wait until
-     * evening / sleep).
+     * Four-arg overload. SUNSET_AND_MAP has three phases gated by
+     * {@code sunsetChestSpawned} and {@code isNight}:
+     * <ul>
+     *   <li>!chestSpawned → chest icon (chicken about to spawn one).</li>
+     *   <li>chestSpawned && !isNight → authored sunset texture (wait for evening).</li>
+     *   <li>chestSpawned && isNight → wand+campfire alternation
+     *       (next action is wand-on-lit-campfire to trigger sleep).</li>
+     * </ul>
      */
     public static Bubble forState(
             ChickenBeatState state,
             boolean playerHasRequiredItem,
-            boolean sunsetChestSpawned
+            boolean sunsetChestSpawned,
+            boolean isNight
     ) {
         return switch (state) {
             case WAITING_FOR_STICK -> playerHasRequiredItem
@@ -110,9 +123,18 @@ public final class ChickenArcBubbles {
                             new ItemStack(ItemsInit.TOWN_WAND.get()),
                             new ItemStack(Items.CAMPFIRE))
                     : Bubble.single(new ItemStack(ItemsInit.TOWN_WAND.get()));
-            case SUNSET_AND_MAP -> sunsetChestSpawned
-                    ? Bubble.texture(SUNSET_TEXTURE)
-                    : Bubble.single(new ItemStack(Items.CHEST));
+            case SUNSET_AND_MAP -> {
+                if (!sunsetChestSpawned) {
+                    yield Bubble.single(new ItemStack(Items.CHEST));
+                }
+                if (isNight) {
+                    yield Bubble.alternating(
+                            new ItemStack(ItemsInit.TOWN_WAND.get()),
+                            new ItemStack(Items.CAMPFIRE)
+                    );
+                }
+                yield Bubble.texture(SUNSET_TEXTURE);
+            }
             case WAITING_FOR_WALL_BLOCK -> Bubble.single(new ItemStack(Items.COBBLESTONE));
             case WAITING_FOR_DOOR -> Bubble.single(new ItemStack(Items.OAK_DOOR));
             case WAITING_FOR_WAND_ON_DOOR -> playerHasRequiredItem

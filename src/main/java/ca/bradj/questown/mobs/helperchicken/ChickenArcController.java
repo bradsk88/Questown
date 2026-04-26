@@ -112,7 +112,8 @@ public final class ChickenArcController {
         Player nearestPlayer = ChickenArcConditions.findNearestPlayerForFlag(flag);
         boolean hasItem = ChickenArcConditions.playerHoldsRequiredItem(nearestPlayer, state);
         boolean chestSpawned = flag.getChickenSunsetChestSpawned();
-        ChickenArcBubbles.Bubble bubble = ChickenArcBubbles.forState(state, hasItem, chestSpawned);
+        boolean isNight = level.isNight();
+        ChickenArcBubbles.Bubble bubble = ChickenArcBubbles.forState(state, hasItem, chestSpawned, isNight);
         String newTexture = bubble.textureIcon() == null ? "" : bubble.textureIcon().toString();
         boolean changed = !net.minecraft.world.item.ItemStack.matches(chicken.getBubbleIconA(), bubble.iconA())
                 || !net.minecraft.world.item.ItemStack.matches(chicken.getBubbleIconB(), bubble.iconB())
