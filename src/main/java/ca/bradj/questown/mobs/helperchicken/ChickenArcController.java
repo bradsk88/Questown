@@ -1,10 +1,12 @@
 package ca.bradj.questown.mobs.helperchicken;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 
 import java.util.List;
@@ -104,12 +106,39 @@ public final class ChickenArcController {
     ) {
         HelperChickenEntity chicken = findChickenForFlag(level, flag);
         if (chicken == null) {
+            warnChickenNotFound(flag, state);
             return;
         }
-        ChickenArcBubbles.Bubble bubble = ChickenArcBubbles.forState(state);
+        Player nearestPlayer = ChickenArcConditions.findNearestPlayerForFlag(flag);
+        boolean hasItem = ChickenArcConditions.playerHoldsRequiredItem(nearestPlayer, state);
+        ChickenArcBubbles.Bubble bubble = ChickenArcBubbles.forState(state, hasItem);
+        boolean changed = !net.minecraft.world.item.ItemStack.matches(chicken.getBubbleIconA(), bubble.iconA())
+                || !net.minecraft.world.item.ItemStack.matches(chicken.getBubbleIconB(), bubble.iconB())
+                || chicken.isThroughWalls() != bubble.throughWalls();
         chicken.setBubbleIconA(bubble.iconA());
         chicken.setBubbleIconB(bubble.iconB());
         chicken.setThroughWalls(bubble.throughWalls());
+        if (changed) {
+            QT.JOB_LOGGER.info(
+                    "[chicken-arc] bubble updated: state={} hasItem={} iconA={} iconB={} throughWalls={}",
+                    state, hasItem, bubble.iconA(), bubble.iconB(), bubble.throughWalls()
+            );
+        }
+    }
+
+    private static long lastChickenNotFoundLogTick = -1L;
+
+    private static void warnChickenNotFound(TownFlagBlockEntity flag, ChickenBeatState state) {
+        ServerLevel sl = flag.getServerLevel();
+        long tick = sl == null ? 0L : sl.getGameTime();
+        if (tick - lastChickenNotFoundLogTick < 100L) {
+            return;
+        }
+        lastChickenNotFoundLogTick = tick;
+        QT.JOB_LOGGER.info(
+                "[chicken-arc] no chicken matches flag at {} (state={}); ownerFlagPos likely null after chunk reload",
+                flag.getTownFlagBasePos(), state
+        );
     }
 
     private static HelperChickenEntity findChickenForFlag(

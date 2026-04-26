@@ -10,14 +10,21 @@ import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.SignBlock;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
  * Pure-function observers that read world state for the helper-chicken arc (U4).
@@ -239,5 +246,86 @@ public final class ChickenArcConditions {
                 PLAYER_SEARCH_RADIUS,
                 false
         );
+    }
+
+    public static Player findNearestPlayerForFlag(TownFlagBlockEntity flag) {
+        ServerLevel level = flag.getServerLevel();
+        if (level == null) {
+            return null;
+        }
+        return findNearestPlayer(level, flag.getTownFlagBasePos());
+    }
+
+    /**
+     * Whether the chicken's beat-peck goal should currently run. Returns true
+     * for beats with no held-item requirement (UI beats, seeds-delivery) so the
+     * chicken pecks the location regardless; for "take item to location" beats
+     * returns true only when the player is holding the matching item.
+     */
+    public static boolean shouldPeckRun(@Nullable Player player, ChickenBeatState state) {
+        Predicate<ItemStack> required = requiredItemPredicate(state);
+        if (required == null) {
+            return true;
+        }
+        return playerHoldsMatching(player, required);
+    }
+
+    /**
+     * Whether the player holds the item the chicken's bubble is asking for, used
+     * to flip the bubble between single-item (item only) and alternating
+     * (item ↔ target block) modes. Returns false for beats with no held-item
+     * requirement so those bubbles stay in their authored single/alternating shape.
+     */
+    public static boolean playerHoldsRequiredItem(@Nullable Player player, ChickenBeatState state) {
+        Predicate<ItemStack> required = requiredItemPredicate(state);
+        if (required == null) {
+            return false;
+        }
+        return playerHoldsMatching(player, required);
+    }
+
+    private static boolean playerHoldsMatching(@Nullable Player player, Predicate<ItemStack> match) {
+        if (player == null) {
+            return false;
+        }
+        return match.test(player.getMainHandItem()) || match.test(player.getOffhandItem());
+    }
+
+    /**
+     * Maps each beat to the predicate matching items the player must hold for
+     * the chicken to peck the target location. Returns null when the beat has
+     * no held-item requirement (UI beats, seeds delivery, terminals, sunset).
+     *
+     * <p>For "any X" beats (wall, door, sign) the predicate matches by Block
+     * type so the player can use any vanilla variant — any solid block, any
+     * door, any sign — not just the cobblestone/oak versions the bubble shows.
+     */
+    @Nullable
+    private static Predicate<ItemStack> requiredItemPredicate(ChickenBeatState state) {
+        return switch (state) {
+            case WAITING_FOR_STICK -> s -> s.is(Items.STICK);
+            case WAITING_FOR_WAND_ON_CAMPFIRE, WAITING_FOR_WAND_ON_DOOR ->
+                    s -> s.is(ItemsInit.TOWN_WAND.get());
+            case WAITING_FOR_WALL_BLOCK -> ChickenArcConditions::isSolidBlockItem;
+            case WAITING_FOR_DOOR -> s -> blockItemBlock(s) instanceof DoorBlock;
+            case WAITING_FOR_SIGN -> s -> blockItemBlock(s) instanceof SignBlock;
+            case WAITING_FOR_CHEST -> s -> s.is(Items.CHEST);
+            case WAITING_FOR_PRESSURE_PLATE -> s -> s.is(ItemsInit.WELCOME_MAT_BLOCK.get());
+            case SUNSET_AND_MAP, WAITING_FOR_VILLAGER_UI, WAITING_FOR_FLAG_UI,
+                 AWAITING_WORLDLY_SEEDS_DELIVERY, COMPLETE, FORFEIT -> null;
+        };
+    }
+
+    private static boolean isSolidBlockItem(ItemStack stack) {
+        if (!(stack.getItem() instanceof BlockItem bi)) {
+            return false;
+        }
+        BlockState defaultState = bi.getBlock().defaultBlockState();
+        return defaultState.isSolidRender(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+    }
+
+    @Nullable
+    private static net.minecraft.world.level.block.Block blockItemBlock(ItemStack stack) {
+        return stack.getItem() instanceof BlockItem bi ? bi.getBlock() : null;
     }
 }

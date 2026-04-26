@@ -66,6 +66,9 @@ public class HelperChickenBeatPeckGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (!playerReadyForPeck()) {
+            return false;
+        }
         BlockPos computed = resolveTarget();
         if (computed == null) {
             return false;
@@ -76,6 +79,9 @@ public class HelperChickenBeatPeckGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (!playerReadyForPeck()) {
+            return false;
+        }
         BlockPos current = resolveTarget();
         if (current == null) {
             return false;
@@ -85,6 +91,36 @@ public class HelperChickenBeatPeckGoal extends Goal {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Item-in-hand gate. For "take item to location" beats the player must be
+     * holding the matching item (any door for the door beat, any sign for the
+     * sign beat, etc.) before the chicken commits to walking to the target;
+     * for UI/seeds-delivery beats there is no required item and this returns
+     * true so the chicken pecks the location regardless.
+     */
+    private boolean playerReadyForPeck() {
+        TownFlagBlockEntity flag = resolveFlag();
+        if (flag == null) {
+            return false;
+        }
+        return ChickenArcConditions.shouldPeckRun(
+                ChickenArcConditions.findNearestPlayerForFlag(flag),
+                flag.getChickenBeatState()
+        );
+    }
+
+    @org.jetbrains.annotations.Nullable
+    private TownFlagBlockEntity resolveFlag() {
+        BlockPos flagPos = flagPosSupplier.get();
+        if (flagPos == null) {
+            return null;
+        }
+        if (this.chicken.level.getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
+            return flag;
+        }
+        return null;
     }
 
     @Override
@@ -167,11 +203,8 @@ public class HelperChickenBeatPeckGoal extends Goal {
     }
 
     private BlockPos resolveTarget() {
-        BlockPos flagPos = flagPosSupplier.get();
-        if (flagPos == null) {
-            return null;
-        }
-        if (!(this.chicken.level.getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)) {
+        TownFlagBlockEntity flag = resolveFlag();
+        if (flag == null) {
             return null;
         }
         ChickenBeatState state = flag.getChickenBeatState();
@@ -179,7 +212,7 @@ public class HelperChickenBeatPeckGoal extends Goal {
             return findSeedsContainerPos(flag);
         }
         Rotation rotation = flag.getChickenStructureRotation();
-        return HelperChickenBeatOffsets.resolveTarget(state, flagPos, rotation);
+        return HelperChickenBeatOffsets.resolveTarget(state, flag.getTownFlagBasePos(), rotation);
     }
 
     /**
@@ -222,14 +255,8 @@ public class HelperChickenBeatPeckGoal extends Goal {
     }
 
     private ChickenBeatState currentBeatState() {
-        BlockPos flagPos = flagPosSupplier.get();
-        if (flagPos == null) {
-            return null;
-        }
-        if (!(this.chicken.level.getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)) {
-            return null;
-        }
-        return flag.getChickenBeatState();
+        TownFlagBlockEntity flag = resolveFlag();
+        return flag == null ? null : flag.getChickenBeatState();
     }
 
     private boolean isHardBlockedForBeat(

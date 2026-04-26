@@ -103,6 +103,78 @@ class ChickenArcBubblesTest {
     }
 
     // -------------------------------------------------------------------------
+    // playerHasRequiredItem flips bubbles between single (item only) and
+    // alternating (item ↔ target block). The flip applies only to
+    // "use X on Y" beats — placement beats stay single regardless.
+    // -------------------------------------------------------------------------
+
+    @Test
+    void waitingForStick_withoutItem_isSingleIcon() {
+        ChickenArcBubbles.Bubble b = ChickenArcBubbles.forState(
+                ChickenBeatState.WAITING_FOR_STICK, false
+        );
+        Assertions.assertFalse(b.iconA().isEmpty());
+        Assertions.assertTrue(b.iconB().isEmpty());
+    }
+
+    @Test
+    void waitingForStick_withItem_alternatesWithCampfire() {
+        ChickenArcBubbles.Bubble b = ChickenArcBubbles.forState(
+                ChickenBeatState.WAITING_FOR_STICK, true
+        );
+        Assertions.assertFalse(b.iconA().isEmpty());
+        Assertions.assertFalse(b.iconB().isEmpty());
+    }
+
+    @Test
+    void wallBlockBeat_alwaysSingle_evenWithItem() {
+        ChickenArcBubbles.Bubble b = ChickenArcBubbles.forState(
+                ChickenBeatState.WAITING_FOR_WALL_BLOCK, true
+        );
+        Assertions.assertFalse(b.iconA().isEmpty());
+        // Placement beats have no "target block" to alternate with — empty air
+        // doesn't make a sensible second icon (option a in the design).
+        Assertions.assertTrue(b.iconB().isEmpty());
+    }
+
+    @Test
+    void doorPlacementBeat_alwaysSingle_evenWithItem() {
+        ChickenArcBubbles.Bubble b = ChickenArcBubbles.forState(
+                ChickenBeatState.WAITING_FOR_DOOR, true
+        );
+        Assertions.assertFalse(b.iconA().isEmpty());
+        Assertions.assertTrue(b.iconB().isEmpty());
+    }
+
+    @Test
+    void chestBeat_alwaysSingle_evenWithItem() {
+        ChickenArcBubbles.Bubble b = ChickenArcBubbles.forState(
+                ChickenBeatState.WAITING_FOR_CHEST, true
+        );
+        Assertions.assertFalse(b.iconA().isEmpty());
+        Assertions.assertTrue(b.iconB().isEmpty());
+    }
+
+    @Test
+    void singleArgOverload_isEquivalentToHasItemFalse() {
+        // Tests authored before the 2-arg overload still call forState(state)
+        // and must keep getting the single-icon (no-item) shape.
+        ChickenArcBubbles.Bubble fromOneArg = ChickenArcBubbles.forState(
+                ChickenBeatState.WAITING_FOR_STICK
+        );
+        ChickenArcBubbles.Bubble fromTwoArg = ChickenArcBubbles.forState(
+                ChickenBeatState.WAITING_FOR_STICK, false
+        );
+        Assertions.assertTrue(net.minecraft.world.item.ItemStack.matches(
+                fromOneArg.iconA(), fromTwoArg.iconA()
+        ));
+        Assertions.assertTrue(net.minecraft.world.item.ItemStack.matches(
+                fromOneArg.iconB(), fromTwoArg.iconB()
+        ));
+        Assertions.assertEquals(fromOneArg.throughWalls(), fromTwoArg.throughWalls());
+    }
+
+    // -------------------------------------------------------------------------
     // Mod-registered-item beats: these icons come from ItemsInit / BlocksInit
     // RegistryObjects whose .get() returns null outside the Forge mod-loading
     // lifecycle. Covered by in-game verification per CLAUDE.md.

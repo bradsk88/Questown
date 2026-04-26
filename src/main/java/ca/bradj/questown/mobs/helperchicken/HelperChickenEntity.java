@@ -53,8 +53,15 @@ public class HelperChickenEntity extends Chicken {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(2, new HelperChickenFollowNearFlagGoal(this, 1.0D, this::getOwnerFlagPos));
-        this.goalSelector.addGoal(3, new HelperChickenBeatPeckGoal(this, this::getOwnerFlagPos));
+        // Peck must outrank follow: both use MOVE+LOOK and the lower priority
+        // number wins, so swapping them lets peck preempt follow whenever the
+        // beat-peck goal's own gates pass (target resolved + player holds the
+        // required item, or it's a UI beat with no item gate). Follow then
+        // takes over only while peck stands down — which is what the player
+        // expects: chicken trails them while they fetch the item, then walks
+        // to the target and pecks once they have it.
+        this.goalSelector.addGoal(2, new HelperChickenBeatPeckGoal(this, this::getOwnerFlagPos));
+        this.goalSelector.addGoal(3, new HelperChickenFollowNearFlagGoal(this, 1.0D, this::getOwnerFlagPos));
         this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
     }

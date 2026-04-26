@@ -45,23 +45,46 @@ public final class ChickenArcBubbles {
     private ChickenArcBubbles() {
     }
 
+    /**
+     * Single-arg overload — equivalent to {@code forState(state, false)}, the
+     * "player has not yet acquired the required item" case. Kept so existing
+     * tests and any caller that does not care about the item-in-hand state
+     * still get the bubble's default rest shape.
+     */
     public static Bubble forState(ChickenBeatState state) {
+        return forState(state, false);
+    }
+
+    /**
+     * Bubble for the given beat. {@code playerHasRequiredItem} controls how
+     * "use X on Y" beats render: when false the bubble shows just the item
+     * (the player still needs to pick it up), when true it alternates between
+     * the item and the target block (the player should now bring it to the
+     * pecked location). Placement beats stay single regardless — the target
+     * spot is empty air with no second icon to alternate with. UI beats,
+     * sunset, seeds-delivery, and terminal states ignore the flag.
+     */
+    public static Bubble forState(ChickenBeatState state, boolean playerHasRequiredItem) {
         return switch (state) {
-            case WAITING_FOR_STICK -> Bubble.single(new ItemStack(Items.STICK));
-            case WAITING_FOR_WAND_ON_CAMPFIRE -> Bubble.alternating(
-                    new ItemStack(ItemsInit.TOWN_WAND.get()),
-                    new ItemStack(Items.CAMPFIRE)
-            );
+            case WAITING_FOR_STICK -> playerHasRequiredItem
+                    ? Bubble.alternating(new ItemStack(Items.STICK), new ItemStack(Items.CAMPFIRE))
+                    : Bubble.single(new ItemStack(Items.STICK));
+            case WAITING_FOR_WAND_ON_CAMPFIRE -> playerHasRequiredItem
+                    ? Bubble.alternating(
+                            new ItemStack(ItemsInit.TOWN_WAND.get()),
+                            new ItemStack(Items.CAMPFIRE))
+                    : Bubble.single(new ItemStack(ItemsInit.TOWN_WAND.get()));
             case SUNSET_AND_MAP -> Bubble.alternating(
                     new ItemStack(Items.CLOCK),
                     new ItemStack(Items.MAP)
             );
             case WAITING_FOR_WALL_BLOCK -> Bubble.single(new ItemStack(Items.COBBLESTONE));
             case WAITING_FOR_DOOR -> Bubble.single(new ItemStack(Items.OAK_DOOR));
-            case WAITING_FOR_WAND_ON_DOOR -> Bubble.alternating(
-                    new ItemStack(ItemsInit.TOWN_WAND.get()),
-                    new ItemStack(Items.OAK_DOOR)
-            );
+            case WAITING_FOR_WAND_ON_DOOR -> playerHasRequiredItem
+                    ? Bubble.alternating(
+                            new ItemStack(ItemsInit.TOWN_WAND.get()),
+                            new ItemStack(Items.OAK_DOOR))
+                    : Bubble.single(new ItemStack(ItemsInit.TOWN_WAND.get()));
             case WAITING_FOR_SIGN -> Bubble.single(new ItemStack(Items.OAK_SIGN));
             case WAITING_FOR_CHEST -> Bubble.single(new ItemStack(Items.CHEST));
             case WAITING_FOR_PRESSURE_PLATE -> Bubble.single(
