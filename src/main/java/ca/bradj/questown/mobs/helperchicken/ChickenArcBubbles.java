@@ -1,7 +1,9 @@
 package ca.bradj.questown.mobs.helperchicken;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -22,12 +24,21 @@ import net.minecraft.world.item.Items;
  */
 public final class ChickenArcBubbles {
 
+    public static final ResourceLocation SUNSET_TEXTURE = new ResourceLocation(
+            Questown.MODID, "textures/bubble/sunset.png"
+    );
+
     public record Bubble(
             ItemStack iconA,
             ItemStack iconB,
-            boolean throughWalls
+            boolean throughWalls,
+            ResourceLocation textureIcon
     ) {
-        public static final Bubble HIDDEN = new Bubble(ItemStack.EMPTY, ItemStack.EMPTY, false);
+        public static final Bubble HIDDEN = new Bubble(ItemStack.EMPTY, ItemStack.EMPTY, false, null);
+
+        public Bubble(ItemStack iconA, ItemStack iconB, boolean throughWalls) {
+            this(iconA, iconB, throughWalls, null);
+        }
 
         public static Bubble single(ItemStack icon) {
             return new Bubble(icon, ItemStack.EMPTY, false);
@@ -39,6 +50,15 @@ public final class ChickenArcBubbles {
 
         public static Bubble throughWalls(ItemStack icon) {
             return new Bubble(icon, ItemStack.EMPTY, true);
+        }
+
+        /**
+         * Texture-mode bubble: the layer renders {@code texture} as a flat
+         * quad above the chicken instead of an item icon. Used for authored
+         * assets without a vanilla item equivalent.
+         */
+        public static Bubble texture(ResourceLocation texture) {
+            return new Bubble(ItemStack.EMPTY, ItemStack.EMPTY, false, texture);
         }
     }
 
@@ -52,7 +72,11 @@ public final class ChickenArcBubbles {
      * still get the bubble's default rest shape.
      */
     public static Bubble forState(ChickenBeatState state) {
-        return forState(state, false);
+        return forState(state, false, false);
+    }
+
+    public static Bubble forState(ChickenBeatState state, boolean playerHasRequiredItem) {
+        return forState(state, playerHasRequiredItem, false);
     }
 
     /**
@@ -64,7 +88,17 @@ public final class ChickenArcBubbles {
      * spot is empty air with no second icon to alternate with. UI beats,
      * sunset, seeds-delivery, and terminal states ignore the flag.
      */
-    public static Bubble forState(ChickenBeatState state, boolean playerHasRequiredItem) {
+    /**
+     * Three-arg overload. {@code sunsetChestSpawned} switches the
+     * SUNSET_AND_MAP beat from its phase-1 hint (chest icon — chicken is about
+     * to spawn a chest) to its phase-2 hint (sunset texture — wait until
+     * evening / sleep).
+     */
+    public static Bubble forState(
+            ChickenBeatState state,
+            boolean playerHasRequiredItem,
+            boolean sunsetChestSpawned
+    ) {
         return switch (state) {
             case WAITING_FOR_STICK -> playerHasRequiredItem
                     ? Bubble.alternating(
@@ -76,10 +110,9 @@ public final class ChickenArcBubbles {
                             new ItemStack(ItemsInit.TOWN_WAND.get()),
                             new ItemStack(Items.CAMPFIRE))
                     : Bubble.single(new ItemStack(ItemsInit.TOWN_WAND.get()));
-            case SUNSET_AND_MAP -> Bubble.alternating(
-                    new ItemStack(Items.CLOCK),
-                    new ItemStack(Items.MAP)
-            );
+            case SUNSET_AND_MAP -> sunsetChestSpawned
+                    ? Bubble.texture(SUNSET_TEXTURE)
+                    : Bubble.single(new ItemStack(Items.CHEST));
             case WAITING_FOR_WALL_BLOCK -> Bubble.single(new ItemStack(Items.COBBLESTONE));
             case WAITING_FOR_DOOR -> Bubble.single(new ItemStack(Items.OAK_DOOR));
             case WAITING_FOR_WAND_ON_DOOR -> playerHasRequiredItem

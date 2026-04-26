@@ -86,6 +86,36 @@ public final class BubbleRenderType extends RenderStateShard {
      *     bubble shape draws over occluding geometry — matches the
      *     through-walls behaviour of {@link #throughWalls(ResourceLocation)}.
      */
+    /**
+     * Textured quad in entity space, used for authored-PNG bubble icons such
+     * as the SUNSET_AND_MAP "evening" indicator. Reuses the entity-translucent
+     * shader so alpha works, with depth-write off (consistent with
+     * {@link #solidWhite(boolean)} so subsequent draws aren't occluded).
+     */
+    public static RenderType texturedIcon(ResourceLocation texture, boolean throughWalls) {
+        RenderType.CompositeState state = RenderType.CompositeState.builder()
+                .setShaderState(RenderStateShard.RENDERTYPE_ENTITY_TRANSLUCENT_SHADER)
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                .setDepthTestState(throughWalls
+                        ? RenderStateShard.NO_DEPTH_TEST
+                        : RenderStateShard.LEQUAL_DEPTH_TEST)
+                .setCullState(RenderStateShard.NO_CULL)
+                .setLightmapState(RenderStateShard.LIGHTMAP)
+                .setOverlayState(RenderStateShard.OVERLAY)
+                .setWriteMaskState(RenderStateShard.COLOR_WRITE)
+                .createCompositeState(false);
+        return RenderType.create(
+                throughWalls ? "qt_bubble_tex_xray" : "qt_bubble_tex",
+                DefaultVertexFormat.NEW_ENTITY,
+                VertexFormat.Mode.QUADS,
+                256,
+                false,
+                true,
+                state
+        );
+    }
+
     public static RenderType solidWhite(boolean throughWalls) {
         RenderType.CompositeState state = RenderType.CompositeState.builder()
                 .setShaderState(RenderStateShard.POSITION_COLOR_SHADER)

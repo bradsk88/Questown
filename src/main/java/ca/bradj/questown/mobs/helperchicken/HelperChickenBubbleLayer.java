@@ -82,6 +82,15 @@ public final class HelperChickenBubbleLayer {
         if (!throughWalls && dispatcher.distanceToSqr(helper) > VISIBILITY_RANGE_SQR) {
             return;
         }
+        String texturePath = helper.getBubbleTexturePath();
+        if (!texturePath.isEmpty()) {
+            renderTextureBubble(
+                    poseStack, bufferSource, helper,
+                    new net.minecraft.resources.ResourceLocation(texturePath),
+                    throughWalls, dispatcher
+            );
+            return;
+        }
         ItemStack shown = chooseDisplayedIcon(
                 helper.tickCount,
                 helper.getBubbleIconA(),
@@ -91,6 +100,78 @@ public final class HelperChickenBubbleLayer {
             return;
         }
         renderBubble(poseStack, bufferSource, helper, shown, throughWalls, dispatcher);
+    }
+
+    /**
+     * Texture-mode renderer. Same outer pose / billboard as the item path,
+     * but the icon is a UV-mapped quad sampling the synced texture instead of
+     * an item model. Quad spans roughly the bubble's inner area so the icon
+     * sits inside the comic outline.
+     */
+    private static void renderTextureBubble(
+            PoseStack poseStack,
+            MultiBufferSource bufferSource,
+            HelperChickenEntity helper,
+            net.minecraft.resources.ResourceLocation texture,
+            boolean throughWalls,
+            EntityRenderDispatcher dispatcher
+    ) {
+        poseStack.pushPose();
+        poseStack.translate(0.0, helper.getBbHeight() + HEAD_LIFT_BLOCKS, 0.0);
+        poseStack.scale(ASSEMBLY_SCALE, ASSEMBLY_SCALE, ASSEMBLY_SCALE);
+        poseStack.mulPose(dispatcher.cameraOrientation());
+
+        poseStack.pushPose();
+        poseStack.translate(0.0, ICON_CENTRE_Y_INNER, 0.0);
+        renderBubbleBackground(poseStack, bufferSource, throughWalls);
+        poseStack.popPose();
+
+        // Icon quad — sized to fit inside the bubble centre rectangle.
+        VertexConsumer consumer = bufferSource.getBuffer(
+                BubbleRenderType.texturedIcon(texture, throughWalls)
+        );
+        Matrix4f matrix = poseStack.last().pose();
+        // Slight forward offset so the quad sits in front of the bubble bg
+        // and never z-fights with it.
+        float z = 0.001f;
+        float r = 0.5f; // half-extent of the icon quad in pose-local units
+        float yc = ICON_CENTRE_Y_INNER;
+        // Quad winding (camera-facing): bottom-left, bottom-right, top-right, top-left
+        textureQuad(consumer, matrix, -r, yc - r, +r, yc - r, +r, yc + r, -r, yc + r, z);
+
+        poseStack.popPose();
+    }
+
+    private static void textureQuad(
+            VertexConsumer c,
+            Matrix4f m,
+            float x1, float y1,
+            float x2, float y2,
+            float x3, float y3,
+            float x4, float y4,
+            float z
+    ) {
+        // NEW_ENTITY format: position, color, uv, overlay, lightmap, normal.
+        // u/v: bottom-left=(0,1), bottom-right=(1,1), top-right=(1,0), top-left=(0,0)
+        emitTexVertex(c, m, x1, y1, z, 0f, 1f);
+        emitTexVertex(c, m, x2, y2, z, 1f, 1f);
+        emitTexVertex(c, m, x3, y3, z, 1f, 0f);
+        emitTexVertex(c, m, x4, y4, z, 0f, 0f);
+    }
+
+    private static void emitTexVertex(
+            VertexConsumer c,
+            Matrix4f m,
+            float x, float y, float z,
+            float u, float v
+    ) {
+        c.vertex(m, x, y, z)
+                .color(255, 255, 255, 255)
+                .uv(u, v)
+                .overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY)
+                .uv2(FULLBRIGHT)
+                .normal(0f, 0f, 1f)
+                .endVertex();
     }
 
     private static void renderBubble(

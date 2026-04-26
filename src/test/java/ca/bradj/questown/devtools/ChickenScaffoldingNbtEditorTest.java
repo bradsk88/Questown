@@ -75,7 +75,7 @@ class ChickenScaffoldingNbtEditorTest {
         ListTag palette = result.getList("palette", Tag.TAG_COMPOUND);
         ListTag blocks = result.getList("blocks", Tag.TAG_COMPOUND);
 
-        BlockPos campfirePos = FLAG_ANCHOR.offset(3, 0, 5);
+        BlockPos campfirePos = FLAG_ANCHOR.offset(ca.bradj.questown.mobs.helperchicken.HelperChickenBeatOffsets.CAMPFIRE_OFFSET);
         CompoundTag campfireEntry = findBlockAt(blocks, campfirePos);
         Assertions.assertNotNull(campfireEntry,
                 "campfire must be present at flag + CAMPFIRE_OFFSET = " + campfirePos);
@@ -211,7 +211,7 @@ class ChickenScaffoldingNbtEditorTest {
         ListTag palette = tag.getList("palette", Tag.TAG_COMPOUND);
         ListTag blocks = tag.getList("blocks", Tag.TAG_COMPOUND);
 
-        BlockPos campfirePos = FLAG_ANCHOR.offset(3, 0, 5);
+        BlockPos campfirePos = FLAG_ANCHOR.offset(ca.bradj.questown.mobs.helperchicken.HelperChickenBeatOffsets.CAMPFIRE_OFFSET);
         // Seed: a dirt block already sits where the campfire will go.
         palette.add(NbtUtils.writeBlockState(Blocks.DIRT.defaultBlockState()));
         int dirtIdx = palette.size() - 1;

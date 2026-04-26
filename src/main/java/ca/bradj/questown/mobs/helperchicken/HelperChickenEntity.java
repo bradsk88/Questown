@@ -39,6 +39,17 @@ public class HelperChickenEntity extends Chicken {
     private static final EntityDataAccessor<Boolean> THROUGH_WALLS = SynchedEntityData.defineId(
             HelperChickenEntity.class, EntityDataSerializers.BOOLEAN
     );
+    /**
+     * Optional override for the bubble icon. When non-empty, the bubble layer
+     * renders this texture as a flat quad instead of {@link #BUBBLE_ICON_A} /
+     * {@link #BUBBLE_ICON_B}. Used for authored bubble assets that do not have
+     * a vanilla item equivalent (e.g. the SUNSET_AND_MAP "evening" indicator).
+     * Stored as the string form of a {@code ResourceLocation} for compatibility
+     * with the default network serializer.
+     */
+    private static final EntityDataAccessor<String> BUBBLE_TEXTURE_PATH = SynchedEntityData.defineId(
+            HelperChickenEntity.class, EntityDataSerializers.STRING
+    );
 
     @Nullable
     private BlockPos ownerFlagPos;
@@ -60,6 +71,10 @@ public class HelperChickenEntity extends Chicken {
         // takes over only while peck stands down — which is what the player
         // expects: chicken trails them while they fetch the item, then walks
         // to the target and pecks once they have it.
+        // Sunset chest goal sits at the same priority tier as the regular peck
+        // goal: SUNSET_AND_MAP has no structure-local peck target, so the two
+        // never both want to run.
+        this.goalSelector.addGoal(2, new HelperChickenSunsetChestGoal(this, this::getOwnerFlagPos));
         this.goalSelector.addGoal(2, new HelperChickenBeatPeckGoal(this, this::getOwnerFlagPos));
         this.goalSelector.addGoal(3, new HelperChickenFollowNearFlagGoal(this, 1.0D, this::getOwnerFlagPos));
         this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));
@@ -72,6 +87,7 @@ public class HelperChickenEntity extends Chicken {
         this.entityData.define(BUBBLE_ICON_A, ItemStack.EMPTY);
         this.entityData.define(BUBBLE_ICON_B, ItemStack.EMPTY);
         this.entityData.define(THROUGH_WALLS, false);
+        this.entityData.define(BUBBLE_TEXTURE_PATH, "");
     }
 
     @Override
@@ -179,6 +195,14 @@ public class HelperChickenEntity extends Chicken {
 
     public void setThroughWalls(boolean throughWalls) {
         this.entityData.set(THROUGH_WALLS, throughWalls);
+    }
+
+    public String getBubbleTexturePath() {
+        return this.entityData.get(BUBBLE_TEXTURE_PATH);
+    }
+
+    public void setBubbleTexturePath(String path) {
+        this.entityData.set(BUBBLE_TEXTURE_PATH, path == null ? "" : path);
     }
 
     /**

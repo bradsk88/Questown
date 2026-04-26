@@ -111,13 +111,17 @@ public final class ChickenArcController {
         }
         Player nearestPlayer = ChickenArcConditions.findNearestPlayerForFlag(flag);
         boolean hasItem = ChickenArcConditions.playerHoldsRequiredItem(nearestPlayer, state);
-        ChickenArcBubbles.Bubble bubble = ChickenArcBubbles.forState(state, hasItem);
+        boolean chestSpawned = flag.getChickenSunsetChestSpawned();
+        ChickenArcBubbles.Bubble bubble = ChickenArcBubbles.forState(state, hasItem, chestSpawned);
+        String newTexture = bubble.textureIcon() == null ? "" : bubble.textureIcon().toString();
         boolean changed = !net.minecraft.world.item.ItemStack.matches(chicken.getBubbleIconA(), bubble.iconA())
                 || !net.minecraft.world.item.ItemStack.matches(chicken.getBubbleIconB(), bubble.iconB())
-                || chicken.isThroughWalls() != bubble.throughWalls();
+                || chicken.isThroughWalls() != bubble.throughWalls()
+                || !chicken.getBubbleTexturePath().equals(newTexture);
         chicken.setBubbleIconA(bubble.iconA());
         chicken.setBubbleIconB(bubble.iconB());
         chicken.setThroughWalls(bubble.throughWalls());
+        chicken.setBubbleTexturePath(newTexture);
         if (changed) {
             QT.JOB_LOGGER.info(
                     "[chicken-arc] bubble updated: state={} hasItem={} iconA={} iconB={} throughWalls={}",

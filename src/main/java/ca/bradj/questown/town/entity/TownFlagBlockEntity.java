@@ -119,6 +119,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     net.minecraft.world.level.block.Rotation chickenStructureRotation =
             net.minecraft.world.level.block.Rotation.NONE;
     boolean chickenRotationDetected = false;
+    /**
+     * Persisted: has the SUNSET_AND_MAP beat already had its "chicken pecks the
+     * ground and spawns a map+axe chest" stage fire? Once true, the bubble
+     * switches from the chest icon to the sunset texture and the chicken stops
+     * being driven toward a fresh peck point.
+     */
+    boolean chickenSunsetChestSpawned = false;
 
     // Ephemeral observation flags consumed by ChickenArcController (U4). These are
     // intentionally NOT persisted — they fire once during a single server session
@@ -956,6 +963,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public void setChickenRotationDetected(boolean v) {
         this.chickenRotationDetected = v;
+    }
+
+    public boolean getChickenSunsetChestSpawned() {
+        return chickenSunsetChestSpawned;
+    }
+
+    public void setChickenSunsetChestSpawned(boolean v) {
+        this.chickenSunsetChestSpawned = v;
     }
 
     public boolean getChickenObservedSleepSinceSunset() {

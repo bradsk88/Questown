@@ -166,6 +166,14 @@ public final class ChickenScaffoldingNbtEditor {
         List<ChickenScaffoldingLayout.BlockPlacement> plan =
                 ChickenScaffoldingLayout.forRotation(Rotation.NONE);
 
+        // The layout is authoritative for the chicken-arc anchor blocks. If a
+        // prior layout revision placed a campfire at a different offset, leave-
+        // overs would create duplicate anchors and break rotation detection
+        // (and the structure-integrity test). Strip every pre-existing campfire
+        // before placing the canonical one. Same for the gate fences — the
+        // GATE_CENTER_OFFSET could move similarly, leaving orphaned columns.
+        removeAllBlocksOfType(blocks, palette, "minecraft:campfire");
+
         for (ChickenScaffoldingLayout.BlockPlacement placement : plan) {
             BlockPos structurePos = flagAnchor.offset(placement.offset());
             removeBlocksAt(blocks, structurePos);
@@ -207,6 +215,30 @@ public final class ChickenScaffoldingNbtEditor {
             }
         }
         return null;
+    }
+
+    /**
+     * Strips every block whose palette entry's {@code Name} matches {@code blockName}.
+     * Used to evict pre-existing layout-managed blocks (e.g. campfires) that may
+     * sit at a stale offset before the editor places the canonical one.
+     */
+    private static void removeAllBlocksOfType(ListTag blocks, ListTag palette, String blockName) {
+        java.util.Set<Integer> matchingPaletteIdx = new java.util.HashSet<>();
+        for (int i = 0; i < palette.size(); i++) {
+            CompoundTag entry = palette.getCompound(i);
+            if (blockName.equals(entry.getString("Name"))) {
+                matchingPaletteIdx.add(i);
+            }
+        }
+        if (matchingPaletteIdx.isEmpty()) {
+            return;
+        }
+        for (int i = blocks.size() - 1; i >= 0; i--) {
+            CompoundTag entry = blocks.getCompound(i);
+            if (matchingPaletteIdx.contains(entry.getInt(STATE_KEY))) {
+                blocks.remove(i);
+            }
+        }
     }
 
     private static void removeBlocksAt(ListTag blocks, BlockPos target) {
