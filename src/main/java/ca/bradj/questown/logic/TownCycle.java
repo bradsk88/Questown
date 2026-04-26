@@ -16,10 +16,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 public class TownCycle {
 
@@ -68,13 +70,29 @@ public class TownCycle {
     public static Optional<BlockPos> findCampfire(
             BlockPos pos, Level level
     ) {
+        return findCampfire(pos, level, bs -> true);
+    }
+
+    /**
+     * Variant that accepts an extra predicate over the campfire's block state,
+     * so callers can require e.g. that the campfire be lit. The block-type
+     * check ({@code is(Blocks.CAMPFIRE)}) is always applied first; the
+     * predicate runs only on campfire states.
+     */
+    public static Optional<BlockPos> findCampfire(
+            BlockPos pos, Level level, Predicate<BlockState> match
+    ) {
         // TODO: Move to RoomRecipes?
 
         int radius = Compat.configGet(Config.CAMPFIRE_SEARCH_RADIUS).get();
         for(int z = -radius; z < radius; ++z) {
             for(int x = -radius; x < radius; ++x) {
                 BlockPos cfPos = pos.offset(x, 0, z);
-                if (level.getBlockState(cfPos).getBlock().equals(Blocks.CAMPFIRE)) {
+                BlockState bs = level.getBlockState(cfPos);
+                if (!bs.is(Blocks.CAMPFIRE)) {
+                    continue;
+                }
+                if (match.test(bs)) {
                     return Optional.of(cfPos);
                 }
             }

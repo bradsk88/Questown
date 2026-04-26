@@ -12,6 +12,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import org.jetbrains.annotations.NotNull;
@@ -126,6 +127,10 @@ public class TownPois {
         return ImmutableList.copyOf(this.welcomeMats);
     }
 
+    private static boolean isCampfireLit(net.minecraft.world.level.block.state.BlockState bs) {
+        return bs.hasProperty(CampfireBlock.LIT) && bs.getValue(CampfireBlock.LIT);
+    }
+
     public interface Listener {
         void campfireFound(BlockPos pos);
 
@@ -145,7 +150,13 @@ public class TownPois {
         // TODO: Don't check this so often - maybe add fireside seating that can be paired to flag block
         Optional<BlockPos> fire = Optional.empty();
         if (visitorSpot == null && villagerCount <= 0) {
-            fire = TownCycle.findCampfire(flagPos, level);
+            // Quest completion fires only when a *lit* campfire exists nearby —
+            // an unlit worldgen campfire (e.g. inside the empty_town structure)
+            // should not auto-complete the achievement on player arrival. The
+            // chicken-arc UX expects the player to use the wand on the campfire
+            // first, lighting it, which is what advances both the chicken's
+            // WAITING_FOR_WAND_ON_CAMPFIRE beat and this special quest.
+            fire = TownCycle.findCampfire(flagPos, level, TownPois::isCampfireLit);
             fire.ifPresent((bp) -> listener.campfireFound(bp));
         }
         BlockPos welcomePos = getWelcomeMatPos(level);
