@@ -181,6 +181,13 @@ public final class ChickenScaffoldingNbtEditor {
             blocks.add(newBlockEntry(paletteIdx, structurePos));
         }
 
+        // Evict any stale blocks at the layout's intentional gap positions
+        // (door column, wall-block hole). Without this, moving DOOR_OFFSET
+        // between revisions leaves the previous door cell walled off.
+        for (BlockPos gap : ChickenScaffoldingLayout.gapOffsets(Rotation.NONE)) {
+            removeBlocksAt(blocks, flagAnchor.offset(gap));
+        }
+
         expandSizeIfNeeded(root, plan, flagAnchor);
         return root;
     }

@@ -108,6 +108,7 @@ public final class ChickenArcBlueprintRegistry {
         return List.of(
                 stickPeckAndFollowSpawn(),
                 f1StickToCampfire(),
+                f2ChestSpawnAfterCampfire(),
                 f3BuildRoomToWelcomeMat(),
                 f4SeedsToStatue(),
                 f1RotationClockwise90(),
@@ -160,6 +161,31 @@ public final class ChickenArcBlueprintRegistry {
                 ))
                 .expectation(ChickenArcExpectation.builder()
                         .finalBeat(ChickenBeatState.SUNSET_AND_MAP)
+                        .chickenSpawned(true)
+                        .build())
+                .build();
+    }
+
+    // Scenario — F2 phase 1: after entering SUNSET_AND_MAP, the chicken's
+    // HelperChickenSunsetChestGoal must walk a few cells and spawn a chest with
+    // a map + axe. Recurring failure modes (snow on ground; tightly-walled
+    // start; pathing stuck) all manifest as "chest never spawns" — assert the
+    // persisted bit so a regression fails the autotest run rather than
+    // requiring a human to notice the chicken standing still in-game.
+    private static ChickenArcBlueprint f2ChestSpawnAfterCampfire() {
+        return ChickenArcBlueprint.builder("F2_chest_spawn_after_campfire")
+                .actions(List.of(
+                        new GiveBoundWand(BlockPos.ZERO, 2),
+                        new WandRightClick(HelperChickenBeatOffsets.CAMPFIRE_OFFSET, 2),
+                        // Generous tick budget: walk 4 cells (~20-40 ticks),
+                        // peck (20 ticks), spawn block + persist (1 tick).
+                        // Rounding up to 200 ticks to allow stuck-teleport
+                        // recovery if the goal's first path attempt fails.
+                        new AdvanceTicks(200)
+                ))
+                .expectation(ChickenArcExpectation.builder()
+                        .finalBeat(ChickenBeatState.SUNSET_AND_MAP)
+                        .flagBits(java.util.Map.of("chicken-sunset-chest-spawned", true))
                         .chickenSpawned(true)
                         .build())
                 .build();
@@ -421,5 +447,5 @@ public final class ChickenArcBlueprintRegistry {
      * Pin the scenario count so accidental additions or drops fail the
      * registry test before they land in a release.
      */
-    public static final int EXPECTED_SCENARIO_COUNT = 13;
+    public static final int EXPECTED_SCENARIO_COUNT = 14;
 }

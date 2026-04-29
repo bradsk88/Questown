@@ -13,7 +13,9 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.animal.Chicken;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -63,7 +65,16 @@ public class HelperChickenEntity extends Chicken {
 
     @Override
     protected void registerGoals() {
+        // Allow paths to route through doors AND have the chicken physically
+        // open closed ones — without these the beat-peck navigation walks the
+        // perimeter of the room because vanilla chicken pathing treats door
+        // blocks as opaque obstacles.
+        if (this.getNavigation() instanceof GroundPathNavigation gnav) {
+            gnav.setCanOpenDoors(true);
+            gnav.setCanPassDoors(true);
+        }
         this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(1, new OpenDoorGoal(this, true));
         // Peck must outrank follow: both use MOVE+LOOK and the lower priority
         // number wins, so swapping them lets peck preempt follow whenever the
         // beat-peck goal's own gates pass (target resolved + player holds the
@@ -138,7 +149,11 @@ public class HelperChickenEntity extends Chicken {
         if (tryDeliverWorldlySeeds(sp, flag, held)) {
             return InteractionResult.sidedSuccess(this.level.isClientSide);
         }
-        ChickenArcController.onPlayerClickedChicken(sp, flag);
+        // Only count main-hand interactions to avoid the off-hand follow-up
+        // attempt double-incrementing the click counter.
+        if (hand == InteractionHand.MAIN_HAND) {
+            ChickenArcController.onPlayerClickedChicken(sp, flag);
+        }
         return InteractionResult.sidedSuccess(this.level.isClientSide);
     }
 

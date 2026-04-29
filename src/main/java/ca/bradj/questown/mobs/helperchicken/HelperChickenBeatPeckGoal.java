@@ -52,6 +52,7 @@ public class HelperChickenBeatPeckGoal extends Goal {
     private final Supplier<BlockPos> flagPosSupplier;
 
     private BlockPos targetPos;
+    private BlockPos lookPos;
     private int ticksSincePathProgress;
     private int peckCountdown;
 
@@ -69,11 +70,12 @@ public class HelperChickenBeatPeckGoal extends Goal {
         if (!playerReadyForPeck()) {
             return false;
         }
-        BlockPos computed = resolveTarget();
+        BlockPos computed = resolveStandTarget();
         if (computed == null) {
             return false;
         }
         this.targetPos = computed;
+        this.lookPos = resolveTarget();
         return true;
     }
 
@@ -82,7 +84,7 @@ public class HelperChickenBeatPeckGoal extends Goal {
         if (!playerReadyForPeck()) {
             return false;
         }
-        BlockPos current = resolveTarget();
+        BlockPos current = resolveStandTarget();
         if (current == null) {
             return false;
         }
@@ -140,6 +142,7 @@ public class HelperChickenBeatPeckGoal extends Goal {
     public void stop() {
         this.chicken.getNavigation().stop();
         this.targetPos = null;
+        this.lookPos = null;
         this.ticksSincePathProgress = 0;
         this.peckCountdown = 0;
     }
@@ -149,10 +152,11 @@ public class HelperChickenBeatPeckGoal extends Goal {
         if (this.targetPos == null) {
             return;
         }
+        BlockPos look = this.lookPos != null ? this.lookPos : this.targetPos;
         this.chicken.getLookControl().setLookAt(
-                this.targetPos.getX() + 0.5D,
-                this.targetPos.getY() + 0.5D,
-                this.targetPos.getZ() + 0.5D
+                look.getX() + 0.5D,
+                look.getY() + 0.5D,
+                look.getZ() + 0.5D
         );
 
         double distSqr = this.chicken.distanceToSqr(
@@ -211,8 +215,58 @@ public class HelperChickenBeatPeckGoal extends Goal {
         if (state == ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY) {
             return findSeedsContainerPos(flag);
         }
+        if (state == ChickenBeatState.SUNSET_AND_MAP) {
+            return resolveSunsetCampfireTarget(flag, false);
+        }
         Rotation rotation = flag.getChickenStructureRotation();
         return HelperChickenBeatOffsets.resolveTarget(state, flag.getTownFlagBasePos(), rotation);
+    }
+
+    /**
+     * Where the chicken should walk to and stand. Diverges from
+     * {@link #resolveTarget} for beats whose focal block is non-walkable
+     * (campfire) — see {@link HelperChickenBeatOffsets#resolveStandTarget}.
+     */
+    private BlockPos resolveStandTarget() {
+        TownFlagBlockEntity flag = resolveFlag();
+        if (flag == null) {
+            return null;
+        }
+        ChickenBeatState state = flag.getChickenBeatState();
+        if (state == ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY) {
+            return findSeedsContainerPos(flag);
+        }
+        if (state == ChickenBeatState.SUNSET_AND_MAP) {
+            return resolveSunsetCampfireTarget(flag, true);
+        }
+        Rotation rotation = flag.getChickenStructureRotation();
+        return HelperChickenBeatOffsets.resolveStandTarget(state, flag.getTownFlagBasePos(), rotation);
+    }
+
+    /**
+     * Phase-3 SUNSET_AND_MAP target: the chicken walks to the campfire when
+     * the chest has dropped AND it's night, demonstrating the "use wand on
+     * lit campfire to sleep" action. Phases 1 (drop chest) and 2 (wait for
+     * dusk) return null so the SunsetChestGoal and WanderNearFlagGoal pick
+     * up at their priorities. Reuses the wand-on-campfire offsets so
+     * stand/look positions match the earlier "light the campfire" beat.
+     */
+    @org.jetbrains.annotations.Nullable
+    private BlockPos resolveSunsetCampfireTarget(TownFlagBlockEntity flag, boolean stand) {
+        if (!flag.getChickenSunsetChestSpawned()) {
+            return null;
+        }
+        ServerLevel level = flag.getServerLevel();
+        if (level == null || !level.isNight()) {
+            return null;
+        }
+        Rotation rotation = flag.getChickenStructureRotation();
+        BlockPos flagPos = flag.getTownFlagBasePos();
+        return stand
+                ? HelperChickenBeatOffsets.resolveStandTarget(
+                        ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE, flagPos, rotation)
+                : HelperChickenBeatOffsets.resolveTarget(
+                        ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE, flagPos, rotation);
     }
 
     /**

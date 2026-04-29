@@ -73,7 +73,16 @@ public class CampfireSleepHandler {
 
         placeTempBed(level, headPos, facing);
 
+        ca.bradj.questown.QT.JOB_LOGGER.info(
+                "[campfire-sleep] beginCampfireSleep player={} campfire={} bedHead={} facing={} dayTime={} isDay={} isNight={}",
+                player.getGameProfile().getName(), campfirePos, headPos, facing,
+                level.getDayTime() % 24000L, level.isDay(), level.dimensionType().hasFixedTime() ? "fixed" : !level.isDay()
+        );
         player.startSleepInBed(headPos).ifLeft(problem -> {
+            ca.bradj.questown.QT.JOB_LOGGER.info(
+                    "[campfire-sleep] startSleepInBed returned LEFT for player={} problem={}",
+                    player.getGameProfile().getName(), problem
+            );
             if (problem != null) {
                 player.displayClientMessage(problem.getMessage(), true);
             }
@@ -83,7 +92,10 @@ public class CampfireSleepHandler {
             campfirePositions.remove(uuid);
             sleepingFlagPositions.remove(uuid);
             removeTempBed(level, headPos, facing);
-        });
+        }).ifRight(unit -> ca.bradj.questown.QT.JOB_LOGGER.info(
+                "[campfire-sleep] startSleepInBed RIGHT (sleeping started) player={} isSleeping={}",
+                player.getGameProfile().getName(), player.isSleeping()
+        ));
     }
 
     static @Nullable BlockPos findSafeSleepPosition(Level level, BlockPos campfirePos) {
@@ -147,6 +159,11 @@ public class CampfireSleepHandler {
 
     public static void onWake(ServerPlayer player) {
         UUID uuid = player.getUUID();
+        ca.bradj.questown.QT.JOB_LOGGER.info(
+                "[campfire-sleep] onWake fired player={} dayTime={} isDay={}",
+                player.getGameProfile().getName(),
+                player.level.getDayTime() % 24000L, player.level.isDay()
+        );
         campfireSleepers.remove(uuid);
         BlockPos headPos = tempBedPositions.remove(uuid);
         Direction facing = tempBedFacings.remove(uuid);

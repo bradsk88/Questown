@@ -46,18 +46,27 @@ class ChickenArcConditionsTest {
     }
 
     @Test
-    void shouldPeckRun_terminalsAndSunset_returnTrue() {
-        // Peck never actually runs for these (resolveTarget is null) but the
-        // gate itself is permissive — the false-gate semantic is reserved for
-        // "player needs the item but doesn't have it".
-        Assertions.assertTrue(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.SUNSET_AND_MAP));
+    void shouldPeckRun_terminals_returnTrue() {
+        // COMPLETE/FORFEIT have no peck target so the gate is moot, but it
+        // stays permissive — the false-gate semantic is reserved for "player
+        // needs the item but doesn't have it".
         Assertions.assertTrue(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.COMPLETE));
         Assertions.assertTrue(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.FORFEIT));
     }
 
     @Test
+    void shouldPeckRun_sunsetAndMap_requiresWand() {
+        // Phase-3 SUNSET_AND_MAP (chest spawned + night) is when the chicken
+        // walks to the lit campfire to demonstrate the wand-on-fire sleep
+        // action. Gate behaves like other wand beats: peck stands down until
+        // the player is holding the wand.
+        Assertions.assertFalse(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.SUNSET_AND_MAP));
+    }
+
+    @Test
     void shouldPeckRun_itemBeat_nullPlayer_returnsFalse() {
-        // Player must be present and hold the item; null player → follow.
+        // Player must be present and hold the item; null player → follow-near-flag
+        // goal picks up and the chicken trails the player until they fetch it.
         Assertions.assertFalse(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_STICK));
         Assertions.assertFalse(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_WALL_BLOCK));
         Assertions.assertFalse(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_DOOR));

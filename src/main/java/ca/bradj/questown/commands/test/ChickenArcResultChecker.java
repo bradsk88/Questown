@@ -123,6 +123,7 @@ public final class ChickenArcResultChecker {
             case "chicken-observed-seeds-given" -> flag.getChickenObservedSeedsGiven();
             case "chicken-observed-villager-ui-open" -> flag.getChickenObservedVillagerUiOpen();
             case "chicken-observed-flag-ui-open" -> flag.getChickenObservedFlagUiOpen();
+            case "chicken-sunset-chest-spawned" -> flag.getChickenSunsetChestSpawned();
             default -> null;
         };
     }

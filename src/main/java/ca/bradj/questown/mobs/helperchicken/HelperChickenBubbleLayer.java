@@ -53,9 +53,11 @@ public final class HelperChickenBubbleLayer {
     private static final float ASSEMBLY_SCALE = 0.5f;
 
     /**
-     * HEAD transform's pose-Y translate (13/16 in display units). The icon
-     * ends up centred at this Y in inner pose-local space. Drawing the bubble
-     * at the same Y co-locates them so the icon overlays the bubble.
+     * Y in inner pose-local space where both bubble background and icon are
+     * centred. Picked to sit a bit above the chicken (matching the
+     * head-lifted assembly origin) — the icon translates to this Y under a
+     * GUI transform so the bubble's centre rectangle and the item centre
+     * coincide regardless of whether the icon is a 2D item or a block.
      */
     private static final float ICON_CENTRE_Y_INNER = 13.0f / 16.0f;
 
@@ -203,15 +205,23 @@ public final class HelperChickenBubbleLayer {
                 ? new WrappingBufferSource(bufferSource)
                 : bufferSource;
         ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
+        // GUI transform centres both 2D items and blocks around the local
+        // origin (HEAD's translate is type-dependent — blocks land at origin
+        // while 2D items land at +13/16 Y, which made block bubbles render in
+        // the bottom-left corner). We translate to the bubble centre so the
+        // icon sits inside it regardless of item kind.
+        poseStack.pushPose();
+        poseStack.translate(0.0, ICON_CENTRE_Y_INNER, 0.0);
         itemRenderer.renderStatic(
                 shown,
-                ItemTransforms.TransformType.HEAD,
+                ItemTransforms.TransformType.GUI,
                 FULLBRIGHT,
                 OverlayTexture.NO_OVERLAY,
                 poseStack,
                 effectiveBuffer,
                 0
         );
+        poseStack.popPose();
         poseStack.popPose();
     }
 

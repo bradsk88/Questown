@@ -76,6 +76,29 @@ public final class ChickenScaffoldingLayout {
         return out;
     }
 
+    /**
+     * Flag-relative offsets that must remain EMPTY in the rendered structure
+     * (the missing wall and the open door column). The NBT editor uses this
+     * to evict stale cobblestone left behind when a previous layout revision
+     * placed a wall here. Without this, moving {@code DOOR_OFFSET} between
+     * revisions leaves the old door cell walled off.
+     */
+    public static List<BlockPos> gapOffsets(Rotation rotation) {
+        List<BlockPos> gaps = new ArrayList<>();
+        gaps.add(HelperChickenBeatOffsets.WALL_BLOCK_OFFSET);
+        BlockPos door = HelperChickenBeatOffsets.DOOR_OFFSET;
+        gaps.add(door);
+        gaps.add(new BlockPos(door.getX(), door.getY() + 1, door.getZ()));
+        if (rotation == Rotation.NONE) {
+            return Collections.unmodifiableList(gaps);
+        }
+        List<BlockPos> rotated = new ArrayList<>(gaps.size());
+        for (BlockPos g : gaps) {
+            rotated.add(g.rotate(rotation));
+        }
+        return Collections.unmodifiableList(rotated);
+    }
+
     private static void addCampfire(List<BlockPlacement> out) {
         BlockState unlit = Blocks.CAMPFIRE.defaultBlockState()
                 .setValue(CampfireBlock.LIT, false);

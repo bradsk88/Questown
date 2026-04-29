@@ -75,8 +75,8 @@ public final class ChickenArcConditions {
                 isWallBlockPlaced(level, flagPos, rotation),
                 isDoorPlaced(level, flagPos, rotation),
                 isRoomRegistered(flag),
-                isSignConvertedToJobBoard(level, flagPos, rotation),
-                isChestPlaced(level, flagPos, rotation),
+                isSignConvertedToJobBoard(flag),
+                isChestPlaced(flag),
                 isWelcomeMatPlaced(flag),
                 flag.getChickenObservedVillagerUiOpen(),
                 flag.getChickenObservedFlagUiOpen(),
@@ -165,32 +165,35 @@ public final class ChickenArcConditions {
         return !flag.getRoomHandle().getAllRegisteredDoors().isEmpty();
     }
 
-    public static boolean isSignConvertedToJobBoard(
-            ServerLevel level,
-            BlockPos flagPos,
-            Rotation rotation
-    ) {
-        BlockPos pos = HelperChickenBeatOffsets.resolveTarget(
-                ChickenBeatState.WAITING_FOR_SIGN, flagPos, rotation
-        );
-        if (pos == null) {
-            return false;
-        }
-        return level.getBlockState(pos).is(BlocksInit.JOB_BOARD_BLOCK.get());
+    public static boolean isSignConvertedToJobBoard(TownFlagBlockEntity flag) {
+        return anyMatchedRoomContains(flag,
+                b -> b == BlocksInit.JOB_BOARD_BLOCK.get());
     }
 
-    public static boolean isChestPlaced(
-            ServerLevel level,
-            BlockPos flagPos,
-            Rotation rotation
+    public static boolean isChestPlaced(TownFlagBlockEntity flag) {
+        return anyMatchedRoomContains(flag,
+                b -> b instanceof net.minecraft.world.level.block.ChestBlock);
+    }
+
+    /**
+     * Whether any room recipe currently matches a room that contains a block
+     * satisfying the predicate. Delegating to the recipe system means the
+     * beat advances regardless of which interior cell the player picked, as
+     * long as the room is recipe-active and contains the required block.
+     */
+    private static boolean anyMatchedRoomContains(
+            TownFlagBlockEntity flag,
+            java.util.function.Predicate<net.minecraft.world.level.block.Block> predicate
     ) {
-        BlockPos pos = HelperChickenBeatOffsets.resolveTarget(
-                ChickenBeatState.WAITING_FOR_CHEST, flagPos, rotation
-        );
-        if (pos == null) {
-            return false;
+        var matches = flag.getRoomHandle().getMatches(m -> true);
+        for (var match : matches) {
+            for (var b : match.getContainedBlocks().values()) {
+                if (predicate.test(b)) {
+                    return true;
+                }
+            }
         }
-        return level.getBlockEntity(pos, BlockEntityType.CHEST).isPresent();
+        return false;
     }
 
     public static boolean isWelcomeMatPlaced(TownFlagBlockEntity flag) {
@@ -259,8 +262,11 @@ public final class ChickenArcConditions {
     /**
      * Whether the chicken's beat-peck goal should currently run. Returns true
      * for beats with no held-item requirement (UI beats, seeds-delivery) so the
-     * chicken pecks the location regardless; for "take item to location" beats
-     * returns true only when the player is holding the matching item.
+     * chicken pecks the location regardless; for beats with a required item
+     * (placement beats too — the chicken can't usefully indicate where to put
+     * something the player isn't carrying) returns true only when the player
+     * is holding it. When false, the lower-priority follow-near-flag goal
+     * picks up and the chicken trails the player until they fetch the item.
      */
     public static boolean shouldPeckRun(@Nullable Player player, ChickenBeatState state) {
         Predicate<ItemStack> required = requiredItemPredicate(state);
@@ -304,14 +310,14 @@ public final class ChickenArcConditions {
     private static Predicate<ItemStack> requiredItemPredicate(ChickenBeatState state) {
         return switch (state) {
             case WAITING_FOR_STICK -> s -> s.is(Items.STICK);
-            case WAITING_FOR_WAND_ON_CAMPFIRE, WAITING_FOR_WAND_ON_DOOR ->
+            case WAITING_FOR_WAND_ON_CAMPFIRE, WAITING_FOR_WAND_ON_DOOR, SUNSET_AND_MAP ->
                     s -> s.is(ItemsInit.TOWN_WAND.get());
             case WAITING_FOR_WALL_BLOCK -> ChickenArcConditions::isSolidBlockItem;
             case WAITING_FOR_DOOR -> s -> blockItemBlock(s) instanceof DoorBlock;
             case WAITING_FOR_SIGN -> s -> blockItemBlock(s) instanceof SignBlock;
             case WAITING_FOR_CHEST -> s -> s.is(Items.CHEST);
             case WAITING_FOR_PRESSURE_PLATE -> s -> s.is(ItemsInit.WELCOME_MAT_BLOCK.get());
-            case SUNSET_AND_MAP, WAITING_FOR_VILLAGER_UI, WAITING_FOR_FLAG_UI,
+            case WAITING_FOR_VILLAGER_UI, WAITING_FOR_FLAG_UI,
                  AWAITING_WORLDLY_SEEDS_DELIVERY, COMPLETE, FORFEIT -> null;
         };
     }

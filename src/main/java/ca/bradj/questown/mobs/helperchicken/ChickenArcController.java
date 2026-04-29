@@ -49,8 +49,16 @@ public final class ChickenArcController {
         ChickenArcTransitions.Observed observed = ChickenArcConditions.observe(flag);
         ChickenBeatState advanced = ChickenArcTransitions.advance(current, observed);
         if (advanced != current) {
+            ca.bradj.questown.QT.JOB_LOGGER.info(
+                    "[chicken-arc] beat advanced {} -> {} (playerHasWand={}, campfireLit={}, sleepHappenedToday={}, signPlacedAsJobBoard={}, chestPlaced={})",
+                    current, advanced,
+                    observed.playerHasWand(), observed.campfireLit(),
+                    observed.sleepHappenedToday(), observed.signPlacedAsJobBoard(),
+                    observed.chestPlaced()
+            );
             persistBeatState(flag, advanced);
             clearTransitionedObservations(flag, current, advanced);
+            clicksByPlayer.clear();
         }
         updateChickenBubble(level, flag, advanced);
     }
@@ -185,26 +193,123 @@ public final class ChickenArcController {
      * from {@link HelperChickenEntity}'s click-to-interact handler — left- and
      * right-click both route here.
      */
+    /**
+     * Per-player click counter for the current beat. Resets implicitly when the
+     * beat changes — a stored counter for state X is invalidated as soon as the
+     * player's first click on state Y arrives. Used to switch monologue hints
+     * over to a fourth-wall plain-text explanation after the third click.
+     */
+    private record BeatClicks(ChickenBeatState state, int count) {}
+    private static final java.util.Map<java.util.UUID, BeatClicks> clicksByPlayer =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    /**
+     * Click cadence at which we break the fourth wall. Every Nth click on the
+     * same beat shows the bracketed plain-text hint instead of the monologue;
+     * the cycle then resets so subsequent clicks return to monologue.
+     */
+    private static final int PLAIN_TEXT_CYCLE = 3;
+
     public static void onPlayerClickedChicken(
             net.minecraft.server.level.ServerPlayer player,
             TownFlagBlockEntity flag
     ) {
         ChickenBeatState state = flag.getChickenBeatState();
-        String key = hintKey(state);
+        boolean hasItem = ChickenArcConditions.playerHoldsRequiredItem(player, state);
+        boolean hasWand = ChickenArcConditions.hasWandInInventory(player);
+        boolean isNight = player.getLevel().isNight();
+        boolean chestSpawned = flag.getChickenSunsetChestSpawned();
+        int clickCount = recordClick(player.getUUID(), state);
+        ca.bradj.questown.QT.JOB_LOGGER.info(
+                "[chicken-arc] click handler: state={} hasMatchingItem={} hasWandInInv={} clickCount={}",
+                state, hasItem, hasWand, clickCount
+        );
+        String key = clickCount % PLAIN_TEXT_CYCLE == 0
+                ? plainTextKey(state, chestSpawned, isNight)
+                : hintKey(state, hasItem, chestSpawned, isNight);
         if (key == null) {
             return;
         }
         ca.bradj.questown.mc.Util.onScreenText(() -> player, key);
     }
 
-    private static String hintKey(ChickenBeatState state) {
+    private static int recordClick(java.util.UUID uuid, ChickenBeatState state) {
+        BeatClicks updated = clicksByPlayer.compute(uuid, (k, prior) -> {
+            if (prior == null || prior.state() != state) {
+                return new BeatClicks(state, 1);
+            }
+            return new BeatClicks(state, prior.count() + 1);
+        });
+        return updated.count();
+    }
+
+    static String plainTextKey(
+            ChickenBeatState state,
+            boolean sunsetChestSpawned,
+            boolean isNight
+    ) {
         return switch (state) {
-            case WAITING_FOR_STICK -> "message.questown.chicken.hint.stick";
-            case WAITING_FOR_WAND_ON_CAMPFIRE -> "message.questown.chicken.hint.wand_on_campfire";
-            case SUNSET_AND_MAP -> "message.questown.chicken.hint.sunset";
-            case WAITING_FOR_WALL_BLOCK -> "message.questown.chicken.hint.wall_block";
-            case WAITING_FOR_DOOR -> "message.questown.chicken.hint.door";
-            case WAITING_FOR_WAND_ON_DOOR -> "message.questown.chicken.hint.wand_on_door";
+            case WAITING_FOR_STICK -> "message.questown.chicken.plain.stick";
+            case WAITING_FOR_WAND_ON_CAMPFIRE -> "message.questown.chicken.plain.wand_on_campfire";
+            case SUNSET_AND_MAP -> {
+                if (!sunsetChestSpawned) {
+                    yield "message.questown.chicken.plain.sunset_preparing";
+                }
+                yield isNight
+                        ? "message.questown.chicken.plain.wand_on_campfire"
+                        : "message.questown.chicken.plain.sunset";
+            }
+            case WAITING_FOR_WALL_BLOCK -> "message.questown.chicken.plain.wall_block";
+            case WAITING_FOR_DOOR -> "message.questown.chicken.plain.door";
+            case WAITING_FOR_WAND_ON_DOOR -> "message.questown.chicken.plain.wand_on_door";
+            case WAITING_FOR_SIGN -> "message.questown.chicken.plain.sign";
+            case WAITING_FOR_CHEST -> "message.questown.chicken.plain.chest";
+            case WAITING_FOR_PRESSURE_PLATE -> "message.questown.chicken.plain.welcome_mat";
+            case WAITING_FOR_VILLAGER_UI -> "message.questown.chicken.plain.villager_ui";
+            case WAITING_FOR_FLAG_UI -> "message.questown.chicken.plain.flag_ui";
+            case AWAITING_WORLDLY_SEEDS_DELIVERY -> "message.questown.chicken.plain.worldly_seeds";
+            case COMPLETE, FORFEIT -> null;
+        };
+    }
+
+    /**
+     * Mirrors the bubble's "needs item vs has item" split — when a beat's
+     * action is "use X on Y" and the player still has to fetch X, the hint
+     * names the item; once they're holding it, the hint names the target.
+     * SUNSET_AND_MAP carries the same three-phase split as the bubble.
+     */
+    static String hintKey(
+            ChickenBeatState state,
+            boolean playerHasRequiredItem,
+            boolean sunsetChestSpawned,
+            boolean isNight
+    ) {
+        return switch (state) {
+            case WAITING_FOR_STICK -> playerHasRequiredItem
+                    ? "message.questown.chicken.hint.stick.use_on_flag"
+                    : "message.questown.chicken.hint.stick";
+            case WAITING_FOR_WAND_ON_CAMPFIRE -> playerHasRequiredItem
+                    ? "message.questown.chicken.hint.wand_on_campfire.use"
+                    : "message.questown.chicken.hint.wand_on_campfire";
+            case SUNSET_AND_MAP -> {
+                if (!sunsetChestSpawned) {
+                    yield "message.questown.chicken.hint.sunset.preparing";
+                }
+                if (isNight) {
+                    yield playerHasRequiredItem
+                            ? "message.questown.chicken.hint.wand_on_campfire.use"
+                            : "message.questown.chicken.hint.wand_on_campfire";
+                }
+                yield "message.questown.chicken.hint.sunset";
+            }
+            case WAITING_FOR_WALL_BLOCK -> playerHasRequiredItem
+                    ? "message.questown.chicken.hint.wall_block.with_item"
+                    : "message.questown.chicken.hint.wall_block";
+            case WAITING_FOR_DOOR -> playerHasRequiredItem
+                    ? "message.questown.chicken.hint.door.with_item"
+                    : "message.questown.chicken.hint.door";
+            case WAITING_FOR_WAND_ON_DOOR -> playerHasRequiredItem
+                    ? "message.questown.chicken.hint.wand_on_door.use"
+                    : "message.questown.chicken.hint.wand_on_door";
             case WAITING_FOR_SIGN -> "message.questown.chicken.hint.sign";
             case WAITING_FOR_CHEST -> "message.questown.chicken.hint.chest";
             case WAITING_FOR_PRESSURE_PLATE -> "message.questown.chicken.hint.welcome_mat";

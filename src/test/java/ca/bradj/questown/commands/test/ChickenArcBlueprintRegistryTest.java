@@ -49,6 +49,7 @@ class ChickenArcBlueprintRegistryTest {
         List<String> expected = List.of(
                 "stick_peck_and_follow_spawn",
                 "F1_stick_to_campfire",
+                "F2_chest_spawn_after_campfire",
                 "F3_build_room_to_welcome_mat",
                 "F4_seeds_to_statue",
                 "F1_rotation_clockwise_90",

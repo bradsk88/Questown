@@ -73,14 +73,30 @@ public class HelperChickenSunsetChestGoal extends Goal {
         }
         Player player = ChickenArcConditions.findNearestPlayerForFlag(flag);
         if (player == null) {
+            logCanUseFailure("no nearby player");
             return false;
         }
         BlockPos picked = pickChestPos(player);
         if (picked == null) {
+            logCanUseFailure("no passable chest position around player " + player.blockPosition());
             return false;
         }
         this.targetPos = picked;
         return true;
+    }
+
+    private static long lastCanUseFailureLogTick = -1L;
+
+    private void logCanUseFailure(String reason) {
+        if (!(this.chicken.level instanceof ServerLevel sl)) {
+            return;
+        }
+        long tick = sl.getGameTime();
+        if (tick - lastCanUseFailureLogTick < 100L) {
+            return;
+        }
+        lastCanUseFailureLogTick = tick;
+        QT.JOB_LOGGER.info("[chicken-arc] sunset chest goal stood down: {}", reason);
     }
 
     @Override
@@ -240,28 +256,77 @@ public class HelperChickenSunsetChestGoal extends Goal {
     }
 
     /**
-     * Pick a target position for the peck — a cardinal-offset of the player at
-     * the player's foot Y. Tries north/east/south/west in order; first one
-     * passable and clear above wins. Returns null if all four candidates fail.
+     * Pick a target position for the peck. Walks outward in cardinal then
+     * diagonal directions from the player at decreasing distance, stopping at
+     * the first passable cell with air above. Falls back to the chicken's own
+     * blockPosition so we never deadlock the SUNSET_AND_MAP beat purely because
+     * cardinal cells are blocked by walls or terrain.
      */
     private BlockPos pickChestPos(Player player) {
         if (!(this.chicken.level instanceof ServerLevel sl)) {
             return null;
         }
-        BlockPos base = player.blockPosition();
-        BlockPos[] candidates = new BlockPos[]{
-                base.north(TARGET_DISTANCE_BLOCKS),
-                base.east(TARGET_DISTANCE_BLOCKS),
-                base.south(TARGET_DISTANCE_BLOCKS),
-                base.west(TARGET_DISTANCE_BLOCKS)
-        };
-        for (BlockPos c : candidates) {
-            if (sl.getBlockState(c).isAir() && sl.getBlockState(c.above()).isAir()) {
-                return c;
+        java.util.function.Predicate<BlockPos> passable = c -> isPassableForChest(sl, c);
+        return pickChestPos(
+                player.blockPosition(),
+                this.chicken.blockPosition(),
+                TARGET_DISTANCE_BLOCKS,
+                passable
+        ).orElse(null);
+    }
+
+    /**
+     * Pure search: walks outward from {@code playerBase} in distance order
+     * (farthest first), trying all 8 N/E/S/W + diagonals at each distance.
+     * Returns the first cell where {@code isPassable} returns true. If every
+     * candidate fails, falls back to {@code chickenAt} when passable, else
+     * empty. Extracted from the goal so unit tests can drive it without a
+     * live ServerLevel.
+     */
+    static java.util.Optional<BlockPos> pickChestPos(
+            BlockPos playerBase,
+            BlockPos chickenAt,
+            int maxDistance,
+            java.util.function.Predicate<BlockPos> isPassable
+    ) {
+        for (int distance = maxDistance; distance >= 1; distance--) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (dx == 0 && dz == 0) {
+                        continue;
+                    }
+                    BlockPos c = playerBase.offset(dx * distance, 0, dz * distance);
+                    if (isPassable.test(c)) {
+                        return java.util.Optional.of(c);
+                    }
+                }
             }
         }
-        return null;
+        if (isPassable.test(chickenAt)) {
+            return java.util.Optional.of(chickenAt);
+        }
+        return java.util.Optional.empty();
     }
+
+    private static boolean isPassableForChest(ServerLevel sl, BlockPos c) {
+        // Treat replaceable blocks (snow layers, grass plants, tall_grass,
+        // fluids) the same as air — placing a chest into them overwrites them
+        // the way a player's right-click would. The narrower air-only check
+        // deadlocked SUNSET_AND_MAP in snowy biomes.
+        return isReplaceable(sl.getBlockState(c)) && isReplaceable(sl.getBlockState(c.above()));
+    }
+
+    /**
+     * Whether a block state can be replaced by a freshly-placed block (chest,
+     * snow layer, grass plant, fluid, etc.). Mirrors the vanilla
+     * {@code Material.isReplaceable()} contract — exposed as a static helper
+     * so unit tests can build {@code Blocks.X.defaultBlockState()} directly
+     * without a {@code BlockGetter}.
+     */
+    static boolean isReplaceable(net.minecraft.world.level.block.state.BlockState state) {
+        return state.isAir() || state.getMaterial().isReplaceable();
+    }
+
 
     /**
      * Find a position adjacent to {@code targetPos} where a chest can sit:
@@ -269,7 +334,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
      * itself if it's clear.
      */
     private BlockPos findChestPlacementPos(ServerLevel sl) {
-        if (sl.getBlockState(this.targetPos).isAir()) {
+        if (isReplaceable(sl.getBlockState(this.targetPos))) {
             return this.targetPos;
         }
         BlockPos[] candidates = new BlockPos[]{
@@ -279,7 +344,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
                 this.targetPos.west()
         };
         for (BlockPos c : candidates) {
-            if (sl.getBlockState(c).isAir()) {
+            if (isReplaceable(sl.getBlockState(c))) {
                 return c;
             }
         }

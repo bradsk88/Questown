@@ -46,16 +46,10 @@ public class HelperChickenWanderNearFlagGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (!isWanderPhase()) {
+            return false;
+        }
         TownFlagBlockEntity flag = resolveFlag();
-        if (flag == null) {
-            return false;
-        }
-        if (flag.getChickenBeatState() != ChickenBeatState.SUNSET_AND_MAP) {
-            return false;
-        }
-        if (!flag.getChickenSunsetChestSpawned()) {
-            return false;
-        }
         BlockPos picked = pickWanderTarget(flag.getTownFlagBasePos());
         if (picked == null) {
             return false;
@@ -66,6 +60,15 @@ public class HelperChickenWanderNearFlagGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        return isWanderPhase() && this.phase != null;
+    }
+
+    /**
+     * SUNSET_AND_MAP phase 2: chest already dropped but it's still daytime and
+     * the player has yet to sleep. At nightfall the chicken should walk to the
+     * campfire instead (phase 3, owned by {@link HelperChickenBeatPeckGoal}).
+     */
+    private boolean isWanderPhase() {
         TownFlagBlockEntity flag = resolveFlag();
         if (flag == null) {
             return false;
@@ -76,7 +79,8 @@ public class HelperChickenWanderNearFlagGoal extends Goal {
         if (!flag.getChickenSunsetChestSpawned()) {
             return false;
         }
-        return this.phase != null;
+        net.minecraft.server.level.ServerLevel level = flag.getServerLevel();
+        return level != null && !level.isNight();
     }
 
     @Override

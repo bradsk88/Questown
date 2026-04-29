@@ -45,9 +45,15 @@ public final class HelperChickenBeatOffsets {
      */
     public static final BlockPos FLAG_OFFSET = new BlockPos(0, 0, 0);
     public static final BlockPos WALL_BLOCK_OFFSET = new BlockPos(6, 0, 3);
-    public static final BlockPos DOOR_OFFSET = new BlockPos(6, 0, 2);
-    public static final BlockPos SIGN_OFFSET = new BlockPos(7, 0, 4);
-    public static final BlockPos CHEST_OFFSET = new BlockPos(8, 0, 4);
+    // Middle of the +x wall (perimeter z spans 2..6, midpoint z=4). A
+    // doorway on a corner cell (x=6,z=2) is invalid in MC — doors require
+    // a single-cell opening with cobblestone neighbours on both sides.
+    public static final BlockPos DOOR_OFFSET = new BlockPos(6, 0, 4);
+    // Inside the room interior (perimeter walls at x=2/x=6, z=2/z=6 → interior
+    // is x∈[3..5], z∈[3..5]). Sign and chest sit on opposite interior walls so
+    // the room recipe scan picks them up and the job-board conversion fires.
+    public static final BlockPos SIGN_OFFSET = new BlockPos(3, 0, 4);
+    public static final BlockPos CHEST_OFFSET = new BlockPos(5, 0, 4);
     public static final BlockPos GATE_CENTER_OFFSET = new BlockPos(2, 0, 9);
 
     private HelperChickenBeatOffsets() {
@@ -74,6 +80,27 @@ public final class HelperChickenBeatOffsets {
         return flagPos.offset(localOffset.rotate(rotation));
     }
 
+    /**
+     * World-space position where the chicken should STAND while pecking. Most
+     * beats use the same block as the focal target ({@link #resolveTarget}),
+     * but beats that focus on a non-walkable / hazardous block (campfire)
+     * resolve to a cardinal-adjacent walkable cell so the chicken is not
+     * rendered standing inside the fire. Look direction stays at the focal
+     * target — the peck goal calls {@link #resolveTarget} for that.
+     */
+    @Nullable
+    public static BlockPos resolveStandTarget(
+            ChickenBeatState state,
+            BlockPos flagPos,
+            Rotation rotation
+    ) {
+        BlockPos localOffset = localStandOffsetForState(state);
+        if (localOffset == null) {
+            return null;
+        }
+        return flagPos.offset(localOffset.rotate(rotation));
+    }
+
     @Nullable
     private static BlockPos localOffsetForState(ChickenBeatState state) {
         return switch (state) {
@@ -86,6 +113,24 @@ public final class HelperChickenBeatOffsets {
             case WAITING_FOR_PRESSURE_PLATE -> GATE_CENTER_OFFSET;
             case WAITING_FOR_VILLAGER_UI, WAITING_FOR_FLAG_UI -> CAMPFIRE_OFFSET;
             case SUNSET_AND_MAP, AWAITING_WORLDLY_SEEDS_DELIVERY, COMPLETE, FORFEIT -> null;
+        };
+    }
+
+    @Nullable
+    private static BlockPos localStandOffsetForState(ChickenBeatState state) {
+        BlockPos focal = localOffsetForState(state);
+        if (focal == null) {
+            return null;
+        }
+        return switch (state) {
+            // Campfire-focused beats: stand south of the campfire (z+1) so
+            // the chicken doesn't render inside the fire. Cobblestone floor
+            // surrounds the campfire on every side, so any cardinal works;
+            // south is consistently outside the room and the gate column.
+            case WAITING_FOR_WAND_ON_CAMPFIRE,
+                 WAITING_FOR_VILLAGER_UI,
+                 WAITING_FOR_FLAG_UI -> focal.south();
+            default -> focal;
         };
     }
 }

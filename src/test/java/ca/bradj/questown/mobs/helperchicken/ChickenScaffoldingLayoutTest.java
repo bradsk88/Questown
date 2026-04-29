@@ -163,6 +163,31 @@ class ChickenScaffoldingLayoutTest {
     }
 
     @Test
+    void signAndChestOffsets_landInsideRoomInterior() {
+        // The room recipe scan fires only on blocks placed INSIDE a registered
+        // room (perimeter walls at x=2/x=6, z=2/z=6 → interior x∈[3..5], z∈[3..5]).
+        // If the chicken's peck targets sit on or outside the perimeter the
+        // sign-to-job-board conversion never runs and the beat deadlocks.
+        BlockPos sign = HelperChickenBeatOffsets.SIGN_OFFSET;
+        BlockPos chest = HelperChickenBeatOffsets.CHEST_OFFSET;
+        Assertions.assertTrue(
+                sign.getX() >= 3 && sign.getX() <= 5
+                        && sign.getZ() >= 3 && sign.getZ() <= 5,
+                "SIGN_OFFSET " + sign + " must be in room interior x∈[3..5], z∈[3..5]"
+        );
+        Assertions.assertTrue(
+                chest.getX() >= 3 && chest.getX() <= 5
+                        && chest.getZ() >= 3 && chest.getZ() <= 5,
+                "CHEST_OFFSET " + chest + " must be in room interior x∈[3..5], z∈[3..5]"
+        );
+        Assertions.assertNotEquals(
+                new BlockPos(sign.getX(), 0, sign.getZ()),
+                new BlockPos(chest.getX(), 0, chest.getZ()),
+                "sign and chest must occupy distinct interior cells"
+        );
+    }
+
+    @Test
     void forRotation_none_returnsImmutableList() {
         List<ChickenScaffoldingLayout.BlockPlacement> base =
                 ChickenScaffoldingLayout.forRotation(Rotation.NONE);
