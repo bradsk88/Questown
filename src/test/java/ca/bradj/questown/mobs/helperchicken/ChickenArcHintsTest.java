@@ -79,24 +79,51 @@ class ChickenArcHintsTest {
 
     @Test
     void everyBeat_hasResolvableHintAndPlainKeys() {
+        // Iterate (state, hasItem) combinations and assert that every reachable
+        // hint/plain key resolves in en_us.json. Skips combinations whose
+        // ChickenArcPresentation row references mod-registered RegistryObjects
+        // (those are exercised by chicken-arc autotest scenarios).
         List<String> missing = new ArrayList<>();
         for (ChickenBeatState state : ChickenBeatState.values()) {
             if (TERMINAL.contains(state)) {
                 continue;
             }
             for (boolean hasItem : new boolean[]{false, true}) {
-                String hk = ChickenArcController.hintKey(state, hasItem, false, false);
-                if (hk == null || !lang.containsKey(hk)) {
-                    missing.add("hint: state=" + state + " hasItem=" + hasItem + " key=" + hk);
+                PhaseInputs in = new PhaseInputs(hasItem, false, false);
+                if (!isModSafe(state, in)) {
+                    continue;
                 }
-            }
-            String pk = ChickenArcController.plainTextKey(state, false, false);
-            if (pk == null || !lang.containsKey(pk)) {
-                missing.add("plain: state=" + state + " key=" + pk);
+                Presentation p = ChickenArcPresentation.present(state, in);
+                if (p.hintKey() == null || !lang.containsKey(p.hintKey())) {
+                    missing.add("hint: state=" + state + " hasItem=" + hasItem + " key=" + p.hintKey());
+                }
+                if (p.plainKey() == null || !lang.containsKey(p.plainKey())) {
+                    missing.add("plain: state=" + state + " key=" + p.plainKey());
+                }
             }
         }
         Assertions.assertTrue(missing.isEmpty(),
                 "lang keys missing or unresolved: " + missing);
+    }
+
+    private static boolean isModSafe(ChickenBeatState state, PhaseInputs in) {
+        BeatPhase phase = ChickenArcPresentation.activePhase(state, in);
+        return switch (state) {
+            case WAITING_FOR_WALL_BLOCK,
+                 WAITING_FOR_DOOR,
+                 WAITING_FOR_SIGN,
+                 WAITING_FOR_CHEST,
+                 WAITING_FOR_VILLAGER_UI,
+                 COMPLETE,
+                 FORFEIT -> true;
+            case WAITING_FOR_STICK -> phase == BeatPhase.NEED_TO_FETCH;
+            case SUNSET_AND_MAP -> phase == BeatPhase.PREPARING || phase == BeatPhase.AWAITING_NIGHT;
+            case WAITING_FOR_WAND_ON_CAMPFIRE,
+                 WAITING_FOR_WAND_ON_DOOR,
+                 WAITING_FOR_PRESSURE_PLATE,
+                 WAITING_FOR_FLAG_UI,
+                 AWAITING_WORLDLY_SEEDS_DELIVERY -> false;
+        };
     }
 
     @Test
@@ -116,14 +143,14 @@ class ChickenArcHintsTest {
                     || state == ChickenBeatState.SUNSET_AND_MAP) {
                 continue;
             }
-            ChickenArcBubbles.Bubble bubble = ChickenArcBubbles.forState(state, false, false, false);
-            ItemStack icon = bubble.iconA();
+            PhaseInputs noItem = new PhaseInputs(false, false, false);
+            Presentation p = ChickenArcPresentation.present(state, noItem);
+            ItemStack icon = p.bubble().iconA();
             if (icon.isEmpty()) {
                 // Texture-mode bubble (sunset) — no icon noun to check.
                 continue;
             }
-            String hintKey = ChickenArcController.hintKey(state, false, false, false);
-            String hint = lang.get(hintKey);
+            String hint = lang.get(p.hintKey());
             List<String> tokens = tokensByItem.getOrDefault(icon.getItem(), List.of());
             if (tokens.isEmpty()) {
                 failures.add(state + ": no token mapping for " + icon.getItem()

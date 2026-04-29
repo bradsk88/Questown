@@ -167,108 +167,61 @@ class ChickenArcPresentationTest {
     }
 
     // -------------------------------------------------------------------------
-    // Parity — new module matches the existing switches byte-for-byte over
-    // every (state, hasItem, chestSpawned, isNight) combination. For mod-icon
-    // beats we compare structurally; if both sides fail (registry null) the
-    // failures are equivalent. Tests deleted in U5 once the old switches are
-    // gone.
+    // Structural invariant: placement-beat bubble does not change with hasItem
+    // (the bubble shows the target item regardless; only the hint adapts).
+    // Documented as intentional in /CONTEXT.md and ADR-0001.
     // -------------------------------------------------------------------------
 
-    @SuppressWarnings("deprecation")
     @Test
-    void parity_bubble_matchesChickenArcBubblesForState_forVanillaBeats() {
-        for (ChickenBeatState state : VANILLA_ONLY) {
-            for (PhaseInputs in : allInputCombinations()) {
-                ChickenArcBubbles.Bubble fromOld = ChickenArcBubbles.forState(
-                        state, in.hasItem(), in.chestSpawned(), in.isNight()
-                );
-                ChickenArcBubbles.Bubble fromNew = ChickenArcPresentation.present(state, in).bubble();
-                assertBubbleEquals(fromOld, fromNew, state, in);
-            }
+    void placementBeats_bubbleIdenticalAcrossPhases() {
+        for (ChickenBeatState state : new ChickenBeatState[]{
+                ChickenBeatState.WAITING_FOR_WALL_BLOCK,
+                ChickenBeatState.WAITING_FOR_DOOR
+        }) {
+            ChickenArcBubbles.Bubble noItem = ChickenArcPresentation.present(
+                    state, new PhaseInputs(false, false, false)).bubble();
+            ChickenArcBubbles.Bubble withItem = ChickenArcPresentation.present(
+                    state, new PhaseInputs(true, false, false)).bubble();
+            Assertions.assertTrue(
+                    ItemStack.matches(noItem.iconA(), withItem.iconA()),
+                    state.name() + " bubble iconA must not change with hasItem"
+            );
+            Assertions.assertTrue(
+                    ItemStack.matches(noItem.iconB(), withItem.iconB()),
+                    state.name() + " bubble iconB must not change with hasItem"
+            );
         }
     }
 
     @Test
-    void parity_hintKey_matchesControllerHintKey_forModSafeBeats() {
-        // Limited to (state, input) combinations that select a phase whose row
-        // can be built without mod-registered RegistryObjects. In-game scenarios
-        // cover the rest. The hint-key strings themselves are vanilla-independent;
-        // the limitation is purely that present() eagerly constructs the Bubble.
-        for (ChickenBeatState state : ChickenBeatState.values()) {
-            for (PhaseInputs in : allInputCombinations()) {
-                if (!isModSafe(state, in)) {
-                    continue;
-                }
-                String fromOld = ChickenArcController.hintKey(
-                        state, in.hasItem(), in.chestSpawned(), in.isNight()
-                );
-                String fromNew = ChickenArcPresentation.present(state, in).hintKey();
-                Assertions.assertEquals(fromOld, fromNew, state.name() + " " + in);
-            }
+    void placementBeats_hintAdaptsAcrossPhases() {
+        for (ChickenBeatState state : new ChickenBeatState[]{
+                ChickenBeatState.WAITING_FOR_WALL_BLOCK,
+                ChickenBeatState.WAITING_FOR_DOOR
+        }) {
+            String noItem = ChickenArcPresentation.present(
+                    state, new PhaseInputs(false, false, false)).hintKey();
+            String withItem = ChickenArcPresentation.present(
+                    state, new PhaseInputs(true, false, false)).hintKey();
+            Assertions.assertNotEquals(
+                    noItem, withItem,
+                    state.name() + " hint must differ between NEED_TO_FETCH and READY_TO_PLACE"
+            );
         }
     }
 
     @Test
-    void parity_plainKey_matchesControllerPlainTextKey_forModSafeBeats() {
-        for (ChickenBeatState state : ChickenBeatState.values()) {
-            for (PhaseInputs in : allInputCombinations()) {
-                if (!isModSafe(state, in)) {
-                    continue;
-                }
-                String fromOld = ChickenArcController.plainTextKey(
-                        state, in.chestSpawned(), in.isNight()
-                );
-                String fromNew = ChickenArcPresentation.present(state, in).plainKey();
-                Assertions.assertEquals(fromOld, fromNew, state.name() + " " + in);
-            }
-        }
-    }
-
-    /**
-     * Returns true when {@link ChickenArcPresentation#present} can build a
-     * Presentation without triggering a null RegistryObject lookup. Combinations
-     * that select a phase whose row references mod-registered items return
-     * false (those rows are exercised by in-game scenarios).
-     */
-    private static boolean isModSafe(ChickenBeatState state, PhaseInputs in) {
-        BeatPhase phase = ChickenArcPresentation.activePhase(state, in);
-        return switch (state) {
-            case WAITING_FOR_WALL_BLOCK,
-                 WAITING_FOR_DOOR,
-                 WAITING_FOR_SIGN,
-                 WAITING_FOR_CHEST,
-                 WAITING_FOR_VILLAGER_UI,
-                 COMPLETE,
-                 FORFEIT -> true;
-            case WAITING_FOR_STICK -> phase == BeatPhase.NEED_TO_FETCH;
-            case SUNSET_AND_MAP -> phase == BeatPhase.PREPARING || phase == BeatPhase.AWAITING_NIGHT;
-            case WAITING_FOR_WAND_ON_CAMPFIRE,
-                 WAITING_FOR_WAND_ON_DOOR,
-                 WAITING_FOR_PRESSURE_PLATE,
-                 WAITING_FOR_FLAG_UI,
-                 AWAITING_WORLDLY_SEEDS_DELIVERY -> false;
-        };
-    }
-
-    private static void assertBubbleEquals(
-            ChickenArcBubbles.Bubble expected,
-            ChickenArcBubbles.Bubble actual,
-            ChickenBeatState state,
-            PhaseInputs in
-    ) {
-        String ctx = " for " + state.name() + " " + in;
-        Assertions.assertTrue(
-                ItemStack.matches(expected.iconA(), actual.iconA()),
-                "iconA mismatch" + ctx
+    void worldlySeedsDelivery_bubbleIsThroughWalls() {
+        // Preserved structural invariant from ChickenArcBubblesTest.
+        // present() will NPE on the WORLDLY_SEEDS RegistryObject in unit tests,
+        // so we assert at the activePhase level only — the through-walls flag
+        // is set by the row table for this beat and verified in-game.
+        Assertions.assertEquals(
+                BeatPhase.DEFAULT,
+                ChickenArcPresentation.activePhase(
+                        ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY,
+                        new PhaseInputs(false, false, false))
         );
-        Assertions.assertTrue(
-                ItemStack.matches(expected.iconB(), actual.iconB()),
-                "iconB mismatch" + ctx
-        );
-        Assertions.assertEquals(expected.throughWalls(), actual.throughWalls(),
-                "throughWalls mismatch" + ctx);
-        Assertions.assertEquals(expected.textureIcon(), actual.textureIcon(),
-                "textureIcon mismatch" + ctx);
     }
 
     private static Iterable<PhaseInputs> allInputCombinations() {

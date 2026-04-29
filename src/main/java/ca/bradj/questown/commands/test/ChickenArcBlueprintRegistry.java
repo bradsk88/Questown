@@ -147,6 +147,9 @@ public final class ChickenArcBlueprintRegistry {
                 .expectation(ChickenArcExpectation.builder()
                         .finalBeat(ChickenBeatState.WAITING_FOR_STICK)
                         .chickenSpawned(true)
+                        // Player ends up holding a stick — required-item phase.
+                        // Verifies the live BeatPhase derivation in ResultChecker.
+                        .finalPhase(ca.bradj.questown.mobs.helperchicken.BeatPhase.READY_TO_USE)
                         .build())
                 .build();
     }
