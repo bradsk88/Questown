@@ -2,11 +2,16 @@ package ca.bradj.questown.commands.test;
 
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.mobs.helperchicken.BeatPhase;
+import ca.bradj.questown.mobs.helperchicken.ChickenArcConditions;
+import ca.bradj.questown.mobs.helperchicken.ChickenArcPresentation;
 import ca.bradj.questown.mobs.helperchicken.ChickenBeatState;
 import ca.bradj.questown.mobs.helperchicken.HelperChickenEntity;
+import ca.bradj.questown.mobs.helperchicken.PhaseInputs;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
@@ -45,6 +50,10 @@ public final class ChickenArcResultChecker {
                 results.add(checkFinalBeatState(scenarioName, flag, expected, output))
         );
 
+        expectation.finalPhase().ifPresent(expected ->
+                results.add(checkFinalPhase(scenarioName, level, flag, expected, output))
+        );
+
         expectation.expectedFlagBits().forEach((key, expected) ->
                 results.add(checkFlagBit(scenarioName, flag, key, expected, output))
         );
@@ -80,6 +89,38 @@ public final class ChickenArcResultChecker {
                 AutotestLogFormatter.TRACK_CHICKEN_ARC, name, pass,
                 "final beat state",
                 "expected=" + expected + " actual=" + actual
+        ));
+        return pass;
+    }
+
+    private static boolean checkFinalPhase(
+            String name,
+            ServerLevel level,
+            TownFlagBlockEntity flag,
+            BeatPhase expected,
+            TestOutput output
+    ) {
+        ChickenBeatState state = flag.getChickenBeatState();
+        Player nearestPlayer = ChickenArcConditions.findNearestPlayerForFlag(flag);
+        if (nearestPlayer == null) {
+            output.msg(AutotestLogFormatter.format(
+                    AutotestLogFormatter.TRACK_CHICKEN_ARC, name, false,
+                    "final phase",
+                    "expectedPhase requires a nearby player to derive PhaseInputs.hasItem"
+            ));
+            return false;
+        }
+        PhaseInputs live = new PhaseInputs(
+                ChickenArcConditions.playerHoldsRequiredItem(nearestPlayer, state),
+                flag.getChickenSunsetChestSpawned(),
+                level.isNight()
+        );
+        BeatPhase actual = ChickenArcPresentation.activePhase(state, live);
+        boolean pass = expected == actual;
+        output.msg(AutotestLogFormatter.format(
+                AutotestLogFormatter.TRACK_CHICKEN_ARC, name, pass,
+                "final phase",
+                "expected=" + expected + " actual=" + actual + " (state=" + state + " inputs=" + live + ")"
         ));
         return pass;
     }

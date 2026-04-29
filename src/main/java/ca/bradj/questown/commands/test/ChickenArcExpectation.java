@@ -1,5 +1,6 @@
 package ca.bradj.questown.commands.test;
 
+import ca.bradj.questown.mobs.helperchicken.BeatPhase;
 import ca.bradj.questown.mobs.helperchicken.ChickenBeatState;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,7 +22,8 @@ public record ChickenArcExpectation(
         boolean expectStatuePlaced,
         boolean expectChickenDiscarded,
         boolean expectChickenSpawned,
-        @Nullable TestExpectation itemDeltas
+        @Nullable TestExpectation itemDeltas,
+        @Nullable BeatPhase expectedFinalPhase
 ) {
     public ChickenArcExpectation {
         // Defensive immutable copy so holders cannot mutate after construction.
@@ -38,6 +40,10 @@ public record ChickenArcExpectation(
         return Optional.ofNullable(itemDeltas);
     }
 
+    public Optional<BeatPhase> finalPhase() {
+        return Optional.ofNullable(expectedFinalPhase);
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -49,6 +55,7 @@ public record ChickenArcExpectation(
         private boolean expectChickenDiscarded;
         private boolean expectChickenSpawned = true;
         private @Nullable TestExpectation itemDeltas;
+        private @Nullable BeatPhase expectedFinalPhase;
 
         public Builder finalBeat(ChickenBeatState beat) {
             this.expectedFinalBeatState = beat;
@@ -80,6 +87,11 @@ public record ChickenArcExpectation(
             return this;
         }
 
+        public Builder finalPhase(BeatPhase phase) {
+            this.expectedFinalPhase = phase;
+            return this;
+        }
+
         public ChickenArcExpectation build() {
             return new ChickenArcExpectation(
                     expectedFinalBeatState,
@@ -87,7 +99,8 @@ public record ChickenArcExpectation(
                     expectStatuePlaced,
                     expectChickenDiscarded,
                     expectChickenSpawned,
-                    itemDeltas
+                    itemDeltas,
+                    expectedFinalPhase
             );
         }
     }

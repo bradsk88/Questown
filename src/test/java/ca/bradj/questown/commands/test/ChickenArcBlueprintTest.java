@@ -149,7 +149,7 @@ class ChickenArcBlueprintTest {
         Map<String, Boolean> mutable = new HashMap<>();
         mutable.put("chicken-arc-forfeit", true);
         ChickenArcExpectation e = new ChickenArcExpectation(
-                null, mutable, false, false, true, null
+                null, mutable, false, false, true, null, null
         );
         mutable.put("chicken-arc-forfeit", false);
         Assertions.assertEquals(Boolean.TRUE, e.expectedFlagBits().get("chicken-arc-forfeit"));
@@ -158,7 +158,7 @@ class ChickenArcBlueprintTest {
     @Test
     void expectation_nullFlagBitsBecomesEmpty() {
         ChickenArcExpectation e = new ChickenArcExpectation(
-                null, null, false, false, true, null
+                null, null, false, false, true, null, null
         );
         Assertions.assertTrue(e.expectedFlagBits().isEmpty());
     }
