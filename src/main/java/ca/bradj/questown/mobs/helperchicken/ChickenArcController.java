@@ -121,7 +121,8 @@ public final class ChickenArcController {
         boolean hasItem = ChickenArcConditions.playerHoldsRequiredItem(nearestPlayer, state);
         boolean chestSpawned = flag.getChickenSunsetChestSpawned();
         boolean isNight = level.isNight();
-        ChickenArcBubbles.Bubble bubble = ChickenArcBubbles.forState(state, hasItem, chestSpawned, isNight);
+        PhaseInputs phaseInputs = new PhaseInputs(hasItem, chestSpawned, isNight);
+        ChickenArcBubbles.Bubble bubble = ChickenArcPresentation.present(state, phaseInputs).bubble();
         String newTexture = bubble.textureIcon() == null ? "" : bubble.textureIcon().toString();
         boolean changed = !net.minecraft.world.item.ItemStack.matches(chicken.getBubbleIconA(), bubble.iconA())
                 || !net.minecraft.world.item.ItemStack.matches(chicken.getBubbleIconB(), bubble.iconB())
@@ -223,9 +224,12 @@ public final class ChickenArcController {
                 "[chicken-arc] click handler: state={} hasMatchingItem={} hasWandInInv={} clickCount={}",
                 state, hasItem, hasWand, clickCount
         );
+        Presentation presentation = ChickenArcPresentation.present(
+                state, new PhaseInputs(hasItem, chestSpawned, isNight)
+        );
         String key = clickCount % PLAIN_TEXT_CYCLE == 0
-                ? plainTextKey(state, chestSpawned, isNight)
-                : hintKey(state, hasItem, chestSpawned, isNight);
+                ? presentation.plainKey()
+                : presentation.hintKey();
         if (key == null) {
             return;
         }
