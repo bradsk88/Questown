@@ -45,6 +45,40 @@ class EmptyTownStructureIntegrityTest {
     }
 
     @Test
+    void emptyTownHasTerrainShaperLayersBaked() throws IOException {
+        // Locks the EmptyTownTerrainShaper output into the committed resource
+        // so manual NBT surgery / schema migrations can't silently regress
+        // the dirt floor, air ceiling, or grass cascade ring.
+        CompoundTag root = NbtIo.readCompressed(Files.newInputStream(STRUCTURE));
+        ListTag palette = root.getList("palette", Tag.TAG_COMPOUND);
+        ListTag blocks = root.getList("blocks", Tag.TAG_COMPOUND);
+
+        List<Integer> dirtIdx = paletteIndicesMatching(palette, "minecraft:dirt"::equals);
+        List<Integer> airIdx = paletteIndicesMatching(palette, "minecraft:air"::equals);
+        List<Integer> grassBlockIdx = paletteIndicesMatching(palette, "minecraft:grass_block"::equals);
+
+        Assertions.assertFalse(dirtIdx.isEmpty(),
+                "dirt floor underlayer must be present (regenerate via EmptyTownTerrainShaperTest.applyToRealStructure)");
+        Assertions.assertFalse(airIdx.isEmpty(),
+                "air ceiling must be present");
+        Assertions.assertFalse(grassBlockIdx.isEmpty(),
+                "grass_block cascade tops must be present");
+
+        long dirtCount = countBlocksWithStateIn(blocks, dirtIdx);
+        long airCount = countBlocksWithStateIn(blocks, airIdx);
+        long grassBlockCount = countBlocksWithStateIn(blocks, grassBlockIdx);
+
+        // Lower bounds — exact counts depend on bbox size and cascade geometry,
+        // but anything well below these means a layer was lost.
+        Assertions.assertTrue(dirtCount > 1000,
+                "expected >1000 dirt entries (floor + cascade body), found " + dirtCount);
+        Assertions.assertTrue(airCount > 5000,
+                "expected >5000 air entries (16-layer ceiling over footprint), found " + airCount);
+        Assertions.assertTrue(grassBlockCount > 100,
+                "expected >100 grass_block entries (cascade tops + plane surface), found " + grassBlockCount);
+    }
+
+    @Test
     void emptyTownHasExactlyOneCampfireAtFlagPlusCampfireOffset() throws IOException {
         CompoundTag root = NbtIo.readCompressed(Files.newInputStream(STRUCTURE));
         ListTag palette = root.getList("palette", Tag.TAG_COMPOUND);
@@ -90,6 +124,16 @@ class EmptyTownStructureIntegrityTest {
         Assertions.assertEquals(1, matches.size(),
                 message + " (found " + matches.size() + " at " + matches + ")");
         return matches.get(0);
+    }
+
+    private static long countBlocksWithStateIn(ListTag blocks, List<Integer> indices) {
+        long count = 0;
+        for (int i = 0; i < blocks.size(); i++) {
+            if (indices.contains(blocks.getCompound(i).getInt("state"))) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private static List<BlockPos> blockPositionsForIndices(ListTag blocks, List<Integer> indices) {

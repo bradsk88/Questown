@@ -3,7 +3,6 @@
   "values": [
     "#forge:is_plains",
     "#minecraft:is_savanna",
-    "#minecraft:is_jungle",
-    "#minecraft:is_taiga"
+    "minecraft:desert"
   ]
 }
