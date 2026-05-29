@@ -27,7 +27,12 @@ Narrow to a specific track:
 ./gradlew runServer -Dquestown.autotest=true -DQUESTOWN_AUTOTEST_CATEGORY=jobs
 ```
 
-The env-var / system-property routing reuses the existing `TestBlueprintRegistry.getTestsByCategory(String)` plumbing. Values other than `chicken` filter the jobs track only; `chicken` filters the chicken track only; unset runs both.
+Category routing:
+
+- `chicken` — chicken track only.
+- `jobs` — meta-bucket for the whole jobs track (all blueprints from `TestBlueprintRegistry.getTestableJobs()`). Use this as the default "jobs only" knob.
+- `warp` or `eating` — narrow per-entry filters. Each test entry is tagged with one of these in `TestBlueprintRegistry`; values are passed through `getTestsByCategory(String)`.
+- unset — runs both tracks.
 
 ## Log location + shape
 

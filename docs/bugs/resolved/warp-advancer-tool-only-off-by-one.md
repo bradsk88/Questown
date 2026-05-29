@@ -1,5 +1,11 @@
 # Bug: Advancer Off-By-One Loot for Tool-Only Jobs
 
+## Status: Resolved 2026-05-28 — autotest-verified 2026-05-29
+
+Verify before beta cut: `/_qtdev test gatherer_unmapped_axe_short`, `/_qtdev test gatherer_unmapped_rod_short`, `/_qtdev test hunter_unmapped_sword_short`, `/_qtdev test miner_short`. Advancer should fill all 6 inventory slots and the block state should end at 0 (idle), not 3.
+
+Last clean-world full autotest run (2026-05-29): gatherer, hunter, miner scenarios passed.
+
 ## Summary
 
 The advancer (warp path) produces one fewer loot item than the ticker (realtime path)

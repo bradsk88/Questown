@@ -1,6 +1,10 @@
 # Bug: Cook Warp Produces Less Cooked Beef Than Realtime
 
-## Status: Known — Acceptable for Launch
+## Status: Resolved 2026-05-28 — autotest-verified 2026-05-29
+
+Verify before beta cut: `/_qtdev test cook 10000 destroy` — cooked_beef should land in the expected range and the warp-vs-realtime diff should be within tolerance. If it regresses, move this file back to `docs/bugs/`.
+
+Last clean-world full autotest run (2026-05-29): cook scenarios passed.
 
 ## Symptom
 

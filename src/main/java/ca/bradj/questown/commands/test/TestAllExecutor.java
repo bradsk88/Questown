@@ -43,9 +43,9 @@ public class TestAllExecutor {
         this.output = output;
         this.origin = origin;
         this.warpAmount = warpAmount;
-        this.jobs = category != null
-                ? TestBlueprintRegistry.getTestsByCategory(category)
-                : TestBlueprintRegistry.getTestableJobs();
+        this.jobs = (category == null || "jobs".equals(category))
+                ? TestBlueprintRegistry.getTestableJobs()
+                : TestBlueprintRegistry.getTestsByCategory(category);
     }
 
     public boolean tick() {
@@ -100,7 +100,8 @@ public class TestAllExecutor {
             msg(result);
         }
         msg("========================================");
-        msg("Passed: " + passed + "/" + jobs.size() + " (" + (passed * 100 / jobs.size()) + "%)");
+        int percentage = jobs.isEmpty() ? 0 : (passed * 100 / jobs.size());
+        msg("Passed: " + passed + "/" + jobs.size() + " (" + percentage + "%)");
         msg("========================================");
     }
 
