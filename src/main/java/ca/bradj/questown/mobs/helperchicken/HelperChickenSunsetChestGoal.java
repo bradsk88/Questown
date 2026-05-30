@@ -35,6 +35,17 @@ import java.util.function.Supplier;
 public class HelperChickenSunsetChestGoal extends Goal {
 
     private static final double ARRIVAL_DISTANCE_SQR = 2.0D;
+    /**
+     * Looser arrival radius applied once the navigation reports done. The path
+     * follower (accuracy 1) stops roughly a block-and-a-half short of the
+     * target's centre — measured ~2.4 sqr in the flat onboarding arena — which
+     * is past {@link #ARRIVAL_DISTANCE_SQR}. Without this, the chicken re-paths
+     * to the same unreachable centre every tick, never pecks, and the
+     * sunset chest never spawns. When the pathfinder has gotten as close as it
+     * can, that counts as arrival; the cap still rejects a fully-failed path
+     * that left the chicken far away (the stuck-teleport handles that case).
+     */
+    private static final double NAV_SETTLE_ARRIVAL_SQR = 9.0D;
     private static final int STUCK_TELEPORT_TICKS = 600;
     private static final int PECK_TICKS = 20;
     private static final double SPEED_MODIFIER = 1.0D;
@@ -154,12 +165,28 @@ public class HelperChickenSunsetChestGoal extends Goal {
                 this.targetPos.getZ() + 0.5D
         );
 
-        if (distSqr <= ARRIVAL_DISTANCE_SQR) {
+        if (hasArrived(distSqr, this.chicken.getNavigation().isDone())) {
             peckAndSpawn();
             return;
         }
 
         tickPathing();
+    }
+
+    /**
+     * Whether the chicken is close enough to the chest target to peck. Within
+     * {@link #ARRIVAL_DISTANCE_SQR} is an unconditional arrival. Otherwise, once
+     * the navigation has finished (the pathfinder can get no closer) a looser
+     * {@link #NAV_SETTLE_ARRIVAL_SQR} radius applies — the follower stops a
+     * block-and-a-half short of the centre, which would otherwise leave the
+     * chicken re-pathing forever and never spawning the chest. Pure so it can
+     * be unit-tested without a live navigation.
+     */
+    static boolean hasArrived(double distSqr, boolean navDone) {
+        if (distSqr <= ARRIVAL_DISTANCE_SQR) {
+            return true;
+        }
+        return navDone && distSqr <= NAV_SETTLE_ARRIVAL_SQR;
     }
 
     private void tickPathing() {
@@ -276,12 +303,18 @@ public class HelperChickenSunsetChestGoal extends Goal {
     }
 
     /**
-     * Pure search: walks outward from {@code playerBase} in distance order
-     * (farthest first), trying all 8 N/E/S/W + diagonals at each distance.
-     * Returns the first cell where {@code isPassable} returns true. If every
-     * candidate fails, falls back to {@code chickenAt} when passable, else
-     * empty. Extracted from the goal so unit tests can drive it without a
-     * live ServerLevel.
+     * Pure search: walks outward from the player's horizontal position in
+     * distance order (farthest first), trying all 8 N/E/S/W + diagonals at each
+     * distance. Candidates sit on {@code chickenAt}'s Y — the ground plane the
+     * chicken can actually walk to and stand on — not the player's Y. The
+     * player may be standing one block up (on the flag, on stairs, mid-jump);
+     * picking the chest at their feet leaves the target hovering above the
+     * floor, which both stalls the chicken's arrival check (the vertical gap
+     * pushes it past the arrival radius) and floats the spawned chest with no
+     * floor beneath it. Returns the first passable cell. If every candidate
+     * fails, falls back to {@code chickenAt} when passable, else empty.
+     * Extracted from the goal so unit tests can drive it without a live
+     * ServerLevel.
      */
     static java.util.Optional<BlockPos> pickChestPos(
             BlockPos playerBase,
@@ -289,13 +322,18 @@ public class HelperChickenSunsetChestGoal extends Goal {
             int maxDistance,
             java.util.function.Predicate<BlockPos> isPassable
     ) {
+        int groundY = chickenAt.getY();
         for (int distance = maxDistance; distance >= 1; distance--) {
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
                     if (dx == 0 && dz == 0) {
                         continue;
                     }
-                    BlockPos c = playerBase.offset(dx * distance, 0, dz * distance);
+                    BlockPos c = new BlockPos(
+                            playerBase.getX() + dx * distance,
+                            groundY,
+                            playerBase.getZ() + dz * distance
+                    );
                     if (isPassable.test(c)) {
                         return java.util.Optional.of(c);
                     }

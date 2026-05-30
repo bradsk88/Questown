@@ -41,4 +41,4 @@ Bar-C blocker. Players whose villagers rely on table-dining will see them slowly
 
 ## Related
 
-- `docs/bugs/chicken-sunset-chest-bit.md` — the other bar-C blocker from the same clean-world run.
+- `docs/bugs/resolved/chicken-sunset-chest-bit.md` — the other bar-C blocker from the same clean-world run (resolved 2026-05-30).

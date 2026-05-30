@@ -14,13 +14,13 @@
 ## Bugs
 
 - **[bugs/eating-dine-at-time-fullness.md](bugs/eating-dine-at-time-fullness.md)** — `eating/dine_at_time` autotest fails: villager fullness drops to -16% (min 25%). Bar-C blocker.
-- **[bugs/chicken-sunset-chest-bit.md](bugs/chicken-sunset-chest-bit.md)** — `F2_chest_spawn_after_campfire` autotest fails: sunset chest never spawns, `chicken-sunset-chest-spawned` flag bit never set. Bar-C blocker, regression suspect: commit `85aca1b7`.
 
 ## Resolved bugs (verify before beta cut)
 
 - **[bugs/resolved/cook-warp-lower-yield-than-realtime.md](bugs/resolved/cook-warp-lower-yield-than-realtime.md)** — Cook warp produced ~56% of realtime cooked-beef yield. Verify with `/_qtdev test cook 10000 destroy`.
 - **[bugs/resolved/warp-advancer-tool-only-off-by-one.md](bugs/resolved/warp-advancer-tool-only-off-by-one.md)** — Advancer filled 5/6 inventory slots for tool-only jobs (gatherer×2, hunter, miner). Verify with `/_qtdev test` per job.
 - **[bugs/resolved/quest-flavor-test-cutoff.md](bugs/resolved/quest-flavor-test-cutoff.md)** — Wooden-sword quest flavor text overflowed the quest card and overlapped icons. Verify by opening the quests UI in-game.
+- **[bugs/resolved/chicken-sunset-chest-bit.md](bugs/resolved/chicken-sunset-chest-bit.md)** — `F2_chest_spawn_after_campfire` sunset chest never spawned: chest target took the player's Y (off the floor) and the arrival radius was tighter than the pathfinder's stopping accuracy. Verify with the chicken autotest track.
 
 ## Conventions / background
 

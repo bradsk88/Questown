@@ -127,6 +127,26 @@ class HelperChickenSunsetChestGoalTest {
     }
 
     @Test
+    void pickChestPos_picksAtChickenGroundY_notPlayerY_regressionForSunsetStall() {
+        // Regression: when the player stands one block above the chicken's
+        // ground (on the flag, on stairs, mid-jump), the chest target used to
+        // inherit the player's Y. The chicken — which walks the ground — could
+        // never close the vertical gap, so its arrival check never fired, the
+        // peck never happened, and chicken-sunset-chest-spawned stayed false
+        // (autotest F2_chest_spawn_after_campfire). The picked cell must sit on
+        // the chicken's Y so the chicken can reach it and the chest lands on a
+        // floor.
+        BlockPos player = new BlockPos(0, 65, 0);
+        BlockPos chicken = new BlockPos(0, 64, -2);
+        Optional<BlockPos> pick = HelperChickenSunsetChestGoal.pickChestPos(
+                player, chicken, 4, anywhere -> true
+        );
+        Assertions.assertTrue(pick.isPresent());
+        Assertions.assertEquals(64, pick.get().getY(),
+                "chest target must be on the chicken's ground Y (64), not the player's Y (65); got " + pick.get());
+    }
+
+    @Test
     void pickChestPos_snowAtFar_solidsAtNear_picksSnowCell() {
         // Composes the bug-class case end-to-end: the picker uses the
         // passability predicate that already accepts snow. We model that by
@@ -138,6 +158,39 @@ class HelperChickenSunsetChestGoalTest {
                 player, new BlockPos(99, 64, 99), 4, passable
         );
         Assertions.assertEquals(Optional.of(snowCell), pick);
+    }
+
+    // -- hasArrived: peck-trigger gating ------------------------------------
+
+    @Test
+    void hasArrived_withinTightRadius_isTrueRegardlessOfNav() {
+        Assertions.assertTrue(HelperChickenSunsetChestGoal.hasArrived(1.5D, false));
+        Assertions.assertTrue(HelperChickenSunsetChestGoal.hasArrived(1.5D, true));
+    }
+
+    @Test
+    void hasArrived_pathfinderSettledShort_isTrue_regressionForSunsetStall() {
+        // Regression: the path follower (accuracy 1) stops ~1.5 blocks short of
+        // the target centre — observed distSqr ~2.4 in the flat onboarding
+        // arena — which is past the tight arrival radius (2.0). The chicken
+        // re-pathed to the same centre every tick, never pecked, and the sunset
+        // chest never spawned (autotest F2_chest_spawn_after_campfire). Once the
+        // navigation reports done, that settled distance counts as arrival.
+        Assertions.assertTrue(HelperChickenSunsetChestGoal.hasArrived(2.4D, true),
+                "navigation settled at 2.4 sqr must count as arrival");
+    }
+
+    @Test
+    void hasArrived_outsideTightRadiusButStillMoving_isFalse() {
+        // Nav not done yet → keep walking, don't peck early.
+        Assertions.assertFalse(HelperChickenSunsetChestGoal.hasArrived(2.4D, false));
+    }
+
+    @Test
+    void hasArrived_navDoneButFarAway_isFalse() {
+        // A fully-failed path that left the chicken across the arena must not
+        // trigger a peck; the stuck-teleport recovery handles that case.
+        Assertions.assertFalse(HelperChickenSunsetChestGoal.hasArrived(25.0D, true));
     }
 
     private static void addRing(Set<BlockPos> sink, BlockPos center, int distance) {
