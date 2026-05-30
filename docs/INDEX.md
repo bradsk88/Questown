@@ -11,12 +11,9 @@
 - **[sequence-diagrams.md](sequence-diagrams.md)** — Mermaid sequence diagrams for complex systems.
 - **[project-qa.md](project-qa.md)** — AI-conducted interview documenting unspoken design decisions.
 
-## Bugs
-
-- **[bugs/eating-dine-at-time-fullness.md](bugs/eating-dine-at-time-fullness.md)** — `eating/dine_at_time` autotest fails: villager fullness drops to -16% (min 25%). Bar-C blocker.
-
 ## Resolved bugs (verify before beta cut)
 
+- **[bugs/resolved/eating-dine-at-time-fullness.md](bugs/resolved/eating-dine-at-time-fullness.md)** — `eating/dine_at_time` villager starved to -16%: `tryGiveItems` skipped `postExtractHook` (and thus `HUNGER_FILL`) for effect/knowledge results. Verify with the `eating` autotest category.
 - **[bugs/resolved/cook-warp-lower-yield-than-realtime.md](bugs/resolved/cook-warp-lower-yield-than-realtime.md)** — Cook warp produced ~56% of realtime cooked-beef yield. Verify with `/_qtdev test cook 10000 destroy`.
 - **[bugs/resolved/warp-advancer-tool-only-off-by-one.md](bugs/resolved/warp-advancer-tool-only-off-by-one.md)** — Advancer filled 5/6 inventory slots for tool-only jobs (gatherer×2, hunter, miner). Verify with `/_qtdev test` per job.
 - **[bugs/resolved/quest-flavor-test-cutoff.md](bugs/resolved/quest-flavor-test-cutoff.md)** — Wooden-sword quest flavor text overflowed the quest card and overlapped icons. Verify by opening the quests UI in-game.
