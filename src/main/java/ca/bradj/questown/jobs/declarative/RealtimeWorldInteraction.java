@@ -6,7 +6,6 @@ import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -185,19 +184,6 @@ public class RealtimeWorldInteraction extends
     ) {
         inputs.work().setJobBlockState(position, state);
         return true;
-    }
-
-    @Override
-    protected Boolean withEffectApplied(
-            @NotNull MCExtra inputs,
-            Boolean ts,
-            MCHeldItem newItem
-    ) {
-        ItemStack stack = newItem.get().toQTItemStack();
-        ResourceLocation effect = EffectMetaItem.getEffect(stack);
-        Long effectExpiry = EffectMetaItem.getEffectExpiry(stack, Util.getTick(inputs.town().getServerLevel()));
-        inputs.town().getVillagerHandle().applyEffect(effect, effectExpiry, inputs.entity().getUUID());
-        return null;
     }
 
     @Override
@@ -426,6 +412,11 @@ public class RealtimeWorldInteraction extends
                 },
                 (in, up) -> {
                     inputs.town().getVillagerHandle().fillHunger(inputs.entity().getUUID(), up);
+                    return in;
+                },
+                (in, effect, durationTicks) -> {
+                    long expiry = Util.getTick(inputs.town().getServerLevel()) + durationTicks;
+                    inputs.town().getVillagerHandle().applyEffect(effect, expiry, inputs.entity().getUUID());
                     return in;
                 }
         );

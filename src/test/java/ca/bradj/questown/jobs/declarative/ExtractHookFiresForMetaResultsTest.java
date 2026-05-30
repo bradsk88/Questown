@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.TestInventory;
@@ -16,26 +15,22 @@ import java.util.Collection;
 import java.util.function.Supplier;
 
 /**
- * Regression for the {@code eating/dine_at_time} bar-C blocker: a villager that
- * dines at a table extracts an {@link EffectMetaItem} (the eating-mood effect)
- * as its only product. {@code tryGiveItems} routed effect/knowledge results
- * through {@code withEffectApplied}/{@code withKnowledge} and silently skipped
- * {@code postExtractHook}, so the {@code EXTRACTING_PRODUCT} special rules — in
- * particular {@code HUNGER_FILL} — never ran and the villager starved.
+ * Guards how {@code tryGiveItems} fires {@code postExtractHook} (which runs the
+ * {@code EXTRACTING_PRODUCT} special rules) per result type.
  *
- * <p>These tests assert the extract hook fires once per extracted result
- * regardless of the result item's type.
+ * <p>Background: the eating jobs used to extract an {@code EffectMetaItem} and
+ * lost their {@code HUNGER_FILL} rule because the effect branch skipped the hook
+ * (the {@code eating/dine_at_time} starvation bug). That whole branch is gone —
+ * eating jobs now produce <em>empty</em> results, so extraction takes the
+ * empty-stack path that has always fired the hook, and mood/hunger are applied
+ * via special rules. These tests pin that contract.
  */
 class ExtractHookFiresForMetaResultsTest {
 
     private static final Position WORK_SPOT = new Position(0, 0);
-    private static final String EFFECT_MARKER = "test:effect";
     private static final String KNOWLEDGE_MARKER = "test:knowledge";
 
-    /**
-     * A {@link TestWorldInteraction} that recognises designated marker items as
-     * effect/knowledge meta-items and records every {@code postExtractHook} call.
-     */
+    /** A {@link TestWorldInteraction} that recognises a knowledge marker and records hook calls. */
     private static class RecordingWorldInteraction extends TestWorldInteraction {
         int postExtractCalls;
         GathererJournalTest.TestItem lastExtracted;
@@ -52,7 +47,7 @@ class ExtractHookFiresForMetaResultsTest {
                     ImmutableMap.<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>>of(),
                     ImmutableMap.of(),
                     ImmutableMap.of(),
-                    ImmutableList.of(), // results: passed directly to tryGiveItems in each test
+                    ImmutableList.of(),
                     inventory,
                     workStatuses,
                     claim,
@@ -63,13 +58,7 @@ class ExtractHookFiresForMetaResultsTest {
 
         @Override
         protected boolean isInstanze(GathererJournalTest.TestItem item, Class<?> clazz) {
-            if (clazz == EffectMetaItem.class) {
-                return EFFECT_MARKER.equals(item.value);
-            }
-            if (clazz == KnowledgeMetaItem.class) {
-                return KNOWLEDGE_MARKER.equals(item.value);
-            }
-            return false;
+            return clazz == KnowledgeMetaItem.class && KNOWLEDGE_MARKER.equals(item.value);
         }
 
         @Override
@@ -95,26 +84,22 @@ class ExtractHookFiresForMetaResultsTest {
     }
 
     @Test
-    void effectResult_stillFiresPostExtractHook_regressionForDineAtTimeStarvation() {
+    void emptyResult_firesPostExtractHookOnce_regressionForDineAtTimeStarvation() {
+        // The path the eating jobs now take: no product item, so the hook fires
+        // once with a null item and the EXTRACTING_PRODUCT rules (HUNGER_FILL,
+        // mood) run. This is what keeps dining villagers from starving.
         RecordingWorldInteraction twi = newWorldInteraction();
 
-        twi.tryGiveItems(
-                null,
-                ImmutableList.of(new GathererJournalTest.TestItem(EFFECT_MARKER)),
-                WORK_SPOT
-        );
+        twi.tryGiveItems(null, ImmutableList.of(), WORK_SPOT);
 
-        Assertions.assertEquals(
-                1, twi.postExtractCalls,
-                "Extracting an EffectMetaItem result must still run EXTRACTING_PRODUCT rules (e.g. HUNGER_FILL)"
-        );
+        Assertions.assertEquals(1, twi.postExtractCalls);
+        Assertions.assertNull(twi.lastExtracted);
     }
 
     @Test
-    void knowledgeResult_doesNotFirePostExtractHook_scopedToEffectsOnly() {
-        // The hook is fired only for effect results. Firing it for knowledge results
-        // double-applies the gatherer's EXTRACTING_PRODUCT rules (it emits a knowledge
-        // item per gather), which inflated warp loot yields — so knowledge is left as-is.
+    void knowledgeResult_doesNotFirePostExtractHook_scopedToProductsOnly() {
+        // Knowledge items are not products; the gatherer emits one per gather and
+        // firing its extract rules would double-apply them (inflating warp loot).
         RecordingWorldInteraction twi = newWorldInteraction();
 
         twi.tryGiveItems(

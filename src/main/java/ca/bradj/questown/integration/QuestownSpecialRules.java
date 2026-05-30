@@ -75,6 +75,27 @@ public final class QuestownSpecialRules {
                 Questown.ResourceLocation(SpecialRules.HUNGER_FILL),
                 new FillHungerSpecialRule(1f)
         );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.APPLY_COMFORTABLE_EATING),
+                new ApplyMoodEffectSpecialRule(
+                        ca.bradj.questown.town.MoodEffects.COMFORTABLE_EATING,
+                        () -> ca.bradj.questown.core.Config.MOOD_EFFECT_DURATION_ATE_COMFORTABLY.get()
+                )
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.APPLY_UNCOMFORTABLE_EATING),
+                new ApplyMoodEffectSpecialRule(
+                        ca.bradj.questown.town.MoodEffects.UNCOMFORTABLE_EATING,
+                        () -> ca.bradj.questown.core.Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY.get()
+                )
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.APPLY_ATE_RAW_FOOD),
+                new ApplyMoodEffectSpecialRule(
+                        ca.bradj.questown.town.MoodEffects.ATE_RAW_FOOD,
+                        () -> ca.bradj.questown.core.Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY.get()
+                )
+        );
 
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation("switch_to_organizer_fetcher"),

@@ -27,6 +27,18 @@ _Avoid_: handler, listener, plugin.
 **Special rule**:
 Synonym for job phase modifier when emphasizing the JSON-declared, per-job-phase form.
 
+### Dining & mood
+
+**Dining**:
+The activity a villager switches to when hungry: it seeks food and eats. Three variants, in fallback order — at a table (`DinerWork`, comfortable), at the town flag (`DinerNoTableWork`, uncomfortable), or raw food when no cooked food is available (`DinerRawFoodWork`). Eating refills **fullness** and applies a **mood effect**, both as special rules at the extract phase — not as produced items (see ADR-0003).
+_Avoid_: feeding.
+
+**Fullness**:
+A villager's hunger level (0 = starving). Drains over realtime ticks; refilled by dining. Realtime-only — warp does not model it (ADR-0002).
+
+**Mood effect**:
+A timed buff/debuff on a villager identified by a `ResourceLocation` (e.g. `comfortable_eating`, `uncomfortable_eating`, `are_raw_food`). Feeds the villager's mood, work-time factor, and visible mood meter.
+
 ### Helper chicken arc
 
 **Helper chicken**:

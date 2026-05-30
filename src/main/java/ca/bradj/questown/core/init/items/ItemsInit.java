@@ -177,7 +177,6 @@ public class ItemsInit {
     );
 
 
-    public static final RegistryObject<Item> EFFECT = ITEMS.register(EffectMetaItem.ITEM_ID, EffectMetaItem::new);
     public static final RegistryObject<Item> HOSPITAL_BED = ITEMS.register(
             HospitalBedBlock.ITEM_ID,
             () -> new HospitalBedItem(BlocksInit.HOSPITAL_BED.get(), Questown.DEFAULT_ITEM_PROPS.stacksTo(1))

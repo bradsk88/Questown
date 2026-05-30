@@ -22,11 +22,12 @@ public class PostExtractHook {
             QTWorldAccess world,
             BlockPos position,
             BiFunction<TOWN, ImmutableMap<String, Integer>, TOWN> itemDataApplier,
-            BiFunction<TOWN, Float, TOWN> hungerUpdater
+            BiFunction<TOWN, Float, TOWN> hungerUpdater,
+            AfterExtractEvent.MoodApplier<TOWN> moodUpdater
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
         AfterExtractEvent<TOWN> bxEvent = new AfterExtractEvent<>(
-                world, position, townPos, itemDataApplier, hungerUpdater
+                world, position, townPos, itemDataApplier, hungerUpdater, moodUpdater
         );
         return processMulti(town, appliers, (o, a) -> a.afterExtract(o, bxEvent));
     }

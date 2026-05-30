@@ -351,15 +351,6 @@ public class TestWorldInteraction extends
     }
 
     @Override
-    protected Boolean withEffectApplied(
-            @NotNull Void inputs,
-            Boolean ts,
-            GathererJournalTest.TestItem newItem
-    ) {
-        return null;
-    }
-
-    @Override
     protected Boolean withKnowledge(
             @NotNull Void inputs,
             Boolean ts,

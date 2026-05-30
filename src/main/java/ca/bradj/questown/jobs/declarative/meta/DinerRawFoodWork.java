@@ -3,7 +3,6 @@ package ca.bradj.questown.jobs.declarative.meta;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
@@ -15,7 +14,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -55,16 +53,6 @@ public class DinerRawFoodWork {
             BLOCK_STATE_DONE, 0
     );
 
-    private static final Collection<ItemStack> RESULTS = ImmutableList.of(
-            EffectMetaItem.withLastingEffect(
-                    EffectMetaItem.MoodEffects.UNCOMFORTABLE_EATING,
-                    Compat.configGet(Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY).get()
-            ),
-            EffectMetaItem.withLastingEffect(
-                    EffectMetaItem.MoodEffects.ATE_RAW_FOOD,
-                    Compat.configGet(Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY).get()
-            )
-    );
     public static final int PAUSE_FOR_ACTION = 10;
 
     public static Work asWork(
@@ -92,7 +80,7 @@ public class DinerRawFoodWork {
                                     ServerLevel level,
                                     Collection<MCHeldItem> heldItems
                             ) {
-                                return MCHeldItem.fromMCItemStacks(RESULTS);
+                                return ImmutableList.of();
                             }
 
                             @Override
@@ -104,7 +92,11 @@ public class DinerRawFoodWork {
                 new WorkSpecialRules(
                         ImmutableMap.of(
                                 ProductionStatus.EXTRACTING_PRODUCT,
-                                ImmutableList.of(SpecialRules.HUNGER_FILL_HALF)
+                                ImmutableList.of(
+                                        SpecialRules.HUNGER_FILL_HALF,
+                                        SpecialRules.APPLY_UNCOMFORTABLE_EATING,
+                                        SpecialRules.APPLY_ATE_RAW_FOOD
+                                )
                         ), // No stage rules
                         ImmutableList.of(
                                 SpecialRules.WORK_IN_EVENING,

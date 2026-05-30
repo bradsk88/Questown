@@ -2,7 +2,6 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.items.EffectMetaItem;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -23,9 +22,9 @@ public class TownVillagerMoods {
     static void staticInitialize() {
         ImmutableMap.Builder<ResourceLocation, Integer> b = ImmutableMap.builder();
 
-        b.put(EffectMetaItem.MoodEffects.COMFORTABLE_EATING, 5);
-        b.put(EffectMetaItem.MoodEffects.UNCOMFORTABLE_EATING, -5);
-        b.put(EffectMetaItem.MoodEffects.ATE_RAW_FOOD, -10);
+        b.put(MoodEffects.COMFORTABLE_EATING, 5);
+        b.put(MoodEffects.UNCOMFORTABLE_EATING, -5);
+        b.put(MoodEffects.ATE_RAW_FOOD, -10);
 
         buffs = b.build();
         staticInitialized = true;

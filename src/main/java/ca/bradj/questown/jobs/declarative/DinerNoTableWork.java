@@ -3,7 +3,6 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -14,7 +13,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -52,9 +50,6 @@ public class DinerNoTableWork {
             BLOCK_STATE_DONE, 0
     );
 
-    private static final Collection<ItemStack> RESULTS = ImmutableList.of(
-            EffectMetaItem.withLastingEffect(EffectMetaItem.MoodEffects.UNCOMFORTABLE_EATING, Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY.get())
-    );
     public static final int PAUSE_FOR_ACTION = 10;
 
     public static Work asWork(
@@ -82,7 +77,7 @@ public class DinerNoTableWork {
                                     ServerLevel level,
                                     Collection<MCHeldItem> heldItems
                             ) {
-                                return MCHeldItem.fromMCItemStacks(RESULTS);
+                                return ImmutableList.of();
                             }
 
                             @Override
@@ -94,7 +89,10 @@ public class DinerNoTableWork {
                 new WorkSpecialRules(
                         ImmutableMap.of(
                                 ProductionStatus.EXTRACTING_PRODUCT,
-                                ImmutableList.of(SpecialRules.HUNGER_FILL)
+                                ImmutableList.of(
+                                        SpecialRules.HUNGER_FILL,
+                                        SpecialRules.APPLY_UNCOMFORTABLE_EATING
+                                )
                         ),
                         ImmutableList.of(
                                 SpecialRules.WORK_IN_EVENING,

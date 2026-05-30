@@ -71,6 +71,13 @@ public class SpecialRules {
     // villager's hunger will be filled up to 100%.
     public static final String HUNGER_FILL = "hunger_fill";
 
+    // If these rules are active during the extraction stage of a job, the
+    // corresponding eating mood effect is applied to the villager. They replace
+    // the EffectMetaItem results the eating jobs used to emit (see ADR-0003).
+    public static final String APPLY_COMFORTABLE_EATING = "apply_comfortable_eating";
+    public static final String APPLY_UNCOMFORTABLE_EATING = "apply_uncomfortable_eating";
+    public static final String APPLY_ATE_RAW_FOOD = "apply_ate_raw_food";
+
     // If this rule is active during the extraction stage of a job, the
     // villager will attempt to use their workspot as a container, adding
     // the last item that was inserted as part of the job.

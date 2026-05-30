@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -259,12 +258,6 @@ public abstract class AbstractWorldInteraction<
             }
             if (isInstanze(newItem.get(), KnowledgeMetaItem.class)) {
                 ts = withKnowledge(inputs, ts, newItem);
-            } else if (isInstanze(newItem.get(), EffectMetaItem.class)) {
-                // Eating jobs (DinerWork/DinerNoTableWork/DinerRawFoodWork) extract only an
-                // EffectMetaItem, so without firing the hook here their EXTRACTING_PRODUCT
-                // rules — notably HUNGER_FILL — never run and the villager never refills.
-                TOWN hooked = postExtractHook(inputs, ts, newItem);
-                ts = withEffectApplied(inputs, hooked != null ? hooked : ts, newItem);
             } else {
                 HELD_ITEM unit = newItem.unit();
                 TOWN hooked = postExtractHook(inputs, ts, unit);
@@ -611,12 +604,6 @@ public abstract class AbstractWorldInteraction<
             TOWN ts,
             POS position,
             State fresh
-    );
-
-    protected abstract TOWN withEffectApplied(
-            @NotNull EXTRA inputs,
-            TOWN ts,
-            HELD_ITEM newItem
     );
 
     protected abstract TOWN withKnowledge(

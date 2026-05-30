@@ -4,7 +4,6 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -310,7 +309,14 @@ public class TimeWarpWorldInteraction extends
                     CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
                     itemData.forEach(t::putInt);
                     return ctx;
-                }, (in, up) -> in
+                }, (in, up) -> in,
+                (in, effect, durationTicks) -> {
+                    long expiry = Util.getTick(inputs.level) + durationTicks;
+                    return in.withVillagerData(
+                            villagerIndex,
+                            in.getVillager(villagerIndex).withEffect(new Effect(effect, expiry))
+                    );
+                }
         );
     }
 
@@ -322,21 +328,6 @@ public class TimeWarpWorldInteraction extends
             State fresh
     ) {
         return ts.setJobBlockState(position, fresh);
-    }
-
-    @Override
-    protected MCTownState withEffectApplied(
-            @NotNull Inputs inputs,
-            MCTownState ts,
-            MCHeldItem newItem
-    ) {
-        ItemStack s = newItem.get().toQTItemStack();
-        ResourceLocation effect = EffectMetaItem.getEffect(s);
-        return ts.withVillagerData(
-                villagerIndex,
-                ts.getVillager(villagerIndex)
-                  .withEffect(new Effect(effect, EffectMetaItem.getEffectExpiry(s, Util.getTick(inputs.level))))
-        );
     }
 
     @Override

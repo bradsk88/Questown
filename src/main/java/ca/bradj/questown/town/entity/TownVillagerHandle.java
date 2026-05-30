@@ -5,7 +5,6 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
@@ -266,15 +265,6 @@ public final class TownVillagerHandle {
             Long expireOnTick,
             UUID uuid
     ) {
-        // TODO: Generalize
-        if (EffectMetaItem.ConsumableEffects.FILL_HUNGER.equals(effect)) {
-            delegate.fillHunger(uuid);
-            return;
-        }
-        if (EffectMetaItem.ConsumableEffects.FILL_HUNGER_HALF.equals(effect)) {
-            delegate.fillHunger(uuid, 0.5f);
-            return;
-        }
         moods.tryApplyEffect(effect, expireOnTick, uuid);
     }
 

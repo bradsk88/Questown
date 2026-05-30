@@ -31,15 +31,15 @@ This was a long-standing latent bug, not a recent regression — the effect/know
 
 ## Fix
 
-In `tryGiveItems`, fire `postExtractHook` in the `EffectMetaItem` branch (mirroring the normal-item branch's `hooked != null ? hooked : ts`). Eating jobs extract only an effect item, so this is what makes `HUNGER_FILL` run when a villager finishes eating.
+Superseded the effect-item mechanism entirely (see [ADR-0003](../../adr/0003-eating-effects-are-special-rules.md)). `EffectMetaItem` was deleted; the eating jobs now produce **empty** results and declare their hunger + mood outcomes as `EXTRACTING_PRODUCT` special rules (`HUNGER_FILL` already existed; mood is the new `ApplyMoodEffectSpecialRule`). With no product item, extraction takes the empty-result path that has always fired `postExtractHook`, so the rules run and the villager refills — the bug class is structurally impossible and `tryGiveItems` has no item-type special-casing left.
 
-**Scoped deliberately to the effect branch only.** The first attempt also added the hook to the `KnowledgeMetaItem` branch, which regressed the gatherer: it emits a knowledge item per gather, so firing its `EXTRACTING_PRODUCT` rules an extra time inflated warp loot yields (`gatherer/axe [short_absence]` produced ~20 items vs the expected 0–14, and the gatherer even dined mid-warp). The knowledge branch is left untouched — no eating job produces knowledge results, so it is irrelevant to this bug.
+(An earlier interim fix — commit 2a345983 — instead fired `postExtractHook` in the `EffectMetaItem` branch. It worked but left a footgun asymmetry, and was reverted by the migration above. Notably, also firing the hook in the `KnowledgeMetaItem` branch had regressed the gatherer — it emits one knowledge item per gather, so its extract rules double-applied and inflated warp loot — which is why knowledge is left on its own path until it gets a proper redesign.)
 
-The warp path's `hungerUpdater` is intentionally a no-op (`(in, up) -> in`) and was left unchanged — warp drives hunger separately and the eating scenarios are realtime-only (`skipWarp`).
+The warp path's `hungerUpdater` is intentionally a no-op (`(in, up) -> in`) and was left unchanged — warp drives hunger separately ([ADR-0002](../../adr/0002-warp-does-not-model-hunger.md)) and the eating scenarios are realtime-only (`skipWarp`). Warp mood application is preserved via the new `moodUpdater`.
 
 ## Tests
 
-- `ExtractHookFiresForMetaResultsTest` (unit): drives `tryGiveItems` with effect / knowledge / normal results and asserts the hook fires for effect and normal results but **not** for knowledge (the deliberate scoping). The effect case fails without the fix.
+- `ExtractHookFiresForMetaResultsTest` (unit): drives `tryGiveItems` and asserts the hook fires once for an empty result (the path eating now takes) and per normal item, but **not** for knowledge results.
 - End-to-end: autotest `eating/dine_at_time` (and the rest of the `eating` category).
 
 ## Related
