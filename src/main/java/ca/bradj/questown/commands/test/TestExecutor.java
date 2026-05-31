@@ -7,6 +7,7 @@ import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.interfaces.KnowledgeHolder;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -64,6 +65,7 @@ public class TestExecutor {
     private BlockPos flagPos;
     private TownFlagBlockEntity tfbe;
     private Map<String, Integer> beforeCounts;
+    private int beforeKnowledgeCount;
     private Map<String, Integer> warpDeltas = new java.util.HashMap<>();
     private Map<String, Integer> beforeRealtimeCounts;
     private long monitorEndTick;
@@ -335,6 +337,7 @@ public class TestExecutor {
         MCTownState state = tfbe.captureCurrentState();
         if (state != null) {
             beforeCounts = TestResultChecker.snapshotItemCounts(state);
+            beforeKnowledgeCount = computeKnowledgeCount();
             if (blueprint.useNaturalWarp()) {
                 msg("State captured, simulating " + effectiveWarpAmount() + " ticks of player absence...");
                 phase = Phase.NATURAL_WARP_FREEZE;
@@ -427,7 +430,7 @@ public class TestExecutor {
         Map<String, Integer> afterCounts = TestResultChecker.snapshotItemCounts(afterState);
         TestResultChecker.Result result = TestResultChecker.check(beforeCounts, afterCounts, blueprint.expectation());
         warpDeltas = result.deltas();
-        warpPassed = result.passed();
+        warpPassed = result.passed() && checkKnowledgeGrowthIfNeeded();
         broadcastResult("WARP", result);
         if (warpOnly) {
             phase = Phase.DONE;
@@ -612,6 +615,30 @@ public class TestExecutor {
                     passed ? "PASS" : "FAIL", fullness * 100, minFullness * 100));
         }
         return allPassed;
+    }
+
+    private int computeKnowledgeCount() {
+        if (tfbe == null) {
+            return 0;
+        }
+        KnowledgeHolder<?, MCHeldItem, ?> handle = tfbe.getKnowledgeHandle();
+        if (handle == null) {
+            return 0;
+        }
+        return handle.getAllKnownGatherResults().size();
+    }
+
+    private boolean checkKnowledgeGrowthIfNeeded() {
+        if (blueprint.minKnowledgeGrowth() == null) {
+            return true;
+        }
+        int after = computeKnowledgeCount();
+        int grown = after - beforeKnowledgeCount;
+        boolean ok = grown == blueprint.minKnowledgeGrowth();
+        msg(String.format(
+                "KNOWLEDGE [%s] grown=%d min=%d",
+                ok ? "PASS" : "FAIL", grown, blueprint.minKnowledgeGrowth()));
+        return ok;
     }
 
     private Map<String, Integer> scaleDeltas(Map<String, Integer> raw) {

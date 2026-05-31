@@ -27,6 +27,10 @@ _Avoid_: handler, listener, plugin.
 **Special rule**:
 Synonym for job phase modifier when emphasizing the JSON-declared, per-job-phase form.
 
+**Leaver job**:
+A job whose townie leaves the town to do the work and returns with products — gatherer, hunter, miner, fisher, and explorer — as opposed to an in-town crafter working at a station. Modeled **warp-only** in the autotest suite as a consequence: the townie isn't present to drive live, so its blueprint sets `realtimePhase=false` and the suite asserts only the warp pass.
+_Avoid_: remote job, expedition job ("leaver" matches the `jobs/leaver/` package and `NewLeaverWork`).
+
 ### Dining & mood
 
 **Dining**:
@@ -50,6 +54,12 @@ The set of (biome, tool-prefix) → items a town has discovered, held in the `Kn
 
 **Gatherer map**:
 An item stamped with a biome. Its presence in a town chest is what makes that biome (and its known loot) usable by gatherers.
+
+### Testing
+
+**Autotest suite**:
+The in-game, server-driven test harness invoked with `/_qtdev test <job> <warp>` (one job) or `testall` (all). Each job runs through a `TestBlueprint`: it builds an arena, spawns a townie, runs the job, and asserts on observable outcomes across three axes — inventory deltas, **fullness**, and town **known-loot** growth. A blueprint runs a **warp pass** and, unless it's a **leaver job** (`realtimePhase=false`), a **realtime pass** too.
+_Avoid_: integration tests (those are the separate JUnit suite), harness (too generic).
 
 ### Helper chicken arc
 
@@ -80,6 +90,7 @@ A `(bubble, hintKey, plainKey)` row in the per-(beat, phase) presentation table.
 - A **Chicken arc** is at any time on exactly one **Beat**, in exactly one **BeatPhase** for that beat.
 - A **(Beat, BeatPhase)** maps to exactly one **Presentation**.
 - A **Townie** runs **Jobs** advanced by **Job phase modifiers**.
+- A **Leaver job** is the kind the explorer runs; **Scouting** is its outcome.
 
 ## Example dialogue
 

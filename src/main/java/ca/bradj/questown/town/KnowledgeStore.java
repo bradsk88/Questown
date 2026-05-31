@@ -54,6 +54,7 @@ public class KnowledgeStore<BIOME, ITEM_IN extends HeldItem<ITEM_IN, ?>, ITEM_OU
         return b.build();
     }
 
+    @Override
     public ImmutableSet<ITEM_IN> getAllKnownGatherResults() {
         ImmutableSet.Builder<ITEM_IN> b = ImmutableSet.builder();
         baseKnowledge.forEach(v -> b.add(unstripper.apply(GathererTools.NO_TOOL_TABLE_PREFIX, null, v)));

@@ -30,7 +30,8 @@ public record TestBlueprint(
         @Nullable BlockPos extraBlockRoomOffset,
         @Nullable ResourceLocation extraBlockRoomId,
         @Nullable TestExpectation expectedVillagerHeld,
-        boolean useNaturalWarp
+        boolean useNaturalWarp,
+        @Nullable Integer minKnowledgeGrowth
 ) {
     public TestBlueprint(
             RoomType roomType,
@@ -43,7 +44,7 @@ public record TestBlueprint(
     ) {
         this(roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
              roomId, expectation, null, null, null, null, false, null,
-             false, false, null, null, null, null, null, false);
+             false, false, null, null, null, null, null, false, null);
     }
 
     public TestBlueprint(
@@ -58,7 +59,56 @@ public record TestBlueprint(
     ) {
         this(roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
              roomId, expectation, supplyDoorOffset, null, null, null, false, null,
-             false, false, null, null, null, null, null, false);
+             false, false, null, null, null, null, null, false, null);
+    }
+
+    // Compatibility constructor: old canonical signature (without minKnowledgeGrowth).
+    public TestBlueprint(
+            RoomType roomType,
+            Collection<BlockPlacement> blocks,
+            Collection<ItemStack> supplyItems,
+            BlockPos doorOrGateOffset,
+            BlockPos chestOffset,
+            ResourceLocation roomId,
+            TestExpectation expectation,
+            @Nullable BlockPos supplyDoorOffset,
+            @Nullable Integer warpAmountOverride,
+            @Nullable Long startTimeTick,
+            @Nullable Integer villagerCount,
+            boolean realtimePhase,
+            @Nullable Integer realtimeTicks,
+            boolean drainHungerBeforeTest,
+            boolean skipWarp,
+            @Nullable TestExpectation realtimeExpectation,
+            @Nullable Float minExpectedFullnessAfter,
+            @Nullable BlockPos extraBlockRoomOffset,
+            @Nullable ResourceLocation extraBlockRoomId,
+            @Nullable TestExpectation expectedVillagerHeld,
+            boolean useNaturalWarp
+    ) {
+        this(roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
+             roomId, expectation, supplyDoorOffset, warpAmountOverride, startTimeTick,
+             villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
+             realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
+             extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, null);
+    }
+
+    public TestBlueprint withMinKnowledgeGrowth(int n) {
+        return new TestBlueprint(
+                roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
+                roomId, expectation, supplyDoorOffset, warpAmountOverride, startTimeTick,
+                villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
+                realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
+                extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, n);
+    }
+
+    public TestBlueprint withWarpAmountOverride(int n) {
+        return new TestBlueprint(
+                roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
+                roomId, expectation, supplyDoorOffset, n, startTimeTick,
+                villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
+                realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
+                extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, minKnowledgeGrowth);
     }
 
     public int effectiveVillagerCount() {

@@ -11,4 +11,6 @@ public interface KnowledgeHolder<BIOME, ITEM_IN, ITEM_OUT> {
     );
 
     void registerFoundLoots(Collection<ITEM_IN> items);
+
+    ImmutableSet<ITEM_IN> getAllKnownGatherResults();
 }

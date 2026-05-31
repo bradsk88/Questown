@@ -57,6 +57,9 @@ public class TestBlueprintRegistry {
             return soupCookBlueprint();
         }
         if ("gatherer".equals(jobId.rootId())) {
+            if ("explore".equals(jobId.jobId())) {
+                return explorerBlueprint();
+            }
             return gathererBlueprint();
         }
         if ("hunter".equals(jobId.rootId())) {
@@ -83,6 +86,7 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("smelter", "process_ore"), smelterBlueprint()));
         jobs.add(entry(new JobID("soup_cook", "one_mushroom_stew"), soupCookBlueprint()));
         jobs.add(entry(new JobID("gatherer", "axe"), gathererBlueprint()));
+        jobs.add(entry(new JobID("gatherer", "explore"), explorerBlueprint()));
         jobs.add(entry(new JobID("hunter", "sword"), hunterBlueprint()));
         jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
         jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
@@ -467,6 +471,17 @@ public class TestBlueprintRegistry {
                         new ItemStack(Items.COOKED_BEEF, 8)
                 )
         );
+    }
+
+    private static TestBlueprint explorerBlueprint() {
+        // Tuned to force EXACTLY ONE scout cycle so the knowledge-growth assertion can pin ==1.
+        // Load-bearing — do not "tidy up": 1 paper + 1 cooked_beef means a second cycle can't
+        // start (it would stall at NEED_PAPER/NEED_FOOD), and warpAmountOverride=2500 covers one
+        // ~2000-tick NEED_ROAM cycle but not two. Change either and the ==1 assertion breaks.
+        return welcomeMatBlueprint(List.of(
+                new ItemStack(Items.PAPER, 1),
+                new ItemStack(Items.COOKED_BEEF, 1)
+        )).withMinKnowledgeGrowth(1).withWarpAmountOverride(2500);
     }
 
     private static TestBlueprint hunterBlueprint() {
