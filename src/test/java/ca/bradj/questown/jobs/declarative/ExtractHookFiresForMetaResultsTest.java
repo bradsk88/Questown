@@ -1,6 +1,5 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.TestInventory;
 import ca.bradj.questown.logic.MonoPredicateCollection;
@@ -15,22 +14,21 @@ import java.util.Collection;
 import java.util.function.Supplier;
 
 /**
- * Guards how {@code tryGiveItems} fires {@code postExtractHook} (which runs the
- * {@code EXTRACTING_PRODUCT} special rules) per result type.
+ * Guards that {@code tryGiveItems} fires {@code postExtractHook} (which runs the
+ * {@code EXTRACTING_PRODUCT} special rules) once per extraction.
  *
- * <p>Background: the eating jobs used to extract an {@code EffectMetaItem} and
- * lost their {@code HUNGER_FILL} rule because the effect branch skipped the hook
- * (the {@code eating/dine_at_time} starvation bug). That whole branch is gone —
- * eating jobs now produce <em>empty</em> results, so extraction takes the
- * empty-stack path that has always fired the hook, and mood/hunger are applied
- * via special rules. These tests pin that contract.
+ * <p>History: the meta-item result types (effect, knowledge) used to be branched on
+ * inside {@code tryGiveItems}, and the effect branch skipped the hook — the
+ * {@code eating/dine_at_time} starvation bug. Both meta-item concepts have since been
+ * deleted (ADR-0003, ADR-0004): eating jobs produce empty results and the explorer
+ * scouts via a rule reading the extracted map, so every result now flows through the
+ * single normal/empty path that always fires the hook. These tests pin that.
  */
 class ExtractHookFiresForMetaResultsTest {
 
     private static final Position WORK_SPOT = new Position(0, 0);
-    private static final String KNOWLEDGE_MARKER = "test:knowledge";
 
-    /** A {@link TestWorldInteraction} that recognises a knowledge marker and records hook calls. */
+    /** A {@link TestWorldInteraction} that records every {@code postExtractHook} call. */
     private static class RecordingWorldInteraction extends TestWorldInteraction {
         int postExtractCalls;
         GathererJournalTest.TestItem lastExtracted;
@@ -54,11 +52,6 @@ class ExtractHookFiresForMetaResultsTest {
                     // A non-empty rule list at the max state makes postExtractHook delegate.
                     ImmutableMap.of(1, ImmutableList.of("test:some_extract_rule"))
             );
-        }
-
-        @Override
-        protected boolean isInstanze(GathererJournalTest.TestItem item, Class<?> clazz) {
-            return clazz == KnowledgeMetaItem.class && KNOWLEDGE_MARKER.equals(item.value);
         }
 
         @Override
@@ -86,8 +79,7 @@ class ExtractHookFiresForMetaResultsTest {
     @Test
     void emptyResult_firesPostExtractHookOnce_regressionForDineAtTimeStarvation() {
         // The path the eating jobs now take: no product item, so the hook fires
-        // once with a null item and the EXTRACTING_PRODUCT rules (HUNGER_FILL,
-        // mood) run. This is what keeps dining villagers from starving.
+        // once with a null item and the EXTRACTING_PRODUCT rules run.
         RecordingWorldInteraction twi = newWorldInteraction();
 
         twi.tryGiveItems(null, ImmutableList.of(), WORK_SPOT);
@@ -97,22 +89,9 @@ class ExtractHookFiresForMetaResultsTest {
     }
 
     @Test
-    void knowledgeResult_doesNotFirePostExtractHook_scopedToProductsOnly() {
-        // Knowledge items are not products; the gatherer emits one per gather and
-        // firing its extract rules would double-apply them (inflating warp loot).
-        RecordingWorldInteraction twi = newWorldInteraction();
-
-        twi.tryGiveItems(
-                null,
-                ImmutableList.of(new GathererJournalTest.TestItem(KNOWLEDGE_MARKER)),
-                WORK_SPOT
-        );
-
-        Assertions.assertEquals(0, twi.postExtractCalls);
-    }
-
-    @Test
     void normalItemResult_firesPostExtractHookOncePerItem() {
+        // Every product (including the explorer's gatherer map, which the scout rule
+        // reads at this hook) now flows through this single path.
         RecordingWorldInteraction twi = newWorldInteraction();
 
         twi.tryGiveItems(

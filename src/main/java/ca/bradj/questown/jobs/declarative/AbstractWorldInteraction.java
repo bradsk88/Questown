@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -256,14 +255,10 @@ public abstract class AbstractWorldInteraction<
                 QT.JOB_LOGGER.debug("[tryGiveItems] Pushing shrunk item qty={}", shrunk.get().quantity());
                 stack.push(shrunk);
             }
-            if (isInstanze(newItem.get(), KnowledgeMetaItem.class)) {
-                ts = withKnowledge(inputs, ts, newItem);
-            } else {
-                HELD_ITEM unit = newItem.unit();
-                TOWN hooked = postExtractHook(inputs, ts, unit);
-                ts = setHeldItem(inputs, hooked != null ? hooked : ts, villagerIndex, i, unit);
-                QT.VILLAGER_LOGGER.debug("Villager took {}", unit.toShortString());
-            }
+            HELD_ITEM unit = newItem.unit();
+            TOWN hooked = postExtractHook(inputs, ts, unit);
+            ts = setHeldItem(inputs, hooked != null ? hooked : ts, villagerIndex, i, unit);
+            QT.VILLAGER_LOGGER.debug("Villager took {}", unit.toShortString());
 
             if (stack.isEmpty()) {
                 gotAll = true;
@@ -604,17 +599,6 @@ public abstract class AbstractWorldInteraction<
             TOWN ts,
             POS position,
             State fresh
-    );
-
-    protected abstract TOWN withKnowledge(
-            @NotNull EXTRA inputs,
-            TOWN ts,
-            HELD_ITEM newItem
-    );
-
-    protected abstract boolean isInstanze(
-            INNER_ITEM innerItem,
-            Class<?> clazz
     );
 
     protected abstract boolean isMulti(INNER_ITEM innerItem);

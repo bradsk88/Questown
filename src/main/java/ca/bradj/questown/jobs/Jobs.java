@@ -361,11 +361,6 @@ public class Jobs {
                 continue;
             }
 
-            if (ItemsInit.KNOWLEDGE.get().equals(mct.get().get())) {
-                dropper.removeItem(mct);
-                continue;
-            }
-
             if (farFromChest) {
                 continue;
             }

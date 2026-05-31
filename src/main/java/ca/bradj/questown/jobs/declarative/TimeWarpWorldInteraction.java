@@ -316,7 +316,9 @@ public class TimeWarpWorldInteraction extends
                             villagerIndex,
                             in.getVillager(villagerIndex).withEffect(new Effect(effect, expiry))
                     );
-                }
+                },
+                extractedItem,
+                (in, foundLoot) -> in.withKnowledge(foundLoot)
         );
     }
 
@@ -328,23 +330,6 @@ public class TimeWarpWorldInteraction extends
             State fresh
     ) {
         return ts.setJobBlockState(position, fresh);
-    }
-
-    @Override
-    protected MCTownState withKnowledge(
-            @NotNull Inputs inputs,
-            MCTownState ts,
-            MCHeldItem newItem
-    ) {
-        return ts.withKnowledge(newItem);
-    }
-
-    @Override
-    protected boolean isInstanze(
-            MCTownItem mcTownItem,
-            Class<?> clazz
-    ) {
-        return clazz.isInstance(mcTownItem.get().asItem());
     }
 
     @Override

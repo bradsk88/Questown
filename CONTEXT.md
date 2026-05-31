@@ -39,6 +39,18 @@ A villager's hunger level (0 = starving). Drains over realtime ticks; refilled b
 **Mood effect**:
 A timed buff/debuff on a villager identified by a `ResourceLocation` (e.g. `comfortable_eating`, `uncomfortable_eating`, `are_raw_food`). Feeds the villager's mood, work-time factor, and visible mood meter.
 
+### Gathering & scouting
+
+**Scouting**:
+What the explorer job does: an expedition that brings back a **gatherer map** for a biome and *learns* one loot drop available in that biome — without taking the item. The learned drop is recorded as **known loot**; the explorer doesn't acquire it.
+_Avoid_: gathering (gathering = actually collecting items; scouting = discovering what's collectable).
+
+**Known loot**:
+The set of (biome, tool-prefix) → items a town has discovered, held in the `KnowledgeStore`. Gates what a gatherer can bring back, but only for biomes the town holds a **gatherer map** for.
+
+**Gatherer map**:
+An item stamped with a biome. Its presence in a town chest is what makes that biome (and its known loot) usable by gatherers.
+
 ### Helper chicken arc
 
 **Helper chicken**:

@@ -96,6 +96,10 @@ public final class QuestownSpecialRules {
                         () -> ca.bradj.questown.core.Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY.get()
                 )
         );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.SCOUT_LOOT),
+                new ca.bradj.questown.jobs.gatherer.ScoutLootSpecialRule()
+        );
 
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation("switch_to_organizer_fetcher"),

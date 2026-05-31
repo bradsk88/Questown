@@ -171,12 +171,6 @@ public class ItemsInit {
         }
     }
 
-    public static final RegistryObject<Item> KNOWLEDGE = ITEMS.register(
-            KnowledgeMetaItem.ITEM_ID,
-            KnowledgeMetaItem::new
-    );
-
-
     public static final RegistryObject<Item> HOSPITAL_BED = ITEMS.register(
             HospitalBedBlock.ITEM_ID,
             () -> new HospitalBedItem(BlocksInit.HOSPITAL_BED.get(), Questown.DEFAULT_ITEM_PROPS.stacksTo(1))

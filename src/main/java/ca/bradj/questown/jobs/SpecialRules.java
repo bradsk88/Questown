@@ -78,6 +78,11 @@ public class SpecialRules {
     public static final String APPLY_UNCOMFORTABLE_EATING = "apply_uncomfortable_eating";
     public static final String APPLY_ATE_RAW_FOOD = "apply_ate_raw_food";
 
+    // If this rule is active during the extraction stage of a job and a gatherer map
+    // is extracted, the town learns one loot drop available in that map's biome
+    // (recorded as known loot). Replaces the explorer's KnowledgeMetaItem (ADR-0004).
+    public static final String SCOUT_LOOT = "scout_loot";
+
     // If this rule is active during the extraction stage of a job, the
     // villager will attempt to use their workspot as a container, adding
     // the last item that was inserted as part of the job.

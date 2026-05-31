@@ -187,24 +187,6 @@ public class RealtimeWorldInteraction extends
     }
 
     @Override
-    protected Boolean withKnowledge(
-            @NotNull MCExtra inputs,
-            Boolean ts,
-            MCHeldItem newItem
-    ) {
-        inputs.town().getKnowledgeHandle().registerFoundLoots(ImmutableList.of(newItem));
-        return null;
-    }
-
-    @Override
-    protected boolean isInstanze(
-            MCTownItem mcTownItem,
-            Class<?> clazz
-    ) {
-        return clazz.isInstance(mcTownItem.get());
-    }
-
-    @Override
     protected boolean isMulti(MCTownItem mcTownItem) {
         return mcTownItem.toQTItemStack().getCount() > 1;
     }
@@ -417,6 +399,11 @@ public class RealtimeWorldInteraction extends
                 (in, effect, durationTicks) -> {
                     long expiry = Util.getTick(inputs.town().getServerLevel()) + durationTicks;
                     inputs.town().getVillagerHandle().applyEffect(effect, expiry, inputs.entity().getUUID());
+                    return in;
+                },
+                extractedItem,
+                (in, foundLoot) -> {
+                    inputs.town().getKnowledgeHandle().registerFoundLoots(ImmutableList.of(foundLoot));
                     return in;
                 }
         );

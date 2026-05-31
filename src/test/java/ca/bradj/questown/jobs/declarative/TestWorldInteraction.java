@@ -351,23 +351,6 @@ public class TestWorldInteraction extends
     }
 
     @Override
-    protected Boolean withKnowledge(
-            @NotNull Void inputs,
-            Boolean ts,
-            GathererJournalTest.TestItem newItem
-    ) {
-        return null;
-    }
-
-    @Override
-    protected boolean isInstanze(
-            GathererJournalTest.TestItem testItem,
-            Class<?> clazz
-    ) {
-        return false;
-    }
-
-    @Override
     protected boolean isMulti(GathererJournalTest.TestItem testItem) {
         return false;
     }

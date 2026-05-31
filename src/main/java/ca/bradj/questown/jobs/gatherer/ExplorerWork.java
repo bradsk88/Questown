@@ -5,7 +5,6 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
@@ -20,7 +19,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.List;
@@ -55,7 +53,9 @@ public class ExplorerWork {
             ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_ROAM),
             ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD),
             ProductionStatus.FACTORY.waitingForTimedState(),
-            ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD)
+            ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD),
+            ProductionStatus.EXTRACTING_PRODUCT,
+            ImmutableList.of(SpecialRules.SCOUT_LOOT)
     );
 
 
@@ -89,27 +89,8 @@ public class ExplorerWork {
         ImmutableList.Builder<MCHeldItem> list = ImmutableList.builder();
         list.add(MCHeldItem.fromTown(map));
 
-        List<GathererTools.LootTableParameters> all = NewLeaverWork.getAllParameters();
-        if (all.isEmpty()) {
-            all = ImmutableList.of(new GathererTools.LootTableParameters(
-                    GathererTools.NO_TOOL_TABLE_PREFIX,
-                    GathererTools.NO_TOOL_LOOT_TABLE_DEFAULT
-            ));
-        }
-
-        GathererTools.LootTableParameters lootParams = all.get(level.getRandom().nextInt(all.size()));
-        @NotNull List<MCHeldItem> knowledge = Loots.getFromLootTables(
-                level, 1, 1,
-                lootParams,
-                biome
-        );
-
-        QT.JOB_LOGGER.debug(
-                "Presenting knowledge of item to explorer: {} [prefix: {}, biome: {}]",
-                knowledge.get(0), lootParams.prefix(), biome
-        );
-        list.add(KnowledgeMetaItem.wrap(knowledge.get(0), lootParams.prefix(), biome));
-
+        // The map is the only product. Learning a loot drop for this biome happens at
+        // extraction via SpecialRules.SCOUT_LOOT, which reads this map's biome (ADR-0004).
         ImmutableList<MCHeldItem> realList = list.build();
         QT.JOB_LOGGER.debug("Presenting items to explorer: {}", realList);
         return realList;
