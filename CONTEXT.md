@@ -31,6 +31,29 @@ Synonym for job phase modifier when emphasizing the JSON-declared, per-job-phase
 A job whose townie leaves the town to do the work and returns with products — gatherer, hunter, miner, fisher, and explorer — as opposed to an in-town crafter working at a station. Modeled **warp-only** in the autotest suite as a consequence: the townie isn't present to drive live, so its blueprint sets `realtimePhase=false` and the suite asserts only the warp pass.
 _Avoid_: remote job, expedition job ("leaver" matches the `jobs/leaver/` package and `NewLeaverWork`).
 
+**Job root**:
+The namespace half of a `JobID` (`rootId()`) that groups jobs into one **cycling pool**: a townie assigned a root shuffles only among jobs sharing it (`gatherer` → gather/axe/shovel/…; `explorer` → just explore). Distinct from a **progression parent** — a job's root and its parent's root can differ (the explorer's root is `explorer` but its parent is `gatherer/gather`).
+_Avoid_: "root job" for this (that means a **starter job**); job type, category.
+
+**Starter job**:
+A job unlocked from the start — `Work.parentID == null` (`ServerJobsRegistry.getAllRootJobs()` / `isUnlockedInitially()`). The opposite is a progression-unlocked job, which names a **progression parent**.
+_Avoid_: "root job" (collides with **job root**), default job.
+
+**Progression parent**:
+The `Work.parentID` a non-starter job points at; the town must have progressed through that parent before the child becomes available. May live in a different **job root** than the child — that is how a townie crosses from one root into another through progression (e.g. `explorer/explore`'s parent is `gatherer/gather`, like `armorer/*`'s parent is `crafter/stick`).
+_Avoid_: prerequisite, unlock requirement.
+
+**Ingredient** (per-state role):
+An item a state's work **consumes** by inserting/using it into the workspot (`item.shrink()`). Pulled **fresh** from a container at each state that requires one — so a mid-cycle ingredient cannot be acquired during **warp** (offline supply collection is container-centric and can't reach back for one). A consumed-from-**held** ingredient is fine in warp, which is why the tool→ingredient idiom works (see **Tool**).
+_Avoid_: material (fine informally, but "ingredient" matches `INGREDIENTS_REQUIRED_AT_STATES`).
+
+**Tool** (per-state role):
+An item a state requires the townie to **hold** but does not itself consume; grabbed once if not already held (re-grab skipped via `villagerAlreadyHolds`), carried for the rest of the cycle, rendered in hand. May be durability-degraded. **Not** synonymous with durable equipment — food and paper are tools. Because ingredient and tool are *per-state roles*, the same item can be a **tool** at an early state and an **ingredient** at a later one: it is grabbed-and-held cheaply, then consumed from held (the **tool→ingredient idiom** — `cook/simple_furnace_food` holds beef as a tool, then consumes it as an ingredient; this also survives warp).
+_Avoid_: equipment, implement.
+
+**Tool-encoded consumable**:
+A consumable held as a **tool** so it's grabbed-once/rendered and survives warp supply collection, then spent — by one of three mechanisms: durability (real tools), the **tool→ingredient idiom** (cook beef; the explorer's paper, held at NEED_PAPER then consumed at USE_PAPER), or a dedicated **special rule** at extract (`HUNGER_FILL` eats diner food). Prefer the idiom over a special rule when the job has a state to hang the ingredient on — a special rule is the fallback for shapes that don't (e.g. a leaver whose only post-pickup phase is the extract itself, if it has no insert state).
+
 ### Dining & mood
 
 **Dining**:
