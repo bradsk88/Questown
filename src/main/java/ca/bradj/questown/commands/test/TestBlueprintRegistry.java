@@ -56,10 +56,10 @@ public class TestBlueprintRegistry {
         if ("soup_cook".equals(jobId.rootId())) {
             return soupCookBlueprint();
         }
+        if ("explorer".equals(jobId.rootId())) {
+            return explorerBlueprint();
+        }
         if ("gatherer".equals(jobId.rootId())) {
-            if ("explore".equals(jobId.jobId())) {
-                return explorerBlueprint();
-            }
             return gathererBlueprint();
         }
         if ("hunter".equals(jobId.rootId())) {
@@ -86,7 +86,7 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("smelter", "process_ore"), smelterBlueprint()));
         jobs.add(entry(new JobID("soup_cook", "one_mushroom_stew"), soupCookBlueprint()));
         jobs.add(entry(new JobID("gatherer", "axe"), gathererBlueprint()));
-        jobs.add(entry(new JobID("gatherer", "explore"), explorerBlueprint()));
+        jobs.add(entry(new JobID("explorer", "explore"), explorerBlueprint()));
         jobs.add(entry(new JobID("hunter", "sword"), hunterBlueprint()));
         jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
         jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
@@ -474,14 +474,28 @@ public class TestBlueprintRegistry {
     }
 
     private static TestBlueprint explorerBlueprint() {
-        // Tuned to force EXACTLY ONE scout cycle so the knowledge-growth assertion can pin ==1.
-        // Load-bearing — do not "tidy up": 1 paper + 1 cooked_beef means a second cycle can't
-        // start (it would stall at NEED_PAPER/NEED_FOOD), and warpAmountOverride=2500 covers one
-        // ~2000-tick NEED_ROAM cycle but not two. Change either and the ==1 assertion breaks.
+        // The ==1 knowledge-growth assertion is bounded by SUPPLY, not by warp ticks:
+        // 1 paper => exactly 1 gatherer map can be made => exactly 1 scout => knowledge grows by 1.
+        // The cooked_beef just keeps the villager fed. Load-bearing — do not raise the paper count.
+        // The warp amount only needs to be "big enough" to complete one full leaver cycle; 2500 was
+        // too short (the villager produced nothing), so we match the suite default that every other
+        // passing leaver job (gatherer:axe, hunter, miner, fisher) uses.
+        // The explorer is the only leaver job whose product REPLACES a consumed input:
+        // it turns 1 paper + 1 food into 1 gatherer map, so the town's net item count is
+        // unchanged. The inherited wildcard ("* grows by >= 1") therefore can't gate it —
+        // assert the actual product (exactly one gatherer map) plus the knowledge growth.
         return welcomeMatBlueprint(List.of(
                 new ItemStack(Items.PAPER, 1),
                 new ItemStack(Items.COOKED_BEEF, 1)
-        )).withMinKnowledgeGrowth(1).withWarpAmountOverride(2500);
+        )).withExpectation(new TestExpectation(
+                List.of(
+                        new ExpectedProduct("questown:gatherer_map", 1, 1),
+                        // Paper is carried as a held tool but consumed once per trip
+                        // (CONSUME_HELD_PAPER) so it isn't infinitely reusable.
+                        new ExpectedProduct("minecraft:paper", -1, -1)
+                ),
+                1, 100
+        )).withMinKnowledgeGrowth(1).withWarpAmountOverride(24000);
     }
 
     private static TestBlueprint hunterBlueprint() {

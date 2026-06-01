@@ -102,6 +102,15 @@ public record TestBlueprint(
                 extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, n);
     }
 
+    public TestBlueprint withExpectation(TestExpectation e) {
+        return new TestBlueprint(
+                roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
+                roomId, e, supplyDoorOffset, warpAmountOverride, startTimeTick,
+                villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
+                realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
+                extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, minKnowledgeGrowth);
+    }
+
     public TestBlueprint withWarpAmountOverride(int n) {
         return new TestBlueprint(
                 roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,

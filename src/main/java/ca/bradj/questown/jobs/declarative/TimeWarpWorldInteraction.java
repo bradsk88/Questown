@@ -301,8 +301,16 @@ public class TimeWarpWorldInteraction extends
             BlockPos position,
             @Nullable MCHeldItem extractedItem
     ) {
+        // Post-extract rules apply item-data / hunger / mood / knowledge — none touch the
+        // deferred block state the WarpWorldAccess holds, but non-migrated rules (SCOUT_LOOT)
+        // DO need a real ServerLevel for loot-table RNG via asServerLevel(). The realtime path
+        // passes a real-level world here too; resolveWorld() would hand back the WarpWorldAccess
+        // whose asServerLevel() is null, so use the real level directly.
+        ca.bradj.questown.world.QTWorldAccess postExtractWorld = inputs.level != null
+                ? MinecraftWorldAccess.silent(inputs.level)
+                : resolveWorld(inputs);
         return PostExtractHook.run(
-                mcTownState, townPos, rules, resolveWorld(inputs), position, (ctx, itemData) -> {
+                mcTownState, townPos, rules, postExtractWorld, position, (ctx, itemData) -> {
                     if (extractedItem == null || extractedItem.isEmpty()) {
                         return ctx;
                     }
