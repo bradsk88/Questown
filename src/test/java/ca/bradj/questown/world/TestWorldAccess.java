@@ -341,6 +341,31 @@ public class TestWorldAccess implements QTWorldAccess {
         }
     }
 
+    // Tree growth (canTreeGrowAt / growTreeAt) is real worldgen (TreeFeature.place) that needs a
+    // live level + registries, which are unavailable here. Per the plan's testability gap, we do
+    // NOT simulate worldgen: these return false and the planted-sapling carrier stays empty. This
+    // path is autotest-covered (in-game), not unit-tested.
+
+    @Override
+    public boolean canTreeGrowAt(BlockPos pos, ItemStack sapling) {
+        return false;
+    }
+
+    @Override
+    public boolean growTreeAt(BlockPos pos, ItemStack sapling) {
+        return false;
+    }
+
+    @Override
+    public Collection<PlantedSapling> getPlantedSaplings() {
+        return List.of();
+    }
+
+    @Override
+    public void clearPlantedSapling(BlockPos pos) {
+        // No carrier in tests.
+    }
+
     @Override
     @Deprecated(forRemoval = true)
     public @Nullable ServerLevel asServerLevel() {

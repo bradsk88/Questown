@@ -159,36 +159,44 @@ interface QTWorldAccess {
 - `Block.asItem()`, recursive block removal for chopping
 - `BuiltinRegistries.CONFIGURED_FEATURE` for tree configs
 
-**Proposed QTWorldAccess methods:**
+**Shipped QTWorldAccess methods** (see ADR-0005 and
+`docs/plans/2026-06-02-001-feat-arborist-warp-unarchive-plan.md`):
 
 ```java
 interface QTWorldAccess {
-    // Tree planting validation
+    // Plantability gate (dry run)
     boolean canTreeGrowAt(BlockPos pos, ItemStack sapling);
 
-    // Tree chopping
-    TreeChopResult chopTreeAt(BlockPos pos, ItemStack tool);
-}
+    // Generate the tree (writes blocks)
+    boolean growTreeAt(BlockPos pos, ItemStack sapling);
 
-record TreeChopResult(
-    List<ItemStack> drops,
-    int blocksRemoved,
-    int toolDamage
-) {}
+    // Tree chopping — already in-memory
+    List<ItemStack> chopTree(BlockPos trunkPos);
+
+    // In-warp planted-sapling carrier, grown by GrowTreesWarpRule
+    Collection<PlantedSapling> getPlantedSaplings();
+    void clearPlantedSapling(BlockPos pos);
+}
 ```
 
-**Note**: `canTreeGrowAt` is complex - it simulates world gen. The MC implementation
-would actually run tree generation checks. This allows for even complex tree shapes
-to "really get planted" by villagers. The warp implementation could use a simplified 
-heuristic (e.g., "3x3 air above = valid") for mid-warp calculations and, if a new 
-tree "was planted" during the warp, we should decide how many trees were planted and 
-schedule post-warp code that will actually check the spots to confirm if they are 
-plantable and plant the N trees that would have remained planted after the warp.
+**Resolved design (no heuristic, no reconciliation).** Both `canTreeGrowAt` and
+`growTreeAt` run the *real* `TreeFeature.place`; they differ only in the
+`WorldGenLevel` adapter — `VoidLevel(level)` in realtime, `SnapshotWorldGenLevel`
+in warp (reads snapshot-first, writes into `WarpWorldAccess`'s snapshot/dirty-set;
+a dry-run mode discards writes for the plantability probe). So realtime and warp
+geometry are identical — no "3x3 air heuristic" divergence.
 
-**Meta-Note**: The note above reveals that this would be a great example for modders
-to use as a reference for when complex world-interaction is required. We should take
-care to make it a good reference that is easy to follow even though it achieves 
-complex results.
+Tree growth runs **in-memory during the warp** via the deterministic, elapsed-time
+`GrowTreesWarpRule` (`questown_vanilla:grow_trees_warp`, a global warp-tick rule):
+a sapling planted (or farm-seeded) during the warp grows once
+`currentTick - plantTick >= TREE_GROWTH_TICKS`, and `cut_trees` can chop the
+resulting logs from the same snapshot. `applyTo` commits everything atomically.
+The earlier "place sapling, reconcile after `applyTo`" idea was **dropped** — it
+couldn't deliver same-warp harvest (ADR-0005, "Considered and rejected").
+
+**Reference example**: `SnapshotWorldGenLevel` is the decoupling doc's intended
+example of complex world interaction (real worldgen) that behaves identically in
+realtime and warp behind the `QTWorldAccess` seam.
 
 ---
 

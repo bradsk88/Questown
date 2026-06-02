@@ -6,8 +6,7 @@
   "icon": "minecraft:oak_sapling",
   "initial_request": "minecraft:oak_log",
   "result": {
-    "type": "item",
-    "item": "minecraft:air"
+    "type": "uses_special_rules"
   },
   "block": {
     "id": "#questown:tillables"
@@ -34,7 +33,7 @@
   "special": [
     {
       "type": "global",
-      "rules": ["questown_vanilla:check_tree_plantable","claim_workspot", "require_air_above"]
+      "rules": ["questown_vanilla:check_tree_plantable","claim_workspot", "require_air_above", "questown_vanilla:grow_trees_warp"]
     },
     {
       "type": "core_state",

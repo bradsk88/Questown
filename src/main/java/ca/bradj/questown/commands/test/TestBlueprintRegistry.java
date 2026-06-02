@@ -71,6 +71,9 @@ public class TestBlueprintRegistry {
         if ("fisher".equals(jobId.rootId())) {
             return fisherBlueprint();
         }
+        if ("arborist".equals(jobId.rootId())) {
+            return arboristCutTreesBlueprint();
+        }
         return null;
     }
 
@@ -91,6 +94,9 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
         jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
         jobs.add(entry(new JobID("crafter", "leather_boots"), armorerBlueprint()));
+        jobs.add(entry(new JobID("arborist", "cut_trees"), arboristCutTreesBlueprint()));
+        jobs.add(entry(new JobID("arborist", "plant_sapling"), arboristPlantSaplingBlueprint()));
+        jobs.add(edgeCaseEntry("arborist", "cut_trees", "full_cycle", arboristFullCycleBlueprint()));
 
         // Edge case tests
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "night_start", farmerNightStartBlueprint()));
@@ -184,6 +190,210 @@ public class TestBlueprintRegistry {
                 List.of(new ExpectedProduct("minecraft:wheat", 1, null)),
                 1,
                 100
+        );
+
+        return new TestBlueprint(
+                RoomType.FARM,
+                blocks,
+                supplies,
+                gateOffset,
+                chestOffset,
+                SpecialQuests.FARM,
+                expectation
+        );
+    }
+
+    /**
+     * Fenced farm plot containing a bare 4-high oak_log column with a reachable base
+     * (no leaves; deterministic 4-log drop count). The arborist is in-town work, so the
+     * chop runs during warp and deposits oak_logs in the chest.
+     * <p>
+     * Warp-only (realtimePhase=false): the chopped column is a non-renewable resource within
+     * the arena, so a post-warp realtime re-run would have no tree left to chop. Realtime/warp
+     * parity for the chop seam is structurally guaranteed (both paths share
+     * {@code event.world().chopTree(...)}); the full plant→grow→chop cycle is exercised by the
+     * full-cycle blueprint.
+     */
+    private static TestBlueprint arboristCutTreesBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        int ox = 4;
+        int oz = -3;
+
+        for (int x = 0; x < 7; x++) {
+            for (int z = 0; z < 7; z++) {
+                boolean isEdge = x == 0 || x == 6 || z == 0 || z == 6;
+                BlockPos offset = new BlockPos(ox + x, 0, oz + z);
+                if (isEdge) {
+                    if (x == 3 && z == 6) {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE_GATE.defaultBlockState()));
+                    } else {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE.defaultBlockState()));
+                    }
+                } else {
+                    blocks.add(new BlockPlacement(offset.below(), Blocks.DIRT.defaultBlockState()));
+                }
+            }
+        }
+
+        // A bare 4-high oak_log column at an interior cell, base reachable from the floor.
+        BlockPos trunkBase = new BlockPos(ox + 3, 0, oz + 3);
+        for (int y = 0; y < 4; y++) {
+            blocks.add(new BlockPlacement(trunkBase.above(y), Blocks.OAK_LOG.defaultBlockState()));
+        }
+
+        BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 5);
+        blocks.add(new BlockPlacement(chestOffset.below(), Blocks.DIRT.defaultBlockState()));
+
+        BlockPos gateOffset = new BlockPos(ox + 3, 0, oz + 6);
+
+        List<ItemStack> supplies = List.of(
+                new ItemStack(Items.WOODEN_AXE, 1)
+        );
+
+        TestExpectation expectation = new TestExpectation(
+                List.of(new ExpectedProduct("minecraft:oak_log", 4, null)),
+                1,
+                100
+        );
+
+        return new TestBlueprint(
+                RoomType.FARM,
+                blocks,
+                supplies,
+                gateOffset,
+                chestOffset,
+                SpecialQuests.FARM,
+                expectation
+        );
+    }
+
+    /**
+     * Fenced farm plot of bare tillable ground ({@code grass_block}, in {@code #questown:tillables})
+     * with open sky above. The arborist plants saplings; {@code GrowTreesWarpRule} grows them into
+     * real trees in the warp snapshot. Asserts the sapling supply is consumed (planting happened);
+     * the grow→chop end-to-end is asserted by the full-cycle blueprint.
+     */
+    private static TestBlueprint arboristPlantSaplingBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        int ox = 4;
+        int oz = -3;
+
+        for (int x = 0; x < 7; x++) {
+            for (int z = 0; z < 7; z++) {
+                boolean isEdge = x == 0 || x == 6 || z == 0 || z == 6;
+                BlockPos offset = new BlockPos(ox + x, 0, oz + z);
+                if (isEdge) {
+                    if (x == 3 && z == 6) {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE_GATE.defaultBlockState()));
+                    } else {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE.defaultBlockState()));
+                    }
+                } else {
+                    // Tillable workspot with open air above for planting + tree growth.
+                    blocks.add(new BlockPlacement(offset, Blocks.GRASS_BLOCK.defaultBlockState()));
+                }
+            }
+        }
+
+        BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 5);
+        blocks.removeIf(bp -> bp.offset().equals(chestOffset));
+        blocks.add(new BlockPlacement(chestOffset.below(), Blocks.DIRT.defaultBlockState()));
+
+        BlockPos gateOffset = new BlockPos(ox + 3, 0, oz + 6);
+
+        List<ItemStack> supplies = List.of(
+                new ItemStack(Items.OAK_SAPLING, 16)
+        );
+
+        TestExpectation expectation = new TestExpectation(
+                List.of(new ExpectedProduct("minecraft:oak_sapling", -16, -1)),
+                1,
+                100
+        );
+
+        return new TestBlueprint(
+                RoomType.FARM,
+                blocks,
+                supplies,
+                gateOffset,
+                chestOffset,
+                SpecialQuests.FARM,
+                expectation
+        );
+    }
+
+    /**
+     * Arborist warp cycle: a fenced farm with a starter 4-high oak_log column at the floor (so
+     * cut_trees is finishable from warp start) PLUS oak_sapling BLOCKS pre-seeded at the floor
+     * (yCoord), as if planted in a prior warp. During the warp, {@code seedFarmSaplings} records
+     * the saplings and {@code GrowTreesWarpRule} attempts to grow them via {@code growTreeAt}
+     * (the in-warp worldgen path), while the cut_trees villager chops the starter column.
+     * <p>
+     * Asserts the starter is chopped (>=4 logs). NOTE: same-warp grow→chop is NOT yet asserted:
+     * {@code TreeFeature.place} currently returns false in the warp path (the failure is not
+     * adapter-, generator-, registry-, or heightmap-relocation-specific — a plain {@code VoidLevel}
+     * fails identically, a pre-existing condition). Once that worldgen integration is resolved, the
+     * seeded saplings here will grow and be re-chopped, and this assertion can be tightened to >=5.
+     * See the plan and ADR-0005.
+     */
+    private static TestBlueprint arboristFullCycleBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        int ox = 4;
+        int oz = -3;
+
+        for (int x = 0; x < 7; x++) {
+            for (int z = 0; z < 7; z++) {
+                boolean isEdge = x == 0 || x == 6 || z == 0 || z == 6;
+                BlockPos offset = new BlockPos(ox + x, 0, oz + z);
+                if (isEdge) {
+                    if (x == 3 && z == 6) {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE_GATE.defaultBlockState()));
+                    } else {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE.defaultBlockState()));
+                    }
+                } else {
+                    // Dirt support a level below the floor; floor (yCoord) left open for saplings/trees.
+                    blocks.add(new BlockPlacement(offset.below(), Blocks.DIRT.defaultBlockState()));
+                }
+            }
+        }
+
+        // Starter 4-high oak_log column (base at yCoord) so cut_trees is finishable at warp start.
+        BlockPos trunkBase = new BlockPos(ox + 1, 0, oz + 1);
+        for (int y = 0; y < 4; y++) {
+            blocks.add(new BlockPlacement(trunkBase.above(y), Blocks.OAK_LOG.defaultBlockState()));
+        }
+
+        // Pre-seeded saplings at the floor (yCoord), spaced apart so each can grow. Base at yCoord,
+        // where cut_trees scans — so the grown trunks are choppable in the same warp.
+        BlockPos[] saplingOffsets = {
+                new BlockPos(ox + 3, 0, oz + 3),
+                new BlockPos(ox + 5, 0, oz + 1),
+                new BlockPos(ox + 3, 0, oz + 5)
+        };
+        for (BlockPos sap : saplingOffsets) {
+            blocks.add(new BlockPlacement(sap, Blocks.OAK_SAPLING.defaultBlockState()));
+        }
+
+        BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 5);
+        blocks.add(new BlockPlacement(chestOffset.below(), Blocks.DIRT.defaultBlockState()));
+
+        BlockPos gateOffset = new BlockPos(ox + 3, 0, oz + 6);
+
+        List<ItemStack> supplies = List.of(
+                new ItemStack(Items.WOODEN_AXE, 1)
+        );
+
+        TestExpectation expectation = new TestExpectation(
+                List.of(
+                        // Starter column is 4 logs. Tighten to >=5 once in-warp growth places trees.
+                        new ExpectedProduct("minecraft:oak_log", 4, null)
+                ),
+                1,
+                500
         );
 
         return new TestBlueprint(

@@ -1,6 +1,8 @@
 package ca.bradj.questown.world;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown._vanilla.TreeFeatureResolver;
+import ca.bradj.questown._vanilla.VoidLevel;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -106,7 +108,13 @@ public class MinecraftWorldAccess implements QTWorldAccess {
 
     @Override
     public List<ItemStack> chopTree(BlockPos trunkPos) {
-        Block trunkBlock = level.getBlockState(trunkPos).getBlock();
+        BlockState trunkState = level.getBlockState(trunkPos);
+        // Only chop log/wood columns (RotatedPillarBlock = logs/wood/stems). A tag-free proxy for
+        // #minecraft:logs so ChopDownTree's scan over all room positions never chops chests/grass/saplings.
+        if (!(trunkState.getBlock() instanceof net.minecraft.world.level.block.RotatedPillarBlock)) {
+            return List.of();
+        }
+        Block trunkBlock = trunkState.getBlock();
         List<ItemStack> drops = new ArrayList<>();
         chopTreeRecursive(trunkPos, trunkBlock, drops);
         return drops;
@@ -121,6 +129,49 @@ public class MinecraftWorldAccess implements QTWorldAccess {
             drops.add(matchBlock.asItem().getDefaultInstance());
             chopTreeRecursive(adjacent.immutable(), matchBlock, drops);
         }
+    }
+
+    @Override
+    public boolean canTreeGrowAt(BlockPos pos, ItemStack sapling) {
+        TreeFeatureResolver.Resolved r = TreeFeatureResolver.resolve(sapling, level.registryAccess());
+        if (r == null) {
+            return false;
+        }
+        // Dry run: VoidLevel discards the placement writes; we only want the plantability verdict.
+        return r.feature().place(
+                r.config(), new VoidLevel(level),
+                level.getChunkSource().getGenerator(), level.random, pos
+        );
+    }
+
+    @Override
+    public boolean growTreeAt(BlockPos pos, ItemStack sapling) {
+        TreeFeatureResolver.Resolved r = TreeFeatureResolver.resolve(sapling, level.registryAccess());
+        if (r == null) {
+            return false;
+        }
+        // Clear the sapling first (as vanilla SaplingBlock.advanceTree does) so the trunk base is
+        // free, then write the live level directly (ServerLevel is a WorldGenLevel). Restore on fail.
+        BlockState previous = level.getBlockState(pos);
+        level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+        boolean placed = r.feature().place(
+                r.config(), level, level.getChunkSource().getGenerator(), level.random, pos
+        );
+        if (!placed) {
+            level.setBlock(pos, previous, 3);
+        }
+        return placed;
+    }
+
+    @Override
+    public Collection<PlantedSapling> getPlantedSaplings() {
+        // Realtime has no warp carrier — vanilla random ticks grow planted saplings.
+        return List.of();
+    }
+
+    @Override
+    public void clearPlantedSapling(BlockPos pos) {
+        // No-op in realtime.
     }
 
     @Override

@@ -1,6 +1,8 @@
 package ca.bradj.questown.world;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown._vanilla.SnapshotWorldGenLevel;
+import ca.bradj.questown._vanilla.TreeFeatureResolver;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -11,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SaplingBlock;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -40,7 +43,7 @@ import java.util.function.Function;
  * <p>
  * {@link #asServerLevel()} returns {@code null} — warp rules must not rely on it.
  */
-public class WarpWorldAccess implements QTWorldAccess {
+public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.SnapshotAccess {
 
     /** Simplified smelting result used internally and in tests. */
     record SmeltResult(ItemStack result, int cookingTime) {}
@@ -56,6 +59,12 @@ public class WarpWorldAccess implements QTWorldAccess {
 
     final Set<BlockPos> dirtyBlocks = new HashSet<>();
     final Set<BlockPos> dirtyContainers = new HashSet<>();
+
+    // Saplings planted this warp (and farm-seeded at warp start), keyed by block position,
+    // awaiting in-warp growth by GrowTreesWarpRule.
+    private final Map<BlockPos, PlantedSapling> plantedSaplings = new HashMap<>();
+    // Updated each warp tick boundary so plantings record an approximate plant tick.
+    private long currentWarpTick = 0;
 
     private final Function<ItemStack, Optional<SmeltResult>> recipeResolver;
     private final Function<ItemStack, Integer> fuelTimeProvider;
@@ -215,7 +224,10 @@ public class WarpWorldAccess implements QTWorldAccess {
     @Override
     public List<ItemStack> chopTree(BlockPos trunkPos) {
         BlockState trunkState = resolveBlockState(trunkPos);
-        if (trunkState == null || trunkState.isAir()) {
+        // Only chop log/wood columns. RotatedPillarBlock (logs, wood, stems) is a tag-free proxy for
+        // #minecraft:logs that also holds when datapack tags aren't loaded (unit tests). This keeps
+        // ChopDownTree's scan over all room positions from chopping chests, grass, or saplings.
+        if (trunkState == null || !(trunkState.getBlock() instanceof net.minecraft.world.level.block.RotatedPillarBlock)) {
             return List.of();
         }
         Block trunkBlock = trunkState.getBlock();
@@ -247,6 +259,95 @@ public class WarpWorldAccess implements QTWorldAccess {
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Tree growth — real worldgen against the in-memory snapshot (see ADR-0005)
+    // -------------------------------------------------------------------------
+
+    @Override
+    public boolean canTreeGrowAt(BlockPos pos, ItemStack sapling) {
+        if (level == null) {
+            // Unit-test constructor: worldgen + registries are unavailable. Autotest-covered instead.
+            return false;
+        }
+        TreeFeatureResolver.Resolved r = TreeFeatureResolver.resolve(sapling, level.registryAccess());
+        if (r == null) {
+            return false;
+        }
+        return r.feature().place(
+                r.config(), new SnapshotWorldGenLevel(level, this, true),
+                level.getChunkSource().getGenerator(), level.random, pos
+        );
+    }
+
+    @Override
+    public boolean growTreeAt(BlockPos pos, ItemStack sapling) {
+        if (level == null) {
+            return false;
+        }
+        TreeFeatureResolver.Resolved r = TreeFeatureResolver.resolve(sapling, level.registryAccess());
+        if (r == null) {
+            return false;
+        }
+        // Clear the sapling first (as vanilla SaplingBlock.advanceTree does): TreeFeature needs the
+        // trunk base to be air/leaves, and a sapling block isn't "free". Restore it if growth fails.
+        BlockState previous = resolveBlockState(pos);
+        setBlock(pos, Blocks.AIR.defaultBlockState());
+        boolean placed = r.feature().place(
+                r.config(), new SnapshotWorldGenLevel(level, this, false),
+                level.getChunkSource().getGenerator(), level.random, pos
+        );
+        if (!placed && previous != null) {
+            setBlock(pos, previous);
+        }
+        return placed;
+    }
+
+    @Override
+    public Collection<PlantedSapling> getPlantedSaplings() {
+        return new ArrayList<>(plantedSaplings.values());
+    }
+
+    @Override
+    public void clearPlantedSapling(BlockPos pos) {
+        plantedSaplings.remove(pos);
+    }
+
+    /** Set by the warp loop at each tick boundary so plantings record an approximate plant tick. */
+    public void setCurrentWarpTick(long tick) {
+        this.currentWarpTick = tick;
+    }
+
+    /**
+     * Seeds saplings that already exist in farm rooms at warp start so prior-warp arborist
+     * plantings also grow. Recorded with {@code plantTick = 0} (grows early in the warp).
+     * Non-farm (decorative) saplings are never passed here, so warp won't burst them.
+     */
+    public void seedFarmSaplings(Iterable<BlockPos> farmPositions) {
+        for (BlockPos pos : farmPositions) {
+            BlockPos immutable = pos.immutable();
+            BlockState bs = resolveBlockState(immutable);
+            if (bs == null || !(bs.getBlock() instanceof SaplingBlock)) {
+                continue;
+            }
+            ItemStack saplingItem = new ItemStack(bs.getBlock().asItem());
+            plantedSaplings.put(immutable, new PlantedSapling(immutable, saplingItem, 0L));
+        }
+    }
+
+    // SnapshotWorldGenLevel.SnapshotAccess — reads snapshot-first, writes into the snapshot/dirty-set.
+
+    @Override
+    public BlockState getBlock(BlockPos pos) {
+        BlockState bs = resolveBlockState(pos);
+        return bs != null ? bs : Blocks.AIR.defaultBlockState();
+    }
+
+    @Override
+    public void setBlock(BlockPos pos, BlockState state) {
+        blockStates.put(pos.immutable(), state);
+        dirtyBlocks.add(pos.immutable());
+    }
+
     // Realtime bone meal rolls a random 2-5 age advance; warp uses a deterministic
     // +3 (the floor of that 3.5 expected value) to keep warp autotests reproducible.
     private static final int BONE_MEAL_AGE_BOOST = 3;
@@ -264,7 +365,7 @@ public class WarpWorldAccess implements QTWorldAccess {
             return applyBoneMeal(pos);
         }
         if (item.getItem() instanceof BlockItem blockItem) {
-            return plantBlockAbove(blockItem, pos);
+            return plantBlockAbove(item, blockItem, pos);
         }
         QT.JOB_LOGGER.error("useItemOnBlock: unsupported item {} during warp; no-op", item.getItem());
         return false;
@@ -280,10 +381,14 @@ public class WarpWorldAccess implements QTWorldAccess {
         return true;
     }
 
-    private boolean plantBlockAbove(BlockItem blockItem, BlockPos pos) {
+    private boolean plantBlockAbove(ItemStack item, BlockItem blockItem, BlockPos pos) {
         BlockPos above = pos.above().immutable();
         blockStates.put(above, blockItem.getBlock().defaultBlockState());
         dirtyBlocks.add(above);
+        if (blockItem.getBlock() instanceof SaplingBlock) {
+            // Record so GrowTreesWarpRule can grow it into a real tree later this warp.
+            plantedSaplings.put(above, new PlantedSapling(above, item.copy(), currentWarpTick));
+        }
         return true;
     }
 
