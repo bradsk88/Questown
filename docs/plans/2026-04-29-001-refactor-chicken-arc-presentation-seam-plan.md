@@ -1,7 +1,7 @@
 ---
 title: Chicken arc presentation seam — consolidate bubble + hint + plain into a (beat, phase) table
 type: refactor
-status: active
+status: complete
 date: 2026-04-29
 origin: docs/adr/0001-chicken-arc-beat-phase.md
 ---
@@ -146,7 +146,7 @@ assertEquals(expected, actual);
 
 ## Implementation Units
 
-- [ ] U1. **Introduce `BeatPhase`, `PhaseInputs`, and `Presentation` types**
+- [x] U1. **Introduce `BeatPhase`, `PhaseInputs`, and `Presentation` types**
 
 **Goal:** Land the data model — three new types — with no behavior change. Nothing calls them yet.
 
@@ -179,7 +179,7 @@ assertEquals(expected, actual);
 
 ---
 
-- [ ] U2. **Implement `ChickenArcPresentation` with full table and `activePhase` logic**
+- [x] U2. **Implement `ChickenArcPresentation` with full table and `activePhase` logic**
 
 **Goal:** Land the new module with the per-(beat, phase) table populated and the `activePhase` decision tree implemented. Old APIs (`ChickenArcBubbles.forState`, `ChickenArcController.hintKey`, `ChickenArcController.plainTextKey`) remain in place and untouched. Behavior of the system is unchanged.
 
@@ -220,7 +220,7 @@ assertEquals(expected, actual);
 
 ---
 
-- [ ] U3. **Migrate the two call sites in `ChickenArcController` to `ChickenArcPresentation`**
+- [x] U3. **Migrate the two call sites in `ChickenArcController` to `ChickenArcPresentation`**
 
 **Goal:** Replace the bubble-update path and click-handler path with calls to the new module. Old APIs (`ChickenArcBubbles.forState`, `hintKey`, `plainTextKey`) become unused but not yet deleted.
 
@@ -249,7 +249,7 @@ assertEquals(expected, actual);
 
 ---
 
-- [ ] U4. **Add `expectedPhase` to `ChickenArcExpectation` and live-phase derivation to `ChickenArcResultChecker`**
+- [x] U4. **Add `expectedPhase` to `ChickenArcExpectation` and live-phase derivation to `ChickenArcResultChecker`**
 
 **Goal:** Open the test surface for phase assertions. Result-checker derives the live phase from real world state and compares to `expectedPhase` when provided.
 
@@ -287,7 +287,7 @@ assertEquals(expected, actual);
 
 ---
 
-- [ ] U5. **Delete old APIs, migrate existing tests, add at least one scenario asserting `expectedPhase`**
+- [x] U5. **Delete old APIs, migrate existing tests, add at least one scenario asserting `expectedPhase`**
 
 **Goal:** Remove the dead code (`ChickenArcBubbles.forState`, `ChickenArcController.hintKey`, `ChickenArcController.plainTextKey`); migrate `ChickenArcBubblesTest` and `ChickenArcHintsTest` to the new API; add at least one autotest scenario that exercises `expectedPhase` end-to-end.
 
