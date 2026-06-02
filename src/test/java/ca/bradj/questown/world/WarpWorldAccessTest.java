@@ -370,6 +370,99 @@ class WarpWorldAccessTest {
     }
 
     // -------------------------------------------------------------------------
+    // useItemOnBlock — in-memory planting and bone meal
+    // -------------------------------------------------------------------------
+
+    private static WarpWorldAccess worldWith(BlockPos pos, BlockState state) {
+        Map<BlockPos, BlockState> blocks = new HashMap<>();
+        blocks.put(pos, state);
+        return new WarpWorldAccess(blocks, new HashMap<>(), i -> Optional.empty(), i -> 0);
+    }
+
+    @Test
+    void useItemOnBlock_plantsSeedBlock_atPosAbove_atAgeZero() {
+        WarpWorldAccess world = worldWith(FIELD, Blocks.FARMLAND.defaultBlockState());
+
+        boolean used = world.useItemOnBlock(new ItemStack(Items.WHEAT_SEEDS), FIELD);
+
+        BlockPos above = FIELD.above();
+        assertTrue(used);
+        assertTrue(world.dirtyBlocks.contains(above));
+        assertEquals(OptionalInt.of(0), world.getBlockIntProperty(above, "age"));
+    }
+
+    @Test
+    void useItemOnBlock_boneMeal_advancesAgeByThree() {
+        BlockState wheatAge2 = Blocks.WHEAT.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.CropBlock.AGE, 2);
+        WarpWorldAccess world = worldWith(FIELD, wheatAge2);
+
+        boolean used = world.useItemOnBlock(new ItemStack(Items.BONE_MEAL), FIELD);
+
+        assertTrue(used);
+        assertTrue(world.dirtyBlocks.contains(FIELD));
+        assertEquals(OptionalInt.of(5), world.getBlockIntProperty(FIELD, "age"));
+    }
+
+    @Test
+    void useItemOnBlock_boneMeal_capsAtMaxAge() {
+        BlockState wheatAge6 = Blocks.WHEAT.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.CropBlock.AGE, 6);
+        WarpWorldAccess world = worldWith(FIELD, wheatAge6);
+
+        boolean used = world.useItemOnBlock(new ItemStack(Items.BONE_MEAL), FIELD);
+
+        assertTrue(used);
+        assertEquals(OptionalInt.of(7), world.getBlockIntProperty(FIELD, "age"));
+    }
+
+    @Test
+    void useItemOnBlock_boneMeal_onMaxedCrop_isNoOp_returnsFalse() {
+        BlockState wheatAge7 = Blocks.WHEAT.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.CropBlock.AGE, 7);
+        WarpWorldAccess world = worldWith(FIELD, wheatAge7);
+
+        boolean used = world.useItemOnBlock(new ItemStack(Items.BONE_MEAL), FIELD);
+
+        assertFalse(used);
+        assertFalse(world.dirtyBlocks.contains(FIELD));
+        assertEquals(OptionalInt.of(7), world.getBlockIntProperty(FIELD, "age"));
+    }
+
+    @Test
+    void useItemOnBlock_boneMeal_onNonCrop_returnsFalse() {
+        WarpWorldAccess world = worldWith(FIELD, Blocks.STONE.defaultBlockState());
+
+        boolean used = world.useItemOnBlock(new ItemStack(Items.BONE_MEAL), FIELD);
+
+        assertFalse(used);
+        assertFalse(world.dirtyBlocks.contains(FIELD));
+    }
+
+    @Test
+    void useItemOnBlock_unsupportedItem_returnsFalse_withoutNpe() {
+        // level == null under the test constructor — proves the punch-through is gone.
+        WarpWorldAccess world = worldWith(FIELD, Blocks.FARMLAND.defaultBlockState());
+
+        boolean used = world.useItemOnBlock(new ItemStack(Items.STICK), FIELD);
+
+        assertFalse(used);
+        assertTrue(world.dirtyBlocks.isEmpty());
+    }
+
+    @Test
+    void useItemOnBlock_plantThenGrow_parity() {
+        WarpWorldAccess world = worldWith(FIELD, Blocks.FARMLAND.defaultBlockState());
+        BlockPos above = FIELD.above();
+
+        world.useItemOnBlock(new ItemStack(Items.WHEAT_SEEDS), FIELD);
+        // The snapshot is authoritative: a GrowCropsWarpRule-style advance sees the planted crop.
+        world.setBlockIntProperty(above, "age", world.getBlockIntProperty(above, "age").getAsInt() + 1);
+
+        assertEquals(OptionalInt.of(1), world.getBlockIntProperty(above, "age"));
+    }
+
+    // -------------------------------------------------------------------------
     // asServerLevel
     // -------------------------------------------------------------------------
 

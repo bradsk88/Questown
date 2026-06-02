@@ -17,6 +17,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.BoneMealItem;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.phys.BlockHitResult;
@@ -245,14 +247,44 @@ public class WarpWorldAccess implements QTWorldAccess {
         }
     }
 
+    // Realtime bone meal rolls a random 2-5 age advance; warp uses a deterministic
+    // +3 (the floor of that 3.5 expected value) to keep warp autotests reproducible.
+    private static final int BONE_MEAL_AGE_BOOST = 3;
+
+    /**
+     * Hand-rolled in-memory planting / bone meal. We deliberately do NOT delegate to
+     * {@code Item.useOn} as realtime does: warp has no live {@code Level} to mutate
+     * (the test constructor's {@code level} is even {@code null}), and routing through
+     * the snapshot/dirty-set is what lets {@code GrowCropsWarpRule} see the planted crop
+     * in the same warp and {@code applyTo} commit it only when the warp succeeds.
+     */
     @Override
     public boolean useItemOnBlock(ItemStack item, BlockPos pos) {
-        // Complex item interactions use the real world (out of scope for in-memory simulation)
-        BlockHitResult bhr = new BlockHitResult(Vec3.atCenterOf(pos), net.minecraft.core.Direction.UP, pos, false);
-        net.minecraft.world.InteractionResult result = item.getItem().useOn(
-                new UseOnContext(level, null, InteractionHand.MAIN_HAND, item, bhr)
-        );
-        return result.consumesAction();
+        if (item.getItem() instanceof BoneMealItem) {
+            return applyBoneMeal(pos);
+        }
+        if (item.getItem() instanceof BlockItem blockItem) {
+            return plantBlockAbove(blockItem, pos);
+        }
+        QT.JOB_LOGGER.error("useItemOnBlock: unsupported item {} during warp; no-op", item.getItem());
+        return false;
+    }
+
+    private boolean applyBoneMeal(BlockPos pos) {
+        OptionalInt age = getBlockIntProperty(pos, "age");
+        OptionalInt maxAge = getMaxBlockIntProperty(pos, "age");
+        if (age.isEmpty() || maxAge.isEmpty() || age.getAsInt() >= maxAge.getAsInt()) {
+            return false;
+        }
+        setBlockIntProperty(pos, "age", Math.min(age.getAsInt() + BONE_MEAL_AGE_BOOST, maxAge.getAsInt()));
+        return true;
+    }
+
+    private boolean plantBlockAbove(BlockItem blockItem, BlockPos pos) {
+        BlockPos above = pos.above().immutable();
+        blockStates.put(above, blockItem.getBlock().defaultBlockState());
+        dirtyBlocks.add(above);
+        return true;
     }
 
     // -------------------------------------------------------------------------
