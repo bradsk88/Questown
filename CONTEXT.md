@@ -21,11 +21,48 @@ _Avoid_: skip, fast-forward, sleep-warp.
 ### Jobs
 
 **Job phase modifier**:
-A pluggable rule that hooks into the job-tick pipeline (init, extract, insert, etc.). Implementations live in `jobs/special/`, `jobs/_vanilla/`, `jobs/integration/`.
+A pluggable rule (`JobPhaseModifier`) that exposes **hooks** firing at points in the job-tick pipeline. Implementations live in `jobs/special/`, `jobs/_vanilla/`, `jobs/integration/`.
 _Avoid_: handler, listener, plugin.
 
 **Special rule**:
-Synonym for job phase modifier when emphasizing the JSON-declared, per-job-phase form.
+Synonym for job phase modifier when emphasizing the JSON-declared form. A special rule is **declared at a phase** (keyed by `ProductionStatus` in the per-job rules map) and **executed by a hook** at that phase's edge — e.g. `SCOUT_LOOT` is declared at the `EXTRACTING_PRODUCT` **phase** and runs in the `afterExtract` **hook**. Some are addressed by string id (`SpecialRules.SCOUT_LOOT = "scout_loot"`, `REMOVE_FROM_WORLD = "remove_from_world"`).
+_Avoid_: for `REMOVE_FROM_WORLD` specifically — it is **also** an unrelated `InventoryFullStrategy` enum value ("drop on ground when inventory full"). Same name, different axis; say which you mean.
+
+**Phase-specific rule**:
+A special rule declared **under a phase key** in the job JSON — stored in `Map<ProductionStatus, Collection<String>>`, run **per-villager** via that phase's **hook**.
+_Avoid_: "state rule" (collides with **processing state**).
+
+**Global rule**:
+A special rule declared **outside any phase** — under the JSON `"global"` key (`ResourceJobLoader` `case "global"` → `Work.getSpecialGlobalRules()`). The defining property is **job-wide declaration**, not a particular runtime. Two execution flavors share the key: (1) **job-wide behavior flags** checked ad hoc for one villager (`EXCLUDE_FROM_WARP`, `ALWAYS_CONSIDER`, `GLOBAL_TAKE_RANDOM_INGREDIENT`); (2) **warp world-tick effects** (`CROP_GROWTH_WARP`, `FURNACE_SMELT_WARP`) that are **collected from all active villagers, deduplicated, and run once per important tick town-wide** via `onWarpTick` (see `decision-declare-and-collect-global-rules.md`). Town-wide-warp-dedup is a *property some globals have*, not what makes a rule global.
+_Avoid_: equating "global" with "town-wide" — `EXCLUDE_FROM_WARP` is global yet per-villager.
+
+**QT-native rule** (Tier 1):
+A `JobPhaseModifier` that reaches the world **only** through `QTWorldAccess` and never calls `asServerLevel()`. Works identically in realtime, warp, and `TestWorldAccess` tests. Declared by implementing the `QTNativeRule` marker interface.
+_Avoid_: "pure rule", "abstract rule".
+
+**MC-native rule** (Tier 2):
+A `JobPhaseModifier` that calls `event.world().asServerLevel()` (or touches Minecraft APIs directly). May **degrade or be skipped during warp** (where `asServerLevel()` can be null — unless handed a **silent world access**). Carries no marker interface; `SpecialRulesRegistry` logs a startup warning naming every Tier-2 rule, as migration tracking. `SCOUT_LOOT` is the current example.
+_Avoid_: calling these "broken" — they are intentionally un-migrated and may work via a real-but-silent level in warp.
+
+**Phase** (villager stage):
+One value of `ProductionStatus` — a stage the **townie** moves through: `GOING_TO_JOB`, `COLLECTING_SUPPLIES`, `EXTRACTING_PRODUCT`, `DROPPING_LOOT`, `waitingForTimedState` (a **timed state**), `IDLE`, etc. The class is named `ProductionStatus` for legacy reasons; the **domain word is phase**. Phases key the special-rules map (`Map<ProductionStatus, Collection<String>>`).
+_Avoid_: "status" (legacy class name only — not the domain term); "state" (means block progress — see **Processing state**); "stage", "step".
+
+**Hook**:
+A `JobPhaseModifier` callback that fires at a **phase edge** (`beforeExtract`/`afterExtract`, `afterInsertItem`, `afterDropLoot`, `beforeMoveToNextState`) or a pipeline moment (`beforeInit`, `beforeTick`, `beforeFindJobSite`, `onWarpTick`, `afterWarpRecovery`). A hook **is not** a phase — it is the *moment around* a phase where rule code runs. `beforeTick` does **not** fire in warp; only `onWarpTick`/`afterExtract`-style hooks run on both paths.
+_Avoid_: phase (that's the `ProductionStatus` value), event (that's the record passed *into* a hook), callback.
+
+**Processing state**:
+The integer step index (`0…maxState`) of a **job block's** work cycle — block-level *progress*, distinct from a villager **phase**. Lives in `workstatus.State.processingState()`. `maxState` is the final step, at which the block is extraction-ready.
+_Avoid_: phase (that's the villager stage), status.
+
+**Work state** (`workstatus.State`):
+The per-job-block progress bundle `(processingState, ingredientCount, workLeft)`. Footgun: `workLeft` is stored **10×-scaled** — only mutate it via `setWorkLeft`/`internalSetWorkLeft`.
+_Avoid_: bare "state" in prose (ambiguous — qualify as *processing state*, *work state*, or *timed state*).
+
+**Timed state**:
+A job state whose advance condition is **elapsed ticks**, not work-done or ingredients-inserted (`IStatusFactory.waitingForTimedState()`). The third advance-mode alongside work- and insert-driven states. Used for a **leaver**'s roam tail (`NEED_ROAM`) and the gatherer-shovel quarter/half-day waits, typically paired with the `REMOVE_FROM_WORLD` special rule.
+_Avoid_: cooldown, wait state.
 
 **Leaver job**:
 A job whose townie leaves the town to do the work and returns with products — gatherer, hunter, miner, fisher, and explorer — as opposed to an in-town crafter working at a station. Modeled **warp-only** in the autotest suite as a consequence: the townie isn't present to drive live, so its blueprint sets `realtimePhase=false` and the suite asserts only the warp pass.
@@ -53,6 +90,86 @@ _Avoid_: equipment, implement.
 
 **Tool-encoded consumable**:
 A consumable held as a **tool** so it's grabbed-once/rendered and survives warp supply collection, then spent — by one of three mechanisms: durability (real tools), the **tool→ingredient idiom** (cook beef; the explorer's paper, held at NEED_PAPER then consumed at USE_PAPER), or a dedicated **special rule** at extract (`HUNGER_FILL` eats diner food). Prefer the idiom over a special rule when the job has a state to hang the ingredient on — a special rule is the fallback for shapes that don't (e.g. a leaver whose only post-pickup phase is the extract itself, if it has no insert state).
+
+### Where work happens
+
+These five name "where a townie works" along an **abstraction axis** — coarsest to finest — plus one outlier (`work location`) that is the *definition* generating the others, not a place.
+
+**Job site**:
+The **room** a townie travels to for a job (ROOM-scoped, not a block). `EntityCurrentJobSite<ROOM>`, `IStatusFactory.goingToJobSite()/noJobSite()`, `WorkLocation.baseRoom`. When a townie is `goingToJobSite` it is walking to *the room*, then separately picking a **work spot** inside it.
+_Avoid_: using "job site" for the block/station — that's a **job block**.
+
+**Job block**:
+The specific block worked within a job site (`WorkPosition.jobBlock`). The thing the townie's action transforms / extracts from.
+_Avoid_: workstation (informal), job site (that's the room).
+
+**Work position** (`WorkPosition`):
+`(jobBlock, entityFeetPos)` — the job block **plus the tile the villager stands on** to work it.
+_Avoid_: collapsing with **work spot** (which adds an action + score).
+
+**Work spot** (`WorkSpot`):
+A **scored, actioned** work position — `(WorkPosition workPos, action, score)`. The unit **ranked** when choosing among candidate places to work inside a job site.
+_Avoid_: work position (a work spot *contains* one), job site.
+
+**Work location** (`WorkLocation`):
+The **predicate spec** defining *what qualifies* as a job block — `(isJobBlock, shouldInitializeWorkState, baseRoom)`. A definition that *generates* job blocks; **not** a coordinate.
+_Avoid_: using "work location" for any actual position — it is a rule, not a place.
+
+### Warp & ticking
+
+The warp loop does **not** simulate every game tick — it **samples** the ticks that matter and applies their effects in order.
+
+**Realtime path** vs **warp path**:
+The two execution pathways for the same job logic. Realtime (`RealtimeWorldInteraction`) runs per game tick while the player is present; warp (`TimeWarpWorldInteraction` + `AbstractAdvanceTime`) runs offline-catch-up. Recurring bug source: the warp path **reimplements** MC mechanics manually, so behavior can diverge — always check parity.
+_Avoid_: "online/offline" loosely (warp is triggered by chunk reload, not literal offline); "simulation" for realtime.
+
+**Tick**:
+The base Minecraft simulation unit (a game tick). Plain "tick" means this.
+
+**Important tick** (the *when*):
+A tick the warp loop actually visits for a villager — when a work cycle completes or a global effect should fire. The warp's **sparse sampling**, computed per-villager by a **Warper** (`ImportantTicks.forVillager`). `Warper.Tick` carries `tick()` and `ticksSincePrevious()`.
+_Avoid_: treating it as "every tick" — most ticks are skipped in warp.
+
+**Warp step** (the *what*):
+A `(tick → town-mutation)` unit. All villagers' important-tick mutations are merged, **sorted chronologically**, and applied in order (`warpSteps: List<Map.Entry<Long, Function<TOWN,TOWN>>>`). Important tick = when; warp step = what.
+_Avoid_: conflating with **important tick** (1:1, but names a different facet).
+
+**Tick delta**:
+Ticks elapsed since the previous visit (`WarpTickEvent.tickDelta`, `Warper.Tick.ticksSincePrevious()`). **Footgun:** a warp hook must scale proportional effects by it (crop growth ∝ delta) and never assume a fixed call frequency — forgetting this is a known warp/realtime parity bug (see `decision-proportional-deltas.md`).
+
+**First tick**:
+A **realtime-only** flag — the first `beforeTick` after init or job-change (`BeforeTickEvent.firstTick`). Does **not** fire in warp; don't hang warp-relevant logic on it.
+
+**Warper**:
+The per-villager object that computes a villager's **important ticks** and applies its **warp step** mutation (`Warper.warp(...)`, `Warper.getTicks(...)`). Distinct from **warp** (the overall offline-catch-up process).
+_Avoid_: "the warper" for the whole warp system — it is per-villager.
+
+**Silent world access**:
+`MinecraftWorldAccess.silent(level)` — a wrapper over a **real** `ServerLevel` that no-ops sound side-effects (`if (silent) return`). The warp `postExtractHook` uses it so an **MC-native (Tier 2)** rule like `SCOUT_LOOT` gets a non-null `asServerLevel()` even offline. A *fourth* world-access flavor, distinct from in-memory `WarpWorldAccess` (see `decision-silent-world-access.md`).
+_Avoid_: assuming warp always means a fake/in-memory world — silent access is the real level with muted sound.
+
+### Containers & supply
+
+Note the **inversion trap**: a **supply room** *holds* supplies; **rooms needing villager input** *lack* them.
+
+**Chest**:
+The placed block. Its inventory is an MC **container**.
+
+**Container** (MC):
+The vanilla inventory interface. QT's item-accepting variant is `ContainerTarget.Container<I>`.
+_Avoid_: using "container" for the job-facing handle — that's a **container target**.
+
+**Container target** (`ContainerTarget`):
+The **job-facing handle** on a container a townie pulls from / inserts into — rankable and filterable. Carries a **rank boost** so a job-specific container outranks a plain chest in decision-making. `ContainerTarget.REMOVED` is the tombstone sentinel.
+_Avoid_: plain "container" (that's the MC interface), "chest" (a chest is one *kind* of backing block).
+
+**Supply room** (canonical):
+A **registered room** whose containers a townie draws supplies from / deposits products to. Only **registered** rooms (door/gate-anchored) are scanned — meta-rooms (welcome mat, block room) don't count.
+_Avoid_: "container room" (informal); using it for rooms that *need* supplies — see **rooms needing villager input**.
+
+**Rooms needing villager input** (`RoomsNeedingVillagerInput`):
+The **inverse demand cache** — rooms that **lack** a required ingredient/tool/work, keyed by **processing state** (`Map<Integer, …NVIRoom>`, `dueToWorkOnly` flag). The opposite of a **supply room**: it lists rooms *missing* what's needed, not rooms holding stock. **"Input" = villager-supplied** (a townie must bring items / do work) — **never** player input.
+_Avoid_: reading "input" as player input; reading it as a list of rooms that *have* supplies (it's the demand side).
 
 ### Dining & mood
 
@@ -113,6 +230,10 @@ A `(bubble, hintKey, plainKey)` row in the per-(beat, phase) presentation table.
 - A **Chicken arc** is at any time on exactly one **Beat**, in exactly one **BeatPhase** for that beat.
 - A **(Beat, BeatPhase)** maps to exactly one **Presentation**.
 - A **Townie** runs **Jobs** advanced by **Job phase modifiers**.
+- A **Special rule** is declared **at a phase** (or **global**) and executed **by a hook** at that phase's edge.
+- A townie travels to a **job site** (the room), ranks **work spots** inside it, and acts on a **job block**; a **work spot** wraps a **work position** = `(job block, feet)`.
+- A townie draws supplies from a **supply room**'s **container targets**; **rooms needing villager input** is the demand side (rooms *missing* supplies), keyed by **processing state**.
+- The **warp** loop visits each townie's **important ticks** (the *when*); each becomes a **warp step** (the *what*); proportional global effects scale by **tick delta**.
 - A **Leaver job** is the kind the explorer runs; **Scouting** is its outcome.
 
 ## Example dialogue
@@ -126,3 +247,6 @@ A `(bubble, hintKey, plainKey)` row in the per-(beat, phase) presentation table.
 
 - **"player" in chicken-arc context.** The bubble-render path queries the *nearest* player to the flag; the click-handler path uses the *clicker*. With multiple players these can disagree, producing bubble/hint divergence not captured by the **Presentation** seam. Not yet resolved.
 - **"state" vs "beat".** `ChickenBeatState` is the enum type; in conversation we say "beat" for the value. Prefer "beat" in prose; reserve "state" for code references.
+- **"phase" across contexts.** In the **jobs** domain, **phase** = a `ProductionStatus` value (a townie's stage). In the **chicken-arc** domain, **BeatPhase** is an unrelated presentation sub-state of a beat. Same word, different bounded contexts — always qualify when both are in play.
+- **`REMOVE_FROM_WORLD` overload.** A `SpecialRules` string (timed-state leaver step) **and** an `InventoryFullStrategy` enum value (drop-on-ground). Disambiguate by which type you mean.
+- **"input" in `RoomsNeedingVillagerInput`.** Means villager-supplied work/items, **not** player input; and it's the *demand* side (rooms lacking supplies), the inverse of a **supply room**.
