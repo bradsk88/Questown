@@ -308,8 +308,19 @@ public interface QTWorldAccess {
 1. ✅ Container rules — `InsertIntoSlotSpecialRule`, `TakeFromSlotSpecialRule`,
    `AddItemToContainerSpecialRule` all use QTWorldAccess container methods;
    `WarpWorldAccess` handles them in-memory
-2. ⬜ Tree rules — `chopTree` and `useItemOnBlock` in `WarpWorldAccess` still
-   delegate to the real world (out of scope during Phase 3)
+2. 🟡 Tree / planting rules:
+   - ✅ `useItemOnBlock` — now fully in-memory in `WarpWorldAccess` for the live
+     crop operations: seed `BlockItem`s plant at `pos.above()` (age 0) and bone
+     meal advances the crop `age` by a deterministic +3, both routed through the
+     snapshot/dirty-set so `applyTo` commits them only on a successful warp. The
+     old real-world `Item.useOn` punch-through is gone (fixes the leak-on-abort and
+     plant-then-no-grow parity bugs). Live consumers: `farmer_wheat_plant.json`,
+     `farmer_global_bone.json`.
+   - ✅ `chopTree` — already in-memory (snapshot + dirty-set recursion).
+   - ⬜ Sapling placement + plantability reconciliation for the **archived**
+     arborist are still deferred (the sapling consumer is in
+     `questown_job_archive/` and not loaded). Tracked in
+     `docs/plans/2026-06-02-001-feat-arborist-warp-unarchive-plan.md`.
 3. ✅ Fishing rules — `deploy_and_retract_fishing_hook` is visual-only; already
    warp-compatible via null-guard on `asServerLevel()`
 
