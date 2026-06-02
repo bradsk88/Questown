@@ -1,7 +1,7 @@
 ---
 title: Helper Chicken Onboarding
 type: feat
-status: active
+status: complete
 date: 2026-04-22
 origin: docs/brainstorms/2026-04-22-helper-chicken-onboarding-requirements.md
 ---

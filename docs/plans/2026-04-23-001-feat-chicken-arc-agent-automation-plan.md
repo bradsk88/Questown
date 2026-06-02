@@ -1,7 +1,7 @@
 ---
 title: Agent-Automated Verification for Helper Chicken Arc
 type: feat
-status: active
+status: complete
 date: 2026-04-23
 deepened: 2026-04-23
 origin: docs/plans/2026-04-22-001-feat-helper-chicken-onboarding-plan.md
