@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.LongUnaryOperator;
 import java.util.function.Predicate;
 
 /**
@@ -125,10 +126,18 @@ public abstract class AbstractAdvanceTime<
 
     /**
      * Advances time by simulating villager work cycles.
+     * <p>
+     * The warp carries <em>two</em> timelines (see ADR-0006). Villager labour is scheduled on the
+     * {@code ticksPassed} <em>productive</em> budget (work stops at night). World-level passive
+     * effects (the {@code warpTickCallback}) run on the {@code wallClockTicks} <em>wall-clock</em> budget so
+     * crops, furnaces and trees keep advancing through the night. {@code productiveToWallClock} maps a
+     * productive offset (relative to {@code currentTick}) to its wall-clock offset within the window.
      *
      * @param storedState      The town state at the start of the warp
-     * @param ticksPassed      Number of ticks to simulate
-     * @param currentTick      The current game tick (reference point)
+     * @param ticksPassed      Productive ticks to simulate (labour budget)
+     * @param wallClockTicks        Wall-clock ticks elapsed (passive-effect budget; {@code >= ticksPassed})
+     * @param currentTick      The current game tick (reference point / window end)
+     * @param productiveToWallClock Maps a productive offset to its wall-clock offset within the window
      * @param work             Work interface for job resolution
      * @param warperFactory    Factory for creating per-villager warpers
      * @param cookResolver     Optional cooking resolver (can be null)
@@ -143,7 +152,9 @@ public abstract class AbstractAdvanceTime<
     public Result<TOWN> advanceTime(
             TOWN storedState,
             long ticksPassed,
+            long wallClockTicks,
             long currentTick,
+            LongUnaryOperator productiveToWallClock,
             Work work,
             WarperFactory<LEVEL, TOWN> warperFactory,
             @Nullable CookResolver<TOWN, LEVEL> cookResolver,
@@ -153,18 +164,20 @@ public abstract class AbstractAdvanceTime<
             long downtimeTicks,
             WarpLogger logger
     ) {
-        if (ticksPassed <= 0) {
-            logger.log("Time warp is not applicable (ticksPassed={})", ticksPassed);
+        if (wallClockTicks <= 0) {
+            logger.log("Time warp is not applicable (wallClockTicks={})", wallClockTicks);
             return new Result<>(storedState, 0, 0);
         }
 
         TOWN liveState = storedState;
         List<TownState.VillagerData<H>> villagers = new ArrayList<>(storedState.villagers);
 
-        // Collect all warp steps across all villagers
+        // Collect all warp steps across all villagers. Labour is scheduled on the productive
+        // budget only; an all-night window (ticksPassed <= 0) produces no labour steps but still
+        // runs passive effects below.
         final List<Map.Entry<Long, Function<TOWN, TOWN>>> warpSteps = new ArrayList<>();
 
-        for (int i = 0; i < villagers.size(); i++) {
+        for (int i = 0; ticksPassed > 0 && i < villagers.size(); i++) {
             TownState.VillagerData<H> v = villagers.get(i);
             logger.log(
                     "[{}] Warping time by {} ticks, starting with journal: {}",
@@ -221,19 +234,30 @@ public abstract class AbstractAdvanceTime<
 
         long before = System.currentTimeMillis();
 
-        // Execute all warp steps, interleaving world-level
-        // hooks at tick boundaries
+        // Execute all warp steps, interleaving world-level hooks at tick boundaries.
+        // Labour fires on the productive stepTick (lastHookTick); the passive callback fires on
+        // the WALL-CLOCK timeline: it receives an absolute wall-clock currentTick (currentTick + wallClockOffset,
+        // so plantTick/age references stay coherent) and a wall-clock tickDelta that telescopes to
+        // wallClockTicks across the whole window (so night is credited to crops/furnaces).
         long lastHookTick = 0;
+        long wallClockCursor = 0;
         for (Map.Entry<Long, Function<TOWN, TOWN>> warpStep
                 : warpSteps) {
             long stepTick = warpStep.getKey();
             if (stepTick > lastHookTick
                     && warpTickCallback != null) {
-                long tickDelta = stepTick - lastHookTick;
+                // Clamp into [0, ticksPassed]: some tick sources (e.g. the downtime skip in
+                // ImportantTicks) emit a leading tick that is not currentTick-relative, which
+                // would otherwise produce a negative offset (and a crop-shrinking delta).
+                long productiveOffset = Math.max(0, Math.min(stepTick - currentTick, ticksPassed));
+                long wallClockOffset = Math.max(wallClockCursor, productiveToWallClock.applyAsLong(productiveOffset));
+                long wallClockTick = currentTick + wallClockOffset;
+                long tickDelta = wallClockOffset - wallClockCursor;
                 liveState = warpTickCallback.onTick(
-                        liveState, stepTick, tickDelta
+                        liveState, wallClockTick, tickDelta
                 );
                 lastHookTick = stepTick;
+                wallClockCursor = wallClockOffset;
             }
             TOWN affectedState =
                     warpStep.getValue().apply(liveState);
@@ -242,12 +266,14 @@ public abstract class AbstractAdvanceTime<
             }
         }
 
-        // Final hook call for remaining ticks after last step
+        // Final hook call for the remaining wall-clock ticks after the last labour step. This covers
+        // the trailing night (and the whole window when an all-night warp produced no steps), so
+        // passive effects still run when productive ticks alone would have stopped at dusk.
         if (warpTickCallback != null
-                && ticksPassed > lastHookTick) {
-            long tickDelta = ticksPassed - lastHookTick;
+                && wallClockTicks > wallClockCursor) {
+            long tickDelta = wallClockTicks - wallClockCursor;
             liveState = warpTickCallback.onTick(
-                    liveState, ticksPassed, tickDelta
+                    liveState, currentTick + wallClockTicks, tickDelta
             );
         }
 

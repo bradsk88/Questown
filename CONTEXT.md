@@ -138,7 +138,19 @@ A `(tick → town-mutation)` unit. All villagers' important-tick mutations are m
 _Avoid_: conflating with **important tick** (1:1, but names a different facet).
 
 **Tick delta**:
-Ticks elapsed since the previous visit (`WarpTickEvent.tickDelta`, `Warper.Tick.ticksSincePrevious()`). **Footgun:** a warp hook must scale proportional effects by it (crop growth ∝ delta) and never assume a fixed call frequency — forgetting this is a known warp/realtime parity bug (see `decision-proportional-deltas.md`).
+Ticks elapsed since the previous visit (`WarpTickEvent.tickDelta`, `Warper.Tick.ticksSincePrevious()`). **Footgun:** a warp hook must scale proportional effects by it (crop growth ∝ delta) and never assume a fixed call frequency — forgetting this is a known warp/realtime parity bug (see `decision-proportional-deltas.md`). The `tickDelta` handed to **passive world processes** is **wall-clock** (night-inclusive), not productive — see **Wall-clock timeline** (ADR-0006).
+
+**Productive timeline** (`productiveTicks`):
+The **labour** budget of a warp window — elapsed ticks with **night subtracted** (`Signals.calculateProductiveTicks`, cut at `PRODUCTIVE_DAY_END_TICK = 11500` each day). Schedules **important ticks**; townies don't work at night, so labour rides this.
+_Avoid_: "warp duration" (ambiguous — could mean wall-clock); "warp ticks".
+
+**Wall-clock timeline** (`wallClockTicks`):
+The **passive-world-process** budget — the **full** elapsed window, night included (`MAX`-clamped). Drives `onWarpTick` effects. Named **wall-clock, not "real"**, to avoid colliding with the **realtime path**: wall-clock is a *duration* axis (day-only vs round-the-clock), realtime is an *execution-pathway* axis (live vs offline). `Signals.ProductiveWallClockTimeline.wallClockOffsetAt` maps a productive offset to its wall-clock offset, placing each night at its **true** clock position (precise, not smeared) so a dusk-planted sapling is credited the whole night (ADR-0006).
+_Avoid_: "real ticks"/"real timeline" (collides with **realtime path**); "elapsed ticks" (that's pre-clamp).
+
+**Passive world process**:
+A world effect that advances **24h a day regardless of villager labour** — crop random-tick growth, furnace smelting, sapling/tree growth — modeled in warp by **global rules** on the `onWarpTick` hook (`GrowCropsWarpRule`, `SmeltFurnaceWarpRule`, `GrowTreesWarpRule`). Rides the **wall-clock timeline**; contrast **labour**, which stops at night and rides the **productive timeline**. An all-night warp runs these with **no** labour.
+_Avoid_: "passive rule" (they are **global rules**); conflating with labour.
 
 **First tick**:
 A **realtime-only** flag — the first `beforeTick` after init or job-change (`BeforeTickEvent.firstTick`). Does **not** fire in warp; don't hang warp-relevant logic on it.
@@ -241,6 +253,7 @@ A `(bubble, hintKey, plainKey)` row in the per-(beat, phase) presentation table.
 - A townie travels to a **job site** (the room), ranks **work spots** inside it, and acts on a **job block**; a **work spot** wraps a **work position** = `(job block, feet)`.
 - A townie draws supplies from a **supply room**'s **container targets**; **rooms needing villager input** is the demand side (rooms *missing* supplies), keyed by **processing state**.
 - The **warp** loop visits each townie's **important ticks** (the *when*); each becomes a **warp step** (the *what*); proportional global effects scale by **tick delta**.
+- A warp window carries **two timelines**: **labour** rides the **productive timeline** (stops at night); **passive world processes** ride the **wall-clock timeline** (round-the-clock). The productive offset of each warp step maps to a wall-clock offset that places night precisely (ADR-0006).
 - A **Leaver job** is the kind the explorer runs; **Scouting** is its outcome.
 
 ## Example dialogue
@@ -257,3 +270,4 @@ A `(bubble, hintKey, plainKey)` row in the per-(beat, phase) presentation table.
 - **"phase" across contexts.** In the **jobs** domain, **phase** = a `ProductionStatus` value (a townie's stage). In the **chicken-arc** domain, **BeatPhase** is an unrelated presentation sub-state of a beat. Same word, different bounded contexts — always qualify when both are in play.
 - **`REMOVE_FROM_WORLD` overload.** A `SpecialRules` string (timed-state leaver step) **and** an `InventoryFullStrategy` enum value (drop-on-ground). Disambiguate by which type you mean.
 - **"input" in `RoomsNeedingVillagerInput`.** Means villager-supplied work/items, **not** player input; and it's the *demand* side (rooms lacking supplies), the inverse of a **supply room**.
+- **"real" in the warp subsystem.** Resolved (ADR-0006): the round-the-clock passive budget is **wall-clock** (`wallClockTicks`), never "real" — "real" is reserved for the **realtime path** (live, player-present execution). Two different axes: wall-clock = duration (day-only vs round-the-clock), realtime = pathway (live vs warp). If you see "real ticks"/"real timeline" anywhere, read it as wall-clock and fix it.

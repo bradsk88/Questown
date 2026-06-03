@@ -166,12 +166,17 @@ public class TownFlagState {
             return storedState;
         }
 
-        ticksPassed = Math.min(ticksPassed, Config.TIME_WARP_MAX_TICKS.get());
-
-        ticksPassed = Signals.calculateProductiveTicks(dayTime, ticksPassed);
-        if (ticksPassed <= 0) {
-            QT.FLAG_LOGGER.info("Time warp contained no productive ticks (all nighttime)");
-            return storedState;
+        // Two timelines (ADR-0006): villager labour runs on the productive budget (stops at
+        // night); passive world processes (crop/furnace/tree warp rules) run on the wall-clock budget.
+        long wallClockTicks = Math.min(ticksPassed, Config.TIME_WARP_MAX_TICKS.get());
+        long productiveTicks = Signals.calculateProductiveTicks(dayTime, wallClockTicks);
+        Signals.ProductiveWallClockTimeline timeline =
+                Signals.buildProductiveWallClockTimeline(dayTime, wallClockTicks);
+        if (productiveTicks <= 0) {
+            QT.FLAG_LOGGER.info(
+                    "Time warp window is all night ({} wall-clock ticks): running passive effects only",
+                    wallClockTicks
+            );
         }
 
         // Create Work implementation that bridges to entity methods
@@ -214,8 +219,10 @@ public class TownFlagState {
                 new MCAdvanceTime(Config.MAX_DOWNTIME_TICKS.get());
         MCAdvanceTime.Result<MCTownState> result = advancer.advanceTime(
                 storedState,
-                ticksPassed,
+                productiveTicks,
+                wallClockTicks,
                 dayTime,
+                timeline::wallClockOffsetAt,
                 ImportantTicks.adaptWork(w),
                 MCAdvanceTime.createWarperFactory(w, e.getBlockPos(), roomPositions, warpWorld),
                 null, // cookResolver - not yet implemented

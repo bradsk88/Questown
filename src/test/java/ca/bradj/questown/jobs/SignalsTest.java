@@ -103,4 +103,91 @@ class SignalsTest {
         // Window [23000, 25000] = [23000, 24000] night + [0, 1000] morning
         assertEquals(1000, calculateProductiveTicks(25000, 2000));
     }
+
+    // ---- ProductiveWallClockTimeline: productive offset -> wall-clock offset mapping ----
+    // wallClockOffsetAt(p) answers "after p productive ticks, how many WALL-CLOCK ticks have elapsed
+    // (skipping past any night that precedes the p-th productive tick)?"
+
+    private static void assertTimelineTotalsMatchProductiveTicks(long windowEnd, long wallClockTicks) {
+        ProductiveWallClockTimeline t = buildProductiveWallClockTimeline(windowEnd, wallClockTicks);
+        assertEquals(
+                calculateProductiveTicks(windowEnd, wallClockTicks), t.productiveTotal(),
+                "productiveTotal must agree with calculateProductiveTicks"
+        );
+        assertEquals(Math.max(0, wallClockTicks), t.wallClockTotal(), "wallClockTotal == wallClockTicks");
+    }
+
+    @Test
+    void timeline_dayOnly_isIdentity() {
+        // Window [0, 11500] — all productive, no night.
+        ProductiveWallClockTimeline t = buildProductiveWallClockTimeline(11500, 11500);
+        assertEquals(11500, t.productiveTotal());
+        assertEquals(11500, t.wallClockTotal());
+        assertEquals(0, t.wallClockOffsetAt(0));
+        assertEquals(5000, t.wallClockOffsetAt(5000));
+        // p at/after productiveTotal maps to wallClockTotal.
+        assertEquals(11500, t.wallClockOffsetAt(11500));
+        assertTimelineTotalsMatchProductiveTicks(11500, 11500);
+    }
+
+    @Test
+    void timeline_openingNight_creditsNightBeforeFirstProductiveTick() {
+        // Window [22000, 35500] = night [22000,24000] (2000) + morning [0,11500] (11500).
+        ProductiveWallClockTimeline t = buildProductiveWallClockTimeline(35500, 13500);
+        assertEquals(11500, t.productiveTotal());
+        assertEquals(13500, t.wallClockTotal());
+        // The 0th productive tick happens only after the opening 2000-tick night.
+        assertEquals(2000, t.wallClockOffsetAt(0));
+        assertEquals(7000, t.wallClockOffsetAt(5000));
+        assertEquals(13500, t.wallClockOffsetAt(11500));
+        assertTimelineTotalsMatchProductiveTicks(35500, 13500);
+    }
+
+    @Test
+    void timeline_nightInMiddle_creditsNightBetweenDays() {
+        // Window [0, 35500] = day1 prod [0,11500) + night [11500,24000) + day2 prod [24000,35500).
+        ProductiveWallClockTimeline t = buildProductiveWallClockTimeline(35500, 35500);
+        assertEquals(23000, t.productiveTotal());
+        assertEquals(35500, t.wallClockTotal());
+        // Day 1 productive maps 1:1.
+        assertEquals(11000, t.wallClockOffsetAt(11000));
+        // The first day-2 productive tick is credited the whole 12500-tick night before it.
+        assertEquals(24000, t.wallClockOffsetAt(11500));
+        assertEquals(24500, t.wallClockOffsetAt(12000));
+        assertEquals(35500, t.wallClockOffsetAt(23000));
+        assertTimelineTotalsMatchProductiveTicks(35500, 35500);
+    }
+
+    @Test
+    void timeline_pureNight_hasNoProductiveTicksButWallClockTotal() {
+        // Window [15000, 17000] — deep night, zero productive.
+        ProductiveWallClockTimeline t = buildProductiveWallClockTimeline(17000, 2000);
+        assertEquals(0, t.productiveTotal());
+        assertEquals(2000, t.wallClockTotal());
+        // No productive ticks exist; offset 0 already sits at the end of the (night) window.
+        assertEquals(2000, t.wallClockOffsetAt(0));
+        assertTimelineTotalsMatchProductiveTicks(17000, 2000);
+    }
+
+    @Test
+    void timeline_multiDay_creditsEachNight() {
+        // Window [0, 72000] — three full days.
+        ProductiveWallClockTimeline t = buildProductiveWallClockTimeline(72000, 72000);
+        assertEquals(11500 * 3, t.productiveTotal());
+        assertEquals(72000, t.wallClockTotal());
+        // Start of each day's productive window lands after that day's preceding night(s).
+        assertEquals(0, t.wallClockOffsetAt(0));
+        assertEquals(24000, t.wallClockOffsetAt(11500));   // day 2 morning
+        assertEquals(48000, t.wallClockOffsetAt(23000));   // day 3 morning
+        assertEquals(30000, t.wallClockOffsetAt(17500));   // mid day-2 (24000 + 6000)
+        assertTimelineTotalsMatchProductiveTicks(72000, 72000);
+    }
+
+    @Test
+    void timeline_zeroWallClockTicks_isEmpty() {
+        ProductiveWallClockTimeline t = buildProductiveWallClockTimeline(0, 0);
+        assertEquals(0, t.productiveTotal());
+        assertEquals(0, t.wallClockTotal());
+        assertEquals(0, t.wallClockOffsetAt(0));
+    }
 }
