@@ -213,9 +213,24 @@ job result comes from the normal result generator. The rule already skips
 entity deployment when `asServerLevel()` returns null (warp/test contexts),
 so fishing works correctly during warp without modification.
 
-See `DeployFishingHookRule.afterInsertItem()` and
-`docs/todo/post-warp-visuals.md` for the post-warp visual restoration
-consideration (low priority).
+`DeployFishingHookRule` is intentionally **Tier 2** (does not implement
+`QTNativeRule`): the cosmetic `FishingHook` entity genuinely requires a
+`ServerLevel` to spawn, and `QTWorldAccess` deliberately has no
+entity-spawn abstraction — inventing one for a visual-only hook would be
+gold-plating. The hook is spawned in realtime via `afterInsertItem()` and
+restored post-warp via `afterWarpRecovery(ServerLevel, …)` (the documented
+visual-restoration seam, correctly typed as `ServerLevel`).
+
+**Verified warp-green** end-to-end via autotest (2026-06-03): a targeted
+`-Dquestown.autotest.only=fisher` run catches fish from the loot table
+during warp (e.g. `[salmon, cod, cod, cod, pufferfish, cod]`),
+`RESULT: 1/1 passed`. The autotest assertion stays a `wildcardExpectation`
+(net gain ≥1 item) on purpose — the `gameplay/fishing` loot table is random
+(fish/junk/treasure), so a specific-fish assertion would flake. Nothing
+further to decouple here.
+
+See `DeployFishingHookRule.afterInsertItem()` for the post-warp visual
+restoration consideration (low priority).
 
 ---
 

@@ -129,6 +129,17 @@ public class TestBlueprintRegistry {
                 .toList();
     }
 
+    /**
+     * Resolves the jobs-track scenarios for a category selector. {@code null} or
+     * the {@code "jobs"} meta-bucket means "every testable job"; any other value
+     * narrows to that category.
+     */
+    public static List<AnyTestEntry> resolveJobs(@Nullable String category) {
+        return (category == null || "jobs".equals(category))
+                ? getTestableJobs()
+                : getTestsByCategory(category);
+    }
+
     private static TestEntry entry(JobID id, TestBlueprint bp) {
         return new TestEntry(id.rootId() + "/" + id.jobId(), id, bp, "warp");
     }

@@ -16,7 +16,12 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import org.jetbrains.annotations.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
+
+import ca.bradj.questown.commands.test.TestBlueprintRegistry.AnyTestEntry;
 
 @Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class AutoTestRunner {
@@ -24,6 +29,8 @@ public class AutoTestRunner {
     private static final String SYSPROP = "questown.autotest";
     private static final String SYSPROP_WARP = "questown.autotest.warp";
     private static final String ENV_CATEGORY = "QUESTOWN_AUTOTEST_CATEGORY";
+    private static final String ENV_ONLY = "QUESTOWN_AUTOTEST_ONLY";
+    private static final String SYSPROP_ONLY = "questown.autotest.only";
     private static final String CATEGORY_CHICKEN = ChickenArcBlueprintRegistry.CATEGORY;
     private static final int DEFAULT_WARP = 24000;
     private static final BlockPos ORIGIN = new BlockPos(0, 64, 0);
@@ -58,7 +65,8 @@ public class AutoTestRunner {
 
         int warpAmount = parseWarpAmount();
         String category = parseCategory();
-        String scope = category != null ? "category=" + category : "all";
+        String only = parseOnly();
+        String scope = describeScope(category, only);
         QT.FLAG_LOGGER.info("[autotest] Starting automated test suite ({}, warp={}, origin={})", scope, warpAmount, ORIGIN.toShortString());
 
         LogTestOutput output = new LogTestOutput("autotest");
@@ -66,17 +74,25 @@ public class AutoTestRunner {
         boolean runChicken = shouldRunChickenTrack(category);
         boolean runJobs = shouldRunJobsTrack(category);
 
+        List<AnyTestEntry> jobsList = runJobs ? TestBlueprintRegistry.resolveJobs(category) : List.of();
+        List<ChickenArcBlueprint> chickenList = runChicken ? ChickenArcBlueprintRegistry.all() : List.of();
+
+        if (only != null) {
+            jobsList = jobsList.stream().filter(e -> nameMatches(e.name(), only)).toList();
+            chickenList = chickenList.stream().filter(b -> nameMatches(b.name(), only)).toList();
+            runJobs = !jobsList.isEmpty();
+            runChicken = !chickenList.isEmpty();
+            if (!runJobs && !runChicken) {
+                reportNoMatchAndShutdown(server, only, category);
+                return;
+            }
+        }
+
         TestAllExecutor jobsExecutor = runJobs
-                ? new TestAllExecutor(overworld, output, ORIGIN, warpAmount, category)
+                ? new TestAllExecutor(overworld, output, ORIGIN, warpAmount, jobsList)
                 : null;
         ChickenArcAllExecutor chickenExecutor = runChicken
-                ? new ChickenArcAllExecutor(
-                overworld,
-                server,
-                fakePlayer,
-                ORIGIN,
-                output,
-                ChickenArcBlueprintRegistry.all())
+                ? new ChickenArcAllExecutor(overworld, server, fakePlayer, ORIGIN, output, chickenList)
                 : null;
 
         AutoTestTickListener listener = new AutoTestTickListener(
@@ -124,6 +140,46 @@ public class AutoTestRunner {
             return null;
         }
         return val;
+    }
+
+    @Nullable
+    private static String parseOnly() {
+        String val = System.getenv(ENV_ONLY);
+        if (val == null || val.isBlank()) {
+            val = System.getProperty(SYSPROP_ONLY);
+        }
+        if (val == null || val.isBlank()) {
+            return null;
+        }
+        return val;
+    }
+
+    private static boolean nameMatches(String name, String only) {
+        return name.toLowerCase(Locale.ROOT).contains(only.toLowerCase(Locale.ROOT));
+    }
+
+    private static String describeScope(@Nullable String category, @Nullable String only) {
+        String base = category != null ? "category=" + category : "all";
+        return only != null ? base + ", only=" + only : base;
+    }
+
+    private static void reportNoMatchAndShutdown(
+            MinecraftServer server,
+            String only,
+            @Nullable String category
+    ) {
+        List<String> available = new ArrayList<>();
+        if (shouldRunJobsTrack(category)) {
+            TestBlueprintRegistry.resolveJobs(category).forEach(e -> available.add(e.name()));
+        }
+        if (shouldRunChickenTrack(category)) {
+            ChickenArcBlueprintRegistry.all().forEach(b -> available.add(b.name()));
+        }
+        QT.FLAG_LOGGER.error("[autotest] only='{}' matched 0 of {} scenarios", only, available.size());
+        QT.FLAG_LOGGER.error("[autotest] available scenarios: {}", available);
+        QT.FLAG_LOGGER.info("[autotest] RESULT: 0/0 passed (FAILURES)");
+        server.halt(false);
+        Runtime.getRuntime().halt(1);
     }
 
     static class AutoTestTickListener {

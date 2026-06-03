@@ -100,6 +100,9 @@ minecraft {
             if (System.getProperty('QUESTOWN_AUTOTEST_CATEGORY') != null) {
                 jvmArg '-DQUESTOWN_AUTOTEST_CATEGORY=' + System.getProperty('QUESTOWN_AUTOTEST_CATEGORY')
             }
+            if (System.getProperty('questown.autotest.only') != null) {
+                jvmArg '-Dquestown.autotest.only=' + System.getProperty('questown.autotest.only')
+            }
 
             mods {
                 questown {

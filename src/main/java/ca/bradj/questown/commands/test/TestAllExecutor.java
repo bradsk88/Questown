@@ -29,7 +29,7 @@ public class TestAllExecutor {
             BlockPos origin,
             int warpAmount
     ) {
-        this(level, output, origin, warpAmount, null);
+        this(level, output, origin, warpAmount, (String) null);
     }
 
     public TestAllExecutor(
@@ -39,13 +39,21 @@ public class TestAllExecutor {
             int warpAmount,
             @Nullable String category
     ) {
+        this(level, output, origin, warpAmount, TestBlueprintRegistry.resolveJobs(category));
+    }
+
+    public TestAllExecutor(
+            ServerLevel level,
+            TestOutput output,
+            BlockPos origin,
+            int warpAmount,
+            List<AnyTestEntry> jobs
+    ) {
         this.level = level;
         this.output = output;
         this.origin = origin;
         this.warpAmount = warpAmount;
-        this.jobs = (category == null || "jobs".equals(category))
-                ? TestBlueprintRegistry.getTestableJobs()
-                : TestBlueprintRegistry.getTestsByCategory(category);
+        this.jobs = jobs;
     }
 
     public boolean tick() {

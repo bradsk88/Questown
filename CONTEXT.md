@@ -217,8 +217,12 @@ An item stamped with a biome. Its presence in a town chest is what makes that bi
 ### Testing
 
 **Autotest suite**:
-The in-game, server-driven test harness invoked with `/_qtdev test <job> <warp>` (one job) or `testall` (all). Each job runs through a `TestBlueprint`: it builds an arena, spawns a townie, runs the job, and asserts on observable outcomes across three axes — inventory deltas, **fullness**, and town **known-loot** growth. A blueprint runs a **warp pass** and, unless it's a **leaver job** (`realtimePhase=false`), a **realtime pass** too.
+The in-game, server-driven test harness invoked with `/_qtdev test <job> <warp>` (one job) or `testall` (all), and headlessly via `./gradlew runServer -Dquestown.autotest=true`. Each **scenario** runs through a `TestBlueprint`: it builds an arena, spawns a townie, runs the job, and asserts on observable outcomes across three axes — inventory deltas, **fullness**, and town **known-loot** growth. A blueprint runs a **warp pass** and, unless it's a **leaver job** (`realtimePhase=false`), a **realtime pass** too. The suite reports `N/N` over scenarios; the headless run can be narrowed to one by name substring (`-Dquestown.autotest.only=<name>`).
 _Avoid_: integration tests (those are the separate JUnit suite), harness (too generic).
+
+**Scenario**:
+One targetable autotest entry — a single `TestBlueprint` paired with a display `name()` (e.g. `fisher/fish`, `arborist/cut_trees [full_cycle]`, `eating/eat_raw_food`, the chicken-arc `stick_peck_and_follow_spawn`). The unit the suite iterates and the unit `-Dquestown.autotest.only=` matches against. A single **job** may have several scenarios (a base plus edge-case variants), and many scenarios aren't jobs at all (eating, worldgen, chicken-arc).
+_Avoid_: job (a job can own multiple scenarios), test case, blueprint (that's the data; the scenario is the named, runnable entry).
 
 ### Helper chicken arc
 
