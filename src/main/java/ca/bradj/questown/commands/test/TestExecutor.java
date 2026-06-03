@@ -180,9 +180,18 @@ public class TestExecutor {
         phase = Phase.FLATTEN;
     }
 
+    // Vertical clearance above the tallest blueprint block, so a grown arborist tree (small oak
+    // needs ~9) has room and no prior-scenario residue survives into this scenario's build volume.
+    private static final int TREE_HEADROOM = 10;
+
     private void flatten() {
-        msg("Flattening 15x15 area...");
-        TestArenaPreparer.flatten(level, origin, TestArenaPreparer.PreparerOptions.jobsTrackDefaults());
+        msg("Flattening arena (full build volume + tree headroom)...");
+        TestArenaPreparer.ClearRegion region = TestArenaPreparer.buildVolume(
+                TestArenaPreparer.PreparerOptions.jobsTrackDefaults().halfWidth(),
+                blueprint.blocks(),
+                TREE_HEADROOM
+        );
+        TestArenaPreparer.flatten(level, origin, region);
         phase = Phase.SETTLE_BEFORE_PLACE;
         waitTicks = 0;
         maxWaitTicks = 5;

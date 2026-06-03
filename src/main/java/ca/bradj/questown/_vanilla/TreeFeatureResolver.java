@@ -2,9 +2,11 @@ package ca.bradj.questown._vanilla;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.mc.Compat;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
@@ -23,6 +25,18 @@ public final class TreeFeatureResolver {
     }
 
     public record Resolved(TreeFeature feature, TreeConfiguration config) {
+    }
+
+    /**
+     * Deterministic per-position RNG for tree growth. {@code TreeFeature.place} consumes randomness
+     * for trunk height and foliage shape; feeding it {@code level.random} makes warp growth
+     * non-deterministic, which both violates the project's warp-determinism principle (cf. the
+     * bone-meal +3 choice) and makes the grown trunk's log count vary run-to-run. Seeding by
+     * {@code pos.asLong()} fixes a grown tree's shape for a given sapling position on both the
+     * realtime and warp paths. See ADR-0005.
+     */
+    public static RandomSource seededFor(BlockPos pos) {
+        return RandomSource.create(pos.asLong());
     }
 
     /**

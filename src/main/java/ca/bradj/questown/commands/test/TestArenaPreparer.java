@@ -136,10 +136,16 @@ public final class TestArenaPreparer {
     }
 
     /**
+     * Rectangular clear region in origin-relative offsets: {@code [minX..maxX] x [minZ..maxZ]}
+     * cleared from {@code topY} down to the floor, with the ground layer (y=-1) set to cobblestone.
+     */
+    public record ClearRegion(int minX, int maxX, int minZ, int maxZ, int topY) {}
+
+    /**
      * Flatten a square arena around {@code origin}. Matches {@link TestExecutor}'s
      * existing flatten semantics: destroy all non-ground blocks above ground level,
      * set the ground layer to cobblestone. {@link PreparerOptions#halfWidth()}
-     * controls the arena size.
+     * controls the arena size; the vertical clear matches the legacy 5-high box.
      */
     public static void flatten(
             ServerLevel level,
@@ -147,16 +153,50 @@ public final class TestArenaPreparer {
             PreparerOptions options
     ) {
         int halfWidth = options.halfWidth();
-        for (int x = -halfWidth; x <= halfWidth; x++) {
-            for (int z = -halfWidth; z <= halfWidth; z++) {
-                for (int y = 4; y >= 0; y--) {
-                    BlockPos pos = origin.offset(x, y, z);
-                    level.destroyBlock(pos, false);
+        flatten(level, origin, new ClearRegion(-halfWidth, halfWidth, -halfWidth, halfWidth, 4));
+    }
+
+    /**
+     * Flatten an explicit {@link ClearRegion}. Used by the jobs track to clear the full build
+     * volume (see {@link #buildVolume}) so prior-scenario residue can't survive into a taller or
+     * wider blueprint — e.g. an arborist farm whose grown tree needs vertical clearance.
+     */
+    public static void flatten(
+            ServerLevel level,
+            BlockPos origin,
+            ClearRegion region
+    ) {
+        for (int x = region.minX(); x <= region.maxX(); x++) {
+            for (int z = region.minZ(); z <= region.maxZ(); z++) {
+                for (int y = region.topY(); y >= 0; y--) {
+                    level.destroyBlock(origin.offset(x, y, z), false);
                 }
-                BlockPos groundPos = origin.offset(x, -1, z);
-                level.setBlockAndUpdate(groundPos, Blocks.COBBLESTONE.defaultBlockState());
+                level.setBlockAndUpdate(origin.offset(x, -1, z), Blocks.COBBLESTONE.defaultBlockState());
             }
         }
+    }
+
+    /**
+     * The clear region covering a scenario's full build volume: the base {@code halfWidth} square
+     * unioned with the blueprint's block bounding box, cleared up through the tallest blueprint
+     * block plus {@code headroom}. Deriving from the blueprint keeps "fully clear the build volume"
+     * true by construction even when a blueprint outgrows the base square (the arborist farm does).
+     */
+    public static ClearRegion buildVolume(
+            int halfWidth,
+            Iterable<TestBlueprint.BlockPlacement> blocks,
+            int headroom
+    ) {
+        int minX = -halfWidth, maxX = halfWidth, minZ = -halfWidth, maxZ = halfWidth, maxY = 4;
+        for (TestBlueprint.BlockPlacement bp : blocks) {
+            BlockPos o = bp.offset();
+            minX = Math.min(minX, o.getX());
+            maxX = Math.max(maxX, o.getX());
+            minZ = Math.min(minZ, o.getZ());
+            maxZ = Math.max(maxZ, o.getZ());
+            maxY = Math.max(maxY, o.getY());
+        }
+        return new ClearRegion(minX, maxX, minZ, maxZ, maxY + headroom);
     }
 
     private static AABB strayAreaAround(BlockPos origin, int halfWidth) {

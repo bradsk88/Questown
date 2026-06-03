@@ -140,7 +140,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         // Dry run: VoidLevel discards the placement writes; we only want the plantability verdict.
         return r.feature().place(
                 r.config(), new VoidLevel(level),
-                level.getChunkSource().getGenerator(), level.random, pos
+                level.getChunkSource().getGenerator(), TreeFeatureResolver.seededFor(pos), pos
         );
     }
 
@@ -155,7 +155,8 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         BlockState previous = level.getBlockState(pos);
         level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
         boolean placed = r.feature().place(
-                r.config(), level, level.getChunkSource().getGenerator(), level.random, pos
+                r.config(), level, level.getChunkSource().getGenerator(),
+                TreeFeatureResolver.seededFor(pos), pos
         );
         if (!placed) {
             level.setBlock(pos, previous, 3);

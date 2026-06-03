@@ -331,12 +331,11 @@ public class TestBlueprintRegistry {
      * the saplings and {@code GrowTreesWarpRule} attempts to grow them via {@code growTreeAt}
      * (the in-warp worldgen path), while the cut_trees villager chops the starter column.
      * <p>
-     * Asserts the starter is chopped (>=4 logs). NOTE: same-warp grow→chop is NOT yet asserted:
-     * {@code TreeFeature.place} currently returns false in the warp path (the failure is not
-     * adapter-, generator-, registry-, or heightmap-relocation-specific — a plain {@code VoidLevel}
-     * fails identically, a pre-existing condition). Once that worldgen integration is resolved, the
-     * seeded saplings here will grow and be re-chopped, and this assertion can be tightened to >=5.
-     * See the plan and ADR-0005.
+     * Asserts the full grow→chop cycle: >=5 logs, which is only reachable if the seeded sapling
+     * grows into a tree (the starter column alone is 4) and cut_trees chops it in the same warp.
+     * For growth to place a tree, the sapling needs a clear footprint — guaranteed by the jobs-track
+     * flatten now clearing the whole build volume + tree headroom (see {@code TestArenaPreparer
+     * .buildVolume}). See ADR-0005.
      */
     private static TestBlueprint arboristFullCycleBlueprint() {
         List<BlockPlacement> blocks = new ArrayList<>();
@@ -367,16 +366,13 @@ public class TestBlueprintRegistry {
             blocks.add(new BlockPlacement(trunkBase.above(y), Blocks.OAK_LOG.defaultBlockState()));
         }
 
-        // Pre-seeded saplings at the floor (yCoord), spaced apart so each can grow. Base at yCoord,
-        // where cut_trees scans — so the grown trunks are choppable in the same warp.
-        BlockPos[] saplingOffsets = {
-                new BlockPos(ox + 3, 0, oz + 3),
-                new BlockPos(ox + 5, 0, oz + 1),
-                new BlockPos(ox + 3, 0, oz + 5)
-        };
-        for (BlockPos sap : saplingOffsets) {
-            blocks.add(new BlockPlacement(sap, Blocks.OAK_SAPLING.defaultBlockState()));
-        }
+        // One oak sapling centered in the 5x5 interior. An oak's foliage radius (2) spans the whole
+        // interior, so only ONE tree fits — saplings any closer block each other's footprint (a
+        // sapling block isn't "free" for growth). The starter column shares the plot because logs
+        // ARE "free". seedFarmSaplings records this sapling and GrowTreesWarpRule grows it mid-warp
+        // into a trunk at the floor (yCoord, where cut_trees scans), so it is chopped in the same warp.
+        BlockPos saplingOffset = new BlockPos(ox + 3, 0, oz + 3);
+        blocks.add(new BlockPlacement(saplingOffset, Blocks.OAK_SAPLING.defaultBlockState()));
 
         BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 5);
         blocks.add(new BlockPlacement(chestOffset.below(), Blocks.DIRT.defaultBlockState()));
@@ -389,8 +385,20 @@ public class TestBlueprintRegistry {
 
         TestExpectation expectation = new TestExpectation(
                 List.of(
-                        // Starter column is 4 logs. Tighten to >=5 once in-warp growth places trees.
-                        new ExpectedProduct("minecraft:oak_log", 4, null)
+                        // The seeded sapling must grow and be chopped in the same warp: the warp
+                        // fells one whole trunk here, and the starter column alone is only 4 logs, so
+                        // >=5 can only be reached by chopping the GROWN oak. Growth is deterministic
+                        // (TreeFeatureResolver.seededFor), so the grown trunk is a fixed 5 logs every
+                        // run — robustly >=5, never the flaky 4..6 of level.random. See ADR-0005.
+                        //
+                        // LOAD-BEARING COORDINATE: the "5" is the deterministic oak height for the
+                        // seed pos.asLong() of the sapling at (ox+3, oz+3) under the ORIGIN at the
+                        // time of writing. Moving the arena origin or this sapling offset re-seeds the
+                        // RNG and can drop the grown trunk to 4 (then this fails, predictably — not a
+                        // flake). If you relocate it, re-pin this threshold to the new deterministic
+                        // height. It also assumes the single felled trunk is the grown oak (job-block
+                        // scan reaches (7,0) before the 4-log starter at (5,-2)).
+                        new ExpectedProduct("minecraft:oak_log", 5, null)
                 ),
                 1,
                 500

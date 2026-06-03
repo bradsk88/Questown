@@ -275,7 +275,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         }
         return r.feature().place(
                 r.config(), new SnapshotWorldGenLevel(level, this, true),
-                level.getChunkSource().getGenerator(), level.random, pos
+                level.getChunkSource().getGenerator(), TreeFeatureResolver.seededFor(pos), pos
         );
     }
 
@@ -294,7 +294,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         setBlock(pos, Blocks.AIR.defaultBlockState());
         boolean placed = r.feature().place(
                 r.config(), new SnapshotWorldGenLevel(level, this, false),
-                level.getChunkSource().getGenerator(), level.random, pos
+                level.getChunkSource().getGenerator(), TreeFeatureResolver.seededFor(pos), pos
         );
         if (!placed && previous != null) {
             setBlock(pos, previous);

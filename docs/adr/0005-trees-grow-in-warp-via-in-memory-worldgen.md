@@ -53,11 +53,24 @@ warp.
   constructor), so the tree-growth path is autotest-covered, not unit-tested.
 - **Implementation note (2026-06-02):** `canTreeGrowAt`/`growTreeAt` are implemented as
   decided (real `TreeFeature.place` against `SnapshotWorldGenLevel`; sapling cleared before
-  placement, as vanilla does; feature resolved from the live `registryAccess`). In the
-  **autotest arena**, `TreeFeature.place` returns false even under ideal conditions — and this
-  is **not** specific to `SnapshotWorldGenLevel`: a plain `VoidLevel` and even direct
-  real-`ServerLevel` placement fail identically (ruling out the adapter, a null/real
-  `ChunkGenerator`, the builtin-vs-runtime registry, and heightmap relocation). The likely cause
-  is the test server's world type lacking worldgen feature support; the design is expected to
-  work in a normal overworld (where vanilla sapling growth works). The arborist chop and plant
-  autotests pass in warp; the full grow→chop is asserted as chop-only pending this. See the plan.
+  placement, as vanilla does; feature resolved from the live `registryAccess`).
+- **Resolution (2026-06-03):** The earlier "the test server's world type lacks worldgen feature
+  support" hypothesis was **wrong**, and was based on a flawed control: the sapling was cleared
+  only in the *snapshot*, so the real-`ServerLevel`/`VoidLevel` controls still saw an
+  `oak_sapling` at the trunk base (not "free") and failed trivially. `TreeFeature` does **no**
+  heightmap relocation in 1.19.2 — it places at `pos` directly. The real cause of `place()`
+  returning false is `getMaxFreeTreeHeight < treeHeight`: a block in the tree's footprint wasn't
+  free (air/leaves/logs). In the headless suite the obstructions were (1) **prior-scenario
+  residue** (cook/smelter cobblestone walls) surviving because the old `flatten` only cleared a
+  `±7 × 5`-high box while the arborist farm extends to offset +10 and a tree needs ~9 vertical,
+  and (2) **crowded saplings** — three spaced 2 apart, inside each other's foliage radius (a
+  sapling block isn't "free"), so none could grow. Fix: jobs-track `flatten` now clears the full
+  build volume + tree headroom (`TestArenaPreparer.buildVolume`), and `full_cycle` seeds one
+  centered sapling. The worldgen path itself was correct all along.
+- **Deterministic growth (2026-06-03):** `growTreeAt`/`canTreeGrowAt` previously passed
+  `level.random` into `TreeFeature.place`, making the grown trunk's height (oak: 4–6 logs)
+  non-deterministic — a warp-determinism violation (cf. bone-meal +3) and a test-flake source.
+  Both paths now seed the RNG by block position (`TreeFeatureResolver.seededFor(pos.asLong())`),
+  so a sapling at a given position always grows the same tree. The warp loop fells one trunk per
+  `full_cycle`, so the assertion is `oak_log >= 5`: the starter column alone is 4, and the
+  deterministic grown oak is a fixed 5, making the grow→chop signal robust rather than 1-in-3 flaky.
