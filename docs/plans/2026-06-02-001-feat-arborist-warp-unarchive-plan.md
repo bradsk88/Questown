@@ -218,8 +218,11 @@ so no coverage" — these were latent):
 2. `event.workSpot()` is unreliable during warp (it can be the town origin `(0,0,0)`), so
    `ChopDownTree` now scans `event.jobBlockPositions()` for a log (like `HarvestCropSpecialRule`
    scans for crops). `chopTree` was also hardened to only chop `#minecraft:logs`.
-3. The arborist JSONs used `result: minecraft:air`; switched to `result: uses_special_rules` so
-   the special-rule drops are treated as the product (matching `farmer/harvest_wheat`).
+Both arborist JSONs were also switched `result: minecraft:air` → `uses_special_rules` to match
+`farmer/harvest_wheat`. NOTE: this is **cosmetic / self-describing only** — both map to
+`ResultGenerator.alwaysEmpty()`, and `tryExtractProduct` runs the result generator **only if
+`preExtractHook` returns null**, so a `beforeExtract` rule that handles extraction skips the
+generator entirely. The load-bearing fixes were (1) and (2); the result-type change is a no-op.
 
 **Known limitation — in-warp tree growth not yet verified end-to-end:** `growTreeAt`/`canTreeGrowAt`
 run `TreeFeature.place`, which returns **false in the autotest arena**. This was traced

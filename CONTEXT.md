@@ -27,6 +27,9 @@ _Avoid_: handler, listener, plugin.
 **Special rule**:
 Synonym for job phase modifier when emphasizing the JSON-declared form. A special rule is **declared at a phase** (keyed by `ProductionStatus` in the per-job rules map) and **executed by a hook** at that phase's edge — e.g. `SCOUT_LOOT` is declared at the `EXTRACTING_PRODUCT` **phase** and runs in the `afterExtract` **hook**. Some are addressed by string id (`SpecialRules.SCOUT_LOOT = "scout_loot"`, `REMOVE_FROM_WORLD = "remove_from_world"`).
 _Avoid_: for `REMOVE_FROM_WORLD` specifically — it is **also** an unrelated `InventoryFullStrategy` enum value ("drop on ground when inventory full"). Same name, different axis; say which you mean.
+_Footgun_ (real, load-bearing): a `beforeExtract` rule that hands the villager a product via `event.entity().tryGiveItem(...)` **must return the resulting (non-null) context**. `AbstractWorldInteraction.tryExtractProduct` runs the result generator **only if `preExtractHook` returns null** — the two are mutually exclusive paths. A rule that returns `null` (the trap: seeding from `super.beforeExtract(...)`, whose default returns null = "didn't handle") silently routes extraction to the result generator and **discards the products it just gave**. This was the latent `ChopDownTree` bug; mirror `HarvestCropSpecialRule` (seed from the passed context, return it).
+
+_Not a footgun_: `"result": {"type": "uses_special_rules"}` (and `via_other_job`) are **self-describing markers** — both map to `ResultGenerator.alwaysEmpty()` and are **functionally equivalent to an air `item` result** (the generator is skipped whenever a rule handles extraction anyway). Prefer them over `"minecraft:air"` for readability when the product comes from a rule / another job, but the choice does **not** affect behavior — so there's no loader check to add here.
 
 **Phase-specific rule**:
 A special rule declared **under a phase key** in the job JSON — stored in `Map<ProductionStatus, Collection<String>>`, run **per-villager** via that phase's **hook**.
@@ -147,6 +150,10 @@ _Avoid_: "the warper" for the whole warp system — it is per-villager.
 **Silent world access**:
 `MinecraftWorldAccess.silent(level)` — a wrapper over a **real** `ServerLevel` that no-ops sound side-effects (`if (silent) return`). The warp `postExtractHook` uses it so an **MC-native (Tier 2)** rule like `SCOUT_LOOT` gets a non-null `asServerLevel()` even offline. A *fourth* world-access flavor, distinct from in-memory `WarpWorldAccess` (see `decision-silent-world-access.md`).
 _Avoid_: assuming warp always means a fake/in-memory world — silent access is the real level with muted sound.
+
+**Worldgen shim**:
+A `WorldGenLevel` implementation (`VoidLevel`, `SnapshotWorldGenLevel`) that lets a **real MC worldgen feature** (`TreeFeature.place`) run **behind the `QTWorldAccess` seam**. `VoidLevel` delegates reads to the real level and **discards writes** (a dry-run probe — realtime plantability); `SnapshotWorldGenLevel` reads **snapshot-first** and routes writes **into `WarpWorldAccess`'s snapshot/dirty-set** (warp growth), with its own dry-run mode. A **different axis** from a `QTWorldAccess` flavor: a shim is what a **Tier-1 rule**'s world-access method (`canTreeGrowAt`/`growTreeAt`) uses *internally* to invoke vanilla worldgen — rules never see it. The decoupling doc's intended reference example for complex world interaction under warp (ADR-0005).
+_Avoid_: calling it a world-access flavor or a `QTWorldAccess`; "fake level".
 
 ### Containers & supply
 
