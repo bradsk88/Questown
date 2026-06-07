@@ -3,6 +3,12 @@
 This document outlines jobs using special rules and proposes `QTWorldAccess` methods
 to make them warpable and testable.
 
+> **Status: CLOSED (2026-06-08).** Every active job is single-tier and Tier-1 jobs
+> are warp-green (verified by autotest). Phases 1–5 done; Categories 1–6 resolved.
+> The only un-migrated held-item rules belong to `organizer/fetch`, which lives in
+> `questown_job_archive/` and is structurally unloadable (see Category 6). No
+> further decoupling work is required for any shipped job.
+
 ---
 
 ## Background
@@ -243,10 +249,25 @@ restoration consideration (low priority).
 - These appear to inspect held items and derive job parameters
 - Less world-coupled, more item-inspection logic
 
-**Proposed approach:**
+**Reviewed and confirmed (2026-06-07): these rules need no `QTWorldAccess`.**
 
-These rules likely don't need `QTWorldAccess` - they operate on inventory/item data
-which is already abstracted. Review implementation to confirm.
+All three operate purely on `StockRequestItem` NBT read off the villager's held
+items — zero Minecraft world coupling, no `asServerLevel()`. All three implement
+`QTNativeRule`.
+
+- `ingredients_from_held_item` / `tools_from_held_item` (both =
+  `IngredientsFromHeldItemSpecialRule`) override only `beforeInit` (fires in warp)
+  → fully warp-safe.
+- `workspot_from_held_item` (`WorkSpotFromHeldItemSpecialRule`): `beforeInit` +
+  `afterDropLoot` are warp-fine, but its dynamic workspot routing lives in
+  `beforeTick`, which does **not** fire in warp. This is **not** a decoupling
+  (`QTWorldAccess`) gap — it's a hook-placement caveat. It is also **moot today**:
+  the only consumer is `questown_job_archive/organizer_fetcher.json`, which
+  `ResourceJobLoader` (bound to the `questown_jobs` subdirectory) can never load.
+  If organizer/fetch is ever un-archived for warp, move that routing from
+  `beforeTick` to a warp-firing hook (`beforeInit`/`onWarpTick`).
+
+**Category 6 is closed — no work required for any active job.**
 
 ---
 
@@ -326,12 +347,12 @@ public interface QTWorldAccess {
 4. ✅ Used by all hook calls (PostInsertHook, PreExtractHook, PostExtractHook) and
    the warp-interleaved callback (WarpTickHook)
 
-### Phase 4: Migrate Remaining Rules — **Partially done**
+### Phase 4: Migrate Remaining Rules — **Done**
 
 1. ✅ Container rules — `InsertIntoSlotSpecialRule`, `TakeFromSlotSpecialRule`,
    `AddItemToContainerSpecialRule` all use QTWorldAccess container methods;
    `WarpWorldAccess` handles them in-memory
-2. 🟡 Tree / planting rules:
+2. ✅ Tree / planting rules:
    - ✅ `useItemOnBlock` — now fully in-memory in `WarpWorldAccess` for the live
      crop operations: seed `BlockItem`s plant at `pos.above()` (age 0) and bone
      meal advances the crop `age` by a deterministic +3, both routed through the
@@ -340,12 +361,14 @@ public interface QTWorldAccess {
      plant-then-no-grow parity bugs). Live consumers: `farmer_wheat_plant.json`,
      `farmer_global_bone.json`.
    - ✅ `chopTree` — already in-memory (snapshot + dirty-set recursion).
-   - ⬜ Sapling placement + plantability reconciliation for the **archived**
-     arborist are still deferred (the sapling consumer is in
-     `questown_job_archive/` and not loaded). Tracked in
+   - ✅ Arborist sapling placement + plantability are **un-archived and warp-green**
+     (both JSONs now live in `questown_jobs/`; in-warp grow→chop verified end-to-end
+     by autotest). See Category 4, ADR-0005, and
      `docs/plans/2026-06-02-001-feat-arborist-warp-unarchive-plan.md`.
 3. ✅ Fishing rules — `deploy_and_retract_fishing_hook` is visual-only; already
    warp-compatible via null-guard on `asServerLevel()`
+4. ✅ Held-item derivation (organizer) — reviewed; needs no `QTWorldAccess`.
+   See Category 6 (the only consumer is archived and structurally unloadable).
 
 ### Phase 5: Third-Party Support — **Done**
 
