@@ -1,21 +1,32 @@
 package ca.bradj.questown.commands.test;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.commands.test.TestBlueprint.BlockPlacement;
 import ca.bradj.questown.commands.test.TestBlueprint.RoomType;
 import ca.bradj.questown.commands.test.TestExpectation.ExpectedProduct;
 import ca.bradj.questown.core.init.BlocksInit;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.town.special.SpecialQuests;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +42,8 @@ public class TestBlueprintRegistry {
     public record TestEntry(String name, JobID jobId, TestBlueprint blueprint, String category)
             implements AnyTestEntry {}
 
-    public record WorldgenCheck(String name, String category, Function<ServerLevel, Boolean> check)
+    /** A self-reporting boolean check that only needs the {@link ServerLevel} (no town build). */
+    public record LevelCheck(String name, String category, Function<ServerLevel, Boolean> check)
             implements AnyTestEntry {}
 
     public static @Nullable TestBlueprint get(JobID jobId) {
@@ -119,6 +131,9 @@ public class TestBlueprintRegistry {
         // Worldgen tests
         jobs.add(emptyTownStructureCheck());
         jobs.add(emptyTownStructureSetCheck());
+
+        // UI tests
+        jobs.add(jobBoardKnowledgeGatingCheck());
 
         return jobs;
     }
@@ -1145,8 +1160,8 @@ public class TestBlueprintRegistry {
 
     // --- Worldgen checks ---
 
-    private static WorldgenCheck emptyTownStructureCheck() {
-        return new WorldgenCheck(
+    private static LevelCheck emptyTownStructureCheck() {
+        return new LevelCheck(
                 "worldgen/empty_town_structure",
                 "worldgen",
                 level -> level.registryAccess()
@@ -1156,8 +1171,8 @@ public class TestBlueprintRegistry {
         );
     }
 
-    private static WorldgenCheck emptyTownStructureSetCheck() {
-        return new WorldgenCheck(
+    private static LevelCheck emptyTownStructureSetCheck() {
+        return new LevelCheck(
                 "worldgen/empty_town_structure_set",
                 "worldgen",
                 level -> level.registryAccess()
@@ -1165,5 +1180,89 @@ public class TestBlueprintRegistry {
                         .map(r -> r.containsKey(new ResourceLocation("questown", "empty_town")))
                         .orElse(false)
         );
+    }
+
+    // --- UI checks ---
+
+    /**
+     * Roadmap #182: the work-request / stock-request screens only offer products of jobs the
+     * town has unlocked. Exercises {@link ServerJobsRegistry#getAllOutputs} against the real
+     * {@code Works} registry with controlled predicates to prove the gate (no town build needed,
+     * since getAllOutputs reads only the registry + the level + the gather-knowledge function).
+     * <p>
+     * The gather-knowledge function is fed the always-known floor (wheat seeds — mirrors
+     * {@code TownKnowledgeStore} baseKnowledge) so the floor's gating is actually tested, not
+     * neutralised:
+     * <ul>
+     *   <li>predicate {@code false} ⇒ empty offer set — the gate suppresses even the
+     *       always-known floor when no job is unlocked (the design decision for #182),</li>
+     *   <li>predicate {@code true} ⇒ non-empty, and the always-known floor (wheat seeds)
+     *       surfaces via its gather job (pre-#182 base intact),</li>
+     *   <li>single-root predicate ⇒ non-empty and a strict subset of the full set
+     *       (the gate filters by {@link JobID}, never invents items).</li>
+     * </ul>
+     */
+    private static LevelCheck jobBoardKnowledgeGatingCheck() {
+        return new LevelCheck(
+                "ui/job_board_knowledge_gating",
+                "ui",
+                TestBlueprintRegistry::checkJobBoardKnowledgeGating
+        );
+    }
+
+    private static final String GATING_CONTROL_ROOT = "farmer";
+    private static final String ALWAYS_KNOWN_ITEM = "minecraft:wheat_seeds";
+
+    private static boolean checkJobBoardKnowledgeGating(ServerLevel level) {
+        try {
+            // Mirror the always-known gather floor (TownKnowledgeStore baseKnowledge = wheat seeds)
+            // so the gate is tested against an item that is in town knowledge regardless of discovery.
+            ImmutableSet<MCTownItem> gatherFloor = ImmutableSet.of(
+                    MCTownItem.fromMCItemStack(Items.WHEAT_SEEDS.getDefaultInstance())
+            );
+            WorksBehaviour.TownData td = new WorksBehaviour.TownData(level, prefix -> gatherFloor);
+
+            ImmutableSet<Ingredient> all = ServerJobsRegistry.getAllOutputs(td, j -> true);
+            ImmutableSet<Ingredient> none = ServerJobsRegistry.getAllOutputs(td, j -> false);
+            ImmutableSet<Ingredient> oneRoot = ServerJobsRegistry.getAllOutputs(
+                    td, j -> GATING_CONTROL_ROOT.equals(j.rootId())
+            );
+
+            Set<String> allNames = itemNames(all);
+            Set<String> oneRootNames = itemNames(oneRoot);
+
+            // none is empty even though the gather floor (wheat seeds) is "always known":
+            // the job-unlock gate suppresses always-known items when no job is unlocked.
+            boolean closesFully = none.isEmpty();
+            boolean opensFully = !all.isEmpty();
+            boolean floorSurfaces = allNames.contains(ALWAYS_KNOWN_ITEM);
+            boolean filtersSelectively = !oneRoot.isEmpty()
+                    && allNames.containsAll(oneRootNames)
+                    && oneRootNames.size() < allNames.size();
+
+            boolean ok = closesFully && opensFully && floorSurfaces && filtersSelectively;
+            if (!ok) {
+                QT.FLAG_LOGGER.error(
+                        "[autotest] job_board_knowledge_gating FAIL: closesFully={} (none={}) opensFully={} (all={}) "
+                                + "floorSurfaces={} filtersSelectively={} ({}={}, all={})",
+                        closesFully, none.size(), opensFully, allNames.size(),
+                        floorSurfaces, filtersSelectively, GATING_CONTROL_ROOT, oneRootNames.size(), allNames.size()
+                );
+            }
+            return ok;
+        } catch (RuntimeException e) {
+            QT.FLAG_LOGGER.error("[autotest] job_board_knowledge_gating threw", e);
+            return false;
+        }
+    }
+
+    private static Set<String> itemNames(Collection<Ingredient> ingredients) {
+        Set<String> names = new HashSet<>();
+        for (Ingredient ingredient : ingredients) {
+            for (ItemStack stack : ingredient.getItems()) {
+                names.add(String.valueOf(ForgeRegistries.ITEMS.getKey(stack.getItem())));
+            }
+        }
+        return names;
     }
 }

@@ -214,6 +214,18 @@ The set of (biome, tool-prefix) → items a town has discovered, held in the `Kn
 **Gatherer map**:
 An item stamped with a biome. Its presence in a town chest is what makes that biome (and its known loot) usable by gatherers.
 
+### Requests
+
+**Job board**:
+The in-town surface where the player requests products from townies. It offers only **fulfillable** products — the outputs of jobs the town has currently **unlocked** — so what the player can request matches exactly what a townie will build. The same unlock gate the work-seeker uses to pick up work also filters the board (roadmap #182), so the board never offers a request no townie can satisfy. It is **not aspirational**: a **progression-unlocked** product does not appear until its tier is unlocked. Gatherer-style products are additionally narrowed to **known loot** (plus an always-known floor, e.g. wheat seeds), still behind the job's unlock.
+_Avoid_: catalog (the board is not "everything craftable in the game"), quest board.
+
+**Work request**:
+A player's standing request for a product, placed on the **job board**; a townie's work-seeker *prefers* a requested product over freely chosen work, but falls back to its own choice if the request goes unmet for long enough.
+
+**Stock request**:
+A request created at the *clipboard* (obtained from the **town flag**) and carried as a physical item, for a product to be kept in stock — fulfilled by the (deprecated) fetcher, `organizer/fetch`. Drawn from the same fulfillable product set as the **job board** and gated the same way (outputs of unlocked jobs only), so the two request surfaces stay consistent. Revisit this gate if the fetcher/`organizer` is ever redesigned to source items the town can't itself produce.
+
 ### Testing
 
 **Autotest suite**:

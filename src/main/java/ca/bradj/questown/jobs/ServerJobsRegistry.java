@@ -571,9 +571,29 @@ public class ServerJobsRegistry {
         return ItemStack.EMPTY;
     }
 
-    public static ImmutableSet<Ingredient> getAllOutputs(WorksBehaviour.TownData t) {
-        List<Ingredient> list = Works.values().stream().map(v -> {
-                                         Work work = v.get();
+    /**
+     * Outputs the player can request on the job board / stock-request screen.
+     * Only includes the products of jobs that are currently unlocked in town:
+     * a job's outputs appear iff {@code jobIsUnlocked} accepts its {@link JobID}.
+     * <p>
+     * This is the same predicate the work-seeker uses to decide which jobs a
+     * villager will actually perform ({@code WorkSeekerJob} gates on
+     * {@code VillagerHolder::isUnlocked}), so the request screen only offers
+     * products that some villager can fulfil — never a permanently
+     * un-fulfillable request for a job no one has unlocked.
+     * <p>
+     * Gatherer-style {@code results} are additionally narrowed to discovered
+     * loot upstream, via {@code t}'s known-gather-results function (the job's
+     * fixed {@code initialRequest} item is not loot and is not narrowed).
+     */
+    public static ImmutableSet<Ingredient> getAllOutputs(
+            WorksBehaviour.TownData t,
+            Predicate<JobID> jobIsUnlocked
+    ) {
+        List<Ingredient> list = Works.values().stream()
+                                     .map(Supplier::get)
+                                     .filter(work -> jobIsUnlocked.test(work.id))
+                                     .map(work -> {
                                          ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
                                          work.results.apply(t).forEach(z -> b.add(z.toMCItemStack()));
                                          @Nullable Ingredient req = work.initialRequest.apply(t.serverLevel());

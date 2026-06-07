@@ -105,7 +105,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
         BlockPos flagPos = parent.getTownFlagBasePos();
         WorksBehaviour.TownData td = parent.getTownData();
-        ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td);
+        ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td, parent.getVillagerHandle()::isUnlocked);
         Compat.openScreen(
                 sp, new MenuProvider() {
                     @Override

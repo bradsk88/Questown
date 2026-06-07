@@ -2,7 +2,7 @@ package ca.bradj.questown.commands.test;
 
 import ca.bradj.questown.commands.test.TestBlueprintRegistry.AnyTestEntry;
 import ca.bradj.questown.commands.test.TestBlueprintRegistry.TestEntry;
-import ca.bradj.questown.commands.test.TestBlueprintRegistry.WorldgenCheck;
+import ca.bradj.questown.commands.test.TestBlueprintRegistry.LevelCheck;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
@@ -70,7 +70,7 @@ public class TestAllExecutor {
             AnyTestEntry entry = jobs.get(currentIndex);
             msg("=== Test " + (currentIndex + 1) + "/" + jobs.size() + ": " + entry.name() + " ===");
 
-            if (entry instanceof WorldgenCheck wc) {
+            if (entry instanceof LevelCheck wc) {
                 recordResult(entry.name(), wc.check().apply(level));
                 currentIndex++;
                 continue;

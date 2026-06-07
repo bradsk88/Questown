@@ -49,7 +49,7 @@ public class StockRequestClipboardItem extends Item {
 
         WorksBehaviour.TownData td = parent.getTownData();
         BlockPos flagPos = parent.getTownFlagBasePos();
-        ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td);
+        ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td, parent.getVillagerHandle()::isUnlocked);
         Compat.openScreen(
                 sp, new MenuProvider() {
                     @Override
