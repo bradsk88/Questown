@@ -371,11 +371,18 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             EntityLocStateProvider<ROOM> elp
     ) {
         return () -> {
+            ProductionJournal journal = deps.getJournal();
             ProductionStatus s = deps.getComputeStatusOverrideForSpecialJobs();
             if (s != null) {
+                // Propagate the override into the journal: DeclarativeJob.tryGetSupplies (and the
+                // supply getter's isCollectingSupplies() gate) reads journal.getStatus(), so an
+                // override that only flowed to the state-computer's return value would never reach
+                // the supply pipeline (the fetcher would never actually collect).
+                if (!s.equals(journal.getStatus())) {
+                    journal.changeStatus(s);
+                }
                 return s;
             }
-            ProductionJournal journal = deps.getJournal();
             journal.tryUpdateStatus(jtp, elp, defaultEntityInvProvider(deps), DeclarativeJobs.STATUS_FACTORY, deps.prioritizesExtraction());
             return journal.getStatus();
         };

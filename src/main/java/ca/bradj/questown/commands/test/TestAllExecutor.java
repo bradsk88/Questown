@@ -61,7 +61,11 @@ public class TestAllExecutor {
             if (!currentExecutor.tick()) {
                 return false;
             }
-            recordResult(jobs.get(currentIndex).name(), currentExecutor.getWarpPassed());
+            recordResult(
+                    jobs.get(currentIndex).name(),
+                    currentExecutor.getWarpPassed(),
+                    currentExecutor.isExpectedFailure()
+            );
             currentExecutor = null;
             currentIndex++;
         }
@@ -89,12 +93,15 @@ public class TestAllExecutor {
     }
 
     private void recordResult(String name, boolean passed) {
-        String line = AutotestLogFormatter.format(
+        recordResult(name, passed, false);
+    }
+
+    private void recordResult(String name, boolean passed, boolean expectedFailure) {
+        String line = AutotestLogFormatter.formatScenario(
                 AutotestLogFormatter.TRACK_JOBS,
                 name,
                 passed,
-                "scenario",
-                passed ? "all expectations met" : "some expectations failed"
+                expectedFailure
         );
         results.add(line);
         if (passed) {

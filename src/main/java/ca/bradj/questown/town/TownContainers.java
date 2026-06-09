@@ -242,6 +242,11 @@ public class TownContainers {
             return;
         }
         if (item.get() instanceof StockRequestItem) {
+            if (room == null) {
+                // No room context (e.g. warp-state container scan) — nothing to stamp the workspot
+                // to; stamping would NPE in RoomSerializer. Warp has no fetcher model anyway.
+                return;
+            }
             if (StockRequestItem.hasRoom(item.getItemNBT())) {
                 return;
             }

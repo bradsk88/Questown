@@ -28,6 +28,7 @@ public class TestExecutor {
         BUILD_ROOM,
         REGISTER_ROOM,
         WAIT_FOR_ROOM,
+        RUN_SETUP_HOOK,
         SPAWN_VILLAGER,
         WAIT_FOR_VILLAGER,
         ASSIGN_JOB,
@@ -65,9 +66,11 @@ public class TestExecutor {
     private BlockPos flagPos;
     private TownFlagBlockEntity tfbe;
     private Map<String, Integer> beforeCounts;
+    private Map<BlockPos, Map<String, Integer>> beforeContainerContents;
     private int beforeKnowledgeCount;
     private Map<String, Integer> warpDeltas = new java.util.HashMap<>();
     private Map<String, Integer> beforeRealtimeCounts;
+    private Map<BlockPos, Map<String, Integer>> beforeRealtimeContainerContents;
     private long monitorEndTick;
     private int lastReportedPercent = 0;
     private boolean warpPassed = false;
@@ -118,7 +121,17 @@ public class TestExecutor {
     }
 
     public boolean getWarpPassed() {
+        if (blueprint.expectedFailure()) {
+            // XFAIL: the warp path is expected to fail, so the scenario passes only when it does.
+            // An unexpected pass (XPASS) flips this to false → a suite failure that flags the bug
+            // has been fixed and the expectedFailure marker should be removed.
+            return !warpPassed;
+        }
         return blueprint.skipWarp() ? realtimePassed : warpPassed;
+    }
+
+    public boolean isExpectedFailure() {
+        return blueprint.expectedFailure();
     }
 
     public JobID getJobId() {
@@ -138,6 +151,7 @@ public class TestExecutor {
             case BUILD_ROOM -> buildRoom();
             case REGISTER_ROOM -> registerRoom();
             case WAIT_FOR_ROOM -> waitForRoom();
+            case RUN_SETUP_HOOK -> runSetupHook();
             case SPAWN_VILLAGER -> spawnVillager();
             case WAIT_FOR_VILLAGER -> waitForVillager();
             case ASSIGN_JOB -> assignJob();
@@ -279,13 +293,28 @@ public class TestExecutor {
     private void waitForRoom() {
         if (!tfbe.getRoomHandle().getRoomsMatching(blueprint.roomId()).isEmpty()) {
             msg("Room detected: " + blueprint.roomId());
-            phase = Phase.SPAWN_VILLAGER;
+            phase = Phase.RUN_SETUP_HOOK;
             return;
         }
         if (tickTimeout("Room detection timed out for " + blueprint.roomId())) {
             return;
         }
         waitTicks++;
+    }
+
+    private void runSetupHook() {
+        TestBlueprint.PostPlacementSetup hook = blueprint.setupHook();
+        if (hook == null) {
+            phase = Phase.SPAWN_VILLAGER;
+            return;
+        }
+        msg("Running post-placement setup hook...");
+        if (!hook.run(level, flagPos, tfbe, output)) {
+            error("Post-placement setup hook failed");
+            phase = Phase.DONE;
+            return;
+        }
+        phase = Phase.SPAWN_VILLAGER;
     }
 
     private void spawnVillager() {
@@ -346,6 +375,7 @@ public class TestExecutor {
         MCTownState state = tfbe.captureCurrentState();
         if (state != null) {
             beforeCounts = TestResultChecker.snapshotItemCounts(state);
+            beforeContainerContents = TestResultChecker.snapshotContainerContents(state);
             beforeKnowledgeCount = computeKnowledgeCount();
             if (blueprint.useNaturalWarp()) {
                 msg("State captured, simulating " + effectiveWarpAmount() + " ticks of player absence...");
@@ -439,7 +469,9 @@ public class TestExecutor {
         Map<String, Integer> afterCounts = TestResultChecker.snapshotItemCounts(afterState);
         TestResultChecker.Result result = TestResultChecker.check(beforeCounts, afterCounts, blueprint.expectation());
         warpDeltas = result.deltas();
-        warpPassed = result.passed() && checkKnowledgeGrowthIfNeeded();
+        boolean containerPassed = checkContainerContentsIfNeeded(
+                beforeContainerContents, afterState, blueprint.expectation());
+        warpPassed = result.passed() && checkKnowledgeGrowthIfNeeded() && containerPassed;
         broadcastResult("WARP", result);
         if (warpOnly) {
             phase = Phase.DONE;
@@ -562,6 +594,7 @@ public class TestExecutor {
             return;
         }
         beforeRealtimeCounts = TestResultChecker.snapshotItemCounts(state);
+        beforeRealtimeContainerContents = TestResultChecker.snapshotContainerContents(state);
         phase = Phase.START_MONITOR;
     }
 
@@ -592,8 +625,35 @@ public class TestExecutor {
 
         boolean fullnessPassed = checkFullnessIfNeeded();
         boolean heldPassed = checkVillagerHeldIfNeeded(afterState);
-        realtimePassed = itemsPassed && fullnessPassed && heldPassed;
+        TestExpectation containerExpectation = blueprint.realtimeExpectation() != null
+                ? blueprint.realtimeExpectation()
+                : blueprint.expectation();
+        boolean containerPassed = checkContainerContentsIfNeeded(
+                beforeRealtimeContainerContents, afterState, containerExpectation);
+        realtimePassed = itemsPassed && fullnessPassed && heldPassed && containerPassed;
         phase = Phase.DONE;
+    }
+
+    private boolean checkContainerContentsIfNeeded(
+            Map<BlockPos, Map<String, Integer>> before,
+            MCTownState afterState,
+            TestExpectation expectation
+    ) {
+        if (expectation == null || expectation.containerContents().isEmpty()) {
+            return true;
+        }
+        // Blueprints express chest positions as flag-relative offsets; the snapshots are keyed by
+        // absolute world positions, so resolve the offsets against this scenario's flag origin.
+        TestExpectation resolved = expectation.withContainerContents(
+                expectation.containerContents().stream()
+                        .map(c -> new TestExpectation.ExpectedContainerContent(
+                                flagPos.offset(c.chest()), c.item(), c.minDelta(), c.maxDelta()))
+                        .toList()
+        );
+        Map<BlockPos, Map<String, Integer>> after = TestResultChecker.snapshotContainerContents(afterState);
+        TestResultChecker.Result result = TestResultChecker.checkContainerContents(before, after, resolved);
+        broadcastResult("CONTAINER", result);
+        return result.passed();
     }
 
     private boolean checkVillagerHeldIfNeeded(MCTownState afterState) {

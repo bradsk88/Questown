@@ -5,9 +5,14 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.commands.test.TestBlueprint.BlockPlacement;
 import ca.bradj.questown.commands.test.TestBlueprint.RoomType;
 import ca.bradj.questown.commands.test.TestExpectation.ExpectedProduct;
+import ca.bradj.questown.commands.test.TestExpectation.ExpectedContainerContent;
 import ca.bradj.questown.core.init.BlocksInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -19,8 +24,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.Container;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
@@ -86,6 +93,9 @@ public class TestBlueprintRegistry {
         if ("arborist".equals(jobId.rootId())) {
             return arboristCutTreesBlueprint();
         }
+        if ("organizer".equals(jobId.rootId())) {
+            return organizerFetchBlueprint();
+        }
         return null;
     }
 
@@ -109,6 +119,11 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("arborist", "cut_trees"), arboristCutTreesBlueprint()));
         jobs.add(entry(new JobID("arborist", "plant_sapling"), arboristPlantSaplingBlueprint()));
         jobs.add(edgeCaseEntry("arborist", "cut_trees", "full_cycle", arboristFullCycleBlueprint()));
+
+        // Organizer/fetch (un-archived). Phase A is the realtime green baseline; Phase B is the
+        // known-red warp spec (XFAIL) documenting that warp has no fetch-relocation model yet.
+        jobs.add(entry(new JobID("organizer", "fetch"), organizerFetchBlueprint()));
+        jobs.add(edgeCaseEntry("organizer", "fetch", "warp_unsupported", organizerFetchWarpUnsupportedBlueprint()));
 
         // Edge case tests
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "night_start", farmerNightStartBlueprint()));
@@ -439,6 +454,166 @@ public class TestBlueprintRegistry {
                 SpecialQuests.FARM,
                 expectation
         );
+    }
+
+    // --- Organizer / fetch (un-archived; see docs/plans/2026-06-08-001 and ADR-0005 precedent) ---
+
+    // A distinctive ingredient guaranteed absent from the flattened arena. The fetch relocates it
+    // from the supply store room to the requested target store room; a relocation is a town-wide
+    // no-op, so the per-position container oracle (U1) is the only thing that can gate it.
+    private static final String ORGANIZER_ITEM = "minecraft:emerald";
+    private static final int ORGANIZER_FETCH_COUNT = 4;
+
+    // Two store rooms either side of the flag (all offsets flag-relative). buildSupplyRoom(ox, oz)
+    // builds only the SHELL (walls + door at (ox+2,0,oz+4)); chests are placed explicitly below.
+    //
+    // The TARGET chest (in the target room, placed by RoomBuilder.placeChest) holds the stock_request
+    // and is its own delivery destination: TownContainers.setWorkSpot stamps the request's job-block
+    // to the chest it sits in, and FetcherHack delivers the fetched item there. The requested
+    // ingredient lives in a SEPARATE chest in the supply room — separate because
+    // FetcherHack.containsUsableRequest only treats a request as "usable" if the requested item
+    // exists in some chest OTHER than the request's own.
+    private static final BlockPos ORGANIZER_TARGET_CHEST = new BlockPos(-4, 0, -1);
+    private static final BlockPos ORGANIZER_TARGET_DOOR = new BlockPos(-4, 0, 2);
+    private static final BlockPos ORGANIZER_SUPPLY_DOOR = new BlockPos(4, 0, 2);
+    private static final BlockPos ORGANIZER_INGREDIENT_CHEST = new BlockPos(4, 0, -1);
+
+    private static List<BlockPlacement> organizerRoomBlocks() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+        blocks.addAll(buildSupplyRoom(-6, -2).blocks); // target store room shell (chest via placeChest)
+        blocks.addAll(buildSupplyRoom(2, -2).blocks);  // supply store room shell
+        blocks.add(new BlockPlacement(ORGANIZER_INGREDIENT_CHEST, Blocks.CHEST.defaultBlockState()));
+        return blocks;
+    }
+
+    /**
+     * Both-sides conservation: the target chest gains the ingredient AND the supply (ingredient)
+     * chest loses it, while the town-wide total is unchanged (a relocation neither creates nor
+     * destroys). Together this gates a real fetch and rejects the dupe (target gains, source
+     * unchanged => town-wide +N) and loss (source loses, target unchanged => town-wide -N) modes.
+     */
+    private static TestExpectation organizerConservation() {
+        return new TestExpectation(
+                List.of(new ExpectedProduct(ORGANIZER_ITEM, 0, 0)),
+                0, 0
+        ).withContainerContents(List.of(
+                new ExpectedContainerContent(ORGANIZER_TARGET_CHEST, ORGANIZER_ITEM, 1, null),
+                new ExpectedContainerContent(ORGANIZER_INGREDIENT_CHEST, ORGANIZER_ITEM, null, -1)
+        ));
+    }
+
+    /**
+     * Post-placement setup: assert the distinctive ingredient is absent (setup-sanity guard against
+     * arena residue), then fabricate the StockRequestItem in the target chest (mirroring
+     * {@code CreateStockRequestFromUIMessage}: only the {@code request} NBT — the workspot is stamped
+     * at runtime by {@code TownContainers.setWorkSpot}) and seed the ingredient in the supply chest.
+     */
+    private static TestBlueprint.PostPlacementSetup organizerSetupHook() {
+        return (level, flagPos, town, output) -> {
+            MCTownState state = town.captureCurrentState();
+            if (state != null) {
+                int pre = TestResultChecker.snapshotItemCounts(state).getOrDefault(ORGANIZER_ITEM, 0);
+                if (pre != 0) {
+                    output.error("[organizer] zero-pre-existing guard tripped: found " + pre
+                            + " " + ORGANIZER_ITEM + " in town before seeding");
+                    return false;
+                }
+            }
+            BlockPos targetChest = flagPos.offset(ORGANIZER_TARGET_CHEST);
+            BlockPos ingredientChest = flagPos.offset(ORGANIZER_INGREDIENT_CHEST);
+
+            ItemStack request = ItemsInit.STOCK_REQUEST.get().getDefaultInstance();
+            StockRequestItem.writeToNBT(request.getOrCreateTag(), WorkRequest.of(Items.EMERALD));
+            if (!putInChest(level, targetChest, request)) {
+                output.error("[organizer] target chest not found at " + targetChest.toShortString());
+                return false;
+            }
+            if (!putInChest(level, ingredientChest, new ItemStack(Items.EMERALD, ORGANIZER_FETCH_COUNT))) {
+                output.error("[organizer] ingredient chest not found at " + ingredientChest.toShortString());
+                return false;
+            }
+            output.msg("[organizer] seeded request at " + targetChest.toShortString() + ", "
+                    + ORGANIZER_FETCH_COUNT + " " + ORGANIZER_ITEM + " at " + ingredientChest.toShortString());
+            return true;
+        };
+    }
+
+    private static boolean putInChest(ServerLevel level, BlockPos pos, ItemStack stack) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (!(be instanceof Container container)) {
+            return false;
+        }
+        container.setItem(0, stack);
+        return true;
+    }
+
+    /**
+     * Phase A — realtime green baseline. Proves the realtime fetch relocates the requested
+     * ingredient source->target (request chest gains it, ingredient chest loses it). Warp is
+     * skipped (the warp model is the deferred follow-up track — see the Phase B XFAIL below).
+     * <p>
+     * Greening this required repairing the fetcher's realtime status seam, which had rotted while
+     * the job sat archived: {@code FetcherHack.computeStatusOverride} (wired via {@code
+     * DeclarativeJob.getComputeStatusOverrideForSpecialJobs}) now drives the acquire→fetch→deliver
+     * status, that override is propagated into {@code journal.getStatus()} (so the supply getter
+     * actually engages), and {@code TownContainers.setWorkSpot} guards a null warp-scan room.
+     */
+    private static TestBlueprint organizerFetchBlueprint() {
+        TestBlueprint base = new TestBlueprint(
+                RoomType.INDOOR,
+                organizerRoomBlocks(),
+                List.of(), // the setup hook seeds chests; no auto-filled supplies
+                ORGANIZER_TARGET_DOOR,
+                ORGANIZER_TARGET_CHEST,
+                SpecialQuests.STORE_ROOM_SMALL,
+                organizerConservation(),
+                ORGANIZER_SUPPLY_DOOR, // supplyDoorOffset: registers the supply room
+                null,                  // warpAmountOverride
+                null,                  // startTimeTick
+                null,                  // villagerCount
+                true,                  // realtimePhase
+                1500,                  // realtimeTicks: multi-hop fetch budget, verified ample (the
+                                       // fetcher loops continuously, relocating >=1 emerald well within)
+                false,                 // drainHungerBeforeTest
+                true,                  // skipWarp
+                organizerConservation(), // realtimeExpectation: the per-position conservation gate
+                null,                  // minExpectedFullnessAfter
+                null,                  // extraBlockRoomOffset
+                null,                  // extraBlockRoomId
+                null,                  // expectedVillagerHeld
+                false                  // useNaturalWarp
+        );
+        return base.withSetupHook(organizerSetupHook());
+    }
+
+    /**
+     * Phase B — warp gap as an executable XFAIL spec. Same setup as Phase A but runs the warp path,
+     * which has no fetch-relocation model, so the correct conservation does NOT hold and the
+     * scenario reports XFAIL. If warp ever achieves conservation it reports XPASS (a suite failure)
+     * — the signal to flip this off and delete the marker. See the deferred warp-relocation track.
+     */
+    private static TestBlueprint organizerFetchWarpUnsupportedBlueprint() {
+        TestBlueprint base = new TestBlueprint(
+                RoomType.INDOOR,
+                organizerRoomBlocks(),
+                List.of(),
+                ORGANIZER_TARGET_DOOR,
+                ORGANIZER_TARGET_CHEST,
+                SpecialQuests.STORE_ROOM_SMALL,
+                organizerConservation(), // warp checkResults gates on this (incl. containerContents)
+                ORGANIZER_SUPPLY_DOOR,
+                null,                  // warpAmountOverride (suite default)
+                null,                  // startTimeTick
+                null,                  // villagerCount
+                false,                 // realtimePhase = false (warp-only)
+                null,                  // realtimeTicks
+                false,                 // drainHungerBeforeTest
+                false,                 // skipWarp = false (run warp)
+                null,                  // realtimeExpectation
+                null, null, null, null,
+                false                  // useNaturalWarp
+        );
+        return base.withSetupHook(organizerSetupHook()).withExpectedFailure(true);
     }
 
     private static TestBlueprint cookBlueprint() {

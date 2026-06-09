@@ -1023,6 +1023,11 @@ public class DeclarativeJob extends
             TownInterface town,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
+        if (FetcherHack.isFetcher(jobId)) {
+            // The fetcher's bespoke status (acquire request → fetch ingredient → deliver) is not
+            // expressible in the generic pipeline; drive it here so the supply getter engages.
+            return FetcherHack.computeStatusOverride(town, journal.getItems());
+        }
         return null; // Default: use standard status computation
     }
 }

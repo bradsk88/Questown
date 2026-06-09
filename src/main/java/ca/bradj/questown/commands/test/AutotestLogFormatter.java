@@ -31,4 +31,36 @@ public final class AutotestLogFormatter {
         String tag = pass ? "[PASS]" : "[FAIL]";
         return track + ":" + name + " " + tag + " " + expectation + ": " + details;
     }
+
+    /**
+     * Per-scenario summary line, xfail-aware. An {@code expectedFailure} scenario reports
+     * {@code [XFAIL]} when it (correctly) fails and {@code [XPASS]} when it unexpectedly passes —
+     * the latter is an alarm that the underlying gap was closed and the marker should be removed.
+     * The {@code passed} flag here is the suite-gate boolean (i.e. {@code getWarpPassed()}), which
+     * is already inverted for expected-failure scenarios.
+     */
+    public static String formatScenario(
+            String track,
+            String name,
+            boolean passed,
+            boolean expectedFailure
+    ) {
+        String tag = scenarioTag(passed, expectedFailure);
+        String details;
+        if (expectedFailure) {
+            details = passed
+                    ? "warp failed as expected"
+                    : "warp unexpectedly passed — remove expectedFailure";
+        } else {
+            details = passed ? "all expectations met" : "some expectations failed";
+        }
+        return track + ":" + name + " " + tag + " scenario: " + details;
+    }
+
+    private static String scenarioTag(boolean passed, boolean expectedFailure) {
+        if (!expectedFailure) {
+            return passed ? "[PASS]" : "[FAIL]";
+        }
+        return passed ? "[XFAIL]" : "[XPASS]";
+    }
 }

@@ -180,6 +180,13 @@ public class ServerJobsRegistry {
             Ingredient wantedResult,
             @Nullable Ingredient apply
     ) {
+        if (apply == null) {
+            // A job whose initial_request is null (e.g. organizer/fetch) yields a non-null
+            // Function<ServerLevel, Ingredient> that returns null; without this guard, satisfaction
+            // checks for any board request would NPE the flag tick. Such a job satisfies no request
+            // by its initial request.
+            return false;
+        }
         for (ItemStack item : apply.getItems()) {
             if (wantedResult.test(item)) {
                 return true;

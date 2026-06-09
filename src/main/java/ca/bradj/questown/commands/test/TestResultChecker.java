@@ -5,6 +5,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.TownState;
+import net.minecraft.core.BlockPos;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,6 +52,70 @@ public class TestResultChecker {
         }
 
         return counts;
+    }
+
+    /**
+     * Per-{@link BlockPos} item counts, one map per container position. Unlike
+     * {@link #snapshotItemCounts} (which flattens every villager + container into one town-wide
+     * total), this preserves <em>where</em> each item sits, so a relocation (source loses N,
+     * target gains N) is observable even though the town-wide delta is ~0.
+     */
+    public static Map<BlockPos, Map<String, Integer>> snapshotContainerContents(MCTownState state) {
+        Map<BlockPos, Map<String, Integer>> byPos = new HashMap<>();
+        for (ContainerTarget<?, MCTownItem> container : state.containers) {
+            Map<String, Integer> counts = byPos.computeIfAbsent(container.getBlockPos(), p -> new HashMap<>());
+            for (MCTownItem item : container.getItems()) {
+                if (item.isEmpty()) {
+                    continue;
+                }
+                counts.merge(itemRegistryName(item), item.quantity(), Integer::sum);
+            }
+        }
+        return byPos;
+    }
+
+    /**
+     * Checks each {@link TestExpectation.ExpectedContainerContent} against the per-position
+     * before/after snapshots from {@link #snapshotContainerContents}. A chest absent from both
+     * snapshots fails with a clear "container not found" detail.
+     */
+    public static Result checkContainerContents(
+            Map<BlockPos, Map<String, Integer>> before,
+            Map<BlockPos, Map<String, Integer>> after,
+            TestExpectation expectation
+    ) {
+        List<String> details = new ArrayList<>();
+        boolean allPassed = true;
+
+        for (TestExpectation.ExpectedContainerContent c : expectation.containerContents()) {
+            if (!before.containsKey(c.chest()) && !after.containsKey(c.chest())) {
+                details.add(String.format(
+                        "[FAIL] %s @ %s: container not found in snapshot",
+                        c.item(), c.chest().toShortString()
+                ));
+                allPassed = false;
+                continue;
+            }
+
+            int beforeCount = before.getOrDefault(c.chest(), Map.of()).getOrDefault(c.item(), 0);
+            int afterCount = after.getOrDefault(c.chest(), Map.of()).getOrDefault(c.item(), 0);
+            int delta = afterCount - beforeCount;
+            boolean passed = (c.minDelta() == null || delta >= c.minDelta())
+                    && (c.maxDelta() == null || delta <= c.maxDelta());
+            if (!passed) {
+                allPassed = false;
+            }
+            details.add(String.format(
+                    "[%s] %s @ %s: expected %s, got %d (before=%d, after=%d)",
+                    passed ? "PASS" : "FAIL", c.item(), c.chest().toShortString(),
+                    formatExpectedRange(c.minDelta(), c.maxDelta()), delta, beforeCount, afterCount
+            ));
+        }
+
+        String summary = allPassed
+                ? "All container-content expectations met"
+                : "Some container-content expectations failed";
+        return new Result(allPassed, summary, details, new HashMap<>());
     }
 
     public static Map<String, Integer> computeDeltas(
@@ -145,14 +210,18 @@ public class TestResultChecker {
     }
 
     private static String formatExpectedRange(TestExpectation.ExpectedProduct product) {
-        if (product.minDelta() != null && product.maxDelta() != null) {
-            return product.minDelta() + ".." + product.maxDelta();
+        return formatExpectedRange(product.minDelta(), product.maxDelta());
+    }
+
+    private static String formatExpectedRange(Integer minDelta, Integer maxDelta) {
+        if (minDelta != null && maxDelta != null) {
+            return minDelta + ".." + maxDelta;
         }
-        if (product.minDelta() != null) {
-            return ">= " + product.minDelta();
+        if (minDelta != null) {
+            return ">= " + minDelta;
         }
-        if (product.maxDelta() != null) {
-            return "<= " + product.maxDelta();
+        if (maxDelta != null) {
+            return "<= " + maxDelta;
         }
         return "any";
     }
