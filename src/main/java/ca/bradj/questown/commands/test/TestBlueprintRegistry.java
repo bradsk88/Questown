@@ -15,6 +15,7 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.town.entity.TownVillagerLearningHandle;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
@@ -32,8 +33,10 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -149,6 +152,7 @@ public class TestBlueprintRegistry {
 
         // UI tests
         jobs.add(jobBoardKnowledgeGatingCheck());
+        jobs.add(jobBoardRealUnlockGatingCheck());
 
         return jobs;
     }
@@ -1429,6 +1433,104 @@ public class TestBlueprintRegistry {
             QT.FLAG_LOGGER.error("[autotest] job_board_knowledge_gating threw", e);
             return false;
         }
+    }
+
+    /**
+     * Roadmap #182, integration half: closes the gap left by {@link #jobBoardKnowledgeGatingCheck()},
+     * which proves the {@code getAllOutputs} filter against <em>synthetic</em> predicates only. Here the
+     * gate is driven by the <em>real</em> {@link TownVillagerLearningHandle#isUnlocked} — the exact method
+     * {@code VillagerHolder.isUnlocked} delegates to ({@code TownVillagerHandles} line ~246), which is the
+     * reference both request surfaces pass ({@code TownWorkHandle.openMenuRequested},
+     * {@code StockRequestClipboardItem.use}). It encodes ADR-0007's governing invariant — "what the player
+     * can request == what a townie will build" — by unlocking exactly one real root via the real handle and
+     * asserting the offer set is:
+     * <ul>
+     *   <li>identical to the controlled single-root predicate's offer set (the real handle gates to exactly
+     *       the unlocked {@link JobID}, never more) — this is the new coverage,</li>
+     *   <li>non-empty (the unlocked root's products surface),</li>
+     *   <li>a strict subset of the full set (progression-locked tiers and other roots are excluded),</li>
+     *   <li>and the predicate itself returns true for the unlocked root, false for a different root.</li>
+     * </ul>
+     */
+    private static LevelCheck jobBoardRealUnlockGatingCheck() {
+        return new LevelCheck(
+                "ui/job_board_real_unlock_gating",
+                "ui",
+                TestBlueprintRegistry::checkJobBoardRealUnlockGating
+        );
+    }
+
+    private static boolean checkJobBoardRealUnlockGating(ServerLevel level) {
+        try {
+            ImmutableSet<MCTownItem> gatherFloor = ImmutableSet.of(
+                    MCTownItem.fromMCItemStack(Items.WHEAT_SEEDS.getDefaultInstance())
+            );
+            WorksBehaviour.TownData td = new WorksBehaviour.TownData(level, prefix -> gatherFloor);
+
+            ImmutableSet<Ingredient> all = ServerJobsRegistry.getAllOutputs(td, j -> true);
+
+            JobID root = pickProducingRoot(td);
+            JobID otherRoot = anyRootOtherThan(root);
+            if (root == null || otherRoot == null) {
+                QT.FLAG_LOGGER.error(
+                        "[autotest] job_board_real_unlock_gating: need >=2 roots with a producing one (root={}, other={})",
+                        root, otherRoot
+                );
+                return false;
+            }
+
+            // The REAL gate: VillagerHolder.isUnlocked delegates straight to this handle's isUnlocked,
+            // and registration ultimately seeds unlocks through this same unlockJob path.
+            TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
+            learning.unlockJob(new UUID(0L, 1L), root);
+
+            ImmutableSet<Ingredient> viaReal = ServerJobsRegistry.getAllOutputs(td, learning::isUnlocked);
+            ImmutableSet<Ingredient> viaSynthetic = ServerJobsRegistry.getAllOutputs(td, j -> j.equals(root));
+
+            Set<String> realNames = itemNames(viaReal);
+            Set<String> syntheticNames = itemNames(viaSynthetic);
+            Set<String> allNames = itemNames(all);
+
+            boolean predicateGates = learning.isUnlocked(root) && !learning.isUnlocked(otherRoot);
+            boolean realMatchesSynthetic = realNames.equals(syntheticNames);
+            boolean opensForUnlocked = !viaReal.isEmpty();
+            boolean strictSubset = allNames.containsAll(realNames) && realNames.size() < allNames.size();
+
+            boolean ok = predicateGates && realMatchesSynthetic && opensForUnlocked && strictSubset;
+            if (!ok) {
+                QT.FLAG_LOGGER.error(
+                        "[autotest] job_board_real_unlock_gating FAIL: predicateGates={} realMatchesSynthetic={} "
+                                + "(real={}, synth={}) opensForUnlocked={} strictSubset={} (real={}, all={}) root={}/{}",
+                        predicateGates, realMatchesSynthetic, realNames.size(), syntheticNames.size(),
+                        opensForUnlocked, strictSubset, realNames.size(), allNames.size(),
+                        root.rootId(), root.jobId()
+                );
+            }
+            return ok;
+        } catch (RuntimeException e) {
+            QT.FLAG_LOGGER.error("[autotest] job_board_real_unlock_gating threw", e);
+            return false;
+        }
+    }
+
+    private static @Nullable JobID pickProducingRoot(WorksBehaviour.TownData td) {
+        List<JobID> roots = new ArrayList<>(ServerJobsRegistry.getAllRootJobs());
+        roots.sort(Comparator.comparing(j -> j.rootId() + "/" + j.jobId()));
+        for (JobID root : roots) {
+            if (!ServerJobsRegistry.getAllOutputs(td, j -> j.equals(root)).isEmpty()) {
+                return root;
+            }
+        }
+        return null;
+    }
+
+    private static @Nullable JobID anyRootOtherThan(@Nullable JobID root) {
+        for (JobID j : ServerJobsRegistry.getAllRootJobs()) {
+            if (!j.equals(root)) {
+                return j;
+            }
+        }
+        return null;
     }
 
     private static Set<String> itemNames(Collection<Ingredient> ingredients) {
