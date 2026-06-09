@@ -123,10 +123,11 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("arborist", "plant_sapling"), arboristPlantSaplingBlueprint()));
         jobs.add(edgeCaseEntry("arborist", "cut_trees", "full_cycle", arboristFullCycleBlueprint()));
 
-        // Organizer/fetch (un-archived). Phase A is the realtime green baseline; Phase B is the
-        // known-red warp spec (XFAIL) documenting that warp has no fetch-relocation model yet.
+        // Organizer/fetch (un-archived). Phase A is the realtime green baseline; Phase B exercises
+        // the warp fetch-relocation model (RelocateRequestedItemWarpRule) and now expects the same
+        // source->target conservation to hold under warp.
         jobs.add(entry(new JobID("organizer", "fetch"), organizerFetchBlueprint()));
-        jobs.add(edgeCaseEntry("organizer", "fetch", "warp_unsupported", organizerFetchWarpUnsupportedBlueprint()));
+        jobs.add(edgeCaseEntry("organizer", "fetch", "warp", organizerFetchWarpBlueprint()));
 
         // Edge case tests
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "night_start", farmerNightStartBlueprint()));
@@ -591,12 +592,13 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Phase B — warp gap as an executable XFAIL spec. Same setup as Phase A but runs the warp path,
-     * which has no fetch-relocation model, so the correct conservation does NOT hold and the
-     * scenario reports XFAIL. If warp ever achieves conservation it reports XPASS (a suite failure)
-     * — the signal to flip this off and delete the marker. See the deferred warp-relocation track.
+     * Phase B — warp fetch relocation, green. Same setup as Phase A but runs the warp path, which
+     * now has a fetch model: {@code RelocateRequestedItemWarpRule} (declared as a global rule in
+     * organizer_fetcher.json) moves the requested ingredient source->target on the warp town state,
+     * so the per-position conservation holds. This supersedes the former XFAIL spec; the warp gap is
+     * closed.
      */
-    private static TestBlueprint organizerFetchWarpUnsupportedBlueprint() {
+    private static TestBlueprint organizerFetchWarpBlueprint() {
         TestBlueprint base = new TestBlueprint(
                 RoomType.INDOOR,
                 organizerRoomBlocks(),
@@ -617,7 +619,7 @@ public class TestBlueprintRegistry {
                 null, null, null, null,
                 false                  // useNaturalWarp
         );
-        return base.withSetupHook(organizerSetupHook()).withExpectedFailure(true);
+        return base.withSetupHook(organizerSetupHook());
     }
 
     private static TestBlueprint cookBlueprint() {

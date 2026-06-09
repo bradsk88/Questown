@@ -36,7 +36,8 @@
         "always_consider",
         "workspot_from_held_item",
         "render_last_item_in_off_hand",
-        "take_random_ingredient"
+        "take_random_ingredient",
+        "relocate_requested_item_warp"
       ]
     },
     {

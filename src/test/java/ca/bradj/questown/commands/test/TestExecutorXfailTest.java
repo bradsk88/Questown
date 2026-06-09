@@ -9,10 +9,11 @@ import java.util.List;
  * Unit coverage for the {@code expectedFailure} (xfail) flag (U3).
  *
  * <p>The inversion inside {@link TestExecutor#getWarpPassed()} (warp-fails ⇒ suite-pass) cannot be
- * unit-tested without a live {@link net.minecraft.server.level.ServerLevel}; that truth table is
- * exercised end-to-end by the {@code organizer_fetch_warp_unsupported} autotest scenario (U6).
- * Here we pin the two pure, decoupled pieces: the blueprint flag round-trips, and the reporting
- * formatter emits the right XFAIL/XPASS/PASS/FAIL label for each (passed, expectedFailure) pair.
+ * unit-tested without a live {@link net.minecraft.server.level.ServerLevel}. The xfail flag is
+ * general harness machinery (the organizer/fetch warp gap that first motivated it is now closed by
+ * {@code RelocateRequestedItemWarpRule}). Here we pin the two pure, decoupled pieces: the blueprint
+ * flag round-trips, and the reporting formatter emits the right XFAIL/XPASS/PASS/FAIL label for each
+ * (passed, expectedFailure) pair.
  */
 class TestExecutorXfailTest {
 

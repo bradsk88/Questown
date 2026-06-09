@@ -137,4 +137,11 @@ public class SpecialRules {
             "furnace_smelt_warp";
 
     public static final String EXCLUDE_FROM_WARP = "exclude_from_warp";
+
+    // Global rule (warp-interleaved). When declared by a job (organizer/fetch),
+    // a requested ingredient is relocated from another chest into the chest
+    // holding its stock request during time warp — the warp equivalent of the
+    // realtime fetcher walking the item between chests.
+    public static final String RELOCATE_REQUESTED_ITEM_WARP =
+            "relocate_requested_item_warp";
 }

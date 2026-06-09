@@ -261,11 +261,20 @@ items — zero Minecraft world coupling, no `asServerLevel()`. All three impleme
 - `workspot_from_held_item` (`WorkSpotFromHeldItemSpecialRule`): `beforeInit` +
   `afterDropLoot` are warp-fine, but its dynamic workspot routing lives in
   `beforeTick`, which does **not** fire in warp. This is **not** a decoupling
-  (`QTWorldAccess`) gap — it's a hook-placement caveat. It is also **moot today**:
-  the only consumer is `questown_job_archive/organizer_fetcher.json`, which
-  `ResourceJobLoader` (bound to the `questown_jobs` subdirectory) can never load.
-  If organizer/fetch is ever un-archived for warp, move that routing from
-  `beforeTick` to a warp-firing hook (`beforeInit`/`onWarpTick`).
+  (`QTWorldAccess`) gap — it's a hook-placement caveat.
+
+**Warp un-archive (2026-06-09): organizer/fetch is now loaded and warp-green.**
+Rather than relocating `beforeTick` workspot routing into a warp hook (the
+caveat above), warp gets its own standalone fetch model:
+`RelocateRequestedItemWarpRule` (a `global` rule in `organizer_fetcher.json`).
+Its `onWarpTick` reads each chest's `StockRequestItem` request and moves the
+requested ingredient out of another chest into the request's own chest — the
+request's delivery destination, matching what realtime's
+`TownContainers.setWorkSpot` stamps. It needs no held-item workspot routing
+(warp has no entity carrying the request), so the `beforeTick` caveat stays
+moot. New reusable primitive: `TownState.withItemRelocatedTo(ingredientCheck,
+targetPos)` (conserving source→target move). Verified by the
+`organizer/fetch [warp]` autotest (per-position conservation, ex-XFAIL).
 
 **Category 6 is closed — no work required for any active job.**
 

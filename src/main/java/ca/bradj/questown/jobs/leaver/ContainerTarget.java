@@ -105,6 +105,41 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         return this.toShortString(true);
     }
 
+    /**
+     * Immutable counterpart to {@link #withItemRemoved}: places one item in the first empty slot
+     * and returns a new wrapper around the (mutated) container, or {@code null} if the container is
+     * full. Used by the warp fetch relocation to deliver a fetched ingredient into a target chest.
+     */
+    public @Nullable ContainerTarget<C, I> withItemAdded(I item) {
+        for (int i = 0; i < container.size(); i++) {
+            if (!container.getItem(i).isEmpty()) {
+                continue;
+            }
+            container.setItem(i, item);
+            return new ContainerTarget<>(
+                    position,
+                    yPosition,
+                    interactPosition,
+                    container,
+                    check,
+                    associate,
+                    canAccept,
+                    rankingBoost
+            );
+        }
+        return null;
+    }
+
+    public int countEmptySlots() {
+        int empty = 0;
+        for (int i = 0; i < container.size(); i++) {
+            if (container.getItem(i).isEmpty()) {
+                empty++;
+            }
+        }
+        return empty;
+    }
+
     public @Nullable Map.Entry<ContainerTarget<C, I>, I> withItemRemoved(Predicate<I> itemCheck) {
         for (int i = 0; i < container.size(); i++) {
             if (itemCheck.test(container.getItem(i))) {

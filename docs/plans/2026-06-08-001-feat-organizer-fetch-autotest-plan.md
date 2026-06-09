@@ -85,16 +85,16 @@ Two structural facts make this tricky to test:
 
 ### Deferred to Follow-Up Work
 
-- **Warp relocation feature** (separate track, separate PR): port `FetcherHack`'s
-  directed source→target routing into the warp path (`onWarpTick` / the
-  `TimeWarpWorldInteraction` insertion logic), operating on the **warp town state**
-  instead of live `ServerLevel`. Then flip the Phase B test from xfail to green and
-  physically confirm the un-archive. Use the conservation autotest from this plan as
-  the green gate. Mirror the arborist un-archive (fix warp first; treat as its own
-  feature), per ADR-0005.
-- **Move `WorkSpotFromHeldItemSpecialRule` routing off `beforeTick`** (does not fire
-  in warp) onto `beforeInit`/`onWarpTick` — part of the warp-relocation track, not a
-  decoupling task (the rule has no MC-world coupling).
+- **Warp relocation feature** — ✅ **DONE (2026-06-09, ADR-0008).** Built as a
+  standalone `global` rule `RelocateRequestedItemWarpRule` (not via the
+  `TimeWarpWorldInteraction` insert path), operating on the warp `MCTownState` through
+  a new conserving primitive `TownState.withItemRelocatedTo`. Phase B flipped from
+  xfail to the green `organizer/fetch [warp]` scenario; this plan's conservation oracle
+  is the green gate. Verified: `only=organizer` 2/2, full jobs track 36/36.
+- **Move `WorkSpotFromHeldItemSpecialRule` routing off `beforeTick`** — ✅ **moot, not
+  needed.** The warp model reads the request straight off the chest, so no held-item
+  workspot routing is required offline (warp has no entity carrying the request). See
+  ADR-0008 "Considered and rejected."
 
 ---
 

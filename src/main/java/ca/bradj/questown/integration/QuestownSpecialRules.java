@@ -169,6 +169,15 @@ public final class QuestownSpecialRules {
                 new SmeltFurnaceWarpRule()
         );
 
+        // Warp-interleaved hook: relocates a requested ingredient into the
+        // stock-request's chest during time warp (organizer/fetch).
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(
+                        SpecialRules.RELOCATE_REQUESTED_ITEM_WARP
+                ),
+                new RelocateRequestedItemWarpRule()
+        );
+
         VanillaSpecialRules.register();
     }
 }

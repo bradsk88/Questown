@@ -194,4 +194,72 @@ class TownStateTest {
 
         return ImmutableList.copyOf(fullItems);
     }
+
+    private static ContainerTarget<Container, TestItem> containerAt(
+            Position pos,
+            Container container
+    ) {
+        return new ContainerTarget<>(
+                pos, 0, pos, container, () -> true, i -> {
+        }, item -> true, RankBoost.SAME_AS_VANILLA_CHEST.value()
+        );
+    }
+
+    private TestTownState townWith(ContainerTarget<Container, TestItem>... containers) {
+        return new TestTownState(
+                new ArrayList<>(), ImmutableList.copyOf(containers), ImmutableMap.of(), new ArrayList<>(), 0L
+        );
+    }
+
+    @Test
+    void withItemRelocatedTo_movesOneUnitFromSourceToTarget() {
+        Container targetC = new Container(false); // 4 empty slots
+        Container sourceC = new Container(false);
+        sourceC.setItem(0, new TestItem("emerald"));
+        ContainerTarget<Container, TestItem> target = containerAt(new Position(0, 0), targetC);
+        ContainerTarget<Container, TestItem> source = containerAt(new Position(5, 5), sourceC);
+        TestTownState town = townWith(target, source);
+
+        TestTownState after = town.withItemRelocatedTo(
+                i -> "emerald".equals(i.value), target.getBlockPos()
+        );
+
+        assertTrue(after != null, "relocation should succeed when source holds the ingredient");
+        assertTrue(target.hasItem(v -> "emerald".equals(v.value)), "target chest gains the emerald");
+        assertTrue(!source.hasItem(v -> "emerald".equals(v.value)), "source chest loses the emerald");
+    }
+
+    @Test
+    void withItemRelocatedTo_returnsNullWhenNoOtherChestHoldsTheIngredient() {
+        // Only the target chest holds the ingredient — a relocation would be target->target (no-op).
+        Container targetC = new Container(false);
+        targetC.setItem(0, new TestItem("emerald"));
+        ContainerTarget<Container, TestItem> target = containerAt(new Position(0, 0), targetC);
+        ContainerTarget<Container, TestItem> other = containerAt(new Position(5, 5), new Container(false));
+        TestTownState town = townWith(target, other);
+
+        assertEquals(null, town.withItemRelocatedTo(i -> "emerald".equals(i.value), target.getBlockPos()));
+    }
+
+    @Test
+    void withItemRelocatedTo_returnsNullWhenTargetIsFull() {
+        Container sourceC = new Container(false);
+        sourceC.setItem(0, new TestItem("emerald"));
+        ContainerTarget<Container, TestItem> target = containerAt(new Position(0, 0), new Container(true));
+        ContainerTarget<Container, TestItem> source = containerAt(new Position(5, 5), sourceC);
+        TestTownState town = townWith(target, source);
+
+        assertEquals(null, town.withItemRelocatedTo(i -> "emerald".equals(i.value), target.getBlockPos()));
+    }
+
+    @Test
+    void withItemRelocatedTo_returnsNullWhenNoContainerAtTargetPos() {
+        Container sourceC = new Container(false);
+        sourceC.setItem(0, new TestItem("emerald"));
+        TestTownState town = townWith(containerAt(new Position(5, 5), sourceC));
+
+        assertEquals(null, town.withItemRelocatedTo(
+                i -> "emerald".equals(i.value), new net.minecraft.core.BlockPos(99, 0, 99)
+        ));
+    }
 }
