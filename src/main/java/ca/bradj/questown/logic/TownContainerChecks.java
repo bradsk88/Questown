@@ -62,7 +62,8 @@ public class TownContainerChecks {
             return false;
         }
         if (!mustAllBeSame) {
-            return true;
+            int total = matchingItems.stream().mapToInt(Item::quantity).sum();
+            return total >= quantityRequired;
         }
         for (ITEM i : matchingItems) {
             Collection<ITEM> sameAsI = itemMatchesInTownOrHand.apply(i::equals);
