@@ -226,6 +226,16 @@ A player's standing request for a product, placed on the **job board**; a townie
 **Stock request**:
 A request created at the *clipboard* (obtained from the **town flag**) and carried as a physical item, for a product to be kept in stock — fulfilled by the (deprecated) fetcher, `organizer/fetch`. Drawn from the same fulfillable product set as the **job board** and gated the same way (outputs of unlocked jobs only), so the two request surfaces stay consistent. Revisit this gate if the fetcher/`organizer` is ever redesigned to source items the town can't itself produce.
 
+### Quests & rewards
+
+**Morning reward**:
+A reward queued for delivery at the next in-game **morning** rather than immediately — `MCDelayedReward.getApplier()` → `town.addMorningReward(child)`, held in `MCMorningRewards` on the flag BE and popped by the flag ticker's `onMorning`/`morningTick`. Not every quest reward is delayed; some apply at once. `hasPendingSpawnVisitor()` answers the **visitor-specific** sub-question ("is a new townie arriving in the morning"), which is **narrower** than "is *any* morning reward queued".
+_Avoid_: assuming all quest rewards are delayed; reusing `hasPendingSpawnVisitor()` as a generic "reward pending" signal.
+
+**All quests done** (caught-up state):
+The transient state where a town's quest list is **non-empty and every quest is `COMPLETED`** — the lull before the next batch appears. **Not** a terminal "tutorial graduated" milestone: quests regenerate continuously (tutorial phases + the procedural quest garden + reward-spawned batches), so this state recurs and un-sets itself. Surfaced on the **town** flag quests tab as an empty-state (roadmap #236). The empty quest list is **not** "all done" (the vacuous-true trap).
+_Avoid_: reading it as "tutorial complete" / a latching flag; treating zero quests as "all done".
+
 ### Testing
 
 **Autotest suite**:
