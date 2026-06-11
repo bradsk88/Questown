@@ -5,6 +5,8 @@ import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.FlagMenus;
+import ca.bradj.questown.gui.QuestCompletion;
+import ca.bradj.questown.gui.QuestScreenSummary;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.TownRemoveQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
@@ -76,6 +78,11 @@ public class TownQuestsHandle implements QuestsHolder {
         ImmutableList<HashMap.SimpleEntry<MCQuest, MCReward>> aQ = unsafeGetTown().getAllQuestsWithRewards();
         @SuppressWarnings("DataFlowIssue") List<UIQuest> quests = UIQuest.fromLevel(t.getServerLevel(), aQ);
 
+        QuestScreenSummary summary = new QuestScreenSummary(
+                QuestCompletion.allComplete(quests.stream().map(q -> q.status).toList()),
+                t.hasPendingMorningReward()
+        );
+
         Collection entities = t.getVillagerHandle().entities();
         Compat.openScreen(
                 player, new MenuProvider() {
@@ -94,6 +101,7 @@ public class TownQuestsHandle implements QuestsHolder {
                                 windowId,
                                 quests,
                                 t.getInfo(),
+                                summary,
                                 () -> triggerAdvancement(player, t)
                         );
                     }
@@ -113,7 +121,7 @@ public class TownQuestsHandle implements QuestsHolder {
                     }
                 }, data ->
                         FlagMenus.writeAndLink(data, quests, t.getInfo(), player, entities, t.bopCount,
-                                () -> t.hasVillagerArrivingInMorning())
+                                () -> t.hasVillagerArrivingInMorning(), summary)
         );
     }
 

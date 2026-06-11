@@ -41,6 +41,11 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private final Map<Position, Runnable> removes = new HashMap<>();
     private final SubUI tabs;
 
+    private final boolean allComplete;
+    private final boolean morningRewardPending;
+    private boolean showingCompleted = false;
+    private @Nullable Rect2i viewCompletedRegion;
+
     public QuestsScreen(
             C container,
             Inventory playerInv,
@@ -52,12 +57,17 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         super.imageHeight = 220;
 
         this.quests = ImmutableList.copyOf(container.GetQuests());
+        this.allComplete = container.isAllComplete();
+        this.morningRewardPending = container.isMorningRewardPending();
         this.background = JEI.getRecipeGuiBackground();
         this.tabs = tabs;
     }
 
     @Override
     protected ImmutableList<UIQuest> cardsData() {
+        if (allComplete && !showingCompleted) {
+            return ImmutableList.of();
+        }
         return ImmutableList.copyOf(quests);
     }
 
@@ -113,6 +123,65 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         this.tabs.draw(new RenderContext(itemRenderer, poseStack), bgX, bgY);
+        if (allComplete && !showingCompleted) {
+            renderAllDoneState(poseStack, mouseX, mouseY, bgY);
+        }
+    }
+
+    private void renderAllDoneState(
+            PoseStack poseStack,
+            int mouseX,
+            int mouseY,
+            int bgY
+    ) {
+        int centerX = this.width / 2;
+        int midY = bgY + (backgroundHeight / 2);
+        Component title = Compat.translatable("menu.quests.all_done_title");
+        Component subtitle = morningRewardPending
+                ? Compat.translatable("menu.quests.all_done_morning")
+                : Compat.translatable("menu.quests.all_done_caught_up");
+        drawCenteredLine(poseStack, title, centerX, midY - 24, TEXT_COLOR);
+        drawCenteredLine(poseStack, subtitle, centerX, midY - 10, TEXT_COLOR);
+        renderViewCompletedLink(poseStack, mouseX, mouseY, centerX, midY + 12);
+    }
+
+    private void drawCenteredLine(
+            PoseStack poseStack,
+            Component text,
+            int centerX,
+            int y,
+            int color
+    ) {
+        int x = centerX - (this.font.width(text) / 2);
+        this.font.draw(poseStack, text, x, y, color);
+    }
+
+    private void renderViewCompletedLink(
+            PoseStack poseStack,
+            int mouseX,
+            int mouseY,
+            int centerX,
+            int y
+    ) {
+        Component link = Compat.translatable("menu.quests.view_completed");
+        int w = this.font.width(link);
+        int linkX = centerX - (w / 2);
+        Rect2i region = new Rect2i(linkX, y, w, this.font.lineHeight);
+        this.viewCompletedRegion = region;
+        boolean hovered = isInRegion(mouseX, mouseY, region);
+        if (hovered) {
+            fill(poseStack, linkX - 2, y - 2, linkX + w + 2, y + this.font.lineHeight, 0x80FFFFFF);
+        }
+        this.font.draw(poseStack, link, linkX, y, hovered ? 0x202020 : TEXT_COLOR);
+    }
+
+    private static boolean isInRegion(
+            double x,
+            double y,
+            Rect2i r
+    ) {
+        return x >= r.getX() && x < r.getX() + r.getWidth()
+                && y >= r.getY() && y < r.getY() + r.getHeight();
     }
 
     @Override
@@ -327,6 +396,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             double y,
             int p_97750_
     ) {
+        if (clickedViewCompleted(x, y)) {
+            showingCompleted = true;
+            return true;
+        }
         for (Map.Entry<Position, Runnable> p : removes.entrySet()) {
             int buttonX = p.getKey().x;
             int buttonY = p.getKey().z;
@@ -342,6 +415,16 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         int bgY = (this.height - backgroundHeight) / 2;
         this.tabs.mouseClicked(bgX, bgY, x, y);
         return super.mouseClicked(x, y, p_97750_);
+    }
+
+    private boolean clickedViewCompleted(
+            double x,
+            double y
+    ) {
+        if (!allComplete || showingCompleted) {
+            return false;
+        }
+        return viewCompletedRegion != null && isInRegion(x, y, viewCompletedRegion);
     }
 
 

@@ -57,6 +57,11 @@ public class TownFlagMenus {
                                                                                .getAllQuestsWithRewards();
         List<UIQuest> uiQuests = UIQuest.fromLevel(sender.getLevel(), quests);
 
+        QuestScreenSummary summary = new QuestScreenSummary(
+                QuestCompletion.allComplete(uiQuests.stream().map(q -> q.status).toList()),
+                flagEntity.hasPendingMorningReward()
+        );
+
         @SuppressWarnings("rawtypes") Collection entities = flag.getVillagerHandle().entities();
 
         @SuppressWarnings("unchecked") ImmutableMap<String, Runnable> showers = ImmutableMap.of(
@@ -65,9 +70,10 @@ public class TownFlagMenus {
                     triggerAdvancementForAnyFarms(sender, UtilClean.keys(quests));
                     openMenu(
                             sender, (windowId, inv, p) -> new TownQuestsContainer(
-                                    windowId, uiQuests, realFlagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
+                                    windowId, uiQuests, realFlagInfo, summary,
+                                    () -> triggerAdvancement(flagPos, sender.getLevel())
                             ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
-                            () -> flagEntity.hasVillagerArrivingInMorning()
+                            () -> flagEntity.hasVillagerArrivingInMorning(), summary
                     );
                 },
                 OpenFlagMenuMessage.VILLAGERS,
@@ -75,7 +81,7 @@ public class TownFlagMenus {
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
                                 windowId, realFlagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
                         ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
-                        () -> flagEntity.hasVillagerArrivingInMorning()
+                        () -> flagEntity.hasVillagerArrivingInMorning(), summary
                 ),
                 OpenFlagMenuMessage.ECONOMICS,
                 () -> {
@@ -87,7 +93,7 @@ public class TownFlagMenus {
                             sender, (windowId, inv, p) -> new TownEconomicsMenu(
                                     windowId, realFlagInfo
                             ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
-                            () -> flagEntity.hasVillagerArrivingInMorning()
+                            () -> flagEntity.hasVillagerArrivingInMorning(), summary
                     );
                 },
                 OpenFlagMenuMessage.BOP,
@@ -96,7 +102,7 @@ public class TownFlagMenus {
                             sender, (windowId, inv, p) -> new TownBlockofProgressMenu(
                                     windowId, realFlagInfo, blocksOfProgress
                             ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
-                            () -> flagEntity.hasVillagerArrivingInMorning()
+                            () -> flagEntity.hasVillagerArrivingInMorning(), summary
                     );
                     AdvancementsInit.TUTORIAL_TRIGGER.trigger(sender, TutorialTrigger.Triggers.FirstBopView);
                 },
@@ -105,7 +111,7 @@ public class TownFlagMenus {
                         sender, (windowId, inv, p) -> new FlagCraftingMenu(
                                 windowId, realFlagInfo
                         ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
-                        () -> flagEntity.hasVillagerArrivingInMorning()
+                        () -> flagEntity.hasVillagerArrivingInMorning(), summary
                 )
         );
 
@@ -146,7 +152,8 @@ public class TownFlagMenus {
             FlagTabsEmbedding.FlagInfo flagPos,
             Iterable<? extends VisitorMobEntity> entities,
             int bopCount,
-            Supplier<Boolean> morningSpawnPending
+            Supplier<Boolean> morningSpawnPending,
+            QuestScreenSummary summary
     ) {
         Compat.openScreen(
                 sender, new MenuProvider() {
@@ -163,7 +170,9 @@ public class TownFlagMenus {
                     ) {
                         return shower.apply(windowId, inv, p);
                     }
-                }, data -> FlagMenus.writeAndLink(data, quests, flagPos, sender, entities, bopCount, morningSpawnPending)
+                }, data -> FlagMenus.writeAndLink(
+                        data, quests, flagPos, sender, entities, bopCount, morningSpawnPending, summary
+                )
         );
     }
 

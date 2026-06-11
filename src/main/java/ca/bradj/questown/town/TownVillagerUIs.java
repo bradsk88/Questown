@@ -94,12 +94,28 @@ public class TownVillagerUIs {
                             player.getLevel(),
                             questsSrc.get()
                     );
-                    FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es, bopCount, morningSpawnPending);
+                    QuestScreenSummary summary = new QuestScreenSummary(
+                            QuestCompletion.allComplete(quests.stream().map(q -> q.status).toList()),
+                            hasPendingMorningReward(player, townFlagBasePos)
+                    );
+                    FlagMenus.writeAndLink(
+                            data, quests, townFlagBasePos, player, es, bopCount, morningSpawnPending, summary
+                    );
                 }
         );
         ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations.markFlagUiOpened(
                 player.getLevel(), townFlagBasePos.flagPos()
         );
+    }
+
+    private static boolean hasPendingMorningReward(
+            ServerPlayer player,
+            FlagTabsEmbedding.FlagInfo townFlagBasePos
+    ) {
+        if (!(player.getLevel().getBlockEntity(townFlagBasePos.flagPos()) instanceof TownFlagBlockEntity flag)) {
+            return false;
+        }
+        return flag.hasPendingMorningReward();
     }
 
     public static void showItemJobsUI(

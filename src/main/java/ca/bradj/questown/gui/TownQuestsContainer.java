@@ -14,14 +14,28 @@ public class TownQuestsContainer extends AbstractQuestsContainer implements Flag
 
     private static final Collection<String> ENABLED_TABS = FlagTabs.allExcept(OpenFlagMenuMessage.QUESTS);
 
+    private final QuestScreenSummary summary;
+
     public TownQuestsContainer(
             int windowId,
             Collection<UIQuest> quests,
             FlagInfo flag,
+            QuestScreenSummary summary,
             Runnable triggerAdvancement
     ) {
         super(MenuTypesInit.TOWN_QUESTS.get(), windowId, quests, flag);
+        this.summary = summary;
         triggerAdvancement.run();
+    }
+
+    @Override
+    public boolean isAllComplete() {
+        return summary.allComplete();
+    }
+
+    @Override
+    public boolean isMorningRewardPending() {
+        return summary.pendingReward();
     }
 
     public static TownQuestsContainer ForClient(
@@ -36,10 +50,13 @@ public class TownQuestsContainer extends AbstractQuestsContainer implements Flag
     public static void write(
             FriendlyByteBuf data,
             List<UIQuest> quests,
-            BlockPos pos
+            BlockPos pos,
+            QuestScreenSummary summary
     ) {
         writeQuests(data, quests);
         writeFlagPos(data, pos);
+        data.writeBoolean(summary.allComplete());
+        data.writeBoolean(summary.pendingReward());
     }
 
     @Override

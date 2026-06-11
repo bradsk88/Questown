@@ -45,6 +45,7 @@ public class FlagMenus {
             // Buffer reads - order must match write()
             Collection<UIQuest> quests = VillagerQuestsContainer.readQuests(buf);
             BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
+            QuestScreenSummary summary = new QuestScreenSummary(buf.readBoolean(), buf.readBoolean());
             TownBlockofProgressMenu.ReadResult bopResult = TownBlockofProgressMenu.readWithFlagInfo(buf);
             int blocksOfProgress = bopResult.blocksOfProgress();
             FlagTabsEmbedding.FlagInfo flagInfo = bopResult.flagInfo();
@@ -52,7 +53,7 @@ public class FlagMenus {
             FlagMenus menus = new FlagMenus();
             // Never provide these initializers with the entity, itself. Instead, pass the entity's UUID.
             // It tends to cause client-side-only bugs that don't show up in the dev environment.
-            menus.initQuestsMenuClientSide(windowId, quests, flagInfo);
+            menus.initQuestsMenuClientSide(windowId, quests, flagInfo, summary);
             menus.initMultiVillagerStatusMenuClientSide(windowId, flagInfo);
             menus.initEconClientSide(windowId, flagInfo);
             menus.initBlocksOfProgress(windowId, flagInfo, blocksOfProgress);
@@ -71,9 +72,10 @@ public class FlagMenus {
             ServerPlayer player,
             Iterable<? extends VisitorMobEntity> es,
             int bopCount,
-            Supplier<Boolean> morningSpawnPending
+            Supplier<Boolean> morningSpawnPending,
+            QuestScreenSummary summary
     ) {
-        TownQuestsContainer.write(buf, quests, flagInfo.flagPos());
+        TownQuestsContainer.write(buf, quests, flagInfo.flagPos(), summary);
         MultiStatusScreenSyncMessage msg = new MultiStatusScreenSyncMessage(makeSyncData(es, morningSpawnPending.get()));
         QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), msg);
         for (VisitorMobEntity e : es) {
@@ -132,10 +134,11 @@ public class FlagMenus {
     public void initQuestsMenuClientSide(
             int windowId,
             Collection<UIQuest> quests,
-            FlagTabsEmbedding.FlagInfo flag
+            FlagTabsEmbedding.FlagInfo flag,
+            QuestScreenSummary summary
     ) {
         questsMenu = new TownQuestsContainer(
-                windowId, quests, flag, () -> {
+                windowId, quests, flag, summary, () -> {
         }
         );
     }

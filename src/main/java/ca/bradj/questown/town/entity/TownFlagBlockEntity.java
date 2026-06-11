@@ -500,6 +500,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return morningRewards.hasPendingSpawnVisitor();
     }
 
+    public boolean hasPendingMorningReward() {
+        return morningRewards.hasPendingMorningReward();
+    }
+
     public void addMorningReward(MCReward ev) {
         this.morningRewards.add(ev);
         this.setChanged();
