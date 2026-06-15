@@ -44,4 +44,14 @@ public class TownPosition {
     public int getY(int flagY) {
         return flagY + scanLevel;
     }
+
+    /**
+     * Re-anchor this fixture to a flag at a new Y while preserving its absolute world Y. X/Z are
+     * already absolute world coords, so only {@code scanLevel} changes — chosen so that
+     * {@code getY(newFlagY) == getY(oldFlagY)}. Used when a town flag is relocated (ADR-0009, #199).
+     */
+    public TownPosition rebasedTo(int oldFlagY, int newFlagY) {
+        int absoluteY = getY(oldFlagY);
+        return new TownPosition(x, z, absoluteY - newFlagY);
+    }
 }
