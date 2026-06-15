@@ -6,6 +6,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.FlagPhase;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
+import ca.bradj.questown.items.RelocationDeedItem;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
@@ -916,6 +917,52 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return false;
         }
         shutdownController.cancel(level, getBlockPos(), this);
+        return true;
+    }
+
+    private boolean isDormant() {
+        BlockState state = getBlockState();
+        return state.hasProperty(TownFlagBlock.PHASE)
+                && state.getValue(TownFlagBlock.PHASE) == FlagPhase.DORMANT;
+    }
+
+    /**
+     * Spawn a {@link RelocationDeedItem} referencing this (dormant) flag at the flag position. The
+     * deed carries only the reference (town UUID + flag pos + dimension), never a town snapshot.
+     */
+    void dropRelocationDeed() {
+        ServerLevel level = getServerLevel();
+        if (level == null) {
+            return;
+        }
+        BlockPos pos = getBlockPos();
+        ItemStack deed = RelocationDeedItem.forReference(getUUID(), pos, level.dimension().location());
+        level.addFreshEntity(new ItemEntity(
+                level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, deed
+        ));
+    }
+
+    /**
+     * Re-issue a relocation deed for this dormant flag (loss-protection). Only valid while DORMANT.
+     */
+    public boolean reissueDeed() {
+        if (!isDormant() || getServerLevel() == null) {
+            return false;
+        }
+        dropRelocationDeed();
+        return true;
+    }
+
+    /**
+     * Wake this dormant town in place — re-spawn its roster and return to ACTIVE. Only valid while
+     * DORMANT; the other loss-protection path beside re-issuing the deed (ADR-0009).
+     */
+    public boolean wakeInPlace() {
+        ServerLevel level = getServerLevel();
+        if (level == null || !isDormant()) {
+            return false;
+        }
+        shutdownController.wake(level, getBlockPos(), this);
         return true;
     }
 

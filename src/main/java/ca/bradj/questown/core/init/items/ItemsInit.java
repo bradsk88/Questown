@@ -33,6 +33,10 @@ public class ItemsInit {
             WelcomeMatBlock.ITEM_ID,
             () -> new BlockItem(BlocksInit.WELCOME_MAT_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)
     );
+    public static final RegistryObject<Item> RELOCATION_DEED = ITEMS.register(
+            RelocationDeedItem.ITEM_ID,
+            RelocationDeedItem::new
+    );
     public static final RegistryObject<Item> FALSE_WALL_BLOCK = ITEMS.register(FalseWallBlock.ID, FalseWallItem::new);
 
     public static final RegistryObject<Item> JOB_BOARD_BLOCK = ITEMS.register(

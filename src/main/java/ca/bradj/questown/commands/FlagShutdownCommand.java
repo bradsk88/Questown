@@ -42,6 +42,14 @@ public class FlagShutdownCommand {
                                 css.getSource(),
                                 BlockPosArgument.getLoadedBlockPos(css, "pos")
                         )))
+                        .then(Commands.literal("reissue").executes(css -> reissue(
+                                css.getSource(),
+                                BlockPosArgument.getLoadedBlockPos(css, "pos")
+                        )))
+                        .then(Commands.literal("wake").executes(css -> wake(
+                                css.getSource(),
+                                BlockPosArgument.getLoadedBlockPos(css, "pos")
+                        )))
                     )
                 )
             )
@@ -83,5 +91,41 @@ public class FlagShutdownCommand {
                 false
         );
         return cancelled ? 1 : 0;
+    }
+
+    private static int reissue(
+            CommandSourceStack source,
+            BlockPos target
+    ) {
+        TownFlagBlockEntity tf = QTCommands.getFlagOrBroadcast(source, target);
+        if (tf == null) {
+            return 0;
+        }
+        boolean ok = tf.reissueDeed();
+        source.sendSuccess(
+                net.minecraft.network.chat.Component.literal(
+                        ok ? "Relocation deed re-issued" : "Flag is not dormant"
+                ),
+                false
+        );
+        return ok ? 1 : 0;
+    }
+
+    private static int wake(
+            CommandSourceStack source,
+            BlockPos target
+    ) {
+        TownFlagBlockEntity tf = QTCommands.getFlagOrBroadcast(source, target);
+        if (tf == null) {
+            return 0;
+        }
+        boolean ok = tf.wakeInPlace();
+        source.sendSuccess(
+                net.minecraft.network.chat.Component.literal(
+                        ok ? "Town woken in place" : "Flag is not dormant"
+                ),
+                false
+        );
+        return ok ? 1 : 0;
     }
 }

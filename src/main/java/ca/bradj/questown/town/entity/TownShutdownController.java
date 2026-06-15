@@ -82,9 +82,24 @@ class TownShutdownController {
         recallAndAbsorb(flagPos, town, progress.forceAbsorbDue(now));
         if (progress.isComplete(now)) {
             setPhase(level, flagPos, FlagPhase.DORMANT);
+            town.dropRelocationDeed();
             progress = null;
             QT.FLAG_LOGGER.info("Town shutdown complete; flag {} is now dormant", flagPos);
         }
+    }
+
+    /**
+     * Wake a dormant town in place: re-spawn the absorbed roster and return to
+     * {@link FlagPhase#ACTIVE}. The loss-protection path — interacting with the dormant flag instead
+     * of placing the deed (ADR-0009).
+     */
+    void wake(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town
+    ) {
+        respawnAbsorbedAndActivate(level, flagPos, town);
+        QT.FLAG_LOGGER.info("Town woken in place; flag {} re-activated", flagPos);
     }
 
     /**
@@ -99,12 +114,21 @@ class TownShutdownController {
         if (progress == null) {
             return;
         }
+        respawnAbsorbedAndActivate(level, flagPos, town);
+        progress = null;
+        QT.FLAG_LOGGER.info("Town shutdown cancelled; flag {} re-activated", flagPos);
+    }
+
+    private void respawnAbsorbedAndActivate(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town
+    ) {
         for (VillagerUUID vuid : absorbedForRespawn) {
             town.addImmediateReward(new SpawnVisitorReward(town, vuid));
         }
+        absorbedForRespawn.clear();
         setPhase(level, flagPos, FlagPhase.ACTIVE);
-        progress = null;
-        QT.FLAG_LOGGER.info("Town shutdown cancelled; flag {} re-activated", flagPos);
     }
 
     private void recallAndAbsorb(

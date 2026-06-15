@@ -4,6 +4,8 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.FlagPhase;
 import ca.bradj.questown.blocks.TownFlagBlock;
+import ca.bradj.questown.items.RelocationDeedItem;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.commands.test.TestBlueprint.BlockPlacement;
 import ca.bradj.questown.commands.test.TestBlueprint.RoomType;
 import ca.bradj.questown.commands.test.TestExpectation.ExpectedProduct;
@@ -24,8 +26,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.Blocks;
@@ -160,6 +165,7 @@ public class TestBlueprintRegistry {
 
         // Flag relocation (#199): non-job ritual scenarios
         jobs.add(flagEntry("town_shutdown", townShutdownBlueprint()));
+        jobs.add(flagEntry("deed_issue_and_recover", deedIssueAndRecoverBlueprint()));
 
         return jobs;
     }
@@ -210,9 +216,113 @@ public class TestBlueprintRegistry {
     /**
      * Town-shutdown ritual (ADR-0009, #199): spawn a 2-townie town, begin shutdown, then assert the
      * townies are all absorbed and the flag has gone DORMANT after the minimum-duration floor.
-     * Realtime-only (skipWarp) because the ritual is driven by the realtime ticker, never warp.
      */
     private static TestBlueprint townShutdownBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(beginShutdownAction())
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    FlagPhase phase = phaseOf(level, flagPos);
+                    long remaining = town.getVillagerHandle().size();
+                    output.msg("Flag phase=" + phase + ", townies remaining=" + remaining);
+                    return phase == FlagPhase.DORMANT && remaining == 0;
+                });
+    }
+
+    /**
+     * Deed issue + lost-deed recovery (ADR-0009, #199): after shutdown completes, a deed is dropped
+     * carrying the flag's reference; discarding it and re-issuing produces another; waking in place
+     * returns the flag to ACTIVE. Drives the real deed item + recovery methods end-to-end.
+     */
+    private static TestBlueprint deedIssueAndRecoverBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(beginShutdownAction())
+                .withCustomAssertion(TestBlueprintRegistry::assertDeedIssueAndRecover);
+    }
+
+    private static TestBlueprint.PostSpawnAction beginShutdownAction() {
+        return (level, flagPos, town, output) -> {
+            boolean started = town.beginTownShutdown();
+            output.msg("beginTownShutdown -> " + started);
+            return started;
+        };
+    }
+
+    private static boolean assertDeedIssueAndRecover(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        if (phaseOf(level, flagPos) != FlagPhase.DORMANT) {
+            output.msg("Expected DORMANT after shutdown, got " + phaseOf(level, flagPos));
+            return false;
+        }
+        // Scope to deeds referencing THIS flag — a stale deed from an earlier scenario may linger in
+        // the shared arena, and in real play multiple towns' deeds can coexist. Matching by the full
+        // reference (town UUID + pos + dimension) also verifies the deed's NBT round-trips.
+        List<ItemEntity> mine = deedsForFlag(level, flagPos, town);
+        if (mine.isEmpty()) {
+            output.msg("No deed referencing this flag was dropped on shutdown completion ("
+                    + findDeeds(level, flagPos).size() + " unrelated deed(s) nearby)");
+            return false;
+        }
+        output.msg("Deed dropped referencing this flag (reference round-trips)");
+        mine.forEach(e -> e.remove(Entity.RemovalReason.DISCARDED));
+        if (!deedsForFlag(level, flagPos, town).isEmpty()) {
+            output.msg("This flag's deeds not cleared before re-issue");
+            return false;
+        }
+        if (!town.reissueDeed() || deedsForFlag(level, flagPos, town).isEmpty()) {
+            output.msg("Re-issue did not produce a new deed for this flag");
+            return false;
+        }
+        boolean woke = town.wakeInPlace();
+        FlagPhase after = phaseOf(level, flagPos);
+        // Roster re-spawn is queued (SpawnVisitorReward, same path the harness uses elsewhere) and
+        // completes on later ticks, so we assert the synchronous wake outcome: ACTIVE again.
+        output.msg("wakeInPlace=" + woke + ", phase now=" + after);
+        return woke && after == FlagPhase.ACTIVE;
+    }
+
+    private static FlagPhase phaseOf(ServerLevel level, BlockPos flagPos) {
+        BlockState bs = level.getBlockState(flagPos);
+        return bs.hasProperty(TownFlagBlock.PHASE) ? bs.getValue(TownFlagBlock.PHASE) : null;
+    }
+
+    private static List<ItemEntity> findDeeds(ServerLevel level, BlockPos flagPos) {
+        return level.getEntitiesOfClass(ItemEntity.class, new AABB(flagPos).inflate(6.0))
+                    .stream()
+                    .filter(e -> RelocationDeedItem.isDeed(e.getItem()))
+                    .toList();
+    }
+
+    private static List<ItemEntity> deedsForFlag(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town
+    ) {
+        return findDeeds(level, flagPos).stream()
+                .filter(e -> referencesFlag(e.getItem(), level, flagPos, town))
+                .toList();
+    }
+
+    private static boolean referencesFlag(
+            ItemStack deed,
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town
+    ) {
+        return town.getUUID().equals(RelocationDeedItem.getTownUuid(deed))
+                && flagPos.equals(RelocationDeedItem.getFlagPos(deed))
+                && level.dimension().location().equals(RelocationDeedItem.getDimension(deed));
+    }
+
+    /**
+     * The shared arena for relocation-ritual scenarios: a fenced 2-townie town, realtime-only
+     * (skipWarp, since the ritual is driven by the realtime ticker, never warp), monitored long
+     * enough to clear the 200-tick shutdown floor. Callers attach the trigger + assertion.
+     */
+    private static TestBlueprint relocationRitualBase() {
         List<BlockPlacement> blocks = new ArrayList<>();
         int ox = 4;
         int oz = -3;
@@ -236,7 +346,7 @@ public class TestBlueprintRegistry {
 
         TestExpectation noProducts = new TestExpectation(List.of(), 0, 0);
 
-        TestBlueprint base = new TestBlueprint(
+        return new TestBlueprint(
                 RoomType.FARM,
                 blocks,
                 List.of(),   // no supplies — townies don't work, they're recalled
@@ -259,22 +369,6 @@ public class TestBlueprintRegistry {
                 null,        // expectedVillagerHeld
                 false        // useNaturalWarp
         );
-
-        return base
-                .withPostSpawnAction((level, flagPos, town, output) -> {
-                    boolean started = town.beginTownShutdown();
-                    output.msg("beginTownShutdown -> " + started);
-                    return started;
-                })
-                .withCustomAssertion((level, flagPos, town, output) -> {
-                    BlockState bs = level.getBlockState(flagPos);
-                    FlagPhase phase = bs.hasProperty(TownFlagBlock.PHASE)
-                            ? bs.getValue(TownFlagBlock.PHASE)
-                            : null;
-                    long remaining = town.getVillagerHandle().size();
-                    output.msg("Flag phase=" + phase + ", townies remaining=" + remaining);
-                    return phase == FlagPhase.DORMANT && remaining == 0;
-                });
     }
 
     private static TestBlueprint farmerBlueprint() {
