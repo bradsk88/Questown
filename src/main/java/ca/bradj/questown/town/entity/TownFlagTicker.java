@@ -285,8 +285,18 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         if (!(level instanceof ServerLevel sl)) {
             return;
         }
+        if (!flagTicksTown(state)) {
+            return;
+        }
         super.tick(new TickData(sl, blockEntityPos, state, e));
         spawnBopParticlesIfNeeded(sl, blockEntityPos, e);
+    }
+
+    private static boolean flagTicksTown(BlockState state) {
+        if (!state.hasProperty(TownFlagBlock.PHASE)) {
+            return true;
+        }
+        return state.getValue(TownFlagBlock.PHASE).ticksTown();
     }
 
     private void spawnBopParticlesIfNeeded(ServerLevel sl, BlockPos pos, TownFlagBlockEntity e) {

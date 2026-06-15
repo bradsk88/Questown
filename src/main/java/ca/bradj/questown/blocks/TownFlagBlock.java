@@ -44,7 +44,9 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.BlockHitResult;
@@ -65,6 +67,7 @@ public class TownFlagBlock extends BaseEntityBlock {
     public static final Item.Properties ITEM_PROPS = new Item.Properties().
             tab(ModItemGroup.QUESTOWN_GROUP);
     public static final Property<Boolean> INACTIVE = BooleanProperty.create("inactive");
+    public static final EnumProperty<FlagPhase> PHASE = EnumProperty.create("phase", FlagPhase.class);
     private Map<Player, Long> informedPlayers = new HashMap<>();
 
     public TownFlagBlock() {
@@ -73,11 +76,13 @@ public class TownFlagBlock extends BaseEntityBlock {
                                          .strength(10.0F, 1200.0F)
                                          .noOcclusion()
         );
-        this.registerDefaultState(this.stateDefinition.any().setValue(INACTIVE, false));
+        this.registerDefaultState(this.stateDefinition.any()
+                                                       .setValue(INACTIVE, false)
+                                                       .setValue(PHASE, FlagPhase.ACTIVE));
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(INACTIVE);
+        p_51385_.add(INACTIVE, PHASE);
     }
 
     public static String itemId(WallType wallType) {
@@ -387,6 +392,20 @@ public class TownFlagBlock extends BaseEntityBlock {
     @Override
     public RenderShape getRenderShape(BlockState blockState) {
         return RenderShape.MODEL;
+    }
+
+    @Override
+    public float getDestroyProgress(
+            BlockState state,
+            Player player,
+            BlockGetter level,
+            BlockPos pos
+    ) {
+        // The town flag is unbreakable in survival: it owns the town's authoritative data and
+        // there is no loot/drop path, so mining it would destroy the town irrecoverably. The
+        // only sanctioned removal is the shutdown ritual (relocation deed) or the creative-only
+        // `qt flag destroy` dev command.
+        return 0.0F;
     }
 
     @Nullable

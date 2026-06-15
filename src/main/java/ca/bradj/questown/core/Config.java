@@ -13,6 +13,7 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<Integer> DOOR_SEARCH_RADIUS;
     public static final ForgeConfigSpec.ConfigValue<Integer> TOWN_TICK_RADIUS;
+    public static final ForgeConfigSpec.ConfigValue<Integer> TOWN_SHUTDOWN_TICKS;
 
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMPFIRE_SEARCH_RADIUS;
 
@@ -108,6 +109,10 @@ public class Config {
         TOWN_TICK_RADIUS = BUILDER.comment(
                 "The radius (around the town flag) where this mod will search for players. If no players are found, the flag will stop ticking."
         ).define("TownTickRadius", 10000);
+        TOWN_SHUTDOWN_TICKS = BUILDER.comment(
+                "The minimum duration (in ticks) a town shutdown ritual must run before the flag can go dormant for relocation. " +
+                        "Acts as an anti-cheat floor so a town cannot be packed up reactively as a panic-button (default 200 = 10s)."
+        ).define("TownShutdownTicks", 200);
         CAMPFIRE_SEARCH_RADIUS = BUILDER.comment(
                 "The radius (around the town flag) where this mod will search for campfires which attract visitors"
         ).define("CampfireSearchRadius", 10);
