@@ -23,6 +23,7 @@ public class CommandInit {
         FreezeCommand.register(event.getDispatcher());
         FlagCommand.register(event.getDispatcher());
         FlagDestroyCommand.register(event.getDispatcher());
+        FlagShutdownCommand.register(event.getDispatcher());
         DebugCommand.register(event.getDispatcher());
         DebugDoorsCommand.register(event.getDispatcher());
         DebugAllDoorsCommand.register(event.getDispatcher());

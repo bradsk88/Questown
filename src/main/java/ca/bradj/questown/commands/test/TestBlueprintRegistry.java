@@ -2,6 +2,8 @@ package ca.bradj.questown.commands.test;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.FlagPhase;
+import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.commands.test.TestBlueprint.BlockPlacement;
 import ca.bradj.questown.commands.test.TestBlueprint.RoomType;
 import ca.bradj.questown.commands.test.TestExpectation.ExpectedProduct;
@@ -28,6 +30,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
@@ -155,6 +158,9 @@ public class TestBlueprintRegistry {
         jobs.add(jobBoardKnowledgeGatingCheck());
         jobs.add(jobBoardRealUnlockGatingCheck());
 
+        // Flag relocation (#199): non-job ritual scenarios
+        jobs.add(flagEntry("town_shutdown", townShutdownBlueprint()));
+
         return jobs;
     }
 
@@ -192,6 +198,83 @@ public class TestBlueprintRegistry {
     private static TestEntry edgeCaseEntry(String root, String job, String variant, TestBlueprint bp) {
         JobID id = new JobID(root, job);
         return new TestEntry(root + "/" + job + " [" + variant + "]", id, bp, "warp");
+    }
+
+    // A non-job ritual scenario. The benign in-town job keeps the townies near the flag (a leaver
+    // would wander off and miss the recall window); the ritual itself is what's under test.
+    private static TestEntry flagEntry(String name, TestBlueprint bp) {
+        JobID id = new JobID("farmer", "harvest_wheat");
+        return new TestEntry("flag/" + name, id, bp, "flag");
+    }
+
+    /**
+     * Town-shutdown ritual (ADR-0009, #199): spawn a 2-townie town, begin shutdown, then assert the
+     * townies are all absorbed and the flag has gone DORMANT after the minimum-duration floor.
+     * Realtime-only (skipWarp) because the ritual is driven by the realtime ticker, never warp.
+     */
+    private static TestBlueprint townShutdownBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+        int ox = 4;
+        int oz = -3;
+        for (int x = 0; x < 7; x++) {
+            for (int z = 0; z < 7; z++) {
+                boolean isEdge = x == 0 || x == 6 || z == 0 || z == 6;
+                BlockPos offset = new BlockPos(ox + x, 0, oz + z);
+                if (isEdge) {
+                    if (x == 3 && z == 6) {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE_GATE.defaultBlockState()));
+                    } else {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE.defaultBlockState()));
+                    }
+                } else {
+                    blocks.add(new BlockPlacement(offset.below(), Blocks.DIRT.defaultBlockState()));
+                }
+            }
+        }
+        BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 5);
+        BlockPos gateOffset = new BlockPos(ox + 3, 0, oz + 6);
+
+        TestExpectation noProducts = new TestExpectation(List.of(), 0, 0);
+
+        TestBlueprint base = new TestBlueprint(
+                RoomType.FARM,
+                blocks,
+                List.of(),   // no supplies — townies don't work, they're recalled
+                gateOffset,
+                chestOffset,
+                SpecialQuests.FARM,
+                noProducts,
+                null,        // supplyDoorOffset
+                null,        // warpAmountOverride
+                null,        // startTimeTick
+                2,           // villagerCount
+                true,        // realtimePhase
+                300,         // realtimeTicks — comfortably past the 200-tick shutdown floor
+                false,       // drainHungerBeforeTest
+                true,        // skipWarp — ritual runs on the realtime path only
+                null,        // realtimeExpectation
+                null,        // minExpectedFullnessAfter
+                null,        // extraBlockRoomOffset
+                null,        // extraBlockRoomId
+                null,        // expectedVillagerHeld
+                false        // useNaturalWarp
+        );
+
+        return base
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    boolean started = town.beginTownShutdown();
+                    output.msg("beginTownShutdown -> " + started);
+                    return started;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    BlockState bs = level.getBlockState(flagPos);
+                    FlagPhase phase = bs.hasProperty(TownFlagBlock.PHASE)
+                            ? bs.getValue(TownFlagBlock.PHASE)
+                            : null;
+                    long remaining = town.getVillagerHandle().size();
+                    output.msg("Flag phase=" + phase + ", townies remaining=" + remaining);
+                    return phase == FlagPhase.DORMANT && remaining == 0;
+                });
     }
 
     private static TestBlueprint farmerBlueprint() {

@@ -3,6 +3,8 @@ package ca.bradj.questown.town.entity;
 import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.FlagPhase;
+import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.VillagerUUID;
@@ -209,6 +211,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final MCAsapRewards asapRewards = new MCAsapRewards();
     private final UUID uuid = UUID.randomUUID();
     final TownFlagState state = new TownFlagState(this);
+    final TownShutdownController shutdownController = new TownShutdownController();
     public long advancedTimeOnTick = -1;
     boolean isInitializedQuests = false;
     boolean changed = false;
@@ -882,6 +885,38 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public VillagerHolder getVillagerHandle() {
         return TownVillagerHandles.asVillagerHolder(villagerHandle);
+    }
+
+    /**
+     * Begin the town-shutdown ritual (ADR-0009): recall every townie to the flag, absorb them, and
+     * flip the flag dormant once the roster is in and the minimum-duration floor has elapsed. Only
+     * an {@link FlagPhase#ACTIVE} flag (realtime, player-present, not already shutting down) is
+     * eligible. Returns false if the flag is not currently eligible.
+     */
+    public boolean beginTownShutdown() {
+        ServerLevel level = getServerLevel();
+        if (level == null) {
+            return false;
+        }
+        BlockState state = getBlockState();
+        if (!state.hasProperty(TownFlagBlock.PHASE) || state.getValue(TownFlagBlock.PHASE) != FlagPhase.ACTIVE) {
+            return false;
+        }
+        shutdownController.begin(level, getBlockPos(), state, this);
+        return true;
+    }
+
+    /**
+     * Abort an in-progress (not yet completed) shutdown: re-spawn the townies absorbed so far and
+     * return the flag to {@link FlagPhase#ACTIVE}. Loss-proof — the town's data never left the flag.
+     */
+    public boolean cancelTownShutdown() {
+        ServerLevel level = getServerLevel();
+        if (level == null || !shutdownController.isRunning()) {
+            return false;
+        }
+        shutdownController.cancel(level, getBlockPos(), this);
+        return true;
     }
 
     public int getY() {

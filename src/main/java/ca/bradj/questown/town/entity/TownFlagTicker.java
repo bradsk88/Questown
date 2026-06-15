@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.FlagPhase;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
@@ -285,18 +286,34 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         if (!(level instanceof ServerLevel sl)) {
             return;
         }
-        if (!flagTicksTown(state)) {
+        FlagPhase phase = phaseOf(state);
+        if (phase == FlagPhase.SHUTTING_DOWN) {
+            e.shutdownController.tick(sl, blockEntityPos, state, e);
+            spawnShutdownParticles(sl, blockEntityPos);
+            return;
+        }
+        if (phase == FlagPhase.DORMANT) {
             return;
         }
         super.tick(new TickData(sl, blockEntityPos, state, e));
         spawnBopParticlesIfNeeded(sl, blockEntityPos, e);
     }
 
-    private static boolean flagTicksTown(BlockState state) {
+    private static FlagPhase phaseOf(BlockState state) {
         if (!state.hasProperty(TownFlagBlock.PHASE)) {
-            return true;
+            return FlagPhase.ACTIVE;
         }
-        return state.getValue(TownFlagBlock.PHASE).ticksTown();
+        return state.getValue(TownFlagBlock.PHASE);
+    }
+
+    private void spawnShutdownParticles(ServerLevel sl, BlockPos pos) {
+        if (sl.getGameTime() % 5 != 0) {
+            return;
+        }
+        double x = pos.getX() + 0.5 + sl.getRandom().nextGaussian() * 0.25;
+        double y = pos.getY() + 1.4;
+        double z = pos.getZ() + 0.5 + sl.getRandom().nextGaussian() * 0.25;
+        sl.sendParticles(ParticleTypes.PORTAL, x, y, z, 2, 0, 0.15, 0, 0.02);
     }
 
     private void spawnBopParticlesIfNeeded(ServerLevel sl, BlockPos pos, TownFlagBlockEntity e) {

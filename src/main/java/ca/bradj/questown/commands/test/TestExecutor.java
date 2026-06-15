@@ -595,7 +595,24 @@ public class TestExecutor {
         }
         beforeRealtimeCounts = TestResultChecker.snapshotItemCounts(state);
         beforeRealtimeContainerContents = TestResultChecker.snapshotContainerContents(state);
+        if (!runPostSpawnActionIfNeeded()) {
+            phase = Phase.DONE;
+            return;
+        }
         phase = Phase.START_MONITOR;
+    }
+
+    private boolean runPostSpawnActionIfNeeded() {
+        TestBlueprint.PostSpawnAction action = blueprint.postSpawnAction();
+        if (action == null) {
+            return true;
+        }
+        msg("Running post-spawn ritual trigger...");
+        if (!action.run(level, flagPos, tfbe, output)) {
+            error("Post-spawn ritual trigger failed");
+            return false;
+        }
+        return true;
     }
 
     private void checkRealtimeResults() {
@@ -630,8 +647,19 @@ public class TestExecutor {
                 : blueprint.expectation();
         boolean containerPassed = checkContainerContentsIfNeeded(
                 beforeRealtimeContainerContents, afterState, containerExpectation);
-        realtimePassed = itemsPassed && fullnessPassed && heldPassed && containerPassed;
+        boolean customPassed = checkCustomAssertionIfNeeded();
+        realtimePassed = itemsPassed && fullnessPassed && heldPassed && containerPassed && customPassed;
         phase = Phase.DONE;
+    }
+
+    private boolean checkCustomAssertionIfNeeded() {
+        TestBlueprint.CustomAssertion assertion = blueprint.customAssertion();
+        if (assertion == null) {
+            return true;
+        }
+        boolean ok = assertion.check(level, flagPos, tfbe, output);
+        msg("CUSTOM assertion: " + (ok ? "PASS" : "FAIL"));
+        return ok;
     }
 
     private boolean checkContainerContentsIfNeeded(
