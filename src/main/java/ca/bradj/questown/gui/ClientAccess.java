@@ -52,6 +52,13 @@ public class ClientAccess {
         openScreen(() -> new WorkRequestConfirmScreen(itemRequested, iconsForJobsWhichProduceResult, flagPos));
     }
 
+    public static void openRelocationConfirm(
+            BlockPos targetPos,
+            int farFixtureCount
+    ) {
+        openScreen(() -> new RelocationConfirmScreen(targetPos, farFixtureCount));
+    }
+
     public static void openItemJobs(
             Ingredient requestedItem,
             Collection<UIJob> jobs,

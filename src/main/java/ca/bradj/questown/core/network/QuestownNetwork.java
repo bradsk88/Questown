@@ -117,6 +117,12 @@ public class QuestownNetwork {
                         decoder(FlagCraftMessage::decode),
                 FlagCraftMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(RelocationChoiceMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                        encoder(RelocationChoiceMessage::encode).
+                        decoder(RelocationChoiceMessage::decode),
+                RelocationChoiceMessage::handle
+        ).add();
     }
 
     private static void initMessagesToClient() {
@@ -203,6 +209,12 @@ public class QuestownNetwork {
                         encoder(ShowTutorialToastMessage::encode).
                         decoder(ShowTutorialToastMessage::decode),
                 ShowTutorialToastMessage::handle
+        ).add();
+        Compat.withConsumer(
+                registerMessage(OpenRelocationConfirmMessage.class, NetworkDirection.PLAY_TO_CLIENT).
+                        encoder(OpenRelocationConfirmMessage::encode).
+                        decoder(OpenRelocationConfirmMessage::decode),
+                OpenRelocationConfirmMessage::handle
         ).add();
     }
 

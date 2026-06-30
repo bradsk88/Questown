@@ -2,6 +2,7 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.blocks.FlagPhase;
 import ca.bradj.questown.blocks.TownFlagBlock;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.items.RelocationDeedItem;
@@ -19,7 +20,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -47,6 +50,17 @@ public final class TownRelocation {
     }
 
     /**
+     * What to do with fixtures (doors/gates) that land outside the new flag's tick radius (ADR-0009,
+     * #199 Phase 4). {@link #BRING_ALL} carries every fixture verbatim (the Phase-3 behaviour, and the
+     * default when nothing is out of range); {@link #LEAVE_BEHIND} drops the out-of-range fixtures and
+     * carries only the rest. The third player choice — cancel — is simply "don't call {@link #place}".
+     */
+    public enum FarFixturePolicy {
+        BRING_ALL,
+        LEAVE_BEHIND
+    }
+
+    /**
      * Place a relocation deed: load the dormant flag it references, copy the town to a new flag at
      * {@code targetPos} with fixtures re-anchored, then destroy the original — atomically and
      * same-dimension only. Validates fully before mutating anything, so a non-{@link
@@ -57,6 +71,36 @@ public final class TownRelocation {
             ServerLevel level,
             ItemStack deedStack,
             BlockPos targetPos
+    ) {
+        return place(level, deedStack, targetPos, FarFixturePolicy.BRING_ALL);
+    }
+
+    /**
+     * Place a relocation deed with an explicit {@link FarFixturePolicy} for fixtures that fall outside
+     * the new flag's tick radius (ADR-0009, #199 Phase 4). Uses the configured {@link
+     * Config#TOWN_TICK_RADIUS} as the cutoff — the same squared distance the ticker uses to decide
+     * whether a flag is close enough to a player to keep ticking.
+     */
+    public static RelocationResult place(
+            ServerLevel level,
+            ItemStack deedStack,
+            BlockPos targetPos,
+            FarFixturePolicy policy
+    ) {
+        return place(level, deedStack, targetPos, policy, Config.TOWN_TICK_RADIUS.get());
+    }
+
+    /**
+     * Place a relocation deed with an explicit policy and tick-radius cutoff. The radius is a
+     * parameter (not read from config inside the geometry) so tests can force fixtures out of range
+     * against a nearby, solid-ground target without depending on far terrain.
+     */
+    public static RelocationResult place(
+            ServerLevel level,
+            ItemStack deedStack,
+            BlockPos targetPos,
+            FarFixturePolicy policy,
+            long tickRadiusSq
     ) {
         UUID townUuid = RelocationDeedItem.getTownUuid(deedStack);
         BlockPos originalPos = RelocationDeedItem.getFlagPos(deedStack);
@@ -79,6 +123,9 @@ public final class TownRelocation {
         // rides along verbatim (ADR-0009 copy fidelity).
         CompoundTag carried = freshTownData(original);
         rebaseFixturesInTag(carried, originalPos.getY(), targetPos.getY());
+        if (policy == FarFixturePolicy.LEAVE_BEHIND) {
+            dropFarFixturesInTag(carried, targetPos, tickRadiusSq);
+        }
 
         TownFlagBlockEntity relocated = placeActiveFlag(level, targetPos);
         if (relocated == null) {
@@ -120,6 +167,97 @@ public final class TownRelocation {
         CompoundTag rooms = townData.getCompound(TownFlagTileData.NBT_ROOMS);
         TownRoomsMapSerializer.INSTANCE.rebaseFixtureY(rooms, oldFlagY, newFlagY);
         townData.put(TownFlagTileData.NBT_ROOMS, rooms);
+    }
+
+    /**
+     * Drop carried doors/gates that sit beyond {@code tickRadiusSq} of the new flag — the "leave it
+     * behind" half of the far-away choice (#199 Phase 4). Runs after {@link #rebaseFixturesInTag}, so
+     * the fixtures' {@code position_y} is already relative to {@code targetPos.getY()}.
+     */
+    private static void dropFarFixturesInTag(
+            CompoundTag townData,
+            BlockPos targetPos,
+            long tickRadiusSq
+    ) {
+        if (!townData.contains(TownFlagTileData.NBT_ROOMS)) {
+            return;
+        }
+        CompoundTag rooms = townData.getCompound(TownFlagTileData.NBT_ROOMS);
+        TownRoomsMapSerializer.INSTANCE.dropFixtures(
+                rooms, targetPos.getY(), pos -> isBeyondRadius(targetPos, pos, tickRadiusSq)
+        );
+        townData.put(TownFlagTileData.NBT_ROOMS, rooms);
+    }
+
+    /**
+     * The dormant town's currently-registered fixtures that would land outside the configured tick
+     * radius of {@code targetPos} — what the deed-use confirmation screen warns about (#199 Phase 4).
+     * Returns empty when the deed can't be resolved or the original flag is gone, so deed-use falls
+     * straight through to {@link #place}, which reports the precise failure. Reads the live room
+     * handle (the same fixtures {@link #place} serializes and drops).
+     */
+    public static List<TownPosition> farFixturesFor(
+            ServerLevel level,
+            ItemStack deedStack,
+            BlockPos targetPos
+    ) {
+        UUID townUuid = RelocationDeedItem.getTownUuid(deedStack);
+        BlockPos originalPos = RelocationDeedItem.getFlagPos(deedStack);
+        ResourceLocation deedDimension = RelocationDeedItem.getDimension(deedStack);
+        if (validate(townUuid, originalPos, deedDimension, level.dimension().location()) != RelocationResult.OK) {
+            return List.of();
+        }
+        TownFlagBlockEntity original = TownFlagBlockEntity.getFromPos(level, originalPos);
+        if (original == null) {
+            return List.of();
+        }
+        return fixturesBeyondRadius(
+                targetPos, originalPos.getY(), registeredFixtures(original), Config.TOWN_TICK_RADIUS.get()
+        );
+    }
+
+    /** Registered doors plus fence gates — the spatial fixtures relocation re-anchors and can drop. */
+    private static Set<TownPosition> registeredFixtures(TownFlagBlockEntity flag) {
+        Set<TownPosition> all = new HashSet<>(flag.getRoomHandle().getAllRegisteredDoors());
+        if (flag.getRoomHandle() instanceof TownRoomsHandle rh) {
+            all.addAll(rh.getRegisteredRooms().getRegisteredGates());
+        }
+        return all;
+    }
+
+    /**
+     * The fixtures that would land outside a flag at {@code targetPos} with cutoff {@code tickRadiusSq}
+     * — i.e. "too far away to come with you" (#199 Phase 4). Pure: the GUI uses it to decide whether to
+     * show the confirmation screen, and {@code TownRelocationTest} locks the split directly. {@code
+     * flagY} re-anchors each fixture's flag-relative {@code scanLevel} to an absolute world Y.
+     */
+    public static List<TownPosition> fixturesBeyondRadius(
+            BlockPos targetPos,
+            int flagY,
+            Iterable<TownPosition> fixtures,
+            long tickRadiusSq
+    ) {
+        List<TownPosition> beyond = new ArrayList<>();
+        for (TownPosition fixture : fixtures) {
+            BlockPos abs = new BlockPos(fixture.x, fixture.getY(flagY), fixture.z);
+            if (isBeyondRadius(targetPos, abs, tickRadiusSq)) {
+                beyond.add(fixture);
+            }
+        }
+        return beyond;
+    }
+
+    /**
+     * Whether {@code fixturePos} is farther from {@code targetPos} than the tick radius — using the
+     * same squared-distance comparison the ticker uses against {@link Config#TOWN_TICK_RADIUS}, so
+     * "can't tick it from here" and "too far to bring" stay one definition.
+     */
+    public static boolean isBeyondRadius(
+            BlockPos targetPos,
+            BlockPos fixturePos,
+            long tickRadiusSq
+    ) {
+        return (long) targetPos.distSqr(fixturePos) > tickRadiusSq;
     }
 
     private static TownFlagBlockEntity placeActiveFlag(

@@ -119,4 +119,62 @@ class TownRelocationTest {
                 TownRelocation.validate(null, FLAG, null, NETHER)
         );
     }
+
+    // ---- B3: fixturesBeyondRadius — the "too far to come with you" split (Phase 4) ----
+
+    // The squared-distance cutoff the ticker uses (Config default): radius 100 → 100^2.
+    private static final long RADIUS_SQ = 100L * 100L;
+    private static final int FLAG_Y = 64;
+
+    @Test
+    void fixturesWithinRadiusAreNotBeyond() {
+        BlockPos target = new BlockPos(0, FLAG_Y, 0);
+        TownPosition nearDoor = new TownPosition(40, 30, 0); // dist^2 = 1600+900 = 2500 < 10000
+        Assertions.assertTrue(
+                TownRelocation.fixturesBeyondRadius(target, FLAG_Y, List.of(nearDoor), RADIUS_SQ).isEmpty()
+        );
+    }
+
+    @Test
+    void fixturesBeyondRadiusAreReturned() {
+        BlockPos target = new BlockPos(0, FLAG_Y, 0);
+        TownPosition farDoor = new TownPosition(200, 0, 0); // dist^2 = 40000 > 10000
+        Assertions.assertEquals(
+                List.of(farDoor),
+                TownRelocation.fixturesBeyondRadius(target, FLAG_Y, List.of(farDoor), RADIUS_SQ)
+        );
+    }
+
+    @Test
+    void fixturesBeyondRadiusSplitsNearFromFar() {
+        BlockPos target = new BlockPos(0, FLAG_Y, 0);
+        TownPosition near = new TownPosition(10, 10, 0);
+        TownPosition nearVertical = new TownPosition(0, 0, 5); // 5 above flag — still in range
+        TownPosition farXZ = new TownPosition(150, 0, 0);
+        List<TownPosition> beyond = TownRelocation.fixturesBeyondRadius(
+                target, FLAG_Y, List.of(near, nearVertical, farXZ), RADIUS_SQ
+        );
+        Assertions.assertEquals(List.of(farXZ), beyond, "only the out-of-range fixture is dropped");
+    }
+
+    @Test
+    void verticalDistanceCountsTowardRadius() {
+        // scanLevel feeds the absolute Y, so a fixture far in Y alone is still "beyond".
+        BlockPos target = new BlockPos(0, FLAG_Y, 0);
+        TownPosition highDoor = new TownPosition(0, 0, 150); // scanLevel 150 → abs Y 214, 150 above target
+        Assertions.assertEquals(
+                List.of(highDoor),
+                TownRelocation.fixturesBeyondRadius(target, FLAG_Y, List.of(highDoor), RADIUS_SQ)
+        );
+    }
+
+    @Test
+    void radiusBoundaryIsInclusive() {
+        // Exactly at the radius is NOT beyond (matches the ticker's <= cutoff).
+        BlockPos target = new BlockPos(0, FLAG_Y, 0);
+        TownPosition onRing = new TownPosition(100, 0, 0); // dist^2 == 10000
+        Assertions.assertTrue(
+                TownRelocation.fixturesBeyondRadius(target, FLAG_Y, List.of(onRing), RADIUS_SQ).isEmpty()
+        );
+    }
 }

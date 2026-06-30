@@ -3,10 +3,12 @@ package ca.bradj.questown.commands.test;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.FlagPhase;
+import ca.bradj.questown.core.Config;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.items.RelocationDeedItem;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.entity.TownRelocation;
+import ca.bradj.questown.town.entity.TownRelocation.FarFixturePolicy;
 import ca.bradj.questown.town.entity.TownRelocation.RelocationResult;
 import ca.bradj.questown.town.entity.TownRoomsHandle;
 import ca.bradj.questown.town.rooms.TownPosition;
@@ -174,6 +176,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("town_shutdown", townShutdownBlueprint()));
         jobs.add(flagEntry("deed_issue_and_recover", deedIssueAndRecoverBlueprint()));
         jobs.add(flagEntry("relocate_nearby", relocateNearbyBlueprint()));
+        jobs.add(flagEntry("relocate_far", relocateFarBlueprint()));
 
         return jobs;
     }
@@ -318,6 +321,11 @@ public class TestBlueprintRegistry {
         long rosterSize;
         CompoundTag preData = new CompoundTag();
         boolean placed;
+        // Phase 4: how out-of-range fixtures are handled, and the cutoff that decides "out of range".
+        // Defaults reproduce the Phase-3 nearby behaviour (carry everything, real tick radius).
+        FarFixturePolicy policy = FarFixturePolicy.BRING_ALL;
+        long tickRadiusSq = Config.TOWN_TICK_RADIUS.get();
+        int beyondCount;
     }
 
     private static boolean relocatePostSpawn(
@@ -337,9 +345,13 @@ public class TestBlueprintRegistry {
         cap.originalDoors = new HashSet<>(fixtures);
         cap.originalAbsDoors = absoluteKeys(fixtures, cap.oldFlagY);
         cap.rosterSize = town.getVillagerHandle().size();
+        cap.beyondCount = TownRelocation
+                .fixturesBeyondRadius(cap.targetPos, cap.oldFlagY, fixtures, cap.tickRadiusSq)
+                .size();
         town.writeTownData(cap.preData);
         output.msg("pre-relocation: uuid=" + cap.originalUuid + " oldFlagY=" + cap.oldFlagY
-                + " fixtures=" + fixtures.size() + " roster=" + cap.rosterSize);
+                + " fixtures=" + fixtures.size() + " beyond=" + cap.beyondCount
+                + " roster=" + cap.rosterSize);
 
         // Reach the dormant precondition without re-running the shutdown floor/recall (covered by
         // flag/town_shutdown): flip the phase directly, then mint the deed exactly as completion does.
@@ -347,8 +359,11 @@ public class TestBlueprintRegistry {
         ItemStack deed = RelocationDeedItem.forReference(
                 cap.originalUuid, flagPos, level.dimension().location()
         );
-        RelocationResult result = TownRelocation.place(level, deed, cap.targetPos);
-        output.msg("place(" + cap.targetPos + ") -> " + result);
+        RelocationResult result = TownRelocation.place(
+                level, deed, cap.targetPos, cap.policy, cap.tickRadiusSq
+        );
+        output.msg("place(" + cap.targetPos + ", " + cap.policy + ", rSq=" + cap.tickRadiusSq
+                + ") -> " + result);
         cap.placed = result == RelocationResult.OK;
         return cap.placed;
     }
@@ -413,6 +428,80 @@ public class TestBlueprintRegistry {
         for (String key : CARRIED_DATA_KEYS) {
             boolean same = Objects.equals(cap.preData.get(key), postData.get(key));
             ok &= report(output, "8 data-carried[" + key + "]", same);
+        }
+
+        return ok;
+    }
+
+    /**
+     * Town relocation "leave it behind" (ADR-0009, #199 Phase 4): relocate with {@link
+     * FarFixturePolicy#LEAVE_BEHIND} and a deliberately tiny tick radius, so every fixture in the
+     * arena counts as "too far to come" against the nearby (solid-ground) target. Drives the real
+     * {@link TownRelocation#place} overload — no far terrain needed, so the scenario stays in the
+     * shared arena and leaves no residue. The assertion proves the far fixtures are dropped while the
+     * intangibles (roster, knowledge) still carry. The "bring it anyway" path just skips the drop, so
+     * it's covered by {@code relocate_nearby} plus the {@code fixturesBeyondRadius} JUnit.
+     */
+    private static TestBlueprint relocateFarBlueprint() {
+        RelocateCapture cap = new RelocateCapture();
+        cap.policy = FarFixturePolicy.LEAVE_BEHIND;
+        cap.tickRadiusSq = 1; // 1-block radius: anything past the target's own block is "far"
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) -> relocatePostSpawn(level, flagPos, town, output, cap))
+                .withCustomAssertion((level, flagPos, town, output) -> assertRelocateFar(level, flagPos, output, cap));
+    }
+
+    private static boolean assertRelocateFar(
+            ServerLevel level,
+            BlockPos originalFlagPos,
+            TestOutput output,
+            RelocateCapture cap
+    ) {
+        if (!cap.placed) {
+            output.msg("FAIL precondition: relocation did not place");
+            return false;
+        }
+        boolean ok = true;
+
+        // (0) the choice was meaningful: with the tiny radius, every fixture was out of range
+        output.msg("fixtures=" + cap.originalDoors.size() + " beyond=" + cap.beyondCount);
+        ok &= report(output, "0 all-fixtures-were-far",
+                cap.beyondCount > 0 && cap.beyondCount == cap.originalDoors.size());
+
+        // (1) original flag destroyed
+        ok &= report(output, "1 original-destroyed",
+                TownFlagBlockEntity.getFromPos(level, originalFlagPos) == null);
+
+        TownFlagBlockEntity newBe = TownFlagBlockEntity.getFromPos(level, cap.targetPos);
+        if (newBe == null) {
+            report(output, "2 new-flag-present", false);
+            return false;
+        }
+        BlockState ns = level.getBlockState(cap.targetPos);
+        FlagPhase phase = ns.hasProperty(TownFlagBlock.PHASE) ? ns.getValue(TownFlagBlock.PHASE) : null;
+        boolean inactive = ns.hasProperty(TownFlagBlock.INACTIVE) && ns.getValue(TownFlagBlock.INACTIVE);
+        // (2) new flag ACTIVE and not INACTIVE
+        ok &= report(output, "2 new-flag-active-not-inactive", phase == FlagPhase.ACTIVE && !inactive);
+
+        // (3) identity carried even though the body of the town was left behind
+        ok &= report(output, "3 identity-carried", cap.originalUuid.equals(newBe.getUUID()));
+
+        // (4) the far fixtures were dropped — none carried to the new flag
+        Set<TownPosition> newDoors = allFixtures(newBe);
+        output.msg("relocated fixtures=" + newDoors.size() + " (expected 0 — all left behind)");
+        ok &= report(output, "4 far-fixtures-dropped", newDoors.isEmpty());
+
+        // (5) intangibles still carry: the roster respawns even with no rooms to live in
+        long live = newBe.getVillagerHandle().size();
+        output.msg("respawned roster=" + live + " (expected " + cap.rosterSize + ")");
+        ok &= report(output, "5 roster-carried", live == cap.rosterSize);
+
+        // (6) intangible town data (knowledge etc.) carried wholesale
+        CompoundTag postData = new CompoundTag();
+        newBe.writeTownData(postData);
+        for (String key : CARRIED_DATA_KEYS) {
+            ok &= report(output, "6 data-carried[" + key + "]",
+                    Objects.equals(cap.preData.get(key), postData.get(key)));
         }
 
         return ok;

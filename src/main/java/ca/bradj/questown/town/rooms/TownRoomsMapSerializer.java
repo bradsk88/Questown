@@ -93,6 +93,46 @@ public class TownRoomsMapSerializer {
         }
     }
 
+    /**
+     * Drop registered doors and fence gates whose absolute world position satisfies {@code dropIf}
+     * (ADR-0009 "leave it behind", #199 Phase 4): when a town moves so far that some fixtures fall
+     * outside the new flag's tick radius, the player can choose to leave them. The fixtures' stored
+     * {@code position_y} is the flag-relative {@code scanLevel}, so it is rebased to absolute via
+     * {@code flagY} before the predicate sees it — pass the NEW flag Y, after {@link #rebaseFixtureY}.
+     * The geometric decision lives in the caller; this only edits NBT.
+     */
+    public void dropFixtures(
+            CompoundTag roomsTag,
+            int flagY,
+            java.util.function.Predicate<BlockPos> dropIf
+    ) {
+        dropFrom(roomsTag, NBT_REGISTERED_DOORS, flagY, dropIf);
+        dropFrom(roomsTag, NBT_REGISTERED_FENCE_GATES, flagY, dropIf);
+    }
+
+    private static void dropFrom(
+            CompoundTag roomsTag,
+            String key,
+            int flagY,
+            java.util.function.Predicate<BlockPos> dropIf
+    ) {
+        if (!roomsTag.contains(key)) {
+            return;
+        }
+        ListTag entries = roomsTag.getList(key, Tag.TAG_COMPOUND);
+        ListTag kept = new ListTag();
+        for (Tag t : entries) {
+            CompoundTag ct = (CompoundTag) t;
+            BlockPos absolute = new BlockPos(
+                    ct.getInt(NBT_POS_X), flagY + ct.getInt(NBT_POS_Y), ct.getInt(NBT_POS_Z)
+            );
+            if (!dropIf.test(absolute)) {
+                kept.add(ct);
+            }
+        }
+        roomsTag.put(key, kept);
+    }
+
     public CompoundTag serializeNBT(TownRoomsMap roomsMap) {
         CompoundTag tag = new CompoundTag();
         ListTag doors = new ListTag();
