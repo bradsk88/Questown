@@ -210,7 +210,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final TownPois pois = new TownPois(subBlocks);
     final MCMorningRewards morningRewards = new MCMorningRewards(this);
     final MCAsapRewards asapRewards = new MCAsapRewards();
-    private final UUID uuid = UUID.randomUUID();
+    private UUID uuid = UUID.randomUUID();
     final TownFlagState state = new TownFlagState(this);
     final TownShutdownController shutdownController = new TownShutdownController();
     public long advancedTimeOnTick = -1;
@@ -841,6 +841,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     @Override
     public UUID getUUID() {
         return uuid;
+    }
+
+    /**
+     * Adopt a relocated town's identity (ADR-0009, #199). A freshly placed flag gets a random UUID,
+     * but relocation copies a dormant town's data onto a new flag, so it must also carry the original
+     * UUID — {@link TownFlags} is keyed by it, and per-villager/knowledge data is keyed against it.
+     * Must be called before the init queue drains so registration uses the carried identity.
+     */
+    void adoptRelocatedIdentity(UUID carried) {
+        this.uuid = carried;
     }
 
     public void registerWelcomeMat(BlockPos welcomeMatBlock) {

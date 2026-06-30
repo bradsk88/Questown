@@ -1,5 +1,8 @@
 {
   "itemGroup.questown": "Questown",
+  "message.questown.relocation_deed.cross_dimension": "This town can only be moved within its own world.",
+  "message.questown.relocation_deed.malformed_reference": "This deed is damaged and no longer points to a town.",
+  "message.questown.relocation_deed.original_unreachable": "The dormant flag could not be reached. Nothing was moved.",
   "message.questown.villager.change_job_in_morning": "Villager %s will change to a new job root in the morning.",
   "message.questown.soup_pot.need_bowl": "You need a bowl to take soup from the pot",
   "message.questown.soup_pot.empty": "Villagers can add mushrooms to the pot to make stew",

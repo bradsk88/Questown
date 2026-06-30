@@ -6,6 +6,11 @@ import ca.bradj.questown.blocks.FlagPhase;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.items.RelocationDeedItem;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownRelocation;
+import ca.bradj.questown.town.entity.TownRelocation.RelocationResult;
+import ca.bradj.questown.town.entity.TownRoomsHandle;
+import ca.bradj.questown.town.rooms.TownPosition;
+import net.minecraft.nbt.CompoundTag;
 import ca.bradj.questown.commands.test.TestBlueprint.BlockPlacement;
 import ca.bradj.questown.commands.test.TestBlueprint.RoomType;
 import ca.bradj.questown.commands.test.TestExpectation.ExpectedProduct;
@@ -43,8 +48,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -166,6 +173,7 @@ public class TestBlueprintRegistry {
         // Flag relocation (#199): non-job ritual scenarios
         jobs.add(flagEntry("town_shutdown", townShutdownBlueprint()));
         jobs.add(flagEntry("deed_issue_and_recover", deedIssueAndRecoverBlueprint()));
+        jobs.add(flagEntry("relocate_nearby", relocateNearbyBlueprint()));
 
         return jobs;
     }
@@ -282,6 +290,170 @@ public class TestBlueprintRegistry {
         // completes on later ticks, so we assert the synchronous wake outcome: ACTIVE again.
         output.msg("wakeInPlace=" + woke + ", phase now=" + after);
         return woke && after == FlagPhase.ACTIVE;
+    }
+
+    /**
+     * Town relocation placement (ADR-0009, #199, Phase 3): isolate the placement step from the
+     * shutdown ritual (which has its own test). After the town spawns, drop it straight to DORMANT
+     * (a blockstate write, not the logic under test), mint a deed, and drive the real
+     * {@link TownRelocation#place} to a nearby target with a non-zero Y delta. The realtime monitor
+     * then ticks the new flag so its data hydrates, its roster respawns, and its rooms reconstitute,
+     * which the assertion verifies end-to-end.
+     */
+    private static TestBlueprint relocateNearbyBlueprint() {
+        RelocateCapture cap = new RelocateCapture();
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) -> relocatePostSpawn(level, flagPos, town, output, cap))
+                .withCustomAssertion((level, flagPos, town, output) -> assertRelocateNearby(level, flagPos, output, cap));
+    }
+
+    // Carries pre-relocation state from the post-spawn trigger to the end-state assertion (the two
+    // run in different phases, so we close over this holder rather than re-deriving).
+    private static final class RelocateCapture {
+        UUID originalUuid;
+        int oldFlagY;
+        BlockPos targetPos;
+        Set<TownPosition> originalDoors = Set.of();
+        Set<String> originalAbsDoors = Set.of();
+        long rosterSize;
+        CompoundTag preData = new CompoundTag();
+        boolean placed;
+    }
+
+    private static boolean relocatePostSpawn(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output,
+            RelocateCapture cap
+    ) {
+        cap.originalUuid = town.getUUID();
+        cap.oldFlagY = flagPos.getY();
+        // Nearby (within tick radius, so no far-away path) with a deliberate +1 Y delta so the
+        // fixture re-anchor (scanLevel) is genuinely exercised; inside the farm footprint so the
+        // new flag sits over solid ground.
+        cap.targetPos = flagPos.offset(5, 1, 0);
+        Set<TownPosition> fixtures = allFixtures(town);
+        cap.originalDoors = new HashSet<>(fixtures);
+        cap.originalAbsDoors = absoluteKeys(fixtures, cap.oldFlagY);
+        cap.rosterSize = town.getVillagerHandle().size();
+        town.writeTownData(cap.preData);
+        output.msg("pre-relocation: uuid=" + cap.originalUuid + " oldFlagY=" + cap.oldFlagY
+                + " fixtures=" + fixtures.size() + " roster=" + cap.rosterSize);
+
+        // Reach the dormant precondition without re-running the shutdown floor/recall (covered by
+        // flag/town_shutdown): flip the phase directly, then mint the deed exactly as completion does.
+        setPhase(level, flagPos, FlagPhase.DORMANT);
+        ItemStack deed = RelocationDeedItem.forReference(
+                cap.originalUuid, flagPos, level.dimension().location()
+        );
+        RelocationResult result = TownRelocation.place(level, deed, cap.targetPos);
+        output.msg("place(" + cap.targetPos + ") -> " + result);
+        cap.placed = result == RelocationResult.OK;
+        return cap.placed;
+    }
+
+    private static boolean assertRelocateNearby(
+            ServerLevel level,
+            BlockPos originalFlagPos,
+            TestOutput output,
+            RelocateCapture cap
+    ) {
+        if (!cap.placed) {
+            output.msg("FAIL precondition: relocation did not place");
+            return false;
+        }
+        boolean ok = true;
+
+        // (1) original flag destroyed
+        boolean originalGone = TownFlagBlockEntity.getFromPos(level, originalFlagPos) == null;
+        ok &= report(output, "1 original-destroyed", originalGone);
+
+        TownFlagBlockEntity newBe = TownFlagBlockEntity.getFromPos(level, cap.targetPos);
+        if (newBe == null) {
+            report(output, "2 new-flag-present", false);
+            return false;
+        }
+        BlockState ns = level.getBlockState(cap.targetPos);
+        FlagPhase phase = ns.hasProperty(TownFlagBlock.PHASE) ? ns.getValue(TownFlagBlock.PHASE) : null;
+        boolean inactive = ns.hasProperty(TownFlagBlock.INACTIVE) && ns.getValue(TownFlagBlock.INACTIVE);
+        output.msg("new flag phase=" + phase + " inactive=" + inactive);
+        // (2) new flag ACTIVE and not INACTIVE
+        ok &= report(output, "2 new-flag-active-not-inactive", phase == FlagPhase.ACTIVE && !inactive);
+
+        // (3) identity carried
+        ok &= report(output, "3 identity-carried", cap.originalUuid.equals(newBe.getUUID()));
+
+        // (4) fixtures re-anchored: absolute positions preserved, scanLevel changed (Y moved)
+        Set<TownPosition> newDoors = allFixtures(newBe);
+        if (newDoors.isEmpty()) {
+            ok &= report(output, "4 fixtures-rebased (NO FIXTURES — cannot verify)", false);
+        } else {
+            Set<String> newAbs = absoluteKeys(newDoors, cap.targetPos.getY());
+            boolean absPreserved = newAbs.equals(cap.originalAbsDoors);
+            boolean scanChanged = !newDoors.equals(cap.originalDoors);
+            output.msg("fixtures: newAbs=" + newAbs + " origAbs=" + cap.originalAbsDoors);
+            ok &= report(output, "4 fixtures-abs-preserved", absPreserved);
+            ok &= report(output, "4 fixtures-scanLevel-rebased", scanChanged);
+        }
+
+        // (6) roster respawned to the carried count
+        long live = newBe.getVillagerHandle().size();
+        output.msg("respawned roster=" + live + " (expected " + cap.rosterSize + ")");
+        ok &= report(output, "6 roster-respawned", live == cap.rosterSize);
+
+        // (7) rooms reconstituted from the carried doors
+        int rooms = newBe.getRoomHandle().getMatches(x -> true).size();
+        output.msg("rooms reconstituted=" + rooms);
+        ok &= report(output, "7 rooms-reconstituted", rooms >= 1);
+
+        // (8) intangible town data carried wholesale (knowledge + economics round-trip identically)
+        CompoundTag postData = new CompoundTag();
+        newBe.writeTownData(postData);
+        for (String key : CARRIED_DATA_KEYS) {
+            boolean same = Objects.equals(cap.preData.get(key), postData.get(key));
+            ok &= report(output, "8 data-carried[" + key + "]", same);
+        }
+
+        return ok;
+    }
+
+    // Stable, persisted town data copied wholesale by relocation; if these round-trip identically
+    // across the move, the rest of the whole-blob copy did too (ADR-0009 copy fidelity). Economics
+    // is intentionally excluded: it's a running log of unmet-needs records (with ticks) that legit-
+    // imately grows over the monitored ticks, so equality is not a valid carry-check for it.
+    private static final java.util.List<String> CARRIED_DATA_KEYS = java.util.List.of(
+            Questown.MODID + "_knowledge",
+            Questown.MODID + "_bops_stored",
+            Questown.MODID + "_bonus_given"
+    );
+
+    // The room entrance may be registered as a door or a fence gate; relocation re-anchors both, so
+    // the fixture check spans the union.
+    private static Set<TownPosition> allFixtures(TownFlagBlockEntity flag) {
+        Set<TownPosition> all = new HashSet<>(flag.getRoomHandle().getAllRegisteredDoors());
+        if (flag.getRoomHandle() instanceof TownRoomsHandle rh) {
+            all.addAll(rh.getRegisteredRooms().getRegisteredGates());
+        }
+        return all;
+    }
+
+    private static Set<String> absoluteKeys(Set<TownPosition> fixtures, int flagY) {
+        return fixtures.stream()
+                .map(p -> p.x + "," + (flagY + p.scanLevel) + "," + p.z)
+                .collect(Collectors.toSet());
+    }
+
+    private static boolean report(TestOutput output, String label, boolean pass) {
+        output.msg((pass ? "PASS " : "FAIL ") + label);
+        return pass;
+    }
+
+    private static void setPhase(ServerLevel level, BlockPos flagPos, FlagPhase phase) {
+        BlockState s = level.getBlockState(flagPos);
+        if (s.hasProperty(TownFlagBlock.PHASE)) {
+            level.setBlockAndUpdate(flagPos, s.setValue(TownFlagBlock.PHASE, phase));
+        }
     }
 
     private static FlagPhase phaseOf(ServerLevel level, BlockPos flagPos) {

@@ -2,11 +2,17 @@ package ca.bradj.questown.items;
 
 import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.town.entity.TownRelocation;
+import ca.bradj.questown.town.entity.TownRelocation.RelocationResult;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -50,6 +56,34 @@ public class RelocationDeedItem extends Item {
         ref.putString(NBT_DIM, dimension.toString());
         stack.getOrCreateTag().put(NBT_ROOT, ref);
         return stack;
+    }
+
+    /**
+     * Placing the deed relocates the town: the new flag goes at the block face the player clicked
+     * (one block off the clicked surface, the same idiom as placing a block). Delegates the whole
+     * ritual to {@link TownRelocation#place} and consumes the deed only on success — a failed
+     * relocation (cross-dimension, unreachable original, malformed reference) leaves the deed in
+     * hand so the town is never stranded.
+     */
+    @Override
+    public InteractionResult useOn(UseOnContext ctx) {
+        if (!(ctx.getLevel() instanceof ServerLevel level)) {
+            return InteractionResult.sidedSuccess(ctx.getLevel().isClientSide());
+        }
+        BlockPos targetPos = ctx.getClickedPos().relative(ctx.getClickedFace());
+        RelocationResult result = TownRelocation.place(level, ctx.getItemInHand(), targetPos);
+        if (result != RelocationResult.OK) {
+            if (ctx.getPlayer() != null) {
+                ctx.getPlayer().displayClientMessage(messageFor(result), true);
+            }
+            return InteractionResult.FAIL;
+        }
+        ctx.getItemInHand().shrink(1);
+        return InteractionResult.CONSUME;
+    }
+
+    private static Component messageFor(RelocationResult result) {
+        return Component.translatable("message.questown.relocation_deed." + result.name().toLowerCase());
     }
 
     public static boolean isDeed(ItemStack stack) {

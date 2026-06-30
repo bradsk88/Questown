@@ -60,6 +60,39 @@ public class TownRoomsMapSerializer {
         roomsMap.initialize(owner, doorsB.build(), gatesB.build(), doorsWithRecipes.build());
     }
 
+    /**
+     * Re-anchor registered doors and fence gates to a flag at a new Y, preserving their absolute
+     * world Y (ADR-0009 flag relocation, #199). The stored {@code position_y} is a flag-relative
+     * {@code scanLevel}; rewrite it so {@code oldFlagY + scanLevel} (the absolute Y) is unchanged
+     * under {@code newFlagY}. X/Z are absolute and untouched. Doors-with-active-recipes are stored
+     * as absolute {@link BlockPos} and so need no rebase.
+     */
+    public void rebaseFixtureY(
+            CompoundTag roomsTag,
+            int oldFlagY,
+            int newFlagY
+    ) {
+        rebaseScanLevels(roomsTag, NBT_REGISTERED_DOORS, oldFlagY, newFlagY);
+        rebaseScanLevels(roomsTag, NBT_REGISTERED_FENCE_GATES, oldFlagY, newFlagY);
+    }
+
+    private static void rebaseScanLevels(
+            CompoundTag roomsTag,
+            String key,
+            int oldFlagY,
+            int newFlagY
+    ) {
+        if (!roomsTag.contains(key)) {
+            return;
+        }
+        ListTag entries = roomsTag.getList(key, Tag.TAG_COMPOUND);
+        for (Tag t : entries) {
+            CompoundTag ct = (CompoundTag) t;
+            int absoluteY = oldFlagY + ct.getInt(NBT_POS_Y);
+            ct.putInt(NBT_POS_Y, absoluteY - newFlagY);
+        }
+    }
+
     public CompoundTag serializeNBT(TownRoomsMap roomsMap) {
         CompoundTag tag = new CompoundTag();
         ListTag doors = new ListTag();

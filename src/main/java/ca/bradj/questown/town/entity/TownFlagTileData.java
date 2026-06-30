@@ -30,7 +30,8 @@ public class TownFlagTileData {
     private static final String NBT_QUEST_BATCHES = String.format("%s_quest_batches", Questown.MODID);
     private static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     private static final String NBT_WELCOME_MATS = String.format("%s_welcome_mats", Questown.MODID);
-    private static final String NBT_ROOMS = String.format("%s_rooms", Questown.MODID);
+    // Package-visible: flag relocation (TownRelocation) reads the rooms sub-tag to re-anchor fixtures.
+    static final String NBT_ROOMS = String.format("%s_rooms", Questown.MODID);
     private static final String NBT_JOBS = String.format("%s_jobs", Questown.MODID);
     private static final String NBT_KNOWLEDGE = String.format("%s_knowledge", Questown.MODID);
     private static final String NBT_VILLAGERS = String.format("%s_villagers", Questown.MODID);

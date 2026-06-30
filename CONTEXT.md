@@ -14,6 +14,21 @@ _Avoid_: villager (too generic — minecraft has its own), citizen, NPC.
 The placed block that marks a town's origin and owns its persistent state (rooms, jobs, beats, registered fixtures).
 _Avoid_: banner, marker.
 
+**Registered fixture**:
+A position-bearing town fixture the **town flag** tracks by location: **doors**, **fence gates** (farm anchors), **welcome mats** (visitor arrival), and **heal spots** (injured-townie recovery). Stored on a `TownPosition` whose **X/Z is absolute world coords but Y is flag-relative** (`scanLevel = fixtureY − flagY`; `getY(flagY) = flagY + scanLevel`). **Rooms** are *not* fixtures — they reconstitute from registered doors via the room scan.
+_Avoid_: treating rooms as a registered fixture; assuming a fixture's Y is absolute.
+
+**Town shutdown**:
+The slow, deliberate ritual that quiesces a town so its **town flag** can be moved (issue #199). All townies path back to the flag and vanish (force-absorbed on timeout so it can't deadlock); when the last one is absorbed, the flag goes **dormant** (stays in the world, holding the town's data) and the player receives a **relocation deed**. Intentionally costly — moving a town is a potential cheat vector, so it must not be instant: completion is gated on **both** the recall finishing **and** a configurable minimum-duration floor (`TOWN_SHUTDOWN_TICKS`, default 200 = 10s) so even a one-townie town can't pack up reactively as a panic-button. Cancelable until the last villager vanishes (re-wakes the town). Particle effects play over the flag for the duration. No material/resource cost — the real cost is the downtime plus abandoning all physical structures.
+_Avoid_: "pack up"; confusing with **warp** (offline catch-up, unrelated).
+
+**Dormant flag**:
+A **town flag** left in the world after **town shutdown**, still holding the town's authoritative state but inactive (no ticking, no townies). It is the town's home during transport, which is why losing the **relocation deed** never loses the town. Placing the deed elsewhere destroys the dormant flag and re-creates the town at the new spot.
+
+**Relocation deed**:
+The item a player receives when **town shutdown** completes. It carries **only a reference** to the **dormant flag** (town UUID + original flag pos + dimension), not a snapshot — the data has exactly one home, so the deed is dupe-proof. Placing it **loads the dormant flag, copies its data to a new flag at the new location, then destroys the original** — transferring the **intangible** state (identity, jobs, knowledge, quests, villager roster, economics, …) and the **registered fixtures** as *absolute* positions, while leaving the physical chest/bed/station blocks behind. Placement re-anchors the flag, recomputes each fixture's flag-relative Y, and if carried fixtures fall outside `TOWN_TICK_RADIUS` opens a **confirmation screen** whose copy says the town is **"far away"** (never "out of range" — players don't parse that), defaulting to *leave behind* and requiring an explicit *bring-it-anyway* to retain. The deed can only be placed in its **origin dimension** (cross-dimension relocation is forbidden — fixtures are dimensionless absolute coords with no meaning in another world). If the original can't be reached (chunk unloadable / already gone), placement **fails loudly** rather than half-transferring. Losing the deed never strands the town: interacting with the dormant flag **re-issues the deed** or **wakes the town in place**. Eligibility to start shutdown is only *realtime + player present* and *not-already-shutting-down* — there is **no chicken-arc gate**: the arc state is carried like any tile data, and a mid-arc move simply re-derives the arc's flag-relative beats at the new offsets (the tutorial "follows you", since the controller re-reads observable conditions rather than latching).
+_Avoid_: implying structures travel with it; a self-contained snapshot item; "town item" (too vague).
+
 **Warp**:
 Offline simulation of what townies would have produced while the player was away from the town. Triggered by chunk reload after the player leaves and returns — **not** by sleeping. Purpose: avoid keeping the town chunk loaded.
 _Avoid_: skip, fast-forward, sleep-warp.
