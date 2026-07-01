@@ -348,6 +348,12 @@ public class TestBlueprintRegistry {
         cap.beyondCount = TownRelocation
                 .fixturesBeyondRadius(cap.targetPos, cap.oldFlagY, fixtures, cap.tickRadiusSq)
                 .size();
+        // Put the onboarding arc mid-flight (non-default beat + rotation) so the carry-check below
+        // proves the chicken beat state and structure rotation ride the whole-blob copy to the new
+        // flag — #199 Phase 5 "the tutorial follows you". Re-anchoring the beat geometry itself is
+        // locked deterministically by HelperChickenBeatRelocationTest.
+        town.setChickenBeatState(ca.bradj.questown.mobs.helperchicken.ChickenBeatState.WAITING_FOR_CHEST);
+        town.setChickenStructureRotation(net.minecraft.world.level.block.Rotation.CLOCKWISE_90);
         town.writeTownData(cap.preData);
         output.msg("pre-relocation: uuid=" + cap.originalUuid + " oldFlagY=" + cap.oldFlagY
                 + " fixtures=" + fixtures.size() + " beyond=" + cap.beyondCount
@@ -514,7 +520,11 @@ public class TestBlueprintRegistry {
     private static final java.util.List<String> CARRIED_DATA_KEYS = java.util.List.of(
             Questown.MODID + "_knowledge",
             Questown.MODID + "_bops_stored",
-            Questown.MODID + "_bonus_given"
+            Questown.MODID + "_bonus_given",
+            // Onboarding arc state (relocatePostSpawn sets these non-default before the move):
+            // beat + rotation must survive so the helper chicken re-derives its beats at the new flag.
+            Questown.MODID + "_chicken_beat_state",
+            Questown.MODID + "_chicken_structure_rotation"
     );
 
     // The room entrance may be registered as a door or a fence gate; relocation re-anchors both, so

@@ -108,3 +108,10 @@ to a deed.
 - Placement near an existing town can produce overlapping room/fixture claims;
   this is the same hazard as placing any flag near another town and is not solved
   here.
+- The helper-chicken onboarding arc needs **no special handling** across a move
+  ("the tutorial follows you"): beat targets are re-derived every tick from
+  `flagPos + rotate(offset)`, and the beat state + structure rotation ride the
+  whole-blob copy. Verified by `HelperChickenBeatRelocationTest` (every beat
+  translates by exactly the flag delta; target-less beats stay null) and by the
+  `flag/relocate_nearby`/`relocate_far` autotests, which relocate a mid-arc town
+  and assert the chicken beat + rotation carry.

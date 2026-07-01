@@ -132,9 +132,13 @@ render/click is GUI-only (document as the usual server-autotest blind spot, like
 
 ## Phase 5 — Polish + edge cases
 
-- Chicken-arc mid-move: confirm a mid-arc relocation re-derives beats at the new
-  offsets (no special handling — verify it doesn't crash; document "tutorial
-  follows you").
+- Chicken-arc mid-move: ✅ DONE (2026-07-01). No special handling needed — beat
+  targets are re-derived every tick from `flagPos + rotate(offset)` and the beat
+  state + rotation ride the whole-blob copy. `HelperChickenBeatRelocationTest`
+  locks the re-derivation deterministically (every beat translates by the flag
+  delta; target-less beats stay null); `flag/relocate_nearby`/`relocate_far` now
+  relocate a mid-arc town and assert the chicken beat + rotation carry (green).
+  "Tutorial follows you" documented in ADR-0009 Consequences.
 - Lang strings (`en_us.json`) for all menus/messages; deed item model/texture.
 - Overlapping-town placement: out of scope for #199 (pre-existing hazard) — note
   in the issue, don't solve here.
@@ -146,7 +150,8 @@ render/click is GUI-only (document as the usual server-autotest blind spot, like
 | Shutdown ritual | `flag/town_shutdown` ✅ | `ShutdownProgress` ✅ |
 | Deed + recovery | `flag/deed_issue_and_recover` ✅ | — |
 | Placement | `flag/relocate_nearby` ✅ (8/8) | `TownPosition` Y-rebase ✅ + `TownRelocation` B1/B2 ✅ |
-| Far-away | `flag/relocate_far` (Phase 4) | far-away predicate (pure) |
+| Far-away | `flag/relocate_far` ✅ (8/8) | far-away predicate (pure) |
+| Chicken-arc mid-move | `flag/relocate_nearby`/`relocate_far` carry beat+rotation ✅ | `HelperChickenBeatRelocationTest` ✅ |
 
 **Phase 3 landed (2026-06-29):** `TownRelocation.place(...)` + `RelocationDeedItem.useOn`; the
 `flag/relocate_nearby` autotest passes all 8 success criteria. Identity-carry required making the
