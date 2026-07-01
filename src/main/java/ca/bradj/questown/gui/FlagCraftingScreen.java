@@ -2,6 +2,7 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.core.network.BeginTownRelocationMessage;
 import ca.bradj.questown.core.network.FlagCraftMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
@@ -55,6 +56,14 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
                 Compat.translatable("menu.flag_crafting.craft"),
                 btn -> QuestownNetwork.CHANNEL.sendToServer(new FlagCraftMessage(flagPos, 1))
         ));
+        this.addRenderableWidget(new Button(
+                bgX + 12, bgY + 128, backgroundWidth - 24, 20,
+                Compat.translatable("menu.flag_crafting.begin_moving"),
+                btn -> {
+                    QuestownNetwork.CHANNEL.sendToServer(new BeginTownRelocationMessage(flagPos));
+                    this.onClose();
+                }
+        ));
     }
 
     @Override
@@ -77,6 +86,9 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
                 new ItemStack(ItemsInit.TOWN_WAND.get()), "menu.flag_crafting.wand_desc");
         renderRecipeRow(poseStack, bgX, bgY + 68, Items.OAK_PRESSURE_PLATE.getDefaultInstance(),
                 new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()), "menu.flag_crafting.mat_desc");
+
+        Compat.drawDarkTextWrap(font, poseStack, new Coordinate(bgX + 12, bgY + 110), backgroundWidth - 24,
+                Compat.translatable("menu.flag_crafting.begin_moving_desc"));
     }
 
     private void renderRecipeRow(PoseStack poseStack, int x, int y, ItemStack input, ItemStack output, String descKey) {

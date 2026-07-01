@@ -147,8 +147,16 @@ render/click is GUI-only (document as the usual server-autotest blind spot, like
   `models/item/relocation_deed.json` (`item/generated` → `questown:items/relocation_deed`),
   and a bespoke `textures/items/relocation_deed.png` (parchment deed + wax seal).
   Note: `/qt flag` command feedback stays `Component.literal` — dev/admin command
-  output, consistent with the rest of the command layer; the polished in-game flag
-  menu entry point remains the documented GUI blind spot (Phase 1/4).
+  output, consistent with the rest of the command layer.
+- In-game "Begin moving" entry point: ✅ DONE (2026-07-01). A "Begin moving this
+  town" button on the flag menu's crafting tab (`FlagCraftingScreen`) sends the new
+  serverbound `BeginTownRelocationMessage`, which resolves the flag block entity and
+  calls `TownFlagBlockEntity.beginTownShutdown()` — the same ritual `/qt flag
+  shutdown` drives (already `flag/town_shutdown`-covered). Eligibility (ACTIVE phase)
+  is decided server-side; the player gets an action-bar ack either way. Also backfilled
+  the `menu.flag_crafting.*` lang keys, which were missing entirely (the crafting screen
+  had been rendering raw i18n keys). The button's click path is the documented
+  server-autotest GUI blind spot; the ritual it triggers is autotest-verified.
 - Overlapping-town placement: ✅ out of scope for #199 (pre-existing hazard) —
   recorded in ADR-0009 Consequences ("same hazard as placing any flag near
   another town and is not solved here"), not solved in this feature.

@@ -14,10 +14,12 @@ import net.minecraft.core.BlockPos;
  * {@code /qt flag shutdown <pos>} begins the town-shutdown relocation ritual on the flag at
  * {@code pos}; {@code /qt flag shutdown <pos> cancel} aborts an in-progress ritual (ADR-0009, #199).
  *
- * <p>This is the concrete trigger for the ritual. The polished in-game entry point — a "Begin
- * moving this town" action on the flag menu — is GUI work (a documented server-autotest blind spot)
- * and wraps these same {@link TownFlagBlockEntity#beginTownShutdown()} /
- * {@link TownFlagBlockEntity#cancelTownShutdown()} entry points.
+ * <p>This is the admin/dev trigger for the ritual. The polished in-game entry point — the "Begin
+ * moving this town" button on the flag menu's crafting tab (see
+ * {@link ca.bradj.questown.core.network.BeginTownRelocationMessage}) — wraps this same
+ * {@link TownFlagBlockEntity#beginTownShutdown()} entry point. The button's click path stays a
+ * documented server-autotest blind spot; the shutdown ritual it starts is covered by the
+ * {@code flag/town_shutdown} autotest.
  */
 public class FlagShutdownCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {

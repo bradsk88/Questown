@@ -123,6 +123,12 @@ public class QuestownNetwork {
                         decoder(RelocationChoiceMessage::decode),
                 RelocationChoiceMessage::handle
         ).add();
+        Compat.withConsumer(
+                registerMessage(BeginTownRelocationMessage.class, NetworkDirection.PLAY_TO_SERVER).
+                        encoder(BeginTownRelocationMessage::encode).
+                        decoder(BeginTownRelocationMessage::decode),
+                BeginTownRelocationMessage::handle
+        ).add();
     }
 
     private static void initMessagesToClient() {
