@@ -16,10 +16,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -98,6 +101,16 @@ public class RelocationDeedItem extends Item {
         }
         deed.shrink(1);
         return InteractionResult.CONSUME;
+    }
+
+    @Override
+    public void appendHoverText(
+            ItemStack stack,
+            @Nullable Level level,
+            List<Component> tooltip,
+            TooltipFlag flag
+    ) {
+        tooltip.add(Component.translatable("item.questown.relocation_deed.tooltip"));
     }
 
     public static Component messageFor(RelocationResult result) {

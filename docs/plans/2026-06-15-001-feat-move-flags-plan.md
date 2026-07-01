@@ -139,9 +139,19 @@ render/click is GUI-only (document as the usual server-autotest blind spot, like
   delta; target-less beats stay null); `flag/relocate_nearby`/`relocate_far` now
   relocate a mid-arc town and assert the chicken beat + rotation carry (green).
   "Tutorial follows you" documented in ADR-0009 Consequences.
-- Lang strings (`en_us.json`) for all menus/messages; deed item model/texture.
-- Overlapping-town placement: out of scope for #199 (pre-existing hazard) — note
-  in the issue, don't solve here.
+- Lang strings + deed asset: ✅ DONE (2026-07-01). Menu/message keys
+  (`menu.relocation_confirm.*`, `message.questown.relocation_deed.*`,
+  `menu.common.cancel`) already existed; the gaps were the deed's own display
+  name and icon. Added `item.questown.relocation_deed` (+ a
+  `.tooltip` wired via `RelocationDeedItem.appendHoverText`),
+  `models/item/relocation_deed.json` (`item/generated` → `questown:items/relocation_deed`),
+  and a bespoke `textures/items/relocation_deed.png` (parchment deed + wax seal).
+  Note: `/qt flag` command feedback stays `Component.literal` — dev/admin command
+  output, consistent with the rest of the command layer; the polished in-game flag
+  menu entry point remains the documented GUI blind spot (Phase 1/4).
+- Overlapping-town placement: ✅ out of scope for #199 (pre-existing hazard) —
+  recorded in ADR-0009 Consequences ("same hazard as placing any flag near
+  another town and is not solved here"), not solved in this feature.
 
 ## Test ledger
 
