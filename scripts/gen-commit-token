@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+# Agents: DO NOT run this except as the final step of the prep-commit procedure.
+#
+# This prints the unlock token for the agent commit-prep forcing function.
+# Running it out-of-band (without first doing the COMPLEX.md documentation work
+# that prep-commit performs) defeats the entire point. There is no mechanical
+# guard against that — only this note and good faith. Don't.
+#
+# The token rotates on the half hour and has a hard, single-bucket expiry:
+# a token minted at 10:29 is already invalid at 10:31. That is intentional —
+# it means "don't dawdle between prep and commit", not "you may reuse it".
+SALT="questown-commit-prep-forcing-function"   # constant; value is irrelevant
+HOUR="$(date -u +%Y%m%d%H)"
+MIN="$(date -u +%M)"
+if [ "$MIN" -lt 30 ]; then HALF=00; else HALF=30; fi
+printf '%s' "$SALT:$HOUR$HALF" | shasum -a 256 | cut -c1-16

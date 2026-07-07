@@ -1,0 +1,51 @@
+#!/usr/bin/env sh
+# Agent commit-prep forcing function — pre-commit hook.
+#
+# This is a FORCING FUNCTION FOR COOPERATIVE AGENTS, not a security boundary.
+# It blocks commits made by a detected agent unless the prep-commit procedure
+# has been run (which documents complex code in co-located COMPLEX.md files
+# before the commit lands). Human commits pass through untouched.
+#
+# Activate with:  git config core.hooksPath .githooks   (see prep-commit-setup)
+
+# --- Agent detection (editable allowlist) -----------------------------------
+# Enforce only when one of these env vars indicates an agent is driving the
+# commit. Add your tool's convention here if it isn't covered.
+is_agent() {
+    [ -n "$CLAUDECODE" ] && return 0     # Claude Code
+    [ -n "$AGENT" ]      && return 0     # emerging convention: Goose/Amp/Codex
+    [ -n "$CURSOR_AGENT" ] && return 0   # Cursor
+    return 1
+}
+
+if ! is_agent; then
+    exit 0   # human commit — no gate
+fi
+
+# --- Token check ------------------------------------------------------------
+# Run the token generator ourselves and compare (DRY: the salt/algorithm live
+# in one place). This subprocess call is invisible to any agent permission
+# layer, so it always succeeds here.
+expected="$(sh "$(git rev-parse --show-toplevel)/scripts/gen-commit-token")"
+
+if [ "$WORKFLOW_MD_CHECKED" = "$expected" ]; then
+    exit 0
+fi
+
+cat >&2 <<'EOF'
+✋ This commit is blocked. Agent commits require the prep-commit procedure —
+there is no shortcut, bypass, or alternative path.
+
+→ If /prep-commit is available, run it now.
+→ If not, install it first:
+    /plugin marketplace add bradsk88/CodeStyle
+    /plugin install brad-johnson-commit-prep
+  then run /prep-commit.
+→ Other agents: read the prep-commit skill at
+    github.com/bradsk88/CodeStyle  (commit-prep/skills/prep-commit/SKILL.md)
+  and follow it completely.
+
+The procedure ends by unlocking this commit. Do not attempt to unlock it
+any other way.
+EOF
+exit 1
