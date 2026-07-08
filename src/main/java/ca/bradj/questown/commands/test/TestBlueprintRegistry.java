@@ -5,6 +5,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.FlagPhase;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.blocks.TownFlagBlock;
+import ca.bradj.questown.items.CampfireSleepHandler;
 import ca.bradj.questown.items.RelocationDeedItem;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.entity.TownRelocation;
@@ -30,6 +31,7 @@ import ca.bradj.questown.town.entity.TownVillagerLearningHandle;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -41,6 +43,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -177,6 +180,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("deed_issue_and_recover", deedIssueAndRecoverBlueprint()));
         jobs.add(flagEntry("relocate_nearby", relocateNearbyBlueprint()));
         jobs.add(flagEntry("relocate_far", relocateFarBlueprint()));
+        jobs.add(flagEntry("campfire_sleep_preserves_flag", campfireSleepPreservesFlagBlueprint()));
 
         return jobs;
     }
@@ -248,6 +252,78 @@ public class TestBlueprintRegistry {
         return relocationRitualBase()
                 .withPostSpawnAction(beginShutdownAction())
                 .withCustomAssertion(TestBlueprintRegistry::assertDeedIssueAndRecover);
+    }
+
+    /**
+     * Regression guard for the campfire-sleep temp bed destroying the town flag. The bed spot is
+     * chosen by {@link CampfireSleepHandler}'s real {@code findSafeSleepPosition} and placed by its
+     * real {@code placeTempBed}; before the fix, a solid non-replaceable block (the flag) passed the
+     * "clear for sleep" check, so the bed overwrote it and the wake teardown left AIR — the flag,
+     * and all its town data, silently vanished. We place a lit campfire two blocks SOUTH of the flag
+     * so the first-scanned bed direction (NORTH) puts the bed head exactly on the flag, run the real
+     * selection + placement via the autotest seam, then assert the flag block survived.
+     */
+    private static TestBlueprint campfireSleepPreservesFlagBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::campfireSleepOntoFlag)
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    boolean flagPresent = phaseOf(level, flagPos) != null;
+                    output.msg("Block at flag pos after campfire-sleep = "
+                            + level.getBlockState(flagPos).getBlock()
+                            + " (flag present=" + flagPresent + ")");
+                    return flagPresent;
+                });
+    }
+
+    private static boolean campfireSleepOntoFlag(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        // Put the campfire two blocks SOUTH of the flag, so the lane toward the flag
+        // (foot = campfire.north(), head = campfire.north().north() = flagPos) can seat a bed
+        // whose head lands on the flag. findSafeSleepPosition tries all four directions and takes
+        // the first with solid, clear ground, so we must remove the OTHER three lanes' support —
+        // otherwise it seats the bed on open ground and never touches the flag (as an earlier run
+        // showed: it picked bare ground to the east). With only the flag lane left, the buggy
+        // selector is forced onto the flag; the fix makes it decline and leave the flag alone.
+        BlockPos campfirePos = flagPos.south().south();
+        BlockPos footPos = flagPos.south();
+        // The flag lane: supported floor under the foot and the flag, clear air above both.
+        level.setBlockAndUpdate(flagPos.below(), Blocks.DIRT.defaultBlockState());
+        level.setBlockAndUpdate(footPos.below(), Blocks.DIRT.defaultBlockState());
+        level.setBlockAndUpdate(footPos, Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(footPos.above(), Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(flagPos.above(), Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(campfirePos.below(), Blocks.DIRT.defaultBlockState());
+        level.setBlockAndUpdate(campfirePos,
+                Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, true));
+        // Collapse the floor under the other three lanes (east / west / south of the campfire) so
+        // isSafeToLieOn fails there (unsupported foot), leaving the flag lane as the only candidate.
+        for (Direction dir : Direction.Plane.HORIZONTAL) {
+            BlockPos foot = campfirePos.relative(dir);
+            if (foot.equals(footPos)) {
+                continue;
+            }
+            level.setBlockAndUpdate(foot.below(), Blocks.AIR.defaultBlockState());
+            level.setBlockAndUpdate(foot.relative(dir).below(), Blocks.AIR.defaultBlockState());
+        }
+        // The recalled townies idle on the town flag. An entity on a block makes it "obstructed",
+        // so findSafeSleepPosition skips it — which hides the bug. In the real incident the flag was
+        // empty (the tutorial runs before any villager exists), so nothing blocked the bed from
+        // landing on it. Clear the flag lane of entities to reproduce that precondition.
+        // Keep the destination inside the harness cleanup zone (origin ±20) so no townie leaks into
+        // the next scenario in a full-suite run (shared arena).
+        for (net.minecraft.world.entity.LivingEntity e :
+                level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                        new AABB(flagPos).inflate(2.5))) {
+            e.teleportTo(flagPos.getX() + 14.5, flagPos.getY(), flagPos.getZ() + 14.5);
+        }
+        BlockPos chosen = CampfireSleepHandler.placeTempBedForTest(level, campfirePos);
+        output.msg("Campfire at " + campfirePos.toShortString() + ", flag at " + flagPos.toShortString()
+                + ", chosen bed head = " + (chosen == null ? "none" : chosen.toShortString()));
+        return true;
     }
 
     private static TestBlueprint.PostSpawnAction beginShutdownAction() {

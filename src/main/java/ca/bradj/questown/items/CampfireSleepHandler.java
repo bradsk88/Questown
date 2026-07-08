@@ -120,10 +120,16 @@ public class CampfireSleepHandler {
 
     private static boolean isClearForSleep(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
+        Material mat = state.getMaterial();
+        // The temp bed is placed with an unconditional setBlock, so the spot must be air or an
+        // otherwise-replaceable block. Without this guard a solid block (e.g. the town flag) counted
+        // as "clear" and the bed overwrote it — destroying the block and, on teardown, leaving air.
+        if (!mat.isReplaceable()) {
+            return false;
+        }
         if (!level.isUnobstructed(state, pos, CollisionContext.empty())) {
             return false;
         }
-        Material mat = state.getMaterial();
         return !mat.isLiquid() && mat != Material.FIRE;
     }
 
@@ -151,6 +157,28 @@ public class CampfireSleepHandler {
         BlockPos footPos = headPos.relative(facing.getOpposite());
         level.setBlock(headPos, Blocks.AIR.defaultBlockState(), 3);
         level.setBlock(footPos, Blocks.AIR.defaultBlockState(), 3);
+    }
+
+    /**
+     * Autotest seam: runs the real bed-spot selection and placement that
+     * {@link #beginCampfireSleep} performs — the part that can overwrite the block
+     * at the chosen head position — without the player sleep state machine (which
+     * needs a {@code ServerPlayer} the headless autotest cannot supply). Returns the
+     * chosen bed-head position, or {@code null} if no safe spot was found. Drives the
+     * production {@link #findSafeSleepPosition}/{@link #placeTempBed}, so it catches a
+     * regression where the temp bed is placed on top of a real block (e.g. the flag).
+     */
+    public static @Nullable BlockPos placeTempBedForTest(Level level, BlockPos campfirePos) {
+        BlockPos headPos = findSafeSleepPosition(level, campfirePos);
+        if (headPos == null) {
+            return null;
+        }
+        Direction facing = findBedFacing(headPos, campfirePos);
+        if (facing == null) {
+            return null;
+        }
+        placeTempBed(level, headPos, facing);
+        return headPos;
     }
 
     public static boolean isCampfireSleeper(UUID uuid) {
