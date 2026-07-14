@@ -22,10 +22,28 @@ import java.util.List;
 
 public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu> {
     private static final int backgroundWidth = 176;
-    private static final int backgroundHeight = 166;
+    private static final int MARGIN = 12;
+    private static final int TEXT_WIDTH = backgroundWidth - 2 * MARGIN; // full row width for descriptions
+    private static final int BLOCK_PAD = 6;                             // vertical gap between blocks
+    private static final int ICON_ROW_HEIGHT = 24;                      // icon/[Craft] row footprint
+    private static final int TOOLTIP_WIDTH = 200;
+    private static final int CRAFT_BTN_X = 100;
+    private static final int CRAFT_BTN_W = 60;
+    private static final int BTN_HEIGHT = 20;
+
     private final FlagTabs tabs;
     private final JEI.NineNine background;
     private final BlockPos flagPos;
+
+    // Flow layout, recomputed each init() from the actual wrapped-text heights so blocks can never
+    // overlap regardless of string length / translation. All values are offsets from the panel's
+    // top-left; the panel is centred using panelHeight.
+    private int panelHeight = 166;
+    private int titleY;
+    private int row1Y;
+    private int row2Y;
+    private int moveDescY;
+    private int moveButtonY;
 
     public FlagCraftingScreen(
             FlagCraftingMenu menu,
@@ -40,30 +58,75 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
         this.flagPos = menu.getFlagInfo().flagPos();
     }
 
+    private Component title() {
+        return Compat.translatable("menu.flag_crafting.title");
+    }
+
+    private Component wandDesc() {
+        return Compat.translatable("menu.flag_crafting.wand_desc");
+    }
+
+    private Component matDesc() {
+        return Compat.translatable("menu.flag_crafting.mat_desc");
+    }
+
+    private Component moveDesc() {
+        return Compat.translatable("menu.flag_crafting.begin_moving_desc");
+    }
+
+    private int lineHeight() {
+        return (int) (font.lineHeight * 1.5);
+    }
+
+    private int wrappedHeight(Component text) {
+        return font.split(text, TEXT_WIDTH).size() * lineHeight();
+    }
+
+    /** Stack the blocks top-to-bottom, advancing past each block's real height. Sets panelHeight. */
+    private void computeLayout() {
+        int y = 8;
+        titleY = y;
+        y += wrappedHeight(title()) + BLOCK_PAD;
+
+        row1Y = y;
+        y += ICON_ROW_HEIGHT + BLOCK_PAD;
+        row2Y = y;
+        y += ICON_ROW_HEIGHT + BLOCK_PAD;
+
+        moveDescY = y;
+        y += wrappedHeight(moveDesc()) + BLOCK_PAD;
+        moveButtonY = y;
+        y += BTN_HEIGHT + 8;
+
+        panelHeight = y;
+    }
+
     @Override
     protected void init() {
         super.init();
+        computeLayout();
         int bgX = (this.width - backgroundWidth) / 2;
-        int bgY = (this.height - backgroundHeight) / 2;
+        int bgY = (this.height - panelHeight) / 2;
 
+        this.addRenderableWidget(craftButton(bgX + CRAFT_BTN_X, bgY + row1Y, 0, wandDesc()));
+        this.addRenderableWidget(craftButton(bgX + CRAFT_BTN_X, bgY + row2Y, 1, matDesc()));
         this.addRenderableWidget(new Button(
-                bgX + 100, bgY + 30, 60, 20,
-                Compat.translatable("menu.flag_crafting.craft"),
-                btn -> QuestownNetwork.CHANNEL.sendToServer(new FlagCraftMessage(flagPos, 0))
-        ));
-        this.addRenderableWidget(new Button(
-                bgX + 100, bgY + 70, 60, 20,
-                Compat.translatable("menu.flag_crafting.craft"),
-                btn -> QuestownNetwork.CHANNEL.sendToServer(new FlagCraftMessage(flagPos, 1))
-        ));
-        this.addRenderableWidget(new Button(
-                bgX + 12, bgY + 128, backgroundWidth - 24, 20,
+                bgX + MARGIN, bgY + moveButtonY, TEXT_WIDTH, BTN_HEIGHT,
                 Compat.translatable("menu.flag_crafting.begin_moving"),
                 btn -> {
                     QuestownNetwork.CHANNEL.sendToServer(new BeginTownRelocationMessage(flagPos));
                     this.onClose();
                 }
         ));
+    }
+
+    private Button craftButton(int x, int y, int recipeIndex, Component tooltip) {
+        return new Button(
+                x, y, CRAFT_BTN_W, BTN_HEIGHT,
+                Compat.translatable("menu.flag_crafting.craft"),
+                btn -> QuestownNetwork.CHANNEL.sendToServer(new FlagCraftMessage(flagPos, recipeIndex)),
+                (btn, stack, mouseX, mouseY) -> this.renderTooltip(stack, font.split(tooltip, TOOLTIP_WIDTH), mouseX, mouseY)
+        );
     }
 
     @Override
@@ -76,34 +139,27 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
         super.render(poseStack, mouseX, mouseY, partialTicks);
 
         int bgX = (this.width - backgroundWidth) / 2;
-        int bgY = (this.height - backgroundHeight) / 2;
+        int bgY = (this.height - panelHeight) / 2;
 
-        Coordinate topLeft = new Coordinate(bgX + 12, bgY + 10);
-        int tWidth = backgroundWidth - 16;
-        Compat.drawDarkTextWrap(font, poseStack, topLeft, tWidth, Compat.translatable("menu.flag_crafting.title"));
+        Compat.drawDarkTextWrap(font, poseStack, new Coordinate(bgX + MARGIN, bgY + titleY), TEXT_WIDTH, title());
 
-        renderRecipeRow(poseStack, bgX, bgY + 28, Items.STICK.getDefaultInstance(),
-                new ItemStack(ItemsInit.TOWN_WAND.get()), "menu.flag_crafting.wand_desc");
-        renderRecipeRow(poseStack, bgX, bgY + 68, Items.OAK_PRESSURE_PLATE.getDefaultInstance(),
-                new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()), "menu.flag_crafting.mat_desc");
+        renderRecipeRow(poseStack, bgX, bgY + row1Y, Items.STICK.getDefaultInstance(), new ItemStack(ItemsInit.TOWN_WAND.get()));
+        renderRecipeRow(poseStack, bgX, bgY + row2Y, Items.OAK_PRESSURE_PLATE.getDefaultInstance(), new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()));
 
-        Compat.drawDarkTextWrap(font, poseStack, new Coordinate(bgX + 12, bgY + 110), backgroundWidth - 24,
-                Compat.translatable("menu.flag_crafting.begin_moving_desc"));
+        Compat.drawDarkTextWrap(font, poseStack, new Coordinate(bgX + MARGIN, bgY + moveDescY), TEXT_WIDTH, moveDesc());
     }
 
-    private void renderRecipeRow(PoseStack poseStack, int x, int y, ItemStack input, ItemStack output, String descKey) {
-        itemRenderer.renderAndDecorateItem(input, x + 12, y + 2);
-        font.draw(poseStack, "\u2192", x + 36, y + 6, 0x404040);
-        itemRenderer.renderAndDecorateItem(output, x + 50, y + 2);
-        Compat.drawDarkTextWrap(font, poseStack, new Coordinate(x + 12, y + 22), backgroundWidth - 120,
-                Compat.translatable(descKey));
+    private void renderRecipeRow(PoseStack poseStack, int x, int iconY, ItemStack input, ItemStack output) {
+        itemRenderer.renderAndDecorateItem(input, x + MARGIN, iconY + 2);
+        font.draw(poseStack, "→", x + 36, iconY + 6, 0x404040);
+        itemRenderer.renderAndDecorateItem(output, x + 50, iconY + 2);
     }
 
     @Override
     protected void renderBg(PoseStack stack, float partialTicks, int mouseX, int mouseY) {
         int bgX = (this.width - backgroundWidth) / 2;
-        int bgY = (this.height - backgroundHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
+        int bgY = (this.height - panelHeight) / 2;
+        this.background.draw(stack, bgX, bgY, backgroundWidth, panelHeight);
         this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
     }
 
@@ -114,8 +170,8 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
 
     public List<Rect2i> getExtraAreas() {
         int x = (this.width - backgroundWidth) / 2;
-        int y = (this.height - backgroundHeight) / 2;
-        return ImmutableList.of(new Rect2i(x, y, backgroundWidth, backgroundHeight));
+        int y = (this.height - panelHeight) / 2;
+        return ImmutableList.of(new Rect2i(x, y, backgroundWidth, panelHeight));
     }
 
     @Override
@@ -126,7 +182,7 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         int x = (this.width - backgroundWidth) / 2;
-        int y = (this.height - backgroundHeight) / 2;
+        int y = (this.height - panelHeight) / 2;
         this.tabs.mouseClicked(x, y, mouseX, mouseY);
         return super.mouseClicked(mouseX, mouseY, button);
     }

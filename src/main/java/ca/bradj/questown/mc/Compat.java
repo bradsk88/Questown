@@ -320,10 +320,19 @@ public class Compat {
             int textWidth,
             Component translatable
     ) {
+        boolean capture = ca.bradj.questown.gui.GuiLayoutCapture.isActive();
         int out = 0;
+        int maxLineWidth = 0;
         for (FormattedCharSequence line : font.split(translatable, textWidth)) {
             drawDarkText(font, poseStack, line, topLeft.x(), topLeft.y() + out);
+            if (capture) {
+                maxLineWidth = Math.max(maxLineWidth, font.width(line));
+            }
             out += (int) (font.lineHeight * 1.5);
+        }
+        if (capture) {
+            ca.bradj.questown.gui.GuiLayoutCapture.recordText(
+                    topLeft.x(), topLeft.y(), maxLineWidth, out, translatable.getString());
         }
         return out;
     }
