@@ -16,7 +16,9 @@ import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -35,6 +37,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private static final int backgroundHeight = 166;
 
     private static final int TEXT_COLOR = 0x404040;
+    private static final int TEXT_MARGIN = 12;
+    private static final int BLOCK_GAP = 6;
+    private static final int BUTTON_HEIGHT = 20;
+    private static final int BUTTON_H_PADDING = 16;
 
     private final List<UIQuest> quests;
     private final JEI.NineNine background;
@@ -44,7 +50,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private final boolean allComplete;
     private final boolean morningRewardPending;
     private boolean showingCompleted = false;
-    private @Nullable Rect2i viewCompletedRegion;
+    private @Nullable Button viewCompletedButton;
 
     public QuestsScreen(
             C container,
@@ -69,6 +75,45 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             return ImmutableList.of();
         }
         return ImmutableList.copyOf(quests);
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        this.viewCompletedButton = null;
+        if (!allComplete || showingCompleted) {
+            return;
+        }
+        Component link = Compat.translatable("menu.quests.view_completed");
+        int btnW = this.font.width(link) + BUTTON_H_PADDING;
+        this.viewCompletedButton = new Button(
+                (this.width - btnW) / 2, emptyStateButtonY(), btnW, BUTTON_HEIGHT, link,
+                btn -> {
+                    showingCompleted = true;
+                    btn.visible = false;
+                    btn.active = false;
+                });
+        this.addRenderableWidget(this.viewCompletedButton);
+    }
+
+    private Component subtitleComponent() {
+        return morningRewardPending
+                ? Compat.translatable("menu.quests.all_done_morning")
+                : Compat.translatable("menu.quests.all_done_caught_up");
+    }
+
+    // Shared layout: the subtitle block + gap + button, vertically centred in the panel. init()
+    // places the button here; render() draws the subtitle above it using the same math.
+    private int emptyStateTop() {
+        int bgY = (this.height - backgroundHeight) / 2;
+        int textWidth = backgroundWidth - 2 * TEXT_MARGIN;
+        int stackHeight = wrappedHeight(subtitleComponent(), textWidth) + BLOCK_GAP + BUTTON_HEIGHT;
+        return bgY + (backgroundHeight - stackHeight) / 2;
+    }
+
+    private int emptyStateButtonY() {
+        int textWidth = backgroundWidth - 2 * TEXT_MARGIN;
+        return emptyStateTop() + wrappedHeight(subtitleComponent(), textWidth) + BLOCK_GAP;
     }
 
     @Override
@@ -124,65 +169,39 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         int bgY = (this.height - backgroundHeight) / 2;
         this.tabs.draw(new RenderContext(itemRenderer, poseStack), bgX, bgY);
         if (allComplete && !showingCompleted) {
-            renderAllDoneState(poseStack, mouseX, mouseY, bgY);
+            renderAllDoneState(poseStack);
         }
     }
 
-    private void renderAllDoneState(
-            PoseStack poseStack,
-            int mouseX,
-            int mouseY,
-            int bgY
-    ) {
-        int centerX = this.width / 2;
-        int midY = bgY + (backgroundHeight / 2);
-        Component title = Compat.translatable("menu.quests.all_done_title");
-        Component subtitle = morningRewardPending
-                ? Compat.translatable("menu.quests.all_done_morning")
-                : Compat.translatable("menu.quests.all_done_caught_up");
-        drawCenteredLine(poseStack, title, centerX, midY - 24, TEXT_COLOR);
-        drawCenteredLine(poseStack, subtitle, centerX, midY - 10, TEXT_COLOR);
-        renderViewCompletedLink(poseStack, mouseX, mouseY, centerX, midY + 12);
+    private void renderAllDoneState(PoseStack poseStack) {
+        // Draw the wrapped subtitle above the "View completed" button (which is a real widget added
+        // in init() at emptyStateButtonY(), so it renders and hit-tests itself).
+        int textWidth = backgroundWidth - 2 * TEXT_MARGIN;
+        drawCenteredWrapped(poseStack, subtitleComponent(), this.width / 2, emptyStateTop(), textWidth, TEXT_COLOR);
     }
 
-    private void drawCenteredLine(
+    private int wrappedHeight(Component text, int maxWidth) {
+        return Compat.splitText(this.font, text, maxWidth).size() * this.font.lineHeight;
+    }
+
+    /** Draw {@code text} wrapped to {@code maxWidth}, each line centred on {@code centerX}. Returns height. */
+    private int drawCenteredWrapped(
             PoseStack poseStack,
             Component text,
             int centerX,
             int y,
+            int maxWidth,
             int color
     ) {
-        int x = centerX - (this.font.width(text) / 2);
-        this.font.draw(poseStack, text, x, y, color);
-    }
-
-    private void renderViewCompletedLink(
-            PoseStack poseStack,
-            int mouseX,
-            int mouseY,
-            int centerX,
-            int y
-    ) {
-        Component link = Compat.translatable("menu.quests.view_completed");
-        int w = this.font.width(link);
-        int linkX = centerX - (w / 2);
-        Rect2i region = new Rect2i(linkX, y, w, this.font.lineHeight);
-        this.viewCompletedRegion = region;
-        boolean hovered = isInRegion(mouseX, mouseY, region);
-        if (hovered) {
-            fill(poseStack, linkX - 2, y - 2, linkX + w + 2, y + this.font.lineHeight, 0x80FFFFFF);
+        int dy = 0;
+        for (FormattedCharSequence line : Compat.splitText(this.font, text, maxWidth)) {
+            int x = centerX - (this.font.width(line) / 2);
+            this.font.draw(poseStack, line, x, y + dy, color);
+            dy += this.font.lineHeight;
         }
-        this.font.draw(poseStack, link, linkX, y, hovered ? 0x202020 : TEXT_COLOR);
+        return dy;
     }
 
-    private static boolean isInRegion(
-            double x,
-            double y,
-            Rect2i r
-    ) {
-        return x >= r.getX() && x < r.getX() + r.getWidth()
-                && y >= r.getY() && y < r.getY() + r.getHeight();
-    }
 
     @Override
     protected List<Component> renderCardContent(
@@ -396,10 +415,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             double y,
             int p_97750_
     ) {
-        if (clickedViewCompleted(x, y)) {
-            showingCompleted = true;
-            return true;
-        }
         for (Map.Entry<Position, Runnable> p : removes.entrySet()) {
             int buttonX = p.getKey().x;
             int buttonY = p.getKey().z;
@@ -416,17 +431,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         this.tabs.mouseClicked(bgX, bgY, x, y);
         return super.mouseClicked(x, y, p_97750_);
     }
-
-    private boolean clickedViewCompleted(
-            double x,
-            double y
-    ) {
-        if (!allComplete || showingCompleted) {
-            return false;
-        }
-        return viewCompletedRegion != null && isInRegion(x, y, viewCompletedRegion);
-    }
-
 
     private @Nullable List<Component> renderRecipeCardIcons(
             PoseStack poseStack,

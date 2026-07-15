@@ -9,15 +9,22 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu> {
@@ -34,6 +41,8 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
     private final FlagTabs tabs;
     private final JEI.NineNine background;
     private final BlockPos flagPos;
+    private Button craftWandButton;
+    private Button craftMatButton;
 
     // Flow layout, recomputed each init() from the actual wrapped-text heights so blocks can never
     // overlap regardless of string length / translation. All values are offsets from the panel's
@@ -79,7 +88,7 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
     }
 
     private int wrappedHeight(Component text) {
-        return font.split(text, TEXT_WIDTH).size() * lineHeight();
+        return Compat.splitText(font, text, TEXT_WIDTH).size() * lineHeight();
     }
 
     /** Stack the blocks top-to-bottom, advancing past each block's real height. Sets panelHeight. */
@@ -108,8 +117,10 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - panelHeight) / 2;
 
-        this.addRenderableWidget(craftButton(bgX + CRAFT_BTN_X, bgY + row1Y, 0, wandDesc()));
-        this.addRenderableWidget(craftButton(bgX + CRAFT_BTN_X, bgY + row2Y, 1, matDesc()));
+        this.craftWandButton = craftButton(bgX + CRAFT_BTN_X, bgY + row1Y, 0, Items.STICK, wandDesc());
+        this.craftMatButton = craftButton(bgX + CRAFT_BTN_X, bgY + row2Y, 1, Items.OAK_PRESSURE_PLATE, matDesc());
+        this.addRenderableWidget(this.craftWandButton);
+        this.addRenderableWidget(this.craftMatButton);
         this.addRenderableWidget(new Button(
                 bgX + MARGIN, bgY + moveButtonY, TEXT_WIDTH, BTN_HEIGHT,
                 Compat.translatable("menu.flag_crafting.begin_moving"),
@@ -120,13 +131,51 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
         ));
     }
 
-    private Button craftButton(int x, int y, int recipeIndex, Component tooltip) {
+    private Button craftButton(int x, int y, int recipeIndex, Item required, Component desc) {
         return new Button(
                 x, y, CRAFT_BTN_W, BTN_HEIGHT,
                 Compat.translatable("menu.flag_crafting.craft"),
-                btn -> QuestownNetwork.CHANNEL.sendToServer(new FlagCraftMessage(flagPos, recipeIndex)),
-                (btn, stack, mouseX, mouseY) -> this.renderTooltip(stack, font.split(tooltip, TOOLTIP_WIDTH), mouseX, mouseY)
+                btn -> {
+                    QuestownNetwork.CHANNEL.sendToServer(new FlagCraftMessage(flagPos, recipeIndex));
+                    this.onClose();
+                },
+                (btn, stack, mouseX, mouseY) -> renderCraftTooltip(stack, desc, required, mouseX, mouseY)
         );
+    }
+
+    private void renderCraftTooltip(PoseStack stack, Component desc, Item required, int mouseX, int mouseY) {
+        int count = countInInventory(required);
+        List<FormattedCharSequence> lines = new ArrayList<>(Compat.splitText(font, desc, TOOLTIP_WIDTH));
+        Style style = Style.EMPTY.applyFormat(count == 0 ? ChatFormatting.RED : ChatFormatting.GRAY);
+        lines.add(Compat.translatableStyled("menu.flag_crafting.in_hand", style, count).getVisualOrderText());
+        this.renderTooltip(stack, lines, mouseX, mouseY);
+    }
+
+    // Recipes consume their input from the player's inventory server-side (FlagCraftMessage), so
+    // grey the button out when the local player has none — clicking it would be a no-op.
+    private void updateCraftButtonStates() {
+        if (this.craftWandButton != null) {
+            this.craftWandButton.active = countInInventory(Items.STICK) > 0;
+        }
+        if (this.craftMatButton != null) {
+            this.craftMatButton.active = countInInventory(Items.OAK_PRESSURE_PLATE) > 0;
+        }
+    }
+
+    private int countInInventory(Item item) {
+        Player player = Minecraft.getInstance().player;
+        if (player == null) {
+            return 0;
+        }
+        Inventory inv = player.getInventory();
+        int total = 0;
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (stack.is(item)) {
+                total += stack.getCount();
+            }
+        }
+        return total;
     }
 
     @Override
@@ -135,6 +184,7 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
 
     @Override
     public void render(PoseStack poseStack, int mouseX, int mouseY, float partialTicks) {
+        updateCraftButtonStates();
         this.renderBackground(poseStack);
         super.render(poseStack, mouseX, mouseY, partialTicks);
 

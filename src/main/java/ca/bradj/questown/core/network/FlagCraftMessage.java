@@ -3,6 +3,7 @@ package ca.bradj.questown.core.network;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
@@ -42,14 +43,19 @@ public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
         if (!consumeItem(player, Items.STICK)) {
             return;
         }
-        player.getInventory().add(new ItemStack(ItemsInit.TOWN_WAND.get()));
+        giveAndNotify(player, new ItemStack(ItemsInit.TOWN_WAND.get()));
     }
 
     private void craftWelcomeMat(ServerPlayer player) {
         if (!consumeItem(player, Items.OAK_PRESSURE_PLATE)) {
             return;
         }
-        player.getInventory().add(new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()));
+        giveAndNotify(player, new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()));
+    }
+
+    private void giveAndNotify(ServerPlayer player, ItemStack crafted) {
+        player.getInventory().add(crafted);
+        player.sendSystemMessage(Component.translatable("message.flag_crafting.created", crafted.getHoverName()));
     }
 
     private boolean consumeItem(ServerPlayer player, Item required) {
