@@ -136,6 +136,10 @@ public class Questown {
                 TilesInit.HOSPITAL_BED.get(),
                 HospitalBedEntityRenderer::new
         ));
+        event.enqueueWork(() -> BlockEntityRenderers.register(
+                TilesInit.TOWN_FLAG.get(),
+                ca.bradj.questown.blocks.entity.renderer.TownFlagDeedRenderer::new
+        ));
         event.enqueueWork(() -> EntityRenderers.register(
                 ca.bradj.questown._vanilla.entities.EntitiesInit.FISHIN_HOOK.get(),
                 FishingHookRenderer::new

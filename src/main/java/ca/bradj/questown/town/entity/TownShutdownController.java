@@ -82,7 +82,7 @@ class TownShutdownController {
         recallAndAbsorb(flagPos, town, progress.forceAbsorbDue(now));
         if (progress.isComplete(now)) {
             setPhase(level, flagPos, FlagPhase.DORMANT);
-            town.dropRelocationDeed();
+            town.makeDeedAvailable();
             progress = null;
             QT.FLAG_LOGGER.info("Town shutdown complete; flag {} is now dormant", flagPos);
         }

@@ -99,8 +99,19 @@ public class RelocationDeedItem extends Item {
             }
             return InteractionResult.FAIL;
         }
-        deed.shrink(1);
+        consumeDeed(ctx);
         return InteractionResult.CONSUME;
+    }
+
+    // Deeds are unstackable one-shots, so clear the used deed from the hand. Done explicitly (rather
+    // than relying on shrink + the use-consumption path) so it also holds in creative, where a used
+    // item is otherwise restored — a leftover deed there references the now-destroyed original flag.
+    private static void consumeDeed(UseOnContext ctx) {
+        if (ctx.getPlayer() == null) {
+            ctx.getItemInHand().shrink(1);
+            return;
+        }
+        ctx.getPlayer().setItemInHand(ctx.getHand(), ItemStack.EMPTY);
     }
 
     @Override

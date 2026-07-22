@@ -65,6 +65,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
@@ -936,20 +937,50 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 && state.getValue(TownFlagBlock.PHASE) == FlagPhase.DORMANT;
     }
 
+    public boolean isDeedAvailable() {
+        BlockState state = getBlockState();
+        return state.hasProperty(TownFlagBlock.DEED_AVAILABLE) && state.getValue(TownFlagBlock.DEED_AVAILABLE);
+    }
+
     /**
-     * Spawn a {@link RelocationDeedItem} referencing this (dormant) flag at the flag position. The
-     * deed carries only the reference (town UUID + flag pos + dimension), never a town snapshot.
+     * Mark that a relocation deed is ready above this (dormant) flag. The flag renders it spinning and
+     * hands it over on interaction ({@link #collectDeed}) — chosen over dropping a {@link ItemEntity}
+     * so it can't be culled or picked up by the wrong entity before the player sees it. Stored as a
+     * blockstate property so it auto-syncs to the client (the flag has no client-side BE ticker).
      */
-    void dropRelocationDeed() {
+    void makeDeedAvailable() {
+        setDeedAvailable(true);
+    }
+
+    private void setDeedAvailable(boolean value) {
         ServerLevel level = getServerLevel();
-        if (level == null) {
+        if (level == null || !getBlockState().hasProperty(TownFlagBlock.DEED_AVAILABLE)) {
             return;
         }
+        level.setBlock(getBlockPos(), getBlockState().setValue(TownFlagBlock.DEED_AVAILABLE, value), Block.UPDATE_ALL);
+    }
+
+    /**
+     * Hand the waiting relocation deed to the player (mirrors {@code TownFlagBOPItemHandler.eject}):
+     * straight into the inventory, or dropped at the flag as a fallback if the inventory is full.
+     */
+    public void collectDeed(ServerPlayer recipient) {
+        ServerLevel level = getServerLevel();
+        if (!isDeedAvailable() || level == null) {
+            return;
+        }
+        setDeedAvailable(false);
         BlockPos pos = getBlockPos();
         ItemStack deed = RelocationDeedItem.forReference(getUUID(), pos, level.dimension().location());
-        level.addFreshEntity(new ItemEntity(
-                level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, deed
-        ));
+        if (recipient.getInventory().add(deed)) {
+            recipient.getInventory().setChanged();
+            recipient.inventoryMenu.broadcastChanges();
+        } else {
+            level.addFreshEntity(new ItemEntity(
+                    level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, deed
+            ));
+        }
+        recipient.sendSystemMessage(Compat.translatable("message.questown.relocation.deed_collected"));
     }
 
     /**
@@ -959,7 +990,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (!isDormant() || getServerLevel() == null) {
             return false;
         }
-        dropRelocationDeed();
+        makeDeedAvailable();
         return true;
     }
 
@@ -972,6 +1003,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (level == null || !isDormant()) {
             return false;
         }
+        // A woken town is live again, so any deed still waiting on the flag would hand out a reference
+        // to a town that is no longer dormant (and would shadow the flag menu on every interaction).
+        setDeedAvailable(false);
         shutdownController.wake(level, getBlockPos(), this);
         return true;
     }

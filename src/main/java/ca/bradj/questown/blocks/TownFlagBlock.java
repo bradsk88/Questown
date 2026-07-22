@@ -68,6 +68,9 @@ public class TownFlagBlock extends BaseEntityBlock {
             tab(ModItemGroup.QUESTOWN_GROUP);
     public static final Property<Boolean> INACTIVE = BooleanProperty.create("inactive");
     public static final EnumProperty<FlagPhase> PHASE = EnumProperty.create("phase", FlagPhase.class);
+    // A relocation deed is waiting above this flag. A blockstate (not BE) property so it auto-syncs to
+    // the client, which the flag has no ticker to hydrate BE data on. The "" model variant ignores it.
+    public static final Property<Boolean> DEED_AVAILABLE = BooleanProperty.create("deed_available");
     private Map<Player, Long> informedPlayers = new HashMap<>();
 
     public TownFlagBlock() {
@@ -78,11 +81,12 @@ public class TownFlagBlock extends BaseEntityBlock {
         );
         this.registerDefaultState(this.stateDefinition.any()
                                                        .setValue(INACTIVE, false)
-                                                       .setValue(PHASE, FlagPhase.ACTIVE));
+                                                       .setValue(PHASE, FlagPhase.ACTIVE)
+                                                       .setValue(DEED_AVAILABLE, false));
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(INACTIVE, PHASE);
+        p_51385_.add(INACTIVE, PHASE, DEED_AVAILABLE);
     }
 
     public static String itemId(WallType wallType) {
@@ -447,6 +451,11 @@ public class TownFlagBlock extends BaseEntityBlock {
             return InteractionResult.sidedSuccess(true);
         }
         TownFlagBlockEntity entity = oEntity.get();
+
+        if (entity.isDeedAvailable()) {
+            entity.collectDeed((ServerPlayer) player);
+            return InteractionResult.sidedSuccess(false);
+        }
 
         InteractionResult sidedSuccess = convertItemInHand(sl, (ServerPlayer) player, hand, entity);
         if (sidedSuccess != null) {

@@ -1,9 +1,9 @@
 package ca.bradj.questown.core.network;
 
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -39,13 +39,22 @@ public record BeginTownRelocationMessage(BlockPos flagPos) {
                 return;
             }
             boolean started = flag.beginTownShutdown();
-            sender.displayClientMessage(
-                    Component.translatable(started
-                            ? "message.questown.relocation.shutdown_started"
-                            : "message.questown.relocation.not_eligible"),
-                    true
-            );
+            // Send as chat (not an action-bar overlay): the message is long, so the overlay
+            // truncated it off-screen and faded before it could be read.
+            sender.sendSystemMessage(Compat.translatable(startMessageKey(started, flag)));
         });
         ctx.get().setPacketHandled(true);
+    }
+
+    private static String startMessageKey(boolean started, TownFlagBlockEntity flag) {
+        if (!started) {
+            return "message.questown.relocation.not_eligible";
+        }
+        // With no villagers there is no one to gather/recall — the deed just appears after the
+        // minimum-duration floor, so the "townsfolk are gathering" copy would be nonsense.
+        if (flag.getVillagerHandle().size() == 0) {
+            return "message.questown.relocation.shutdown_started_no_villagers";
+        }
+        return "message.questown.relocation.shutdown_started";
     }
 }

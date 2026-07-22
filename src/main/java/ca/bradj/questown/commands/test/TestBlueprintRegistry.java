@@ -344,23 +344,16 @@ public class TestBlueprintRegistry {
             output.msg("Expected DORMANT after shutdown, got " + phaseOf(level, flagPos));
             return false;
         }
-        // Scope to deeds referencing THIS flag — a stale deed from an earlier scenario may linger in
-        // the shared arena, and in real play multiple towns' deeds can coexist. Matching by the full
-        // reference (town UUID + pos + dimension) also verifies the deed's NBT round-trips.
-        List<ItemEntity> mine = deedsForFlag(level, flagPos, town);
-        if (mine.isEmpty()) {
-            output.msg("No deed referencing this flag was dropped on shutdown completion ("
-                    + findDeeds(level, flagPos).size() + " unrelated deed(s) nearby)");
+        // The deed is no longer dropped as an item; it hovers over the flag and is collected on
+        // interaction (ADR-0009). Assert it became available on shutdown completion.
+        if (!town.isDeedAvailable()) {
+            output.msg("No deed became available on the flag after shutdown completion");
             return false;
         }
-        output.msg("Deed dropped referencing this flag (reference round-trips)");
-        mine.forEach(e -> e.remove(Entity.RemovalReason.DISCARDED));
-        if (!deedsForFlag(level, flagPos, town).isEmpty()) {
-            output.msg("This flag's deeds not cleared before re-issue");
-            return false;
-        }
-        if (!town.reissueDeed() || deedsForFlag(level, flagPos, town).isEmpty()) {
-            output.msg("Re-issue did not produce a new deed for this flag");
+        output.msg("Deed available on the flag (hover + collect-on-interact)");
+        // Re-issue (loss-protection) must keep a deed available while DORMANT.
+        if (!town.reissueDeed() || !town.isDeedAvailable()) {
+            output.msg("Re-issue did not keep a deed available for this flag");
             return false;
         }
         boolean woke = town.wakeInPlace();
@@ -368,6 +361,12 @@ public class TestBlueprintRegistry {
         // Roster re-spawn is queued (SpawnVisitorReward, same path the harness uses elsewhere) and
         // completes on later ticks, so we assert the synchronous wake outcome: ACTIVE again.
         output.msg("wakeInPlace=" + woke + ", phase now=" + after);
+        // Waking must retract the waiting deed, or a live town keeps handing out references to itself
+        // and the deed branch shadows the flag menu forever.
+        if (town.isDeedAvailable()) {
+            output.msg("Deed still available on the flag after waking the town in place");
+            return false;
+        }
         return woke && after == FlagPhase.ACTIVE;
     }
 
