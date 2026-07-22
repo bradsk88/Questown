@@ -52,6 +52,8 @@ public class Questown {
 
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
+        // Dev-only: lets an out-of-game operator push chat to the player during play-tests.
+        MinecraftForge.EVENT_BUS.register(new ca.bradj.questown.core.AgentMessageBridge());
 
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
 
