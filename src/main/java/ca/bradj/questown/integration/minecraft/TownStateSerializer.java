@@ -66,6 +66,9 @@ public class TownStateSerializer {
             vTag.put("journal_items", journalItems);
             vTag.putUUID("UUID", e.uuid);
             vTag.putString("job", ServerJobsRegistry.getStringValue(e.journal.jobId()));
+            CompoundTag profTag = new CompoundTag();
+            e.getProficiencies().forEach(profTag::putFloat);
+            vTag.put("proficiencies", profTag);
             villagers.add(vTag);
         }
         tag.put("villagers", villagers);
@@ -145,10 +148,23 @@ public class TownStateSerializer {
             b.add(new TownState.VillagerData<>(
                     x, y, z,
                     journal,
-                    uuid
+                    uuid,
+                    loadProficiencies(vcTag)
             ));
         }
 
+        return b.build();
+    }
+
+    private static ImmutableMap<String, Float> loadProficiencies(CompoundTag vcTag) {
+        if (!vcTag.contains("proficiencies")) {
+            return ImmutableMap.of();
+        }
+        CompoundTag profTag = vcTag.getCompound("proficiencies");
+        ImmutableMap.Builder<String, Float> b = ImmutableMap.builder();
+        for (String key : profTag.getAllKeys()) {
+            b.put(key, profTag.getFloat(key));
+        }
         return b.build();
     }
 

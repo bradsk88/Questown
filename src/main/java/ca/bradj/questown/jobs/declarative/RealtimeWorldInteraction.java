@@ -109,7 +109,32 @@ public class RealtimeWorldInteraction extends
 
     @Override
     protected int getWorkSpeedOf10(MCExtra mcExtra) {
-        return Math.max(mcExtra.town().getVillagerHandle().getWorkSpeed(mcExtra.entity().getUUID()), 1);
+        java.util.UUID uuid = mcExtra.entity().getUUID();
+        int base = mcExtra.town().getVillagerHandle().getWorkSpeed(uuid);
+        float mult = proficiencyMultiplier(
+                ca.bradj.questown.jobs.ServerJobsRegistry.getProficiencyId(getJobId()),
+                id -> mcExtra.town().getVillagerHandle().getProficiency(uuid, id)
+        );
+        return Math.max(Math.round(base * mult), 1);
+    }
+
+    /**
+     * The work-speed multiplier for the current job's proficiency-id (1× if the job declares none).
+     * Both paths fold this into their {@code of-10} speed at {@code getWorkSpeedOf10} so effective
+     * production rate stays warp/realtime-symmetric (ADR-0010).
+     */
+    static float proficiencyMultiplier(
+            @Nullable String proficiencyId,
+            Function<String, Float> levelForId
+    ) {
+        if (proficiencyId == null) {
+            return 1f;
+        }
+        return ca.bradj.questown.jobs.Proficiency.multiplierFor(
+                levelForId.apply(proficiencyId),
+                ca.bradj.questown.core.Config.PROFICIENCY_MIN_MULTIPLIER.get().floatValue(),
+                ca.bradj.questown.core.Config.PROFICIENCY_MAX_MULTIPLIER.get().floatValue()
+        );
     }
 
     @Override
@@ -118,6 +143,28 @@ public class RealtimeWorldInteraction extends
             Integer timeToAugment
     ) {
         return mcExtra.town().getVillagerHandle().getAffectedTime(mcExtra.entity().getUUID(), timeToAugment);
+    }
+
+    @Override
+    protected Boolean onWorkActionCompleted(
+            MCExtra mcExtra,
+            Boolean town
+    ) {
+        String profId = ca.bradj.questown.jobs.ServerJobsRegistry.getProficiencyId(getJobId());
+        if (profId == null) {
+            return town;
+        }
+        java.util.UUID uuid = mcExtra.entity().getUUID();
+        var handle = mcExtra.town().getVillagerHandle();
+        Map<String, Float> leveled = ca.bradj.questown.jobs.Proficiency.levelUp(
+                handle.getProficiencies(uuid),
+                profId,
+                ca.bradj.questown.core.Config.PROFICIENCY_GAIN_PER_TICK.get().floatValue(),
+                ca.bradj.questown.core.Config.PROFICIENCY_DECAY_PER_TICK.get().floatValue(),
+                interval
+        );
+        handle.setProficiencies(uuid, leveled);
+        return town;
     }
 
     @Override

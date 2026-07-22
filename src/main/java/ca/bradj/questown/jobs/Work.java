@@ -41,6 +41,7 @@ public class Work {
     private Overrides overrides;
     private boolean hasNoOutput;
     private @Nullable SlotPrecondition slotPrecondition;
+    private @Nullable String proficiencyId;
 
     public Work(
             JobID id,
@@ -83,8 +84,22 @@ public class Work {
         return specialGlobalRules;
     }
 
+    /**
+     * The job definition's proficiency-id (a free-form string; multiple jobs may
+     * share one). Null means proficiency does not apply to this job — a flat 1×
+     * work-speed multiplier and no leveling. See ADR-0010.
+     */
+    public @Nullable String getProficiencyId() {
+        return proficiencyId;
+    }
+
+    public Work withProficiencyId(@Nullable String proficiencyId) {
+        this.proficiencyId = proficiencyId;
+        return this;
+    }
+
     public Work withPriority(int priority) {
-        return new Work(
+        Work work = new Work(
                 id,
                 parentID,
                 icon,
@@ -102,12 +117,14 @@ public class Work {
                 hasNoOutput,
                 specialGlobalRules
         );
+        work.proficiencyId = proficiencyId;
+        return work;
     }
 
     public Work withNeeds(
             Function<List<MCHeldItem>, Collection<Ingredient>> needz
     ) {
-        return new Work(
+        Work work = new Work(
                 id,
                 parentID,
                 icon,
@@ -125,6 +142,8 @@ public class Work {
                 hasNoOutput,
                 specialGlobalRules
         );
+        work.proficiencyId = proficiencyId;
+        return work;
     }
 
     public @Nullable ResourceLocation applyStatusTextureOverride(IStatus<?> status) {
@@ -157,6 +176,7 @@ public class Work {
                 specialGlobalRules
         );
         work.overrides = overrides;
+        work.proficiencyId = proficiencyId;
         return work;
     }
 
@@ -168,6 +188,7 @@ public class Work {
         );
         work.overrides = this.overrides;
         work.slotPrecondition = sp;
+        work.proficiencyId = proficiencyId;
         return work;
     }
 

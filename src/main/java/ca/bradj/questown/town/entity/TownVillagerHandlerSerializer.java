@@ -31,6 +31,7 @@ public class TownVillagerHandlerSerializer {
     private static final String NBT_DURATION = "duration";
     private static final String NBT_DAMAGE = "damage";
     private static final String NBT_PENDING_JOB_CHANGES = "pending_job_changes";
+    private static final String NBT_PROFICIENCIES = "proficiencies";
 
     public void deserialize(
             CompoundTag compound,
@@ -81,8 +82,20 @@ public class TownVillagerHandlerSerializer {
         ImmutableMap<UUID, Integer> experience = deserializeMap(compound, NBT_EXP, simpleInt);
         ImmutableMap<UUID, Integer> level = deserializeMap(compound, NBT_LEVELS, simpleInt);
         ImmutableMap<VillagerUUID, Boolean> pending = deserializeVMap(compound, NBT_PENDING_JOB_CHANGES, simpleBool);
+        ImmutableMap<UUID, ImmutableMap<String, Float>> proficiencies = deserializeMap(
+                compound, NBT_PROFICIENCIES, t -> {
+                    CompoundTag pt = ((CompoundTag) t).getCompound(NBT_PROFICIENCIES);
+                    ImmutableMap.Builder<String, Float> b2 = ImmutableMap.builder();
+                    for (String key : pt.getAllKeys()) {
+                        b2.put(key, pt.getFloat(key));
+                    }
+                    return b2.build();
+                }
+        );
 
-        villagerHandle.initialize(fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending);
+        villagerHandle.initialize(
+                fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending, proficiencies
+        );
     }
 
     private <X> ImmutableMap<UUID, X> deserializeMap(
@@ -179,6 +192,13 @@ public class TownVillagerHandlerSerializer {
         };
         serializeMap(compound, NBT_JOBS_KNOWN_TO_EXIST, villagerHandle.getJobsKnownToExist(), bc);
         serializeVMap(compound, NBT_PENDING_JOB_CHANGES, villagerHandle.getJobChangesPending(), simpleBool);
+        serializeMap(
+                compound, NBT_PROFICIENCIES, villagerHandle.getAllProficiencies(), (t, m) -> {
+                    CompoundTag pt = new CompoundTag();
+                    m.forEach(pt::putFloat);
+                    t.put(NBT_PROFICIENCIES, pt);
+                }
+        );
         return compound;
     }
 

@@ -153,6 +153,14 @@ public abstract class AbstractWorldInteraction<
             protected int getWorkSpeedOf10(EXTRA extra) {
                 return self.getWorkSpeedOf10(extra);
             }
+
+            @Override
+            protected TOWN onWorkActionCompleted(
+                    EXTRA extra,
+                    TOWN town
+            ) {
+                return self.onWorkActionCompleted(extra, town);
+            }
         };
         this.claimSpots = claimSpots;
     }
@@ -287,6 +295,21 @@ public abstract class AbstractWorldInteraction<
             return ts;
         };
         return reset;
+    }
+
+    protected JobID getJobId() {
+        return jobId;
+    }
+
+    /**
+     * Called once per completed work action (see {@link AbstractWorkWI#onWorkActionCompleted}).
+     * The proficiency-leveling seam; default passes {@code town} through unchanged.
+     */
+    protected TOWN onWorkActionCompleted(
+            EXTRA extra,
+            TOWN town
+    ) {
+        return town;
     }
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);

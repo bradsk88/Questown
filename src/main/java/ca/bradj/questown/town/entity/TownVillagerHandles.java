@@ -107,6 +107,36 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public float getProficiency(
+                    UUID uuid,
+                    String proficiencyId
+            ) {
+                return villagerHandle.getProficiency(uuid, proficiencyId);
+            }
+
+            @Override
+            public ImmutableMap<String, Float> getProficiencies(UUID uuid) {
+                return villagerHandle.getProficiencies(uuid);
+            }
+
+            @Override
+            public void setProficiency(
+                    UUID uuid,
+                    String proficiencyId,
+                    float level
+            ) {
+                villagerHandle.setProficiency(uuid, proficiencyId, level);
+            }
+
+            @Override
+            public void setProficiencies(
+                    UUID uuid,
+                    java.util.Map<String, Float> levels
+            ) {
+                villagerHandle.setProficiencies(uuid, levels);
+            }
+
+            @Override
             public VillagerStatsData getStats(UUID uuid) {
                 return villagerHandle.delegate.getStats(uuid);
             }

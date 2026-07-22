@@ -391,6 +391,34 @@ public class ServerJobsRegistry {
         return ImmutableSet.copyOf(Works.ids().stream().filter(v -> !isSeekingWork(v)).collect(Collectors.toSet()));
     }
 
+    /**
+     * The proficiency-id declared by the job {@code jobID}, or null if it declares none (flat 1×
+     * work speed, no leveling). Resolved from the same job definition on both the realtime and
+     * warp paths so effective speed stays symmetric. See ADR-0010.
+     */
+    public static @Nullable String getProficiencyId(JobID jobID) {
+        Work work = getWork(jobID, true);
+        if (work == null) {
+            return null;
+        }
+        return work.getProficiencyId();
+    }
+
+    /**
+     * The union of proficiency-ids declared by any registered job — the finite pool a townie's
+     * proficiency map is drawn from and bounded by. See ADR-0010.
+     */
+    public static ImmutableSet<String> getAllDeclaredProficiencyIds() {
+        ImmutableSet.Builder<String> b = ImmutableSet.builder();
+        for (Supplier<Work> value : Works.values()) {
+            String id = value.get().getProficiencyId();
+            if (id != null) {
+                b.add(id);
+            }
+        }
+        return b.build();
+    }
+
     public static ResourceLocation getRoomForJobRootId(
             ServerLevel rand,
             String rootId

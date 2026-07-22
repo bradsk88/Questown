@@ -109,6 +109,20 @@ _Avoid_: equipment, implement.
 **Tool-encoded consumable**:
 A consumable held as a **tool** so it's grabbed-once/rendered and survives warp supply collection, then spent — by one of three mechanisms: durability (real tools), the **tool→ingredient idiom** (cook beef; the explorer's paper, held at NEED_PAPER then consumed at USE_PAPER), or a dedicated **special rule** at extract (`HUNGER_FILL` eats diner food). Prefer the idiom over a special rule when the job has a state to hang the ingredient on — a special rule is the fallback for shapes that don't (e.g. a leaver whose only post-pickup phase is the extract itself, if it has no insert state).
 
+### Proficiency
+
+**Proficiency**:
+A per-**townie**, per-**proficiency-id** multiplier on **effective work speed** — the rate at which a townie completes a job's work, applied on **both** the **realtime path** (into `SimpleVillagerHandle.getWorkSpeed(uuid)`) and the **warp path** (into the `timeFactor` / `WorkEffects.calculateTimeFactor`). "Affects work speed" means effective production rate, which **must be path-symmetric** (a proficiency that only hooked realtime would evaporate offline — the classic warp/realtime parity bug). A townie holds an **open-ended** map `proficiency-id → level ∈ [0,1]`, **seeded with 3 random** entries at spawn and growing as they work (RimWorld-style): working a job adds to its proficiency and decays all others. Only proficiency-ids that some **job definition** declares are ever reachable, which bounds the map naturally.
+_Avoid_: "skill" (too generic), "experience/XP" (implies monotonic gain — proficiency decays), treating the 3 seeds as a closed set.
+
+**Proficiency leveling**:
+How a townie's proficiency levels change. Fires **once per completed work action** (the `decrWork`/state-advance seam in `AbstractWorkWI`, co-located with where `getWorkSpeedOf10` is consumed) — **not** per game tick. For an action of duration `D` (`cooldown_ticks` / `WorkWorldInteractions.actionDuration`) on a job with proficiency-id `P`: `level[P] += 0.001 × D` (clamped ≤ 1, creating `P` at 0 if absent); every **other** held proficiency decays `−= 0.0001 × D` (clamped ≥ 0) — RimWorld-style familiarity loss. Must credit the **same number of actions on the warp path** as realtime (warp completes many actions per visit — crediting "once per important tick" would diverge offline skill from live; this is the recurring parity footgun). The **work-action seam is the boundary**: **timer jobs** (gatherer/baker, which advance on **timed states**, not work actions) and jobs declaring **no proficiency-id** never reach the hook, so they get flat 1× speed and no leveling with no job-type branching (this is why #269 lists timer jobs as out of scope).
+_Avoid_: firing per tick; leveling in warp once-per-important-tick instead of per-action.
+
+**Proficiency ID**:
+A free-form string field on a **job definition**; **multiple jobs may share one** (a shared id means shared skill across those jobs). A job that declares **no** proficiency-id yields a flat **1× multiplier** for every townie (proficiency simply doesn't apply). Distinct from a **job root** and a **JobID** — proficiency-id is an orthogonal skill axis, not an identity or cycling-pool key.
+_Avoid_: conflating with **job root** / **JobID**.
+
 ### Where work happens
 
 These five name "where a townie works" along an **abstraction axis** — coarsest to finest — plus one outlier (`work location`) that is the *definition* generating the others, not a place.

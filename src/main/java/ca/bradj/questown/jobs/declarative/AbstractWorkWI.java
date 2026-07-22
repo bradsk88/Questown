@@ -65,15 +65,32 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         }
 
 
+        boolean actionCompleted = false;
         if (!bs.hasWorkLeft()) {
             this.preStateChangeCallback.accept(extra, new WorkSpot<>(bp, curState, 0, bp));
             bs = bs.incrProcessing().setWorkLeft(nextStepWork).setCount(0);
+            actionCompleted = true;
         }
-        if (nextStepTime <= 0) {
-            return setJobBlockState(extra, bp, bs);
-        } else {
-            return setJobBlockStateWithTimer(extra, bp, bs, nextStepTime);
+        TOWN result = nextStepTime <= 0
+                ? setJobBlockState(extra, bp, bs)
+                : setJobBlockStateWithTimer(extra, bp, bs, nextStepTime);
+        if (actionCompleted) {
+            return onWorkActionCompleted(extra, result);
         }
+        return result;
+    }
+
+    /**
+     * Fires once per <em>completed</em> work action (workLeft exhausted → the block advances
+     * a processing state), on both the realtime and warp paths. This is the proficiency-leveling
+     * seam (ADR-0010): timer jobs and no-proficiency jobs never reach it. Implementations may
+     * return an updated {@code town}. Default: pass through.
+     */
+    protected TOWN onWorkActionCompleted(
+            EXTRA extra,
+            TOWN town
+    ) {
+        return town;
     }
 
     protected abstract TOWN setJobBlockStateWithTimer(

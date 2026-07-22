@@ -64,6 +64,39 @@ public interface VillagerHolder {
 
     int getWorkSpeed(UUID uuid);
 
+    /**
+     * The townie's current proficiency level ∈ [0,1] for {@code proficiencyId}, or 0 if
+     * they hold no proficiency in it. See ADR-0010.
+     */
+    float getProficiency(
+            UUID uuid,
+            String proficiencyId
+    );
+
+    /**
+     * The townie's full proficiency map (proficiency-id → level). Read seam for autotests
+     * and the warp bridge.
+     */
+    ImmutableMap<String, Float> getProficiencies(UUID uuid);
+
+    /**
+     * Force a single proficiency level (test seam + realtime leveling). Creates the map /
+     * entry if absent.
+     */
+    void setProficiency(
+            UUID uuid,
+            String proficiencyId,
+            float level
+    );
+
+    /**
+     * Replace the townie's whole proficiency map (warp-load bridge).
+     */
+    void setProficiencies(
+            UUID uuid,
+            java.util.Map<String, Float> levels
+    );
+
     VillagerStatsData getStats(UUID uuid);
 
     Collection<JobID> getJobs();

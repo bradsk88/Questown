@@ -103,7 +103,8 @@ public class TownFlagState {
                 Vec3 pos = entity.position();
                 ImmutableSnapshot<MCHeldItem, ?> snapshot = ((VisitorMobEntity) entity).getJobJournalSnapshot();
                 TownState.VillagerData<MCHeldItem> data = new TownState.VillagerData<MCHeldItem>(
-                        pos.x, pos.y, pos.z, snapshot, entity.getUUID()
+                        pos.x, pos.y, pos.z, snapshot, entity.getUUID(),
+                        parent.getVillagerHandle().getProficiencies(entity.getUUID())
                 );
                 vB.add(data);
             }
@@ -390,6 +391,11 @@ public class TownFlagState {
                 );
                 sl.addFreshEntity(recovered);
                 e.getVillagerHandle().register(recovered);
+                // Restore persisted proficiencies over any seed the register() call may have applied
+                // (loaded/relocated townies keep theirs — ADR-0010).
+                if (!v.getProficiencies().isEmpty()) {
+                    e.getVillagerHandle().setProficiencies(v.uuid, v.getProficiencies());
+                }
             }
             e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Loaded villager state from NBT: {}", villagers);
         }

@@ -401,6 +401,11 @@ public class TestBlueprintRegistry {
         FarFixturePolicy policy = FarFixturePolicy.BRING_ALL;
         long tickRadiusSq = Config.TOWN_TICK_RADIUS.get();
         int beyondCount;
+        // Job proficiency (ADR-0010): a known level stamped on one townie pre-move, asserted to
+        // survive the whole-blob copy (it rides NBT_TOWN_STATE, no bespoke relocation code).
+        UUID profVillager;
+        float expectedProf;
+        static final String PROF_ID = "smithing";
     }
 
     private static boolean relocatePostSpawn(
@@ -429,6 +434,14 @@ public class TestBlueprintRegistry {
         // locked deterministically by HelperChickenBeatRelocationTest.
         town.setChickenBeatState(ca.bradj.questown.mobs.helperchicken.ChickenBeatState.WAITING_FOR_CHEST);
         town.setChickenStructureRotation(net.minecraft.world.level.block.Rotation.CLOCKWISE_90);
+        // Stamp a known proficiency on the first townie so the assertion can prove it rode the
+        // whole-blob copy (ADR-0010 Phase 5). Set before writeTownData so it lands in NBT_TOWN_STATE.
+        java.util.Collection<net.minecraft.world.entity.LivingEntity> ents = town.getVillagerHandle().entities();
+        if (!ents.isEmpty()) {
+            cap.profVillager = ents.iterator().next().getUUID();
+            cap.expectedProf = 0.42f;
+            town.getVillagerHandle().setProficiency(cap.profVillager, RelocateCapture.PROF_ID, cap.expectedProf);
+        }
         town.writeTownData(cap.preData);
         output.msg("pre-relocation: uuid=" + cap.originalUuid + " oldFlagY=" + cap.oldFlagY
                 + " fixtures=" + fixtures.size() + " beyond=" + cap.beyondCount
@@ -509,6 +522,15 @@ public class TestBlueprintRegistry {
         for (String key : CARRIED_DATA_KEYS) {
             boolean same = Objects.equals(cap.preData.get(key), postData.get(key));
             ok &= report(output, "8 data-carried[" + key + "]", same);
+        }
+
+        // (9) job proficiency rode the whole-blob copy: the stamped townie keeps its level (ADR-0010)
+        if (cap.profVillager != null) {
+            float got = newBe.getVillagerHandle().getProficiency(cap.profVillager, RelocateCapture.PROF_ID);
+            output.msg("proficiency: got=" + got + " expected=" + cap.expectedProf);
+            ok &= report(output, "9 proficiency-carried", Math.abs(got - cap.expectedProf) < 1e-4f);
+        } else {
+            ok &= report(output, "9 proficiency-carried (NO ROSTER — cannot verify)", false);
         }
 
         return ok;

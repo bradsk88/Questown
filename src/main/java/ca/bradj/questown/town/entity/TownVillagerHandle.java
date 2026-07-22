@@ -43,6 +43,8 @@ public final class TownVillagerHandle {
     private final TownVillagerSleepModule sleep = new TownVillagerSleepModule();
     private final HealingModule<VisitorMobEntity> healing = new TownVillagerHealingModule();
     private final TownVillagerMoods moods = new TownVillagerMoods();
+    private final ca.bradj.questown.town.TownVillagerProficiencies proficiencies =
+            new ca.bradj.questown.town.TownVillagerProficiencies();
     final TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
 
     TownVillagerHandle() {
@@ -237,7 +239,8 @@ public final class TownVillagerHandle {
             Map<UUID, ? extends Map<JobID, ? extends ImmutableCollection<JobID>>> jobsKnownToExist,
             ImmutableMap<UUID, Integer> experience,
             ImmutableMap<UUID, Integer> level,
-            ImmutableMap<VillagerUUID, Boolean> jobChangesPending
+            ImmutableMap<VillagerUUID, Boolean> jobChangesPending,
+            Map<UUID, ? extends Map<String, Float>> proficiencies
     ) {
         this.learning.initialize(unlockedJobs, jobsKnownToExist);
         delegate.initialize(
@@ -249,6 +252,7 @@ public final class TownVillagerHandle {
                 Config.HUNGER_ENABLED.get()
         );
         moods.initialize(moodEffects);
+        this.proficiencies.initialize(proficiencies);
     }
 
     void recallVillagers() {
@@ -274,6 +278,40 @@ public final class TownVillagerHandle {
 
     ImmutableMap<UUID, ImmutableList<Effect>> getMoodEffects() {
         return ImmutableMap.copyOf(moods.getEffects());
+    }
+
+    float getProficiency(
+            UUID uuid,
+            String proficiencyId
+    ) {
+        return proficiencies.getLevel(uuid, proficiencyId);
+    }
+
+    ImmutableMap<String, Float> getProficiencies(UUID uuid) {
+        return proficiencies.getAll(uuid);
+    }
+
+    ImmutableMap<UUID, ImmutableMap<String, Float>> getAllProficiencies() {
+        return proficiencies.getAll();
+    }
+
+    boolean isProficiencySeeded(UUID uuid) {
+        return proficiencies.isSeeded(uuid);
+    }
+
+    void setProficiency(
+            UUID uuid,
+            String proficiencyId,
+            float level
+    ) {
+        proficiencies.setLevel(uuid, proficiencyId, level);
+    }
+
+    void setProficiencies(
+            UUID uuid,
+            Map<String, Float> levels
+    ) {
+        proficiencies.setAll(uuid, levels);
     }
 
     ImmutableMap<UUID, Integer> getDamage() {
@@ -355,11 +393,30 @@ public final class TownVillagerHandle {
     void register(VisitorMobEntity visitorMobEntity) {
         delegate.register(visitorMobEntity);
 
+        seedProficiencies(visitorMobEntity.getUUID());
+
         ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(visitorMobEntity.getJobId());
         for (JobID jobID : defaultWork) {
             learning.unlockJob(visitorMobEntity.getUUID(), jobID);
         }
         learning.requestKnowledge(visitorMobEntity.getUUID(), defaultWork);
+    }
+
+    /**
+     * Seed a freshly-spawned townie with random proficiencies, unless they already carry a
+     * persisted map (loaded/relocated townies keep theirs — the wake path overwrites this seed
+     * with their saved levels). See ADR-0010.
+     */
+    private void seedProficiencies(UUID uuid) {
+        if (proficiencies.isSeeded(uuid)) {
+            return;
+        }
+        Map<String, Float> seed = ca.bradj.questown.jobs.Proficiency.seed(
+                uuid,
+                ServerJobsRegistry.getAllDeclaredProficiencyIds(),
+                Config.PROFICIENCY_SEED_COUNT.get()
+        );
+        proficiencies.setAll(uuid, seed);
     }
 
     void addHungryListener(Consumer<VisitorMobEntity> o) {
