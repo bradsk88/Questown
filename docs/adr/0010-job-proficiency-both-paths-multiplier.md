@@ -96,7 +96,16 @@ and **visitor (up-to-10) seeding** are deferred to their own work (#268).
 
 - Effective work speed is path-symmetric; the **realtime-vs-warp leveling-parity
   autotest** is the feature's acceptance gate — if it's red, the feature is wrong
-  by definition.
+  by definition. Built as `farmer/harvest_wheat [proficiency_parity]`; it caught a
+  real defect on its first green-capable run (below).
+- **The multiplier must be clamped to the `decrWork` 1–10 contract.** `getWorkSpeedOf10`
+  feeds `State.decrWork`, which throws outside that band. Mood alone respects it, but
+  scaling by a multiplier above 1 does not: a well-fed townie past level ~0.33 computes
+  11+ and throws *inside the warp loop*, whose handler downgrades the crash to
+  "continuing as if nothing happened in town while player was away" — silent offline
+  production loss, worst for the player's most skilled townies. Consequence:
+  the upper half of the configured band is partly unreachable at high mood, since the
+  product saturates at the ceiling.
 - Proficiency levels bake into save NBT (per-uuid holder + `VillagerData`), so a
   later change to the leveling semantics or storage shape needs a migration —
   hence this record.
@@ -109,3 +118,25 @@ and **visitor (up-to-10) seeding** are deferred to their own work (#268).
 - Visitors (#268) will extend seeding (up to 10) and are the payoff for the
   open-ended model — a visitor can arrive already expert at something no townie
   has touched.
+
+## Amendment (2026-07-26): re-center the band so mastery has headroom
+
+The Consequences above understate a balance problem: proficiency and **mood**
+compete for the same 1–10 `decrWork` band. Base speed is `(int)(mood × 10)`, so at
+the default neutral mood (75 ⇒ base 7) the proficiency band is a fair ~4–10, but at
+**max mood (base 10) the ceiling clamps every bit of upside away** — only the 0.5×
+floor remains reachable. The reward therefore *shrinks as mood rises and vanishes
+at the top*: feeding and housing a townie well erases the skill differentiation
+that #269 exists to create.
+
+Decision: treat "mastery has no upside at high mood" as a **bug, not a deliberate
+ceiling**, and re-center so that today's speed sits near the **middle** of the
+achievable range rather than at its maximum. Without this, #269 cannot deliver its
+stated motivation ("gives each townie a distinct contribution") for exactly the
+towns the player has invested the most in.
+
+Deliberately not specified here: whether to lower the well-fed base or widen the
+`decrWork` band. Both have wide blast radius on existing balance and want their own
+measurement pass. What is settled is that **no job JSON should declare a
+`proficiency_id` until the band is re-centered** — until then the feature can only
+subtract.
