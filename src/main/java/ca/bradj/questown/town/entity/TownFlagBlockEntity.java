@@ -882,6 +882,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         workHandle.openMenuRequested(sender, skipStraightToAdd);
     }
 
+    /**
+     * Test seam: publish the live town state to the tile now, the way the ticker does when the town
+     * changes. {@link #warpTime} advances the state stored on the tile, <em>not</em> the live
+     * handles, so a test that mutates a villager and then warps must publish first or the warp runs
+     * against stale data and silently measures the wrong thing.
+     */
+    public void publishStateToTileForTest() {
+        CompoundTag tag = Compat.getBlockStoredTagData(this);
+        writeTownData(tag);
+        state.putStateOnTile(tag, getUUID(), getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TOWN_STATE_CHANGES));
+    }
+
     public MCTownState warpTime(int ticks) {
         return state.warp(this, Compat.getBlockStoredTagData(this), getServerLevel(), ticks);
     }

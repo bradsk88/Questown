@@ -112,10 +112,29 @@ public class RealtimeWorldInteraction extends
         java.util.UUID uuid = mcExtra.entity().getUUID();
         int base = mcExtra.town().getVillagerHandle().getWorkSpeed(uuid);
         float mult = proficiencyMultiplier(
-                ca.bradj.questown.jobs.ServerJobsRegistry.getProficiencyId(getJobId()),
+                getProficiencyId(),
                 id -> mcExtra.town().getVillagerHandle().getProficiency(uuid, id)
         );
-        return Math.max(Math.round(base * mult), 1);
+        return applyProficiencyToWorkSpeed(base, mult);
+    }
+
+    /**
+     * Scale an of-10 work speed by a proficiency multiplier, keeping the result inside the 1–10
+     * band {@link ca.bradj.questown.town.workstatus.State#decrWork} accepts. Without the ceiling a
+     * townie who is both well-fed (base 10) and better than break-even at their job (multiplier
+     * above 1) computes a speed of 11+ and throws, taking down the whole work loop — the warp
+     * loop's exception handler turns that into a silently lost visit.
+     */
+    static int applyProficiencyToWorkSpeed(
+            int baseOf10,
+            float multiplier
+    ) {
+        return Math.max(1, Math.min(10, Math.round(baseOf10 * multiplier)));
+    }
+
+    @Override
+    protected @Nullable String getProficiencyId() {
+        return ca.bradj.questown.jobs.ServerJobsRegistry.getProficiencyId(getJobId());
     }
 
     /**
@@ -150,7 +169,7 @@ public class RealtimeWorldInteraction extends
             MCExtra mcExtra,
             Boolean town
     ) {
-        String profId = ca.bradj.questown.jobs.ServerJobsRegistry.getProficiencyId(getJobId());
+        String profId = getProficiencyId();
         if (profId == null) {
             return town;
         }

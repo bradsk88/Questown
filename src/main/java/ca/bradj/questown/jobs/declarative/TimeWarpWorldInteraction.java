@@ -113,10 +113,15 @@ public class TimeWarpWorldInteraction extends
         Collection<Effect> effects = villager.getEffectsAndClearExpired(Util.getTick(inputs.level()));
         int base = TownVillagerMoods.compute(effects) / 10;
         float mult = RealtimeWorldInteraction.proficiencyMultiplier(
-                ServerJobsRegistry.getProficiencyId(getJobId()),
+                getProficiencyId(),
                 villager::getProficiencyLevel
         );
-        return Math.max(Math.round(base * mult), 1);
+        return RealtimeWorldInteraction.applyProficiencyToWorkSpeed(base, mult);
+    }
+
+    @Override
+    protected @Nullable String getProficiencyId() {
+        return ServerJobsRegistry.getProficiencyId(getJobId());
     }
 
     @Override
@@ -132,7 +137,7 @@ public class TimeWarpWorldInteraction extends
             Inputs inputs,
             MCTownState town
     ) {
-        String profId = ServerJobsRegistry.getProficiencyId(getJobId());
+        String profId = getProficiencyId();
         if (profId == null || town == null) {
             return town;
         }

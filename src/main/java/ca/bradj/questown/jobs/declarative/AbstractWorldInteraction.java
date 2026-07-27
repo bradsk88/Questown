@@ -159,6 +159,7 @@ public abstract class AbstractWorldInteraction<
                     EXTRA extra,
                     TOWN town
             ) {
+                countProficiencyBearingActionForTest(self.getProficiencyId());
                 return self.onWorkActionCompleted(extra, town);
             }
         };
@@ -299,6 +300,44 @@ public abstract class AbstractWorldInteraction<
 
     protected JobID getJobId() {
         return jobId;
+    }
+
+    /**
+     * Completed work actions of proficiency-bearing jobs since the last reset, counted where the
+     * realtime and warp paths both funnel through. The proficiency-parity autotest (ADR-0010) needs
+     * a measure of "how much work happened" that is independent of the proficiency code under test:
+     * produced items can't serve, since a townie's held stack and a chest stack don't count alike.
+     * Jobs declaring no proficiency-id (the work seeker, every shipped job today) are excluded, or
+     * their actions would inflate the divisor and understate the per-action gain.
+     * <p>
+     * Process-global and never reset outside tests: every town and every villager increments the
+     * same counter, so only a single-worker scenario can read it as "the work under test".
+     */
+    private static long proficiencyBearingActionsForTest = 0;
+
+    private static void countProficiencyBearingActionForTest(@Nullable String proficiencyId) {
+        if (proficiencyId == null) {
+            return;
+        }
+        proficiencyBearingActionsForTest++;
+    }
+
+    /**
+     * The proficiency-id of this interaction's job, or null when it declares none. Resolved by the
+     * two real paths through {@code ServerJobsRegistry}; the default keeps JUnit's world-interaction
+     * doubles away from the server registry, which they never initialize. Real paths must
+     * override — the null default means a new subclass is silently inert, with no failure.
+     */
+    protected @Nullable String getProficiencyId() {
+        return null;
+    }
+
+    public static long getProficiencyBearingActionsForTest() {
+        return proficiencyBearingActionsForTest;
+    }
+
+    public static void resetProficiencyBearingActionsForTest() {
+        proficiencyBearingActionsForTest = 0;
     }
 
     /**

@@ -183,7 +183,7 @@ public class Config {
                 "The work-speed multiplier applied to a townie with proficiency level 0 in their current job's proficiency-id"
         ).defineInRange("ProficiencyMinMultiplier", 0.5, 0.0, 100.0);
         PROFICIENCY_MAX_MULTIPLIER = BUILDER.comment(
-                "The work-speed multiplier applied to a townie with proficiency level 1 (maxed) in their current job's proficiency-id"
+                "The work-speed multiplier applied to a townie with proficiency level 1 (maxed) in their current job's proficiency-id. NOTE: the scaled speed is clamped to 1-10 (State.decrWork's contract), so values above 1 have no effect on a well-fed townie."
         ).defineInRange("ProficiencyMaxMultiplier", 2.0, 0.0, 100.0);
         PROFICIENCY_SEED_COUNT = BUILDER.comment(
                 "The number of distinct proficiencies a freshly-spawned townie is seeded with (drawn from the union of declared proficiency-ids)"

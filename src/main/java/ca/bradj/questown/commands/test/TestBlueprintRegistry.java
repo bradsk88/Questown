@@ -27,6 +27,10 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
+import ca.bradj.questown.town.TownState;
+import ca.bradj.questown.town.interfaces.VillagerHolder;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.town.entity.TownVillagerLearningHandle;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableSet;
@@ -44,6 +48,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -53,6 +58,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -157,6 +163,7 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("gatherer", "axe", "tool_durability", gathererToolDurabilityBlueprint()));
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "2_villagers", farmerTwoVillagersBlueprint()));
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "warp_then_realtime", farmerRealtimeBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "proficiency_parity", proficiencyParityBlueprint()));
         jobs.add(edgeCaseEntry("gatherer", "axe", "short_absence", gathererShortAbsenceBlueprint()));
         jobs.add(edgeCaseEntry("gatherer", "axe", "sleep_jump", gathererSleepJumpBlueprint()));
         jobs.add(edgeCaseEntry("gatherer", "axe", "absence_then_sleep", gathererAbsenceThenSleepBlueprint()));
@@ -792,6 +799,208 @@ public class TestBlueprintRegistry {
                 SpecialQuests.FARM,
                 expectation
         );
+    }
+
+    /**
+     * Proficiency leveling parity (ADR-0010, #269) — the feature's acceptance gate. The same work
+     * must move a townie's proficiency by the same amount whether it happened live or offline; a
+     * warp path that credited "once per important tick" instead of once per completed action would
+     * drift a townie's skill away from its realtime self while the player was away.
+     * <p>
+     * Runs both passes against the <em>same</em> villager: realtime first (the executor's monitored
+     * window), then an explicit warp inside the assertion. The executor's own warp pass can't be
+     * used — it kills and respawns the roster before the realtime phase, so the two halves would
+     * describe different townies with different UUIDs.
+     * <p>
+     * Farmer harvest is the vehicle because it is a single work state (`work: 10`,
+     * `cooldown_ticks: 10`) driven by {@code decrWork}, so one completed action is one harvest.
+     */
+    private static TestBlueprint proficiencyParityBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        ParityCapture cap = new ParityCapture();
+        // A second hoe. Warp scores a job's tools against the town's containers, and the base
+        // blueprint's only hoe ends up in the villager's hands — leaving warp to conclude the
+        // harvest job is unequipped and re-score onto compost, completing zero actions under test.
+        List<ItemStack> supplies = new ArrayList<>(base.supplyItems());
+        supplies.add(new ItemStack(Items.WOODEN_HOE, 1));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), supplies,
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                base.expectation(),
+                base.supplyDoorOffset(),
+                null,        // warpAmountOverride — the warp half is driven by the assertion
+                0L,          // startTimeTick — start at dawn so the realtime window is productive
+                1,           // villagerCount — one worker, so the action counter is unambiguous
+                true,        // realtimePhase
+                4800,        // realtimeTicks
+                false,       // drainHungerBeforeTest
+                true,        // skipWarp — this scenario gates on the realtime pass (see getWarpPassed)
+                null, null, null, null, null, false
+        )
+                .withPostSpawnAction((level, flagPos, town, output) -> parityPostSpawn(town, cap, output))
+                .withCustomAssertion((level, flagPos, town, output) -> assertLevelingParity(level, flagPos, town, cap, output));
+    }
+
+    /**
+     * Cross-phase holder for the parity scenario: the post-spawn action stamps the baseline, the
+     * custom assertion reads it back after the realtime window (the {@code RelocateCapture} idiom).
+     */
+    private static final class ParityCapture {
+        // Two ids so the assertion can check the neglected-proficiency decay as well as the gain.
+        static final String WORKED = "farming";
+        static final String NEGLECTED = "smithing";
+        static final JobID JOB = new JobID("farmer", "harvest_wheat");
+        // Mid-band baselines: far enough from the [0,1] clamps that a whole window of gain or
+        // decay cannot hit one, which would flatten the delta and mask a parity break.
+        static final float BASE_WORKED = 0.3f;
+        static final float BASE_NEGLECTED = 0.5f;
+        // Warp compresses a window into a handful of simulated steps (~1 per 480 ticks), so the
+        // budget has to be generous to complete a meaningful number of actions — but small enough
+        // that the gain cannot reach the level-1 clamp, which would flatten the delta and fake a
+        // mismatch. ~40 actions of headroom sits between those bounds.
+        static final int WARP_TICKS = 48000;
+
+        @Nullable UUID villager;
+    }
+
+    /**
+     * The acceptance gate of ADR-0010: per completed work action, the realtime path and the warp
+     * path must move proficiency by the same amount — gain on the worked id, decay on the others.
+     * Normalizing by completed actions (rather than comparing raw deltas) is what makes the two
+     * windows comparable without forcing them to do an identical amount of work.
+     */
+    private static boolean assertLevelingParity(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            ParityCapture cap,
+            TestOutput output
+    ) {
+        try {
+            if (cap.villager == null) {
+                return report(output, "parity (no villager was captured)", false);
+            }
+            VillagerHolder handle = town.getVillagerHandle();
+            long realtimeActions = AbstractWorldInteraction.getProficiencyBearingActionsForTest();
+            float rtGain = handle.getProficiency(cap.villager, ParityCapture.WORKED) - ParityCapture.BASE_WORKED;
+            float rtDecay = ParityCapture.BASE_NEGLECTED - handle.getProficiency(cap.villager, ParityCapture.NEGLECTED);
+            output.msg("parity realtime: actions=" + realtimeActions + " gain=" + rtGain + " decay=" + rtDecay);
+
+            // Restart the warp window from the same baseline, so both windows are measured under
+            // identical conditions and neither inherits the other's accumulated level.
+            handle.setProficiencies(cap.villager, Map.of(
+                    ParityCapture.WORKED, ParityCapture.BASE_WORKED,
+                    ParityCapture.NEGLECTED, ParityCapture.BASE_NEGLECTED
+            ));
+            AbstractWorldInteraction.resetProficiencyBearingActionsForTest();
+            // The realtime window stripped the field, and a farmer with nothing to harvest re-scores
+            // onto compost/bone_meal — different jobs, so the warp window would complete zero actions
+            // of the job under test. Regrow the crop so both windows start from the same full field.
+            int regrown = regrowHarvestableCrops(level, flagPos);
+            output.msg("parity: regrew " + regrown + " crops before the warp window");
+            // Warp advances the tile's stored state, so the reset baseline has to be published or
+            // the warp half would run against the level the realtime half left behind.
+            town.publishStateToTileForTest();
+            MCTownState warped = town.warpTime(ParityCapture.WARP_TICKS);
+            long warpActions = AbstractWorldInteraction.getProficiencyBearingActionsForTest();
+            if (warped == null) {
+                return report(output, "parity (warp produced no town state)", false);
+            }
+            float warpWorked = proficiencyIn(warped, cap.villager, ParityCapture.WORKED);
+            float warpNeglected = proficiencyIn(warped, cap.villager, ParityCapture.NEGLECTED);
+            float wpGain = warpWorked - ParityCapture.BASE_WORKED;
+            float wpDecay = ParityCapture.BASE_NEGLECTED - warpNeglected;
+            output.msg("parity warp: actions=" + warpActions + " gain=" + wpGain + " decay=" + wpDecay);
+
+            boolean ok = report(output, "parity realtime did work", realtimeActions > 0);
+            ok &= report(output, "parity warp did work", warpActions > 0);
+            if (!ok) {
+                // Zero work on either side makes every ratio below vacuously equal — the one way
+                // this gate could go green while proving nothing.
+                return false;
+            }
+            ok &= report(output, "parity worked level did not hit the clamp (shorten the window)",
+                         warpWorked < 1f && handle.getProficiency(cap.villager, ParityCapture.WORKED) <= 1f);
+            ok &= report(output, "parity neglected level did not hit the floor (shorten the window)",
+                         warpNeglected > 0f);
+
+            float rtGainPer = rtGain / realtimeActions;
+            float wpGainPer = wpGain / warpActions;
+            float rtDecayPer = rtDecay / realtimeActions;
+            float wpDecayPer = wpDecay / warpActions;
+            output.msg("parity per-action gain: realtime=" + rtGainPer + " warp=" + wpGainPer);
+            output.msg("parity per-action decay: realtime=" + rtDecayPer + " warp=" + wpDecayPer);
+            ok &= report(output, "parity gain per action matches", Math.abs(rtGainPer - wpGainPer) < 1e-4f);
+            ok &= report(output, "parity decay per action matches", Math.abs(rtDecayPer - wpDecayPer) < 1e-5f);
+            return ok;
+        } finally {
+            ServerJobsRegistry.clearProficiencyIdOverridesForTest();
+        }
+    }
+
+    /**
+     * Return every wheat block around the flag to fully grown, so a second measurement window sees
+     * the same harvestable field the first one did.
+     */
+    private static int regrowHarvestableCrops(
+            ServerLevel level,
+            BlockPos flagPos
+    ) {
+        int regrown = 0;
+        for (int x = -12; x <= 12; x++) {
+            for (int z = -12; z <= 12; z++) {
+                for (int y = -2; y <= 2; y++) {
+                    BlockPos pos = flagPos.offset(x, y, z);
+                    BlockState state = level.getBlockState(pos);
+                    if (!state.is(Blocks.WHEAT) || !state.hasProperty(CropBlock.AGE)) {
+                        continue;
+                    }
+                    if (state.getValue(CropBlock.AGE) == 7) {
+                        continue;
+                    }
+                    level.setBlock(pos, state.setValue(CropBlock.AGE, 7), Block.UPDATE_ALL);
+                    regrown++;
+                }
+            }
+        }
+        return regrown;
+    }
+
+    private static float proficiencyIn(
+            MCTownState state,
+            UUID villager,
+            String proficiencyId
+    ) {
+        for (TownState.VillagerData<MCHeldItem> v : state.villagers) {
+            if (villager.equals(v.uuid)) {
+                return v.getProficiencyLevel(proficiencyId);
+            }
+        }
+        return Float.NaN;
+    }
+
+    private static boolean parityPostSpawn(
+            TownFlagBlockEntity town,
+            ParityCapture cap,
+            TestOutput output
+    ) {
+        Collection<net.minecraft.world.entity.LivingEntity> ents = town.getVillagerHandle().entities();
+        if (ents.isEmpty()) {
+            output.msg("No villager to measure proficiency on");
+            return false;
+        }
+        cap.villager = ents.iterator().next().getUUID();
+        // Shipped job JSON declares no proficiency-id (the feature is inert), so the job under test
+        // is given one for the duration of this scenario. Cleared in the assertion's finally block.
+        ServerJobsRegistry.overrideProficiencyIdForTest(ParityCapture.JOB, ParityCapture.WORKED);
+        town.getVillagerHandle().setProficiencies(cap.villager, Map.of(
+                ParityCapture.WORKED, ParityCapture.BASE_WORKED,
+                ParityCapture.NEGLECTED, ParityCapture.BASE_NEGLECTED
+        ));
+        AbstractWorldInteraction.resetProficiencyBearingActionsForTest();
+        output.msg("parity: baseline " + ParityCapture.WORKED + "=" + ParityCapture.BASE_WORKED
+                + " " + ParityCapture.NEGLECTED + "=" + ParityCapture.BASE_NEGLECTED);
+        return true;
     }
 
     /**

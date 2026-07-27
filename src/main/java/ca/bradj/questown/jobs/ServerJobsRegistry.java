@@ -53,6 +53,8 @@ import static ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.isSeekingWor
 
 public class ServerJobsRegistry {
 
+    private static final Map<JobID, String> proficiencyIdOverrides = new HashMap<>();
+
     public static boolean isExcludedFromWarp(JobID jobID) {
         Supplier<Work> w = Works.get(jobID);
         if (w == null) return false;
@@ -397,11 +399,33 @@ public class ServerJobsRegistry {
      * warp paths so effective speed stays symmetric. See ADR-0010.
      */
     public static @Nullable String getProficiencyId(JobID jobID) {
+        String overridden = proficiencyIdOverrides.get(jobID);
+        if (overridden != null) {
+            return overridden;
+        }
         Work work = getWork(jobID, true);
         if (work == null) {
             return null;
         }
         return work.getProficiencyId();
+    }
+
+    /**
+     * Test seam: make {@code jobID} behave as if its definition declared {@code proficiencyId}.
+     * Shipped job JSON declares none yet, so this is how an autotest reaches the leveling and
+     * multiplier code at all. Deliberately not fed into {@link #getAllDeclaredProficiencyIds()} —
+     * spawn-seeding draws random levels, and a test asserting exact levels must set them itself.
+     */
+    public static void overrideProficiencyIdForTest(
+            JobID jobID,
+            String proficiencyId
+    ) {
+        proficiencyIdOverrides.put(jobID, proficiencyId);
+    }
+
+    /** Undoes {@link #overrideProficiencyIdForTest}; every scenario that sets one must clear it. */
+    public static void clearProficiencyIdOverridesForTest() {
+        proficiencyIdOverrides.clear();
     }
 
     /**
