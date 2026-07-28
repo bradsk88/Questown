@@ -126,6 +126,13 @@ A consumable held as a **tool** so it's grabbed-once/rendered and survives warp 
 **Proficiency**:
 A per-**townie**, per-**proficiency-id** multiplier on **effective work speed** — the rate at which a townie completes a job's work, applied on **both** the **realtime path** (into `SimpleVillagerHandle.getWorkSpeed(uuid)`) and the **warp path** (into the `timeFactor` / `WorkEffects.calculateTimeFactor`). "Affects work speed" means effective production rate, which **must be path-symmetric** (a proficiency that only hooked realtime would evaporate offline — the classic warp/realtime parity bug). A townie holds an **open-ended** map `proficiency-id → level ∈ [0,1]`, **seeded with 3 random** entries at spawn and growing as they work (RimWorld-style): working a job adds to its proficiency and decays all others. Only proficiency-ids that some **job definition** declares are ever reachable, which bounds the map naturally.
 _Avoid_: "skill" (too generic), "experience/XP" (implies monotonic gain — proficiency decays), treating the 3 seeds as a closed set.
+
+**Proficiency owns speed; mood owns downtime** (2026-07-27):
+The resolution of the band collision below. Today both feed one 1–10 number (`getWorkSpeed` is literally `mood × 10`, and `applyProficiencyToWorkSpeed` clamps to `[1,10]`), so they cannibalize each other. The fix is to **decouple the axes**: **proficiency** gets the work-speed band uncontested, and **mood** instead scales a townie's **downtime** — how often and how long they take `DowntimeWork`.
+
+This works because **downtime is an authored job, not idling**: the townie walks around town and `RANDOM_DOWNTIME_POSE` exists precisely so they *appear to be doing something*, and it is warp-aware (`PostDowntimeWarper`). So a low-mood town is *visibly lounging* rather than frozen — legible, true, and it does not manufacture the standing-still visual that need bubbles exist to explain (ADR-0011). It also gives mood an **immediate, watchable** effect, which alternatives (mood → injury resilience, mood → learning rate) lacked.
+_Avoid_: "mood governs willingness/frequency of *work*" (the naive framing — it reads as manufacturing idle townies); widening the `decrWork` band or lowering the well-fed base (both were considered and rejected once breaking changes were declared acceptable — this is an alpha).
+_Open_: the **spiral floor** — mood → downtime composes with the hunger→**injury** spiral (ADR-0012), so a town can in principle tip into unrecoverable decline. Needs a floor.
 _Footgun_ (unresolved, balance-critical): **proficiency and mood compete for the same 1–10 band, so the happier a townie is, the less their skill matters.** Base speed is `(int)(mood × 10)` (`SimpleVillagerHandle:419`) and `applyProficiencyToWorkSpeed` clamps the product to the band `State.decrWork` requires. At the default **neutral mood (75 ⇒ base 7)** the band is roughly **4–10** — a fair spread. At **max mood (base 10)** the ceiling clamps *all* upside away: `PROFICIENCY_MAX_MULTIPLIER` (default 2.0) does nothing and only the 0.5× floor is reachable, so a maxed-out townie's mastery earns exactly the speed it would have had with no proficiency at all. ADR-0010 records this as "partly unreachable at high mood"; the sharper statement is that **the reward shrinks as mood rises and vanishes at the top**, which is backwards — feeding and housing a townie well should not erase their skill differentiation. Wants headroom (a lower well-fed base, or a wider `decrWork` band) before any job JSON declares a `proficiency_id`.
 
 **Proficiency leveling**:
@@ -244,6 +251,52 @@ A villager's hunger level (0 = starving). Drains over realtime ticks; refilled b
 **Mood effect**:
 A timed buff/debuff on a villager identified by a `ResourceLocation` (e.g. `comfortable_eating`, `uncomfortable_eating`, `are_raw_food`). Feeds the villager's mood, work-time factor, and visible mood meter.
 
+**Mood**:
+`neutral + sum(active mood effects)`, clamped 0–100 (`TownVillagerMoods.compute`). Because it is a **sum over a neutral baseline** with effects that expire, mood is **self-restoring** — it returns to `NEUTRAL_MOOD` (75) when debuffs lapse, and cannot spiral downward on its own. That, plus **fullness** being realtime-only (ADR-0002, so warp cannot starve anyone) and **injury** healing on sleep, is why the mood→downtime→production→hunger→injury loop has a structural floor without needing an explicit one.
+
+**Today mood has exactly three inputs, all about dining** (`COMFORTABLE_EATING +5`, `UNCOMFORTABLE_EATING −5`, `ATE_RAW_FOOD −10`), so live mood only ever occupies **65–80**. Two consequences: real base work speed is `mood × 10` = **6–8**, which makes the **proficiency** ceiling almost entirely fictional (at base 8 a 2.0× multiplier clamps at 10, so only 1.25× is reachable); and mood is too thin to carry **downtime**.
+
+**Decided (2026-07-27): mood becomes the town-quality score.** New inputs are things the player *builds and maintains* — having a bed / bed quality (per-bed heal factors already exist), having a **bedroom** (a registered room, not a bed on the floor), being **injured**, and **overwork** (long stretches without downtime), alongside the existing dining inputs. The band widens well beyond ±10 so it can drive downtime meaningfully.
+
+This is also a **partial answer to the builder gap** noted under **Milestone**: "build good rooms → happier townies → more work done" rewards building *well* rather than *minimally*, driven entirely by room recipes that already exist, with no "block niceness" system required.
+
+Because mood becomes a multi-input simulation stat, it gets a **dedicated mood-breakdown tab on the villager UI** answering *"why is this townie at 62%"* — without it, mood is just another opaque number, which is the failure mode ADR-0011 exists to fight. (Build it per `docs/solutions/conventions/gui-layout-flow-and-linter.md` and verify with the `gui-lint` oracle.)
+_Avoid_: treating mood as a hunger/fullness readout (**fullness** is separate); assuming mood decays downward over time (it restores toward neutral).
+
+### Pressure & injury
+
+**Pressure**:
+The adversity axis of the town — what can go *wrong*, as opposed to merely slowly. Questown's reference point is **Dragon Quest Builders**, whose town loop Questown already mirrors (guide NPC ≈ **helper chicken**, build orders ≈ quests, room recipes, townhall ≈ **town flag**, residents arriving as the town grows). Questown takes DQB's build-and-watch loop but **deliberately not its monster attack waves**: pressure is **threat-as-pressure, not combat** (2026-07-27). The player's response to pressure is the *same verb* as the core loop — supply the town, build the right rooms — just with consequences attached, rather than switching into a combat mode that vanilla Minecraft and every other village mod already serve.
+
+Pressure must cost something or it is only a quest with a timer. Exactly two loss layers are in scope: **stock** (stored food spoils, crops die — makes *preparation* matter) and **injury** (see below — makes the loss *visible on a specific townie*). Explicitly **out of scope**: **roster loss** (a townie leaving or dying — too heavy for the genre, unrecoverable without a re-recruit path, and it turns every absence into anxiety, which fights **warp**) and **proficiency decay as a penalty** (invisible, uncorrelatable to its cause, and it punishes precisely the warp-heavy playstyle the mod invites).
+
+Pressure exists because **watching is primary** (ADR-0011): with nothing able to go wrong, the only reason to watch is to catch bugs, which is why an idle townie currently reads so badly — unmet needs are the mod's *only* source of drama.
+_Avoid_: "raid", "attack", "wave", "defense" (all imply the rejected combat reading); "difficulty" (pressure is a fiction, not a slider).
+
+**Onset-shaped** vs **forecast-shaped**:
+The two ways a beat can carry **anticipation** — the build-up-and-release tension DQB gets from announcing its waves. **Onset-shaped**: the event *starts small and worsens*, so its own first stage is the warning (a single blighted crop that spreads; a night colder than the last; a townie who starts limping). **Forecast-shaped**: something announces the event before it begins (a calendar, a forecaster, a deadline).
+
+**Threat is onset-shaped; opportunity is forecast-shaped** (2026-07-27). Onset is the default for **pressure** because it needs **no new architecture at all** — no scheduler, no calendar, no announcement channel, no warp-event semantics — it is self-teaching (the player learns the mechanic by watching stage one become stage two), and it makes **presence the defense**, the strongest possible statement of watching-first (ADR-0011). Warp then yields the bad-but-recoverable end state rather than a surprise catastrophe. Its one cost — onset gives "I caught it in time" but never DQB's "I was ready this time" — is paid off by the **post office** instead, which buys the preparation fantasy through *upside* rather than danger.
+
+**Seasons are explicitly out of scope**: a cold snap is a **random event with a ramp**, not a modeled season. Players who want seasonal difficulty install a seasons mod; Questown stays in its lane.
+_Avoid_: reading forecast-shaped as "not shipping" — forecasting is intended *later*, as an **unlock**, so that warning time is itself a progression reward (a young town is hit unwarned; a mature town sees it coming).
+
+**Blight**:
+The reference **onset-shaped** pressure. A **town-internal record of blighted positions** (QT owns positions, never items) rendered with particles, which **de-grows** the plants it holds and **spreads to neighbours** over time. The spread is what supplies the anticipation: one sickly crop at the farm's edge is the warning, and catching it early costs one crop while ignoring it costs the farm.
+_Avoid_: item-level spoilage of any kind — see **Pressure raises demand**.
+
+**Pressure raises demand** (not destroys supply):
+The constraint that keeps pressure legal. Town storage is **vanilla items in vanilla chests**, and Questown deliberately does **not** own them — any spoilage mechanic would need per-item metadata, which breaks the moment an item leaves a scanned chest and makes Questown a bad citizen among other mods. So pressure takes the **demand** side: a cold snap makes townies *eat more* and need firewood they didn't need before. What the player loses is their **buffer** — the *"I thought I had enough"* feeling stock loss was for — and it never reads as the mod deleting your things. The only destructible targets are **world-owned**: standing crops (see **Blight**).
+
+This also chains into **injury** with no new mechanism: buffer drains → **fullness** drops → underfed townies take damage → they rest instead of working → production falls further. That spiral is the first legitimate caller `addDamage` would ever have.
+_Avoid_: "spoilage", "rot", "decay" applied to stored items.
+
+**Injury**:
+A per-**townie** damage level that makes them **rest instead of work** (probabilistically, scaled by damage — `TownFlagBlockEntity:645`) and heals while they sleep, at a **per-bed heal factor**. The intended sink for **pressure**, and a growth path: **hospital beds, doctors, and hospital rooms** are planned, so injury is what gives those room recipes and that job branch a reason to exist.
+
+**Status: a complete mechanism with no trigger.** `SimpleVillagerHandle` tracks `damage`, heals it on sleep, surfaces `getDamagePercent` as a bar in the villager UI, and the rest-instead-of-work behavior is live — but the **only** caller of `addDamage` in the mod is the `AddDamageCommand` debug command. Nothing in normal play can injure a townie. Activating it is therefore the cheapest available route to real pressure, and it simultaneously gives **beds** and **heal spots** (a **registered fixture** that currently does very little) a purpose.
+_Avoid_: reading `DAMAGE_TICKS` as a source of damage — it is the *healing rate* ("ticks to heal one point"); treating injury as health/death (there is no townie death — see **Pressure**).
+
 ### Gathering & scouting
 
 **Scouting**:
@@ -279,9 +332,27 @@ _Open_: the stall is currently **invisible** — nothing tells the player their 
 
 ### Quests & rewards
 
+**Milestone**:
+A named, announced town achievement — *"survived your first blight"*, *"shipped your first hundred"*, *"ten townies"* — that carries the town's **arc**: the sense of playing *toward* something, which watching-first (ADR-0011) needs and which continuously-regenerating procedural quests do not supply. Milestones **gate** things (the **post office** unlock, **blight** severity, **letter** size), so they mean something mechanically rather than being confetti, and they ride the advancement plumbing that already exists.
+
+Deliberately **not** a Dragon Quest Builders-style continuous **town level** (2026-07-27). Questown already has a progression currency (**Block of Progress**) and a progression tree (job unlocks); a second always-rising number would leave the player unsure which one matters. A milestone is also a *story* in a way a score is not.
+
+_Known gap_: DQB's town level rewards **building for its own sake**, and Questown does not — a room is purely instrumental (it enables a job), so a gorgeous town scores exactly like dirt huts. This under-serves the builder audience relative to the explorer/manager. Accepted for now: a real fix needs a **"block niceness"** evaluation system, which is far off.
+_Avoid_: "town level"/"town score" (the rejected continuous reading); treating milestones as purely cosmetic.
+
 **Morning reward**:
 A reward queued for delivery at the next in-game **morning** rather than immediately — `MCDelayedReward.getApplier()` → `town.addMorningReward(child)`, held in `MCMorningRewards` on the flag BE and popped by the flag ticker's `onMorning`/`morningTick`. Not every quest reward is delayed; some apply at once. `hasPendingSpawnVisitor()` answers the **visitor-specific** sub-question ("is a new townie arriving in the morning"), which is **narrower** than "is *any* morning reward queued".
 _Avoid_: assuming all quest rewards are delayed; reusing `hasPendingSpawnVisitor()` as a generic "reward pending" signal.
+
+**Post office** / **Letter**:
+The planned surface for **forecast-shaped** anticipation (`docs/features/post-office.md`, still a stub). A **letter** is a Stardew-style standing order — *"we need 100 of X by \<date\> for \<reward\>"* — sized at a bit more than the town's usual output, so the player has to work out how to scale production to hit the date. Where **blight** teaches the player to *watch*, letters teach them to *build capacity*; together they cover both halves of the DQB tension without a threat scheduler, since a deadline **is** the anticipation.
+
+Letters pay **items the town cannot produce** (exotic wood, ores, mob drops — the town's outputs become purchasing power), **villagers** (precedented by `SpawnVisitorReward`), **knowledge** (a **gatherer map**, a **known loot** entry, a room recipe), and possibly **standing**. They explicitly **do not pay Blocks of Progress** (2026-07-27): a letter is fulfilled by *sustained production across a deadline*, which is exactly what **warp** delivers while the player is **away** — so a BOP-paying post office would pay progression currency for absence, inverting the very counterweight the BOP stall exists to create, and it would be the *efficient* faucet because bulk orders scale with town size while townie leveling does not. Today BOPs have exactly one faucet (`BOPDepositorWork`) and there is **no** BOP quest-reward type in the reward registry; keep it that way.
+
+The post office is deliberately **multi-purpose** — a surface to expand on, not a single mechanic. Purposes so far: bulk standing orders (above); **hand-delivery requests**, which hand the *player* a treasure map to a random **vanilla village**, giving explorer-type players an early reason to leave town and doubling as a way to discover vanilla villages. That subsumes `docs/todo/supply-cache-mission.md` (the tutorial's map-driven exploration beat) with less work, since vanilla structure location supplies the target instead of an authored chest.
+
+**Cost model**: a letter's price is not a stat but a **townie's time** — the postal worker is a **leaver job** on a multi-day run (the gatherer's quarter/half/full-day **timed states** are the existing shape), so **scarcity and commitment fall out of throughput** with no active-letter cap, no standing stat, and no failure penalty. Goods are never destroyed on a missed deadline (consistent with Questown not owning items). The cost inverts with town size — crippling at 3 townies, negligible at 20 — which is handled by gating the post office as a **mid-game unlock** (the option isn't on the table while it's unaffordable) and by sizing the **ask** to the town's usual production, so the *shipment* scales even though the *worker* doesn't. Legibility rides existing surfaces: leavers exit through the town gate and report status on the flag's villager tab. **Townie names** amplify this but do not block it.
+_Avoid_: paying BOPs; treating letters as **work requests** (those are player→townie; a letter is world→town); consuming shipped goods incrementally.
 
 **All quests done** (caught-up state):
 The transient state where a town's quest list is **non-empty and every quest is `COMPLETED`** — the lull before the next batch appears. **Not** a terminal "tutorial graduated" milestone: quests regenerate continuously (tutorial phases + the procedural quest garden + reward-spawned batches), so this state recurs and un-sets itself. Surfaced on the **town** flag quests tab as an empty-state (roadmap #236). The empty quest list is **not** "all done" (the vacuous-true trap).
