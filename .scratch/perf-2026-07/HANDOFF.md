@@ -74,9 +74,17 @@ p50 is 18us, so averages hide it completely.
    game tick. `updateStoredData` went **44% → 12%** of tick time (187us → 96us avg). This was
    the room-scaling growth risk; it is defused.
 2. **Dev world aligned to the shipped default.** `run/world/serverconfig/questown-server.toml`
-   `FlagTickInterval` 100 → 10. It had been **hand-edited** (the code default has been 10 since
-   2024-03-16 and never changed), so all local playtesting was running the heavy path 10x less
-   often than players do. This fix did not improve performance — it **revealed** the stutter.
+   `FlagTickInterval` 100 → 10, so all local playtesting had been running the heavy path 10x less
+   often than the code default. This fix did not improve performance — it **revealed** the stutter.
+
+   **CORRECTION (2026-07-28):** that file had NOT been hand-edited. `Config.java` registered
+   `ECONOMIC_RECORDS_DEPTH` under the key `"FlagTickInterval"`, colliding with the real one; the
+   later `define` won, so **100 was the value written into every world's config** — all 25 worlds
+   under `run/saves/` show `FlagTickInterval = 100` and no `EconomicRecordsDepth` key at all.
+   Fixed (key renamed to `EconomicRecordsDepth`). Consequence: **existing** worlds keep
+   `FlagTickInterval = 100` in their toml, since it is a valid value and nothing rewrites it — only
+   new worlds get the code default of 10. Anyone playtesting stutter in an old world is still
+   measuring the throttled path.
 
 ### Deliberately NOT done (decisions for the human)
 

@@ -380,7 +380,7 @@ public class Config {
         ).defineInRange("ContainerScanInterval", 10L, 1L, 24000L);
         ECONOMIC_RECORDS_DEPTH = BUILDER.comment(
                 "This essentially controls how \"far back\" the data goes on the \"Economics\" screens."
-        ).defineInRange("FlagTickInterval", 100, 1, 24000);
+        ).defineInRange("EconomicRecordsDepth", 100, 1, 24000);
 
         // Time Warp
         BUILDER.push("TimeWarp").comment(

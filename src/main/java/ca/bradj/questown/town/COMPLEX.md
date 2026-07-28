@@ -63,6 +63,41 @@ flowchart LR
 - The counter is per-`TownFlagState` (per town), and warp bookkeeping stays above
   the early return so leaving/returning is unaffected by the throttle.
 
+## Exceptional case: where `FlagTickInterval` actually comes from
+
+The gate above reads a **per-world server toml**, not the code default, and for
+every world created before 2026-07-28 those two disagree.
+
+```mermaid
+flowchart TD
+    Reg["Config static init<br/>FLAG_TICK_INTERVAL define('FlagTickInterval', 10)"] --> Path{"same config path?"}
+    Collide["ECONOMIC_RECORDS_DEPTH define('FlagTickInterval', 100)<br/>— the bug, now 'EconomicRecordsDepth'"] --> Path
+    Path -- "yes (pre-fix)" --> Won["later define wins<br/>→ spec default 100"]
+    Won --> Toml["written into<br/>world/serverconfig/questown-server.toml"]
+
+    Toml --> Old["EXISTING world: 100 stays<br/>(valid value, Forge never rewrites)"]
+    Toml --> NewW["NEW world: written fresh at 10"]
+    Old --> Gate["isFlagTick? gameTime % interval"]
+    NewW --> Gate
+```
+
+- **The fix does not heal existing worlds**, and no migration is planned. Forge
+  only writes a key that is missing or that fails validation; `100` is in range,
+  so every pre-fix save keeps `FlagTickInterval = 100` and runs the heavy phases
+  10x less often than a fresh install. Perf numbers gathered in an old save are
+  measuring the throttled path — edit the toml by hand before comparing against
+  the defaults.
+- `EconomicRecordsDepth` is absent from those tomls entirely and will be written
+  on next load at its intended default of 100 — the same number the collision
+  happened to supply, so no economics behaviour changes.
+- The interval is also the **denominator for work-status timers** (`ticksSinceLast`
+  below), so editing it mid-world rescales every in-flight timer: a 100 → 10 edit
+  makes existing gatherer day-waits and `NEED_ROAM` tails expire 10x sooner, once.
+- Whether `10` should stay the shipped default is an **open gameplay call**, not a
+  settled one. It is what the code has always intended; the stutter work above is
+  what makes it affordable, but 100 is what every existing player has actually
+  been running.
+
 ## Measuring it (`perf/*` autotest scenarios)
 
 ```mermaid
