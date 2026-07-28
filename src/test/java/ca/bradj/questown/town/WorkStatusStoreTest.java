@@ -72,6 +72,26 @@ class WorkStatusStoreTest {
     }
 
     @Test
+    void Test_TimerShouldDecayOncePerTickRegardlessOfHowManyRoomsAreNew() {
+        TestWorkStatusStore s = new TestWorkStatusStore();
+        Position pos = new Position(1, 2);
+        s.setJobBlockStateWithTimer(pos, State.fresh(), 10);
+
+        // Five rooms appear in the same tick. The timer must still only lose `ticksSinceLast`.
+        s.tick(null, roomsAt(0, 10, 20, 30, 40), 1);
+
+        Assertions.assertEquals(9, s.getTimeToNextState(pos));
+    }
+
+    private static ImmutableList<Room> roomsAt(int... xs) {
+        ImmutableList.Builder<Room> b = ImmutableList.builder();
+        for (int x : xs) {
+            b.add(new Room(new Position(x, 2), InclusiveSpace.from(x, 4).to(x + 2, 6)));
+        }
+        return b.build();
+    }
+
+    @Test
     void Test_ShouldMoveToNextStateAfterFinalTick() {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);

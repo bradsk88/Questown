@@ -43,6 +43,7 @@ import org.jetbrains.annotations.Nullable;
 import vazkii.patchouli.api.TriPredicate;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -328,6 +329,16 @@ public class ServerJobsRegistry {
     }
 
 
+    /**
+     * Answers "does any job care about this block?" — asked for every position of a room, by every
+     * work-status store, on every flag tick. Answering it from scratch walks every registered job
+     * (there is one cook job per cookable item), so the answer is cached.
+     *
+     * <p>The cache key is the block state plus whether the block above is air, because those are
+     * the only two things every registered {@code shouldInitializeWorkState} predicate looks at
+     * (the block state, and {@code p.above()} for {@code REQUIRE_AIR_ABOVE}). A predicate that
+     * inspects any other neighbour would need this key widened.
+     */
     public static boolean shouldInitializeWithState(
             WorkLocation.BlockInfo info,
             BlockPos pos
@@ -336,6 +347,31 @@ public class ServerJobsRegistry {
         if (state.isAir()) {
             return false;
         }
+        JobInterestKey key = new JobInterestKey(state, info.state(pos.above()).isAir());
+        Boolean known = jobInterestByBlock.get(key);
+        if (known != null) {
+            return known;
+        }
+        boolean interesting = computeShouldInitializeWithState(info, pos, state);
+        jobInterestByBlock.put(key, interesting);
+        return interesting;
+    }
+
+    private record JobInterestKey(BlockState state, boolean airAbove) {
+    }
+
+    private static final Map<JobInterestKey, Boolean> jobInterestByBlock = new ConcurrentHashMap<>();
+
+    /** Called when the job registry is (re)built, since the answers depend on the registered jobs. */
+    public static void forgetWhichBlocksJobsCareAbout() {
+        jobInterestByBlock.clear();
+    }
+
+    private static boolean computeShouldInitializeWithState(
+            WorkLocation.BlockInfo info,
+            BlockPos pos,
+            BlockState state
+    ) {
         BlockState bs = state;
         Block b = bs.getBlock();
         JobID a = new JobID("temporary", "temporary"); // TODO: Add a way to get the jobBlockTest without an ID

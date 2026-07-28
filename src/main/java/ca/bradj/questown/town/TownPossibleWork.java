@@ -24,7 +24,6 @@ import ca.bradj.questown.town.interfaces.VillagerHolder;
 import ca.bradj.questown.world.MinecraftWorldAccess;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import joptsimple.internal.Strings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -36,7 +35,7 @@ import java.text.NumberFormat;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 import static ca.bradj.questown.mc.Util.info;
 
@@ -52,8 +51,13 @@ public class TownPossibleWork {
 
     private final Map<String, List<JobID>> preselectedJobs = new HashMap<>();
     private final Map<UUID, JobCycler> villagerCyclers = new HashMap<>();
+    private final Queue<String> rootsAwaitingRecompute = new ArrayDeque<>();
+    private @Nullable RootScoring scoringInProgress;
     private boolean shouldRecompute = true;
     private int buffer;
+
+    /** Half a millisecond: a tenth of what a hitch needs to be visible, out of a 50ms server tick. */
+    private static final long RECOMPUTE_NANOS_PER_TICK = 500_000;
 
     public TownPossibleWork() {
     }
@@ -63,6 +67,9 @@ public class TownPossibleWork {
     }
 
     public void tick() {
+        if (spendTickBudgetOnRecompute()) {
+            return;
+        }
         if (!shouldRecompute) {
             return;
         }
@@ -72,7 +79,8 @@ public class TownPossibleWork {
         if (buffer != 0) {
             return;
         }
-        recomputeNow();
+        beginRecomputePass();
+        spendTickBudgetOnRecompute();
     }
 
     /**
@@ -80,33 +88,111 @@ public class TownPossibleWork {
      * Used during time warp when tick() won't be called.
      */
     public void recomputeNow() {
-        TownFlagBlockEntity t = town.getUnsafe();
-        Stream<String> roots = t.getVillagerHandle().getJobs().stream().map(JobID::rootId);
-        ImmutableSet<Map.Entry<JobID, Supplier<Work>>> rjs = Works.regularJobs();
-        roots.forEach(root -> {
-            List<JobPossibility> unfilteredJobs = getJobsSortedByPossibility(root, rjs, t);
-            bigLog(t, root, unfilteredJobs);
+        beginRecomputePass();
+        while (scoreOneJob()) {
+            // Warp has no ticks to spread the work across, so the whole pass runs here.
+        }
+    }
 
-            List<JobPossibility> jobs = unfilteredJobs.stream().filter(
-                    v -> v.score.value > Config.PREFERRED_JOB_ACCEPTANCE.get()
-            ).toList();
-            if (jobs.isEmpty()) {
-                jobs = unfilteredJobs.stream().filter(
-                        v -> v.score.value > Config.MIN_JOB_ACCEPTANCE.get()
-                ).toList();
+    /**
+     * Scoring one job scans the town's containers for each of its states, and a root can own
+     * dozens of jobs (there is one cook job per cookable item). A whole pass in one tick is a
+     * visible hitch, so a pass is spread over as many ticks as it takes to stay inside the budget.
+     */
+    private boolean spendTickBudgetOnRecompute() {
+        if (!isRecomputePassInProgress()) {
+            return false;
+        }
+        long deadline = System.nanoTime() + RECOMPUTE_NANOS_PER_TICK;
+        do {
+            if (!scoreOneJob()) {
+                return false;
             }
-            ImmutableList<JobID> preselected = jobs.stream().map(v -> v.jobID).collect(ImmutableList.toImmutableList());
-            preselectedJobs.put(root, preselected);
-            if (jobs.isEmpty()) {
-                registerUnmetNeeds(root);
-            }
-            t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
-                    "Prepared for {}: [{}]",
-                    root,
-                    Strings.join(preselected.stream().map(JobID::jobId).toList(), ",")
-            );
-        });
+        } while (System.nanoTime() < deadline);
+        return true;
+    }
+
+    private boolean isRecomputePassInProgress() {
+        return scoringInProgress != null || !rootsAwaitingRecompute.isEmpty();
+    }
+
+    private void beginRecomputePass() {
+        TownFlagBlockEntity t = town.getUnsafe();
+        rootsAwaitingRecompute.clear();
+        scoringInProgress = null;
+        t.getVillagerHandle().getJobs().stream().map(JobID::rootId).forEach(rootsAwaitingRecompute::add);
         shouldRecompute = false;
+    }
+
+    /** @return false once the pass has nothing left to do. */
+    private boolean scoreOneJob() {
+        if (scoringInProgress == null) {
+            String root = rootsAwaitingRecompute.poll();
+            if (root == null) {
+                return false;
+            }
+            scoringInProgress = new RootScoring(root, jobsOfRoot(root));
+            return true;
+        }
+        TownFlagBlockEntity t = town.getUnsafe();
+        Map.Entry<JobID, Supplier<Work>> job = scoringInProgress.remainingJobs.poll();
+        if (job != null) {
+            scoringInProgress.scored.add(new JobPossibility(job.getKey(), getWorkPercentPossible(t, job)));
+            return true;
+        }
+        RootScoring finished = scoringInProgress;
+        scoringInProgress = null;
+        applyScores(t, finished.root, finished.scored);
+        return true;
+    }
+
+    private static Queue<Map.Entry<JobID, Supplier<Work>>> jobsOfRoot(String root) {
+        // FIXME: Only include jobs that are known by the villagers
+        return Works.regularJobs()
+                    .stream()
+                    .filter(v -> root.equals(v.getKey().rootId()))
+                    .collect(Collectors.toCollection(ArrayDeque::new));
+    }
+
+    private static final class RootScoring {
+        private final String root;
+        private final Queue<Map.Entry<JobID, Supplier<Work>>> remainingJobs;
+        private final List<JobPossibility> scored = new ArrayList<>();
+
+        private RootScoring(
+                String root,
+                Queue<Map.Entry<JobID, Supplier<Work>>> remainingJobs
+        ) {
+            this.root = root;
+            this.remainingJobs = remainingJobs;
+        }
+    }
+
+    private void applyScores(
+            TownFlagBlockEntity t,
+            String root,
+            List<JobPossibility> unfilteredJobs
+    ) {
+        bigLog(t, root, unfilteredJobs);
+
+        List<JobPossibility> jobs = unfilteredJobs.stream().filter(
+                v -> v.score.value > Config.PREFERRED_JOB_ACCEPTANCE.get()
+        ).toList();
+        if (jobs.isEmpty()) {
+            jobs = unfilteredJobs.stream().filter(
+                    v -> v.score.value > Config.MIN_JOB_ACCEPTANCE.get()
+            ).toList();
+        }
+        ImmutableList<JobID> preselected = jobs.stream().map(v -> v.jobID).collect(ImmutableList.toImmutableList());
+        preselectedJobs.put(root, preselected);
+        if (jobs.isEmpty()) {
+            registerUnmetNeeds(root);
+        }
+        t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
+                "Prepared for {}: [{}]",
+                root,
+                Strings.join(preselected.stream().map(JobID::jobId).toList(), ",")
+        );
     }
 
     private static void bigLog(
@@ -168,21 +254,6 @@ public class TownPossibleWork {
                                                             .format(Math.round(v * 1000.0) / 1000.0)) +
                     '}';
         }
-    }
-
-    private static ImmutableList<JobPossibility> getJobsSortedByPossibility(
-            String root,
-            ImmutableSet<Map.Entry<JobID, Supplier<Work>>> allJobs,
-            TownFlagBlockEntity t
-    ) {
-        // FIXME: Only include jobs that are known by the villagers
-        List<Map.Entry<JobID, Supplier<Work>>> e = allJobs.stream().filter(v -> root.equals(v.getKey().rootId()))
-                                                          .toList();
-        ImmutableList.Builder<JobPossibility> b = ImmutableList.builder();
-        for (Map.Entry<JobID, Supplier<Work>> w : e) {
-            b.add(new JobPossibility(w.getKey(), getWorkPercentPossible(t, w)));
-        }
-        return b.build();
     }
 
     private static WithReason<Double> getWorkPercentPossible(

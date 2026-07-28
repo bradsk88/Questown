@@ -4,6 +4,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.gatherer.*;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -32,14 +33,26 @@ public class Works {
     ) {
         ImmutableMap.Builder<JobID, Supplier<Work>> b = ImmutableMap.builder();
         dataPackJobs.forEach((k, v) -> b.put(k, () -> v));
-        b.put(ExplorerWork.ID, ExplorerWork::asWork);
-        b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork::asWork);
-        b.put(GathererUnmappedShovelWorkQtrDay.ID, GathererUnmappedShovelWorkQtrDay::asWork);
-        b.put(GathererUnmappedShovelWorkHalfDay.ID, GathererUnmappedShovelWorkHalfDay::asWork);
-        b.put(GathererUnmappedShovelWorkFullDay.ID, GathererUnmappedShovelWorkFullDay::asWork);
+        b.put(ExplorerWork.ID, builtOnce(ExplorerWork::asWork));
+        b.put(GathererMappedAxeWork.ID, builtOnce(GathererMappedAxeWork::asWork));
+        b.put(GathererUnmappedShovelWorkQtrDay.ID, builtOnce(GathererUnmappedShovelWorkQtrDay::asWork));
+        b.put(GathererUnmappedShovelWorkHalfDay.ID, builtOnce(GathererUnmappedShovelWorkHalfDay::asWork));
+        b.put(GathererUnmappedShovelWorkFullDay.ID, builtOnce(GathererUnmappedShovelWorkFullDay::asWork));
 
         works = b.build();
         initialized = true;
+        ServerJobsRegistry.forgetWhichBlocksJobsCareAbout();
+    }
+
+    /**
+     * Datapack jobs are built once at load and handed out as shared instances. The hardcoded jobs
+     * below were method references, so every {@code values().get()} rebuilt a whole Work — and
+     * {@link ServerJobsRegistry#shouldInitializeWithState} walks all of them per block position,
+     * per work-status store, on every flag tick. A Work is an immutable description of a job, so
+     * it is built once per datapack load like the rest.
+     */
+    private static Supplier<Work> builtOnce(Supplier<Work> factory) {
+        return Suppliers.memoize(factory::get)::get;
     }
 
     public static ImmutableSet<Map.Entry<JobID, Supplier<Work>>> regularJobs() {
