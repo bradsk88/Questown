@@ -189,6 +189,11 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("relocate_far", relocateFarBlueprint()));
         jobs.add(flagEntry("campfire_sleep_preserves_flag", campfireSleepPreservesFlagBlueprint()));
 
+        // Perf measurements (always pass; they report timings). Baseline first so the pair can be
+        // compared within a single run.
+        jobs.add(perfEntry("town_small", perfBlueprint(1, 0, 2000)));
+        jobs.add(perfEntry("town_large", perfBlueprint(20, 15, 2000)));
+
         return jobs;
     }
 
@@ -1804,6 +1809,111 @@ public class TestBlueprintRegistry {
         BlockPos chestOffset = new BlockPos(ox + 2, 0, oz + 1);
 
         return new SupplyRoom(blocks, chestOffset, doorLower);
+    }
+
+    // --- Perf scenarios ---
+    //
+    // These are MEASUREMENTS, not gates: they always pass and report flag-tick timings, so a
+    // regression shows up as a number in the log rather than a red scenario. The point is the
+    // scaling shape (tick cost vs townie count vs registered-room count), which is why they come
+    // in a small/large pair — one run gives you a baseline and a loaded town to compare it to.
+    //
+    // The expectation is deliberately empty (no products, 0 cycles): TestResultChecker's product
+    // loop and cycle gate are both skipped, so the scenario cannot fail on production outcomes.
+
+    private static TestBlueprint perfBlueprint(int villagers, int extraRooms, int ticks) {
+        SupplyRoom base = buildSupplyRoom(-6, -2);
+        TestBlueprint bp = new TestBlueprint(
+                RoomType.INDOOR,
+                base.blocks(),
+                List.of(),
+                base.doorOffset(),
+                base.chestOffset(),
+                SpecialQuests.STORE_ROOM_SMALL,
+                new TestExpectation(List.of(), 0, 0),
+                null,      // supplyDoorOffset
+                null,      // warpAmountOverride
+                null,      // startTimeTick
+                villagers,
+                true,      // realtimePhase: the whole point is realtime tick cost
+                ticks,
+                false,     // drainHungerBeforeTest
+                true,      // skipWarp
+                new TestExpectation(List.of(), 0, 0),
+                null, null, null, null,
+                false      // useNaturalWarp
+        );
+        return bp.withSetupHook(perfExtraRoomsSetup(extraRooms))
+                 .withPostSpawnAction(perfStartProfiling())
+                 .withCustomAssertion(perfReport(villagers, extraRooms));
+    }
+
+    /**
+     * Builds {@code count} additional enclosed 5x5 shells in a ring around the flag and registers
+     * each door, to load the room scan and the container scan. Each shell is self-enclosing
+     * (floor, walls, ceiling), so surrounding terrain cannot break the enclosure — and the report
+     * prints the room count the town actually ended up with, so a shell that failed to resolve
+     * shows up in the measurement rather than silently inflating it.
+     */
+    private static TestBlueprint.PostPlacementSetup perfExtraRoomsSetup(int count) {
+        return (level, flagPos, town, output) -> {
+            int placed = 0;
+            for (int i = 0; i < count; i++) {
+                // Ring the flag at a radius that clears the base room at (-6,-2).
+                int ring = 1 + (i / 8);
+                double angle = (i % 8) * (Math.PI / 4);
+                int ox = (int) Math.round(Math.cos(angle) * 9 * ring) - 2;
+                int oz = (int) Math.round(Math.sin(angle) * 9 * ring) - 2;
+
+                SupplyRoom room = buildSupplyRoom(ox, oz);
+                for (BlockPlacement bp : room.blocks()) {
+                    level.setBlockAndUpdate(flagPos.offset(bp.offset()), bp.blockState());
+                }
+                // A bare shell matches no room RECIPE, and the container scan iterates recipe
+                // matches — so a chest is what makes the room count toward the cost being measured.
+                level.setBlockAndUpdate(
+                        flagPos.offset(room.chestOffset()),
+                        Blocks.CHEST.defaultBlockState()
+                );
+                town.getRoomHandle().registerDoor(flagPos.offset(room.doorOffset()));
+                placed++;
+            }
+            output.msg("[perf] built and registered " + placed + " extra room shell(s)");
+            return true;
+        };
+    }
+
+    private static TestBlueprint.PostSpawnAction perfStartProfiling() {
+        return (level, flagPos, town, output) -> {
+            ca.bradj.questown.town.TickProfile.INSTANCE.enable();
+            output.msg("[perf] profiling enabled; measuring flag-tick cost from here");
+            return true;
+        };
+    }
+
+    private static TestBlueprint.CustomAssertion perfReport(int villagers, int extraRooms) {
+        return (level, flagPos, town, output) -> {
+            ca.bradj.questown.town.TickProfile.Snapshot snap =
+                    ca.bradj.questown.town.TickProfile.INSTANCE.snapshot();
+            long actualVillagers = town.getVillagerHandle().size();
+            int actualRooms = town.getRoomHandle().getMatches(x -> true).size();
+
+            output.msg(String.format(
+                    "[perf] townies=%d (requested %d) rooms=%d (requested %d extra)",
+                    actualVillagers, villagers, actualRooms, extraRooms
+            ));
+            output.msg("[perf] flag tick: " + snap.describe());
+            for (String line : ca.bradj.questown.town.TickProfile.INSTANCE.describePhases()) {
+                output.msg("[perf]" + line);
+            }
+
+            ca.bradj.questown.town.TickProfile.INSTANCE.disable();
+            return true;
+        };
+    }
+
+    private static TestEntry perfEntry(String name, TestBlueprint bp) {
+        return new TestEntry("perf/" + name, new JobID("farmer", "harvest_wheat"), bp, "perf");
     }
 
     private static TestExpectation wildcardExpectation() {

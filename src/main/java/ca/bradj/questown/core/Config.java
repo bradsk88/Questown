@@ -91,6 +91,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Integer> EXPERIENCE_REQUIRED_AT_LEVEL_1;
     public static final ForgeConfigSpec.ConfigValue<Double> EXPERIENCE_RAMP_FACTOR;
     public static final ForgeConfigSpec.ConfigValue<Long> FLAG_TICK_INTERVAL;
+    public static final ForgeConfigSpec.ConfigValue<Long> CONTAINER_SCAN_INTERVAL;
     public static final ForgeConfigSpec.ConfigValue<Integer> ECONOMIC_RECORDS_DEPTH;
     public static final ForgeConfigSpec.ConfigValue<Double> NORMAL_BED_HEAL_MULTIPLIER;
     public static final ForgeConfigSpec.ConfigValue<Double> HOSPITAL_BED_HEAL_MULTIPLIER;
@@ -372,6 +373,11 @@ public class Config {
         FLAG_TICK_INTERVAL = BUILDER.comment(
                 "The number of game ticks that pass for every tick that the town flag does"
         ).defineInRange("FlagTickInterval", 10L, 1L, 24000L);
+        CONTAINER_SCAN_INTERVAL = BUILDER.comment(
+                "The number of game ticks between town-wide container scans (detecting items the",
+                "player added to or removed from chests). Cost scales with the number of rooms, so",
+                "raise this in large towns. Lower values detect chest changes sooner."
+        ).defineInRange("ContainerScanInterval", 10L, 1L, 24000L);
         ECONOMIC_RECORDS_DEPTH = BUILDER.comment(
                 "This essentially controls how \"far back\" the data goes on the \"Economics\" screens."
         ).defineInRange("FlagTickInterval", 100, 1, 24000);
