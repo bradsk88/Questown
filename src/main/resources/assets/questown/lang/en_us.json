@@ -2,6 +2,7 @@
   "itemGroup.questown": "Questown",
   "item.questown.relocation_deed": "Town Relocation Deed",
   "item.questown.relocation_deed.tooltip": "Place on a block to move a dormant town's flag there.",
+  "message.questown.townie_need.cant_reach": "They can't find a way there.",
   "message.questown.relocation_deed.cross_dimension": "This town can only be moved within its own world.",
   "message.questown.relocation_deed.malformed_reference": "This deed is damaged and no longer points to a town.",
   "message.questown.relocation_deed.original_unreachable": "The dormant flag could not be reached. Nothing was moved.",

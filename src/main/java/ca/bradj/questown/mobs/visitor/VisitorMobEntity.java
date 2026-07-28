@@ -129,6 +129,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private static final EntityDataAccessor<ItemStack> lastHeldItem = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.ITEM_STACK
     );
+    /**
+     * The townie's current unmet need, as a {@link TownieNeed} name, or empty for "nothing wrong".
+     * Synched because the bubble that renders it is client-side; a String is used for the same
+     * reason the helper chicken's bubble fields are — it serializes with no custom serializer.
+     */
+    private static final EntityDataAccessor<String> need = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.STRING
+    );
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
     // State management should be done via the town block. This entity should
@@ -396,6 +404,26 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.entityData.define(jobName, "jobs.gatherer");
         this.entityData.define(heldItem, ItemStack.EMPTY);
         this.entityData.define(lastHeldItem, ItemStack.EMPTY);
+        this.entityData.define(need, TownieNeed.NONE.name());
+    }
+
+    /**
+     * Records that this townie needs the player's help with something, so a bubble can say so.
+     * Silence means working (ADR-0011), so this is set only when the townie has actually given up.
+     */
+    public void setNeed(TownieNeed newNeed) {
+        if (level.isClientSide()) {
+            return;
+        }
+        if (newNeed.name().equals(this.entityData.get(need))) {
+            return;
+        }
+        QT.VILLAGER_LOGGER.debug("Townie {} need is now {}", UtilClean.truncateMiddle(getUUID()), newNeed);
+        this.entityData.set(need, newNeed.name());
+    }
+
+    public TownieNeed getNeed() {
+        return TownieNeed.fromName(this.entityData.get(need));
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY

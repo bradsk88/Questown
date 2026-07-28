@@ -1,6 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.mobs.helperchicken.HelperChickenBubbleLayer;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.PlayerModel;
@@ -59,9 +60,29 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
         this.setModelProperties(entity);
         if (entity.isSitting()) {
             this.renderSiting(entity, yaw, pTicks, stack, buffer, light);
+        } else {
+            super.render(entity, yaw, pTicks, stack, buffer, light);
+        }
+        renderNeedBubble(entity, stack, buffer);
+    }
+
+    /**
+     * The bubble must be drawn out here rather than as a {@code RenderLayer}: inside a layer the
+     * pose is still under the entity's body yaw, so the icon would spin as the townie turns.
+     * Same reason the helper chicken's bubble is a plain static call from its renderer.
+     */
+    private void renderNeedBubble(
+            VisitorMobEntity entity,
+            PoseStack stack,
+            MultiBufferSource buffer
+    ) {
+        NeedBubbleFocus.forgetIfResolved(entity);
+        if (!NeedBubbleFocus.isShowingBubble(entity)) {
             return;
         }
-        super.render(entity, yaw, pTicks, stack, buffer, light);
+        HelperChickenBubbleLayer.renderIconBubbleFor(
+                entity, entity.getNeed().icon(), stack, buffer, this.entityRenderDispatcher
+        );
     }
 
     private void setModelProperties(VisitorMobEntity entity) {

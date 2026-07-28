@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -105,6 +106,27 @@ public final class HelperChickenBubbleLayer {
     }
 
     /**
+     * Draws the same comic bubble over any entity, for callers that already know which icon to
+     * show — the townie need-bubbles of ADR-0011, which pick their icon from a synched need rather
+     * than from the chicken's alternating pair.
+     *
+     * <p>Same pose contract as {@link #renderBubbleFor}: call it after {@code super.render}, with
+     * the pose still camera-relative and the origin at the entity's feet.
+     */
+    public static void renderIconBubbleFor(
+            Entity entity,
+            ItemStack icon,
+            PoseStack poseStack,
+            MultiBufferSource bufferSource,
+            EntityRenderDispatcher dispatcher
+    ) {
+        if (icon.isEmpty() || dispatcher.distanceToSqr(entity) > VISIBILITY_RANGE_SQR) {
+            return;
+        }
+        renderBubble(poseStack, bufferSource, entity, icon, false, dispatcher);
+    }
+
+    /**
      * Texture-mode renderer. Same outer pose / billboard as the item path,
      * but the icon is a UV-mapped quad sampling the synced texture instead of
      * an item model. Quad spans roughly the bubble's inner area so the icon
@@ -113,13 +135,13 @@ public final class HelperChickenBubbleLayer {
     private static void renderTextureBubble(
             PoseStack poseStack,
             MultiBufferSource bufferSource,
-            HelperChickenEntity helper,
+            Entity entity,
             net.minecraft.resources.ResourceLocation texture,
             boolean throughWalls,
             EntityRenderDispatcher dispatcher
     ) {
         poseStack.pushPose();
-        poseStack.translate(0.0, helper.getBbHeight() + HEAD_LIFT_BLOCKS, 0.0);
+        poseStack.translate(0.0, entity.getBbHeight() + HEAD_LIFT_BLOCKS, 0.0);
         poseStack.scale(ASSEMBLY_SCALE, ASSEMBLY_SCALE, ASSEMBLY_SCALE);
         poseStack.mulPose(dispatcher.cameraOrientation());
 
@@ -179,7 +201,7 @@ public final class HelperChickenBubbleLayer {
     private static void renderBubble(
             PoseStack poseStack,
             MultiBufferSource bufferSource,
-            HelperChickenEntity helper,
+            Entity entity,
             ItemStack shown,
             boolean throughWalls,
             EntityRenderDispatcher dispatcher
@@ -189,7 +211,7 @@ public final class HelperChickenBubbleLayer {
         // brings its own 180°Y rotation that orients the model toward the
         // camera, so we DO NOT apply our own 180°Y here.
         poseStack.pushPose();
-        poseStack.translate(0.0, helper.getBbHeight() + HEAD_LIFT_BLOCKS, 0.0);
+        poseStack.translate(0.0, entity.getBbHeight() + HEAD_LIFT_BLOCKS, 0.0);
         poseStack.scale(ASSEMBLY_SCALE, ASSEMBLY_SCALE, ASSEMBLY_SCALE);
         poseStack.mulPose(dispatcher.cameraOrientation());
 

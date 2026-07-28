@@ -17,6 +17,44 @@ worktree at `db6c74dd`, so it is **not** caused by that work.
 | full suite, HEAD baseline | 54/55 — `organizer/fetch [warp]` FAIL |
 | full suite, working tree | 55/56 — same single failure |
 
+## UPDATE 2026-07-28: it is nondeterministic, not merely order-dependent
+
+Four more full-suite runs, same machine, same scenario order:
+
+| Run | Tree | Result |
+| --- | --- | --- |
+| perf work | flag-tick perf fixes | 58/58 — **passed** |
+| healing #1 | healing scale fix | 57/58 — FAIL |
+| healing control | HEAD, change stashed | 58/58 — **passed** |
+| healing #2 | healing scale fix (identical to #1) | 58/58 — **passed** |
+| need bubbles | bubble slice | 57/58 — FAIL |
+| need bubbles #2 | bubble slice (identical) | 57/58 — FAIL |
+| need bubbles control | HEAD, bubble slice removed | 57/58 — **FAIL** |
+
+Identical code passing and failing across runs (#1 vs #2) rules out pure order-dependence: run
+order was the same every time. Something in the shared arena varies between runs — residue, entity
+load, or a timing race in the fetch itself.
+
+**It also appears to get worse the more the suite is run.** The greens above are all from earlier
+in the day; the last three consecutive runs — two with a change, one with that change removed —
+were all red. That is the shape of **accumulating** arena residue rather than a per-run coin flip:
+`run/world` persists between runs, so each suite leaves state the next one inherits. First thing to
+try is running the suite twice from a freshly wiped `run/world` and seeing whether run 1 is
+reliably green and run 2 reliably red.
+
+**Cost paid so far:** this scenario has now forced three extra full-suite runs (~60 minutes) purely
+to exonerate unrelated changes — a bisect that produced no information about the changes and only
+confirmed the flake.
+
+**This is now a signal-quality problem, not a curiosity.** Two of the last four full-suite runs
+were red on this one scenario, so "58/58" is no longer a reliable gate, and every future change
+has to argue its way past this failure before it can be committed. That cost is now larger than
+the cost of fixing it.
+
+Worth noting for whoever picks it up: the failing variant is **`[warp]`**, which does not run
+entity AI at all (no brains, no pathing — warp goes through `TimeWarpWorldInteraction`). So the
+cause is in warp-side fetch/container state, not in movement or behaviour code.
+
 ## Symptom
 
 ```
