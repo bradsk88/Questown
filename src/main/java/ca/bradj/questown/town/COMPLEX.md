@@ -73,30 +73,36 @@ flowchart TD
     Reg["Config static init<br/>FLAG_TICK_INTERVAL define('FlagTickInterval', 10)"] --> Path{"same config path?"}
     Collide["ECONOMIC_RECORDS_DEPTH define('FlagTickInterval', 100)<br/>— the bug, now 'EconomicRecordsDepth'"] --> Path
     Path -- "yes (pre-fix)" --> Won["later define wins<br/>→ spec default 100"]
-    Won --> Toml["written into<br/>world/serverconfig/questown-server.toml"]
+    Won --> Toml["100 written into every world's<br/>serverconfig/questown-server.toml"]
 
-    Toml --> Old["EXISTING world: 100 stays<br/>(valid value, Forge never rewrites)"]
-    Toml --> NewW["NEW world: written fresh at 10"]
-    Old --> Gate["isFlagTick? gameTime % interval"]
-    NewW --> Gate
+    Toml --> Stuck["a same-key fix would leave it stuck at 100<br/>(valid value — Forge never rewrites one)"]
+    Stuck --> V2["so the key is renamed: FlagTickIntervalV2"]
+    V2 --> Fresh["absent from every toml → written fresh at 10<br/>old key dropped as unknown"]
+    Fresh --> Gate["isFlagTick? gameTime % interval"]
 ```
 
-- **The fix does not heal existing worlds**, and no migration is planned. Forge
-  only writes a key that is missing or that fails validation; `100` is in range,
-  so every pre-fix save keeps `FlagTickInterval = 100` and runs the heavy phases
-  10x less often than a fresh install. Perf numbers gathered in an old save are
-  measuring the throttled path — edit the toml by hand before comparing against
-  the defaults.
+- **The rename is the migration.** Forge only writes a key that is missing or
+  fails validation, so fixing the collision alone would have left every existing
+  world pinned at `100` forever — a value no one chose. Renaming to
+  `FlagTickIntervalV2` makes the key absent everywhere, so each world writes it
+  at the current default and the stale entry is dropped as unknown. This is the
+  project's convention for "the value in the wild is wrong and should be
+  re-defaulted": rename with a version suffix rather than write a migration.
+- The player-facing comment says only what the setting does. The reason for the
+  suffix lives here, not in everyone's toml.
 - `EconomicRecordsDepth` is absent from those tomls entirely and will be written
   on next load at its intended default of 100 — the same number the collision
   happened to supply, so no economics behaviour changes.
-- The interval is also the **denominator for work-status timers** (`ticksSinceLast`
-  below), so editing it mid-world rescales every in-flight timer: a 100 → 10 edit
-  makes existing gatherer day-waits and `NEED_ROAM` tails expire 10x sooner, once.
-- Whether `10` should stay the shipped default is an **open gameplay call**, not a
-  settled one. It is what the code has always intended; the stutter work above is
-  what makes it affordable, but 100 is what every existing player has actually
-  been running.
+- The interval does **not** rescale work-status timers, despite being passed as
+  `ticksSinceLast`: the store is ticked only on flag ticks, so a timer loses
+  `interval` every `interval` game ticks — one tick per game tick at any setting.
+  What the interval changes is *granularity*: a timer can overshoot by up to one
+  interval, so at 100 a finished job sits idle for up to 5 seconds before the
+  town notices.
+- The practical effect of the rename is that every existing world moves 100 → 10,
+  i.e. work statuses update 10x more often than they have been. That is the
+  setting doing what it was always meant to do, and the stutter work above is what
+  makes it affordable.
 
 ## Measuring it (`perf/*` autotest scenarios)
 

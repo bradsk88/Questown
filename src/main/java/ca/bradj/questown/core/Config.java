@@ -372,7 +372,7 @@ public class Config {
         ).defineInRange("BlockClaimsTickLimit", 1000L, 1, 24000);
         FLAG_TICK_INTERVAL = BUILDER.comment(
                 "The number of game ticks that pass for every tick that the town flag does"
-        ).defineInRange("FlagTickInterval", 10L, 1L, 24000L);
+        ).defineInRange("FlagTickIntervalV2", 10L, 1L, 24000L);
         CONTAINER_SCAN_INTERVAL = BUILDER.comment(
                 "The number of game ticks between town-wide container scans (detecting items the",
                 "player added to or removed from chests). Cost scales with the number of rooms, so",

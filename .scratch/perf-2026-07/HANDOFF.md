@@ -81,17 +81,24 @@ p50 is 18us, so averages hide it completely.
    `ECONOMIC_RECORDS_DEPTH` under the key `"FlagTickInterval"`, colliding with the real one; the
    later `define` won, so **100 was the value written into every world's config** — all 25 worlds
    under `run/saves/` show `FlagTickInterval = 100` and no `EconomicRecordsDepth` key at all.
-   Fixed (key renamed to `EconomicRecordsDepth`). Consequence: **existing** worlds keep
-   `FlagTickInterval = 100` in their toml, since it is a valid value and nothing rewrites it — only
-   new worlds get the code default of 10. Anyone playtesting stutter in an old world is still
-   measuring the throttled path.
+   Fixed: `ECONOMIC_RECORDS_DEPTH` gets its own key, and the flag-tick key is renamed
+   **`FlagTickIntervalV2`** so the wrong value cannot persist. Forge never rewrites a valid entry,
+   so fixing the collision alone would have pinned every existing world at 100 forever; a renamed
+   key is absent from every toml, gets written at the current default, and the stale entry is
+   dropped as unknown. Verified on a world holding `FlagTickInterval = 100`: after one boot it
+   reads `FlagTickIntervalV2 = 10`. **So the "25 other worlds still at 100" caveat below is now
+   moot** — every world migrates itself on next load.
+
+   (Project convention, per Brad: when the value already written into people's worlds is wrong and
+   should be re-defaulted, rename the key with a version suffix rather than write a migration.)
 
 ### Deliberately NOT done (decisions for the human)
 
-- **25 other worlds under `run/saves/` are still at `FlagTickInterval = 100`.** If playtesting
-  happens in one of those, it is still hiding the stutter. Not bulk-edited.
+- ~~**25 other worlds under `run/saves/` are still at `FlagTickInterval = 100`.**~~ Resolved by
+  the `FlagTickIntervalV2` rename above — every world re-defaults itself to 10 on next load.
 - **The shipped default was not raised to 100.** It would help perf but makes job work-statuses
-  10x less responsive for every player — a gameplay call, not a cleanup.
+  10x less responsive for every player — a gameplay call, not a cleanup. Still open, but the
+  case for 10 is stronger now that the flag tick's p99 is 2.7ms instead of 14.7ms.
 
 ## 3. Uncommitted state
 
