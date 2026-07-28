@@ -15,11 +15,13 @@ flowchart TD
 
     Inner --> Stored["phase updateStoredData<br/>→ TownFlagTicker.updateStoredData<br/>→ TownFlagState.tick"]
     Stored -->|"changed"| New["phase handleNewStoredData<br/>(invalidate possibleWork, item/job quests)"]
-    Inner --> PerTick["phases: workHandle, quests, biomes,<br/>healing, possibleWork, roomsHandle<br/>(every game tick)"]
+    Inner --> PerTick["phases: workHandle, quests, biomes,<br/>healing (bed-boost decay), possibleWork, roomsHandle<br/>(every game tick)"]
 
     PerTick --> Gate{"isFlagTick?<br/>gameTime % FlagTickInterval == 0"}
     Gate -- no --> Exit["return (still profiled)"]
     Gate -- yes --> Heavy["phases: updateWorkStatuses,<br/>asapRewards, pois"]
+    Heavy --> Vil["tickVillagers(signals)<br/>→ moods, learning,<br/>SimpleVillagerHandle: hunger + injury healing"]
+    Vil --> Econ["applyNewEconomicsData"]
 
     Wrap -.finally.-> Prof["TickProfile.INSTANCE.record(nanos)<br/>+ TICK_SAMPLING_RATE average (now us)"]
 ```
@@ -36,6 +38,11 @@ flowchart TD
   sample count that is a multiple of the tick count.
 - Timings moved from `System.currentTimeMillis()` to `nanoTime`/microseconds — at
   ms resolution a 400us tick rounds to 0 and a rare spike averages away.
+- **Two unrelated things are called "healing" on this map.** The per-game-tick
+  `healing` phase decays temporary healing-*bed boost* factors
+  (`tickHealingHandle` → `HealingStore.tick`). Villager *injury* healing is
+  `SimpleVillagerHandle.tickDamage`, inside `tickVillagers`, below the gate — that
+  is the one the interval table further down applies to.
 
 ## Container-scan throttle (inside `updateStoredData`)
 
@@ -103,6 +110,44 @@ flowchart TD
   i.e. work statuses update 10x more often than they have been. That is the
   setting doing what it was always meant to do, and the stutter work above is what
   makes it affordable.
+
+### What the interval does and does not change (audited 2026-07-28)
+
+Villager **labour throughput does not depend on this setting at all**: job progress
+is driven by the entity's own tick (`VisitorMobEntity.tick` → `DeclarativeJob.tick`
+→ the ticker), which never reads the config. Everything below the `isFlagTick`
+guard, though, runs once per flag tick, and whether that changes pace depends
+entirely on whether the work per call is interval-scaled or fixed:
+
+| per-flag-tick work | interval-scaled? | effect of a smaller interval |
+|---|---|---|
+| work-status timers (`ticksSinceLast`) | yes | none, beyond less overshoot at expiry |
+| hunger (`tickHunger`) | yes | none |
+| injury healing (`tickDamage`) | **yes, as of this change** | none (was 10x slower at large intervals) |
+| injury healing on waking (sleep listener) | n/a — not on this path | none |
+| ASAP rewards (`MCAsapRewards.tick`) | no — pops **one** per call | queued rewards drain faster |
+| knowledge requests | no — serves **one** per call | job awareness resolves faster |
+| mood recompute (`moodTick--`) | no — fixed decrement | stale mood corrects sooner |
+| room scan rotation, POIs, beds, economics | n/a — idempotent | noticed sooner, same outcome |
+
+- The rule to follow when adding work here: **subtract or advance by the interval,
+  not by a constant.** `tickHunger` does; `tickDamage` did not, and was the
+  constant `100` — which is `TICK_FACTOR x 10`, i.e. this expression with the
+  interval frozen at its default. `DamageTicks` promises "the number of ticks it
+  will take for one point of damage to heal", and that promise was only true at
+  interval 10.
+- The "one item per call" cases (rewards, knowledge) are deliberate drip-feeds, not
+  bugs — but they are denominated in flag ticks, so their real-world rate moves
+  with this setting. Worth knowing before tuning either of them.
+- **Injury heals by two separate routes, in two different units.** `tickDamage`
+  above subtracts `TICK_FACTOR x interval` per flag tick; the sleep listener in
+  `SimpleVillagerHandle.add` subtracts `duration x healFactor` on waking, in raw
+  game ticks with no `TICK_FACTOR` — so a night's sleep grants a tenth of what the
+  same duration of continuous healing would. Whether that ratio is tuning or an
+  omitted factor is unresolved; do not "fix" one route without pricing the other.
+- `BlockClaimsTickLimit` is **dead config**: `Claim.ticked()` decrements
+  `ticksLeft`, but nothing anywhere reads it, so a claim never expires on a timer —
+  only `clearClaim` or a re-claim by the same owner releases a spot.
 
 ## Measuring it (`perf/*` autotest scenarios)
 

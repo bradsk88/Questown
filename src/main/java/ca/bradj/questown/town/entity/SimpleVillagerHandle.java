@@ -174,9 +174,23 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     private void tickDamage() {
         tickThing(
-                damage, 0, e -> applyHealFactor(e, 100), 0, (newVal, e) -> {
+                damage, 0, e -> applyHealFactor(e, healingPerFlagTick()), 0, (newVal, e) -> {
                 }
         );
+    }
+
+    /**
+     * Damage is stored as ticks-to-heal x {@link #TICK_FACTOR}, and {@code DamageTicks} promises
+     * "the number of ticks it will take for one point of damage to heal" — so healing has to
+     * advance by one tick's worth per <em>game</em> tick, whatever the flag interval is. This runs
+     * once per flag tick, so it covers the whole interval, exactly as hunger does.
+     *
+     * <p>It was previously the constant 100, i.e. this expression with the interval frozen at its
+     * default of 10 — which made injured townies heal 10x slower than the config claimed in any
+     * world running a larger interval.
+     */
+    private int healingPerFlagTick() {
+        return TICK_FACTOR * Math.toIntExact(configs.flagTickInterval);
     }
 
     private int applyHealFactor(
