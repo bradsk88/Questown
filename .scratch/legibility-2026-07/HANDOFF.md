@@ -11,8 +11,8 @@ The perf thread from [[../perf-2026-07/HANDOFF]] is **finished and committed**. 
 is now the **"nothing in this mod is silent" legibility pass**, whose first slice (need bubbles)
 landed. Everything below is about continuing that pass.
 
-**Next task: pick up the legibility list at item 2 — see §3.**
-**Blocker to consider fixing first: the autotest flake in §5. It is degrading every change's signal.**
+**Next task: pick up the legibility list at item 3 — see §3.** (Item 2 landed 2026-07-29, `f4eebbeb`.)
+**Blocker: the autotest flake in §5 — experiment run, prediction refuted, see §5.**
 
 ## 1. What landed this session (7 commits, 2 unpushed)
 
@@ -77,8 +77,12 @@ the **Need bubble** entry in `CONTEXT.md`.
 Agreed sequencing (from ADR-0011 + the perf handoff), with slice 1 done:
 
 1. ~~`WANDER_GIVEUP_TICKS`~~ — **done**, differently than proposed (see §2).
-2. **Deed-consumption dupe bug** — `.scratch/flag-playtest-2026-07/deed-not-consumed-on-move.md`
-   (**p1**, the only p1 left in that folder). Start here.
+2. ~~**Deed-consumption dupe bug**~~ — **done** 2026-07-29 (`f4eebbeb`). The cause was **creative
+   mode**, not the empty-town edge case: the game mode restores a used stack's count, undoing
+   `shrink(1)`. `useOn` had already been fixed in passing by `42a6cc95`; the confirm-screen path had
+   not, and nothing tested the item layer. Both paths now share `RelocationDeedItem.consumeFrom`,
+   and `flag/deed_consumed_on_place` drives the real path with a **creative** FakePlayer (a
+   survival-only test would pass against the bug).
 3. **Craft-button feedback + disable** — `craft-buttons-no-feedback.md`,
    `craft-buttons-not-disabled-without-item.md`.
 4. **Crafting-tab layout** — `crafting-tab-layout-broken.md`. Note: the GUI work has a convention
@@ -112,9 +116,16 @@ short version: **identical code both passed and failed** across runs, so it is n
 not merely order-dependent as originally filed. Today: green in the morning, then the last three
 consecutive runs red — including a control run with the change under test **removed**.
 
-That shape suggests **accumulating** arena residue (`run/world` persists between suite runs), not a
-per-run coin flip. **First experiment: wipe `run/world`, run the suite twice, and see whether run 1
-is reliably green and run 2 reliably red.** Note the failing variant is `[warp]`, which runs a
+**The experiment ran on 2026-07-29 and the prediction was wrong.** From a freshly wiped `run/world`,
+two consecutive suites on HEAD were **both green** on `organizer/fetch [warp]` (57/58 then 58/58 —
+run 1's failure was the unrelated `gatherer:axe` loot flake). So one suite's residue is not enough.
+The residue story still fits — three consecutive reds against a long-lived world, green twice after
+the wipe — but the horizon is **many** runs. **Usable today: wipe `run/world` before any suite whose
+result you intend to trust.** The real fix is making the harness start each suite clean; not done,
+because whether a suite may inherit state at all is Brad's call (see §7).
+
+Original (now-refuted) prediction, kept for the record: wipe `run/world`, run the suite twice, and
+see whether run 1 is reliably green and run 2 reliably red. Note the failing variant is `[warp]`, which runs a
 realtime prelude and then warps — so the cause could be in either half, and "warp does not run
 entity AI" is NOT sufficient to exonerate a movement-related change (I made that mistake).
 
@@ -145,6 +156,11 @@ Cost so far: three extra full-suite runs (~1 hour) spent purely proving unrelate
 - `BlockClaimsTickLimit` is **dead config** — `Claim.ticked()` decrements `ticksLeft` and nothing
   reads it, so claims never expire. Make it real, or delete it?
   See `.scratch/perf-2026-07/block-claims-tick-limit-is-dead-config.md`.
+- Should the autotest harness **reset `run/world` per suite** (or run against a throwaway world dir)?
+  Wiping it made the long-red `organizer/fetch [warp]` green twice — see §5.
+- The issue tracker's five statuses have **no "resolved" state**. `deed-not-consumed-on-move.md` is
+  closed as `wontfix` + a `resolved:` date + a triage note, because `wontfix` is the only status
+  documented as "kept as historical record". Worth adding a real one.
 - Injury heals by **two routes in different units** — `tickDamage` (TICK_FACTOR-scaled) and the
   sleep-wake listener (raw game ticks), so a night's sleep grants a tenth of what the same duration
   of continuous healing does. Tuning or an omitted factor?
