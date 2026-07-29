@@ -42,6 +42,33 @@ were all red. That is the shape of **accumulating** arena residue rather than a 
 try is running the suite twice from a freshly wiped `run/world` and seeing whether run 1 is
 reliably green and run 2 reliably red.
 
+## UPDATE 2026-07-29: the wipe experiment ran — residue survives, the prediction was backwards
+
+Ran exactly the experiment above: moved `run/world` aside, then two consecutive full suites on the
+same tree (HEAD, `bb395e61`).
+
+| Run | World | Result | `organizer/fetch [warp]` |
+| --- | --- | --- | --- |
+| 1 | freshly wiped | 57/58 | **PASS** |
+| 2 | run 1's residue | 58/58 | **PASS** |
+
+The prediction — run 1 green, run 2 red — is **refuted**: residue from a single prior suite is not
+enough to make it fail. What *did* change is that this scenario had gone red on the last three
+consecutive runs against a long-lived `run/world`, and wiping that world made it green twice. So
+the residue story survives, but the accumulation horizon is **many** runs, not one.
+
+**Cheap mitigation available now:** wipe `run/world` before a suite you intend to trust. That is
+also the shape of a real fix — have the harness (or the gradle task) start each suite from a clean
+world instead of inheriting whatever the last few runs left behind. Not implemented; it is a
+harness/build change and wants Brad's call on whether a suite run should be allowed to keep state
+at all.
+
+Run 1's single failure was **not** this scenario — it was `gatherer:axe [warp]`, the separately
+documented loot flake (`gatherer-warp-loot-flaky`), and run 2 passed it. Note the detail though:
+`expected 0..14, got -1 (before=9, after=8)` — a **negative** delta, i.e. an item left the chest.
+That is not the "not enough loot" shape the existing note describes and may be a different bug
+wearing the same scenario's name.
+
 **Cost paid so far:** this scenario has now forced three extra full-suite runs (~60 minutes) purely
 to exonerate unrelated changes — a bisect that produced no information about the changes and only
 confirmed the flake.
