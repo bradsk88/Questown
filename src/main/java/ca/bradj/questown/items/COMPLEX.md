@@ -51,3 +51,56 @@ test arena (see the `flag/campfire_sleep_preserves_flag` autotest):
 `placeTempBed` without the `ServerPlayer`/sleep state machine (headless has no
 player). It is the destructive core, so it catches a regression that re-lets the
 bed land on a non-replaceable block.
+
+# Relocation deed — placement and consumption
+
+Collecting the deed lives in `town/entity/COMPLEX.md`. This is the other half:
+**placing** it, and the non-obvious reason the deed is cleared from the hand
+rather than shrunk. A deed that outlives its own placement is a duplication
+hazard — it still references the flag that placement just destroyed, so placing
+it again mints a second flag for a town that no longer exists.
+
+```mermaid
+flowchart TD
+    Use["RelocationDeedItem.useOn\n(client side → sidedSuccess, no-op)"] --> Far{"farFixturesFor(target)\n> 0?"}
+    Far -- yes --> Screen["send OpenRelocationConfirmMessage\nreturn SUCCESS — deed STAYS in hand"]
+    Screen --> Choice["player picks bring / leave\n→ RelocationChoiceMessage.handle"]
+    Choice --> PlaceB["TownRelocation.place(policy)"]
+    Far -- no --> PlaceA["TownRelocation.place(BRING_ALL)"]
+
+    PlaceA --> OkA{"result == OK?"}
+    PlaceB --> OkB{"result == OK?"}
+    OkA -- no --> FailA["displayClientMessage(messageFor)\nreturn FAIL — deed retained"]
+    OkB -- no --> FailB["displayClientMessage\nreturn — deed retained"]
+    OkA -- yes --> Consume
+    OkB -- yes --> Consume["RelocationDeedItem.consumeFrom(player, hand)\nsetItemInHand(hand, EMPTY)"]
+    Consume --> Done["useOn returns CONSUME"]
+
+    subgraph creative ["why EMPTY, not shrink(1)"]
+      G1["ServerPlayerGameMode.useItemOn\n(creative branch)"] --> G2["int i = stack.getCount()"]
+      G2 --> G3["stack.useOn(ctx)"]
+      G3 --> G4["stack.setCount(i)\n← undoes any shrink"]
+    end
+    Consume -.immune to.-> creative
+```
+
+- **Cancel sends no message at all.** The confirm screen just closes, so the
+  "deed stays in hand" branch is also the cancel path — nothing to undo.
+- **`setItemInHand(hand, EMPTY)` survives the creative restore** because it
+  replaces the *slot*; the game mode's `setCount(i)` then mutates a stack that is
+  no longer in the inventory. `shrink(1)` mutates the very stack the game mode is
+  about to restore, so in creative the deed comes straight back (the 2026-07-14
+  playtest bug). Both placement paths share `consumeFrom` so neither can drift
+  back to the shrink idiom.
+- **Consumption is strictly after an OK result** — "fail loudly, consume
+  nothing". `place` validates fully before mutating, so a non-OK result leaves
+  both the world and the deed untouched.
+
+## Autotest coverage
+
+`flag/deed_consumed_on_place` drives the whole real path —
+`ServerPlayerGameMode.useItemOn` → `useOn` — with a **creative** Forge
+FakePlayer, and asserts deed 1 → 0 plus "nothing dropped on the ground instead".
+Creative is essential: in survival the naive shrink passes, so a survival-only
+test would have been green against the bug. The other relocate scenarios call
+`TownRelocation.place` directly and never touch the item layer.

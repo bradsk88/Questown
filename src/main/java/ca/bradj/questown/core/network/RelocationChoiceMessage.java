@@ -60,7 +60,7 @@ public record RelocationChoiceMessage(
                 sender.displayClientMessage(RelocationDeedItem.messageFor(result), true);
                 return;
             }
-            deed.shrink(1);
+            RelocationDeedItem.consumeFrom(sender, hand);
         });
         ctx.get().setPacketHandled(true);
     }

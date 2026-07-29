@@ -13,7 +13,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -103,15 +105,25 @@ public class RelocationDeedItem extends Item {
         return InteractionResult.CONSUME;
     }
 
-    // Deeds are unstackable one-shots, so clear the used deed from the hand. Done explicitly (rather
-    // than relying on shrink + the use-consumption path) so it also holds in creative, where a used
-    // item is otherwise restored — a leftover deed there references the now-destroyed original flag.
     private static void consumeDeed(UseOnContext ctx) {
         if (ctx.getPlayer() == null) {
             ctx.getItemInHand().shrink(1);
             return;
         }
-        ctx.getPlayer().setItemInHand(ctx.getHand(), ItemStack.EMPTY);
+        consumeFrom(ctx.getPlayer(), ctx.getHand());
+    }
+
+    /**
+     * Take a placed deed out of the player's hand. Deeds are unstackable one-shots, so the slot is
+     * cleared explicitly rather than shrunk: creative restores the count of a used stack, and a deed
+     * that survives its own placement references a flag that no longer exists — place it again and
+     * the town has two.
+     */
+    public static void consumeFrom(
+            Player player,
+            InteractionHand hand
+    ) {
+        player.setItemInHand(hand, ItemStack.EMPTY);
     }
 
     @Override

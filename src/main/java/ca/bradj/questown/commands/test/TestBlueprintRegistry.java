@@ -39,11 +39,19 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.util.FakePlayer;
+import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.Blocks;
@@ -187,6 +195,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("deed_issue_and_recover", deedIssueAndRecoverBlueprint()));
         jobs.add(flagEntry("relocate_nearby", relocateNearbyBlueprint()));
         jobs.add(flagEntry("relocate_far", relocateFarBlueprint()));
+        jobs.add(flagEntry("deed_consumed_on_place", deedConsumedOnPlaceBlueprint()));
         jobs.add(flagEntry("campfire_sleep_preserves_flag", campfireSleepPreservesFlagBlueprint()));
 
         // Perf measurements (always pass; they report timings). Baseline first so the pair can be
@@ -545,6 +554,131 @@ public class TestBlueprintRegistry {
             ok &= report(output, "9 proficiency-carried (NO ROSTER — cannot verify)", false);
         }
 
+        return ok;
+    }
+
+    /**
+     * Deed consumption on a successful placement (#199, playtest follow-up). A deed that survives its
+     * own relocation is a duplication hazard: placed again it mints a second flag referencing a town
+     * that no longer exists. The other relocate scenarios call {@link TownRelocation#place} directly,
+     * so nothing covered the item layer that is supposed to take the deed away.
+     *
+     * <p>This drives the whole real use path — {@code ServerPlayerGameMode.useItemOn} into
+     * {@link RelocationDeedItem#useOn} — with a <em>creative</em> player, because creative is exactly
+     * where the naive {@code shrink(1)} fails silently: the game mode restores the stack's count after
+     * the use and hands the deed straight back.
+     */
+    private static TestBlueprint deedConsumedOnPlaceBlueprint() {
+        DeedUseCapture cap = new DeedUseCapture();
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) -> placeDeedByHand(level, flagPos, town, output, cap))
+                .withCustomAssertion((level, flagPos, town, output) -> assertDeedConsumed(level, flagPos, output, cap));
+    }
+
+    // Carries the item-layer outcome from the post-spawn trigger to the end-state assertion. The
+    // counts are read immediately around the use, since the monitor phase that follows would let a
+    // dropped deed despawn or be picked up and hide the leak.
+    private static final class DeedUseCapture {
+        BlockPos targetPos;
+        InteractionResult useResult;
+        int deedsBefore;
+        int deedsAfter;
+        boolean relocated;
+    }
+
+    private static boolean placeDeedByHand(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output,
+            DeedUseCapture cap
+    ) {
+        // Click the farm floor, so the deed lands the new flag on the air block above it — the same
+        // "one block off the clicked face" idiom useOn implements.
+        BlockPos clickedPos = flagPos.offset(5, -1, 0);
+        cap.targetPos = clickedPos.above();
+
+        // Dormant is a precondition of placement, not the thing under test (flag/town_shutdown owns
+        // the ritual), so reach it with a blockstate write and mint the deed as completion does.
+        setPhase(level, flagPos, FlagPhase.DORMANT);
+        ItemStack deed = RelocationDeedItem.forReference(
+                town.getUUID(), flagPos, level.dimension().location()
+        );
+
+        ServerPlayer player = creativeDeedHolder(level, clickedPos, deed);
+        cap.deedsBefore = countDeeds(player);
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(clickedPos), Direction.UP, clickedPos, false);
+        cap.useResult = player.gameMode.useItemOn(
+                player,
+                level,
+                player.getItemInHand(InteractionHand.MAIN_HAND),
+                InteractionHand.MAIN_HAND,
+                hit
+        );
+        cap.deedsAfter = countDeeds(player);
+        cap.relocated = TownFlagBlockEntity.getFromPos(level, cap.targetPos) != null;
+        output.msg("useItemOn(" + cap.targetPos.toShortString() + ") -> " + cap.useResult
+                + ", deeds held " + cap.deedsBefore + " -> " + cap.deedsAfter
+                + ", new flag present=" + cap.relocated);
+        // Report through the assertion rather than failing here, so the counts always reach the log.
+        return true;
+    }
+
+    // A creative player holding nothing but the deed, standing on the block it will click. Forge's
+    // FakePlayer carries a no-op net handler, so the game mode's client packets go nowhere and the
+    // creative branch (which is what makes this scenario worth running) executes for real.
+    private static ServerPlayer creativeDeedHolder(
+            ServerLevel level,
+            BlockPos stand,
+            ItemStack deed
+    ) {
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        player.setGameMode(GameType.CREATIVE);
+        player.moveTo(stand.getX() + 0.5, stand.getY() + 1.0, stand.getZ() + 0.5);
+        player.setItemInHand(InteractionHand.MAIN_HAND, deed);
+        return player;
+    }
+
+    private static int countDeeds(ServerPlayer player) {
+        int count = 0;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+            if (RelocationDeedItem.isDeed(stack)) {
+                count += stack.getCount();
+            }
+        }
+        return count;
+    }
+
+    private static long deedsOnTheGround(
+            ServerLevel level,
+            BlockPos around
+    ) {
+        return level.getEntitiesOfClass(ItemEntity.class, new AABB(around).inflate(20))
+                .stream()
+                .filter(e -> RelocationDeedItem.isDeed(e.getItem()))
+                .count();
+    }
+
+    private static boolean assertDeedConsumed(
+            ServerLevel level,
+            BlockPos originalFlagPos,
+            TestOutput output,
+            DeedUseCapture cap
+    ) {
+        boolean ok = true;
+        ok &= report(output, "1 relocation-placed", cap.relocated);
+        ok &= report(output, "2 original-destroyed",
+                TownFlagBlockEntity.getFromPos(level, originalFlagPos) == null);
+        ok &= report(output, "3 use-consumed-action",
+                cap.useResult != null && cap.useResult.consumesAction());
+        ok &= report(output, "4 deed-held-before", cap.deedsBefore == 1);
+        // The dupe hazard itself: a deed that outlives its own placement can mint a second flag.
+        ok &= report(output, "5 deed-gone-after", cap.deedsAfter == 0);
+        long dropped = deedsOnTheGround(level, originalFlagPos);
+        output.msg("deed item entities near the old flag = " + dropped);
+        ok &= report(output, "6 no-deed-dropped", dropped == 0);
         return ok;
     }
 
