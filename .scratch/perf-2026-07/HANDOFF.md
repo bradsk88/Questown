@@ -1,9 +1,15 @@
 ---
 title: Session handoff — design grilling + flag-tick perf investigation
-status: ready-for-agent
+status: ready-for-human
 created: 2026-07-27
+closed: 2026-07-29
 priority: p1
 ---
+
+> **CLOSED 2026-07-29.** The perf work here is done and committed (`1f066b04`, `4a07c0ac`, plus the
+> config fixes `2c2cf80b`/`83efc333`). The live thread moved on to the legibility pass — see
+> [[../legibility-2026-07/HANDOFF]]. Kept for the measurements, the reasoning, and the two perf
+> leads that are still open (`possibleWork`, `updateStoredData`).
 
 # Handoff
 
