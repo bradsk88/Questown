@@ -430,7 +430,7 @@
   "menu.quests.room_quest": "Build a room containing the blocks shown here",
   "menu.quests.campfire_quest": "Place a campfire near the town flag",
   "message.flag_crafting.created": "Created %s",
-  "menu.flag_crafting.in_hand": "%s in hand",
+  "menu.flag_crafting.in_inventory": "%s in your inventory",
   "menu.quests.all_done_morning": "You will be rewarded in the morning",
   "menu.quests.all_done_caught_up": "You're all caught up. New quests will appear soon",
   "menu.quests.view_completed": "View completed quests →",

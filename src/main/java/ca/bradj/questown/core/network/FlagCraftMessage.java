@@ -2,8 +2,8 @@ package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
@@ -53,9 +53,14 @@ public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
         giveAndNotify(player, new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()));
     }
 
+    // The "Created X" message is the only confirmation a craft gives, so it must not be able to lie:
+    // a full inventory would otherwise swallow the item while the input was still consumed. Drop the
+    // remainder at the player's feet instead, the same fallback the flag uses for a block of progress.
     private void giveAndNotify(ServerPlayer player, ItemStack crafted) {
-        player.getInventory().add(crafted);
-        player.sendSystemMessage(Component.translatable("message.flag_crafting.created", crafted.getHoverName()));
+        if (!player.getInventory().add(crafted)) {
+            player.drop(crafted, false);
+        }
+        player.sendSystemMessage(Compat.translatable("message.flag_crafting.created", crafted.getHoverName()));
     }
 
     private boolean consumeItem(ServerPlayer player, Item required) {

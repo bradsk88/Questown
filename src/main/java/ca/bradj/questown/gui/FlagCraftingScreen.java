@@ -147,7 +147,7 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
         int count = countInInventory(required);
         List<FormattedCharSequence> lines = new ArrayList<>(Compat.splitText(font, desc, TOOLTIP_WIDTH));
         Style style = Style.EMPTY.applyFormat(count == 0 ? ChatFormatting.RED : ChatFormatting.GRAY);
-        lines.add(Compat.translatableStyled("menu.flag_crafting.in_hand", style, count).getVisualOrderText());
+        lines.add(Compat.translatableStyled("menu.flag_crafting.in_inventory", style, count).getVisualOrderText());
         this.renderTooltip(stack, lines, mouseX, mouseY);
     }
 
