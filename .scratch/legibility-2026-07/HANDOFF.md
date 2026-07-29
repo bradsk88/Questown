@@ -11,7 +11,7 @@ The perf thread from [[../perf-2026-07/HANDOFF]] is **finished and committed**. 
 is now the **"nothing in this mod is silent" legibility pass**, whose first slice (need bubbles)
 landed. Everything below is about continuing that pass.
 
-**Next task: pick up the legibility list at item 3 — see §3.** (Item 2 landed 2026-07-29, `f4eebbeb`.)
+**Next task: pick up the legibility list at item 4 — see §3.** (Items 2 and 3 landed 2026-07-29.)
 **Blocker: the autotest flake in §5 — experiment run, prediction refuted, see §5.**
 
 ## 1. What landed this session (7 commits, 2 unpushed)
@@ -83,8 +83,13 @@ Agreed sequencing (from ADR-0011 + the perf handoff), with slice 1 done:
    not, and nothing tested the item layer. Both paths now share `RelocationDeedItem.consumeFrom`,
    and `flag/deed_consumed_on_place` drives the real path with a **creative** FakePlayer (a
    survival-only test would pass against the bug).
-3. **Craft-button feedback + disable** — `craft-buttons-no-feedback.md`,
-   `craft-buttons-not-disabled-without-item.md`.
+3. ~~**Craft-button feedback + disable**~~ — **done** 2026-07-29 (`ef9bb156`). Both were already
+   implemented by `a3e8f1d8` the day after the playtest and never closed. What was left: the
+   "Created X" confirmation fired even when a full inventory ate the item (now drops at the
+   player's feet), and the tooltip said "in hand" while the count and the server-side consumption
+   are both inventory-wide (now `menu.flag_crafting.in_inventory`).
+   **Pattern worth noticing: three of the first three list items were already fixed and left open.
+   Check `git log` for the file before implementing anything else from this folder.**
 4. **Crafting-tab layout** — `crafting-tab-layout-broken.md`. Note: the GUI work has a convention
    (`docs/solutions/conventions/gui-layout-flow-and-linter.md`) and a dev-only `gui-lint` oracle —
    open the screen in a dev client and confirm `[gui-lint] <Screen> — OK`. There is also an
