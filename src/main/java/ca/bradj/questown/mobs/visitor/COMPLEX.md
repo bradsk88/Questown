@@ -35,8 +35,42 @@ flowchart TD
 - **Icon then words, in two gestures**: sweeping the crosshair earns the icon ("who
   needs me"); walking up and looking squarely earns the action-bar line ("what for").
 - The bubble renderer lives in `mobs/helperchicken` because that is where it was
-  built; it now has a second, non-chicken consumer. Worth moving to a neutral home
-  when the third one (the dead-door bubble) lands.
+  built. The third consumer (dead doors) has now landed, so per the earlier note it
+  is due a move to a neutral home — deferred: 11 files reference that package and the
+  move is mechanical, not risky. Do it as its own commit.
+
+## The second consumer: dead doors
+
+A registered door with no room bubbles too (ADR-0011, grilling 2026-08-09). Doors are
+not entities, so the pipeline differs from townies at both ends and meets in the middle:
+
+```mermaid
+flowchart TD
+    Scan["MultiLevelRoomDetector scan callback<br/>+ recipe listeners + register/deRegister"]
+    Scan --> Recompute["TownRoomsMap.recomputeDeadDoors"]
+    Recompute --> Classify{"rooms.get(doorPos)?"}
+    Classify -->|"no room"| NE["NOT_ENCLOSED"]
+    Classify -->|"room, no recipe match"| NR["NO_RECIPE"]
+    NE --> Push["flag.setDeadDoors<br/>+ sendBlockUpdated on change"]
+    NR --> Push
+    Push --> Tag["flag BE update tag: 'deadDoors' list"]
+    Tag -.chunk sync.-> Reg["DeadDoorBubbles.register(flag)<br/>client onLoad / setRemoved"]
+    Reg --> Focus["NeedBubbleFocus.tick:<br/>doors (BlockPos keys) compete in the SAME<br/>contest as townies (UUID keys)"]
+    Focus -->|"currentDoor()"| Render["NeedBubbleClientEvents.onRenderLevel<br/>AFTER_TRANSLUCENT_BLOCKS<br/>→ renderIconBubbleAtBlock"]
+```
+
+- **Zombie doors are not bubbles.** If the door *block* is gone, the registration is
+  silently discarded on the next tick's block check (ADR-0013) — there is nothing to
+  point a bubble at, and a never-completed room cost the player nothing, so there is no
+  broadcast either.
+- **Both troubles share one door icon** (`DoorTrouble.sharedIcon`); the distinction
+  lives only in the close-up words, because the fix differs (walls/roof vs. contents).
+- **The sync rides the flag BE update tag**, not a packet. Accepted cost: a player in
+  bubble range of a door whose *flag* chunk is not loaded sees no bubble.
+- **A door bubbles from the moment it is registered** — the wand-then-fetch-materials
+  build flow is *expected* to show a bubble. It diagnoses; it never deregisters.
+- The focus holder key is now `Object` (UUID for townies, BlockPos for doors) — the
+  hysteresis rule (`keepsBubble`) is type-agnostic and its tests did not change.
 
 ## Exceptional: the need clears itself
 

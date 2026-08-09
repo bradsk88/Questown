@@ -95,8 +95,16 @@ Agreed sequencing (from ADR-0011 + the perf handoff), with slice 1 done:
    rewrite); the only remaining work was verification: `[gui-lint] FlagCraftingScreen — OK` in a
    dev client. Issue closed as wontfix+resolved, same convention as items 2–3. Note: there is an
    uncommitted L2 widget-linter PoC mentioned in the `gui-layout-validation` note.
-5. **Dead-door failure message** — the second need-bubble consumer. ADR-0011 explicitly **rejects**
-   `dropDeadDoors()`/deregistration: diagnosis only, never undo the player's action.
+5. ~~**Dead-door failure message**~~ — **implemented 2026-08-09** after a grilling session.
+   Registered door with no room bubbles (from registration until scan attaches it); two
+   troubles distinguished in words only (`NOT_ENCLOSED` / `NO_RECIPE`, one shared door icon);
+   doors compete in the SAME single-bubble contest as townies; sync rides the flag BE update
+   tag (`deadDoors`), not a packet. Zombie doors (block gone) were found **already discarded**
+   by a pre-existing tick check (`TownRoomsMap`, reason "not existing anymore") — that
+   behaviour is now ratified by **ADR-0013** (silent: no bubble, no broadcast). Docs:
+   `mobs/visitor/COMPLEX.md` "second consumer" section; glossary in CONTEXT.md. **Not yet
+   verified in a dev client.** Follow-up deferred: move `HelperChickenBubbleLayer` to a
+   neutral package (its own commit; 11 files reference the chicken package).
 6. **Third bubble consumer: unmet item.** `NoMCEconomics.unmetNeedsRecord` already holds
    `UnmetNeed(tick, villager, request)` per villager UUID — a ready-made source. `WithReason` prose
    is developer-facing and must be rephrased before being shown verbatim.
