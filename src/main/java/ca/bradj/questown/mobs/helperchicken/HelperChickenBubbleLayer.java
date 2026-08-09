@@ -198,6 +198,38 @@ public final class HelperChickenBubbleLayer {
                 .endVertex();
     }
 
+    /**
+     * Draws the same comic bubble over a block position — the dead-door bubble of ADR-0011,
+     * which has no entity to hang the render off.
+     *
+     * <p>Pose contract: {@code poseStack} must be in camera-relative world space (as handed
+     * to a {@code RenderLevelStageEvent} subscriber), and {@code cameraPos} is the active
+     * camera's world position. The bubble floats just above the top of the two-block door.
+     */
+    public static void renderIconBubbleAtBlock(
+            net.minecraft.core.BlockPos pos,
+            ItemStack icon,
+            PoseStack poseStack,
+            MultiBufferSource bufferSource,
+            net.minecraft.world.phys.Vec3 cameraPos
+    ) {
+        if (icon.isEmpty()
+                || cameraPos.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(pos)) > VISIBILITY_RANGE_SQR) {
+            return;
+        }
+        // AFTER_TRANSLUCENT runs after entity rendering, so the dispatcher's camera
+        // orientation is still valid for billboarding.
+        EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        poseStack.pushPose();
+        poseStack.translate(
+                pos.getX() + 0.5 - cameraPos.x,
+                pos.getY() + 2.0 + HEAD_LIFT_BLOCKS - cameraPos.y,
+                pos.getZ() + 0.5 - cameraPos.z
+        );
+        renderBubbleAssembly(poseStack, bufferSource, icon, false, dispatcher);
+        poseStack.popPose();
+    }
+
     private static void renderBubble(
             PoseStack poseStack,
             MultiBufferSource bufferSource,
@@ -207,11 +239,26 @@ public final class HelperChickenBubbleLayer {
             EntityRenderDispatcher dispatcher
     ) {
         // Outer pose: +Y is world-up. Translate up to chicken's head + lift.
-        // Then scale, then billboard via cameraOrientation. HEAD transform
-        // brings its own 180°Y rotation that orients the model toward the
-        // camera, so we DO NOT apply our own 180°Y here.
         poseStack.pushPose();
         poseStack.translate(0.0, entity.getBbHeight() + HEAD_LIFT_BLOCKS, 0.0);
+        renderBubbleAssembly(poseStack, bufferSource, shown, throughWalls, dispatcher);
+        poseStack.popPose();
+    }
+
+    /**
+     * Scale + billboard + bubble background + icon, shared by the entity path (origin at the
+     * entity's feet, pre-lifted) and the block path (origin at the bubble's world anchor).
+     * HEAD transform brings its own 180°Y rotation that orients the model toward the
+     * camera, so we DO NOT apply our own 180°Y here.
+     */
+    private static void renderBubbleAssembly(
+            PoseStack poseStack,
+            MultiBufferSource bufferSource,
+            ItemStack shown,
+            boolean throughWalls,
+            EntityRenderDispatcher dispatcher
+    ) {
+        poseStack.pushPose();
         poseStack.scale(ASSEMBLY_SCALE, ASSEMBLY_SCALE, ASSEMBLY_SCALE);
         poseStack.mulPose(dispatcher.cameraOrientation());
 

@@ -51,7 +51,12 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import ca.bradj.questown.town.rooms.DeadDoorBubbles;
+import ca.bradj.questown.town.rooms.DoorTrouble;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -102,6 +107,67 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final TownKnownBiomes biomes = new TownKnownBiomes();
     TownHealingHandle healing = new TownHealingHandle();
     private final TownFlagInitialization initializer;
+
+    private static final String NBT_DEAD_DOORS = "deadDoors";
+
+    /**
+     * Registered doors with no room, and why (ADR-0011). Written server-side by
+     * {@code TownRoomsMap} whenever the scan changes it; synced to clients via the update
+     * tag so the dead-door bubble can be drawn. Live read, never latched: a door leaves the
+     * set the moment its scan attaches it to a room.
+     */
+    private Map<BlockPos, DoorTrouble> deadDoors = ImmutableMap.of();
+
+    public Map<BlockPos, DoorTrouble> getDeadDoors() {
+        return deadDoors;
+    }
+
+    public void setDeadDoors(Map<BlockPos, DoorTrouble> updated) {
+        if (this.deadDoors.equals(updated)) {
+            return;
+        }
+        this.deadDoors = ImmutableMap.copyOf(updated);
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        }
+    }
+
+    private void writeDeadDoors(CompoundTag tag) {
+        ListTag list = new ListTag();
+        deadDoors.forEach((pos, trouble) -> {
+            CompoundTag entry = new CompoundTag();
+            entry.putInt("x", pos.getX());
+            entry.putInt("y", pos.getY());
+            entry.putInt("z", pos.getZ());
+            entry.putString("trouble", trouble.name());
+            list.add(entry);
+        });
+        tag.put(NBT_DEAD_DOORS, list);
+    }
+
+    private void readDeadDoors(CompoundTag tag) {
+        if (!tag.contains(NBT_DEAD_DOORS)) {
+            return;
+        }
+        ImmutableMap.Builder<BlockPos, DoorTrouble> b = ImmutableMap.builder();
+        for (Tag t : tag.getList(NBT_DEAD_DOORS, Tag.TAG_COMPOUND)) {
+            CompoundTag entry = (CompoundTag) t;
+            b.put(
+                    new BlockPos(entry.getInt("x"), entry.getInt("y"), entry.getInt("z")),
+                    DoorTrouble.fromName(entry.getString("trouble"))
+            );
+        }
+        this.deadDoors = b.build();
+    }
+
+    @Override
+    public void handleUpdateTag(CompoundTag tag) {
+        super.handleUpdateTag(tag);
+        // Unlike the town-data initializers (see the warning on load), this payload only
+        // ever feeds client-side bubble rendering, so a plain field write is safe here.
+        readDeadDoors(tag);
+    }
     private final TownVillagerData.FallbackSelector fallbackSelector = new TownVillagerData.FallbackSelector();
     private final NoMCEconomics economics = new NoMCEconomics();
     final TownFlagTicker ticker = new TownFlagTicker();
@@ -402,6 +468,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (this.isInitialized()) {
             this.writeTownData(tag);
         }
+        writeDeadDoors(tag);
         return tag;
     }
 
@@ -415,9 +482,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public void onLoad() {
         super.onLoad();
         if (!(level instanceof ServerLevel sl)) {
+            // Client side: make this flag's synced dead-door set findable by the bubble
+            // focus. Guarded so the client-only class is never touched on a server.
+            if (level != null && level.isClientSide()) {
+                DeadDoorBubbles.register(this);
+            }
             return;
         }
         initializeFreshFlag(false);
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        if (level != null && level.isClientSide()) {
+            DeadDoorBubbles.unregister(this);
+        }
     }
 
     public void initializeFreshFlag(boolean fullInit) {
