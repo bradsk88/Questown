@@ -8,11 +8,30 @@ https://modrinth.com/mod/questown/
 ### Automated Testing
 Run all 12 job tests on a headless server:
 ```
-JAVA_HOME=/home/retro/.gradle/jdks/jdk-17.0.18+8 ./gradlew runServer -Dquestown.autotest=true -Dquestown.autotest.warp=24000
+JAVA_HOME=/home/retro/.gradle/jdks/jdk-17.0.20+8 ./gradlew runServer -Dquestown.autotest=true -Dquestown.autotest.warp=24000
 ```
-- Requires JDK 17 (Gradle auto-provisions it at the path above on first build).
+- Requires JDK 17 (Gradle auto-provisions it under `~/.gradle/jdks/` on first build — if the
+  pinned path is gone, substitute any JDK 17 that exists on your machine).
 - Exit code 0 = all pass, 1 = failures.
 - Results in `run/logs/latest.log` — grep for `[autotest]`.
+
+### Dev environment pitfalls (learned 2026-08-09)
+
+- **"Invalid patcher dependency: net.minecraftforge:forge:...:userdev"** — this almost
+  certainly means ForgeGradle cached a corrupt userdev jar. The known cause: the
+  `modmaven.dev` repository (a former JEI mirror) now serves an HTML redirect page
+  **with HTTP 200** for artifacts it doesn't have, and ForgeGradle's downloader caches
+  that page as the jar. The repo has been removed from `build.gradle`; if you see this
+  error, delete the poisoned artifact and rebuild:
+  `rm -rf ~/.gradle/caches/forge_gradle/maven_downloader/net/minecraftforge/forge/<version>/`
+- **"Unsupported class file major version 65"** — you ran Gradle 7.2 on Java 21. Questown
+  needs an older JDK to *run Gradle* (e.g. `JAVA_HOME=~/.jdks/corretto-16.0.2 ./gradlew runClient`);
+  RoomRecipes instead pins `org.gradle.java.home` in its `gradle.properties` to a JDK 17.
+- **`Could not find ca.bradj:RoomRecipes:1.19.2-<version>`** — RoomRecipes is resolved from
+  `mavenLocal()`, not a remote repo. Publish it from a sibling checkout:
+  `cd ../RoomRecipes && git checkout 1.19.2-<version> && ./gradlew publishToMavenLocal`
+  (the published version is the git branch name). Its `gradle.properties` may pin
+  `org.gradle.java.home` to a since-deleted auto-provisioned JDK — point it at any local JDK 17.
 
 ### Release Preparation
 Before a new version can be considered beta-ready, you must test

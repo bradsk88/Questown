@@ -11,7 +11,8 @@ The perf thread from [[../perf-2026-07/HANDOFF]] is **finished and committed**. 
 is now the **"nothing in this mod is silent" legibility pass**, whose first slice (need bubbles)
 landed. Everything below is about continuing that pass.
 
-**Next task: pick up the legibility list at item 4 — see §3.** (Items 2 and 3 landed 2026-07-29.)
+**Next task: pick up the legibility list at item 5 — see §3.** (Item 4 verified already-fixed and
+closed 2026-08-09.)
 **Blocker: the autotest flake in §5 — experiment run, prediction refuted, see §5.**
 
 ## 1. What landed this session (7 commits, 2 unpushed)
@@ -90,9 +91,9 @@ Agreed sequencing (from ADR-0011 + the perf handoff), with slice 1 done:
    are both inventory-wide (now `menu.flag_crafting.in_inventory`).
    **Pattern worth noticing: three of the first three list items were already fixed and left open.
    Check `git log` for the file before implementing anything else from this folder.**
-4. **Crafting-tab layout** — `crafting-tab-layout-broken.md`. Note: the GUI work has a convention
-   (`docs/solutions/conventions/gui-layout-flow-and-linter.md`) and a dev-only `gui-lint` oracle —
-   open the screen in a dev client and confirm `[gui-lint] <Screen> — OK`. There is also an
+4. ~~**Crafting-tab layout**~~ — **done** 2026-08-09. Already fixed by `3ebeb496` (flow-layout
+   rewrite); the only remaining work was verification: `[gui-lint] FlagCraftingScreen — OK` in a
+   dev client. Issue closed as wontfix+resolved, same convention as items 2–3. Note: there is an
    uncommitted L2 widget-linter PoC mentioned in the `gui-layout-validation` note.
 5. **Dead-door failure message** — the second need-bubble consumer. ADR-0011 explicitly **rejects**
    `dropDeadDoors()`/deregistration: diagnosis only, never undo the player's action.

@@ -32,11 +32,10 @@ repositories {
         name = "Progwml6 maven"
         url = "https://dvs1.progwml6.com/files/maven/"
     }
-    maven {
-        // location of a maven mirror for JEI files, as a fallback
-        name = "ModMaven"
-        url = "https://modmaven.dev"
-    }
+    // REMOVED 2026-08-09: modmaven.dev (JEI mirror fallback) now serves an HTML redirect
+    // page (to maven.knifepoint.net) with HTTP 200 for artifacts it doesn't have — e.g. the
+    // Forge userdev jar — which ForgeGradle then caches as the real artifact and fails with
+    // "Invalid patcher dependency". JEI remains available via Progwml6 and BlameJared above/below.
     maven { url 'https://maven.blamejared.com' }
 }
 
