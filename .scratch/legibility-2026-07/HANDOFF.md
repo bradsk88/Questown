@@ -11,8 +11,8 @@ The perf thread from [[../perf-2026-07/HANDOFF]] is **finished and committed**. 
 is now the **"nothing in this mod is silent" legibility pass**, whose first slice (need bubbles)
 landed. Everything below is about continuing that pass.
 
-**Next task: pick up the legibility list at item 5 — see §3.** (Item 4 verified already-fixed and
-closed 2026-08-09.)
+**Next task: the legibility list (§3) is now exhausted through item 6 — pick the next slice
+with Brad.** (Item 5 and 6 both implemented, neither yet verified in a dev client.)
 **Blocker: the autotest flake in §5 — experiment run, prediction refuted, see §5.**
 
 ## 1. What landed this session (7 commits, 2 unpushed)
@@ -105,9 +105,13 @@ Agreed sequencing (from ADR-0011 + the perf handoff), with slice 1 done:
    `mobs/visitor/COMPLEX.md` "second consumer" section; glossary in CONTEXT.md. **Not yet
    verified in a dev client.** Follow-up deferred: move `HelperChickenBubbleLayer` to a
    neutral package (its own commit; 11 files reference the chicken package).
-6. **Third bubble consumer: unmet item.** `NoMCEconomics.unmetNeedsRecord` already holds
-   `UnmetNeed(tick, villager, request)` per villager UUID — a ready-made source. `WithReason` prose
-   is developer-facing and must be rephrased before being shown verbatim.
+6. ~~**Third bubble consumer: unmet item**~~ — **done 2026-08-13**. `UNMET_ITEM` set in
+   `TownPossibleWork.registerUnmetNed`, cleared in the `applyScores` else-branch (each consumer
+   clears only its own need). Generic bundle icon + generic words; the ADR's per-item icon is a
+   deferred follow-up (needs the item ID synced per entity). **Autotested** as requested:
+   `farmer/harvest_wheat [no_supplies]` asserts all townies end `UNMET_ITEM`; base farmer asserts
+   all `NONE`. Suite: 44/45, sole failure the known `gatherer:axe` loot flake. Not yet verified
+   visually in a dev client (same status as item 5).
 
 Adding a consumer is now cheap: add an enum constant to `TownieNeed`, give it an icon, add one
 lang key (`message.questown.townie_need.<lowercase_name>`), and call `setNeed` from wherever the

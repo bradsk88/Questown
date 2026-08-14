@@ -72,6 +72,30 @@ flowchart TD
 - The focus holder key is now `Object` (UUID for townies, BlockPos for doors) — the
   hysteresis rule (`keepsBubble`) is type-agnostic and its tests did not change.
 
+## The third consumer: unmet item
+
+When `TownPossibleWork.applyScores` finds **no viable job** for a root, the villagers of
+that root are waiting on supplies the town does not have — the mod's worst "looks broken"
+moment (ADR-0011). That path already computed the exact missing ingredient for the
+economics record; it now also raises the bubble:
+
+- **Set** in `registerUnmetNed` (per-villager, same pass as `econ.registerUnmetNeed`):
+  `setNeed(UNMET_ITEM)`.
+- **Cleared** in the `applyScores` else-branch (`clearUnmetItemNeeds`): any villager of
+  the root whose need is `UNMET_ITEM` goes back to `NONE` the moment a viable job exists
+  again. Only `UNMET_ITEM` is cleared — a simultaneous `CANT_REACH` is left alone, and
+  `MoveToTownTargetSink.clearCantReachNeed` returns the courtesy (each consumer clears
+  only its own need).
+- **Icon is the vanilla bundle** (a bag of things to bring), deliberately generic — the
+  ADR's "townie under a coal icon" (the *actual* missing item) would need the item ID
+  synced per entity; that is a possible follow-up, not part of this slice.
+- **The words stay generic for the same reason**: "They don't have the supplies they
+  need to work." The `WithReason` prose behind the score is developer-facing and must be
+  rephrased before it is ever shown verbatim.
+- **Autotest**: `farmer/harvest_wheat [no_supplies]` asserts every townie ends the run
+  at `UNMET_ITEM`; the base `farmer/harvest_wheat` asserts the supplied counterpart ends
+  at `NONE`. Both ride the existing `CustomAssertion` seam (realtime phase).
+
 ## Exceptional: the need clears itself
 
 ```mermaid

@@ -3,6 +3,7 @@
   "item.questown.relocation_deed": "Town Relocation Deed",
   "item.questown.relocation_deed.tooltip": "Place on a block to move a dormant town's flag there.",
   "message.questown.townie_need.cant_reach": "They can't find a way there.",
+  "message.questown.townie_need.unmet_item": "They don't have the supplies they need to work.",
   "message.questown.door_need.not_enclosed": "This door has no room — finish the walls and roof.",
   "message.questown.door_need.no_recipe": "This room matches no recipe — try different furniture.",
   "message.questown.relocation_deed.cross_dimension": "This town can only be moved within its own world.",

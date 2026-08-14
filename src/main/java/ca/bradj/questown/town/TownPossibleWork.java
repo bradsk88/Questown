@@ -17,6 +17,7 @@ import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mobs.visitor.TownieNeed;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
@@ -187,6 +188,8 @@ public class TownPossibleWork {
         preselectedJobs.put(root, preselected);
         if (jobs.isEmpty()) {
             registerUnmetNeeds(root);
+        } else {
+            clearUnmetItemNeeds(root);
         }
         t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
                 "Prepared for {}: [{}]",
@@ -219,7 +222,7 @@ public class TownPossibleWork {
             Work work = ServerJobsRegistry.getRandomWork(sl, root, vh::isUnlocked);
             NoMCEconomics econ = town.getUnsafe().getEconomicsHandle();
             vh.entities().stream().map(v -> (VisitorMobEntity) v).filter(v -> root.equals(v.getJobId().rootId()))
-              .forEach(villager -> this.registerUnmetNed(work, econ, tick, villager.getUUID()));
+              .forEach(villager -> this.registerUnmetNed(work, econ, tick, villager));
         } catch (Exception e) {
             QT.FLAG_LOGGER.error("Failed to register unmet needs for root: {}", root, e);
         }
@@ -229,8 +232,9 @@ public class TownPossibleWork {
             Work work,
             NoMCEconomics econ,
             long tick,
-            UUID uuid
+            VisitorMobEntity villager
     ) {
+        UUID uuid = villager.getUUID();
         DeclarativeJob x = (DeclarativeJob) work.jobFunc.apply(uuid);
         Ingredient xx = x.initialIngredients.get(0);
         if (xx == null) {
@@ -239,7 +243,21 @@ public class TownPossibleWork {
                 return;
             }
         }
+        villager.setNeed(TownieNeed.UNMET_ITEM);
         econ.registerUnmetNeed(tick, uuid, Ingredients.toString(xx));
+    }
+
+    /** A townie with viable work again is no longer waiting on supplies. */
+    private void clearUnmetItemNeeds(String root) {
+        try {
+            town.getUnsafe().getVillagerHandle().entities().stream()
+                .map(v -> (VisitorMobEntity) v)
+                .filter(v -> root.equals(v.getJobId().rootId()))
+                .filter(v -> v.getNeed() == TownieNeed.UNMET_ITEM)
+                .forEach(v -> v.setNeed(TownieNeed.NONE));
+        } catch (Exception e) {
+            QT.FLAG_LOGGER.error("Failed to clear unmet-item needs for root: {}", root, e);
+        }
     }
 
     private record JobPossibility(

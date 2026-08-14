@@ -21,6 +21,8 @@ import ca.bradj.questown.commands.test.TestExpectation.ExpectedContainerContent;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.mobs.visitor.TownieNeed;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.JobID;
@@ -140,7 +142,15 @@ public class TestBlueprintRegistry {
         List<AnyTestEntry> jobs = new ArrayList<>();
 
         // Core job tests
-        jobs.add(entry(new JobID("farmer", "harvest_wheat"), farmerBlueprint()));
+        jobs.add(entry(new JobID("farmer", "harvest_wheat"), farmerBlueprint().withCustomAssertion(
+                (level, flagPos, town, output) -> {
+                    // Counterpart to the no_supplies case: a supplied farmer never asks for items.
+                    List<TownieNeed> needs = town.getVillagerHandle().entities().stream()
+                            .map(v -> ((VisitorMobEntity) v).getNeed())
+                            .toList();
+                    output.msg("Townie needs at end of supplied farmer run: " + needs);
+                    return needs.stream().allMatch(n -> n == TownieNeed.NONE);
+                })));
         jobs.add(entry(new JobID("cook", "simple_furnace_food"), cookBlueprint()));
         jobs.add(entry(new JobID("baker", "bread"), bakerBlueprint()));
         jobs.add(entry(new JobID("crafter", "stick"), crafterBlueprint()));
@@ -2114,7 +2124,15 @@ public class TestBlueprintRegistry {
                 ),
                 base.supplyDoorOffset(), 24000, 0L, null, false, null,
                 false, false, null, null, null, null, null, false
-        );
+        ).withCustomAssertion((level, flagPos, town, output) -> {
+            // Legibility pass (ADR-0011): with no supplies, the farmer must be
+            // flagged UNMET_ITEM so the need bubble can say so. Silence means working.
+            List<TownieNeed> needs = town.getVillagerHandle().entities().stream()
+                    .map(v -> ((VisitorMobEntity) v).getNeed())
+                    .toList();
+            output.msg("Townie needs at end of no-supplies run: " + needs);
+            return !needs.isEmpty() && needs.stream().allMatch(n -> n == TownieNeed.UNMET_ITEM);
+        });
     }
 
     private static TestBlueprint gathererToolDurabilityBlueprint() {

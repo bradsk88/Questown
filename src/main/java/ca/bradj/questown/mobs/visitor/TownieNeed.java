@@ -15,7 +15,9 @@ public enum TownieNeed {
     /** Nothing wrong. Silence is the signal that the townie is fine. */
     NONE,
     /** Gave up walking somewhere: no viable path, or wedged despite one. */
-    CANT_REACH;
+    CANT_REACH,
+    /** No viable job because the town lacks the item(s) the job needs as input. */
+    UNMET_ITEM;
 
     public static TownieNeed fromName(String name) {
         for (TownieNeed v : values()) {
@@ -38,6 +40,7 @@ public enum TownieNeed {
     public ItemStack icon() {
         return switch (this) {
             case CANT_REACH -> Items.BARRIER.getDefaultInstance();
+            case UNMET_ITEM -> Items.BUNDLE.getDefaultInstance();
             case NONE -> ItemStack.EMPTY;
         };
     }
