@@ -12,6 +12,8 @@ import ca.bradj.questown.town.entity.TownRelocation;
 import ca.bradj.questown.town.entity.TownRelocation.FarFixturePolicy;
 import ca.bradj.questown.town.entity.TownRelocation.RelocationResult;
 import ca.bradj.questown.town.entity.TownRoomsHandle;
+import ca.bradj.questown.items.TownWand;
+import ca.bradj.questown.town.rooms.DoorTrouble;
 import ca.bradj.questown.town.rooms.TownPosition;
 import net.minecraft.nbt.CompoundTag;
 import ca.bradj.questown.commands.test.TestBlueprint.BlockPlacement;
@@ -60,7 +62,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
@@ -207,6 +211,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("relocate_far", relocateFarBlueprint()));
         jobs.add(flagEntry("deed_consumed_on_place", deedConsumedOnPlaceBlueprint()));
         jobs.add(flagEntry("campfire_sleep_preserves_flag", campfireSleepPreservesFlagBlueprint()));
+        jobs.add(flagEntry("dead_door_bubbled", deadDoorBubbledBlueprint()));
 
         // Perf measurements (always pass; they report timings). Baseline first so the pair can be
         // compared within a single run.
@@ -304,6 +309,65 @@ public class TestBlueprintRegistry {
                             + " (flag present=" + flagPresent + ")");
                     return flagPresent;
                 });
+    }
+
+    // Where the lone door stands relative to the flag: clear of the farm base (x 4..10, z -3..3)
+    // so the room scan never attaches it to anything.
+    private static final BlockPos DEAD_DOOR_OFFSET = new BlockPos(-2, 0, 0);
+
+    /**
+     * Dead-door bubbling (ADR-0011, legibility item 5): a registered door that encloses nothing
+     * must surface on the flag as {@link DoorTrouble#NOT_ENCLOSED}, which is what
+     * {@code DeadDoorBubbles} reads to draw the door-icon bubble client-side. Drives the real wand
+     * path — {@link TownWand#onRightClicked} into its {@code DoorHandler} — rather than calling
+     * {@code registerDoor} directly, so a break in the item layer is caught too.
+     */
+    private static TestBlueprint deadDoorBubbledBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::registerLoneDoorViaWand)
+                .withCustomAssertion(TestBlueprintRegistry::assertDoorDead);
+    }
+
+    private static boolean registerLoneDoorViaWand(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos doorPos = flagPos.offset(DEAD_DOOR_OFFSET);
+        level.setBlockAndUpdate(doorPos.below(), Blocks.DIRT.defaultBlockState());
+        BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+
+        // Same wand idiom as ChickenArcTestExecutor: a FakePlayer holding a flag-bound wand,
+        // clicking the door's lower half.
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
+        TownFlagBlock.StoreParentOnNBT(wand, flagPos);
+        player.setItemInHand(InteractionHand.MAIN_HAND, wand);
+        ((TownWand) wand.getItem()).onRightClicked(() -> player, level, doorPos, wand);
+
+        output.msg("Wand-registered lone door at " + doorPos.toShortString()
+                + "; deadDoors=" + town.getDeadDoors());
+        return true;
+    }
+
+    private static boolean assertDoorDead(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos doorPos = flagPos.offset(DEAD_DOOR_OFFSET);
+        Map<BlockPos, DoorTrouble> dead = town.getDeadDoors();
+        output.msg("deadDoors after monitor = " + dead);
+        boolean ok = report(output, "1 door-bubbled", dead.containsKey(doorPos));
+        ok &= report(output, "2 not-enclosed", dead.get(doorPos) == DoorTrouble.NOT_ENCLOSED);
+        // The farm's fence gate must not leak into the door-bubble set.
+        ok &= report(output, "3 no-false-positives", dead.size() == 1);
+        return ok;
     }
 
     private static boolean campfireSleepOntoFlag(
