@@ -15,6 +15,7 @@ is_agent() {
     [ -n "$CLAUDECODE" ] && return 0     # Claude Code
     [ -n "$AGENT" ]      && return 0     # emerging convention: Goose/Amp/Codex
     [ -n "$CURSOR_AGENT" ] && return 0   # Cursor
+    [ -n "$PI_CODING_AGENT" ] && return 0 # pi
     return 1
 }
 
