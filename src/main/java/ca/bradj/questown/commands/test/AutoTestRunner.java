@@ -22,6 +22,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 import ca.bradj.questown.commands.test.TestBlueprintRegistry.AnyTestEntry;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 
 @Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class AutoTestRunner {
@@ -31,6 +32,10 @@ public class AutoTestRunner {
     private static final String ENV_CATEGORY = "QUESTOWN_AUTOTEST_CATEGORY";
     private static final String ENV_ONLY = "QUESTOWN_AUTOTEST_ONLY";
     private static final String SYSPROP_ONLY = "questown.autotest.only";
+    // Dev-only: after the suite completes, log the result but leave the server
+    // running so a dev client can join and inspect the final world state
+    // (e.g. visual verification of need bubbles via screenshot).
+    private static final String SYSPROP_HOLD = "questown.autotest.hold";
     private static final String CATEGORY_CHICKEN = ChickenArcBlueprintRegistry.CATEGORY;
     private static final int DEFAULT_WARP = 24000;
     private static final BlockPos ORIGIN = new BlockPos(0, 64, 0);
@@ -182,6 +187,78 @@ public class AutoTestRunner {
         Runtime.getRuntime().halt(1);
     }
 
+    // Hold-mode companion: drops each joining player at the test arena, and
+    // (because the roster wanders between scenarios) keeps re-aiming each hold
+    // spectator at the nearest NEEDY townie — close enough and square enough for
+    // the bubble's second-gesture hint to fire — so a headless screenshot
+    // (grim) can see what a player walking up to the problem would see.
+    static class HoldModeLoginListener {
+        private static final int REAIM_TICKS = 40;
+        private int ticks = 0;
+
+        @SubscribeEvent
+        public void onLogin(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+            if (!(event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp)) {
+                return;
+            }
+            if (sp.getGameProfile().getName().startsWith("[")) { // skip FakePlayers
+                return;
+            }
+            sp.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+            sp.teleportTo((net.minecraft.server.level.ServerLevel) sp.level, ORIGIN.getX() + 4, ORIGIN.getY() + 3, ORIGIN.getZ() + 4, 135, 20);
+            aimAtNearestNeedy(sp);
+            QT.FLAG_LOGGER.info("[autotest] HOLDING: teleported {} to arena viewpoint", sp.getGameProfile().getName());
+        }
+
+        @SubscribeEvent
+        public void onTick(net.minecraftforge.event.TickEvent.ServerTickEvent event) {
+            if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) {
+                return;
+            }
+            if (++ticks < REAIM_TICKS) {
+                return;
+            }
+            ticks = 0;
+            net.minecraft.server.MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+            if (server == null) {
+                return;
+            }
+            for (net.minecraft.server.level.ServerPlayer sp : server.getPlayerList().getPlayers()) {
+                if (sp.getGameProfile().getName().startsWith("[")) {
+                    continue;
+                }
+                aimAtNearestNeedy(sp);
+            }
+        }
+
+        private void aimAtNearestNeedy(net.minecraft.server.level.ServerPlayer sp) {
+            java.util.List<VisitorMobEntity> all = sp
+                    .getLevel()
+                    .getEntitiesOfClass(VisitorMobEntity.class, sp.getBoundingBox().inflate(64));
+            java.util.Optional<VisitorMobEntity> needy = all.stream()
+                    .filter(v -> v.getNeed().isNeeded())
+                    .min((a, b) -> Double.compare(a.distanceTo(sp), b.distanceTo(sp)));
+            if (needy.isEmpty()) {
+                QT.FLAG_LOGGER.info("[autotest] aim: no needy townie near player at {} ({} townies loaded)", sp.blockPosition().toShortString(), all.size());
+                return;
+            }
+            QT.FLAG_LOGGER.info("[autotest] aim: tracking {} at {}", needy.get().getUUID(), needy.get().blockPosition().toShortString());
+            needy.ifPresent(v -> {
+                net.minecraft.world.phys.Vec3 eye = v.getEyePosition();
+                net.minecraft.world.phys.Vec3 from = new net.minecraft.world.phys.Vec3(
+                        eye.x + 3.5, eye.y + 0.5, eye.z + 3.5
+                );
+                double dx = eye.x - from.x;
+                double dy = eye.y - from.y;
+                double dz = eye.z - from.z;
+                double hor = Math.sqrt(dx * dx + dz * dz);
+                float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+                float pitch = (float) -Math.toDegrees(Math.atan2(dy, hor));
+                sp.teleportTo((net.minecraft.server.level.ServerLevel) sp.level, from.x, from.y - 1.62, from.z, yaw, pitch);
+            });
+        }
+    }
+
     static class AutoTestTickListener {
         private final MinecraftServer server;
         private final @Nullable TestAllExecutor jobsExecutor;
@@ -256,6 +333,11 @@ public class AutoTestRunner {
                     passed, total, allPassed ? "ALL PASS" : "FAILURES");
             QT.FLAG_LOGGER.info("[autotest] ========================================");
 
+            if ("true".equals(System.getProperty(SYSPROP_HOLD))) {
+                QT.FLAG_LOGGER.info("[autotest] HOLDING: server left running for client inspection");
+                MinecraftForge.EVENT_BUS.register(new HoldModeLoginListener());
+                return;
+            }
             server.halt(false);
             if (!allPassed) {
                 Runtime.getRuntime().halt(1);

@@ -68,6 +68,12 @@ minecraft {
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
 
+            // Dev-only: -Pautojoin makes the client skip the title screen and
+            // connect straight to a local (hold-mode autotest) server.
+            if (project.hasProperty('autojoin')) {
+                args '--server', 'localhost', '--port', '25565'
+            }
+
             mods {
                 questown {
                     source sourceSets.main
@@ -77,6 +83,10 @@ minecraft {
 
         server {
             workingDirectory project.file('run')
+
+            // Keep the Swing server GUI out of the dev box: it steals focus and
+            // screen space, and headless screenshots (grim) can't see past it.
+            args '--nogui'
 
             // Recommended logging data for a userdev environment
             // The markers can be changed as needed.
@@ -94,6 +104,7 @@ minecraft {
 
             jvmArg '-Dquestown.autotest=' + System.getProperty('questown.autotest', 'false')
             jvmArg '-Dquestown.autotest.warp=' + System.getProperty('questown.autotest.warp', '24000')
+            jvmArg '-Dquestown.autotest.hold=' + System.getProperty('questown.autotest.hold', 'false')
             // Forward the category/scenario filters to the forked server JVM so the
             // runbook's documented -D invocations reach AutoTestRunner.parseCategory.
             if (System.getProperty('QUESTOWN_AUTOTEST_CATEGORY') != null) {
