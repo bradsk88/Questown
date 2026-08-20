@@ -351,6 +351,11 @@ public class TestBlueprintRegistry {
 
         output.msg("Wand-registered lone door at " + doorPos.toShortString()
                 + "; deadDoors=" + town.getDeadDoors());
+        // A held server should aim at this door, not at a needy townie, so the
+        // bubble screenshot shows the door icon and not the (irrelevant) townie
+        // need that surfaces when the town outlives the assertion.
+        System.setProperty("questown.autotest.aim.door",
+                DEAD_DOOR_OFFSET.getX() + "," + DEAD_DOOR_OFFSET.getY() + "," + DEAD_DOOR_OFFSET.getZ());
         return true;
     }
 

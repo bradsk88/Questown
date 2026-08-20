@@ -23,6 +23,7 @@ import java.util.UUID;
 
 import ca.bradj.questown.commands.test.TestBlueprintRegistry.AnyTestEntry;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 
 @Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class AutoTestRunner {
@@ -188,13 +189,47 @@ public class AutoTestRunner {
     }
 
     // Hold-mode companion: drops each joining player at the test arena, and
-    // (because the roster wanders between scenarios) keeps re-aiming each hold
-    // spectator at the nearest NEEDY townie — close enough and square enough for
-    // the bubble's second-gesture hint to fire — so a headless screenshot
-    // (grim) can see what a player walking up to the problem would see.
+    // keeps re-aiming each hold spectator at the nearest thing worth a
+    // screenshot: a NEEDY townie when one exists, otherwise a dead door.
+    // (The roster wanders and doors don't move, but the re-aim is what puts
+    // the target square enough in the cone for the bubble's second-gesture
+    // hint to fire.) A headless screenshot (grim) then sees what a player
+    // walking up to the problem would see.
     static class HoldModeLoginListener {
         private static final int REAIM_TICKS = 40;
         private int ticks = 0;
+        // True when the last re-aim found no needy townie and aimed at a dead
+        // door instead; used to keep the log quiet in the common first case.
+        private boolean doorFallbackLogged;
+        // Scenario-specific preferred aim target, persisted in the System
+        // properties of the held server so late-joining clients still get it.
+        private @Nullable BlockPos preferredDoor;
+
+        /** Fallback aim target when no needy townie is nearby: the dead door closest to the player. */
+        static @Nullable BlockPos pickDeadDoor(net.minecraft.server.level.ServerPlayer sp) {
+            // The arena is a small fixed region around ORIGIN; read its chunks
+            // directly (1.19.2 ServerChunkCache has no getLoadedChunks()).
+            net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) sp.getLevel();
+            BlockPos best = null;
+            double bestDist = Double.MAX_VALUE;
+            for (int cx = (ORIGIN.getX() >> 4) - 2; cx <= (ORIGIN.getX() >> 4) + 2; cx++) {
+                for (int cz = (ORIGIN.getZ() >> 4) - 2; cz <= (ORIGIN.getZ() >> 4) + 2; cz++) {
+                    for (var e : level.getChunk(cx, cz).getBlockEntities().values()) {
+                        if (!(e instanceof TownFlagBlockEntity flag)) {
+                            continue;
+                        }
+                        for (BlockPos door : flag.getDeadDoors().keySet()) {
+                            double d = door.distSqr(sp.blockPosition());
+                            if (d < bestDist) {
+                                bestDist = d;
+                                best = door;
+                            }
+                        }
+                    }
+                }
+            }
+            return best;
+        }
 
         @SubscribeEvent
         public void onLogin(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
@@ -205,8 +240,12 @@ public class AutoTestRunner {
                 return;
             }
             sp.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+            // Inside the DeadDoorBubbles 16-block gate and aimed south-east at the
+            // standard arena (test blocks sit toward +x/+z), so the first aim pass
+            // can usually hon in without a starring-at-the-sky frame.
             sp.teleportTo((net.minecraft.server.level.ServerLevel) sp.level, ORIGIN.getX() + 4, ORIGIN.getY() + 3, ORIGIN.getZ() + 4, 135, 20);
-            aimAtNearestNeedy(sp);
+            preferredDoor = readPreferredDoor();
+            aim(sp);
             QT.FLAG_LOGGER.info("[autotest] HOLDING: teleported {} to arena viewpoint", sp.getGameProfile().getName());
         }
 
@@ -227,35 +266,78 @@ public class AutoTestRunner {
                 if (sp.getGameProfile().getName().startsWith("[")) {
                     continue;
                 }
-                aimAtNearestNeedy(sp);
+                aim(sp);
             }
         }
 
-        private void aimAtNearestNeedy(net.minecraft.server.level.ServerPlayer sp) {
+        private void aim(net.minecraft.server.level.ServerPlayer sp) {
+            if (preferredDoor != null) {
+                aimTo(sp, net.minecraft.world.phys.Vec3.atBottomCenterOf(preferredDoor).add(0, 2.0, 0), 2.5);
+                return;
+            }
+            java.util.Optional<VisitorMobEntity> needy = nearestNeedyTownie(sp);
+            if (needy.isPresent()) {
+                doorFallbackLogged = false;
+                VisitorMobEntity v = needy.get();
+                QT.FLAG_LOGGER.info("[autotest] aim: tracking {} at {}", v.getUUID(), v.blockPosition().toShortString());
+                // ~3.5 blocks off the eye: inside the second-gesture hint range,
+                // and the same stand-off the bubble screenshots were taken with.
+                aimTo(sp, v.getEyePosition(), 3.5);
+                return;
+            }
+            BlockPos door = pickDeadDoor(sp);
+            if (door == null) {
+                QT.FLAG_LOGGER.info("[autotest] aim: nothing to track (no needy townie, no dead door)");
+                return;
+            }
+            if (!doorFallbackLogged) {
+                doorFallbackLogged = true;
+                QT.FLAG_LOGGER.info("[autotest] aim: no needy townie; falling back to dead door {}", door.toShortString());
+            }
+            aimTo(sp, net.minecraft.world.phys.Vec3.atBottomCenterOf(door).add(0, 2.0, 0), 2.5);
+        }
+
+        private java.util.Optional<VisitorMobEntity> nearestNeedyTownie(net.minecraft.server.level.ServerPlayer sp) {
             java.util.List<VisitorMobEntity> all = sp
                     .getLevel()
                     .getEntitiesOfClass(VisitorMobEntity.class, sp.getBoundingBox().inflate(64));
-            java.util.Optional<VisitorMobEntity> needy = all.stream()
+            return all.stream()
                     .filter(v -> v.getNeed().isNeeded())
                     .min((a, b) -> Double.compare(a.distanceTo(sp), b.distanceTo(sp)));
-            if (needy.isEmpty()) {
-                QT.FLAG_LOGGER.info("[autotest] aim: no needy townie near player at {} ({} townies loaded)", sp.blockPosition().toShortString(), all.size());
-                return;
+        }
+
+        /** Preferred door offset from System.getProperty, e.g. "x,y,z". Set by the
+         *  dead_door_bubbled scenario so the held server aims at it. */
+        private @Nullable BlockPos readPreferredDoor() {
+            String val = System.getProperty("questown.autotest.aim.door");
+            if (val == null || val.isBlank()) {
+                return null;
             }
-            QT.FLAG_LOGGER.info("[autotest] aim: tracking {} at {}", needy.get().getUUID(), needy.get().blockPosition().toShortString());
-            needy.ifPresent(v -> {
-                net.minecraft.world.phys.Vec3 eye = v.getEyePosition();
-                net.minecraft.world.phys.Vec3 from = new net.minecraft.world.phys.Vec3(
-                        eye.x + 3.5, eye.y + 0.5, eye.z + 3.5
-                );
-                double dx = eye.x - from.x;
-                double dy = eye.y - from.y;
-                double dz = eye.z - from.z;
-                double hor = Math.sqrt(dx * dx + dz * dz);
-                float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
-                float pitch = (float) -Math.toDegrees(Math.atan2(dy, hor));
-                sp.teleportTo((net.minecraft.server.level.ServerLevel) sp.level, from.x, from.y - 1.62, from.z, yaw, pitch);
-            });
+            String[] parts = val.split(",");
+            if (parts.length != 3) {
+                return null;
+            }
+            try {
+                return ORIGIN.offset(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+
+        // Stands the player ~`offset` blocks off-back of the target, inside the
+        // bubble-hint range, looking squarely at it. Eye height is corrected for
+        // (teleport y is eye-level minus 1.62), matching the prior aim math.
+        private void aimTo(net.minecraft.server.level.ServerPlayer sp, net.minecraft.world.phys.Vec3 target, double offset) {
+            net.minecraft.world.phys.Vec3 from = new net.minecraft.world.phys.Vec3(
+                    target.x + offset, target.y + 0.5, target.z + offset
+            );
+            double dx = target.x - from.x;
+            double dy = target.y - from.y;
+            double dz = target.z - from.z;
+            double hor = Math.sqrt(dx * dx + dz * dz);
+            float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+            float pitch = (float) -Math.toDegrees(Math.atan2(dy, hor));
+            sp.teleportTo((net.minecraft.server.level.ServerLevel) sp.level, from.x, from.y - 1.62, from.z, yaw, pitch);
         }
     }
 
