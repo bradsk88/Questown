@@ -34,3 +34,26 @@ flowchart TD
   viable work). Verify soon after HOLD, don't sit on the held world for hours.
 - Fake players (`[AutoTest]`) are excluded from both the login teleport and the
   per-tick re-aim via the bracketed-name check.
+- **Aim preference order** — a scenario may post its own target via the System
+  property `questown.autotest.aim.door` ("x,y,z" offset from the arena origin,
+  set in a postSpawnAction). When present it wins over needy townies; without
+  it, a post-scenario needy townie will steal the aim and the thing the
+  scenario asserted on (a dead door, say) may never reach the screen. Used by
+  `flag/dead_door_bubbled`.
+
+## Launch discipline (hold mode)
+
+- Env: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8` — the wrong
+  JDK breaks Gradle's Groovy compile; a POSIX locale fails javac with
+  "unmappable character for encoding US-ASCII".
+- Before relaunching: `pkill -f '[G]radlew runClient'`, `pkill -f '[G]radlew
+  runServer'`, `pkill -f 'questown[.]autotest'` — always bracket one char or
+  the pattern self-matches your own bash argv and kills your shell. Then
+  `rm -rf run/world` and confirm port 25565 is free (a surviving held server
+  kills the new one with "Address already in use", and holds `session.lock`).
+- Order: server → wait for "HOLDING: server left running" → client
+  (`runClient -Pautojoin`). Never join mid-run.
+- Before using a Minecraft API in hold-mode/test code, grep an existing call
+  site — 1.19.2 lacks several 1.20+ methods (`ServerChunkCache.getLoadedChunks`,
+  `Level.getBlockEntities`). Scanning `level.getChunk(cx, cz).getBlockEntities()`
+  over the arena works.
