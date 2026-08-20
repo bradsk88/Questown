@@ -61,4 +61,25 @@ Optional frontmatter the skills may add:
 
 ## Git tracking
 
-`.scratch/` is intentionally *not* gitignored — issues are part of the project history. If you want a scratchpad that doesn't get committed, use a different directory.
+`.scratch/` is intentionally *not* gitignored — issues are part of the project
+history. If you want a scratchpad that doesn't get committed, use a different directory.
+
+## Handoffs
+
+A session-continuation handoff is an issue file: `.scratch/<feature>/HANDOFF[-date].md`
+(see `.scratch/legibility-2026-07/HANDOFF-2026-08-19.md` for the canonical style).
+It must let a fresh session continue *and succeed* — not just describe what happened:
+
+- **State** — branch, HEAD, how to run the tests, what's uncommitted, any quota or
+  credential limits in force.
+- **Verified this session** — with evidence (scenario names, grim captures). Numbers,
+  not adjectives.
+- **Next** — ordered steps with exact commands.
+- **Traps** — mistakes that cost this session time. Highest-value section; write it
+  even when unflattering (pkill self-match, JAVA_HOME/locale, session.lock, api drift).
+- **Still open** — decisions the next agent should not silently make.
+
+Status uses the canonical triage roles (`ready-for-agent` to hand to an agent,
+`ready-for-human` when eyes are needed). After writing one, compose a short pointer
+prompt to the handoff for the next session and put it on the user's clipboard
+(`xclip -selection clipboard`) — point at the file, don't restate it.
