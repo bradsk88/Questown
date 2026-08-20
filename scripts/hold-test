@@ -1,0 +1,41 @@
+#!/bin/bash
+# Hold-mode autotest: runs one scenario, leaves the server up, and joins a
+# spectator client aimed at the interesting thing (grim can then capture it).
+# Usage: ./scripts/hold-test <scenario-name-substring>   e.g. hold-test flag/dead_door_bubbled
+# See src/main/java/ca/bradj/questown/commands/test/COMPLEX.md for the why.
+set -u
+cd "$(dirname "$0")/.."
+SCENARIO="${1:?usage: hold-test <scenario-name-substring>}"
+
+export JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8
+export LANG=C.UTF-8
+
+# Kill leftovers — patterns are bracketed so pkill/pgrep never self-matches
+# this script's own command line.
+pkill -f '[G]radlew runClient' 2>/dev/null
+pkill -f '[G]radlew runServer' 2>/dev/null
+pkill -f 'questown[.]autotest' 2>/dev/null
+sleep 3
+
+if python3 -c "import socket,sys; sys.exit(0 if socket.socket().connect_ex(('127.0.0.1',25565))==0 else 1)"; then
+    echo "port 25565 still busy — a held server survived; kill it and retry" >&2
+    exit 1
+fi
+
+rm -rf run/world
+LOG=/tmp/hold-test-$(date +%s).log
+echo "log: $LOG"
+nohup ./gradlew runServer -Dquestown.autotest=true -Dquestown.autotest.hold=true \
+    -Dquestown.autotest.only="$SCENARIO" > "$LOG" 2>&1 &
+
+for i in $(seq 1 60); do
+    sleep 5
+    if grep -q "HOLDING: server left running" "$LOG" 2>/dev/null; then break; fi
+    if grep -q "RESULT: 0/0\|BUILD FAILED" "$LOG" 2>/dev/null; then
+        echo "scenario did not reach HOLD — see $LOG" >&2; exit 1
+    fi
+done
+grep -E "RESULT:|HOLDING:" "$LOG" | tail -2
+
+nohup ./gradlew runClient -Pautojoin > /tmp/hold-test-client.log 2>&1 &
+echo "server held + client joining. When done: grim /tmp/shot.png to capture."
