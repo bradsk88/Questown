@@ -255,3 +255,18 @@ task publishModrinth(dependsOn: 'reobfJar') {
         }
     }
 }
+
+// Autotest suites start from a clean world: residue from prior suite runs
+// accumulates in run/world and makes results run-count dependent
+// (.scratch/autotest-suite/organizer-fetch-warp-fails-only-in-full-suite.md).
+if (System.getProperty('questown.autotest', 'false') == 'true') {
+    tasks.matching { it.name == 'runServer' }.configureEach {
+        doFirst {
+            def world = project.file('run/world')
+            if (world.exists()) {
+                println '[autotest] wiping run/world for a clean suite run'
+                world.deleteDir()
+            }
+        }
+    }
+}

@@ -51,6 +51,9 @@ flowchart TD
   the pattern self-matches your own bash argv and kills your shell. Then
   `rm -rf run/world` and confirm port 25565 is free (a surviving held server
   kills the new one with "Address already in use", and holds `session.lock`).
+  Note: any `runServer` launch with `-Dquestown.autotest=true` now wipes
+  `run/world` itself before boot (gradle `doFirst`), so the manual wipe is
+  only needed when relaunching a *non-autotest* server over a locked world.
 - Order: server → wait for "HOLDING: server left running" → client
   (`runClient -Pautojoin`). Never join mid-run.
 - Before using a Minecraft API in hold-mode/test code, grep an existing call

@@ -1,8 +1,8 @@
 ---
 title: organizer/fetch [warp] passes in isolation but fails in the full suite
-status: needs-info
+status: ready-for-human
 created: 2026-07-22
-updated: 2026-08-21
+updated: 2026-08-22
 priority: p2
 ---
 
@@ -16,7 +16,10 @@ suite runs.
 **Question for Brad: should a plain autotest suite run wipe `run/world` at start (losing any
 residue you might want to inspect after a failure), or should wiping stay a manual step?**
 
-If yes: implement in the autotest harness/gradle task and this becomes ready-for-agent.
+**Answered 2026-08-22: yes.** Implemented in `build.gradle`: a `doFirst` on `runServer`
+wipes `run/world` whenever `-Dquestown.autotest=true` (plain suite and hold-mode alike).
+Verified: a planted `run/world/MARKER` was deleted on an autotest launch and the suite
+runner still booted and reported. Awaiting Brad's sign-off to close.
 
 ## Context
 
