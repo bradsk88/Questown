@@ -203,6 +203,10 @@ public class TownPossibleWork {
             String root,
             List<JobPossibility> unfilteredJobs
     ) {
+        // Joining every job's toString is not cheap; skip it when the output would be discarded.
+        if (!t.isDebugLogConsuming(DebugLogArgument.JOB_POSSIBILITIES_COMPUTE)) {
+            return;
+        }
         t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
                 "Possible jobs for root {}: [\n{}\n]", root,
                 Strings.join(
@@ -337,20 +341,25 @@ public class TownPossibleWork {
             return WithReason.always(0, "Town lacks required job site (or descendant) of: " + dj.location().baseRoom() + " (" + roomReason + ")");
         }
         ServerLevel sl = Preconditions.checkNotNull(t.getServerLevel());
+        // The scan only depends on the job's location (not on the state), and it does not change
+        // within one scoring pass, so it is computed once per job and reused across all states.
+        @Nullable List<ContainerTarget<MCContainer, MCTownItem>> jobSiteContainers = null;
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
             boolean townHasIngredient = true;
             final IPredicateCollection<MCHeldItem> ing = dj.getChecks().getIngredientsForStep(ii);
             if (ing != null && !ing.isEmpty()) {
                 townHasIngredient = false;
-                List<ContainerTarget<MCContainer, MCTownItem>> foundContainer = Containers.get(
-                        t,
-                        r -> true,
-                        bp -> isJobBlock(t, dj, bp, sl),
-                        js -> dj.location().baseRoom().equals(js),
-                        false
-                );
-                for (ContainerTarget<MCContainer, MCTownItem> tg : foundContainer) {
+                if (jobSiteContainers == null) {
+                    jobSiteContainers = Containers.get(
+                            t,
+                            r -> true,
+                            bp -> isJobBlock(t, dj, bp, sl),
+                            js -> dj.location().baseRoom().equals(js),
+                            false
+                    );
+                }
+                for (ContainerTarget<MCContainer, MCTownItem> tg : jobSiteContainers) {
                     if (tg.hasItem(zzz -> ing.test(MCHeldItem.fromTown(zzz)))) {
                         townHasIngredient = true;
                         break;

@@ -1,12 +1,26 @@
 ---
 title: possibleWork spikes to 7ms behind a 0us p95
-status: ready-for-agent
+status: ready-for-human
 created: 2026-07-27
-updated: 2026-07-27
+updated: 2026-08-21
 priority: p2
 ---
 
-## Status: improved, not closed
+## Status: fixed, pending human review
+
+After hoisting the per-state `Containers.get` scan to once per job (and guarding `bigLog`
+behind `isDebugLogConsuming`), `perf/town_large` reports:
+
+| metric              | before | incremental | hoisted |
+|---------------------|--------|-------------|---------|
+| `possibleWork` avg  | 62us   | 80us        | 53us    |
+| `possibleWork` p95  | 2us    | 560us       | 514us   |
+| `possibleWork` max  | 8197us | 4632us      | 760us   |
+
+The max is now barely above the 500us tick budget, i.e. the residual is one job's
+*first* scan plus a few cheap states — the repeated scans were the cost.
+
+## What was done (original: incremental scoring)
 
 `TownPossibleWork.recomputeNow` no longer does the whole pass in one tick. In `perf/town_large`:
 
@@ -41,12 +55,15 @@ that is milliseconds for a single job.
 
 ## Next steps (in order of expected payoff)
 
-- Hoist the container scan: within one pass the town's containers do not change, so
-  `Containers.get` results can be computed once per (room, job-block predicate) and reused across
-  states and jobs. This is the real fix — it attacks the cost, not the scheduling.
-- Failing that, make the scoring itself resumable per *state* rather than per job.
-- `bigLog(t, root, unfilteredJobs)` still joins every job's `toString()` into one string before
-  handing it to a debug logger that usually discards it. Cheap to guard, small win.
+- ~~Hoist the container scan~~ DONE 2026-08-21: hoisted per job (the scan depends only on
+  the job's location, which is constant across its states; cross-job caching was rejected
+  because each job has its own predicate instances). `findMatchingContainer` (tools) was
+  deliberately NOT hoisted — it scans every container in town, not just job-site ones, and
+  `getHighestPossibleState` returns early on the first unmet state, so caching it could do
+  strictly more work than today.
+- ~~Make the scoring itself resumable per *state*~~ no longer needed; max is at the budget.
+- ~~`bigLog(t, root, unfilteredJobs)`~~ DONE 2026-08-21: guarded behind the new public
+  `TownFlagBlockEntity.isDebugLogConsuming(logId)` (toggled on, or INVISIBLE_LOG_LEVEL=trace).
 
 ## How to measure
 

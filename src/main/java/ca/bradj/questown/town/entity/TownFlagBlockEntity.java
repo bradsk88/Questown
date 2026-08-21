@@ -1267,6 +1267,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return logToggles.getOrDefault(logId, false);
     }
 
+    /** True if a log for logId would actually be written anywhere (not silently discarded). */
+    public boolean isDebugLogConsuming(String logId) {
+        if (isDebugLogEnabled(logId)) {
+            return true;
+        }
+        return "trace".equalsIgnoreCase(System.getenv("INVISIBLE_LOG_LEVEL"));
+    }
+
     public AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> getRealWorkStatusHandle(UUID ownerIDOrNullForGlobal) {
         if (ownerIDOrNullForGlobal == null) {
             return jobHandle;
