@@ -4,6 +4,7 @@ status: ready-for-human
 created: 2026-07-22
 updated: 2026-08-21
 resolved: 2026-08-21
+closed: 2026-08-21
 priority: p2
 ---
 
