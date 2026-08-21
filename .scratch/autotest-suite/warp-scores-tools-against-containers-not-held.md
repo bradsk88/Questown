@@ -1,8 +1,9 @@
 ---
 title: Warp may score a job as unequipped when the worker is holding the only tool
-status: ready-for-agent
+status: ready-for-human
 created: 2026-07-22
 updated: 2026-08-21
+resolved: 2026-08-21
 priority: p2
 ---
 
@@ -22,11 +23,20 @@ warp job is one of them. When fixed, remove the spare-hoe workaround in
 
 **Reproducing autotest (2026-08-21):** `farmer/harvest_wheat [held_tool_warp]` — realtime first
 so the farmer picks up the town's only hoe, then an assertion-driven warp that must harvest
-wheat. Currently XFAIL (the `expectedFailure` marker): wheat 3 -> 3 under warp with the hoe in
-the farmer's hand and a full field. The fix flips it to XPASS, which fails the suite as a
-reminder to remove the marker. Harness note: `TestExecutor.getWarpPassed` now applies XFAIL to
-the effective (skipWarp-aware) result — previously XFAIL on a skipWarp scenario always passed.
+wheat. Reproduced pre-fix (wheat 3 -> 3 under warp). Harness note: `TestExecutor.getWarpPassed`
+now applies XFAIL to the effective (skipWarp-aware) result — previously XFAIL on a skipWarp
+scenario always passed.
 Run in isolation: `-Dquestown.autotest.only=held_tool`.
+
+## RESOLVED 2026-08-21
+
+`TownPossibleWork.townHasTool(t, tool)` — a town has a tool if it is in any town container OR
+any townie journal inventory slot (hand included). Scoring stays town-level, per the design
+note above. Verification:
+
+- `held_tool_warp` gate flipped XFAIL -> XPASS (wheat 3->3 became 6->13), marker removed;
+- spare-hoe workaround removed from `proficiencyParityBlueprint`;
+- full farmer group 9/9 green, parity per-action gain/decay still identical across realtime/warp.
 
 ## Context
 

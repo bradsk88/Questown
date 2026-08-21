@@ -1037,13 +1037,8 @@ public class TestBlueprintRegistry {
     private static TestBlueprint proficiencyParityBlueprint() {
         TestBlueprint base = farmerBlueprint();
         ParityCapture cap = new ParityCapture();
-        // A second hoe. Warp scores a job's tools against the town's containers, and the base
-        // blueprint's only hoe ends up in the villager's hands — leaving warp to conclude the
-        // harvest job is unequipped and re-score onto compost, completing zero actions under test.
-        List<ItemStack> supplies = new ArrayList<>(base.supplyItems());
-        supplies.add(new ItemStack(Items.WOODEN_HOE, 1));
         return new TestBlueprint(
-                base.roomType(), base.blocks(), supplies,
+                base.roomType(), base.blocks(), base.supplyItems(),
                 base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
                 base.expectation(),
                 base.supplyDoorOffset(),
@@ -1206,9 +1201,8 @@ public class TestBlueprintRegistry {
      * <p>
      * Realtime runs first so the farmer fetches the hoe; the warp half is driven inside the
      * assertion because the executor's own warp pass runs <em>before</em> realtime, when the hoe
-     * is still in the chest and the bug cannot show. XFAIL until the scorer counts held tools —
-     * the XPASS flip flags the fix landing (then remove the marker and the spare hoe in
-     * {@link #proficiencyParityBlueprint()}).
+     * is still in the chest and the bug cannot show. Reproduced the bug pre-fix (wheat 3 -> 3
+     * under warp); fixed by `TownPossibleWork.townHasTool`, which counts tools held by townies.
      */
     private static TestBlueprint heldToolWarpBlueprint() {
         TestBlueprint base = farmerBlueprint(); // exactly one hoe, a full field of ripe wheat
@@ -1227,7 +1221,6 @@ public class TestBlueprintRegistry {
                 true,        // skipWarp — warp runs inside the assertion, once the hoe is held
                 null, null, null, null, null, false
         )
-                .withExpectedFailure(true)
                 .withCustomAssertion(TestBlueprintRegistry::assertWarpHarvestsWithHeldTool);
     }
 

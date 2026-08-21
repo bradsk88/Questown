@@ -29,6 +29,7 @@ import joptsimple.internal.Strings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
@@ -370,11 +371,7 @@ public class TownPossibleWork {
             boolean townHasTool = true;
             final IPredicateCollection<MCTownItem> tool = dj.getChecks().getToolsForStep(ii);
             if (tool != null && !tool.isEmpty()) {
-                townHasTool = false;
-                @Nullable ContainerTarget<MCContainer, MCTownItem> toolCont = t.findMatchingContainer(tool::test);
-                if (toolCont != null) {
-                    townHasTool = true;
-                }
+                townHasTool = townHasTool(t, tool);
             }
 
             if (!townHasIngredient || !townHasTool) {
@@ -392,6 +389,33 @@ public class TownPossibleWork {
                 dj.getMaxState(),
                 "All ingredients and tools available for all job states"
         );
+    }
+
+    /**
+     * A town "has" a tool if it is in any town container <em>or in any townie's inventory</em>.
+     * The container-only check scored a worker holding the town's only tool as unequipped, so
+     * warp reassigned them away from the job they'd do live (the held-tool warp regression
+     * scenario). The hand is the first inventory slot; the whole journal inventory is checked
+     * because tools can sit in later slots too.
+     */
+    private static boolean townHasTool(
+            TownFlagBlockEntity t,
+            IPredicateCollection<MCTownItem> tool
+    ) {
+        if (t.findMatchingContainer(tool::test) != null) {
+            return true;
+        }
+        return t.getVillagerHandle().entities().stream()
+                .filter(v -> v instanceof VisitorMobEntity)
+                .map(v -> (VisitorMobEntity) v)
+                .flatMap(v -> {
+                    ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
+                    for (int slot = 0; slot < v.getInventory().getContainerSize(); slot++) {
+                        b.add(v.getInventory().getItem(slot));
+                    }
+                    return b.build().stream();
+                })
+                .anyMatch(stack -> !stack.isEmpty() && tool.test(MCTownItem.fromMCItemStack(stack)));
     }
 
     private static boolean isJobBlock(
