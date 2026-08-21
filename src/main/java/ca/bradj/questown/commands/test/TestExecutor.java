@@ -135,13 +135,16 @@ public class TestExecutor {
     }
 
     public boolean getWarpPassed() {
+        // skipWarp scenarios report through the realtime check (the custom assertion runs there),
+        // so XFAIL must flip that result too — warpPassed is never set on the skipWarp path.
+        boolean effective = blueprint.skipWarp() ? realtimePassed : warpPassed;
         if (blueprint.expectedFailure()) {
-            // XFAIL: the warp path is expected to fail, so the scenario passes only when it does.
-            // An unexpected pass (XPASS) flips this to false → a suite failure that flags the bug
-            // has been fixed and the expectedFailure marker should be removed.
-            return !warpPassed;
+            // XFAIL: the path under test is expected to fail, so the scenario passes only when it
+            // does. An unexpected pass (XPASS) flips this to false → a suite failure that flags
+            // the bug has been fixed and the expectedFailure marker should be removed.
+            return !effective;
         }
-        return blueprint.skipWarp() ? realtimePassed : warpPassed;
+        return effective;
     }
 
     public boolean isExpectedFailure() {

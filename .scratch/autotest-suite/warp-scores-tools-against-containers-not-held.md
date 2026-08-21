@@ -20,6 +20,14 @@ villager-specific, so "some townie holds it" is the right granularity — the wo
 warp job is one of them. When fixed, remove the spare-hoe workaround in
 `TestBlueprintRegistry.proficiencyParityBlueprint()` (comment points here).
 
+**Reproducing autotest (2026-08-21):** `farmer/harvest_wheat [held_tool_warp]` — realtime first
+so the farmer picks up the town's only hoe, then an assertion-driven warp that must harvest
+wheat. Currently XFAIL (the `expectedFailure` marker): wheat 3 -> 3 under warp with the hoe in
+the farmer's hand and a full field. The fix flips it to XPASS, which fails the suite as a
+reminder to remove the marker. Harness note: `TestExecutor.getWarpPassed` now applies XFAIL to
+the effective (skipWarp-aware) result — previously XFAIL on a skipWarp scenario always passed.
+Run in isolation: `-Dquestown.autotest.only=held_tool`.
+
 ## Context
 
 Observed while building the job-proficiency parity gate (ADR-0010). Not caused by that work —

@@ -186,6 +186,7 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "2_villagers", farmerTwoVillagersBlueprint()));
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "warp_then_realtime", farmerRealtimeBlueprint()));
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "proficiency_parity", proficiencyParityBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "held_tool_warp", heldToolWarpBlueprint()));
         jobs.add(edgeCaseEntry("gatherer", "axe", "short_absence", gathererShortAbsenceBlueprint()));
         jobs.add(edgeCaseEntry("gatherer", "axe", "sleep_jump", gathererSleepJumpBlueprint()));
         jobs.add(edgeCaseEntry("gatherer", "axe", "absence_then_sleep", gathererAbsenceThenSleepBlueprint()));
@@ -1195,6 +1196,90 @@ public class TestBlueprintRegistry {
             }
         }
         return Float.NaN;
+    }
+
+    /**
+     * Regression gate for `.scratch/autotest-suite/warp-scores-tools-against-containers-not-held.md`:
+     * warp scores tool availability against town <em>containers</em> only, so when the worker is
+     * holding the town's only tool (the normal steady state), warp re-scores them onto a job that
+     * needs no tool and the tooled job does no offline work.
+     * <p>
+     * Realtime runs first so the farmer fetches the hoe; the warp half is driven inside the
+     * assertion because the executor's own warp pass runs <em>before</em> realtime, when the hoe
+     * is still in the chest and the bug cannot show. XFAIL until the scorer counts held tools —
+     * the XPASS flip flags the fix landing (then remove the marker and the spare hoe in
+     * {@link #proficiencyParityBlueprint()}).
+     */
+    private static TestBlueprint heldToolWarpBlueprint() {
+        TestBlueprint base = farmerBlueprint(); // exactly one hoe, a full field of ripe wheat
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                base.expectation(),
+                base.supplyDoorOffset(),
+                null,        // warpAmountOverride — the warp half is driven by the assertion
+                0L,          // startTimeTick — start at dawn so the realtime window is productive
+                1,           // villagerCount — one worker holds the town's only hoe
+                true,        // realtimePhase
+                2400,        // realtimeTicks — long enough to fetch the hoe, short enough that the
+                             // field is not stripped bare (an idle farmer deposits the hoe again)
+                false,       // drainHungerBeforeTest
+                true,        // skipWarp — warp runs inside the assertion, once the hoe is held
+                null, null, null, null, null, false
+        )
+                .withExpectedFailure(true)
+                .withCustomAssertion(TestBlueprintRegistry::assertWarpHarvestsWithHeldTool);
+    }
+
+    /**
+     * The held-tool gate: with the town's only hoe in the farmer's hand (not any chest), a warp
+     * window must still harvest wheat. Pre-bug, warp scores harvest as unequipped and switches to
+     * composting, so wheat does not increase.
+     */
+    private static boolean assertWarpHarvestsWithHeldTool(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        MCTownState before = town.captureCurrentState();
+        if (before == null) {
+            return report(output, "held-tool warp (no town state before warp)", false);
+        }
+        // Precondition: the town's only hoe must be in the farmer's hand, or the scenario proves
+        // nothing about container-vs-held tool scoring.
+        boolean hoeHeld = before.villagers.stream()
+                .flatMap(v -> v.journal.items().stream())
+                .anyMatch(i -> !i.isEmpty() && i.get().get() == Items.WOODEN_HOE);
+        if (!hoeHeld) {
+            output.msg("held-tool warp: villager journals at assertion time: "
+                    + before.villagers.stream()
+                            .map(v -> v.journal.items().stream()
+                                    .filter(i -> !i.isEmpty())
+                                    .map(MCHeldItem::getShortName)
+                                    .toList())
+                            .toList());
+        }
+        if (!report(output, "held-tool warp precondition (farmer holds the town's only hoe)", hoeHeld)) {
+            return false;
+        }
+        // The realtime window stripped part of the field; regrow it so the warp window starts
+        // from a full harvestable field (same idiom as the parity scenario).
+        int regrown = regrowHarvestableCrops(level, flagPos);
+        output.msg("held-tool warp: regrew " + regrown + " crops before the warp window");
+        town.publishStateToTileForTest();
+        int wheatBefore = townItemCount(before, "minecraft:wheat");
+        MCTownState warped = town.warpTime(ParityCapture.WARP_TICKS);
+        if (warped == null) {
+            return report(output, "held-tool warp (warp produced no town state)", false);
+        }
+        int wheatAfter = townItemCount(warped, "minecraft:wheat");
+        output.msg("held-tool warp: wheat " + wheatBefore + " -> " + wheatAfter);
+        return report(output, "held-tool warp harvested wheat", wheatAfter > wheatBefore);
+    }
+
+    private static int townItemCount(MCTownState state, String itemId) {
+        return TestResultChecker.snapshotItemCounts(state).getOrDefault(itemId, 0);
     }
 
     private static boolean parityPostSpawn(
