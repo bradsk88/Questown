@@ -1,9 +1,24 @@
 ---
 title: Warp may score a job as unequipped when the worker is holding the only tool
-status: needs-triage
+status: ready-for-agent
 created: 2026-07-22
+updated: 2026-08-21
 priority: p2
 ---
+
+## Triage 2026-08-21: container-only hypothesis CONFIRMED in code
+
+`TownPossibleWork.getHighestPossibleState` checks tools via
+`t.findMatchingContainer(tool::test)` → `TownContainers.findMatching` →
+`findAllContainersMatching` → `getAllContainers` — a scan of town **containers** only. Nothing
+in the chain looks at villagers' held items. So a worker holding the town's only tool is scored
+"lacking tools" and warp switches jobs. Confirmed by reading code, not just behaviour.
+
+Fix direction: the tool-availability check should also count tools held by town villagers
+(`VillagerHandle` entities' held items). Design note: scoring is town-level, not
+villager-specific, so "some townie holds it" is the right granularity — the worker doing the
+warp job is one of them. When fixed, remove the spare-hoe workaround in
+`TestBlueprintRegistry.proficiencyParityBlueprint()` (comment points here).
 
 ## Context
 

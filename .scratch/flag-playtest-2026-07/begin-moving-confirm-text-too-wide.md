@@ -1,9 +1,19 @@
 ---
 title: "Begin moving" confirmation text is too wide and vanishes too fast
-status: needs-triage
+status: ready-for-human
 created: 2026-07-14
+resolved: 2026-08-21
 priority: p2
 ---
+
+## Triage 2026-08-21: already fixed
+
+`BeginTownRelocationMessage.handle` now sends the acknowledgement via
+`sender.sendSystemMessage(...)` (persistent chat) instead of the action bar, with a comment
+describing exactly this bug ("the message is long, so the overlay truncated it off-screen and
+faded before it could be read"). Both acceptance criteria are met by that change (chat persists
+and wraps). Fixed somewhere between #199 (`9bf33bcb`) and `42a6cc95`. Marking resolved — close
+after a quick in-game glance if you want confirmation.
 
 ## Context
 

@@ -1,9 +1,22 @@
 ---
 title: organizer/fetch [warp] passes in isolation but fails in the full suite
-status: needs-triage
+status: needs-info
 created: 2026-07-22
+updated: 2026-08-21
 priority: p2
 ---
+
+## Triage 2026-08-21: one question for Brad, then ready
+
+The evidence points at accumulating `run/world` residue (many-run horizon), and the proposed
+fix is to have the harness start each suite from a clean world. Note hold-mode launch discipline
+already wipes `run/world` manually before every run — this would just automate it for plain
+suite runs.
+
+**Question for Brad: should a plain autotest suite run wipe `run/world` at start (losing any
+residue you might want to inspect after a failure), or should wiping stay a manual step?**
+
+If yes: implement in the autotest harness/gradle task and this becomes ready-for-agent.
 
 ## Context
 
