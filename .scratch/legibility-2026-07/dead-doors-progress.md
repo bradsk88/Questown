@@ -2,6 +2,7 @@
 title: Item 5 (dead doors) — VERIFIED in a dev client
 status: ready-for-human
 created: 2026-08-20
+closed: 2026-08-21
 priority: p1
 ---
 

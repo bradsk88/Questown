@@ -3,6 +3,7 @@ title: updateWorkStatuses is 64% of flag-tick time and the main stutter source
 status: ready-for-human
 created: 2026-07-27
 resolved: 2026-07-27
+closed: 2026-08-21
 priority: p1
 ---
 
