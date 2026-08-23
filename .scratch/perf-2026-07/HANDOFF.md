@@ -75,6 +75,12 @@ p50 is 18us, so averages hide it completely.
 - `perf/town_small` + `perf/town_large` autotest scenarios (category `perf`), run with
   `-Dquestown.autotest.only=perf`. They are **measurements, not gates** — empty expectation,
   always pass, print the timing table.
+- **A *max* can be a one-time startup cost, not a recurring one.** A continuously-running perf
+  scenario can't reproduce a trigger that only fires on a real away→return (e.g. the warp — only
+  on `!initialized` or a return); that trigger shows once as a startup max, then never recurs in
+  the run. Before treating a max as the real recurring cost, confirm the harness reproduces the
+  trigger (or verify via the code path). This is why `updateStoredData`'s 6.6ms max closed as
+  cheap-enough-to-ignore rather than a recurring cost — see [[updatestoreddata-6ms-max-spike]].
 
 ### Fixes applied and verified (58/58 autotest PASS)
 
