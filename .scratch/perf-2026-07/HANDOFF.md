@@ -25,8 +25,11 @@ its remaining cost is the per-job town-container scan, not the scheduling. Both 
 the numbers and the reasoning. The uncommitted-state list in section 3 below is now larger — see
 `git status`.
 
-The largest phase is now `roomsHandle` (219us avg, 57% of tick time) and the largest single spike
-is `updateStoredData` (6.6ms max). Neither has been investigated.
+The largest phase is now `roomsHandle` (219us avg, 57% of tick time). The largest *spike* was
+`updateStoredData` (6.6ms max) — **closed 2026-08-22 as cheap-enough-to-ignore** ([[updatestoreddata-6ms-max-spike]]):
+it is the capped offline-production *warp* on return (ADR-0006), a single one-tick cost that is
+not player-visible, not a one-time artifact (recurs per return) but only the long-absence tail.
+`roomsHandle` (an *average*, not a spike) is the one lead left open.
 
 ## 1. Design decisions (captured — read these, don't re-derive)
 
