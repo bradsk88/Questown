@@ -1,7 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.mobs.helperchicken.HelperChickenBubbleLayer;
+import ca.bradj.questown.render.BubbleRenderer;
 import ca.bradj.questown.town.rooms.DoorTrouble;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -41,7 +41,7 @@ public final class NeedBubbleClientEvents {
         }
         Minecraft mc = Minecraft.getInstance();
         MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
-        HelperChickenBubbleLayer.renderIconBubbleAtBlock(
+        BubbleRenderer.renderIconBubbleAtBlock(
                 door,
                 DoorTrouble.sharedIcon(),
                 event.getPoseStack(),

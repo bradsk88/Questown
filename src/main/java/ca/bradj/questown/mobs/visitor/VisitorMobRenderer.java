@@ -1,7 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.mobs.helperchicken.HelperChickenBubbleLayer;
+import ca.bradj.questown.render.BubbleRenderer;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.PlayerModel;
@@ -80,7 +80,7 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
         if (!NeedBubbleFocus.isShowingBubble(entity)) {
             return;
         }
-        HelperChickenBubbleLayer.renderIconBubbleFor(
+        BubbleRenderer.renderIconBubbleFor(
                 entity, entity.getNeed().icon(), stack, buffer, this.entityRenderDispatcher
         );
     }

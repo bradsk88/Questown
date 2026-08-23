@@ -43,7 +43,7 @@ exact visual that reads as a bug, and says nothing.
 compete for effort, legibility wins.
 
 **Surface a townie's unmet need as a world-space speech bubble**, generalizing the
-helper chicken's proven presentation pattern (`HelperChickenBubbleLayer` is already
+helper chicken's proven presentation pattern (`BubbleRenderer` is already
 a reusable static, not a `RenderLayer`, and already carries a 16-block distance
 gate). A townie standing still under a coal icon is not broken — it is *asking for
 coal*, which converts the mod's worst-looking moment into its core "help the town

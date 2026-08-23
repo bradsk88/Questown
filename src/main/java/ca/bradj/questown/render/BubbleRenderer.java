@@ -1,5 +1,7 @@
-package ca.bradj.questown.mobs.helperchicken;
+package ca.bradj.questown.render;
 
+import ca.bradj.questown.mobs.helperchicken.BubbleRenderType;
+import ca.bradj.questown.mobs.helperchicken.HelperChickenEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Matrix4f;
@@ -16,9 +18,12 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
- * World-space speech-bubble renderer for the helper chicken.
+ * World-space speech-bubble renderer shared across the helper chicken, the
+ * townie need-bubbles of ADR-0011, and the dead doors.
  *
- * <p>Driven from {@link HelperChickenRenderer#render} after {@code super.render}
+ * <p>Driven from
+ * {@link ca.bradj.questown.mobs.helperchicken.HelperChickenRenderer#render}
+ * after {@code super.render}
  * returns — at that point the pose stack is in OUTER (world-space, camera-
  * relative) state with the chicken's body-yaw rotation popped, so applying
  * {@link EntityRenderDispatcher#cameraOrientation()} alone gives a true
@@ -41,7 +46,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * </ul>
  */
 @OnlyIn(Dist.CLIENT)
-public final class HelperChickenBubbleLayer {
+public final class BubbleRenderer {
 
     private static final int FULLBRIGHT = 0xF000F0;
     private static final double VISIBILITY_RANGE_SQR = 16.0 * 16.0;
@@ -62,7 +67,7 @@ public final class HelperChickenBubbleLayer {
      */
     private static final float ICON_CENTRE_Y_INNER = 13.0f / 16.0f;
 
-    private HelperChickenBubbleLayer() {
+    private BubbleRenderer() {
     }
 
     /**
@@ -70,7 +75,8 @@ public final class HelperChickenBubbleLayer {
      *
      * <p>Must be called with {@code poseStack} in OUTER (camera-relative)
      * state — i.e. after {@code super.render} returns from
-     * {@link HelperChickenRenderer#render}. Pose origin must be at the
+     * {@link ca.bradj.questown.mobs.helperchicken.HelperChickenRenderer#render}.
+     * Pose origin must be at the
      * entity's feet position; +Y must point world-up (no entity-yaw or
      * Y-flip applied).
      */

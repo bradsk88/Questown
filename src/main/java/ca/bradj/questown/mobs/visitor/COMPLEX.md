@@ -21,7 +21,7 @@ flowchart TD
     Focus -->|"best crosshairAlignment >= 0.9,<br/>one winner"| Hold["current = that townie's UUID"]
 
     Hold --> Render["VisitorMobRenderer.render<br/>→ renderNeedBubble"]
-    Render --> Bubble["HelperChickenBubbleLayer.renderIconBubbleFor<br/>(TownieNeed.icon() = barrier)"]
+    Render --> Bubble["BubbleRenderer.renderIconBubbleFor<br/>(TownieNeed.icon() = barrier)"]
 
     Hold -->|"within 8 blocks AND alignment >= 0.985"| Hint["ClientAccess.showHint(need.hintKey())<br/>every 40 ticks"]
 ```
@@ -34,10 +34,11 @@ flowchart TD
   the same reason `HelperChickenRenderer` calls the bubble layer statically.
 - **Icon then words, in two gestures**: sweeping the crosshair earns the icon ("who
   needs me"); walking up and looking squarely earns the action-bar line ("what for").
-- The bubble renderer lives in `mobs/helperchicken` because that is where it was
-  built. The third consumer (dead doors) has now landed, so per the earlier note it
-  is due a move to a neutral home — deferred: 11 files reference that package and the
-  move is mechanical, not risky. Do it as its own commit.
+- The bubble renderer was moved to `render/` (from `mobs/helperchicken`, where it was
+  first built) once the third consumer (dead doors) landed, since it is now a neutral
+  world-space bubble shared by the chicken, townie needs, and dead doors. It is
+  `render/BubbleRenderer` — the chicken-specific `renderBubbleFor` path is the only
+  method that still takes a `HelperChickenEntity`.
 
 ## The second consumer: dead doors
 

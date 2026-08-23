@@ -1,5 +1,6 @@
 package ca.bradj.questown.mobs.helperchicken;
 
+import ca.bradj.questown.render.BubbleRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.ChickenRenderer;
@@ -13,7 +14,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  *
  * <p>Reuses the vanilla {@link ChickenRenderer} for the base model and adds
  * a world-space speech bubble above the chicken's head via
- * {@link HelperChickenBubbleLayer#renderBubbleFor}.
+ * {@link BubbleRenderer#renderBubbleFor}.
  *
  * <p>The bubble is rendered from this class's {@code render} override after
  * {@code super.render} returns — at that point the pose stack is in OUTER
@@ -41,7 +42,7 @@ public class HelperChickenRenderer extends ChickenRenderer {
     ) {
         super.render(entity, entityYaw, partialTicks, poseStack, bufferSource, packedLight);
         if (entity instanceof HelperChickenEntity helper) {
-            HelperChickenBubbleLayer.renderBubbleFor(
+            BubbleRenderer.renderBubbleFor(
                     helper, poseStack, bufferSource, partialTicks, this.entityRenderDispatcher
             );
         }

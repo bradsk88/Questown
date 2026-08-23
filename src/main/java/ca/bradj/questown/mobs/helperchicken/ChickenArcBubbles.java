@@ -9,7 +9,7 @@ import net.minecraft.world.item.ItemStack;
  * item icons shown above the chicken's head plus the through-walls flag.
  *
  * <p>v1 renders bubbles as {@link ItemStack}s via the vanilla item renderer
- * (see {@link HelperChickenBubbleLayer}). Each beat picks items that visually
+ * (see {@link ca.bradj.questown.render.BubbleRenderer}). Each beat picks items that visually
  * convey the next action — a stick icon for "go get a stick", a chest for
  * "place a chest", and so on. When a beat has two icons the layer hard-cuts
  * between them every 20 ticks; when it has one the layer shows it steadily.
