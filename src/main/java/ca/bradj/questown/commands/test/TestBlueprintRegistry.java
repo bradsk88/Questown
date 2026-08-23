@@ -213,6 +213,9 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("deed_consumed_on_place", deedConsumedOnPlaceBlueprint()));
         jobs.add(flagEntry("campfire_sleep_preserves_flag", campfireSleepPreservesFlagBlueprint()));
         jobs.add(flagEntry("dead_door_bubbled", deadDoorBubbledBlueprint()));
+        // BOP cap (report): pre-fill the flag and drive one deposit across the 64-slot boundary.
+        jobs.add(flagEntry("bop_boundary_63", bopBoundaryBlueprint()));
+        jobs.add(flagEntry("bop_full_64", bopFullBlueprint()));
 
         // Perf measurements (always pass; they report timings). Baseline first so the pair can be
         // compared within a single run.
@@ -2212,6 +2215,99 @@ public class TestBlueprintRegistry {
                 List.of(new ExpectedProduct("*", 1, null)),
                 1, 100
         );
+    }
+
+    // --- BOP stall (report) scenarios ---
+    //
+    // These are MEASUREMENTS, not gates: they always pass and report what the flag does when a
+    // BOP deposit collides with the flag's 64-slot cap (TownFlagBOPItemHandler.getSlots()==64).
+    // They exercise the REAL deposit path (WorkSeekerJob -> changeJobForVisitorFromBoard ->
+    // BOPDepositorWork -> insertItem -> ClearBOPSpecialRule), not a stand-in, so the report is
+    // what a live town would actually do. The empty expectation (0 products, 0 cycles) keeps the
+    // scenario from failing on production outcomes.
+    //
+    // The two cases bracket the cap:
+    //   bop_boundary_63: pre-fill to 63 (one slot free); the 64th deposit is ACCEPTED (bopCount->64).
+    //   bop_full_64:     pre-fill to 64 (full); the next deposit is REJECTED, yet the townie's XP
+    //                    latch (hasBlockOfProgress) STILL clears -> the townie is NOT re-stalled.
+    // That last line is the finding that refutes "a full flag re-stalls the townie".
+
+    private static TestBlueprint bopStallBase(int realtimeTicks) {
+        SupplyRoom base = buildSupplyRoom(-6, -2);
+        return new TestBlueprint(
+                RoomType.INDOOR,
+                base.blocks(),
+                List.of(),
+                base.doorOffset(),
+                base.chestOffset(),
+                SpecialQuests.STORE_ROOM_SMALL,
+                new TestExpectation(List.of(), 0, 0),
+                null,      // supplyDoorOffset
+                null,      // warpAmountOverride
+                null,      // startTimeTick
+                1,         // one townie
+                true,      // realtimePhase
+                realtimeTicks,
+                false,     // drainHungerBeforeTest
+                true,      // skipWarp
+                new TestExpectation(List.of(), 0, 0),
+                null, null, null, null,
+                false      // useNaturalWarp
+        );
+    }
+
+    /** Pre-fill the flag's deposited-BOP count, so a single deposit lands on (or past) the cap. */
+    private static TestBlueprint.PostPlacementSetup bopPreFill(int count) {
+        return (level, flagPos, town, output) -> {
+            town.grantBlockOfProgressForTest(count);
+            output.msg("[bop-stall] pre-filled flag to " + count + " BOPs (cap=64); bopCount="
+                    + town.getBlocksOfProgress());
+            return true;
+        };
+    }
+
+    /** Hand each townie a level-up so the flag's work-seeker assigns BOPDepositorWork. */
+    private static TestBlueprint.PostSpawnAction bopForceLevelUp() {
+        return (level, flagPos, town, output) -> {
+            VillagerHolder vh = town.getVillagerHandle();
+            for (var e : vh.entities()) {
+                VisitorMobEntity vme = (VisitorMobEntity) e;
+                vh.addExperience(vme.getUUID(), 1_000_000);
+                output.msg("[bop-stall] forced level-up for " + vme.getUUID()
+                        + " -> latch(hasBop)=" + vh.hasBlockOfProgress(vme.getUUID())
+                        + ", bopCount=" + town.getBlocksOfProgress());
+            }
+            return true;
+        };
+    }
+
+    /** Report the post-deposit state. Always returns true (a measurement, not a gate). */
+    private static TestBlueprint.CustomAssertion bopReportStall() {
+        return (level, flagPos, town, output) -> {
+            VillagerHolder vh = town.getVillagerHandle();
+            output.msg("[bop-stall] FINAL bopCount=" + town.getBlocksOfProgress() + " (cap=64)");
+            for (var e : vh.entities()) {
+                VisitorMobEntity vme = (VisitorMobEntity) e;
+                output.msg("[bop-stall] townie " + vme.getUUID()
+                        + ": latch(hasBop)=" + vh.hasBlockOfProgress(vme.getUUID())
+                        + ", need=" + vme.getNeed());
+            }
+            return true;
+        };
+    }
+
+    private static TestBlueprint bopBoundaryBlueprint() {
+        return bopStallBase(800)
+                .withSetupHook(bopPreFill(63))
+                .withPostSpawnAction(bopForceLevelUp())
+                .withCustomAssertion(bopReportStall());
+    }
+
+    private static TestBlueprint bopFullBlueprint() {
+        return bopStallBase(800)
+                .withSetupHook(bopPreFill(64))
+                .withPostSpawnAction(bopForceLevelUp())
+                .withCustomAssertion(bopReportStall());
     }
 
     // --- Edge case blueprints ---

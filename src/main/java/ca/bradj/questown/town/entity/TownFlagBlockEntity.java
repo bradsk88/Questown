@@ -255,6 +255,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return bopCount;
     }
 
+    /**
+     * Dev/test only: set the flag's deposited BOP count directly, mirroring the tutorial
+     * {@code grantBop}. Lets a scenario pre-fill the flag (e.g. to 63, one below the 64-slot cap)
+     * without having to drive 63 level-ups through the real deposit path.
+     */
+    public void grantBlockOfProgressForTest(int amount) {
+        this.bopCount += amount;
+        setChanged();
+    }
+
     public boolean isFlagpoleBuilt() {
         return flagpoleBuilt;
     }
