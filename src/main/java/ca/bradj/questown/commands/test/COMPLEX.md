@@ -48,7 +48,11 @@ flowchart TD
   "unmappable character for encoding US-ASCII".
 - Before relaunching: `pkill -f '[G]radlew runClient'`, `pkill -f '[G]radlew
   runServer'`, `pkill -f 'questown[.]autotest'` — always bracket one char or
-  the pattern self-matches your own bash argv and kills your shell. Then
+  the pattern self-matches your own bash argv and kills your shell. A **held**
+  server (one launched with `-Dquestown.autotest.hold=true`) **catches SIGTERM
+  and survives `pkill`** — after `pkill`, re-check with `pgrep -af '[r]unServer'`
+  and `kill -9 <pid>` the java child (the `gradlew` wrapper dies, the server JVM
+  does not) if it is still up. Then
   `rm -rf run/world` and confirm port 25565 is free (a surviving held server
   kills the new one with "Address already in use", and holds `session.lock`).
   Note: any `runServer` launch with `-Dquestown.autotest=true` now wipes
