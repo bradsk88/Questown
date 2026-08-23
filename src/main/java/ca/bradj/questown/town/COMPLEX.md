@@ -145,9 +145,15 @@ entirely on whether the work per call is interval-scaled or fixed:
   game ticks with no `TICK_FACTOR` — so a night's sleep grants a tenth of what the
   same duration of continuous healing would. Whether that ratio is tuning or an
   omitted factor is unresolved; do not "fix" one route without pricing the other.
-- `BlockClaimsTickLimit` is **dead config**: `Claim.ticked()` decrements
-  `ticksLeft`, but nothing anywhere reads it, so a claim never expires on a timer —
-  only `clearClaim` or a re-claim by the same owner releases a spot.
+- `BlockClaimsTickLimit` is **real (2026-08-23)**: `decayClaims` subtracts
+  `ticksSinceLast` — the same game-tick delta the timers use — from
+  `Claim.ticksLeft`, and a claim whose TTL reaches 0 is dropped and logged. It is the
+  catch-all that releases a claim orphaned by an owner that died, unloaded, changed jobs,
+  or got stuck: nothing clears a claim on those paths (only the work-cycle reset and the
+  morning plate reset do), and these servers rarely restart, so a TTL is the robust
+  release. Active townies re-claim on every item insert, so only abandoned claims expire.
+  (Was dead config in the 2026-07-28 audit: `Claim.ticked()` decremented `ticksLeft` but
+  nothing read it.)
 
 ## Measuring it (`perf/*` autotest scenarios)
 

@@ -191,7 +191,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     }
 
     private Collection<POS> decayTimersAndCollectExpired(long ticksSinceLast) {
-        claims.replaceAll((k, v) -> v == null ? null : v.ticked());
+        decayClaims(ticksSinceLast);
 
         Collection<POS> expired = null;
         for (Map.Entry<POS, Long> e : timeJobStatuses.entrySet()) {
@@ -209,6 +209,35 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             expired.add(e.getKey());
         }
         return expired == null ? ImmutableList.of() : expired;
+    }
+
+    /**
+     * Advance every claim by the elapsed game-tick delta and drop the ones that run out. A claim
+     * is the catch-all release for a work spot: nothing clears it when its owner dies, unloads,
+     * changes jobs, or gets stuck (only the work-cycle reset and the morning plate reset do), so
+     * without a TTL an orphaned claim would block the spot from every other townie for the rest
+     * of the world's life — and these servers rarely restart. Active townies refresh the claim
+     * on every item insert, so in practice only abandoned claims expire. The delta is the same
+     * {@code ticksSinceLast} the timers use, so {@code BLOCK_CLAIMS_TICK_LIMIT} means game ticks,
+     * not flag ticks.
+     */
+    private void decayClaims(long ticksSinceLast) {
+        Iterator<Map.Entry<POS, Claim>> it = claims.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<POS, Claim> e = it.next();
+            Claim current = e.getValue();
+            if (current == null) {
+                it.remove();
+                continue;
+            }
+            Claim next = current.ticked(ticksSinceLast);
+            if (next == null) {
+                it.remove();
+                debugLogger.log("Claim at {} expired (TTL ran out) and was released", e.getKey());
+            } else {
+                e.setValue(next);
+            }
+        }
     }
 
     private void advanceBlocksWithExpiredTimers(Collection<POS> expired) {

@@ -1,9 +1,37 @@
 ---
 title: BlockClaimsTickLimit is dead config — claims never expire on a timer
-status: needs-info
+status: ready-for-human
 created: 2026-07-28
+updated: 2026-08-23
 priority: p3
 ---
+
+## Status: implemented (make-real), 2026-08-23 — pending human review
+
+Decision (Brad): **make-real**, not delete. Rationale: these servers rarely restart, so
+"self-heals on the next restart" is not a real safety net, and there is too much async chaos
+on an MC server to trust a few specific clear-on-death/unload/job-change sites — a missed path
+leaves an orphan forever. A TTL is the robust catch-all: it releases *every* orphaned claim
+regardless of which abnormal-exit path produced it.
+
+Implemented:
+- `Claim.ticked()` → `Claim.ticked(long delta)` returns the decremented claim, or `null` once
+  the TTL runs out so the caller drops it.
+- `AbstractWorkStatusStore` now calls `decayClaims(ticksSinceLast)` (was
+  `claims.replaceAll(… v.ticked())`). It decrements by the **game-tick delta** `ticksSinceLast`
+  (the same value `timeJobStatuses` uses), so `BLOCK_CLAIMS_TICK_LIMIT` means *game ticks*, not
+  *flag ticks* — its real duration no longer moves with `FlagTickIntervalV2`. A claim that hits
+  0 is removed and logged (`"Claim at {} expired (TTL ran out) and was released"`).
+- Because a townie re-claims its spot on every item insert (refreshing `ticksLeft`), the timer
+  in practice only fires for *abandoned* claims; active workers refresh before it reaches 0.
+
+Tests: 4 added to `WorkStatusStoreTest` (expiry releases the spot, TTL is in game-ticks not
+flag-ticks, holds until TTL, re-claim refreshes). `WorkStatusStoreTest` 10/10 green.
+
+Note on the residual trade-off (accepted): a single work step that runs longer than
+`BLOCK_CLAIMS_TICK_LIMIT` game-ticks without re-inserting could lose its claim mid-work and be
+re-claimed by another townie. Default 1000 game-ticks (~80 s at `FlagTickIntervalV2=10`) is long
+enough that an active worker re-inserts well before it.
 
 ## What
 
