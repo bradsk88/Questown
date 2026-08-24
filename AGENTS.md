@@ -36,6 +36,10 @@ pump). Shape match ≠ status; verify the trigger.
 
 When building or changing a `gui/` screen, follow `docs/solutions/conventions/gui-layout-flow-and-linter.md` (flow layout, not hardcoded positions) and verify with the dev-only `gui-lint` oracle — open the screen in a dev client and confirm `[gui-lint] <Screen> — OK, no layout violations`.
 
+## Build verification
+
+A Gradle `BUILD SUCCESSFUL` with the task `up-to-date` did not recompile your edits — it only re-ran cached outputs, so it proves nothing about the code you just changed. After changing code, check the task says `executed` (or pass `--rerun-tasks`) before trusting a build as a pass. Applies to `compileJava`/`test`/`build`.
+
 ## Hold-mode autotest (visual verification on a live server)
 
 See `src/main/java/ca/bradj/questown/commands/test/COMPLEX.md` ("Launch discipline")
