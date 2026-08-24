@@ -124,3 +124,20 @@ Open
   first, last, or deterministic-by-uuid so it varies across townies.
 - Uniqueness within a town, and behaviour when the pool is exhausted.
 - Whether custom naming costs a Block of Progress, and where that UI lives.
+
+## Status (partial)
+
+2026-08-24 — shipped the **decided core**, not the whole feature. The name
+extractor (`TownieNames`) exists as runtime code: registry path tokenized on `_`,
+stoplisted tokens (material states / forms / qualifiers) dropped, digit and
+length (3-10) filters applied, first survivor title-cased, a curated blocklist
+(Rotten / Poisonous / Suspicious) rejecting results that survive everything. The
+checked-in `minecraft:` pool is asserted by a JUnit golden file
+(`TownieNamesTest`, 6 cases, all passing), and `generatePool()` iterates
+`ForgeRegistries.ITEMS` so a future config can point the same code at other
+namespace sets. Nothing is wired in yet.
+
+Still open: assigning a name to a townie and persisting the resolved string
+(`VisitorMobEntity`), the `message.villager.leveled_up` swap that shows the name
+instead of the truncated UUID, nameplate rendering, custom naming at a cost, and
+the three open questions below. Not closed.

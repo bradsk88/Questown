@@ -1,0 +1,96 @@
+# Townie name golden file — curated, scoped to the minecraft: namespace.
+# Format: "<path> <name>" per line; a line with only the path means the
+# expected result is null. Blank lines and lines starting with '#' are ignored.
+#
+# This is the reviewable list the doc asks for: a stoplist change regenerates a
+# diff against it and the test catches the regression. Regenerate with the
+# runtime extractor (TownieNames.generatePool) when widening the pool.
+
+# Core materials — single token.
+diamond Diamond
+emerald Emerald
+coal Coal
+copper Copper
+iron Iron
+gold Gold
+redstone Redstone
+lapis Lapis
+quartz Quartz
+amethyst Amethyst
+netherite Netherite
+
+# Ingots / nuggets — the form token drops, the core stays.
+iron_ingot Iron
+gold_ingot Gold
+copper_ingot Copper
+netherite_ingot Netherite
+iron_nugget Iron
+gold_nugget Gold
+
+# Blocks — the form token drops.
+iron_block Iron
+gold_block Gold
+copper_block Copper
+diamond_block Diamond
+emerald_block Emerald
+redstone_block Redstone
+lapis_block Lapis
+quartz_block Quartz
+amethyst_block Amethyst
+netherite_block Netherite
+
+# Ores — the form token drops.
+iron_ore Iron
+gold_ore Gold
+copper_ore Copper
+diamond_ore Diamond
+emerald_ore Emerald
+redstone_ore Redstone
+coal_ore Coal
+
+# Wood — every form token drops to the tree core.
+oak_log Oak
+oak_planks Oak
+oak_sapling Oak
+oak_leaves Oak
+oak_wood Oak
+oak_door Oak
+oak_stairs Oak
+oak_slab Oak
+oak_fence Oak
+oak_fence_gate Oak
+oak_button Oak
+oak_trapdoor Oak
+oak_sign Oak
+oak_hanging_sign Oak
+dark_oak_log Dark
+
+# Oxidized copper — the whole point of the stoplist: noisy names collapse.
+exposed_copper_block Copper
+exposed_copper_ore Copper
+oxidized_copper_block Copper
+weathered_copper_block Copper
+waxed_copper_block Copper
+cut_copper_block Copper
+waxed_exposed_copper_block Copper
+waxed_oxidized_copper_stairs Copper
+cut_copper_stairs Copper
+cut_copper_slab Copper
+oxidized_cut_copper_block Copper
+
+# Tools stay off the stoplist; the first survivor wins (provisional: see doc).
+iron_shovel Iron
+iron_pickaxe Iron
+iron_sword Iron
+iron_hoe Iron
+iron_axe Iron
+golden_apple Golden
+golden_carrot Golden
+golden_sword Golden
+
+# Length filter — an 11-char token is out of range, so this is a null.
+cobblestone
+
+# Blocklist — results that survive everything and still read badly.
+rotten_flesh
+poisonous_potato
