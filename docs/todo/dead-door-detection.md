@@ -1,6 +1,13 @@
 Dead Door Detection
 ====================
 
+> **Superseded / closed 2026-08-24.** `dropDeadDoors` is still commented, but dead-door
+> handling is now covered by newer design: ADR-0013 (zombie registrations discarded in-tick
+> when the block is gone) and `DoorTrouble` / `DeadDoorBubbles` (a door that won't make a
+> valid room now surfaces as a need bubble, not a silent deregistration). Behavior changed
+> from silent deregistration to a visible bubble. Closed as superseded. See ADR-0013 and
+> `TownRoomsMap` line 450.
+
 The code for detecting and deregistering doors that never produce a valid
 room already exists in `TownRoomsMap.dropDeadDoors()` but is commented out
 with a performance TODO.

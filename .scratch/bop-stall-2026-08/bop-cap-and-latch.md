@@ -2,6 +2,7 @@
 title: BOP stall is a per-townie latch + a 64-slot flag cap; a full flag silently loses BOPs
 status: ready-for-human
 created: 2026-08-25
+closed: 2026-08-24
 priority: p2
 ---
 
@@ -44,6 +45,14 @@ notice**. This is consistent with the "BOPs don't accumulate while away" vision,
 silent and permanent. Is that acceptable, or should a full-flag deposit (a) surface a notice
 (bubble/chat) and/or (b) be capped so the townie doesn't churn toward a level-up it can't
 deposit? The invisible-stall `_Open_` in CONTEXT's BOP entry partly covers this.
+
+## Closure (2026-08-24)
+
+Answer (Brad): **(a) surface a notice.** Implemented in `9ef06f7c` — a `BOP_FULL`
+blockstate, a red BOP rendered above the flag when full, and opening the flag full jumps
+straight to the BOP menu with a red warning line. Verified by 873 unit tests and the
+`flag/bop_full_64` autotest. **(b) capping churn was not pursued** — BOPs are still
+dropped at 64, but no longer silently (the flag turns red).
 
 ## Notes
 

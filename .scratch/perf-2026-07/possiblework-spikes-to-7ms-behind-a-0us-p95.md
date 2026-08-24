@@ -3,10 +3,11 @@ title: possibleWork spikes to 7ms behind a 0us p95
 status: ready-for-human
 created: 2026-07-27
 updated: 2026-08-21
+closed: 2026-08-24
 priority: p2
 ---
 
-## Status: fixed, pending human review
+## Status: closed 2026-08-24 (was fixed, pending human review)
 
 After hoisting the per-state `Containers.get` scan to once per job (and guarding `bigLog`
 behind `isDebugLogConsuming`), `perf/town_large` reports:

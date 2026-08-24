@@ -3,10 +3,11 @@ title: BlockClaimsTickLimit is dead config — claims never expire on a timer
 status: ready-for-human
 created: 2026-07-28
 updated: 2026-08-23
+closed: 2026-08-24
 priority: p3
 ---
 
-## Status: implemented (make-real), 2026-08-23 — pending human review
+## Status: closed 2026-08-24 (implemented make-real 2026-08-23; verified, 10/10 tests)
 
 Decision (Brad): **make-real**, not delete. Rationale: these servers rarely restart, so
 "self-heals on the next restart" is not a real safety net, and there is too much async chaos
