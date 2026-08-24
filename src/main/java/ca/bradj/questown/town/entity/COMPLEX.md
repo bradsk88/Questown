@@ -125,3 +125,28 @@ flowchart LR
 - Collection is the **only** thing that moves `bopCount` down; it never touches the
   latch. Spending is the player's decision, so progression advances only if the
   player checks in — the counterweight to warp (ADR-0011).
+
+## Full-flag notice
+
+A full flag (bopCount at the 64 cap) silently loses further BOPs, and the latch
+still clears (so the townie is *not* re-stalled), so "stopped progressing" was
+invisible. A **blockstate** surfaces it, mirroring the deed's `DEED_AVAILABLE`
+pattern, since the flag has no client-side ticker to hydrate BE data.
+
+```mermaid
+flowchart TD
+    Cap["bopCount changes\n(deposit / collect / grant / test)"] --> Sync["syncBopFull()\n→ setBlock BOP_FULL = (bopCount >= CAP)"]
+    Sync -.auto-syncs.-> Cl["flag BOP_FULL = true"]
+    Cl -->|"isBopFull()"| Red["TownFlagDeedRenderer\nred BOP cube above flag"]
+    Sync -->|"use() — before first_bop_view check"| Open["open BOP menu\nunconditionally"]
+    Open -->|"FlagInfo.bopFull"| Warn["TownBlockofProgressScreen\nred 'full' warning line"]
+```
+
+- `syncBopFull()` is called at every `bopCount` change site and **after
+  `initializeBOP`**, where the persisted blockstate can be stale against the
+  freshly-loaded count (reconcile on load).
+- The notice is **unconditional on interaction** (not gated on the `first_bop_view`
+  advancement), so the warning shows even once the player has seen the tab.
+- `SpinningCube.render` gained a real `color` param — the old `0xF000F0` arg was a
+  misnamed light value, not a tint — so the two existing callers pass white and the
+  full-BOP passes red.

@@ -41,7 +41,7 @@ public class SpinningCubeLayer<T extends LivingEntity, M extends EntityModel<T>>
         poseStack.pushPose();
         // Position above the entity's head, then draw the shared spinning cube (top-left texture quad).
         poseStack.translate(0.0D, -(entity.getBbHeight() / 2), 0.0D);
-        SpinningCube.render(poseStack, bufferSource, 0xF000F0, CUBE_TEXTURE, ageInTicks, 0.3f, 0.0f, 0.25f, 0.0f, 0.25f);
+        SpinningCube.render(poseStack, bufferSource, 0xF000F0, 0xFFFFFFFF, CUBE_TEXTURE, ageInTicks, 0.3f, 0.0f, 0.25f, 0.0f, 0.25f);
         poseStack.popPose();
     }
 }

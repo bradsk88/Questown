@@ -12,7 +12,7 @@ flowchart TD
     Init["ScreenEvent.Init.Post"] -->|Questown screen & !production| P["pendingCheck = true"]
     RPre["ScreenEvent.Render.Pre"] -->|pendingCheck| Begin["GuiLayoutCapture.begin()"]
     Begin --> Render["screen.render() runs"]
-    Render --> Draw["Compat.drawDarkTextWrap"]
+    Render --> Draw["Compat.drawTextWrap\n(dark + red, via the *Wrap helpers)"]
     Draw -->|capture active| Rec["GuiLayoutCapture.recordText(bbox)"]
     RPost["ScreenEvent.Render.Post"] --> Collect["widgets (Layer 2) + captured text (Layer 1)"]
     Collect --> Check["GuiLayoutLinter.check(w,h,boxes)"]
@@ -20,8 +20,10 @@ flowchart TD
 ```
 
 - **Layer 2** (`collectWidgetBoxes`): widget geometry — off-screen, button-label-overflow.
-- **Layer 1** (`GuiLayoutCapture` + the `drawDarkTextWrap` hook): each wrapped-text block's
-  real bbox, so text bleeding into another element shows up as an **overlap**.
+- **Layer 1** (`GuiLayoutCapture` + the `drawTextWrap` hook): each wrapped-text
+  block's real bbox; dark and red (warning) text both route through `drawTextWrap`
+  (via `drawDarkTextWrap` / `drawRedTextWrap`), so both are captured. Text bleeding
+  into another element shows up as an **overlap**.
 - Both feed ONE `GuiLayoutLinter.check` (pure, JUnit-tested in `GuiLayoutLinterTest`).
 - Runs once per screen open (Init sets a flag; the first Render pair captures + checks).
 - Inert in shipped jars (`FMLEnvironment.production`) and never loaded on a server

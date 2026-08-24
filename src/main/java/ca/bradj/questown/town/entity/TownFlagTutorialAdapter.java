@@ -55,6 +55,7 @@ class TownFlagTutorialAdapter implements TutorialTownView {
     public void grantBop(int amount) {
         flag.bopCount += amount;
         flag.setChanged();
+        flag.syncBopFull();
     }
 
     @Override

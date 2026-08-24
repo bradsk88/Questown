@@ -21,11 +21,11 @@ class TabNotificationTest {
     }
 
     private FlagTabsEmbedding.FlagInfo infoWithIncompleteQuests(boolean showBop) {
-        return FlagTabsEmbedding.FlagInfo.withQuestNotification(BlockPos.ZERO, showBop, true);
+        return FlagTabsEmbedding.FlagInfo.withQuestNotification(BlockPos.ZERO, showBop, true, false);
     }
 
     private FlagTabsEmbedding.FlagInfo infoAllComplete(boolean showBop) {
-        return FlagTabsEmbedding.FlagInfo.withQuestNotification(BlockPos.ZERO, showBop, false);
+        return FlagTabsEmbedding.FlagInfo.withQuestNotification(BlockPos.ZERO, showBop, false, false);
     }
 
     private Optional<FlagTabs.TabDecision> findTab(ImmutableList<FlagTabs.TabDecision> decisions, String titleKey) {
@@ -108,7 +108,7 @@ class TabNotificationTest {
     @Test
     void fromTownState_withIncompleteQuests_hasNotification() {
         FlagTabsEmbedding.FlagInfo fi = FlagTabsEmbedding.FlagInfo.withQuestNotification(
-                BlockPos.ZERO, true, true
+                BlockPos.ZERO, true, true, false
         );
         assertTrue(fi.hasIncompleteQuests());
     }
@@ -116,7 +116,7 @@ class TabNotificationTest {
     @Test
     void fromTownState_withAllComplete_noNotification() {
         FlagTabsEmbedding.FlagInfo fi = FlagTabsEmbedding.FlagInfo.withQuestNotification(
-                BlockPos.ZERO, true, false
+                BlockPos.ZERO, true, false, false
         );
         assertFalse(fi.hasIncompleteQuests());
     }
@@ -124,7 +124,7 @@ class TabNotificationTest {
     @Test
     void fromTownState_withBop_showsBopTab() {
         FlagTabsEmbedding.FlagInfo fi = FlagTabsEmbedding.FlagInfo.withQuestNotification(
-                BlockPos.ZERO, true, false
+                BlockPos.ZERO, true, false, false
         );
         assertTrue(fi.showBlockOfProgressTab());
     }

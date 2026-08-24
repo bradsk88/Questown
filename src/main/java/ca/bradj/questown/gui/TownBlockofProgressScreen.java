@@ -127,6 +127,17 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
                 text
         );
         bgY += 8;
+        // A full flag silently loses further BOPs, so warn the player in red (captured by gui-lint).
+        if (menu.getFlagInfo().bopFull()) {
+            bgY += Compat.drawRedTextWrap(
+                    font,
+                    poseStack,
+                    topLeft.withY(bgY),
+                    tWidth,
+                    Compat.translatable("menu.block_of_progress.full")
+            );
+            bgY += 8;
+        }
         bgY += Compat.drawDarkTextWrap(
                 font,
                 poseStack,

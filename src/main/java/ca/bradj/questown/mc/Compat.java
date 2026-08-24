@@ -320,11 +320,39 @@ public class Compat {
             int textWidth,
             Component translatable
     ) {
+        return drawTextWrap(font, poseStack, topLeft, textWidth, translatable, 0x00000000);
+    }
+
+    public static int drawRedTextWrap(
+            Font font,
+            PoseStack poseStack,
+            Coordinate topLeft,
+            int textWidth,
+            Component translatable
+    ) {
+        return drawTextWrap(font, poseStack, topLeft, textWidth, translatable, 0xFFFF0000);
+    }
+
+    /**
+     * Draw wrapped {@code translatable} in {@code color} and record the extent when the gui-lint
+     * {@link ca.bradj.questown.gui.GuiLayoutCapture} is active. Dark and red text both delegate
+     * here so the linter captures either.
+     *
+     * @return The number of vertical pixels used up when drawing the text
+     */
+    public static int drawTextWrap(
+            Font font,
+            PoseStack poseStack,
+            Coordinate topLeft,
+            int textWidth,
+            Component translatable,
+            int color
+    ) {
         boolean capture = ca.bradj.questown.gui.GuiLayoutCapture.isActive();
         int out = 0;
         int maxLineWidth = 0;
         for (FormattedCharSequence line : font.split(translatable, textWidth)) {
-            drawDarkText(font, poseStack, line, topLeft.x(), topLeft.y() + out);
+            font.draw(poseStack, line, topLeft.x(), topLeft.y() + out, color);
             if (capture) {
                 maxLineWidth = Math.max(maxLineWidth, font.width(line));
             }

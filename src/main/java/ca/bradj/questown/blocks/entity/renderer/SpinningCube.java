@@ -28,6 +28,7 @@ public final class SpinningCube {
             PoseStack poseStack,
             MultiBufferSource bufferSource,
             int packedLight,
+            int color,
             ResourceLocation texture,
             float ageInTicks,
             float scale,
@@ -45,35 +46,35 @@ public final class SpinningCube {
         Matrix4f matrix = poseStack.last().pose();
 
         // Front
-        vertex(builder, matrix, packedLight, -0.5f, -0.5f, 0.5f, minU, minV, 0, 0, 1);
-        vertex(builder, matrix, packedLight, 0.5f, -0.5f, 0.5f, maxU, minV, 0, 0, 1);
-        vertex(builder, matrix, packedLight, 0.5f, 0.5f, 0.5f, maxU, maxV, 0, 0, 1);
-        vertex(builder, matrix, packedLight, -0.5f, 0.5f, 0.5f, minU, maxV, 0, 0, 1);
+        vertex(builder, matrix, packedLight, color, -0.5f, -0.5f, 0.5f, minU, minV, 0, 0, 1);
+        vertex(builder, matrix, packedLight, color, 0.5f, -0.5f, 0.5f, maxU, minV, 0, 0, 1);
+        vertex(builder, matrix, packedLight, color, 0.5f, 0.5f, 0.5f, maxU, maxV, 0, 0, 1);
+        vertex(builder, matrix, packedLight, color, -0.5f, 0.5f, 0.5f, minU, maxV, 0, 0, 1);
         // Back
-        vertex(builder, matrix, packedLight, -0.5f, -0.5f, -0.5f, minU, minV, 0, 0, -1);
-        vertex(builder, matrix, packedLight, -0.5f, 0.5f, -0.5f, minU, maxV, 0, 0, -1);
-        vertex(builder, matrix, packedLight, 0.5f, 0.5f, -0.5f, maxU, maxV, 0, 0, -1);
-        vertex(builder, matrix, packedLight, 0.5f, -0.5f, -0.5f, maxU, minV, 0, 0, -1);
+        vertex(builder, matrix, packedLight, color, -0.5f, -0.5f, -0.5f, minU, minV, 0, 0, -1);
+        vertex(builder, matrix, packedLight, color, -0.5f, 0.5f, -0.5f, minU, maxV, 0, 0, -1);
+        vertex(builder, matrix, packedLight, color, 0.5f, 0.5f, -0.5f, maxU, maxV, 0, 0, -1);
+        vertex(builder, matrix, packedLight, color, 0.5f, -0.5f, -0.5f, maxU, minV, 0, 0, -1);
         // Top
-        vertex(builder, matrix, packedLight, -0.5f, 0.5f, 0.5f, minU, minV, 0, -1, 0);
-        vertex(builder, matrix, packedLight, 0.5f, 0.5f, 0.5f, maxU, minV, 0, -1, 0);
-        vertex(builder, matrix, packedLight, 0.5f, 0.5f, -0.5f, maxU, maxV, 0, -1, 0);
-        vertex(builder, matrix, packedLight, -0.5f, 0.5f, -0.5f, minU, maxV, 0, -1, 0);
+        vertex(builder, matrix, packedLight, color, -0.5f, 0.5f, 0.5f, minU, minV, 0, -1, 0);
+        vertex(builder, matrix, packedLight, color, 0.5f, 0.5f, 0.5f, maxU, minV, 0, -1, 0);
+        vertex(builder, matrix, packedLight, color, 0.5f, 0.5f, -0.5f, maxU, maxV, 0, -1, 0);
+        vertex(builder, matrix, packedLight, color, -0.5f, 0.5f, -0.5f, minU, maxV, 0, -1, 0);
         // Bottom
-        vertex(builder, matrix, packedLight, -0.5f, -0.5f, 0.5f, minU, minV, 0, 1, 0);
-        vertex(builder, matrix, packedLight, -0.5f, -0.5f, -0.5f, minU, maxV, 0, 1, 0);
-        vertex(builder, matrix, packedLight, 0.5f, -0.5f, -0.5f, maxU, maxV, 0, 1, 0);
-        vertex(builder, matrix, packedLight, 0.5f, -0.5f, 0.5f, maxU, minV, 0, 1, 0);
+        vertex(builder, matrix, packedLight, color, -0.5f, -0.5f, 0.5f, minU, minV, 0, 1, 0);
+        vertex(builder, matrix, packedLight, color, -0.5f, -0.5f, -0.5f, minU, maxV, 0, 1, 0);
+        vertex(builder, matrix, packedLight, color, 0.5f, -0.5f, -0.5f, maxU, maxV, 0, 1, 0);
+        vertex(builder, matrix, packedLight, color, 0.5f, -0.5f, 0.5f, maxU, minV, 0, 1, 0);
         // Right
-        vertex(builder, matrix, packedLight, 0.5f, -0.5f, 0.5f, minU, minV, 1, 0, 0);
-        vertex(builder, matrix, packedLight, 0.5f, -0.5f, -0.5f, minU, maxV, 1, 0, 0);
-        vertex(builder, matrix, packedLight, 0.5f, 0.5f, -0.5f, maxU, maxV, 1, 0, 0);
-        vertex(builder, matrix, packedLight, 0.5f, 0.5f, 0.5f, maxU, minV, 1, 0, 0);
+        vertex(builder, matrix, packedLight, color, 0.5f, -0.5f, 0.5f, minU, minV, 1, 0, 0);
+        vertex(builder, matrix, packedLight, color, 0.5f, -0.5f, -0.5f, minU, maxV, 1, 0, 0);
+        vertex(builder, matrix, packedLight, color, 0.5f, 0.5f, -0.5f, maxU, maxV, 1, 0, 0);
+        vertex(builder, matrix, packedLight, color, 0.5f, 0.5f, 0.5f, maxU, minV, 1, 0, 0);
         // Left
-        vertex(builder, matrix, packedLight, -0.5f, -0.5f, 0.5f, minU, minV, -1, 0, 0);
-        vertex(builder, matrix, packedLight, -0.5f, 0.5f, 0.5f, maxU, minV, -1, 0, 0);
-        vertex(builder, matrix, packedLight, -0.5f, 0.5f, -0.5f, maxU, maxV, -1, 0, 0);
-        vertex(builder, matrix, packedLight, -0.5f, -0.5f, -0.5f, minU, maxV, -1, 0, 0);
+        vertex(builder, matrix, packedLight, color, -0.5f, -0.5f, 0.5f, minU, minV, -1, 0, 0);
+        vertex(builder, matrix, packedLight, color, -0.5f, 0.5f, 0.5f, maxU, minV, -1, 0, 0);
+        vertex(builder, matrix, packedLight, color, -0.5f, 0.5f, -0.5f, maxU, maxV, -1, 0, 0);
+        vertex(builder, matrix, packedLight, color, -0.5f, -0.5f, -0.5f, minU, maxV, -1, 0, 0);
 
         poseStack.popPose();
     }
@@ -82,12 +83,18 @@ public final class SpinningCube {
             VertexConsumer builder,
             Matrix4f matrix,
             int packedLight,
+            int color,
             float x, float y, float z,
             float u, float v,
             int nx, int ny, int nz
     ) {
         builder.vertex(matrix, x, y, z)
-               .color(1.0f, 1.0f, 1.0f, 1.0f)
+               .color(
+                       ((color >> 16) & 0xFF) / 255f,
+                       ((color >> 8) & 0xFF) / 255f,
+                       (color & 0xFF) / 255f,
+                       ((color >> 24) & 0xFF) / 255f
+               )
                .uv(u, v)
                .overlayCoords(OverlayTexture.NO_OVERLAY)
                .uv2(packedLight)

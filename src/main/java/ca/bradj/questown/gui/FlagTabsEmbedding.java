@@ -14,19 +14,21 @@ public interface FlagTabsEmbedding {
             boolean showQuestsTab,
             boolean showEconTab,
             boolean showBlockOfProgressTab,
-            boolean hasIncompleteQuests
+            boolean hasIncompleteQuests,
+            boolean bopFull
     ) {
-        public static FlagInfo dumb(BlockPos flagPos, boolean showBOP) {
-            return new FlagInfo(flagPos, true, true, true, showBOP, false);
+        public static FlagInfo dumb(BlockPos flagPos, boolean showBOP, boolean bopFull) {
+            return new FlagInfo(flagPos, true, true, true, showBOP, false, bopFull);
         }
 
-        public static FlagInfo withQuestNotification(BlockPos flagPos, boolean showBOP, boolean hasIncompleteQuests) {
-            return new FlagInfo(flagPos, true, true, true, showBOP, hasIncompleteQuests);
+        public static FlagInfo withQuestNotification(BlockPos flagPos, boolean showBOP, boolean hasIncompleteQuests, boolean bopFull) {
+            return new FlagInfo(flagPos, true, true, true, showBOP, hasIncompleteQuests, bopFull);
         }
 
         public static FlagInfo read(FriendlyByteBuf buf) {
             return new FlagInfo(
                     buf.readBlockPos(),
+                    buf.readBoolean(),
                     buf.readBoolean(),
                     buf.readBoolean(),
                     buf.readBoolean(),
@@ -42,6 +44,7 @@ public interface FlagTabsEmbedding {
             data.writeBoolean(showEconTab);
             data.writeBoolean(showBlockOfProgressTab);
             data.writeBoolean(hasIncompleteQuests);
+            data.writeBoolean(bopFull);
         }
     }
 

@@ -71,6 +71,10 @@ public class TownFlagBlock extends BaseEntityBlock {
     // A relocation deed is waiting above this flag. A blockstate (not BE) property so it auto-syncs to
     // the client, which the flag has no ticker to hydrate BE data on. The "" model variant ignores it.
     public static final Property<Boolean> DEED_AVAILABLE = BooleanProperty.create("deed_available");
+    // The flag's deposited BOPs have reached the cap. Rendered as a red BOP above the flag and surfaced
+    // as a warning in the BOP menu, so a full flag (which silently loses further BOPs) is visible.
+    // A blockstate (not BE) property so it auto-syncs to the client, like DEED_AVAILABLE.
+    public static final Property<Boolean> BOP_FULL = BooleanProperty.create("bop_full");
     private Map<Player, Long> informedPlayers = new HashMap<>();
 
     public TownFlagBlock() {
@@ -82,11 +86,12 @@ public class TownFlagBlock extends BaseEntityBlock {
         this.registerDefaultState(this.stateDefinition.any()
                                                        .setValue(INACTIVE, false)
                                                        .setValue(PHASE, FlagPhase.ACTIVE)
-                                                       .setValue(DEED_AVAILABLE, false));
+                                                       .setValue(DEED_AVAILABLE, false)
+                                                       .setValue(BOP_FULL, false));
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(INACTIVE, PHASE, DEED_AVAILABLE);
+        p_51385_.add(INACTIVE, PHASE, DEED_AVAILABLE, BOP_FULL);
     }
 
     public static String itemId(WallType wallType) {
@@ -463,7 +468,9 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         if (oEntity.get().isInitialized()) {
-            if (shouldPreSelectBopTab(entity, (ServerPlayer) player)) {
+            // A full flag opens the BOP menu unconditionally (not gated on first_bop_view), so the
+            // warning shows even once the player has seen the tab.
+            if (entity.isBopFull() || shouldPreSelectBopTab(entity, (ServerPlayer) player)) {
                 entity.menus.showUI(
                         (ServerPlayer) player,
                         OpenFlagMenuMessage.BOP,

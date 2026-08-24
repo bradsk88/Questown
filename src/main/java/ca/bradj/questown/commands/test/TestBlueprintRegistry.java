@@ -2286,6 +2286,8 @@ public class TestBlueprintRegistry {
         return (level, flagPos, town, output) -> {
             VillagerHolder vh = town.getVillagerHandle();
             output.msg("[bop-stall] FINAL bopCount=" + town.getBlocksOfProgress() + " (cap=64)");
+            output.msg("[bop-stall] BOP_FULL blockstate=" + town.isBopFull() + " (bopCount="
+                    + town.getBlocksOfProgress() + ")");
             for (var e : vh.entities()) {
                 VisitorMobEntity vme = (VisitorMobEntity) e;
                 output.msg("[bop-stall] townie " + vme.getUUID()

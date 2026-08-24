@@ -263,6 +263,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public void grantBlockOfProgressForTest(int amount) {
         this.bopCount += amount;
         setChanged();
+        syncBopFull();
     }
 
     public boolean isFlagpoleBuilt() {
@@ -1134,7 +1135,35 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public FlagTabsEmbedding.FlagInfo getInfo() {
         boolean hasIncomplete = quests.getAll().stream().anyMatch(q -> !q.isComplete());
-        return FlagTabsEmbedding.FlagInfo.withQuestNotification(getBlockPos(), bopCount > 0, hasIncomplete);
+        return FlagTabsEmbedding.FlagInfo.withQuestNotification(getBlockPos(), bopCount > 0, hasIncomplete, isBopFull());
+    }
+
+    /**
+     * Whether the flag's deposited BOPs have reached the cap. Read from the client-synced
+     * {@link TownFlagBlock#BOP_FULL} blockstate (mirrors {@link #isDeedAvailable()}) so the client
+     * render and the server interaction see the same value.
+     */
+    public boolean isBopFull() {
+        BlockState state = getBlockState();
+        return state.hasProperty(TownFlagBlock.BOP_FULL) && state.getValue(TownFlagBlock.BOP_FULL);
+    }
+
+    /**
+     * Reconcile the {@link TownFlagBlock#BOP_FULL} blockstate with the deposited count. Called at
+     * every {@code bopCount}-change site (deposit/collect, tutorial grant, test pre-fill) and after
+     * load, so the red-BOP render and the menu warning track the count. The blockstate persists in
+     * the block state, so it can be stale against the freshly-loaded count; this reconciles it.
+     */
+    public void syncBopFull() {
+        setBopFull(bopCount >= TownFlagBOPItemHandler.CAP);
+    }
+
+    private void setBopFull(boolean value) {
+        ServerLevel level = getServerLevel();
+        if (level == null || !getBlockState().hasProperty(TownFlagBlock.BOP_FULL)) {
+            return;
+        }
+        level.setBlock(getBlockPos(), getBlockState().setValue(TownFlagBlock.BOP_FULL, value), Block.UPDATE_ALL);
     }
 
     public void ejectBlockOfProgress(ServerPlayer sender) {

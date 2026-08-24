@@ -101,6 +101,10 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         if (tag.contains("completed_procedural_batches")) {
             flag.completedProceduralBatches = tag.getInt("completed_procedural_batches");
         }
+        // The BOP_FULL blockstate persists in the block state and can be stale against the
+        // freshly-loaded count; reconcile it here so the red-BOP render and the menu warning
+        // track the loaded count.
+        flag.syncBopFull();
     }
 
     @Override

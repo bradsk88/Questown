@@ -14,6 +14,9 @@ import org.jetbrains.annotations.NotNull;
 
 public class TownFlagBOPItemHandler implements IItemHandler {
 
+    /** The flag holds at most this many Blocks of Progress; a full flag silently drops further ones. */
+    public static final int CAP = 64;
+
     private final TownFlagBlockEntity town;
 
     public TownFlagBOPItemHandler(TownFlagBlockEntity town) {
@@ -26,6 +29,7 @@ public class TownFlagBOPItemHandler implements IItemHandler {
     ) {
         flag.bopCount--;
         flag.setChanged();
+        flag.syncBopFull();
         ItemStack v = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance();
         BlockPos bp = flag.getTownFlagBasePos();
         flag.messages.broadcastMessage(
@@ -47,7 +51,7 @@ public class TownFlagBOPItemHandler implements IItemHandler {
 
     @Override
     public int getSlots() {
-        return 64;
+        return CAP;
     }
 
     @Override
@@ -70,6 +74,7 @@ public class TownFlagBOPItemHandler implements IItemHandler {
         itemStack.shrink(1);
         if (!simulate) {
             town.bopCount++;
+            town.syncBopFull();
             QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", town.bopCount);
             town.messages.broadcastMessage("messages.bop.earned");
         }

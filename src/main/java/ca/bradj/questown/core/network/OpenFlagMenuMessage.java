@@ -33,7 +33,7 @@ public record OpenFlagMenuMessage(FlagTabsEmbedding.FlagInfo flag, String type) 
         BlockPos flag = buffer.readBlockPos();
         String type = buffer.readUtf();
         boolean show = buffer.readBoolean();
-        return new OpenFlagMenuMessage(FlagTabsEmbedding.FlagInfo.dumb(flag, show), type);
+        return new OpenFlagMenuMessage(FlagTabsEmbedding.FlagInfo.dumb(flag, show, false), type);
     }
 
 
