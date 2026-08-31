@@ -32,7 +32,7 @@ satisfied by an observed condition; once satisfied the controller advances.
 | `WAITING_FOR_WAND_ON_DOOR` | Right-click the door with the wand | Room registered (door has a wand-marked door, OR a recipe-matched room exists) |
 | `WAITING_FOR_SIGN` | Place a sign inside the room | Job-board block at `SIGN_OFFSET` (room recipe converts the sign automatically) |
 | `WAITING_FOR_CHEST` | Place a chest inside the room | Chest block at `CHEST_OFFSET` |
-| `WAITING_FOR_PRESSURE_PLATE` | Place a welcome mat between the gate fences | Welcome-mat block placed in flag-tracked welcome-mat list |
+| `WAITING_FOR_PRESSURE_PLATE` | Take a wooden pressure plate to the flag base (right-click to craft a welcome mat in hand), then place the mat between the gate fences | Welcome-mat block placed in flag-tracked welcome-mat list |
 | `WAITING_FOR_VILLAGER_UI` | Right-click the villager | `chickenObservedVillagerUiOpen` set |
 | `WAITING_FOR_FLAG_UI` | Right-click the flag | `chickenObservedFlagUiOpen` set |
 | `AWAITING_WORLDLY_SEEDS_DELIVERY` | Hand Worldly Seeds to the chicken | Seed item consumed, statue transform fires |
@@ -52,12 +52,20 @@ satisfied by an observed condition; once satisfied the controller advances.
   chicken wants).
 - **Player holding the matching item** → alternates between the item and
   the destination block at 1Hz. Tells the player "now bring this to that".
-- **Placement beats** (wall/door/sign/chest/plate) stay single — the
-  destination is empty air, so there's no second icon.
+- **Placement beats** (wall/door/sign/chest) stay single — the
+  destination is empty air, so there's no second icon. The chest beat's
+  bubble stays single even when the player holds a chest; only its hint
+  shifts (see §4).
 - **`SUNSET_AND_MAP` is three-phase**:
   1. `!chestSpawned` → chest icon (chicken about to drop a chest with an axe + map).
   2. `chestSpawned && !isNight` → authored sunset texture (wait until dusk).
   3. `chestSpawned && isNight` → wand+campfire alternation (sleep-on-fire).
+- **`WAITING_FOR_PRESSURE_PLATE` is three-phase** — the mat is *crafted* at the
+  flag base, so there is a real destination (unlike the other placement beats):
+  1. neither plate nor mat in hand → single pressure-plate icon (go fetch one).
+  2. plate in hand → alternates pressure-plate ↔ flag-base icon (take it to the
+     flag to craft the mat in hand).
+  3. mat in hand → single welcome-mat icon at the gate (place it).
 - **Through-walls mode** for `AWAITING_WORLDLY_SEEDS_DELIVERY` — the chicken
   is invisible behind blocks but the bubble still renders so the player can
   find their way back.
@@ -75,14 +83,17 @@ When the player clicks (left or right) the chicken,
 stick…", "It looks at your wand, then to the door…". Never imperative,
 never names mechanics directly. ≤80 chars per line, target ~50.
 
-**Item-aware variants:** when the bubble alternates (player holding the
-matching item), the hint shifts to "It looks at your X, then to Y…" form.
-Today this applies to:
+**Item-aware variants:** when the player holds the matching item, the hint
+shifts to the "It looks at your X, then to Y…" form. For most beats this
+coincides with the bubble alternating (item ↔ destination); the chest beat's
+bubble stays single but its hint still shifts. Today this applies to:
 
 - `WAITING_FOR_STICK` → `…hint.stick` / `…hint.stick.use_on_flag`
 - `WAITING_FOR_WAND_ON_CAMPFIRE` → `…hint.wand_on_campfire` / `…hint.wand_on_campfire.use`
 - `WAITING_FOR_WAND_ON_DOOR` → `…hint.wand_on_door` / `…hint.wand_on_door.use`
 - `WAITING_FOR_DOOR` → `…hint.door` / `…hint.door.with_item`
+- `WAITING_FOR_CHEST` → `…hint.chest` / `…hint.chest.with_item`
+- `WAITING_FOR_PRESSURE_PLATE` → `…hint.pressure_plate` / `…hint.pressure_plate.use`
 
 Hints MUST NOT telegraph specifics the chicken hasn't yet shown the player.
 For example, the no-item door hint says "It seems to want a door…", not

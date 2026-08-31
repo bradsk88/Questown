@@ -113,7 +113,8 @@ public final class ChickenArcResultChecker {
         PhaseInputs live = new PhaseInputs(
                 ChickenArcConditions.playerHoldsRequiredItem(nearestPlayer, state),
                 flag.getChickenSunsetChestSpawned(),
-                level.isNight()
+                level.isNight(),
+                ChickenArcConditions.playerHoldsPressurePlate(nearestPlayer)
         );
         BeatPhase actual = ChickenArcPresentation.activePhase(state, live);
         boolean pass = expected == actual;

@@ -11,6 +11,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
@@ -218,6 +219,9 @@ public class HelperChickenBeatPeckGoal extends Goal {
         if (state == ChickenBeatState.SUNSET_AND_MAP) {
             return resolveSunsetCampfireTarget(flag, false);
         }
+        if (state == ChickenBeatState.WAITING_FOR_PRESSURE_PLATE) {
+            return resolvePressurePlateTarget(flag, false);
+        }
         Rotation rotation = flag.getChickenStructureRotation();
         return HelperChickenBeatOffsets.resolveTarget(state, flag.getTownFlagBasePos(), rotation);
     }
@@ -238,6 +242,9 @@ public class HelperChickenBeatPeckGoal extends Goal {
         }
         if (state == ChickenBeatState.SUNSET_AND_MAP) {
             return resolveSunsetCampfireTarget(flag, true);
+        }
+        if (state == ChickenBeatState.WAITING_FOR_PRESSURE_PLATE) {
+            return resolvePressurePlateTarget(flag, true);
         }
         Rotation rotation = flag.getChickenStructureRotation();
         return HelperChickenBeatOffsets.resolveStandTarget(state, flag.getTownFlagBasePos(), rotation);
@@ -267,6 +274,38 @@ public class HelperChickenBeatPeckGoal extends Goal {
                         ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE, flagPos, rotation)
                 : HelperChickenBeatOffsets.resolveTarget(
                         ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE, flagPos, rotation);
+    }
+
+    /**
+     * Pressure-plate beat target: the chicken pecks a different location
+     * depending on which item the player is carrying. With a welcome mat in
+     * hand it pecks the gate where the mat will be placed; with a pressure
+     * plate in hand it pecks the flag base where the plate is crafted into a
+     * mat. The same gate the peck runs on
+     * ({@link ChickenArcConditions#shouldPeckRun}) drives which offset is
+     * returned, so the chicken never pecks the gate before a mat exists.
+     */
+    @org.jetbrains.annotations.Nullable
+    private BlockPos resolvePressurePlateTarget(TownFlagBlockEntity flag, boolean stand) {
+        Player player = ChickenArcConditions.findNearestPlayerForFlag(flag);
+        Rotation rotation = flag.getChickenStructureRotation();
+        BlockPos flagPos = flag.getTownFlagBasePos();
+        // Welcome mat in hand → the gate, where it is placed.
+        if (ChickenArcConditions.playerHoldsRequiredItem(player, ChickenBeatState.WAITING_FOR_PRESSURE_PLATE)) {
+            return stand
+                    ? HelperChickenBeatOffsets.resolveStandTarget(
+                            ChickenBeatState.WAITING_FOR_PRESSURE_PLATE, flagPos, rotation)
+                    : HelperChickenBeatOffsets.resolveTarget(
+                            ChickenBeatState.WAITING_FOR_PRESSURE_PLATE, flagPos, rotation);
+        }
+        // Pressure plate in hand → the flag base, where it is crafted into a
+        // mat. Both stand and look resolve to the flag base (FLAG_OFFSET),
+        // shared with the WAITING_FOR_STICK beat.
+        return stand
+                ? HelperChickenBeatOffsets.resolveStandTarget(
+                        ChickenBeatState.WAITING_FOR_STICK, flagPos, rotation)
+                : HelperChickenBeatOffsets.resolveTarget(
+                        ChickenBeatState.WAITING_FOR_STICK, flagPos, rotation);
     }
 
     /**

@@ -11,6 +11,16 @@ package ca.bradj.questown.mobs.helperchicken;
 public record PhaseInputs(
         boolean hasItem,
         boolean chestSpawned,
-        boolean isNight
+        boolean isNight,
+        boolean hasPressurePlate
 ) {
+    /**
+     * 3-arg convenience for callers that don't care about the pressure-plate
+     * phase (every beat except {@code WAITING_FOR_PRESSURE_PLATE}). Defaults
+     * {@code hasPressurePlate} to false so existing construction sites and
+     * tests keep compiling unchanged.
+     */
+    public PhaseInputs(boolean hasItem, boolean chestSpawned, boolean isNight) {
+        this(hasItem, chestSpawned, isNight, false);
+    }
 }

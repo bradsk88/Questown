@@ -113,8 +113,6 @@ class ChickenArcPresentationTest {
     void activePhase_singlePhaseBeats_areAlwaysDefault() {
         ChickenBeatState[] singlePhase = new ChickenBeatState[]{
                 ChickenBeatState.WAITING_FOR_SIGN,
-                ChickenBeatState.WAITING_FOR_CHEST,
-                ChickenBeatState.WAITING_FOR_PRESSURE_PLATE,
                 ChickenBeatState.WAITING_FOR_VILLAGER_UI,
                 ChickenBeatState.WAITING_FOR_FLAG_UI,
                 ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY,
@@ -130,6 +128,44 @@ class ChickenArcPresentationTest {
                 );
             }
         }
+    }
+
+    @Test
+    void activePhase_chest_picksDefaultOrPlaceFromHasItem() {
+        ChickenBeatState s = ChickenBeatState.WAITING_FOR_CHEST;
+        Assertions.assertEquals(
+                BeatPhase.DEFAULT,
+                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false))
+        );
+        Assertions.assertEquals(
+                BeatPhase.READY_TO_PLACE,
+                ChickenArcPresentation.activePhase(s, new PhaseInputs(true, false, false))
+        );
+    }
+
+    @Test
+    void activePhase_pressurePlate_threePhases() {
+        ChickenBeatState s = ChickenBeatState.WAITING_FOR_PRESSURE_PLATE;
+        // No plate, no mat → go get a pressure plate.
+        Assertions.assertEquals(
+                BeatPhase.NEED_TO_FETCH,
+                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, false))
+        );
+        // Has a pressure plate → take it to the flag base to craft the mat.
+        Assertions.assertEquals(
+                BeatPhase.READY_TO_USE,
+                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, true))
+        );
+        // Has a welcome mat → place it at the gate.
+        Assertions.assertEquals(
+                BeatPhase.READY_TO_PLACE,
+                ChickenArcPresentation.activePhase(s, new PhaseInputs(true, false, false, false))
+        );
+        // Mat wins over plate (placement phase takes priority over craft phase).
+        Assertions.assertEquals(
+                BeatPhase.READY_TO_PLACE,
+                ChickenArcPresentation.activePhase(s, new PhaseInputs(true, false, false, true))
+        );
     }
 
     // -------------------------------------------------------------------------

@@ -119,9 +119,10 @@ public final class ChickenArcController {
         }
         Player nearestPlayer = ChickenArcConditions.findNearestPlayerForFlag(flag);
         boolean hasItem = ChickenArcConditions.playerHoldsRequiredItem(nearestPlayer, state);
+        boolean hasPressurePlate = ChickenArcConditions.playerHoldsPressurePlate(nearestPlayer);
         boolean chestSpawned = flag.getChickenSunsetChestSpawned();
         boolean isNight = level.isNight();
-        PhaseInputs phaseInputs = new PhaseInputs(hasItem, chestSpawned, isNight);
+        PhaseInputs phaseInputs = new PhaseInputs(hasItem, chestSpawned, isNight, hasPressurePlate);
         ChickenArcBubbles.Bubble bubble = ChickenArcPresentation.present(state, phaseInputs).bubble();
         String newTexture = bubble.textureIcon() == null ? "" : bubble.textureIcon().toString();
         boolean changed = !net.minecraft.world.item.ItemStack.matches(chicken.getBubbleIconA(), bubble.iconA())
@@ -219,13 +220,14 @@ public final class ChickenArcController {
         boolean hasWand = ChickenArcConditions.hasWandInInventory(player);
         boolean isNight = player.getLevel().isNight();
         boolean chestSpawned = flag.getChickenSunsetChestSpawned();
+        boolean hasPressurePlate = ChickenArcConditions.playerHoldsPressurePlate(player);
         int clickCount = recordClick(player.getUUID(), state);
         ca.bradj.questown.QT.JOB_LOGGER.info(
                 "[chicken-arc] click handler: state={} hasMatchingItem={} hasWandInInv={} clickCount={}",
                 state, hasItem, hasWand, clickCount
         );
         Presentation presentation = ChickenArcPresentation.present(
-                state, new PhaseInputs(hasItem, chestSpawned, isNight)
+                state, new PhaseInputs(hasItem, chestSpawned, isNight, hasPressurePlate)
         );
         String key = clickCount % PLAIN_TEXT_CYCLE == 0
                 ? presentation.plainKey()

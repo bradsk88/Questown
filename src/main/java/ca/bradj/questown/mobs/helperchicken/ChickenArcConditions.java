@@ -9,10 +9,12 @@ import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
@@ -263,12 +265,19 @@ public final class ChickenArcConditions {
      * Whether the chicken's beat-peck goal should currently run. Returns true
      * for beats with no held-item requirement (UI beats, seeds-delivery) so the
      * chicken pecks the location regardless; for beats with a required item
-     * (placement beats too — the chicken can't usefully indicate where to put
-     * something the player isn't carrying) returns true only when the player
-     * is holding it. When false, the lower-priority follow-near-flag goal
-     * picks up and the chicken trails the player until they fetch the item.
+     * (placement beats too) returns true only when the player is holding it.
+     * When false, the lower-priority follow-near-flag goal picks up and the
+     * chicken trails the player until they fetch the item.
+     *
+     * <p>The pressure-plate beat is the one exception: it pecks in BOTH the
+     * "has a pressure plate" phase (pointing at the flag base to craft the mat)
+     * and the "has a welcome mat" phase (pointing at the gate to place it), so
+     * it accepts either item. Neither item → no peck, the chicken follows.
      */
     public static boolean shouldPeckRun(@Nullable Player player, ChickenBeatState state) {
+        if (state == ChickenBeatState.WAITING_FOR_PRESSURE_PLATE) {
+            return playerHoldsPressurePlate(player) || playerHoldsRequiredItem(player, state);
+        }
         Predicate<ItemStack> required = requiredItemPredicate(state);
         if (required == null) {
             return true;
@@ -288,6 +297,22 @@ public final class ChickenArcConditions {
             return false;
         }
         return playerHoldsMatching(player, required);
+    }
+
+    /**
+     * Whether the player holds a wooden pressure plate (main or off hand) —
+     * the item the flag base converts into a welcome mat. Only the
+     * {@code WAITING_FOR_PRESSURE_PLATE} beat reads this, to distinguish "has
+     * plate" from "has mat"; the peck still keys off the welcome-mat predicate
+     * via {@link #playerHoldsRequiredItem}, so the chicken keeps trailing the
+     * player (not pecking the gate) until a mat actually exists.
+     */
+    public static boolean playerHoldsPressurePlate(@Nullable Player player) {
+        if (player == null) {
+            return false;
+        }
+        return Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES).test(player.getMainHandItem())
+                || Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES).test(player.getOffhandItem());
     }
 
     private static boolean playerHoldsMatching(@Nullable Player player, Predicate<ItemStack> match) {
