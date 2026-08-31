@@ -23,6 +23,7 @@ public final class NeedBubbleClientEvents {
             return;
         }
         NeedBubbleFocus.tick(Minecraft.getInstance());
+        ca.bradj.questown.mobs.helperchicken.ChickenArcHintFocus.tick(Minecraft.getInstance());
     }
 
     /**

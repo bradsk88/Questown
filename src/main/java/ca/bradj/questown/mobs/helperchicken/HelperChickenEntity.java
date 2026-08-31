@@ -52,6 +52,16 @@ public class HelperChickenEntity extends Chicken {
     private static final EntityDataAccessor<String> BUBBLE_TEXTURE_PATH = SynchedEntityData.defineId(
             HelperChickenEntity.class, EntityDataSerializers.STRING
     );
+    /**
+     * The lang key of the chicken's current monologue hint, synced so the
+     * client can show it on the overlay message when the player looks at the
+     * chicken. The click handler still drives the plain-text fourth-wall
+     * cycle; this carries the monologue. Empty for terminal beats, which have
+     * no hint.
+     */
+    private static final EntityDataAccessor<String> HINT_KEY = SynchedEntityData.defineId(
+            HelperChickenEntity.class, EntityDataSerializers.STRING
+    );
 
     @Nullable
     private BlockPos ownerFlagPos;
@@ -102,6 +112,7 @@ public class HelperChickenEntity extends Chicken {
         this.entityData.define(BUBBLE_ICON_B, ItemStack.EMPTY);
         this.entityData.define(THROUGH_WALLS, false);
         this.entityData.define(BUBBLE_TEXTURE_PATH, "");
+        this.entityData.define(HINT_KEY, "");
     }
 
     @Override
@@ -221,6 +232,14 @@ public class HelperChickenEntity extends Chicken {
 
     public void setBubbleTexturePath(String path) {
         this.entityData.set(BUBBLE_TEXTURE_PATH, path == null ? "" : path);
+    }
+
+    public String getHintKey() {
+        return this.entityData.get(HINT_KEY);
+    }
+
+    public void setHintKey(String key) {
+        this.entityData.set(HINT_KEY, key == null ? "" : key);
     }
 
     /**

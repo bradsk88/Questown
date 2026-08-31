@@ -124,16 +124,20 @@ public final class ChickenArcController {
         boolean isNight = level.isNight();
         boolean seedsInContainer = ChickenArcConditions.areWorldlySeedsInAnyContainer(flag);
         PhaseInputs phaseInputs = new PhaseInputs(hasItem, chestSpawned, isNight, hasPressurePlate, seedsInContainer);
-        ChickenArcBubbles.Bubble bubble = ChickenArcPresentation.present(state, phaseInputs).bubble();
+        Presentation presentation = ChickenArcPresentation.present(state, phaseInputs);
+        ChickenArcBubbles.Bubble bubble = presentation.bubble();
         String newTexture = bubble.textureIcon() == null ? "" : bubble.textureIcon().toString();
+        String newHintKey = presentation.hintKey() == null ? "" : presentation.hintKey();
         boolean changed = !net.minecraft.world.item.ItemStack.matches(chicken.getBubbleIconA(), bubble.iconA())
                 || !net.minecraft.world.item.ItemStack.matches(chicken.getBubbleIconB(), bubble.iconB())
                 || chicken.isThroughWalls() != bubble.throughWalls()
-                || !chicken.getBubbleTexturePath().equals(newTexture);
+                || !chicken.getBubbleTexturePath().equals(newTexture)
+                || !chicken.getHintKey().equals(newHintKey);
         chicken.setBubbleIconA(bubble.iconA());
         chicken.setBubbleIconB(bubble.iconB());
         chicken.setThroughWalls(bubble.throughWalls());
         chicken.setBubbleTexturePath(newTexture);
+        chicken.setHintKey(newHintKey);
         if (changed) {
             QT.JOB_LOGGER.info(
                     "[chicken-arc] bubble updated: state={} hasItem={} iconA={} iconB={} throughWalls={}",

@@ -86,6 +86,12 @@ inside the balloon (HEAD transform put blocks in the bottom-left corner).
 When the player clicks (left or right) the chicken,
 `ChickenArcController.onPlayerClickedChicken` emits an on-screen text hint.
 
+The monologue hint also appears on its own when the player looks squarely at
+the chicken and is close: the chicken syncs its current hint key, and the
+client-side `ChickenArcHintFocus` (ADR-0011, parallel to the townie need
+bubble) shows it on the overlay message. The click handler still owns the
+plain-text fourth-wall cycle; on-look surfaces only the monologue.
+
 **Voice:** internal monologue from the player's POV. "It seems to want a
 stick…", "It looks at your wand, then to the door…". Never imperative,
 never names mechanics directly. ≤80 chars per line, target ~50.
