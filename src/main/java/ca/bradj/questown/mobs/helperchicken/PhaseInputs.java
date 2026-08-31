@@ -12,15 +12,25 @@ public record PhaseInputs(
         boolean hasItem,
         boolean chestSpawned,
         boolean isNight,
-        boolean hasPressurePlate
+        boolean hasPressurePlate,
+        boolean seedsInContainer
 ) {
     /**
+     * 4-arg convenience for callers that don't care about the Worldly-Seeds
+     * phase (every beat except {@code AWAITING_WORLDLY_SEEDS_DELIVERY}).
+     * Defaults {@code seedsInContainer} to false.
+     */
+    public PhaseInputs(boolean hasItem, boolean chestSpawned, boolean isNight, boolean hasPressurePlate) {
+        this(hasItem, chestSpawned, isNight, hasPressurePlate, false);
+    }
+
+    /**
      * 3-arg convenience for callers that don't care about the pressure-plate
-     * phase (every beat except {@code WAITING_FOR_PRESSURE_PLATE}). Defaults
-     * {@code hasPressurePlate} to false so existing construction sites and
+     * or Worldly-Seeds phase. Defaults {@code hasPressurePlate} and
+     * {@code seedsInContainer} to false so existing construction sites and
      * tests keep compiling unchanged.
      */
     public PhaseInputs(boolean hasItem, boolean chestSpawned, boolean isNight) {
-        this(hasItem, chestSpawned, isNight, false);
+        this(hasItem, chestSpawned, isNight, false, false);
     }
 }

@@ -214,7 +214,7 @@ public class HelperChickenBeatPeckGoal extends Goal {
         }
         ChickenBeatState state = flag.getChickenBeatState();
         if (state == ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY) {
-            return findSeedsContainerPos(flag);
+            return seedsDeliveryTarget(flag, false);
         }
         if (state == ChickenBeatState.SUNSET_AND_MAP) {
             return resolveSunsetCampfireTarget(flag, false);
@@ -238,7 +238,7 @@ public class HelperChickenBeatPeckGoal extends Goal {
         }
         ChickenBeatState state = flag.getChickenBeatState();
         if (state == ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY) {
-            return findSeedsContainerPos(flag);
+            return seedsDeliveryTarget(flag, true);
         }
         if (state == ChickenBeatState.SUNSET_AND_MAP) {
             return resolveSunsetCampfireTarget(flag, true);
@@ -306,6 +306,28 @@ public class HelperChickenBeatPeckGoal extends Goal {
                         ChickenBeatState.WAITING_FOR_STICK, flagPos, rotation)
                 : HelperChickenBeatOffsets.resolveTarget(
                         ChickenBeatState.WAITING_FOR_STICK, flagPos, rotation);
+    }
+
+    /**
+     * Worldly-Seeds beat target. With Worldly Seeds in a town container the
+     * chicken pecks that container; with none yet it walks to the gate, where
+     * the gatherer/villager returns with them. The gate reuses the
+     * pressure-plate beat's offset (both point at
+     * {@link HelperChickenBeatOffsets#GATE_CENTER_OFFSET}).
+     */
+    @org.jetbrains.annotations.Nullable
+    private BlockPos seedsDeliveryTarget(TownFlagBlockEntity flag, boolean stand) {
+        BlockPos container = findSeedsContainerPos(flag);
+        if (container != null) {
+            return container;
+        }
+        Rotation rotation = flag.getChickenStructureRotation();
+        BlockPos flagPos = flag.getTownFlagBasePos();
+        return stand
+                ? HelperChickenBeatOffsets.resolveStandTarget(
+                        ChickenBeatState.WAITING_FOR_PRESSURE_PLATE, flagPos, rotation)
+                : HelperChickenBeatOffsets.resolveTarget(
+                        ChickenBeatState.WAITING_FOR_PRESSURE_PLATE, flagPos, rotation);
     }
 
     /**

@@ -69,6 +69,13 @@ satisfied by an observed condition; once satisfied the controller advances.
 - **Through-walls mode** for `AWAITING_WORLDLY_SEEDS_DELIVERY` — the chicken
   is invisible behind blocks but the bubble still renders so the player can
   find their way back.
+- **`AWAITING_WORLDLY_SEEDS_DELIVERY` is two-phase** — the bubble stays the
+  through-walls seed icon in both phases; only the hint/peck target change:
+  1. no Worldly Seeds in any town container → the chicken waits at the gate
+     (where the gatherer/villager returns) with the "waiting for the
+     villager" hint.
+  2. Worldly Seeds in a container → the chicken pecks that container with the
+     "hand me the seeds" hint (the original behaviour).
 
 Icons render with `ItemTransforms.TransformType.GUI` and an explicit
 translate to the bubble center, so 2D items and 3D blocks both center

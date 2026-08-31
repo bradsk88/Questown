@@ -40,6 +40,7 @@ public final class ChickenArcPresentation {
     private static final String HINT_VILLAGER_UI = "message.questown.chicken.hint.villager_ui";
     private static final String HINT_FLAG_UI = "message.questown.chicken.hint.flag_ui";
     private static final String HINT_WORLDLY_SEEDS = "message.questown.chicken.hint.worldly_seeds";
+    private static final String HINT_WORLDLY_SEEDS_WAITING = "message.questown.chicken.hint.worldly_seeds.waiting";
 
     private static final String PLAIN_STICK = "message.questown.chicken.plain.stick";
     private static final String PLAIN_WAND_CAMPFIRE = "message.questown.chicken.plain.wand_on_campfire";
@@ -55,6 +56,7 @@ public final class ChickenArcPresentation {
     private static final String PLAIN_VILLAGER_UI = "message.questown.chicken.plain.villager_ui";
     private static final String PLAIN_FLAG_UI = "message.questown.chicken.plain.flag_ui";
     private static final String PLAIN_WORLDLY_SEEDS = "message.questown.chicken.plain.worldly_seeds";
+    private static final String PLAIN_WORLDLY_SEEDS_WAITING = "message.questown.chicken.plain.worldly_seeds.waiting";
 
     private ChickenArcPresentation() {
     }
@@ -69,10 +71,10 @@ public final class ChickenArcPresentation {
             case SUNSET_AND_MAP -> sunsetAndMapPhase(in);
             case WAITING_FOR_CHEST -> in.hasItem() ? BeatPhase.READY_TO_PLACE : BeatPhase.DEFAULT;
             case WAITING_FOR_PRESSURE_PLATE -> pressurePlatePhase(in);
+            case AWAITING_WORLDLY_SEEDS_DELIVERY -> seedsPhase(in);
             case WAITING_FOR_SIGN,
                  WAITING_FOR_VILLAGER_UI,
                  WAITING_FOR_FLAG_UI,
-                 AWAITING_WORLDLY_SEEDS_DELIVERY,
                  COMPLETE,
                  FORFEIT -> BeatPhase.DEFAULT;
         };
@@ -109,6 +111,20 @@ public final class ChickenArcPresentation {
         return BeatPhase.NEED_TO_FETCH;
     }
 
+    /**
+     * Two-phase Worldly-Seeds beat. The phase is decided by whether Worldly
+     * Seeds can currently be delivered:
+     * <ol>
+     *   <li>seeds in a town container ({@code seedsInContainer}) — the chicken
+     *       pecks that container; {@link BeatPhase#READY_TO_PLACE};</li>
+     *   <li>no seeds yet — the chicken waits at the gate for the gatherer/
+     *       villager to bring them back; {@link BeatPhase#DEFAULT}.</li>
+     * </ol>
+     */
+    private static BeatPhase seedsPhase(PhaseInputs in) {
+        return in.seedsInContainer() ? BeatPhase.READY_TO_PLACE : BeatPhase.DEFAULT;
+    }
+
     public static Presentation present(ChickenBeatState state, PhaseInputs in) {
         return rowFor(state, activePhase(state, in));
     }
@@ -131,9 +147,7 @@ public final class ChickenArcPresentation {
             case WAITING_FOR_FLAG_UI -> new Presentation(
                     Bubble.single(new ItemStack(BlocksInit.COBBLESTONE_TOWN_FLAG.get())),
                     HINT_FLAG_UI, PLAIN_FLAG_UI);
-            case AWAITING_WORLDLY_SEEDS_DELIVERY -> new Presentation(
-                    Bubble.throughWalls(new ItemStack(ItemsInit.WORLDLY_SEEDS.get())),
-                    HINT_WORLDLY_SEEDS, PLAIN_WORLDLY_SEEDS);
+            case AWAITING_WORLDLY_SEEDS_DELIVERY -> seedsRow(phase);
             case COMPLETE, FORFEIT -> new Presentation(Bubble.HIDDEN, null, null);
         };
     }
@@ -206,6 +220,14 @@ public final class ChickenArcPresentation {
             default -> new Presentation(
                     Bubble.single(new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get())),
                     HINT_WELCOME_MAT, PLAIN_WELCOME_MAT);
+        };
+    }
+
+    private static Presentation seedsRow(BeatPhase phase) {
+        Bubble bubble = Bubble.throughWalls(new ItemStack(ItemsInit.WORLDLY_SEEDS.get()));
+        return switch (phase) {
+            case READY_TO_PLACE -> new Presentation(bubble, HINT_WORLDLY_SEEDS, PLAIN_WORLDLY_SEEDS);
+            default -> new Presentation(bubble, HINT_WORLDLY_SEEDS_WAITING, PLAIN_WORLDLY_SEEDS_WAITING);
         };
     }
 

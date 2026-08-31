@@ -115,7 +115,6 @@ class ChickenArcPresentationTest {
                 ChickenBeatState.WAITING_FOR_SIGN,
                 ChickenBeatState.WAITING_FOR_VILLAGER_UI,
                 ChickenBeatState.WAITING_FOR_FLAG_UI,
-                ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY,
                 ChickenBeatState.COMPLETE,
                 ChickenBeatState.FORFEIT
         };
@@ -165,6 +164,21 @@ class ChickenArcPresentationTest {
         Assertions.assertEquals(
                 BeatPhase.READY_TO_PLACE,
                 ChickenArcPresentation.activePhase(s, new PhaseInputs(true, false, false, true))
+        );
+    }
+
+    @Test
+    void activePhase_worldlySeedsDelivery_twoPhases() {
+        ChickenBeatState s = ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY;
+        // No Worldly Seeds yet → the chicken waits at the gate for the villager.
+        Assertions.assertEquals(
+                BeatPhase.DEFAULT,
+                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, false, false))
+        );
+        // Worldly Seeds in a container → the chicken pecks that container.
+        Assertions.assertEquals(
+                BeatPhase.READY_TO_PLACE,
+                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, false, true))
         );
     }
 

@@ -114,7 +114,8 @@ public final class ChickenArcResultChecker {
                 ChickenArcConditions.playerHoldsRequiredItem(nearestPlayer, state),
                 flag.getChickenSunsetChestSpawned(),
                 level.isNight(),
-                ChickenArcConditions.playerHoldsPressurePlate(nearestPlayer)
+                ChickenArcConditions.playerHoldsPressurePlate(nearestPlayer),
+                ChickenArcConditions.areWorldlySeedsInAnyContainer(flag)
         );
         BeatPhase actual = ChickenArcPresentation.activePhase(state, live);
         boolean pass = expected == actual;
