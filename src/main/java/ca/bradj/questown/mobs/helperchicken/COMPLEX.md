@@ -1,0 +1,93 @@
+# COMPLEX.md — helperchicken (onboarding arc)
+
+The helper-chicken tutorial walks the player through a linear set of beats to
+onboard them to a town. Two pure layers drive it from one per-tick controller:
+
+- **Beat** (`ChickenBeatState`) — the linear, ordinal state machine. The
+  authoritative "how far along is the arc." Advanced by
+  `ChickenArcTransitions`; persisted by `name()` in the flag NBT.
+- **Phase** (`BeatPhase`) — the per-beat sub-state: what the chicken is doing
+  *right now* within a beat (e.g. "at the gate" vs "ready to place the seeds").
+  Derived by `ChickenArcPresentation`.
+
+Both layers are pure (no I/O); the controller reads the world and writes the
+result back.
+
+## Tick flow (happy path)
+
+`ChickenArcController.tick(flag)` runs once per flag per tick:
+
+```mermaid
+flowchart TD
+  tick[Controller.tick flag] --> guard{spawned, not forfeit,<br/>not COMPLETE/FORFEIT}
+  guard -->|no| stop[return]
+  guard -->|yes| observe[ChickenArcConditions.observe flag]
+  observe --> adv[ChickenArcTransitions.advance current, observed]
+  adv --> changed{advanced != current?}
+  changed -->|yes| persist[persist beat + clear consumed observations]
+  persist --> bubble[updateChickenBubble]
+  changed -->|no| bubble
+  bubble --> present[ChickenArcPresentation.present state, PhaseInputs]
+  present --> set[push bubble onto the chicken entity]
+```
+
+- `Observed` (14 booleans) feeds beat *advancement*; `PhaseInputs` (6 booleans)
+  feeds phase *derivation* — two separate snapshots, read separately.
+- `advance` skips past every satisfied beat in ordinal order, so a player who
+  placed the chest before the sign auto-completes the chest beat the tick after
+  the sign beat (out-of-order acceptance).
+- On a beat change the controller clears the ephemeral observation that drove it
+  (e.g. the sleep observation fires once and must not re-trigger next day).
+
+## Beat state machine
+
+`ChickenArcTransitions.advance(current, observed)` is a pure state machine:
+
+```mermaid
+flowchart TD
+  advance[advance current, observed] --> term{COMPLETE or FORFEIT?}
+  term -->|yes| ret[return current]
+  term -->|no| loop{isSatisfied state, observed?}
+  loop -->|yes| next[nextOrdinal state]
+  next --> loop
+  loop -->|no| ret2[return state]
+```
+
+- `isSatisfied` maps each beat to one boolean of `Observed` (e.g.
+  `AWAITING_WORLDLY_SEEDS_DELIVERY -> playerGaveSeedsToChicken`).
+- Beats are persisted by `name()` under `chicken-beat-state`; the enum order and
+  names must not be reordered or renamed, only inserted.
+
+## Phase derivation (per beat)
+
+`ChickenArcPresentation.present(state, inputs)` picks a `BeatPhase` per beat and
+maps it to a `Presentation` (a bubble icon + a monologue hint + a plain-text
+fallback). Most beats are a single phase; a few branch on inputs. The
+gate-wait beat (`AWAITING_WORLDLY_SEEDS_DELIVERY`) is the only one that reads a
+jobs-domain value:
+
+```mermaid
+flowchart TD
+  present[present state, PhaseInputs] --> s1{seedsInContainer?}
+  s1 -->|yes| rtp[READY_TO_PLACE: peck the container]
+  s1 -->|no| s2{gathererLeft?}
+  s2 -->|yes| def[DEFAULT: waiting for the villager to return]
+  s2 -->|no| ag[AWAITING_GATHERER: at the gate, villager not gone out]
+```
+
+- `gathererLeft` is a **cross-domain read**: the gate-wait beat reads the
+  gatherer villager's jobs-domain `ProductionStatus`
+  (`IProductionStatus.isBusy`) through the chicken arc (see `CONTEXT.md`
+  "phase across contexts").
+- `ChickenArcConditions.isGathererLeft(flag)` finds the villager whose
+  `jobId.rootId() == "gatherer"` among the flag's entities and returns its
+  `isBusy()`; if no gatherer is loaded it returns false, so the neutral
+  `AWAITING_GATHERER` hint is the safe fallback.
+
+## Player clicks (hint cadence)
+
+`onPlayerClickedChicken` is a separate entry point (left/right click on the
+chicken). It re-derives the `Presentation` for the current beat and, every Nth
+click on the same beat, switches the monologue hint to the plain-text fallback
+(`PLAIN_TEXT_CYCLE = 3`); the per-player click counter resets when the beat
+changes.

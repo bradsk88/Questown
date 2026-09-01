@@ -41,6 +41,7 @@ public final class ChickenArcPresentation {
     private static final String HINT_FLAG_UI = "message.questown.chicken.hint.flag_ui";
     private static final String HINT_WORLDLY_SEEDS = "message.questown.chicken.hint.worldly_seeds";
     private static final String HINT_WORLDLY_SEEDS_WAITING = "message.questown.chicken.hint.worldly_seeds.waiting";
+    private static final String HINT_WORLDLY_SEEDS_GATE = "message.questown.chicken.hint.worldly_seeds.gate";
 
     private static final String PLAIN_STICK = "message.questown.chicken.plain.stick";
     private static final String PLAIN_WAND_CAMPFIRE = "message.questown.chicken.plain.wand_on_campfire";
@@ -57,6 +58,7 @@ public final class ChickenArcPresentation {
     private static final String PLAIN_FLAG_UI = "message.questown.chicken.plain.flag_ui";
     private static final String PLAIN_WORLDLY_SEEDS = "message.questown.chicken.plain.worldly_seeds";
     private static final String PLAIN_WORLDLY_SEEDS_WAITING = "message.questown.chicken.plain.worldly_seeds.waiting";
+    private static final String PLAIN_WORLDLY_SEEDS_GATE = "message.questown.chicken.plain.worldly_seeds.gate";
 
     private ChickenArcPresentation() {
     }
@@ -112,17 +114,29 @@ public final class ChickenArcPresentation {
     }
 
     /**
-     * Two-phase Worldly-Seeds beat. The phase is decided by whether Worldly
-     * Seeds can currently be delivered:
+     * Three-phase Worldly-Seeds beat. The phase is decided by whether Worldly
+     * Seeds can currently be delivered, and whether the gatherer has gone out:
      * <ol>
      *   <li>seeds in a town container ({@code seedsInContainer}) — the chicken
      *       pecks that container; {@link BeatPhase#READY_TO_PLACE};</li>
-     *   <li>no seeds yet — the chicken waits at the gate for the gatherer/
-     *       villager to bring them back; {@link BeatPhase#DEFAULT}.</li>
+     *   <li>no seeds yet, gatherer has left ({@code gathererLeft}) — the chicken
+     *       waits at the gate for the gatherer/villager to bring them back;
+     *       {@link BeatPhase#DEFAULT};</li>
+     *   <li>no seeds yet, gatherer has not left — the chicken is at the gate but
+     *       the villager hasn't gone out, so the "waiting for the villager to
+     *       return" hint must not fire; {@link BeatPhase#AWAITING_GATHERER}.
+     *       (The gatherer's phase is a jobs-domain value read into this
+     *       chicken-arc beat — see {@code CONTEXT.md} "phase across contexts".)</li>
      * </ol>
      */
     private static BeatPhase seedsPhase(PhaseInputs in) {
-        return in.seedsInContainer() ? BeatPhase.READY_TO_PLACE : BeatPhase.DEFAULT;
+        if (in.seedsInContainer()) {
+            return BeatPhase.READY_TO_PLACE;
+        }
+        if (in.gathererLeft()) {
+            return BeatPhase.DEFAULT;
+        }
+        return BeatPhase.AWAITING_GATHERER;
     }
 
     public static Presentation present(ChickenBeatState state, PhaseInputs in) {
@@ -227,6 +241,7 @@ public final class ChickenArcPresentation {
         Bubble bubble = Bubble.throughWalls(new ItemStack(ItemsInit.WORLDLY_SEEDS.get()));
         return switch (phase) {
             case READY_TO_PLACE -> new Presentation(bubble, HINT_WORLDLY_SEEDS, PLAIN_WORLDLY_SEEDS);
+            case AWAITING_GATHERER -> new Presentation(bubble, HINT_WORLDLY_SEEDS_GATE, PLAIN_WORLDLY_SEEDS_GATE);
             default -> new Presentation(bubble, HINT_WORLDLY_SEEDS_WAITING, PLAIN_WORLDLY_SEEDS_WAITING);
         };
     }

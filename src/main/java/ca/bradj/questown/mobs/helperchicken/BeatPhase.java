@@ -20,5 +20,13 @@ public enum BeatPhase {
     READY_TO_USE,
     READY_TO_PLACE,
     PREPARING,
-    AWAITING_NIGHT
+    AWAITING_NIGHT,
+    /**
+     * Seeds-delivery beat, before the gatherer has left town. The chicken is
+     * at the gate but the villager hasn't gone out yet, so the "waiting for the
+     * villager to return" hint ({@link #DEFAULT}) must not fire. Neutral gate
+     * hint instead. Distinct from {@link #DEFAULT}: see {@code CONTEXT.md}
+     * "phase across contexts" — this reads the gatherer's jobs-domain phase.
+     */
+    AWAITING_GATHERER
 }

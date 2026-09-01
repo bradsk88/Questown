@@ -123,7 +123,8 @@ public final class ChickenArcController {
         boolean chestSpawned = flag.getChickenSunsetChestSpawned();
         boolean isNight = level.isNight();
         boolean seedsInContainer = ChickenArcConditions.areWorldlySeedsInAnyContainer(flag);
-        PhaseInputs phaseInputs = new PhaseInputs(hasItem, chestSpawned, isNight, hasPressurePlate, seedsInContainer);
+        boolean gathererLeft = ChickenArcConditions.isGathererLeft(flag);
+        PhaseInputs phaseInputs = new PhaseInputs(hasItem, chestSpawned, isNight, hasPressurePlate, seedsInContainer, gathererLeft);
         Presentation presentation = ChickenArcPresentation.present(state, phaseInputs);
         ChickenArcBubbles.Bubble bubble = presentation.bubble();
         String newTexture = bubble.textureIcon() == null ? "" : bubble.textureIcon().toString();
@@ -232,8 +233,9 @@ public final class ChickenArcController {
                 state, hasItem, hasWand, clickCount
         );
         boolean seedsInContainer = ChickenArcConditions.areWorldlySeedsInAnyContainer(flag);
+        boolean gathererLeft = ChickenArcConditions.isGathererLeft(flag);
         Presentation presentation = ChickenArcPresentation.present(
-                state, new PhaseInputs(hasItem, chestSpawned, isNight, hasPressurePlate, seedsInContainer)
+                state, new PhaseInputs(hasItem, chestSpawned, isNight, hasPressurePlate, seedsInContainer, gathererLeft)
         );
         String key = clickCount % PLAIN_TEXT_CYCLE == 0
                 ? presentation.plainKey()

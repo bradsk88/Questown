@@ -168,17 +168,22 @@ class ChickenArcPresentationTest {
     }
 
     @Test
-    void activePhase_worldlySeedsDelivery_twoPhases() {
+    void activePhase_worldlySeedsDelivery_threePhases() {
         ChickenBeatState s = ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY;
-        // No Worldly Seeds yet → the chicken waits at the gate for the villager.
+        // No seeds, gatherer has not left → neutral gate hint (not the gate-wait).
+        Assertions.assertEquals(
+                BeatPhase.AWAITING_GATHERER,
+                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, false, false, false))
+        );
+        // No seeds, gatherer has left → gate-wait "waiting for the villager to return".
         Assertions.assertEquals(
                 BeatPhase.DEFAULT,
-                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, false, false))
+                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, false, false, true))
         );
         // Worldly Seeds in a container → the chicken pecks that container.
         Assertions.assertEquals(
                 BeatPhase.READY_TO_PLACE,
-                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, false, true))
+                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, false, true, false))
         );
     }
 
@@ -267,7 +272,7 @@ class ChickenArcPresentationTest {
         // so we assert at the activePhase level only — the through-walls flag
         // is set by the row table for this beat and verified in-game.
         Assertions.assertEquals(
-                BeatPhase.DEFAULT,
+                BeatPhase.AWAITING_GATHERER,
                 ChickenArcPresentation.activePhase(
                         ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY,
                         new PhaseInputs(false, false, false))

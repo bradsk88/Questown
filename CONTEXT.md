@@ -248,6 +248,10 @@ _Avoid_: reading "input" as player input; reading it as a list of rooms that *ha
 The activity a villager switches to when hungry: it seeks food and eats. Three variants, in fallback order — at a table (`DinerWork`, comfortable), at the town flag (`DinerNoTableWork`, uncomfortable), or raw food when no cooked food is available (`DinerRawFoodWork`). Eating refills **fullness** and applies a **mood effect**, both as special rules at the extract phase — not as produced items (see ADR-0003).
 _Avoid_: feeding.
 
+**Free-food bonus**:
+A one-time free-food reward the player triggers by right-clicking the **town flag** base with a block of dirt; it drops food a **townie** can eat, refilling **fullness**. Distinct from **dining** (which the townie does on its own) and from the gatherer's **Worldly Seeds** (a tutorial trigger, not food, and not given via the flag — ADR-0014).
+_Avoid_: "bonus food" (ambiguous); conflating with **Worldly Seeds** (a different item and mechanic); treating it as repeatable (it is one-time).
+
 **Fullness**:
 A villager's hunger level (0 = starving). Drains over realtime ticks; refilled by dining. Realtime-only — warp does not model it (ADR-0002).
 
@@ -392,7 +396,7 @@ _Avoid_: state (ambiguous), step, stage.
 A sub-state within a beat for presentation. Selected from `PhaseInputs`. One of: `DEFAULT`, `NEED_TO_FETCH`, `READY_TO_USE`, `READY_TO_PLACE`, `PREPARING`, `AWAITING_NIGHT`. Single-phase beats use `DEFAULT`.
 
 **PhaseInputs**:
-The world-state booleans that select a beat's active phase: `(hasItem, chestSpawned, isNight)`.
+The world-state booleans that select a beat's active **BeatPhase** (e.g. `hasItem`, `chestSpawned`, `isNight`, `hasPressurePlate`, `seedsInContainer`, `gathererLeft`). Most describe the chicken's beat context; `gathererLeft` reads the **gatherer**'s jobs-domain **phase** — see the **phase across contexts** ambiguity.
 
 **Presentation**:
 A `(bubble, hintKey, plainKey)` row in the per-(beat, phase) presentation table. Authored once in `ChickenArcPresentation`, read by both the bubble-render path and the click-handler hint path.
@@ -422,7 +426,7 @@ A `(bubble, hintKey, plainKey)` row in the per-(beat, phase) presentation table.
 
 - **"player" in chicken-arc context.** The bubble-render path queries the *nearest* player to the flag; the click-handler path uses the *clicker*. With multiple players these can disagree, producing bubble/hint divergence not captured by the **Presentation** seam. **Partly resolved (2026-07-26):** single-player is the priority and co-op only has to not break, so nearest-player is an acceptable approximation here and this divergence is not worth chasing on its own. It becomes a real defect only when the **town audience** concept lands (and properly when players can *join* a town).
 - **"state" vs "beat".** `ChickenBeatState` is the enum type; in conversation we say "beat" for the value. Prefer "beat" in prose; reserve "state" for code references.
-- **"phase" across contexts.** In the **jobs** domain, **phase** = a `ProductionStatus` value (a townie's stage). In the **chicken-arc** domain, **BeatPhase** is an unrelated presentation sub-state of a beat. Same word, different bounded contexts — always qualify when both are in play.
+- **"phase" across contexts.** In the **jobs** domain, **phase** = a `ProductionStatus` value (a townie's stage). In the **chicken-arc** domain, **BeatPhase** is an unrelated presentation sub-state of a beat. Same word, different bounded contexts — always qualify when both are in play. They can *couple* through one input: the seeds-delivery beat's `gathererLeft` input reads the **gatherer**'s jobs-domain **phase** (whether the leaver has gone out), so a **BeatPhase** decision can depend on a jobs-domain **phase** even though the terms stay distinct.
 - **`REMOVE_FROM_WORLD` overload.** A `SpecialRules` string (timed-state leaver step) **and** an `InventoryFullStrategy` enum value (drop-on-ground). Disambiguate by which type you mean.
 - **"input" in `RoomsNeedingVillagerInput`.** Means villager-supplied work/items, **not** player input; and it's the *demand* side (rooms lacking supplies), the inverse of a **supply room**.
 - **"real" in the warp subsystem.** Resolved (ADR-0006): the round-the-clock passive budget is **wall-clock** (`wallClockTicks`), never "real" — "real" is reserved for the **realtime path** (live, player-present execution). Two different axes: wall-clock = duration (day-only vs round-the-clock), realtime = pathway (live vs warp). If you see "real ticks"/"real timeline" anywhere, read it as wall-clock and fix it.

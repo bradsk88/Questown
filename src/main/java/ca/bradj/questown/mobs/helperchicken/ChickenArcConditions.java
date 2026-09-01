@@ -4,12 +4,16 @@ import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.production.IProductionStatus;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
@@ -211,6 +215,32 @@ public final class ChickenArcConditions {
         for (ContainerTarget<MCContainer, MCTownItem> ct : all) {
             if (ct.hasItem(item -> item.get() == ItemsInit.WORLDLY_SEEDS.get())) {
                 return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether the gatherer (the town's first job, a leaver) has gone out to
+     * gather — i.e. its jobs-domain phase is an active/moving one, not
+     * {@code IDLE}. Reads the gatherer's {@link IProductionStatus#isBusy()} from
+     * its {@link VisitorMobEntity}. Feeds the seeds-delivery beat's
+     * {@code gathererLeft} input (see {@code CONTEXT.md} "phase across contexts").
+     *
+     * <p>Returns false when no gatherer is loaded (not yet spawned, or the
+     * entity's chunk is unloaded) — the neutral gate-wait hint is the safe
+     * fallback in that case.
+     */
+    public static boolean isGathererLeft(TownFlagBlockEntity flag) {
+        for (LivingEntity e : flag.getVillagerHandle().entities()) {
+            if (!(e instanceof VisitorMobEntity vme)) {
+                continue;
+            }
+            if (!GathererUnmappedNoToolWorkQtrDay.ID.rootId().equals(vme.getJobId().rootId())) {
+                continue;
+            }
+            if (vme.getStatusForServer() instanceof IProductionStatus<?> ps) {
+                return ps.isBusy();
             }
         }
         return false;

@@ -13,24 +13,36 @@ public record PhaseInputs(
         boolean chestSpawned,
         boolean isNight,
         boolean hasPressurePlate,
-        boolean seedsInContainer
+        boolean seedsInContainer,
+        boolean gathererLeft
 ) {
+    /**
+     * 5-arg convenience for callers that don't care about the gatherer-left
+     * phase. Defaults {@code gathererLeft} to false.
+     */
+    public PhaseInputs(
+            boolean hasItem, boolean chestSpawned, boolean isNight,
+            boolean hasPressurePlate, boolean seedsInContainer
+    ) {
+        this(hasItem, chestSpawned, isNight, hasPressurePlate, seedsInContainer, false);
+    }
+
     /**
      * 4-arg convenience for callers that don't care about the Worldly-Seeds
      * phase (every beat except {@code AWAITING_WORLDLY_SEEDS_DELIVERY}).
-     * Defaults {@code seedsInContainer} to false.
+     * Defaults {@code seedsInContainer} and {@code gathererLeft} to false.
      */
     public PhaseInputs(boolean hasItem, boolean chestSpawned, boolean isNight, boolean hasPressurePlate) {
-        this(hasItem, chestSpawned, isNight, hasPressurePlate, false);
+        this(hasItem, chestSpawned, isNight, hasPressurePlate, false, false);
     }
 
     /**
      * 3-arg convenience for callers that don't care about the pressure-plate
-     * or Worldly-Seeds phase. Defaults {@code hasPressurePlate} and
-     * {@code seedsInContainer} to false so existing construction sites and
-     * tests keep compiling unchanged.
+     * or Worldly-Seeds phase. Defaults {@code hasPressurePlate},
+     * {@code seedsInContainer}, and {@code gathererLeft} to false so existing
+     * construction sites and tests keep compiling unchanged.
      */
     public PhaseInputs(boolean hasItem, boolean chestSpawned, boolean isNight) {
-        this(hasItem, chestSpawned, isNight, false, false);
+        this(hasItem, chestSpawned, isNight, false, false, false);
     }
 }
