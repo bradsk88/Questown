@@ -1,6 +1,7 @@
 package ca.bradj.questown;
 
 import ca.bradj.questown.blocks.entity.renderer.AxeRackBlockEntityRenderer;
+import ca.bradj.questown.blocks.entity.renderer.ChickenStatueBlockEntityRenderer;
 import ca.bradj.questown.blocks.entity.renderer.FoodDisplayEntityRenderer;
 import ca.bradj.questown.blocks.entity.renderer.HospitalBedEntityRenderer;
 import ca.bradj.questown.blocks.entity.renderer.PlateBlockEntityRenderer;
@@ -141,6 +142,10 @@ public class Questown {
         event.enqueueWork(() -> BlockEntityRenderers.register(
                 TilesInit.TOWN_FLAG.get(),
                 ca.bradj.questown.blocks.entity.renderer.TownFlagDeedRenderer::new
+        ));
+        event.enqueueWork(() -> BlockEntityRenderers.register(
+                TilesInit.CHICKEN_STATUE.get(),
+                ChickenStatueBlockEntityRenderer::new
         ));
         event.enqueueWork(() -> EntityRenderers.register(
                 ca.bradj.questown._vanilla.entities.EntitiesInit.FISHIN_HOOK.get(),

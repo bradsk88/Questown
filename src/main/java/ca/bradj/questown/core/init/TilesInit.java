@@ -40,6 +40,12 @@ public class TilesInit {
             ).build(null)
     );
 
+    public static final RegistryObject<BlockEntityType<ChickenStatueBlockEntity>> CHICKEN_STATUE = TILES.register(
+            StoneChickenStatue.ITEM_ID, () -> BlockEntityType.Builder.of(
+                    ChickenStatueBlockEntity::new, BlocksInit.STONE_CHICKEN_STATUE.get()
+            ).build(null)
+    );
+
     public static final RegistryObject<BlockEntityType<FoodDisplayEntity>> FOOD_DISPLAY = TILES.register(
             FoodDisplayBlock.ITEM_ID, () -> BlockEntityType.Builder.of(
                     FoodDisplayEntity::new, BlocksInit.FOOD_DISPLAY.get()

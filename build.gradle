@@ -63,6 +63,13 @@ minecraft {
         client {
             workingDirectory project.file('run')
 
+            // JDK 17+ modules: netty (used by Forge networking) reflectively touches
+            // jdk.internal.misc.Unsafe. Without these add-opens the client dies at
+            // ForgeMod.<init> with "module java.base does not export jdk.internal.misc
+            // to module io.netty.common" / "Reflective setAccessible(true) disabled".
+            jvmArg '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED'
+            jvmArg '--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED'
+
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
             property 'mixin.env.remapRefMap', 'true'
