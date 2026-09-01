@@ -59,7 +59,10 @@ flowchart TD
   `run/world` itself before boot (gradle `doFirst`), so the manual wipe is
   only needed when relaunching a *non-autotest* server over a locked world.
 - Order: server → wait for "HOLDING: server left running" → client
-  (`runClient -Pautojoin`). Never join mid-run.
+  (`runClient -Pautojoin`). Never join mid-run. Background the launch in the bash
+  tool with a bare `nohup ... &` + only an `echo` (a `sleep`/`tail`/`disown` in the
+  same call kills the process — see the global `~/.pi/agent/AGENTS.md` "This machine"
+  note); the "wait for HOLDING" is a separate check call, not a foreground loop.
 - Before using a Minecraft API in hold-mode/test code, grep an existing call
   site — 1.19.2 lacks several 1.20+ methods (`ServerChunkCache.getLoadedChunks`,
   `Level.getBlockEntities`). Scanning `level.getChunk(cx, cz).getBlockEntities()`
