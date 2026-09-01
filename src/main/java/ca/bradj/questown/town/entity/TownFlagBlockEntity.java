@@ -1278,6 +1278,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return true;
     }
 
+    public boolean getGivenBonusFood() {
+        return givenBonusFood;
+    }
+
     public void toggleDebugLog(String logId) {
         logToggles.compute(logId, (k, v) -> v == null || !v);
     }

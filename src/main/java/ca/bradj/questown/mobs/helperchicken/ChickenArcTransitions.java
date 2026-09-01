@@ -1,5 +1,7 @@
 package ca.bradj.questown.mobs.helperchicken;
 
+import java.util.Set;
+
 /**
  * Pure-function state machine for the helper-chicken onboarding arc (U4).
  *
@@ -39,6 +41,7 @@ public final class ChickenArcTransitions {
             boolean signPlacedAsJobBoard,
             boolean chestPlaced,
             boolean welcomeMatPlaced,
+            boolean bonusFoodGiven,
             boolean playerOpenedVillagerUi,
             boolean playerOpenedFlagUi,
             boolean worldlySeedsInAnyContainer,
@@ -48,6 +51,14 @@ public final class ChickenArcTransitions {
 
     private ChickenArcTransitions() {
     }
+
+    /**
+     * Beats the player may skip. An optional beat auto-advances (see
+     * {@link #shouldAdvance}) when the NEXT beat's condition is met, so it never
+     * stalls the arc for a player who does not perform the optional action.
+     */
+    private static final Set<ChickenBeatState> OPTIONAL =
+            Set.of(ChickenBeatState.WAITING_FOR_FREE_FOOD);
 
     /**
      * Advances the beat state by consuming every observed condition that
@@ -65,7 +76,7 @@ public final class ChickenArcTransitions {
             return current;
         }
         ChickenBeatState state = current;
-        while (isSatisfied(state, o)) {
+        while (shouldAdvance(state, o)) {
             ChickenBeatState next = nextOrdinal(state);
             if (next == state) {
                 return state;
@@ -73,6 +84,22 @@ public final class ChickenArcTransitions {
             state = next;
         }
         return state;
+    }
+
+    /**
+     * A beat advances when its own condition is met. An optional beat also
+     * advances (is skipped over) when the NEXT beat's condition is met, so a
+     * player who skips the optional action still progresses the arc instead of
+     * stalling at the optional beat.
+     */
+    private static boolean shouldAdvance(
+            ChickenBeatState state,
+            Observed o
+    ) {
+        if (isSatisfied(state, o)) {
+            return true;
+        }
+        return OPTIONAL.contains(state) && isSatisfied(nextOrdinal(state), o);
     }
 
     private static boolean isSatisfied(
@@ -89,6 +116,7 @@ public final class ChickenArcTransitions {
             case WAITING_FOR_SIGN -> o.signPlacedAsJobBoard();
             case WAITING_FOR_CHEST -> o.chestPlaced();
             case WAITING_FOR_PRESSURE_PLATE -> o.welcomeMatPlaced();
+            case WAITING_FOR_FREE_FOOD -> o.bonusFoodGiven();
             case WAITING_FOR_VILLAGER_UI -> o.playerOpenedVillagerUi();
             case WAITING_FOR_FLAG_UI -> o.playerOpenedFlagUi();
             case AWAITING_WORLDLY_SEEDS_DELIVERY -> o.playerGaveSeedsToChicken();

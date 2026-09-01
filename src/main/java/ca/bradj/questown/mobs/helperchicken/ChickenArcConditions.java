@@ -84,6 +84,7 @@ public final class ChickenArcConditions {
                 isSignConvertedToJobBoard(flag),
                 isChestPlaced(flag),
                 isWelcomeMatPlaced(flag),
+                flag.getGivenBonusFood(),
                 flag.getChickenObservedVillagerUiOpen(),
                 flag.getChickenObservedFlagUiOpen(),
                 seedsInContainer,
@@ -94,7 +95,7 @@ public final class ChickenArcConditions {
     private static ChickenArcTransitions.Observed emptyObservation() {
         return new ChickenArcTransitions.Observed(
                 false, false, false, false, false, false, false, false, false,
-                false, false, false, false
+                false, false, false, false, false
         );
     }
 
@@ -372,7 +373,8 @@ public final class ChickenArcConditions {
             case WAITING_FOR_SIGN -> s -> blockItemBlock(s) instanceof SignBlock;
             case WAITING_FOR_CHEST -> s -> s.is(Items.CHEST);
             case WAITING_FOR_PRESSURE_PLATE -> s -> s.is(ItemsInit.WELCOME_MAT_BLOCK.get());
-            case WAITING_FOR_VILLAGER_UI, WAITING_FOR_FLAG_UI,
+            case WAITING_FOR_FREE_FOOD,
+                 WAITING_FOR_VILLAGER_UI, WAITING_FOR_FLAG_UI,
                  AWAITING_WORLDLY_SEEDS_DELIVERY, COMPLETE, FORFEIT -> null;
         };
     }

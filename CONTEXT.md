@@ -385,7 +385,7 @@ _Avoid_: job (a job can own multiple scenarios), test case, blueprint (that's th
 A guide entity that walks a new player through onboarding by pecking, displaying bubbles, and waiting for player actions.
 
 **Chicken arc**:
-The staged onboarding sequence the helper chicken walks the player through: stick → wand → campfire → wall → door → sign → chest → welcome mat → ui → seeds delivery, branched by sunset map.
+The staged onboarding sequence the helper chicken walks the player through: stick → wand → campfire → wall → door → sign → chest → welcome mat → free food → ui → seeds delivery, branched by sunset map.
 _Avoid_: tutorial, quest, walkthrough.
 
 **Beat**:
@@ -393,7 +393,10 @@ One step of the chicken arc. Identity is the `ChickenBeatState` enum value (e.g.
 _Avoid_: state (ambiguous), step, stage.
 
 **BeatPhase**:
-A sub-state within a beat for presentation. Selected from `PhaseInputs`. One of: `DEFAULT`, `NEED_TO_FETCH`, `READY_TO_USE`, `READY_TO_PLACE`, `PREPARING`, `AWAITING_NIGHT`. Single-phase beats use `DEFAULT`.
+A sub-state within a beat for presentation. Selected from `PhaseInputs`. One of: `DEFAULT`, `NEED_TO_FETCH`, `READY_TO_USE`, `READY_TO_PLACE`, `PREPARING`, `AWAITING_NIGHT`, `AWAITING_GATHERER`. Single-phase beats use `DEFAULT`.
+
+**Optional beat**:
+A **Beat** the player may skip without the arc stalling. It auto-completes when the *next* beat's condition is met, so a player who never performs the optional action (the **Free-food bonus**) keeps progressing. Contrast a required beat, the arc waits on which it must be done to advance. Only `WAITING_FOR_FREE_FOOD` is optional; every other beat is required.
 
 **PhaseInputs**:
 The world-state booleans that select a beat's active **BeatPhase** (e.g. `hasItem`, `chestSpawned`, `isNight`, `hasPressurePlate`, `seedsInContainer`, `gathererLeft`). Most describe the chicken's beat context; `gathererLeft` reads the **gatherer**'s jobs-domain **phase** — see the **phase across contexts** ambiguity.

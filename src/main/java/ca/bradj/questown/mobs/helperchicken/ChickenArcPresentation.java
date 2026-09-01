@@ -37,6 +37,7 @@ public final class ChickenArcPresentation {
     private static final String HINT_PRESSURE_PLATE = "message.questown.chicken.hint.pressure_plate";
     private static final String HINT_PRESSURE_PLATE_USE = "message.questown.chicken.hint.pressure_plate.use";
     private static final String HINT_WELCOME_MAT = "message.questown.chicken.hint.welcome_mat";
+    private static final String HINT_FREE_FOOD = "message.questown.chicken.hint.free_food";
     private static final String HINT_VILLAGER_UI = "message.questown.chicken.hint.villager_ui";
     private static final String HINT_FLAG_UI = "message.questown.chicken.hint.flag_ui";
     private static final String HINT_WORLDLY_SEEDS = "message.questown.chicken.hint.worldly_seeds";
@@ -54,6 +55,7 @@ public final class ChickenArcPresentation {
     private static final String PLAIN_CHEST = "message.questown.chicken.plain.chest";
     private static final String PLAIN_PRESSURE_PLATE = "message.questown.chicken.plain.pressure_plate";
     private static final String PLAIN_WELCOME_MAT = "message.questown.chicken.plain.welcome_mat";
+    private static final String PLAIN_FREE_FOOD = "message.questown.chicken.plain.free_food";
     private static final String PLAIN_VILLAGER_UI = "message.questown.chicken.plain.villager_ui";
     private static final String PLAIN_FLAG_UI = "message.questown.chicken.plain.flag_ui";
     private static final String PLAIN_WORLDLY_SEEDS = "message.questown.chicken.plain.worldly_seeds";
@@ -75,6 +77,7 @@ public final class ChickenArcPresentation {
             case WAITING_FOR_PRESSURE_PLATE -> pressurePlatePhase(in);
             case AWAITING_WORLDLY_SEEDS_DELIVERY -> seedsPhase(in);
             case WAITING_FOR_SIGN,
+                 WAITING_FOR_FREE_FOOD,
                  WAITING_FOR_VILLAGER_UI,
                  WAITING_FOR_FLAG_UI,
                  COMPLETE,
@@ -155,6 +158,9 @@ public final class ChickenArcPresentation {
                     Bubble.single(new ItemStack(Items.OAK_SIGN)), HINT_SIGN, PLAIN_SIGN);
             case WAITING_FOR_CHEST -> chestRow(phase);
             case WAITING_FOR_PRESSURE_PLATE -> pressurePlateRow(phase);
+            case WAITING_FOR_FREE_FOOD -> new Presentation(
+                    Bubble.single(new ItemStack(BlocksInit.COBBLESTONE_TOWN_FLAG.get())),
+                    HINT_FREE_FOOD, PLAIN_FREE_FOOD);
             case WAITING_FOR_VILLAGER_UI -> new Presentation(
                     Bubble.single(new ItemStack(Items.VILLAGER_SPAWN_EGG)),
                     HINT_VILLAGER_UI, PLAIN_VILLAGER_UI);

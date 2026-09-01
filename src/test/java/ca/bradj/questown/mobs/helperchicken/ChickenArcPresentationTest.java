@@ -113,6 +113,7 @@ class ChickenArcPresentationTest {
     void activePhase_singlePhaseBeats_areAlwaysDefault() {
         ChickenBeatState[] singlePhase = new ChickenBeatState[]{
                 ChickenBeatState.WAITING_FOR_SIGN,
+                ChickenBeatState.WAITING_FOR_FREE_FOOD,
                 ChickenBeatState.WAITING_FOR_VILLAGER_UI,
                 ChickenBeatState.WAITING_FOR_FLAG_UI,
                 ChickenBeatState.COMPLETE,

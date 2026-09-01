@@ -61,6 +61,7 @@ class ChickenArcHintsTest {
             ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE,
             ChickenBeatState.WAITING_FOR_WAND_ON_DOOR,
             ChickenBeatState.WAITING_FOR_PRESSURE_PLATE,
+            ChickenBeatState.WAITING_FOR_FREE_FOOD,
             ChickenBeatState.WAITING_FOR_FLAG_UI,
             ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY
     );
@@ -121,6 +122,7 @@ class ChickenArcHintsTest {
             case WAITING_FOR_WAND_ON_CAMPFIRE,
                  WAITING_FOR_WAND_ON_DOOR,
                  WAITING_FOR_PRESSURE_PLATE,
+                 WAITING_FOR_FREE_FOOD,
                  WAITING_FOR_FLAG_UI,
                  AWAITING_WORLDLY_SEEDS_DELIVERY -> false;
         };

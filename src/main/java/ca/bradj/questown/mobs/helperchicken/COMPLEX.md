@@ -41,18 +41,22 @@ flowchart TD
 
 ## Beat state machine
 
-`ChickenArcTransitions.advance(current, observed)` is a pure state machine:
+`ChickenArcTransitions.advance(current, observed)` is a pure state machine that
+skips past every beat whose condition is met:
 
 ```mermaid
 flowchart TD
   advance[advance current, observed] --> term{COMPLETE or FORFEIT?}
   term -->|yes| ret[return current]
-  term -->|no| loop{isSatisfied state, observed?}
+  term -->|no| loop{shouldAdvance state, observed?}
   loop -->|yes| next[nextOrdinal state]
   next --> loop
   loop -->|no| ret2[return state]
 ```
 
+- `shouldAdvance` is `isSatisfied(state)` for a required beat; for an optional
+  beat it is also true when the NEXT beat's condition is met, so a player who
+  skips the optional action is not stalled (see `CONTEXT.md` **Optional beat**).
 - `isSatisfied` maps each beat to one boolean of `Observed` (e.g.
   `AWAITING_WORLDLY_SEEDS_DELIVERY -> playerGaveSeedsToChicken`).
 - Beats are persisted by `name()` under `chicken-beat-state`; the enum order and
