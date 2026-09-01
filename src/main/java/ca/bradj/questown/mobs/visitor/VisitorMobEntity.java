@@ -137,6 +137,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private static final EntityDataAccessor<String> need = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.STRING
     );
+    /**
+     * When {@link #need} is {@link TownieNeed#UNMET_ITEM}, the missing ingredient as its
+     * {@link ca.bradj.questown.gui.Ingredients#toString} form, so a client bubble can name and
+     * show it (the Inventory screen's "needs" row pattern). Empty for any other need.
+     */
+    private static final EntityDataAccessor<String> unmetItem = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.STRING
+    );
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
     // State management should be done via the town block. This entity should
@@ -405,6 +413,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.entityData.define(heldItem, ItemStack.EMPTY);
         this.entityData.define(lastHeldItem, ItemStack.EMPTY);
         this.entityData.define(need, TownieNeed.NONE.name());
+        this.entityData.define(unmetItem, "");
     }
 
     /**
@@ -420,10 +429,25 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
         QT.VILLAGER_LOGGER.debug("Townie {} need is now {}", UtilClean.truncateMiddle(getUUID()), newNeed);
         this.entityData.set(need, newNeed.name());
+        if (newNeed != TownieNeed.UNMET_ITEM) {
+            this.entityData.set(unmetItem, "");
+        }
     }
 
     public TownieNeed getNeed() {
         return TownieNeed.fromName(this.entityData.get(need));
+    }
+
+    /** Server-only: the item the {@code UNMET_ITEM} need is about, cleared by {@link #setNeed}. */
+    public void setUnmetItem(String itemKey) {
+        if (level.isClientSide()) {
+            return;
+        }
+        this.entityData.set(unmetItem, itemKey == null ? "" : itemKey);
+    }
+
+    public String getUnmetItem() {
+        return this.entityData.get(unmetItem);
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY

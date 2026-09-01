@@ -1,6 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.render.BubbleRenderer;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -11,6 +12,8 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.UUID;
 
@@ -81,8 +84,23 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
             return;
         }
         BubbleRenderer.renderIconBubbleFor(
-                entity, entity.getNeed().icon(), stack, buffer, this.entityRenderDispatcher
+                entity, needBubbleIcon(entity), stack, buffer, this.entityRenderDispatcher
         );
+    }
+
+    /**
+     * The bubble icon. A resolved {@code UNMET_ITEM} shows the actual missing item (a rotating
+     * representative, as the Inventory screen's "needs" row does); any other need keeps its icon.
+     */
+    private static ItemStack needBubbleIcon(VisitorMobEntity entity) {
+        Ingredient missing = NeedBubbleFocus.unmetNeedIngredient(entity);
+        if (missing == null) {
+            return entity.getNeed().icon();
+        }
+        ItemStack representative = Ingredients.representativeItemStack(missing);
+        return representative != null && !representative.isEmpty()
+                ? representative
+                : entity.getNeed().icon();
     }
 
     private void setModelProperties(VisitorMobEntity entity) {

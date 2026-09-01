@@ -90,20 +90,31 @@ public class Ingredients {
         return j.getAsJsonObject().get("tag").getAsString();
     }
 
+    /**
+     * A rotating representative item for an ingredient (one per second, as the "needs" row cycles),
+     * or null when none matches. Used both by {@link #render} and the townie need bubble.
+     */
+    public static @Nullable ItemStack representativeItemStack(Ingredient ing) {
+        ItemStack[] matchingStacks = ing.getItems();
+        if (matchingStacks.length == 0) {
+            return null;
+        }
+        int curSeconds = (int) (System.currentTimeMillis() / 1000);
+        return matchingStacks[curSeconds % matchingStacks.length];
+    }
+
     public static @Nullable ItemStack render(
             ItemRenderer itemRenderer,
             Ingredient ing,
             int iconX,
             int y
     ) {
-        int curSeconds = (int) (System.currentTimeMillis() / 1000);
-        ItemStack[] matchingStacks = ing.getItems();
-        if (matchingStacks.length > 0) {
-            ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
-            itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
-            return itemStack;
+        ItemStack itemStack = representativeItemStack(ing);
+        if (itemStack == null) {
+            return null;
         }
-        return null;
+        itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
+        return itemStack;
     }
 
     // This one is better than Minecraft's, because it preserves the tag ID

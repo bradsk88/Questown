@@ -248,8 +248,10 @@ public class TownPossibleWork {
                 return;
             }
         }
+        String itemKey = Ingredients.toString(xx);
         villager.setNeed(TownieNeed.UNMET_ITEM);
-        econ.registerUnmetNeed(tick, uuid, Ingredients.toString(xx));
+        villager.setUnmetItem(itemKey);
+        econ.registerUnmetNeed(tick, uuid, itemKey);
     }
 
     /** A townie with viable work again is no longer waiting on supplies. */

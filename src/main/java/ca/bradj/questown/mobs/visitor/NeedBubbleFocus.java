@@ -1,13 +1,16 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.gui.ClientAccess;
+import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.rooms.DeadDoorBubbles;
 import ca.bradj.questown.town.rooms.DoorTrouble;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.Nullable;
@@ -154,8 +157,44 @@ public final class NeedBubbleFocus {
         if (hintCooldown > 0) {
             return;
         }
-        ClientAccess.showHint(Compat.translatable(bestHintKey));
+        ClientAccess.showHint(hintComponent(townie, bestHintKey));
         hintCooldown = HINT_REPEAT_TICKS;
+    }
+
+    /**
+     * The missing item a {@link TownieNeed#UNMET_ITEM} bubble is about, or null for any other need
+     * or when the item cannot be resolved on the client.
+     */
+    static @Nullable Ingredient unmetNeedIngredient(VisitorMobEntity townie) {
+        if (townie.getNeed() != TownieNeed.UNMET_ITEM) {
+            return null;
+        }
+        String key = townie.getUnmetItem();
+        if (key.isEmpty()) {
+            return null;
+        }
+        try {
+            return Ingredients.fromString(key);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /**
+     * The on-look hint for a bubble holder. A resolved {@code UNMET_ITEM} names the missing item
+     * (the Inventory screen's "needs" row pattern); anything else keeps the generic per-need key.
+     */
+    private static Component hintComponent(
+            @Nullable VisitorMobEntity townie,
+            String hintKey
+    ) {
+        Ingredient missing = unmetNeedIngredient(townie);
+        if (missing == null) {
+            return Compat.translatable(hintKey);
+        }
+        return Compat.translatable(
+                "message.questown.townie_need.unmet_item.item", Ingredients.getName(missing)
+        );
     }
 
     private static void adopt(@Nullable Object best, double bestScore) {

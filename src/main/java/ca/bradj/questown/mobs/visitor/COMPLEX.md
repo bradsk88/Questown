@@ -76,26 +76,33 @@ flowchart TD
 ## The third consumer: unmet item
 
 When `TownPossibleWork.applyScores` finds **no viable job** for a root, the villagers of
-that root are waiting on supplies the town does not have — the mod's worst "looks broken"
-moment (ADR-0011). That path already computed the exact missing ingredient for the
-economics record; it now also raises the bubble:
+that root are waiting on supplies the town does not have. That path already computed the
+exact missing ingredient for the economics record; it now also raises the bubble, and the
+bubble shows that item, not a generic stand-in.
 
 - **Set** in `registerUnmetNed` (per-villager, same pass as `econ.registerUnmetNeed`):
-  `setNeed(UNMET_ITEM)`.
+  `setNeed(UNMET_ITEM)` and `setUnmetItem` with the missing ingredient's
+  `Ingredients.toString` form (a tag like `#questown:villager_food` or a single item).
 - **Cleared** in the `applyScores` else-branch (`clearUnmetItemNeeds`): any villager of
   the root whose need is `UNMET_ITEM` goes back to `NONE` the moment a viable job exists
-  again. Only `UNMET_ITEM` is cleared — a simultaneous `CANT_REACH` is left alone, and
-  `MoveToTownTargetSink.clearCantReachNeed` returns the courtesy (each consumer clears
-  only its own need).
-- **Icon is the vanilla bundle** (a bag of things to bring), deliberately generic — the
-  ADR's "townie under a coal icon" (the *actual* missing item) would need the item ID
-  synced per entity; that is a possible follow-up, not part of this slice.
-- **The words stay generic for the same reason**: "They don't have the supplies they
-  need to work." The `WithReason` prose behind the score is developer-facing and must be
-  rephrased before it is ever shown verbatim.
+  again, and `setNeed` clears `unmetItem` when the need is not `UNMET_ITEM` (so the item
+  cannot linger onto another need). Only `UNMET_ITEM` is cleared here. A simultaneous
+  `CANT_REACH` is left alone, and `MoveToTownTargetSink.clearCantReachNeed` returns the
+  courtesy (each consumer clears only its own need).
+- **Icon is the missing item itself**, shown like the Inventory screen's "needs" row:
+  the item ID is synced per entity (`unmetItem`, alongside `need`), the client rebuilds
+  the ingredient, and the bubble renders a rotating representative via
+  `Ingredients.representativeItemStack`. It falls back to `TownieNeed.icon()` (the bundle)
+  when the item cannot be resolved on the client.
+- **The words name the item** ("They need %s to work", `%s` from
+  `Ingredients.getName`, so a tag renders as its name, e.g. "Food"). The generic
+  `unmet_item` key is the fallback when no item resolves. This is the ADR's deferred
+  "townie under the actual missing item" follow-up: the item ID is now synced per entity,
+  so the bubble no longer needs the developer-facing `WithReason` prose to be rephrased.
 - **Autotest**: `farmer/harvest_wheat [no_supplies]` asserts every townie ends the run
   at `UNMET_ITEM`; the base `farmer/harvest_wheat` asserts the supplied counterpart ends
-  at `NONE`. Both ride the existing `CustomAssertion` seam (realtime phase).
+  at `NONE`. Both ride the existing `CustomAssertion` seam (realtime phase). The item the
+  bubble shows is client-side, so it is verified in a dev client, not by the autotest.
 
 ## Exceptional: the need clears itself
 
