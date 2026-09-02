@@ -42,6 +42,8 @@ When building or changing a `gui/` screen, follow `docs/solutions/conventions/gu
 
 A Gradle `BUILD SUCCESSFUL` with the task `up-to-date` did not recompile your edits — it only re-ran cached outputs, so it proves nothing about the code you just changed. After changing code, check the task says `executed` (or pass `--rerun-tasks`) before trusting a build as a pass. Applies to `compileJava`/`test`/`build`.
 
+When verifying a build output, identify the newest artifact, not an alphabetical match. The version is the git branch, so several versioned jars coexist in `build/libs`; `find build/libs/*.jar | head -1` returns the first by name (often a stale version), so you can verify a jar you did not just build. Use `ls -t build/libs/*.jar | head -1` (newest by mtime) instead.
+
 ## Adding a value to a switch-covered enum
 
 Adding a value to an enum that has exhaustive `switch` expressions (e.g. the
