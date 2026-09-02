@@ -60,7 +60,10 @@ Questown is a new mod that intends to add a quest-based component to village bui
     modId="roomrecipes"
     mandatory=true
     ordering="BEFORE"
-    versionRange="[1.19.2-0.0.6-alpha.3,1.19.2-0.0.7-alpha.1],[1.19.2-1.0.0-beta.1]"
+    # 0.0.6-alpha.3 is excluded on purpose: Room.getSpaces() changed return type
+    # (Collection -> ImmutableList) at 0.0.7, so 0.0.6 is binary-incompatible and
+    # crashes at runtime (NoSuchMethodError) instead of being rejected at boot.
+    versionRange="[1.19.2-0.0.7-alpha.1,)"
     side="BOTH"
 [[dependencies.questown]]
     modId="jei"
