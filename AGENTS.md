@@ -1,4 +1,6 @@
-Try to avoid asking the user to test something themselves. You have access to a tool called "autotest".
+Try to avoid asking the user to test something themselves. You have access to a tool called "autotest". When unsure whether to run a heavy check (an autotest, a dev client, a build), default to running it yourself rather than offering it as the user's choice or deferring it.
+
+When the user reports a behaviour that does not work ("X sits idle after Y", "this does nothing"), that is a *verification* question, not a code investigation — the first move is an autotest, not reading code to speculate. "Understanding the code" is not "does it work"; a code reading that cannot settle a broken-behaviour report is a signal to set up the test, not to keep re-reading the same files.
 
 ## Running the dev client (`./gradlew runClient`)
 
@@ -40,6 +42,21 @@ When building or changing a `gui/` screen, follow `docs/solutions/conventions/gu
 
 A Gradle `BUILD SUCCESSFUL` with the task `up-to-date` did not recompile your edits — it only re-ran cached outputs, so it proves nothing about the code you just changed. After changing code, check the task says `executed` (or pass `--rerun-tasks`) before trusting a build as a pass. Applies to `compileJava`/`test`/`build`.
 
+## Adding a value to a switch-covered enum
+
+Adding a value to an enum that has exhaustive `switch` expressions (e.g. the
+chicken-arc `ChickenBeatState` and `BeatPhase`) ripples to every `switch` over it
+AND to count/ordering assertions in tests. Before compiling, grep for all the
+sites up front — don't discover them one compile-error at a time:
+
+- switches: `grep -rln 'case WAITING_FOR_' src/main/java` (adjust the prefix to the
+  enum's value names; an exhaustive `switch` over an enum is the usual break)
+- count/ordering: `grep -rln 'values().length\|canonicalOrdering' src/test`
+
+This session added a beat and hit 3 switches (2 in `main/`, 1 in a test) plus a
+beat-count and a canonical-ordering assertion across three failed compiles
+before finding them all up front.
+
 ## Hold-mode autotest (visual verification on a live server)
 
 See `src/main/java/ca/bradj/questown/commands/test/COMPLEX.md` ("Launch discipline")
@@ -67,9 +84,3 @@ Five canonical roles using default strings (`needs-triage`, `needs-info`, `ready
 ### Domain docs
 
 Single-context. `CONTEXT.md` not yet present at repo root; ADRs go in `docs/adr/` going forward (legacy `docs/decision-*.md` files are pre-existing and not moved). See `docs/agents/domain.md`.
-
-https://claude.com/cai/oauth/authorize?code=true&client_id=9d1c250a-e61b-44d9-88ed-5944d1962f5e&response_type=code&redirect_uri=https%3A%2F%2Fplatform.claude.com%2Foauth%2F  
-code%2Fcallback&scope=org%3Acreate_api_key+user%3Aprofile+user%3Ainference+user%3Asessions%3Aclaude_code+user%3Amcp_servers+user%3Afile_upload&code_challenge=Z5ezMjRC296GkD  
-5bF9M0Ve7O9khxOUbkCzv10sYcet4&code_challenge_method=S256&state=PaFd3IJlSEAlpie43Yil4v2xEZRp-SCipa-zPgmxjOA                                                                    
-                                                                                                                                                                                
-                                                                                                                 
