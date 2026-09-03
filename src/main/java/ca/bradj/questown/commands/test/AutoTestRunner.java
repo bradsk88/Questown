@@ -209,7 +209,7 @@ public class AutoTestRunner {
         static @Nullable BlockPos pickDeadDoor(net.minecraft.server.level.ServerPlayer sp) {
             // The arena is a small fixed region around ORIGIN; read its chunks
             // directly (1.19.2 ServerChunkCache has no getLoadedChunks()).
-            net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) sp.getLevel();
+            net.minecraft.server.level.ServerLevel level = sp.serverLevel();
             BlockPos best = null;
             double bestDist = Double.MAX_VALUE;
             for (int cx = (ORIGIN.getX() >> 4) - 2; cx <= (ORIGIN.getX() >> 4) + 2; cx++) {
@@ -243,7 +243,7 @@ public class AutoTestRunner {
             // Inside the DeadDoorBubbles 16-block gate and aimed south-east at the
             // standard arena (test blocks sit toward +x/+z), so the first aim pass
             // can usually hon in without a starring-at-the-sky frame.
-            sp.teleportTo((net.minecraft.server.level.ServerLevel) sp.level, ORIGIN.getX() + 4, ORIGIN.getY() + 3, ORIGIN.getZ() + 4, 135, 20);
+            sp.teleportTo(sp.serverLevel(), ORIGIN.getX() + 4, ORIGIN.getY() + 3, ORIGIN.getZ() + 4, 135, 20);
             preferredDoor = readPreferredDoor();
             aim(sp);
             QT.FLAG_LOGGER.info("[autotest] HOLDING: teleported {} to arena viewpoint", sp.getGameProfile().getName());
@@ -299,7 +299,7 @@ public class AutoTestRunner {
 
         private java.util.Optional<VisitorMobEntity> nearestNeedyTownie(net.minecraft.server.level.ServerPlayer sp) {
             java.util.List<VisitorMobEntity> all = sp
-                    .getLevel()
+                    .level()
                     .getEntitiesOfClass(VisitorMobEntity.class, sp.getBoundingBox().inflate(64));
             return all.stream()
                     .filter(v -> v.getNeed().isNeeded())
@@ -337,7 +337,7 @@ public class AutoTestRunner {
             double hor = Math.sqrt(dx * dx + dz * dz);
             float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
             float pitch = (float) -Math.toDegrees(Math.atan2(dy, hor));
-            sp.teleportTo((net.minecraft.server.level.ServerLevel) sp.level, from.x, from.y - 1.62, from.z, yaw, pitch);
+            sp.teleportTo(sp.serverLevel(), from.x, from.y - 1.62, from.z, yaw, pitch);
         }
     }
 

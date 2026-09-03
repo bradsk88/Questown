@@ -5,10 +5,9 @@ import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AtomicDouble;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.network.chat.Component;
@@ -24,7 +23,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Predicate;
 
-public class VillagerAdvancementsContent extends GuiComponent {
+public class VillagerAdvancementsContent {
     private final Minecraft minecraft;
     private final VillagerAdvancementsScreen screen;
     private final DisplayInfo display;
@@ -191,21 +190,21 @@ public class VillagerAdvancementsContent extends GuiComponent {
         return this.display;
     }
 
-    public void drawContents(PoseStack p_97164_) {
+    public void drawContents(GuiGraphics p_97164_) {
         if (!this.initializedToCenter) {
             this.scrollX = (double) (117 - (this.maxX + this.minX) / 2);
             this.scrollY = (double) (56 - (this.maxY + this.minY) / 2);
             this.initializedToCenter = true;
         }
-        p_97164_.pushPose();
-        p_97164_.translate(0.0, 0.0, 950.0);
+        p_97164_.pose().pushPose();
+        p_97164_.pose().translate(0.0, 0.0, 950.0);
         RenderSystem.enableDepthTest();
         RenderSystem.colorMask(false, false, false, false);
-        fill(p_97164_, 4680, 2260, -4680, -2260, -16777216);
+        p_97164_.fill(4680, 2260, -4680, -2260, -16777216);
         RenderSystem.colorMask(true, true, true, true);
-        p_97164_.translate(0.0, 0.0, -950.0);
+        p_97164_.pose().translate(0.0, 0.0, -950.0);
         RenderSystem.depthFunc(518);
-        fill(p_97164_, 234, 113, 0, 0, -16777216);
+        p_97164_.fill(234, 113, 0, 0, -16777216);
         RenderSystem.depthFunc(515);
         ResourceLocation resourcelocation = this.display.getBackground();
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
@@ -222,7 +221,7 @@ public class VillagerAdvancementsContent extends GuiComponent {
 
         for (int i1 = -1; i1 <= 15; ++i1) {
             for (int j1 = -1; j1 <= 8; ++j1) {
-                blit(p_97164_, k + 16 * i1, l + 16 * j1, 0.0F, 0.0F, 16, 16, 16, 16);
+                p_97164_.blit(resourcelocation, k + 16 * i1, l + 16 * j1, 0, 0, 16, 16);
             }
         }
 
@@ -230,24 +229,24 @@ public class VillagerAdvancementsContent extends GuiComponent {
         this.root.drawConnectivity(p_97164_, i, j, false);
         this.root.draw(p_97164_, i, j);
         RenderSystem.depthFunc(518);
-        p_97164_.translate(0.0, 0.0, -950.0);
+        p_97164_.pose().translate(0.0, 0.0, -950.0);
         RenderSystem.colorMask(false, false, false, false);
-        fill(p_97164_, 4680, 2260, -4680, -2260, -16777216);
+        p_97164_.fill(4680, 2260, -4680, -2260, -16777216);
         RenderSystem.colorMask(true, true, true, true);
         RenderSystem.depthFunc(515);
-        p_97164_.popPose();
+        p_97164_.pose().popPose();
     }
 
     public void drawTooltips(
-            PoseStack p_97184_,
+            GuiGraphics p_97184_,
             int p_97185_,
             int p_97186_,
             int p_97187_,
             int p_97188_
     ) {
-        p_97184_.pushPose();
-        p_97184_.translate(0.0, 0.0, -200.0);
-        fill(p_97184_, 0, 0, 234, 113, Mth.floor(this.fade * 255.0F) << 24);
+        p_97184_.pose().pushPose();
+        p_97184_.pose().translate(0.0, 0.0, -200.0);
+        p_97184_.fill(0, 0, 234, 113, Mth.floor(this.fade * 255.0F) << 24);
         boolean flag = false;
         int i = Mth.floor(this.scrollX);
         int j = Mth.floor(this.scrollY);
@@ -276,7 +275,7 @@ public class VillagerAdvancementsContent extends GuiComponent {
 
         }
 
-        p_97184_.popPose();
+        p_97184_.pose().popPose();
         if (flag) {
             this.fade = Mth.clamp(this.fade + 0.02F, 0.0F, 0.3F);
         } else {

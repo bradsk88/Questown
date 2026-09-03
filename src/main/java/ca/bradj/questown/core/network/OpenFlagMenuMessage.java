@@ -45,7 +45,7 @@ public record OpenFlagMenuMessage(FlagTabsEmbedding.FlagInfo flag, String type) 
             ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
             // Do stuff
             BlockPos p = flag().flagPos();
-            Optional<TownFlagBlockEntity> entity = sender.getLevel().getBlockEntity(p, TilesInit.TOWN_FLAG.get());
+            Optional<TownFlagBlockEntity> entity = sender.level().getBlockEntity(p, TilesInit.TOWN_FLAG.get());
             if (entity.isEmpty()) {
                 QT.GUI_LOGGER.error(
                         "No flag at position {}, {}, {}. Quest will not be removed.",

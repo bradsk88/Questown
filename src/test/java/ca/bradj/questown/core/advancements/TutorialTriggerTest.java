@@ -46,14 +46,14 @@ class TutorialTriggerTest {
     @Test
     void instanceRejectsInvalidContext() {
         assertThrows(IllegalArgumentException.class, () ->
-                new TutorialTrigger.Instance(EntityPredicate.Composite.ANY, TutorialTrigger.Triggers.Invalid)
+                new TutorialTrigger.Instance(EntityPredicate.wrap(EntityPredicate.ANY), TutorialTrigger.Triggers.Invalid)
         );
     }
 
     @Test
     void instanceMatchesCorrectTrigger() {
         TutorialTrigger.Instance instance = new TutorialTrigger.Instance(
-                EntityPredicate.Composite.ANY, TutorialTrigger.Triggers.TutorialComplete
+                EntityPredicate.wrap(EntityPredicate.ANY), TutorialTrigger.Triggers.TutorialComplete
         );
         assertTrue(instance.matches(TutorialTrigger.Triggers.TutorialComplete));
     }
@@ -61,7 +61,7 @@ class TutorialTriggerTest {
     @Test
     void instanceDoesNotMatchDifferentTrigger() {
         TutorialTrigger.Instance instance = new TutorialTrigger.Instance(
-                EntityPredicate.Composite.ANY, TutorialTrigger.Triggers.TutorialComplete
+                EntityPredicate.wrap(EntityPredicate.ANY), TutorialTrigger.Triggers.TutorialComplete
         );
         assertFalse(instance.matches(TutorialTrigger.Triggers.SecondJobType));
     }

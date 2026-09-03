@@ -99,7 +99,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
     private static long lastCanUseFailureLogTick = -1L;
 
     private void logCanUseFailure(String reason) {
-        if (!(this.chicken.level instanceof ServerLevel sl)) {
+        if (!(this.chicken.level() instanceof ServerLevel sl)) {
             return;
         }
         long tick = sl.getGameTime();
@@ -225,7 +225,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
         if (flag == null) {
             return;
         }
-        if (!(this.chicken.level instanceof ServerLevel sl)) {
+        if (!(this.chicken.level() instanceof ServerLevel sl)) {
             return;
         }
         BlockPos chestPos = findChestPlacementPos(sl);
@@ -290,7 +290,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
      * cardinal cells are blocked by walls or terrain.
      */
     private BlockPos pickChestPos(Player player) {
-        if (!(this.chicken.level instanceof ServerLevel sl)) {
+        if (!(this.chicken.level() instanceof ServerLevel sl)) {
             return null;
         }
         java.util.function.Predicate<BlockPos> passable = c -> isPassableForChest(sl, c);
@@ -362,7 +362,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
      * without a {@code BlockGetter}.
      */
     static boolean isReplaceable(net.minecraft.world.level.block.state.BlockState state) {
-        return state.isAir() || state.getMaterial().isReplaceable();
+        return state.isAir() || state.canBeReplaced();
     }
 
 
@@ -390,7 +390,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
     }
 
     private void teleportToTargetWithPoof() {
-        if (!(this.chicken.level instanceof ServerLevel sl)) {
+        if (!(this.chicken.level() instanceof ServerLevel sl)) {
             return;
         }
         double tx = this.targetPos.getX() + 0.5D;
@@ -408,7 +408,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
         if (flagPos == null) {
             return null;
         }
-        if (this.chicken.level.getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
+        if (this.chicken.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
             return flag;
         }
         return null;

@@ -13,6 +13,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.advancements.FrameType;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
@@ -99,7 +100,7 @@ public class VillagerAdvancementsScreen extends Screen {
     }
 
     public void render(
-            PoseStack p_97361_,
+            GuiGraphics p_97361_,
             int p_97362_,
             int p_97363_,
             float p_97364_
@@ -144,7 +145,7 @@ public class VillagerAdvancementsScreen extends Screen {
     }
 
     private void renderInside(
-            PoseStack p_97374_,
+            GuiGraphics p_97374_,
             int p_97375_,
             int p_97376_,
             int p_97377_,
@@ -152,10 +153,10 @@ public class VillagerAdvancementsScreen extends Screen {
     ) {
         VillagerAdvancementsContent advancementtab = this.content;
         if (advancementtab == null) {
-            fill(p_97374_, p_97377_ + 9, p_97378_ + 18, p_97377_ + 9 + 234, p_97378_ + 18 + 113, -16777216);
+            p_97374_.fill(p_97377_ + 9, p_97378_ + 18, p_97377_ + 9 + 234, p_97378_ + 18 + 113, -16777216);
             int i = p_97377_ + 9 + 117;
-            drawCenteredString(p_97374_, this.font, NO_ADVANCEMENTS_LABEL, i, p_97378_ + 18 + 56 - 4, -1);
-            drawCenteredString(p_97374_, this.font, VERY_SAD_LABEL, i, p_97378_ + 18 + 113 - 9, -1);
+            p_97374_.drawCenteredString(this.font, NO_ADVANCEMENTS_LABEL, i, p_97378_ + 18 + 56 - 4, -1);
+            p_97374_.drawCenteredString(this.font, VERY_SAD_LABEL, i, p_97378_ + 18 + 113 - 9, -1);
         } else {
             PoseStack posestack = RenderSystem.getModelViewStack();
             posestack.pushPose();
@@ -171,7 +172,7 @@ public class VillagerAdvancementsScreen extends Screen {
     }
 
     public void renderWindow(
-            PoseStack p_97357_,
+            GuiGraphics p_97357_,
             int p_97358_,
             int p_97359_
     ) {
@@ -179,17 +180,17 @@ public class VillagerAdvancementsScreen extends Screen {
         RenderSystem.enableBlend();
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderTexture(0, WINDOW_LOCATION);
-        this.blit(p_97357_, p_97358_, p_97359_, 0, 0, 252, 140);
+        p_97357_.blit(WINDOW_LOCATION, p_97358_, p_97359_, 0, 0, 252, 140);
 
-        this.font.draw(p_97357_, TITLE, (float) (p_97358_ + 8), (float) (p_97359_ + 6), 4210752);
+        p_97357_.drawString(this.font, TITLE, p_97358_ + 8, p_97359_ + 6, 4210752, false);
 
         int bgX = (this.width - 252) / 2;
         int bgY = (this.height - 140) / 2;
-        this.tabs.draw(new RenderContext(itemRenderer, p_97357_), bgX, bgY);
+        this.tabs.draw(new RenderContext(Compat.itemRenderer(), p_97357_), bgX, bgY);
     }
 
     private void renderTooltips(
-            PoseStack p_97382_,
+            GuiGraphics p_97382_,
             int p_97383_,
             int p_97384_,
             int mouseX,

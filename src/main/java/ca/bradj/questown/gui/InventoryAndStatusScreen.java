@@ -7,7 +7,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiGraphics;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -70,14 +70,12 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int maybeY = ((this.height - backgroundHeight) / 2) + 32 + 16 + 8;
 
         this.addRenderableWidget(
-                new Button(
-                        maybeX, maybeY,
-                        48, 20,
+                Button.builder(
                         Compat.translatable("menu.quests"),
                         (p_96776_) -> {
                             openQuestsScreen();
                         }
-                )
+                ).bounds(maybeX, maybeY, 48, 20).build()
         );
     }
 
@@ -87,32 +85,32 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
     @Override
     public void render(
-            PoseStack stack,
+            GuiGraphics gui,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
-        super.renderBackground(stack);
-        super.render(stack, mouseX, mouseY, partialTicks);
-        this.renderTooltip(stack, mouseX, mouseY);
+        super.renderBackground(gui);
+        super.render(gui, mouseX, mouseY, partialTicks);
+        renderTooltips(mouseX, mouseY);
     }
 
     @Override
     protected void renderBg(
-            PoseStack stack,
+            GuiGraphics gui,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
-        this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
-        renderInventory(stack);
-        status.render(stack);
+        this.background.draw(gui, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.tabs.draw(new RenderContext(Compat.itemRenderer(), gui), bgX, bgY);
+        renderInventory(gui);
+        status.render(gui);
     }
 
-    private void renderInventory(PoseStack stack) {
+    private void renderInventory(GuiGraphics gui) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         int yCoord = 0;
@@ -120,39 +118,15 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             Slot s = menu.slots.get(i);
             int xCoord = x - 1 + s.x;
             yCoord = y - 1 + s.y;
-            this.slot.draw(stack, xCoord, yCoord);
+            this.slot.draw(gui, xCoord, yCoord);
         }
         int iconX = x - 8;
         for (Ingredient i : ClientJobWantedResources.wantedIngredients) {
-            this.ingredientRenderer.render(itemRenderer, i, iconX += 16, yCoord + 32);
+            this.ingredientRenderer.render(gui, i, iconX += 16, yCoord + 32);
         }
     }
 
-    private void renderSlotStatus(
-            PoseStack stack,
-            DataSlot dataSlot,
-            int x,
-            int y
-    ) {
-        if (dataSlot.get() == 0) {
-            return;
-        }
-        if (dataSlot.get() != 1) {
-            throw new IllegalStateException("Slot status should only be 0 or 1");
-        }
-        RenderSystem.setShaderTexture(0, lockTex);
-        int srcX = 0;
-        int srcY = 0;
-        int drawWidth = 16;
-        int drawHeight = 8;
-        int texWidth = 16;
-        int texHeight = 8;
-        blit(stack, x, y, srcX, srcY, drawWidth, drawHeight, texWidth, texHeight);
-    }
-
-    @Override
-    protected void renderTooltip(
-            @NotNull PoseStack stack,
+    private void renderTooltips(
             int mouseX,
             int mouseY
     ) {
@@ -161,14 +135,14 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
         if (this.tabs.renderTooltip(
                 x, y, mouseX, mouseY,
-                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
+                key -> this.setTooltipForNextRenderPass(Compat.translatable(key))
         )) {
             return;
         }
 
         if (status.renderTooltip(
                 mouseX, mouseY,
-                key -> super.renderTooltip(stack, key, Optional.empty(), mouseX, mouseY)
+                key -> this.setTooltipForNextRenderPass(key.stream().map(Component::getVisualOrderText).toList())
         )) {
             return;
         }
@@ -179,7 +153,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             int xCoord = x - 1 + s.x;
             yCoord = y - 1 + s.y;
             if (i >= TE_INVENTORY_FIRST_SLOT_INDEX) {
-                if (renderLocksTooltip(stack, xCoord + 1, yCoord + 16 + 2, mouseX, mouseY)) {
+                if (renderLocksTooltip(xCoord + 1, yCoord + 16 + 2, mouseX, mouseY)) {
                     return;
                 }
             }
@@ -187,12 +161,10 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
         int iconX = x - 12;
         for (Ingredient i : ClientJobWantedResources.wantedIngredients) {
-            if (renderNeedsTooltip(stack, iconX += 16 + 4, yCoord + 32, mouseX, mouseY, i)) {
+            if (renderNeedsTooltip(iconX += 16 + 4, yCoord + 32, mouseX, mouseY, i)) {
                 return;
             }
         }
-
-        super.renderTooltip(stack, mouseX, mouseY);
     }
 
     @Override
@@ -214,7 +186,6 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     }
 
     private boolean renderLocksTooltip(
-            @NotNull PoseStack stack,
             int leftX,
             int topY,
             int mouseX,
@@ -227,7 +198,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 Component component = Compat.translatable(
                         "tooltips.villagers.job.inventory.locked"
                 );
-                super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);
+                this.setTooltipForNextRenderPass(component);
                 return true;
             }
         }
@@ -235,7 +206,6 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     }
 
     private boolean renderNeedsTooltip(
-            @NotNull PoseStack stack,
             int leftX,
             int topY,
             int mouseX,
@@ -250,7 +220,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 Component component = Compat.translatable(
                         "tooltips.villagers.job.needs", jPart, Ingredients.getName(item)
                 );
-                super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);
+                this.setTooltipForNextRenderPass(component);
                 return true;
             }
         }

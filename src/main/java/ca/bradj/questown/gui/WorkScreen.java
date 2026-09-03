@@ -5,8 +5,8 @@ import ca.bradj.questown.mc.JEI;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
+import net.minecraft.client.gui.GuiGraphics;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
@@ -89,13 +89,13 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         int y = (this.height - backgroundHeight) / 2;
         int pageStringY = y + borderPadding;
         int x = ((this.width - backgroundWidth) / 2);
-        this.addMoreBtn.x = x + backgroundWidth - buttonWidth - borderPadding;
-        this.addMoreBtn.y = pageStringY;
+        this.addMoreBtn.setX(x + backgroundWidth - buttonWidth - borderPadding);
+        this.addMoreBtn.setY(pageStringY);
         this.addRenderableWidget(this.addMoreBtn);
-        this.previousPage.x = x + borderPadding;
-        this.previousPage.y = pageStringY;
-        this.nextPage.x = x + backgroundWidth - (2 * buttonWidth) - borderPadding;
-        this.nextPage.y = pageStringY;
+        this.previousPage.setX(x + borderPadding);
+        this.previousPage.setY(pageStringY);
+        this.nextPage.setX(x + backgroundWidth - (2 * buttonWidth) - borderPadding);
+        this.nextPage.setY(pageStringY);
         this.addRenderableWidget(this.previousPage);
         this.addRenderableWidget(this.nextPage);
         if (getMenu().skipToAdd()) {
@@ -140,19 +140,19 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
 
     @Override
     public void render(
-            PoseStack poseStack,
+            GuiGraphics gui,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
+        this.renderBackground(gui);
+        super.render(gui, mouseX, mouseY, partialTicks);
 
         int x = ((this.width - backgroundWidth) / 2);
         int y = (this.height - backgroundHeight) / 2;
         int pageStringY = y + PAGE_PADDING;
 
-        renderPageNum(poseStack, x);
+        renderPageNum(gui, x);
 
         y = pageStringY + PAGE_PADDING;
 
@@ -171,27 +171,28 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
             if (jobPosting == null) {
                 continue;
             }
-            this.cardBackground.draw(poseStack, x, cardY, CARD_WIDTH, CARD_HEIGHT);
+            this.cardBackground.draw(gui, x, cardY, CARD_WIDTH, CARD_HEIGHT);
             RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
             int iconY = cardY + CARD_HEIGHT - 24;
-            ImmutableList<Slot> slotz = renderJobCardIcons(poseStack, jobPosting, x, iconY, mouseX, mouseY);
+            ImmutableList<Slot> slotz = renderJobCardIcons(gui, jobPosting, x, iconY, mouseX, mouseY);
             b.addAll(slotz);
 
             int idX = x + PAGE_PADDING;
             int idY = iconY - 10;
-            this.font.draw(poseStack, Compat.translatable("job_board.default_name"), idX, idY, TEXT_COLOR);
+            gui.drawString(font, Compat.translatable("job_board.default_name"), idX, idY, TEXT_COLOR);
 
             int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
-            this.font.drawShadow(
-                    poseStack,
+            gui.drawString(
+                    font,
                     Compat.literal("x"),
                     removeX + borderPadding - 1,
                     iconY + borderPadding - 1,
-                    0xFFFFFF
+                    0xFFFFFF,
+                    true
             );
             highlightAndTooltip(
-                    poseStack,
+                    gui,
                     mouseX,
                     mouseY,
                     removeX,
@@ -204,15 +205,15 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         slots.addAll(b.build());
 
         // Render the page buttons
-        this.addMoreBtn.render(poseStack, mouseX, mouseY, partialTicks);
-        this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
-        this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
+        this.addMoreBtn.render(gui, mouseX, mouseY, partialTicks);
+        this.previousPage.render(gui, mouseX, mouseY, partialTicks);
+        this.nextPage.render(gui, mouseX, mouseY, partialTicks);
     }
 
     private List<Slot> slots = new ArrayList<>();
 
     private ImmutableList<Slot> renderJobCardIcons(
-            PoseStack poseStack,
+            GuiGraphics gui,
             UIWork recipe,
             int x,
             int y,
@@ -225,9 +226,9 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
 
         int iconX = x + 8;
 
-        ItemStack itemStack = Ingredients.render(itemRenderer, ing, iconX, y);
+        ItemStack itemStack = Ingredients.render(gui, ing, iconX, y);
         if (itemStack != null) {
-            highlightAndTooltip(poseStack, mouseX, mouseY, iconX, y, itemStack.getItem().getName(itemStack));
+            highlightAndTooltip(gui, mouseX, mouseY, iconX, y, itemStack.getItem().getName(itemStack));
             Slot element = new Slot(dummyInv, 0, iconX, y + 1);
             element.set(itemStack);
             b.add(element);
@@ -236,7 +237,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
     }
 
     private void highlightAndTooltip(
-            PoseStack poseStack,
+            GuiGraphics gui,
             int mouseX,
             int mouseY,
             int iconX,
@@ -245,9 +246,9 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
     ) {
         if (mouseX >= iconX && mouseY >= iconY && mouseX < iconX + 16 && mouseY < iconY + 17) {
             // transparent white square behind hovered item slot
-            fill(poseStack, iconX, iconY + 1, iconX + 16, iconY + 17, 0x80FFFFFF);
+            gui.fill(iconX, iconY + 1, iconX + 16, iconY + 17, 0x80FFFFFF);
             // render hovered item's name as a tooltip
-            renderTooltip(poseStack, tooltipText, mouseX, mouseY);
+            this.setTooltipForNextRenderPass(tooltipText);
         }
     }
 
@@ -269,16 +270,15 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
     }
 
     private void renderPageNum(
-            PoseStack poseStack,
+            GuiGraphics gui,
             int x
     ) {
         // Draw page numbers
-        fill(
-                poseStack,
+        gui.fill(
                 x + borderPadding + buttonWidth,
-                nextPage.y,
+                nextPage.getY(),
                 x + backgroundWidth - borderPadding - buttonWidth,
-                nextPage.y + buttonHeight,
+                nextPage.getY() + buttonHeight,
                 0x30000000
         );
         int totalPages = (int) Math.ceil((double) work.size() / MAX_CARDS_PER_PAGE);
@@ -286,33 +286,19 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
         ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        Compat.drawLightText(font, poseStack, pageString, textArea.getX(), textArea.getY());
+        Compat.drawLightText(font, gui, pageString, textArea.getX(), textArea.getY());
     }
 
     @Override
     protected void renderBg(
-            PoseStack poseStack,
+            GuiGraphics gui,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(poseStack, x, y, backgroundWidth, backgroundHeight);
-    }
-
-    private void renderSlot(
-            PoseStack poseStack,
-            Slot slot,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        ItemStack stack = slot.getItem();
-        if (!stack.isEmpty()) {
-            this.minecraft.getItemRenderer().renderGuiItem(stack, slot.x, slot.y);
-            this.minecraft.getItemRenderer().renderGuiItemDecorations(this.font, stack, slot.x, slot.y, "");
-        }
+        this.background.draw(gui, x, y, backgroundWidth, backgroundHeight);
     }
 
 

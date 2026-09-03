@@ -257,7 +257,7 @@ public class TestWorldAccess implements QTWorldAccess {
                 slots.set(i, item.copy());
                 return true;
             }
-            if (existing.sameItem(item) && existing.getCount() < existing.getMaxStackSize()) {
+            if (ItemStack.isSameItem(existing, item) && existing.getCount() < existing.getMaxStackSize()) {
                 existing.grow(item.getCount());
                 return true;
             }

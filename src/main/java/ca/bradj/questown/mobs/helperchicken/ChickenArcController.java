@@ -224,7 +224,7 @@ public final class ChickenArcController {
         ChickenBeatState state = flag.getChickenBeatState();
         boolean hasItem = ChickenArcConditions.playerHoldsRequiredItem(player, state);
         boolean hasWand = ChickenArcConditions.hasWandInInventory(player);
-        boolean isNight = player.getLevel().isNight();
+        boolean isNight = player.level().isNight();
         boolean chestSpawned = flag.getChickenSunsetChestSpawned();
         boolean hasPressurePlate = ChickenArcConditions.playerHoldsPressurePlate(player);
         int clickCount = recordClick(player.getUUID(), state);

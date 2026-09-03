@@ -47,8 +47,7 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.Tags;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -64,8 +63,7 @@ import java.util.function.Supplier;
 public class TownFlagBlock extends BaseEntityBlock {
 
     public static final String ITEM_ID = "flag_base";
-    public static final Item.Properties ITEM_PROPS = new Item.Properties().
-            tab(ModItemGroup.QUESTOWN_GROUP);
+    public static final Item.Properties ITEM_PROPS = new Item.Properties();
     public static final Property<Boolean> INACTIVE = BooleanProperty.create("inactive");
     public static final EnumProperty<FlagPhase> PHASE = EnumProperty.create("phase", FlagPhase.class);
     // A relocation deed is waiting above this flag. A blockstate (not BE) property so it auto-syncs to
@@ -79,7 +77,7 @@ public class TownFlagBlock extends BaseEntityBlock {
 
     public TownFlagBlock() {
         super(
-                BlockBehaviour.Properties.of(Material.STONE, MaterialColor.COLOR_GRAY)
+                BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY)
                                          .strength(10.0F, 1200.0F)
                                          .noOcclusion()
         );

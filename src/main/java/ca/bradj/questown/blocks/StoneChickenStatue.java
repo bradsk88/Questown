@@ -3,10 +3,10 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.blocks.entity.ChickenStatueBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
 
 /**
  * Trophy block left where the helper chicken stood when the onboarding arc
@@ -23,8 +23,8 @@ public class StoneChickenStatue extends Block implements EntityBlock {
     public static final String ITEM_ID = "stone_chicken_statue";
 
     public StoneChickenStatue() {
-        super(Properties
-                .of(Material.STONE)
+        super(BlockBehaviour.Properties
+                .of()
                 .strength(0.0f)
                 .noOcclusion());
     }

@@ -120,7 +120,7 @@ public class HelperChickenBeatPeckGoal extends Goal {
         if (flagPos == null) {
             return null;
         }
-        if (this.chicken.level.getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
+        if (this.chicken.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
             return flag;
         }
         return null;
@@ -349,7 +349,7 @@ public class HelperChickenBeatPeckGoal extends Goal {
     }
 
     private boolean isTargetPermanentlyInvalid() {
-        if (!(this.chicken.level instanceof ServerLevel sl)) {
+        if (!(this.chicken.level() instanceof ServerLevel sl)) {
             return false;
         }
         BlockState bs = sl.getBlockState(this.targetPos);
@@ -383,13 +383,13 @@ public class HelperChickenBeatPeckGoal extends Goal {
         // is satisfied in-effect — force-complete to avoid deadlock.
         return switch (beatState) {
             case WAITING_FOR_WALL_BLOCK, WAITING_FOR_DOOR, WAITING_FOR_SIGN, WAITING_FOR_CHEST ->
-                    bs.isSolidRender(this.chicken.level, this.targetPos);
+                    bs.isSolidRender(this.chicken.level(), this.targetPos);
             default -> false;
         };
     }
 
     private void teleportToTargetWithPoof() {
-        if (!(this.chicken.level instanceof ServerLevel sl)) {
+        if (!(this.chicken.level() instanceof ServerLevel sl)) {
             return;
         }
         double tx = this.targetPos.getX() + 0.5D;
@@ -406,7 +406,7 @@ public class HelperChickenBeatPeckGoal extends Goal {
         if (flagPos == null) {
             return;
         }
-        if (!(this.chicken.level.getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)) {
+        if (!(this.chicken.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)) {
             return;
         }
         // Escape hatch for permanently-invalid targets only. Normal transitions are U4's job.

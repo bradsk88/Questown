@@ -5,6 +5,7 @@ import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
@@ -53,7 +54,7 @@ public final class TreeFeatureResolver {
             return null;
         }
 
-        var features = registryAccess.registryOrThrow(Registry.CONFIGURED_FEATURE_REGISTRY);
+        var features = registryAccess.registryOrThrow(Registries.CONFIGURED_FEATURE);
         String treeId = idParts[0];
         ConfiguredFeature<?, ?> cf = features.get(new ResourceLocation("minecraft", treeId));
         if (cf == null) {

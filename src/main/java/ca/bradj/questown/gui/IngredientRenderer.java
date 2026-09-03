@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
-import net.minecraft.client.renderer.entity.ItemRenderer;
+import ca.bradj.questown.mc.Compat;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -9,7 +10,7 @@ public class IngredientRenderer {
     }
 
     public void render(
-            ItemRenderer itemRenderer,
+            GuiGraphics gui,
             Ingredient i,
             int iconX,
             int yCoord
@@ -17,7 +18,7 @@ public class IngredientRenderer {
         int curSeconds = (int) (System.currentTimeMillis() / 1000);
         ItemStack[] matchingStacks = i.getItems();
         ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
-        itemRenderer.renderAndDecorateItem(itemStack, iconX, yCoord);
+        Compat.renderItemAndDecorations(gui, itemStack, iconX, yCoord);
     }
 
     public int getSize() {

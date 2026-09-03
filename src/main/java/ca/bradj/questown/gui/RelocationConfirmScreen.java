@@ -5,8 +5,8 @@ import ca.bradj.questown.core.network.RelocationChoiceMessage;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
@@ -59,21 +59,18 @@ public class RelocationConfirmScreen extends Screen {
         int buttonX = pageLeftX + PAGE_PADDING;
         int firstButtonY = pageTopY + backgroundHeight - (2 * PAGE_PADDING) - (3 * (buttonHeight + 4));
 
-        this.addRenderableWidget(new Button(
-                buttonX, firstButtonY, buttonWidth, buttonHeight,
+        this.addRenderableWidget(Button.builder(
                 Compat.translatable("menu.relocation_confirm.bring_anyway"),
                 (b) -> choose(false)
-        ));
-        this.addRenderableWidget(new Button(
-                buttonX, firstButtonY + buttonHeight + 4, buttonWidth, buttonHeight,
+        ).bounds(buttonX, firstButtonY, buttonWidth, buttonHeight).build());
+        this.addRenderableWidget(Button.builder(
                 Compat.translatable("menu.relocation_confirm.leave_behind"),
                 (b) -> choose(true)
-        ));
-        this.addRenderableWidget(new Button(
-                buttonX, firstButtonY + (2 * (buttonHeight + 4)), buttonWidth, buttonHeight,
+        ).bounds(buttonX, firstButtonY + buttonHeight + 4, buttonWidth, buttonHeight).build());
+        this.addRenderableWidget(Button.builder(
                 Compat.translatable("menu.common.cancel"),
                 (b) -> this.onClose()
-        ));
+        ).bounds(buttonX, firstButtonY + (2 * (buttonHeight + 4)), buttonWidth, buttonHeight).build());
     }
 
     private void choose(boolean leaveBehind) {
@@ -83,12 +80,12 @@ public class RelocationConfirmScreen extends Screen {
 
     @Override
     public void render(
-            PoseStack stack,
+            GuiGraphics stack,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
-        this.fillGradient(stack, 0, 0, this.width, this.height, -1072689136, -804253680);
+        stack.fillGradient(0, 0, this.width, this.height, -1072689136, -804253680);
         this.renderBackground(stack);
         super.render(stack, mouseX, mouseY, partialTicks);
         int textX = pageLeftX + PAGE_PADDING;
@@ -106,7 +103,7 @@ public class RelocationConfirmScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(PoseStack poseStack) {
+    public void renderBackground(GuiGraphics poseStack) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         this.background.draw(poseStack, x, y, backgroundWidth, backgroundHeight);

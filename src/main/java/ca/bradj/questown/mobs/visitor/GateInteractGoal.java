@@ -29,7 +29,7 @@ public class GateInteractGoal extends Goal {
         if (!this.hasGate) {
             return false;
         } else {
-            BlockState blockstate = this.mob.level.getBlockState(this.gatePos);
+            BlockState blockstate = this.mob.level().getBlockState(this.gatePos);
             if (!(blockstate.getBlock() instanceof FenceGateBlock)) {
                 this.hasGate = false;
                 return false;
@@ -41,9 +41,9 @@ public class GateInteractGoal extends Goal {
 
     protected void setOpen(boolean p_25196_) {
         if (this.hasGate) {
-            BlockState blockstate = this.mob.level.getBlockState(this.gatePos);
+            BlockState blockstate = this.mob.level().getBlockState(this.gatePos);
             if (blockstate.getBlock() instanceof FenceGateBlock) {
-                this.mob.level.getBlockState(this.gatePos).setValue(FenceGateBlock.OPEN, p_25196_);
+                this.mob.level().getBlockState(this.gatePos).setValue(FenceGateBlock.OPEN, p_25196_);
             }
         }
 
@@ -62,7 +62,7 @@ public class GateInteractGoal extends Goal {
                     Node node = path.getNode(i);
                     this.gatePos = new BlockPos(node.x, node.y + 1, node.z);
                     if (!(this.mob.distanceToSqr((double)this.gatePos.getX(), this.mob.getY(), (double)this.gatePos.getZ()) > 2.25D)) {
-                        this.hasGate = this.mob.level.getBlockState(this.gatePos).getBlock() instanceof FenceGateBlock;
+                        this.hasGate = this.mob.level().getBlockState(this.gatePos).getBlock() instanceof FenceGateBlock;
                         if (this.hasGate) {
                             return true;
                         }
@@ -70,7 +70,7 @@ public class GateInteractGoal extends Goal {
                 }
 
                 this.gatePos = this.mob.blockPosition().above();
-                this.hasGate = this.mob.level.getBlockState(this.gatePos).getBlock() instanceof FenceGateBlock;
+                this.hasGate = this.mob.level().getBlockState(this.gatePos).getBlock() instanceof FenceGateBlock;
                 return this.hasGate;
             } else {
                 return false;

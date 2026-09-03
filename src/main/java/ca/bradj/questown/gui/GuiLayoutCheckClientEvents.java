@@ -72,7 +72,7 @@ public final class GuiLayoutCheckClientEvents {
             }
             int contentWidth = widget instanceof Button ? font.width(widget.getMessage()) : -1;
             boxes.add(new GuiLayoutLinter.Box(
-                    labelOf(widget), widget.x, widget.y, widget.getWidth(), widget.getHeight(), contentWidth));
+                    labelOf(widget), widget.getX(), widget.getY(), widget.getWidth(), widget.getHeight(), contentWidth));
         }
         return boxes;
     }

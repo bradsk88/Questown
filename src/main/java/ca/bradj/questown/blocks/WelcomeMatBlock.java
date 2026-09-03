@@ -17,10 +17,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
@@ -38,7 +38,7 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
     ) {
         super(
                 BlockBehaviour.Properties
-                        .of(Material.WOOL, MaterialColor.COLOR_BROWN)
+                        .of().mapColor(MapColor.COLOR_BROWN)
                         .strength(1.0F, 10.0F)
                         .noCollission(),
                 Entity::new,
@@ -49,7 +49,7 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
     @Override
     public List<ItemStack> getDrops(
             BlockState p_60537_,
-            LootContext.Builder p_60538_
+            LootParams.Builder p_60538_
     ) {
         // The drop is handled by Entity.dropWhenOrphaned
         return ImmutableList.of();

@@ -97,8 +97,8 @@ public class JobUnlockConfirmMenu extends AbstractVillagerMenu {
             if (!villagerSlot.hasItem()) {
                 continue;
             }
-            ItemEntity ie = new ItemEntity(sp.level, sp.getX(), sp.getY(), sp.getZ(), villagerSlot.getItem());
-            sp.level.addFreshEntity(ie);
+            ItemEntity ie = new ItemEntity(sp.level(), sp.getX(), sp.getY(), sp.getZ(), villagerSlot.getItem());
+            sp.level().addFreshEntity(ie);
         }
     }
 

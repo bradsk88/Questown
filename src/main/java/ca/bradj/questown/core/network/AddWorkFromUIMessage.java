@@ -75,7 +75,7 @@ public final class AddWorkFromUIMessage {
             // Work that needs to be thread-safe (most work)
             ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
             // Do stuff
-            BlockEntity flag = sender.getLevel().getBlockEntity(flagPos);
+            BlockEntity flag = sender.level().getBlockEntity(flagPos);
             if (!(flag instanceof TownFlagBlockEntity tfbe)) {
                 QT.GUI_LOGGER.error("No flag at position {}. Work will not be added.", flagPos);
                 return;

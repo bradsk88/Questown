@@ -3,6 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -39,7 +40,7 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
     }
 
     protected abstract List<Component> renderCardContent(
-            PoseStack stack,
+            GuiGraphics stack,
             PagedCardScreen.Card<D> dCard,
             int mouseX,
             int mouseY
@@ -61,7 +62,7 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
 
     @Override
     protected void renderBg(
-            PoseStack poseStack,
+            GuiGraphics poseStack,
             float v,
             int i,
             int i1
@@ -71,7 +72,7 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
 
     @Override
     public void render(
-            PoseStack p_97795_,
+            GuiGraphics p_97795_,
             int p_97796_,
             int p_97797_,
             float p_97798_
@@ -96,7 +97,7 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
 
     // TODO: Move to RenderUtils for reuse
     private void renderTooltipWithDynamicWrapping(
-            PoseStack stack,
+            GuiGraphics stack,
             int mouseX,
             int mouseY,
             List<Component> tooltip
@@ -107,7 +108,7 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
         int widthRightOfCursor = Math.max(rightEdge - mouseX, 80); // Ensure at least 150px for tooltips
         List<FormattedCharSequence> tt = tooltip.stream().map(t -> Compat.splitText(font, t, widthRightOfCursor))
                                                 .flatMap(Collection::stream).toList();
-        renderTooltip(stack, tt, mouseX, mouseY);
+        this.setTooltipForNextRenderPass(tt);
     }
 
     @Override

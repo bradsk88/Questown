@@ -7,7 +7,7 @@ import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -54,7 +54,7 @@ public class VillagerBlockofProgressScreen extends AbstractContainerScreen<Villa
 
     @Override
     protected void renderLabels(
-            PoseStack p_97808_,
+            GuiGraphics gui,
             int p_97809_,
             int p_97810_
     ) {
@@ -62,22 +62,22 @@ public class VillagerBlockofProgressScreen extends AbstractContainerScreen<Villa
 
     @Override
     public void render(
-            PoseStack poseStack,
+            GuiGraphics gui,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
+        this.renderBackground(gui);
+        super.render(gui, mouseX, mouseY, partialTicks);
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         bgY += 16;
-        RenderUtil.renderItemScaled(itemRenderer, 4, ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(), bgX + 16, bgY + 2);
-        renderText(poseStack, bgX, bgY);
+        RenderUtil.renderItemScaled(Compat.itemRenderer(), 4, ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(), bgX + 16, bgY + 2);
+        renderText(gui, bgX, bgY);
     }
 
     private void renderText(
-            PoseStack poseStack,
+            GuiGraphics gui,
             int bgX,
             int bgY
     ) {
@@ -85,32 +85,32 @@ public class VillagerBlockofProgressScreen extends AbstractContainerScreen<Villa
         int tWidth = backgroundWidth - 16;
         int iconWidth = 32;
         bgY += Compat.drawDarkTextWrap(
-                font, poseStack, topLeft.withY(bgY).shifted(iconWidth, 0), tWidth - iconWidth,
+                font, gui, topLeft.withY(bgY).shifted(iconWidth, 0), tWidth - iconWidth,
                 Compat.translatable("menu.block_of_progress.v_has_earned", UtilClean.truncateMiddle(menu.villagerUUID))
         );
         bgY += 8;
         bgY += Compat.drawDarkTextWrap(
-                font, poseStack, topLeft.withY(bgY), tWidth,
+                font, gui, topLeft.withY(bgY), tWidth,
                 Compat.translatable("menu.block_of_progress.many_uses")
         );
         bgY += 8;
         Compat.drawDarkTextWrap(
-                font, poseStack, topLeft.withY(bgY), tWidth,
+                font, gui, topLeft.withY(bgY), tWidth,
                 Compat.translatable("menu.block_of_progress.will_deposit", UtilClean.truncateMiddle(menu.villagerUUID))
         );
     }
 
     @Override
     protected void renderBg(
-            PoseStack stack,
+            GuiGraphics gui,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
-        this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
+        this.background.draw(gui, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.tabs.draw(new RenderContext(Compat.itemRenderer(), gui), bgX, bgY);
     }
 
     @Override

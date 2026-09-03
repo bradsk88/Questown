@@ -72,12 +72,10 @@ public class VillagerPathNavigation extends GroundPathNavigation {
             @Override
             protected BlockPathTypes evaluateBlockPathType(
                     BlockGetter getr,
-                    boolean p_77615_,
-                    boolean p_77616_,
                     BlockPos pos,
                     BlockPathTypes defaultType
             ) {
-                defaultType = super.evaluateBlockPathType(getr, p_77615_, p_77616_, pos, defaultType);
+                defaultType = super.evaluateBlockPathType(getr, pos, defaultType);
 
                 if (defaultType == BlockPathTypes.FENCE && (getr.getBlockState(pos)
                                                                 .getBlock() instanceof FenceGateBlock)) {

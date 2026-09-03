@@ -47,7 +47,7 @@ public class RelocationDeedItem extends Item {
 
     public RelocationDeedItem() {
         // Fresh Properties (not the shared DEFAULT_ITEM_PROPS) so stacksTo(1) doesn't mutate it.
-        super(new Item.Properties().tab(ModItemGroup.QUESTOWN_GROUP).stacksTo(1));
+        super(new Item.Properties().stacksTo(1));
     }
 
     /**

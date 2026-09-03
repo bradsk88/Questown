@@ -4,8 +4,9 @@ import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
-import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -39,7 +40,7 @@ public class Ingredients {
         JsonElement j = item.toJson();
         String tag = getTag(j);
         if (tag != null) {
-            return WorkRequest.of(new TagKey<>(Registry.ITEM_REGISTRY, new ResourceLocation(tag)));
+            return WorkRequest.of(new TagKey<>(Registries.ITEM, new ResourceLocation(tag)));
         }
         if (j.isJsonObject() && j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
@@ -54,7 +55,7 @@ public class Ingredients {
     public static Ingredient fromString(String block) {
         if (block.startsWith("#")) {
             return Ingredient.of(TagKey.create(
-                    Registry.ITEM_REGISTRY,
+                    Registries.ITEM,
                     new ResourceLocation(block.replace("#", ""))
             ));
         }
@@ -104,7 +105,7 @@ public class Ingredients {
     }
 
     public static @Nullable ItemStack render(
-            ItemRenderer itemRenderer,
+            GuiGraphics gui,
             Ingredient ing,
             int iconX,
             int y
@@ -113,7 +114,7 @@ public class Ingredients {
         if (itemStack == null) {
             return null;
         }
-        itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
+        Compat.renderItemAndDecorations(gui, itemStack, iconX, y + 1);
         return itemStack;
     }
 

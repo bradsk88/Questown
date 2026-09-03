@@ -23,6 +23,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -34,6 +35,7 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -42,7 +44,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.LootTables;
+import net.minecraft.world.level.storage.loot.LootDataManager;
+import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -131,7 +134,7 @@ public class ResourceJobLoader {
             for (ItemStack item : ing.getItems()) {
                 Item iconItem = item.getItem();
                 // FIXME: Make "initial request" a function that provides recipe manager as input
-                Function<ServerLevel, Ingredient> initReq = sl -> Ingredient.of(cooked(sl.getRecipeManager(), item.getItem()));
+                Function<ServerLevel, Ingredient> initReq = sl -> Ingredient.of(cooked(sl.getRecipeManager(), sl.registryAccess(), item.getItem()));
                 WorkSpecialRules special = loadRulesV2(obj);
                 if (!obj.get("block").isJsonObject()) {
                     throw new IllegalArgumentException("block must be an object");
@@ -307,12 +310,13 @@ public class ResourceJobLoader {
 
         private Item cooked(
                 RecipeManager rm,
+                RegistryAccess ra,
                 Item iconItem
         ) {
             List<SmeltingRecipe> all = rm.getAllRecipesFor(RecipeType.SMELTING);
             return all.stream()
                       .filter(v -> isSingleItemRecipeMatch(iconItem, v))
-                      .findFirst().orElseThrow().getResultItem().getItem();
+                      .findFirst().orElseThrow().getResultItem(ra).getItem();
         }
 
         private static boolean isSingleItemRecipeMatch(
@@ -541,7 +545,7 @@ public class ResourceJobLoader {
             ResultGenerator<MCHeldItem> g = new ResultGenerator<>() {
                 @Override
                 public Iterable<MCHeldItem> generate(ServerLevel level, Collection<MCHeldItem> heldItems) {
-                    Item cookedItem = cooked(level.getRecipeManager(), rawItem);
+                    Item cookedItem = cooked(level.getRecipeManager(), level.registryAccess(), rawItem);
                     return ImmutableList.of(MCHeldItem.fromMCItemStack(cookedItem.getDefaultInstance()));
                 }
 
@@ -717,8 +721,8 @@ public class ResourceJobLoader {
                     ServerLevel level,
                     Collection<MCHeldItem> heldItems
             ) {
-                LootTables tables = level.getServer().getLootTables();
-                LootTable loot = tables.get(ResourceLocation.tryParse(table));
+                LootDataManager tables = level.getServer().getLootData();
+                LootTable loot = tables.getElement(LootDataType.TABLE, ResourceLocation.tryParse(table));
                 return Loots.loadFromTables(level, loot, 1, maxResults).stream().map(MCHeldItem::fromTown).toList();
             }
 
@@ -784,7 +788,7 @@ public class ResourceJobLoader {
             JsonArray recipe,
             Item gridItem
     ) {
-        CraftingContainer cc = new CraftingContainer(
+        CraftingContainer cc = new TransientCraftingContainer(
                 new AbstractContainerMenu(null, 0) {
                     @Override
                     public ItemStack quickMoveStack(Player player, int i) {
@@ -811,7 +815,7 @@ public class ResourceJobLoader {
         Optional<CraftingRecipe> match = level.getServer().getRecipeManager()
                                               .getRecipeFor(RecipeType.CRAFTING, cc, level);
         if (match.isPresent()) {
-            return match.get().assemble(cc);
+            return match.get().assemble(cc, level.registryAccess());
         }
         return ItemStack.EMPTY;
     }

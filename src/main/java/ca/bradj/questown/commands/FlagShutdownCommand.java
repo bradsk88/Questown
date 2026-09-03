@@ -69,7 +69,7 @@ public class FlagShutdownCommand {
         }
         boolean started = tf.beginTownShutdown();
         source.sendSuccess(
-                net.minecraft.network.chat.Component.literal(
+                () -> net.minecraft.network.chat.Component.literal(
                         started ? "Town shutdown started" : "Flag is not eligible for shutdown"
                 ),
                 false
@@ -87,7 +87,7 @@ public class FlagShutdownCommand {
         }
         boolean cancelled = tf.cancelTownShutdown();
         source.sendSuccess(
-                net.minecraft.network.chat.Component.literal(
+                () -> net.minecraft.network.chat.Component.literal(
                         cancelled ? "Town shutdown cancelled" : "No shutdown in progress"
                 ),
                 false
@@ -105,7 +105,7 @@ public class FlagShutdownCommand {
         }
         boolean ok = tf.reissueDeed();
         source.sendSuccess(
-                net.minecraft.network.chat.Component.literal(
+                () -> net.minecraft.network.chat.Component.literal(
                         ok ? "Relocation deed re-issued" : "Flag is not dormant"
                 ),
                 false
@@ -123,7 +123,7 @@ public class FlagShutdownCommand {
         }
         boolean ok = tf.wakeInPlace();
         source.sendSuccess(
-                net.minecraft.network.chat.Component.literal(
+                () -> net.minecraft.network.chat.Component.literal(
                         ok ? "Town woken in place" : "Flag is not dormant"
                 ),
                 false

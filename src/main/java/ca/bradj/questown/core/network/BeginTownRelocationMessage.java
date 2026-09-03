@@ -35,7 +35,7 @@ public record BeginTownRelocationMessage(BlockPos flagPos) {
             if (sender == null) {
                 return;
             }
-            if (!(sender.getLevel().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)) {
+            if (!(sender.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)) {
                 return;
             }
             boolean started = flag.beginTownShutdown();

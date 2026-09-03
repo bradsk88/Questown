@@ -22,13 +22,14 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,8 +51,8 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
     public BreadOvenBlock(
     ) {
         super(
-                Properties
-                        .of(Material.WOOL, MaterialColor.COLOR_BROWN)
+                BlockBehaviour.Properties
+                        .of().mapColor(MapColor.COLOR_BROWN)
                         .lightLevel((BlockState bs) -> bs.getValue(BAKE_STATE) == BAKE_STATE_BAKING ? 10 : 0)
                         .strength(1.0F, 10.0F)
         );
@@ -114,7 +115,7 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
     @Override
     public List<ItemStack> getDrops(
             BlockState p_60537_,
-            LootContext.Builder p_60538_
+            LootParams.Builder p_60538_
     ) {
         // TODO: Also drop stuff inside
         //  Maybe something like onHurt() { town.dropInsertedItems(this.pos) }

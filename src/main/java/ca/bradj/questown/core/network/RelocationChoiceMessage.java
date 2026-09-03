@@ -47,7 +47,7 @@ public record RelocationChoiceMessage(
             if (sender == null) {
                 return;
             }
-            ServerLevel level = sender.getLevel();
+            ServerLevel level = sender.serverLevel();
             InteractionHand hand = deedHand(sender);
             if (hand == null) {
                 QT.GUI_LOGGER.warn("Relocation choice arrived but the player no longer holds a deed");

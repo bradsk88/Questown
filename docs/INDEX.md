@@ -23,6 +23,11 @@
 
 - **[conventions/realtime-job-cycling.md](conventions/realtime-job-cycling.md)** — How villagers cycle through jobs in real-time using shuffled selection (and the "cycle drag" players sometimes observe with cook).
 
+## Build environment & version migration
+
+- **`../AGENTS.md` ("Build environment" section)** — the JDK-17 Gradle pin, `jar tf` (not `unzip`) to locate classes in a jar, the javap caveats, and the compile-loop migration discipline. Read before running `./gradlew` or porting the mod to a new MC version.
+- **skill `questown-mc-version-migration`** — the ordered loop to migrate Questown + RoomRecipes to a new MC version (probe deps -> RoomRecipes -> publish -> Questown -> compile loop) and how the strangler/`Compat` seam keeps the change centralised.
+
 ## Solutions
 
 `docs/solutions/` — documented solutions to past problems (bugs, conventions, design patterns, best practices), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`, `component`, `severity`). Relevant when implementing or debugging in documented areas.

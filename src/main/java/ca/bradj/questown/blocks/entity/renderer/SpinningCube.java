@@ -2,9 +2,9 @@ package ca.bradj.questown.blocks.entity.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Matrix4f;
-import com.mojang.math.Quaternion;
-import com.mojang.math.Vector3f;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -40,7 +40,7 @@ public final class SpinningCube {
         poseStack.pushPose();
         poseStack.scale(scale, scale, scale);
         float radians = (float) Math.toRadians(ageInTicks * ROTATION_SPEED);
-        poseStack.mulPose(new Quaternion(new Vector3f(0.0f, 1.0f, 0.0f), radians, false));
+        poseStack.mulPose(new Quaternionf().rotationAxis(radians, new Vector3f(0.0f, 1.0f, 0.0f)));
 
         VertexConsumer builder = bufferSource.getBuffer(RenderType.beaconBeam(texture, true));
         Matrix4f matrix = poseStack.last().pose();

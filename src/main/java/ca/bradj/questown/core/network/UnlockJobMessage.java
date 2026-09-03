@@ -53,7 +53,7 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
             // Work that needs to be thread-safe (most work)
             ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
             // Do stuff
-            Optional<TownFlagBlockEntity> flag = sender.getLevel().getBlockEntity(flagPos, TilesInit.TOWN_FLAG.get());
+            Optional<TownFlagBlockEntity> flag = sender.level().getBlockEntity(flagPos, TilesInit.TOWN_FLAG.get());
             if (flag.isEmpty()) {
                 QT.GUI_LOGGER.error("No flag at position {}. Quest will not be removed.", flagPos);
                 return;
@@ -101,7 +101,7 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
         flag.get().getVillagerHandle().unlockJob(villagerUUID, id);
         String key = "messages.jobs.unlocked_by_mod";
         MutableComponent msg = Compat.translatable(key, sender.getName(), id.toNiceString(), villagerUUID);
-        for (Player player : sender.level.players()) {
+        for (Player player : sender.serverLevel().players()) {
             Compat.sendMessage((ServerPlayer) player, msg);
         }
     }

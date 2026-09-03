@@ -8,8 +8,8 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
@@ -50,11 +50,11 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
     @Override
     protected void init() {
         super.init();
-        this.unlockButton = this.addRenderableWidget(new Button(
-                0, 0, backgroundWidth - 8, 20, Compat.translatable("menu.block_of_progress.take"), (p_96776_) -> {
+        this.unlockButton = this.addRenderableWidget(Button.builder(
+                Compat.translatable("menu.block_of_progress.take"), (p_96776_) -> {
             QuestownNetwork.CHANNEL.sendToServer(new GiveBOPMessage(menu.getFlagInfo().flagPos()));
             Minecraft.getInstance().setScreen(null);
-        }));
+        }).bounds(0, 0, backgroundWidth - 8, 20).build());
     }
 
     @Override
@@ -72,7 +72,7 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
 
     @Override
     protected void renderLabels(
-            PoseStack p_97808_,
+            GuiGraphics gui,
             int p_97809_,
             int p_97810_
     ) {
@@ -80,15 +80,15 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
 
     @Override
     public void render(
-            PoseStack poseStack,
+            GuiGraphics gui,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
-        unlockButton.x = buttonX + 4;
-        unlockButton.y = buttonY;
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
+        unlockButton.setX(buttonX + 4);
+        unlockButton.setY(buttonY);
+        this.renderBackground(gui);
+        super.render(gui, mouseX, mouseY, partialTicks);
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         bgY += 8;
@@ -96,14 +96,14 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
         int iconsX = (width / 2) - (8 * ct);
         for (int i = 0; i < ct; i++) {
             ItemStack defaultInstance = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance();
-            RenderUtil.renderItemScaled(itemRenderer, 3, defaultInstance, iconsX + (16 * i), bgY + 2);
+            RenderUtil.renderItemScaled(Compat.itemRenderer(), 3, defaultInstance, iconsX + (16 * i), bgY + 2);
         }
         bgY += 24;
-        renderText(poseStack, bgX, bgY);
+        renderText(gui, bgX, bgY);
     }
 
     private void renderText(
-            PoseStack poseStack,
+            GuiGraphics gui,
             int bgX,
             int bgY
     ) {
@@ -121,7 +121,7 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
         }
         bgY += Compat.drawDarkTextWrap(
                 font,
-                poseStack,
+                gui,
                 topLeft.withY(bgY),
                 tWidth,
                 text
@@ -131,7 +131,7 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
         if (menu.getFlagInfo().bopFull()) {
             bgY += Compat.drawRedTextWrap(
                     font,
-                    poseStack,
+                    gui,
                     topLeft.withY(bgY),
                     tWidth,
                     Compat.translatable("menu.block_of_progress.full")
@@ -140,7 +140,7 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
         }
         bgY += Compat.drawDarkTextWrap(
                 font,
-                poseStack,
+                gui,
                 topLeft.withY(bgY),
                 tWidth,
                 Compat.translatable("menu.block_of_progress.many_uses")
@@ -151,15 +151,15 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
 
     @Override
     protected void renderBg(
-            PoseStack stack,
+            GuiGraphics gui,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
-        this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
+        this.background.draw(gui, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.tabs.draw(new RenderContext(Compat.itemRenderer(), gui), bgX, bgY);
     }
 
     @Override

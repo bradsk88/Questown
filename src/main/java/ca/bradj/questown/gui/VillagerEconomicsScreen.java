@@ -6,7 +6,7 @@ import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -57,14 +57,14 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
 
     @Override
     protected void renderLabels(
-            PoseStack p_97808_,
+            GuiGraphics p_97808_,
             int p_97809_,
             int p_97810_
     ) {
     }
 
     private void renderTooltips(
-            PoseStack stack,
+            GuiGraphics gui,
             int mouseX,
             int mouseY
     ) {
@@ -75,7 +75,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
                 bgY,
                 mouseX,
                 mouseY,
-                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
+                key -> this.setTooltipForNextRenderPass(Compat.translatable(key))
         )) {
             return;
         }
@@ -89,67 +89,64 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
                 Ingredient ingr = Ingredients.fromString(card.data().ingredientKey());
                 Component itemName = Ingredients.getName(ingr);
                 int timesNeeded = card.data().timesNeeded();
-                List<Component> es = ImmutableList.of(
-                        Compat.translatable(key1, itemName, timesNeeded),
-                        Compat.translatable(key2, ItemEconomicsData.PERIOD_DAYS)
-                );
-                super.renderTooltip(stack, es, Optional.empty(), mouseX, mouseY);
+                this.setTooltipForNextRenderPass(List.of(
+                        Compat.translatable(key1, itemName, timesNeeded).getVisualOrderText(),
+                        Compat.translatable(key2, ItemEconomicsData.PERIOD_DAYS).getVisualOrderText()
+                ));
             }
         }
-
-        super.renderTooltip(stack, mouseX, mouseY);
     }
 
     @Override
     public void render(
-            PoseStack poseStack,
+            GuiGraphics gui,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
-        renderTooltips(poseStack, mouseX, mouseY);
+        this.renderBackground(gui);
+        super.render(gui, mouseX, mouseY, partialTicks);
+        renderTooltips(gui, mouseX, mouseY);
     }
 
     @Override
     protected List<Component> renderCardContent(
-            PoseStack poseStack,
+            GuiGraphics gui,
             Card<ItemEconomicsData> card,
             int mouseX,
             int mouseY
     ) {
-        renderDataAndIcons(poseStack, card.coords(), card.data());
+        renderDataAndIcons(gui, card.coords(), card.data());
         return null;
     }
 
     private void renderDataAndIcons(
-            PoseStack poseStack,
+            GuiGraphics gui,
             CardCoordinates coords,
             ItemEconomicsData data
     ) {
         int iconX = coords.leftX() + MED_PADDING;
         int iconY = coords.topY() + MED_PADDING;
         Ingredient item = Ingredients.fromString(data.ingredientKey());
-        ingredientRenderer.render(itemRenderer, item, iconX, iconY);
+        ingredientRenderer.render(gui, item, iconX, iconY);
         int textX = iconX + ingredientRenderer.getSize() + SMALL_PADDING + SMALL_PADDING;
         int textY = coords.topYPadded();
-        Compat.drawDarkText(font, poseStack, Ingredients.getName(item), textX, textY);
+        Compat.drawDarkText(font, gui, Ingredients.getName(item), textX, textY);
         String count = Integer.toString(data.timesNeeded());
         int countX = coords.rightXPadded() - font.width(count);
-        Compat.drawDarkText(font, poseStack, Compat.literal(count), countX, textY);
+        Compat.drawDarkText(font, gui, Compat.literal(count), countX, textY);
     }
 
     protected void renderBg(
-            PoseStack stack,
+            GuiGraphics gui,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
-        super.renderBg(stack, partialTicks, mouseX, mouseY);
+        super.renderBg(gui, partialTicks, mouseX, mouseY);
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight()) / 2;
-        this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
+        this.tabs.draw(new RenderContext(Compat.itemRenderer(), gui), bgX, bgY);
     }
 
     @Override

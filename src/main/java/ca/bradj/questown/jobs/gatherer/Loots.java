@@ -11,9 +11,10 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.LootTables;
+import net.minecraft.world.level.storage.loot.LootDataManager;
+import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -69,16 +70,16 @@ public class Loots {
     ) {
         String id = String.format("%s/%s/%s", lt.prefix().value(), biome.getNamespace(), biome.getPath());
         ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
-        LootTables tables = level.getServer().getLootTables();
-        if (!tables.getIds().contains(rl)) {
+        LootDataManager tables = level.getServer().getLootData();
+        if (!tables.getKeys(LootDataType.TABLE).contains(rl)) {
             QT.JOB_LOGGER.warn("No loot table found for {}. Using fallback {}", id, lt.fallback());
             rl = new ResourceLocation(Questown.MODID, lt.fallback().path());
         }
-        if (!tables.getIds().contains(rl)) {
+        if (!tables.getKeys(LootDataType.TABLE).contains(rl)) {
             QT.JOB_LOGGER.warn("No loot table found for {}. Using fallback {}", id, lt.fallback());
             rl = new ResourceLocation(Questown.MODID, NO_TOOL_LOOT_TABLE_DEFAULT.path());
         }
-        if (!tables.getIds().contains(rl)) {
+        if (!tables.getKeys(LootDataType.TABLE).contains(rl)) {
             throw new IllegalStateException(
                     String.format(
                             "No loot table found for %s or fallback %s",
@@ -95,7 +96,7 @@ public class Loots {
             GathererTools.LootTableParameters lt,
             ResourceLocation biome, ResourceLocation rl
     ) {
-        LootTables tables = level.getServer().getLootTables();
+        LootDataManager tables = level.getServer().getLootData();
         return getFromKnownTable(level, minAmount, maxAmount, lt, biome, tables, rl);
     }
 
@@ -103,9 +104,9 @@ public class Loots {
     private static List<MCHeldItem> getFromKnownTable(
             ServerLevel level, int minAmount, int maxAmount,
             GathererTools.LootTableParameters lt,
-            ResourceLocation biome, LootTables tables, ResourceLocation rl
+            ResourceLocation biome, LootDataManager tables, ResourceLocation rl
     ) {
-        LootTable lootTable = tables.get(rl);
+        LootTable lootTable = tables.getElement(LootDataType.TABLE, rl);
         List<MCTownItem> loot = Loots.loadFromTables(level, lootTable, minAmount, maxAmount);
         return loot.stream().map(v -> MCHeldItem.fromLootTable(v, lt.prefix(), biome)).toList();
     }
@@ -130,8 +131,8 @@ public class Loots {
             return ImmutableList.of();
         }
 
-        LootContext.Builder lcb = new LootContext.Builder(level);
-        LootContext lc = lcb.create(LootContextParamSets.EMPTY);
+        LootParams.Builder lcb = new LootParams.Builder(level);
+        LootParams lc = lcb.create(LootContextParamSets.EMPTY);
 
         ArrayList<ItemStack> rItems = new ArrayList<>();
         int max = minItems + (level.random.nextInt(maxItems - minItems + 1));

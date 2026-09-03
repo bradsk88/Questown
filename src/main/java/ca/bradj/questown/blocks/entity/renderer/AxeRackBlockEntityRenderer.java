@@ -6,7 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
@@ -63,11 +63,12 @@ public class AxeRackBlockEntityRenderer implements BlockEntityRenderer<AxeRackBl
 
         itemRenderer.renderStatic(
                 itemStack,
-                ItemTransforms.TransformType.GUI,
+                ItemDisplayContext.GUI,
                 ll,
                 OverlayTexture.NO_OVERLAY,
                 stack,
                 buf,
+                pbe.getLevel(),
                 1
         );
         stack.popPose();

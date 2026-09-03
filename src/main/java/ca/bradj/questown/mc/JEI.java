@@ -1,7 +1,6 @@
 package ca.bradj.questown.mc;
 
 import ca.bradj.questown.core.UtilClean;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.Internal;
@@ -87,13 +86,13 @@ public class JEI {
         }
 
         public void draw(
-                PoseStack stack,
+                net.minecraft.client.gui.GuiGraphics gui,
                 int x,
                 int y,
                 int backgroundWidth,
                 int backgroundHeight
         ) {
-            this.delegate.draw(stack, x, y, backgroundWidth, backgroundHeight);
+            this.delegate.draw(gui, x, y, backgroundWidth, backgroundHeight);
         }
     }
 }

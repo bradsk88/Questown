@@ -32,8 +32,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.AABB;
@@ -68,8 +67,8 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
     private final DyeColor color;
 
     public HospitalBedBlock() {
-        this(DyeColor.BLACK, BlockBehaviour.Properties.of(Material.WOOL, (p_152613_) -> {
-            return p_152613_.getValue(BedBlock.PART) == BedPart.FOOT ? DyeColor.BLACK.getMaterialColor() : MaterialColor.WOOL;
+        this(DyeColor.BLACK, BlockBehaviour.Properties.of().mapColor((p_152613_) -> {
+            return p_152613_.getValue(BedBlock.PART) == BedPart.FOOT ? DyeColor.BLACK.getMapColor() : MapColor.WOOL;
         }).sound(SoundType.WOOD).strength(0.2F).noOcclusion());
     }
 
@@ -104,7 +103,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
                     p_49516_.removeBlock(blockpos, false);
                 }
 
-                p_49516_.explode((Entity)null, DamageSource.badRespawnPointExplosion(), (ExplosionDamageCalculator)null, (double)p_49517_.getX() + 0.5D, (double)p_49517_.getY() + 0.5D, (double)p_49517_.getZ() + 0.5D, 5.0F, true, Explosion.BlockInteraction.DESTROY);
+                p_49516_.explode((Entity)null, p_49516_.damageSources().badRespawnPointExplosion(Vec3.atBottomCenterOf(p_49517_)), (ExplosionDamageCalculator)null, (double)p_49517_.getX() + 0.5D, (double)p_49517_.getY() + 0.5D, (double)p_49517_.getZ() + 0.5D, 5.0F, true, Level.ExplosionInteraction.BLOCK);
                 return InteractionResult.SUCCESS;
             } else if (p_49515_.getValue(OCCUPIED)) {
                 if (!this.kickVillagerOutOfBed(p_49516_, p_49517_)) {

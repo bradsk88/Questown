@@ -41,8 +41,7 @@ public class Questown {
      * @deprecated Use QT.LOGGER
      */
     public static final Logger LOGGER = QT.LOGGER;
-    public static final Item.Properties DEFAULT_ITEM_PROPS = new Item.Properties().
-            tab(ModItemGroup.QUESTOWN_GROUP);
+    public static final Item.Properties DEFAULT_ITEM_PROPS = new Item.Properties();
     public static ResourceLocation ResourceLocationError = ResourceLocation("error");
 
     public Questown() {

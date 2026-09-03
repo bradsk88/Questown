@@ -13,12 +13,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 
 import java.util.List;
@@ -36,8 +37,8 @@ public class SoupPotBlock extends Block implements InsertedItemAware, ExtractedI
     public SoupPotBlock(
     ) {
         super(
-                Properties
-                        .of(Material.GLASS, MaterialColor.TERRACOTTA_BROWN)
+                BlockBehaviour.Properties
+                        .of().mapColor(MapColor.TERRACOTTA_BROWN)
                         .strength(1.0F, 10.0F)
                         .noOcclusion()
         );
@@ -58,7 +59,7 @@ public class SoupPotBlock extends Block implements InsertedItemAware, ExtractedI
     @Override
     public List<ItemStack> getDrops(
             BlockState p_60537_,
-            LootContext.Builder p_60538_
+            LootParams.Builder p_60538_
     ) {
         // TODO: Preserve level
         return ImmutableList.of(

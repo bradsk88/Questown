@@ -4,7 +4,7 @@ import ca.bradj.questown.core.network.JobRootChangeMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiGraphics;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
@@ -55,8 +55,8 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         int maybeY = ((this.height - backgroundHeight) / 2) + 32 + 16 + 8;
 
         int buttonWidth = (backgroundWidth / 2) - 8;
-        this.unlockButton = this.addRenderableWidget(new Button(
-                maybeX, maybeY, buttonWidth, 20, Compat.translatable("menu.common.unlock"), (p_96776_) -> {
+        this.unlockButton = this.addRenderableWidget(Button.builder(
+                Compat.translatable("menu.common.unlock"), (p_96776_) -> {
             QuestownNetwork.CHANNEL.sendToServer(new JobRootChangeMessage(
                     menu.flagPos,
                     menu.villagerUUID,
@@ -64,16 +64,12 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
             ));
             Minecraft.getInstance().setScreen(null);
         }
-        ));
+        ).bounds(maybeX, maybeY, buttonWidth, 20).build());
         if (menu.alreadyPending.get() == 0) {
-            this.addRenderableWidget(new Button(
-                    maybeX + buttonWidth,
-                    maybeY,
-                    buttonWidth,
-                    20,
+            this.addRenderableWidget(Button.builder(
                     Compat.translatable("menu.common.cancel"),
                     (p_96776_) -> Minecraft.getInstance().setScreen(null)
-            ));
+            ).bounds(maybeX + buttonWidth, maybeY, buttonWidth, 20).build());
         } else {
             unlockButton.visible = false;
             unlockButton.active = false;
@@ -83,7 +79,7 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
 
     @Override
     public void render(
-            PoseStack stack,
+            GuiGraphics gui,
             int mouseX,
             int mouseY,
             float partialTicks
@@ -91,40 +87,22 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         int jobIconX = bgX + 8 + slot.getWidth() + 4;
-        super.renderBackground(stack);
-        super.render(stack, mouseX, mouseY, partialTicks);
+        super.renderBackground(gui);
+        super.render(gui, mouseX, mouseY, partialTicks);
         if (menu.alreadyPending.get() == 1) {
-            renderStatusText(stack, bgX, bgY + menu.gathererInventoryYOffset + 24);
+            renderStatusText(gui, bgX, bgY + menu.gathererInventoryYOffset + 24);
             return;
         }
 
         if (unlockButton != null) {
             unlockButton.active = menu.tx.hasBlockOfProgress();
         }
-        renderChangeText(stack, jobIconX, bgY + menu.gathererInventoryYOffset);
-        this.renderTooltip(stack, mouseX, mouseY);
-    }
-
-    @Override
-    protected void renderTooltip(
-            PoseStack stack,
-            int mouseX,
-            int mouseY
-    ) {
-        super.renderTooltip(stack, mouseX, mouseY);
-        int x = (this.width - backgroundWidth) / 2;
-        int y = (this.height - backgroundHeight) / 2;
-        tabs.renderTooltip(
-                x,
-                y,
-                mouseX,
-                mouseY,
-                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
-        );
+        renderChangeText(gui, jobIconX, bgY + menu.gathererInventoryYOffset);
+        this.tabs.renderTooltip(bgX, bgY, mouseX, mouseY, key -> this.setTooltipForNextRenderPass(Compat.translatable(key)));
     }
 
     private void renderChangeText(
-            PoseStack stack,
+            GuiGraphics gui,
             int x,
             int y1
     ) {
@@ -138,13 +116,13 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         }
         List<FormattedCharSequence> parts = font.split(Compat.translatable(key), textWidth);
         for (FormattedCharSequence part : parts) {
-            Compat.drawDarkText(font, stack, part, x, bgY);
+            Compat.drawDarkText(font, gui, part, x, bgY);
             bgY += 8;
         }
     }
 
     private void renderStatusText(
-            PoseStack stack,
+            GuiGraphics gui,
             int x,
             int y1
     ) {
@@ -155,26 +133,26 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
                 textWidth
         );
         for (FormattedCharSequence part : parts) {
-            drawCenteredString(stack, font, part, x + (textWidth/2), bgY, -1);
+            gui.drawCenteredString(font, part, x + (textWidth/2), bgY, -1);
             bgY += 8;
         }
     }
 
     @Override
     protected void renderBg(
-            PoseStack stack,
+            GuiGraphics gui,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
-        this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
-        renderInventory(stack);
+        this.background.draw(gui, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.tabs.draw(new RenderContext(Compat.itemRenderer(), gui), bgX, bgY);
+        renderInventory(gui);
     }
 
-    private void renderInventory(PoseStack stack) {
+    private void renderInventory(GuiGraphics gui) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         int yCoord;
@@ -188,7 +166,7 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
             int xCoord = x - 1 + s.x;
             yCoord = y - 1 + s.y;
             this.gathererSlotY = Math.min(yCoord, gathererSlotY);
-            this.slot.draw(stack, xCoord, yCoord);
+            this.slot.draw(gui, xCoord, yCoord);
         }
     }
 
@@ -208,7 +186,7 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
 
     @Override
     protected void renderLabels(
-            PoseStack p_97808_,
+            GuiGraphics p_97808_,
             int p_97809_,
             int p_97810_
     ) {

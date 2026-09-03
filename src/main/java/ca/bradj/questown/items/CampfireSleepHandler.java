@@ -10,7 +10,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
-import net.minecraft.world.level.material.Material;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
@@ -120,23 +121,23 @@ public class CampfireSleepHandler {
 
     private static boolean isClearForSleep(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        Material mat = state.getMaterial();
         // The temp bed is placed with an unconditional setBlock, so the spot must be air or an
         // otherwise-replaceable block. Without this guard a solid block (e.g. the town flag) counted
         // as "clear" and the bed overwrote it — destroying the block and, on teardown, leaving air.
-        if (!mat.isReplaceable()) {
+        if (state.isSolid()) {
             return false;
         }
         if (!level.isUnobstructed(state, pos, CollisionContext.empty())) {
             return false;
         }
-        return !mat.isLiquid() && mat != Material.FIRE;
+        FluidState fluidState = state.getFluidState();
+        return !fluidState.is(FluidTags.WATER) && !fluidState.is(FluidTags.LAVA) && !state.is(Blocks.FIRE);
     }
 
     private static @Nullable Direction findBedFacing(BlockPos headPos, BlockPos campfirePos) {
         int dx = Integer.signum(headPos.getX() - campfirePos.getX());
         int dz = Integer.signum(headPos.getZ() - campfirePos.getZ());
-        return Direction.fromNormal(dx, 0, dz);
+        return Direction.fromDelta(dx, 0, dz);
     }
 
     private static void placeTempBed(Level level, BlockPos headPos, Direction facing) {
@@ -190,21 +191,21 @@ public class CampfireSleepHandler {
         ca.bradj.questown.QT.JOB_LOGGER.info(
                 "[campfire-sleep] onWake fired player={} dayTime={} isDay={}",
                 player.getGameProfile().getName(),
-                player.level.getDayTime() % 24000L, player.level.isDay()
+                player.level().getDayTime() % 24000L, player.level().isDay()
         );
         campfireSleepers.remove(uuid);
         BlockPos headPos = tempBedPositions.remove(uuid);
         Direction facing = tempBedFacings.remove(uuid);
         if (headPos != null && facing != null) {
-            removeTempBed(player.level, headPos, facing);
+            removeTempBed(player.level(), headPos, facing);
         }
         BlockPos firePos = campfirePositions.remove(uuid);
         if (firePos != null) {
-            extinguishCampfire(player.level, firePos);
+            extinguishCampfire(player.level(), firePos);
         }
         BlockPos flagPos = sleepingFlagPositions.remove(uuid);
         if (flagPos != null
-                && player.level.getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
+                && player.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
             flag.setChickenObservedSleepSinceSunset(true);
         }
     }

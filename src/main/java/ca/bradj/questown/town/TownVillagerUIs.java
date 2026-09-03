@@ -84,14 +84,14 @@ public class TownVillagerUIs {
                             return;
                         }
                         AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
-                                player.getLevel(),
+                                player.serverLevel(),
                                 RoomTrigger.Triggers.FirstOpenFlagMenu,
                                 townFlagBasePos.flagPos()
                         );
                     }
                 }, data -> {
                     List<UIQuest> quests = UIQuest.fromLevel(
-                            player.getLevel(),
+                            player.serverLevel(),
                             questsSrc.get()
                     );
                     QuestScreenSummary summary = new QuestScreenSummary(
@@ -104,7 +104,7 @@ public class TownVillagerUIs {
                 }
         );
         ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations.markFlagUiOpened(
-                player.getLevel(), townFlagBasePos.flagPos()
+                player.level(), townFlagBasePos.flagPos()
         );
     }
 
@@ -112,7 +112,7 @@ public class TownVillagerUIs {
             ServerPlayer player,
             FlagTabsEmbedding.FlagInfo townFlagBasePos
     ) {
-        if (!(player.getLevel().getBlockEntity(townFlagBasePos.flagPos()) instanceof TownFlagBlockEntity flag)) {
+        if (!(player.level().getBlockEntity(townFlagBasePos.flagPos()) instanceof TownFlagBlockEntity flag)) {
             return false;
         }
         return flag.hasPendingMorningReward();
@@ -134,7 +134,7 @@ public class TownVillagerUIs {
 
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
-        sender.getLevel().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
+        sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
@@ -198,7 +198,7 @@ public class TownVillagerUIs {
 
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
-        sender.getLevel().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
+        sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
         ImmutableList<JobID> jubz = ServerJobsRegistry.getAllJobs()
@@ -252,10 +252,10 @@ public class TownVillagerUIs {
 
         VisitorMobEntity e = f.get();
 
-        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level, e.getFlagPos());
+        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level(), e.getFlagPos());
 
         List<UIQuest> quests = flag.getQuestHandle().getAllBatchesForVillager(e.getUUID()).stream()
-                                   .map(v -> UIQuest.fromLevel(sender.getLevel(), v)).flatMap(List::stream).toList();
+                                   .map(v -> UIQuest.fromLevel(sender.serverLevel(), v)).flatMap(List::stream).toList();
 
         VillagerStatsData stats = flag.getVillagerHandle().getStats(e.getUUID());
         VillagerEconomicsData econ = new VillagerEconomicsData(ImmutableList.of());
@@ -484,7 +484,7 @@ public class TownVillagerUIs {
         );
         if (e.getFlagPos() != null) {
             ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations.markVillagerUiOpened(
-                    sender.getLevel(), e.getFlagPos()
+                    sender.serverLevel(), e.getFlagPos()
             );
         }
     }

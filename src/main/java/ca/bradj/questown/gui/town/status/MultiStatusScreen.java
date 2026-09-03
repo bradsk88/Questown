@@ -9,8 +9,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
@@ -56,7 +55,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
 
     @Override
     public void render(
-            PoseStack stack,
+            GuiGraphics stack,
             int mouseX,
             int mouseY,
             float partialTicks
@@ -65,8 +64,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int bgY = (this.height - super.backgroundHeight()) / 2;
         super.renderBackground(stack);
         super.render(stack, mouseX, mouseY, partialTicks);
-        tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
-        this.renderTooltip(stack, mouseX, mouseY);
+        tabs.draw(new RenderContext(Compat.itemRenderer(), stack), bgX, bgY);
     }
 
     @Override
@@ -80,23 +78,24 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
 
     @Override
     protected List<Component> renderCardContent(
-            PoseStack poseStack,
+            GuiGraphics poseStack,
             Card<UUID> card,
             int mouseX,
             int mouseY
     ) {
         if (MORNING_ARRIVAL_SENTINEL.equals(card.data())) {
-            font.draw(poseStack, Compat.translatable("gui.status.villager_arriving_morning"),
+            poseStack.drawString(font, Compat.translatable("gui.status.villager_arriving_morning"),
                     card.coords().leftXPadded(), card.coords().topYPadded(), 0x808080);
             return null;
         }
         renderStatus(poseStack, card.coords(), card.data());
-        renderInventory(card.coords(), card.data());
+        renderInventory(poseStack, card.coords(), card.data());
         renderFace(poseStack, card.coords(), card.data());
         return null;
     }
 
     private void renderInventory(
+            GuiGraphics gui,
             CardCoordinates coords,
             UUID uuid
     ) {
@@ -105,13 +104,13 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         for (Item item : items) {
             int destX = iconX + SMALL_PADDING;
             int destY = coords.topYPadded() + BIG_PADDING;
-            this.itemRenderer.renderAndDecorateItem(new ItemStack(item), destX, destY);
+            Compat.renderItemAndDecorations(gui, new ItemStack(item), destX, destY);
             iconX += 16;
         }
     }
 
     private void renderFace(
-            PoseStack stack,
+            GuiGraphics stack,
             CardCoordinates coords,
             UUID uuid
     ) {
@@ -129,7 +128,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     }
 
     private void renderStatus(
-            PoseStack stack,
+            GuiGraphics stack,
             PagedCardScreen.CardCoordinates coords,
             UUID uuid
     ) {
@@ -141,8 +140,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int destX = getStatusX(coords);
         int destY = getStatusY(coords);
         @NotNull StatusPacket status = getSmoothedStatus(uuid);
-        RenderSystem.setShaderTexture(0, status.image());
-        blit(stack, destX, destY, 0, 0, drawWidth, drawHeight, texWidth, texHeight);
+        stack.blit(status.image(), destX, destY, 0, 0, drawWidth, drawHeight);
     }
 
     private static int getStatusY(CardCoordinates coords) {
@@ -174,7 +172,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
 
     @Override
     protected void renderTooltip(
-            @NotNull PoseStack stack,
+            @NotNull GuiGraphics stack,
             int mouseX,
             int mouseY
     ) {
@@ -186,7 +184,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
                 bgY,
                 mouseX,
                 mouseY,
-                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
+                key -> this.setTooltipForNextRenderPass(Compat.translatable(key))
         )) {
             return;
         }
@@ -198,7 +196,9 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             int y = getStatusY(v.coords());
             if (UtilClean.isCoordInBox(mouseX, mouseY, x, y, 32, 32)) {
                 @NotNull StatusPacket status = getSmoothedStatus(v.data());
-                super.renderTooltip(stack, status.texts(), Optional.empty(), mouseX, mouseY);
+                this.setTooltipForNextRenderPass(
+                        status.texts().stream().map(Component::getVisualOrderText).toList()
+                );
                 return;
             }
         }

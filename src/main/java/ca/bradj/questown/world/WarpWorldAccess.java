@@ -75,7 +75,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         this.level = level;
         this.recipeResolver = ingredient -> level.getRecipeManager()
                 .getRecipeFor(RecipeType.SMELTING, new net.minecraft.world.SimpleContainer(ingredient), level)
-                .map(r -> new SmeltResult(r.getResultItem().copy(), r.getCookingTime()));
+                .map(r -> new SmeltResult(r.getResultItem(level.registryAccess()).copy(), r.getCookingTime()));
         this.fuelTimeProvider = fuel -> ForgeHooks.getBurnTime(fuel, RecipeType.SMELTING);
         for (BlockPos pos : positions) {
             blockStates.put(pos, level.getBlockState(pos));

@@ -60,7 +60,7 @@ public class HelperChickenFollowNearFlagGoal extends Goal {
         if (!isArcActive(flagPos)) {
             return false;
         }
-        this.player = this.chicken.level.getNearestPlayer(this.targetingConditions, this.chicken);
+        this.player = this.chicken.level().getNearestPlayer(this.targetingConditions, this.chicken);
         if (this.player == null) {
             return false;
         }
@@ -127,7 +127,7 @@ public class HelperChickenFollowNearFlagGoal extends Goal {
 
     @org.jetbrains.annotations.Nullable
     private TownFlagBlockEntity readFlag(BlockPos flagPos) {
-        if (this.chicken.level.getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
+        if (this.chicken.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
             return flag;
         }
         return null;

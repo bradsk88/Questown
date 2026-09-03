@@ -32,7 +32,7 @@ public final class ChickenStatueTransformHandler {
             HelperChickenEntity chicken,
             TownFlagBlockEntity flag
     ) {
-        if (!(chicken.level instanceof ServerLevel sl)) {
+        if (!(chicken.level() instanceof ServerLevel sl)) {
             return;
         }
         BlockPos statuePos = findStatuePos(sl, chicken);
@@ -47,11 +47,11 @@ public final class ChickenStatueTransformHandler {
             HelperChickenEntity chicken
     ) {
         BlockPos at = chicken.blockPosition();
-        if (level.getBlockState(at).getMaterial().isReplaceable()) {
+        if (level.getBlockState(at).canBeReplaced()) {
             return at;
         }
         BlockPos above = at.above();
-        if (level.getBlockState(above).getMaterial().isReplaceable()) {
+        if (level.getBlockState(above).canBeReplaced()) {
             return above;
         }
         return at;

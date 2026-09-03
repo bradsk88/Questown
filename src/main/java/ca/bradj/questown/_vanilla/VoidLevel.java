@@ -4,6 +4,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.world.flag.FeatureFlagSet;
+import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -144,6 +146,11 @@ public class VoidLevel implements WorldGenLevel {
     @Override
     public RegistryAccess registryAccess() {
         throw new UnsupportedOperationException("VoidLevel does not support registryAccess()");
+    }
+
+    @Override
+    public FeatureFlagSet enabledFeatures() {
+        return FeatureFlags.DEFAULT_FLAGS;
     }
 
     @Override

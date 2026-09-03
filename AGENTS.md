@@ -20,6 +20,15 @@ Do not use deprecated methods in new code. If there is no other option, prompt t
 
 Before calling a raw Minecraft API for a common integration (text splitting, components/styling, tooltip text, sounds, item names, on-screen text), scan `mc/Compat`, `mc/Util`, and `gui/RenderUtil` first and reuse the existing wrapper (e.g. `Compat.splitText` not `font.split`; `Compat.translatableStyled` not `.withStyle`). Add one to `Compat` if none fits. See `docs/solutions/conventions/prefer-compat-util-renderutil-wrappers.md`.
 
+**Version migrations go through the strangler seam.** `mc/Compat` exists specifically so forward/back-porting between MC versions is cheap: when a migration (e.g. 1.19.2 -> 1.20.1) changes a vanilla API that several call sites use, route it through a `Compat` wrapper (e.g. a vanished `GuiComponent.fill`/`blit` becomes `Compat.fill`/`Compat.blit`) rather than scattering the change. Mechanical-only edits (a moved import like joml `com.mojang.math.*` -> `org.joml.*`, or `Entity.level` field -> `level()`) are fine inline; the strangler applies to *functions that changed or disappeared* between versions, so the next port touches one place.
+
+## Build environment (this machine)
+
+- **Gradle 7.2 here runs on JDK 17, not the system JDK 21.** The system default `java` is 21, which makes Gradle 7.2 fail to compile `build.gradle` with `Unsupported class file major version 65`. `gradle.properties` pins `org.gradle.java.home=/home/retro/.gradle/jdks/jdk-17.0.20+8`; ensure a new repo/branch has that line (RoomRecipes does, Questown may not).
+- **`unzip` is not installed.** To locate/verify a class inside a jar use `jar tf <jar> | grep ...`, not `unzip -l`. `javap -classpath <jar> FQN` works for classes that exist but returns nothing for inner classes (`X$Y`) or for classes that were *removed* in the target version — so a `javap` "class not found" can mean the tool quirk OR a genuinely-gone class. Confirm a class's location with `jar tf` before concluding it moved; the ForgeGradle mapped jar lives at `build/fg_cache/net/minecraftforge/forge/<ver>_mapped_official_<mc>/<ver>_<...>_mapped_official_<mc>.jar`.
+- **A version migration is a compile loop, not a memory exercise.** Change `build.gradle` (forge/jei/patchouli/roomrecipes + `mappings`), then `./gradlew build` and let the compiler name each change; fix per category and re-run. Do not pre-decide a 1.20 API change from memory. The `RoomRecipes` mod (only Forge dep) migrates first and is `publishToMavenLocal`-ed to `~/.m2` (Questown resolves it via `mavenLocal()`); Questown cannot compile until that jar exists.
+- **Dependency availability is a hard gate.** Before choosing an MC target, probe the reachable maven (maven.minecraftforge.net, maven.blamejared.com, dvs1.progwml6.com — modrinth/terraform/modmaven are NOT reachable). For 1.20.x: Forge + JEI resolve for base 1.20 but **Patchouli only has 1.20.1+** (no base-1.20 Patchouli anywhere reachable), so **1.20.1 is the only buildable 1.20.x target**, not 1.20.
+
 ## Codebase scope
 
 "the codebase" for this project spans **two repos**: Questown and the adjacent

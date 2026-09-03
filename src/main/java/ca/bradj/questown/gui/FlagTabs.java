@@ -3,6 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -37,8 +38,7 @@ public class FlagTabs extends Tabs implements SubUI {
         ImmutableList.Builder<Tab> b = ImmutableList.builder();
         if (fi.showVillagersTab()) {
             b.add(new Tab(
-                    (rc, x, y) -> rc.itemRenderer()
-                                    .renderAndDecorateItem(Items.PLAYER_HEAD.getDefaultInstance(), x + 10, y + 7),
+                    (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.PLAYER_HEAD.getDefaultInstance(), x + 10, y + 7),
                     setScreen(villagerScreenFn),
                     "tooltips.villagers",
                     villagerScreenFn == null,
@@ -47,8 +47,7 @@ public class FlagTabs extends Tabs implements SubUI {
         }
         if (fi.showQuestsTab()) {
             b.add(new Tab(
-                    (rc, x, y) -> rc.itemRenderer()
-                                    .renderAndDecorateItem(Items.BOOK.getDefaultInstance(), x + 10, y + 7),
+                    (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.BOOK.getDefaultInstance(), x + 10, y + 7),
                     setScreen(questsScreenFn),
                     "tooltips.quests",
                     questsScreenFn == null,
@@ -59,7 +58,7 @@ public class FlagTabs extends Tabs implements SubUI {
             b.add(new Tab(
                     (rc, x, y) -> {
                         int txBefore = RenderSystem.getShaderTexture(0);
-                        Util.blitTab(rc.stack(), x, y, 0);
+                        Util.blitTab(rc.gui(), x, y, 0);
                         RenderSystem.setShaderTexture(0, txBefore);
                     },
                     setScreen(econScreenFn),
@@ -84,8 +83,7 @@ public class FlagTabs extends Tabs implements SubUI {
             ));
         }
         b.add(new Tab(
-                (rc, x, y) -> rc.itemRenderer()
-                                .renderAndDecorateItem(Items.CRAFTING_TABLE.getDefaultInstance(), x + 10, y + 7),
+                (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.CRAFTING_TABLE.getDefaultInstance(), x + 10, y + 7),
                 setScreen(craftingScreenFn),
                 "tooltips.crafting",
                 craftingScreenFn == null,

@@ -9,7 +9,7 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
@@ -87,34 +87,22 @@ public class WorkRequestConfirmScreen extends Screen {
         this.moreInfoButtonY = jobIconsY + 24;
         int buttonHeight = (2 * font.lineHeight) + 2;
         int buttonWidth = backgroundWidth - (2 * PAGE_PADDING);
-        this.addRenderableWidget(new Button(
-                pageLeftX + PAGE_PADDING,
-                moreInfoButtonY,
-                buttonWidth,
-                buttonHeight,
+        this.addRenderableWidget(Button.builder(
                 Compat.translatable("menu.common.learn_more"),
                 (p_96776_) -> this.openJobsInfoScreen.run()
-        ));
+        ).bounds(pageLeftX + PAGE_PADDING, moreInfoButtonY, buttonWidth, buttonHeight).build());
 
         // Bottom buttons are relative to bottom of page
         this.confirmTextY = pageTopY + backgroundHeight - (2 * PAGE_PADDING) - buttonHeight - tallLine;
         this.confirmButtonY = confirmTextY + tallLine;
-        this.addRenderableWidget(new Button(
-                pageLeftX + PAGE_PADDING,
-                confirmButtonY,
-                (int) (buttonWidth / 2f),
-                buttonHeight,
+        this.addRenderableWidget(Button.builder(
                 Compat.translatable("menu.common.yes"),
                 (p_96776_) -> this.requestWork.run()
-        ));
-        this.addRenderableWidget(new Button(
-                (int) (pageLeftX + PAGE_PADDING + (buttonWidth / 2f)),
-                confirmButtonY,
-                (int) (buttonWidth / 2f),
-                buttonHeight,
+        ).bounds(pageLeftX + PAGE_PADDING, confirmButtonY, (int) (buttonWidth / 2f), buttonHeight).build());
+        this.addRenderableWidget(Button.builder(
                 Compat.translatable("menu.common.no"),
                 (p_96776_) -> this.backToRequestedJobs.run()
-        ));
+        ).bounds((int) (pageLeftX + PAGE_PADDING + (buttonWidth / 2f)), confirmButtonY, (int) (buttonWidth / 2f), buttonHeight).build());
     }
 
     @Override
@@ -131,25 +119,25 @@ public class WorkRequestConfirmScreen extends Screen {
 
     @Override
     public void render(
-            PoseStack stack,
+            GuiGraphics gui,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
-        this.fillGradient(stack, 0, 0, this.width, this.height, -1072689136, -804253680);
-        this.renderBackground(stack);
-        super.render(stack, mouseX, mouseY, partialTicks);
+        gui.fillGradient(0, 0, this.width, this.height, -1072689136, -804253680);
+        this.renderBackground(gui);
+        super.render(gui, mouseX, mouseY, partialTicks);
         int x = pageLeftX;
         x = x + PAGE_PADDING;
 
         int xRef = x;
 
-        Compat.drawDarkText(this.font, stack, title, x, pageTopY);
-        Ingredients.render(itemRenderer, itemRequested, x, mainItemIconY);
+        Compat.drawDarkText(this.font, gui, title, x, pageTopY);
+        Ingredients.render(gui, itemRequested, x, mainItemIconY);
         x += 24;
         Compat.drawDarkText(
                 this.font,
-                stack,
+                gui,
                 Compat.translatable(
                         "menu.work_add_confirm.there_are_n_known_jobs",
                         iconsForJobsWhichProduceResult.size()
@@ -158,14 +146,14 @@ public class WorkRequestConfirmScreen extends Screen {
                 mainItemTextY
         );
         Component translatable = Compat.translatable("menu.work_add_confirm.which_produce_this_item");
-        Compat.drawDarkText(this.font, stack, translatable, x, mainItemTextY2);
-        renderJobIcons(stack, mouseX, mouseY, xRef, jobIconsY);
+        Compat.drawDarkText(this.font, gui, translatable, x, mainItemTextY2);
+        renderJobIcons(gui, mouseX, mouseY, xRef, jobIconsY);
         Component confTxt = Compat.translatable("menu.work_add_confirm.confirm_text");
-        Compat.drawDarkText(this.font, stack, confTxt, xRef, confirmTextY);
+        Compat.drawDarkText(this.font, gui, confTxt, xRef, confirmTextY);
     }
 
     private void renderJobIcons(
-            PoseStack stack,
+            GuiGraphics gui,
             int mouseX,
             int mouseY,
             int xRef,
@@ -174,11 +162,11 @@ public class WorkRequestConfirmScreen extends Screen {
         RenderUtil.stripOfRequestableItems(
                 (ingr, coord) -> {
                     Ingredient ing = Ingredients.fromRL(ingr.getValue());
-                    Ingredients.render(itemRenderer, ing, coord.x(), coord.y());
+                    Ingredients.render(gui, ing, coord.x(), coord.y());
                 },
                 (ingr) -> Jobs.getComponentsForTooltip(ingr.getKey()),
-                (text, coord) -> Compat.drawDarkText(font, stack, text, coord.x(), coord.y()),
-                (topLeft, botRight) -> RenderUtil.highlight(stack, topLeft, botRight),
+                (text, coord) -> Compat.drawDarkText(font, gui, text, coord.x(), coord.y()),
+                (topLeft, botRight) -> RenderUtil.highlight(gui, topLeft, botRight),
                 iconsForJobsWhichProduceResult,
                 new Coordinate(xRef, y),
                 new Coordinate(xRef + backgroundWidth - (PAGE_PADDING * 2), y),
@@ -187,10 +175,10 @@ public class WorkRequestConfirmScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(PoseStack poseStack) {
+    public void renderBackground(GuiGraphics gui) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(poseStack, x, y, backgroundWidth, backgroundHeight);
+        this.background.draw(gui, x, y, backgroundWidth, backgroundHeight);
     }
 
     @Override

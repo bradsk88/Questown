@@ -97,7 +97,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
             ServerPlayer sp,
             boolean skipToAdd
     ) {
-        BlockEntity p = sp.getLevel().getBlockEntity(parentPos);
+        BlockEntity p = sp.serverLevel().getBlockEntity(parentPos);
         if (!(p instanceof TownFlagBlockEntity parent)) {
             QT.FLAG_LOGGER.error("No flag found at work handle parent pos");
             return;

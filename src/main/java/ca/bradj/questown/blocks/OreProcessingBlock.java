@@ -8,12 +8,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.material.MapColor;
 
 import java.util.List;
 
@@ -31,8 +32,8 @@ public class OreProcessingBlock extends Block implements StatefulJobBlock {
     public OreProcessingBlock(
     ) {
         super(
-                Properties
-                        .of(Material.WOOL, MaterialColor.COLOR_BROWN)
+                BlockBehaviour.Properties
+                        .of().mapColor(MapColor.COLOR_BROWN)
                         .strength(1.0F, 10.0F)
         );
         this.registerDefaultState(this.stateDefinition.any()
@@ -56,7 +57,7 @@ public class OreProcessingBlock extends Block implements StatefulJobBlock {
     @Override
     public List<ItemStack> getDrops(
             BlockState p_60537_,
-            LootContext.Builder p_60538_
+            LootParams.Builder p_60538_
     ) {
         // TODO: Also drop stuff inside
         //  Maybe something like onHurt() { town.dropInsertedItems(this.pos) }

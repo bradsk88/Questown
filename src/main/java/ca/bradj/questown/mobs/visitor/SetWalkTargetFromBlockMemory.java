@@ -68,7 +68,7 @@ public class SetWalkTargetFromBlockMemory extends Behavior<VisitorMobEntity> {
 
                     for (int j = 1000; i < 1000 && (vec3 == null || this.tooFar(
                             ent,
-                            GlobalPos.of(p_24059_.dimension(), new BlockPos(vec3))
+                            GlobalPos.of(p_24059_.dimension(), BlockPos.containing(vec3))
                     )); ++i) {
                         vec3 = DefaultRandomPos.getPosTowards(
                                 ent,

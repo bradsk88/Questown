@@ -41,6 +41,7 @@ import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -2607,7 +2608,7 @@ public class TestBlueprintRegistry {
                 "worldgen/empty_town_structure",
                 "worldgen",
                 level -> level.registryAccess()
-                        .registry(Registry.STRUCTURE_REGISTRY)
+                        .registry(Registries.STRUCTURE)
                         .map(r -> r.containsKey(new ResourceLocation("questown", "empty_town")))
                         .orElse(false)
         );
@@ -2618,7 +2619,7 @@ public class TestBlueprintRegistry {
                 "worldgen/empty_town_structure_set",
                 "worldgen",
                 level -> level.registryAccess()
-                        .registry(Registry.STRUCTURE_SET_REGISTRY)
+                        .registry(Registries.STRUCTURE_SET)
                         .map(r -> r.containsKey(new ResourceLocation("questown", "empty_town")))
                         .orElse(false)
         );

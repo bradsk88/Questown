@@ -7,8 +7,10 @@ import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.rooms.TownPosition;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -224,7 +226,7 @@ public class Compat {
         if (inserted.getOrCreateTag().isEmpty()) {
             for (int i = 0; i < iItemHandler.getSlots(); i++) {
                 ItemStack stackInSlot = iItemHandler.getStackInSlot(i);
-                if (stackInSlot.getOrCreateTag().isEmpty() && stackInSlot.sameItem(inserted)) {
+                if (stackInSlot.getOrCreateTag().isEmpty() && ItemStack.isSameItem(stackInSlot, inserted)) {
                     if (stackInSlot.getCount() < targetSize) {
                         iItemHandler.insertItem(i, inserted, false);
                         return true;
@@ -244,32 +246,32 @@ public class Compat {
 
     public static void drawDarkText(
             Font font,
-            PoseStack stack,
+            GuiGraphics gui,
             Component translatable,
             int x,
             int y
     ) {
-        font.draw(stack, translatable, x, y, 0x00000000);
+        gui.drawString(font, translatable, x, y, 0x00000000);
     }
 
     public static void drawDarkText(
             Font font,
-            PoseStack stack,
+            GuiGraphics gui,
             FormattedCharSequence translatable,
             int x,
             int y
     ) {
-        font.draw(stack, translatable, x, y, 0x00000000);
+        gui.drawString(font, translatable, x, y, 0x00000000);
     }
 
     public static void drawLightText(
             Font font,
-            PoseStack stack,
+            GuiGraphics gui,
             String translatable,
             int x,
             int y
     ) {
-        font.drawShadow(stack, translatable, x, y, 0xFFFFFFFF);
+        gui.drawString(font, translatable, x, y, 0xFFFFFFFF, true);
     }
 
     public static Component getItemName(ResourceLocation wantedId) {
@@ -315,22 +317,22 @@ public class Compat {
      */
     public static int drawDarkTextWrap(
             Font font,
-            PoseStack poseStack,
+            GuiGraphics gui,
             Coordinate topLeft,
             int textWidth,
             Component translatable
     ) {
-        return drawTextWrap(font, poseStack, topLeft, textWidth, translatable, 0x00000000);
+        return drawTextWrap(font, gui, topLeft, textWidth, translatable, 0x00000000);
     }
 
     public static int drawRedTextWrap(
             Font font,
-            PoseStack poseStack,
+            GuiGraphics gui,
             Coordinate topLeft,
             int textWidth,
             Component translatable
     ) {
-        return drawTextWrap(font, poseStack, topLeft, textWidth, translatable, 0xFFFF0000);
+        return drawTextWrap(font, gui, topLeft, textWidth, translatable, 0xFFFF0000);
     }
 
     /**
@@ -342,7 +344,7 @@ public class Compat {
      */
     public static int drawTextWrap(
             Font font,
-            PoseStack poseStack,
+            GuiGraphics gui,
             Coordinate topLeft,
             int textWidth,
             Component translatable,
@@ -352,7 +354,7 @@ public class Compat {
         int out = 0;
         int maxLineWidth = 0;
         for (FormattedCharSequence line : font.split(translatable, textWidth)) {
-            font.draw(poseStack, line, topLeft.x(), topLeft.y() + out, color);
+            gui.drawString(font, line, topLeft.x(), topLeft.y() + out, color);
             if (capture) {
                 maxLineWidth = Math.max(maxLineWidth, font.width(line));
             }
@@ -385,6 +387,20 @@ public class Compat {
             float v1
     ) {
         return RANDOM.nextFloat() * (v1 - v) + v;
+    }
+
+    public static ItemRenderer itemRenderer() {
+        return Minecraft.getInstance().getItemRenderer();
+    }
+
+    public static void renderItemAndDecorations(
+            GuiGraphics gui,
+            ItemStack stack,
+            int x,
+            int y
+    ) {
+        gui.renderItem(stack, x, y);
+        gui.renderItemDecorations(Minecraft.getInstance().font, stack, x, y);
     }
 
     public static List<FormattedCharSequence> splitText(

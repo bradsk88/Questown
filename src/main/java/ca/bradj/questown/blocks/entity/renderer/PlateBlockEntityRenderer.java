@@ -2,16 +2,17 @@ package ca.bradj.questown.blocks.entity.renderer;
 
 import ca.bradj.questown.blocks.entity.PlateBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Vector3f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
@@ -41,23 +42,23 @@ public class PlateBlockEntityRenderer implements BlockEntityRenderer<PlateBlockE
         stack.pushPose();
         stack.translate(0.5f, 0, 0.5f);
         stack.scale(0.375f, 0.375f, 0.375f);
-        stack.mulPose(Vector3f.XP.rotationDegrees(90));
+        stack.mulPose(new Quaternionf().rotationAxis((float) Math.toRadians(90), new Vector3f(1, 0, 0)));
 
         switch (pbe.getBlockState().getValue(HorizontalDirectionalBlock.FACING)) {
-            case NORTH -> stack.mulPose(Vector3f.ZP.rotationDegrees(0));
-            case EAST -> stack.mulPose(Vector3f.ZP.rotationDegrees(90));
-            case SOUTH -> stack.mulPose(Vector3f.ZP.rotationDegrees(180));
-            case WEST -> stack.mulPose(Vector3f.ZP.rotationDegrees(270));
+            case NORTH -> stack.mulPose(new Quaternionf().rotationAxis((float) Math.toRadians(0), new Vector3f(0, 0, 1)));
+            case EAST -> stack.mulPose(new Quaternionf().rotationAxis((float) Math.toRadians(90), new Vector3f(0, 0, 1)));
+            case SOUTH -> stack.mulPose(new Quaternionf().rotationAxis((float) Math.toRadians(180), new Vector3f(0, 0, 1)));
+            case WEST -> stack.mulPose(new Quaternionf().rotationAxis((float) Math.toRadians(270), new Vector3f(0, 0, 1)));
         }
 
-        stack.mulPose(Vector3f.XP.rotationDegrees(-30));
+        stack.mulPose(new Quaternionf().rotationAxis((float) Math.toRadians(-30), new Vector3f(1, 0, 0)));
         stack.translate(0, 0, -0.5f);
 
         int ll = getLightLevel(pbe.getLevel(), pbe.getBlockPos());
 
         itemRenderer.renderStatic(
-                itemStack, ItemTransforms.TransformType.GUI, ll,
-                OverlayTexture.NO_OVERLAY, stack, buf, 1
+                itemStack, ItemDisplayContext.GUI, ll,
+                OverlayTexture.NO_OVERLAY, stack, buf, pbe.getLevel(), 1
         );
         stack.popPose();
 

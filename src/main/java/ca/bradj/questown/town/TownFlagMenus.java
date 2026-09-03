@@ -48,14 +48,14 @@ public class TownFlagMenus {
             int blocksOfProgress
     ) {
         BlockPos flagPos = inputFlagInfo.flagPos();
-        TownFlagBlockEntity flagEntity = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(flagPos);
+        TownFlagBlockEntity flagEntity = (TownFlagBlockEntity) sender.serverLevel().getBlockEntity(flagPos);
         TownInterface flag = flagEntity;
         FlagTabsEmbedding.FlagInfo realFlagInfo = flagEntity.getInfo();
 
         @SuppressWarnings("DataFlowIssue")
         ImmutableList<AbstractMap.SimpleEntry<MCQuest, MCReward>> quests = flag.getQuestHandle()
                                                                                .getAllQuestsWithRewards();
-        List<UIQuest> uiQuests = UIQuest.fromLevel(sender.getLevel(), quests);
+        List<UIQuest> uiQuests = UIQuest.fromLevel(sender.serverLevel(), quests);
 
         QuestScreenSummary summary = new QuestScreenSummary(
                 QuestCompletion.allComplete(uiQuests.stream().map(q -> q.status).toList()),
@@ -71,7 +71,7 @@ public class TownFlagMenus {
                     openMenu(
                             sender, (windowId, inv, p) -> new TownQuestsContainer(
                                     windowId, uiQuests, realFlagInfo, summary,
-                                    () -> triggerAdvancement(flagPos, sender.getLevel())
+                                    () -> triggerAdvancement(flagPos, sender.serverLevel())
                             ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
                             () -> flagEntity.hasVillagerArrivingInMorning(), summary
                     );
@@ -79,7 +79,7 @@ public class TownFlagMenus {
                 OpenFlagMenuMessage.VILLAGERS,
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
-                                windowId, realFlagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
+                                windowId, realFlagInfo, () -> triggerAdvancement(flagPos, sender.serverLevel())
                         ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
                         () -> flagEntity.hasVillagerArrivingInMorning(), summary
                 ),
@@ -127,7 +127,7 @@ public class TownFlagMenus {
             ServerPlayer p,
             Collection<? extends Quest<ResourceLocation, ?>> q
     ) {
-        List<RoomRecipe> farmRecipes = p.level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).stream()
+        List<RoomRecipe> farmRecipes = p.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).stream()
                                               .filter(RoomRecipe::isFarmRecipe).toList();
         for (Quest<?, ?> mcQuest : q) {
             if (farmRecipes.stream().noneMatch(z -> z.getId().equals(mcQuest.getWantedId()))) {

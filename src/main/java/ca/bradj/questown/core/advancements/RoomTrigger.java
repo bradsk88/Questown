@@ -7,7 +7,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.advancements.critereon.AbstractCriterionTriggerInstance;
 import net.minecraft.advancements.critereon.DeserializationContext;
-import net.minecraft.advancements.critereon.EntityPredicate;
+import net.minecraft.advancements.critereon.ContextAwarePredicate;
 import net.minecraft.advancements.critereon.SimpleCriterionTrigger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -80,7 +80,7 @@ public class RoomTrigger extends SimpleCriterionTrigger<RoomTrigger.Instance> {
     @Override
     public Instance createInstance(
             JsonObject json,
-            EntityPredicate.Composite predicate,
+            ContextAwarePredicate predicate,
             DeserializationContext parser
     ) {
         if (!json.has("context")) {
@@ -112,7 +112,7 @@ public class RoomTrigger extends SimpleCriterionTrigger<RoomTrigger.Instance> {
         private final Triggers context;
 
         public Instance(
-                EntityPredicate.Composite p_i231464_2_,
+                ContextAwarePredicate p_i231464_2_,
                 Triggers context
         ) {
             super(RoomTrigger.ID, p_i231464_2_);

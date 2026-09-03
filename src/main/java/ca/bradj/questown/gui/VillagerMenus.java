@@ -59,7 +59,7 @@ public class VillagerMenus {
         boolean alreadyPending = buf.readBoolean();
 
         // TODO[Performance]: Rather than getting the entity, get the vUUID and slot locks
-        VisitorMobEntity e = (VisitorMobEntity) player.level.getEntity(i);
+        VisitorMobEntity e = (VisitorMobEntity) player.level().getEntity(i);
         VillagerMenus menus = new VillagerMenus(e);
         // Never provide these initializers with the entity, itself. Instead, pass the entity's UUID.
         // It tends to cause client-side-only bugs that don't show up in the dev environment.

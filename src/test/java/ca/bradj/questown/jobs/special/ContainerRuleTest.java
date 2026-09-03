@@ -163,7 +163,7 @@ class ContainerRuleTest {
         rule.afterInsertItem(true, event);
 
         Assertions.assertTrue(
-                world.getSlotContents(WORK_SPOT, 1).sameItem(wheat),
+                ItemStack.isSameItem(world.getSlotContents(WORK_SPOT, 1), wheat),
                 "Item should be in first open slot (slot 1)"
         );
     }

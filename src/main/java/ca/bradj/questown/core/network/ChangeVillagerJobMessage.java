@@ -47,7 +47,7 @@ public record ChangeVillagerJobMessage(
             // Work that needs to be thread-safe (most work)
             ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
             // Do stuff
-            Optional<TownFlagBlockEntity> flag = sender.getLevel()
+            Optional<TownFlagBlockEntity> flag = sender.level()
                                                        .getBlockEntity(
                                                                new BlockPos(flagX, flagY, flagZ),
                                                                TilesInit.TOWN_FLAG.get()

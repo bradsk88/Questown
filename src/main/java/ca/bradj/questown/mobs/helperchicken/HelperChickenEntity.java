@@ -153,19 +153,19 @@ public class HelperChickenEntity extends Chicken {
         if (this.ownerFlagPos == null) {
             return super.interactAt(player, vec, hand);
         }
-        if (!(this.level.getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag)) {
+        if (!(this.level().getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag)) {
             return super.interactAt(player, vec, hand);
         }
         ItemStack held = player.getItemInHand(hand);
         if (tryDeliverWorldlySeeds(sp, flag, held)) {
-            return InteractionResult.sidedSuccess(this.level.isClientSide);
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
         // Only count main-hand interactions to avoid the off-hand follow-up
         // attempt double-incrementing the click counter.
         if (hand == InteractionHand.MAIN_HAND) {
             ChickenArcController.onPlayerClickedChicken(sp, flag);
         }
-        return InteractionResult.sidedSuccess(this.level.isClientSide);
+        return InteractionResult.sidedSuccess(this.level().isClientSide);
     }
 
     private boolean tryDeliverWorldlySeeds(
@@ -197,7 +197,7 @@ public class HelperChickenEntity extends Chicken {
         if (this.ownerFlagPos == null) {
             return;
         }
-        if (this.level.getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag) {
+        if (this.level().getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag) {
             ChickenArcController.onPlayerClickedChicken(player, flag);
         }
     }
@@ -284,7 +284,7 @@ public class HelperChickenEntity extends Chicken {
         if (this.ownerFlagPos == null) {
             return ChickenBeatState.FORFEIT;
         }
-        if (this.level.getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag) {
+        if (this.level().getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag) {
             return flag.getChickenBeatState();
         }
         return ChickenBeatState.FORFEIT;

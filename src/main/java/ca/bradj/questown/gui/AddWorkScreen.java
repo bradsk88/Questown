@@ -4,7 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiGraphics;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
@@ -80,10 +80,10 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
         int y = (this.height - backgroundHeight) / 2;
         int pageStringY = y + borderPadding;
         int x = ((this.width - backgroundWidth) / 2);
-        this.previousPage.x = x + borderPadding;
-        this.previousPage.y = pageStringY;
-        this.nextPage.x = x + backgroundWidth - buttonWidth - borderPadding;
-        this.nextPage.y = pageStringY;
+        this.previousPage.setX(x + borderPadding);
+        this.previousPage.setY(pageStringY);
+        this.nextPage.setX(x + backgroundWidth - buttonWidth - borderPadding);
+        this.nextPage.setY(pageStringY);
         this.addRenderableWidget(this.previousPage);
         this.addRenderableWidget(this.nextPage);
     }
@@ -103,19 +103,19 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
 
     @Override
     public void render(
-            PoseStack poseStack,
+            GuiGraphics gui,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
+        this.renderBackground(gui);
+        super.render(gui, mouseX, mouseY, partialTicks);
 
         int x = ((this.width - backgroundWidth) / 2);
         int y = (this.height - backgroundHeight) / 2;
         int pageStringY = y + PAGE_PADDING;
 
-        renderPageNum(poseStack, x);
+        renderPageNum(gui, x);
 
         y = pageStringY + PAGE_PADDING;
 
@@ -126,24 +126,24 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
         y = y + PAGE_PADDING;
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
-        ImmutableList<Slot> slotz = renderRequestItemIcons(poseStack, work, x, y, mouseX, mouseY);
+        ImmutableList<Slot> slotz = renderRequestItemIcons(gui, work, x, y, mouseX, mouseY);
         b.addAll(slotz);
 
         int idX = x + PAGE_PADDING;
         int idY = y - 10;
-        this.font.draw(poseStack, Compat.translatable("job_board.add_work.title"), idX, idY, TEXT_COLOR);
+        gui.drawString(this.font, Compat.translatable("job_board.add_work.title"), idX, idY, TEXT_COLOR);
         slots.clear();
         slots.addAll(b.build());
 
         // Render the page buttons
-        this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
-        this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
+        this.previousPage.render(gui, mouseX, mouseY, partialTicks);
+        this.nextPage.render(gui, mouseX, mouseY, partialTicks);
     }
 
     private List<Slot> slots = new ArrayList<>();
 
     private ImmutableList<Slot> renderRequestItemIcons(
-            PoseStack poseStack,
+            GuiGraphics gui,
             Iterable<Ingredient> possibleRequests,
             int x,
             int y,
@@ -166,7 +166,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
             if (allPossible.length > 0) {
                 int curSeconds = (int) (System.currentTimeMillis() / 1000);
                 ItemStack itemStack = allPossible[curSeconds % allPossible.length];
-                renderRequest(poseStack, y, mouseX, mouseY, itemStack, iconX, dummyInv, slotIndex, b);
+                renderRequest(gui, y, mouseX, mouseY, itemStack, iconX, dummyInv, slotIndex, b);
                 slotIndex++;
                 slotX++;
             }
@@ -179,7 +179,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
                     slotX = 0;
                 }
                 iconX = x + 8 + slotX * 18;
-                renderRequest(poseStack, y, mouseX, mouseY, specificItem, iconX, dummyInv, slotIndex, b);
+                renderRequest(gui, y, mouseX, mouseY, specificItem, iconX, dummyInv, slotIndex, b);
                 slotIndex++;
                 slotX++;
             }
@@ -188,7 +188,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
     }
 
     private void renderRequest(
-            PoseStack poseStack,
+            GuiGraphics gui,
             int y,
             int mouseX,
             int mouseY,
@@ -198,22 +198,16 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
             int slotIndex,
             ImmutableList.Builder<Slot> b
     ) {
-        this.itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
+        Compat.renderItemAndDecorations(gui, itemStack, iconX, y + 1);
         if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
-            fill(
-                    poseStack,
+            gui.fill(
                     iconX,
                     y + 1,
                     iconX + 16,
                     y + 17,
                     0x80FFFFFF
             ); // transparent white square behind hovered item slot
-            renderTooltip(
-                    poseStack,
-                    itemStack.getItem().getName(itemStack),
-                    mouseX,
-                    mouseY
-            ); // render hovered item's name as a tooltip
+            this.setTooltipForNextRenderPass(itemStack.getItem().getName(itemStack)); // hovered item's name as tooltip
         }
         Slot element = new Slot(dummyInv, slotIndex, iconX, y + 1);
         element.set(itemStack);
@@ -221,16 +215,15 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
     }
 
     private void renderPageNum(
-            PoseStack poseStack,
+            GuiGraphics gui,
             int x
     ) {
         // Draw page numbers
-        fill(
-                poseStack,
+        gui.fill(
                 x + borderPadding + buttonWidth,
-                nextPage.y,
+                nextPage.getY(),
                 x + backgroundWidth - borderPadding - buttonWidth,
-                nextPage.y + buttonHeight,
+                nextPage.getY() + buttonHeight,
                 0x30000000
         );
         int totalPages = (int) Math.ceil((double) work.size() / MAX_CARDS_PER_PAGE);
@@ -238,33 +231,19 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
         ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        Compat.drawLightText(font, poseStack, pageString, textArea.getX(), textArea.getY());
+        Compat.drawLightText(font, gui, pageString, textArea.getX(), textArea.getY());
     }
 
     @Override
     protected void renderBg(
-            PoseStack poseStack,
+            GuiGraphics gui,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(poseStack, x, y, backgroundWidth, backgroundHeight);
-    }
-
-    private void renderSlot(
-            PoseStack poseStack,
-            Slot slot,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        ItemStack stack = slot.getItem();
-        if (!stack.isEmpty()) {
-            this.minecraft.getItemRenderer().renderGuiItem(stack, slot.x, slot.y);
-            this.minecraft.getItemRenderer().renderGuiItemDecorations(this.font, stack, slot.x, slot.y, "");
-        }
+        this.background.draw(gui, x, y, backgroundWidth, backgroundHeight);
     }
 
     private void nextPage() {

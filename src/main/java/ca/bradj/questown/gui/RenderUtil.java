@@ -8,14 +8,14 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.apache.logging.log4j.util.BiConsumer;
 import org.jetbrains.annotations.Nullable;
@@ -95,11 +95,11 @@ public class RenderUtil {
     }
 
     public static void highlight(
-            PoseStack stack,
+            GuiGraphics gui,
             Coordinate topLeft,
             Coordinate botRight
     ) {
-        GuiComponent.fill(stack, topLeft.x(), topLeft.y(), botRight.x(), botRight.y(), HIGHLIGHT);
+        gui.fill(topLeft.x(), topLeft.y(), botRight.x(), botRight.y(), HIGHLIGHT);
     }
 
     public static void renderItemScaled(
@@ -115,7 +115,7 @@ public class RenderUtil {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         PoseStack posestack = RenderSystem.getModelViewStack();
         posestack.pushPose();
-        posestack.translate(x, y, 100.0F + itemRenderer.blitOffset);
+        posestack.translate(x, y, 100.0F);
         posestack.translate(8.0D, 8.0D, 0.0D);
         posestack.scale(1.0F, -1.0F, 1.0F);
         float size = 16.0F * scale;
@@ -126,7 +126,7 @@ public class RenderUtil {
                                                                                  .bufferSource();
         itemRenderer.render(
                 defaultInstance,
-                ItemTransforms.TransformType.GUI,
+                ItemDisplayContext.GUI,
                 false,
                 posestack1,
                 multibuffersource$buffersource,

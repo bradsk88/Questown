@@ -8,8 +8,8 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 
 public class MineshaftBlock extends RoomBlock {
@@ -17,7 +17,7 @@ public class MineshaftBlock extends RoomBlock {
 
     public MineshaftBlock(
     ) {
-        super(Properties.of(Material.STONE, MaterialColor.STONE).strength(1.0F, 10.0F).noOcclusion().lightLevel(b -> 15));
+        super(BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(1.0F, 10.0F).noOcclusion().lightLevel(b -> 15));
     }
 
     @Override

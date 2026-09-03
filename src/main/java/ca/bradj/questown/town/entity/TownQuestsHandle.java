@@ -114,7 +114,7 @@ public class TownQuestsHandle implements QuestsHolder {
                             return;
                         }
                         AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
-                                player.getLevel(),
+                                player.serverLevel(),
                                 RoomTrigger.Triggers.FirstOpenFlagMenu,
                                 t.getBlockPos()
                         );
@@ -184,7 +184,7 @@ public class TownQuestsHandle implements QuestsHolder {
             MCQuestBatch batch
     ) {
         final TownInterface t = unsafeGetTown();
-        List<UIQuest> quests = UIQuest.fromLevel(sp.getLevel(), batch);
+        List<UIQuest> quests = UIQuest.fromLevel(sp.serverLevel(), batch);
         Compat.openScreen(
                 sp, new MenuProvider() {
                     @Override

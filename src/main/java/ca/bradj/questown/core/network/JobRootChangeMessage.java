@@ -36,7 +36,7 @@ public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean 
     ) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer sender = ctx.get().getSender();
-            Optional<TownFlagBlockEntity> flag = sender.getLevel().getBlockEntity(flagPos, TilesInit.TOWN_FLAG.get());
+            Optional<TownFlagBlockEntity> flag = sender.level().getBlockEntity(flagPos, TilesInit.TOWN_FLAG.get());
             if (flag.isEmpty()) {
                 QT.GUI_LOGGER.error("No flag at position {}. Job root will not be changed.", flagPos);
                 return;

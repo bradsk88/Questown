@@ -14,8 +14,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
@@ -296,7 +295,7 @@ public class Util {
             WorkOutput<X, WorkPosition<BlockPos>> v
     ) {
         BlockPos feet = v.spot().entityFeetPos();
-        if (sl.getBlockState(feet).getMaterial().isSolid()) {
+        if (sl.getBlockState(feet).isSolid()) {
             feet = feet.above();
         }
         return new WorkOutput<>(
@@ -309,67 +308,41 @@ public class Util {
 
 
     public static void blit(
-            PoseStack stack,
+            GuiGraphics gui,
+            ResourceLocation texture,
             int screenX,
             int screenY,
             float firstPixelInFilex,
             float firstPixelInFileY,
             int drawNumPixelsX,
-            int drawNumPixelsY,
-            int widthOfEntireFile,
-            int texFileHeight
+            int drawNumPixelsY
     ) {
-        blit(
-                stack,
+        gui.blit(
+                texture,
                 screenX,
                 screenY,
-                firstPixelInFilex,
-                firstPixelInFileY,
                 drawNumPixelsX,
                 drawNumPixelsY,
-                widthOfEntireFile,
-                texFileHeight,
-                drawNumPixelsX,
-                drawNumPixelsY
-        );
-    }
-
-    public static void blit(
-            PoseStack stack,
-            int screenX,
-            int screenY,
-            float firstPixelInFilex,
-            float firstPixelInFileY,
-            int drawNumPixelsX,
-            int drawNumPixelsY,
-            int widthOfEntireFile,
-            int texFileHeight,
-            int drawWidth,
-            int drawHeight
-    ) {
-        GuiComponent.blit(
-                stack,
-                screenX,
-                screenY,
-                drawWidth,
-                drawHeight,
-                firstPixelInFilex,
-                firstPixelInFileY,
-                drawNumPixelsX,
-                drawNumPixelsY,
-                widthOfEntireFile,
-                texFileHeight
+                (int) firstPixelInFilex,
+                (int) firstPixelInFileY
         );
     }
 
     public static void blitTab(
-            PoseStack stack,
+            GuiGraphics gui,
             Integer x,
             Integer y,
             int i
     ) {
-        RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/tabs.png"));
-        blit(stack, x + 12, y + 10, i * 16, 0, 16, 16, 256, 256);
+        gui.blit(
+                Questown.ResourceLocation("textures/menu/tabs.png"),
+                x + 12,
+                y + 10,
+                16,
+                16,
+                i * 16,
+                0
+        );
     }
 
     public static void onScreenText(
@@ -386,16 +359,16 @@ public class Util {
     public static final int faceWidth = 8;
 
     public static void blitFace(
-            PoseStack stack,
+            GuiGraphics gui,
             UUID uuid,
             int x,
             int y
     ) {
-        blitFace(stack, uuid, x, y, 1);
+        blitFace(gui, uuid, x, y, 1);
     }
 
     public static void blitFace(
-            PoseStack stack,
+            GuiGraphics gui,
             UUID uuid,
             int x,
             int y,
@@ -403,20 +376,14 @@ public class Util {
     ) {
         float texStartX = 8;
         float texStartY = 8;
-        int texFileWidth = 64;
-        int texFileHeight = 64;
         ResourceLocation texture = VisitorMobRenderer.getTextureLocation(uuid);
-        RenderSystem.setShaderTexture(0, texture);
         Util.blit(
-                stack,
+                gui,
+                texture,
                 x,
                 y,
                 texStartX,
                 texStartY,
-                faceWidth,
-                faceWidth,
-                texFileWidth,
-                texFileHeight,
                 faceWidth * scale,
                 faceWidth * scale
         );

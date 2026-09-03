@@ -3,7 +3,7 @@ package ca.bradj.questown.jobs.requests;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -78,7 +78,7 @@ public class WorkRequest {
             throw new IllegalArgumentException("Invalid work request on buffer.");
         }
         if (i.isEmpty()) {
-            return new WorkRequest(new TagKey<>(Registry.ITEM_REGISTRY, new ResourceLocation(t)), null);
+            return new WorkRequest(new TagKey<>(Registries.ITEM, new ResourceLocation(t)), null);
         }
         return new WorkRequest(null, ForgeRegistries.ITEMS.getValue(new ResourceLocation(i)));
     }

@@ -1,14 +1,14 @@
 package ca.bradj.questown.gui.villager.advancements;
 
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.advancements.FrameType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.StringSplitter;
-import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-public class VillagerAdvancementsWidget extends GuiComponent {
+public class VillagerAdvancementsWidget {
     private static final ResourceLocation WIDGETS_LOCATION = new ResourceLocation(
             "textures/gui/advancements/widgets.png");
     private static final int[] TEST_SPLIT_OFFSETS = new int[]{0, 10, -10, 25, -25};
@@ -131,7 +131,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     }
 
     public void drawConnectivity(
-            PoseStack p_97299_,
+            GuiGraphics p_97299_,
             int p_97300_,
             int p_97301_,
             boolean p_97302_
@@ -172,7 +172,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     }
 
     public void draw(
-            PoseStack p_97267_,
+            GuiGraphics p_97267_,
             int p_97268_,
             int p_97269_
     ) {
@@ -189,11 +189,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             int ft = getFrameType();
             if (ft >= 0) {
                 this.blit(p_97267_, x, y, ft, v1, v2, v3);
-                this.minecraft.getItemRenderer().renderAndDecorateFakeItem(
-                        this.display.getIcon(),
-                        p_97268_ + this.x + 8,
-                        p_97269_ + this.y + 5
-                );
+                Compat.renderItemAndDecorations(p_97267_, this.display.getIcon(), p_97268_ + this.x + 8, p_97269_ + this.y + 5);
             }
         }
 
@@ -218,12 +214,48 @@ public class VillagerAdvancementsWidget extends GuiComponent {
         return ft;
     }
 
+    private void blit(
+            GuiGraphics gui,
+            int x,
+            int y,
+            int u,
+            int v,
+            int width,
+            int height
+    ) {
+        gui.blit(WIDGETS_LOCATION, x, y, u, v, width, height);
+    }
+
+    private void hLine(
+            GuiGraphics gui,
+            int x1,
+            int x2,
+            int y,
+            int color
+    ) {
+        int min = Math.min(x1, x2);
+        int max = Math.max(x1, x2);
+        gui.fill(min, y, max + 1, y + 1, color);
+    }
+
+    private void vLine(
+            GuiGraphics gui,
+            int x,
+            int y1,
+            int y2,
+            int color
+    ) {
+        int min = Math.min(y1, y2);
+        int max = Math.max(y1, y2);
+        gui.fill(x, min, x + 1, max + 1, color);
+    }
+
     public void addChild(VillagerAdvancementsWidget p_97307_) {
         this.children.add(p_97307_);
     }
 
     public void drawHover(
-            PoseStack p_97271_,
+            GuiGraphics p_97271_,
             int p_97272_,
             int p_97273_,
             float p_97274_,
@@ -278,46 +310,48 @@ public class VillagerAdvancementsWidget extends GuiComponent {
                 26
         );
         if (flag) {
-            this.minecraft.font.drawShadow(p_97271_, this.title, (float) (i1 + 5), (float) (p_97273_ + this.y + 9), -1);
+            p_97271_.drawString(this.minecraft.font, this.title, (float) (i1 + 5), (float) (p_97273_ + this.y + 9), -1, true);
         } else {
-            this.minecraft.font.drawShadow(
-                    p_97271_,
+            p_97271_.drawString(
+                    this.minecraft.font,
                     this.title,
                     (float) (p_97272_ + this.x + 32),
                     (float) (p_97273_ + this.y + 9),
-                    -1
+                    -1,
+                    true
             );
         }
 
         int k1;
         if (flag1) {
             for (k1 = 0; k1 < this.description.size(); ++k1) {
-                this.minecraft.font.draw(
-                        p_97271_,
+                p_97271_.drawString(
+                        this.minecraft.font,
                         (FormattedCharSequence) this.description.get(k1),
                         (float) (i1 + 5),
                         (float) (l + 26 - j1 + 7 + k1 * 9),
-                        -5592406
+                        -5592406,
+                        false
                 );
             }
         } else {
             for (k1 = 0; k1 < this.description.size(); ++k1) {
-                this.minecraft.font.draw(
-                        p_97271_,
+                p_97271_.drawString(
+                        this.minecraft.font,
                         (FormattedCharSequence) this.description.get(k1),
                         (float) (i1 + 5),
                         (float) (p_97273_ + this.y + 9 + 17 + k1 * 9),
-                        -5592406
+                        -5592406,
+                        false
                 );
             }
         }
 
-        this.minecraft.getItemRenderer()
-                      .renderAndDecorateFakeItem(this.display.getIcon(), p_97272_ + this.x + 8, p_97273_ + this.y + 5);
+        Compat.renderItemAndDecorations(p_97271_, this.display.getIcon(), p_97272_ + this.x + 8, p_97273_ + this.y + 5);
     }
 
     protected void render9Sprite(
-            PoseStack p_97288_,
+            GuiGraphics p_97288_,
             int p_97289_,
             int p_97290_,
             int p_97291_,
@@ -414,7 +448,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     }
 
     protected void renderRepeating(
-            PoseStack p_97278_,
+            GuiGraphics p_97278_,
             int p_97279_,
             int p_97280_,
             int p_97281_,

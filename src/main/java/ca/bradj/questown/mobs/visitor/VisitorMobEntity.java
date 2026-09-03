@@ -222,13 +222,13 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 .build();
     }
 
-    public static ImmutableList<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> getCorePackage(
+    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super VisitorMobEntity>>> getCorePackage(
     ) {
         return ImmutableList.of(
                 Pair.of(0, new Swim(0.8F)),
                 Pair.of(0, new LookAtWalkTarget()),
                 Pair.of(0, new LookAtTargetSink(45, 90)),
-                Pair.of(0, new WakeUp()),
+                Pair.of(0, WakeUp.create()),
                 Pair.of(1, new MoveToTownTargetSink()),
                 Pair.of(4, new Admire(100)),
                 Pair.of(5, new CoerceWalk()),
@@ -236,25 +236,25 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         );
     }
 
-    public static ImmutableList<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> getRestPackage(
+    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super VisitorMobEntity>>> getRestPackage(
     ) {
-        Behavior<? super VisitorMobEntity> walkTarget = new SetWalkTargetFromBlockMemory(
+        BehaviorControl<? super VisitorMobEntity> walkTarget = new SetWalkTargetFromBlockMemory(
                 MemoryModuleType.HOME, 0.5f, 1, 150, 1200
         );
 
         return ImmutableList.of(
                 Pair.of(1, walkTarget),
                 Pair.of(4, new SleepInBed()),
-                Pair.of(99, new UpdateActivityFromSchedule())
+                Pair.of(99, UpdateActivityFromSchedule.create())
         );
     }
 
-    public static ImmutableList<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> getIdlePackage(
+    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super VisitorMobEntity>>> getIdlePackage(
             VisitorMobEntity entity
     ) {
-        ImmutableList.Builder<Pair<Integer, ? extends Behavior<? super VisitorMobEntity>>> b = ImmutableList.builder();
+        ImmutableList.Builder<Pair<Integer, ? extends BehaviorControl<? super VisitorMobEntity>>> b = ImmutableList.builder();
         b.add(Pair.of(3, new LookAtWalkTarget()));
-        b.add(Pair.of(99, new UpdateActivityFromSchedule()));
+        b.add(Pair.of(99, UpdateActivityFromSchedule.create()));
         return b.build();
     }
 
@@ -288,8 +288,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (inventoryFullStrategy.equals(InventoryFullStrategy.REMOVE_FROM_WORLD)) {
             return false;
         }
-        ItemEntity item = new ItemEntity(level, getX(), getY(), getZ(), v.get().toMCItemStack());
-        level.addFreshEntity(item);
+        ItemEntity item = new ItemEntity(level(), getX(), getY(), getZ(), v.get().toMCItemStack());
+        level().addFreshEntity(item);
         return false;
     }
 
@@ -342,7 +342,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
      */
     @SuppressWarnings("DeprecatedIsStillUsed")
     public void setJob(Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob) {
-        if (!(level instanceof ServerLevel sl)) {
+        if (!(level() instanceof ServerLevel sl)) {
             QT.VILLAGER_LOGGER.error("setJob should never be called from client side");
             return;
         }
@@ -421,7 +421,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
      * Silence means working (ADR-0011), so this is set only when the townie has actually given up.
      */
     public void setNeed(TownieNeed newNeed) {
-        if (level.isClientSide()) {
+        if (level().isClientSide()) {
             return;
         }
         if (newNeed.name().equals(this.entityData.get(need))) {
@@ -440,7 +440,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     /** Server-only: the item the {@code UNMET_ITEM} need is about, cleared by {@link #setNeed}. */
     public void setUnmetItem(String itemKey) {
-        if (level.isClientSide()) {
+        if (level().isClientSide()) {
             return;
         }
         this.entityData.set(unmetItem, itemKey == null ? "" : itemKey);
@@ -484,7 +484,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return; // TODO: Confirm this is ok
         }
 
-        if (!(level instanceof ServerLevel sl)) {
+        if (!(level() instanceof ServerLevel sl)) {
             return;
         }
 
@@ -582,7 +582,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             j.initializeStatusFromEntityData(s);
         }
         j.tick(town, this, getDirection());
-        if (level.isClientSide()) {
+        if (level().isClientSide()) {
             return;
         }
 
@@ -700,7 +700,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // only handle cosmetic stuff like position, pose, etc.
 
     private void detectNearbyDistractions(ServerLevel sl) {
-        List<Player> ps = level.getNearbyPlayers(
+        List<Player> ps = level().getNearbyPlayers(
                 TargetingConditions.forNonCombat(),
                 this,
                 this.getBoundingBox().inflate(16.0D, 64.0D, 16.0D)
@@ -739,39 +739,39 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (getBrain().getMemory(MemoryModuleType.WALK_TARGET)
                       .isPresent()) {
             BlockPos on = blockPosition();
-            BlockState bs = level.getBlockState(on);
+            BlockState bs = level().getBlockState(on);
             if (bs.getBlock() instanceof FarmBlock) {
                 on = on.above();
-                bs = level.getBlockState(on);
+                bs = level().getBlockState(on);
             }
             if (bs.getBlock() instanceof FenceGateBlock) {
                 bs = bs.setValue(FenceGateBlock.OPEN, true);
-                level.setBlock(on, bs, 10);
+                level().setBlock(on, bs, 10);
             }
             Direction dir = getDirection();
             BlockPos front = on.relative(dir);
-            BlockState fbs = level.getBlockState(front);
+            BlockState fbs = level().getBlockState(front);
             if (fbs.getBlock() instanceof FenceGateBlock) {
                 fbs = fbs.setValue(FenceGateBlock.OPEN, true);
-                level.setBlock(front, fbs, 10);
+                level().setBlock(front, fbs, 10);
             }
             front = on.relative(dir.getCounterClockWise());
-            fbs = level.getBlockState(front);
+            fbs = level().getBlockState(front);
             if (fbs.getBlock() instanceof FenceGateBlock) {
                 fbs = fbs.setValue(FenceGateBlock.OPEN, true);
-                level.setBlock(front, fbs, 10);
+                level().setBlock(front, fbs, 10);
             }
             front = on.relative(dir.getClockWise());
-            fbs = level.getBlockState(front);
+            fbs = level().getBlockState(front);
             if (fbs.getBlock() instanceof FenceGateBlock) {
                 fbs = fbs.setValue(FenceGateBlock.OPEN, true);
-                level.setBlock(front, fbs, 10);
+                level().setBlock(front, fbs, 10);
             }
             BlockPos behind = on.relative(getDirection().getOpposite());
-            BlockState bbs = level.getBlockState(behind);
+            BlockState bbs = level().getBlockState(behind);
             if (bbs.getBlock() instanceof FenceGateBlock) {
                 bbs = bbs.setValue(FenceGateBlock.OPEN, false);
-                level.setBlock(behind, bbs, 10);
+                level().setBlock(behind, bbs, 10);
             }
         }
     }
@@ -785,8 +785,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         super.remove(p_146834_);
         if (p_146834_.equals(RemovalReason.KILLED)) {
             for (int i = 0; i < getInventory().getContainerSize(); i++) {
-                level.addFreshEntity(new ItemEntity(
-                        level,
+                level().addFreshEntity(new ItemEntity(
+                        level(),
                         position().x,
                         position().y,
                         position().z,
@@ -839,7 +839,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     private Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getJob() {
-        if (level.isClientSide()) {
+        if (level().isClientSide()) {
             return ClientSideThrowingJob.INSTANCE;
         }
         return this.job.get();
@@ -854,11 +854,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (getJob().shouldBeNoClip(town, blockPosition())) {
             return;
         }
-        List<Entity> list = this.level.getEntities(this, this.getBoundingBox(), EntitySelector.pushableBy(this));
+        List<Entity> list = this.level().getEntities(this, this.getBoundingBox(), EntitySelector.pushableBy(this));
         list = list.stream().filter(v -> !(getClass().isInstance(v) || v instanceof Player)).toList();
         // Copied from superclass
         if (!list.isEmpty()) {
-            int i = this.level.getGameRules().getInt(GameRules.RULE_MAX_ENTITY_CRAMMING);
+            int i = this.level().getGameRules().getInt(GameRules.RULE_MAX_ENTITY_CRAMMING);
             if (i > 0 && list.size() > i - 1 && this.random.nextInt(4) == 0) {
                 int j = 0;
 
@@ -869,7 +869,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 }
 
                 if (j > i - 1) {
-                    this.hurt(DamageSource.CRAMMING, 6.0F);
+                    this.hurt(this.level().damageSources().cramming(), 6.0F);
                 }
             }
 
@@ -959,7 +959,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         super.load(tag);
         if (tag.contains(NBT_TOWN_X) && tag.contains(NBT_TOWN_Y) && tag.contains(NBT_TOWN_Z)) {
             BlockPos bp = new BlockPos(tag.getInt(NBT_TOWN_X), tag.getInt(NBT_TOWN_Y), tag.getInt(NBT_TOWN_Z));
-            if (this.level instanceof ServerLevel sl) {
+            if (this.level() instanceof ServerLevel sl) {
                 BlockEntity entity = sl.getBlockEntity(bp);
                 if (!(entity instanceof TownFlagBlockEntity flag)) {
                     QT.VILLAGER_LOGGER.error("Entity at {} was not a TownFlag", bp);
@@ -1017,7 +1017,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         brain.addActivity(Activity.REST, getRestPackage());
         brain.addActivity(Activity.CORE, getCorePackage());
         brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-        brain.updateActivityFromSchedule(this.level.getDayTime(), this.level.getGameTime());
+        brain.updateActivityFromSchedule(this.level().getDayTime(), this.level().getGameTime());
         return brain;
     }
 
@@ -1031,10 +1031,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public void startSleeping(BlockPos p_21141_) {
         getInBed(p_21141_);
         this.setSleepingPos(p_21141_);
-        this.brain.setMemory(MemoryModuleType.LAST_SLEPT, this.level.getGameTime());
+        this.brain.setMemory(MemoryModuleType.LAST_SLEPT, this.level().getGameTime());
         this.brain.eraseMemory(MemoryModuleType.WALK_TARGET);
         this.brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
-        this.lastBedTime = Util.getDayTime(level);
+        this.lastBedTime = Util.getDayTime(level());
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
@@ -1048,9 +1048,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             this.stopRiding();
         }
 
-        BlockState blockstate = this.level.getBlockState(p_21141_);
-        if (blockstate.isBed(level, p_21141_, this)) {
-            blockstate.setBedOccupied(level, p_21141_, this, true);
+        BlockState blockstate = this.level().getBlockState(p_21141_);
+        if (blockstate.isBed(level(), p_21141_, this)) {
+            blockstate.setBedOccupied(level(), p_21141_, this, true);
         }
 
         this.setPose(SLEEPING);
@@ -1070,13 +1070,13 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @Override
     public void stopSleeping() {
         Optional<BlockPos> sleepingPos = getOutOfBed();
-        long curTime = this.level.getGameTime();
+        long curTime = this.level().getGameTime();
         this.brain.setMemory(MemoryModuleType.LAST_WOKEN, curTime);
 
         sleepingPos.ifPresent(
                 bed -> {
                     long nightSleepTicks = lastBedTime.ticksBeforeMidnight();
-                    long ticksSlept = Util.getDayTime(level).dayTime() + nightSleepTicks;
+                    long ticksSlept = Util.getDayTime(level()).dayTime() + nightSleepTicks;
                     sleepListeners.forEach(l -> l.accept(new VillagerSleptEvent(ticksSlept, bed)));
                 }
         );
@@ -1086,11 +1086,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     private @NotNull Optional<BlockPos> getOutOfBed() {
         Optional<BlockPos> sleepingPos = this.getSleepingPos();
-        sleepingPos.filter(this.level::hasChunkAt).ifPresent((p_147228_) -> {
-            BlockState blockstate = this.level.getBlockState(p_147228_);
-            if (blockstate.isBed(level, p_147228_, this)) {
-                blockstate.setBedOccupied(level, p_147228_, this, false);
-                Vec3 vec31 = BedBlock.findStandUpPosition(this.getType(), this.level, p_147228_, this.getYRot())
+        sleepingPos.filter((p_147227_) -> this.level().hasChunkAt(p_147227_)).ifPresent((p_147228_) -> {
+            BlockState blockstate = this.level().getBlockState(p_147228_);
+            if (blockstate.isBed(this.level(), p_147228_, this)) {
+                blockstate.setBedOccupied(this.level(), p_147228_, this, false);
+                Vec3 vec31 = BedBlock.findStandUpPosition(this.getType(), this.level(), p_147228_, this.getDirection(), this.getYRot())
                                      .orElseGet(() -> {
                                          BlockPos blockpos = p_147228_.above();
                                          return new Vec3(
@@ -1129,12 +1129,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     protected void customServerAiStep() {
-        this.level.getProfiler()
+        this.level().getProfiler()
                   .push(String.format("%s_%s", Questown.MODID, "visitorBrain"));
         //noinspection unchecked
         Brain<VisitorMobEntity> brain1 = (Brain<VisitorMobEntity>) this.getBrain();
-        brain1.tick((ServerLevel) this.level, this);
-        this.level.getProfiler()
+        brain1.tick((ServerLevel) this.level(), this);
+        this.level().getProfiler()
                   .pop();
         super.customServerAiStep();
 
@@ -1226,8 +1226,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public void releasePoi(MemoryModuleType<GlobalPos> p_35429_) {
-        if (this.level instanceof ServerLevel) {
-            MinecraftServer minecraftserver = ((ServerLevel) this.level).getServer();
+        if (this.level() instanceof ServerLevel) {
+            MinecraftServer minecraftserver = ((ServerLevel) this.level()).getServer();
             this.brain.getMemory(p_35429_)
                       .ifPresent((p_186306_) -> {
                           ServerLevel serverlevel = minecraftserver.getLevel(p_186306_.dimension());
@@ -1247,7 +1247,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     protected void jumpFromGround() {
-        BlockState onBlock = level.getBlockState(blockPosition());
+        BlockState onBlock = level().getBlockState(blockPosition());
         if (!job.get().isJumpingAllowed(onBlock)) {
             // Jumping destroys crops. Don't do it when we don't have to
             return;
@@ -1265,7 +1265,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             Vec3 p_19981_,
             InteractionHand hand
     ) {
-        boolean isClientSide = player.level.isClientSide();
+        boolean isClientSide = player.level().isClientSide();
         if (!(player instanceof ServerPlayer sp)) {
             return InteractionResult.sidedSuccess(isClientSide);
         }

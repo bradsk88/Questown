@@ -4,11 +4,11 @@ import ca.bradj.questown.mobs.helperchicken.BubbleRenderType;
 import ca.bradj.questown.mobs.helperchicken.HelperChickenEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Matrix4f;
+import org.joml.Matrix4f;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -289,11 +289,12 @@ public final class BubbleRenderer {
         poseStack.translate(0.0, ICON_CENTRE_Y_INNER, 0.0);
         itemRenderer.renderStatic(
                 shown,
-                ItemTransforms.TransformType.GUI,
+                ItemDisplayContext.GUI,
                 FULLBRIGHT,
                 OverlayTexture.NO_OVERLAY,
                 poseStack,
                 effectiveBuffer,
+                Minecraft.getInstance().level,
                 0
         );
         poseStack.popPose();

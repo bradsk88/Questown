@@ -8,7 +8,7 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
@@ -53,21 +53,11 @@ public class StatusGraphic {
     }
 
     public void render(
-            PoseStack stack
+            GuiGraphics gui
     ) {
         if (getSmoothedStatus() instanceof ProductionStatus ps) {
-            RenderSystem.setShaderTexture(0, ClientAccess.getArt(jobId, ps));
+            blit(gui, ClientAccess.getArt(jobId, ps), topLeft.get().x(), topLeft.get().y(), 0, 0, 32, 32);
         }
-        int srcX = 0;
-        int srcY = 0;
-        Coordinate l = topLeft.get();
-        int destX = l.x();
-        int destY = l.y();
-        int drawWidth = 32;
-        int drawHeight = 32;
-        int texWidth = 32;
-        int texHeight = 32;
-        blit(stack, destX, destY, srcX, srcY, drawWidth, drawHeight, texWidth, texHeight);
     }
 
     public boolean renderTooltip(

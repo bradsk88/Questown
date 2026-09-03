@@ -8,9 +8,9 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
@@ -121,34 +121,31 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
         this.craftMatButton = craftButton(bgX + CRAFT_BTN_X, bgY + row2Y, 1, Items.OAK_PRESSURE_PLATE, matDesc());
         this.addRenderableWidget(this.craftWandButton);
         this.addRenderableWidget(this.craftMatButton);
-        this.addRenderableWidget(new Button(
-                bgX + MARGIN, bgY + moveButtonY, TEXT_WIDTH, BTN_HEIGHT,
+        this.addRenderableWidget(Button.builder(
                 Compat.translatable("menu.flag_crafting.begin_moving"),
                 btn -> {
                     QuestownNetwork.CHANNEL.sendToServer(new BeginTownRelocationMessage(flagPos));
                     this.onClose();
                 }
-        ));
+        ).bounds(bgX + MARGIN, bgY + moveButtonY, TEXT_WIDTH, BTN_HEIGHT).build());
     }
 
     private Button craftButton(int x, int y, int recipeIndex, Item required, Component desc) {
-        return new Button(
-                x, y, CRAFT_BTN_W, BTN_HEIGHT,
+        return Button.builder(
                 Compat.translatable("menu.flag_crafting.craft"),
                 btn -> {
                     QuestownNetwork.CHANNEL.sendToServer(new FlagCraftMessage(flagPos, recipeIndex));
                     this.onClose();
-                },
-                (btn, stack, mouseX, mouseY) -> renderCraftTooltip(stack, desc, required, mouseX, mouseY)
-        );
+                }
+        ).bounds(x, y, CRAFT_BTN_W, BTN_HEIGHT).build();
     }
 
-    private void renderCraftTooltip(PoseStack stack, Component desc, Item required, int mouseX, int mouseY) {
+    private void renderCraftTooltip(GuiGraphics gui, Component desc, Item required, int mouseX, int mouseY) {
         int count = countInInventory(required);
         List<FormattedCharSequence> lines = new ArrayList<>(Compat.splitText(font, desc, TOOLTIP_WIDTH));
         Style style = Style.EMPTY.applyFormat(count == 0 ? ChatFormatting.RED : ChatFormatting.GRAY);
         lines.add(Compat.translatableStyled("menu.flag_crafting.in_inventory", style, count).getVisualOrderText());
-        this.renderTooltip(stack, lines, mouseX, mouseY);
+        this.setTooltipForNextRenderPass(lines);
     }
 
     // Recipes consume their input from the player's inventory server-side (FlagCraftMessage), so
@@ -179,38 +176,45 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
     }
 
     @Override
-    protected void renderLabels(PoseStack stack, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphics gui, int mouseX, int mouseY) {
     }
 
     @Override
-    public void render(PoseStack poseStack, int mouseX, int mouseY, float partialTicks) {
+    public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
         updateCraftButtonStates();
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
+        this.renderBackground(gui);
+        super.render(gui, mouseX, mouseY, partialTicks);
 
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - panelHeight) / 2;
 
-        Compat.drawDarkTextWrap(font, poseStack, new Coordinate(bgX + MARGIN, bgY + titleY), TEXT_WIDTH, title());
+        Compat.drawDarkTextWrap(font, gui, new Coordinate(bgX + MARGIN, bgY + titleY), TEXT_WIDTH, title());
 
-        renderRecipeRow(poseStack, bgX, bgY + row1Y, Items.STICK.getDefaultInstance(), new ItemStack(ItemsInit.TOWN_WAND.get()));
-        renderRecipeRow(poseStack, bgX, bgY + row2Y, Items.OAK_PRESSURE_PLATE.getDefaultInstance(), new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()));
+        renderRecipeRow(gui, bgX, bgY + row1Y, Items.STICK.getDefaultInstance(), new ItemStack(ItemsInit.TOWN_WAND.get()));
+        renderRecipeRow(gui, bgX, bgY + row2Y, Items.OAK_PRESSURE_PLATE.getDefaultInstance(), new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()));
 
-        Compat.drawDarkTextWrap(font, poseStack, new Coordinate(bgX + MARGIN, bgY + moveDescY), TEXT_WIDTH, moveDesc());
+        Compat.drawDarkTextWrap(font, gui, new Coordinate(bgX + MARGIN, bgY + moveDescY), TEXT_WIDTH, moveDesc());
+
+        if (this.craftWandButton != null && this.craftWandButton.isHovered()) {
+            renderCraftTooltip(gui, wandDesc(), Items.STICK, mouseX, mouseY);
+        }
+        if (this.craftMatButton != null && this.craftMatButton.isHovered()) {
+            renderCraftTooltip(gui, matDesc(), Items.OAK_PRESSURE_PLATE, mouseX, mouseY);
+        }
     }
 
-    private void renderRecipeRow(PoseStack poseStack, int x, int iconY, ItemStack input, ItemStack output) {
-        itemRenderer.renderAndDecorateItem(input, x + MARGIN, iconY + 2);
-        font.draw(poseStack, "→", x + 36, iconY + 6, 0x404040);
-        itemRenderer.renderAndDecorateItem(output, x + 50, iconY + 2);
+    private void renderRecipeRow(GuiGraphics gui, int x, int iconY, ItemStack input, ItemStack output) {
+        Compat.renderItemAndDecorations(gui, input, x + MARGIN, iconY + 2);
+        gui.drawString(font, "→", x + 36, iconY + 6, 0x404040);
+        Compat.renderItemAndDecorations(gui, output, x + 50, iconY + 2);
     }
 
     @Override
-    protected void renderBg(PoseStack stack, float partialTicks, int mouseX, int mouseY) {
+    protected void renderBg(GuiGraphics gui, float partialTicks, int mouseX, int mouseY) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - panelHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, panelHeight);
-        this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
+        this.background.draw(gui, bgX, bgY, backgroundWidth, panelHeight);
+        this.tabs.draw(new RenderContext(Compat.itemRenderer(), gui), bgX, bgY);
     }
 
     @Override

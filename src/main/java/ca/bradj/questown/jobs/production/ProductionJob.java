@@ -34,7 +34,6 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.Marker;
 import org.jetbrains.annotations.NotNull;
@@ -138,12 +137,11 @@ public abstract class ProductionJob<
         if (sl == null) {
             return false;
         }
-        Material footMaterial = sl.getBlockState(bp).getMaterial();
-        boolean footSpotBlocked = footMaterial.isSolid();
+        boolean footSpotBlocked = sl.getBlockState(bp).isSolid();
         BlockState torsoMaterial = sl.getBlockState(bp.above());
-        boolean torsoSpotBlocked = torsoMaterial.getMaterial().isSolid();
+        boolean torsoSpotBlocked = torsoMaterial.isSolid();
         BlockState groundMaterial = sl.getBlockState(bp.below());
-        boolean groundSpotSolid = groundMaterial.getMaterial().isSolid();
+        boolean groundSpotSolid = groundMaterial.isSolid();
         return groundSpotSolid && !(footSpotBlocked || torsoSpotBlocked);
     }
 

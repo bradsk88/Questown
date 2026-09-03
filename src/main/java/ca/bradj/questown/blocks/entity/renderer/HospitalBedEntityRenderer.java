@@ -6,7 +6,8 @@ import ca.bradj.questown.blocks.entity.HospitalBedBlockEntity;
 import ca.bradj.questown.core.init.TilesInit;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Vector3f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import it.unimi.dsi.fastutil.ints.Int2IntFunction;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
@@ -164,9 +165,9 @@ public class HospitalBedEntityRenderer implements BlockEntityRenderer<HospitalBe
     ) {
         stack.pushPose();
         stack.translate(0.0D, 0.5625D, p_173549_ ? -1.0D : 0.0D);
-        stack.mulPose(Vector3f.XP.rotationDegrees(90.0F));
+        stack.mulPose(new Quaternionf().rotationAxis((float) Math.toRadians(90.0F), new Vector3f(1, 0, 0)));
         stack.translate(0.5D, 0.5D, 0.5D);
-        stack.mulPose(Vector3f.ZP.rotationDegrees(180.0F + p_173545_.toYRot()));
+        stack.mulPose(new Quaternionf().rotationAxis((float) Math.toRadians(180.0F + p_173545_.toYRot()), new Vector3f(0, 0, 1)));
         stack.translate(-0.5D, -0.5D, -0.5D);
         VertexConsumer vertexconsumer = material.buffer(buffer, RenderType::entitySolid);
         p_173544_.render(stack, vertexconsumer, p_173547_, p_173548_);

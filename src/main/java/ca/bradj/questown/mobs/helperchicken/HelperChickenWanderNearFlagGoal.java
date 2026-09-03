@@ -131,8 +131,8 @@ public class HelperChickenWanderNearFlagGoal extends Goal {
             int dx = this.random.nextInt(WANDER_RADIUS * 2 + 1) - WANDER_RADIUS;
             int dz = this.random.nextInt(WANDER_RADIUS * 2 + 1) - WANDER_RADIUS;
             BlockPos candidate = flagPos.offset(dx, 0, dz);
-            if (this.chicken.level.getBlockState(candidate).isAir()
-                    && this.chicken.level.getBlockState(candidate.above()).isAir()) {
+            if (this.chicken.level().getBlockState(candidate).isAir()
+                    && this.chicken.level().getBlockState(candidate.above()).isAir()) {
                 return candidate;
             }
         }
@@ -145,7 +145,7 @@ public class HelperChickenWanderNearFlagGoal extends Goal {
         if (flagPos == null) {
             return null;
         }
-        if (this.chicken.level.getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
+        if (this.chicken.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
             return flag;
         }
         return null;

@@ -20,14 +20,15 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -48,8 +49,8 @@ public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlo
     public BowlRackBlock(
     ) {
         super(
-                Properties
-                        .of(Material.GLASS, MaterialColor.TERRACOTTA_BROWN)
+                BlockBehaviour.Properties
+                        .of().mapColor(MapColor.TERRACOTTA_BROWN)
                         .strength(1.0F, 10.0F)
                         .noOcclusion()
         );
@@ -99,7 +100,7 @@ public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlo
     @Override
     public List<ItemStack> getDrops(
             BlockState p_60537_,
-            LootContext.Builder p_60538_
+            LootParams.Builder p_60538_
     ) {
         ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
         b.add(

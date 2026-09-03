@@ -215,7 +215,7 @@ public class TownRooms implements
         for (InclusiveSpace space : room.getSpaces()) {
             RoomEffects.renderParticlesBetween(
                     space, (x, z) -> {
-                        BlockPos bp = new BlockPos(x, room.yCoord, z);
+                        BlockPos bp = new BlockPos((int) x, (int) room.yCoord, (int) z);
                         if (!sl.isEmptyBlock(bp)) {
                             return;
                         }

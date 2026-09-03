@@ -17,10 +17,10 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,8 +30,8 @@ public class FoodDisplayBlock extends HorizontalDirectionalBlock implements Inse
     public FoodDisplayBlock(
     ) {
         super(
-                Properties
-                        .of(Material.WOOD, MaterialColor.WOOD)
+                BlockBehaviour.Properties
+                        .of().mapColor(MapColor.WOOD)
                         .strength(2.0F, 3.0F)
                         .sound(SoundType.WOOD)
                         .noOcclusion()

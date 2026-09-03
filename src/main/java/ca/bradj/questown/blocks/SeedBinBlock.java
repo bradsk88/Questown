@@ -19,14 +19,15 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,8 +44,8 @@ public class SeedBinBlock extends Block implements InsertedItemAware, EntityBloc
     public SeedBinBlock(
     ) {
         super(
-                Properties
-                        .of(Material.WOOD, MaterialColor.WOOD)
+                BlockBehaviour.Properties
+                        .of().mapColor(MapColor.WOOD)
                         .strength(1.0F, 10.0F)
                         .noOcclusion()
         );
@@ -84,7 +85,7 @@ public class SeedBinBlock extends Block implements InsertedItemAware, EntityBloc
     @Override
     public List<ItemStack> getDrops(
             BlockState p_60537_,
-            LootContext.Builder p_60538_
+            LootParams.Builder p_60538_
     ) {
         ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
         b.add(

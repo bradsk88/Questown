@@ -43,7 +43,7 @@ public class DeployFishingHookRule extends JobPhaseModifier {
             push = push.subtract(Vec3.atCenterOf(owner.blockPosition()));
             push = push.normalize();
             push = push.multiply(3, 1, 3);
-            hookPos = Vec3.atBottomCenterOf(blockPos.offset(push.x, 0, push.z));
+            hookPos = Vec3.atBottomCenterOf(blockPos.offset((int) push.x, 0, (int) push.z));
         }
         e.setPos(hookPos);
         sl.addFreshEntity(e);
