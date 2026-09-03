@@ -2,6 +2,8 @@ Try to avoid asking the user to test something themselves. You have access to a 
 
 When the user reports a behaviour that does not work ("X sits idle after Y", "this does nothing"), that is a *verification* question, not a code investigation — the first move is an autotest, not reading code to speculate. "Understanding the code" is not "does it work"; a code reading that cannot settle a broken-behaviour report is a signal to set up the test, not to keep re-reading the same files.
 
+A perf/lag report ("grinds to a halt", "can't keep up", "half-waiting for server") is the same kind of verification question. Before asserting which code costs the tick, run the perf autotest: `./gradlew runServer -Dquestown.autotest=true -Dquestown.autotest.only=perf/town_large` — its `TickProfile` reports the flag-tick average vs the 50ms budget and the per-phase µs (which phase is hot). A perf test that disproves a suspected cause *is* the finding, not a nuisance to work around; do not commit a perf fix before running it.
+
 ## Running the dev client (`./gradlew runClient`)
 
 **When the background client task reports exit code 1 / 143, or "Gradle build daemon disappeared unexpectedly", that is just the user closing the Minecraft window.** It is NOT a crash, a launch failure, or a regression. Do not investigate it, do not re-read the log looking for the cause, and do not relaunch — the user closed it on purpose. Only treat it as a real failure if the log shows an actual exception/crash BEFORE the window opened.
@@ -43,6 +45,8 @@ When building or changing a `gui/` screen, follow `docs/solutions/conventions/gu
 A Gradle `BUILD SUCCESSFUL` with the task `up-to-date` did not recompile your edits — it only re-ran cached outputs, so it proves nothing about the code you just changed. After changing code, check the task says `executed` (or pass `--rerun-tasks`) before trusting a build as a pass. Applies to `compileJava`/`test`/`build`.
 
 When verifying a build output, identify the newest artifact, not an alphabetical match. The version is the git branch, so several versioned jars coexist in `build/libs`; `find build/libs/*.jar | head -1` returns the first by name (often a stale version), so you can verify a jar you did not just build. Use `ls -t build/libs/*.jar | head -1` (newest by mtime) instead.
+
+`publishModrinth` (and `publish`) declare no outputs, so they are not up-to-date-cached: the task runs — and POSTs — on every invocation. Do not run a publish task a second time to "check the exit code"; that creates a duplicate Modrinth entry. Verify the result via the API (`GET https://api.modrinth.com/v2/project/<id>/version`, singular), not another run.
 
 ## Adding a value to a switch-covered enum
 
