@@ -12,6 +12,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ChestBlock;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,7 +46,11 @@ public class Containers {
 
                                         @Override
                                         public @Nullable ContainerTarget<MCContainer, MCTownItem> asChest() {
-                                            if (!(z.getValue() instanceof ChestBlock cb)) {
+                                            // Guard on the live blockstate, not the stored record: a position
+                                            // recorded as a chest can now hold a wall block (e.g. an inset corner),
+                                            // and re-reading it here is what made the ERROR below flood the log.
+                                            Block b = town.getServerLevel().getBlockState(z.getKey()).getBlock();
+                                            if (!(b instanceof ChestBlock cb)) {
                                                 return null;
                                             }
                                             return TownContainers.fromChestBlock(
