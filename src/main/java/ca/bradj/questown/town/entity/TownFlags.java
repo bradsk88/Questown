@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.entity;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import net.minecraftforge.event.level.SleepFinishedTimeEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -23,6 +24,14 @@ public class TownFlags {
 
     @SubscribeEvent
     public static void OnWake(SleepFinishedTimeEvent event) {
+        // Diagnostic: this is the definitive "did morning come" signal. In the
+        // 2026-09-03 two-player-sleep soft-lock this never fired, so night
+        // never skipped. If it fires but the server then goes silent, the bug
+        // is in the wake path (onMorning / onWake), not the night-skip itself.
+        QT.JOB_LOGGER.info(
+                "[campfire-sleep] SleepFinishedTimeEvent (morning) newTime={}",
+                event.getNewTime()
+        );
         for (TownFlagBlockEntity e : flags.values()) {
             e.ticker.onMorning(TownFlagTicker.TickData.fromFlag(e), event.getNewTime());
         }
