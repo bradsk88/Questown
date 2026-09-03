@@ -192,7 +192,10 @@ public class TownContainers {
         }
 
         if (!blockState.getBlock().equals(block)) {
-            QT.BLOCK_LOGGER.error(
+            // Benign, expected: the block at a recorded chest position changed (broke, or the
+            // inset-corner/wall overwrote it). We return a REMOVED target below, so this is not
+            // an error. Logging it per-call on the server thread flooded the log and lagged the game.
+            QT.BLOCK_LOGGER.debug(
                     "Given block is not present at given position. Actual blockstate {}", blockState
             );
             return new ContainerTarget<>(
