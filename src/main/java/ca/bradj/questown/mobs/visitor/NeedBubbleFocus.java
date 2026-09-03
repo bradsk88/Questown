@@ -166,6 +166,9 @@ public final class NeedBubbleFocus {
      * or when the item cannot be resolved on the client.
      */
     static @Nullable Ingredient unmetNeedIngredient(VisitorMobEntity townie) {
+        if (townie == null) {
+            return null;
+        }
         if (townie.getNeed() != TownieNeed.UNMET_ITEM) {
             return null;
         }
