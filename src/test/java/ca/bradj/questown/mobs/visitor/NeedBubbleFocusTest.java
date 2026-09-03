@@ -48,4 +48,12 @@ class NeedBubbleFocusTest {
     void Test_BubbleIsDroppedWhenNobodyQualifiesAnymore() {
         Assertions.assertFalse(NeedBubbleFocus.keepsBubble(HOLDER, 0.95, null, 0));
     }
+
+    // A dead-door winner (a BlockPos) leaves the townie holder null. The hint path runs the same
+    // for doors as for townies, so unmetNeedIngredient must not dereference the null townie:
+    // that is the crash that booted the client when looking squarely at a dead door.
+    @Test
+    void Test_UnmetNeedIngredientReturnsNullForNullTownie() {
+        Assertions.assertNull(NeedBubbleFocus.unmetNeedIngredient(null));
+    }
 }
