@@ -186,6 +186,10 @@ public class CampfireSleepHandler {
         return campfireSleepers.contains(uuid);
     }
 
+    public static int getCampfireSleeperCount() {
+        return campfireSleepers.size();
+    }
+
     public static void onWake(ServerPlayer player) {
         UUID uuid = player.getUUID();
         ca.bradj.questown.QT.JOB_LOGGER.info(
