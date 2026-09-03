@@ -75,7 +75,26 @@ public class TownPois {
             Filter<R> filter,
             PositionFactory<P, R> pFact
     ) {
+        return getWanderTarget(level, all, filter, pFact, null);
+    }
+
+    /**
+     * As {@link #getWanderTarget(ServerLevel, Collection, Filter, PositionFactory)},
+     * but reports *why* a search came back empty to {@code diagnostics} (if given).
+     * Keeping the reason out of this method's return type lets the caller log a
+     * specific, actionable message once instead of a vague per-tick warning.
+     */
+    public <R extends Room, P> @Nullable P getWanderTarget(
+            ServerLevel level,
+            Collection<R> all,
+            Filter<R> filter,
+            PositionFactory<P, R> pFact,
+            @Nullable WanderDiagnostics diagnostics
+    ) {
         if (all.isEmpty()) {
+            if (diagnostics != null) {
+                diagnostics.noRooms();
+            }
             return null;
         }
         R r = ImmutableList.copyOf(all).get(level.getRandom().nextInt(all.size()));
@@ -95,9 +114,21 @@ public class TownPois {
 
         ImmutableList<P> positions = b.build();
         if (positions.isEmpty()) {
+            if (diagnostics != null) {
+                diagnostics.noCandidateInRoom(all.size(), allEnclosed.size());
+            }
             return null;
         }
         return positions.get(level.getRandom().nextInt(positions.size()));
+    }
+
+    /** Why a wander-target search returned null. One method fires per search. */
+    public interface WanderDiagnostics {
+        /** The town has no rooms to wander into at all (day and night both checked). */
+        void noRooms();
+
+        /** Rooms exist, but the chosen one contributed no position passing the filter. */
+        void noCandidateInRoom(int roomCount, int enclosedCount);
     }
 
     public @Nullable BlockPos getWelcomeMatPos(@NotNull ServerLevel level) {

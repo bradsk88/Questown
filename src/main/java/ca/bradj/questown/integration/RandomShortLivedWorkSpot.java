@@ -40,6 +40,13 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
         return false;
     }
 
+    // When a wander-target scan comes back null (town has no valid room), we
+    // record a retry-after tick on the villager instead of rescanning every
+    // tick. Without this, a villager in a room-less town spun a full room
+    // interior scan each tick and drowned the log in repeated errors.
+    private static final String DATA_KEY_WORKSPOT_RETRY_AFTER = "questown:work_spot_retry_after";
+    private static final long RETRY_AFTER_FAILURE_TICKS = 100;
+
     @Override
     public void beforeTick(BeforeTickEvent bxEvent) {
         super.beforeTick(bxEvent);
@@ -47,14 +54,24 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
         ServerLevel serverLevel = bxEvent.world().get().asServerLevel();
         @Nullable BlockPos override = getOverride(villagerData, false);
         if (override == null) {
-            choosePosAndStoreOnVillager(
+            if (isWaitingToRetry(villagerData, serverLevel)) {
+                return;
+            }
+            boolean chose = choosePosAndStoreOnVillager(
                     bxEvent.otherVillagerPositions(),
                     bxEvent.randomWalkableTownPosition(),
                     villagerData::write,
                     serverLevel
             );
+            if (!chose) {
+                villagerData.write(
+                        DATA_KEY_WORKSPOT_RETRY_AFTER,
+                        Long.toString(Util.getTick(serverLevel) + RETRY_AFTER_FAILURE_TICKS)
+                );
+            }
             return;
         }
+        villagerData.clear(DATA_KEY_WORKSPOT_RETRY_AFTER);
         String until = villagerData.get(DATA_KEY_WORKSPOT_OVERRIDE_UNTIL);
         if (until == null) {
             if (Jobs.isCloseTo(bxEvent.position(), override)) {
@@ -76,7 +93,19 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
         villagerData.write(DATA_KEY_WORKSPOT_OVERRIDE_UNTIL, Long.toString(newUntil));
     }
 
-    private void choosePosAndStoreOnVillager(
+    private boolean isWaitingToRetry(
+            UnsafeVillagerData villagerData,
+            ServerLevel serverLevel
+    ) {
+        String retryAfter = villagerData.get(DATA_KEY_WORKSPOT_RETRY_AFTER);
+        if (retryAfter == null || retryAfter.isEmpty()) {
+            return false;
+        }
+        return Util.getTick(serverLevel) < Long.parseLong(retryAfter);
+    }
+
+    /** Returns true if a position was stored, false if the search came back null. */
+    private boolean choosePosAndStoreOnVillager(
             java.util.function.Supplier<ImmutableList<BlockPos>> otherVillagerPositions,
             java.util.function.Supplier<BlockPos> randomWalkableTownPosition,
             java.util.function.BiConsumer<String, String> writeUnsafeDataToVillager,
@@ -87,21 +116,24 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
             if (!ovp.isEmpty()) {
                 BlockPos pos = Compat.shuffle(ovp, serverLevel).get(0);
                 storePosOnVillager(writeUnsafeDataToVillager, pos);
-                return;
+                return true;
             }
         }
         BlockPos p = randomWalkableTownPosition.get();
+        if (p == null) {
+            // The town-side wander search already logged the specific reason
+            // (no rooms / all rooms filtered out), rate-limited. Retrying is
+            // deferred via DATA_KEY_WORKSPOT_RETRY_AFTER by the caller.
+            return false;
+        }
         storePosOnVillager(writeUnsafeDataToVillager, p);
+        return true;
     }
 
     private void storePosOnVillager(
             java.util.function.BiConsumer<String, String> writeUnsafeDataToVillager,
             BlockPos p
     ) {
-        if (p == null) {
-            QT.logBug("RandomWorkSpot: Chose null work spot position.");
-            return;
-        }
         String val = Long.toString(p.asLong());
         writeUnsafeDataToVillager.accept(DATA_KEY_WORKSPOT_OVERRIDE, val);
         QT.JOB_LOGGER.debug("RandomWorkSpot: Chose new work spot at " + p + " stored as " + val);
@@ -110,7 +142,10 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
     @Override
     public void beforeFindJobSite(BeforeFindJobSiteEvent event) {
         super.beforeFindJobSite(event);
-        BlockPos override = getOverride(event.unsafeVillagerData(), true);
+        // Missing override is the common case (villager has not been assigned a
+        // random spot yet, or the last search found no valid room). It is not a
+        // bug, so don't logBug here — that fired every tick in a room-less town.
+        BlockPos override = getOverride(event.unsafeVillagerData(), false);
         if (override == null) return;
         event.applyWorkspotOverride()
              .accept(WithReason.always(override, "Overridden by " + this.getClass().getSimpleName()));
