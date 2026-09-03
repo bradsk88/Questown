@@ -820,6 +820,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return pois.getVisitorJoinPos(getServerLevel(), getBlockPos());
     }
 
+    // Rate-limits the wander-failure warning so a stuck villager logs once per
+    // window instead of every tick. Keyed by the avoiding position (a proxy for
+    // the stuck villager), value is the game tick when the window opened.
+    private final Map<BlockPos, Long> wanderFailLogWindows = new HashMap<>();
+    private static final long WANDER_FAIL_LOG_INTERVAL_TICKS = 200;
+
     @Override
     public BlockPos getRandomWanderTarget(BlockPos avoiding) {
         if (!isInitialized()) {
@@ -831,7 +837,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return null;
         }
 
-        if (sl.isNight()) {
+        boolean night = sl.isNight();
+        if (night) {
             allRooms = roomsHandle.getRegisteredRooms().getAllRooms();
         } else {
             allRooms = roomsHandle.getAllRoomsIncludingMetaAndFarms();
@@ -847,13 +854,42 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                         return true;
                     }
                     return false;
-                }, (p, r) -> Positions.ToBlock(p, r.yCoord)
+                }, (p, r) -> Positions.ToBlock(p, r.yCoord),
+                new TownPois.WanderDiagnostics() {
+                    @Override
+                    public void noRooms() {
+                        logWanderFailureOnce(sl, avoiding, "no wanderable rooms ({})", night ? "night" : "day");
+                    }
+
+                    @Override
+                    public void noCandidateInRoom(int roomCount, int enclosedCount) {
+                        logWanderFailureOnce(
+                                sl, avoiding,
+                                "all {} room(s) filtered out ({} enclosed position(s) checked; {})",
+                                roomCount, enclosedCount, night ? "night" : "day"
+                        );
+                    }
+                }
         );
-        if (townPos == null) {
-            QT.FLAG_LOGGER.warn("Could not find wander target avoiding {}", avoiding);
-            return townPos;
-        }
         return townPos;
+    }
+
+    private void logWanderFailureOnce(
+            ServerLevel sl,
+            BlockPos avoiding,
+            String reason,
+            Object... reasonArgs
+    ) {
+        long now = sl.getGameTime();
+        Long windowStart = wanderFailLogWindows.get(avoiding);
+        if (windowStart != null && now - windowStart < WANDER_FAIL_LOG_INTERVAL_TICKS) {
+            return;
+        }
+        wanderFailLogWindows.put(avoiding, now);
+        Object[] args = new Object[reasonArgs.length + 1];
+        System.arraycopy(reasonArgs, 0, args, 0, reasonArgs.length);
+        args[reasonArgs.length] = avoiding;
+        QT.FLAG_LOGGER.warn("Could not find wander target: " + reason + " [avoiding {}]", args);
     }
 
     public ImmutableSet<UUID> getVillagers() {

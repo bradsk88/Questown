@@ -18,6 +18,11 @@
 - **[bugs/resolved/warp-advancer-tool-only-off-by-one.md](bugs/resolved/warp-advancer-tool-only-off-by-one.md)** — Advancer filled 5/6 inventory slots for tool-only jobs (gatherer×2, hunter, miner). Verify with `/_qtdev test` per job.
 - **[bugs/resolved/quest-flavor-test-cutoff.md](bugs/resolved/quest-flavor-test-cutoff.md)** — Wooden-sword quest flavor text overflowed the quest card and overlapped icons. Verify by opening the quests UI in-game.
 - **[bugs/resolved/chicken-sunset-chest-bit.md](bugs/resolved/chicken-sunset-chest-bit.md)** — `F2_chest_spawn_after_campfire` sunset chest never spawned: chest target took the player's Y (off the floor) and the arrival radius was tighter than the pathfinder's stopping accuracy. Verify with the chicken autotest track.
+- **[bugs/room-scan-server-stall.md](bugs/room-scan-server-stall.md)** — "waiting for server" stall was a villager wander retry loop, not room detection: a town with no wanderable room re-ran a full interior scan per stuck villager per tick. Fixed by deferring the retry and logging the failure reason once. Verify with a play session in a town missing a valid wander room.
+
+## Diagnosed bugs (fix not yet applied)
+
+- **[bugs/campfire-sleep-multiplayer-softlock.md](bugs/campfire-sleep-multiplayer-softlock.md)** — Two players sleeping via campfire-wand never reach morning: vanilla skips night only when *every* player holds `sleepCounter >= 100` simultaneously, and re-clicking the campfire resets a player's counter. Root-caused from 1.19.2 bytecode; fix direction noted (no-op a re-click while already sleeping).
 
 ## Conventions / background
 

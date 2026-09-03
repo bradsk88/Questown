@@ -298,3 +298,41 @@ flowchart TD
   job root: entries are written whole, per root, and no reader compares two roots
   against each other. An `invalidate()` arriving mid-pass does not restart the
   pass — it re-arms the gate, so the next pass starts after the current one ends.
+
+## Wander-target search: deferred retry + reasoned failure log
+
+`TownPois.getWanderTarget` picks a random room and a random interior position
+in it that passes the caller's filter. It returns `null` for two distinct
+reasons — the town has **no rooms**, or rooms exist but **every enclosed
+position was filtered out**. Callers that treat `null` as "try again next tick"
+turn an empty search into a per-tick full room-interior scan, which is what
+produced the 2026-09-03 "waiting for server" stall (see
+`docs/bugs/room-scan-server-stall.md`).
+
+```mermaid
+flowchart TD
+    BT["RandomShortLivedWorkSpot.beforeTick"] --> Ovr{"work-spot override set?"}
+    Ovr -- yes --> Use["use override"]
+    Ovr -- no --> Wait{"retry-after tick reached?<br/>(work_spot_retry_after)"}
+    Wait -- no --> Skip["return (idle)"]
+    Wait -- yes --> Scan["town.getRandomWanderTarget"]
+    Scan --> Rooms{"TownPois: any rooms?"}
+    Rooms -- no --> NR["diagnostics.noRooms()<br/>log once / 200 ticks"]
+    Rooms -- yes --> Cand{"any enclosed position<br/>passes filter?"}
+    Cand -- no --> NC["diagnostics.noCandidateInRoom<br/>(roomCount, enclosedCount)<br/>log once / 200 ticks"]
+    Cand -- yes --> Pick["return random position"]
+    NR --> Store["write retry-after = now + 100 ticks"]
+    NC --> Store
+```
+
+- The retry state lives on the villager (`questown:work_spot_retry_after`),
+  not on the town, so one stuck villager's cooldown does not delay another's
+  search. `RETRY_AFTER_FAILURE_TICKS` (100) is hardcoded: it is a backoff for a
+  failed search, not a taste knob.
+- The flag-side failure log is **rate-limited per stuck position** (one warn
+  per 200 ticks) and carries the reason plus day/night and room/position
+  counts — replacing the old per-tick `Could not find wander target avoiding
+  {}` that gave no reason and no context.
+- `beforeFindJobSite` no longer `logBug`s on a missing override: that is the
+  normal "no spot assigned yet / no valid room" case, not a bug, and it fired
+  every tick in a room-less town.
