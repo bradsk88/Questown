@@ -221,6 +221,9 @@ public class TestBlueprintRegistry {
         // compared within a single run.
         jobs.add(perfEntry("town_small", perfBlueprint(1, 0, 2000)));
         jobs.add(perfEntry("town_large", perfBlueprint(20, 15, 2000)));
+        // Plus-shaped room reproduction: a 4-corner-pillar room, the "specifically shaped room" from
+        // the report. Reports the same TickProfile so the grind shows as a number.
+        jobs.add(plusRoomEntry("plus_room", plusRoomBlueprint(20, 2000)));
 
         return jobs;
     }
@@ -2140,6 +2143,121 @@ public class TestBlueprintRegistry {
         return bp.withSetupHook(perfExtraRoomsSetup(extraRooms))
                  .withPostSpawnAction(perfStartProfiling())
                  .withCustomAssertion(perfReport(villagers, extraRooms));
+    }
+
+    // --- Plus-shaped room (report) ---
+    //
+    // Reproduction for the "specifically shaped room" report: a rectangular room with a pillar in
+    // each corner (a "plus-shaped space"), chests on the N/S walls, a door on the east wall. The
+    // four interior corner pillars are the pathological case for the wall-walking detector:
+    // Crawl.forwardSpread fans 5 child crawls from every wall block, the corner pillars emit
+    // several overlapping sub-rooms, and LevelRoomDetector.removeOverlaps re-runs a full wall-walk
+    // (RoomDetection.findRoomForDoor) per overlapping pair. This is a MEASUREMENT, not a gate: it
+    // always passes and reports the flag-tick TickProfile so the cost shows up as a number rather
+    // than a red scenario. The perf/town_large harness is a synthetic town and cannot build this
+    // shape, so it is what the perf autotest could not answer.
+
+    /**
+     * Builds a {@code size}x{@code size} self-enclosing shell (floor/walls/ceiling) with a
+     * pillar in each interior corner ({@code pillarHeight} blocks tall), chests on the N/S walls
+     * between the pillars, and a two-high door on the east wall. Returns the blocks plus the
+     * chest and door offsets so the door can be registered for detection.
+     */
+    private static SupplyRoom buildPlusRoom(int ox, int oz, int size, int pillarHeight) {
+        List<BlockPlacement> blocks = new ArrayList<>();
+        BlockState cobble = Blocks.COBBLESTONE.defaultBlockState();
+
+        // Floor, walls (two high) and ceiling, like buildSupplyRoom, but sized `size`.
+        for (int x = 0; x < size; x++) {
+            for (int z = 0; z < size; z++) {
+                boolean isEdge = x == 0 || x == size - 1 || z == 0 || z == size - 1;
+                blocks.add(new BlockPlacement(new BlockPos(ox + x, -1, oz + z), cobble));
+                if (isEdge) {
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 0, oz + z), cobble));
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 1, oz + z), cobble));
+                }
+                blocks.add(new BlockPlacement(new BlockPos(ox + x, 2, oz + z), cobble));
+            }
+        }
+
+        // The four corner pillars: one block in from each corner, `pillarHeight` blocks tall
+        // (filling the full wall height so each reads as an interior wall the walker must turn on).
+        int[][] corners = {
+                {1, 1}, {size - 2, 1}, {1, size - 2}, {size - 2, size - 2}
+        };
+        for (int[] corner : corners) {
+            for (int y = 0; y <= pillarHeight; y++) {
+                blocks.add(new BlockPlacement(new BlockPos(ox + corner[0], y, oz + corner[1]), cobble));
+            }
+        }
+
+        // Chests on the N/S walls, between the corner pillars (mid-wall, one block in from the
+        // wall so they sit in the space the pillars bracket).
+        int midX = ox + (size - 1) / 2;
+        blocks.add(new BlockPlacement(new BlockPos(midX, 0, oz + 1), Blocks.CHEST.defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(midX, 0, oz + size - 2), Blocks.CHEST.defaultBlockState()));
+
+        // Door on the east wall (x = ox+size-1), mid-z, two-high.
+        int doorZ = oz + (size - 1) / 2;
+        BlockPos doorLower = new BlockPos(ox + size - 1, 0, doorZ);
+        BlockPos doorUpper = new BlockPos(ox + size - 1, 1, doorZ);
+        blocks.removeIf(bp -> bp.offset().equals(doorLower) || bp.offset().equals(doorUpper));
+        blocks.add(new BlockPlacement(doorLower, Blocks.OAK_DOOR.defaultBlockState()));
+        blocks.add(new BlockPlacement(doorUpper, Blocks.OAK_DOOR.defaultBlockState().setValue(
+                DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
+        )));
+
+        return new SupplyRoom(blocks, new BlockPos(midX, 0, oz + 1), doorLower);
+    }
+
+    /**
+     * Registers the plus-shaped room's door for detection, then reports how many sub-rooms the
+     * detector produced from it (the number of overlapping sub-rooms is the O(n^2) input to
+     * removeOverlaps, so it is the measurement that explains the grind).
+     */
+    private static TestBlueprint.PostPlacementSetup plusRoomSetup() {
+        return (level, flagPos, town, output) -> {
+            SupplyRoom room = buildPlusRoom(-6, -2, 11, 2);
+            for (BlockPlacement bp : room.blocks()) {
+                level.setBlockAndUpdate(flagPos.offset(bp.offset()), bp.blockState());
+            }
+            town.getRoomHandle().registerDoor(flagPos.offset(room.doorOffset()));
+            output.msg("[perf] plus-room: built 11x11 with 4 corner pillars and registered its door");
+            return true;
+        };
+    }
+
+    private static TestBlueprint plusRoomBlueprint(int villagers, int ticks) {
+        // Base blueprints still need a valid (if unused) door/chest offset; the plus room is
+        // built and registered in the setup hook. Reuse the 5x5 supply shell as the placeholder
+        // base so the flag has a valid INDOOR room to sit on.
+        SupplyRoom base = buildSupplyRoom(-6, -2);
+        TestBlueprint bp = new TestBlueprint(
+                RoomType.INDOOR,
+                base.blocks(),
+                List.of(),
+                base.doorOffset(),
+                base.chestOffset(),
+                SpecialQuests.STORE_ROOM_SMALL,
+                new TestExpectation(List.of(), 0, 0),
+                null, null, null,
+                villagers,
+                true,      // realtimePhase: measure realtime tick cost
+                ticks,
+                false,     // drainHungerBeforeTest
+                true,      // skipWarp
+                new TestExpectation(List.of(), 0, 0),
+                null, null, null, null,
+                false      // useNaturalWarp
+        );
+        return bp.withSetupHook(plusRoomSetup())
+                 .withPostSpawnAction(perfStartProfiling())
+                 .withCustomAssertion(perfReport(villagers, 0));
+    }
+
+    private static TestEntry plusRoomEntry(String name, TestBlueprint bp) {
+        return new TestEntry("perf/" + name, new JobID("farmer", "harvest_wheat"), bp, "perf");
     }
 
     /**
