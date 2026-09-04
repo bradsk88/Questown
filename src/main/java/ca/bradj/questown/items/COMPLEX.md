@@ -104,3 +104,30 @@ FakePlayer, and asserts deed 1 → 0 plus "nothing dropped on the ground instead
 Creative is essential: in survival the naive shrink passes, so a survival-only
 test would have been green against the bug. The other relocate scenarios call
 `TownRelocation.place` directly and never touch the item layer.
+
+# Door placement — register on the parent flag
+
+`FalseDoorItem` and `TownDoorItem` place a door, then register it on the flag
+the item's NBT names. Both resolve the parent with
+`TownFlagBlock.GetParentFromNBT` and hand the door position to that flag's room
+handle.
+
+```mermaid
+flowchart TD
+    A[useOn, server level] --> B["GetParentFromNBT\n(item NBT → flag)"]
+    B --> N{parent null?}
+    N -- no --> Place[place the door block]
+    Place --> Reg["parent.getRoomHandle()\n.registerDoor(pos)"]
+    Reg --> C[return CONSUME]
+    N -- yes --> Log[log error]
+    Log --> FD["FalseDoor: FAIL,\nno block placed"]
+    Log --> TD["TownDoor: block placed,\nregistration skipped"]
+```
+
+- **The null-parent edge case** — `GetParentFromNBT` returns null when the flag
+  is not resolvable (its chunk is unloaded). The unguarded code NPEs; the guard
+  logs and bails.
+- **Placement and registration differ** — `FalseDoor` resolves the parent
+  *before* `setBlock`, so a null parent aborts the whole placement (returns
+  FAIL, the item is not consumed). `TownDoor` places via the block's own `useOn`
+  first, so the door block is set regardless and only registration is skipped.
