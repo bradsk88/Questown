@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -260,4 +261,83 @@ class SimpleVillagerHandleTest {
         Assertions.assertNull(hungryInformed.get());
     }
 
+    // ---- Experience / "frozen" mechanism (Option B, finch handoff) ----
+    //
+    // These characterize the REAL SimpleVillagerHandle.addExperience path (not simulated):
+    // experience climbs while no block-of-progress latch is set, and holds flat ("frozen")
+    // once the latch is set on a level-up and is not cleared. The root cause of "experience
+    // not increasing from work" is UNCONFIRMED, so these are characterization tests, not
+    // reproducing tests; the completion-listener trigger that would call addExperience from a
+    // job completion is untestable without a full Minecraft world (see @Disabled below).
+
+    private static SimpleVillagerHandle<String, UUID> newHandle(TestDelegator t) {
+        return new SimpleVillagerHandle<>(
+                t,
+                new SimpleVillagerHandle.Configs(
+                        100,   // baseFullness
+                        true,  // hungerEnabled
+                        1,     // flagTickInterval
+                        1,     // normalBedHealMultiplier
+                        100,   // expRequiredAtLevel1 (level-1 target)
+                        10,    // expRampFactor (level-2 target = 100 * 10)
+                        100,   // damageTicks
+                        0.5f,  // neutralMood
+                        100,   // bufferTicksAfterFoodAttempt
+                        100    // maxTicksBeforeDowntime
+                )
+        );
+    }
+
+    @Test
+    public void addExperience_increasesWhenNoBlockOfProgress() {
+        SimpleVillagerHandle<String, UUID> handle = newHandle(new TestDelegator());
+        UUID v = UUID.randomUUID();
+
+        handle.addExperience(v, 60);
+        Assertions.assertEquals(60, handle.getStats(v).experienceValue());
+
+        handle.addExperience(v, 20);
+        Assertions.assertEquals(
+                80, handle.getStats(v).experienceValue(),
+                "experience climbs while no block-of-progress latch is set"
+        );
+    }
+
+    @Test
+    public void addExperience_holdsFlatOnceBlockOfProgressLatchSet() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+
+        // 100 >= target(100) -> level up, sets the hasBlockOfProgress latch, exp -> 100 % 100 = 0.
+        handle.addExperience(v, 100);
+        Assertions.assertEquals(1, t.broadcast.size(), "the level-up fired exactly once");
+        int frozen = handle.getStats(v).experienceValue();
+
+        // With the latch set, further addExperience calls are no-ops: the value holds flat.
+        handle.addExperience(v, 50);
+        handle.addExperience(v, 50);
+        Assertions.assertEquals(
+                frozen, handle.getStats(v).experienceValue(),
+                "experience is frozen (holds flat) while the block-of-progress latch is set"
+        );
+        Assertions.assertEquals(
+                1, t.broadcast.size(),
+                "no further level-up while the latch is set"
+        );
+    }
+
+    @Disabled("Untestable without a full Minecraft world: the completion-listener path that "
+            + "calls SimpleVillagerHandle.addExperience from a job completion lives in "
+            + "AbstractWorldInteraction.tryExtractProduct -> jobCompletedListeners -> "
+            + "VisitorMobEntity.addExperience (VisitorMobEntity ~line 385). The 'frozen' "
+            + "mechanism is characterized above, but the root cause of 'experience not "
+            + "increasing from work' is UNCONFIRMED (candidates: the completion listener "
+            + "not firing; DeclarativeJob.getExperienceEarned returning 0; the "
+            + "hasBlockOfProgress latch stuck because no item is ever inserted to clear "
+            + "it; or starvation blocking work).")
+    @Test
+    public void completionListener_firesAddExperience_onJobCompletion() {
+        // See @Disabled: cannot be reached without a real world interaction.
+    }
 }
