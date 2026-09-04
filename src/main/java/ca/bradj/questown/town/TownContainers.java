@@ -187,7 +187,8 @@ public class TownContainers {
                     new MCContainer(ContainerTarget.REMOVED), () -> false,
                     item -> TownContainers.setWorkSpot(room, p, item),
                     REJECTS_EVERYTHING,
-                    NO_BOOST
+                    NO_BOOST,
+                    room
             );
         }
 
@@ -203,7 +204,8 @@ public class TownContainers {
                     new MCContainer(ContainerTarget.REMOVED), () -> false,
                     item -> TownContainers.setWorkSpot(room, p, item),
                     REJECTS_EVERYTHING,
-                    NO_BOOST
+                    NO_BOOST,
+                    room
             );
         }
 
@@ -232,7 +234,8 @@ public class TownContainers {
                 () -> level.getBlockState(p) == blockState,
                 item -> TownContainers.setWorkSpot(room, p, item),
                 ACCEPTS_ALL_ITEMS,
-                NO_BOOST
+                NO_BOOST,
+                room
         );
     }
 
@@ -302,7 +305,8 @@ public class TownContainers {
                 item -> {
                 }, // TODO: Allow players to put organizer requests in non-chest containers?
                 item -> ((ContainerTarget.Container) blockEntity).canAcceptIfSpaceAllows(item),
-                ((ContainerTarget.Container) blockEntity).getItemAcceptanceRankBoost().value()
+                ((ContainerTarget.Container) blockEntity).getItemAcceptanceRankBoost().value(),
+                null
         );
     }
 

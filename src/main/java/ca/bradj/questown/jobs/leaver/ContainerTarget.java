@@ -4,6 +4,7 @@ import ca.bradj.questown.blocks.entity.ItemAccepting;
 import ca.bradj.questown.jobs.Item;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
@@ -203,6 +204,7 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
     Position position;
     int yPosition;
     Container<I> container;
+    @Nullable MCRoom room;
 
     public ImmutableList<I> getItems() {
         ImmutableList.Builder<I> b = ImmutableList.builder();
@@ -228,6 +230,30 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
             @Nullable Predicate<I> canAccept,
             float rankingBoost
     ) {
+        this(
+                position,
+                yPosition,
+                interactionPosition,
+                container,
+                check,
+                associate,
+                canAccept,
+                rankingBoost,
+                null
+        );
+    }
+
+    public ContainerTarget(
+            Position position,
+            int yPosition,
+            Position interactionPosition,
+            @NotNull Container<I> container,
+            ValidCheck check,
+            Consumer<I> associate,
+            @Nullable Predicate<I> canAccept,
+            float rankingBoost,
+            @Nullable MCRoom room
+    ) {
         this.position = position;
         this.yPosition = yPosition;
         this.interactPosition = interactionPosition;
@@ -236,6 +262,12 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         this.associate = associate;
         this.canAccept = canAccept;
         this.rankingBoost = rankingBoost;
+        this.room = room;
+    }
+
+    /** The room the container lives in, or null when it is outside a room (e.g. a warp target). */
+    public @Nullable MCRoom getRoom() {
+        return room;
     }
 
     public Position getPosition() {
