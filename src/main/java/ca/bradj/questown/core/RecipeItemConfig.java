@@ -18,6 +18,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
+import java.util.Map;
 
 public class RecipeItemConfig {
 
@@ -26,7 +27,7 @@ public class RecipeItemConfig {
 
     public static final String ITEM_WEIGHTS = "Item weights";
     private static final Config defaultItemWeights = Config.of(InMemoryFormat.defaultInstance());
-    public static final ForgeConfigSpec.ConfigValue<Config> itemWeights;
+    public static final ForgeConfigSpec.ConfigValue<String> itemWeights;
 
     private static final int TORCH_SCORE = RecipeItemScore.canCraftInFourGrid(
             CommonRecipes.TORCH_INGREDIENTS, false
@@ -220,6 +221,16 @@ public class RecipeItemConfig {
         defaultItemWeights.add(itemOrTagKey, cost);
     }
 
+    // ForgeConfigSpec cannot round-trip a nightconfig Config value through TOML (a TOML load
+    // yields a SimpleCommentedConfig while the default is a SimpleConfig, so every load is
+    // flagged "not correct" and re-saved, then re-loaded, forever). Store the weights as a
+    // single string instead, which round-trips cleanly. See ItemWeightCodec for details.
+
+    // Current weights as a map, decoded from the stored config value.
+    public static Map<String, Integer> getWeights() {
+        return ItemWeightCodec.decode(itemWeights.get());
+    }
+
     // TODO: How can mod pack builders add weights to this?
 
     public static final String FILENAME = "questown-item-weights-server.toml";
@@ -227,7 +238,7 @@ public class RecipeItemConfig {
     static {
         BUILDER.push(FILENAME);
 
-        itemWeights = BUILDER.define(ITEM_WEIGHTS, defaultItemWeights);
+        itemWeights = BUILDER.define(ITEM_WEIGHTS, ItemWeightCodec.encode(defaultItemWeights));
 
         BUILDER.pop();
         SPEC = BUILDER.build();

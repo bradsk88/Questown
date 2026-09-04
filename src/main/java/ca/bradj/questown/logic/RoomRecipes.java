@@ -6,7 +6,6 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
-import com.electronwill.nightconfig.core.Config;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonObject;
@@ -90,7 +89,7 @@ public class RoomRecipes {
             RoomRecipe recipe,
             int stopAt
     ) {
-        Config allWeights = RecipeItemConfig.itemWeights.get();
+        Map<String, Integer> allWeights = RecipeItemConfig.getWeights();
         int weight = 0;
         for (Ingredient in : recipe.getIngredients()) {
             if (weight > stopAt) {
@@ -99,8 +98,9 @@ public class RoomRecipes {
             boolean foundWeight = false;
             if (getAsJsonObject(in).has("item")) {
                 String id = getAsJsonObject(in).get("item").getAsString();
-                if (allWeights.contains(String.format("%s", id))) {
-                    weight += allWeights.getInt(id);
+                Integer itemWeight = allWeights.get(id);
+                if (itemWeight != null) {
+                    weight += itemWeight;
                     foundWeight = true;
                 } else {
                     QT.QUESTS_LOGGER.error(
@@ -111,8 +111,9 @@ public class RoomRecipes {
             if (getAsJsonObject(in).has("tag")) {
                 String id = getAsJsonObject(in).get("tag").getAsString();
                 String tID = String.format("#%s", id);
-                if (allWeights.contains(tID)) {
-                    weight += allWeights.getInt(tID);
+                Integer tagWeight = allWeights.get(tID);
+                if (tagWeight != null) {
+                    weight += tagWeight;
                     foundWeight = true;
                 } else {
                     QT.QUESTS_LOGGER.error(
