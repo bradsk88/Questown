@@ -253,11 +253,16 @@ task publishModrinth(dependsOn: 'reobfJar') {
         def versionType = cleanVersion.contains("alpha") ? "alpha" : cleanVersion.contains("beta") ? "beta" : "release"
         def projectId = project.findProperty("MODRINTH_PROJECT_ID") ?: System.getenv("MODRINTH_PROJECT_ID") ?: "QY0XuBVZ"
         def data = """{"name":"Questown ${cleanVersion}","version_number":"${cleanVersion}","version_type":"${versionType}","featured":false,"game_versions":["1.19.2"],"loaders":["forge"],"project_id":"${projectId}","changelog":"${changelog}","dependencies":[],"file_parts":["file"],"primary_file":"file"}"""
+        // curl truncates an inline -F "data=${data}" field at ~270 chars, 400ing a long
+        // changelog with "EOF while parsing a string at column 270" (the version string
+        // alone pushes the skeleton past 270). Send the data from a file instead.
+        def dataFile = new File(buildDir, 'modrinth-data.json')
+        dataFile.text = data
         exec {
             commandLine 'curl', '--fail', '-s', '-X', 'POST',
                     'https://api.modrinth.com/v2/version',
                     '-H', "Authorization: ${token}",
-                    '-F', "data=${data}",
+                    '-F', "data=@${dataFile}",
                     '-F', "file=@${jarPath}"
         }
     }
