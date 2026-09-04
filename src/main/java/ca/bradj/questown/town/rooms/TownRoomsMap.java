@@ -257,11 +257,9 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 },
                 activeRecipes::get,
                 ImmutableMap.copyOf(doorsAtLevel),
-                Config.LOG_ROOM_SHAPES.get()
+                true
         );
-        if (Config.LOG_ROOM_SHAPES.get()) {
-            pendingRooms.setArtSink(this::logRoomShapes);
-        }
+        pendingRooms.setArtSink(this::logRoomShapes);
 
         long start = System.currentTimeMillis();
 
@@ -332,7 +330,8 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
      * Mirrors the shape output of {@code qt debug doors_all}: logs the ASCII art of a
      * room's shape. Only fires for a scan level whose shape changed since the last logged
      * scan, so a newly registered door (a bare "D") or a room that forms/changes walls
-     * logs once, while a stable town stays quiet. Gated by {@link Config#LOG_ROOM_SHAPES}.
+     * logs once, while a stable town stays quiet. Always on while we diagnose the
+     * room-crash/lag issue; to disable, pass false to the detector and drop the art sink.
      */
     private void logRoomShapes(
             int scanLevel,
