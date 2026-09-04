@@ -67,3 +67,19 @@ flowchart TD
   site — 1.19.2 lacks several 1.20+ methods (`ServerChunkCache.getLoadedChunks`,
   `Level.getBlockEntities`). Scanning `level.getChunk(cx, cz).getBlockEntities()`
   over the arena works.
+
+## Why a room-detection *gate* lives in `CrawlPerfTest`, not the perf autotest
+
+A perf autotest scenario cannot gate the wall-walk crawl. The crawl runs inside
+the flag-tick, and the flag-tick holds the single server thread. A shape that
+makes the crawl O(n²) (a comb, ~12000 visited positions) stalls that thread — a
+400×400 comb measured a 5641 ms / 112-tick-behind `Can't keep up` on the *fixed*
+(HashSet) code — and the autotest fails on the global `TestExecutor` timeout
+(`maxWaitTicks = 100 × villagerCount`, 20 townies = 2000 ticks: "Villager spawn
+timed out"), *before* the scenario's own assertion runs. So the scenario fails on
+correct code, not on a regression: the gate cannot bite without also failing.
+The cost is real regardless of HashSet-vs-ArrayList, so an autotest budget on
+this shape is structurally unsound. Keep the gate as the synchronous unit test
+`CrawlPerfTest` (RoomRecipes — it drives the crawl directly, asserts `ms < 1000`,
+and bites); the perf autotest's `plus_room` stays a measurement (always passes,
+reports the `TickProfile`), never a gate.
