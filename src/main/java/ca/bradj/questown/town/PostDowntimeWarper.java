@@ -138,7 +138,7 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
                 warpWorld
         );
 
-        if (jobWarper instanceof NoOpWarper) {
+        if (jobWarper == NoOpWarper.INSTANCE) {
             return liveState;
         }
 
