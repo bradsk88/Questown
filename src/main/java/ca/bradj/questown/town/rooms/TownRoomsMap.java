@@ -49,6 +49,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private @Nullable TownFlagBlockEntity town;
     private final Map<TownPosition, Integer> doorsToDrop = new HashMap<>();
     private final Map<TownPosition, DoorTrouble> deadDoors = new HashMap<>();
+    private final Map<Integer, Map<Position, String>> lastLoggedRoomShapes = new HashMap<>();
 
     Set<TownPosition> getRegisteredDoors() {
         return registeredDoors;
@@ -256,8 +257,11 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 },
                 activeRecipes::get,
                 ImmutableMap.copyOf(doorsAtLevel),
-                false
+                Config.LOG_ROOM_SHAPES.get()
         );
+        if (Config.LOG_ROOM_SHAPES.get()) {
+            pendingRooms.setArtSink(this::logRoomShapes);
+        }
 
         long start = System.currentTimeMillis();
 
@@ -322,6 +326,38 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             }
             times.clear();
         }
+    }
+
+    /**
+     * Mirrors the shape output of {@code qt debug doors_all}: logs the ASCII art of a
+     * room's shape. Only fires for a scan level whose shape changed since the last logged
+     * scan, so a newly registered door (a bare "D") or a room that forms/changes walls
+     * logs once, while a stable town stays quiet. Gated by {@link Config#LOG_ROOM_SHAPES}.
+     */
+    private void logRoomShapes(
+            int scanLevel,
+            ImmutableMap<Position, String> shapes
+    ) {
+        Map<Position, String> prev = lastLoggedRoomShapes
+                .computeIfAbsent(scanLevel, k -> new HashMap<>());
+        boolean changed = shapes.entrySet()
+                                .stream()
+                                .anyMatch(e -> !Objects.equals(prev.get(e.getKey()), e.getValue()));
+        if (!changed) {
+            return;
+        }
+        shapes.forEach((door, art) -> {
+            if (!Objects.equals(prev.get(door), art)) {
+                QT.FLAG_LOGGER.debug(
+                        "Room shape at {} (scan level {}):\n{}",
+                        door.getUIString(),
+                        scanLevel,
+                        art
+                );
+                prev.put(door, art);
+            }
+        });
+        prev.keySet().retainAll(shapes.keySet());
     }
 
     public void initializeNew(

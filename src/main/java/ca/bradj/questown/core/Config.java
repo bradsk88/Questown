@@ -88,6 +88,7 @@ public class Config {
     public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_COMFORTABLY;
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_DIMENSION;
     public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_SCAN_ITERATIONS;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_ROOM_SHAPES;
     public static final ForgeConfigSpec.ConfigValue<Integer> EXPERIENCE_REQUIRED_AT_LEVEL_1;
     public static final ForgeConfigSpec.ConfigValue<Double> EXPERIENCE_RAMP_FACTOR;
     public static final ForgeConfigSpec.ConfigValue<Long> FLAG_TICK_INTERVAL;
@@ -131,6 +132,11 @@ public class Config {
         MAX_ROOM_SCAN_ITERATIONS = BUILDER.comment(
                 "The maximum number of ticks that will be spent searching for town rooms"
         ).defineInRange("MaxRoomScanIterations", 1000, 1, 24000);
+        LOG_ROOM_SHAPES = BUILDER.comment(
+                "When true, logs the ASCII shape of each room (as the 'qt debug doors_all' command does) " +
+                        "whenever a door is registered or a room is detected. This enables the room detector's " +
+                        "debug art, which is heavy in large towns and may slow the server."
+        ).define("LogRoomShapes", false);
         BUILDER.pop();
 
         // Quests Config
