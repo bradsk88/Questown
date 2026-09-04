@@ -70,6 +70,22 @@ flowchart LR
 - The counter is per-`TownFlagState` (per town), and warp bookkeeping stays above
   the early return so leaving/returning is unaffected by the throttle.
 
+## Contained-blocks map is a snapshot (not refreshed on block-type change)
+
+The `RoomRecipeMatch` contained-blocks map is read live once per detection and
+cached in `ActiveRecipes`. It is re-read only when a room's **enclosed spaces**
+change — `ActiveRooms.update` diffs `MCRoom`, which holds `doorPos`/`spaces`/
+`yCoord` but no block data — not when a contained block's *type* changes. So a
+block inside an already-enclosed room (a chest becoming a wall, placing or
+adjusting furniture, building an inset corner) can leave the map stale until the
+enclosed region changes. A mismatch between the map and the live block at a
+recorded position is therefore not a detection error: the value was correct at
+detection, the map just was not refreshed. The job path
+(`Containers.asChest`) guards on the live blockstate, so a stale entry is
+skipped, not logged — which is why the 2026-09-04 log-flood was a logging bug
+(`TownContainers.fromChestBlockMaybe` logging `ERROR` per call), not a wrong
+room.
+
 ## Exceptional case: where `FlagTickInterval` actually comes from
 
 The gate above reads a **per-world server toml**, not the code default, and for

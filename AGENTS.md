@@ -48,6 +48,8 @@ When verifying a build output, identify the newest artifact, not an alphabetical
 
 `publishModrinth` (and `publish`) declare no outputs, so they are not up-to-date-cached: the task runs — and POSTs — on every invocation. Do not run a publish task a second time to "check the exit code"; that creates a duplicate Modrinth entry. Verify the result via the API (`GET https://api.modrinth.com/v2/project/<id>/version`, singular), not another run.
 
+Check that same API **before** publishing, not only after. The version is the git branch, so a branch may already be published from an earlier commit, and a new commit on the same branch re-POSTs the same version number — Modrinth keeps it as a duplicate (it already holds two `alpha.6-unstable` entries). If the branch's version already exists, bump the branch (`alpha.N` → `alpha.N+1`) rather than re-publishing; do not assume the branch is un-published because it is a new commit.
+
 ## Adding a value to a switch-covered enum
 
 Adding a value to an enum that has exhaustive `switch` expressions (e.g. the
