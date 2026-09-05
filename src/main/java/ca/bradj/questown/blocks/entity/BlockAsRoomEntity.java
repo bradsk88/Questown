@@ -55,7 +55,9 @@ public class BlockAsRoomEntity extends BlockEntity implements TownFlagSubEntity 
     }
 
     private Collection<ItemStack> dropWhenOrphaned(BlockPos flagPos) {
-        ItemStack toDrop = getBlockState().getBlock().asItem().getDefaultInstance();
+        Block b = getBlockState().getBlock();
+        ItemStack toDrop = b instanceof RoomBlock rb ? rb.getOrphanDropItem().getDefaultInstance()
+                : b.asItem().getDefaultInstance();
         TownFlagBlock.StoreParentOnNBT(toDrop, flagPos);
         return ImmutableList.of(toDrop);
     }

@@ -2,6 +2,8 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.JobBoardBlock;
+import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.mc.Util;
@@ -78,6 +80,11 @@ public class TownWorldInteraction {
             );
             @NotNull TownFlagBlockEntity t = town.getUnsafe();
             t.registerJobsBoard(e.getKey());
+            // setBlockAndUpdate bypasses JobBoardBlock.getStateForPlacement,
+            // so register the block-room explicitly.
+            t.getRoomHandle().registerBlockAsRoom(
+                    RoomBlock.getRoomId((JobBoardBlock) BlocksInit.JOB_BOARD_BLOCK.get()), e.getKey()
+            );
             t.jobHandle.setJobBlockState(e.getKey(), State.freshAtState(WorkSeekerJob.MAX_STATE));
         }
         return null;
