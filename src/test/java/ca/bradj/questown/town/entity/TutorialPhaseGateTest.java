@@ -8,6 +8,11 @@ import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.quests.QuestBatch;
 import ca.bradj.questown.town.special.SpecialQuests;
+import com.google.common.collect.ImmutableList;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.roomrecipes.core.space.InclusiveSpace;
+import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import net.minecraft.SharedConstants;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.Bootstrap;
@@ -570,4 +575,106 @@ class TutorialPhaseGateTest {
         campfireBatch.addNewQuest(null, SpecialQuests.CAMPFIRE);
         assertFalse(TownQuests.isProceduralBatch(campfireBatch));
     }
+
+    // ===== Superset completion for onboarding quests =====
+
+    private static final ResourceLocation STORE_ROOM_MEDIUM = new ResourceLocation("questown", "store_room_medium");
+    private static final ResourceLocation CRAFTING_ROOM = new ResourceLocation("questown", "crafting_room");
+
+    /**
+     * Drives the onboarding superset completion path the same way the production wiring would:
+     * {@code roomRecipeCreated} matches a room's recipe IDs against each onboarding quest's wanted id
+     * and calls {@code markQuestAsComplete} for any match. This tests the mechanism (a superset
+     * matches a smaller storeroom quest) without a live world, which the full method needs.
+     */
+    private static void applySupersetCompletion(
+            TownQuests quests,
+            ResourceLocation... matchedRecipeIds
+    ) {
+        for (Quest quest : quests.getAll()) {
+            if (quest.isOnboarding() && !quest.isComplete()) {
+                ResourceLocation wanted = (ResourceLocation) quest.getWantedId();
+                if (Set.of(matchedRecipeIds).contains(wanted)) {
+                    quests.markQuestAsComplete(null, wanted);
+                }
+            }
+        }
+    }
+
+    private static boolean isComplete(
+            TownQuests quests,
+            ResourceLocation wanted
+    ) {
+        return quests.questBatches.getAll().stream()
+                .filter(q -> wanted.equals(q.getWantedId()))
+                .anyMatch(Quest::isComplete);
+    }
+
+    /** Adds a single quest to a fresh TownQuests via the onboarding-style Inputs flow. */
+    private TownQuests questsWithQuest(MCQuest q) {
+        TownQuests quests = newTownQuests();
+        MCQuestBatch.Inputs inputs = new MCQuestBatch.Inputs(q.getBatchUUID(), null);
+        inputs.addNewQuest(q);
+        quests.questBatches.add(inputs.withRewardUponCompletion(new NoOpReward()));
+        return quests;
+    }
+
+    @Test
+    void superset_onboardingSmallStoreroomQuest_completedByHugeStoreroom() {
+        MCQuest smallQuest = MCQuest.standalone(null, null, SpecialQuests.STORE_ROOM_SMALL);
+        smallQuest.setOnboarding(true);
+        TownQuests quests = questsWithQuest(smallQuest);
+
+        // A huge storeroom (many chests) matches small/medium/big/huge at once.
+        applySupersetCompletion(quests,
+                SpecialQuests.STORE_ROOM_SMALL, STORE_ROOM_MEDIUM,
+                new ResourceLocation("questown", "store_room_big"),
+                new ResourceLocation("questown", "store_room_huge"));
+
+        assertTrue(isComplete(quests, SpecialQuests.STORE_ROOM_SMALL));
+    }
+
+    @Test
+    void superset_randomSmallStoreroomQuest_notCompletedByHugeStoreroom() {
+        MCQuest randomSmallQuest = MCQuest.standalone(null, null, SpecialQuests.STORE_ROOM_SMALL);
+        // not onboarding
+        TownQuests quests = questsWithQuest(randomSmallQuest);
+
+        applySupersetCompletion(quests,
+                SpecialQuests.STORE_ROOM_SMALL, STORE_ROOM_MEDIUM,
+                new ResourceLocation("questown", "store_room_big"),
+                new ResourceLocation("questown", "store_room_huge"));
+
+        assertFalse(isComplete(quests, SpecialQuests.STORE_ROOM_SMALL));
+    }
+
+    @Test
+    void superset_onboardingMediumUpgradeQuest_completedByHugeStoreroom() {
+        MCQuest upgradeQuest = MCQuest.upgrade(null, null, SpecialQuests.STORE_ROOM_SMALL, STORE_ROOM_MEDIUM);
+        upgradeQuest.setOnboarding(true);
+        TownQuests quests = questsWithQuest(upgradeQuest);
+
+        applySupersetCompletion(quests,
+                SpecialQuests.STORE_ROOM_SMALL, STORE_ROOM_MEDIUM,
+                new ResourceLocation("questown", "store_room_big"),
+                new ResourceLocation("questown", "store_room_huge"));
+
+        assertTrue(isComplete(quests, STORE_ROOM_MEDIUM));
+    }
+
+    @Test
+    void superset_unmatchedOnboardingQuest_notCompleted() {
+        MCQuest craftingQuest = MCQuest.standalone(null, null, CRAFTING_ROOM);
+        craftingQuest.setOnboarding(true);
+        TownQuests quests = questsWithQuest(craftingQuest);
+
+        // The room is a storeroom; it does not match the crafting room recipe.
+        applySupersetCompletion(quests,
+                SpecialQuests.STORE_ROOM_SMALL, STORE_ROOM_MEDIUM,
+                new ResourceLocation("questown", "store_room_big"),
+                new ResourceLocation("questown", "store_room_huge"));
+
+        assertFalse(isComplete(quests, CRAFTING_ROOM));
+    }
+
 }
