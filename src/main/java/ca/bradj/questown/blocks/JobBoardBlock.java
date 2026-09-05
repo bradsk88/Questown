@@ -1,7 +1,6 @@
 package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -19,8 +18,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.material.Material;
@@ -34,7 +31,7 @@ import java.util.List;
 
 import static net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
 
-public class JobBoardBlock extends TownFlagSubBlock<JobBoardBlock.Entity> {
+public class JobBoardBlock extends RoomBlock {
     public static final String ITEM_ID = "job_board_block";
     private final ArrayList<OpenMenuListener> openMenuListeners = new ArrayList<>();
 
@@ -44,9 +41,7 @@ public class JobBoardBlock extends TownFlagSubBlock<JobBoardBlock.Entity> {
                 Properties
                         .of(Material.WOOL, MaterialColor.COLOR_BROWN)
                         .strength(1.0F, 10.0F).
-                        noOcclusion(),
-                Entity::new,
-                Entity::tick
+                        noOcclusion()
         );
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
@@ -81,7 +76,11 @@ public class JobBoardBlock extends TownFlagSubBlock<JobBoardBlock.Entity> {
         }
 
         parent.registerJobsBoard(matPos);
-        return blockState;
+        BlockState superState = super.getStateForPlacement(ctx); // registers the block-room on the flag
+        if (superState == null) {
+            return null;
+        }
+        return superState.setValue(FACING, ctx.getHorizontalDirection().getOpposite());
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
@@ -111,50 +110,14 @@ public class JobBoardBlock extends TownFlagSubBlock<JobBoardBlock.Entity> {
     }
 
     @Override
-    protected BlockEntityType<Entity> getTickerEntityType() {
-        return TilesInit.JOB_BOARD.get();
+    public net.minecraft.world.item.Item getOrphanDropItem() {
+        // Born from a vanilla sign (sign -> job board conversion at the
+        // flag), so it orphans back into a sign.
+        return Items.OAK_SIGN;
     }
 
-    public static class Entity extends BlockEntity implements TownFlagSubEntity {
-
-        private final List<Runnable> tickListeners = new ArrayList<>();
-
-        public Entity(
-                BlockPos p_155229_,
-                BlockState p_155230_
-        ) {
-            super(TilesInit.JOB_BOARD.get(), p_155229_, p_155230_);
-        }
-
-        @Override
-        public Block getBlock() {
-            return getBlockState().getBlock();
-        }
-
-        @Override
-        public void runWhenOrphaned(
-                ServerLevel sl,
-                Block childBlock,
-                BlockPos childPos,
-                BlockPos flagPos
-        ) {
-            ItemStack toDrop = Items.OAK_SIGN.getDefaultInstance();
-            TownFlagBlock.StoreParentOnNBT(toDrop, flagPos);
-            TownFlagSubBlocks.dropDrops(sl, childPos, ImmutableList.of(toDrop));
-        }
-
-        @Override
-        public void addTickListener(Runnable listener) {
-            this.tickListeners.add(listener);
-        }
-
-        public static void tick(
-                Level level,
-                BlockPos pos,
-                BlockState blockState,
-                Entity entity
-        ) {
-            entity.tickListeners.forEach(Runnable::run);
-        }
+    @Override
+    public String getId() {
+        return ITEM_ID;
     }
 }

@@ -72,6 +72,16 @@ public abstract class RoomBlock extends TownFlagSubBlock<BlockAsRoomEntity> impl
         return Questown.ResourceLocation("block_room/" + rb.getDescriptionId());
     }
 
+    /**
+     * The item dropped when the flag orphans this block. Defaults to the
+     * block's own item; blocks born from a conversion (e.g. the job board,
+     * which starts life as a vanilla sign) override this to drop their
+     * pre-conversion form.
+     */
+    public Item getOrphanDropItem() {
+        return asItem();
+    }
+
     public static boolean isBlockRoom(ResourceLocation rb) {
         return rb.getPath().startsWith("block_room/");
     }
