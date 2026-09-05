@@ -1,7 +1,8 @@
 ---
 title: Onboarding storeroom quests should complete on any storeroom, not the exact recipe
-status: ready-for-human
+status: closed
 created: 2026-09-04
+closed: 2026-09-05
 priority: p2
 ---
 
