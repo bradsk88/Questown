@@ -55,6 +55,8 @@ When building or changing a `gui/` screen, follow `docs/solutions/conventions/gu
 
 ## Build verification
 
+Run gradle compile/test tasks with `LANG=C.UTF-8` (the hold-mode env, not just hold mode): a POSIX locale fails javac with "unmappable character for encoding US-ASCII" on sources with unicode. A cached `up-to-date` task can mask this — it only bites when a task actually recompiles.
+
 A Gradle `BUILD SUCCESSFUL` with the task `up-to-date` did not recompile your edits — it only re-ran cached outputs, so it proves nothing about the code you just changed. After changing code, check the task says `executed` (or pass `--rerun-tasks`) before trusting a build as a pass. Applies to `compileJava`/`test`/`build`.
 
 `./gradlew build` is **red by default**, independent of your changes: `ChickenArcHintsTest.todo_…` is a deliberate `Assertions.fail` marker (chicken-arc mod-icon beats that need a Forge mod-loading harness) and always fails. A `:test` failure on a `todo_…` test is **not a regression** — verify `compileJava`/`jar` `executed` (or run `./gradlew build -x test`) before treating the suite as a gate. `publishModrinth` does not run tests, so a red `:test` never blocks a release.
