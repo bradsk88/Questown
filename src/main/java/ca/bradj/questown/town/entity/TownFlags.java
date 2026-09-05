@@ -20,6 +20,16 @@ public class TownFlags {
             TownFlagBlockEntity entity
     ) {
         flags.put(uuid, entity);
+        QT.FLAG_LOGGER.info(
+                "[findflag] flag {} registered at {}",
+                uuid,
+                entity.getBlockPos()
+        );
+    }
+
+    // Dev-only: dump every known flag's position (used to locate the incident flag).
+    public static java.util.Collection<TownFlagBlockEntity> all() {
+        return java.util.Collections.unmodifiableCollection(flags.values());
     }
 
     @SubscribeEvent
