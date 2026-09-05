@@ -127,6 +127,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.status = QuestStatus.COMPLETED;
         q.completedOn = room;
         q.setFlavorText(this.getFlavorText());
+        q.setOnboarding(this.isOnboarding());
         q.concurrentJobIdsEncoded = this.concurrentJobIdsEncoded;
         return q;
     }
@@ -143,6 +144,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.ownerUUID = this.ownerUUID;
         q.status = QuestStatus.ACTIVE; // TODO: Use (and render) "lost" status?
         q.completedOn = null;
+        q.setOnboarding(this.isOnboarding());
         return q;
     }
 
@@ -154,6 +156,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         private static final String NBT_RECIPE_ID = "recipe_id";
         private static final String NBT_FROM_RECIPE_ID = "from_recipe_id";
         private static final String NBT_FLAVOR_TEXT = "flavor_text";
+        private static final String NBT_ONBOARDING = "onboarding";
         private static final String NBT_CONCURRENT_JOB_IDS = "concurrent_job_ids";
         private static final String NBT_STATUS = "status";
         private static final String NBT_COMPLETED_ON_DOORPOS_X = "doorpos_x";
@@ -187,6 +190,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             }
             if (quest.getFlavorText() != null) {
                 ct.putString(NBT_FLAVOR_TEXT, quest.getFlavorText());
+            }
+            if (quest.isOnboarding()) {
+                ct.putBoolean(NBT_ONBOARDING, true);
             }
             if (quest instanceof MCQuest mcq && mcq.concurrentJobIdsEncoded != null) {
                 ct.putString(NBT_CONCURRENT_JOB_IDS, mcq.concurrentJobIdsEncoded);
@@ -241,6 +247,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             );
             if (nbt.contains(NBT_FLAVOR_TEXT)) {
                 quest.setFlavorText(nbt.getString(NBT_FLAVOR_TEXT));
+            }
+            if (nbt.getBoolean(NBT_ONBOARDING)) {
+                quest.setOnboarding(true);
             }
             if (nbt.contains(NBT_CONCURRENT_JOB_IDS)) {
                 quest.concurrentJobIdsEncoded = nbt.getString(NBT_CONCURRENT_JOB_IDS);

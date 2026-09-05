@@ -25,6 +25,12 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     @Nullable
     private String flavorText;
 
+    // True for quests added by the onboarding flow (tutorial phases, the kickoff batch). Such
+    // quests complete on a room that is a superset of the wanted recipe ("any storeroom"),
+    // whereas random/procedural quests require an exact recipe match. See the storeroom quest
+    // completion notes in .scratch/storeroom-quest-completion.
+    private boolean onboarding;
+
     Quest() {
         this(null, null, null, null, null, 1);
     }
@@ -125,6 +131,14 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
 
     public void setFlavorText(@Nullable String flavorText) {
         this.flavorText = flavorText;
+    }
+
+    public boolean isOnboarding() {
+        return onboarding;
+    }
+
+    public void setOnboarding(boolean onboarding) {
+        this.onboarding = onboarding;
     }
 
     public enum QuestStatus {

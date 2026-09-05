@@ -595,6 +595,17 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         view.broadcastMessage("New quests are available! Right-click the town flag to see them.");
     }
 
+    /**
+     * Flags a batch's quests as onboarding so they complete on a room that is a superset of the
+     * wanted recipe ("any storeroom"), unlike random/procedural quests which require an exact recipe
+     * match. See .scratch/storeroom-quest-completion.
+     */
+    private static void markOnboarding(MCQuestBatch batch) {
+        for (MCQuest q : batch.getAll()) {
+            q.setOnboarding(true);
+        }
+    }
+
     private void addPhase4CrafterQuests(TutorialTownView view) {
         // Batch A: Assign crafter + build crafting room
         UUID batchAUUID = UUID.randomUUID();
@@ -609,6 +620,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         batchA.addNewQuest(craftingRoomQuest);
 
         MCQuestBatch batchAQ = batchA.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_4A));
+        markOnboarding(batchAQ);
         questBatches.add(batchAQ);
 
         // Batch B: Specialize crafter to bowl
@@ -620,6 +632,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         batchB.addNewQuest(bowlJobQuest);
 
         MCQuestBatch batchBQ = batchB.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_4B));
+        markOnboarding(batchBQ);
         questBatches.add(batchBQ);
 
         QT.QUESTS_LOGGER.info("Tutorial phase 4 quests added (crafter + bowl)");
@@ -640,6 +653,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         q.addNewQuest(kitchenQuest);
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_5));
+        markOnboarding(qq);
         questBatches.add(qq);
         QT.QUESTS_LOGGER.info("Tutorial phase 5 quests added (supply chain)");
     }
@@ -653,6 +667,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         q.addNewQuest(upgradeQuest);
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_6));
+        markOnboarding(qq);
         questBatches.add(qq);
         QT.QUESTS_LOGGER.info("Tutorial phase 6 quest added (storage upgrade)");
     }
@@ -668,6 +683,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         q.addNewQuest(woodQuest);
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_7));
+        markOnboarding(qq);
         questBatches.add(qq);
         QT.QUESTS_LOGGER.info("Tutorial phase 7 quest added (exotic wood: {})", exoticWood);
     }
@@ -768,6 +784,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         q.addNewQuest(swordQuest);
 
         MCQuestBatch qb = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_KICKOFF));
+        markOnboarding(qb);
         questBatches.add(qb);
         QT.QUESTS_LOGGER.debug("Tutorial quests added to town: {}", qb.toNiceString());
     }
