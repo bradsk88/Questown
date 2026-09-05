@@ -3,8 +3,10 @@ package ca.bradj.questown.core.network;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.gui.BopTransactionSyncer;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
@@ -41,8 +43,11 @@ public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean 
                 QT.GUI_LOGGER.error("No flag at position {}. Job root will not be changed.", flagPos);
                 return;
             }
-            BopTransactionSyncer.syncConsumedBOP(sender);
-            flag.get().getVillagerHandle().scheduleJobRootChange(villagerUUID, instant);
+            // Read the consumed BOP's guarantee before it vanishes: a blessed ("gold") BOP
+            // forces the specified root instead of the usual random choice.
+            ItemStack consumed = BopTransactionSyncer.syncConsumedBOP(sender);
+            Optional<JobID> guarantee = ca.bradj.questown.blocks.BlockOfProgress.getBlessedJob(consumed);
+            flag.get().getVillagerHandle().scheduleJobRootChange(villagerUUID, instant, guarantee);
         });
         ctx.get().setPacketHandled(true);
 

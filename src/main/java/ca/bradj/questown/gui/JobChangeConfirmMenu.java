@@ -74,4 +74,9 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
     public boolean isBlessed() {
         return tx.hasBlockOfProgress() && tx.isBlessed();
     }
+
+    /** The root job a blessed ("gold") BOP guarantees, or empty for a plain BOP. */
+    public java.util.Optional<JobID> getBlessedJob() {
+        return tx.getBlessedJob();
+    }
 }

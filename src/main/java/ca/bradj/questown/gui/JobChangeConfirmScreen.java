@@ -133,10 +133,16 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
 
 
         String key = "menu.unlock_root.insert_bop";
+        Object[] args = new Object[0];
         if (menu.isBlessed()) {
             key = "menu.unlock_root.insert_bop_blessed";
+            // A plain-blessed stack without a guaranteed root keeps the legacy generic text;
+            // a "gold" BOP names the root it will change to.
+            args = new Object[]{menu.getBlessedJob()
+                    .map(j -> Compat.translatable("jobs." + j.rootId()))
+                    .orElseGet(() -> Compat.translatable("menu.unlock_root.unguaranteed_job"))};
         }
-        List<FormattedCharSequence> parts = font.split(Compat.translatable(key), textWidth);
+        List<FormattedCharSequence> parts = font.split(Compat.translatable(key, args), textWidth);
         for (FormattedCharSequence part : parts) {
             Compat.drawDarkText(font, stack, part, x, bgY);
             bgY += 8;

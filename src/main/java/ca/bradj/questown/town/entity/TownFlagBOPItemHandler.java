@@ -27,15 +27,18 @@ public class TownFlagBOPItemHandler implements IItemHandler {
             TownFlagBlockEntity flag,
             ServerPlayer recipient
     ) {
-        flag.bopCount--;
+        // FIFO: the player collects the oldest deposit first (see bopStacks on the entity).
+        if (flag.bopStacks.isEmpty()) {
+            return;
+        }
+        ItemStack v = flag.bopStacks.remove(0);
         flag.setChanged();
         flag.syncBopFull();
-        ItemStack v = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance();
         BlockPos bp = flag.getTownFlagBasePos();
         flag.messages.broadcastMessage(
                 "messages.player.took_bop",
                 recipient.getName(),
-                ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
+                v,
                 Util.getTinyString(bp)
         );
         if (recipient.getInventory().add(v)) {
@@ -56,10 +59,10 @@ public class TownFlagBOPItemHandler implements IItemHandler {
 
     @Override
     public @NotNull ItemStack getStackInSlot(int i) {
-        if (i >= town.bopCount) {
+        if (i >= town.getBopCount()) {
             return ItemStack.EMPTY;
         }
-        return new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get());
+        return town.bopStacks.get(i);
     }
 
     @Override
@@ -73,9 +76,12 @@ public class TownFlagBOPItemHandler implements IItemHandler {
         }
         itemStack.shrink(1);
         if (!simulate) {
-            town.bopCount++;
+            // Snapshot so the stored stack keeps its bless NBT even if the caller's copy mutates.
+            ItemStack stored = itemStack.copy();
+            stored.setCount(1);
+            town.bopStacks.add(stored);
             town.syncBopFull();
-            QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", town.bopCount);
+            QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", town.getBopCount());
             town.messages.broadcastMessage("messages.bop.earned");
         }
         return itemStack;
@@ -104,7 +110,7 @@ public class TownFlagBOPItemHandler implements IItemHandler {
         if (i >= getSlots()) {
             return false;
         }
-        if (i < town.bopCount) {
+        if (i < town.getBopCount()) {
             return false;
         }
         return itemStack.is(ItemsInit.BLOCK_OF_PROGRESS.get());

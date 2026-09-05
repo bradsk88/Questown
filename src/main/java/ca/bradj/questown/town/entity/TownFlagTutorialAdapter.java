@@ -3,6 +3,8 @@ package ca.bradj.questown.town.entity;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
+import net.minecraft.world.item.ItemStack;
 import ca.bradj.questown.gui.ItemEconomicsData;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
@@ -53,7 +55,9 @@ class TownFlagTutorialAdapter implements TutorialTownView {
 
     @Override
     public void grantBop(int amount) {
-        flag.bopCount += amount;
+        for (int i = 0; i < amount; i++) {
+            flag.bopStacks.add(new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get()));
+        }
         flag.setChanged();
         flag.syncBopFull();
     }

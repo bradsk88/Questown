@@ -67,9 +67,11 @@ therefore two distinct states, not one:
 - **The latch** (`SimpleVillagerHandle.hasBlockOfProgress`, one `Boolean` per
   townie) — set on level-up, the value `addExperience` early-returns on; a townie
   can hold **at most one** uncollected BOP, so it accrues no XP until it deposits.
-- **The flag's count** (`TownFlagBlockEntity.bopCount`, capped at **64** by
-  `TownFlagBOPItemHandler.getSlots()`) — bumped on deposit, decremented only when
-  the **player** collects. This is the "uncollected by the player" state.
+- **The flag's deposits** (`TownFlagBlockEntity.bopStacks`, capped at **64** by
+  `TownFlagBOPItemHandler.getSlots()`) — real stacks, because each deposit may be
+  **blessed** with the depositing townie's root job (a "gold" BOP; see ADR-0015).
+  Appended on deposit, popped FIFO only when the **player** collects. This is the
+  "uncollected by the player" state.
 
 ## Earn → latch → assign (happy path)
 
@@ -80,7 +82,7 @@ flowchart TD
     Lvl -- yes --> Latch["level up\nhasBlockOfProgress = true\n(broadcast leveled_up)"]
     Latch --> Stall["addExperience early-returns\nno more XP while latched"]
     Latch --> Seek["WorkSeekerJob seeks work\nchangeJobForVisitorFromBoard"]
-    Seek -->|"hasBlockOfProgress = true\n(before the downtime check)"| Give["give BOP item +\nchangeJob -> BOPDepositorWork"]
+    Seek -->|"hasBlockOfProgress = true\n(before the downtime check)"| Give["bless BOP stack with\nthe earning root job;\ngive + BOPDepositorWork"]
 ```
 
 - The latch is a `Boolean`, not a counter — one townie holds at most one BOP, so
@@ -93,8 +95,8 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Dep["BOPDepositorWork:\ntownie inserts BOP at flag"] --> Ins{"bopCount < 64?"}
-    Ins -- yes --> OK["insertItem: bopCount++\nbroadcast bop.earned"]
+    Dep["BOPDepositorWork:\ntownie inserts BOP at flag"] --> Ins{"deposit count < 64?"}
+    Ins -- yes --> OK["insertItem: stack appended\n(bless NBT survives)\nbroadcast bop.earned"]
     Ins -- no --> Lost["insertItem rejected\n'Item lost due to not enough space'\nBOP dropped"]
     OK --> Clr["ClearBOPSpecialRule\nfires (item is a BOP)"]
     Lost --> Clr
@@ -117,25 +119,34 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    Flag["flag holds bopCount\n(presented spinning above it)"] --> Eject["player: ejectBlockOfProgress"]
-    Eject --> Inv["inventory.add / else drop ItemEntity\nbopCount--, broadcast took_bop"]
+    Flag["flag holds bopStacks\n(presented spinning above it)"] --> Eject["player: ejectBlockOfProgress"]
+    Eject --> Inv["inventory.add / else drop ItemEntity\noldest stack, broadcast took_bop"]
     Inv --> Spend["player spends BOP\non the skill tree (job unlocks)"]
+    Inv --> Root["or: root job change\na blessed (gold) BOP\nforces that root"]
 ```
 
-- Collection is the **only** thing that moves `bopCount` down; it never touches the
+- Collection is the **only** thing that moves the deposits down; it never touches the
   latch. Spending is the player's decision, so progression advances only if the
   player checks in — the counterweight to warp (ADR-0011).
+- A blessed ("gold") BOP guarantees its carried root on a root job change:
+  `JobRootChangeMessage` reads the spent stack (`BopTransactionSyncer.syncConsumedBOP`
+  returns it), and `SimpleVillagerHandle` stores it in `guaranteedRoots`, applied at
+  `handleMorning` **before** the overnight quest override (persisted as
+  `guaranteed_roots` NBT). The menu shows the named root
+  (`menu.unlock_root.insert_bop_blessed`).
+- While the flag holds any BOP it **sparkles cyan** (`TownFlagTicker.spawnBopParticlesIfNeeded`,
+  `DustParticleOptions`); a full flag renders the red BOP cube instead.
 
 ## Full-flag notice
 
-A full flag (bopCount at the 64 cap) silently loses further BOPs, and the latch
+A full flag (at the 64-deposit cap) silently loses further BOPs, and the latch
 still clears (so the townie is *not* re-stalled), so "stopped progressing" was
 invisible. A **blockstate** surfaces it, mirroring the deed's `DEED_AVAILABLE`
 pattern, since the flag has no client-side ticker to hydrate BE data.
 
 ```mermaid
 flowchart TD
-    Cap["bopCount changes\n(deposit / collect / grant / test)"] --> Sync["syncBopFull()\n→ setBlock BOP_FULL = (bopCount >= CAP)"]
+    Cap["deposit count changes\n(deposit / collect / grant / test)"] --> Sync["syncBopFull()\n→ setBlock BOP_FULL = (count >= CAP)"]
     Sync -.auto-syncs.-> Cl["flag BOP_FULL = true"]
     Cl -->|"isBopFull()"| Red["TownFlagDeedRenderer\nred BOP cube above flag"]
     Sync -->|"use() — before first_bop_view check"| Open["open BOP menu\nunconditionally"]
