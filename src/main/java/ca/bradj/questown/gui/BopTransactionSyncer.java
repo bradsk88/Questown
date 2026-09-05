@@ -2,6 +2,8 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.blocks.BlockOfProgress;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.jobs.JobID;
+import java.util.Optional;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -21,16 +23,19 @@ public class BopTransactionSyncer {
         this.getSlot = getSlot;
     }
 
-    public static void syncConsumedBOP(
+    public static @NotNull ItemStack syncConsumedBOP(
             ServerPlayer sender
     ) {
-        // Also clear the BOP slot in the open menu, if present, to prevent it being returned to the player
+        // Also clear the BOP slot in the open menu, if present, to prevent it being returned to the player.
+        // Returns the consumed stack so callers can read bless/guarantee NBT before it is voided.
+        ItemStack consumed = ItemStack.EMPTY;
         if (sender.containerMenu instanceof JobChangeConfirmMenu menu) {
-            menu.tx.clearBopSlot();
+            consumed = menu.tx.takeBopSlot();
         }
         if (sender.containerMenu instanceof JobUnlockConfirmMenu menu) {
-            menu.tx.clearBopSlot();
+            consumed = menu.tx.takeBopSlot();
         }
+        return consumed;
     }
 
     private @NotNull Slot getBopSlot(
@@ -47,11 +52,19 @@ public class BopTransactionSyncer {
         return getBopSlot().getItem();
     }
 
-    public void clearBopSlot() {
+    /** Empties the BOP slot and returns what was in it (EMPTY if none). */
+    public @NotNull ItemStack takeBopSlot() {
+        ItemStack stack = getBopSlotItem();
         getBopSlot().set(ItemStack.EMPTY);
+        return stack;
     }
 
     public boolean isBlessed() {
         return BlockOfProgress.isBlessed(getBopSlotItem());
+    }
+
+    /** The root job a blessed BOP in the slot guarantees, or empty for a plain BOP. */
+    public Optional<JobID> getBlessedJob() {
+        return BlockOfProgress.getBlessedJob(getBopSlotItem());
     }
 }

@@ -168,6 +168,17 @@ public interface VillagerHolder {
             boolean instant
     );
 
+    /**
+     * Same as {@link #scheduleJobRootChange(UUID, boolean)} but carries a guaranteed root
+     * (from a blessed "gold" BOP): when present, the pending change takes this root instead
+     * of picking randomly at handleMorning.
+     */
+    void scheduleJobRootChange(
+            UUID villagerUUID,
+            boolean instant,
+            Optional<JobID> guaranteedRoot
+    );
+
     boolean isUnlocked(JobID jobID);
 
     UnsafeVillagerData getUnprotectedDataHandle(@Nullable VillagerUUID vuid);

@@ -94,7 +94,7 @@ public class ItemsInit {
 
     public static final RegistryObject<Item> BLOCK_OF_PROGRESS = ITEMS.register(
             BlockOfProgress.ITEM_ID,
-            () -> new BlockItem(BlocksInit.BLOCK_OF_PROGRESS.get(), Questown.DEFAULT_ITEM_PROPS)
+            () -> new BlockOfProgressItem(Questown.DEFAULT_ITEM_PROPS)
     );
 
     public static final RegistryObject<Item> FISHING_STATION_BLOCK = ITEMS.register(

@@ -120,7 +120,7 @@ public class TownQuestsHandle implements QuestsHolder {
                         );
                     }
                 }, data ->
-                        FlagMenus.writeAndLink(data, quests, t.getInfo(), player, entities, t.bopCount,
+                        FlagMenus.writeAndLink(data, quests, t.getInfo(), player, entities, t.getBopCount(),
                                 () -> t.hasVillagerArrivingInMorning(), summary)
         );
     }

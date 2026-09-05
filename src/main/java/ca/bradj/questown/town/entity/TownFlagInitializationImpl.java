@@ -7,10 +7,14 @@ import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.econ.TownEconomicsSerializer;
 import ca.bradj.questown.town.quests.MCMorningRewards;
 import ca.bradj.questown.town.quests.MCQuestBatches;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -82,7 +86,11 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     @Override
     public CompoundTag serializeBOP() {
         CompoundTag t = new CompoundTag();
-        t.putInt("count", flag.bopCount);
+        ListTag stacks = new ListTag();
+        for (ItemStack bop : flag.bopStacks) {
+            stacks.add(bop.save(new CompoundTag()));
+        }
+        t.put("stacks", stacks);
         t.putBoolean("tutorial_bop_granted", flag.tutorialBopGranted);
         t.putBoolean("flagpole_built", flag.isFlagpoleBuilt());
         t.putInt("completed_procedural_batches", flag.completedProceduralBatches);
@@ -91,7 +99,20 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
 
     @Override
     public void initializeBOP(CompoundTag tag) {
-        flag.bopCount = tag.getInt("count");
+        flag.bopStacks.clear();
+        if (tag.contains("stacks")) {
+            ListTag stacks = tag.getList("stacks", Tag.TAG_COMPOUND);
+            for (Tag s : stacks) {
+                flag.bopStacks.add(ItemStack.of((CompoundTag) s));
+            }
+        } else if (tag.contains("count")) {
+            // Legacy saves stored a bare count (bless NBT did not survive the flag yet):
+            // migrate to that many plain BOPs.
+            int count = tag.getInt("count");
+            for (int i = 0; i < count; i++) {
+                flag.bopStacks.add(new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get()));
+            }
+        }
         if (tag.contains("tutorial_bop_granted")) {
             flag.tutorialBopGranted = tag.getBoolean("tutorial_bop_granted");
         }

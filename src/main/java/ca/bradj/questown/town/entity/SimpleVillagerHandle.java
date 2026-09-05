@@ -47,6 +47,8 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     // Serialized
     private final Map<UUID, Boolean> jobChangesPending = new HashMap<>();
+    // roots guaranteed by blessed ("gold") BOPs; cleared once the pending change applies
+    private final Map<UUID, JobID> guaranteedRoots = new HashMap<>();
 
     public static void staticInit() {
         TownVillagerUIs.staticInit();
@@ -61,6 +63,10 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public ImmutableMap<UUID, Boolean> getJobChangesPending() {
         return ImmutableMap.copyOf(jobChangesPending);
+    }
+
+    public ImmutableMap<UUID, JobID> getGuaranteedRoots() {
+        return ImmutableMap.copyOf(guaranteedRoots);
     }
 
     private final List<ENTITY> entities = new ArrayList<>();
@@ -117,6 +123,18 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             ImmutableMap<UUID, Boolean> jobChangesPending,
             boolean hungerEnabled
     ) {
+        initialize(fullness, damage, experience, level, jobChangesPending, hungerEnabled, ImmutableMap.of());
+    }
+
+    public void initialize(
+            Map<UUID, Integer> fullness,
+            Map<UUID, Integer> damage,
+            ImmutableMap<UUID, Integer> experience,
+            ImmutableMap<UUID, Integer> level,
+            ImmutableMap<UUID, Boolean> jobChangesPending,
+            boolean hungerEnabled,
+            ImmutableMap<UUID, JobID> guaranteedRoots
+    ) {
         if (!this.fullness.isEmpty()) {
             throw new IllegalStateException("Attempting to initialize already initialized");
         }
@@ -125,6 +143,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         this.experience.putAll(experience);
         this.levels.putAll(level);
         this.jobChangesPending.putAll(jobChangesPending);
+        this.guaranteedRoots.putAll(guaranteedRoots);
         addHungryListener(e -> {
             if (UtilClean.getOrDefault(fullness, delegator.getUUID(e), configs.baseFullness) == 0) {
                 starving.put(delegator.getUUID(e), true);
@@ -571,11 +590,25 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             long currentTick,
             boolean instant
     ) {
+        scheduleJobRootChange(villagerUUID, currentTick, instant, Optional.empty());
+    }
+
+    public void scheduleJobRootChange(
+            UUID villagerUUID,
+            long currentTick,
+            boolean instant,
+            Optional<JobID> guaranteedRoot
+    ) {
         ENTITY e = getEntity(villagerUUID);
         if (e == null) {
             QT.FLAG_LOGGER.error("Villager not found for job root change: {}", villagerUUID);
             return;
         }
+        // A newer schedule replaces any older guarantee, even a plain (random) one.
+        guaranteedRoot.ifPresentOrElse(
+                root -> guaranteedRoots.put(delegator.getUUID(e), root),
+                () -> guaranteedRoots.remove(delegator.getUUID(e))
+        );
         if (instant) {
             QT.FLAG_LOGGER.info(
                     "Villager {} will change to a new job NOW (creative mode)",
@@ -609,7 +642,15 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             ENTITY v,
             long currentTick
     ) {
-//        Optional<JobID> override = town.getUnsafe().getQuestHandle().overnightJobOverride();
+        // A blessed ("gold") BOP spent on this villager dictates the new root; it applies
+        // before any overnight quest override, and ordinary random picks.
+        Optional<JobID> guaranteed = Optional.ofNullable(guaranteedRoots.remove(delegator.getUUID(v)));
+        if (guaranteed.isPresent()) {
+            QT.FLAG_LOGGER.info("Blessed BOP dictates job root change to: {}", guaranteed.get());
+            unlockAndChange(v, guaranteed.get(), currentTick);
+            return;
+        }
+
         Optional<JobID> override = delegator.getOvernightJobOverride();
         if (override.isPresent()) {
             QT.FLAG_LOGGER.info("Overriding random job root change in favor of: {}", override.get());

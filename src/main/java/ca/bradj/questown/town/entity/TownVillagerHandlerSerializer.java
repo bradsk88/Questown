@@ -31,6 +31,7 @@ public class TownVillagerHandlerSerializer {
     private static final String NBT_DURATION = "duration";
     private static final String NBT_DAMAGE = "damage";
     private static final String NBT_PENDING_JOB_CHANGES = "pending_job_changes";
+    private static final String NBT_GUARANTEED_ROOTS = "guaranteed_roots";
     private static final String NBT_PROFICIENCIES = "proficiencies";
 
     public void deserialize(
@@ -82,6 +83,11 @@ public class TownVillagerHandlerSerializer {
         ImmutableMap<UUID, Integer> experience = deserializeMap(compound, NBT_EXP, simpleInt);
         ImmutableMap<UUID, Integer> level = deserializeMap(compound, NBT_LEVELS, simpleInt);
         ImmutableMap<VillagerUUID, Boolean> pending = deserializeVMap(compound, NBT_PENDING_JOB_CHANGES, simpleBool);
+        // Blessed ("gold") BOP guarantees pending against root changes, persisted so a spend
+        // overnight still forces the root after a save/quit in between.
+        ImmutableMap<UUID, JobID> guaranteedRoots = deserializeMap(
+                compound, NBT_GUARANTEED_ROOTS, t -> JobID.fromTag((CompoundTag) ((CompoundTag) t).getCompound(NBT_VALUE))
+        );
         ImmutableMap<UUID, ImmutableMap<String, Float>> proficiencies = deserializeMap(
                 compound, NBT_PROFICIENCIES, t -> {
                     CompoundTag pt = ((CompoundTag) t).getCompound(NBT_PROFICIENCIES);
@@ -94,7 +100,8 @@ public class TownVillagerHandlerSerializer {
         );
 
         villagerHandle.initialize(
-                fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending, proficiencies
+                fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending, proficiencies,
+                guaranteedRoots
         );
     }
 
@@ -192,6 +199,10 @@ public class TownVillagerHandlerSerializer {
         };
         serializeMap(compound, NBT_JOBS_KNOWN_TO_EXIST, villagerHandle.getJobsKnownToExist(), bc);
         serializeVMap(compound, NBT_PENDING_JOB_CHANGES, villagerHandle.getJobChangesPending(), simpleBool);
+        serializeMap(
+                compound, NBT_GUARANTEED_ROOTS, villagerHandle.getGuaranteedRoots(),
+                (CompoundTag t, JobID j) -> t.put(NBT_VALUE, JobID.toTag(j))
+        );
         serializeMap(
                 compound, NBT_PROFICIENCIES, villagerHandle.getAllProficiencies(), (t, m) -> {
                     CompoundTag pt = new CompoundTag();

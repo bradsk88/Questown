@@ -54,6 +54,7 @@ class SimpleVillagerHandleTest {
         List<String> logs = new ArrayList<>();
         List<String> broadcast = new ArrayList<>();
         Map<UUID, Boolean> dining = new HashMap<>();
+        JobID overnightOverride = null;
         private VillagerSleepModule<UUID> sleepModule = new TestSleepModule();
 
         @Override
@@ -136,7 +137,7 @@ class SimpleVillagerHandleTest {
 
         @Override
         public Optional<JobID> getOvernightJobOverride() {
-            return Optional.empty();
+            return Optional.ofNullable(overnightOverride);
         }
 
         @Override
@@ -339,5 +340,87 @@ class SimpleVillagerHandleTest {
     @Test
     public void completionListener_firesAddExperience_onJobCompletion() {
         // See @Disabled: cannot be reached without a real world interaction.
+    }
+
+    // ---- Blessed ("gold") BOP guarantees ----
+
+    @Test
+    public void scheduleJobRootChange_withGuarantee_forcesThatRootOnMorning() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+        JobID guarantee = new JobID("hunter", "hunter");
+
+        handle.scheduleJobRootChange(v, 0, false, Optional.of(guarantee));
+        Assertions.assertTrue(
+                handle.isJobChangePending(v),
+                "a non-instant root change marks the pending flag"
+        );
+
+        handle.handleMorning(0);
+        Assertions.assertEquals(
+                1, t.jobChanges.size(),
+                "exactly one job change applied at morning"
+        );
+        Assertions.assertEquals(
+                guarantee, t.jobChanges.get(0),
+                "the guaranteed root is applied even though the never-empty override/shuffle would not find it"
+        );
+        Assertions.assertTrue(
+                handle.getGuaranteedRoots().isEmpty(),
+                "the guarantee is consumed once applied"
+        );
+    }
+
+    @Test
+    public void scheduleJobRootChange_guaranteeBeatsOvernightOverride() {
+        TestDelegator t = new TestDelegator();
+        t.overnightOverride = new JobID("gatherer", "gatherer");
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+        JobID guarantee = new JobID("hunter", "hunter");
+
+        handle.scheduleJobRootChange(v, 0, false, Optional.of(guarantee));
+        handle.handleMorning(0);
+        Assertions.assertEquals(
+                guarantee, t.jobChanges.get(0),
+                "a blessed BOP's guarantee applies before the overnight quest override"
+        );
+    }
+
+    @Test
+    public void scheduleJobRootChange_noGuarantee_fallsBackToOvernightOverride() {
+        TestDelegator t = new TestDelegator();
+        t.overnightOverride = new JobID("gatherer", "gatherer");
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        handle.scheduleJobRootChange(v, 0, false, Optional.empty());
+        handle.handleMorning(0);
+        Assertions.assertEquals(
+                t.overnightOverride, t.jobChanges.get(0),
+                "with no guarantee, the overnight override still applies"
+        );
+        // NB: the fully-random path (no guarantee, no override) needs ServerJobsRegistry.getAllRootJobs,
+        // which is uninitialized headless (Works.works null → NPE). Not reachable in unit tests.
+    }
+
+    @Test
+    public void plainSchedule_replacesAStaleGuarantee() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        handle.scheduleJobRootChange(v, 0, false, Optional.of(new JobID("hunter", "hunter")));
+        Assertions.assertFalse(handle.getGuaranteedRoots().isEmpty());
+        handle.scheduleJobRootChange(v, 0, false, Optional.empty());
+        Assertions.assertTrue(
+                handle.getGuaranteedRoots().isEmpty(),
+                "re-scheduling without a guarantee replaces the stale one"
+        );
     }
 }

@@ -3,6 +3,7 @@ package ca.bradj.questown.town.entity;
 import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.BlockOfProgress;
 import ca.bradj.questown.blocks.FlagPhase;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
@@ -50,6 +51,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
 import net.minecraft.core.particles.ParticleTypes;
 import ca.bradj.questown.town.rooms.DeadDoorBubbles;
 import ca.bradj.questown.town.rooms.DoorTrouble;
@@ -172,7 +174,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final NoMCEconomics economics = new NoMCEconomics();
     final TownFlagTicker ticker = new TownFlagTicker();
 
-    int bopCount = 0;
+    // Deposited Blocks of Progress. Stored as real stacks (not a count) because each deposit
+    // may be blessed: the item's NBT carries the depositor's job, which a blessed BOP guarantees
+    // on a root job change. FIFO: eject() gives the player the oldest deposit first.
+    final NonNullList<ItemStack> bopStacks = NonNullList.create();
     boolean tutorialBopGranted = false;
     int completedProceduralBatches = 0;
     private boolean flagpoleBuilt = false;
@@ -252,16 +257,23 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     @Override
     public int getBlocksOfProgress() {
-        return bopCount;
+        return getBopCount();
+    }
+
+    public int getBopCount() {
+        return bopStacks.size();
     }
 
     /**
-     * Dev/test only: set the flag's deposited BOP count directly, mirroring the tutorial
+     * Dev/test only: fill the flag's deposited BOPs directly, mirroring the tutorial
      * {@code grantBop}. Lets a scenario pre-fill the flag (e.g. to 63, one below the 64-slot cap)
-     * without having to drive 63 level-ups through the real deposit path.
+     * without having to drive 63 level-ups through the real deposit path. Grants plain
+     * (unblessed) BOPs.
      */
     public void grantBlockOfProgressForTest(int amount) {
-        this.bopCount += amount;
+        for (int i = 0; i < amount; i++) {
+            bopStacks.add(new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get()));
+        }
         setChanged();
         syncBopFull();
     }
@@ -743,7 +755,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
 
         if (villagerHandle.hasBlockOfProgress(ownerVUID)) {
-            MCHeldItem bop = MCHeldItem.fromTown(ItemsInit.BLOCK_OF_PROGRESS.get());
+            // Bless the BOP with the job that earned it: a "gold" BOP guarantees that root job
+            // when spent on a job change (see BlockOfProgress.bless / getBlessedJob).
+            ItemStack bopStack = new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get());
+            BlockOfProgress.bless(bopStack, currentJob);
+            MCHeldItem bop = MCHeldItem.fromTown(bopStack);
             villager.tryGiveItem(bop, InventoryFullStrategy.REMOVE_FROM_WORLD);
             changeJob.accept(BOPDepositorWork.getIdForRoot(currentJob.rootId()));
             return true;
@@ -1171,7 +1187,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public FlagTabsEmbedding.FlagInfo getInfo() {
         boolean hasIncomplete = quests.getAll().stream().anyMatch(q -> !q.isComplete());
-        return FlagTabsEmbedding.FlagInfo.withQuestNotification(getBlockPos(), bopCount > 0, hasIncomplete, isBopFull());
+        return FlagTabsEmbedding.FlagInfo.withQuestNotification(getBlockPos(), getBopCount() > 0, hasIncomplete, isBopFull());
     }
 
     /**
@@ -1185,13 +1201,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     /**
-     * Reconcile the {@link TownFlagBlock#BOP_FULL} blockstate with the deposited count. Called at
-     * every {@code bopCount}-change site (deposit/collect, tutorial grant, test pre-fill) and after
+     * Reconcile the {@link TownFlagBlock#BOP_FULL} blockstate with the deposited stacks. Called at
+     * every bop-stacks-change site (deposit/collect, tutorial grant, test pre-fill) and after
      * load, so the red-BOP render and the menu warning track the count. The blockstate persists in
-     * the block state, so it can be stale against the freshly-loaded count; this reconciles it.
+     * the block state, so it can be stale against the freshly-loaded stacks; this reconciles it.
      */
     public void syncBopFull() {
-        setBopFull(bopCount >= TownFlagBOPItemHandler.CAP);
+        setBopFull(getBopCount() >= TownFlagBOPItemHandler.CAP);
     }
 
     private void setBopFull(boolean value) {

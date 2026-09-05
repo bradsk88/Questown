@@ -20,7 +20,9 @@ import ca.bradj.questown.town.quests.Completable;
 import ca.bradj.questown.town.quests.Reward;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
+import com.mojang.math.Vector3f;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -316,8 +318,13 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         sl.sendParticles(ParticleTypes.PORTAL, x, y, z, 2, 0, 0.15, 0, 0.02);
     }
 
+    // The flag sparkles cyan while it holds Blocks of Progress, so the player can tell at a
+    // glance that there is one to collect (a full flag additionally renders a red BOP cube).
+    private static final DustParticleOptions CYAN_SPARKLE =
+            new DustParticleOptions(new Vector3f(0.0f, 1.0f, 1.0f), 1.0f);
+
     private void spawnBopParticlesIfNeeded(ServerLevel sl, BlockPos pos, TownFlagBlockEntity e) {
-        if (e.bopCount <= 0) {
+        if (e.getBopCount() <= 0) {
             return;
         }
         if (sl.getGameTime() % 20 != 0) {
@@ -326,7 +333,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         double x = pos.getX() + 0.5 + sl.getRandom().nextGaussian() * 0.3;
         double y = pos.getY() + 1.2;
         double z = pos.getZ() + 0.5 + sl.getRandom().nextGaussian() * 0.3;
-        sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, x, y, z, 1, 0, 0.1, 0, 0.01);
+        sl.sendParticles(CYAN_SPARKLE, x, y, z, 1, 0, 0.1, 0, 0.01);
     }
 
     public record TickData(ServerLevel level, BlockPos blockEntityPos, BlockState state, TownFlagBlockEntity entity) {
