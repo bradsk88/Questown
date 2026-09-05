@@ -54,6 +54,9 @@ public class Questown {
         MinecraftForge.EVENT_BUS.register(this);
         // Dev-only: lets an out-of-game operator push chat to the player during play-tests.
         MinecraftForge.EVENT_BUS.register(new ca.bradj.questown.core.AgentMessageBridge());
+        // Dev-only: measures the whole server tick so a "Can't keep up" stall shows as a number
+        // the perf/* autotest scenarios can read (invisible in the flag-tick buckets).
+        MinecraftForge.EVENT_BUS.register(new ca.bradj.questown.core.ServerTickProfiler());
 
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
 

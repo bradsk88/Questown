@@ -36,6 +36,7 @@ flowchart TD
   while it is enabled, their samples fold into the same buckets — which is how
   the cross-run arena residue described in the perf notes shows up as a phase
   sample count that is a multiple of the tick count.
+- **A whole-server-tick stall is invisible in the flag-tick buckets.** A flag tick is only one phase of the server tick, so a 2s "Can't keep up" can happen while the flag tick stays fast and the flag-tick buckets never show it. `TickProfile` carries a second sample set (`serverMicros`) fed by `ServerTickProfiler` on the `ServerTickEvent` START/END boundary; `describeStallAttribution` splits the worst server-tick against the flag-tick to localize the rest. Same dev-only enable guard; read by the `perf/*` autotest and the `qt tickprofile` command.
 - Timings moved from `System.currentTimeMillis()` to `nanoTime`/microseconds — at
   ms resolution a 400us tick rounds to 0 and a rare spike averages away.
 - **Two unrelated things are called "healing" on this map.** The per-game-tick
