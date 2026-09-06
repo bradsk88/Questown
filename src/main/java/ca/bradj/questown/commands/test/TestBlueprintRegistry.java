@@ -48,6 +48,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -176,6 +177,11 @@ public class TestBlueprintRegistry {
         // the warp fetch-relocation model (RelocateRequestedItemWarpRule) and now expects the same
         // source->target conservation to hold under warp.
         jobs.add(entry(new JobID("organizer", "fetch"), organizerFetchBlueprint()));
+        // nav/roof_gatherer drives the REAL gatherer job (which walks gate <-> supply chests, so
+        // its container nav target is actually exercised) in a supply room whose roof is
+        // reachable, with the supplies chest at yCoord+1 under a head-height grass ledge. The
+        // entry name (not the JobID) selects it via only=nav/roof_gatherer.
+        jobs.add(new TestEntry("nav/roof_gatherer", new JobID("gatherer", "axe"), navGathererBlueprint(), "nav"));
         jobs.add(edgeCaseEntry("organizer", "fetch", "warp", organizerFetchWarpBlueprint()));
 
         // Edge case tests
@@ -1607,6 +1613,159 @@ public class TestBlueprintRegistry {
         }
         container.setItem(0, stack);
         return true;
+    }
+
+    // Offsets for the nav/roof_gatherer scenario (flag-relative). The supply room shell is
+    // buildSupplyRoom(4, -2): interior x 5..7, z -1..1, floor feet y=0, roof y=2, door at (6,0,2).
+    private static final BlockPos NAV_MAT_OFFSET = new BlockPos(3, 0, 0);
+    private static final BlockPos NAV_RAISED_CHEST = new BlockPos(6, 1, -1);
+    private static final BlockPos NAV_WEST_DOOR = new BlockPos(4, 0, 0);
+
+    private static volatile boolean navRoofVisited;
+    private static volatile boolean navRoomEntered;
+    private static volatile int navMinY;
+    private static volatile int navMaxY;
+
+    /**
+     * Roof-navigation before/after, on the vehicle that actually walks: the gatherer (gate &lt;-&gt;
+     * supply chests). The supply room's roof is reachable (a 3-step staircase on its east edge),
+     * and the supplies chest sits one level above the room's scan level (yCoord+1, on a plank)
+     * under a head-height grass ledge with a one-block roof hole above it. The ledge occupies the
+     * chest's interact spot (chest + one toward the door, at chest height), so that spot is not
+     * standable from inside the room, while the ledge top (feet y=2) is Manhattan-1 from the
+     * pre-fix walk target (the interact spot at the chest's own height). Pre-fix the only node
+     * within the pathfinder's completion distance is on the grass above the room, so the townie
+     * climbs the stairs and stands on the ledge. Post-fix ({@code navTargetForContainer} pins the
+     * target to the room's yCoord) the target is the interior floor spot one block lower, whose
+     * Manhattan-1 neighbours are standable interior floor — so the path goes through the door.
+     * <p>
+     * The assertion gates on the fix: the townie must enter the room (feet y == flagY inside the
+     * room footprint) and never visit the roof/ledge (feet y &gt;= flagY+2). Pre-fix it bites:
+     * the townie climbs the stairs, crosses the roof, and drops onto the ledge above the chest.
+     * The axe readout is informational: the gatherer's first container leg is DROPPING_LOOT (the
+     * vehicle under test), so the supplies walk may not run within the window.
+     */
+    private static TestBlueprint navGathererBlueprint() {
+        SupplyRoom sr = buildSupplyRoom(4, -2);
+        List<BlockPlacement> blocks = new ArrayList<>(sr.blocks);
+        // Move the door from the south wall (sr.doorOffset) to the WEST wall, facing EAST, open,
+        // hinge LEFT. Townies cannot open wooden doors (no InteractWithDoor brain behavior;
+        // useNearbyGates handles only fence gates), and an open door on the south wall leaves its
+        // panel across half the doorway (0.2 block of clearance), which wedged the townie on the
+        // threshold in testing. With this facing, the open panel lies flat against the north jamb
+        // and the straight walk line from the welcome mat (3,0,0) never clips it.
+        blocks.removeIf(bp -> bp.offset().equals(sr.doorOffset) || bp.offset().equals(sr.doorOffset.above()));
+        blocks.add(new BlockPlacement(sr.doorOffset, Blocks.COBBLESTONE.defaultBlockState()));
+        blocks.add(new BlockPlacement(sr.doorOffset.above(), Blocks.COBBLESTONE.defaultBlockState()));
+        BlockState westDoor = Blocks.OAK_DOOR.defaultBlockState()
+                                             .setValue(DoorBlock.FACING, net.minecraft.core.Direction.EAST)
+                                             .setValue(DoorBlock.OPEN, true);
+        blocks.removeIf(bp -> bp.offset().equals(NAV_WEST_DOOR) || bp.offset().equals(NAV_WEST_DOOR.above()));
+        blocks.add(new BlockPlacement(NAV_WEST_DOOR, westDoor));
+        blocks.add(new BlockPlacement(NAV_WEST_DOOR.above(),
+                westDoor.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER)));
+        // One-block roof hole above the ledge, so the ledge top is a valid pathfinding node.
+        blocks.removeIf(bp -> bp.offset().equals(new BlockPos(5, 2, -1)));
+        // Plank table under the chest: the chest sits at yCoord+1, so pre-fix its interact spot
+        // (and the ContainerTarget yPosition) is one above the room's scan level.
+        blocks.add(new BlockPlacement(new BlockPos(6, 0, -1), Blocks.OAK_PLANKS.defaultBlockState()));
+        // Head-height grass ledge filling the interact spot (5,1,-1: one WEST of the chest, toward
+        // the west door per getDoorDirectionFromCenter): unstandable from inside, but its top
+        // (feet y=2) is Manhattan-1 from the pre-fix target.
+        blocks.add(new BlockPlacement(new BlockPos(5, 1, -1), Blocks.GRASS_BLOCK.defaultBlockState()));
+        // Three-step staircase on the east edge: arena floor (feet y=0) up to the roof (feet y=3).
+        blocks.add(new BlockPlacement(new BlockPos(9, 0, -2), Blocks.COBBLESTONE.defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(9, 1, -1), Blocks.COBBLESTONE.defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(9, 2, 0), Blocks.COBBLESTONE.defaultBlockState()));
+
+        TestBlueprint base = new TestBlueprint(
+                RoomType.WELCOME_MAT,
+                blocks,
+                List.of(new ItemStack(Items.STONE_AXE, 1), new ItemStack(Items.COOKED_BEEF, 8)),
+                NAV_MAT_OFFSET,
+                NAV_RAISED_CHEST,
+                SpecialQuests.TOWN_GATE,
+                new TestExpectation(List.of(), 0, 0),
+                NAV_WEST_DOOR,
+                null, null, null,
+                true, 600, false,
+                true, null, null, null, null, null, false
+        );
+        return base.withPostSpawnAction((level, flagPos, town, output) -> {
+                    int flagY = flagPos.getY();
+                    navRoofVisited = false;
+                    navRoomEntered = false;
+                    navMinY = flagY;
+                    navMaxY = flagY;
+                    Thread t = new Thread(() -> {
+                        long end = System.currentTimeMillis() + 35000;
+                        BlockPos last = null;
+                        while (System.currentTimeMillis() < end) {
+                            for (LivingEntity e : town.getVillagerHandle().entities()) {
+                                if (!(e instanceof VisitorMobEntity vme)) {
+                                    continue;
+                                }
+                                BlockPos bp = vme.blockPosition();
+                                int y = bp.getY();
+                                navMinY = Math.min(navMinY, y);
+                                navMaxY = Math.max(navMaxY, y);
+                                // Roof or ledge: feet at least two above the flag (roof surface
+                                // feet is flagY+3, the ledge top flagY+2; the interior floor is
+                                // flagY).
+                                if (y >= flagY + 2) {
+                                    navRoofVisited = true;
+                                }
+                                // Inside the supply room at floor level: entered through the door.
+                                int rx = bp.getX() - flagPos.getX();
+                                int rz = bp.getZ() - flagPos.getZ();
+                                if (y == flagY && rx >= 5 && rx <= 7 && rz >= -1 && rz <= 1) {
+                                    navRoomEntered = true;
+                                }
+                                if (!bp.equals(last)) {
+                                    last = bp;
+                                    output.msg("[nav/roof_gatherer] townie at " + bp.toShortString());
+                                }
+                            }
+                            try {
+                                Thread.sleep(250);
+                            } catch (InterruptedException ex) {
+                                return;
+                            }
+                        }
+                    }, "nav-roof-gatherer");
+                    t.setDaemon(true);
+                    t.start();
+                    output.msg("[nav/roof_gatherer] started position tracker over the realtime phase");
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    // The axe proves the supplies walk completed (or didn't). Result line is the
+                    // before/after signal: roof visited (bug) vs room entered via the door (fix).
+                    boolean axeTaken = true;
+                    BlockEntity be = level.getBlockEntity(flagPos.offset(NAV_RAISED_CHEST));
+                    if (be instanceof Container container) {
+                        for (int i = 0; i < container.getContainerSize(); i++) {
+                            if (container.getItem(i).is(Items.STONE_AXE)) {
+                                axeTaken = false;
+                            }
+                        }
+                    }
+                    output.msg(String.format(
+                            "[nav/roof_gatherer] RESULT: axeTaken=%s, roofVisited=%s, roomEntered=%s, y-range %d..%d (flagY=%d)",
+                            axeTaken, navRoofVisited, navRoomEntered, navMinY, navMaxY, flagPos.getY()));
+                    // Gate: the pinned target must route through the door. Pre-fix this scenario
+                    // bites (roofVisited=true, roomEntered=false): the townie climbs the stairs,
+                    // crosses the roof, and drops onto the ledge above the chest.
+                    if (navRoofVisited) {
+                        output.error("[nav/roof_gatherer] townie went over the roof to reach the chest");
+                        return false;
+                    }
+                    if (!navRoomEntered) {
+                        output.error("[nav/roof_gatherer] townie never entered the supply room through the door");
+                        return false;
+                    }
+                    return true;
+                });
     }
 
     /**

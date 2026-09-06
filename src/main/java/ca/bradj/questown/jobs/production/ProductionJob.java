@@ -366,14 +366,14 @@ public abstract class ProductionJob<
             successTarget = getDropTargetForLoot(entityBlockPos, town);
             if (successTarget != null) {
                 this.setLookTarget(successTarget.getBlockPos());
-                return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
+                return navTargetForContainer(successTarget);
             }
         }
 
         setupForGetSupplies(town, entityBlockPos, Util.getTick(sl));
         if (suppliesTarget != null) {
             this.setLookTarget(suppliesTarget.getBlockPos());
-            return Positions.ToBlock(suppliesTarget.getInteractPosition(), suppliesTarget.getYPosition());
+            return navTargetForContainer(suppliesTarget);
         }
 
         if (shouldDisappear(town, entityPos)) {

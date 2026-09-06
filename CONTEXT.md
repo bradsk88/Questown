@@ -99,6 +99,8 @@ _Avoid_: cooldown, wait state.
 
 **Leaver job**:
 A job whose townie leaves the town to do the work and returns with products — gatherer, hunter, miner, fisher, and explorer — as opposed to an in-town crafter working at a station. Modeled **warp-only** in the autotest suite as a consequence: the townie isn't present to drive live, so its blueprint sets `realtimePhase=false` and the suite asserts only the warp pass.
+
+_Gatherer live navigation (2026-09, code-traced):_ in **live** play a gatherer goes **back and forth between the town gate and the supply chests** — it leaves the gate, walks to a chest to get/drop, and returns, so its nav target *is* the chest and the ground pathfinder actually routes to it. Trace: gatherer jobs are `Work`s from `NewLeaverWork.asWork` → `WorksBehaviour.productionWork` with `SpecialQuests.TOWN_GATE_LOCATION` as the base room (the work site is the gate); the job instance is `DeclarativeJob` → `DeclarativeProductionJob` → `ProductionJob`, whose realtime walk target is `getTarget` → `doGetTarget` → `navTargetForContainer` for both the loot-drop and supplies legs, with no teleport in the realtime path (the `DeclarativeJobs.warper` / `RelocateRequestedItemWarpRule` paths are the downtime time-warp on town state, not entity movement). That is the one vehicle that exercises `ProductionJob.navTargetForContainer` (the fetch's deliver *warps*, so its nav target is never walked). It is the vehicle for a container-in-a-room navigation bug (the townie routing over a reachable roof/grass instead of entering at the door). Tension with the line above: the autotest models leavers warp-only, so a gatherer repro of that bug is a **live play-test / held realtime**, not a held autotest scenario — do not expect the gatherer to drive in the warp-only suite.
 _Avoid_: remote job, expedition job ("leaver" matches the `jobs/leaver/` package and `NewLeaverWork`).
 
 **Job root**:
@@ -241,6 +243,14 @@ _Avoid_: "container room" (informal); using it for rooms that *need* supplies �
 **Rooms needing villager input** (`RoomsNeedingVillagerInput`):
 The **inverse demand cache** — rooms that **lack** a required ingredient/tool/work, keyed by **processing state** (`Map<Integer, …NVIRoom>`, `dueToWorkOnly` flag). The opposite of a **supply room**: it lists rooms *missing* what's needed, not rooms holding stock. **"Input" = villager-supplied** (a townie must bring items / do work) — **never** player input.
 _Avoid_: reading "input" as player input; reading it as a list of rooms that *have* supplies (it's the demand side).
+
+**How a townie navigates to a container** (`ProductionJob.navTargetForContainer`):
+The block a townie must **stand** to interact with a container target — the **interact spot** (the air one block in front of the container toward the room's door, from `TownContainers.fromChestBlockMaybe`), re-pinned to the room's scan level (`yCoord`) by the fix. Pre-fix the spot sat at the container's own height; with a reachable roof that lets the ground pathfinder route over the roof instead of entering at the door, so pinning to `yCoord` forces the door. A townie targets only a container that is **registered**, and a container registers only as a **contained block of a detected room** (`getBlocksInRoomV2` = `yCoord` and `yCoord+1`) — a chest below the scan level is never seen, so its job falls to `NO_SUPPLIES` and never reaches the nav target.
+_Avoid_: treating "the job needs a chest" as "the townie will reach it" — reachability is gated by registration, and registration by the room's scan level; a chest off that level is invisible to every job.
+
+**Fetch vs gatherer as a navigation vehicle**:
+`organizer/fetch` **warps** its deliver, so its nav target is never walked (only its supplies leg is a walk). A **gatherer** *walks* between the town gate and supply chests (see **Leaver**), so its nav target is exercised — it is the vehicle for a container-in-a-room navigation bug (roof/grass instead of the door). Because leavers are warp-only in the autotest, that repro is a **live / held-realtime**, not a held-autotest scenario.
+_Avoid_: driving a fetch scenario to confirm a nav-target fix — the deliver warps, so the pinned target is never walked.
 
 ### Dining & mood
 
