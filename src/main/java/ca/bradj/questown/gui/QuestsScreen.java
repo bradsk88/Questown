@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.QT;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
@@ -487,17 +488,25 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             if (entry == null) {
                 continue;
             }
-            PatchouliAPI.get().openBookEntry(BOOK_ID, entry, 0);
+            // A wrong/unknown entry id makes Patchouli return a null BookEntry and NPE
+            // inside openBookEntry, crashing the client. Never let that take the click down.
+            try {
+                PatchouliAPI.get().openBookEntry(BOOK_ID, entry, 0);
+            } catch (RuntimeException e) {
+                QT.GUI_LOGGER.warn("Could not open book entry {} (quest type {})", entry, quest.getType(), e);
+                return false;
+            }
             return true;
         }
         return false;
     }
 
+    // Entry ids are the file path under en_us/, and every entry file lives in entries/.
     private static @Nullable ResourceLocation lessonEntryForQuestType(Quest.QuestType type) {
         return switch (type) {
-            case JOB_CHANGE -> new ResourceLocation(Questown.MODID, "lessons/lesson_bop");
-            case ROOM -> new ResourceLocation(Questown.MODID, "lessons/lesson_room_recipes");
-            case ITEM -> new ResourceLocation(Questown.MODID, "lessons/lesson_needs");
+            case JOB_CHANGE -> new ResourceLocation(Questown.MODID, "entries/lesson_bop");
+            case ROOM -> new ResourceLocation(Questown.MODID, "entries/lesson_room_recipes");
+            case ITEM -> new ResourceLocation(Questown.MODID, "entries/lesson_needs");
             case CONCURRENT_JOBS -> new ResourceLocation(Questown.MODID, "entries/014-supply-chains");
             default -> null;
         };
