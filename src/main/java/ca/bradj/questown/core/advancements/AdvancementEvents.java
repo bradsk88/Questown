@@ -56,14 +56,14 @@ public class AdvancementEvents {
             .put(RoomTrigger.Triggers.FirstOpenFlagMenu.getID(),       "entries/010-how-to-progress")
             .put(VisitorTrigger.Triggers.FirstJobDone.getID(),         "entries/011-how-to-level")
             // FirstJobQuest fires right after FirstJobDone; omitting it here so 011 isn't immediately overridden
-            .put(VisitorTrigger.Triggers.FirstUnmetNeeds.getID(),      "lessons/lesson_needs")
-            .put(RoomTrigger.Triggers.FirstJobBlock.getID(),           "lessons/lesson_room_recipes")
+            .put(VisitorTrigger.Triggers.FirstUnmetNeeds.getID(),      "entries/lesson_needs")
+            .put(RoomTrigger.Triggers.FirstJobBlock.getID(),           "entries/lesson_room_recipes")
             .put(TutorialTrigger.Triggers.TutorialComplete.getID(),    "entries/013-the-crafter")
             .put(TutorialTrigger.Triggers.SecondJobType.getID(),       "entries/014-supply-chains")
             .put(TutorialTrigger.Triggers.FirstWarp.getID(),           "entries/015-while-you-were-away")
-            .put(TutorialTrigger.Triggers.FirstRoomUpgrade.getID(),    "lessons/lesson_upgrades")
-            .put(TutorialTrigger.Triggers.FirstBopView.getID(),        "lessons/lesson_bop")
-            .put(TutorialTrigger.Triggers.FirstCampfireSleep.getID(),  "lessons/lesson_campfire_sleep")
+            .put(TutorialTrigger.Triggers.FirstRoomUpgrade.getID(),    "entries/lesson_upgrades")
+            .put(TutorialTrigger.Triggers.FirstBopView.getID(),        "entries/lesson_bop")
+            .put(TutorialTrigger.Triggers.FirstCampfireSleep.getID(),  "entries/lesson_campfire_sleep")
             .build();
 
     @SubscribeEvent
