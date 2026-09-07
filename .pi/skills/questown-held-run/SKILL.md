@@ -159,15 +159,16 @@ the server log (the `--- observe ---` cycles and the town's chat) and the
 `_qtdev` commands. When a step cannot proceed, surface it as the blocking
 question in a check-in; do not resolve it by reading code.
 
-- `_qtdev help` — the onboarding guide the helper chicken would show a human
+- `_qtdev help` - the onboarding guide the helper chicken would show a human
   player, as text an agent can read from the log. It prints the current
-  chicken-arc beat (a `need` and a `how`) plus a compact map of the whole arc,
-  so a stuck agent finds the next first-town onboarding action without a mouse
-  (it can't see the chicken or right-click). The `how` names the command (or a
-  vanilla command) that does the beat; beats with no command are flagged as
-  needing a player — those are the stumbling points. Consult it when stuck on
-  first-town onboarding; it gives the next beat, **not** the game's why (which
-  you still learn by watching the town's response).
+  chicken-arc beat as a `need` (what the arc wants), a `how` (a command or
+  vanilla action the agent can use, since it can't right-click), a `teaches`
+  (the legibility gap the beat exposes - the stumbling point), a `status` (is
+  the arc even running and is the beat's condition met, so a stale beat is not
+  mistaken for progress), plus a compact map of the whole arc. Consult it when
+  stuck on first-town onboarding; it gives the next beat and why it is stuck,
+  **not** the game's why (which you still learn by watching the town's
+  response).
 - `_qtdev registerroom <x> <y> <z>` — register a door at the position, the way a
   player right-clicking a door with the town wand would.
 - `_qtdev quests` — list the flag's active and complete quests.

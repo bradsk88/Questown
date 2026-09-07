@@ -31,7 +31,7 @@ final class AgentBeatGuidance {
     }
 
     /** The current beat's agent-facing guidance, or {@code null} for terminal beats. */
-    record Guidance(String need, String how) {
+    record Guidance(String need, String how, String teaches) {
     }
 
     @Nullable
@@ -41,51 +41,81 @@ final class AgentBeatGuidance {
                     "Stand near the flag holding a town wand (this claims it).",
                     "Advances only when a player within ~16 blocks of the flag holds the wand - "
                             + "a /give to a far dev does not advance it. Give the dev a wand and keep it "
-                            + "near the flag (give Dev questown:town_wand; qt tp).");
+                            + "near the flag (give Dev questown:town_wand; qt tp).",
+                    "The chicken reacts to a player standing near the flag, not to a wand in any "
+                            + "inventory. A player far away sees a chicken that does nothing and can not "
+                            + "tell why - presence, not the item, is the trigger.");
             case WAITING_FOR_WAND_ON_CAMPFIRE -> new Guidance(
                     "Light the campfire (a wand right-click lights it).",
                     "The beat needs a LIT campfire; a /setblock campfire is unlit and will not advance "
-                            + "it. Needs a player action (a stumbling point for a headless agent).");
+                            + "it. Needs a player action (a stumbling point for a headless agent).",
+                    "Lighting the campfire is a wand-only step separate from placing it. A player who "
+                            + "built a campfire the normal way has no cue that a second, wand action is "
+                            + "still required.");
             case SUNSET_AND_MAP -> new Guidance(
                     "Return at night and sleep on the campfire (via the wand).",
                     "The beat advances on a campfire sleep (a flag bit). No _qtdev command performs the "
-                            + "sleep - needs a player. Likely a stumbling point.");
+                            + "sleep - needs a player. Likely a stumbling point.",
+                    "The arc gates on a real night-time campfire sleep with no fast-path. A player who "
+                            + "finishes the build before dusk sees the town stop responding and may read it "
+                            + "as broken rather than waiting.");
             case WAITING_FOR_WALL_BLOCK -> new Guidance(
                     "Place a solid block in the wall gap.",
-                    "/setblock <gap pos> cobblestone (a plain block has no mod side effect, so /setblock works).");
+                    "/setblock <gap pos> cobblestone (a plain block has no mod side effect, so /setblock works).",
+                    "The chicken wants a block in one specific gap, signalled only by where it pecks. A "
+                            + "player who can not find the gap can not tell what is wanted.");
             case WAITING_FOR_DOOR -> new Guidance(
                     "Place a door in the wall gap.",
-                    "/setblock <gap pos> oak_door.");
+                    "/setblock <gap pos> oak_door.",
+                    "As with the wall, the door goes in one gap signalled only by the chicken's peck. "
+                            + "Progress is invisible until the chicken notices - legibility depends on "
+                            + "watching it.");
             case WAITING_FOR_WAND_ON_DOOR -> new Guidance(
                     "Register the room by marking the door.",
-                    "/_qtdev registerroom <door pos>.");
+                    "/_qtdev registerroom <door pos>.",
+                    "Registering a room is a hidden wand right-click with no visible result beyond the "
+                            + "room being detected. A player may not know the action 'took.'");
             case WAITING_FOR_SIGN -> new Guidance(
                     "Place a sign in the room (it converts to a job board).",
                     "/_qtdev place_board <sign pos> (the block must be inside the registered room so the "
-                            + "room recipe matches).");
+                            + "room recipe matches).",
+                    "A placed sign silently becomes a job board when the recipe matches - the change is "
+                            + "invisible until then, so a player may not notice the sign 'did something.'");
             case WAITING_FOR_CHEST -> new Guidance(
                     "Place a chest in the room.",
                     "/setblock <pos> chest inside the registered room (the beat needs it in a "
-                            + "recipe-matched room; /setblock alone will not make it a town container).");
+                            + "recipe-matched room; /setblock alone will not make it a town container).",
+                    "The chest only counts inside the registered room; a chest elsewhere is ignored, so a "
+                            + "player placing a chest and seeing no progress has no obvious reason why.");
             case WAITING_FOR_PRESSURE_PLATE -> new Guidance(
                     "Craft a welcome mat at the flag and place it at the gate.",
-                    "/_qtdev place_mat <gate pos>.");
+                    "/_qtdev place_mat <gate pos>.",
+                    "The welcome mat is crafted at the flag, not taken from an inventory - a non-obvious "
+                            + "step. A player looking for the mat in their pack will not find it.");
             case WAITING_FOR_FREE_FOOD -> new Guidance(
                     "Free-food bonus: right-click the flag with a block of dirt (optional beat).",
-                    "Optional - you can skip it; it auto-completes when the next beat is met.");
+                    "Optional - you can skip it; it auto-completes when the next beat is met.",
+                    "This is the only skippable beat - it teaches that not every beat is required, but the "
+                            + "arc gives no signal that this one is optional, so a player may stall here.");
             case WAITING_FOR_VILLAGER_UI -> new Guidance(
                     "Open a villager's menu (right-click a villager).",
                     "No _qtdev command opens a villager menu - needs a player action "
-                            + "(a stumbling point for a headless agent).");
+                            + "(a stumbling point for a headless agent).",
+                    "Opening a villager's menu is the onboarding step, but players interact with villagers "
+                            + "for other reasons too - the action is not marked as special.");
             case WAITING_FOR_FLAG_UI -> new Guidance(
                     "Open the flag's menu (right-click the flag).",
                     "No _qtdev command opens the flag menu - needs a player action "
-                            + "(a stumbling point for a headless agent).");
+                            + "(a stumbling point for a headless agent).",
+                    "Opening the flag's menu is the step, but a player may have used the flag before and "
+                            + "not realise opening its menu is the onboarding action.");
             case AWAITING_WORLDLY_SEEDS_DELIVERY -> new Guidance(
                     "Hand Worldly Seeds to the chicken (right-click it with the seeds).",
                     "The beat advances on a player right-clicking the chicken with the seeds (a flag bit). "
                             + "/_qtdev deposit only fills a container - it drives the presentation phase, not "
-                            + "the advance, so it does not complete this beat. Needs a player (a stumbling point).");
+                            + "the advance, so it does not complete this beat. Needs a player (a stumbling point).",
+                    "The seeds must be handed to the chicken, not merely left in a chest - a subtle "
+                            + "distinction a player may miss when the chest already 'has' the seeds.");
             case COMPLETE, FORFEIT -> null;
         };
     }
