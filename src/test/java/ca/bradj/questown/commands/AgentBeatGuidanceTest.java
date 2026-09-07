@@ -44,8 +44,9 @@ class AgentBeatGuidanceTest {
 
     @Test
     void beatsWithADevCommandNameIt() {
-        // The agent cannot right-click, so beats that have a _qtdev command
-        // must name it in the "how".
+        // The agent cannot right-click, so beats that advance on a flag/block
+        // condition have a _qtdev (or vanilla) command in the "how". These must
+        // name the command that actually advances the beat.
         Assertions.assertTrue(
                 AgentBeatGuidance.forBeat(ChickenBeatState.WAITING_FOR_WAND_ON_DOOR).how()
                         .contains("registerroom"));
@@ -55,24 +56,24 @@ class AgentBeatGuidanceTest {
         Assertions.assertTrue(
                 AgentBeatGuidance.forBeat(ChickenBeatState.WAITING_FOR_PRESSURE_PLATE).how()
                         .contains("place_mat"));
-        Assertions.assertTrue(
-                AgentBeatGuidance.forBeat(ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY).how()
-                        .contains("deposit"));
     }
 
     @Test
     void beatsWithNoDevCommandFlagThemForAPlayer() {
-        // The right-click beats with no _qtdev command are the stumbling points:
-        // the guidance must say a player action is needed, not silently omit it.
-        Assertions.assertTrue(
-                AgentBeatGuidance.forBeat(ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE).how()
-                        .contains("player action"));
-        Assertions.assertTrue(
-                AgentBeatGuidance.forBeat(ChickenBeatState.WAITING_FOR_VILLAGER_UI).how()
-                        .contains("player action"));
-        Assertions.assertTrue(
-                AgentBeatGuidance.forBeat(ChickenBeatState.WAITING_FOR_FLAG_UI).how()
-                        .contains("player action"));
+        // The beats that advance on a player action (wand near the flag, a lit
+        // campfire, opening a UI, right-clicking the chicken) cannot be advanced
+        // by a _qtdev command; the guidance must say a player is needed, not
+        // silently point at a command that only affects the presentation phase.
+        for (ChickenBeatState state : new ChickenBeatState[]{
+                ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE,
+                ChickenBeatState.WAITING_FOR_VILLAGER_UI,
+                ChickenBeatState.WAITING_FOR_FLAG_UI,
+                ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY
+        }) {
+            Assertions.assertTrue(
+                    AgentBeatGuidance.forBeat(state).how().toLowerCase().contains("player"),
+                    "how for " + state + " should flag that a player is needed");
+        }
     }
 
     @Test
