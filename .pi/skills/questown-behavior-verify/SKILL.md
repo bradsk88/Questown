@@ -1,6 +1,7 @@
 ---
 name: questown-behavior-verify
-description: Verifies a Questown behavior (navigation, jobs, movement) on a live server when a visual play-test cannot run (this box has no capturable window). TRIGGER when asked to "watch" a Questown behavior, run a before/after, or "see" a villager/townie do something live, or when a unit test cannot settle a broken-behaviour report. SKIP when a unit test or the existing autotest suite already proves it. The key fact: this box's runClient opens no window (grim captures 0 bytes), so the evidence must come from the server log, not a screenshot.
+description: >-
+  Verifies a Questown behavior (navigation, jobs, movement) on a live server when a visual play-test cannot run (this box has no capturable window). TRIGGER when asked to "watch" a Questown behavior, run a before/after, or "see" a villager/townie do something live, or when a unit test cannot settle a broken-behaviour report. SKIP when a unit test or the existing autotest suite already proves it. The key fact: this box's runClient opens no window (grim captures 0 bytes), so the evidence must come from the server log, not a screenshot.
 ---
 
 # Questown behavior verification (no window)
