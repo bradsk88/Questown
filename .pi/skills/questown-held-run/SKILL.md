@@ -21,8 +21,11 @@ in survival. Do not ask the dev to place blocks or drive the run.
 
 This skill consolidates what was scattered across `AGENTS.md`,
 `references/questown-dev-launch.md`, `questown-behavior-verify`, and
-`commands/test/COMPLEX.md`. Read those for the full detail; the rest of this
-skill is the sequence a session needs up front.
+`commands/test/COMPLEX.md`. Before the first launch, read
+`~/.pi/agent/references/questown-dev-launch.md` — it has the full OOM-137 /
+client-daemon-death / FIFO-survival detail this skill only summarizes, and a
+fresh session that skips it will hit the launch traps. The rest of this skill is
+the sequence a session needs up front.
 
 ## Launch (server first, then client — order matters)
 
@@ -147,6 +150,14 @@ closes, which need it clears, what a job does with a placed block. It performs
 the action a player would, then *observes* the town's response (a quest closing,
 a need appearing or clearing, a villager moving). The why is something the agent
 learns by watching, not something the docs hand it ahead of time.
+
+A blocked step is the run's open question, not a lookup. Do **not** open
+`VillageGrowthExecutor` (or any source) to find where to place a block, what a
+command closes, or what happens next — that is re-deriving the mechanism the
+discipline is meant to keep out of the run. The only observation channels are
+the server log (the `--- observe ---` cycles and the town's chat) and the
+`_qtdev` commands. When a step cannot proceed, surface it as the blocking
+question in a check-in; do not resolve it by reading code.
 
 - `_qtdev registerroom <x> <y> <z>` — register a door at the position, the way a
   player right-clicking a door with the town wand would.
