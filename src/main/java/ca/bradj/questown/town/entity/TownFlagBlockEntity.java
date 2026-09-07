@@ -1008,6 +1008,24 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         );
     }
 
+    /**
+     * Place a welcome mat block at {@code pos} and register it with this flag, the
+     * way a player placing the item does (the block's {@code onUse} registers it).
+     * Used where the placement cannot go through the item-use path (e.g. a console
+     * command that has no player hand to place it with). The placed block carries
+     * the flag-linking NBT so it is associated with this flag.
+     */
+    public void placeWelcomeMat(BlockPos pos) {
+        ServerLevel level = getServerLevel();
+        if (level == null) {
+            return;
+        }
+        net.minecraft.world.level.block.state.BlockState state =
+                ca.bradj.questown.core.init.BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState();
+        level.setBlockAndUpdate(pos, state);
+        registerWelcomeMat(pos);
+    }
+
     public List<BlockPos> getWelcomeMats() {
         return pois.getWelcomeMats();
     }
@@ -1016,6 +1034,25 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public void registerJobsBoard(BlockPos matPos) {
         this.workHandle.registerJobBoard(matPos);
         this.setChanged();
+    }
+
+    /**
+     * Place a job-board block at {@code pos} and register it with this flag, the way
+     * a player placing the item does, but driven from the console (no player hand to
+     * place it with). Mirrors {@link #placeWelcomeMat}. Placing the JOB_BOARD_BLOCK
+     * directly is equivalent to the sign to job-board conversion
+     * (isSignConvertedToJobBoard checks for the job-board block itself), and the
+     * explicit register re-runs the placement side effect setBlockAndUpdate bypasses.
+     */
+    public void placeJobBoard(BlockPos pos) {
+        ServerLevel level = getServerLevel();
+        if (level == null) {
+            return;
+        }
+        net.minecraft.world.level.block.state.BlockState state =
+                ca.bradj.questown.core.init.BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState();
+        level.setBlockAndUpdate(pos, state);
+        registerJobsBoard(pos);
     }
 
     public void openJobsMenu(

@@ -105,7 +105,7 @@ minecraft {
             // Recommended logging level for the console
             // You can set various levels here.
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            property 'forge.logging.console.level', 'debug'
+            property 'forge.logging.console.level', 'info'
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
 
@@ -119,6 +119,9 @@ minecraft {
             }
             if (System.getProperty('questown.autotest.only') != null) {
                 jvmArg '-Dquestown.autotest.only=' + System.getProperty('questown.autotest.only')
+            }
+            if (System.getProperty('questown.village.agentDrive') != null) {
+                jvmArg '-Dquestown.village.agentDrive=' + System.getProperty('questown.village.agentDrive')
             }
 
             mods {
@@ -282,3 +285,26 @@ if (System.getProperty('questown.autotest', 'false') == 'true') {
         }
     }
 }
+
+// importCheck: deterministic, surgical unused-import gate. Delegates to the
+// import-clean tool (JavaParser AST): it removes only imports whose name appears
+// nowhere as a real identifier in the parsed tree and never reformats the body,
+// so it can never drop a used import. Wired into `check` so `./gradlew build`/
+// `check` surfaces it, and runnable standalone as `./gradlew importCheck`.
+// Fix a failure with:  /home/retro/.local/bin/import-clean apply src/main/java src/test/java
+task importCheck {
+    group = 'verification'
+    description = 'Fail if any Java source has unused imports. Fix: import-clean apply src/main/java src/test/java'
+    doLast {
+        def cleaner = '/home/retro/.local/bin/import-clean'
+        def proc = new ProcessBuilder(cleaner, 'check', 'src/main/java', 'src/test/java')
+                .redirectErrorStream(true).start()
+        def output = proc.inputStream.text
+        proc.waitFor()
+        if (proc.exitValue() != 0) {
+            logger.lifecycle(output)
+            throw new GradleException("importCheck: unused imports found. Fix: ${cleaner} apply src/main/java src/test/java")
+        }
+    }
+}
+check.dependsOn importCheck
