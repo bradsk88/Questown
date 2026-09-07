@@ -102,7 +102,7 @@ public final class ChickenArcTransitions {
         return OPTIONAL.contains(state) && isSatisfied(nextOrdinal(state), o);
     }
 
-    private static boolean isSatisfied(
+    public static boolean isSatisfied(
             ChickenBeatState state,
             Observed o
     ) {

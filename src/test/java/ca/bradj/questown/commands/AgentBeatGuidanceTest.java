@@ -33,6 +33,7 @@ class AgentBeatGuidanceTest {
             Assertions.assertNotNull(g, "guidance missing for " + state);
             Assertions.assertFalse(g.need().isBlank(), "blank need for " + state);
             Assertions.assertFalse(g.how().isBlank(), "blank how for " + state);
+            Assertions.assertFalse(g.teaches().isBlank(), "blank teaches for " + state);
         }
     }
 
