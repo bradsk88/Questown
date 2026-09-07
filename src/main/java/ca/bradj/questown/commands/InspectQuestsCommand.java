@@ -35,7 +35,8 @@ public class InspectQuestsCommand {
         for (TownFlagBlockEntity flag : ca.bradj.questown.town.entity.TownFlags.all()) {
             String flagId = flag.getBlockPos() != null
                     ? flag.getBlockPos().toShortString() : flag.getUUID().toString();
-            QT.FLAG_LOGGER.info("[questinspect] flag {} (pos {})", flag.getUUID(), flagId);
+            QT.FLAG_LOGGER.info("[questinspect] flag {} (pos {}) red-dot-quests-tab={}",
+                    flag.getUUID(), flagId, flag.getInfo().hasIncompleteQuests());
             for (Quest<ResourceLocation, MCRoom> q : flag.getAllQuests()) {
                 if (!(q instanceof MCQuest mcq)) {
                     continue;

@@ -44,19 +44,30 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
    classes; a plain `compileJava` cannot re-fetch them).
 2. Kill stale: `pkill -9 -f '[f]orgeserveruserdev'`, `pkill -9 -f 'runClient'`,
    `pkill -9 -f 'sleep 999999'`.
-3. Launch the server **alone** (FIFO writer in the same call — a later `pkill`
-   kills the writer):
+3. Launch the FIFO writer **first, in its own call**, verify it is alive, then
+   launch the server in a **separate** call. A `sleep` or a second background job
+   in the *server's* call kills the server ("no output", no process, no log — the
+   global AGENTS.md launch-survival rule). A held `pkill` (teardown) kills the
+   writer; recreate it on relaunch, do not share the server's call — that sharing
+   is what kills the server.
    ```
+   # call 1 — FIFO writer, then verify alive in a later call
    rm -f run/server-cmd.fifo; mkfifo run/server-cmd.fifo
    nohup sh -c 'sleep 999999 > run/server-cmd.fifo' &
+   echo "fifo writer launched"
+   # later call: pgrep -af 'sleep 999999'  (confirm the sh is alive)
+   # call 2 — server alone: only nohup + echo, no FIFO writer, no sleep
    rm -f /tmp/village-server.log
    JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8 nohup ./gradlew \
      runServer -Dquestown.autotest=true -Dquestown.autotest.hold=true \
      -Dquestown.autotest.only=village/growth -Dquestown.tp.fifo=true \
      -Dquestown.village.agentDrive=true > /tmp/village-server.log 2>&1 &
+   echo "server launch issued"
    ```
 4. Verify it booted (separate call): `grep -a 'Flag block entity live'
-   /tmp/village-server.log` and `pgrep -af '[f]orgeserveruserdev'`. A stale
+   /tmp/village-server.log` and `pgrep -af '[f]orgeserveruserdev'`, and confirm the
+   FIFO writer is alive — `pgrep -af 'sleep 999999'`. A dead writer blocks every
+   later FIFO write, so catch it here, not on the first `qt` command. A stale
    `:compileJava UP-TO-DATE` means the edit did not compile — force with
    `--rerun-tasks` or confirm a fresh boot line, not the old timestamps.
 5. **Then** launch the client (it reconnects to the live server):
@@ -140,10 +151,17 @@ learns by watching, not something the docs hand it ahead of time.
 - `_qtdev registerroom <x> <y> <z>` — register a door at the position, the way a
   player right-clicking a door with the town wand would.
 - `_qtdev quests` — list the flag's active and complete quests.
+- `_qtdev villagers` — inspect the town's villagers: each one's need (and, for an
+  UNMET_ITEM need, the item it lacks), the quests that belong to that villager,
+  and the red-dot cue that marks the quests tab. Mirrors what right-clicking a
+  visitor shows.
 - `_qtdev deposit <item> [count]` — put an item into a registered container, the
   way a player dropping an item into a chest would.
 - `_qtdev place_mat <x> <y> <z>` — place a welcome mat at the position.
 - `_qtdev place_board <x> <y> <z>` — place a job board at the position.
+- Vanilla (also from the FIFO/console): `tp <x> <y> <z>` (teleport),
+  `time set <ticks>` (set the time of day, 0–24000), `setblock <x> <y> <z>
+  <block>` (set a block), `qt tp` (jump to the nearest flag).
 - **Arg types: use `ItemArgument`/`BlockPosArgument`, not `StringArgumentType
   .word()`.** From the FIFO/console, `StringArgumentType.word()` fails to parse
   with `Expected whitespace to end one argument, but found trailing data` (even
