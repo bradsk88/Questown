@@ -37,5 +37,10 @@ public class CommandInit {
         TestCommand.register(event.getDispatcher(), event.getBuildContext());
         TestAllCommand.register(event.getDispatcher(), event.getBuildContext());
         ChickenRemoveCommand.register(event.getDispatcher());
+        RegisterRoomCommand.register(event.getDispatcher());
+        InspectQuestsCommand.register(event.getDispatcher());
+        DepositItemCommand.register(event.getDispatcher(), event.getBuildContext());
+        FlagCraftCommand.register(event.getDispatcher());
+        FlagPlaceBoardCommand.register(event.getDispatcher());
     }
 }
