@@ -38,17 +38,18 @@ final class AgentBeatGuidance {
     static Guidance forBeat(ChickenBeatState state) {
         return switch (state) {
             case WAITING_FOR_STICK -> new Guidance(
-                    "Get a town wand in hand - this claims the flag.",
-                    "No _qtdev command issues a wand. Obtain one (e.g. /give).");
+                    "Stand near the flag holding a town wand (this claims it).",
+                    "Advances only when a player within ~16 blocks of the flag holds the wand - "
+                            + "a /give to a far dev does not advance it. Give the dev a wand and keep it "
+                            + "near the flag (give Dev questown:town_wand; qt tp).");
             case WAITING_FOR_WAND_ON_CAMPFIRE -> new Guidance(
-                    "Light the campfire with the town wand.",
-                    "No _qtdev command lights the campfire - it is a wand right-click, "
-                            + "so this needs a player action (a stumbling point for a headless agent).");
+                    "Light the campfire (a wand right-click lights it).",
+                    "The beat needs a LIT campfire; a /setblock campfire is unlit and will not advance "
+                            + "it. Needs a player action (a stumbling point for a headless agent).");
             case SUNSET_AND_MAP -> new Guidance(
                     "Return at night and sleep on the campfire (via the wand).",
-                    "No _qtdev command performs the campfire sleep. Warp toward night with "
-                            + "qt debug warp <flag pos> <ticks>, but the sleep itself needs a player "
-                            + "- likely a stumbling point.");
+                    "The beat advances on a campfire sleep (a flag bit). No _qtdev command performs the "
+                            + "sleep - needs a player. Likely a stumbling point.");
             case WAITING_FOR_WALL_BLOCK -> new Guidance(
                     "Place a solid block in the wall gap.",
                     "/setblock <gap pos> cobblestone (a plain block has no mod side effect, so /setblock works).");
@@ -60,11 +61,12 @@ final class AgentBeatGuidance {
                     "/_qtdev registerroom <door pos>.");
             case WAITING_FOR_SIGN -> new Guidance(
                     "Place a sign in the room (it converts to a job board).",
-                    "/_qtdev place_board <sign pos>.");
+                    "/_qtdev place_board <sign pos> (the block must be inside the registered room so the "
+                            + "room recipe matches).");
             case WAITING_FOR_CHEST -> new Guidance(
                     "Place a chest in the room.",
-                    "/setblock <pos> chest (note: /setblock will not register it as a town "
-                            + "container - deposit via /_qtdev deposit <item> <count>).");
+                    "/setblock <pos> chest inside the registered room (the beat needs it in a "
+                            + "recipe-matched room; /setblock alone will not make it a town container).");
             case WAITING_FOR_PRESSURE_PLATE -> new Guidance(
                     "Craft a welcome mat at the flag and place it at the gate.",
                     "/_qtdev place_mat <gate pos>.");
@@ -80,8 +82,10 @@ final class AgentBeatGuidance {
                     "No _qtdev command opens the flag menu - needs a player action "
                             + "(a stumbling point for a headless agent).");
             case AWAITING_WORLDLY_SEEDS_DELIVERY -> new Guidance(
-                    "Deliver Worldly Seeds to the town (into a chest in the room).",
-                    "/_qtdev deposit <item> <count>.");
+                    "Hand Worldly Seeds to the chicken (right-click it with the seeds).",
+                    "The beat advances on a player right-clicking the chicken with the seeds (a flag bit). "
+                            + "/_qtdev deposit only fills a container - it drives the presentation phase, not "
+                            + "the advance, so it does not complete this beat. Needs a player (a stumbling point).");
             case COMPLETE, FORFEIT -> null;
         };
     }
