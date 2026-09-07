@@ -1,0 +1,29 @@
+[done: ADR-0015] Gold Block of Progress which have secondary text like "Guaranteed to change job to <hunter>"
+[open] Because the first villagers (gatherer, hunter) leave down, it's hard to manage their leveling. Maybe just make it possible from the flag menu.
+[open] New villagers should have a "unwavering optimism" bonus when they first arrive (don't need food, don't have mood debuffs) for a couple of days.
+[done: ADR-0015] Flag should sparkle in cyan when BOP is present
+bradsk88 — 10:15 AM
+[has-issue: .scratch/job-board-room-block] Make the job board a room-block
+[open] Windows holes are still making rooms fail to
+
+bradsk88 — 10:57 AM
+[open] After moving flag, it's unclear when th evillagers will return, and the completed quests and registerd doors seem to get lost.
+[has-plan: docs/plans/2026-09-07-001-feat-organizer-chest-sort-plan.md] Organizers can "hit the sort button" on a chest, stacking items up to their level (e.g. level 2 organizer can stack up to 2 size stack)
+[open] Need a way to dispose of fake door/wall item
+bradsk88 — 11:06 AM
+[open] Players want to give food direct to the villagers, but after being given food they still have the "give me food" bubble above them and they don't eat.
+[open] Taking bread from a villager, it brings along nbt data and makes it no longer stackable.
+[fixed] Unlocking level 2 skil ldoes not reveal level 3 kill?
+
+bradsk88 — 11:37 AM
+[open] Maybe upgrades should require both BOPs AND level? (unlock tier three at level three etc)
+[open] Villagers keep waking up with tons of loot in hand
+[open] Gold BOPs (particularly onboarding) can have "instant job change" effect
+bradsk88 — 11:47 AM
+[open] When villagers are relaxing, there should be some visual indication so you don't have to right click to understand why they aren't working.
+[open] Beds seem to be delayed. First bed quest shows up after SECOND villager shows up. Third villager arrives and only quest is "make me a miner" - no bed for third miner.
+[fixed] Clicking on quests crashes the client
+[open] No recipe for mineshaft
+[open] No recipe for fishing block
+bradsk88 — 12:09 PM
+[open] Cheating a mineshaft does not register it with a flag

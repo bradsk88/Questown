@@ -276,6 +276,9 @@ task publishModrinth(dependsOn: 'reobfJar') {
 // (.scratch/autotest-suite/organizer-fetch-warp-fails-only-in-full-suite.md).
 if (System.getProperty('questown.autotest', 'false') == 'true') {
     tasks.matching { it.name == 'runServer' }.configureEach {
+        if (System.getProperty('questown.tp.fifo') != null) {
+            standardInput = new java.io.FileInputStream(project.file('run/server-cmd.fifo'))
+        }
         doFirst {
             def world = project.file('run/world')
             if (world.exists()) {
