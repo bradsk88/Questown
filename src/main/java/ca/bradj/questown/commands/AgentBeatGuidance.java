@@ -46,12 +46,13 @@ final class AgentBeatGuidance {
                             + "inventory. A player far away sees a chicken that does nothing and can not "
                             + "tell why - presence, not the item, is the trigger.");
             case WAITING_FOR_WAND_ON_CAMPFIRE -> new Guidance(
-                    "Light the campfire (a wand right-click lights it).",
-                    "The beat needs a LIT campfire; a /setblock campfire is unlit and will not advance "
-                            + "it. Needs a player action (a stumbling point for a headless agent).",
-                    "Lighting the campfire is a wand-only step separate from placing it. A player who "
-                            + "built a campfire the normal way has no cue that a second, wand action is "
-                            + "still required.");
+                    "Light a campfire near the flag.",
+                    "The beat needs a lit campfire within the flag's campfire-search radius; it does not "
+                            + "need a wand or a player nearby. /setblock <campfire pos> campfire[lit=true] "
+                            + "advances it; a plain /setblock campfire is unlit and will not.",
+                    "The beat keys off a lit campfire in range, so the name reads as a wand action it is "
+                            + "not. A player who built the campfire the normal way does not know it also "
+                            + "has to be lit, but a lit setblock settles it with no wand.");
             case SUNSET_AND_MAP -> new Guidance(
                     "Return at night and sleep on the campfire (via the wand).",
                     "The beat advances on a campfire sleep (a flag bit). No _qtdev command performs the "
