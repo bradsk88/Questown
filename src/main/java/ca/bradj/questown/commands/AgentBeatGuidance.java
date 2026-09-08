@@ -51,11 +51,17 @@ final class AgentBeatGuidance {
                             + "has to be lit.");
             case SUNSET_AND_MAP -> new Guidance(
                     "Sleep on the campfire when it gets dark.",
-                    "Come back at night and sleep on the campfire with the wand. No agent-side action does "
-                            + "this; it needs a player. Likely a stumbling point.",
-                    "The arc gates on a real night-time campfire sleep with no fast-path. A player who "
-                            + "finishes the build before dusk sees the town stop responding and may read it "
-                            + "as broken rather than waiting.");
+                    "The campfire sleep completes at dawn. Drive it from the console: right-click the "
+                            + "campfire with the town wand to start the sleep (needs the paired wand), "
+                            + "then send `time set <dawn>` via the FIFO to skip the night - the sleep "
+                            + "wakes at dawn and the beat advances. Do not wait out a real night; it "
+                            + "freezes the player. There is no console command that right-clicks the "
+                            + "campfire, so the sleep must start from a live player or a command that "
+                            + "fires that action; the clock skip is the part the agent does.",
+                    "The arc gates on a night-time campfire sleep. A player who finishes the build "
+                            + "before dusk sees the town stop responding and may read it as broken "
+                            + "rather than waiting; the agent's move is to skip the night with `time "
+                            + "set`, not to wait.");
             case WAITING_FOR_WALL_BLOCK -> new Guidance(
                     "Fill the wall gap the chicken is pointing at.",
                     "Place a solid block in the gap the chicken is pecking at.",
@@ -73,10 +79,14 @@ final class AgentBeatGuidance {
                     "Registering a room is a hidden wand right-click with no visible result beyond the "
                             + "room being detected. A player may not know the action 'took.'");
             case WAITING_FOR_SIGN -> new Guidance(
-                    "Put a sign in the registered room.",
-                    "Place a sign inside the registered room; it becomes a job board.",
+                    "Put a sign in the room.",
+                    "Place a sign inside the room the chicken is pointing at; it becomes a job board. "
+                            + "If no room is registered yet, register the room's door first (right-click "
+                            + "the door with the town wand) so the room exists before the sign counts.",
                     "A placed sign silently becomes a job board when the recipe matches - the change is "
-                            + "invisible until then, so a player may not notice the sign 'did something.'");
+                            + "invisible until then, so a player may not notice the sign 'did something.' "
+                            + "A player may also place a sign before any room is registered and see no "
+                            + "progress, with no obvious reason why.");
             case WAITING_FOR_CHEST -> new Guidance(
                     "Put a chest in the registered room.",
                     "Place a chest inside the registered room.",
