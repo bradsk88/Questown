@@ -377,9 +377,17 @@ public class AutoTestRunner {
             if (sp.getGameProfile().getName().startsWith("[")) { // skip FakePlayers
                 return;
             }
-            sp.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+            // Peaceful world + survival player: a dead player silently stalls every interaction beat
+            // (the chicken-arc gates on a live nearest player's inventory, and tp/give do not reach a
+            // dead player). Peaceful removes the whole class of dead-player stalls deterministically,
+            // so the agent does not have to remember to set it via the FIFO.
+            sp.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+            net.minecraft.server.MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+            if (server != null) {
+                server.setDifficulty(net.minecraft.world.Difficulty.PEACEFUL, true);
+            }
             aim(sp);
-            QT.FLAG_LOGGER.info("[village] watch: teleported {} to village viewpoint",
+            QT.FLAG_LOGGER.info("[village] watch: teleported {} to village viewpoint (survival, peaceful)",
                     sp.getGameProfile().getName());
         }
 

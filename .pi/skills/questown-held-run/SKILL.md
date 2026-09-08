@@ -76,8 +76,18 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
 5. **Then** launch the client (it reconnects to the live server):
    `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8 nohup ./gradlew
    runClient -Pautojoin > /tmp/village-client.log 2>&1 &`.
-6. Set the world peaceful **and** put the dev in survival: `echo 'difficulty peaceful' > run/server-cmd.fifo` then `echo 'gamemode survival Dev' > run/server-cmd.fifo`. Peaceful is **world-level** (`difficulty peaceful`, not per-player), so a death cannot revert it and no hostile mob can spawn to kill the player the agent is emulating. A dead player is the silent blocker every session hits: the chicken-arc gates on a *live* nearest player's inventory, so a dead player silently stalls every interaction beat no matter what the clickwand log says, and `tp`/`give` do not reach a dead player. Peaceful setup removes the whole class of dead-player stalls; do not rely on checking liveness in-run. If the world still has a dead player, it cannot progress until a live player holds the required item — ask the dev to respawn, do not keep feeding a dead player.
-7. **Start the onboarding arc if the flag is hand-placed.** A flag placed by a
+   The client joins in survival mode with the world set to peaceful
+   (deterministic, set by `VillageWatchListener.onLogin` on the server) —
+   no FIFO `gamemode`/`difficulty` commands needed. A dead player is the
+   silent blocker every session hits: the chicken-arc gates on a *live*
+   nearest player's inventory, so a dead player silently stalls every
+   interaction beat no matter what the clickwand log says, and `tp`/`give`
+   do not reach a dead player. Peaceful setup removes the whole class of
+   dead-player stalls; do not rely on checking liveness in-run. If the
+   world still has a dead player, it cannot progress until a live player
+   holds the required item — ask the dev to respawn, do not keep feeding
+   a dead player.
+6. **Start the onboarding arc if the flag is hand-placed.** A flag placed by a
    player (not in an `empty_town` structure) never had its chicken rotation
    detected, so the arc is inert. Check the arc with `_qtdev inspect <chicken>`:
    if the chicken is not guiding (no beat, or "the chicken has stopped guiding
