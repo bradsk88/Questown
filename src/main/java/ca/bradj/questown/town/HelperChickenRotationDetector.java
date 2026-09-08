@@ -102,6 +102,27 @@ public final class HelperChickenRotationDetector {
         return out;
     }
 
+    /**
+     * One-shot rotation read for callers that bypass {@link #detectIfNeeded}'s
+     * retry/forfeit budget (e.g. {@code HelperChickenSpawnController.forceSpawn}).
+     * Returns the rotation of a candidate position that currently holds a
+     * campfire, or {@link Rotation#NONE} if none do. Unlike {@code detectIfNeeded}
+     * it never forfeits and never persists - it only reads the current world.
+     */
+    public static Rotation detectRotationOnce(TownFlagBlockEntity flag) {
+        ServerLevel sl = flag.getServerLevel();
+        if (sl == null) {
+            return Rotation.NONE;
+        }
+        BlockPos flagPos = flag.getTownFlagBasePos();
+        for (Map.Entry<Rotation, BlockPos> e : candidatePositions(flagPos).entrySet()) {
+            if (sl.getBlockState(e.getValue()).is(Blocks.CAMPFIRE)) {
+                return e.getKey();
+            }
+        }
+        return Rotation.NONE;
+    }
+
     private static void finalizeDetection(
             TownFlagBlockEntity flag,
             Rotation detected,
