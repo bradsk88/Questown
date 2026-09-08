@@ -38,8 +38,7 @@ public class CommandInit {
         TestAllCommand.register(event.getDispatcher(), event.getBuildContext());
         ChickenRemoveCommand.register(event.getDispatcher());
         RegisterRoomCommand.register(event.getDispatcher());
-        InspectQuestsCommand.register(event.getDispatcher());
-        InspectVillagerCommand.register(event.getDispatcher());
+        QtDevInspectCommand.register(event.getDispatcher(), event.getBuildContext());
         DepositItemCommand.register(event.getDispatcher(), event.getBuildContext());
         FlagCraftCommand.register(event.getDispatcher());
         FlagPlaceBoardCommand.register(event.getDispatcher());

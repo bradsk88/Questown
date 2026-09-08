@@ -76,17 +76,17 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
 5. **Then** launch the client (it reconnects to the live server):
    `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8 nohup ./gradlew
    runClient -Pautojoin > /tmp/village-client.log 2>&1 &`.
-6. Put the dev in survival: `echo 'gamemode survival Dev' > run/server-cmd.fifo`.
+6. Set the world peaceful **and** put the dev in survival: `echo 'difficulty peaceful' > run/server-cmd.fifo` then `echo 'gamemode survival Dev' > run/server-cmd.fifo`. Peaceful is **world-level** (`difficulty peaceful`, not per-player), so a death cannot revert it and no hostile mob can spawn to kill the player the agent is emulating. A dead player is the silent blocker every session hits: the chicken-arc gates on a *live* nearest player's inventory, so a dead player silently stalls every interaction beat no matter what the clickwand log says, and `tp`/`give` do not reach a dead player. Peaceful setup removes the whole class of dead-player stalls; do not rely on checking liveness in-run. If the world still has a dead player, it cannot progress until a live player holds the required item — ask the dev to respawn, do not keep feeding a dead player.
 7. **Start the onboarding arc if the flag is hand-placed.** A flag placed by a
    player (not in an `empty_town` structure) never had its chicken rotation
-   detected, so the arc is inert and `_qtdev help`'s `status` line reports
-   "not running - the helper chicken has never spawned." Before driving
-   onboarding, run `_qtdev spawn_chicken <flag pos>` once (get the pos from
-   `_qtdev help` or `qt findflag`) to start the arc; it clears the forfeit,
-   reads the rotation once, and spawns the chicken. The individual beats still
-   need their real conditions, so this only starts the arc, not fakes it.
-   Worldgen-placed flags need this only if the arc is not already running
-   (`_qtdev help` status says "running").
+   detected, so the arc is inert. Check the arc with `_qtdev inspect <chicken>`:
+   if the chicken is not guiding (no beat, or "the chicken has stopped guiding
+   you"), run `_qtdev spawn_chicken <flag pos>` once (get the pos from
+   `qt findflag`) to start the arc; it clears the forfeit, reads the rotation
+   once, and spawns the chicken. The individual beats still need their real
+   conditions, so this only starts the arc, not fakes it. Worldgen-placed flags
+   need this only if `_qtdev inspect <chicken>` shows the arc is not guiding
+   yet.
 
 Do not restart the server while the client is up - it kills the client and
 wipes the world. If you must load a new command, kill the client, restart the
@@ -127,7 +127,7 @@ blocking**. Act on the current output, not a pre-baked plan.
 **Confirm against the latest observe cycle, not the last line you grepped.**
 Observe lines and the need/job lines interleave, and a line you grepped a
 window ago is not the current state. Before reporting a townie's need or job
-status, read the most recent `--- observe ---` cycle (or a fresh `qt quests`) so
+status, read the most recent `--- observe ---` cycle (or a fresh `_qtdev inspect <flag>` / `_qtdev inspect <flag> villagers`) so
 a need that cleared a window later is not reported as still open. When the dev
 (as a live observer) says a state is not what the log shows, the log is the
 stale one — re-read, do not argue the old line.
@@ -140,12 +140,12 @@ available! Right-click the town flag"). Each window read both:
   (proof the town sent it)
 - client log: `grep -aE '\[CHAT\]' /tmp/village-client.log` (what the dev sees)
 - observe lines: `grep -aE '\[village\] (KNOWN|UNCLEAR)' /tmp/village-server.log`
-- quest detail: `_qtdev quests` (lists the quests)
+- quest/villager detail: `_qtdev inspect <flag>` / `_qtdev inspect <flag> quests` / `_qtdev inspect <flag> villagers`
 
 **The broadcast is not proof a quest completed.** It fires on room
 re-creation, not on completion; a `recipe_created`/`quest_completed` broadcast
 can appear while the quest is still open. Verify completion against the done
-list / `qt quests`, not the broadcast.
+list / `_qtdev inspect <flag> quests`, not the broadcast.
 
 ## The console command set (the agent's hands)
 
@@ -169,23 +169,9 @@ the server log (the `--- observe ---` cycles and the town's chat) and the
 `_qtdev` commands. When a step cannot proceed, surface it as the blocking
 question in a check-in; do not resolve it by reading code.
 
-- `_qtdev help` - the onboarding guide the helper chicken would show a human
-  player, as text an agent can read from the log. It prints the current
-  chicken-arc beat as a `need` (what the arc wants), a `how` (the world
-  interaction that fulfils it - what a player would do; map it onto your own
-  tools, don't treat it as a command), a `teaches` (the legibility gap the beat
-  exposes - the stumbling point), a `status` (is the arc even running and is the
-  beat's condition met, so a stale beat is not mistaken for progress), plus a
-  compact map of the whole arc. Consult it when stuck on first-town onboarding;
-  it gives the next beat and why it is stuck, **not** the game's why (which you
-  still learn by watching the town's response).
+- `_qtdev inspect <flag>` - the flag menu a player would see by right-clicking the flag: which tabs are shown (villagers, quests, economics, block of progress, crafting), with red-dots, and the static content. `_qtdev inspect <flag> <tab>` returns one tab (`villagers`, `quests`, `economy`, `blocks`, `crafting`). `_qtdev inspect <chicken>` narrates the current onboarding beat as the chicken's observed behavior (e.g. "The chicken looks at your town wand, then back to the flag base [Use the town wand on the flag base]"), keyed off the player's held item so the same beat reads differently in different states. This is the new-player vantage: it returns what a right-click shows, not the gate behind it - no internal state name, no condition line, no arc map. Use it to decide the next action; do not reach for `_qtdev help` (which prints the internal beat/`status`/map - the cheatsheet) or the removed `qt quests` / `_qtdev villagers` (which reach the quest board without going through the menu).
 - `_qtdev registerroom <x> <y> <z>` — register a door at the position, the way a
   player right-clicking a door with the town wand would.
-- `_qtdev quests` — list the flag's active and complete quests.
-- `_qtdev villagers` — inspect the town's villagers: each one's need (and, for an
-  UNMET_ITEM need, the item it lacks), the quests that belong to that villager,
-  and the red-dot cue that marks the quests tab. Mirrors what right-clicking a
-  visitor shows.
 - `_qtdev deposit <item> [count]` — put an item into a registered container, the
   way a player dropping an item into a chest would.
 - `_qtdev place_mat <x> <y> <z>` — place a welcome mat at the position.
