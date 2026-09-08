@@ -135,6 +135,12 @@ public class QtDevInspectCommand {
             QT.FLAG_LOGGER.warn("[_qtdev inspect] no town flag at {}", pos);
             return 1;
         }
+        if (!flag.getChickenEverSpawned()) {
+            QT.FLAG_LOGGER.warn("[_qtdev inspect] no helper chicken is spawned for flag {} "
+                    + "(the onboarding arc is inert; start it with _qtdev spawn_chicken {})",
+                    flag.getTownFlagBasePos(), flag.getTownFlagBasePos());
+            return 1;
+        }
         ChickenBeatState state = flag.getChickenBeatState();
         if (state == ChickenBeatState.COMPLETE) {
             QT.FLAG_LOGGER.info("[_qtdev inspect] the chicken has finished guiding you; the flag is "
