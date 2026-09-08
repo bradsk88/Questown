@@ -83,12 +83,24 @@ public class AutoTestRunner {
         List<AnyTestEntry> jobsList = runJobs ? TestBlueprintRegistry.resolveJobs(category) : List.of();
         List<ChickenArcBlueprint> chickenList = runChicken ? ChickenArcBlueprintRegistry.all() : List.of();
 
+        boolean runVillage = only != null && nameMatches("village/growth", only);
+        if (runVillage) {
+            runJobs = false;
+            runChicken = false;
+            // The growth scenario runs for many minutes; let a spectator client
+            // join and watch while it plays, not only in post-run hold mode.
+            if ("true".equals(System.getProperty(SYSPROP_HOLD))) {
+                MinecraftForge.EVENT_BUS.register(new VillageWatchListener());
+                QT.FLAG_LOGGER.info("[village] watch: spectator camera armed (join anytime)");
+            }
+        }
+
         if (only != null) {
             jobsList = jobsList.stream().filter(e -> nameMatches(e.name(), only)).toList();
             chickenList = chickenList.stream().filter(b -> nameMatches(b.name(), only)).toList();
             runJobs = !jobsList.isEmpty();
             runChicken = !chickenList.isEmpty();
-            if (!runJobs && !runChicken) {
+            if (!runJobs && !runChicken && !runVillage) {
                 reportNoMatchAndShutdown(server, only, category);
                 return;
             }
@@ -100,9 +112,12 @@ public class AutoTestRunner {
         ChickenArcAllExecutor chickenExecutor = runChicken
                 ? new ChickenArcAllExecutor(overworld, server, fakePlayer, ORIGIN, output, chickenList)
                 : null;
+        VillageGrowthExecutor villageExecutor = runVillage
+                ? new VillageGrowthExecutor(overworld, server, fakePlayer, ORIGIN)
+                : null;
 
         AutoTestTickListener listener = new AutoTestTickListener(
-                server, jobsExecutor, chickenExecutor
+                server, jobsExecutor, chickenExecutor, villageExecutor
         );
         MinecraftForge.EVENT_BUS.register(listener);
     }
@@ -341,23 +356,88 @@ public class AutoTestRunner {
         }
     }
 
+    /**
+     * Spectator camera for a held village/growth run. Drops each joining player
+     * in spectator mode above the village, aimed at the flag; every 40 ticks it
+     * re-aims at the newest thing worth watching (a needy townie if one exists,
+     * else the flag), so the viewer watches the village live instead of a
+     * finished arena. Unlike HoldModeLoginListener it also tracks the village
+     * while the scenario is still playing out — hold mode is entered only after
+     * the executor finishes, so during the run the same listener is registered
+     * up front by onServerStarted when the village track is selected.
+     */
+    static class VillageWatchListener {
+        private int ticks = 0;
+
+        @SubscribeEvent
+        public void onLogin(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+            if (!(event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp)) {
+                return;
+            }
+            if (sp.getGameProfile().getName().startsWith("[")) { // skip FakePlayers
+                return;
+            }
+            sp.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+            aim(sp);
+            QT.FLAG_LOGGER.info("[village] watch: teleported {} to village viewpoint",
+                    sp.getGameProfile().getName());
+        }
+
+        @SubscribeEvent
+        public void onTick(net.minecraftforge.event.TickEvent.ServerTickEvent event) {
+            // No-op: the login handler gives each spectator an initial viewpoint
+            // (aimed at the flag) and then leaves them alone, so the user can fly
+            // around and observe on their own. The former per-tick re-aim kept
+            // resetting the camera and fought the user's own movement.
+        }
+
+        private void aim(net.minecraft.server.level.ServerPlayer sp) {
+            // Prefer the newest needy townie; otherwise hover over the flag.
+            net.minecraft.world.phys.Vec3 target = net.minecraft.world.phys.Vec3.atCenterOf(ORIGIN);
+            java.util.List<VisitorMobEntity> townies = sp.getLevel().getEntitiesOfClass(
+                    VisitorMobEntity.class, sp.getBoundingBox().inflate(96));
+            townies.sort((a, b) -> Double.compare(a.distanceTo(sp), b.distanceTo(sp)));
+            for (VisitorMobEntity v : townies) {
+                if (v.getNeed().isNeeded()) {
+                    target = v.getEyePosition();
+                    break;
+                }
+            }
+            double offset = 7.0; // back off so the buildings around the flag stay in frame
+            net.minecraft.world.phys.Vec3 from = new net.minecraft.world.phys.Vec3(
+                    target.x + offset, target.y + 4.5, target.z + offset);
+            double dx = target.x - from.x;
+            double dy = target.y - from.y;
+            double dz = target.z - from.z;
+            double hor = Math.sqrt(dx * dx + dz * dz);
+            float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+            float pitch = (float) -Math.toDegrees(Math.atan2(dy, hor));
+            sp.teleportTo((net.minecraft.server.level.ServerLevel) sp.level,
+                    from.x, from.y - 1.62, from.z, yaw, pitch);
+        }
+    }
+
     static class AutoTestTickListener {
         private final MinecraftServer server;
         private final @Nullable TestAllExecutor jobsExecutor;
         private final @Nullable ChickenArcAllExecutor chickenExecutor;
+        private final @Nullable VillageGrowthExecutor villageExecutor;
         private boolean jobsSuiteStartAnnounced;
         private boolean jobsDone;
         private boolean chickenSuiteStartAnnounced;
         private boolean chickenDone;
+        private boolean villageDone;
 
         AutoTestTickListener(
                 MinecraftServer server,
                 @Nullable TestAllExecutor jobsExecutor,
-                @Nullable ChickenArcAllExecutor chickenExecutor
+                @Nullable ChickenArcAllExecutor chickenExecutor,
+                @Nullable VillageGrowthExecutor villageExecutor
         ) {
             this.server = server;
             this.jobsExecutor = jobsExecutor;
             this.chickenExecutor = chickenExecutor;
+            this.villageExecutor = villageExecutor;
         }
 
         @SubscribeEvent
@@ -393,6 +473,16 @@ public class AutoTestRunner {
                     chickenDone = true;
                 }
             }
+            if (!villageDone) {
+                if (villageExecutor == null) {
+                    villageDone = true;
+                } else {
+                    if (!villageExecutor.tick()) {
+                        return;
+                    }
+                    villageDone = true;
+                }
+            }
             MinecraftForge.EVENT_BUS.unregister(this);
             reportAndShutdown();
         }
@@ -408,6 +498,10 @@ public class AutoTestRunner {
                 passed += chickenExecutor.getPassed();
                 total += chickenExecutor.getTotal();
             }
+            if (villageExecutor != null) {
+                passed += villageExecutor.getPassedAssertions();
+                total += villageExecutor.getTotalAssertions();
+            }
             boolean allPassed = total > 0 && passed == total;
 
             QT.FLAG_LOGGER.info("[autotest] ========================================");
@@ -417,7 +511,9 @@ public class AutoTestRunner {
 
             if ("true".equals(System.getProperty(SYSPROP_HOLD))) {
                 QT.FLAG_LOGGER.info("[autotest] HOLDING: server left running for client inspection");
-                MinecraftForge.EVENT_BUS.register(new HoldModeLoginListener());
+                if (villageExecutor == null) {
+                    MinecraftForge.EVENT_BUS.register(new HoldModeLoginListener());
+                } // village runs already registered VillageWatchListener at startup
                 return;
             }
             server.halt(false);
