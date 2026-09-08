@@ -39,9 +39,11 @@ final class AgentBeatGuidance {
         return switch (state) {
             case WAITING_FOR_STICK -> new Guidance(
                     "Stand near the flag holding a town wand (this claims it).",
-                    "Advances only when a player within ~16 blocks of the flag holds the wand - "
-                            + "a /give to a far dev does not advance it. Give the dev a wand and keep it "
-                            + "near the flag (give Dev questown:town_wand; qt tp).",
+                    "Advances only when a player within ~16 blocks of the flag holds the wand. "
+                            + "gamemode survival Dev; give Dev questown:town_wand; tp Dev <flag x> 65 <flag z>. "
+                            + "Do not use qt tp: it puts the dev in spectator at the observation viewpoint, "
+                            + "and a spectator near the flag does not satisfy the beat - presence in a player "
+                            + "mode within the radius does.",
                     "The chicken reacts to a player standing near the flag, not to a wand in any "
                             + "inventory. A player far away sees a chicken that does nothing and can not "
                             + "tell why - presence, not the item, is the trigger.");
