@@ -2,6 +2,7 @@ package ca.bradj.questown.mobs.helperchicken;
 
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
@@ -20,7 +21,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.EmptyBlockGetter;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.Rotation;
@@ -76,7 +76,7 @@ public final class ChickenArcConditions {
 
         return new ChickenArcTransitions.Observed(
                 hasWandInInventory(nearestPlayer),
-                isCampfireLit(level, flagPos, rotation),
+                isCampfireLit(level, flagPos),
                 flag.getChickenObservedSleepSinceSunset(),
                 isWallBlockPlaced(level, flagPos, rotation),
                 isDoorPlaced(level, flagPos, rotation),
@@ -111,22 +111,24 @@ public final class ChickenArcConditions {
         return player.getOffhandItem().is(ItemsInit.TOWN_WAND.get());
     }
 
+    /**
+     * Whether a lit campfire exists within the flag's campfire-search radius. This
+     * mirrors the special campfire quest's own detection ({@link TownCycle#findCampfire}
+     * with the same lit predicate), so the chicken's {@code WAITING_FOR_WAND_ON_CAMPFIRE}
+     * beat and the campfire quest agree on where the campfire is. The beat no longer
+     * requires the campfire to sit at the exact rotation-anchored {@code CAMPFIRE_OFFSET}:
+     * on a hand-placed flag that offset is never where the player put the campfire, so
+     * the quest could complete while the beat stayed stuck. The offset is still the
+     * peck/animation target; only the advance condition is the radius scan.
+     */
     public static boolean isCampfireLit(
             ServerLevel level,
-            BlockPos flagPos,
-            Rotation rotation
+            BlockPos flagPos
     ) {
-        BlockPos pos = HelperChickenBeatOffsets.resolveTarget(
-                ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE, flagPos, rotation
-        );
-        if (pos == null) {
-            return false;
-        }
-        BlockState bs = level.getBlockState(pos);
-        if (!bs.is(Blocks.CAMPFIRE)) {
-            return false;
-        }
-        return bs.hasProperty(CampfireBlock.LIT) && bs.getValue(CampfireBlock.LIT);
+        return TownCycle.findCampfire(
+                flagPos, level,
+                bs -> bs.hasProperty(CampfireBlock.LIT) && bs.getValue(CampfireBlock.LIT)
+        ).isPresent();
     }
 
     public static boolean isWallBlockPlaced(

@@ -59,6 +59,12 @@ flowchart TD
   skips the optional action is not stalled (see `CONTEXT.md` **Optional beat**).
 - `isSatisfied` maps each beat to one boolean of `Observed` (e.g.
   `AWAITING_WORLDLY_SEEDS_DELIVERY -> playerGaveSeedsToChicken`).
+- The campfire beat (`WAITING_FOR_WAND_ON_CAMPFIRE`) advances on a lit campfire
+  *anywhere in the flag's campfire radius* — the same `TownCycle.findCampfire`
+  scan the campfire quest uses, not the fixed structure `CAMPFIRE_OFFSET`. The
+  offset is only the chicken's peck/animation target; the quest and the beat
+  agree because both scan the radius (a hand-placed flag puts the campfire where
+  the player put it, not at the offset).
 - Beats are persisted by `name()` under `chicken-beat-state`; the enum order and
   names must not be reordered or renamed, only inserted.
 
