@@ -38,12 +38,13 @@ final class AgentBeatGuidance {
     static Guidance forBeat(ChickenBeatState state) {
         return switch (state) {
             case WAITING_FOR_STICK -> new Guidance(
-                    "Stand near the flag holding a town wand (this claims it).",
-                    "Advances only when a player within ~16 blocks of the flag holds the wand. "
-                            + "gamemode survival Dev; give Dev questown:town_wand; tp Dev <flag x> 65 <flag z>. "
-                            + "Do not use qt tp: it puts the dev in spectator at the observation viewpoint, "
-                            + "and a spectator near the flag does not satisfy the beat - presence in a player "
-                            + "mode within the radius does.",
+                    "Right-click the flag with a stick to get the town wand (this claims it).",
+                    "The flag turns a stick into a town wand when a player right-clicks it with a stick, "
+                            + "and the arc advances once that player is within ~16 blocks holding the wand. "
+                            + "A headless agent has no mouse, so it uses: /_qtdev clickwand <flag pos> "
+                            + "(it gives the player a stick and does the real flag click, which converts it to "
+                            + "the wand). The player must be in a player mode near the flag - do not use "
+                            + "qt tp, it puts the dev in spectator and a spectator does not satisfy the beat.",
                     "The chicken reacts to a player standing near the flag, not to a wand in any "
                             + "inventory. A player far away sees a chicken that does nothing and can not "
                             + "tell why - presence, not the item, is the trigger.");
