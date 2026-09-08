@@ -171,14 +171,14 @@ question in a check-in; do not resolve it by reading code.
 
 - `_qtdev help` - the onboarding guide the helper chicken would show a human
   player, as text an agent can read from the log. It prints the current
-  chicken-arc beat as a `need` (what the arc wants), a `how` (a command or
-  vanilla action the agent can use, since it can't right-click), a `teaches`
-  (the legibility gap the beat exposes - the stumbling point), a `status` (is
-  the arc even running and is the beat's condition met, so a stale beat is not
-  mistaken for progress), plus a compact map of the whole arc. Consult it when
-  stuck on first-town onboarding; it gives the next beat and why it is stuck,
-  **not** the game's why (which you still learn by watching the town's
-  response).
+  chicken-arc beat as a `need` (what the arc wants), a `how` (the world
+  interaction that fulfils it - what a player would do; map it onto your own
+  tools, don't treat it as a command), a `teaches` (the legibility gap the beat
+  exposes - the stumbling point), a `status` (is the arc even running and is the
+  beat's condition met, so a stale beat is not mistaken for progress), plus a
+  compact map of the whole arc. Consult it when stuck on first-town onboarding;
+  it gives the next beat and why it is stuck, **not** the game's why (which you
+  still learn by watching the town's response).
 - `_qtdev registerroom <x> <y> <z>` — register a door at the position, the way a
   player right-clicking a door with the town wand would.
 - `_qtdev quests` — list the flag's active and complete quests.
@@ -189,6 +189,11 @@ question in a check-in; do not resolve it by reading code.
 - `_qtdev deposit <item> [count]` — put an item into a registered container, the
   way a player dropping an item into a chest would.
 - `_qtdev place_mat <x> <y> <z>` — place a welcome mat at the position.
+- `_qtdev clickwand <x> <y> <z>` — right-click the flag with a stick so it
+  converts to the town wand (the real flag interaction; the agent's stand-in
+  for the wand beat a player does by hand).
+- `_qtdev click <item> <pos>` — right-click a block with any item, the way a
+  player would (the real block interaction).
 - `_qtdev place_board <x> <y> <z>` - place a job board at the position.
 - `_qtdev spawn_chicken <x> <y> <z>` - force the helper chicken to spawn for a
   flag, so a held run can drive onboarding on a flag that was not placed in an
