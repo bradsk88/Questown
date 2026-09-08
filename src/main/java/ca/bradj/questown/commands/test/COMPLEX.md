@@ -99,3 +99,69 @@ this shape is structurally unsound. Keep the gate as the synchronous unit test
 `CrawlPerfTest` (RoomRecipes — it drives the crawl directly, asserts `ms < 1000`,
 and bites); the perf autotest's `plus_room` stays a measurement (always passes,
 reports the `TickProfile`), never a gate.
+
+## Driving the daily cycle and roster growth in a scenario
+
+Two things a scenario often wants to force — the night-to-morning transition and
+the villager roster growing — run off mechanisms that are easy to misread.
+
+**Morning rewards fire from the day-time signal, not from campfire-sleep.**
+`AbstractTownFlagTicker` calls `Signals.fromDayTime(getDayTime())` every tick;
+when the signal flips to `Signals.MORNING`, `detectMorning` pushes a morning and
+`onMorning` -> `morningTick` -> `handleMorning` runs the morning-reward queue
+(`SpawnVisitorReward`, quest-completion rewards, etc.). `Signals.fromDayTime` is
+pure: `dayTime % 24000 < 6000` is `MORNING`, `> 22000` is `NIGHT`. So
+`time set night` then `time set day` flips the signal and fires the morning
+rewards — **no campfire-sleep and no fake-player vanilla-sleep is required**. The
+campfire-sleep `SleepFinishedTimeEvent` is *one* other trigger of `morningTick`,
+not the only one; do not conclude that `morningTick` needs it. A fake
+`[AutoTest]` player cannot vanilla-sleep, but `time set` still drives the cycle.
+
+**The roster grows from quest-completion rewards, and the first villager needs
+the tutorial batch.** Roster changes come from `SpawnVisitorReward`, queued by
+quest-completion rewards (`MCRewardList` claimed via the asap-rewards queue). The
+first villager is the `PHASE_KICKOFF` tutorial batch (`TownFlagTutorialAdapter`),
+which only completes when *all* its quests complete: `special_quest.campfire`,
+an item quest (e.g. `minecraft:wooden_sword`), `questown:store_room` (a chest
+registered as a store room), `questown:job_board` (a job board block placed in a
+registered room), and `special_quest.town_gate` (a welcome mat). A scenario that
+registers doors and a campfire but never places a job board or a town-gate
+welcome mat leaves that batch open, so **no villager ever spawns** — the roster
+stays 0, not 1. Place every tutorial quest's object before expecting a roster.
+
+**Room-recipe quests complete on *re-detection*, not the initial door scan.** A
+registered door's room recipe is first computed when the door is detected, and
+`recipe_created` broadcasts at that moment — but the tutorial-batch room quests
+(`store_room`, `job_board`, `town_gate`) often do **not** complete on that first
+pass (the quest is not yet in the active batch, or the room's top match differs
+at first detection). They complete when the room is **re-detected** — a fresh
+`roomRecipeCreated` from re-wand-clicking the door, or from placing the quest's
+block in the room (pressure plate for `town_gate`, job board block for
+`job_board`, chest for `store_room`). The completion fires on the *re-creation*,
+not on a block toggle: a chest broken and re-added does not re-trigger
+re-detection by itself (`TownRoomsMap.tick` only runs `MultiLevelRoomDetector`
+while `pendingRooms != null`). So to drive the tutorial batch to completion,
+re-wand-click each door (or place the quest's block in its room) — do not expect
+the initial detection to close the quests, and do not read a `recipe_created`
+broadcast as proof the quest completed (check the `done=` list, not the
+broadcast). The `onboarding` flag on these quests is **dead** (set in
+`TownQuests`, read only for NBT in `MCQuest`) — superset completion was never
+wired; completion is exact-match on the top match, and only re-detection makes it
+fire. Verified run: `store_room`/`job_board`/`town_gate` all stayed open after
+initial detection, completed on re-detection/re-placement, and the roster then
+went 1→2 via `SpawnVisitorReward`.
+
+**An `UNMET_ITEM` need re-sets every flag-tick; a deposit only clears it if the
+job scores > 0.** `TownPossibleWork` raises `UNMET_ITEM` whenever a job scores 0
+(`registerUnmetNeeds`) and clears it when a viable job exists
+(`clearUnmetItemNeeds`). A job scores 0 when it lacks its **job block** at the
+job-block location *or* its ingredients at a container near that location. So a
+food deposit into a random registered container does not clear the need if the
+job's own job block (e.g. `welcome_mat_block` for `gatherer/gather`) is absent, or
+the food is not at a container the job's base room can see. Depositing the right
+item is necessary, not sufficient — the job block must exist first. `resolveItem`
+in a scenario must also handle tag needs (e.g. `#questown:villager_food`): use
+`ca.bradj.questown.gui.Ingredients.representativeItemStack` (the same resolver the
+need bubble uses), not a bare `ResourceLocation`/`ForgeRegistries.ITEMS` lookup,
+which returns null for a tag.
+
