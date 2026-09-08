@@ -179,7 +179,12 @@ question in a check-in; do not resolve it by reading code.
 - `_qtdev deposit <item> [count]` — put an item into a registered container, the
   way a player dropping an item into a chest would.
 - `_qtdev place_mat <x> <y> <z>` — place a welcome mat at the position.
-- `_qtdev place_board <x> <y> <z>` — place a job board at the position.
+- `_qtdev place_board <x> <y> <z>` - place a job board at the position.
+- `_qtdev spawn_chicken <x> <y> <z>` - force the helper chicken to spawn for a
+  flag, so a held run can drive onboarding on a flag that was not placed in an
+  empty_town structure (and so never had its rotation detected, leaving the
+  arc inert). Bypasses the rotation-detection/forfeit gates; the individual
+  beats still need their real conditions.
 - Vanilla (also from the FIFO/console): `tp <x> <y> <z>` (teleport),
   `time set <ticks>` (set the time of day, 0–24000), `setblock <x> <y> <z>
   <block>` (set a block), `qt tp` (jump to the nearest flag).
