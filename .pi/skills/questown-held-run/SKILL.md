@@ -77,8 +77,18 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
    `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8 nohup ./gradlew
    runClient -Pautojoin > /tmp/village-client.log 2>&1 &`.
 6. Put the dev in survival: `echo 'gamemode survival Dev' > run/server-cmd.fifo`.
+7. **Start the onboarding arc if the flag is hand-placed.** A flag placed by a
+   player (not in an `empty_town` structure) never had its chicken rotation
+   detected, so the arc is inert and `_qtdev help`'s `status` line reports
+   "not running - the helper chicken has never spawned." Before driving
+   onboarding, run `_qtdev spawn_chicken <flag pos>` once (get the pos from
+   `_qtdev help` or `qt findflag`) to start the arc; it clears the forfeit,
+   reads the rotation once, and spawns the chicken. The individual beats still
+   need their real conditions, so this only starts the arc, not fakes it.
+   Worldgen-placed flags need this only if the arc is not already running
+   (`_qtdev help` status says "running").
 
-Do not restart the server while the client is up — it kills the client and
+Do not restart the server while the client is up - it kills the client and
 wipes the world. If you must load a new command, kill the client, restart the
 server alone, relaunch the client after. Full traps (OOM 137, client daemon
 death, FIFO) are in `~/.pi/agent/references/questown-dev-launch.md`.
