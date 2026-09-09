@@ -219,6 +219,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("deed_consumed_on_place", deedConsumedOnPlaceBlueprint()));
         jobs.add(flagEntry("campfire_sleep_preserves_flag", campfireSleepPreservesFlagBlueprint()));
         jobs.add(flagEntry("dead_door_bubbled", deadDoorBubbledBlueprint()));
+        jobs.add(flagEntry("too_short_room_dead", tooShortRoomBlueprint()));
         // BOP cap (report): pre-fill the flag and drive one deposit across the 64-slot boundary.
         jobs.add(flagEntry("bop_boundary_63", bopBoundaryBlueprint()));
         jobs.add(flagEntry("bop_full_64", bopFullBlueprint()));
@@ -328,6 +329,10 @@ public class TestBlueprintRegistry {
     // so the room scan never attaches it to anything.
     private static final BlockPos DEAD_DOOR_OFFSET = new BlockPos(-2, 0, 0);
 
+    // Where the too-short room's north-west corner stands relative to the flag: also clear of the
+    // farm base and of the lone door, so the scan sees only this room's own door.
+    private static final BlockPos TOO_SHORT_ROOM_OFFSET = new BlockPos(-9, 0, -2);
+
     /**
      * Dead-door bubbling (ADR-0011, legibility item 5): a registered door that encloses nothing
      * must surface on the flag as {@link DoorTrouble#NOT_ENCLOSED}, which is what
@@ -386,6 +391,76 @@ public class TestBlueprintRegistry {
         // The farm's fence gate must not leak into the door-bubble set.
         ok &= report(output, "3 no-false-positives", dead.size() == 1);
         return ok;
+    }
+
+    /**
+     * Walkability regression guard (Config.MIN_ROOM_WALKABLE_FRACTION): a room that is 2D-enclosed
+     * but only one block tall inside — air at the feet level, a solid roof at the head level —
+     * cannot be entered by a two-block-tall villager, so the room scan must reject it and the door
+     * must surface as {@link DoorTrouble#NOT_ENCLOSED}. Before the check, the 2D wall-walk counted
+     * the interior as "not a wall" (empty at feet OR head) and detected a valid room directly over
+     * a villager-unreachable floor. Builds the exact structure an agent produced in a held run.
+     */
+    private static TestBlueprint tooShortRoomBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::buildTooShortRoomAndRegister)
+                .withCustomAssertion(TestBlueprintRegistry::assertTooShortRoomDead);
+    }
+
+    private static boolean buildTooShortRoomAndRegister(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        // 5x5 footprint: floor at y-1, two-tall walls (so IsWall holds), and a ceiling at y+1 over
+        // the interior only — so each interior cell is air at feet (y) but solid at head (y+1).
+        BlockPos base = flagPos.offset(TOO_SHORT_ROOM_OFFSET);
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
+                BlockPos p = base.offset(x, 0, z);
+                level.setBlockAndUpdate(p.below(), Blocks.COBBLESTONE.defaultBlockState());
+                if (isEdge) {
+                    level.setBlockAndUpdate(p, Blocks.COBBLESTONE.defaultBlockState());
+                }
+                // Ceiling one block above the floor level across the whole footprint (walls + interior).
+                level.setBlockAndUpdate(p.above(), Blocks.COBBLESTONE.defaultBlockState());
+            }
+        }
+        // Full (both-halves) door on the east edge, replacing the wall/ceiling there.
+        BlockPos doorPos = base.offset(4, 0, 2);
+        BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+
+        // Register the door via the real wand path (same idiom as registerLoneDoorViaWand).
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
+        TownFlagBlock.StoreParentOnNBT(wand, flagPos);
+        player.setItemInHand(InteractionHand.MAIN_HAND, wand);
+        ((TownWand) wand.getItem()).onRightClicked(() -> player, level, doorPos, wand);
+
+        output.msg("Built 1-block-tall enclosed room and registered its door at "
+                + doorPos.toShortString() + "; deadDoors=" + town.getDeadDoors());
+        return true;
+    }
+
+    private static boolean assertTooShortRoomDead(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos doorPos = flagPos.offset(TOO_SHORT_ROOM_OFFSET).offset(4, 0, 2);
+        Map<BlockPos, DoorTrouble> dead = town.getDeadDoors();
+        output.msg("deadDoors after monitor = " + dead);
+        return report(
+                output,
+                "too-short room rejected as no-room (NOT_ENCLOSED)",
+                dead.get(doorPos) == DoorTrouble.NOT_ENCLOSED
+        );
     }
 
     private static boolean campfireSleepOntoFlag(

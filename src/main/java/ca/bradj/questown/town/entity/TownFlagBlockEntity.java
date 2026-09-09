@@ -1086,6 +1086,32 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         registerJobsBoard(pos);
     }
 
+    /**
+     * Place a full (both-halves) oak door at {@code pos}, the way a player's door item
+     * does, but driven from the console (no player hand to place it with). A dev/agent
+     * placing a door with vanilla {@code setblock} easily places only the LOWER half
+     * (leaving a one-block gap where the UPPER half belongs, which then gets roofed over
+     * and breaks the door); this places both halves so the door is whole. Registration
+     * for room detection is a separate step ({@code _qtdev registerroom}), mirroring the
+     * player flow of placing a door then right-clicking it with the town wand.
+     */
+    public void placeDoor(BlockPos pos) {
+        ServerLevel level = getServerLevel();
+        if (level == null) {
+            return;
+        }
+        net.minecraft.world.level.block.state.BlockState door =
+                net.minecraft.world.level.block.Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(pos, door.setValue(
+                net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER
+        ));
+        level.setBlockAndUpdate(pos.above(), door.setValue(
+                net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
+        ));
+    }
+
     public void openJobsMenu(
             ServerPlayer sender,
             boolean skipStraightToAdd

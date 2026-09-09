@@ -52,6 +52,27 @@ public class WallDetection {
         return false;
     }
 
+    /**
+     * True when a two-block-tall villager can stand at {@code dp}: the feet block (at
+     * {@code y}) and the head block (at {@code y + 1}) are both passable (air or no
+     * collision shape). This is the interior counterpart of {@link #IsWall}: a wall is
+     * solid at both levels, but a position that is merely empty at {@code y} OR
+     * {@code y + 1} is not necessarily standable — a one-block-tall gap (air at feet,
+     * solid roof at head) reads as "not a wall" yet cannot be walked into. Room
+     * detection uses this to reject rooms whose interior a villager cannot enter.
+     */
+    public static boolean IsWalkable(ServerLevel level, Position dp, int y) {
+        return isPassable(level, Positions.ToBlock(dp, y)) && isPassable(
+                level,
+                Positions.ToBlock(dp, y).above()
+        );
+    }
+
+    private static boolean isPassable(ServerLevel level, BlockPos bp) {
+        BlockState bs = level.getBlockState(bp);
+        return bs.isAir() || bs.getCollisionShape(level, bp).isEmpty();
+    }
+
     public static boolean IsEmpty(ServerLevel level, Position dp, int y) {
         BlockPos bp = Positions.ToBlock(dp, y);
         BlockPos abp = bp.above();
