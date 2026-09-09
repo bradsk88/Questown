@@ -58,3 +58,7 @@ flowchart LR
   `DoorTrouble.NOT_ENCLOSED` (no new trouble type), pointing the player at the
   door to rebuild taller. Regression guard: the `flag/too_short_room_dead`
   autotest builds the exact 1-block-tall structure and asserts the rejection.
+  The 0.5 fraction is bracketed from both sides by two more tests: `flag/floating_chest_room`
+  (a 5x5 room with one chest floating at head height is accepted) and
+  `flag/floating_furniture_over_half` (a 4x4 room with three of four interior
+  cells floating is rejected).
