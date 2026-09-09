@@ -88,14 +88,15 @@ public final class ChickenArcConditions {
                 flag.getChickenObservedVillagerUiOpen(),
                 flag.getChickenObservedFlagUiOpen(),
                 seedsInContainer,
-                flag.getChickenObservedSeedsGiven()
+                flag.getChickenObservedSeedsGiven(),
+                rotation == Rotation.NONE
         );
     }
 
     private static ChickenArcTransitions.Observed emptyObservation() {
         return new ChickenArcTransitions.Observed(
                 false, false, false, false, false, false, false, false, false,
-                false, false, false, false, false
+                false, false, false, false, false, false
         );
     }
 

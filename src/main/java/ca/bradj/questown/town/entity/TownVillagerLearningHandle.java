@@ -53,6 +53,24 @@ public class TownVillagerLearningHandle {
         ImmutableSet<JobID> representativeJobs = ServerJobsRegistry.getAllJobs();
         boolean changed = delegate.tick(representativeJobs);
         if (!changed) return;
+
+        // Write the freshly-computed awareness back into the reveal table, per villager. Without
+        // this the tick only *logs* the next awareness and discards it, so a villager's tree reveals
+        // only the children of its initial/default jobs and deeper tiers never appear short of a new
+        // villager's registration (the only other path that calls registerAsKnown). registerAsKnown is
+        // idempotent, and the client only displays a child whose parent is unlocked, so registering the
+        // town-wide awareness to every villager is safe.
+        Set<UUID> villagers = new HashSet<>();
+        villagers.addAll(unlockedJobs.keySet());
+        villagers.addAll(jobsKnownToExist.keySet());
+        for (Map.Entry<JobID, ImmutableList<JobID>> pc : delegate.getNextJobAwarenesses().entrySet()) {
+            for (UUID villager : villagers) {
+                for (JobID child : pc.getValue()) {
+                    registerAsKnown(villager, pc.getKey(), child);
+                }
+            }
+        }
+
         String tag = DebugLogArgument.AWARENESS_COMPUTE;
         TownInterface.DebugLogger logger = town.getUnsafe().getDebugLogger(QT.FLAG_LOGGER, tag);
         for (Map.Entry<JobID, ImmutableList<JobID>> pc : delegate.getNextJobAwarenesses().entrySet()) {

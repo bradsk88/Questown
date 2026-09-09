@@ -9,7 +9,21 @@ description: >-
 A visual play-test cannot run on this box: `runClient` connects but opens no
 window (`grim` captures 0 bytes, `xdotool search --name Minecraft` finds
 nothing). So the evidence for a live behavior must come from the **server log**,
-not a screenshot. See `references/questown-dev-launch.md`.
+not a screenshot. See `references/questown-dev-launch.md`. For the full held-run
+sequence (server-first launch order, 30s observation cadence, chat/observe
+channels, the console command set) load the `questown-held-run` skill; this
+skill is for verifying a specific behavior on a live world, not driving the town
+through onboarding.
+
+**The user wants the client run, and a held server is the verification path — never ask, offer, or defer it.**
+When a held `runServer` autotest or play-test needs a verification pass, just run
+`runClient` (add `-Pautojoin` for a live view) and hand control back. Do not ask
+the user whether they want it run, do not offer it as a choice, and do not
+"watch a client" the run when a unit test or the existing autotest suite already
+settles the question (that is the only skip). Do not decline the run because the
+box has no window — the client still renders and a user can drive a
+reproduction; the automated evidence comes from the server log, and that is what
+the run produces.
 
 ## The recipe
 
@@ -66,3 +80,29 @@ a unit test that fails on the old code and passes on the new is stronger
 evidence than a live run and is faster. Reserve this skill for behavior that
 only settles on a live world (interaction timing, pathfinding end-state,
 real-time effects).
+
+## Driving a run (vs. observing it)
+
+This skill is about *verifying* a behavior, not *driving* a town through onboarding.
+When the task is to drive a held run by console (place blocks, register rooms,
+supply items, flip the clock), do not pre-plan a sequence of actions. Read the
+latest `[village]` KNOWN/UNCLEAR line and act only on what it says; one action,
+then read the result, then decide the next. Do not infer the next step from
+reading Java (e.g. the reward a tutorial phase "should" hand out) — a guessed
+outcome reported as fact is the failure mode. The next step is whatever the town
+reports, not what the code is expected to do.
+
+**Read the chat channel, not only the `[village]` observe lines.** The town
+speaks in chat: `TownMessages.broadcastMessage` sends the player-facing signal
+("Quest completed: X", "New visitors will arrive after all players sleep",
+"New quests are available! Right-click the town flag") to every connected player.
+The observe lines are a *separate*, staler channel that does not carry these.
+Each 30s window, read both: the server log's `Broadcasting message` lines
+(`grep -aE 'Broadcasting message' <serverlog>` — proof the town sent it) and the
+client log's `[CHAT]` lines (`grep -aE '\\[CHAT\\]' <clientlog>` — what the user
+sees). The chat tells the *next action* (e.g. "right-click the flag", "after
+all players sleep"). But the broadcast is **not proof a quest completed** — it
+fires on room re-creation, not on completion; verify completion against the
+done list / `qt quests` (a `recipe_created` broadcast can appear while the quest
+is still open). Read the chat to know what to do next; verify completion against
+the done list.

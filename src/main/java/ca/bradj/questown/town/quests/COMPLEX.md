@@ -27,27 +27,38 @@ flowchart TD
   complete the same quest twice — which is what makes the superset path below
   safe alongside the top-match path.
 
-## Onboarding superset (the exception)
+## Onboarding flag: stored but not wired (as of 2026-09-07)
 
 Randomly generated quests keep exact matching ("the villagers want this
 specific room"). Onboarding quests (the tutorial phases and the kickoff batch,
-all built in `TownQuests`) are flagged `onboarding` and complete on **any
-recipe the room contains**, so a bigger storeroom completes the small-storeroom
-and storage-upgrade quests instead of stalling.
+all built in `TownQuests`) are flagged `onboarding` — but **that flag is not
+read by the completion path.** It is set in `TownQuests.markOnboarding` and
+carried through `completed()` / `lost()` / NBT, but `isOnboarding()` is read
+only in `MCQuest` for NBT serialization, never in `QuestBatch.markRecipeAsComplete`
+or `roomRecipeCreated`. The superset-completion described below is **not
+implemented**; it is the design the closed issue
+`.scratch/storeroom-quest-completion/storeroom-quest-superset-completion.md`
+recorded, and it still needs wiring. Treat the flag as a dead field until a
+commit actually gates completion on it.
+
+What completion *does* do today is **exact-match on the room's top match**, and
+only on a **re-detection** — see `commands/test/COMPLEX.md` "Room-recipe quests
+complete on *re-detection*, not the initial door scan". The tutorial-batch room
+quests (`store_room`, `job_board`, `town_gate`) complete there, not via any
+superset path. The superset design below is the intended-but-unbuilt behaviour:
 
 ```mermaid
 flowchart TD
-    Built["TownQuests.addQuestsForVillagerKickoff /\naddPhase4…7\n(markOnboarding → Quest.onboarding = true)"] --> Q["onboarding quests\nsuperset = any recipe in match.getRecipeIDs"]
+    Built["TownQuests.addQuestsForVillagerKickoff /\naddPhase4…7\n(markOnboarding → Quest.onboarding = true)"] --> Q["onboarding quests\n(DESIGNED superset = any recipe in match.getRecipeIDs\nNOT IMPLEMENTED — flag not read by completion)"]
     Q --> Hit{"wanted id ∈ matched recipes?"}
     Hit -- yes --> Done["markQuestAsComplete(room, wanted)"]
     Hit -- no --> Skip["no change"]
     Q2["random quests (QuestBatchSeed.grow)\nonboarding = false"] --> Exact["exact only\nneeded id must be the top match"]
 ```
 
-- **The gate is `onboarding`, not the recipe id.** The same `store_room` id can
-  be an onboarding quest (superset) or a random quest (exact); only the flag
-  differs. It is set at the tutorial/kickoff batch-creation sites and carried
-  through `completed()` / `lost()` and NBT.
+- **The gate would be `onboarding`, not the recipe id** (design intent). The
+  same `store_room` id can be an onboarding quest (superset) or a random quest
+  (exact); only the flag differs. Today the flag has no effect.
 - **Superset set = the storeroom chain** (`store_room`, `medium`, `big`,
   `huge`, `warehouse`, `storeage_facility`), not "any room with `forge:chests`"
   — that would also match `armory`, `range`, `kitchen_stocked`,

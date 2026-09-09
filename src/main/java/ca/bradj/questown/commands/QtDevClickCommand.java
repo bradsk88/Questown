@@ -3,13 +3,10 @@ package ca.bradj.questown.commands;
 import ca.bradj.questown.QT;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
-import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.commands.arguments.coordinates.Coordinates;
-import net.minecraft.commands.arguments.item.ItemArgument;
-import net.minecraft.commands.arguments.item.ItemInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -17,7 +14,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -30,30 +26,32 @@ import net.minecraft.world.phys.Vec3;
 // it runs from the console (FIFO). The player is the nearest live player to the
 // target, matching the arc's nearest-player search.
 public class QtDevClickCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> src, CommandBuildContext ctx) {
-        RequiredArgumentBuilder<CommandSourceStack, ItemInput> item =
-                Commands.argument("item", ItemArgument.item(ctx));
+    public static void register(CommandDispatcher<CommandSourceStack> src) {
         RequiredArgumentBuilder<CommandSourceStack, Coordinates> posArg = Commands.argument(
                 "pos", BlockPosArgument.blockPos()
         );
 
         // @formatter:off
         var qtdev = Commands.literal("_qtdev");
-        var click = Commands.literal("click")
-                .then(item
-                    .then(posArg
-                        .executes(css -> run(
-                                css.getSource(),
-                                ItemArgument.getItem(css, "item").getItem(),
-                                BlockPosArgument.getLoadedBlockPos(css, "pos")
-                        ))));
         var clickwand = Commands.literal("clickwand")
                 .then(posArg
                     .executes(css -> runWand(
                             css.getSource(),
                             BlockPosArgument.getLoadedBlockPos(css, "pos")
                     )));
-        qtdev.then(click).then(clickwand);
+        // clickheld: right-click a block with whatever the player ALREADY holds
+        // (e.g. the parent-NBT town wand from clickwand), preserving the stack's NBT
+        // so NBT-gated use-on interactions run. This drives the campfire-sleep beat
+        // (SUNSET_AND_MAP): the sleep is reached from useItemOn, so a held run
+        // starts it by setting the clock to night then clickheld-ing the campfire
+        // (the player must be near the bed head, else startSleepInBed is TOO_FAR_AWAY).
+        var clickheld = Commands.literal("clickheld")
+                .then(posArg
+                    .executes(css -> runHeld(
+                            css.getSource(),
+                            BlockPosArgument.getLoadedBlockPos(css, "pos")
+                    )));
+        qtdev.then(clickwand).then(clickheld);
         src.register(qtdev);
         // @formatter:on
     }
@@ -89,32 +87,41 @@ public class QtDevClickCommand {
         return 0;
     }
 
-    private static int run(CommandSourceStack source, Item item, BlockPos pos) {
+    /**
+     * Right-click a block with the item the player already holds, preserving its
+     * NBT. This is the real block interaction (gameMode.useItemOn on the held
+     * stack), not a bit flip, and — unlike the removed bare {@code click} — it
+     * keeps the stack's NBT, so an NBT-gated use-on interaction actually runs.
+     * It drives the campfire-sleep beat (SUNSET_AND_MAP): the sleep is reached
+     * from useItemOn, so a held run starts it by setting the clock to night then
+     * clickheld-ing the campfire (the player must be near the bed head, else
+     * startSleepInBed reports TOO_FAR_AWAY). The held stack is used as-is; it is
+     * not restored afterwards (an interaction may legitimately consume or mutate
+     * it).
+     */
+    private static int runHeld(CommandSourceStack source, BlockPos pos) {
         ServerPlayer player = findPlayer(source, pos);
         if (player == null) {
-            QT.FLAG_LOGGER.warn("[click] no player near {}", pos);
+            QT.FLAG_LOGGER.warn("[click held] no player near {}", pos);
             return 1;
         }
-        ServerLevel level = source.getLevel();
-        ItemStack stack = new ItemStack(item);
         ItemStack held = player.getMainHandItem();
-        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
-        try {
-            InteractionResult result = player.gameMode.useItemOn(
-                    player,
-                    level,
-                    player.getMainHandItem(),
-                    InteractionHand.MAIN_HAND,
-                    new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false)
-            );
-            QT.FLAG_LOGGER.info(
-                    "[click] {} right-clicked {} with {} -> {}",
-                    player.getGameProfile().getName(), pos, item, result
-            );
-            return 0;
-        } finally {
-            player.setItemInHand(InteractionHand.MAIN_HAND, held);
+        if (held.isEmpty()) {
+            QT.FLAG_LOGGER.warn("[click held] {} has nothing in the main hand", player.getGameProfile().getName());
+            return 1;
         }
+        InteractionResult result = player.gameMode.useItemOn(
+                player,
+                source.getLevel(),
+                held,
+                InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false)
+        );
+        QT.FLAG_LOGGER.info(
+                "[click held] {} right-clicked {} with held {} -> {}",
+                player.getGameProfile().getName(), pos, held.getItem().toString(), result
+        );
+        return 0;
     }
 
     private static ServerPlayer findPlayer(CommandSourceStack source, BlockPos near) {

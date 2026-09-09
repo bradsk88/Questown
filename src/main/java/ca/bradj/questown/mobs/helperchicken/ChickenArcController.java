@@ -30,7 +30,25 @@ public final class ChickenArcController {
     private ChickenArcController() {
     }
 
+    private static long lastTickDiagTick = -1L;
+
     public static void tick(TownFlagBlockEntity flag) {
+        // Diagnostic for a held/agent run: ungated it would spam JOB_LOGGER in any
+        // world, so only emit it when the held autotest is active.
+        if ("true".equals(System.getProperty("questown.autotest.hold"))) {
+            ServerLevel diagLevel = flag.getServerLevel();
+            long gt = diagLevel == null ? 0L : diagLevel.getGameTime();
+            if (gt - lastTickDiagTick >= 200L) {
+                lastTickDiagTick = gt;
+                Player nearest = ChickenArcConditions.findNearestPlayerForFlag(flag);
+                QT.JOB_LOGGER.info(
+                        "[chicken-arc] tick diag: spawned={} forfeit={} state={} initialized={} level={} nearest={} nearestHasWand={}",
+                        flag.getChickenEverSpawned(), flag.getChickenArcForfeit(),
+                        flag.getChickenBeatState(), flag.isInitialized(), diagLevel != null,
+                        nearest == null ? "null" : nearest.getName(),
+                        ChickenArcConditions.hasWandInInventory(nearest));
+            }
+        }
         if (!flag.getChickenEverSpawned()) {
             return;
         }

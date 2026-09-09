@@ -51,17 +51,17 @@ final class AgentBeatGuidance {
                             + "has to be lit.");
             case SUNSET_AND_MAP -> new Guidance(
                     "Sleep on the campfire when it gets dark.",
-                    "The campfire sleep completes at dawn. Drive it from the console: right-click the "
-                            + "campfire with the town wand to start the sleep (needs the paired wand), "
-                            + "then send `time set <dawn>` via the FIFO to skip the night - the sleep "
-                            + "wakes at dawn and the beat advances. Do not wait out a real night; it "
-                            + "freezes the player. There is no console command that right-clicks the "
-                            + "campfire, so the sleep must start from a live player or a command that "
-                            + "fires that action; the clock skip is the part the agent does.",
-                    "The arc gates on a night-time campfire sleep. A player who finishes the build "
-                            + "before dusk sees the town stop responding and may read it as broken "
-                            + "rather than waiting; the agent's move is to skip the night with `time "
-                            + "set`, not to wait.");
+                    "Use the town wand on the lit campfire to sleep: `_qtdev clickheld "
+                            + "<campfire pos>`, from a player within a few blocks of it (a "
+                            + "player too far gets `TOO_FAR_AWAY` and nothing happens); you "
+                            + "wake at dawn. A campfire sleep will not start in daylight, so if "
+                            + "it is still day set the clock to night first with `time set "
+                            + "13000`. The night then passes on its own; if it ever holds, "
+                            + "`time set <dawn>` forces the wake.",
+                    "A player who finishes the build before dusk sees the town go quiet and may "
+                            + "read it as broken rather than as waiting for dark. The agent sets "
+                            + "the clock to night, then `clickheld` the campfire, and does not "
+                            + "wait out a real night.");
             case WAITING_FOR_WALL_BLOCK -> new Guidance(
                     "Fill the wall gap the chicken is pointing at.",
                     "Place a solid block in the gap the chicken is pecking at.",
