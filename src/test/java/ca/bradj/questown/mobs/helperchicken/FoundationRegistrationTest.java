@@ -72,13 +72,13 @@ class FoundationRegistrationTest {
         // Ordering is the state-machine progression. Must not drift.
         ChickenBeatState[] expected = {
                 ChickenBeatState.WAITING_FOR_STICK,
-                ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE,
-                ChickenBeatState.SUNSET_AND_MAP,
                 ChickenBeatState.WAITING_FOR_WALL_BLOCK,
                 ChickenBeatState.WAITING_FOR_DOOR,
                 ChickenBeatState.WAITING_FOR_WAND_ON_DOOR,
-                ChickenBeatState.WAITING_FOR_SIGN,
                 ChickenBeatState.WAITING_FOR_CHEST,
+                ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE,
+                ChickenBeatState.SUNSET_AND_MAP,
+                ChickenBeatState.WAITING_FOR_SIGN,
                 ChickenBeatState.WAITING_FOR_PRESSURE_PLATE,
                 ChickenBeatState.WAITING_FOR_FREE_FOOD,
                 ChickenBeatState.WAITING_FOR_VILLAGER_UI,

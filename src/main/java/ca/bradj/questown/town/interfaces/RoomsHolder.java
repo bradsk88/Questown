@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.town.rooms.TownPosition;
+import ca.bradj.questown.town.rooms.TownRoomsMap;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatches;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -19,6 +20,9 @@ public interface RoomsHolder {
     Collection<MCRoom> getFarms();
 
     Collection<RoomRecipeMatch<MCRoom>> getMatches(Predicate<RoomRecipeMatch<MCRoom>> include);
+
+    /** The registered-room map (un-matched registered rooms included). */
+    TownRoomsMap getRegisteredRooms();
 
     Collection<BlockPos> findMatchedRecipeBlocks(TownInterface.MatchRecipe mr);
 

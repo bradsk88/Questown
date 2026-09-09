@@ -207,3 +207,19 @@ shows a chest in a room rather than in the open. This is the `QtDevInspectComman
 - **O5 — how the player registers the second room.** Settled: re-run the
   existing wall/door/register flow on a new shell; no new beat. Phase 3 keys the
   sign on that new room.
+
+## Progress (held run, 2026-09-10)
+
+- The re-sequence is implemented and the unit tests pass (the deliberate
+  `ChickenArcHintsTest.todo_` marker is the only failure).
+- A held `village/growth` run advanced the arc through the new order
+  (`WAITING_FOR_STICK` -> `WAITING_FOR_WALL_BLOCK` -> `WAITING_FOR_DOOR` ->
+  `WAITING_FOR_WAND_ON_DOOR` -> `WAITING_FOR_CHEST`) and reached the chest beat.
+- **Follow-up (unconfirmed):** at the chest beat the goal stood down with
+  `no registered rooms` and `registered-doors=1 rooms=0` — the registered door
+  was not an enclosed room in `getAllRooms()`. A second run hit
+  `no passable cell inside the registered store shell` instead (the room was
+  detected but the interior cell at the chicken's Y was not passable). The two
+  failures point at the registered door not reliably yielding an enclosed room
+  at the chicken's ground Y; not yet root-caused. The re-sequence itself is not
+  in doubt.

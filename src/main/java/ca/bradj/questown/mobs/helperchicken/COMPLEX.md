@@ -31,7 +31,7 @@ flowchart TD
   present --> set[push bubble onto the chicken entity]
 ```
 
-- `Observed` (14 booleans) feeds beat *advancement*; `PhaseInputs` (6 booleans)
+- `Observed` (15 booleans) feeds beat *advancement*; `PhaseInputs` (6 booleans)
   feeds phase *derivation* — two separate snapshots, read separately.
 - `advance` skips past every satisfied beat in ordinal order, so a player who
   placed the chest before the sign auto-completes the chest beat the tick after
@@ -59,6 +59,20 @@ flowchart TD
   skips the optional action is not stalled (see `CONTEXT.md` **Optional beat**).
 - `isSatisfied` maps each beat to one boolean of `Observed` (e.g.
   `AWAITING_WORLDLY_SEEDS_DELIVERY -> playerGaveSeedsToChicken`).
+- The chest beat (`WAITING_FOR_CHEST`) comes *before* the campfire sleep: the
+  chicken works the player's store into place first (see the chest goal below),
+  so the player has a room with something in it before they go to sleep. The
+  job board (`WAITING_FOR_SIGN`) follows the sleep, in a second room, so the
+  chest and the job board are no longer two conditions on one matched room.
+- `HelperChickenSunsetChestGoal` drives the chest beat. On `WAITING_FOR_CHEST`
+  it walks into the player's registered store shell, waits for the player to
+  step inside that room, then drops the chest (map + wooden axe) in the room's
+  interior. It reads the registered room through `RoomsHolder.getRegisteredRooms()`
+  and picks a passable interior cell across the room's `yCoord`, `yCoord + 1`,
+  and the chicken's ground Y (a door in open ground registers as a door but
+  yields no enclosed room, so the goal stands down until a real room exists).
+  `SUNSET_AND_MAP` follows the chest beat, driven by the same `chickenSunsetChestSpawned`
+  flag the chest goal sets when it drops the chest.
 - The campfire beat (`WAITING_FOR_WAND_ON_CAMPFIRE`) advances on a lit campfire
   *anywhere in the flag's campfire radius* — the same `TownCycle.findCampfire`
   scan the campfire quest uses, not the fixed structure `CAMPFIRE_OFFSET`. The
@@ -70,8 +84,10 @@ flowchart TD
   wall hole; a hand-placed flag has no such hole, so `wallBlockPlaced` can never
   be true and the beat would stall the arc. It is skipped when the flag is
   hand-placed; the room lesson is still carried by the door beats that follow.
-- Beats are persisted by `name()` under `chicken-beat-state`; the enum order and
-  names must not be reordered or renamed, only inserted.
+- Beats are persisted by `name()` under `chicken-beat-state`. There is no live
+  onboarding in the field, so the order and names may be reordered or renamed
+  freely (not just inserted); only the persistence key is stable across a
+  running save, and that is by `name()`.
 
 ## Phase derivation (per beat)
 
