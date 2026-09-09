@@ -1,11 +1,14 @@
 package ca.bradj.questown.town.rooms;
 
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.town.WallDetection;
 import ca.bradj.questown.town.entity.TownRooms;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatches;
 import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.logic.LevelRoomDetector;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
@@ -139,11 +142,49 @@ public class MultiLevelRoomDetector {
                         flagY + scanLevel
                 );
                 return mcRoom;
-            });
+            }).filter(r -> hasWalkableInterior(r, scanLevel));
             b.put(k, value);
             value.ifPresent(r -> roomsToScan.add(new RoomWithlevel(r, scanLevel)));
         });
         ImmutableMap<Position, Optional<MCRoom>> build = b.build();
         return build;
+    }
+
+    /**
+     * Rejects a detected room whose interior a two-block-tall villager cannot stand in.
+     * The 2D wall-walk treats a cell as interior when it is empty at the feet level OR the
+     * head level, so a room roofed only one block above its floor still "detects" — but no
+     * villager can enter it. This requires at least
+     * {@link Config#MIN_ROOM_WALKABLE_FRACTION} of the interior floor cells to be standable
+     * (passable at both feet and head), so a room with a low overhang over only part of its
+     * floor still counts while a fully low-roofed room is rejected (surfaces as no-room).
+     */
+    private boolean hasWalkableInterior(
+            MCRoom room,
+            int scanLevel
+    ) {
+        double fraction = Config.MIN_ROOM_WALKABLE_FRACTION.get();
+        if (fraction <= 0.0) {
+            return true;
+        }
+        int y = flagY + scanLevel;
+        int walkable = 0;
+        int total = 0;
+        for (InclusiveSpace space : room.getSpaces()) {
+            for (Position p : InclusiveSpaces.getPositions(
+                    space,
+                    InclusiveSpaces.PositionType.INTERIOR_ONLY
+            )) {
+                total++;
+                if (WallDetection.IsWalkable(level, p, y)) {
+                    walkable++;
+                }
+            }
+        }
+        if (total == 0) {
+            return false;
+        }
+        int required = Math.max(1, (int) Math.ceil(total * fraction));
+        return walkable >= required;
     }
 }
