@@ -220,6 +220,8 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("campfire_sleep_preserves_flag", campfireSleepPreservesFlagBlueprint()));
         jobs.add(flagEntry("dead_door_bubbled", deadDoorBubbledBlueprint()));
         jobs.add(flagEntry("too_short_room_dead", tooShortRoomBlueprint()));
+        jobs.add(flagEntry("floating_chest_room", floatingChestRoomBlueprint()));
+        jobs.add(flagEntry("floating_furniture_over_half", floatingFurnitureOverHalfBlueprint()));
         // BOP cap (report): pre-fill the flag and drive one deposit across the 64-slot boundary.
         jobs.add(flagEntry("bop_boundary_63", bopBoundaryBlueprint()));
         jobs.add(flagEntry("bop_full_64", bopFullBlueprint()));
@@ -459,6 +461,163 @@ public class TestBlueprintRegistry {
         return report(
                 output,
                 "too-short room rejected as no-room (NOT_ENCLOSED)",
+                dead.get(doorPos) == DoorTrouble.NOT_ENCLOSED
+        );
+    }
+
+    // Where the floating-chest room's north-west corner stands relative to the flag: south of the
+    // too-short room's footprint (z 6..10), clear of it, the farm base, and the lone door.
+    private static final BlockPos FLOATING_CHEST_ROOM_OFFSET = new BlockPos(-9, 0, 6);
+
+    /**
+     * Floating-furniture edge case for the walkability filter: a proper two-block-tall room whose
+     * only defect is one chest "floating" at head height against a wall (air at the feet level).
+     * That cell is not walkable (a chest has a collision shape at y+1), but one unwalkable cell in
+     * a 9-cell interior must NOT sink the room under {@link Config#MIN_ROOM_WALKABLE_FRACTION} —
+     * the room encloses, so the door must stay live and a room must be detected.
+     */
+    private static TestBlueprint floatingChestRoomBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::buildFloatingChestRoomAndRegister)
+                .withCustomAssertion(TestBlueprintRegistry::assertFloatingChestRoomAlive);
+    }
+
+    private static boolean buildFloatingChestRoomAndRegister(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        // 5x5 footprint: floor at y-1, two-tall cobble walls, interior open at both levels — except
+        // one chest at head height (y+1) against the west wall, with air at its feet (y).
+        BlockPos base = flagPos.offset(FLOATING_CHEST_ROOM_OFFSET);
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
+                BlockPos p = base.offset(x, 0, z);
+                level.setBlockAndUpdate(p.below(), Blocks.COBBLESTONE.defaultBlockState());
+                if (isEdge) {
+                    level.setBlockAndUpdate(p, Blocks.COBBLESTONE.defaultBlockState());
+                    level.setBlockAndUpdate(p.above(), Blocks.COBBLESTONE.defaultBlockState());
+                }
+            }
+        }
+        BlockPos chestPos = base.offset(1, 1, 2);
+        level.setBlockAndUpdate(chestPos, Blocks.CHEST.defaultBlockState());
+
+        // Full (both-halves) door on the east edge, replacing the wall there.
+        BlockPos doorPos = base.offset(4, 0, 2);
+        BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+
+        // Register the door via the real wand path (same idiom as registerLoneDoorViaWand).
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
+        TownFlagBlock.StoreParentOnNBT(wand, flagPos);
+        player.setItemInHand(InteractionHand.MAIN_HAND, wand);
+        ((TownWand) wand.getItem()).onRightClicked(() -> player, level, doorPos, wand);
+
+        output.msg("Built 2-tall room with floating chest at " + chestPos.toShortString()
+                + " and registered its door at " + doorPos.toShortString()
+                + "; deadDoors=" + town.getDeadDoors());
+        return true;
+    }
+
+    private static boolean assertFloatingChestRoomAlive(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos doorPos = flagPos.offset(FLOATING_CHEST_ROOM_OFFSET).offset(4, 0, 2);
+        Map<BlockPos, DoorTrouble> dead = town.getDeadDoors();
+        int rooms = town.getRoomHandle().getMatches(x -> true).size();
+        output.msg("deadDoors after monitor = " + dead + "; rooms=" + rooms);
+        boolean ok = report(output, "1 room-detected", rooms >= 1);
+        ok &= report(output, "2 door-not-dead", !dead.containsKey(doorPos));
+        return ok;
+    }
+
+    // Where the over-halved room's north-west corner stands relative to the flag: south of the
+    // floating-chest room's footprint (z 12..15), clear of it, the too-short room, the farm base, and
+    // the lone door.
+    private static final BlockPos FLOATING_FURNITURE_ROOM_OFFSET = new BlockPos(-9, 0, 12);
+
+    /**
+     * Breaking point of the walkability filter: a 4x4 footprint has 4 interior cells, so
+     * {@link Config#MIN_ROOM_WALKABLE_FRACTION} (0.5) requires at least {@code ceil(4 * 0.5) = 2}
+     * of them standable. A lone floating chest (the {@code floating_chest_room} case) tolerably
+     * leaves 3 standable, but here three interior cells carry a chest at head height (air at the
+     * feet), so only 1 cell is standable — below the 2-cell floor — and the room is rejected.
+     * This pins the line: 50% unwalkable survives, just over 50% does not.
+     */
+    private static TestBlueprint floatingFurnitureOverHalfBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::buildFloatingFurnitureOverHalfAndRegister)
+                .withCustomAssertion(TestBlueprintRegistry::assertFloatingFurnitureOverHalfDead);
+    }
+
+    private static boolean buildFloatingFurnitureOverHalfAndRegister(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        // 4x4 footprint: floor at y-1, two-tall cobble walls, interior open at both levels — except
+        // three interior cells (of four) carry a chest at head height (y+1) with air at their feet.
+        BlockPos base = flagPos.offset(FLOATING_FURNITURE_ROOM_OFFSET);
+        for (int x = 0; x < 4; x++) {
+            for (int z = 0; z < 4; z++) {
+                boolean isEdge = x == 0 || x == 3 || z == 0 || z == 3;
+                BlockPos p = base.offset(x, 0, z);
+                level.setBlockAndUpdate(p.below(), Blocks.COBBLESTONE.defaultBlockState());
+                if (isEdge) {
+                    level.setBlockAndUpdate(p, Blocks.COBBLESTONE.defaultBlockState());
+                    level.setBlockAndUpdate(p.above(), Blocks.COBBLESTONE.defaultBlockState());
+                }
+            }
+        }
+        // Three of the four interior cells (x,z in {1,2}) get a floating chest at head height.
+        for (int i = 0; i < 3; i++) {
+            int x = (i % 2) + 1;
+            int z = (i / 2) + 1;
+            level.setBlockAndUpdate(base.offset(x, 1, z), Blocks.CHEST.defaultBlockState());
+        }
+
+        // Full (both-halves) door on the east edge, replacing the wall there.
+        BlockPos doorPos = base.offset(3, 0, 1);
+        BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+
+        // Register the door via the real wand path (same idiom as registerLoneDoorViaWand).
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
+        TownFlagBlock.StoreParentOnNBT(wand, flagPos);
+        player.setItemInHand(InteractionHand.MAIN_HAND, wand);
+        ((TownWand) wand.getItem()).onRightClicked(() -> player, level, doorPos, wand);
+
+        output.msg("Built 4x4 room with 3/4 interior cells carrying floating chests and registered"
+                + " its door at " + doorPos.toShortString() + "; deadDoors=" + town.getDeadDoors());
+        return true;
+    }
+
+    private static boolean assertFloatingFurnitureOverHalfDead(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos doorPos = flagPos.offset(FLOATING_FURNITURE_ROOM_OFFSET).offset(3, 0, 1);
+        Map<BlockPos, DoorTrouble> dead = town.getDeadDoors();
+        int rooms = town.getRoomHandle().getMatches(x -> true).size();
+        output.msg("deadDoors after monitor = " + dead + "; rooms=" + rooms);
+        return report(
+                output,
+                "over-halved room rejected as no-room (NOT_ENCLOSED)",
                 dead.get(doorPos) == DoorTrouble.NOT_ENCLOSED
         );
     }

@@ -43,3 +43,4 @@
 
 - **[todo/special_rule_result.md](todo/special_rule_result.md)** — Support special result values in job JSON instead of `minecraft:air` for jobs fully dependent on special rules.
 - **[todo/test-command-improvement.md](todo/test-command-improvement.md)** — ~~Use existing flag position as origin for `/qt test` command instead of player position.~~ DONE
+- **[todo/room-walkable-vs-reachable.md](todo/room-walkable-vs-reachable.md)** — Deferred: count a room's interior by whether a villager can *reach* a cell (not just stand in it), so a room over half floating furniture at head height would pass. We kept the 0.5 fraction and pinned it with two regression tests instead.
