@@ -45,6 +45,6 @@ public class CommandInit {
         FlagPlaceDoorCommand.register(event.getDispatcher());
         QtDevHelpCommand.register(event.getDispatcher());
         QtDevSpawnChickenCommand.register(event.getDispatcher());
-        QtDevClickCommand.register(event.getDispatcher(), event.getBuildContext());
+        QtDevClickCommand.register(event.getDispatcher());
     }
 }

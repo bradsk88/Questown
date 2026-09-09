@@ -6,9 +6,11 @@ A perf/lag report ("grinds to a halt", "can't keep up", "half-waiting for server
 
 ## Running the dev client (`./gradlew runClient`)
 
-**When the background client task reports exit code 1 / 143, or "Gradle build daemon disappeared unexpectedly", that is just the user closing the Minecraft window.** It is NOT a crash, a launch failure, or a regression. Do not investigate it, do not re-read the log looking for the cause, and do not relaunch — the user closed it on purpose. Only treat it as a real failure if the log shows an actual exception/crash BEFORE the window opened.
+The dev is a secondary observer via `runClient`; the agent is the main driver. When a held `runServer` autotest or play-test needs a verification pass, run `runClient -Pautojoin` and hand control back — never ask, offer, or defer it, and do not decline because the box has no capturable window (grim captures 0 bytes; the client still renders). The one skip is when a unit test or the existing autotest suite already settles the question.
 
-Launch the client with `run_in_background: true` and then **immediately hand control back to the user**. Never follow a launch with a foreground wait-loop (`for ... sleep ...` polling the log for "Sound engine started") — that holds the turn open and blocks the user from typing. If you need the boot/gameplay log later, just read the task's output file on a later turn.
+- A background client task that reports exit code 1 / 143, or "Gradle build daemon disappeared unexpectedly", is the user closing the Minecraft window, not a crash or regression. Only treat it as a real failure if the log shows an actual exception before the window opened.
+- Do not restart the server while the client is up (it kills the client and wipes the world). Keep the client up while the dev is watching; if you must load a new command, tell the dev, then relaunch the client after the server is back.
+- The full launch sequence (server first, then client, so the compile does not OOM-kill the server), the FIFO, the pgrep traps, and the 10-30s observation cadence are in `~/.pi/agent/references/questown-dev-launch.md` and `.pi/skills/questown-held-run/SKILL.md`. Read those before relaunching `runServer`/`runClient`.
 
 When writing unit tests, DO NOT "simulate" core questown logic. If a situation comes up which causes testing to be impossible due to insufficient interfaces on the real code: 1) make a note of that, 2) Add a failing assertion to the test so it is possible to understand what tests are failing due to the code not being testable, 3) continue working on what is possible to test.
 
@@ -53,6 +55,41 @@ pump). Shape match ≠ status; verify the trigger.
 
 When building or changing a `gui/` screen, follow `docs/solutions/conventions/gui-layout-flow-and-linter.md` (flow layout, not hardcoded positions) and verify with the dev-only `gui-lint` oracle — open the screen in a dev client and confirm `[gui-lint] <Screen> — OK, no layout violations`.
 
+## A dev command is a thin wrapper; domain logic lives on the owner
+
+When a held/agent run needs an action a player would do with a mouse (place a
+flag-linked block, place a welcome mat, open a menu), the `qt`/`_qtdev`
+command should be a **thin wrapper** that delegates the action to the entity
+that owns it, not re-implement the action in the command. E.g. placing a
+welcome mat: the command calls
+`TownFlagBlockEntity.placeWelcomeMat(pos)` (which sets the block and registers
+it), not re-implement the item-use path + NBT in the command. The command
+re-implementing domain logic is the failure mode: it duplicates a path that the
+owner already has, drifts from it, and misses the owner's registration side
+effects. If the owner has no method for the action, add the method to the owner
+first, then wrap it.
+
+A command that takes a `pos` should take the `pos` as a literal argument
+(`qt place_mat <x> <y> <z>`), not derive it (nearest flag, manhattan
+distance to the player, the player's look vector). Deriving a position is the
+kind of "fancy" logic that should be on the owner, and it makes the command
+harder to test and reason about.
+
+## Ask the user for an observed fact instead of re-deriving it
+
+When you are stuck on why something produced the wrong result (a command
+gave the wrong item, a log line is wrong, a value is AIR), stop re-deriving the
+cause from code and **ask the user for the observation they have that you do
+not**. The user is a live observer; you are not. In this session the craft
+command's log said "Created Air" but the user noticed the welcome mat was in
+their hand — the craft *worked*, the log was cosmetic-wrong, and the real
+problem (the mat needed to be *placed*, not just given) was only visible from
+the user's observation. Re-deriving a registry issue for several turns when the
+user could tell you "it's in my hand" in one line is the failure mode. When a
+log line contradicts the expected result, check the *effect* (what is in the
+world / inventory) before trusting the log line, and ask the user rather than
+keep re-reading code.
+
 ## Build verification
 
 Run gradle compile/test tasks with `LANG=C.UTF-8` (the hold-mode env, not just hold mode): a POSIX locale fails javac with "unmappable character for encoding US-ASCII" on sources with unicode. A cached `up-to-date` task can mask this — it only bites when a task actually recompiles.
@@ -72,6 +109,17 @@ Two concrete traps hit when actually running a publish (the version was shipped 
 - `publishModrinth` **truncates a long changelog**. Its `curl -F "data=${data}"` drops the `data` field after ~270 chars, so a long changelog 400s with Modrinth `{"error":"invalid_input","description":"Error while parsing JSON: EOF while parsing a string at line 1 column N"}` (N near the changelog; `curl` exit 22). The JSON is valid locally; the failure is in transit, not the content — a `--trace-ascii` shows the `data` field cut off mid-string. Send the payload from a file (`curl -F "data=@<file>"`) instead of inline, or fix `build.gradle`'s `publishModrinth` to do so.
 
 Running a gradle task that recompiles `build.gradle` (after editing it) fails on the machine's default Java 21 with `java.lang.IllegalArgumentException: Unsupported class file major version 65` — Gradle 7.2's Groovy can't parse Java 21 bytecode. Set `JAVA_HOME=/home/retro/.gradle/jdks/jdk-17.0.20+8` for that run. `compileJava`/`test` pass on Java 21; only a `build.gradle` recompile hits it.
+
+## Looking up an API / method name (dot completion)
+
+When you need to call a method or read a field on a type you are not sure of, do not guess the name and do not read the Java source to find it. Use `jmembers` (`~/.local/bin/jmembers`), the dot-completion equivalent for agents: it lists the type's real members from the compiled symbols via `javap`, the same list an IDE completion menu shows.
+
+```
+jmembers <Type> [anchor]            # FQ or simple name; optional substring filter
+jmembers --all <Type> [anchor]      # include protected/private members
+```
+
+It resolves the classpath itself (own `build/classes`, the branch's mapped Forge/MC jar from `build.gradle`, and dep jars in the Gradle cache), so it hands back the deobfuscated names you actually use (`useOn`, not the SRG `m_41661_`). If a simple name is ambiguous (`Item`), it lists the candidates; re-run with the fully-qualified name. Run from the project root or set `JMEMBERS_PROJECT`. `jmembers` gives names and signatures, not behavior: for what a method does, still read the source or a doc. Full detail: `references/jmembers-dot-completion.md`.
 
 ## Adding a value to a switch-covered enum
 
@@ -93,7 +141,9 @@ before finding them all up front.
 See `src/main/java/ca/bradj/questown/commands/test/COMPLEX.md` ("Launch discipline")
 for the kill-order, env (`JAVA_HOME` JDK 17 + `LANG=C.UTF-8`), world wipe and port
 check that precede every held `runServer -Dquestown.autotest.hold=true
--Dquestown.autotest.only=<scenario>` + `runClient -Pautojoin` cycle.
+-Dquestown.autotest.only=<scenario>` + `runClient -Pautojoin` cycle. For the full
+held-run sequence (server-first launch, 30s observation cadence, chat/observe
+channels, the console command set) load the `questown-held-run` skill.
 
 Checking for a held server: `pgrep -af 'gradlew runServer'` **returns nothing** for a
 running held server — the held server is a `java` process (its `runServer` is in `-D`
@@ -104,36 +154,14 @@ the `questown.autotest.aim.door` system property or a needy townie steals the ca
 
 ## Injecting a console command / TP into a headless runServer
 
-To drive the forked server (e.g. `tp <player> <x> <y> <z>`) without RCON (broken in this
-build) and without a reachable GLFW window (the dev box is headless), feed the `runServer`
-task's stdin from a FIFO:
+RCON is broken in this build, and the dev box has no reachable GLFW window, so feed the `runServer` task's stdin from a FIFO. The working setup (the `tasks.matching { it.name == 'runServer' }` block with `standardInput = new java.io.FileInputStream(project.file('run/server-cmd.fifo'))`, the `mkfifo` + `nohup sh -c 'sleep 999999 > run/server-cmd.fifo' &` writer, the `-PperfFifo`/`questown.tp.fifo` gates, the `info`-not-`debug` console level, and the dead-server-when-a-write-blocks trap) is in `~/.pi/agent/references/questown-dev-launch.md`. These are throwaway perf/TP plumbing, not features — re-apply them for a headless perf/TP run and revert before committing.
 
-- Wire it in `build.gradle` via a `tasks.matching { it.name == 'runServer' }` block, **not**
-  the `runs { server { ... } }` block. The `runs` block has no `standardInput` property
-  (adding `standardInput = ...` there fails configuration with `> standardInput`). And
-  `standardInput` wants an **`InputStream`, not a `File`** (passing `project.file(...)`
-  fails with `Cannot cast ... File ... to java.io.InputStream`). The working form:
-  `tasks.matching { it.name == 'runServer' }.configureEach { standardInput = new
-  java.io.FileInputStream(project.file('run/server-cmd.fifo')) }`, gated by `-PperfFifo`.
-- Hold a writer open on the FIFO before launch, or the JVM's open-for-read blocks:
-  `mkfifo run/server-cmd.fifo; nohup sh -c 'sleep 999999 > run/server-cmd.fifo' &`. Then
-  `echo 'tp Dev 240 64 -1' > run/server-cmd.fifo`.
-- Keep the server's `forge.logging.console.level` at **`info`, not `debug`** for these
-  runs: debug output backs up the console appender (the log freezes, ~bytes/min, while the
-  server ticks fine — `jstack` shows `Server thread` in `waitUntilNextTick`), so
-  `Can't keep up` and flag/room lines never flush. Revert the build.gradle edits after.
-- If a FIFO write blocks (the `echo '...' > run/server-cmd.fifo` never returns) or a
-  console command aborts, the server process may be **dead**, not slow. Check
-  `pgrep -f forgeserveruserdev` before assuming the pipe is backed up — a blocked
-  FIFO read is the dead-server signal, and the server's console went to a pipe, so
-  the death is only visible in `run/crash-reports/`, not in the log you were reading.
-
-Note: `TownTickRadius` in `questown-server.toml` is compared against **squared** distance
-(`distSqr`) in `TownFlagTicker`, so its effective radius is `sqrt(value)` (default 10000 =
-~100 blocks, not 10000). Widening it keeps the flag awake but does **not** move the player
-onto the room — that is not equivalent to teleporting the player to the flag.
+Note: `TownTickRadius` in `questown-server.toml` is compared against **squared** distance (`distSqr`) in `TownFlagTicker`, so its effective radius is `sqrt(value)` (default 10000 = ~100 blocks, not 10000). Widening it keeps the flag awake but does **not** move the player onto the room — that is not equivalent to teleporting the player to the flag.
 
 ## Agent skills
+
+Project skills live under `.pi/skills/` and are **tracked in git** — commit a new skill with the work that created it. An untracked skill exists only in your working tree and vanishes on a clean checkout.
+
 
 ### Issue tracker
 
@@ -146,3 +174,7 @@ Five canonical roles using default strings (`needs-triage`, `needs-info`, `ready
 ### Domain docs
 
 Single-context. `CONTEXT.md` not yet present at repo root; ADRs go in `docs/adr/` going forward (legacy `docs/decision-*.md` files are pre-existing and not moved). See `docs/agents/domain.md`.
+
+### Plans
+
+Implementation plans go in `docs/plans/` (phases, a vocabulary→code map, a test ledger, and an "open decisions" list). When a plan or doc has a "verified"/status column, **verified** means confirmed in code (grep the class or the declaration); a claim seen only in a `COMPLEX.md` or an ADR is "referenced in a doc," not "verified" — re-confirm it in code before it earns the label.

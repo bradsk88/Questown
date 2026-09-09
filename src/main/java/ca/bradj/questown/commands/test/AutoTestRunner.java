@@ -62,17 +62,33 @@ public class AutoTestRunner {
         overworld.setChunkForced(chunkPos.x, chunkPos.z, true);
         QT.FLAG_LOGGER.info("[autotest] Force-loaded chunk at {}", chunkPos);
 
-        // Spawn a fake player near origin so the town flag doesn't go inactive
-        GameProfile profile = new GameProfile(UUID.randomUUID(), "[AutoTest]");
-        var fakePlayer = FakePlayerFactory.get(overworld, profile);
-        fakePlayer.setPos(ORIGIN.getX(), ORIGIN.getY() + 1, ORIGIN.getZ());
-        overworld.addNewPlayer(fakePlayer);
-        QT.FLAG_LOGGER.info("[autotest] Spawned fake player at origin");
-
         int warpAmount = parseWarpAmount();
         String category = parseCategory();
         String only = parseOnly();
         String scope = describeScope(category, only);
+
+        // The held, agent-driven village/growth run has exactly one real player: the
+        // runClient observer ("Dev"). Both the chicken arc's findNearestPlayer and
+        // the flag's active gate read the nearest player, and the agent drives the
+        // Dev via console (give / clickwand). A fake player added at the flag would be
+        // the nearest player and steal both gates from the Dev (the Dev gets the wand,
+        // but the arc reads the fake player's empty hand, so the run is stuck at
+        // WAITING_FOR_STICK). In that path we create the fake player (the executor's
+        // player field may reference it) but do NOT add it to the level, so
+        // getNearestPlayer returns the Dev. The forced chunk above keeps the flag's
+        // chunk loaded regardless.
+        boolean heldVillage = only != null
+                && nameMatches("village/growth", only)
+                && "true".equals(System.getProperty(SYSPROP_HOLD));
+        GameProfile profile = new GameProfile(UUID.randomUUID(), "[AutoTest]");
+        var fakePlayer = FakePlayerFactory.get(overworld, profile);
+        fakePlayer.setPos(ORIGIN.getX(), ORIGIN.getY() + 1, ORIGIN.getZ());
+        if (!heldVillage) {
+            overworld.addNewPlayer(fakePlayer);
+            QT.FLAG_LOGGER.info("[autotest] Spawned fake player at origin");
+        } else {
+            QT.FLAG_LOGGER.info("[village] held run: fake player created but not added to level; the Dev (runClient) is the single player the arc gates on");
+        }
         QT.FLAG_LOGGER.info("[autotest] Starting automated test suite ({}, warp={}, origin={})", scope, warpAmount, ORIGIN.toShortString());
 
         LogTestOutput output = new LogTestOutput("autotest");

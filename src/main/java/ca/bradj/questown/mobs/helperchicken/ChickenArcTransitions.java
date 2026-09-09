@@ -45,7 +45,8 @@ public final class ChickenArcTransitions {
             boolean playerOpenedVillagerUi,
             boolean playerOpenedFlagUi,
             boolean worldlySeedsInAnyContainer,
-            boolean playerGaveSeedsToChicken
+            boolean playerGaveSeedsToChicken,
+            boolean handPlaced
     ) {
     }
 
@@ -110,7 +111,13 @@ public final class ChickenArcTransitions {
             case WAITING_FOR_STICK -> o.playerHasWand();
             case WAITING_FOR_WAND_ON_CAMPFIRE -> o.campfireLit();
             case SUNSET_AND_MAP -> o.sleepHappenedToday();
-            case WAITING_FOR_WALL_BLOCK -> o.wallBlockPlaced();
+            // The fill-the-hole beat assumes the empty_town structure's pre-dug
+            // hole. A hand-placed flag has no such hole, so wallBlockPlaced can
+            // never be true and the beat would stall the arc forever. Skip it when
+            // the flag is hand-placed; the room lesson is still carried by the
+            // door beats that follow (a registered door with no room bubbles a
+            // "no room detected" hint that nudges the player to build one).
+            case WAITING_FOR_WALL_BLOCK -> o.wallBlockPlaced() || o.handPlaced();
             case WAITING_FOR_DOOR -> o.doorPlaced();
             case WAITING_FOR_WAND_ON_DOOR -> o.roomRegistered();
             case WAITING_FOR_SIGN -> o.signPlacedAsJobBoard();

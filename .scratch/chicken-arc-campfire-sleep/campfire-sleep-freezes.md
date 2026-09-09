@@ -5,7 +5,19 @@ created: 2026-09-08
 priority: p2
 updated: 2026-09-08
 closed: 2026-09-08
+updated: 2026-09-09
 ---
+
+## Superseded (2026-09-09)
+
+The claim that the campfire-sleep beat cannot be driven from the console is
+wrong for the current build. `_qtdev clickheld <campfire pos>` is a
+`gameMode.useItemOn` on the held paired wand, and it does fire
+`CampfireSleepHandler.beginCampfireSleep`. Verified in a held village/growth
+run: with the clock set to night and the player near the campfire bed head,
+`clickheld` started the sleep and the night auto-skipped to dawn. The
+remaining caveats are the bed-head distance (`TOO_FAR_AWAY`) and the night
+clock skip, not the click itself. See `AgentBeatGuidance.SUNSET_AND_MAP`.
 
 ## Resolution (2026-09-08)
 

@@ -65,6 +65,11 @@ flowchart TD
   offset is only the chicken's peck/animation target; the quest and the beat
   agree because both scan the radius (a hand-placed flag puts the campfire where
   the player put it, not at the offset).
+- The wall-block beat (`WAITING_FOR_WALL_BLOCK`) advances on
+  `wallBlockPlaced() || handPlaced`. The `empty_town` structure pre-digs the
+  wall hole; a hand-placed flag has no such hole, so `wallBlockPlaced` can never
+  be true and the beat would stall the arc. It is skipped when the flag is
+  hand-placed; the room lesson is still carried by the door beats that follow.
 - Beats are persisted by `name()` under `chicken-beat-state`; the enum order and
   names must not be reordered or renamed, only inserted.
 

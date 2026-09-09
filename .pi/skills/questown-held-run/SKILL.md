@@ -89,13 +89,13 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
    a dead player.
 6. **Start the onboarding arc if the flag is hand-placed.** A flag placed by a
    player (not in an `empty_town` structure) never had its chicken rotation
-   detected, so the arc is inert. Check the arc with `_qtdev inspect <chicken>`:
+   detected, so the arc is inert. Check the arc with `_qtdev inspect chicken <pos>`:
    if the chicken is not guiding (no beat, or "the chicken has stopped guiding
    you"), run `_qtdev spawn_chicken <flag pos>` once (get the pos from
    `qt findflag`) to start the arc; it clears the forfeit, reads the rotation
    once, and spawns the chicken. The individual beats still need their real
    conditions, so this only starts the arc, not fakes it. Worldgen-placed flags
-   need this only if `_qtdev inspect <chicken>` shows the arc is not guiding
+   need this only if `_qtdev inspect chicken <pos>` shows the arc is not guiding
    yet.
 
 Do not restart the server while the client is up - it kills the client and
@@ -137,7 +137,7 @@ blocking**. Act on the current output, not a pre-baked plan.
 **Confirm against the latest observe cycle, not the last line you grepped.**
 Observe lines and the need/job lines interleave, and a line you grepped a
 window ago is not the current state. Before reporting a townie's need or job
-status, read the most recent `--- observe ---` cycle (or a fresh `_qtdev inspect <flag>` / `_qtdev inspect <flag> villagers`) so
+status, read the most recent `--- observe ---` cycle (or a fresh `_qtdev inspect <flag>` / `_qtdev inspect villagers <pos>`) so
 a need that cleared a window later is not reported as still open. When the dev
 (as a live observer) says a state is not what the log shows, the log is the
 stale one — re-read, do not argue the old line.
@@ -150,12 +150,12 @@ available! Right-click the town flag"). Each window read both:
   (proof the town sent it)
 - client log: `grep -aE '\[CHAT\]' /tmp/village-client.log` (what the dev sees)
 - observe lines: `grep -aE '\[village\] (KNOWN|UNCLEAR)' /tmp/village-server.log`
-- quest/villager detail: `_qtdev inspect <flag>` / `_qtdev inspect <flag> quests` / `_qtdev inspect <flag> villagers`
+- quest/villager detail: `_qtdev inspect <flag>` / `_qtdev inspect quests <pos>` / `_qtdev inspect villagers <pos>`
 
 **The broadcast is not proof a quest completed.** It fires on room
 re-creation, not on completion; a `recipe_created`/`quest_completed` broadcast
 can appear while the quest is still open. Verify completion against the done
-list / `_qtdev inspect <flag> quests`, not the broadcast.
+list / `_qtdev inspect quests <pos>`, not the broadcast.
 
 ## The console command set (the agent's hands)
 
@@ -172,14 +172,17 @@ a need appearing or clearing, a villager moving). The why is something the agent
 learns by watching, not something the docs hand it ahead of time.
 
 A blocked step is the run's open question, not a lookup. Do **not** open
-`VillageGrowthExecutor` (or any source) to find where to place a block, what a
-command closes, or what happens next — that is re-deriving the mechanism the
-discipline is meant to keep out of the run. The only observation channels are
-the server log (the `--- observe ---` cycles and the town's chat) and the
-`_qtdev` commands. When a step cannot proceed, surface it as the blocking
-question in a check-in; do not resolve it by reading code.
+`VillageGrowthExecutor` (or any source, or a `.scratch`/handoff note) to find
+where to place a block, what a command closes, or what happens next — that is
+re-deriving the mechanism the discipline is meant to keep out of the run. The
+first move when a step cannot proceed is `_qtdev inspect chicken <pos>` (the
+flag's position): the chicken's narration (to do / how / where) is the in-world
+guidance and names the next action without a doc. The only observation channels
+are the server log (the `--- observe ---` cycles and the town's chat) and the
+`_qtdev` commands; read the chicken narration, then surface the blocked step as
+a check-in question from it. Do not resolve it by reading code or a stale doc.
 
-- `_qtdev inspect <flag>` - the flag menu a player would see by right-clicking the flag: which tabs are shown (villagers, quests, economics, block of progress, crafting), with red-dots, and the static content. `_qtdev inspect <flag> <tab>` returns one tab (`villagers`, `quests`, `economy`, `blocks`, `crafting`). `_qtdev inspect <chicken>` narrates the current onboarding beat as the chicken's observed behavior (e.g. "The chicken looks at your town wand, then back to the flag base [Use the town wand on the flag base]"), keyed off the player's held item so the same beat reads differently in different states. This is the new-player vantage: it returns what a right-click shows, not the gate behind it - no internal state name, no condition line, no arc map. Use it to decide the next action; do not reach for `_qtdev help` (which prints the internal beat/`status`/map - the cheatsheet) or the removed `qt quests` / `_qtdev villagers` (which reach the quest board without going through the menu).
+- `_qtdev inspect <flag>` - the flag menu a player would see by right-clicking the flag: which tabs are shown (villagers, quests, economics, block of progress, crafting), with red-dots, and the static content. `_qtdev inspect <tab> <pos>` returns one tab (`villagers`, `quests`, `economy`, `blocks`, `crafting`). `_qtdev inspect chicken <pos>` narrates the current onboarding beat as the chicken's observed behavior (e.g. "The chicken looks at your town wand, then back to the flag base [Use the town wand on the flag base]"), keyed off the player's held item so the same beat reads differently in different states. This is the new-player vantage: it returns what a right-click shows, not the gate behind it - no internal state name, no condition line, no arc map. Use it to decide the next action; do not reach for `_qtdev help` (which prints the internal beat/`status`/map - the cheatsheet) or the removed `qt quests` / `_qtdev villagers` (which reach the quest board without going through the menu).
 - `_qtdev registerroom <x> <y> <z>` — register a door at the position, the way a
   player right-clicking a door with the town wand would.
 - `_qtdev deposit <item> [count]` — put an item into a registered container, the
@@ -188,8 +191,12 @@ question in a check-in; do not resolve it by reading code.
 - `_qtdev clickwand <x> <y> <z>` — right-click the flag with a stick so it
   converts to the town wand (the real flag interaction; the agent's stand-in
   for the wand beat a player does by hand).
-- `_qtdev click <item> <pos>` — right-click a block with any item, the way a
-  player would (the real block interaction).
+- `_qtdev clickheld <pos>` — right-click a block with whatever the player
+  already holds, keeping the item's NBT (the way a player would). Use it for an
+  NBT-carrying held item, e.g. the paired town wand from `clickwand`. With the
+  clock at night and the player near the campfire, `_qtdev clickheld <campfire
+  pos>` makes the player sleep on it and wake at dawn (a player too far gets
+  `TOO_FAR_AWAY`).
 - `_qtdev place_board <x> <y> <z>` - place a job board at the position.
 - `_qtdev spawn_chicken <x> <y> <z>` - force the helper chicken to spawn for a
   flag, so a held run can drive onboarding on a flag that was not placed in an
