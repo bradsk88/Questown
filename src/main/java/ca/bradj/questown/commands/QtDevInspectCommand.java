@@ -13,6 +13,8 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.entity.TownFlags;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.rooms.DoorTrouble;
+import ca.bradj.questown.town.rooms.TownPosition;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -68,6 +70,9 @@ public class QtDevInspectCommand {
         inspect.then(Commands.literal("crafting")
                 .then(posArg().executes(css -> runTab(css.getSource(),
                         BlockPosArgument.getLoadedBlockPos(css, "pos"), "crafting"))));
+        inspect.then(Commands.literal("doors")
+                .then(posArg().executes(css -> runTab(css.getSource(),
+                        BlockPosArgument.getLoadedBlockPos(css, "pos"), "doors"))));
         inspect.then(Commands.literal("chicken")
                 .then(posArg().executes(css -> runChicken(css.getSource(),
                         BlockPosArgument.getLoadedBlockPos(css, "pos")))));
@@ -100,6 +105,12 @@ public class QtDevInspectCommand {
         if (flag == null) {
             QT.FLAG_LOGGER.warn("[_qtdev inspect] no town flag at {}", pos);
             return 1;
+        }
+        // doors is not a menu tab (a player does not see it in the flag menu); it is
+        // the agent's read of the door-trouble signal, so it bypasses the shown check.
+        if (tab.equals("doors")) {
+            printDoors(flag);
+            return 0;
         }
         if (!tabShown(flag.getInfo(), tab)) {
             QT.FLAG_LOGGER.info("[_qtdev inspect] the {} tab is not shown for flag {}",
@@ -204,6 +215,13 @@ public class QtDevInspectCommand {
             // pointing at an empty cell.
             case WAITING_FOR_SIGN, WAITING_FOR_CHEST -> {
                 String item = state == ChickenBeatState.WAITING_FOR_SIGN ? "put a sign" : "put a chest";
+                // A registered door with no room is a dead door (ADR-0011); the cell the
+                // chicken pecks at is rotation-anchored and is not the room, so surface the
+                // trouble and, for NO_RECIPE, where the room actually is.
+                String deadDoor = deadDoorGuidance(flag);
+                if (deadDoor != null) {
+                    yield deadDoor;
+                }
                 if (noRoom) {
                     yield "no room is registered yet - register the room's door first "
                             + "(right-click the door with the town wand, or use the register-room "
@@ -357,6 +375,60 @@ public class QtDevInspectCommand {
         QT.FLAG_LOGGER.info("[_qtdev inspect] crafting tab:");
         QT.FLAG_LOGGER.info("[_qtdev inspect]   the crafting tab shows the flag's craftable "
                 + "recipes (no per-tab payload beyond the flag)");
+    }
+
+    /**
+     * The door-trouble read (ADR-0011): each registered door and why it has no
+     * room - NOT_ENCLOSED (walls or roof incomplete) or NO_RECIPE (enclosed, but
+     * the contents match no room recipe). For NO_RECIPE the room exists, so the
+     * range is printed (where the player must put the recipe block); a door with
+     * a room is shown as such.
+     */
+    private static void printDoors(TownFlagBlockEntity flag) {
+        QT.FLAG_LOGGER.info("[_qtdev inspect] doors tab:");
+        var doors = flag.getRoomHandle().getAllRegisteredDoors();
+        if (doors.isEmpty()) {
+            QT.FLAG_LOGGER.info("[_qtdev inspect]   no registered doors");
+            return;
+        }
+        int flagY = flag.getBlockPos().getY();
+        for (TownPosition tp : doors) {
+            BlockPos bp = new BlockPos(tp.x, flagY + tp.scanLevel, tp.z);
+            DoorTrouble trouble = flag.getDeadDoors().get(bp);
+            if (trouble == null) {
+                QT.FLAG_LOGGER.info("[_qtdev inspect]   door {} - has a room", bp.toShortString());
+                continue;
+            }
+            QT.FLAG_LOGGER.info("[_qtdev inspect]   door {} - no room ({})",
+                    bp.toShortString(), trouble.name());
+            if (trouble == DoorTrouble.NO_RECIPE) {
+                flag.getRoomRangeForDoor(bp).ifPresent(r ->
+                        QT.FLAG_LOGGER.info("[_qtdev inspect]     room range: {}", r));
+            }
+        }
+    }
+
+    /**
+     * For the sign/chest beats, if a registered door has no room the beat can not
+     * be met at the rotation-anchored cell the chicken pecks at. Returns a
+     * guidance string naming the trouble and, for NO_RECIPE, the room's position
+     * range (where the block must go); null when every registered door has a room.
+     */
+    private static String deadDoorGuidance(TownFlagBlockEntity flag) {
+        for (var e : flag.getDeadDoors().entrySet()) {
+            DoorTrouble trouble = e.getValue();
+            String at = "the door at " + e.getKey().toShortString();
+            if (trouble == DoorTrouble.NO_RECIPE) {
+                String range = flag.getRoomRangeForDoor(e.getKey())
+                        .map(r -> "the room is " + r + " - put the sign/chest inside it")
+                        .orElse("the room has no position range");
+                return at + " has no recipe-matched room (its contents match no recipe); "
+                        + range;
+            }
+            return at + " is not enclosed (walls or roof incomplete) - build the room "
+                    + "around it first, then put the sign/chest inside it.";
+        }
+        return null;
     }
 
     // --- helpers ---

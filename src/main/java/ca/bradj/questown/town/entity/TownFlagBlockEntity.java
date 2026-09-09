@@ -124,6 +124,37 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return deadDoors;
     }
 
+    /**
+     * The position range of a registered door's room, for the door-trouble
+     * guidance (ADR-0011): a {@code NO_RECIPE} door needs the player to place
+     * a recipe block inside the room, so the agent must know where the room is.
+     * Read from the live scan (the room may be un-matched), not the matched
+     * set. Empty when the door is not enclosed at all (NOT_ENCLOSED) or the
+     * door is not registered.
+     */
+    public Optional<String> getRoomRangeForDoor(BlockPos doorPos) {
+        MCRoom room = null;
+        for (MCRoom r : roomsHandle.getRegisteredRooms().getAllRooms()) {
+            if (r.getDoorPos().x == doorPos.getX() && r.getDoorPos().z == doorPos.getZ()) {
+                room = r;
+                break;
+            }
+        }
+        if (room == null || room.getSpaces().isEmpty()) {
+            return Optional.empty();
+        }
+        int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
+        int minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
+        for (InclusiveSpace s : room.getSpaces()) {
+            minX = Math.min(minX, s.getWestX());
+            maxX = Math.max(maxX, s.getEastX());
+            minZ = Math.min(minZ, s.getNorthZ());
+            maxZ = Math.max(maxZ, s.getSouthZ());
+        }
+        return Optional.of("x " + minX + ".." + maxX + ", z " + minZ + ".." + maxZ
+                + ", y " + doorPos.getY());
+    }
+
     public void setDeadDoors(Map<BlockPos, DoorTrouble> updated) {
         if (this.deadDoors.equals(updated)) {
             return;
