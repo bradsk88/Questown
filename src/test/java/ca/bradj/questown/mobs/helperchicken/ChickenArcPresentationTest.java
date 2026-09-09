@@ -88,20 +88,23 @@ class ChickenArcPresentationTest {
     }
 
     @Test
-    void activePhase_sunsetAndMap_threePhases() {
+    void activePhase_sunsetAndMap_twoPhases() {
         ChickenBeatState s = ChickenBeatState.SUNSET_AND_MAP;
+        // The chest is dropped on the earlier WAITING_FOR_CHEST beat, so this
+        // beat has no PREPARING phase: by day it waits for night, at night it
+        // goes to the campfire. chestSpawned no longer changes the phase.
         Assertions.assertEquals(
-                BeatPhase.PREPARING,
+                BeatPhase.AWAITING_NIGHT,
                 ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false))
         );
         Assertions.assertEquals(
-                BeatPhase.PREPARING,
-                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, true)),
-                "PREPARING ignores isNight when chest not yet spawned"
+                BeatPhase.AWAITING_NIGHT,
+                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, true, false)),
+                "day ignores chestSpawned (the chest beat dropped it earlier)"
         );
         Assertions.assertEquals(
-                BeatPhase.AWAITING_NIGHT,
-                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, true, false))
+                BeatPhase.READY_TO_USE,
+                ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, true))
         );
         Assertions.assertEquals(
                 BeatPhase.READY_TO_USE,

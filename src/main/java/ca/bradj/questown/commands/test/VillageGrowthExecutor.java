@@ -521,7 +521,7 @@ public final class VillageGrowthExecutor {
             if (t.getNeed() == TownieNeed.UNMET_ITEM
                     && TownContainers.getAllContainers(flag, level).isEmpty()) {
                 unclear.add("townie " + shortId(t) + " needs " + t.getUnmetItem()
-                        + " but no registered container exists to leave it in");
+                        + " but the village has no chest in a room yet to leave it in");
             }
             if (t.getNeed() == TownieNeed.UNMET_ITEM
                     && unmetItemAttempts.getOrDefault(t.getUnmetItem(), 0) >= 3) {

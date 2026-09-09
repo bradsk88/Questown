@@ -24,7 +24,6 @@ public final class ChickenArcPresentation {
     private static final String HINT_WAND_CAMPFIRE = "message.questown.chicken.hint.wand_on_campfire";
     private static final String HINT_WAND_CAMPFIRE_USE = "message.questown.chicken.hint.wand_on_campfire.use";
     private static final String HINT_SUNSET = "message.questown.chicken.hint.sunset";
-    private static final String HINT_SUNSET_PREPARING = "message.questown.chicken.hint.sunset.preparing";
     private static final String HINT_WALL_BLOCK = "message.questown.chicken.hint.wall_block";
     private static final String HINT_WALL_BLOCK_WITH_ITEM = "message.questown.chicken.hint.wall_block.with_item";
     private static final String HINT_DOOR = "message.questown.chicken.hint.door";
@@ -47,7 +46,6 @@ public final class ChickenArcPresentation {
     private static final String PLAIN_STICK = "message.questown.chicken.plain.stick";
     private static final String PLAIN_WAND_CAMPFIRE = "message.questown.chicken.plain.wand_on_campfire";
     private static final String PLAIN_SUNSET = "message.questown.chicken.plain.sunset";
-    private static final String PLAIN_SUNSET_PREPARING = "message.questown.chicken.plain.sunset_preparing";
     private static final String PLAIN_WALL_BLOCK = "message.questown.chicken.plain.wall_block";
     private static final String PLAIN_DOOR = "message.questown.chicken.plain.door";
     private static final String PLAIN_WAND_DOOR = "message.questown.chicken.plain.wand_on_door";
@@ -85,10 +83,12 @@ public final class ChickenArcPresentation {
         };
     }
 
+    /**
+     * The sleep beat. The chest is dropped earlier (the WAITING_FOR_CHEST
+     * beat), so this beat no longer carries a chest-spawn "preparing" phase:
+     * it waits for night, then the chicken wanders to the campfire to sleep.
+     */
     private static BeatPhase sunsetAndMapPhase(PhaseInputs in) {
-        if (!in.chestSpawned()) {
-            return BeatPhase.PREPARING;
-        }
         if (in.isNight()) {
             return BeatPhase.READY_TO_USE;
         }
@@ -262,9 +262,6 @@ public final class ChickenArcPresentation {
 
     private static Presentation sunsetAndMapRow(BeatPhase phase) {
         return switch (phase) {
-            case PREPARING -> new Presentation(
-                    Bubble.single(new ItemStack(Items.CHEST)),
-                    HINT_SUNSET_PREPARING, PLAIN_SUNSET_PREPARING);
             case READY_TO_USE -> new Presentation(
                     Bubble.alternating(
                             new ItemStack(ItemsInit.TOWN_WAND.get()),

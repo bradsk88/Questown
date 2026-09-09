@@ -25,15 +25,13 @@ class ChickenArcTransitionsTest {
     private static ChickenArcTransitions.Observed allFalse() {
         return new ChickenArcTransitions.Observed(
                 false, false, false, false, false, false, false,
-                false, false, false, false, false, false, false
-        );
+                false, false, false, false, false, false, false, false);
     }
 
     private static ChickenArcTransitions.Observed allTrue() {
         return new ChickenArcTransitions.Observed(
                 true, true, true, true, true, true, true, true, true,
-                true, true, true, true, true
-        );
+                true, true, true, true, true, true);
     }
 
     @Test
@@ -45,23 +43,21 @@ class ChickenArcTransitionsTest {
     }
 
     @Test
-    void stick_advancesToWandOnCampfire_whenPlayerHasWand() {
+    void stick_advancesToWallBlock_whenPlayerHasWand() {
         ChickenArcTransitions.Observed obs = new ChickenArcTransitions.Observed(
                 true, false, false, false, false, false, false, false, false,
-                false, false, false, false, false
-        );
+                false, false, false, false, false, false);
         ChickenBeatState next = ChickenArcTransitions.advance(
                 ChickenBeatState.WAITING_FOR_STICK, obs
         );
-        Assertions.assertEquals(ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE, next);
+        Assertions.assertEquals(ChickenBeatState.WAITING_FOR_WALL_BLOCK, next);
     }
 
     @Test
     void campfire_advancesToSunsetAndMap_whenLit() {
         ChickenArcTransitions.Observed obs = new ChickenArcTransitions.Observed(
                 true, true, false, false, false, false, false, false, false,
-                false, false, false, false, false
-        );
+                false, false, false, false, false, false);
         ChickenBeatState next = ChickenArcTransitions.advance(
                 ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE, obs
         );
@@ -69,28 +65,28 @@ class ChickenArcTransitionsTest {
     }
 
     @Test
-    void sunsetAndMap_advancesOnSleep() {
+    void sunsetAndMap_advancesToSignOnSleep() {
         ChickenArcTransitions.Observed obs = new ChickenArcTransitions.Observed(
                 true, true, true, false, false, false, false, false, false,
-                false, false, false, false, false
-        );
+                false, false, false, false, false, false);
         ChickenBeatState next = ChickenArcTransitions.advance(
                 ChickenBeatState.SUNSET_AND_MAP, obs
         );
-        Assertions.assertEquals(ChickenBeatState.WAITING_FOR_WALL_BLOCK, next);
+        Assertions.assertEquals(ChickenBeatState.WAITING_FOR_SIGN, next);
     }
 
     @Test
-    void stick_runsThroughToSunset_whenAllEarlierConditionsMet() {
-        // Out-of-order: wand, campfire-lit already — sunset beat stays open.
+    void stick_stopsAtWallBlock_whenWandAndCampfireMetButNoWall() {
+        // Out-of-order: wand + campfire-lit are met (campfire is a later beat),
+        // but the wall beat that now follows STICK is unmet, so the machine stops
+        // there instead of skipping forward to the campfire/sunset beats.
         ChickenArcTransitions.Observed obs = new ChickenArcTransitions.Observed(
                 true, true, false, false, false, false, false, false, false,
-                false, false, false, false, false
-        );
+                false, false, false, false, false, false);
         ChickenBeatState next = ChickenArcTransitions.advance(
                 ChickenBeatState.WAITING_FOR_STICK, obs
         );
-        Assertions.assertEquals(ChickenBeatState.SUNSET_AND_MAP, next);
+        Assertions.assertEquals(ChickenBeatState.WAITING_FOR_WALL_BLOCK, next);
     }
 
     @Test
@@ -99,8 +95,7 @@ class ChickenArcTransitionsTest {
         // Machine should cascade chest and advance to WAITING_FOR_PRESSURE_PLATE.
         ChickenArcTransitions.Observed obs = new ChickenArcTransitions.Observed(
                 true, true, true, true, true, true, true, true, false,
-                false, false, false, false, false
-        );
+                false, false, false, false, false, false);
         ChickenBeatState next = ChickenArcTransitions.advance(
                 ChickenBeatState.WAITING_FOR_SIGN, obs
         );
@@ -149,8 +144,7 @@ class ChickenArcTransitionsTest {
     void idempotent_sameInputs_sameOutput() {
         ChickenArcTransitions.Observed obs = new ChickenArcTransitions.Observed(
                 true, true, true, false, false, false, false, false, false,
-                false, false, false, false, false
-        );
+                false, false, false, false, false, false);
         ChickenBeatState once = ChickenArcTransitions.advance(
                 ChickenBeatState.WAITING_FOR_STICK, obs
         );
@@ -177,8 +171,7 @@ class ChickenArcTransitionsTest {
         // free-food beat auto-advances, so the arc is not stalled at it.
         ChickenArcTransitions.Observed obs = new ChickenArcTransitions.Observed(
                 false, false, false, false, false, false, false, false, false,
-                false, true, false, false, false
-        );
+                false, true, false, false, false, false);
         ChickenBeatState next = ChickenArcTransitions.advance(
                 ChickenBeatState.WAITING_FOR_FREE_FOOD, obs
         );
@@ -190,8 +183,7 @@ class ChickenArcTransitionsTest {
         // The player gave the bonus: the optional beat completes normally.
         ChickenArcTransitions.Observed obs = new ChickenArcTransitions.Observed(
                 false, false, false, false, false, false, false, false, false,
-                true, false, false, false, false
-        );
+                true, false, false, false, false, false);
         ChickenBeatState next = ChickenArcTransitions.advance(
                 ChickenBeatState.WAITING_FOR_FREE_FOOD, obs
         );

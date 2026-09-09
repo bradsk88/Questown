@@ -213,8 +213,7 @@ public class QtDevInspectCommand {
             // These act inside a registered room; if none is registered the block
             // the chicken pecks at is not yet a room, so say so instead of
             // pointing at an empty cell.
-            case WAITING_FOR_SIGN, WAITING_FOR_CHEST -> {
-                String item = state == ChickenBeatState.WAITING_FOR_SIGN ? "put a sign" : "put a chest";
+            case WAITING_FOR_SIGN -> {
                 // A registered door with no room is a dead door (ADR-0011); the cell the
                 // chicken pecks at is rotation-anchored and is not the room, so surface the
                 // trouble and, for NO_RECIPE, where the room actually is.
@@ -225,10 +224,17 @@ public class QtDevInspectCommand {
                 if (noRoom) {
                     yield "no room is registered yet - register the room's door first "
                             + "(right-click the door with the town wand, or use the register-room "
-                            + "command), then " + item + " inside it.";
+                            + "command), then put a sign inside it.";
                 }
-                yield "the registered room - " + item + " inside it (the chicken pecks at "
+                yield "the registered room - put a sign inside it (the chicken pecks at "
                         + target.toShortString() + ").";
+            }
+            case WAITING_FOR_CHEST -> {
+                // The chicken brings and drops the chest itself; the player only needs to
+                // stand in the room to watch it (the worked example), so never read this as
+                // "put a chest". No behind-the-curtain terms (container / recipe).
+                yield "the room the chicken is standing in - stand in it and watch the "
+                        + "chicken drop a chest there.";
             }
             case WAITING_FOR_WALL_BLOCK ->
                     "the gap the chicken pecks at (" + target.toShortString() + ")";
@@ -276,8 +282,8 @@ public class QtDevInspectCommand {
                             + "and use it on the door]";
             case WAITING_FOR_SIGN -> "The chicken looks into the room and pecks. [Put a sign in "
                     + "the room]";
-            case WAITING_FOR_CHEST -> "The chicken looks into the room and pecks. [Put a chest in "
-                    + "the room]";
+            case WAITING_FOR_CHEST -> "The chicken brings a chest into the room. "
+                    + "[Stand in the room and watch the chicken drop a chest]";
             case WAITING_FOR_PRESSURE_PLATE -> "The chicken looks at the gate, then at your hand. "
                     + "[Make a welcome mat and put it on the gate]";
             case WAITING_FOR_FREE_FOOD -> "The chicken looks at your hand, then at the flag. "
