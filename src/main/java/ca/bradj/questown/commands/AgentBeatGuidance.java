@@ -69,10 +69,16 @@ final class AgentBeatGuidance {
                             + "player who can not find the gap can not tell what is wanted.");
             case WAITING_FOR_DOOR -> new Guidance(
                     "Put a door in the wall gap the chicken is pointing at.",
-                    "Place a door in the gap the chicken is pecking at.",
-                    "As with the wall, the door goes in one gap signalled only by the chicken's peck. "
-                            + "Progress is invisible until the chicken notices - legibility depends on "
-                            + "watching it.");
+                    "Place a full door (both halves) in the gap the chicken is pecking "
+                            + "at with `_qtdev place_door <gap pos>`. Do not use `setblock`: it "
+                            + "lays only the lower half of a door, leaving a one-block gap that "
+                            + "then gets roofed over and breaks the door.",
+                    "As with the wall, the door goes in one gap signalled only by the chicken's "
+                            + "peck. Progress is invisible until the chicken notices - legibility "
+                            + "depends on watching it. A door is two blocks; `setblock` puts only "
+                            + "one, so it leaves a gap rather than a door and the beat never "
+                            + "advances. `place_door` lays both halves the way a player using a "
+                            + "door item would.");
             case WAITING_FOR_WAND_ON_DOOR -> new Guidance(
                     "Mark the door to register the room.",
                     "Right-click the door with the town wand to register the room it stands in.",
@@ -92,6 +98,14 @@ final class AgentBeatGuidance {
                     "Place a chest inside the registered room.",
                     "The chest only counts inside the registered room; a chest elsewhere is ignored, so a "
                             + "player placing a chest and seeing no progress has no obvious reason why.");
+            case WAITING_FOR_ROOM_BUILD -> new Guidance(
+                    "The chicken is building the room around the door.",
+                    "No action is needed; the chicken is building the room itself, one block at a "
+                            + "time, until the registered door detects an enclosed room. Watch it finish "
+                            + "and the next beat begins.",
+                    "This beat is the only one in the arc the player does not drive; a player may not "
+                            + "know why the chicken is laying blocks, and may think they need to do "
+                            + "something while nothing is in fact required.");
             case WAITING_FOR_PRESSURE_PLATE -> new Guidance(
                     "Make a welcome mat and put it on the gate.",
                     "Craft a welcome mat at the flag, then place it at the gate the chicken points to.",
@@ -134,6 +148,7 @@ final class AgentBeatGuidance {
             case WAITING_FOR_WALL_BLOCK -> "wall";
             case WAITING_FOR_DOOR -> "door";
             case WAITING_FOR_WAND_ON_DOOR -> "register";
+            case WAITING_FOR_ROOM_BUILD -> "build";
             case WAITING_FOR_SIGN -> "jobboard";
             case WAITING_FOR_CHEST -> "chest";
             case WAITING_FOR_PRESSURE_PLATE -> "mat";

@@ -223,3 +223,26 @@ shows a chest in a room rather than in the open. This is the `QtDevInspectComman
   failures point at the registered door not reliably yielding an enclosed room
   at the chicken's ground Y; not yet root-caused. The re-sequence itself is not
   in doubt.
+
+## Progress (2026-09-10, room-build beat)
+
+- Decision resolved: the chicken builds the room itself, on a **new
+  `WAITING_FOR_ROOM_BUILD` beat** inserted after `WAITING_FOR_WAND_ON_DOOR`
+  and before `WAITING_FOR_CHEST` (not absorbed into the register beat).
+- Implemented: `HelperChickenRoomBuildGoal` + `ChickenRoomShellPlan` (pure
+  layout), the beat/condition/presentation, agent guidance, `_qtdev inspect`
+  narration, the `roomBuilt` observation, and lang keys. The chicken walks to
+  the registered door and lays a 3×3×3 cobbleshell around it (door row squared
+  to a single-cell opening, two-cells-deep interior, no ceiling), one block per
+  peck; the beat advances when the room scan detects an enclosed room at the
+  door.
+- Unit tests pass (the deliberate `ChickenArcHintsTest.todo_` marker is the
+  only failure). `compileJava --rerun-tasks` is green.
+- Confirmed (2026-09-10, held `village/growth` run): the chicken lays the
+  blocks, the room registers (`room_created` broadcast, beat advanced to
+  `WAITING_FOR_CHEST`). Three failures found and fixed on the way: the peck
+  goal starved the room-build goal at the same tier (`shouldPeckRun`), the
+  shell layout was a plus not a closed box (rebased on
+  `InclusiveSpace`/`getWallPositions`, `frameFor` made `along`/`inward`
+  perpendicular), and the door was half-placed (the run now uses `_qtdev
+  place_door`, not `setblock`). See helperchicken/COMPLEX.md.

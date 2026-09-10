@@ -11,6 +11,7 @@ import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.roomrecipes.serialization.MCRoom;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
@@ -29,6 +30,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -81,6 +83,7 @@ public final class ChickenArcConditions {
                 isWallBlockPlaced(level, flagPos, rotation),
                 isDoorPlaced(level, flagPos, rotation),
                 isRoomRegistered(flag),
+                isRoomBuilt(flag),
                 isSignConvertedToJobBoard(flag),
                 isChestPlaced(flag),
                 isWelcomeMatPlaced(flag),
@@ -96,7 +99,7 @@ public final class ChickenArcConditions {
     private static ChickenArcTransitions.Observed emptyObservation() {
         return new ChickenArcTransitions.Observed(
                 false, false, false, false, false, false, false, false, false,
-                false, false, false, false, false, false
+                false, false, false, false, false, false, false
         );
     }
 
@@ -173,6 +176,22 @@ public final class ChickenArcConditions {
             return true;
         }
         return !flag.getRoomHandle().getAllRegisteredDoors().isEmpty();
+    }
+
+    public static boolean doorHasRoom(TownFlagBlockEntity flag) {
+        Collection<MCRoom> rooms = flag.getRoomHandle().getRegisteredRooms().getAllRooms();
+        return !rooms.isEmpty();
+    }
+
+    /**
+     * Whether the helper chicken has built an enclosed room around a registered
+     * door. The room-build beat advances on this, and a room appearing in any
+     * form (the player building it themselves, or the chicken's own build) is
+     * accepted — the beat only exists to bridge the gap between "door registered"
+     * and "a room exists", which can be crossed either way.
+     */
+    public static boolean isRoomBuilt(TownFlagBlockEntity flag) {
+        return doorHasRoom(flag);
     }
 
     public static boolean isSignConvertedToJobBoard(TownFlagBlockEntity flag) {
@@ -309,6 +328,13 @@ public final class ChickenArcConditions {
      * it accepts either item. Neither item → no peck, the chicken follows.
      */
     public static boolean shouldPeckRun(@Nullable Player player, ChickenBeatState state) {
+        if (state == ChickenBeatState.WAITING_FOR_ROOM_BUILD) {
+            // This beat's work is the room-build goal's, not the peck goal's. The
+            // room-build goal lays the shell; if the peck goal also ran here it would
+            // hold the same goal tier and starve the room-build goal, so the peck
+            // stands down for this beat and the room-build goal gets the slot.
+            return false;
+        }
         if (state == ChickenBeatState.WAITING_FOR_PRESSURE_PLATE) {
             return playerHoldsPressurePlate(player) || playerHoldsRequiredItem(player, state);
         }
@@ -375,6 +401,7 @@ public final class ChickenArcConditions {
             case WAITING_FOR_DOOR -> s -> blockItemBlock(s) instanceof DoorBlock;
             case WAITING_FOR_SIGN -> s -> blockItemBlock(s) instanceof SignBlock;
             case WAITING_FOR_CHEST -> s -> s.is(Items.CHEST);
+            case WAITING_FOR_ROOM_BUILD -> null;
             case WAITING_FOR_PRESSURE_PLATE -> s -> s.is(ItemsInit.WELCOME_MAT_BLOCK.get());
             case WAITING_FOR_FREE_FOOD,
                  WAITING_FOR_VILLAGER_UI, WAITING_FOR_FLAG_UI,

@@ -240,6 +240,8 @@ public class QtDevInspectCommand {
                     "the gap the chicken pecks at (" + target.toShortString() + ")";
             case WAITING_FOR_DOOR, WAITING_FOR_WAND_ON_DOOR ->
                     "the door at " + target.toShortString();
+            case WAITING_FOR_ROOM_BUILD ->
+                    "the door the chicken is building a room around (" + target.toShortString() + ")";
             case WAITING_FOR_PRESSURE_PLATE ->
                     "the gate at " + target.toShortString()
                             + " (craft the welcome mat at the flag first)";
@@ -284,6 +286,8 @@ public class QtDevInspectCommand {
                     + "the room]";
             case WAITING_FOR_CHEST -> "The chicken brings a chest into the room. "
                     + "[Stand in the room and watch the chicken drop a chest]";
+            case WAITING_FOR_ROOM_BUILD -> "The chicken pecks at the door and lays blocks "
+                    + "around it. [The chicken builds a room around the door — watch it]";
             case WAITING_FOR_PRESSURE_PLATE -> "The chicken looks at the gate, then at your hand. "
                     + "[Make a welcome mat and put it on the gate]";
             case WAITING_FOR_FREE_FOOD -> "The chicken looks at your hand, then at the flag. "

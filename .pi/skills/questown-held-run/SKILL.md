@@ -87,16 +87,17 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
    world still has a dead player, it cannot progress until a live player
    holds the required item — ask the dev to respawn, do not keep feeding
    a dead player.
-6. **Start the onboarding arc if the flag is hand-placed.** A flag placed by a
-   player (not in an `empty_town` structure) never had its chicken rotation
-   detected, so the arc is inert. Check the arc with `_qtdev inspect chicken <pos>`:
-   if the chicken is not guiding (no beat, or "the chicken has stopped guiding
-   you"), run `_qtdev spawn_chicken <flag pos>` once (get the pos from
-   `qt findflag`) to start the arc; it clears the forfeit, reads the rotation
+6. **Start the onboarding arc if the chicken is not guiding.** The arc can be
+   inert (its chicken rotation was never detected), so no beat drives. Do not
+   infer this from where the flag came from. "Hand-placed" vs "worldgen" is not
+   a fact you can read off a flag, and a structure name in the worldgen data is
+   not proof the flag came from it, so a matching `empty_town` file is not a
+   verified origin. Check the arc directly with `_qtdev inspect chicken <pos>`
+   (the flag's position, from `qt findflag`): if the chicken is not guiding (no
+   beat, or "the chicken has stopped guiding you"), run `_qtdev spawn_chicken
+   <flag pos>` once to start the arc; it clears the forfeit, reads the rotation
    once, and spawns the chicken. The individual beats still need their real
-   conditions, so this only starts the arc, not fakes it. Worldgen-placed flags
-   need this only if `_qtdev inspect chicken <pos>` shows the arc is not guiding
-   yet.
+   conditions, so this only starts the arc, not fakes it.
 
 Do not restart the server while the client is up - it kills the client and
 wipes the world. If you must load a new command, kill the client, restart the
@@ -177,14 +178,31 @@ where to place a block, what a command closes, or what happens next — that is
 re-deriving the mechanism the discipline is meant to keep out of the run. The
 first move when a step cannot proceed is `_qtdev inspect chicken <pos>` (the
 flag's position): the chicken's narration (to do / how / where) is the in-world
-guidance and names the next action without a doc. The only observation channels
-are the server log (the `--- observe ---` cycles and the town's chat) and the
-`_qtdev` commands; read the chicken narration, then surface the blocked step as
-a check-in question from it. Do not resolve it by reading code or a stale doc.
+guidance and names the next action without a doc.
+
+A blocked step is **not** automatically a check-in. Before surfacing it, run
+the tools the skill gave you, the console command set (`registerroom`,
+`deposit`, `place_mat`, `clickwand`, `clickheld`, `place_board`,
+`spawn_chicken`, `setblock`, `tp`, `time`, and the `inspect` variants), in the
+context of the chicken's guidance, reading each response. The only observation
+channels are the server log (the `--- observe ---` cycles and the town's chat)
+and those `_qtdev` commands. "Blocked" is not a check-in until you have run the
+tools you have and the response confirms the precondition still isn't met. For
+example, `registerroom` returns the door but the room still won't register:
+*that* is a real dead end, not "the first line looked blocked." Checking in on a
+blocked-looking line before running your tools defers the run; the agent is the
+main driver, the dev a secondary observer. Trying a tool is not a peek. The
+tools are your hands, and reading each response is how you learn the game, so do
+not read code or a stale doc to decide which tool to try.
 
 - `_qtdev inspect <flag>` - the flag menu a player would see by right-clicking the flag: which tabs are shown (villagers, quests, economics, block of progress, crafting), with red-dots, and the static content. `_qtdev inspect <tab> <pos>` returns one tab (`villagers`, `quests`, `economy`, `blocks`, `crafting`). `_qtdev inspect chicken <pos>` narrates the current onboarding beat as the chicken's observed behavior (e.g. "The chicken looks at your town wand, then back to the flag base [Use the town wand on the flag base]"), keyed off the player's held item so the same beat reads differently in different states. This is the new-player vantage: it returns what a right-click shows, not the gate behind it - no internal state name, no condition line, no arc map. Use it to decide the next action; do not reach for `_qtdev help` (which prints the internal beat/`status`/map - the cheatsheet) or the removed `qt quests` / `_qtdev villagers` (which reach the quest board without going through the menu).
 - `_qtdev registerroom <x> <y> <z>` — register a door at the position, the way a
   player right-clicking a door with the town wand would.
+- `_qtdev place_door <x> <y> <z>` — place a **full** door (both halves) at the
+  position, the way a player using a door item on a block would. Use this to put
+  a door in a wall gap, **not** `setblock`: `setblock` lays only the lower half
+  of a door, leaving a one-block gap that then gets roofed over and breaks the
+  door.
 - `_qtdev deposit <item> [count]` — put an item into a registered container, the
   way a player dropping an item into a chest would.
 - `_qtdev place_mat <x> <y> <z>` — place a welcome mat at the position.
@@ -199,13 +217,15 @@ a check-in question from it. Do not resolve it by reading code or a stale doc.
   `TOO_FAR_AWAY`).
 - `_qtdev place_board <x> <y> <z>` - place a job board at the position.
 - `_qtdev spawn_chicken <x> <y> <z>` - force the helper chicken to spawn for a
-  flag, so a held run can drive onboarding on a flag that was not placed in an
-  empty_town structure (and so never had its rotation detected, leaving the
-  arc inert). Bypasses the rotation-detection/forfeit gates; the individual
-  beats still need their real conditions.
+  flag whose arc is inert (its chicken rotation was never detected). Run it when
+  `_qtdev inspect chicken <pos>` shows the chicken is not guiding; do not decide
+  from where the flag came from. Bypasses the rotation-detection/forfeit gates;
+  the individual beats still need their real conditions.
 - Vanilla (also from the FIFO/console): `tp <x> <y> <z>` (teleport),
   `time set <ticks>` (set the time of day, 0–24000), `setblock <x> <y> <z>
-  <block>` (set a block), `qt tp` (jump to the nearest flag).
+  <block>` (set a block), `qt tp` (jump to the nearest flag). For a **door**, use
+  `_qtdev place_door`, not `setblock` (see above): `setblock` only lays the lower
+  half of a door.
 - **Arg types: use `ItemArgument`/`BlockPosArgument`, not `StringArgumentType
   .word()`.** From the FIFO/console, `StringArgumentType.word()` fails to parse
   with `Expected whitespace to end one argument, but found trailing data` (even
@@ -233,7 +253,9 @@ not a derived one (nearest flag, manhattan distance).
 Periodically check in with the dev: report what happened and what you plan next
 based on the game's observable status. Check-ins are the **only** time code
 changes can be proposed/approved. Outside a check-in, play the game; do not
-propose fixes from a code read.
+propose fixes from a code read. A check-in is a last resort after you have run
+the tools you have (see the blocked-step rule): a blocked-looking line you have
+not driven with your own tools is not a check-in.
 
 When a log line contradicts the expected result (a command gave the wrong
 item, a log says "Created Air"), check the *effect* (what is in the world /
