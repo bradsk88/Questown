@@ -42,8 +42,14 @@ import java.util.Set;
  */
 public final class ChickenRoomShellPlan {
 
-    /** The door's edge to the outer edge of the room, in cells. */
-    static final int ROOM_SIZE = 3;
+    /**
+     * The room is {@value #ROOM_SIZE} wide by {@value #ROOM_SIZE} deep. A 4×4
+     * gives a 3×3 interior (9 cells): the chicken stands on one interior cell to
+     * drop the chest while the player occupies a different one to witness it, so
+     * the two can coexist. A 3×3 shell has a single interior cell, which the
+     * chicken and the player both need, so the chest beat could never complete.
+     */
+    static final int ROOM_SIZE = 4;
     /** Interior cells back from the door's edge (ROOM_SIZE minus the door's edge). */
     static final int INTERIOR_DEPTH = ROOM_SIZE - 1;
 
@@ -184,11 +190,19 @@ public final class ChickenRoomShellPlan {
         BlockPos door = frame.doorPos();
         Direction along = frame.along();
         Direction in = frame.inward();
-        // The along edge is ROOM_SIZE cells wide centred on the door: from along -1
-        // to along +1, with the door at along 0. The inward edge runs from the
-        // door's edge (inward 0) to inward (ROOM_SIZE - 1).
-        BlockPos a = door.relative(along, -(ROOM_SIZE - 1) / 2).relative(in, 0);
-        BlockPos b = door.relative(along, (ROOM_SIZE - 1) / 2).relative(in, ROOM_SIZE - 1);
+        // The along edge is ROOM_SIZE cells wide centred on the door, the door at
+        // along 0. Split the ROOM_SIZE - 1 cells on either side of the door into
+        // a floor half (one side) and a ceil half (the other) so the box is square
+        // for any ROOM_SIZE: an odd ROOM_SIZE gives an even split, an even one (4)
+        // puts one more cell on one side than the other, so the door sits one cell
+        // off the exact centre but still walled on both sides. (The old
+        // (ROOM_SIZE - 1) / 2 on both sides produced a 3×4 lopsided box at
+        // ROOM_SIZE 4, which the wall walk could read as a plus.) The inward edge
+        // runs from the door's edge (inward 0) to inward (ROOM_SIZE - 1).
+        int floorHalf = (ROOM_SIZE - 1) / 2;
+        int ceilHalf = (ROOM_SIZE - 1) - floorHalf;
+        BlockPos a = door.relative(along, -floorHalf).relative(in, 0);
+        BlockPos b = door.relative(along, ceilHalf).relative(in, ROOM_SIZE - 1);
         return InclusiveSpace.from(a.getX(), a.getZ()).to(b.getX(), b.getZ());
     }
 

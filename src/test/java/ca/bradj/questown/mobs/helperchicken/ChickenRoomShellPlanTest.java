@@ -116,6 +116,40 @@ class ChickenRoomShellPlanTest {
     }
 
     @Test
+    void plan_boxIsSquareFourByFour() {
+        // The shell is ROOM_SIZE wide by ROOM_SIZE deep. At ROOM_SIZE 4 that is a
+        // 4×4 box; the door is walled on both sides of the along edge so the wall
+        // walk closes it (not a plus).
+        InclusiveSpace rectangle = ChickenRoomShellPlan.space(frame());
+        int width = rectangle.getEastX() - rectangle.getWestX() + 1;
+        int height = rectangle.getSouthZ() - rectangle.getNorthZ() + 1;
+        Assertions.assertEquals(4, width, "box must be 4 wide along the row");
+        Assertions.assertEquals(4, height, "box must be 4 deep inward");
+        Assertions.assertTrue(
+                InclusiveSpaces.isWhole(rectangle, p -> laidAtFeet(
+                        ChickenRoomShellPlan.plan(frame(), EMPTY_WORLD, NO_LAI), p), true),
+                "a 4×4 shell must close whole, not read as a plus"
+        );
+    }
+
+    @Test
+    void plan_interiorFitsChickenAndPlayer() {
+        // The witness gate (playerInStoreShell) needs the player in an interior
+        // cell while the chicken occupies a (different) interior cell to drop the
+        // chest. A 3×3 shell has one interior cell — they cannot coexist and the
+        // chest beat deadlocks. The 4×4 shell must leave at least two interior
+        // cells so the chicken and the player can both stand inside the room.
+        InclusiveSpace rectangle = ChickenRoomShellPlan.space(frame());
+        long interiorCells = InclusiveSpaces.getPositions(
+                rectangle, InclusiveSpaces.PositionType.INTERIOR_ONLY).size();
+        Assertions.assertTrue(
+                interiorCells >= 2,
+                "the interior must fit both the chicken and the player; got "
+                        + interiorCells + " interior cell(s)"
+        );
+    }
+
+    @Test
     void plan_chestCellIsOneRowInFromTheDoor() {
         // Chest cell = the door's position, one row inward, at feet level.
         ChickenRoomShellPlan.Plan plan =
