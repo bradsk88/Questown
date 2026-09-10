@@ -38,6 +38,7 @@ public final class ChickenArcTransitions {
             boolean wallBlockPlaced,
             boolean doorPlaced,
             boolean roomRegistered,
+            boolean roomBuilt,
             boolean signPlacedAsJobBoard,
             boolean chestPlaced,
             boolean welcomeMatPlaced,
@@ -120,6 +121,7 @@ public final class ChickenArcTransitions {
             case WAITING_FOR_WALL_BLOCK -> o.wallBlockPlaced() || o.handPlaced();
             case WAITING_FOR_DOOR -> o.doorPlaced();
             case WAITING_FOR_WAND_ON_DOOR -> o.roomRegistered();
+            case WAITING_FOR_ROOM_BUILD -> o.roomBuilt();
             case WAITING_FOR_SIGN -> o.signPlacedAsJobBoard();
             case WAITING_FOR_CHEST -> o.chestPlaced();
             case WAITING_FOR_PRESSURE_PLATE -> o.welcomeMatPlaced();

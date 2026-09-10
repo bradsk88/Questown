@@ -59,6 +59,12 @@ flowchart TD
   skips the optional action is not stalled (see `CONTEXT.md` **Optional beat**).
 - `isSatisfied` maps each beat to one boolean of `Observed` (e.g.
   `AWAITING_WORLDLY_SEEDS_DELIVERY -> playerGaveSeedsToChicken`).
+- `WAITING_FOR_ROOM_BUILD` sits between `WAITING_FOR_WAND_ON_DOOR` and
+  `WAITING_FOR_CHEST`: after the door is registered, the chicken lays a shell
+  around it (below) so the wall walk detects a room, then the chest beat can
+  drop its chest into a room that actually exists. The room-detection itself is
+  documented in `town/rooms/COMPLEX.md`; this beat only lays the blocks that make
+  it succeed.
 - The chest beat (`WAITING_FOR_CHEST`) comes *before* the campfire sleep: the
   chicken works the player's store into place first (see the chest goal below),
   so the player has a room with something in it before they go to sleep. The
@@ -122,3 +128,42 @@ chicken). It re-derives the `Presentation` for the current beat and, every Nth
 click on the same beat, switches the monologue hint to the plain-text fallback
 (`PLAIN_TEXT_CYCLE = 3`); the per-player click counter resets when the beat
 changes.
+
+
+## The room-build beat and its goal tier
+
+`WAITING_FOR_ROOM_BUILD` is the only onboarding beat the chicken drives itself:
+the player does nothing, the chicken lays the shell. Two goals share goal tier 2
+(`HelperChickenEntity`): the peck goal (follows/pecks the beat target) and the
+room-build goal (`HelperChickenRoomBuildGoal`). They are mutually exclusive by
+their own `canUse`/`canContinueToUse` gates, not by priority.
+
+```mermaid
+flowchart TD
+  tick[Controller.tick] --> cond{ChickenArcConditions.observe}
+  cond --> rb{state == WAITING_FOR_ROOM_BUILD?}
+  rb -->|yes| peck[shouldPeckRun -> false:<br/>peck goal stands down]
+  peck --> build[RoomBuildGoal.canUse runs]
+  rb -->|no| follow[peck goal drives the beat]
+  build --> next[nextBlock: one shell cell]
+  next --> lay[peck + setBlockAndUpdate one block<br/>per peck cadence]
+  lay --> scan[room scan detects the room?<br/>town/rooms/COMPLEX.md]
+  scan -->|yes| adv[advance -> WAITING_FOR_CHEST]
+  scan -->|no| next
+```
+
+- `ChickenArcConditions.shouldPeckRun` returns `false` for `WAITING_FOR_ROOM_BUILD`
+  (the beat has no held-item requirement, so without this the peck goal would run
+  forever and starve the room-build goal at the same tier). This is the fix a
+  plus-shaped layout was not the only failure — the goal was unreachable.
+- `ChickenRoomShellPlan` is pure: it builds an `InclusiveSpace` around the door
+  (the door centred on one edge) and lays the closed perimeter via
+  `InclusiveSpaces.getWallPositions`, reusing RoomRecipes' enclosure that the room
+  scan (`town/rooms/COMPLEX.md`) would walk. A hand-rolled corner/edge loop
+  previously produced a plus (open sides) the wall walk could not close; the
+  `isWhole` test guards against that. Each perimeter cell is laid at feet and head
+  (`WallDetection.IsWall` needs a solid at both levels); there is no ceiling or
+  floor (room detection is a 2D wall walk).
+- The goal re-plans from the live world each block, so a block the player placed
+  (or broke) mid-build is skipped or re-laid, and the goal stands down when the
+  plan is exhausted but the room still has not been detected.

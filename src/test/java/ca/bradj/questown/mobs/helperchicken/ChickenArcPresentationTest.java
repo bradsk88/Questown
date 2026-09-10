@@ -35,6 +35,7 @@ class ChickenArcPresentationTest {
             ChickenBeatState.WAITING_FOR_DOOR,
             ChickenBeatState.WAITING_FOR_SIGN,
             ChickenBeatState.WAITING_FOR_CHEST,
+            ChickenBeatState.WAITING_FOR_ROOM_BUILD,
             ChickenBeatState.WAITING_FOR_VILLAGER_UI,
             ChickenBeatState.COMPLETE,
             ChickenBeatState.FORFEIT
@@ -143,6 +144,23 @@ class ChickenArcPresentationTest {
         Assertions.assertEquals(
                 BeatPhase.READY_TO_PLACE,
                 ChickenArcPresentation.activePhase(s, new PhaseInputs(true, false, false))
+        );
+    }
+
+    @Test
+    void activePhase_roomBuild_isAlwaysDefault() {
+        // The room-build beat is chicken-driven, not player-driven: it never
+        // reads the player's held item, so it stays in the default phase
+        // regardless of what the player holds.
+        Assertions.assertEquals(
+                BeatPhase.DEFAULT,
+                ChickenArcPresentation.activePhase(
+                        ChickenBeatState.WAITING_FOR_ROOM_BUILD, new PhaseInputs(false, false, false))
+        );
+        Assertions.assertEquals(
+                BeatPhase.DEFAULT,
+                ChickenArcPresentation.activePhase(
+                        ChickenBeatState.WAITING_FOR_ROOM_BUILD, new PhaseInputs(true, false, false))
         );
     }
 

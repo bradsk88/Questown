@@ -114,6 +114,7 @@ class ChickenArcHintsTest {
                  WAITING_FOR_DOOR,
                  WAITING_FOR_SIGN,
                  WAITING_FOR_CHEST,
+                 WAITING_FOR_ROOM_BUILD,
                  WAITING_FOR_VILLAGER_UI,
                  COMPLETE,
                  FORFEIT -> true;

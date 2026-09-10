@@ -62,9 +62,9 @@ class FoundationRegistrationTest {
     }
 
     @Test
-    void chickenBeatState_hasExactly15Values() {
+    void chickenBeatState_hasExactly16Values() {
         // Canonical — U6 state-machine table depends on these names and ordering.
-        Assertions.assertEquals(15, ChickenBeatState.values().length);
+        Assertions.assertEquals(16, ChickenBeatState.values().length);
     }
 
     @Test
@@ -75,6 +75,7 @@ class FoundationRegistrationTest {
                 ChickenBeatState.WAITING_FOR_WALL_BLOCK,
                 ChickenBeatState.WAITING_FOR_DOOR,
                 ChickenBeatState.WAITING_FOR_WAND_ON_DOOR,
+                ChickenBeatState.WAITING_FOR_ROOM_BUILD,
                 ChickenBeatState.WAITING_FOR_CHEST,
                 ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE,
                 ChickenBeatState.SUNSET_AND_MAP,
