@@ -163,7 +163,15 @@ flowchart TD
   previously produced a plus (open sides) the wall walk could not close; the
   `isWhole` test guards against that. Each perimeter cell is laid at feet and head
   (`WallDetection.IsWall` needs a solid at both levels); there is no ceiling or
-  floor (room detection is a 2D wall walk).
+  floor (room detection is a 2D wall walk). The shell is a 4×4 rectangle
+  (`ROOM_SIZE = 4`, a 3×3 interior) so the chest beat's witness gate and the
+  chicken's own occupancy can coexist: the chest beat drops the chest only when
+  the player is inside a room interior cell (`playerInStoreShell`), and the
+  chicken stands on an interior cell to drop it — a 3×3 shell has a single
+  interior cell that both need, which deadlocked the beat. The door is centred on
+  the along edge via a floor/ceil split of the remaining cells, so the box stays
+  square (an even `ROOM_SIZE` puts one more cell on one side than the other, but
+  the door is walled on both sides and the wall walk still closes it).
 - The goal re-plans from the live world each block, so a block the player placed
   (or broke) mid-build is skipped or re-laid, and the goal stands down when the
   plan is exhausted but the room still has not been detected.
