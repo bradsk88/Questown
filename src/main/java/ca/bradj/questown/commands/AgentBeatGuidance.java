@@ -118,15 +118,15 @@ final class AgentBeatGuidance {
                     "This is the only skippable beat - it teaches that not every beat is required, but the "
                             + "arc gives no signal that this one is optional, so a player may stall here.");
             case WAITING_FOR_VILLAGER_UI -> new Guidance(
-                    "Open a villager's menu.",
-                    "Right-click a villager to open its menu. No agent-side action opens a menu; it needs "
-                            + "a player. Likely a stumbling point.",
+                    "Look at a villager.",
+                    "Right-click a villager to open its menu, or use `_qtdev inspect <flag> villagers` "
+                            + "to look at the villager and advance this beat.",
                     "Opening a villager's menu is the onboarding step, but players interact with villagers "
                             + "for other reasons too - the action is not marked as special.");
             case WAITING_FOR_FLAG_UI -> new Guidance(
-                    "Open the flag's menu.",
-                    "Right-click the flag to open its menu. No agent-side action opens a menu; it needs "
-                            + "a player. Likely a stumbling point.",
+                    "Look at the flag.",
+                    "Right-click the flag to open its menu, or use `_qtdev inspect <flag>` "
+                            + "to look at the flag menu and advance this beat.",
                     "Opening the flag's menu is the step, but a player may have used the flag before and "
                             + "not realise opening its menu is the onboarding action.");
             case AWAITING_WORLDLY_SEEDS_DELIVERY -> new Guidance(
