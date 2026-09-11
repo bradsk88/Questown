@@ -232,8 +232,7 @@ public class QtDevInspectCommand {
                             + "on the door]"
                     : "The chicken looks at the door, then at your empty hand. [Hold the town wand "
                             + "and use it on the door]";
-            case WAITING_FOR_SIGN -> "The chicken looks into the room and pecks. [Put a sign in "
-                    + "the room]";
+            case WAITING_FOR_SIGN -> signInRoomLine(flag);
             case WAITING_FOR_CHEST -> "The chicken brings a chest into the room. "
                     + "[Stand in the room and watch the chicken drop a chest]";
             case WAITING_FOR_ROOM_BUILD -> "The chicken pecks at the door and lays blocks "
@@ -249,6 +248,24 @@ public class QtDevInspectCommand {
                     + "quest is still open - look at the quests for which room it needs]";
             case COMPLETE, FORFEIT -> "";
         };
+    }
+
+    /**
+     * The sign beat names a spot the sign can go, the way a player would see the
+     * room's open floor. The agent places into that cell instead of guessing a
+     * coordinate (a guessed spot lands on a wall or outside the room, so it does
+     * not count, and an agent placing with setblock breaks the wall it lands on).
+     * The spot is the first empty interior cell of a registered room, the same
+     * cells {@code _qtdev place_block} lists - guaranteed inside a room.
+     */
+    private static String signInRoomLine(TownFlagBlockEntity flag) {
+        BlockPos cell = flag.interiorCells().stream().findFirst().orElse(null);
+        if (cell == null) {
+            return "The chicken looks into the room and pecks. [Put a sign in the room - "
+                    + "register the door and build a room first]";
+        }
+        return "The chicken looks into the room and pecks. [Put a sign in the room - at "
+                + cell.getX() + ", " + cell.getY() + ", " + cell.getZ() + "]";
     }
 
     // --- the menu tabs ---
