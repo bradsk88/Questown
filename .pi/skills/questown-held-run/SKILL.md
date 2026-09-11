@@ -262,7 +262,13 @@ player sees the need clear or not.
   block would. Use this for a door, **not** `setblock`: `setblock` lays only the
   lower half of a door, leaving a one-block gap that then gets roofed over and
   breaks the door.
-- `_qtdev place_mat <x> <y> <z>` — place a welcome mat at the position.
+- `_qtdev place_mat` (no coordinate) or `_qtdev place_mat <x> <y> <z>` — place a
+  welcome mat. With **no coordinate** it drops the mat a block beside the flag, so
+  an agent that can not see where the chicken's "gate" cue points can still place the
+  mat in a safe spot; with a coordinate it places at that block, the way a player
+  using a mat item would. Prefer the bare form: the welcome mat has no fixed spot in
+  a hand-placed town, and placing it **on the door** replaces the door and un-registers
+  the room you built (the `room_destroyed`/`quest_lost` broadcast above).
 - `_qtdev clickwand <x> <y> <z>` — right-click the flag with a stick so it
   converts to the town wand (the real flag interaction; the agent's stand-in
   for the wand beat a player does by hand).
