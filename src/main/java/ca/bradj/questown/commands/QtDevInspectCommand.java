@@ -6,9 +6,7 @@ import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.mobs.helperchicken.ChickenArcConditions;
 import ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations;
-import ca.bradj.questown.mobs.helperchicken.ChickenArcTransitions;
 import ca.bradj.questown.mobs.helperchicken.ChickenBeatState;
-import ca.bradj.questown.mobs.helperchicken.HelperChickenBeatOffsets;
 import ca.bradj.questown.mobs.visitor.TownieNeed;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.entity.TownFlags;
@@ -138,16 +136,18 @@ public class QtDevInspectCommand {
     }
 
     /**
-     * The chicken's current beat. Narrated two ways: first as the chicken's
-     * observed behavior (the new-player vantage the command is meant to be),
-     * then as the agent's actionable guidance - the action a new player would
-     * do, the concrete place it goes, and, where no console action can do the
-     * beat, a plain "needs a player" note. The two are drawn from the same
-     * {@link AgentBeatGuidance} source as {@code _qtdev help} so they cannot
-     * drift, and so the agent is never routed to an observable-only line
-     * ambiguous enough to push it into a code-derived substitute (the job-board
-     * for a sign gap). See the filed issues under
-     * .scratch/chicken-arc-campfire-sleep/.
+     * The chicken's current beat. This is the chicken's observed behavior - the
+     * new-player vantage the command is meant to be - plus what is in the player's
+     * hand. It is hand-holding (the chicken points at something and the player
+     * watches what happens), not an answer: it never prints what the town wants
+     * (the {@code to do}), the exact action or its place (the {@code how} / {@code where}),
+     * or a "needs a live player" note. Those are behind the curtain; a player reads
+     * the world (the quest, the room, the villager's need) and decides, and the
+     * actionable guidance lives in the {@code _qtdev help} cheatsheet, not here. The
+     * old version printed the actionable guidance off the same {@link AgentBeatGuidance}
+     * source as {@code _qtdev help}, so it could not drift - but drifting was the
+     * point, a hand-holding cue that told the agent the answer instead of letting it
+     * read the world. See the filed issues under .scratch/chicken-arc-campfire-sleep/.
      */
     private static int runChicken(CommandSourceStack source, BlockPos pos) {
         TownFlagBlockEntity flag = flagAt(pos);
@@ -172,31 +172,12 @@ public class QtDevInspectCommand {
             return 0;
         }
         QT.FLAG_LOGGER.info("[_qtdev inspect] {}", chickenBehavior(flag, state));
-        AgentBeatGuidance.Guidance guidance = AgentBeatGuidance.forBeat(state);
         // The player's held item, the way a new player looks down at their own hand.
         // This is the eye a blind _qtdev clickheld lacks: it acts with whatever is
         // held, so the agent must be able to see what that is and correct it, rather
         // than retry clickheld at new spots hoping the held item is the one the beat
         // wants. A no-op clickheld is usually "wrong hand," not "wrong spot."
         printHeld(source, flag);
-        if (guidance != null) {
-            QT.FLAG_LOGGER.info("[_qtdev inspect] to do: {}", guidance.need());
-            QT.FLAG_LOGGER.info("[_qtdev inspect] how:   {}", guidance.how());
-            String place = whereToAct(flag, state);
-            if (place != null) {
-                QT.FLAG_LOGGER.info("[_qtdev inspect] where: {}", place);
-            }
-            if (needsLivePlayer(state)) {
-                QT.FLAG_LOGGER.info("[_qtdev inspect] gap:   this beat needs a live player (no console "
-                        + "action can do it); do not substitute a code-derived action.");
-            } else if (state == ChickenBeatState.WAITING_FOR_VILLAGER_UI) {
-                QT.FLAG_LOGGER.info("[_qtdev inspect] use:   _qtdev inspect <flag> villagers "
-                        + "to look at a villager and advance this beat.");
-            } else if (state == ChickenBeatState.WAITING_FOR_FLAG_UI) {
-                QT.FLAG_LOGGER.info("[_qtdev inspect] use:   _qtdev inspect <flag> "
-                        + "to look at the flag menu and advance this beat.");
-            }
-        }
         return 0;
     }
 
@@ -216,75 +197,6 @@ public class QtDevInspectCommand {
         net.minecraft.world.item.ItemStack held = player.getMainHandItem();
         QT.FLAG_LOGGER.info("[_qtdev inspect] held: {}",
                 held.isEmpty() ? "(empty)" : held.getHoverName().getString());
-    }
-
-    /**
-     * Beats a held run can drive only from a live player, not from the console
-     * command set: opening a villager's or the flag's menu (the agent has no
-     * menu-open action), and handing the Worldly Seeds to the chicken. The
-     * campfire-sleep beat is NOT here: its clock skip is an agent action
-     * (`time set`), so it is not a pure player beat. Surfacing the gap plainly
-     * is what keeps the agent from filling it with a code-derived substitute
-     * (the job-board-for-a-sign gap) - see .scratch/chicken-arc-campfire-sleep/.
-     */
-    private static boolean needsLivePlayer(ChickenBeatState state) {
-        return state == ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY;
-    }
-
-    /**
-     * The concrete place the current beat acts, in the world. Points the agent
-     * at the block the chicken pecks at (the real location a new player would
-     * act on), and - for the beats that act inside a registered room - tells
-     * the agent to register the room first when none is, instead of assuming a
-     * registered room already exists. Returns null for beats with no single
-     * world target (the campfire sleep, the UI opens).
-     */
-    private static String whereToAct(TownFlagBlockEntity flag, ChickenBeatState state) {
-        BlockPos target = HelperChickenBeatOffsets.resolveTarget(state, flag.getTownFlagBasePos(),
-                flag.getChickenStructureRotation());
-        if (target == null) {
-            return null;
-        }
-        boolean noRoom = flag.getRoomHandle().getAllRegisteredDoors().isEmpty();
-        return switch (state) {
-            // These act inside a registered room; if none is registered the block
-            // the chicken pecks at is not yet a room, so say so instead of
-            // pointing at an empty cell.
-            case WAITING_FOR_SIGN -> {
-                // A registered door with no room is a dead door (ADR-0011); the cell the
-                // chicken pecks at is rotation-anchored and is not the room, so surface the
-                // trouble and, for NO_RECIPE, where the room actually is.
-                String deadDoor = deadDoorGuidance(flag);
-                if (deadDoor != null) {
-                    yield deadDoor;
-                }
-                if (noRoom) {
-                    yield "no room is registered yet - register the room's door first "
-                            + "(right-click the door with the town wand, or use the register-room "
-                            + "command), then put a sign inside it.";
-                }
-                yield "the registered room - put a sign inside it (the chicken pecks at "
-                        + target.toShortString() + ").";
-            }
-            case WAITING_FOR_CHEST -> {
-                // The chicken brings and drops the chest itself; the player only needs to
-                // stand in the room to watch it (the worked example), so never read this as
-                // "put a chest". No behind-the-curtain terms (container / recipe).
-                yield "the room the chicken is standing in - stand in it and watch the "
-                        + "chicken drop a chest there.";
-            }
-            case WAITING_FOR_WALL_BLOCK ->
-                    "the gap the chicken pecks at (" + target.toShortString() + ")";
-            case WAITING_FOR_DOOR, WAITING_FOR_WAND_ON_DOOR ->
-                    "the door at " + target.toShortString();
-            case WAITING_FOR_ROOM_BUILD ->
-                    "the door the chicken is building a room around (" + target.toShortString() + ")";
-            case WAITING_FOR_PRESSURE_PLATE ->
-                    "the gate at " + target.toShortString()
-                            + " (craft the welcome mat at the flag first)";
-            default ->
-                    null;
-        };
     }
 
     /**
@@ -312,8 +224,9 @@ public class QtDevInspectCommand {
                     + "[Come back at night and sleep on the campfire with the wand]";
             case WAITING_FOR_WALL_BLOCK -> "The chicken pecks at a gap in the wall. [Put a solid "
                     + "block in the gap the chicken pecks at]";
-            case WAITING_FOR_DOOR -> "The chicken pecks at a gap in the wall. [Put a door in the "
-                    + "gap the chicken pecks at]";
+            case WAITING_FOR_DOOR -> "The chicken points at a spot near the flag. [Put a door "
+                    + "near the flag - _qtdev place_door with no coordinate drops it in the "
+                    + "right spot]";
             case WAITING_FOR_WAND_ON_DOOR -> holdsWand
                     ? "The chicken looks at the door, then at your town wand. [Use the town wand "
                             + "on the door]"
@@ -453,29 +366,6 @@ public class QtDevInspectCommand {
                         QT.FLAG_LOGGER.info("[_qtdev inspect]     room range: {}", r));
             }
         }
-    }
-
-    /**
-     * For the sign/chest beats, if a registered door has no room the beat can not
-     * be met at the rotation-anchored cell the chicken pecks at. Returns a
-     * guidance string naming the trouble and, for NO_RECIPE, the room's position
-     * range (where the block must go); null when every registered door has a room.
-     */
-    private static String deadDoorGuidance(TownFlagBlockEntity flag) {
-        for (var e : flag.getDeadDoors().entrySet()) {
-            DoorTrouble trouble = e.getValue();
-            String at = "the door at " + e.getKey().toShortString();
-            if (trouble == DoorTrouble.NO_RECIPE) {
-                String range = flag.getRoomRangeForDoor(e.getKey())
-                        .map(r -> "the room is " + r + " - put the sign/chest inside it")
-                        .orElse("the room has no position range");
-                return at + " has no recipe-matched room (its contents match no recipe); "
-                        + range;
-            }
-            return at + " is not enclosed (walls or roof incomplete) - build the room "
-                    + "around it first, then put the sign/chest inside it.";
-        }
-        return null;
     }
 
     // --- helpers ---

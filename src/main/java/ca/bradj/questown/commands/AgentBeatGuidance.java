@@ -68,17 +68,17 @@ final class AgentBeatGuidance {
                     "The chicken wants a block in one specific gap, signalled only by where it pecks. A "
                             + "player who can not find the gap can not tell what is wanted.");
             case WAITING_FOR_DOOR -> new Guidance(
-                    "Put a door in the wall gap the chicken is pointing at.",
-                    "Place a full door (both halves) in the gap the chicken is pecking "
-                            + "at with `_qtdev place_door <gap pos>`. Do not use `setblock`: it "
-                            + "lays only the lower half of a door, leaving a one-block gap that "
-                            + "then gets roofed over and breaks the door.",
-                    "As with the wall, the door goes in one gap signalled only by the chicken's "
-                            + "peck. Progress is invisible until the chicken notices - legibility "
-                            + "depends on watching it. A door is two blocks; `setblock` puts only "
-                            + "one, so it leaves a gap rather than a door and the beat never "
-                            + "advances. `place_door` lays both halves the way a player using a "
-                            + "door item would.");
+                    "Put a door near the flag.",
+                    "Place a full door (both halves) near the flag with `_qtdev place_door` "
+                            + "(no coordinate places it at the door spot for you). Do not use "
+                            + "`setblock`: it lays only the lower half of a door, leaving a "
+                            + "one-block gap that then gets roofed over and breaks the door.",
+                    "The door beat only needs a DoorBlock at the door spot; `_qtdev place_door` "
+                            + "with no coordinate drops it there, so the agent need not find the "
+                            + "chicken's peck. A door is two blocks; `setblock` puts only one, so "
+                            + "it leaves a gap rather than a door and the beat never advances. "
+                            + "`place_door` lays both halves the way a player using a door item "
+                            + "would.");
             case WAITING_FOR_WAND_ON_DOOR -> new Guidance(
                     "Mark the door to register the room.",
                     "Right-click the door with the town wand to register the room it stands in.",
