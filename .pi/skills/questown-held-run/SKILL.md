@@ -306,15 +306,16 @@ Do **not** report "done" when the arc ends.
 
 - The arc's last beat (`AWAITING_WORLDLY_SEEDS_DELIVERY`) is a **gap** the
   command set cannot perform: it needs a live player to hand the Worldly Seeds
-  to the chicken. The chicken now shows this in-world (it goes to the welcome
-  mat and waits for the gatherer, whose first loot includes the seeds), so the
-  gap reads as "the gatherer is out," not as a dead end. A gap pauses the
-  *arc*, not the *run*. Keep observing the world past it: read the observe
-  cycles, the town's chat, and `_qtdev inspect` for new needs, jobs, and quest
-  changes. The open `ROOM` quests each need their own room; a `UNMET_ITEM` need
-  clears through the townie's job or a real supply, not a command — keep
-  observing and driving what you can (build the room, supply the real way), not
-  the onboarding.
+  to the chicken. But the chicken no longer tells the agent to wait — its
+  `_qtdev inspect chicken` line now points back at the flag and names the open
+  room quest ("a room quest is still open - build a room for it"), so the gap
+  reads as a concrete next action, not a dead end. A gap pauses the *arc*, not
+  the *run*. Keep observing the world past it: read the observe cycles, the
+  town's chat, and `_qtdev inspect` for new needs, jobs, and quest changes. The
+  open `ROOM` quests each need their own room; a `UNMET_ITEM` need clears
+  through the townie's job or a real supply, not a command — keep observing
+  and driving what you can (build the room, supply the real way), not the
+  onboarding.
 - "The chicken stopped guiding" is a hand-holding cue ending, not a stop signal.
   Switch to observing the town's own observable state (roster, jobs, needs,
   quests open/done) and keep driving what you can with the command set.
