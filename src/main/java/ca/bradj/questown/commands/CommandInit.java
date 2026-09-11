@@ -48,5 +48,6 @@ public class CommandInit {
         QtDevClickCommand.register(event.getDispatcher());
         FlagPlacePlayerCommand.register(event.getDispatcher());
         FreeFoodCommand.register(event.getDispatcher());
+        FlagPlaceBlockCommand.register(event.getDispatcher());
     }
 }
