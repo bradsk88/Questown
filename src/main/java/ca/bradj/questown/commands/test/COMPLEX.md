@@ -151,6 +151,30 @@ fire. Verified run: `store_room`/`job_board`/`town_gate` all stayed open after
 initial detection, completed on re-detection/re-placement, and the roster then
 went 1→2 via `SpawnVisitorReward`.
 
+**A sign in a registered room converts to a job board, but only when the
+`job_board` recipe enters the match.** The sign→job-board conversion
+(`TownWorldInteraction.swapJobBoardSign`) is wired into the flag's recipe
+`created` **and** `changed` events (`TownFlagBlockEntity`), not into the
+quest-completion path. A sign completes the `job_board` **quest** whenever the
+room matches the recipe (the quest is exact-match on the top match); the
+conversion is a separate side effect that must fire on the event that carries
+the sign into the match. The two can diverge: in a room whose top match is
+another recipe (a chest's `store_room`), adding a sign makes the room match
+*both* recipes, but the top match stays `store_room`, so the event is a
+`roomRecipeChanged` (not `created`). Conversion used to run only on
+`roomRecipeCreated`, so in that case the quest completed but the sign stayed an
+`oak_sign` (the work handle's `hasAtLeastOneBoard()` stayed false, and the
+chicken's `WAITING_FOR_SIGN` beat never advanced). Running `swapBlocks` on
+`roomRecipeChanged` too fixes it: `swapJobBoardSign` only swaps *sign* blocks,
+so it is idempotent and does not touch an already-converted board. Verified run:
+chest-in-room + sign now converts (the beat advances, the board registers).
+
+Note (cosmetic signs): this converts *any* sign a player places in a
+recipe-matching room, so a decorative sign in a store room becomes a job board.
+This is why the job board is planned to become a `RoomBlock` itself (see
+`.scratch/job-board-room-block/`); once it is a block placed by its own item, a
+sign no longer needs to be swapped in, and this conversion path can be dropped.
+
 **An `UNMET_ITEM` need re-sets every flag-tick; a deposit only clears it if the
 job scores > 0.** `TownPossibleWork` raises `UNMET_ITEM` whenever a job scores 0
 (`registerUnmetNeeds`) and clears it when a viable job exists
