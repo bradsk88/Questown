@@ -194,6 +194,18 @@ public final class ChickenArcConditions {
     }
 
     public static boolean isSignConvertedToJobBoard(TownFlagBlockEntity flag) {
+        // A placed job board registers in the flag's work handle (the same way
+        // a placed welcome mat registers in pois and isWelcomeMatPlaced reads it
+        // via getWelcomeMats). The sign -> job-board conversion installs the board
+        // via setBlockAndUpdate and registers it in the work handle, but the board
+        // also becomes its own block-room, so it is not in the matched walled room's
+        // contained blocks; reading only anyMatchedRoomContains misses it and the beat
+        // stalls even though the board is placed and the job_board quest completes.
+        // Checking the work handle's registration (hasAtLeastOneBoard) is the reliable
+        // signal, mirroring isWelcomeMatPlaced.
+        if (flag.getWorkHandle().hasAtLeastOneBoard()) {
+            return true;
+        }
         return anyMatchedRoomContains(flag,
                 b -> b == BlocksInit.JOB_BOARD_BLOCK.get());
     }
