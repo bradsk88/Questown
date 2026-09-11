@@ -729,6 +729,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             RoomRecipeMatch<MCRoom> newMatch
     ) {
         ServerLevel l = getServerLevel();
+        // A sign converts to a job board only in the created/changed events, not in the
+        // quest-completion path; run the swap on changed too so a sign in a room whose
+        // top match is another recipe (e.g. a store room) still converts when it joins the
+        // match. swapBlocks is idempotent (it only swaps sign blocks, not boards).
+        world.swapBlocks(l, newMatch);
         Optional<ResourceLocation> oldMatchID = getTopMatch(this::recipesFromLevel, oldMatch);
         Optional<ResourceLocation> newMatchID = getTopMatch(this::recipesFromLevel, newMatch);
         if (oldMatchID.isPresent() && newMatchID.isPresent() && !oldMatchID.equals(newMatchID)) {
