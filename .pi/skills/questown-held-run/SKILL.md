@@ -125,7 +125,11 @@ kill -9 $(pgrep -f 'sleep 999999')          # the FIFO writers
 ```
 
 Re-check with `pgrep -af '[f]orgeserveruserdev'` and `pgrep -af 'sleep
-999999'` after — a held server can outlive the `pkill`.
+999999'` after. The held server catches SIGTERM, so it can outlive the
+`pkill` - if `pgrep -af '[f]orgeserveruserdev'` still prints a pid,
+`kill -9 <pid>` it directly (the `pkill -f` did not reach it) and re-check.
+Do not trust the `pkill` exit: confirm with the `pgrep` that the java
+child is actually gone before the next run.
 
 ## The observation cadence (~10s windows)
 
@@ -180,6 +184,15 @@ from `rooms=0` when the broadcast says it was. The recipe-change events
 conversions like sign->job-board) run only on a registered room, so a
 broadcast you read as "not registered" will make you skip the very
 mechanism you were debugging.
+
+To read what a broadcast *says*, the English strings live in
+`src/main/resources/assets/questown/lang/en_us.json` under
+`messages.building.*` and `messages.town_flag.*` (e.g.
+`messages.building.room_created`, `messages.building.recipe_created`,
+`messages.town_flag.quest_completed`, `messages.town_flag.quest_lost`).
+Do not build a second dictionary in this skill - grep the lang file for
+the key the log printed, and read the `messages.*` / `dialog.*` / `room.*`
+translation keys it carries.
 
 Also read each window:
 - client log: `grep -aE '\[CHAT\]' /tmp/village-client.log` (what the dev sees)
