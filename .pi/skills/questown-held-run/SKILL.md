@@ -261,6 +261,7 @@ not read code or a stale doc to decide which tool to try.
   `item`, not `items`) and needs the `CommandBuildContext` from
   `event.getBuildContext()`; resolve with `ItemArgument.getItem(ctx, "item").getItem()`.
 
+- **A held-item beat: the held item is whatever the player is holding, and `give` does not change it.** `give <player> <item>` puts the item in an empty inventory slot, **not** the hand, so `clickheld` (which uses `getMainHandItem`) still uses the old held item — the `give` looks like it worked ("Gave 1 [X]") but the hand is unchanged, and the beat won't advance. To use a held-item action (a campfire sleep, an item's use-on a block), the right item must be **in the hand**: `clickwand` puts a stick in the main hand and converts it to the town wand on the flag, or `clickheld <flag pos>` with a stick in hand consumes the stick and leaves the wand held. There is no `select`/`hand_to` command; do not `give` then `clickheld` expecting the give to set the hand.
 - **Smoke-test a command before the long boot cycle.** After registering/editing
   a command, send it once and confirm the log shows **no** `Incorrect argument`
   / `Expected whitespace ... trailing data` / `Cannot parse` line for it (a
