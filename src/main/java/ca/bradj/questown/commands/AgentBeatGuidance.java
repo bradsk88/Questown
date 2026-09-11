@@ -86,21 +86,27 @@ final class AgentBeatGuidance {
                             + "room being detected. A player may not know the action 'took.'");
             case WAITING_FOR_SIGN -> new Guidance(
                     "Put a sign in the registered room.",
-                    "Put a sign inside the registered room - it becomes a job board. "
-                            + "This is a block you place, not an action you perform with a held "
-                            + "item; the chicken's current hint may describe holding and using a "
-                            + "sign, but placing it is a block placement, not a click. If no room is "
-                            + "registered yet, register the door first (right-click the door with "
-                            + "the town wand) so the room exists before the sign counts.",
+                    "Place a sign inside the registered room with `_qtdev place_block <index> sign` - "
+                            + "it becomes a job board when the recipe matches. The command lists the "
+                            + "room's interior cells as indices, so you place into a cell the room "
+                            + "actually contains rather than a coordinate you guessed: a guessed "
+                            + "outside-the-room spot does not count, and one that lands on a wall "
+                            + "destroys the room (you must then rebuild it). If no room is registered "
+                            + "yet, register the door first (right-click the door with the town wand) "
+                            + "so the room exists before the sign counts.",
                     "A placed sign silently becomes a job board when the recipe matches - the change is "
                             + "invisible until then, so a player may not notice the sign 'did something.' "
                             + "A player may also place a sign before any room is registered and see no "
                             + "progress, with no obvious reason why.");
             case WAITING_FOR_CHEST -> new Guidance(
-                    "Put a chest in the registered room.",
-                    "Place a chest inside the registered room.",
-                    "The chest only counts inside the registered room; a chest elsewhere is ignored, so a "
-                            + "player placing a chest and seeing no progress has no obvious reason why.");
+                    "The chicken is placing a chest in the registered room.",
+                    "No action is needed; the chicken drops the chest itself, one beat at a time. Watch "
+                            + "it finish and the next beat begins. This is the chicken's beat, not a "
+                            + "block you place - do not place a chest yourself (a chest you place "
+                            + "yourself does not register as the room's contained block).",
+                    "Like the room-build beat, this one the player does not drive. A player may not "
+                            + "know the chicken is the one placing the chest, and may waste time trying "
+                            + "to place it while the chicken is meant to drop it.");
             case WAITING_FOR_ROOM_BUILD -> new Guidance(
                     "The chicken is building the room around the door.",
                     "No action is needed; the chicken is building the room itself, one block at a "
