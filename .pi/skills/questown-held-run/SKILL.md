@@ -201,11 +201,14 @@ not read code or a stale doc to decide which tool to try.
 - `_qtdev inspect <flag>` - the flag menu a player would see by right-clicking the flag: which tabs are shown (villagers, quests, economics, block of progress, crafting), with red-dots, and the static content. `_qtdev inspect <tab> <pos>` returns one tab (`villagers`, `quests`, `economy`, `blocks`, `crafting`). `_qtdev inspect chicken <pos>` narrates the current onboarding beat as the chicken's observed behavior (e.g. "The chicken looks at your town wand, then back to the flag base [Use the town wand on the flag base]"), keyed off the player's held item so the same beat reads differently in different states. This is the new-player vantage: it returns what a right-click shows, not the gate behind it - no internal state name, no condition line, no arc map. Use it to decide the next action; do not reach for `_qtdev help` (which prints the internal beat/`status`/map - the cheatsheet) or the removed `qt quests` / `_qtdev villagers` (which reach the quest board without going through the menu).
 - `_qtdev registerroom <x> <y> <z>` — register a door at the position, the way a
   player right-clicking a door with the town wand would.
-- `_qtdev place_door <x> <y> <z>` — place a **full** door (both halves) at the
-  position, the way a player using a door item on a block would. Use this to put
-  a door in a wall gap, **not** `setblock`: `setblock` lays only the lower half
-  of a door, leaving a one-block gap that then gets roofed over and breaks the
-  door.
+- `_qtdev place_door` (no coordinate) or `_qtdev place_door <x> <y> <z>` — place
+  a **full** door (both halves). With **no coordinate** it drops the door at the
+  chicken's door target (the door spot the door beat checks), so an agent that
+  can not see the chicken's peck can still land the door in the right place; with
+  a coordinate it places at that block, the way a player using a door item on a
+  block would. Use this for a door, **not** `setblock`: `setblock` lays only the
+  lower half of a door, leaving a one-block gap that then gets roofed over and
+  breaks the door.
 - `_qtdev deposit <item> [count]` — put an item into a registered container, the
   way a player dropping an item into a chest would.
 - `_qtdev place_mat <x> <y> <z>` — place a welcome mat at the position.
@@ -234,9 +237,16 @@ not read code or a stale doc to decide which tool to try.
   `_qtdev inspect chicken <pos>` shows the chicken is not guiding; do not decide
   from where the flag came from. Bypasses the rotation-detection/forfeit gates;
   the individual beats still need their real conditions.
-- Vanilla (also from the FIFO/console): `tp <x> <y> <z>` (teleport),
-  `time set <ticks>` (set the time of day, 0–24000), `setblock <x> <y> <z>
-  <block>` (set a block), `qt tp` (jump to the nearest flag). For a **door**, use
+- Vanilla (also from the FIFO/console): `tp <player> <x> <y> <z>` (teleport the
+  named player), `time set <ticks>` (set the time of day, 0–24000),
+  `setblock <x> <y> <z> <block>` (set a block), `qt tp` (jump the player to the
+  nearest flag).
+  **A bare `tp <x> <y> <z>` (no player target) silently no-ops from a console
+  source** — it has no player to move, so the command appears to run but the
+  player never moves, and there is no log line to tell you it failed. Always
+  target a player (`tp dev <x> <y> <z>`, or `tp @s`). This bit the chest beat:
+  the chicken's "stand in the room" guidance was unmet the whole time because
+  the teleport never happened, and it looked like an unbreakable dead end. For a **door**, use
   `_qtdev place_door`, not `setblock` (see above): `setblock` only lays the lower
   half of a door.
 - **Arg types: use `ItemArgument`/`BlockPosArgument`, not `StringArgumentType
@@ -260,6 +270,24 @@ not read code or a stale doc to decide which tool to try.
 Before re-implementing a player action in a command, check this set — a command
 may already exist. A command that takes a `pos` takes it as a literal argument,
 not a derived one (nearest flag, manhattan distance).
+
+## Past onboarding is not "done"
+
+The chicken-arc (the helper-chicken onboarding) finishing is **not** the end of
+the run. When the last onboarding beat is done, the town keeps running: townies
+keep cycling jobs and surfacing needs, quests stay open, the flag keeps ticking.
+Do **not** report "done" when the arc ends.
+
+- The arc's last beat may be a **gap** (a beat that needs a live player the
+  command set cannot perform, e.g. `AWAITING_WORLDLY_SEEDS_DELIVERY`). A gap
+  pauses the *arc*, not the *run*. Keep observing the world past it: read the
+  observe cycles, the town's chat, and `_qtdev inspect` for new needs, jobs,
+  and quest changes.
+- "The chicken stopped guiding" is a hand-holding cue ending, not a stop signal.
+  Switch to observing the town's own observable state (roster, jobs, needs,
+  quests open/done) and keep driving what you can with the command set.
+- Only stop (or check in as a true dead end) after the **town** shows no
+  progress across several observe cycles, not after the **arc** ends.
 
 ## Check-ins (the only time to propose a code change)
 
