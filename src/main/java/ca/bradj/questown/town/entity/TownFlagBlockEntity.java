@@ -33,6 +33,7 @@ import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mobs.helperchicken.ChickenRoomShellPlan;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.econ.NoMCEconomics;
@@ -1084,6 +1085,48 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 ca.bradj.questown.core.init.BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState();
         level.setBlockAndUpdate(pos, state);
         registerJobsBoard(pos);
+    }
+
+    /**
+     * Lay a room shell around a door at {@code pos}, the way the helper chicken does in its
+     * room-build beat, but driven from the console (no chicken to lay it). A room quest needs
+     * its own room, and the only hand that builds a room is the chicken's beat, which a held run
+     * with no live player cannot trigger; this is the agent's standing-in for that beat. The
+     * layout is the same pure plan the chicken uses ({@link ca.bradj.questown.mobs.helperchicken
+     * .ChickenRoomShellPlan}), so the perimeter it lays is the one RoomRecipes' wall walk accepts
+     * (a closed box, not a plus). The door is registered first so the room scan attaches the shell
+     * to it, then the perimeter is laid at feet and head ({@code WallDetection.IsWall} reads a
+     * wall when solid at both levels), leaving the interior open so a villager can stand in it.
+     */
+    public void buildRoom(BlockPos doorPos) {
+        ServerLevel level = getServerLevel();
+        if (level == null) {
+            return;
+        }
+        // Register the door first so the room scan attaches the shell to it (the chicken's build
+        // goal builds around an already-registered door). A door that is already registered is a
+        // no-op here, so re-running is safe.
+        getRoomHandle().registerDoor(doorPos);
+        int baseY = getBlockPos().getY() + (doorPos.getY() - getBlockPos().getY());
+        // The door may sit at the flag's height or a scan level offset; the shell builds at the
+        // door's own height so a door registered off the flag's Y still gets its room.
+        ChickenRoomShellPlan.DoorFrame frame = ChickenRoomShellPlan.frameFor(
+                doorPos, baseY, p -> !level.getBlockState(p).isAir()
+        );
+        ChickenRoomShellPlan.Plan plan = ChickenRoomShellPlan.plan(
+                frame, p -> !level.getBlockState(p).isAir(), java.util.Set.of()
+        );
+        int laid = 0;
+        for (ChickenRoomShellPlan.BlockStep step : plan.steps()) {
+            if (level.getBlockState(step.pos()).isAir()) {
+                level.setBlockAndUpdate(step.pos(), net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState());
+                laid++;
+            }
+        }
+        QT.FLAG_LOGGER.info(
+                "[build_room] laid {} shell blocks around door {} for flag {}",
+                laid, doorPos, getBlockPos()
+        );
     }
 
     /**

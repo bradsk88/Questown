@@ -42,6 +42,7 @@ public class CommandInit {
         FlagCraftCommand.register(event.getDispatcher());
         FlagPlaceBoardCommand.register(event.getDispatcher());
         FlagPlaceDoorCommand.register(event.getDispatcher());
+        FlagBuildRoomCommand.register(event.getDispatcher());
         QtDevHelpCommand.register(event.getDispatcher());
         QtDevSpawnChickenCommand.register(event.getDispatcher());
         QtDevClickCommand.register(event.getDispatcher());
