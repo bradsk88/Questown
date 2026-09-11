@@ -314,6 +314,13 @@ public class QtDevInspectCommand {
                         "[_qtdev inspect]     each room quest needs its own room - put this quest's "
                                 + "recipe block in a room built for it, not the room for another "
                                 + "quest.");
+                if (q.status == Quest.QuestStatus.ACTIVE) {
+                    QT.FLAG_LOGGER.info(
+                            "[_qtdev inspect]     create the room with _qtdev build_room <door pos>: "
+                                + "register a door and lay a room shell around it, the way the "
+                                + "helper chicken builds one, then put this quest's recipe block "
+                                + "inside.");
+                }
             }
         }
         if (!any) {
