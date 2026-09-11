@@ -245,9 +245,8 @@ public class QtDevInspectCommand {
             case WAITING_FOR_VILLAGER_UI -> "The chicken looks at a villager in the town. [Look at "
                     + "a villager]";
             case WAITING_FOR_FLAG_UI -> "The chicken looks at the flag. [Look at the flag]";
-            case AWAITING_WORLDLY_SEEDS_DELIVERY -> "The chicken goes to the welcome mat and waits, "
-                    + "pecking at where the gatherer stands. [The gatherer is out - wait for it to "
-                    + "return with its first loot, which includes the Worldly Seeds]";
+            case AWAITING_WORLDLY_SEEDS_DELIVERY -> "The chicken looks back at the flag. [A "
+                    + "room quest is still open - build a room for it]";
             case COMPLETE, FORFEIT -> "";
         };
     }

@@ -140,15 +140,15 @@ final class AgentBeatGuidance {
                     "Opening the flag's menu is the step, but a player may have used the flag before and "
                             + "not realise opening its menu is the onboarding action.");
             case AWAITING_WORLDLY_SEEDS_DELIVERY -> new Guidance(
-                    "The chicken waits at the welcome mat for the gatherer.",
-                    "The gatherer's first loot includes the Worldly Seeds, and the gatherer is out. The "
-                            + "chicken waits at the welcome mat for it to return; there is no agent-side "
-                            + "action to advance this beat. The onboarding is over here - keep observing "
-                            + "the town: its open quests (each room quest needs its own room) and its "
-                            + "villagers' needs, not the onboarding.",
-                    "The seeds come from the gatherer's loot, so a player who sees the chicken waiting at "
-                            + "the mat and does not see the gatherer may read the town as stuck when it is "
-                            + "only waiting for the gatherer to return with its first loot.");
+                    "A room quest is still open - build a room for it.",
+                    "The onboarding is over, but the town still has open room quests. Each room quest "
+                            + "needs its own room - register a door, lay a shell around it, and put the "
+                            + "quest's recipe block inside. The chicken now points back at the flag, not "
+                            + "the welcome mat, so keep driving the town's open quests, not the onboarding.",
+                    "The chicken now points back at the flag and names the open room quest, so a player "
+                            + "who finishes the onboarding still has a visible next action instead of a "
+                            + "town that looks stuck. A player may otherwise read the mat-waiting chicken "
+                            + "as a sign the town is done.");
             case COMPLETE, FORFEIT -> null;
         };
     }
