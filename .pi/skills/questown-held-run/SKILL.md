@@ -138,7 +138,7 @@ blocking**. Act on the current output, not a pre-baked plan.
 **Confirm against the latest observe cycle, not the last line you grepped.**
 Observe lines and the need/job lines interleave, and a line you grepped a
 window ago is not the current state. Before reporting a townie's need or job
-status, read the most recent `--- observe ---` cycle (or a fresh `_qtdev inspect <flag>` / `_qtdev inspect villagers <pos>`) so
+status, read the most recent `--- observe ---` cycle (or a fresh `_qtdev inspect <pos>` / `_qtdev inspect villagers <pos>`) so
 a need that cleared a window later is not reported as still open. When the dev
 (as a live observer) says a state is not what the log shows, the log is the
 stale one — re-read, do not argue the old line.
@@ -151,12 +151,14 @@ available! Right-click the town flag"). Each window read both:
   (proof the town sent it)
 - client log: `grep -aE '\[CHAT\]' /tmp/village-client.log` (what the dev sees)
 - observe lines: `grep -aE '\[village\] (KNOWN|UNCLEAR)' /tmp/village-server.log`
-- quest/villager detail: `_qtdev inspect <flag>` / `_qtdev inspect quests <pos>` / `_qtdev inspect villagers <pos>`
+- quest/villager detail: `_qtdev inspect <pos>` / `_qtdev inspect quests <pos>` / `_qtdev inspect villagers <pos>` (the tab literal comes *before* the pos; `_qtdev inspect <pos> villagers` does not parse)
 
 **The broadcast is not proof a quest completed.** It fires on room
 re-creation, not on completion; a `recipe_created`/`quest_completed` broadcast
 can appear while the quest is still open. Verify completion against the done
-list / `_qtdev inspect quests <pos>`, not the broadcast.
+list / `_qtdev inspect quests <pos>`, not the broadcast. A `ROOM` quest needs its
+own room (put the recipe block in a room built for that quest); the quests tab
+says so, but a new player can miss that each quest wants a distinct room.
 
 ## The console command set (the agent's hands)
 
@@ -278,11 +280,15 @@ the run. When the last onboarding beat is done, the town keeps running: townies
 keep cycling jobs and surfacing needs, quests stay open, the flag keeps ticking.
 Do **not** report "done" when the arc ends.
 
-- The arc's last beat may be a **gap** (a beat that needs a live player the
-  command set cannot perform, e.g. `AWAITING_WORLDLY_SEEDS_DELIVERY`). A gap
-  pauses the *arc*, not the *run*. Keep observing the world past it: read the
-  observe cycles, the town's chat, and `_qtdev inspect` for new needs, jobs,
-  and quest changes.
+- The arc's last beat (`AWAITING_WORLDLY_SEEDS_DELIVERY`) is a **gap** the
+  command set cannot perform: it needs a live player to hand the Worldly Seeds
+  to the chicken. The chicken now shows this in-world (it goes to the welcome
+  mat and waits for the gatherer, whose first loot includes the seeds), so the
+  gap reads as "the gatherer is out," not as a dead end. A gap pauses the
+  *arc*, not the *run*. Keep observing the world past it: read the observe
+  cycles, the town's chat, and `_qtdev inspect` for new needs, jobs, and quest
+  changes. The open quests (each `ROOM` quest needs its own room) and the
+  townies' needs are the town's next work - keep driving them, not the onboarding.
 - "The chicken stopped guiding" is a hand-holding cue ending, not a stop signal.
   Switch to observing the town's own observable state (roster, jobs, needs,
   quests open/done) and keep driving what you can with the command set.

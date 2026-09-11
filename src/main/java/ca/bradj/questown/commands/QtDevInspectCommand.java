@@ -245,8 +245,9 @@ public class QtDevInspectCommand {
             case WAITING_FOR_VILLAGER_UI -> "The chicken looks at a villager in the town. [Look at "
                     + "a villager]";
             case WAITING_FOR_FLAG_UI -> "The chicken looks at the flag. [Look at the flag]";
-            case AWAITING_WORLDLY_SEEDS_DELIVERY -> "The chicken looks at the Worldly Seeds, then "
-                    + "at you. [Give the Worldly Seeds to the chicken]";
+            case AWAITING_WORLDLY_SEEDS_DELIVERY -> "The chicken goes to the welcome mat and waits, "
+                    + "pecking at where the gatherer stands. [The gatherer is out - wait for it to "
+                    + "return with its first loot, which includes the Worldly Seeds]";
             case COMPLETE, FORFEIT -> "";
         };
     }
@@ -308,6 +309,12 @@ public class QtDevInspectCommand {
             any = true;
             QT.FLAG_LOGGER.info("[_qtdev inspect]   {} wants {} ({} x{})",
                     q.status, q.getWantedId(), explain(q), q.getIngredients().size());
+            if (q.getType() == Quest.QuestType.ROOM) {
+                QT.FLAG_LOGGER.info(
+                        "[_qtdev inspect]     each room quest needs its own room - put this quest's "
+                                + "recipe block in a room built for it, not the room for another "
+                                + "quest.");
+            }
         }
         if (!any) {
             QT.FLAG_LOGGER.info("[_qtdev inspect]   no quests");

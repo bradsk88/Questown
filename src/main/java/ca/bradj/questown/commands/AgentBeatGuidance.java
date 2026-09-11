@@ -123,22 +123,26 @@ final class AgentBeatGuidance {
                             + "expecting the beat to resolve on its own.");
             case WAITING_FOR_VILLAGER_UI -> new Guidance(
                     "Look at a villager.",
-                    "Right-click a villager to open its menu, or use `_qtdev inspect <flag> villagers` "
+                    "Right-click a villager to open its menu, or use `_qtdev inspect villagers <flag> `"
                             + "to look at the villager and advance this beat.",
                     "Opening a villager's menu is the onboarding step, but players interact with villagers "
                             + "for other reasons too - the action is not marked as special.");
             case WAITING_FOR_FLAG_UI -> new Guidance(
                     "Look at the flag.",
                     "Right-click the flag to open its menu, or use `_qtdev inspect <flag>` "
-                            + "to look at the flag menu and advance this beat.",
+                            + "(the flag menu itself) to look at the menu and advance this beat.",
                     "Opening the flag's menu is the step, but a player may have used the flag before and "
                             + "not realise opening its menu is the onboarding action.");
             case AWAITING_WORLDLY_SEEDS_DELIVERY -> new Guidance(
-                    "Hand the Worldly Seeds to the chicken.",
-                    "Right-click the chicken while holding the Worldly Seeds. Leaving them in a chest does "
-                            + "not count. No agent-side action does this; it needs a player. Likely a stumbling point.",
-                    "The seeds must be handed to the chicken, not merely left in a chest - a subtle "
-                            + "distinction a player may miss when the chest already 'has' the seeds.");
+                    "The chicken waits at the welcome mat for the gatherer.",
+                    "The gatherer's first loot includes the Worldly Seeds, and the gatherer is out. The "
+                            + "chicken waits at the welcome mat for it to return; there is no agent-side "
+                            + "action to advance this beat. The onboarding is over here - keep observing "
+                            + "the town: its open quests (each room quest needs its own room) and its "
+                            + "villagers' needs, not the onboarding.",
+                    "The seeds come from the gatherer's loot, so a player who sees the chicken waiting at "
+                            + "the mat and does not see the gatherer may read the town as stuck when it is "
+                            + "only waiting for the gatherer to return with its first loot.");
             case COMPLETE, FORFEIT -> null;
         };
     }
