@@ -1148,8 +1148,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
         // Register the door first so the room scan attaches the shell to it (the chicken's build
-        // goal builds around an already-registered door). A door that is already registered is a
-        // no-op here, so re-running is safe.
+        // goal builds around the first registered door, and none when there is none). A door that
+        // is already registered already has a room built around it, so building around it again
+        // would lay a second shell over the first - two rooms sharing a wall with no way out. A
+        // quest that needs its own room needs a new door, not this one.
+        int scanLevel = doorPos.getY() - getBlockPos().getY();
+        if (getRoomHandle().getAllRegisteredDoors().contains(
+                new ca.bradj.questown.town.rooms.TownPosition(doorPos.getX(), doorPos.getZ(), scanLevel)
+        )) {
+            QT.FLAG_LOGGER.warn(
+                    "[build_room] door {} already has a room built around it; a quest that needs its "
+                            + "own room needs a new door, not this one",
+                    doorPos
+            );
+            return;
+        }
         getRoomHandle().registerDoor(doorPos);
         int baseY = getBlockPos().getY() + (doorPos.getY() - getBlockPos().getY());
         // The door may sit at the flag's height or a scan level offset; the shell builds at the
