@@ -45,8 +45,13 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
    build/classes/java/main/ca/bradj/questown/logic/RoomRecipes.class`. Do
    **not** `./gradlew clean` (it wipes the ForgeGradle-decompiled Minecraft
    classes; a plain `compileJava` cannot re-fetch them).
-2. Kill stale: `pkill -9 -f '[f]orgeserveruserdev'`, `pkill -9 -f 'runClient'`,
-   `pkill -9 -f 'sleep 999999'`.
+2. Kill *stale, by pid* (not by the shared `runClient`/`runServer` pattern —
+   that also matches the dev's own gradle tab in another terminal). The held
+   server and its FIFO writer are the stale bits from a prior run:
+   `kill -9 $(pgrep -f 'sleep 999999')` (the writer) and, if a held server is
+   still up, `kill -9 $(pgrep -f '[f]orgeserveruserdev')`. Do **not**
+   `pkill -f 'runClient'`/`'runServer'` here — step 5's client is *this*
+   session's, and the dev's tab is not yours to kill.
 3. Launch the FIFO writer **first, in its own call**, verify it is alive, then
    launch the server in a **separate** call. A `sleep` or a second background job
    in the *server's* call kills the server ("no output", no process, no log — the
@@ -115,21 +120,34 @@ done) **kill the server and the FIFO writers** — a held server catches SIGTERM
 and survives `pkill`, so kill the java child directly. Leaving it running
 orphans a live server plus stale `sleep 999999` writers (the FIFO tangle that
 blocks the next run's console and makes the next session's `qt`/`time` commands
-fail):
+fail).
+
+**Kill the pids *you* launched, never by the shared pattern.** The dev runs
+their *own* `runClient`/`runServer` gradle task in a *separate terminal tab*
+that you are not watching. `pkill -9 -f 'runClient'` / `'runServer'` matches
+*any* process with that string — including the dev's tab — and drops it. The
+held `runServer` gradle wrapper (and the `runClient` wrapper you launched) may
+also already be dead by teardown time, so the pattern only ever finds the
+dev's tab. Kill by pid instead:
 
 ```sh
-pkill -9 -f 'runClient'
-pkill -9 -f 'runServer'
-kill -9 $(pgrep -f '[f]orgeserveruserdev')   # the held server survives pkill
-kill -9 $(pgrep -f 'sleep 999999')          # the FIFO writers
+# capture the pids at launch, into files (in the launch calls, after nohup):
+pgrep -af 'forgeserveruserdev' | head -1 | awk '{print $1}' > run/hold-server.pid
+pgrep -af 'sleep 999999' | grep -v pgrep | head -1 | awk '{print $1}' > run/hold-fifo.pid
+pgrep -af 'runClient' | grep -v pgrep | head -1 | awk '{print $1}' > run/hold-client.pid
+# teardown: kill only those pids, never pkill -f 'runClient'/'runServer':
+kill -9 $(cat run/hold-server.pid 2>/dev/null)   # the held java server (survives SIGTERM)
+kill -9 $(cat run/hold-fifo.pid 2>/dev/null)     # the FIFO writer
+kill -9 $(cat run/hold-client.pid 2>/dev/null)   # this session's client, not the dev's
 ```
 
-Re-check with `pgrep -af '[f]orgeserveruserdev'` and `pgrep -af 'sleep
-999999'` after. The held server catches SIGTERM, so it can outlive the
-`pkill` - if `pgrep -af '[f]orgeserveruserdev'` still prints a pid,
-`kill -9 <pid>` it directly (the `pkill -f` did not reach it) and re-check.
-Do not trust the `pkill` exit: confirm with the `pgrep` that the java
-child is actually gone before the next run.
+The held server catches SIGTERM, so it can outlive a `pkill`; kill it by the
+captured pid (or `pgrep -af '[f]orgeserveruserdev'` and `kill -9 <pid>`). The
+`runClient`/`runServer` *gradle wrappers* for *your* launch are ordinary
+processes a `kill -9` reaches — no need to `pkill` them by name, and that is
+what kills the dev's tab. Re-check with `pgrep -af '[f]orgeserveruserdev'`
+and `pgrep -af 'sleep 999999'` after; confirm the java child is actually gone
+before the next run.
 
 ## The observation cadence (~10s windows)
 
@@ -239,17 +257,19 @@ main driver, the dev a secondary observer. Trying a tool is not a peek. The
 tools are your hands, and reading each response is how you learn the game, so do
 not read code or a stale doc to decide which tool to try.
 
-**A `UNMET_ITEM` need is the job's domain, not a command.** A need for an item
-(mutton, a sword, food) clears because a townie's job *produces* it into the
-container its job block points at, or because a player leaves it in the storeroom
-the game shows you. There is no `_qtdev deposit` shortcut: the only container
-stand-in is `_qtdev free_food`, which covers the free-food beat only. Do not
-shortcut a need out of existence by dropping the item in a container yourself
-—that overwrites the very lesson the quest is teaching (the supply chain) and
-reads as success in a log that was never the right one. When the chicken's cue
-is "put X in the world," place the block the matching hand places it; when a need
-shows `UNMET_ITEM`, let the job run and watch whether it clears, the same way a
-player sees the need clear or not.
+**A `UNMET_ITEM` need is the job's domain, not a command - except the one item
+a player supplies.** A need for an item (mutton, food, and most others) clears
+because a townie's job *produces* it into the container its job block points at.
+Let that job run and watch whether the need clears, the same way a player sees it
+clear or not. The exception is an open item *quest* the player is meant to supply
+(the wooden sword): a new player clears it by leaving the item in the storeroom
+the game shows you, and that has a hand - `_qtdev supply_sword` (see below).
+`_qtdev free_food` covers the free-food beat only; it is not a general deposit.
+Do not invent other shortcuts: there is no `_qtdev deposit`, and dropping an item
+into a container for a *need* (not a player-supplied quest) overwrites the very
+lesson the quest is teaching (the supply chain) and reads as success in a log that
+was never the right one. When the chicken's cue is "put X in the world," place the
+block the matching hand places it.
 
 - `_qtdev inspect <flag>` - the flag menu a player would see by right-clicking the flag: which tabs are shown (villagers, quests, economics, block of progress, crafting), with red-dots, and the static content. `_qtdev inspect <tab> <pos>` returns one tab (`villagers`, `quests`, `economy`, `blocks`, `crafting`). `_qtdev inspect chicken <pos>` narrates the current onboarding beat as the chicken's observed behavior (e.g. "The chicken looks at your town wand, then back to the flag base [Use the town wand on the flag base]"), keyed off the player's held item so the same beat reads differently in different states. This is the new-player vantage: it returns what a right-click shows, not the gate behind it - no internal state name, no condition line, no arc map. Use it to decide the next action; do not reach for `_qtdev help` (which prints the internal beat/`status`/map - the cheatsheet) or the removed `qt quests` / `_qtdev villagers` (which reach the quest board without going through the menu).
 - `_qtdev registerroom <x> <y> <z>` — register a door at the position, the way a
@@ -294,6 +314,17 @@ campfire. When the chicken's hint is "put X in the world" (a door, a campfire,
   `_qtdev inspect chicken <pos>` shows the chicken is not guiding; do not decide
   from where the flag came from. Bypasses the rotation-detection/forfeit gates;
   the individual beats still need their real conditions.
+- `_qtdev supply_sword` - supply the one item quest a *player* clears: the open
+  `wooden_sword` quest. It deposits a wooden sword into a registered container
+  (the storeroom) - the real player path of leaving the item in the chest the
+  game shows you, not a magic clear, so the supply-chain lesson is preserved.
+  Scoped to the wooden sword only: every other item need is a townie's job, not a
+  command, so let those run instead. Use it only when an open item *quest* (not a
+  townie's `UNMET_ITEM` need) is the blocking thing and no townie job will produce
+  it; if it returns a "no registered container" line, the town has no storeroom yet
+  - that is a real dead end, not a no-op. After it, read the broadcast and confirm
+  completion against the done list / `_qtdev inspect quests <pos>`, not the
+  broadcast.
 - Vanilla (also from the FIFO/console): `tp <player> <x> <y> <z>` (teleport the
   named player), `time set <ticks>` (set the time of day, 0–24000),
   `setblock <x> <y> <z> <block>` (set a block), `qt tp` (jump the player to the
@@ -344,8 +375,9 @@ Do **not** report "done" when the arc ends.
   reads as a concrete next action, not a dead end. A gap pauses the *arc*, not
   the *run*. Keep observing the world past it: read the observe cycles, the
   town's chat, and `_qtdev inspect` for new needs, jobs, and quest changes. The
-  open `ROOM` quests each need their own room; a `UNMET_ITEM` need clears
-  through the townie's job or a real supply, not a command — keep observing
+  open `ROOM` quests each need their own room; a townie's `UNMET_ITEM` need
+  clears through its job, while the one item *quest* a player supplies (the wooden
+  sword) clears with `_qtdev supply_sword` - keep observing
   and driving what you can (build the room, supply the real way), not the
   onboarding.
 - "The chicken stopped guiding" is a hand-holding cue ending, not a stop signal.
