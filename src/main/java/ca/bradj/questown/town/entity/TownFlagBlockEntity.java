@@ -1098,6 +1098,50 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
      * to it, then the perimeter is laid at feet and head ({@code WallDetection.IsWall} reads a
      * wall when solid at both levels), leaving the interior open so a villager can stand in it.
      */
+    // Dev-only: the empty interior cells of this flag's registered rooms, the way a player
+    // would see a room's open floor. A block placed at one of these cells is inside a room,
+    // so the room re-detection picks it up as a contained block (a chest here becomes a
+    // registered container). Returns air cells only, in a stable order, so an agent can index
+    // one without guessing a coordinate. No permission gate; a held run has no player to look
+    // into a room, so this is the agent's eyes for "where is the floor".
+    public java.util.List<BlockPos> interiorCells() {
+        ServerLevel level = getServerLevel();
+        java.util.List<BlockPos> cells = new java.util.ArrayList<>();
+        if (level == null) {
+            return cells;
+        }
+        for (MCRoom room : roomsHandle.getRegisteredRooms().getAllRooms()) {
+            int y = room.yCoord;
+            for (InclusiveSpace space : room.getSpaces()) {
+                for (int x = space.getWestX(); x <= space.getEastX(); x++) {
+                    for (int z = space.getNorthZ(); z <= space.getSouthZ(); z++) {
+                        BlockPos pos = new BlockPos(x, y, z);
+                        if (level.getBlockState(pos).isAir()) {
+                            cells.add(pos);
+                        }
+                    }
+                }
+            }
+        }
+        return cells;
+    }
+
+    // Dev-only: place a block at the indexed interior cell, the way a player placing a block
+    // on the floor would. Thin wrapper over {@link #interiorCells()} + a vanilla setBlock;
+    // the agent picks the spot by index (a position it could not see) and the block id.
+    public void placeBlockInInterior(int index, Block block) {
+        ServerLevel level = getServerLevel();
+        if (level == null) {
+            return;
+        }
+        java.util.List<BlockPos> cells = interiorCells();
+        if (index < 0 || index >= cells.size()) {
+            return;
+        }
+        BlockPos pos = cells.get(index);
+        level.setBlockAndUpdate(pos, block.defaultBlockState());
+    }
+
     public void buildRoom(BlockPos doorPos) {
         ServerLevel level = getServerLevel();
         if (level == null) {

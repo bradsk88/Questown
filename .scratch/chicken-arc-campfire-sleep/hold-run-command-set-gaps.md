@@ -88,3 +88,23 @@ necessary but not sufficient.
   `signPlacedAsJobBoard=true`, but the action placed a job board block, not a
   sign. The real action (place a sign) was never performed.
 - Log: /tmp/village-server.log (2026-09-08).
+- 2026-09-11: one instance of this class is now fixed - `_qtdev deposit` was
+  removed (commit 01b1e2be). It wrote an item into any registered container and
+  returned success regardless of whether the `UNMET_ITEM` need it was meant to
+  clear actually cleared, so an item quest could "complete" the game-state way
+  while the supply-chain lesson (a job produces the item into its
+  job-block's container) was never played - the gap hidden, exactly the
+  failure mode this issue names. This closes the deposit case only; the
+  sign/villager-UI/flag-UI/campfire-sleep beats in the set are still open.
+- 2026-09-11: the "where" half of the sign case is now fixed - `_qtdev place_block`
+  lists a registered room's interior cells as indices, so the agent places a sign
+  in a cell the room actually contains rather than a guessed coordinate (which
+  before destroyed the room). The agent's `place_block <index> sign` now advances
+  the sign beat end-to-end (the sign->job-board conversion registers the job board
+  in the work handle, which `isSignConvertedToJobBoard` reads; that observation fix
+  is the same commit). This addresses the sign case's "where" gap only; the
+  villager-UI/flag-UI/campfire-sleep beats in the set are still open, and the
+  sign case's "code-derived substitute" half (the beat needed the board placed
+  directly, `place_board`, not the sign conversion) is closed by the same commit's
+  `isSignConvertedToJobBoard` fix. Still open overall: villager-UI, flag-UI,
+  campfire-sleep.
