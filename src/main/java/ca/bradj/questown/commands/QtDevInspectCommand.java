@@ -5,6 +5,7 @@ import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.mobs.helperchicken.ChickenArcConditions;
+import ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations;
 import ca.bradj.questown.mobs.helperchicken.ChickenArcTransitions;
 import ca.bradj.questown.mobs.helperchicken.ChickenBeatState;
 import ca.bradj.questown.mobs.helperchicken.HelperChickenBeatOffsets;
@@ -38,8 +39,11 @@ import net.minecraft.world.item.crafting.Ingredient;
  * progress, crafting) and their static content; for the chicken, the current
  * beat narrated as the chicken's observed behavior, dynamically from the
  * player's held item. It never prints the internal {@link ChickenBeatState}
- * enum, a {@code status}/condition line, or the arc map, and it changes no
- * state. The action (placing a block, right-clicking) stays a separate command.
+ * enum, a {@code status}/condition line, or the arc map. The action (placing a
+ * block, right-clicking a block) stays a separate command. Inspecting a
+ * villager or the flag menu does set the corresponding chicken-arc UI
+ * observation flag, so the beat advances the way it would for a player looking
+ * at the same thing.
  *
  * <p>No permission gate, so it runs from the console (FIFO). Registered under
  * {@code _qtdev inspect}, replacing the direct {@code qt quests} /
@@ -90,6 +94,7 @@ public class QtDevInspectCommand {
             QT.FLAG_LOGGER.warn("[_qtdev inspect] no town flag at {}", pos);
             return 1;
         }
+        ChickenArcUiObservations.markFlagUiOpened(source.getLevel(), flag.getTownFlagBasePos());
         FlagTabsEmbedding.FlagInfo info = flag.getInfo();
         QT.FLAG_LOGGER.info("[_qtdev inspect] flag {} - the menu a player would see:",
                 pos.toShortString());
@@ -118,7 +123,11 @@ public class QtDevInspectCommand {
             return 0;
         }
         switch (tab) {
-            case "villagers" -> printVillagers(flag);
+            case "villagers" -> {
+                ChickenArcUiObservations.markVillagerUiOpened(
+                        source.getLevel(), flag.getTownFlagBasePos());
+                printVillagers(flag);
+            }
             case "quests" -> printQuests(flag);
             case "economy" -> printEconomy(flag);
             case "blocks" -> printBlocks(flag);
@@ -174,6 +183,12 @@ public class QtDevInspectCommand {
             if (needsLivePlayer(state)) {
                 QT.FLAG_LOGGER.info("[_qtdev inspect] gap:   this beat needs a live player (no console "
                         + "action can do it); do not substitute a code-derived action.");
+            } else if (state == ChickenBeatState.WAITING_FOR_VILLAGER_UI) {
+                QT.FLAG_LOGGER.info("[_qtdev inspect] use:   _qtdev inspect <flag> villagers "
+                        + "to look at a villager and advance this beat.");
+            } else if (state == ChickenBeatState.WAITING_FOR_FLAG_UI) {
+                QT.FLAG_LOGGER.info("[_qtdev inspect] use:   _qtdev inspect <flag> "
+                        + "to look at the flag menu and advance this beat.");
             }
         }
         return 0;
@@ -189,9 +204,7 @@ public class QtDevInspectCommand {
      * (the job-board-for-a-sign gap) - see .scratch/chicken-arc-campfire-sleep/.
      */
     private static boolean needsLivePlayer(ChickenBeatState state) {
-        return state == ChickenBeatState.WAITING_FOR_VILLAGER_UI
-                || state == ChickenBeatState.WAITING_FOR_FLAG_UI
-                || state == ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY;
+        return state == ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY;
     }
 
     /**
