@@ -25,7 +25,6 @@ import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.Rotation;
-import net.minecraft.world.level.block.SignBlock;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
@@ -399,7 +398,7 @@ public final class ChickenArcConditions {
                     s -> s.is(ItemsInit.TOWN_WAND.get());
             case WAITING_FOR_WALL_BLOCK -> ChickenArcConditions::isSolidBlockItem;
             case WAITING_FOR_DOOR -> s -> blockItemBlock(s) instanceof DoorBlock;
-            case WAITING_FOR_SIGN -> s -> blockItemBlock(s) instanceof SignBlock;
+            case WAITING_FOR_SIGN -> null;
             case WAITING_FOR_CHEST -> s -> s.is(Items.CHEST);
             case WAITING_FOR_ROOM_BUILD -> null;
             case WAITING_FOR_PRESSURE_PLATE -> s -> s.is(ItemsInit.WELCOME_MAT_BLOCK.get());
