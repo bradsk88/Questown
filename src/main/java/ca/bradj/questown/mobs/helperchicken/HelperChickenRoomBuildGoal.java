@@ -46,11 +46,11 @@ public class HelperChickenRoomBuildGoal extends Goal {
     private static final double NAV_SETTLE_ARRIVAL_SQR = 9.0D;
     private static final int STUCK_TELEPORT_TICKS = 600;
     // The per-block peck cadence: the chicken pecks, waits this many ticks, then lays
-    // the block. 10 ticks (2x the original 20) lays the shell twice as fast. This is a
-    // cosmetic/animation rate, not a perf or correctness knob; it only shortens how
-    // long the shell takes to appear. The chest goal keeps its own 20-tick peck (the
-    // drop is meant to be watched, not rushed).
-    private static final int PECK_TICKS = 10;
+    // the block. 5 ticks (2x the prior 10, 4x the original 20) lays the shell twice as
+    // fast. This is a cosmetic/animation rate, not a perf or correctness knob; it only
+    // shortens how long the shell takes to appear. The chest goal keeps its own
+    // 20-tick peck (the drop is meant to be watched, not rushed).
+    private static final int PECK_TICKS = 5;
     private static final double SPEED_MODIFIER = 1.0D;
 
     private final HelperChickenEntity chicken;
