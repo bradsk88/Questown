@@ -173,6 +173,12 @@ public class QtDevInspectCommand {
         }
         QT.FLAG_LOGGER.info("[_qtdev inspect] {}", chickenBehavior(flag, state));
         AgentBeatGuidance.Guidance guidance = AgentBeatGuidance.forBeat(state);
+        // The player's held item, the way a new player looks down at their own hand.
+        // This is the eye a blind _qtdev clickheld lacks: it acts with whatever is
+        // held, so the agent must be able to see what that is and correct it, rather
+        // than retry clickheld at new spots hoping the held item is the one the beat
+        // wants. A no-op clickheld is usually "wrong hand," not "wrong spot."
+        printHeld(source, flag);
         if (guidance != null) {
             QT.FLAG_LOGGER.info("[_qtdev inspect] to do: {}", guidance.need());
             QT.FLAG_LOGGER.info("[_qtdev inspect] how:   {}", guidance.how());
@@ -192,6 +198,24 @@ public class QtDevInspectCommand {
             }
         }
         return 0;
+    }
+
+    /**
+     * What the player is holding in the main hand - the "look at my hand" a new
+     * player has but a headless agent does not. Lets the agent match the
+     * chicken's "use your held X" hint to the actual held item and correct it
+     * (e.g. the town wand is in the hand but the beat wants a sign), instead of
+     * blind-retrying _qtdev clickheld. Empty when the hand is empty.
+     */
+    private static void printHeld(CommandSourceStack source, TownFlagBlockEntity flag) {
+        Player player = ChickenArcConditions.findNearestPlayerForFlag(flag);
+        if (player == null) {
+            QT.FLAG_LOGGER.info("[_qtdev inspect] held: (no player near the flag)");
+            return;
+        }
+        net.minecraft.world.item.ItemStack held = player.getMainHandItem();
+        QT.FLAG_LOGGER.info("[_qtdev inspect] held: {}",
+                held.isEmpty() ? "(empty)" : held.getHoverName().getString());
     }
 
     /**

@@ -85,11 +85,13 @@ final class AgentBeatGuidance {
                     "Registering a room is a hidden wand right-click with no visible result beyond the "
                             + "room being detected. A player may not know the action 'took.'");
             case WAITING_FOR_SIGN -> new Guidance(
-                    "Hold a sign and place it in the room.",
-                    "Get a sign (e.g. `give Dev oak_sign`), hold it, and use it on a block inside the "
-                            + "registered room - it becomes a job board. If no room is registered yet, "
-                            + "register the door first (right-click the door with the town wand) so the "
-                            + "room exists before the sign counts.",
+                    "Put a sign in the registered room.",
+                    "Put a sign inside the registered room - it becomes a job board. "
+                            + "This is a block you place, not an action you perform with a held "
+                            + "item; the chicken's current hint may describe holding and using a "
+                            + "sign, but placing it is a block placement, not a click. If no room is "
+                            + "registered yet, register the door first (right-click the door with "
+                            + "the town wand) so the room exists before the sign counts.",
                     "A placed sign silently becomes a job board when the recipe matches - the change is "
                             + "invisible until then, so a player may not notice the sign 'did something.' "
                             + "A player may also place a sign before any room is registered and see no "

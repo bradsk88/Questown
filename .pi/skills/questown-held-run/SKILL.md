@@ -178,7 +178,10 @@ where to place a block, what a command closes, or what happens next — that is
 re-deriving the mechanism the discipline is meant to keep out of the run. The
 first move when a step cannot proceed is `_qtdev inspect chicken <pos>` (the
 flag's position): the chicken's narration (to do / how / where) is the in-world
-guidance and names the next action without a doc.
+guidance and names the next action without a doc. It also prints the player's
+**held** item (the hand a new player looks at); when a `clickheld` no-ops, read
+that line to see the held item is the wrong one (the town wand instead of a
+sign, say) and correct the hand, rather than retrying `clickheld` at new spots.
 
 A blocked step is **not** automatically a check-in. Before surfacing it, run
 the tools the skill gave you, the console command set (`registerroom`,
@@ -209,12 +212,22 @@ not read code or a stale doc to decide which tool to try.
 - `_qtdev clickwand <x> <y> <z>` — right-click the flag with a stick so it
   converts to the town wand (the real flag interaction; the agent's stand-in
   for the wand beat a player does by hand).
-- `_qtdev clickheld <pos>` — right-click a block with whatever the player
-  already holds, keeping the item's NBT (the way a player would). Use it for an
-  NBT-carrying held item, e.g. the paired town wand from `clickwand`. With the
-  clock at night and the player near the campfire, `_qtdev clickheld <campfire
-  pos>` makes the player sleep on it and wake at dawn (a player too far gets
-  `TOO_FAR_AWAY`).
+- `_qtdev clickheld <pos>` — right-click a block with the player's **held**
+  item, keeping that item's NBT (the way a player would). It does whatever the
+  held item does: for the paired town wand from `clickwand`, for an action the
+  current moment asks the *player* to perform with what they hold. It is **not
+  a block-placement tool** — if the held item isn't what the moment needs (the
+  town wand from `clickwand`, say), it places nothing, and retrying it won't
+  help; that is the wrong hand, not a failed placement. A player too far gets
+  `TOO_FAR_AWAY`.
+- **Putting a block in the world is its own hand, never `clickheld`.** To put a
+  block in the world use `setblock` or the matching command (`place_door`,
+  `place_board`, `place_mat`, `deposit`) — the same hand that placed the door
+  and the campfire. When the chicken's hint is "put X in the world" (a door,
+  a campfire, a sign, a chest, a mat), place X as a block this way; do not
+  route it through `clickheld`, whose held item may be the wrong one. Only use
+  `clickheld` when the moment asks the player to *use the held item* on a
+  block (the wand on a door, an item's action on a block).
 - `_qtdev place_board <x> <y> <z>` - place a job board at the position.
 - `_qtdev spawn_chicken <x> <y> <z>` - force the helper chicken to spawn for a
   flag whose arc is inert (its chicken rotation was never detected). Run it when
