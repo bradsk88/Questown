@@ -148,7 +148,7 @@ immediate feedback a player sees in chat (`TownMessages.broadcastMessage`).
 It fires when something changes: a quest completes, a room is destroyed or
 created, a new quest appears, visitors arrive. After performing a command
 (`place_mat`, `place_board`, `place_door`, `clickwand`, `clickheld`,
-`registerroom`, `deposit`, `tp`, `time`), check the broadcast channel before
+`registerroom`, `free_food`, `tp`, `time`), check the broadcast channel before
 the observe cycle:
 
 ```
@@ -200,7 +200,7 @@ sign, say) and correct the hand, rather than retrying `clickheld` at new spots.
 
 A blocked step is **not** automatically a check-in. Before surfacing it, run
 the tools the skill gave you, the console command set (`registerroom`,
-`deposit`, `place_mat`, `clickwand`, `clickheld`, `place_board`,
+`free_food`, `place_mat`, `clickwand`, `clickheld`, `place_board`,
 `spawn_chicken`, `setblock`, `tp`, `time`, and the `inspect` variants), in the
 context of the chicken's guidance, reading each response. The only observation
 channels are the server log (the `--- observe ---` cycles and the town's chat)
@@ -213,6 +213,18 @@ main driver, the dev a secondary observer. Trying a tool is not a peek. The
 tools are your hands, and reading each response is how you learn the game, so do
 not read code or a stale doc to decide which tool to try.
 
+**A `UNMET_ITEM` need is the job's domain, not a command.** A need for an item
+(mutton, a sword, food) clears because a townie's job *produces* it into the
+container its job block points at, or because a player leaves it in the storeroom
+the game shows you. There is no `_qtdev deposit` shortcut: the only container
+stand-in is `_qtdev free_food`, which covers the free-food beat only. Do not
+shortcut a need out of existence by dropping the item in a container yourself
+—that overwrites the very lesson the quest is teaching (the supply chain) and
+reads as success in a log that was never the right one. When the chicken's cue
+is "put X in the world," place the block the matching hand places it; when a need
+shows `UNMET_ITEM`, let the job run and watch whether it clears, the same way a
+player sees the need clear or not.
+
 - `_qtdev inspect <flag>` - the flag menu a player would see by right-clicking the flag: which tabs are shown (villagers, quests, economics, block of progress, crafting), with red-dots, and the static content. `_qtdev inspect <tab> <pos>` returns one tab (`villagers`, `quests`, `economy`, `blocks`, `crafting`). `_qtdev inspect chicken <pos>` narrates the current onboarding beat as the chicken's observed behavior (e.g. "The chicken looks at your town wand, then back to the flag base [Use the town wand on the flag base]"), keyed off the player's held item so the same beat reads differently in different states. This is the new-player vantage: it returns what a right-click shows, not the gate behind it - no internal state name, no condition line, no arc map. Use it to decide the next action; do not reach for `_qtdev help` (which prints the internal beat/`status`/map - the cheatsheet) or the removed `qt quests` / `_qtdev villagers` (which reach the quest board without going through the menu).
 - `_qtdev registerroom <x> <y> <z>` — register a door at the position, the way a
   player right-clicking a door with the town wand would.
@@ -224,8 +236,6 @@ not read code or a stale doc to decide which tool to try.
   block would. Use this for a door, **not** `setblock`: `setblock` lays only the
   lower half of a door, leaving a one-block gap that then gets roofed over and
   breaks the door.
-- `_qtdev deposit <item> [count]` — put an item into a registered container, the
-  way a player dropping an item into a chest would.
 - `_qtdev place_mat <x> <y> <z>` — place a welcome mat at the position.
 - `_qtdev clickwand <x> <y> <z>` — right-click the flag with a stick so it
   converts to the town wand (the real flag interaction; the agent's stand-in
@@ -240,9 +250,9 @@ not read code or a stale doc to decide which tool to try.
   `TOO_FAR_AWAY`.
 - **Putting a block in the world is its own hand, never `clickheld`.** To put a
   block in the world use `setblock` or the matching command (`place_door`,
-  `place_board`, `place_mat`, `deposit`) — the same hand that placed the door
-  and the campfire. When the chicken's hint is "put X in the world" (a door,
-  a campfire, a sign, a chest, a mat), place X as a block this way; do not
+  `place_board`, `place_mat`) — the same hand that placed the door and the
+campfire. When the chicken's hint is "put X in the world" (a door, a campfire,
+  a sign, a chest, a mat), place X as a block this way; do not
   route it through `clickheld`, whose held item may be the wrong one. Only use
   `clickheld` when the moment asks the player to *use the held item* on a
   block (the wand on a door, an item's action on a block).
@@ -301,8 +311,10 @@ Do **not** report "done" when the arc ends.
   gap reads as "the gatherer is out," not as a dead end. A gap pauses the
   *arc*, not the *run*. Keep observing the world past it: read the observe
   cycles, the town's chat, and `_qtdev inspect` for new needs, jobs, and quest
-  changes. The open quests (each `ROOM` quest needs its own room) and the
-  townies' needs are the town's next work - keep driving them, not the onboarding.
+  changes. The open `ROOM` quests each need their own room; a `UNMET_ITEM` need
+  clears through the townie's job or a real supply, not a command — keep
+  observing and driving what you can (build the room, supply the real way), not
+  the onboarding.
 - "The chicken stopped guiding" is a hand-holding cue ending, not a stop signal.
   Switch to observing the town's own observable state (roster, jobs, needs,
   quests open/done) and keep driving what you can with the command set.

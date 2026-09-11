@@ -17,9 +17,9 @@ import net.minecraft.world.item.Items;
 // right-clicking the flag with a block of dirt, but the flag's giveBonusFood
 // only drops a carrot ItemEntity at the flag — it feeds no one. A held run has
 // no mouse to do that action anyway. This command is the meaningful version:
-// it deposits food into a registered container (the same path a player depositing
-// into a chest takes, see DepositItemCommand) and flips the once-only bonus-food
-// bit so the beat advances. Enforces the same "only once" rule as giveBonusFood.
+// it deposits food into a registered container (the same path a player leaving
+// food in the storeroom takes) and flips the once-only bonus-food bit so the
+// beat advances. Enforces the same "only once" rule as giveBonusFood.
 public class FreeFoodCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         src.register(
