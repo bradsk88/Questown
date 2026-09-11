@@ -143,22 +143,35 @@ a need that cleared a window later is not reported as still open. When the dev
 (as a live observer) says a state is not what the log shows, the log is the
 stale one — re-read, do not argue the old line.
 
-**Read the chat channel, not only the `[village]` observe lines.** The town
-speaks in chat (`TownMessages.broadcastMessage` sends "Quest completed: X",
-"New visitors will arrive after all players sleep", "New quests are
-available! Right-click the town flag"). Each window read both:
-- server log: `grep -aE 'Broadcasting message' /tmp/village-server.log`
-  (proof the town sent it)
+**After any action, read the broadcast first.** The broadcast is the
+immediate feedback a player sees in chat (`TownMessages.broadcastMessage`).
+It fires when something changes: a quest completes, a room is destroyed or
+created, a new quest appears, visitors arrive. After performing a command
+(`place_mat`, `place_board`, `place_door`, `clickwand`, `clickheld`,
+`registerroom`, `deposit`, `tp`, `time`), check the broadcast channel before
+the observe cycle:
+
+```
+grep -aE 'Broadcasting message' /tmp/village-server.log | tail -5
+```
+
+The observe cycle (`[village] KNOWN/UNCLEAR`) is the steady state; the
+broadcast is the event. A `room_destroyed` or `quest_lost` broadcast after
+`place_mat` means the mat destroyed the room; the observe cycle showing
+`rooms=0` is the consequence, not the cause. Read the broadcast to find
+what just happened; read the observe cycle to see what is true now.
+
+The broadcast is not proof a quest completed. It fires on room re-creation,
+not on completion; a `recipe_created`/`quest_completed` broadcast can appear
+while the quest is still open. Verify completion against the done list /
+`_qtdev inspect quests <pos>`, not the broadcast. A `ROOM` quest needs its
+own room (put the recipe block in a room built for that quest); the quests
+tab says so, but a new player can miss that each quest wants a distinct room.
+
+Also read each window:
 - client log: `grep -aE '\[CHAT\]' /tmp/village-client.log` (what the dev sees)
 - observe lines: `grep -aE '\[village\] (KNOWN|UNCLEAR)' /tmp/village-server.log`
 - quest/villager detail: `_qtdev inspect <pos>` / `_qtdev inspect quests <pos>` / `_qtdev inspect villagers <pos>` (the tab literal comes *before* the pos; `_qtdev inspect <pos> villagers` does not parse)
-
-**The broadcast is not proof a quest completed.** It fires on room
-re-creation, not on completion; a `recipe_created`/`quest_completed` broadcast
-can appear while the quest is still open. Verify completion against the done
-list / `_qtdev inspect quests <pos>`, not the broadcast. A `ROOM` quest needs its
-own room (put the recipe block in a room built for that quest); the quests tab
-says so, but a new player can miss that each quest wants a distinct room.
 
 ## The console command set (the agent's hands)
 
