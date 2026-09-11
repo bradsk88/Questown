@@ -168,6 +168,19 @@ while the quest is still open. Verify completion against the done list /
 own room (put the recipe block in a room built for that quest); the quests
 tab says so, but a new player can miss that each quest wants a distinct room.
 
+**A room broadcast means the room is registered - do not argue it from the
+observe line.** `room_created` / `recipe_created` broadcast from
+`TownMessages`, which only fires when a room is registered in
+`TownRoomsMap`. If you see that broadcast, the room IS registered; the
+observe line's `rooms=N` (often 0, because it counts a different set, e.g.
+walled/recipe-matching rooms) is a *second* counter and does not
+overrule the broadcast. Do not conclude "the room is not registered"
+from `rooms=0` when the broadcast says it was. The recipe-change events
+(`ActiveRecipes` created/changed - the ones that drive block
+conversions like sign->job-board) run only on a registered room, so a
+broadcast you read as "not registered" will make you skip the very
+mechanism you were debugging.
+
 Also read each window:
 - client log: `grep -aE '\[CHAT\]' /tmp/village-client.log` (what the dev sees)
 - observe lines: `grep -aE '\[village\] (KNOWN|UNCLEAR)' /tmp/village-server.log`
