@@ -328,7 +328,7 @@ public class QtDevInspectCommand {
             case WAITING_FOR_PRESSURE_PLATE -> "The chicken looks at the gate, then at your hand. "
                     + "[Make a welcome mat and put it on the gate]";
             case WAITING_FOR_FREE_FOOD -> "The chicken looks at your hand, then at the flag. "
-                    + "[Right-click the flag with a block of dirt - optional]";
+                    + "[Feed the flag free food]";
             case WAITING_FOR_VILLAGER_UI -> "The chicken looks at a villager in the town. [Look at "
                     + "a villager]";
             case WAITING_FOR_FLAG_UI -> "The chicken looks at the flag. [Look at the flag]";

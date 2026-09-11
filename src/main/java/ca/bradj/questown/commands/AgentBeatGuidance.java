@@ -115,11 +115,12 @@ final class AgentBeatGuidance {
                     "The welcome mat is crafted at the flag, not taken from an inventory - a non-obvious "
                             + "step. A player looking for the mat in their pack will not find it.");
             case WAITING_FOR_FREE_FOOD -> new Guidance(
-                    "Bonus: feed the flag a block of dirt.",
-                    "Right-click the flag with a block of dirt. This beat is optional; it completes on its "
-                            + "own when the next beat is met.",
-                    "This is the only skippable beat - it teaches that not every beat is required, but the "
-                            + "arc gives no signal that this one is optional, so a player may stall here.");
+                    "Feed the flag free food.",
+                    "Run `_qtdev free_food` to put food in the registered chest; it feeds the flag and "
+                            + "advances the beat.",
+                    "Feed the flag. Without it a villager that runs out of food can leave town, and the "
+                            + "town gives no signal that the food is needed, so a player may sit idle "
+                            + "expecting the beat to resolve on its own.");
             case WAITING_FOR_VILLAGER_UI -> new Guidance(
                     "Look at a villager.",
                     "Right-click a villager to open its menu, or use `_qtdev inspect <flag> villagers` "

@@ -1428,6 +1428,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return givenBonusFood;
     }
 
+    /**
+     * Set the once-only bonus-food bit without dropping anything at the flag, so
+     * the {@code free_food} command can put the food in a registered container
+     * (where a villager can actually eat it) instead of a carrot ItemEntity at the
+     * flag that feeds no one. Returns false if already given, mirroring
+     * {@link #giveBonusFood(ServerPlayer)}'s once-only rule.
+     */
+    public boolean markBonusFoodGiven() {
+        if (givenBonusFood) {
+            return false;
+        }
+        givenBonusFood = true;
+        return true;
+    }
+
     public void toggleDebugLog(String logId) {
         logToggles.compute(logId, (k, v) -> v == null || !v);
     }
