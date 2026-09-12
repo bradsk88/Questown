@@ -65,6 +65,72 @@ class ChickenRoomShellPlanTest {
         Assertions.assertEquals(Direction.NORTH, f.inward());
     }
 
+    // -- feasibility: the pre-flight that must back off, not half-build --------
+
+    @Test
+    void feasibility_emptyFootprint_isClear() {
+        // A door on flat ground with no wall anywhere: the build may start.
+        ChickenRoomShellPlan.Outcome o =
+                ChickenRoomShellPlan.feasibility(new BlockPos(0, 64, 0), 64, EMPTY_WORLD);
+        Assertions.assertTrue(o.clear(), "a clear footprint must pass the pre-flight");
+    }
+
+    @Test
+    void feasibility_occupiedDoorCell_isNotClear() {
+        // A block already in the door cell (a wall, or a door the build would sit
+        // beside) is not a doorway to build around. The build must back off.
+        Set<BlockPos> doorCell = new HashSet<>();
+        doorCell.add(new BlockPos(0, 64, 0));
+        ChickenRoomShellPlan.Outcome o =
+                ChickenRoomShellPlan.feasibility(new BlockPos(0, 64, 0), 64,
+                        p -> doorCell.contains(p));
+        Assertions.assertFalse(o.clear(),
+                "a block in the door cell must fail the pre-flight");
+        Assertions.assertTrue(o.reason().contains("door cell"),
+                "the reason must name the door cell: " + o.reason());
+    }
+
+    @Test
+    void feasibility_wallInFootprint_isNotClear() {
+        // A wall at wall level on the shell's perimeter (the door adjacent to another
+        // room) would make the shell a plus, not a closed box. The build must back off
+        // rather than lay over it. Derive the occupancy from the same wall set
+        // feasibility itself checks, so the test does not depend on the resolved frame
+        // orientation: occupying any wall cell the pre-flight scans must fail it.
+        ChickenRoomShellPlan.DoorFrame f =
+                ChickenRoomShellPlan.frameFor(new BlockPos(0, 64, 0), 64, EMPTY_WORLD);
+        InclusiveSpace rect = ChickenRoomShellPlan.space(f);
+        java.util.Collection<Position> walls =
+                InclusiveSpaces.getWallPositions(rect, true);
+        Assertions.assertFalse(walls.isEmpty(), "the footprint has a perimeter");
+        Position wall = walls.iterator().next();
+        BlockPos perimeterCell = new BlockPos(wall.x, 64, wall.z);
+        Set<BlockPos> intruding = new HashSet<>();
+        intruding.add(perimeterCell);
+        ChickenRoomShellPlan.Outcome o =
+                ChickenRoomShellPlan.feasibility(new BlockPos(0, 64, 0), 64,
+                        p -> intruding.contains(p));
+        Assertions.assertFalse(o.clear(),
+                "a wall on a cell the pre-flight scans must fail it");
+        Assertions.assertTrue(o.reason().contains("footprint"),
+                "the reason must name the footprint: " + o.reason());
+    }
+
+    @Test
+    void feasibility_groundBelowFootprint_isAllowed() {
+        // Ground at the cell below the wall level (y-1) does not block the build:
+        // the shell lays at feet (y) and head (y+1) on top of the floor. A ground
+        // block must not read as a wall-level collision.
+        Set<BlockPos> ground = new HashSet<>();
+        ground.add(new BlockPos(0, 63, 0));
+        ground.add(new BlockPos(0, 63, -1));
+        ChickenRoomShellPlan.Outcome o =
+                ChickenRoomShellPlan.feasibility(new BlockPos(0, 64, 0), 64,
+                        p -> ground.contains(p));
+        Assertions.assertTrue(o.clear(),
+                "ground below the footprint must not fail the pre-flight");
+    }
+
     // -- enclosure: the regression guard the plan used to fail ---------------
 
     @Test

@@ -175,3 +175,41 @@ flowchart TD
 - The goal re-plans from the live world each block, so a block the player placed
   (or broke) mid-build is skipped or re-laid, and the goal stands down when the
   plan is exhausted but the room still has not been detected.
+
+## The console `_qtdev build_room` hand (agent stand-in for the room-build beat)
+
+A held run has no live player to build walls first, so a room quest's "build a
+room for it" has no hand but the chicken's beat. `_qtdev build_room <pos>`
+(`FlagBuildRoomCommand` → `TownFlagBlockEntity.buildRoom`) is the agent's
+stand-in for that beat. It is **not** the chicken goal: the chicken lays one
+cell per peck and re-reads the scan each tick, so the room appears
+incrementally; `build_room` lays the whole shell in one burst and then
+registers the door, so the resumable scan (see `town/rooms/COMPLEX.md`) attaches
+the room on a *later* tick, not synchronously.
+
+```mermaid
+flowchart TD
+  br["_qtdev build_room <pos>"] --> dup{door already registered?}
+  dup -- yes --> back1["back off: it already has a room"]
+  dup -- no --> pre[ChickenRoomShellPlan.feasibility<br/>door cell + perimeter open at wall level?]
+  pre -- "blocked (a wall in the footprint)" --> back2["back off + log the spot and why"]
+  pre -- clear --> lay[lay the whole shell]
+  lay --> reg[register the door]
+  reg --> scan["room scan detects on a later tick<br/>town/rooms/COMPLEX.md"]
+```
+
+- **Atomic pre-flight (`ChickenRoomShellPlan.feasibility`).** Before touching the
+  world, `buildRoom` checks the door cell and the shell's perimeter are open at
+  wall level (ground below is allowed — a wall reads solid only at feet *and*
+  head). A door beside an existing wall would lay the shell over it (a plus the
+  wall walk can not close) and leave `registered-doors` up but `rooms` at 0; the
+  pre-flight backs off and logs the spot and reason instead. It is pure and
+  unit-tested in `ChickenRoomShellPlanTest`, deriving the perimeter cell from the
+  same `getWallPositions` the pre-flight scans, so the test does not depend on
+  the resolved frame orientation.
+- **Lay-then-register.** The shell is laid before the door is registered, so the
+  scan detects the complete shell. Registering a door before its shell exists
+  (the pre-fix order) left an orphan a finished scan can never attach a room to.
+  Because the scan is resumable, the room still appears on a later tick, not in
+  the same call — read the next observe cycle / `inspect doors`, not an instant
+  `recipe_created`, to confirm.

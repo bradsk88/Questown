@@ -47,8 +47,8 @@ public class FlagBuildRoomCommand {
             return 1;
         }
         flag.buildRoom(pos);
-        QT.FLAG_LOGGER.info("[build_room] built a room around door {} for flag {}",
-                pos, flag.getBlockPos());
+        // buildRoom may have backed off (it refuses a footprint that can not close); the detail
+        // is in its log line, so do not assert success here.
         return 0;
     }
 
