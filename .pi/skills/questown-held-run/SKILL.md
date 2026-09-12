@@ -245,7 +245,8 @@ sign, say) and correct the hand, rather than retrying `clickheld` at new spots.
 A blocked step is **not** automatically a check-in. Before surfacing it, run
 the tools the skill gave you, the console command set (`registerroom`,
 `free_food`, `place_mat`, `clickwand`, `clickheld`, `place_board`,
-`spawn_chicken`, `setblock`, `tp`, `time`, and the `inspect` variants), in the
+`build_room`, `place_block`, `spawn_chicken`, `setblock`, `tp`, `time`, and the
+`inspect` variants), in the
 context of the chicken's guidance, reading each response. The only observation
 channels are the server log (the `--- observe ---` cycles and the town's chat)
 and those `_qtdev` commands. "Blocked" is not a check-in until you have run the
@@ -256,6 +257,16 @@ blocked-looking line before running your tools defers the run; the agent is the
 main driver, the dev a secondary observer. Trying a tool is not a peek. The
 tools are your hands, and reading each response is how you learn the game, so do
 not read code or a stale doc to decide which tool to try.
+
+**An `inspect` can *advance* a beat, not just read one.** `_qtdev inspect
+villagers <flag>` opens the villager UI and `_qtdev inspect <flag>` opens the flag
+menu - each calls `markXUiOpened`, so the `WAITING_FOR_VILLAGER_UI` /
+`WAITING_FOR_FLAG_UI` beats advance when you read the tab, the way a player
+right-clicking the villager/flag would. A blocked "look at a villager" / "look at
+the flag" beat is **not** a dead end and **not** a reason to try `clickheld` on a
+mob (a mob is not a block - `clickheld` is `useItemOn`, a block right-click, and
+never acts on a mob). Read the tab with `inspect`; the beat advances on the next
+tick.
 
 **A `UNMET_ITEM` need is the job's domain, not a command - except the one item
 a player supplies.** A need for an item (mutton, food, and most others) clears
@@ -309,6 +320,21 @@ campfire. When the chicken's hint is "put X in the world" (a door, a campfire,
   `clickheld` when the moment asks the player to *use the held item* on a
   block (the wand on a door, an item's action on a block).
 - `_qtdev place_board <x> <y> <z>` - place a job board at the position.
+- `_qtdev build_room <x> <y> <z>` - build a room around a door spot the way the helper
+  chicken does: it places its own door, lays the shell, and registers the door so the room
+  scan detects it. Use it for a room quest ("each room quest needs its own room"). It is
+  **atomic**: if the door spot is not clear (an existing wall at wall-level intrudes the
+  footprint, or the door cell is not open) it backs off and logs why rather than half-building -
+  so read the `[build_room] refusing to build …` line and pick a clear spot, do not assume it
+  built. The room is detected by the scan on a later tick (not synchronously), so read the
+  next observe cycle / `inspect doors`, not an instant `recipe_created`, to confirm.
+- `_qtdev place_block [index] <block>` - place a block inside a registered room's interior
+  (the way a player placing a block on the floor would). With no index it lists the room's
+  empty interior cells (index, x, y, z); with `<index> <block>` it places the block at that
+  cell. Use it to put a quest's recipe block (a chest, a sign→job board, …) *inside* the room -
+  a block placed at a coordinate you guessed may land outside the room footprint and never
+  register. It resolves a **block** id (not an item id), so it where a vanilla `setblock` (which
+  resolves an item) would not. List first, pick a cell, then place - do not guess a coordinate.
 - `_qtdev spawn_chicken <x> <y> <z>` - force the helper chicken to spawn for a
   flag whose arc is inert (its chicken rotation was never detected). Run it when
   `_qtdev inspect chicken <pos>` shows the chicken is not guiding; do not decide

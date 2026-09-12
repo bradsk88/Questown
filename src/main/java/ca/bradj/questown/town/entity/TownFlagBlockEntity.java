@@ -1168,10 +1168,23 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             );
             return;
         }
-        getRoomHandle().registerDoor(doorPos);
+        // Pre-flight: do not lay a shell that can not close, and do not register a door that can
+        // not detect. Registering a door before its shell exists leaves an orphan the scan can
+        // never attach a room to (registered-doors up, rooms stays 0), and laying over an existing
+        // wall makes a plus the walk can not close. Check first; back off and report instead of
+        // half-building.
+        ChickenRoomShellPlan.Outcome feasible = ChickenRoomShellPlan.feasibility(
+                doorPos, getBlockPos().getY() + (doorPos.getY() - getBlockPos().getY()),
+                p -> !level.getBlockState(p).isAir()
+        );
+        if (!feasible.clear()) {
+            QT.FLAG_LOGGER.warn(
+                    "[build_room] refusing to build a room at {}: {} - pick a clear door spot",
+                    doorPos, feasible.reason()
+            );
+            return;
+        }
         int baseY = getBlockPos().getY() + (doorPos.getY() - getBlockPos().getY());
-        // The door may sit at the flag's height or a scan level offset; the shell builds at the
-        // door's own height so a door registered off the flag's Y still gets its room.
         ChickenRoomShellPlan.DoorFrame frame = ChickenRoomShellPlan.frameFor(
                 doorPos, baseY, p -> !level.getBlockState(p).isAir()
         );
@@ -1185,8 +1198,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 laid++;
             }
         }
+        // The shell is in place; now register the door so the scan detects the room. Registering
+        // after the shell (not before) is what the chicken's goal effectively does - it builds the
+        // shell around an already-registered door and re-reads it each tick - and it avoids
+        // registering a door a scan has already finished over (which would leave it undetected
+        // until the next scan cycle). The scan is resumable, so the room appears on a later tick.
+        getRoomHandle().registerDoor(doorPos);
         QT.FLAG_LOGGER.info(
-                "[build_room] laid {} shell blocks around door {} for flag {}",
+                "[build_room] laid {} shell blocks around door {} for flag {} (door registered; the room "
+                        + "is detected by the scan on a later tick)",
                 laid, doorPos, getBlockPos()
         );
     }

@@ -207,6 +207,55 @@ public final class ChickenRoomShellPlan {
     }
 
     /**
+     * Whether a door can be built into a room at {@code doorPos} before any block is
+     * touched, so a build can back off and report instead of half-building. The check is
+     * the pre-flight half of the build: a build that laid a shell over an occupied cell
+     * (a door inside an existing wall, or a footprint overlapping another room) would leave
+     * a registered door the wall walk can not close, so the build must not start at all.
+     *
+     * <p>"Clear" means: the door cell and every shell cell are not occupied at
+     * <em>wall level</em> (feet or head solid). Ground at the cell below is allowed, because
+     * a shell lays its walls at feet and head on top of the floor and a wall reads as a wall
+     * when solid at both feet and head. The door cell must be air (a fresh door is placed
+     * there, not onto an existing block); a solid block there is a wall, not a doorway.
+     */
+    public static Outcome feasibility(
+            BlockPos doorPos,
+            int baseY,
+            java.util.function.Predicate<BlockPos> isOccupied
+    ) {
+        DoorFrame frame = frameFor(doorPos, baseY, isOccupied);
+        // The door cell itself must be open: a door is placed into it, so a block there
+        // (a wall, or a door the build would have to sit beside) is not a doorway to build
+        // around.
+        if (isOccupied.test(doorPos) || isOccupied.test(doorPos.above())) {
+            return new Outcome(false, "the door cell is not open (a block is already there) at "
+                    + doorPos.toShortString());
+        }
+        InclusiveSpace rectangle = space(frame);
+        int y = frame.baseY();
+        // Every cell the shell would lay into must be open at wall level. A shell that would
+        // overlie an existing wall (a door adjacent to another room) is a plus, not a closed
+        // box, so it must not start. The shell lays the closed perimeter, not the interior (the
+        // interior stays open for the chest and a villager to stand in), so only the perimeter
+        // cells are checked here - a block in the interior is not a build-blocker.
+        for (Position wall : InclusiveSpaces.getWallPositions(rectangle, true)) {
+            BlockPos p = new BlockPos(wall.x, y, wall.z);
+            if (isOccupied.test(p) || isOccupied.test(p.above())) {
+                return new Outcome(
+                        false,
+                        "the room footprint is blocked by a wall at " + p.toShortString()
+                );
+            }
+        }
+        return new Outcome(true, "");
+    }
+
+    /** The result of {@link #feasibility}: clear, and a reason the build must not start. */
+    public record Outcome(boolean clear, String reason) {
+    }
+
+    /**
      * The full build order for the shell around {@code frame}: the closed
      * perimeter of {@link #space(DoorFrame)} at feet and head, with the interior
      * left open. Cells already occupied in the world (or already laid, in
