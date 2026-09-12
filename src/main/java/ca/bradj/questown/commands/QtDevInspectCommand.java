@@ -215,11 +215,22 @@ public class QtDevInspectCommand {
                             + "[Use the town wand on the flag base]"
                     : "The chicken looks at where you are holding your hand, then back to the "
                             + "flag base. [Get the town wand - right-click the flag with a stick]";
-            case WAITING_FOR_WAND_ON_CAMPFIRE -> holdsWand
-                    ? "The chicken looks at the campfire near the flag. [Light a campfire near "
-                            + "the flag]"
-                    : "The chicken looks at the campfire near the flag, then at your empty hand. "
-                            + "[Light a campfire near the flag, then hold the town wand]";
+            case WAITING_FOR_WAND_ON_CAMPFIRE -> {
+                boolean campfireLit = ChickenArcConditions.isCampfireLit(
+                        flag.getServerLevel(), flag.getTownFlagBasePos()
+                );
+                if (campfireLit) {
+                    yield holdsWand
+                            ? "The chicken looks at the lit campfire near the flag. [Use the town wand on the campfire]"
+                            : "The chicken looks at the lit campfire near the flag, then at your empty hand. "
+                                    + "[Hold the town wand and use it on the campfire]";
+                }
+                yield holdsWand
+                        ? "The chicken looks at an empty spot near the flag, then at your town wand. "
+                                + "[Place and light a campfire near the flag]"
+                        : "The chicken looks at an empty spot near the flag, then at your empty hand. "
+                                + "[Place and light a campfire near the flag, then hold the town wand]";
+            }
             case SUNSET_AND_MAP -> "The chicken looks at the dark sky, then at the campfire. "
                     + "[Come back at night and sleep on the campfire with the wand]";
             case WAITING_FOR_WALL_BLOCK -> "The chicken pecks at a gap in the wall. [Put a solid "
