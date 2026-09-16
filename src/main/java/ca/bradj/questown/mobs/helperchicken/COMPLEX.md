@@ -191,22 +191,33 @@ the room on a *later* tick, not synchronously.
 flowchart TD
   br["_qtdev build_room <pos>"] --> dup{door already registered?}
   dup -- yes --> back1["back off: it already has a room"]
-  dup -- no --> pre[ChickenRoomShellPlan.feasibility<br/>door cell + perimeter open at wall level?]
+  dup -- no --> door{door already placed?}
+  door -- no --> place["placeDoor(pos)"]
+  door -- yes --> pre
+  place --> pre[ChickenRoomShellPlan.feasibility<br/>perimeter open; door cell treated as open]
   pre -- "blocked (a wall in the footprint)" --> back2["back off + log the spot and why"]
   pre -- clear --> lay[lay the whole shell]
   lay --> reg[register the door]
   reg --> scan["room scan detects on a later tick<br/>town/rooms/COMPLEX.md"]
 ```
 
+- **Place door if absent.** If there is no `DoorBlock` at the target position,
+  `buildRoom` places both halves with `placeDoor()` before any shell block is
+  laid. Without a door block the shell plan treats the door cell as a wall
+  position and fills it with cobblestone, leaving solid walls with no way in.
+  The old code also rejected a pre-placed door in the feasibility check, so
+  calling `build_room` at a coordinate where the player had already put a door
+  would silently no-op. The fix distinguishes the two cases and handles each.
 - **Atomic pre-flight (`ChickenRoomShellPlan.feasibility`).** Before touching the
-  world, `buildRoom` checks the door cell and the shell's perimeter are open at
-  wall level (ground below is allowed — a wall reads solid only at feet *and*
-  head). A door beside an existing wall would lay the shell over it (a plus the
-  wall walk can not close) and leave `registered-doors` up but `rooms` at 0; the
-  pre-flight backs off and logs the spot and reason instead. It is pure and
-  unit-tested in `ChickenRoomShellPlanTest`, deriving the perimeter cell from the
-  same `getWallPositions` the pre-flight scans, so the test does not depend on
-  the resolved frame orientation.
+  world, `buildRoom` checks the shell's perimeter cells are open at wall level
+  (ground below is allowed — a wall reads solid only at feet *and* head). The
+  door cell is treated as open because it will contain the door being placed or
+  already there. A door beside an existing wall would lay the shell over it (a
+  plus the wall walk can not close) and leave `registered-doors` up but `rooms` at
+  0; the pre-flight backs off and logs the spot and reason instead. It is pure
+  and unit-tested in `ChickenRoomShellPlanTest`, deriving the perimeter cell from
+  the same `getWallPositions` the pre-flight scans, so the test does not depend
+  on the resolved frame orientation.
 - **Lay-then-register.** The shell is laid before the door is registered, so the
   scan detects the complete shell. Registering a door before its shell exists
   (the pre-fix order) left an orphan a finished scan can never attach a room to.

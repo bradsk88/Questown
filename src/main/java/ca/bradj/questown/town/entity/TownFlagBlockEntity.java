@@ -1152,11 +1152,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (level == null) {
             return;
         }
-        // Register the door first so the room scan attaches the shell to it (the chicken's build
-        // goal builds around the first registered door, and none when there is none). A door that
-        // is already registered already has a room built around it, so building around it again
-        // would lay a second shell over the first - two rooms sharing a wall with no way out. A
-        // quest that needs its own room needs a new door, not this one.
+        // A door that is already registered already has a room built around it, so building
+        // around it again would lay a second shell over the first - two rooms sharing a wall
+        // with no way out. A quest that needs its own room needs a new door, not this one.
         int scanLevel = doorPos.getY() - getBlockPos().getY();
         if (getRoomHandle().getAllRegisteredDoors().contains(
                 new ca.bradj.questown.town.rooms.TownPosition(doorPos.getX(), doorPos.getZ(), scanLevel)
@@ -1168,14 +1166,35 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             );
             return;
         }
-        // Pre-flight: do not lay a shell that can not close, and do not register a door that can
-        // not detect. Registering a door before its shell exists leaves an orphan the scan can
-        // never attach a room to (registered-doors up, rooms stays 0), and laying over an existing
-        // wall makes a plus the walk can not close. Check first; back off and report instead of
-        // half-building.
+
+        // Place a door if none exists. Without a door block the shell plan treats the door
+        // cell as an open perimeter position and fills it with cobblestone, leaving solid walls
+        // with no way in.
+        if (!(level.getBlockState(doorPos).getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) {
+            if (!level.getBlockState(doorPos).isAir() || !level.getBlockState(doorPos.above()).isAir()) {
+                QT.FLAG_LOGGER.warn(
+                        "[build_room] door cell at {} is blocked and cannot hold a door",
+                        doorPos
+                );
+                return;
+            }
+            placeDoor(doorPos);
+        }
+
+        int baseY = getBlockPos().getY() + (doorPos.getY() - getBlockPos().getY());
+
+        // Pre-flight: do not lay a shell that can not close. The feasibility check treats the
+        // door cell as open so it does not reject an already-placed door; every other cell is
+        // checked the normal way.
+        java.util.function.Predicate<BlockPos> isOccupied = p -> !level.getBlockState(p).isAir();
+        java.util.function.Predicate<BlockPos> isOccupiedIgnoringDoorCell = p -> {
+            if (p.equals(doorPos) || p.equals(doorPos.above())) {
+                return false;
+            }
+            return isOccupied.test(p);
+        };
         ChickenRoomShellPlan.Outcome feasible = ChickenRoomShellPlan.feasibility(
-                doorPos, getBlockPos().getY() + (doorPos.getY() - getBlockPos().getY()),
-                p -> !level.getBlockState(p).isAir()
+                doorPos, baseY, isOccupiedIgnoringDoorCell
         );
         if (!feasible.clear()) {
             QT.FLAG_LOGGER.warn(
@@ -1184,13 +1203,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             );
             return;
         }
-        int baseY = getBlockPos().getY() + (doorPos.getY() - getBlockPos().getY());
-        ChickenRoomShellPlan.DoorFrame frame = ChickenRoomShellPlan.frameFor(
-                doorPos, baseY, p -> !level.getBlockState(p).isAir()
-        );
-        ChickenRoomShellPlan.Plan plan = ChickenRoomShellPlan.plan(
-                frame, p -> !level.getBlockState(p).isAir(), java.util.Set.of()
-        );
+        ChickenRoomShellPlan.DoorFrame frame = ChickenRoomShellPlan.frameFor(doorPos, baseY, isOccupied);
+        ChickenRoomShellPlan.Plan plan = ChickenRoomShellPlan.plan(frame, isOccupied, java.util.Set.of());
         int laid = 0;
         for (ChickenRoomShellPlan.BlockStep step : plan.steps()) {
             if (level.getBlockState(step.pos()).isAir()) {
