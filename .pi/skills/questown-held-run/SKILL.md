@@ -139,8 +139,10 @@ pgrep -af 'runClient' | grep -v pgrep | head -1 | awk '{print $1}' > run/hold-cl
 # teardown: kill only those pids, never pkill -f 'runClient'/'runServer':
 kill -9 $(cat run/hold-server.pid 2>/dev/null)   # the held java server (survives SIGTERM)
 kill -9 $(cat run/hold-wrapper.pid 2>/dev/null)  # the gradle wrapper (keeps living if the server dies)
-kill -9 -$(cat run/hold-fifo.pid 2>/dev/null) # the FIFO writer + its orphaned `sleep` child (kill the group; the child outlives the `sh` parent)
+kill -9 $(cat run/hold-fifo.pid 2>/dev/null)
+kill -9 $(pgrep -f 'sleep 999999' | head -5) # parent sh AND the orphaned `sleep 999999` child (its cmdline is bare, no fifo path); the group kill (-PID) silently leaves the child alive, and a live child holds the fifo open and blocks the next run's commands
 kill -9 $(cat run/hold-client.pid 2>/dev/null)   # this session's client, not the dev's
+# verify, then kill stragglers by pid: pgrep -af 'sleep 999999'; pgrep -af 'runClient' - the client java can outlive its wrapper pid; kill any remaining match whose cmdline holds -Pautojoin (this session's client), never a bare pkill -f 'runClient' (the dev's tab)
 ```
 
 The held server catches SIGTERM, so it can outlive a `pkill`; kill it by the
@@ -379,9 +381,16 @@ campfire. When the chicken's hint is "put X in the world" (a door, a campfire,
   completion against the done list / `_qtdev inspect quests <pos>`, not the
   broadcast.
 - Vanilla (also from the FIFO/console): `tp <player> <x> <y> <z>` (teleport the
-  named player), `time set <ticks>` (set the time of day, 0–24000),
+  named player), `time set <ticks>` (set the time; absolute ticks past 24000 work -
+  37000 is day 1 night, 61000 day 2, so use them to reach a *later* day's night),
   `setblock <x> <y> <z> <block>` (set a block), `qt tp` (jump the player to the
   nearest flag).
+  **A campfire sleep works once per in-game day, and a failed sleep is silent.**
+  Sleeping at the campfire at night then `time set 13000` again puts you back in
+  the SAME night: `clickheld` logs `-> PASS` but no `SleepFinishedTimeEvent`
+  follows, with no error line. Advance to a later day's night (37000, 61000,
+  85000, ...). Also: the first `clickheld` after a tp can no-op with a `Trying
+  to drop too quickly` warn - retry it once before concluding anything.
   **A bare `tp <x> <y> <z>` (no player target) silently no-ops from a console
   source** — it has no player to move, so the command appears to run but the
   player never moves, and there is no log line to tell you it failed. Always
