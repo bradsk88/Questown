@@ -946,4 +946,60 @@ public class StatusesProductionRoutineTest {
         Assertions.assertEquals(PTestStatus.WAITING, s);
     }
 
+    private static RoomsNeedingVillagerInput<Room, String, Position> noWork() {
+        return new RoomsNeedingVillagerInput<>(ImmutableMap.of());
+    }
+
+    private static @Nullable PTestStatus evening(
+            PTestStatus current,
+            boolean hasNonSupplyItems,
+            boolean unfinishedTimedWork
+    ) {
+        return ca.bradj.questown.jobs.production.ProductionStatuses.getEveningStatus(
+                current,
+                new TestInventory(false, hasNonSupplyItems, ImmutableMap.of()),
+                new TestJobTownWithTime(
+                        false, true,
+                        ImmutableList.of(),
+                        noWork(),
+                        unfinishedTimedWork
+                ),
+                PTestStatus.FACTORY,
+                PTestStatus.FACTORY
+        );
+    }
+
+    @Test
+    void InEvening_WaitingForTimedState_IsHeldOut_WhenTimedWorkUnfinished() {
+        // A town-leaver mid-trip (waiting on a timed work state) must NOT be
+        // recalled at evening while his timer is still running. Regression
+        // test for the night-return bug: getEveningStatus used to recall him
+        // unconditionally, cutting the trip short.
+        @Nullable PTestStatus s = evening(PTestStatus.WAITING, false, true);
+        Assertions.assertNull(s, "expected no status change (held out) while timed work is unfinished");
+    }
+
+    @Test
+    void InEvening_WaitingForTimedState_IsHeldOut_EvenWhenCarrying() {
+        // The hold wins over dropping-loot: a mid-trip leaver keeps whatever he
+        // carries and drops it on the eventual (post-timer) recall.
+        @Nullable PTestStatus s = evening(PTestStatus.WAITING, true, true);
+        Assertions.assertNull(s, "expected no status change (held out) even when carrying items");
+    }
+
+    @Test
+    void InEvening_WaitingForTimedState_IsRecalled_WhenTimerDone() {
+        // Once the timer runs down, the evening recall applies as usual.
+        @Nullable PTestStatus s = evening(PTestStatus.WAITING, false, false);
+        Assertions.assertEquals(PTestStatus.RELAXING, s);
+    }
+
+    @Test
+    void InEvening_NotWaiting_IsRecalled_EvenWhenTimedWorkUnfinished() {
+        // A villager not in the timed-wait state (e.g. idle) is unaffected by
+        // the guard, even if some timed work exists in town.
+        @Nullable PTestStatus s = evening(PTestStatus.IDLE, false, true);
+        Assertions.assertEquals(PTestStatus.RELAXING, s);
+    }
+
 }

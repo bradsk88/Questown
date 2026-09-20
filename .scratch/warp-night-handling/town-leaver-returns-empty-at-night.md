@@ -28,6 +28,14 @@ usable sword (Damage: 1; hunters ignore damage until the tool breaks) in
 the registered storeroom chest. That stall may be part of the same bug or
 a second one.
 
+## Status
+
+- **Fix implemented (evening hold):** `ProductionStatuses.getEveningStatus`
+  now mirrors the morning path — a `WAITING_FOR_TIMED_STATE` villager with
+  unfinished timed work returns `null` (no recall) instead of being yanked to
+  `droppingLoot`/`relaxing`. Unit-tested in `StatusesProductionRoutineTest`
+  (`InEvening_…`). **Live held-run verification still pending.**
+
 ## Acceptance criteria
 
 - A town-leaver (e.g. hunter) who is out of town when night falls stays
