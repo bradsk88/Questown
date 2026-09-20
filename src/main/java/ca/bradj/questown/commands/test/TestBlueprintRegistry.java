@@ -2961,7 +2961,11 @@ public class TestBlueprintRegistry {
      * Simulates the campfire sleep scenario: player is in town at evening,
      * sleeps through night, dayTime jumps ~11000 ticks to morning.
      * The flag was ticking normally before sleep, so its reference tick is
-     * current. The dayTime jump should NOT cause a massive warp.
+     * current. Villagers sleep at night, so the jump must produce NOTHING:
+     * the expectation is a non-positive item delta (regression guard for the
+     * bug where a sleep warp yielded a full loot batch). The lower bound is
+     * unbounded because a hungry villager may legitimately eat from the
+     * chest during the live settle window.
      * startTimeTick=12000 (evening), warpAmount=11000 (jump to next morning).
      */
     private static TestBlueprint gathererSleepJumpBlueprint() {
@@ -2975,7 +2979,7 @@ public class TestBlueprintRegistry {
                 base.roomType(), base.blocks(), base.supplyItems(),
                 base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
                 new TestExpectation(
-                        List.of(new ExpectedProduct("*", 0, 14)),
+                        List.of(new ExpectedProduct("*", null, 0)),
                         0, 100
                 ),
                 base.supplyDoorOffset(), 11000, 12000L, null, false, null,
@@ -2985,7 +2989,11 @@ public class TestBlueprintRegistry {
 
     /**
      * Simulates: player was briefly away (tp'd back after dying), then slept.
-     * Combined effect: short real absence + sleep time jump.
+     * Combined effect: short real absence + sleep time jump. Only the
+     * daytime portion of the interval (10000-12000, 2000 ticks) can produce
+     * - the night portion is slept through - so a small or zero delta is
+     * correct, and the lower bound is unbounded because a hungry villager
+     * may legitimately eat from the chest during the live settle window.
      * startTimeTick=10000 (afternoon), warpAmount=14000 (past next morning).
      */
     private static TestBlueprint gathererAbsenceThenSleepBlueprint() {
@@ -2999,7 +3007,7 @@ public class TestBlueprintRegistry {
                 base.roomType(), base.blocks(), base.supplyItems(),
                 base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
                 new TestExpectation(
-                        List.of(new ExpectedProduct("*", 0, 14)),
+                        List.of(new ExpectedProduct("*", null, 14)),
                         0, 100
                 ),
                 base.supplyDoorOffset(), 14000, 10000L, null, false, null,
