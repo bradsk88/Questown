@@ -45,4 +45,30 @@ a second one.
   production is not masking the behavior anymore; this is the real
   leaver-day cycle.
 - The `status:` line in `_qtdev inspect villagers` (added this session)
+
+## Confirmed mechanism (2026-09-20, new `progress:` instrumentation)
+
+A new `progress:` line in `_qtdev inspect villagers` shows the leaver's
+job-block state and work/time ticks left (e.g. `progress: job block
+1,64,0 state=2 time-left=3640`). With it the recall is definite, not
+likely:
+
+- day: gatherer `gather_half_day` `WAITING_FOR_TIMED_STATE`, `state=2
+  time-left=3640`
+- `time set 35500` (evening): same gatherer flips to `RELAXING` with
+  `state=2 time-left=3190` still remaining
+
+The evening signal recalls the leaver while ~3200 ticks of work are
+left on the timer. The timer keeps counting down (3640 -> 3190 across
+the wall-clock gap) but his status is yanked to RELAXING, so he
+reappears in town with the trip unfinished.
+
+Root cause: `ProductionStatuses.getNewStatusFromSignal` on
+EVENING/NIGHT calls `getEveningStatus`, which unconditionally moves the
+villager to `droppingLoot` (carrying) or `relaxing` (empty) regardless
+of current status. It never consults `isUnfinishedTimeWorkPresent` /
+the leaver's remaining timer. Only the *morning* path
+(`JobStatuses.productionRoutine`) holds a `WAITING_FOR_TIMED_STATE`
+villager out while `town.isUnfinishedTimeWorkPresent()`; the evening
+path has no such branch. That asymmetry is the bug.
   made the cycle visible; use it for the repro.

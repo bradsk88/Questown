@@ -27,6 +27,7 @@ import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
@@ -323,6 +324,42 @@ public class DeclarativeJob extends
         DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra, WorkLocation> deps
                 = new DeclarativeJobTickerDependencies(this, (TownFlagBlockEntity) town, vme);
         this.ticker.tick(deps, (p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a));
+    }
+
+    /**
+     * Eyes-level debug snapshot of the job's current work-site progress: the
+     * processing state and how many work/time ticks remain before the next
+     * stage. This backs the "progress / [work/time] left" indicator and is how
+     * an observer tells a leaver who is genuinely mid-trip (timer still
+     * counting down) from one whose trip was cut short. Returns null when the
+     * job has no current work spot (e.g. it is not yet assigned a job block).
+     */
+    public @Nullable String getWorkProgressDebug(TownInterface town) {
+        WorkPosition<BlockPos> spot = ticker.workSpot();
+        if (spot == null || spot.jobBlock() == null) {
+            return null;
+        }
+        BlockPos bp = spot.jobBlock();
+        AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> work =
+                ((TownFlagBlockEntity) town).getRealWorkStatusHandle(
+                        specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS) ? null : ownerUUID
+                );
+        State state = work.getJobBlockState(bp);
+        Integer timeToNext = work.getTimeToNextState(bp);
+        StringBuilder sb = new StringBuilder();
+        sb.append("job block ").append(bp.getX()).append(',').append(bp.getY()).append(',').append(bp.getZ());
+        if (state == null) {
+            sb.append(" (no state yet)");
+        } else {
+            sb.append(" state=").append(state.processingState());
+            if (state.hasWorkLeft()) {
+                sb.append(" work-left=").append(state.workLeft());
+            }
+        }
+        if (timeToNext != null && timeToNext > 0) {
+            sb.append(" time-left=").append(timeToNext);
+        }
+        return sb.toString();
     }
 
 
