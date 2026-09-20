@@ -324,7 +324,13 @@ public class QtDevInspectCommand {
         }
         if (!any) {
             QT.FLAG_LOGGER.info("[_qtdev inspect]   no villagers");
+            return;
         }
+        // The command a player cannot see but the agent needs named: the change
+        // job tab's action, as a console hand. The tab itself is player-facing;
+        // this line only says the hand exists and what it costs.
+        QT.FLAG_LOGGER.info("[_qtdev inspect]   to change a villager's job: _qtdev change_job <villager uuid> "
+                + "- spends a Block of Progress from the flag and requests a job change (takes effect overnight)");
     }
 
     private static void printQuests(TownFlagBlockEntity flag) {
@@ -336,6 +342,10 @@ public class QtDevInspectCommand {
             any = true;
             QT.FLAG_LOGGER.info("[_qtdev inspect]   {} wants {} ({} x{})",
                     q.status, q.getWantedId(), explain(q), q.getIngredients().size());
+            // The quest's flavor text, the guidance the quest UI shows a player.
+            if (q.getFlavorText() != null && !q.getFlavorText().isEmpty()) {
+                QT.FLAG_LOGGER.info("[_qtdev inspect]     {}", q.getFlavorText());
+            }
             if (q.getType() == Quest.QuestType.ROOM) {
                 // The blocks the room must contain, the way the quest UI shows the
                 // room recipe as icons: a player reads those and knows what to put
