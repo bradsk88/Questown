@@ -19,6 +19,14 @@ driver**; the dev is a **secondary observer** via `runClient`. The agent places
 blocks, registers rooms, supplies items, and flips the clock; the dev watches
 in survival. Do not ask the dev to place blocks or drive the run.
 
+**The observation standard.** In this context the agent plays as a new player:
+it may use only what the game surfaces (the server log, the `inspect` tabs,
+the chicken's narration, broadcasts, chat). This skill documents what each
+command does and how it fails - never recipes, mechanics, or strategy the game
+is meant to teach. When a run stalls on knowledge the game does not surface,
+the fix belongs in the game or in a dev command's output, not in this skill.
+(Other contexts may allow an omniscient agent; a held run is not one of them.)
+
 This skill consolidates what was scattered across `AGENTS.md`,
 `references/questown-dev-launch.md`, `questown-behavior-verify`, and
 `commands/test/COMPLEX.md`. Before the first launch, read
@@ -288,7 +296,7 @@ was never the right one. When the chicken's cue is "put X in the world," place t
 block the matching hand places it.
 
 - `_qtdev inspect <flag>` - the flag menu a player would see by right-clicking the flag: which tabs are shown (villagers, quests, economics, block of progress, crafting), with red-dots, and the static content. `_qtdev inspect <tab> <pos>` returns one tab (`villagers`, `quests`, `economy`, `blocks`, `crafting`). `_qtdev inspect chicken <pos>` narrates the current onboarding beat as the chicken's observed behavior (e.g. "The chicken looks at your town wand, then back to the flag base [Use the town wand on the flag base]"), keyed off the player's held item AND the actual world state so the same beat reads differently in different states. This is the new-player vantage: it returns what a right-click shows, not the gate behind it - no internal state name, no condition line, no arc map. Use it to decide the next action; do not reach for `_qtdev help` (which prints the internal beat/`status`/map - the cheatsheet) or the removed `qt quests` / `_qtdev villagers` (which reach the quest board without going through the menu).
-- **The chicken's hint reflects what it sees.** When the campfire beat says "an empty spot" instead of "the campfire," the campfire does not exist yet and you must place one. When it says "the lit campfire," one exists and you should use the wand on it. The chicken observes the world, not the internal beat state.
+- **The chicken's hint reflects what it sees.** Its wording changes with the actual world state, so read it literally rather than assuming a beat is stuck. The chicken observes the world, not the internal beat state.
 - `_qtdev registerroom <x> <y> <z>` — register a door at the position, the way a
   player right-clicking a door with the town wand would.
 - `_qtdev place_door` (no coordinate) or `_qtdev place_door <x> <y> <z>` — place
@@ -296,16 +304,13 @@ block the matching hand places it.
   chicken's door target (the door spot the door beat checks), so an agent that
   can not see the chicken's peck can still land the door in the right place; with
   a coordinate it places at that block, the way a player using a door item on a
-  block would. Use this for a door, **not** `setblock`: `setblock` lays only the
-  lower half of a door, leaving a one-block gap that then gets roofed over and
-  breaks the door.
+  block would. Use this for a door, **not** `setblock`.
 - `_qtdev place_mat` (no coordinate) or `_qtdev place_mat <x> <y> <z>` — place a
   welcome mat. With **no coordinate** it drops the mat a block beside the flag, so
   an agent that can not see where the chicken's "gate" cue points can still place the
   mat in a safe spot; with a coordinate it places at that block, the way a player
   using a mat item would. Prefer the bare form: the welcome mat has no fixed spot in
-  a hand-placed town, and placing it **on the door** replaces the door and un-registers
-  the room you built (the `room_destroyed`/`quest_lost` broadcast above).
+  a hand-placed town.
 - `_qtdev clickwand <x> <y> <z>` — right-click the flag with a stick so it
   converts to the town wand (the real flag interaction; the agent's stand-in
   for the wand beat a player does by hand).
@@ -337,7 +342,7 @@ campfire. When the chicken's hint is "put X in the world" (a door, a campfire,
 - `_qtdev place_block [index] <block>` - place a block inside a registered room's interior
   (the way a player placing a block on the floor would). With no index it lists the room's
   empty interior cells (index, x, y, z); with `<index> <block>` it places the block at that
-  cell. Use it to put a quest's recipe block (a chest, a sign→job board, …) *inside* the room -
+  cell. Use it to put a quest's recipe block *inside* the room -
   a block placed at a coordinate you guessed may land outside the room footprint and never
   register. It resolves a **block** id (not an item id), so it where a vanilla `setblock` (which
   resolves an item) would not. List first, pick a cell, then place - do not guess a coordinate.
@@ -396,9 +401,7 @@ campfire. When the chicken's hint is "put X in the world" (a door, a campfire,
   player never moves, and there is no log line to tell you it failed. Always
   target a player (`tp dev <x> <y> <z>`, or `tp @s`). This bit the chest beat:
   the chicken's "stand in the room" guidance was unmet the whole time because
-  the teleport never happened, and it looked like an unbreakable dead end. For a **door**, use
-  `_qtdev place_door`, not `setblock` (see above): `setblock` only lays the lower
-  half of a door.
+  the teleport never happened, and it looked like an unbreakable dead end. For a **door**, use `_qtdev place_door`, not `setblock` (see above).
 - **Arg types: use `ItemArgument`/`BlockPosArgument`, not `StringArgumentType
   .word()`.** From the FIFO/console, `StringArgumentType.word()` fails to parse
   with `Expected whitespace to end one argument, but found trailing data` (even

@@ -83,6 +83,15 @@ real-time effects).
 
 ## Driving a run (vs. observing it)
 
+**The observation standard.** The two modes have different rules. Verification
+(this skill's main job) may read code freely: code says what to *measure*. A
+driven run is the opposite: the agent plays as a new player and may use only
+what the game surfaces (the log, the `inspect` tabs, the chicken, broadcasts,
+chat) - code and docs never say what to *do next*, and skill docs record what
+a command does and how it fails, never recipes, mechanics, or strategy the game
+is meant to teach. When a driven run stalls on knowledge the game does not
+surface, the fix belongs in the game or a dev command's output, not in a doc.
+
 This skill is about *verifying* a behavior, not *driving* a town through onboarding.
 When the task is to drive a held run by console (place blocks, register rooms,
 supply items, flip the clock), do not pre-plan a sequence of actions. Read the
