@@ -315,6 +315,43 @@ public class QtDevInspectCommand {
             TownieNeed need = villager.getNeed();
             QT.FLAG_LOGGER.info("[_qtdev inspect]   villager {} job={} need={}",
                     villager.getUUID(), villager.getJobId(), need);
+            // The live job status (seeking work, hunting, dropping loot),
+            // what a player reads off the villager; job= is the job id, not
+            // the live status.
+            try {
+                ca.bradj.questown.jobs.IStatus<?> status = villager.getStatusForServer();
+                if (status != null) {
+                    // ProductionStatus.name() is the sync ordinal, not a
+                    // readable name; its `name` field holds the human one.
+                    String label = status instanceof ca.bradj.questown.jobs.production.ProductionStatus ps
+                            ? ps.name : status.nameV2();
+                    QT.FLAG_LOGGER.info("[_qtdev inspect]     status: {}", label);
+                }
+            } catch (Exception ignored) {
+                // status is best-effort eyes, never a reason to fail the inspect
+            }
+            // Eyes-level state a player sees on the villager's body: full hands
+            // (carried loot) and a Block of Progress bobbing above their head.
+            // Without this an agent reads need=NONE on a villager who is stuck
+            // holding goods they cannot deposit, and the stall is invisible.
+            String carrying = describeCarrying(villager);
+            boolean hasLoot = !carrying.isEmpty();
+            if (hasLoot) {
+                QT.FLAG_LOGGER.info("[_qtdev inspect]     carrying: {}", carrying);
+            }
+            boolean hasBop = villager.hasBlockOfProgress();
+            if (hasBop) {
+                QT.FLAG_LOGGER.info("[_qtdev inspect]     holding a Block of Progress (visible above their head)");
+            }
+            if (hasLoot || hasBop) {
+                switch (townContainerSpace(flag)) {
+                    case ALL_FULL -> QT.FLAG_LOGGER.info(
+                            "[_qtdev inspect]     cannot deposit: every town chest is full - make space or build another store room");
+                    case NO_CONTAINER -> QT.FLAG_LOGGER.info(
+                            "[_qtdev inspect]     cannot deposit: the town has no chest - build a store room");
+                    case HAS_SPACE -> { }
+                }
+            }
             if (need == TownieNeed.UNMET_ITEM) {
                 String name = resolveItemName(villager.getUnmetItem());
                 QT.FLAG_LOGGER.info("[_qtdev inspect]     needs item: {}{}",
@@ -331,6 +368,42 @@ public class QtDevInspectCommand {
         // this line only says the hand exists and what it costs.
         QT.FLAG_LOGGER.info("[_qtdev inspect]   to change a villager's job: _qtdev change_job <villager uuid> "
                 + "- spends a Block of Progress from the flag and requests a job change (takes effect overnight)");
+    }
+
+    /** What a player sees in the villager's hands: the non-empty stacks they
+     * carry, as "Nx item" entries. Empty string when their hands are empty. */
+    private static String describeCarrying(VisitorMobEntity villager) {
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        net.minecraft.world.Container inv = villager.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            net.minecraft.world.item.ItemStack s = inv.getItem(i);
+            if (!s.isEmpty()) {
+                parts.add(s.getCount() + "x " + s.getItem());
+            }
+        }
+        return String.join(", ", parts);
+    }
+
+    private enum ContainerSpace { HAS_SPACE, ALL_FULL, NO_CONTAINER }
+
+    /** Whether the town's registered containers can take one more item, the
+     * fact a player reads by opening the chests. Same rule as the deposit path
+     * (an empty slot anywhere); stacked-but-not-full slots are not counted,
+     * matching how the deposit code actually inserts. */
+    private static ContainerSpace townContainerSpace(TownFlagBlockEntity flag) {
+        boolean sawContainer = false;
+        for (ca.bradj.questown.jobs.leaver.ContainerTarget<ca.bradj.questown.integration.minecraft.MCContainer, ca.bradj.questown.integration.minecraft.MCTownItem> target :
+                ca.bradj.questown.town.TownContainers.getAllContainers(flag, flag.getServerLevel())) {
+            if (flag.getServerLevel().getBlockEntity(target.getBlockPos()) instanceof net.minecraft.world.Container c) {
+                sawContainer = true;
+                for (int i = 0; i < c.getContainerSize(); i++) {
+                    if (c.getItem(i).isEmpty()) {
+                        return ContainerSpace.HAS_SPACE;
+                    }
+                }
+            }
+        }
+        return sawContainer ? ContainerSpace.ALL_FULL : ContainerSpace.NO_CONTAINER;
     }
 
     private static void printQuests(TownFlagBlockEntity flag) {

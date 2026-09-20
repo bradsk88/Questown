@@ -23,7 +23,9 @@ in survival. Do not ask the dev to place blocks or drive the run.
 it may use only what the game surfaces (the server log, the `inspect` tabs,
 the chicken's narration, broadcasts, chat). This skill documents what each
 command does and how it fails - never recipes, mechanics, or strategy the game
-is meant to teach. When a run stalls on knowledge the game does not surface,
+is meant to teach. That standard applies to the skill's own command
+documentation too: describe what an output shows, never what to conclude
+from it or what to do next. When a run stalls on knowledge the game does not surface,
 the fix belongs in the game or in a dev command's output, not in this skill.
 (Other contexts may allow an omniscient agent; a held run is not one of them.)
 
@@ -167,7 +169,10 @@ Observe in ~10s windows — one observe cycle (the flag's `--- observe ---` line
 is 200 ticks, ~10s). Start at 10s and go **up**, not down, if the state has not
 changed by the next cycle. After each window, report (a) what is **clear** about
 what the town/villagers need, and (b) what is **ambiguous, unknown, or
-blocking**. Act on the current output, not a pre-baked plan.
+blocking**. Act on the current output, not a pre-baked plan. **Waiting for
+production is a blocked step**: two observe windows with no change is a
+stall, not patience - inspect the villager (status, carrying), do not
+schedule a third window of waiting.
 
 **Confirm against the latest observe cycle, not the last line you grepped.**
 Observe lines and the need/job lines interleave, and a line you grepped a
@@ -295,7 +300,8 @@ lesson the quest is teaching (the supply chain) and reads as success in a log th
 was never the right one. When the chicken's cue is "put X in the world," place the
 block the matching hand places it.
 
-- `_qtdev inspect <flag>` - the flag menu a player would see by right-clicking the flag: which tabs are shown (villagers, quests, economics, block of progress, crafting), with red-dots, and the static content. `_qtdev inspect <tab> <pos>` returns one tab (`villagers`, `quests`, `economy`, `blocks`, `crafting`). `_qtdev inspect chicken <pos>` narrates the current onboarding beat as the chicken's observed behavior (e.g. "The chicken looks at your town wand, then back to the flag base [Use the town wand on the flag base]"), keyed off the player's held item AND the actual world state so the same beat reads differently in different states. This is the new-player vantage: it returns what a right-click shows, not the gate behind it - no internal state name, no condition line, no arc map. Use it to decide the next action; do not reach for `_qtdev help` (which prints the internal beat/`status`/map - the cheatsheet) or the removed `qt quests` / `_qtdev villagers` (which reach the quest board without going through the menu).
+- `_qtdev inspect <flag>` - the flag menu a player would see by right-clicking the flag: which tabs are shown (villagers, quests, economics, block of progress, crafting), with red-dots, and the static content. `_qtdev inspect <tab> <pos>` returns one tab (`villagers`, `quests`, `economy`, `blocks`, `crafting`).
+- **`inspect villagers` also shows what a player's eyes see on the villager's body**: a `carrying: Nx item` line for the items in their hands, a `holding a Block of Progress` line (the icon a player sees above their head), and a `cannot deposit: ...` line when they are holding goods the town's chests cannot take (every chest full, or no chest) - what a player learns by watching the villager at a chest and opening it themselves. `_qtdev inspect chicken <pos>` narrates the current onboarding beat as the chicken's observed behavior (e.g. "The chicken looks at your town wand, then back to the flag base [Use the town wand on the flag base]"), keyed off the player's held item AND the actual world state so the same beat reads differently in different states. This is the new-player vantage: it returns what a right-click shows, not the gate behind it - no internal state name, no condition line, no arc map. Use it to decide the next action; do not reach for `_qtdev help` (which prints the internal beat/`status`/map - the cheatsheet) or the removed `qt quests` / `_qtdev villagers` (which reach the quest board without going through the menu).
 - **The chicken's hint reflects what it sees.** Its wording changes with the actual world state, so read it literally rather than assuming a beat is stuck. The chicken observes the world, not the internal beat state.
 - `_qtdev registerroom <x> <y> <z>` — register a door at the position, the way a
   player right-clicking a door with the town wand would.
@@ -396,6 +402,12 @@ campfire. When the chicken's hint is "put X in the world" (a door, a campfire,
   follows, with no error line. Advance to a later day's night (37000, 61000,
   85000, ...). Also: the first `clickheld` after a tp can no-op with a `Trying
   to drop too quickly` warn - retry it once before concluding anything.
+  **The client can drop at the moment a campfire sleep starts** (`Dev left
+  the game` right after the first sleep heartbeat, client back at the menu;
+  seen twice in one session, cause unknown). The sleep dies with it: relaunch
+  the client, `tp` back, and `clickheld` once - a rapid second click can
+  interrupt a sleep that did start (`OTHER_PROBLEM`), so give one click ~15s
+  before retrying.
   **A bare `tp <x> <y> <z>` (no player target) silently no-ops from a console
   source** — it has no player to move, so the command appears to run but the
   player never moves, and there is no log line to tell you it failed. Always
