@@ -337,6 +337,19 @@ public class QtDevInspectCommand {
             QT.FLAG_LOGGER.info("[_qtdev inspect]   {} wants {} ({} x{})",
                     q.status, q.getWantedId(), explain(q), q.getIngredients().size());
             if (q.getType() == Quest.QuestType.ROOM) {
+                // The blocks the room must contain, the way the quest UI shows the
+                // room recipe as icons: a player reads those and knows what to put
+                // in the room, so the agent gets the same read here. A tag entry
+                // also lists a few example items that count.
+                StringBuilder needs = new StringBuilder();
+                for (Ingredient ing : q.getIngredients()) {
+                    if (needs.length() > 0) {
+                        needs.append(", ");
+                    }
+                    needs.append(describeIngredient(ing));
+                }
+                QT.FLAG_LOGGER.info("[_qtdev inspect]     room needs: {}",
+                        needs.length() == 0 ? "(no recipe found for this room)" : needs);
                 QT.FLAG_LOGGER.info(
                         "[_qtdev inspect]     each room quest needs its own room - put this quest's "
                                 + "recipe block in a room built for it, not the room for another "
@@ -436,6 +449,14 @@ public class QtDevInspectCommand {
             return "job: " + q.getWantedId();
         }
         return String.valueOf(q.getWantedId());
+    }
+
+    /** One ingredient of a room recipe, as a player reads it in the quest UI:
+     * the item or tag name (tags resolve to a readable name, e.g. the
+     * light_sources tag reads "Light Source").
+     */
+    private static String describeIngredient(Ingredient ing) {
+        return Ingredients.getName(ing).getString();
     }
 
     /**
