@@ -30,11 +30,28 @@ a second one.
 
 ## Status
 
-- **Fix implemented (evening hold):** `ProductionStatuses.getEveningStatus`
-  now mirrors the morning path — a `WAITING_FOR_TIMED_STATE` villager with
-  unfinished timed work returns `null` (no recall) instead of being yanked to
-  `droppingLoot`/`relaxing`. Unit-tested in `StatusesProductionRoutineTest`
-  (`InEvening_…`). **Live held-run verification still pending.**
+- **Fix implemented (evening hold), commit `34bcb737`:**
+  `ProductionStatuses.getEveningStatus` now mirrors the morning path — a
+  `WAITING_FOR_TIMED_STATE` villager with unfinished timed work returns `null`
+  (no recall) instead of being yanked to `droppingLoot`/`relaxing`.
+  Unit-tested in `StatusesProductionRoutineTest` (`InEvening_…`).
+- **Live verified (held village/growth, 2026-09-20):** gatherer `9bb486f7`
+  (job `axe`, `time: 2000`) went out mid-morning (`state=2 time-left=1550` at
+  dayTime 2444). On `time set 13000` (evening) he **stayed**
+  `WAITING_FOR_TIMED_STATE` (`time-left=1270`, then `730` at 13672), and only
+  flipped to `RELAXING` once the timer expired (dayTime 14743, progress line
+  cleared). Before the fix, the evening jump would have yanked him to
+  `RELAXING` with time still on the timer (see Confirmed mechanism).
+- **The `canFit` start-gate ("don't take a job you can't finish before
+  evening")** does exist and is wired into both selection paths
+  (`changeJobForVisitorFromBoard` realtime, `getRandomFinishableWork` warp):
+  `ServerJobsRegistry.canFit` rejects a job whose `dayTime +
+  getTotalDuration()` lands in EVENING/NIGHT. The original repro had the clock
+  manually parked at evening (`time set 13000`) for a long stretch while
+  onboarding was driven — an unnatural state. Whether a *natural* run can
+  still produce a late-afternoon trip start (e.g. via warp-resume restoring an
+  in-flight timer without re-running `canFit`) was not isolated this session;
+  the evening hold makes the behaviour correct regardless.
 
 ## Acceptance criteria
 
