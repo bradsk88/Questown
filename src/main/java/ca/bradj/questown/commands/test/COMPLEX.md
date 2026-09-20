@@ -189,3 +189,37 @@ in a scenario must also handle tag needs (e.g. `#questown:villager_food`): use
 need bubble uses), not a bare `ResourceLocation`/`ForgeRegistries.ITEMS` lookup,
 which returns null for a tag.
 
+## The `village/self_sufficiency` watchtower seed
+
+A self-driving realtime scenario that plays a just-past-onboarding town forward
+and surfaces soft-locks (a watchtower, not a pass/fail gate). It differs from
+`village/growth` in two load-bearing ways:
+
+**Runs realtime, not warped.** `village/growth` warps with `time set` and structurally
+cannot exercise leaver/timed-work behavior (which only ticks in realtime). The
+watchtower must run realtime for the same reason — a warp skips exactly the
+behavior it is meant to watch.
+
+**The seed is gated on the flag ticking, which needs a player.** `SpawnVisitorReward`
+claims and the room scan both run on flag ticks; the flag ticks only with a player
+nearby. In a held run the `runClient` observer may join late, so the seed phases
+(`WAIT_FOR_ROOMS`, `WAIT_FOR_VILLAGERS`) poll for the roster/rooms rather than racing
+ahead on a timer — a fixed timeout lets the seed race ahead with 0 villagers and rooms
+undetected, then furnish outside a registered room where the jobs cannot see it.
+
+**A chest counts only inside a *registered* room.** A job draws supplies from a
+container that is a contained block of a registered room in `flag.getRoomHandle()
+.getMatches(...)`; a chest outside a registered room is invisible to every job.
+The seed therefore builds the store room as a closed rectangular shell (the wall
+walk closes it cleanly; `flag.buildRoom`'s chicken shell leaks at this footprint,
+leaving the room `NOT_ENCLOSED`) and registers its door, so the interior chest is a
+registered container.
+
+**A job with no work request has no work.** Work requests are *not* quests. They come
+from the job board: a player posting a request, or a `ChangeJobReward` posting the
+job's output item when a job-change quest completes. The seed assigns jobs via
+`ChangeJobReward` *and* posts the work requests directly (`flag.getWorkHandle()
+.requestWork` for each job's `initial_request` — mutton for the hunter, wheat seeds
+for the gatherer), because without a posted request the job has nothing to produce
+and its villager sits in `downtime`/`NO_JOBSITE` forever.
+
