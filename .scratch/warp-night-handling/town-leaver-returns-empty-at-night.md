@@ -2,6 +2,8 @@
 title: Town-leaver workers return empty at night instead of staying out until their timer ends
 status: needs-triage
 created: 2026-09-20
+closed: 2026-09-20
+resolved: 2026-09-20
 ---
 
 ## Context
@@ -52,6 +54,14 @@ a second one.
   still produce a late-afternoon trip start (e.g. via warp-resume restoring an
   in-flight timer without re-running `canFit`) was not isolated this session;
   the evening hold makes the behaviour correct regardless.
+- **Morning-after coherence verified (same run):** after the held-out trip
+  completed, the next morning the gatherer went `seeking_work -> axe`, re-armed
+  from the storeroom chest (`GOING_TO_JOB`, `carrying: 1x wooden_axe`), and
+  started a fresh trip (`WAITING_FOR_TIMED_STATE`, `state=2 time-left=2870`).
+  A `NO_JOBSITE` seen earlier in the cycle was the transient re-arm step, not
+  a persistent stall: the chest held a usable `wooden_axe` (Damage: 1) and he
+  fetched it. The original report's `NO_JOBSITE` stall (observation #4) did
+  not reproduce as a persistent state.
 
 ## Acceptance criteria
 
