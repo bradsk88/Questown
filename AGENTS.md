@@ -20,6 +20,8 @@ A test that uses vanilla bootstrap (`ItemStack` NBT, `Bootstrap.bootStrap()`) mu
 
 Do not make design decisions without first consulting the local docs/ files. There is an index that can help with doing that efficiently.
 
+Before asserting a domain fact as a constraint or a negative — "villagers can't eat X", "no gate exists for Y", "job Z works this way" — grep `CONTEXT.md` and `docs/adr/` for the term first. The two times a session asserted one of these from a single code read (raw food, the `canFit` start-gate), the correct model was already in `CONTEXT.md` or the selection path, and the dev had to correct it. A single-file or single-call-site read is not grounds for "X doesn't exist."
+
 Do not build large functions unless there is a compelling reason to do so.
 
 Do not choose nesting over early returns.
@@ -173,7 +175,7 @@ Five canonical roles using default strings (`needs-triage`, `needs-info`, `ready
 
 ### Domain docs
 
-Single-context. `CONTEXT.md` not yet present at repo root; ADRs go in `docs/adr/` going forward (legacy `docs/decision-*.md` files are pre-existing and not moved). See `docs/agents/domain.md`.
+Single-context. `CONTEXT.md` lives at the repo root (the domain vocabulary: jobs, food, economy, rooms). ADRs go in `docs/adr/` going forward (legacy `docs/decision-*.md` files are pre-existing and not moved). See `docs/agents/domain.md`.
 
 ### Plans
 
