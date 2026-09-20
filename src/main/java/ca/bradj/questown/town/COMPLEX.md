@@ -49,12 +49,26 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    T["TownFlagState.tick"] --> Warp["warp bookkeeping<br/>(always runs)"]
-    Warp --> Due{"isDueForContainerScan?<br/>ticksSinceContainerScan >= ContainerScanInterval"}
+    T["TownFlagState.tick"] --> Warp{"game-time jump<br/>> 10 ticks?"}
+    Warp -- no --> Ref["update warp reference tick"]
+    Warp -- yes --> Awake{"ticked moments ago<br/>in wall time?"}
+    Awake -- "yes (sleep / time set)" --> Ref
+    Awake -- "no (genuine absence)" --> Day["warp only the daytime<br/>portion of the gap"]
+    Day --> Due
+    Ref --> Due{"isDueForContainerScan?<br/>ticksSinceContainerScan >= ContainerScanInterval"}
     Due -- no --> Skip["return false (no changes reported)"]
     Due -- yes --> Scan["TownContainers.findAllContainersMatching<br/>→ checkForContainerChanges vs listenedBlocks"]
     Scan --> Res["true if any container hash changed"]
 ```
+
+- **A time jump while the town is awake produces nothing.** The flag ticks
+  every game tick while a player is in radius, so a jump detected on a tick
+  that follows the previous one by moments of wall time is a sleep or a
+  `/time set`, not a player absence; the reference tick advances without a
+  warp. Genuine absence (the flag was not ticking) warps only the
+  time-of-day portion in `[0, 12000)` of the gap — villagers sleep at night.
+  Regression guard: `gatherer/axe [sleep_jump]` asserts a non-positive
+  product delta.
 
 - The scan walks every recipe-matched room's blocks (chests **and** block
   entities) and hashes contents — ~187us in a 16-room town, ~44% of all tick

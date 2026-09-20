@@ -432,8 +432,27 @@ public class TownFlagState {
         boolean waking = timeSinceWake > 10 || !initialized;
         this.initialized = true;
 
+        long nowMs = System.currentTimeMillis();
+        // The flag ticks every game tick while a player is in radius, so a
+        // game-time jump detected on a tick that follows the previous one by
+        // moments of wall time means the town was awake: the jump is a sleep
+        // or a /time set, not a player absence, and must not produce.
+        boolean townAwake = lastTickWallMs != 0 && (nowMs - lastTickWallMs) < 5000;
+        this.lastTickWallMs = nowMs;
+
         if (waking) {
-            warp(e, flagTag, level, timeSinceWake);
+            if (townAwake) {
+                flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
+            } else {
+                // Genuine absence (the flag was not ticking): catch up, but
+                // only for the daytime portion - villagers sleep at night.
+                long warpTicks = daytimeTicks(lastTick, gt);
+                if (warpTicks > 10) {
+                    warp(e, flagTag, level, warpTicks, timeSinceWake);
+                } else {
+                    flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
+                }
+            }
         } else {
             flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
         }
@@ -481,6 +500,23 @@ public class TownFlagState {
             ServerLevel level,
             long timeSinceWake
     ) {
+        return warp(e, flagTag, level, timeSinceWake, timeSinceWake);
+    }
+
+    /**
+     * @param warpTicks the ticks of work to simulate (the natural-warp path
+     *                  passes only the daytime portion of the elapsed
+     *                  interval; the explicit dev warp passes the full amount)
+     * @param elapsedTicks the real elapsed ticks, used for the "while you
+     *                     were away" summary's day count
+     */
+    MCTownState warp(
+            TownFlagBlockEntity e,
+            CompoundTag flagTag,
+            ServerLevel level,
+            long warpTicks,
+            long elapsedTicks
+    ) {
         long levelDayTime = level.getDayTime();
 
         // Snapshot container contents before warp for summary
@@ -488,7 +524,7 @@ public class TownFlagState {
 
         MCTownState newState = null;
         try {
-            newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
+            newState = TownFlagState.advanceTime(parent, level, warpTicks);
             if (newState != null) {
                 e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Storing state on {}: {}", e.getUUID(), newState);
                 Compat.getBlockStoredTagData(e).put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
@@ -496,7 +532,7 @@ public class TownFlagState {
                 TownFlagState.restoreWarpVisuals(level, newState);
                 parent.getKnowledgeHandle().registerFoundLoots(newState.knowledge());
 
-                sendWarpSummary(e, level, timeSinceWake, beforeItems);
+                sendWarpSummary(e, level, elapsedTicks, beforeItems);
             }
         } catch (Exception ex) {
             if (Config.CRASH_ON_FAILED_WARP.get()) {
@@ -621,6 +657,28 @@ public class TownFlagState {
             );
         }
     }
+
+    /** Ticks in {@code [from, to)} whose time-of-day falls in the working
+     * day {@code [0, 12000)}. Night ticks are excluded because villagers
+     * sleep then; a warp may only produce for daylight ticks. */
+    static long daytimeTicks(long from, long to) {
+        if (to <= from) {
+            return 0;
+        }
+        long total = 0;
+        long startDay = Math.floorDiv(from, 24000L);
+        long endDay = Math.floorDiv(to - 1, 24000L);
+        for (long d = startDay; d <= endDay; d++) {
+            long segStart = Math.max(from, d * 24000L);
+            long segEnd = Math.min(to, d * 24000L + 12000L);
+            if (segEnd > segStart) {
+                total += segEnd - segStart;
+            }
+        }
+        return total;
+    }
+
+    private long lastTickWallMs;
 
     private void profileTick(long startTime) {
         if (Config.TICK_SAMPLING_RATE.get() > 0) {
