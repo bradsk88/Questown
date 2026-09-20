@@ -330,6 +330,17 @@ public class QtDevInspectCommand {
             } catch (Exception ignored) {
                 // status is best-effort eyes, never a reason to fail the inspect
             }
+            // Work-site progress (processing state, work/time ticks left): how a
+            // player watching a leaver tells a genuine mid-trip (timer still
+            // counting down) from a trip cut short. Best-effort like status.
+            try {
+                String progress = villager.getWorkProgressDebug();
+                if (progress != null) {
+                    QT.FLAG_LOGGER.info("[_qtdev inspect]     progress: {}", progress);
+                }
+            } catch (Exception ignored) {
+                // best-effort eyes, never a reason to fail the inspect
+            }
             // Eyes-level state a player sees on the villager's body: full hands
             // (carried loot) and a Block of Progress bobbing above their head.
             // Without this an agent reads need=NONE on a villager who is stuck

@@ -1306,6 +1306,19 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.get().getStatus();
     }
 
+    /**
+     * The job's current work-site progress (processing state, work/time left),
+     * for the inspect command's eyes-level readout. Null when the job is not a
+     * declarative job or has no current work spot.
+     */
+    public @Nullable String getWorkProgressDebug() {
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
+        if (j instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj && town != null) {
+            return dj.getWorkProgressDebug(town);
+        }
+        return null;
+    }
+
     public void addStatusListener(StatusListener l) {
         this.cleanupJobListeners.add(
                 job.get().addStatusListener(l)
