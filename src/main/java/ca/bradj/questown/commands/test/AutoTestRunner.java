@@ -78,7 +78,7 @@ public class AutoTestRunner {
         // getNearestPlayer returns the Dev. The forced chunk above keeps the flag's
         // chunk loaded regardless.
         boolean heldVillage = only != null
-                && nameMatches("village/growth", only)
+                && (nameMatches("village/growth", only) || nameMatches("village/self_sufficiency", only))
                 && "true".equals(System.getProperty(SYSPROP_HOLD));
         GameProfile profile = new GameProfile(UUID.randomUUID(), "[AutoTest]");
         var fakePlayer = FakePlayerFactory.get(overworld, profile);
@@ -100,7 +100,8 @@ public class AutoTestRunner {
         List<ChickenArcBlueprint> chickenList = runChicken ? ChickenArcBlueprintRegistry.all() : List.of();
 
         boolean runVillage = only != null && nameMatches("village/growth", only);
-        if (runVillage) {
+        boolean runSelfSuff = only != null && nameMatches("village/self_sufficiency", only);
+        if (runVillage || runSelfSuff) {
             runJobs = false;
             runChicken = false;
             // The growth scenario runs for many minutes; let a spectator client
@@ -116,7 +117,7 @@ public class AutoTestRunner {
             chickenList = chickenList.stream().filter(b -> nameMatches(b.name(), only)).toList();
             runJobs = !jobsList.isEmpty();
             runChicken = !chickenList.isEmpty();
-            if (!runJobs && !runChicken && !runVillage) {
+            if (!runJobs && !runChicken && !runVillage && !runSelfSuff) {
                 reportNoMatchAndShutdown(server, only, category);
                 return;
             }
@@ -131,9 +132,12 @@ public class AutoTestRunner {
         VillageGrowthExecutor villageExecutor = runVillage
                 ? new VillageGrowthExecutor(overworld, server, fakePlayer, ORIGIN)
                 : null;
+        VillageSelfSufficiencyExecutor selfSuffExecutor = runSelfSuff
+                ? new VillageSelfSufficiencyExecutor(overworld, server, fakePlayer, ORIGIN)
+                : null;
 
         AutoTestTickListener listener = new AutoTestTickListener(
-                server, jobsExecutor, chickenExecutor, villageExecutor
+                server, jobsExecutor, chickenExecutor, villageExecutor, selfSuffExecutor
         );
         MinecraftForge.EVENT_BUS.register(listener);
     }
@@ -446,22 +450,26 @@ public class AutoTestRunner {
         private final @Nullable TestAllExecutor jobsExecutor;
         private final @Nullable ChickenArcAllExecutor chickenExecutor;
         private final @Nullable VillageGrowthExecutor villageExecutor;
+        private final @Nullable VillageSelfSufficiencyExecutor selfSuffExecutor;
         private boolean jobsSuiteStartAnnounced;
         private boolean jobsDone;
         private boolean chickenSuiteStartAnnounced;
         private boolean chickenDone;
         private boolean villageDone;
+        private boolean selfSuffDone;
 
         AutoTestTickListener(
                 MinecraftServer server,
                 @Nullable TestAllExecutor jobsExecutor,
                 @Nullable ChickenArcAllExecutor chickenExecutor,
-                @Nullable VillageGrowthExecutor villageExecutor
+                @Nullable VillageGrowthExecutor villageExecutor,
+                @Nullable VillageSelfSufficiencyExecutor selfSuffExecutor
         ) {
             this.server = server;
             this.jobsExecutor = jobsExecutor;
             this.chickenExecutor = chickenExecutor;
             this.villageExecutor = villageExecutor;
+            this.selfSuffExecutor = selfSuffExecutor;
         }
 
         @SubscribeEvent
@@ -507,6 +515,16 @@ public class AutoTestRunner {
                     villageDone = true;
                 }
             }
+            if (!selfSuffDone) {
+                if (selfSuffExecutor == null) {
+                    selfSuffDone = true;
+                } else {
+                    if (!selfSuffExecutor.tick()) {
+                        return;
+                    }
+                    selfSuffDone = true;
+                }
+            }
             MinecraftForge.EVENT_BUS.unregister(this);
             reportAndShutdown();
         }
@@ -526,6 +544,8 @@ public class AutoTestRunner {
                 passed += villageExecutor.getPassedAssertions();
                 total += villageExecutor.getTotalAssertions();
             }
+            // self_sufficiency is a watchtower: it reports but is not a pass/fail gate,
+            // so it contributes no assertions to the result.
             boolean allPassed = total > 0 && passed == total;
 
             QT.FLAG_LOGGER.info("[autotest] ========================================");
@@ -535,7 +555,7 @@ public class AutoTestRunner {
 
             if ("true".equals(System.getProperty(SYSPROP_HOLD))) {
                 QT.FLAG_LOGGER.info("[autotest] HOLDING: server left running for client inspection");
-                if (villageExecutor == null) {
+                if (villageExecutor == null && selfSuffExecutor == null) {
                     MinecraftForge.EVENT_BUS.register(new HoldModeLoginListener());
                 } // village runs already registered VillageWatchListener at startup
                 return;
