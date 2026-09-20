@@ -56,3 +56,8 @@ logs
 /vazkii/patchouli/api/VariableHelper$1.class
 /vazkii/patchouli/api/VariableHelper.class
 /vazkii/patchouli/api/VariableHelper.java
+
+# Ad-hoc terminal/sensor captures from local dev sessions (throwaway)
+/log.txt
+/log[0-9]*.txt
+/output.txt
