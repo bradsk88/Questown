@@ -50,6 +50,7 @@ public class CommandInit {
         FreeFoodCommand.register(event.getDispatcher());
         SupplySwordCommand.register(event.getDispatcher());
         LookRoomCommand.register(event.getDispatcher());
+        ChangeJobCommand.register(event.getDispatcher());
         FlagPlaceBlockCommand.register(event.getDispatcher());
     }
 }

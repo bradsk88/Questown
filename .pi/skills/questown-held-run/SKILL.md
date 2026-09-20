@@ -247,8 +247,8 @@ sign, say) and correct the hand, rather than retrying `clickheld` at new spots.
 A blocked step is **not** automatically a check-in. Before surfacing it, run
 the tools the skill gave you, the console command set (`registerroom`,
 `free_food`, `place_mat`, `clickwand`, `clickheld`, `place_board`,
-`build_room`, `place_block`, `look_room`, `place_player`, `spawn_chicken`,
-`setblock`, `tp`, `time`, and the `inspect` variants), in the
+`build_room`, `place_block`, `look_room`, `place_player`, `change_job`,
+`spawn_chicken`, `setblock`, `tp`, `time`, and the `inspect` variants), in the
 context of the chicken's guidance, reading each response. The only observation
 channels are the server log (the `--- observe ---` cycles and the town's chat)
 and those `_qtdev` commands. "Blocked" is not a check-in until you have run the
@@ -351,6 +351,11 @@ campfire. When the chicken's hint is "put X in the world" (a door, a campfire,
 - `_qtdev place_player` - teleport the player into an open interior cell of the
   largest registered room, the way the player would walk in. This is the hand for
   a cue that asks the player to be inside a room.
+- `_qtdev change_job <villager uuid>` - the change job tab's action as a console
+  hand: spends one Block of Progress from the flag's store and requests a job
+  change for the villager, which takes effect overnight. Reports clearly when
+  the flag holds no Block of Progress. The villager's uuid is in
+  `inspect villagers`, which also names this command.
 - `_qtdev inspect quests <pos>` also prints `room needs: ...` for a ROOM quest -
   the blocks the room must contain, the way the quest UI shows the recipe as
   icons. Read it before furnishing a

@@ -84,7 +84,13 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             @Nullable VillagerUUID ownerId,
             ResourceLocation jobId
     ) {
-        return new MCQuest(batchUUID, ownerId, jobId, null, QuestType.JOB_CHANGE, 1);
+        MCQuest q = new MCQuest(batchUUID, ownerId, jobId, null, QuestType.JOB_CHANGE, 1);
+        // Player-facing guidance shown in the quest UI, in the same style as the
+        // crafter-arc job quests. Without it the quest read as only a job id.
+        q.setFlavorText("A villager wants to work as a " + JobID.fromRL(jobId).toNiceString()
+                + ". Spend a Block of Progress on the change job tab to request a job change - "
+                + "it takes effect overnight.");
+        return q;
     }
 
     public static MCQuest concurrentJobs(

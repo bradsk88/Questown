@@ -296,6 +296,40 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return bopStacks.size();
     }
 
+    public enum JobChangeResult {
+        REQUESTED, NO_BOP, NO_VILLAGER
+    }
+
+    /**
+     * Dev-only: the change-job-tab job change a player performs by spending a
+     * Block of Progress on the villager's change job tab (JobRootChangeMessage),
+     * driven from the console. Removes the oldest deposited BOP from the flag's
+     * store (the order the player collects them in) - the spend the player makes
+     * in the tab - and schedules the root change through the same handle call
+     * the message handler uses, overnight (not instant). A blessed BOP's
+     * guaranteed root is carried the way the handler carries it. The new root is
+     * chosen by the usual rules (random unless the spent BOP was blessed); this
+     * does not pick a job, it only performs the player's spend-and-request.
+     */
+    public JobChangeResult spendBopToRequestJobChange(UUID villagerUUID) {
+        boolean inTown = getVillagerHandle().entities().stream()
+                .anyMatch(e -> e.getUUID().equals(villagerUUID));
+        if (!inTown) {
+            return JobChangeResult.NO_VILLAGER;
+        }
+        if (bopStacks.isEmpty()) {
+            return JobChangeResult.NO_BOP;
+        }
+        net.minecraft.world.item.ItemStack consumed = bopStacks.remove(0);
+        setChanged();
+        syncBopFull();
+        getVillagerHandle().scheduleJobRootChange(
+                villagerUUID, false,
+                ca.bradj.questown.blocks.BlockOfProgress.getBlessedJob(consumed)
+        );
+        return JobChangeResult.REQUESTED;
+    }
+
     /**
      * Dev/test only: fill the flag's deposited BOPs directly, mirroring the tutorial
      * {@code grantBop}. Lets a scenario pre-fill the flag (e.g. to 63, one below the 64-slot cap)
