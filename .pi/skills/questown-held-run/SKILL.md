@@ -361,6 +361,11 @@ campfire. When the chicken's hint is "put X in the world" (a door, a campfire,
   block (legend printed below). Use it before placing anything inside a room by
   coordinate, and whenever a door shows `NO_RECIPE` (where is the open floor?) or
   `NOT_ENCLOSED` (which wall cell is open?).
+  **Reading the grid to a coordinate:** each row is one `z`, and the columns run
+  west-to-east from the printed `x min..max` — so the Nth character of a row is
+  `x = minX + (N-1)`. E.g. `x 5..8`, row `z=2: #c.#` puts `c` at `6,64,2`, not
+  `5,64,2`. Do not guess a contained block's coordinate from the glyph's visual
+  position; count from minX.
 - `_qtdev place_player` - teleport the player into an open interior cell of the
   largest registered room, the way the player would walk in. This is the hand for
   a cue that asks the player to be inside a room.
