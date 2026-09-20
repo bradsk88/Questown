@@ -133,11 +133,13 @@ dev's tab. Kill by pid instead:
 ```sh
 # capture the pids at launch, into files (in the launch calls, after nohup):
 pgrep -af 'forgeserveruserdev' | head -1 | awk '{print $1}' > run/hold-server.pid
+pgrep -af 'questown.autotest.hol[d]' | grep -v 'bash\|pgrep' | head -1 | awk '{print $1}' > run/hold-wrapper.pid   # the gradle wrapper: outlives a dead server, untracked otherwise
 pgrep -af 'sleep 999999' | grep -v pgrep | head -1 | awk '{print $1}' > run/hold-fifo.pid
 pgrep -af 'runClient' | grep -v pgrep | head -1 | awk '{print $1}' > run/hold-client.pid
 # teardown: kill only those pids, never pkill -f 'runClient'/'runServer':
 kill -9 $(cat run/hold-server.pid 2>/dev/null)   # the held java server (survives SIGTERM)
-kill -9 $(cat run/hold-fifo.pid 2>/dev/null)     # the FIFO writer
+kill -9 $(cat run/hold-wrapper.pid 2>/dev/null)  # the gradle wrapper (keeps living if the server dies)
+kill -9 -$(cat run/hold-fifo.pid 2>/dev/null) # the FIFO writer + its orphaned `sleep` child (kill the group; the child outlives the `sh` parent)
 kill -9 $(cat run/hold-client.pid 2>/dev/null)   # this session's client, not the dev's
 ```
 
@@ -245,8 +247,8 @@ sign, say) and correct the hand, rather than retrying `clickheld` at new spots.
 A blocked step is **not** automatically a check-in. Before surfacing it, run
 the tools the skill gave you, the console command set (`registerroom`,
 `free_food`, `place_mat`, `clickwand`, `clickheld`, `place_board`,
-`build_room`, `place_block`, `spawn_chicken`, `setblock`, `tp`, `time`, and the
-`inspect` variants), in the
+`build_room`, `place_block`, `look_room`, `place_player`, `spawn_chicken`,
+`setblock`, `tp`, `time`, and the `inspect` variants), in the
 context of the chicken's guidance, reading each response. The only observation
 channels are the server log (the `--- observe ---` cycles and the town's chat)
 and those `_qtdev` commands. "Blocked" is not a check-in until you have run the
@@ -272,9 +274,10 @@ tick.
 a player supplies.** A need for an item (mutton, food, and most others) clears
 because a townie's job *produces* it into the container its job block points at.
 Let that job run and watch whether the need clears, the same way a player sees it
-clear or not. The exception is an open item *quest* the player is meant to supply
-(the wooden sword): a new player clears it by leaving the item in the storeroom
-the game shows you, and that has a hand - `_qtdev supply_sword` (see below).
+clear or not. The exception is an open sword *quest* the player is meant to supply
+(wooden sword in onboarding, stone sword after): a new player clears it by leaving
+the item in the storeroom the game shows you, and that has a hand -
+`_qtdev complete_sword_quest` (see below).
 `_qtdev free_food` covers the free-food beat only; it is not a general deposit.
 Do not invent other shortcuts: there is no `_qtdev deposit`, and dropping an item
 into a container for a *need* (not a player-supplied quest) overwrites the very
@@ -336,17 +339,35 @@ campfire. When the chicken's hint is "put X in the world" (a door, a campfire,
   a block placed at a coordinate you guessed may land outside the room footprint and never
   register. It resolves a **block** id (not an item id), so it where a vanilla `setblock` (which
   resolves an item) would not. List first, pick a cell, then place - do not guess a coordinate.
+  If `place_block` lists no cells for a room that should have open floor, do not guess -
+  read the room with `look_room` first.
+- `_qtdev look_room <door pos>` - the agent's eyes for a room, the way a player
+  standing in front of it sees walls and floor. Prints the room (or, for a door with
+  no detected room, a probe around the door) as an ASCII grid at floor level: `#` a
+  wall cell, `D` the door, `.` an open interior cell, and a letter per contained
+  block (legend printed below). Use it before placing anything inside a room by
+  coordinate, and whenever a door shows `NO_RECIPE` (where is the open floor?) or
+  `NOT_ENCLOSED` (which wall cell is open?).
+- `_qtdev place_player` - teleport the player into an open interior cell of the
+  largest registered room, the way the player would walk in. This is the hand for
+  a cue that asks the player to be inside a room.
+- `_qtdev inspect quests <pos>` also prints `room needs: ...` for a ROOM quest -
+  the blocks the room must contain, the way the quest UI shows the recipe as
+  icons. Read it before furnishing a
+  room quest; do not guess a room's recipe from its name.
 - `_qtdev spawn_chicken <x> <y> <z>` - force the helper chicken to spawn for a
   flag whose arc is inert (its chicken rotation was never detected). Run it when
   `_qtdev inspect chicken <pos>` shows the chicken is not guiding; do not decide
   from where the flag came from. Bypasses the rotation-detection/forfeit gates;
   the individual beats still need their real conditions.
-- `_qtdev supply_sword` - supply the one item quest a *player* clears: the open
-  `wooden_sword` quest. It deposits a wooden sword into a registered container
-  (the storeroom) - the real player path of leaving the item in the chest the
-  game shows you, not a magic clear, so the supply-chain lesson is preserved.
-  Scoped to the wooden sword only: every other item need is a townie's job, not a
-  command, so let those run instead. Use it only when an open item *quest* (not a
+- `_qtdev complete_sword_quest` (alias `supply_sword`) - clear the one kind of
+  item quest a *player* supplies: an open sword quest (wooden or stone). It
+  deposits the wanted sword into a registered container (the storeroom) - the
+  real player path of leaving the item in the chest the game shows you, not a
+  magic clear, so the supply-chain lesson is preserved. One time per quest: once
+  the quest closes, a re-run finds no open sword quest. Scoped to swords only:
+  every other item need is a townie's job, not a command, so let those run
+  instead. Use it only when an open item *quest* (not a
   townie's `UNMET_ITEM` need) is the blocking thing and no townie job will produce
   it; if it returns a "no registered container" line, the town has no storeroom yet
   - that is a real dead end, not a no-op. After it, read the broadcast and confirm
@@ -403,8 +424,8 @@ Do **not** report "done" when the arc ends.
   the *run*. Keep observing the world past it: read the observe cycles, the
   town's chat, and `_qtdev inspect` for new needs, jobs, and quest changes. The
   open `ROOM` quests each need their own room; a townie's `UNMET_ITEM` need
-  clears through its job, while the one item *quest* a player supplies (the wooden
-  sword) clears with `_qtdev supply_sword` - keep observing
+  clears through its job, while the sword *quests* a player supplies (wooden,
+  stone) clear with `_qtdev complete_sword_quest` - keep observing
   and driving what you can (build the room, supply the real way), not the
   onboarding.
 - "The chicken stopped guiding" is a hand-holding cue ending, not a stop signal.

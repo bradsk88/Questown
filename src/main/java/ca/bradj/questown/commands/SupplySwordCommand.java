@@ -10,7 +10,6 @@ import ca.bradj.questown.town.quests.MCQuest;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -18,23 +17,31 @@ import net.minecraft.world.item.Items;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.List;
 
-// Dev-only: an open item quest (here only the wooden sword) is cleared by the
-// real player path of leaving the item in the storeroom the game shows you,
-// not by a magic clear. Most item supply is the villagers' own jobs; the
-// wooden sword is the one item quest a player supplies. This command does
-// exactly that: it deposits the wanted item into a registered container, the
+// Dev-only: an open sword quest is cleared by the real player path of leaving the
+// item in the storeroom the game shows you, not by a magic clear. Most item supply
+// is the villagers' own jobs; a sword quest (the wooden sword in onboarding, the
+// stone sword after) is the one kind of item quest a player supplies. This command
+// does exactly that: it deposits the wanted item into a registered container, the
 // same path a player dropping the item in the chest takes, so the quest's
-// supply-chain lesson is preserved. Scoped to the wooden sword only - other
-// item needs are the townies' job, not a command.
+// supply-chain lesson is preserved. Scoped to sword quests only - other item needs
+// are the townies' job, not a command. One time per quest, the way a quest
+// completes: once the sword is in, the quest closes and a re-run finds no open
+// sword quest (the same once-only shape as free_food's bonus-food bit).
 public class SupplySwordCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
-        src.register(
-            Commands.literal("_qtdev").then(
-                Commands.literal("supply_sword")
-                    .executes(css -> run(css.getSource()))
-            )
-        );
+        // complete_sword_quest is the name an agent looks for; supply_sword is the
+        // older literal, kept so existing runs and docs keep working.
+        for (String literal : new String[]{"complete_sword_quest", "supply_sword"}) {
+            src.register(
+                Commands.literal("_qtdev").then(
+                    Commands.literal(literal)
+                        .executes(css -> run(css.getSource()))
+                )
+            );
+        }
     }
 
     private static int run(CommandSourceStack source) {
@@ -42,52 +49,75 @@ public class SupplySwordCommand {
             if (flag.getBlockPos() == null) {
                 continue;
             }
-            MCQuest swordQuest = openSwordQuest(flag);
-            if (swordQuest == null) {
-                QT.FLAG_LOGGER.warn("[supply_sword] no open wooden_sword quest for flag {}", flag.getUUID());
+            List<MCQuest> swordQuests = openSwordQuests(flag);
+            if (swordQuests.isEmpty()) {
+                QT.FLAG_LOGGER.warn("[complete_sword_quest] no open sword quest for flag {}", flag.getUUID());
                 return 1;
             }
-            Item item = ForgeRegistries.ITEMS.getValue(swordQuest.getWantedId());
-            if (item == null || item == Items.AIR) {
-                QT.FLAG_LOGGER.warn("[supply_sword] cannot resolve the wanted item for flag {}", flag.getUUID());
-                return 1;
+            boolean all = true;
+            for (MCQuest quest : swordQuests) {
+                Item item = ForgeRegistries.ITEMS.getValue(quest.getWantedId());
+                if (item == null || item == Items.AIR) {
+                    QT.FLAG_LOGGER.warn("[complete_sword_quest] cannot resolve the wanted item {} for flag {}",
+                            quest.getWantedId(), flag.getUUID());
+                    all = false;
+                    continue;
+                }
+                DepositResult result = deposit(flag, source, item, quest.getCountNeeded());
+                if (result == DepositResult.DEPOSITED) {
+                    QT.FLAG_LOGGER.info("[complete_sword_quest] deposited {}x {} into a registered container (real player path) for flag {}",
+                            quest.getCountNeeded(), quest.getWantedId(), flag.getUUID());
+                } else if (result == DepositResult.ALL_FULL) {
+                    QT.FLAG_LOGGER.warn("[complete_sword_quest] every registered container is full for flag {}; make space in a town chest to clear it",
+                            flag.getUUID());
+                    all = false;
+                } else {
+                    QT.FLAG_LOGGER.warn("[complete_sword_quest] no registered container for flag {}; supply the sword in a town chest to clear it",
+                            flag.getUUID());
+                    all = false;
+                }
             }
-            if (deposit(flag, source, item, swordQuest.getCountNeeded())) {
-                QT.FLAG_LOGGER.info("[supply_sword] deposited {}x {} into a registered container (real player path) for flag {}",
-                        swordQuest.getCountNeeded(), swordQuest.getWantedId(), flag.getUUID());
-                return 0;
-            }
-            QT.FLAG_LOGGER.warn("[supply_sword] no registered container for flag {}; supply the sword in a town chest to clear it",
-                    flag.getUUID());
-            return 1;
+            return all ? 0 : 1;
         }
-        QT.FLAG_LOGGER.warn("[supply_sword] no flag to supply the sword for");
+        QT.FLAG_LOGGER.warn("[complete_sword_quest] no flag to supply the sword for");
         return 1;
     }
 
-    /** The open (incomplete) wooden_sword quest on the flag, or null. */
-    private static MCQuest openSwordQuest(TownFlagBlockEntity flag) {
-        ResourceLocation wanted = ca.bradj.questown.mc.Compat.getItemId(Items.WOODEN_SWORD);
+    /** The open (incomplete) sword item quests on the flag (wooden_sword,
+     * stone_sword, ...). Item type only: a job quest like hunter_qt_sword also
+     * ends in "_sword" but names a job, not an item to deposit. */
+    private static List<MCQuest> openSwordQuests(TownFlagBlockEntity flag) {
+        List<MCQuest> out = new ArrayList<>();
         for (AbstractMap.SimpleEntry<MCQuest, ?> e : flag.getQuestHandle().getAllQuestsWithRewards()) {
             MCQuest q = e.getKey();
             if (q.isComplete() || q.getWantedId() == null) {
                 continue;
             }
-            if (wanted.equals(q.getWantedId())) {
-                return q;
+            if (q.getType() != ca.bradj.questown.town.quests.Quest.QuestType.ITEM) {
+                continue;
+            }
+            if (q.getWantedId().getPath().endsWith("_sword")) {
+                out.add(q);
             }
         }
-        return null;
+        return out;
     }
 
-    /** Deposit the wanted item into the first registered town container,
-     * as a player dropping the item in the chest. Returns false if the town
-     * has no container, so a blocked step reads as a real dead end. */
-    private static boolean deposit(TownFlagBlockEntity flag, CommandSourceStack source, Item item, int count) {
+    private enum DepositResult { DEPOSITED, NO_CONTAINER, ALL_FULL }
+
+    /** Deposit the wanted item into the first registered town container with an
+     * empty slot, as a player dropping the item in the chest. Tries every
+     * registered container: the first one may be full of gathered loot, and a
+     * player would just open the next chest. NO_CONTAINER when the town has no
+     * container at all (a real dead end), ALL_FULL when containers exist but
+     * none has an empty slot. */
+    private static DepositResult deposit(TownFlagBlockEntity flag, CommandSourceStack source, Item item, int count) {
+        ItemStack stack = new ItemStack(item, count);
+        boolean sawContainer = false;
         for (ContainerTarget<MCContainer, MCTownItem> target :
                 TownContainers.getAllContainers(flag, source.getLevel())) {
             if (source.getLevel().getBlockEntity(target.getBlockPos()) instanceof Container c) {
-                ItemStack stack = new ItemStack(item, count);
+                sawContainer = true;
                 for (int i = 0; i < c.getContainerSize() && !stack.isEmpty(); i++) {
                     if (c.getItem(i).isEmpty()) {
                         c.setItem(i, stack.copy());
@@ -95,9 +125,11 @@ public class SupplySwordCommand {
                     }
                 }
                 c.setChanged();
-                return stack.isEmpty();
+                if (stack.isEmpty()) {
+                    return DepositResult.DEPOSITED;
+                }
             }
         }
-        return false;
+        return sawContainer ? DepositResult.ALL_FULL : DepositResult.NO_CONTAINER;
     }
 }

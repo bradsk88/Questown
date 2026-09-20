@@ -49,6 +49,7 @@ public class CommandInit {
         FlagPlacePlayerCommand.register(event.getDispatcher());
         FreeFoodCommand.register(event.getDispatcher());
         SupplySwordCommand.register(event.getDispatcher());
+        LookRoomCommand.register(event.getDispatcher());
         FlagPlaceBlockCommand.register(event.getDispatcher());
     }
 }
