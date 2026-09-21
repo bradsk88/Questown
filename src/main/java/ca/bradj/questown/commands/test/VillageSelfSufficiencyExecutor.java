@@ -110,12 +110,32 @@ public final class VillageSelfSufficiencyExecutor {
     /** Container-flow counter wiring the store chest (and future room chests)
      *  to a per-item produced/consumed/stock record. See ContainerFlowTracker. */
     private final ContainerFlowTracker flowTracker = new ContainerFlowTracker();
-    /** Last day seen at watch start; the daily report keys its delta on this. */
-    private long lastReportDay = -1;
+    /** Night-sleep counter; the daily report keys its day number on this (one
+     *  report per completed night, plus a baseline at watch start). */
+    private int nightsSlept = 0;
     /** True once the first night has been slept through. The welcome mat (town
      *  gate) can only be placed after the campfire quest completes and this flag
      *  is set, so the room-builder gates the town_gate placement on it. */
     private boolean firstNightPassed = false;
+    /** Last day number the daily report was emitted for; -1 before the first report. */
+    private long lastReportedDay = -1;
+    /** Snapshot of the six report categories at the last report, for the delta. */
+    private ReportSnapshot lastSnapshot;
+
+    /** The six report categories at one point in time, for the day-over-day delta. */
+    private record ReportSnapshot(
+            long roster,
+            long questsOpen,
+            long questsDone,
+            long unmetItem,
+            long cantReach,
+            long noneNeed,
+            long stockTotal,
+            long producedTotal,
+            long consumedTotal
+    ) {
+        static ReportSnapshot ZERO = new ReportSnapshot(0,0,0,0,0,0,0,0,0);
+    }
 
     public VillageSelfSufficiencyExecutor(
             ServerLevel level,
@@ -466,6 +486,9 @@ public final class VillageSelfSufficiencyExecutor {
             long days = readDays();
             watchEndTick = level.getGameTime() + (long) days * TICKS_PER_DAY;
             msg("Watching for " + days + " in-game days (" + (days * TICKS_PER_DAY) + " ticks) in realtime");
+            // Baseline daily report at watch start (day 1), so the first night
+            // sleep's report has a delta to compare against.
+            emitDailyReport();
             phase = Phase.WATCH;
         }
     }
@@ -501,9 +524,12 @@ public final class VillageSelfSufficiencyExecutor {
             server.getCommands().performPrefixedCommand(
                     server.createCommandSourceStack().withPermission(4), "time set day");
             firstNightPassed = true;
-            msg("Sleeped through night; day " + ((level.getDayTime() / TICKS_PER_DAY) + 1));
+            nightsSlept++;
+            msg("Sleeped through night; watch-day " + (nightsSlept + 1));
         }
-        // TODO: daily report (six categories + day-over-day delta)
+        // Daily report: six categories + day-over-day delta, emitted once per
+        // day-number change.
+        emitDailyReport();
         // TODO: lock detectors (tripwires + forward-progress net)
         // Self-driving room builder: detect open room quests, build a room for
         // each, and place the recipe block once the room registers.
@@ -522,6 +548,100 @@ public final class VillageSelfSufficiencyExecutor {
         for (String line : flowTracker.counter().reportLines()) {
             msg(line);
         }
+    }
+
+    /** Emit the deterministic daily report: six categories with a day-over-day
+     *  delta, on the {@code [village]} log prefix. Called once per day number
+     *  change (the day rolls when {@code level.getDayTime()} crosses a multiple
+     *  of 24000). The six categories:
+     *  <ol>
+     *    <li>roster + jobs (villager count, job id distribution)</li>
+     *    <li>quests open/done</li>
+     *    <li>general item economy (produced/consumed/stock from the flow counter)
+     *        + demand side (unmet needs from {@code NoMCEconomics})</li>
+     *    <li>mood aggregate (TownieNeed distribution: NONE / CANT_REACH / UNMET_ITEM)</li>
+     *    <li>locks fired today (placeholder until the lock detectors land)</li>
+     *    <li>milestones reached (first night passed, cook/farmer unlocked)</li>
+     *  </ol>
+     *  Each line carries a delta vs the previous day's snapshot. */
+    private void emitDailyReport() {
+        // Key the report on the number of nights slept (one per completed
+        // in-game day), not the vanilla day counter. `time set day` resets
+        // dayTime to 1000, so the vanilla day number never advances past 1 in a
+        // watch that sleeps through nights. Day 1 is the baseline at watch
+        // start; day N+1 is emitted after the Nth night sleep.
+        long day = nightsSlept + 1;
+        if (day == lastReportedDay) return;
+        lastReportedDay = day;
+
+        // Roster + jobs
+        long roster = flag.getVillagerHandle().size();
+        java.util.Map<String, Long> jobCounts = new java.util.TreeMap<>();
+        long unmetItem = 0, cantReach = 0, noneNeed = 0;
+        for (LivingEntity v : flag.getVillagerHandle().entities()) {
+            VisitorMobEntity t = (VisitorMobEntity) v;
+            jobCounts.merge(t.getJobId().rootId(), 1L, Long::sum);
+            var need = t.getNeed();
+            switch (need) {
+                case UNMET_ITEM -> unmetItem++;
+                case CANT_REACH -> cantReach++;
+                case NONE -> noneNeed++;
+            }
+        }
+
+        // Quests open/done
+        long questsOpen = 0, questsDone = 0;
+        for (var entry : flag.getAllQuestsWithRewards()) {
+            var quest = entry.getKey();
+            if (quest.isComplete()) questsDone++;
+            else questsOpen++;
+        }
+
+        // Item economy: produced/consumed/stock from the flow counter
+        long producedTotal = 0, consumedTotal = 0, stockTotal = 0;
+        for (var item : flowTracker.counter().lastStock().keySet()) {
+            stockTotal += flowTracker.counter().stockOf(item);
+        }
+        for (var entry : flowTracker.counter().produced().entrySet()) {
+            for (var d : entry.getValue().values()) producedTotal += d;
+        }
+        for (var entry : flowTracker.counter().consumed().entrySet()) {
+            for (var d : entry.getValue().values()) consumedTotal += d;
+        }
+
+        // Demand side: unmet needs from NoMCEconomics
+        var econ = flag.getEconomicsHandle();
+        econ.update();
+        long demandTotal = 0;
+        for (var item : econ.getAggregatedItems(null)) {
+            demandTotal += item.timesNeeded();
+        }
+
+        ReportSnapshot snap = new ReportSnapshot(
+                roster, questsOpen, questsDone, unmetItem, cantReach, noneNeed,
+                stockTotal, producedTotal, consumedTotal);
+        ReportSnapshot prev = lastSnapshot != null ? lastSnapshot : ReportSnapshot.ZERO;
+        lastSnapshot = snap;
+
+        // Emit the six category lines with deltas.
+        msg("[village] day=" + day + " REPORT");
+        msg("  roster=" + roster + " (" + jobCounts + ")"
+                + delta(roster, prev.roster));
+        msg("  quests open=" + questsOpen + " done=" + questsDone
+                + delta(questsOpen, prev.questsOpen) + "/" + delta(questsDone, prev.questsDone));
+        msg("  economy produced=" + producedTotal + " consumed=" + consumedTotal
+                + " stock=" + stockTotal + " demand=" + demandTotal
+                + delta(stockTotal, prev.stockTotal));
+        msg("  mood none=" + noneNeed + " unmet=" + unmetItem + " cant_reach=" + cantReach
+                + delta(unmetItem, prev.unmetItem));
+        msg("  locks fired: (none yet - lock detectors pending)");
+        msg("  milestones: firstNight=" + firstNightPassed);
+    }
+
+    private static String delta(long now, long prev) {
+        long d = now - prev;
+        if (d == 0) return "";
+        return " [" + (d > 0 ? "+" : "") + d + "]";
     }
 
     private void heartbeat() {
