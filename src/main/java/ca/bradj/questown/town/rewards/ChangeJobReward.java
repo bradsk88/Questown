@@ -50,6 +50,15 @@ public class ChangeJobReward extends MCReward {
             JobID jobID = WorkSeekerJob.newIDForRoot(jobName);
             town.getVillagerHandle().changeJobForVillager(visitorUUID, jobID, false);
             ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(jobID);
+            // Registering a townie unlocks the specific works for its current job
+            // (TownVillagerHandle.register). A job *change* after registration does not
+            // re-run that, so the new root's works stay locked: the work-seeker finds an
+            // empty set, logs "No jobs found for root ID", and the villager soft-locks in
+            // seeking_work. Unlock the specific works (not the root meta-ID, which
+            // isUnlocked never matches) the same way register does.
+            for (JobID workID : defaultWork) {
+                town.getVillagerHandle().unlockJob(visitorUUID, workID);
+            }
             defaultWork.forEach(v -> {
                 ItemStack output = ServerJobsRegistry.getDefaultWorkForNewWorker(town.getServerLevel(), v);
                 if (output.isEmpty()) {

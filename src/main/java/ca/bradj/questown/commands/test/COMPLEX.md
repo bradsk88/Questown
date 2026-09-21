@@ -223,3 +223,27 @@ job's output item when a job-change quest completes. The seed assigns jobs via
 for the gatherer), because without a posted request the job has nothing to produce
 and its villager sits in `downtime`/`NO_JOBSITE` forever.
 
+**A job change must also *unlock* the new root's works.** A townie's specific
+works are unlocked once, at registration (`TownVillagerHandle.register` walks the
+job's `defaultWork` and calls `learning.unlockJob` for each). The work-seeker and
+`TownPossibleWork.registerUnmetNeeds` both call `getRandomWork(root, vh::isUnlocked)`,
+and `isUnlocked` is an *exact* `JobID` match over the per-villager unlocked set (a
+root meta-ID like the work-seeker's own ID never matches a specific work). So if a
+`ChangeJobReward` changes a townie's root *after* registration, the new root's works
+stay locked, `getRandomWork` returns an empty set, and the villager logs `No jobs
+found for root ID` and soft-locks in `seeking_work` with a `NO_JOBSITE` status.
+The fix lives on the owner, not the scenario: `ChangeJobReward`'s applier now unlocks
+each of the new root's `defaultWork` (mirroring `register`), so any consumer of the
+reward gets a townie that can actually work. (Unlocking the root meta-ID does not
+help — `isUnlocked` never matches it.)
+
+**Unlocking the works is not enough if the town can't reach the supplies.** With the
+works unlocked, a fresh seed still soft-locked, but on the *second* half of the lock:
+`status: NO_WORK_POSSIBLE` with `UNMET_ITEM`. The hunter needed a *sword* (its job
+tool) and the gatherer needed *food* — items the seed does place in the store room's
+chest — but the work-seeker looks for them in the job's base room (the
+`special_quest.town_gate` meta room the jobs anchor to), not the separate store room.
+That is the `NO_JOBSITE` vs `NO_SUPPLIES` distinction: `NO_JOBSITE` is a missing
+*job site* (fixed by the unlock above); `NO_WORK_POSSIBLE` from `UNMET_ITEM` is a
+missing *supply* at a container the job's base room can see.
+
