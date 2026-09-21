@@ -1260,6 +1260,74 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     /**
+     * Build a complete 5x5 rectangular room (3x3 interior, single south door,
+     * plank walls, dirt floor, flat roof) around a clear door spot, register the
+     * door so the room scan detects it, and place the recipe block inside.
+     * <p>
+     * This is the reliable room-build for the self-sufficiency watchtower:
+     * the seed's {@code buildOneBuilding} shape (which the wall walk closes
+     * cleanly, unlike {@link #buildRoom}'s chicken shell at some footprints).
+     * The door spot must be on flat ground with air above and below; the method
+     * computes the building's southwest corner from the door position (the door
+     * sits at the south wall, two cells in from the west corner).
+     *
+     * @param doorPos     the clear ground-level cell for the door
+     * @param recipeBlock the block to place inside the room
+     * @return the door position if the room was built, or null if the spot was
+     *         not clear
+     */
+    public @Nullable BlockPos buildRoomForRecipe(BlockPos doorPos, net.minecraft.world.level.block.Block recipeBlock) {
+        ServerLevel level = getServerLevel();
+        if (level == null) return null;
+
+        if (!level.getBlockState(doorPos).isAir()
+                || !level.getBlockState(doorPos.above()).isAir()
+                || level.getBlockState(doorPos.below()).isAir()) {
+            return null;
+        }
+
+        int s = 4;
+        int cornerX = doorPos.getX() - s / 2;
+        int cornerZ = doorPos.getZ() - s;
+        BlockPos corner = new BlockPos(cornerX, doorPos.getY(), cornerZ);
+
+        for (int dx = 0; dx <= s; dx++) {
+            for (int dz = 0; dz <= s; dz++) {
+                BlockPos at = corner.offset(dx, 0, dz);
+                level.setBlockAndUpdate(at.below(), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState());
+                boolean edge = dx == 0 || dx == s || dz == 0 || dz == s;
+                if (edge) {
+                    boolean isDoor = dx == s / 2 && dz == s;
+                    for (int dy = 0; dy <= 2; dy++) {
+                        BlockPos wall = at.above(dy);
+                        if (isDoor && dy <= 1) {
+                            var half = dy == 0
+                                    ? net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER
+                                    : net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER;
+                            level.setBlockAndUpdate(wall, net.minecraft.world.level.block.Blocks.OAK_DOOR.defaultBlockState()
+                                    .setValue(net.minecraft.world.level.block.DoorBlock.HALF, half));
+                        } else {
+                            level.setBlockAndUpdate(wall, net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState());
+                        }
+                    }
+                }
+                level.setBlockAndUpdate(at.above(3), net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState());
+            }
+        }
+
+        getRoomHandle().registerDoor(doorPos);
+
+        BlockPos centerCell = new BlockPos(cornerX + 2, doorPos.getY(), cornerZ + 2);
+        level.setBlockAndUpdate(centerCell, recipeBlock.defaultBlockState());
+
+        QT.FLAG_LOGGER.info(
+                "[buildRoomForRecipe] built 5x5 room at corner {} for door {}, placed {} inside, door registered",
+                corner.toShortString(), doorPos.toShortString(), recipeBlock
+        );
+        return doorPos;
+    }
+
+    /**
      * Place a full (both-halves) oak door at {@code pos}, the way a player's door item
      * does, but driven from the console (no player hand to place it with). A dev/agent
      * placing a door with vanilla {@code setblock} easily places only the LOWER half
