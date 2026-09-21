@@ -333,7 +333,7 @@ The in-town surface where the player requests products from townies. It offers o
 _Avoid_: catalog (the board is not "everything craftable in the game"), quest board.
 
 **Work request**:
-A player's standing request for a product, placed on the **job board**; a townie's work-seeker *prefers* a requested product over freely chosen work, but falls back to its own choice if the request goes unmet for long enough.
+A standing request for a product, placed on the **job board**; a townie's work-seeker *prefers* a requested product over freely chosen work, but falls back to its own choice if the request goes unmet for long enough. **A job with no matching request on the board has nothing to produce** — its townie sits in `downtime`/`NO_JOBSITE` — so posting the request is what makes the job actionable, independently of any quest. Requests originate two ways: the **player** posting from the board, or a `ChangeJobReward` posting the job's output item when a job-change quest completes (a quest *completing* does not itself drive work; only the request it posts does).
 
 **Stock request**:
 A request created at the *clipboard* (obtained from the **town flag**) and carried as a physical item, for a product to be kept in stock — fulfilled by the (deprecated) fetcher, `organizer/fetch`. Drawn from the same fulfillable product set as the **job board** and gated the same way (outputs of unlocked jobs only), so the two request surfaces stay consistent. Revisit this gate if the fetcher/`organizer` is ever redesigned to source items the town can't itself produce.
