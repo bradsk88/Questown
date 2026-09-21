@@ -266,3 +266,30 @@ screen. The flow counter is a new, self-contained class with its own
 unit-testable core (`ContainerFlowCounter` is pure, no Minecraft imports) and a
 thin Minecraft-facing tracker on top.
 
+**The room-builder builds on recipe id, not batch UUID.** A `MCQuestBatch`
+carries several room quests (the kickoff batch holds `job_board`, `store_room`,
+and `town_gate` under one batch UUID), so the builder dedups by recipe id, never
+by batch UUID. A ROOM quest with a null batchUUID is a single-recipe room (the
+campfire, the bedroom, the farm) that stands on its own; the builder builds it
+on its recipe id alone. A batchUUID guard on the build path over-filtered these
+single-recipe rooms (the builder skipped them), so the guard is not on the build
+path; it is only on the dedup key.
+
+**The welcome mat is the town gate, not room furniture.** The `town_gate` quest's
+recipe is the welcome mat, a standalone job block placed beside the flag and
+registered (`flag.placeWelcomeMat`, which calls `registerWelcomeMat` ->
+`roomsHandle.registerBlockAsRoom(SpecialQuests.TOWN_GATE, pos)`), not a block
+inside a room shell. Placing it in a room via `buildRoomForRecipe` lays a mat in
+room furniture where it does nothing. The mat is also *gated*: the town_gate
+quest is only satisfiable after the campfire quest completes and the first night
+passes (the town must be past the kickoff batch). The builder places it only
+after `firstNightPassed` is set, so it does not register a mat the town is not
+ready for.
+
+**The watch loop sleeps through nights.** A realtime 5-day watch spends ~10 real
+minutes per game day waiting for the night to pass. The watch loop detects
+`level.isNight()` and skips to morning via `time set day` (the growth executor's
+pattern: the day-time signal flip drives the flag's morning detection, no
+fake-player vanilla sleep required). `firstNightPassed` is set on the first
+sleep, which is the gate the welcome-mat placement waits on.
+

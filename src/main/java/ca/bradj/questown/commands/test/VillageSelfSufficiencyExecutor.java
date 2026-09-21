@@ -112,6 +112,10 @@ public final class VillageSelfSufficiencyExecutor {
     private final ContainerFlowTracker flowTracker = new ContainerFlowTracker();
     /** Last day seen at watch start; the daily report keys its delta on this. */
     private long lastReportDay = -1;
+    /** True once the first night has been slept through. The welcome mat (town
+     *  gate) can only be placed after the campfire quest completes and this flag
+     *  is set, so the room-builder gates the town_gate placement on it. */
+    private boolean firstNightPassed = false;
 
     public VillageSelfSufficiencyExecutor(
             ServerLevel level,
@@ -246,11 +250,14 @@ public final class VillageSelfSufficiencyExecutor {
     private void waitForFlag() {
         flag = TownFlagBlockEntity.getFromPos(level, flagPos);
         if (flag != null) {
-            // The welcome mat is the town gate: the gatherer and hunter jobs
-            // anchor to special_quest.town_gate (the welcome mat's base room).
-            BlockPos matPos = flagPos.east();
-            level.setBlockAndUpdate(matPos.below(), Blocks.GRASS_BLOCK.defaultBlockState());
-            flag.placeWelcomeMat(matPos);
+            // The welcome mat (town gate) is NOT placed here. It is the town gate:
+            // the gatherer and hunter jobs anchor to special_quest.town_gate, and
+            // that quest is only satisfiable after the campfire quest completes and
+            // the first night passes (the town must be past the kickoff batch). Placing
+            // it in the seed registers a mat the town is not ready for, so the quest
+            // never closes and the builder then lays a second mat inside a room shell.
+            // The room-builder places it (via placeWelcomeMat, which registers it)
+            // once the campfire room is built and the first night has passed.
 
             // Register both room doors with the flag (the same path a wand click
             // on a door takes). The rectangular shells were laid in buildSeed; the
@@ -259,7 +266,7 @@ public final class VillageSelfSufficiencyExecutor {
             flag.getRoomHandle().registerDoor(boardRoomDoorPos);
             flag.getRoomHandle().registerDoor(storeRoomDoorPos);
 
-            msg("Welcome mat at " + matPos.toShortString() + "; doors registered at "
+            msg("Doors registered at "
                     + boardRoomDoorPos.toShortString() + " (board) and "
                     + storeRoomDoorPos.toShortString() + " (store)");
             msg("Flag live; waiting for rooms to register");
@@ -346,6 +353,21 @@ public final class VillageSelfSufficiencyExecutor {
                     + " (cooked meat + wooden/stone sword)");
         } else {
             msg("WARN store room has no interior cell; store chest not placed");
+        }
+
+        // Complete the tutorial sword quest the real player path: the seed is
+        // "just past onboarding", which means the wooden-sword item quest is
+        // already closed. Leaving it open keeps the town in the tutorial batch
+        // (PHASE_KICKOFF), so no farm/cook room quest ever opens and the room
+        // builder has nothing to build for the food chain. Depositing the sword
+        // (not a magic clear) advances the town past the tutorial batch so the
+        // natural progression opens the farm/cook room quests the builder can
+        // close. The deposit lands in the store chest, which is why it must run
+        // after the chest is placed and tracked.
+        if (ca.bradj.questown.commands.SupplySwordCommand.completeSwordQuestsForFlag(flag, level)) {
+            msg("Tutorial sword quest completed (real player path); town advances past PHASE_KICKOFF");
+        } else {
+            msg("WARN no open sword quest to complete at furnish (the town may already be past it)");
         }
 
         msg("Flag live; entering realtime watch");
@@ -468,6 +490,19 @@ public final class VillageSelfSufficiencyExecutor {
         if (ticks % 400 == 0) {
             heartbeat();
         }
+        // Sleep through nights: the town's overnight phase (job changes taking
+        // effect, the chicken arc's overnight steps) requires night passage, but a
+        // realtime 5-day watch spends ~10 real minutes per game day waiting for
+        // the night to pass. Skip the night the way the growth executor does:
+        // `time set day` flips the day-time signal, which drives the flag's
+        // morning detection (AbstractTownFlagTicker.detectMorning -> onMorning ->
+        // morningTick); no fake-player vanilla sleep is required.
+        if (level.isNight()) {
+            server.getCommands().performPrefixedCommand(
+                    server.createCommandSourceStack().withPermission(4), "time set day");
+            firstNightPassed = true;
+            msg("Sleeped through night; day " + ((level.getDayTime() / TICKS_PER_DAY) + 1));
+        }
         // TODO: daily report (six categories + day-over-day delta)
         // TODO: lock detectors (tripwires + forward-progress net)
         // Self-driving room builder: detect open room quests, build a room for
@@ -517,13 +552,10 @@ public final class VillageSelfSufficiencyExecutor {
             var quest = entry.getKey();
             if (quest.getType() != ca.bradj.questown.town.quests.Quest.QuestType.ROOM) continue;
             if (quest.getStatus() != ca.bradj.questown.town.quests.Quest.QuestStatus.ACTIVE) continue;
-            UUID batchUuid = quest.getBatchUUID();
-            if (batchUuid == null) {
-                if (roomBuilderTicks % 1000 == 0) {
-                    msg("[room-builder] ROOM quest " + quest.getWantedId() + " has null batchUUID; skipping");
-                }
-                continue;
-            }
+            // A ROOM quest with a null batchUUID is a single-recipe room (e.g.
+            // campfire) that stands on its own; the batchUUID guard was for the
+            // multi-recipe tutorial batch (job_board/store_room/town_gate share
+            // one) and over-filtered these. Build it on its recipe id alone.
             @SuppressWarnings("unchecked")
             var recipeId = (net.minecraft.resources.ResourceLocation) quest.getWantedId();
             if (completedRoomRecipes.contains(recipeId)) {
@@ -531,6 +563,46 @@ public final class VillageSelfSufficiencyExecutor {
                     msg("[room-builder] skipping " + quest.getWantedId() + " (already completed)");
                 }
                 continue;
+            }
+
+            // The town_gate quest's recipe is the welcome mat, a standalone job
+            // block placed beside the flag and registered, not a block inside a
+            // room. The seed already places a mat at flagPos.east(); if one is
+            // registered, the quest will complete on re-detection and the builder
+            // has nothing to do. If none is registered (the seed's mat was not
+            // detected as a room), place one via placeWelcomeMat (which places
+            // and registers) so the quest can complete.
+            if (recipeId.getPath().equals("special_quest.town_gate")) {
+                // The town gate can only be placed after the campfire quest
+                // completes and the first night passes (the town must be past the
+                // kickoff batch). Until then the quest is not satisfiable, so the
+                // builder waits rather than placing a mat the town is not ready for.
+                if (!firstNightPassed) {
+                    if (roomBuilderTicks % 1000 == 0) {
+                        msg("[room-builder] town_gate: waiting for first night to pass before placing welcome mat");
+                    }
+                    continue;
+                }
+                if (!flag.getWelcomeMats().isEmpty()) {
+                    // A mat is registered; the quest will complete on re-detection.
+                    // Skip this cycle without marking it done, so the builder keeps
+                    // watching until the quest actually closes.
+                    if (roomBuilderTicks % 1000 == 0) {
+                        msg("[room-builder] town_gate: welcome mat already registered, waiting for re-detection");
+                    }
+                    continue;
+                }
+                BlockPos matPos = findClearDoorSpot();
+                if (matPos == null) {
+                    msg("[room-builder] no clear spot for quest " + quest.getWantedId()
+                            + "; will retry next cycle");
+                    return;
+                }
+                flag.placeWelcomeMat(matPos);
+                completedRoomRecipes.add(recipeId);
+                msg("[room-builder] placed welcome mat for quest " + quest.getWantedId()
+                        + " at " + matPos.toShortString() + " (registered, not a room)");
+                return;
             }
 
             // Resolve the recipe block.

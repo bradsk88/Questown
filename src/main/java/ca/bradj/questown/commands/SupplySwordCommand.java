@@ -44,6 +44,33 @@ public class SupplySwordCommand {
         }
     }
 
+    /** Complete every open sword quest for the given flag (and only that flag).
+     *  Public entry point for scenario code (the self_suff seed) that needs the
+     *  sword quest cleared through the real player path without driving the
+     *  command. Returns true when at least one quest was deposited, false when
+     *  there was no open sword quest on that flag. */
+    public static boolean completeSwordQuestsForFlag(TownFlagBlockEntity flag, net.minecraft.server.level.ServerLevel level) {
+        List<MCQuest> swordQuests = openSwordQuests(flag);
+        if (swordQuests.isEmpty()) {
+            return false;
+        }
+        net.minecraft.commands.CommandSourceStack source = level.getServer().createCommandSourceStack().withPermission(4);
+        boolean any = false;
+        for (MCQuest quest : swordQuests) {
+            Item item = ForgeRegistries.ITEMS.getValue(quest.getWantedId());
+            if (item == null || item == Items.AIR) {
+                continue;
+            }
+            DepositResult result = deposit(flag, source, item, quest.getCountNeeded());
+            if (result == DepositResult.DEPOSITED) {
+                QT.FLAG_LOGGER.info("[complete_sword_quest] deposited {}x {} into a registered container (real player path) for flag {}",
+                        quest.getCountNeeded(), quest.getWantedId(), flag.getUUID());
+                any = true;
+            }
+        }
+        return any;
+    }
+
     private static int run(CommandSourceStack source) {
         for (TownFlagBlockEntity flag : ca.bradj.questown.town.entity.TownFlags.all()) {
             if (flag.getBlockPos() == null) {
