@@ -101,6 +101,13 @@ public final class VillageSelfSufficiencyExecutor {
     private int waitTicks = 0;
     private long watchEndTick = -1;
 
+    /** Recipe IDs that have been completed by the builder. Do not re-build.
+     *  Keyed by recipe ID (not batch UUID) because a batch can contain multiple
+     *  room quests (job_board, store_room, town_gate all share one batch). */
+    private final java.util.Set<net.minecraft.resources.ResourceLocation> completedRoomRecipes = new java.util.HashSet<>();
+    /** Tick counter for the room-builder cadence (every 200 ticks = ~10s). */
+    private int roomBuilderTicks = 0;
+
     public VillageSelfSufficiencyExecutor(
             ServerLevel level,
             MinecraftServer server,
@@ -455,7 +462,12 @@ public final class VillageSelfSufficiencyExecutor {
         }
         // TODO: daily report (six categories + day-over-day delta)
         // TODO: lock detectors (tripwires + forward-progress net)
-        // TODO: self-driving room builder
+        // Self-driving room builder: detect open room quests, build a room for
+        // each, and place the recipe block once the room registers.
+        roomBuilderTicks++;
+        if (roomBuilderTicks % 200 == 0) {
+            driveRoomBuilder();
+        }
     }
 
     private void heartbeat() {
@@ -470,6 +482,134 @@ public final class VillageSelfSufficiencyExecutor {
                     .append(need == null || need.equals("NONE") ? "" : ":" + need);
         }
         msg("watch " + sb);
+    }
+
+    // ---- self-driving room builder ----
+
+    /** Detects an open ROOM quest, builds a complete room for it (via the
+     *  flag's {@code buildRoomForRecipe} owner method), which lays a 5x5 shell,
+     *  registers the door, and places the recipe block inside. Runs every 200
+     *  ticks from the watch loop. One quest at a time. */
+    private void driveRoomBuilder() {
+        if (flag == null || level == null) return;
+        var allQuests = flag.getAllQuestsWithRewards();
+
+        for (var entry : allQuests) {
+            var quest = entry.getKey();
+            if (quest.getType() != ca.bradj.questown.town.quests.Quest.QuestType.ROOM) continue;
+            if (quest.getStatus() != ca.bradj.questown.town.quests.Quest.QuestStatus.ACTIVE) continue;
+            UUID batchUuid = quest.getBatchUUID();
+            if (batchUuid == null) {
+                if (roomBuilderTicks % 1000 == 0) {
+                    msg("[room-builder] ROOM quest " + quest.getWantedId() + " has null batchUUID; skipping");
+                }
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            var recipeId = (net.minecraft.resources.ResourceLocation) quest.getWantedId();
+            if (completedRoomRecipes.contains(recipeId)) {
+                if (roomBuilderTicks % 1000 == 0) {
+                    msg("[room-builder] skipping " + quest.getWantedId() + " (already completed)");
+                }
+                continue;
+            }
+
+            // Resolve the recipe block.
+            net.minecraft.world.level.block.Block recipeBlock = resolveRecipeBlock(
+                    (net.minecraft.resources.ResourceLocation) quest.getWantedId());
+            if (recipeBlock == null) {
+                msg("[room-builder] could not resolve recipe block for " + quest.getWantedId());
+                completedRoomRecipes.add(recipeId);
+                continue;
+            }
+
+            // Find a clear door spot.
+            BlockPos doorPos = findClearDoorSpot();
+            if (doorPos == null) {
+                msg("[room-builder] no clear door spot for quest " + quest.getWantedId()
+                        + "; will retry next cycle");
+                return;
+            }
+
+            // Build the room atomically: shell + door + recipe block.
+            BlockPos built = flag.buildRoomForRecipe(doorPos, recipeBlock);
+            if (built == null) {
+                msg("[room-builder] buildRoomForRecipe failed at " + doorPos.toShortString());
+                continue;
+            }
+
+            completedRoomRecipes.add(recipeId);
+            msg("[room-builder] built room for quest " + quest.getWantedId()
+                    + " at door " + doorPos.toShortString()
+                    + ", placed " + recipeBlock);
+            return; // One quest at a time; the room scan will detect it on a later tick.
+        }
+
+        // No open ROOM quests (or all completed).
+        if (roomBuilderTicks % 1000 == 0) {
+            msg("[room-builder] no open ROOM quests to build for");
+        }
+    }
+
+    /** Find a clear door spot near the flag for a new room. Probes a ring of
+     *  positions at increasing distance, skipping occupied cells and cells that
+     *  already have a registered door. */
+    @Nullable
+    private BlockPos findClearDoorSpot() {
+        BlockPos flagPos = flag.getBlockPos();
+        int baseY = flagPos.getY();
+        // Probe in a spiral: 3, 5, 7 blocks out in 8 directions.
+        int[] dxs = {1, 0, -1, 0, 1, 0, -1, 0};
+        int[] dzs = {0, 1, 0, -1, 1, 0, -1, 0};
+        for (int dist : new int[]{5, 7, 9, 11, 13}) {
+            for (int d = 0; d < 8; d++) {
+                int x = flagPos.getX() + dxs[d] * dist;
+                int z = flagPos.getZ() + dzs[d] * dist;
+                BlockPos spot = new BlockPos(x, baseY, z);
+                // Both the spot and the block above must be air for a door.
+                if (!level.getBlockState(spot).isAir()) continue;
+                if (!level.getBlockState(spot.above()).isAir()) continue;
+                // The cell below must be solid (floor for the room).
+                if (level.getBlockState(spot.below()).isAir()) continue;
+                // Already a registered door? Skip.
+                int scanLevel = baseY - flagPos.getY();
+                if (flag.getRoomHandle().getAllRegisteredDoors().contains(
+                        new ca.bradj.questown.town.rooms.TownPosition(x, z, scanLevel))) continue;
+                // Avoid the seed buildings' footprints (known corners).
+                if (boardRoomCorner != null && insideBuilding(boardRoomCorner, spot)) continue;
+                if (storeRoomCorner != null && insideBuilding(storeRoomCorner, spot)) continue;
+                return spot;
+            }
+        }
+        return null;
+    }
+
+    /** Whether a position falls within the footprint of a seed building
+     *  (corner + BUILDING_SIZE x BUILDING_SIZE). */
+    private boolean insideBuilding(BlockPos corner, BlockPos pos) {
+        int s = BUILDING_SIZE - 1;
+        int dx = pos.getX() - corner.getX();
+        int dz = pos.getZ() - corner.getZ();
+        return dx >= -1 && dx <= s + 1 && dz >= -1 && dz <= s + 1;
+    }
+
+    /** Resolve the block to place for a room recipe quest. Looks up the
+     *  RoomRecipe by its id, takes the first ingredient, and returns the
+     *  first matching block. */
+    @Nullable
+    private net.minecraft.world.level.block.Block resolveRecipeBlock(net.minecraft.resources.ResourceLocation recipeId) {
+        var recipes = ca.bradj.questown.logic.RoomRecipes.hydrate(level.getRecipeManager(), true);
+        var recipe = recipes.get(recipeId);
+        if (recipe == null) return null;
+        var ingredients = recipe.getIngredients();
+        if (ingredients.isEmpty()) return null;
+        var first = ingredients.get(0);
+        for (var stack : first.getItems()) {
+            if (stack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
+                return bi.getBlock();
+            }
+        }
+        return null;
     }
 
     private void finish() {
