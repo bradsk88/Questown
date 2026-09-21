@@ -74,13 +74,21 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
    nohup sh -c 'sleep 999999 > run/server-cmd.fifo' &
    echo "fifo writer launched"
    # later call: pgrep -af 'sleep 999999'  (confirm the sh is alive)
-   # call 2 — server alone: only nohup + echo, no FIFO writer, no sleep
+   # call 2 — server alone: only nohup + echo + pid capture, no FIFO writer, no sleep
    rm -f /tmp/village-server.log
    JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8 nohup ./gradlew \
      runServer -Dquestown.autotest=true -Dquestown.autotest.hold=true \
      -Dquestown.autotest.only=village/growth -Dquestown.tp.fifo=true \
      -Dquestown.village.agentDrive=true > /tmp/village-server.log 2>&1 &
    echo "server launch issued"
+   # capture the pids IN THIS SAME CALL, right after nohup — the held server's
+   # java pid is NOT the gradle wrapper pid, and the file goes stale the instant
+   # a new server launches. A capture done later (after other work) has already
+   # gone stale and the next teardown kills the wrong pid.
+   sleep 3   # let the java child spawn before pgrep sees it
+   pgrep -af 'forgeserveruserdev' | head -1 | awk '{print $1}' > run/hold-server.pid
+   pgrep -af 'questown.autotest.hol[d]' | grep -v 'bash\|pgrep' | head -1 | awk '{print $1}' > run/hold-wrapper.pid
+   pgrep -af 'sleep 999999' | grep -v pgrep | head -1 | awk '{print $1}' > run/hold-fifo.pid
    ```
 4. Verify it booted (separate call): `grep -a 'Flag block entity live'
    /tmp/village-server.log` and `pgrep -af '[f]orgeserveruserdev'`, and confirm the
@@ -141,10 +149,8 @@ also already be dead by teardown time, so the pattern only ever finds the
 dev's tab. Kill by pid instead:
 
 ```sh
-# capture the pids at launch, into files (in the launch calls, after nohup):
-pgrep -af 'forgeserveruserdev' | head -1 | awk '{print $1}' > run/hold-server.pid
-pgrep -af 'questown.autotest.hol[d]' | grep -v 'bash\|pgrep' | head -1 | awk '{print $1}' > run/hold-wrapper.pid   # the gradle wrapper: outlives a dead server, untracked otherwise
-pgrep -af 'sleep 999999' | grep -v pgrep | head -1 | awk '{print $1}' > run/hold-fifo.pid
+# server/fifo/wrapper pids are captured at launch (see the Launch step, call 2).
+# The client pid is captured after the client launch (step 5):
 pgrep -af 'runClient' | grep -v pgrep | head -1 | awk '{print $1}' > run/hold-client.pid
 # teardown: kill only those pids, never pkill -f 'runClient'/'runServer':
 kill -9 $(cat run/hold-server.pid 2>/dev/null)   # the held java server (survives SIGTERM)
@@ -153,6 +159,7 @@ kill -9 $(cat run/hold-fifo.pid 2>/dev/null)
 kill -9 $(pgrep -f 'sleep 999999' | head -5) # parent sh AND the orphaned `sleep 999999` child (its cmdline is bare, no fifo path); the group kill (-PID) silently leaves the child alive, and a live child holds the fifo open and blocks the next run's commands
 kill -9 $(cat run/hold-client.pid 2>/dev/null)   # this session's client, not the dev's
 # verify, then kill stragglers by pid: pgrep -af 'sleep 999999'; pgrep -af 'runClient' - the client java can outlive its wrapper pid; kill any remaining match whose cmdline holds -Pautojoin (this session's client), never a bare pkill -f 'runClient' (the dev's tab)
+# a stale hold-server.pid (wrong pid) means the capture wasn't done at launch — re-capture live: pgrep -af 'forgeserveruserdev'
 ```
 
 The held server catches SIGTERM, so it can outlive a `pkill`; kill it by the
