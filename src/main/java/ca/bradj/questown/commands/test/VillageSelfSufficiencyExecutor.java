@@ -34,8 +34,12 @@ import java.util.UUID;
  * assigned directly (a hunter for food plus the starting jobs). The chicken
  * arc is skipped entirely.
  *
- * <p>Food chain is hunter-only: villagers eat raw meat via the raw-food diner
- * work and survive at a mood penalty; no cook is needed for survival.
+ * <p>Food needs two things. *Survival* is hunter-only: villagers eat raw meat via
+ * the raw-food diner work and survive at a mood penalty, so no cook is needed to
+ * keep them alive. *Working* is different: a hunter or gatherer eats a cooked
+ * item from #questown:villager_food to keep working (their job's ingredient), so
+ * the seed must stock the store chest with cooked meat, not raw. Seeding only raw
+ * meat left the town in NO_WORK_POSSIBLE.
  *
  * <p>Watchtower layers (built up incrementally; this file currently holds the
  * seed + run window):
@@ -302,9 +306,17 @@ public final class VillageSelfSufficiencyExecutor {
             flag.placeBlockInInterior(storeCell, net.minecraft.world.level.block.Blocks.CHEST);
             storeChestPos = flag.interiorCells().get(storeCell);
             if (level.getBlockEntity(storeChestPos) instanceof net.minecraft.world.Container c) {
-                c.setItem(0, new ItemStack(net.minecraft.world.item.Items.MUTTON, 16));
-                c.setItem(1, new ItemStack(net.minecraft.world.item.Items.BEEF, 16));
-                c.setItem(2, new ItemStack(net.minecraft.world.item.Items.PORKCHOP, 16));
+                // COOKED meat, not raw: a townie's working ingredient is
+                // #questown:villager_food, and that tag is cooked items only (bread,
+                // cooked_*, baked_potato, ...). Raw meat is the *survival* food a
+                // raw-food diner work consumes, not the working ingredient a hunter or
+                // gatherer eats to keep working. Seeding raw meat left the whole town
+                // in NO_WORK_POSSIBLE (the work-seeker found no villager_food in any
+                // registered room's chest). A chest in a registered room is searched
+                // for ingredients by the work-seeker, so the store room's chest works.
+                c.setItem(0, new ItemStack(net.minecraft.world.item.Items.COOKED_MUTTON, 16));
+                c.setItem(1, new ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, 16));
+                c.setItem(2, new ItemStack(net.minecraft.world.item.Items.COOKED_PORKCHOP, 16));
                 // A wooden sword completes the tutorial batch (PHASE_KICKOFF): the
                 // open wooden_sword item quest requires a wooden sword in the store
                 // room. Without it the town stays in the tutorial phase with no work
@@ -316,7 +328,7 @@ public final class VillageSelfSufficiencyExecutor {
                 c.setChanged();
             }
             msg("Store chest seeded at " + storeChestPos.toShortString()
-                    + " (raw meat + wooden/stone sword)");
+                    + " (cooked meat + wooden/stone sword)");
         } else {
             msg("WARN store room has no interior cell; store chest not placed");
         }
