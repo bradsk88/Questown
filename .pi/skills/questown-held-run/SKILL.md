@@ -345,6 +345,14 @@ campfire. When the chicken's hint is "put X in the world" (a door, a campfire,
   so read the `[build_room] refusing to build …` line and pick a clear spot, do not assume it
   built. The room is detected by the scan on a later tick (not synchronously), so read the
   next observe cycle / `inspect doors`, not an instant `recipe_created`, to confirm.
+  **A clean spot can still yield a leaky shell.** `build_room` lays the chicken's
+  `ChickenRoomShellPlan` perimeter, which at some footprints is not a closed box -
+  the room then reads `NOT_ENCLOSED` on `look_room` and never registers, even though
+  the `[build_room] laid N shell blocks` line logged success. The log line says the
+  shell was *laid*, not that the room *closed*. Confirm with `look_room`; if it is
+  `NOT_ENCLOSED`, the shell shape is the problem (not the spot) - the workaround is a
+  hand-laid rectangular shell (5x5 outer walls, single door, 3x3 interior, the shape
+  the wall walk closes cleanly) plus `_qtdev registerroom <door pos>`.
 - `_qtdev place_block [index] <block>` - place a block inside a registered room's interior
   (the way a player placing a block on the floor would). With no index it lists the room's
   empty interior cells (index, x, y, z); with `<index> <block>` it places the block at that
