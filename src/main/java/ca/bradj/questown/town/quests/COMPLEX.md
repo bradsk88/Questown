@@ -26,6 +26,12 @@ flowchart TD
   matches `getWantedId`, so completing one recipe and then another can never
   complete the same quest twice — which is what makes the superset path below
   safe alongside the top-match path.
+- **Track/dedup quests by `getWantedId()` (recipe id), never by `getBatchUUID()`.**
+  A `MCQuestBatch` carries *several* quests (e.g. the kickoff batch holds
+  `job_board`, `store_room`, and `town_gate` under one batch UUID), so the batch
+  UUID is shared across them. Keying a "done" set on the batch UUID marks every
+  quest in the batch done after the first one completes. The recipe id is the
+  per-quest identity; the batch UUID is the grouping.
 
 ## Onboarding flag: stored but not wired (as of 2026-09-07)
 
