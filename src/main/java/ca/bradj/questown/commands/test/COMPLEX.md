@@ -247,3 +247,22 @@ That is the `NO_JOBSITE` vs `NO_SUPPLIES` distinction: `NO_JOBSITE` is a missing
 *job site* (fixed by the unlock above); `NO_WORK_POSSIBLE` from `UNMET_ITEM` is a
 missing *supply* at a container the job's base room can see.
 
+**Container flow is a polling diff, not an event.** A vanilla `Container`
+exposes no change callback, so the watchtower's flow counter
+(`ContainerFlowCounter` + `ContainerFlowTracker`) does not hook an
+insert/remove seam. It snapshots each tracked container's per-item totals at a
+fixed cadence (every 200 ticks, alongside the room builder) and diffs against
+the last snapshot: a slot gain is `recordInsert`, a loss is `recordExtract`.
+The diff is *net per slot*, so a two-item swap nets to zero and is not
+counted as a flow. The tracker writes nothing to the world; it is pure read.
+The day bucket comes from `level.getDayTime() / 24000`, which a realtime held
+watch may cross but the counter does not enforce as a wall-clock boundary.
+
+**The flow counter is a standalone class, not an extension of `NoMCEconomics`.**
+`NoMCEconomics` is a *demand/unmet-needs* tracker (it records what the town
+wants, not what it moves). Growing it with production/consumption would conflate
+two different questions and bloat a class that already feeds the UI's needs
+screen. The flow counter is a new, self-contained class with its own
+unit-testable core (`ContainerFlowCounter` is pure, no Minecraft imports) and a
+thin Minecraft-facing tracker on top.
+

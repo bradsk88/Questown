@@ -107,6 +107,11 @@ public final class VillageSelfSufficiencyExecutor {
     private final java.util.Set<net.minecraft.resources.ResourceLocation> completedRoomRecipes = new java.util.HashSet<>();
     /** Tick counter for the room-builder cadence (every 200 ticks = ~10s). */
     private int roomBuilderTicks = 0;
+    /** Container-flow counter wiring the store chest (and future room chests)
+     *  to a per-item produced/consumed/stock record. See ContainerFlowTracker. */
+    private final ContainerFlowTracker flowTracker = new ContainerFlowTracker();
+    /** Last day seen at watch start; the daily report keys its delta on this. */
+    private long lastReportDay = -1;
 
     public VillageSelfSufficiencyExecutor(
             ServerLevel level,
@@ -313,6 +318,9 @@ public final class VillageSelfSufficiencyExecutor {
             flag.placeBlockInInterior(storeCell, net.minecraft.world.level.block.Blocks.CHEST);
             storeChestPos = flag.interiorCells().get(storeCell);
             if (level.getBlockEntity(storeChestPos) instanceof net.minecraft.world.Container c) {
+                // Start watching this chest for flow; the counter is the store room's
+                // sole production/consumption seam in the current seed.
+                flowTracker.track(level, storeChestPos);
                 // COOKED meat, not raw: a townie's working ingredient is
                 // #questown:villager_food, and that tag is cooked items only (bread,
                 // cooked_*, baked_potato, ...). Raw meat is the *survival* food a
@@ -467,6 +475,17 @@ public final class VillageSelfSufficiencyExecutor {
         roomBuilderTicks++;
         if (roomBuilderTicks % 200 == 0) {
             driveRoomBuilder();
+            pollFlow();
+        }
+    }
+
+    /** Poll tracked containers and log any item-flow changes since the last
+     *  poll. The flow line is the watchtower's first hard number: it turns the
+     *  "town stalls" observation into produced/consumed/stock per item. */
+    private void pollFlow() {
+        flowTracker.poll(level);
+        for (String line : flowTracker.counter().reportLines()) {
+            msg(line);
         }
     }
 
