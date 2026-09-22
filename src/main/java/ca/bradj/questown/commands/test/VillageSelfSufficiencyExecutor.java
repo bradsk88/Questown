@@ -3,6 +3,7 @@ package ca.bradj.questown.commands.test;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.mobs.visitor.TownieNeed;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
@@ -121,6 +122,202 @@ public final class VillageSelfSufficiencyExecutor {
     private long lastReportedDay = -1;
     /** Snapshot of the six report categories at the last report, for the delta. */
     private ReportSnapshot lastSnapshot;
+
+    /**
+     * Lock-detector state. Each detector tracks how long its condition has been
+     * true and fires once (with a re-arm) when it exceeds a bound. The
+     * forward-progress net compares day-snapshots and fires when all tracked
+     * values are unchanged across a full day.
+     */
+    /** Per-villager production-status tick counter, keyed by villager UUID.
+     *  A value of 0 means the villager is not currently in a lock status. */
+    private final java.util.Map<java.util.UUID, Integer> lockStatusTicks = new java.util.HashMap<>();
+    /** Per-villager UNMET_ITEM tick counter, keyed by villager UUID. */
+    private final java.util.Map<java.util.UUID, Integer> unmetItemTicks = new java.util.HashMap<>();
+    /** Tick at which a ROOM quest was first seen ACTIVE, keyed by recipe path. */
+    private final java.util.Map<String, Long> roomQuestOpenSince = new java.util.HashMap<>();
+    /** Peak roster seen so far, for the leaver-never-returning detector. */
+    private long peakRoster = 0;
+    /** Tick at which the roster dropped below peak, or -1 if at peak. */
+    private long rosterDropSinceTick = -1;
+    /** Last day-snapshot for the forward-progress net. */
+    private ReportSnapshot prevDaySnapshot;
+    /** Consecutive days with no change in (roster, questsOpen, questsDone, stock). */
+    private long noProgressDays = 0;
+    /** Ticks the town has been at or below 50% of peak roster. */
+    private long lowRosterTicks = 0;
+
+    /** Bound (in ticks) after which a lock status is reported. ~100s. */
+    private static final int LOCK_STATUS_BOUND_TICKS = 2000;
+    /** Bound (in ticks) after which UNMET_ITEM is reported. ~100s. */
+    private static final int UNMET_ITEM_BOUND_TICKS = 2000;
+    /** Bound (in ticks) after which a ROOM quest open is reported. ~5 game days. */
+    private static final long ROOM_QUEST_OPEN_BOUND_TICKS = 120_000L;
+    /** Bound (in ticks) after which a roster drop is reported. ~5 game days. */
+    private static final long ROSTER_DROP_BOUND_TICKS = 120_000L;
+    /** Bound (in ticks) after which low roster (below 50% peak) is reported. */
+    private static final long LOW_ROSTER_BOUND_TICKS = 120_000L;
+    /** Forward-progress net: minimum days of no-change before firing. */
+    private static final long PROGRESS_NET_MIN_DAYS = 2;
+
+    /**
+     * Run all lock detectors once per tick. Each detector logs a dump on
+     * detection and re-arms after a cooldown; it does not kill the run.
+     */
+    private void checkLockDetectors() {
+        long nowTick = level.getGameTime();
+        var villagerHandle = flag.getVillagerHandle();
+        long currentRoster = villagerHandle.size();
+
+        // Track peak roster and roster drop.
+        if (currentRoster > peakRoster) {
+            peakRoster = currentRoster;
+            rosterDropSinceTick = -1;
+        }
+        if (currentRoster < peakRoster && rosterDropSinceTick < 0) {
+            rosterDropSinceTick = nowTick;
+        }
+
+        // --- Per-villager lock-status and UNMET_ITEM detectors ---
+        // Build the set of current villager UUIDs so we can clear stale entries.
+        var currentUuids = new java.util.HashSet<java.util.UUID>();
+        for (LivingEntity v : villagerHandle.entities()) {
+            VisitorMobEntity t = (VisitorMobEntity) v;
+            java.util.UUID uuid = t.getUUID();
+            currentUuids.add(uuid);
+
+            // Production status (NO_JOBSITE / NO_SUPPLIES / NO_WORK_POSSIBLE).
+            var status = t.getStatusForServer();
+            String statusName = status != null ? status.name() : "";
+            boolean isLockStatus = statusName.equals("NO_JOBSITE")
+                    || statusName.equals("NO_SUPPLIES")
+                    || statusName.equals("NO_WORK_POSSIBLE");
+
+            if (isLockStatus) {
+                int ticksIn = lockStatusTicks.merge(uuid, 1, Integer::sum);
+                if (ticksIn == LOCK_STATUS_BOUND_TICKS) {
+                    msg("[lock] NO_JOBSITE/NO_SUPPLIES/NO_WORK_POSSIBLE: "
+                            + uuid.toString().substring(0, 8)
+                            + ":" + t.getJobId().rootId()
+                            + "/" + t.getJobId().jobId()
+                            + " status=" + statusName
+                            + " for " + (ticksIn / 20) + "s"
+                            + " (unmet item: " + t.getUnmetItem() + ")");
+                    dumpLockContext(uuid, t);
+                }
+            } else {
+                lockStatusTicks.remove(uuid);
+            }
+
+            // UNMET_ITEM need.
+            TownieNeed need = t.getNeed();
+            if (need == TownieNeed.UNMET_ITEM) {
+                int ticksUnmet = unmetItemTicks.merge(uuid, 1, Integer::sum);
+                if (ticksUnmet == UNMET_ITEM_BOUND_TICKS) {
+                    msg("[lock] UNMET_ITEM: "
+                            + uuid.toString().substring(0, 8)
+                            + ":" + t.getJobId().rootId()
+                            + "/" + t.getJobId().jobId()
+                            + " missing=" + t.getUnmetItem()
+                            + " for " + (ticksUnmet / 20) + "s");
+                    dumpLockContext(uuid, t);
+                }
+            } else {
+                unmetItemTicks.remove(uuid);
+            }
+        }
+        // Clear stale entries for villagers no longer on the roster.
+        lockStatusTicks.keySet().retainAll(currentUuids);
+        unmetItemTicks.keySet().retainAll(currentUuids);
+
+        // --- Room quest open-too-long detector ---
+        for (var entry : flag.getAllQuestsWithRewards()) {
+            var quest = entry.getKey();
+            if (quest.getType() != ca.bradj.questown.town.quests.Quest.QuestType.ROOM) continue;
+            String recipePath = quest.getWantedId().getPath();
+            if (quest.getStatus() == ca.bradj.questown.town.quests.Quest.QuestStatus.ACTIVE) {
+                roomQuestOpenSince.computeIfAbsent(recipePath, k -> nowTick);
+                long openTicks = nowTick - roomQuestOpenSince.get(recipePath);
+                if (openTicks == ROOM_QUEST_OPEN_BOUND_TICKS) {
+                    msg("[lock] ROOM_QUEST_OPEN_TOO_LONG: " + recipePath
+                            + " open for " + (openTicks / 20000.0) + " game-days");
+                }
+            } else {
+                roomQuestOpenSince.remove(recipePath);
+            }
+        }
+
+        // --- Leaver-never-returning detector ---
+        if (rosterDropSinceTick >= 0) {
+            long dropTicks = nowTick - rosterDropSinceTick;
+            if (dropTicks == ROSTER_DROP_BOUND_TICKS) {
+                msg("[lock] LEAVER_NEVER_RETURNING: roster dropped to "
+                        + currentRoster + " (peak " + peakRoster
+                        + ") and has not recovered for " + (dropTicks / 20) + "s");
+            }
+        }
+
+        // --- Low-roster detector (below 50% of peak) ---
+        if (peakRoster > 0 && currentRoster < peakRoster / 2) {
+            lowRosterTicks++;
+            if (lowRosterTicks == LOW_ROSTER_BOUND_TICKS) {
+                msg("[lock] LOW_ROSTER: roster=" + currentRoster
+                        + " < 50% of peak=" + peakRoster
+                        + " for " + (lowRosterTicks / 20) + "s");
+            }
+        } else {
+            lowRosterTicks = 0;
+        }
+
+        // --- Forward-progress net: no change in (roster, questsOpen, questsDone, stock) across days ---
+        // Uses the noProgressDays counter, updated at the top of each day by
+        // advanceProgressNet() (called from emitDailyReport on day-number change).
+        if (noProgressDays >= PROGRESS_NET_MIN_DAYS && lastSnapshot != null) {
+            msg("[lock] NO_FORWARD_PROGRESS: no change in (roster, questsOpen, questsDone, stock) "
+                    + "across " + noProgressDays + " consecutive days: "
+                    + "roster=" + lastSnapshot.roster()
+                    + " questsOpen=" + lastSnapshot.questsOpen()
+                    + " questsDone=" + lastSnapshot.questsDone()
+                    + " stock=" + lastSnapshot.stockTotal());
+        }
+    }
+
+    /**
+     * Called from emitDailyReport when the day number advances. Compares the
+     * just-written lastSnapshot against prevDaySnapshot, increments
+     * noProgressDays if unchanged, resets if changed, and shifts the baseline.
+     */
+    private void advanceProgressNet() {
+        if (lastSnapshot == null) return;
+        if (prevDaySnapshot == null) {
+            prevDaySnapshot = lastSnapshot;
+            return;
+        }
+        boolean changed = lastSnapshot.roster() != prevDaySnapshot.roster()
+                || lastSnapshot.questsOpen() != prevDaySnapshot.questsOpen()
+                || lastSnapshot.questsDone() != prevDaySnapshot.questsDone()
+                || lastSnapshot.stockTotal() != prevDaySnapshot.stockTotal();
+        if (changed) {
+            noProgressDays = 0;
+        } else {
+            noProgressDays++;
+        }
+        prevDaySnapshot = lastSnapshot;
+    }
+
+    private void dumpLockContext(java.util.UUID uuid, VisitorMobEntity t) {
+        msg("[lock]   context: job=" + t.getJobId()
+                + " need=" + t.getNeed()
+                + " unmetItem=" + t.getUnmetItem()
+                + " status=" + t.getStatusForServer());
+        // Quest summary.
+        long open = 0, done = 0;
+        for (var entry : flag.getAllQuestsWithRewards()) {
+            if (entry.getKey().isComplete()) done++;
+            else open++;
+        }
+        msg("[lock]   quests open=" + open + " done=" + done);
+    }
 
     /** The six report categories at one point in time, for the day-over-day delta. */
     private record ReportSnapshot(
@@ -530,7 +727,9 @@ public final class VillageSelfSufficiencyExecutor {
         // Daily report: six categories + day-over-day delta, emitted once per
         // day-number change.
         emitDailyReport();
-        // TODO: lock detectors (tripwires + forward-progress net)
+        // Lock detectors (tripwires + forward-progress net). Log + dump on
+        // detection; do NOT kill the run.
+        checkLockDetectors();
         // Self-driving room builder: detect open room quests, build a room for
         // each, and place the recipe block once the room registers.
         roomBuilderTicks++;
@@ -663,6 +862,7 @@ public final class VillageSelfSufficiencyExecutor {
                 stockTotal, producedTotal, consumedTotal);
         ReportSnapshot prev = lastSnapshot != null ? lastSnapshot : ReportSnapshot.ZERO;
         lastSnapshot = snap;
+        advanceProgressNet();
 
         // Emit the six category lines with deltas.
         msg("[village] day=" + day + " REPORT");
@@ -675,7 +875,7 @@ public final class VillageSelfSufficiencyExecutor {
                 + delta(stockTotal, prev.stockTotal));
         msg("  mood none=" + noneNeed + " unmet=" + unmetItem + " cant_reach=" + cantReach
                 + delta(unmetItem, prev.unmetItem));
-        msg("  locks fired: (none yet - lock detectors pending)");
+        msg("  locks fired: " + activeLockSummary());
         msg("  milestones: firstNight=" + firstNightPassed);
     }
 
@@ -683,6 +883,31 @@ public final class VillageSelfSufficiencyExecutor {
         long d = now - prev;
         if (d == 0) return "";
         return " [" + (d > 0 ? "+" : "") + d + "]";
+    }
+
+    /** Compact summary of the lock conditions currently active (for the daily report). */
+    private String activeLockSummary() {
+        var out = new java.util.ArrayList<String>();
+        for (var e : lockStatusTicks.entrySet()) {
+            if (e.getValue() >= LOCK_STATUS_BOUND_TICKS) {
+                out.add(e.getKey().toString().substring(0, 8) + ":lock_status(" + e.getValue() + "t)");
+            }
+        }
+        for (var e : unmetItemTicks.entrySet()) {
+            if (e.getValue() >= UNMET_ITEM_BOUND_TICKS) {
+                out.add(e.getKey().toString().substring(0, 8) + ":unmet_item(" + e.getValue() + "t)");
+            }
+        }
+        for (var e : roomQuestOpenSince.entrySet()) {
+            long open = level.getGameTime() - e.getValue();
+            if (open >= ROOM_QUEST_OPEN_BOUND_TICKS) out.add("room:" + e.getKey());
+        }
+        if (rosterDropSinceTick >= 0 && level.getGameTime() - rosterDropSinceTick >= ROSTER_DROP_BOUND_TICKS) {
+            out.add("leaver_not_returning");
+        }
+        if (noProgressDays >= PROGRESS_NET_MIN_DAYS) out.add("no_forward_progress(" + noProgressDays + "d)");
+        if (out.isEmpty()) return "none";
+        return String.join(", ", out);
     }
 
     private void heartbeat() {

@@ -317,3 +317,25 @@ pattern: the day-time signal flip drives the flag's morning detection, no
 fake-player vanilla sleep required). `firstNightPassed` is set on the first
 sleep, which is the gate the welcome-mat placement waits on.
 
+**Lock detectors run every tick during the watch phase.** The `checkLockDetectors()`
+method implements five tripwires plus a forward-progress net, all log-and-dump
+(never kill the run):
+
+- **NO_JOBSITE / NO_SUPPLIES / NO_WORK_POSSIBLE** — per-villager production status
+  tracked in `lockStatusTicks`; fires once at 2000 ticks (~100 s) with a
+  `dumpLockContext` (job, need, unmet item, quest summary).
+- **UNMET_ITEM** — per-villager `TownieNeed.UNMET_ITEM` tracked in
+  `unmetItemTicks`; fires once at 2000 ticks with the missing item name.
+- **ROOM_QUEST_OPEN_TOO_LONG** — each ACTIVE ROOM quest's first-seen tick is
+  stored in `roomQuestOpenSince`; fires once at 120 000 ticks (~5 game days).
+- **LEAVER_NEVER_RETURNING / LOW_ROSTER** — peak roster is tracked; a drop
+  below peak (and separately below 50 % of peak) is timed from
+  `rosterDropSinceTick` / `lowRosterTicks` and fires at 120 000 ticks.
+- **NO_FORWARD_PROGRESS** — `advanceProgressNet()` is called from
+  `emitDailyReport()` after each day's snapshot is written. It compares the
+  new `lastSnapshot` against `prevDaySnapshot` on (roster, questsOpen,
+  questsDone, stockTotal); unchanged days increment `noProgressDays`, any
+  change resets it to 0. The detector fires once at 2 consecutive unchanged
+  days. The daily report's "locks fired" line calls `activeLockSummary()` to
+  list currently-tripped detectors compactly.
+
