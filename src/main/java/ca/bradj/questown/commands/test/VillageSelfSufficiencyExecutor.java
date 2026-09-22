@@ -118,6 +118,11 @@ public final class VillageSelfSufficiencyExecutor {
      *  gate) can only be placed after the campfire quest completes and this flag
      *  is set, so the room-builder gates the town_gate placement on it. */
     private boolean firstNightPassed = false;
+    /** Milestones, latched once and reported from then on: a townie holding a
+     *  cook job (the food chain is producing cooked food) and/or a farmer job. */
+    private boolean cookUnlocked = false;
+    private boolean farmerUnlocked = false;
+    private boolean milestoneLogged = false;
     /** Last day number the daily report was emitted for; -1 before the first report. */
     private long lastReportedDay = -1;
     /** Snapshot of the six report categories at the last report, for the delta. */
@@ -730,6 +735,8 @@ public final class VillageSelfSufficiencyExecutor {
         // Lock detectors (tripwires + forward-progress net). Log + dump on
         // detection; do NOT kill the run.
         checkLockDetectors();
+        // Run-end milestone marker (cook/farmer unlocked, town on cooked food).
+        trackMilestones();
         // Self-driving room builder: detect open room quests, build a room for
         // each, and place the recipe block once the room registers.
         roomBuilderTicks++;
@@ -876,7 +883,31 @@ public final class VillageSelfSufficiencyExecutor {
         msg("  mood none=" + noneNeed + " unmet=" + unmetItem + " cant_reach=" + cantReach
                 + delta(unmetItem, prev.unmetItem));
         msg("  locks fired: " + activeLockSummary());
-        msg("  milestones: firstNight=" + firstNightPassed);
+        msg("  milestones: firstNight=" + firstNightPassed
+                + " cookUnlocked=" + cookUnlocked
+                + " farmerUnlocked=" + farmerUnlocked);
+    }
+
+    /** Detect the run-end milestone: a townie holding a cook job (the food chain
+     *  now produces cooked food) and/or a farmer job. Latched once; the first
+     *  sighting is logged as the milestone event. */
+    private void trackMilestones() {
+        for (LivingEntity v : flag.getVillagerHandle().entities()) {
+            String root = ((VisitorMobEntity) v).getJobId().rootId();
+            if (root.equals("cook") && !cookUnlocked) {
+                cookUnlocked = true;
+                logMilestone("cook_unlocked (town on cooked food)");
+            }
+            if (root.equals("farmer") && !farmerUnlocked) {
+                farmerUnlocked = true;
+                logMilestone("farmer_unlocked");
+            }
+        }
+    }
+
+    private void logMilestone(String what) {
+        milestoneLogged = true;
+        msg("[village] MILESTONE: " + what + " on day=" + (nightsSlept + 1));
     }
 
     private static String delta(long now, long prev) {
@@ -1093,6 +1124,10 @@ public final class VillageSelfSufficiencyExecutor {
         long roster = flag.getVillagerHandle().size();
         msg("========================================");
         msg("WATCH complete: roster=" + roster);
+        msg("milestones: firstNight=" + firstNightPassed
+                + " cookUnlocked=" + cookUnlocked
+                + " farmerUnlocked=" + farmerUnlocked
+                + (cookUnlocked ? "  [milestone: town on cooked food]" : ""));
         msg("========================================");
         phase = Phase.DONE;
     }

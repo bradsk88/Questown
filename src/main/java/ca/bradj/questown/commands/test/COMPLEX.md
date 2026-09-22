@@ -339,3 +339,12 @@ method implements five tripwires plus a forward-progress net, all log-and-dump
   days. The daily report's "locks fired" line calls `activeLockSummary()` to
   list currently-tripped detectors compactly.
 
+**Run-end milestone marker.** `trackMilestones()` runs every watch tick after
+the daily report. It latches two booleans the first time a roster townie holds
+a `cook` job (`cookUnlocked` — the food chain now produces cooked food, the
+improvement target from the kestrel design) or a `farmer` job
+(`farmerUnlocked`). The first sighting of each is logged as a `MILESTONE` line
+with the current watch day. The daily report's milestone line and the
+run-end `WATCH complete` block both surface the latched state, so the
+improvement target is visible in both the per-day diff and the final summary.
+
