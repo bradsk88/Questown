@@ -247,16 +247,27 @@ That is the `NO_JOBSITE` vs `NO_SUPPLIES` distinction: `NO_JOBSITE` is a missing
 *job site* (fixed by the unlock above); `NO_WORK_POSSIBLE` from `UNMET_ITEM` is a
 missing *supply* at a container the job's base room can see.
 
-**Container flow is a polling diff, not an event.** A vanilla `Container`
+**Container flow is a polling diff against a seeded baseline, not an event.** A vanilla `Container`
 exposes no change callback, so the watchtower's flow counter
 (`ContainerFlowCounter` + `ContainerFlowTracker`) does not hook an
-insert/remove seam. It snapshots each tracked container's per-item totals at a
-fixed cadence (every 200 ticks, alongside the room builder) and diffs against
-the last snapshot: a slot gain is `recordInsert`, a loss is `recordExtract`.
-The diff is *net per slot*, so a two-item swap nets to zero and is not
-counted as a flow. The tracker writes nothing to the world; it is pure read.
-The day bucket comes from `level.getDayTime() / 24000`, which a realtime held
-watch may cross but the counter does not enforce as a wall-clock boundary.
+insert/remove seam. When the scenario starts tracking a container it first
+snapshots whatever is already in it and records that as the seed baseline:
+the first poll's diff (against an empty `previous`) is the seed being captured,
+not real production — the counter's `totalProduced` subtracts the seed so a
+starting inventory is not counted as flow (consumed is not capped by it; the
+seed only blocks the catch-up insert). The tracker then snapshots each tracked
+container's per-item totals on the daily-report cadence and diffs against the
+last: a slot gain is `recordInsert`, a loss is `recordExtract`. The diff is *net
+per slot*, so a two-item swap nets to zero and is not counted as a flow. The
+tracker writes nothing to the world; it is pure read.
+
+**The daily report shows per-day windows, not cumulative-since-town-start.** The
+flow counter's `totalProduced`/`totalConsumed` are cumulative-since-tracked, so
+the report stores the last-seen cumulative per report and reports the delta as
+the day's production/consumption. The day-1 report (at watch start) is a
+point-in-time baseline: zero windows for all four categories, non-zero only for
+`stock` (the starting inventory). `stock` is always a point-in-time read with a
+day-over-day delta against the previous report's `stock`.
 
 **The flow counter is a standalone class, not an extension of `NoMCEconomics`.**
 `NoMCEconomics` is a *demand/unmet-needs* tracker (it records what the town
@@ -265,6 +276,19 @@ two different questions and bloat a class that already feeds the UI's needs
 screen. The flow counter is a new, self-contained class with its own
 unit-testable core (`ContainerFlowCounter` is pure, no Minecraft imports) and a
 thin Minecraft-facing tracker on top.
+
+**Demand in the report is a windowed count, not the cumulative UI aggregate.**
+`NoMCEconomics.getAggregatedItems(null)` returns the cumulative `aggregatedAll`,
+which is *not a per-day number* and, because it is derived from the
+`EvictingQueue`, is *pinned at the queue depth* (in a 5-day held run the report
+read `demand=100` every day). The daily report instead uses
+`NoMCEconomics.getUnmetNeedsWindowTotal()`, a bounded window over a
+monotonically-increasing `unmetNeedsCumulative` counter (kept separate because
+the queue itself evicts and does not grow monotonically). The counter's
+`WindowTotal` is a small pure helper (unit-testable in `WindowTotalTest`);
+each call to `getUnmetNeedsWindowTotal` returns the unmet needs registered since
+the last call and advances the baseline — so the report uses it directly, with
+the day-1 baseline consuming the pre-watch window (reported as zero).
 
 **The room-builder builds on recipe id, not batch UUID.** A `MCQuestBatch`
 carries several room quests (the kickoff batch holds `job_board`, `store_room`,

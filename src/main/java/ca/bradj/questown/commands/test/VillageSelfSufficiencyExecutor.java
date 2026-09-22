@@ -536,18 +536,68 @@ public final class VillageSelfSufficiencyExecutor {
         roomBuilderTicks++;
         if (roomBuilderTicks % 200 == 0) {
             driveRoomBuilder();
-            pollFlow();
         }
     }
 
-    /** Poll tracked containers and log any item-flow changes since the last
-     *  poll. The flow line is the watchtower's first hard number: it turns the
-     *  "town stalls" observation into produced/consumed/stock per item. */
-    private void pollFlow() {
+    /**
+     * One daily-report snapshot of the economy. produced/consumed are the
+     * *per-day window* (flow during the day that just ended); stock is the
+     * point-in-time total in the tracked containers; demand is the unmet item
+     * needs registered during the day that just ended. A point-in-time baseline
+     * report (day 1, at watch start) carries a zero window for all four.
+     */
+    private record EconomySnapshot(long produced, long consumed, long stock, long demand) {
+        static EconomySnapshot ZERO = new EconomySnapshot(0, 0, 0, 0);
+    }
+
+    /** Cumulative flow-counter produced/consumed at the last report, so the
+     *  per-day window is the delta against it. The flow counter's {@code
+     *  totalProduced}/{@code totalConsumed} are cumulative-since-tracked (a
+     *  one-time seed baseline already excluded), so the window is a subtraction. */
+    private long lastCumProduced = 0;
+    private long lastCumConsumed = 0;
+    /** True once the day-1 baseline report has consumed the pre-watch demand
+     *  window (via {@code getUnmetNeedsWindowTotal}), so day 2's report shows
+     *  day 1's demand, not the pre-watch accumulation. */
+    private boolean demandBaselineAdvanced = false;
+
+    /**
+     * Take the next daily-report economy numbers. Polls the containers, then
+     * reads the flow counter's raw (cumulative-since-tracked) produced/consumed
+     * and stock; reads the economics handle's demand window (a per-call delta,
+     * already bounded) and, on the first call, treats it as consumed pre-watch
+     * state (reported as zero). Updates the stored cumulative baselines.
+     */
+    private EconomySnapshot nextEconomyReport() {
         flowTracker.poll(level);
-        for (String line : flowTracker.counter().reportLines()) {
-            msg(line);
+        ContainerFlowCounter counter = flowTracker.counter();
+        long cumProduced = 0;
+        long cumConsumed = 0;
+        for (String item : counter.produced().keySet()) {
+            cumProduced += counter.totalProduced(item);
         }
+        for (String item : counter.consumed().keySet()) {
+            cumConsumed += counter.totalConsumed(item);
+        }
+        long stock = counter.lastStock().values().stream().mapToInt(Integer::intValue).sum();
+
+        flag.getEconomicsHandle().update();
+        long demand = flag.getEconomicsHandle().getUnmetNeedsWindowTotal();
+
+        long producedWindow = Math.max(0, cumProduced - lastCumProduced);
+        long consumedWindow = Math.max(0, cumConsumed - lastCumConsumed);
+        lastCumProduced = cumProduced;
+        lastCumConsumed = cumConsumed;
+
+        long demandWindow;
+        if (!demandBaselineAdvanced) {
+            // Day 1: advance the baseline, report zero (there was no prior day).
+            demandWindow = 0;
+            demandBaselineAdvanced = true;
+        } else {
+            demandWindow = demand;
+        }
+        return new EconomySnapshot(producedWindow, consumedWindow, stock, demandWindow);
     }
 
     /** Emit the deterministic daily report: six categories with a day-over-day
@@ -597,25 +647,16 @@ public final class VillageSelfSufficiencyExecutor {
             else questsOpen++;
         }
 
-        // Item economy: produced/consumed/stock from the flow counter
-        long producedTotal = 0, consumedTotal = 0, stockTotal = 0;
-        for (var item : flowTracker.counter().lastStock().keySet()) {
-            stockTotal += flowTracker.counter().stockOf(item);
-        }
-        for (var entry : flowTracker.counter().produced().entrySet()) {
-            for (var d : entry.getValue().values()) producedTotal += d;
-        }
-        for (var entry : flowTracker.counter().consumed().entrySet()) {
-            for (var d : entry.getValue().values()) consumedTotal += d;
-        }
-
-        // Demand side: unmet needs from NoMCEconomics
-        var econ = flag.getEconomicsHandle();
-        econ.update();
-        long demandTotal = 0;
-        for (var item : econ.getAggregatedItems(null)) {
-            demandTotal += item.timesNeeded();
-        }
+        // Item economy: per-day window. nextEconomyReport() polls the
+        // containers, computes the per-day produced/consumed window (the delta
+        // against the stored cumulative baseline), and the per-day demand
+        // window (a per-call delta from the economics handle). On the day-1
+        // baseline it returns a zero window for all four.
+        EconomySnapshot econSnap = nextEconomyReport();
+        long producedTotal = econSnap.produced();
+        long consumedTotal = econSnap.consumed();
+        long stockTotal = econSnap.stock();
+        long demandTotal = econSnap.demand();
 
         ReportSnapshot snap = new ReportSnapshot(
                 roster, questsOpen, questsDone, unmetItem, cantReach, noneNeed,

@@ -26,6 +26,13 @@ public class NoMCEconomics {
     private Map<UUID, ImmutableList<ItemEconomicsData>> aggregated = ImmutableMap.of();
     private ImmutableList<ItemEconomicsData> aggregatedAll = ImmutableList.of();
     private ImmutableList<RoomNeed<String>> roomsAll = ImmutableList.of();
+    private final WindowTotal unmetNeedsWindow = new WindowTotal(0);
+    /** Monotonically increasing count of every unmet-item-need ever registered.
+     *  Kept separate from {@link #unmetNeedsRecord} because that is an
+     *  EvictingQueue whose size caps at {@code ECONOMIC_RECORDS_DEPTH} (evicting
+     *  old entries) and therefore does not grow monotonically. Drives the windowed
+     *  total. */
+    private long unmetNeedsCumulative = 0;
 
     public static ImmutableMap<UUID, ImmutableList<ItemEconomicsData>> aggregateForUI(
             Collection<UnmetNeed> unmetNeedsRecord
@@ -114,6 +121,7 @@ public class NoMCEconomics {
             String requested
     ) {
         unmetNeedsRecord.add(new UnmetNeed(tick, villagerId, requested));
+        unmetNeedsCumulative++; // monotonic; the queue above may evict
         this.needAggregate = true;
     }
 
@@ -128,6 +136,21 @@ public class NoMCEconomics {
 
     public ImmutableList<ItemEconomicsData> getAggregatedItems(@Nullable UUID villagerId) {
         return getAggregated(aggregatedAll, aggregated, villagerId);
+    }
+
+    /**
+     * Windowed unmet item needs: the number of records registered to
+     * {@link #unmetNeedsRecord} since this method last returned a value. Zero
+     * on the first call (nothing measured yet). Callers should invoke
+     * {@link #update} first so it reflects all needs registered up to now.
+     *
+     * <p>This is the value the daily report’s {@code demand=} should use: it is
+     * a bounded per-window count, not the cumulative-since-town-start aggregate
+     * that {@link #getAggregatedItems} returns (which in a held run is pinned at
+     * the {@code EvictingQueue} depth).
+     */
+    public long getUnmetNeedsWindowTotal() {
+        return unmetNeedsWindow.next(unmetNeedsCumulative);
     }
 
     public Collection<RoomNeed<String>> getAggregatedRooms() {

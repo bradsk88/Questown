@@ -25,6 +25,30 @@ public final class ContainerFlowCounter {
     private final Map<String, Map<Long, Long>> consumed = new HashMap<>();
     /** Last stock snapshot taken, item -> count. Refreshed by {@link #takeStockSnapshot}. */
     private Map<String, Integer> lastStock = new HashMap<>();
+    /** Stock present in the tracked containers before any flow was observed.
+     *  Recorded by {@link #recordSeed} on the first snapshot; the totals
+     *  exclude it so a starting inventory is not counted as produced. */
+    private Map<String, Integer> seededStock = new HashMap<>();
+
+    public ContainerFlowCounter() {
+    }
+
+    /**
+     * Records the stock already present in the tracked containers when
+     * tracking starts (e.g. the scenario's seeded supplies). The produced and
+     * consumed totals are measured against this baseline, so the initial
+     * inventory is not miscounted as flow. Multiple calls (one per tracked
+     * container) merge into the combined baseline.
+     */
+    public void recordSeed(Map<String, Integer> stock) {
+        for (Map.Entry<String, Integer> e : stock.entrySet()) {
+            seededStock.merge(e.getKey(), e.getValue(), Integer::sum);
+        }
+    }
+
+    public boolean hasSeed() {
+        return !seededStock.isEmpty();
+    }
 
     /** Records {@code count} copies of the item entering a tracked container. */
     public void recordInsert(String itemKey, long day, int count) {
@@ -65,14 +89,32 @@ public final class ContainerFlowCounter {
         return lastStock.getOrDefault(itemKey, 0);
     }
 
-    /** Total produced across all days for one item. */
+    /** Total produced across all days for one item, excluding the seeded baseline. */
     public long totalProduced(String itemKey) {
-        return produced.getOrDefault(itemKey, Map.of()).values().stream().mapToLong(Long::longValue).sum();
+        long raw = produced.getOrDefault(itemKey, Map.of()).values().stream().mapToLong(Long::longValue).sum();
+        return Math.max(0, raw - seededStock.getOrDefault(itemKey, 0));
     }
 
-    /** Total consumed across all days for one item. */
+    /** Total consumed across all days for one item. The seed is a starting balance
+     *  and does not affect the consumed total: it prevents the first-poll catch-up
+     *  insert (the initial balance) from being counted as production, but it does
+     *  not mean items are being consumed. */
     public long totalConsumed(String itemKey) {
         return consumed.getOrDefault(itemKey, Map.of()).values().stream().mapToLong(Long::longValue).sum();
+    }
+
+    /** Sum of the produced and consumed totals for one item. */
+    public long totalFlow(String itemKey) {
+        return totalProduced(itemKey) + totalConsumed(itemKey);
+    }
+
+    /** Sum of every item's produced and consumed totals. */
+    public long totalFlowAll() {
+        long total = 0;
+        for (String item : unionKeys()) {
+            total += totalFlow(item);
+        }
+        return total;
     }
 
     /**

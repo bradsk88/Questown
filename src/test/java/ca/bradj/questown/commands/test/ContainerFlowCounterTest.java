@@ -91,4 +91,44 @@ class ContainerFlowCounterTest {
         ContainerFlowCounter.putStock(stock, "z", 0);
         assertNull(stock.get("z"));
     }
+
+    @Test
+    void recordSeedExcludesStartingInventoryFromTotals() {
+        ContainerFlowCounter c = new ContainerFlowCounter();
+        assertFalse(c.hasSeed());
+        c.recordSeed(Map.of("mutton", 48));
+        assertTrue(c.hasSeed());
+        // No inserts yet: nothing has actually flowed in.
+        assertEquals(0, c.totalProduced("mutton"));
+    }
+
+    @Test
+    void recordSeedSubtractsOnlyTheCatchUpInsert() {
+        // Simulate the tracker's real behaviour: the first poll inserts the
+        // initial balance (48), then a real +12 (total 60 in the produced map).
+        ContainerFlowCounter c = new ContainerFlowCounter();
+        c.recordSeed(Map.of("mutton", 48));
+        c.recordInsert("mutton", 1, 48); // first-poll catch-up: the seeded 48
+        c.recordInsert("mutton", 2, 12); // town adds 12 more
+        assertEquals(12, c.totalProduced("mutton"));
+        // No consumes: the seed does not affect the consumed total.
+        assertEquals(0, c.totalConsumed("mutton"));
+        // An item not in the seed is counted normally.
+        c.recordInsert("bread", 2, 5);
+        assertEquals(5, c.totalProduced("bread"));
+    }
+
+    @Test
+    void recordSeedDoesNotCapConsumed() {
+        // Starting at 48, the town adds 12 (60 total in), then consumes 30.
+        // The 30 consumed is a real extraction, not capped by the seed.
+        ContainerFlowCounter c = new ContainerFlowCounter();
+        c.recordSeed(Map.of("mutton", 48));
+        c.recordInsert("mutton", 1, 48);  // catch-up
+        c.recordInsert("mutton", 1, 12);  // real +12
+        c.recordExtract("mutton", 1, 30); // real -30
+        assertEquals(12, c.totalProduced("mutton"));
+        assertEquals(30, c.totalConsumed("mutton"));
+        assertEquals(42, c.totalFlow("mutton"));
+    }
 }
