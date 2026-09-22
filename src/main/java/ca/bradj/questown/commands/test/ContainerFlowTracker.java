@@ -28,22 +28,22 @@ public final class ContainerFlowTracker {
     /** item -> total count, per container pos, from the last poll. */
     private final Map<BlockPos, Map<String, Integer>> previous = new HashMap<>();
     private final Map<String, Integer> stock = new HashMap<>();
-    private long day;
 
     public void track(ServerLevel level, BlockPos pos) {
-        containers.add(pos.immutable());
-        if (level != null && level.getGameTime() > 0) {
-            syncDay(level);
+        if (!containers.add(pos.immutable())) {
+            return; // already tracked; the seed was recorded (or skipped) on the first call
         }
-    }
-
-    private void syncDay(ServerLevel level) {
-        // Game day number; vanilla does not advance it within the tick cycle
-        // unless the day counter rolls, which a held realtime watch may cross.
-        long d = level.getDayTime() >= 24000L
-                ? level.getDayTime() / 24000L
-                : 0L;
-        this.day = d;
+        // If the chest already holds items when tracking starts, record that as
+        // the seed baseline so it is not miscounted as produced on the first
+        // poll. If the chest is empty (or absent) at this point, no seed is
+        // recorded: a later poll still establishes the baseline against an
+        // empty previous snapshot.
+        if (level != null) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof Container c) {
+                counter.recordSeed(countStock(c));
+            }
+        }
     }
 
     /**
@@ -64,9 +64,9 @@ public final class ContainerFlowTracker {
                 int prevCount = prev.getOrDefault(item, 0);
                 int delta = nowCount - prevCount;
                 if (delta > 0) {
-                    counter.recordInsert(item, day, delta);
+                    counter.recordInsert(item, 0, delta);
                 } else if (delta < 0) {
-                    counter.recordExtract(item, day, -delta);
+                    counter.recordExtract(item, 0, -delta);
                 }
             }
             previous.put(pos, now);
