@@ -447,7 +447,14 @@ public class TownPossibleWork {
             WorksBehaviour.TownData td
     ) {
         JobCycler cycler = villagerCyclers.computeIfAbsent(villagerUUID, k -> new JobCycler());
-        return cycler.nextValid(getFor(currentJob), canAlwaysStart, canFitInDay, requestedResults, td);
+        // The precomputed list is the town-wide "known" set (all of the root's jobs); gate it to
+        // the works *this* townie has unlocked for itself, so a freshly-minted townie only ever
+        // sees the one work it holds rather than every tier another townie has unlocked.
+        VillagerHolder vh = town.getUnsafe().getVillagerHandle();
+        ImmutableList<JobID> possible = getFor(currentJob).stream()
+                .filter(jobID -> vh.isUnlocked(villagerUUID, jobID))
+                .collect(ImmutableList.toImmutableList());
+        return cycler.nextValid(possible, canAlwaysStart, canFitInDay, requestedResults, td);
     }
 
     public void invalidate() {

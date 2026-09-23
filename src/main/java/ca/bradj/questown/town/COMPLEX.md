@@ -329,6 +329,12 @@ flowchart TD
   job root: entries are written whole, per root, and no reader compares two roots
   against each other. An `invalidate()` arriving mid-pass does not restart the
   pass — it re-arms the gate, so the next pass starts after the current one ends.
+- `nextForVillager` filters the preselected works by the **per-villager**
+  `isUnlocked` (the townie's own unlocked set), not the town-wide "some townie
+  knows it" gate. A townie only picks work it has personally unlocked, so a
+  newly-minted hunter lands on base `hunter/sword` and does not climb the
+  `sword_half_day` / `sword_full_day` tiers. The town-wide `isUnlocked` remains
+  for the board/knowledge gate; the per-villager overload gates work selection.
 
 ## Wander-target search: deferred retry + reasoned failure log
 
