@@ -286,6 +286,11 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public boolean isUnlocked(UUID villagerUUID, JobID jobID) {
+                return villagerHandle.learning.isUnlocked(villagerUUID, jobID);
+            }
+
+            @Override
             public UnsafeVillagerData getUnprotectedDataHandle(@Nullable VillagerUUID vuid) {
                 return villagerHandle.getUnprotectedDataHandle(getUUID(vuid));
             }

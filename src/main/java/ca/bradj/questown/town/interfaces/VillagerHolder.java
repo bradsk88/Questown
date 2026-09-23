@@ -181,6 +181,14 @@ public interface VillagerHolder {
 
     boolean isUnlocked(JobID jobID);
 
+    /**
+     * Whether a specific townie has unlocked this work (per-villager). The town-wide
+     * {@link #isUnlocked(JobID)} is the "can anyone in town do this" gate used by the
+     * request board; this is the narrower "can *this* townie do this" gate the
+     * work-seeker needs, so a freshly-minted townie only sees the works it itself holds.
+     */
+    boolean isUnlocked(UUID villagerUUID, JobID jobID);
+
     UnsafeVillagerData getUnprotectedDataHandle(@Nullable VillagerUUID vuid);
 
     Optional<Entity> getLookTarget(@Nullable VillagerUUID vuid);

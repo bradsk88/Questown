@@ -94,7 +94,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             Work w = ServerJobsRegistry.getRandomWork(
                     x.town().getServerLevel(),
                     getId().rootId(),
-                    x.town().getVillagerHandle()::isUnlocked
+                    workId -> x.town().getVillagerHandle().isUnlocked(ownerUUID, workId)
             );
             Job<?, ?, ?> job = w.jobFunc.apply(ownerUUID);
             if (job instanceof DeclarativeJob dj) {
