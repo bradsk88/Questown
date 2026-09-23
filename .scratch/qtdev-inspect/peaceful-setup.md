@@ -2,8 +2,13 @@
 title: Set the world to peaceful during held-run sandbox setup
 status: needs-triage
 created: 2026-09-08
+closed: 2026-09-23
 priority: p0
 ---
+
+## Closed 2026-09-23
+
+`AutoTestRunner.VillageWatchListener.onLogin` sets `server.setDifficulty(PEACEFUL, true)` (world-level, not per-player) plus survival for every non-fake player joining a village track, and the held-run skill documents it. All three acceptance criteria are met in code.
 
 ## Context
 
