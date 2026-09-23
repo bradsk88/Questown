@@ -179,7 +179,10 @@ what the town/villagers need, and (b) what is **ambiguous, unknown, or
 blocking**. Act on the current output, not a pre-baked plan. **Waiting for
 production is a blocked step**: two observe windows with no change is a
 stall, not patience - inspect the villager (status, carrying), do not
-schedule a third window of waiting.
+schedule a third window of waiting. Likewise, a yes/no "will this townie
+start working?" is settled by `_qtdev inspect villagers <flag>` (its
+job + need + status line) on the first probe; reserve time-elapsed windows
+(daily report, milestone) for questions that actually need time to pass.
 
 **Confirm against the latest observe cycle, not the last line you grepped.**
 Observe lines and the need/job lines interleave, and a line you grepped a

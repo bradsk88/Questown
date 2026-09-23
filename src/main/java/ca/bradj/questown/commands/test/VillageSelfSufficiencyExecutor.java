@@ -80,6 +80,16 @@ public final class VillageSelfSufficiencyExecutor {
      *  one gatherer; that is the seed's effective end state. */
     private static final int VILLAGER_COUNT = 2;
 
+    /** Opening food block per cooked-meat item in the store chest. The seed is a
+     *  one-time bootstrap, not a supply: the town is meant to outproduce its diner
+     *  consumption once its job chain is working, and the watchtower measures how
+     *  often the opening block drains to zero (a food-lock) before a random
+     *  job-change quest brings up a cook. Sizing is a tuning knob, logged at seed
+     *  time; too little locks on day one, too much hides the lock the test exists
+     *  to find. 48 total (16x3) drained in a day with no production, so the block
+     *  is raised to bridge the expected gap until the first cook turns the chain. */
+    private static final int FOOD_SEED_PER_ITEM = 48;
+
     /** Buildings around the flag: 3x3 interior, one south door, one chest. */
     private static final int BUILDING_SIZE = 5;
 
@@ -123,6 +133,11 @@ public final class VillageSelfSufficiencyExecutor {
     private boolean cookUnlocked = false;
     private boolean farmerUnlocked = false;
     private boolean milestoneLogged = false;
+    /** Latched once the opening food block has been written into the store chest.
+     *  The write happens at watch start, after the flag is live and past its first
+     *  tick (which restores chest contents from its captured NBT state and would
+     *  flush a chest filled during furnish). */
+    private boolean openingFoodSeeded = false;
     /** Last day number the daily report was emitted for; -1 before the first report. */
     private long lastReportedDay = -1;
     /** Snapshot of the six report categories at the last report, for the delta. */
@@ -529,10 +544,13 @@ public final class VillageSelfSufficiencyExecutor {
         // Job board in the board room's interior.
         int boardCell = firstInteriorCellIndex(boardRoomCorner);
         if (boardCell >= 0) {
-            BlockPos boardPosIn = flag.interiorCells().get(boardCell);
-            flag.placeBlockInInterior(boardCell, ca.bradj.questown.core.init.BlocksInit.JOB_BOARD_BLOCK.get());
-            flag.registerJobsBoard(boardPosIn);
-            msg("Job board placed in board room interior at " + boardPosIn.toShortString());
+            BlockPos boardPosIn = flag.placeBlockInInterior(boardCell, ca.bradj.questown.core.init.BlocksInit.JOB_BOARD_BLOCK.get());
+            if (boardPosIn != null) {
+                flag.registerJobsBoard(boardPosIn);
+                msg("Job board placed in board room interior at " + boardPosIn.toShortString());
+            } else {
+                msg("WARN board room has no interior cell; job board not placed");
+            }
         } else {
             msg("WARN board room has no interior cell; job board not placed");
         }
@@ -544,53 +562,46 @@ public final class VillageSelfSufficiencyExecutor {
         // the seed did not supply it).
         int storeCell = firstInteriorCellIndex(storeRoomCorner);
         if (storeCell >= 0) {
-            flag.placeBlockInInterior(storeCell, net.minecraft.world.level.block.Blocks.CHEST);
-            storeChestPos = flag.interiorCells().get(storeCell);
-            if (level.getBlockEntity(storeChestPos) instanceof net.minecraft.world.Container c) {
-                // Start watching this chest for flow; the counter is the store room's
-                // sole production/consumption seam in the current seed.
-                flowTracker.track(level, storeChestPos);
-                // COOKED meat, not raw: a townie's working ingredient is
-                // #questown:villager_food, and that tag is cooked items only (bread,
-                // cooked_*, baked_potato, ...). Raw meat is the *survival* food a
-                // raw-food diner work consumes, not the working ingredient a hunter or
-                // gatherer eats to keep working. Seeding raw meat left the whole town
-                // in NO_WORK_POSSIBLE (the work-seeker found no villager_food in any
-                // registered room's chest). A chest in a registered room is searched
-                // for ingredients by the work-seeker, so the store room's chest works.
-                c.setItem(0, new ItemStack(net.minecraft.world.item.Items.COOKED_MUTTON, 16));
-                c.setItem(1, new ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, 16));
-                c.setItem(2, new ItemStack(net.minecraft.world.item.Items.COOKED_PORKCHOP, 16));
-                // A wooden sword completes the tutorial batch (PHASE_KICKOFF): the
-                // open wooden_sword item quest requires a wooden sword in the store
-                // room. Without it the town stays in the tutorial phase with no work
-                // requests, so the seeded villagers have nothing to do. This is part
-                // of the "just past onboarding" seed, not the watchtower doing the
-                // player's job.
-                c.setItem(3, new ItemStack(net.minecraft.world.item.Items.WOODEN_SWORD, 1));
-                c.setItem(4, new ItemStack(net.minecraft.world.item.Items.STONE_SWORD, 1));
-                c.setChanged();
+            // placeBlockInInterior returns the real cell the chest landed on; capture
+            // it in the same call rather than re-deriving it from interiorCells() (which
+            // is recomputed per call and its index can shift, which is what left the old
+            // seed one cell off the chest actually placed).
+            storeChestPos = flag.placeBlockInInterior(storeCell, net.minecraft.world.level.block.Blocks.CHEST);
+            if (storeChestPos != null) {
+                // The chest is PLACED here but NOT filled here: the flag's first tick
+                // restores chest contents from its captured NBT state and would flush a
+                // chest filled during furnish. seedOpeningFood() writes the block in at
+                // watch start, once, against this captured position.
+                //
+                // The opening block is food only, and COOKED meat, not raw: a townie's
+                // working ingredient is #questown:villager_food, and that tag is cooked
+                // items only (bread, cooked_*, baked_potato, ...). Raw meat is the
+                // *survival* food a raw-food diner work consumes, not the working
+                // ingredient a hunter or gatherer eats to keep working. Seeding raw
+                // meat left the whole town in NO_WORK_POSSIBLE (the work-seeker found
+                // no villager_food in any registered room's chest). A chest in a
+                // registered room is searched for ingredients by the work-seeker, so
+                // the store room's chest works. The wooden/stone sword is NOT seeded at
+                // all: the sword *quest* only opens after the first villager arrives and
+                // is satisfied the real-player path by satisfyOpenSwordQuestIfVillager.
+                msg("Store chest placed at " + storeChestPos.toShortString()
+                        + " (the " + (FOOD_SEED_PER_ITEM * 3) + " opening food block is seeded once the flag is live, post-first-tick)");
+            } else {
+                msg("WARN store room has no indexable interior cell; store chest not placed");
             }
-            msg("Store chest seeded at " + storeChestPos.toShortString()
-                    + " (cooked meat + wooden/stone sword)");
         } else {
             msg("WARN store room has no interior cell; store chest not placed");
         }
 
-        // Complete the tutorial sword quest the real player path: the seed is
-        // "just past onboarding", which means the wooden-sword item quest is
-        // already closed. Leaving it open keeps the town in the tutorial batch
-        // (PHASE_KICKOFF), so no farm/cook room quest ever opens and the room
-        // builder has nothing to build for the food chain. Depositing the sword
-        // (not a magic clear) advances the town past the tutorial batch so the
-        // natural progression opens the farm/cook room quests the builder can
-        // close. The deposit lands in the store chest, which is why it must run
-        // after the chest is placed and tracked.
-        if (ca.bradj.questown.commands.SupplySwordCommand.completeSwordQuestsForFlag(flag, level)) {
-            msg("Tutorial sword quest completed (real player path); town advances past PHASE_KICKOFF");
-        } else {
-            msg("WARN no open sword quest to complete at furnish (the town may already be past it)");
-        }
+        // The tutorial sword quest is NOT closed here. The seed places the town
+        // "just past onboarding", but the wooden-sword item quest only opens once
+        // the first villager arrives, and closing it is action-gated: a sword
+        // deposited before the quest is open does not close it. Satisfying it at
+        // furnish time misses it entirely (the run logged "no open sword quest to
+        // complete at furnish"). The watch loop satisfies the open sword quest the
+        // real-player path once a villager is present (satisfyOpenSwordQuestIfVillager),
+        // which advances the town past PHASE_KICKOFF so natural progression opens
+        // the farm/cook room quests the room builder can close.
 
         msg("Flag live; entering realtime watch");
         phase = Phase.SPAWN_VILLAGERS;
@@ -682,14 +693,37 @@ public final class VillageSelfSufficiencyExecutor {
     }
 
     private void waitForJobs() {
-        // Give the flag a few ticks to publish the new jobs to the tile before
-        // the watch begins (the daily report and lock detectors read live state).
-        if (++waitTicks >= 200) {
+        // Wait until the two job-change rewards have actually been claimed, not on a
+        // blind timer. A job-change reward applies when the flag ticks (which needs a
+        // nearby player, so it can lag); it both sets the job and posts the job's
+        // output as a work request, which is what makes the job actionable. If the
+        // watch starts before the change lands, the townies sit in seeking_work with
+        // no work request and the run measures a phantom food-lock the seed caused.
+        boolean hunterIn = false, gathererIn = false;
+        for (var job : flag.getVillagerHandle().getVillagerJobs().values()) {
+            if ("hunter".equals(job.rootId())) hunterIn = true;
+            if ("gatherer".equals(job.rootId())) gathererIn = true;
+        }
+        if (hunterIn && gathererIn) {
             long days = readDays();
             watchEndTick = level.getGameTime() + (long) days * TICKS_PER_DAY;
-            msg("Watching for " + days + " in-game days (" + (days * TICKS_PER_DAY) + " ticks) in realtime");
+            msg("Job changes complete (hunter + gatherer both assigned); watching for "
+                    + days + " in-game days (" + (days * TICKS_PER_DAY) + " ticks) in realtime");
             // Baseline daily report at watch start (day 1), so the first night
             // sleep's report has a delta to compare against.
+            emitDailyReport();
+            phase = Phase.WATCH;
+            return;
+        }
+        if (++waitTicks % 600 == 0) {
+            msg("waiting for job changes: hunter=" + hunterIn + " gatherer=" + gathererIn
+                    + " (the reward claims on flag ticks, which need a player nearby)");
+        }
+        if (waitTicks > 2400) {
+            msg("WARN job changes not confirmed after 120s (hunter=" + hunterIn
+                    + " gatherer=" + gathererIn + "); starting the watch anyway");
+            long days = readDays();
+            watchEndTick = level.getGameTime() + (long) days * TICKS_PER_DAY;
             emitDailyReport();
             phase = Phase.WATCH;
         }
@@ -743,6 +777,63 @@ public final class VillageSelfSufficiencyExecutor {
         if (roomBuilderTicks % 200 == 0) {
             driveRoomBuilder();
         }
+        // Satisfy the open sword quest the real-player path, once a villager is
+        // present. The sword quest only opens after the first villager arrives,
+        // and each later sword quest (wooden then stone) opens at its own time, so
+        // this re-checks every cycle rather than firing once. The deposit is the
+        // once-per-quest player action (the same path a player dropping the sword
+        // in the store chest takes); a re-check finds no open quest once closed.
+        if (roomBuilderTicks % 200 == 0) {
+            satisfyOpenSwordQuestIfVillager();
+        }
+        // Seed the opening food block into the store chest, once, now that the flag is live
+        // (its first tick restores chest contents from the captured NBT state and would
+        // flush a chest filled during furnish). One-shot; if the chest block entity is not
+        // up yet the latch is not set and the next cycle retries.
+        if (roomBuilderTicks % 200 == 0) {
+            seedOpeningFood();
+        }
+    }
+
+    /** Satisfy the currently-open sword item quest via the real player path, but
+     *  only once at least one villager has arrived. The wooden-sword quest opens
+     *  when the first villager spawns and the stone-sword quest later; satisfying
+     *  each as it opens is what unblocks the hunter's sword job so the food chain
+     *  can start. Before any villager the quest is not open, so there is nothing to
+     *  satisfy (and pre-depositing would not close it). */
+    private void satisfyOpenSwordQuestIfVillager() {
+        if (flag == null || level == null) return;
+        if (flag.getVillagerHandle().size() < 1) return;
+        if (ca.bradj.questown.commands.SupplySwordCommand.completeSwordQuestsForFlag(flag, level)) {
+            msg("[seed] satisfied the open sword quest (real player path); a villager is present");
+        }
+    }
+
+    /** Seed the opening food block into the store chest, once. The chest position was
+     *  captured at furnish from placeBlockInInterior's return (the real cell it landed on),
+     *  so no lookup is needed here. The fill cannot happen at furnish: the flag's first
+     *  tick restores chest contents from its captured NBT state and would flush a chest
+     *  filled during furnish. Also points the flow tracker at the chest so the daily
+     *  report's stock/produced/consumed measure the store seam (track AFTER seeding so
+     *  the opening block is the seed baseline and is not counted as produced).
+     *  One-shot (latched); if the block entity is not a Container yet the latch is not set
+     *  and the next cycle retries. COOKED meat, not raw: a townie's working ingredient is
+     *  #questown:villager_food (cooked items only); raw meat is the survival food a
+     *  raw-food diner work consumes, and seeding raw meat left the town in
+     *  NO_WORK_POSSIBLE. */
+    private void seedOpeningFood() {
+        if (openingFoodSeeded || flag == null || level == null || storeChestPos == null) return;
+        if (level.getBlockEntity(storeChestPos) instanceof net.minecraft.world.Container c) {
+            c.setItem(0, new ItemStack(net.minecraft.world.item.Items.COOKED_MUTTON, FOOD_SEED_PER_ITEM));
+            c.setItem(1, new ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, FOOD_SEED_PER_ITEM));
+            c.setItem(2, new ItemStack(net.minecraft.world.item.Items.COOKED_PORKCHOP, FOOD_SEED_PER_ITEM));
+            c.setChanged();
+            flowTracker.track(level, storeChestPos);
+            openingFoodSeeded = true;
+            msg("[seed] seeded " + (FOOD_SEED_PER_ITEM * 3) + " opening food into the store chest at "
+                    + storeChestPos.toShortString() + "; flow tracker pointed there");
+        }
+        // Otherwise the chest block entity is not up yet; leave the latch unset and retry next cycle.
     }
 
     /**

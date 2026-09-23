@@ -78,9 +78,14 @@ public class FlagPlaceBlockCommand {
             QT.FLAG_LOGGER.warn("[place_block] no flag to place the block for");
             return 1;
         }
-        flag.placeBlockInInterior(index, block);
-        QT.FLAG_LOGGER.info("[place_block] placed {} at interior cell index {} for flag {}",
-                blockId, index, flag.getBlockPos());
+        BlockPos pos = flag.placeBlockInInterior(index, block);
+        if (pos == null) {
+            QT.FLAG_LOGGER.warn("[place_block] no interior cell at index {} for flag {} (no cells or out of range)",
+                    index, flag.getBlockPos());
+            return 1;
+        }
+        QT.FLAG_LOGGER.info("[place_block] placed {} at {} (interior cell index {}) for flag {}",
+                blockId, pos.toShortString(), index, flag.getBlockPos());
         return 0;
     }
 

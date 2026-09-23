@@ -200,6 +200,17 @@ cannot exercise leaver/timed-work behavior (which only ticks in realtime). The
 watchtower must run realtime for the same reason — a warp skips exactly the
 behavior it is meant to watch.
 
+**The purpose is to measure food-locks, not to help the town win.** The town is
+supposed to be completely run by its villagers; the watchtower measures how often
+it food-locks (villagers stuck `UNMET_ITEM(#questown:villager_food)` with no cook
+producing) under natural progression. Cooking jobs arrive from *random* job-change
+quests as the town levels up — the scenario does not and must not staff a cook.
+The agent/seed provides only what a player would: the room quests (the room-builder)
+and the player-supplied sword quests (the real-player deposit path). Food is the
+town's own jobs, never something the seed tops up on demand — a seed that feeds the
+town on a timer hides the very lock the test exists to find. The seed is a one-time
+bootstrap (opening food block + sword unblock + the initial job changes), not a supply.
+
 **The seed is gated on the flag ticking, which needs a player.** `SpawnVisitorReward`
 claims and the room scan both run on flag ticks; the flag ticks only with a player
 nearby. In a held run the `runClient` observer may join late, so the seed phases
@@ -246,6 +257,33 @@ chest — but the work-seeker looks for them in the job's base room (the
 That is the `NO_JOBSITE` vs `NO_SUPPLIES` distinction: `NO_JOBSITE` is a missing
 *job site* (fixed by the unlock above); `NO_WORK_POSSIBLE` from `UNMET_ITEM` is a
 missing *supply* at a container the job's base room can see.
+**The sword quest opens only after the first villager, and closing is action-gated.**
+A wooden/stone sword sitting in the store chest does not close the sword item quest:
+the quest opens once the first villager arrives, and it completes only when the
+sword is deposited *after* it is open (the real-player path, the same action a
+player dropping the sword in the chest takes). Seeding the sword at furnish time
+(before the quest opens) is ineffective, and a one-shot "complete the sword quest"
+call there finds no open quest to close. The watch loop therefore re-checks every
+cycle and satisfies the currently-open sword quest the real-player path (the
+`complete_sword_quest` command's underlying method) once roster >= 1, which covers
+the wooden sword and the later stone sword as each opens.
+
+**An index into `interiorCells()` is not a stable position.** `flag.interiorCells()`
+is recomputed on every call over all registered rooms' air cells, so an index
+captured by one call can resolve to a different (air) cell on the next. The seed's
+store chest originally landed one cell off its recorded position (run: chest at
+-11,64,-11, recorded index pos -11,64,-10), so a raw `getBlockEntity(pos).setItem(...)`
+write at the recorded pos was a silent no-op (the chest never filled) and the flow
+tracker on that pos read an air cell (the daily report's `stock=0` was partly this
+measurement bug, not just an empty chest). The fix: `placeBlockInInterior` now
+returns the real cell it placed, and the seed captures that position in the same
+call (board + chest), then seeds + flow-tracks it at watch start.
+
+**The chest fill must not happen during furnish.** The flag's first tick restores
+chest contents from its captured NBT state, which flushes a chest filled before the
+flag is live. The seed therefore places the chest at furnish and writes the opening
+food block at watch start, once, against the captured position (latched; if the
+block entity is not a container yet the next cycle retries).
 
 **Container flow is a polling diff against a seeded baseline, not an event.** A vanilla `Container`
 exposes no change callback, so the watchtower's flow counter

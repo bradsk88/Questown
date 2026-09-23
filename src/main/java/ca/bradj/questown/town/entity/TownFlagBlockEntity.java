@@ -1168,17 +1168,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     // Dev-only: place a block at the indexed interior cell, the way a player placing a block
     // on the floor would. Thin wrapper over {@link #interiorCells()} + a vanilla setBlock;
     // the agent picks the spot by index (a position it could not see) and the block id.
-    public void placeBlockInInterior(int index, Block block) {
+    // Returns the real cell the block landed on, so a caller that places a chest or board
+    // can record the exact position without re-deriving it (interiorCells() is recomputed
+    // per call and its indices can shift between the two). Null if nothing was placed.
+    public @Nullable BlockPos placeBlockInInterior(int index, Block block) {
         ServerLevel level = getServerLevel();
         if (level == null) {
-            return;
+            return null;
         }
         java.util.List<BlockPos> cells = interiorCells();
         if (index < 0 || index >= cells.size()) {
-            return;
+            return null;
         }
         BlockPos pos = cells.get(index);
         level.setBlockAndUpdate(pos, block.defaultBlockState());
+        return pos;
     }
 
     public void buildRoom(BlockPos doorPos) {
