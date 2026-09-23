@@ -3,6 +3,7 @@ title: "Begin moving" confirmation text is too wide and vanishes too fast
 status: ready-for-human
 created: 2026-07-14
 resolved: 2026-08-21
+closed: 2026-09-23
 priority: p2
 ---
 
