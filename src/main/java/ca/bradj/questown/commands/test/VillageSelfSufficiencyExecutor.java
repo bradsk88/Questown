@@ -116,8 +116,17 @@ public final class VillageSelfSufficiencyExecutor {
      *  Keyed by recipe ID (not batch UUID) because a batch can contain multiple
      *  room quests (job_board, store_room, town_gate all share one batch). */
     private final java.util.Set<net.minecraft.resources.ResourceLocation> completedRoomRecipes = new java.util.HashSet<>();
-    /** Tick counter for the room-builder cadence (every 200 ticks = ~10s). */
+    /** Tick counter for the room-builder cadence (every 200 ticks = ~10s). The
+     *  job-change driver rides the same cadence. */
     private int roomBuilderTicks = 0;
+    /** Open JOB_CHANGE quests already driven, keyed by the quest's wanted
+     *  "root/work" string. Pruned each cycle to the still-ACTIVE job-change
+     *  quests, so a quest that closes (a townie now holds that job) releases its
+     *  entry and a later identical quest can be driven again. Guarding by the
+     *  wanted job (not the villager) means one driven change is enough per open
+     *  quest: processJobChanges adopts ANY townie holding the exact job as the
+     *  batch owner, so a single converted townie closes it. */
+    private final java.util.Set<String> jobChangeDriven = new java.util.HashSet<>();
     /** Container-flow counter wiring the store chest (and future room chests)
      *  to a per-item produced/consumed/stock record. See ContainerFlowTracker. */
     private final ContainerFlowTracker flowTracker = new ContainerFlowTracker();
@@ -776,6 +785,11 @@ public final class VillageSelfSufficiencyExecutor {
         roomBuilderTicks++;
         if (roomBuilderTicks % 200 == 0) {
             driveRoomBuilder();
+            // Fulfil open job-change quests (follow-up tutorial batches open a
+            // JOB_CHANGE the room builder does not cover): drive a townie into the
+            // wanted job the seed's way (ChangeJobReward) so processJobChanges
+            // closes it and the cook/farmer milestone can fire.
+            driveJobChange();
         }
         // Satisfy the open sword quest the real-player path, once a villager is
         // present. The sword quest only opens after the first villager arrives,
@@ -1148,6 +1162,86 @@ public final class VillageSelfSufficiencyExecutor {
         if (roomBuilderTicks % 1000 == 0) {
             msg("[room-builder] no open ROOM quests to build for");
         }
+    }
+
+    /** Fulfil an open JOB_CHANGE quest by driving a townie into the wanted job,
+     *  the same owner path the seed uses for its bootstrap hunter/gatherer: a
+     *  {@link ca.bradj.questown.town.rewards.ChangeJobReward} sets the root,
+     *  unlocks the root's default works, and posts the work request the
+     *  work-seeker picks up; once a townie is actually doing the wanted work,
+     *  {@code TownQuests.processJobChanges} closes the quest. One quest at a
+     *  time, on the same 200-tick cadence as the room builder.
+     *
+     *  <p>Unlike the room builder this does not place blocks: the wanted work is
+     *  already a buildable job, and a townie doing it is the completion signal.
+     *  We only pick the townie and hand the change to the flag's reward path.
+     *  We deliberately do NOT use the player's BOP path
+     *  ({@code spendBopToRequestJobChange}): a plain BOP resolves to a random
+     *  root, so it cannot be aimed at the quest's wanted job. */
+    private void driveJobChange() {
+        if (flag == null || level == null) return;
+        if (flag.getVillagerHandle().size() < 1) return; // no townie to convert yet
+        var allQuests = flag.getAllQuestsWithRewards();
+
+        // Release entries whose quest has closed (no longer ACTIVE), so a later
+        // identical quest in a new batch can still be driven.
+        java.util.Set<String> activeJobChanges = new java.util.HashSet<>();
+        for (var entry : allQuests) {
+            var quest = entry.getKey();
+            if (quest.getType() == ca.bradj.questown.town.quests.Quest.QuestType.JOB_CHANGE
+                    && quest.getStatus() == ca.bradj.questown.town.quests.Quest.QuestStatus.ACTIVE) {
+                activeJobChanges.add(String.valueOf(quest.getWantedId()));
+            }
+        }
+        jobChangeDriven.retainAll(activeJobChanges);
+
+        for (var entry : allQuests) {
+            var quest = entry.getKey();
+            if (quest.getType() != ca.bradj.questown.town.quests.Quest.QuestType.JOB_CHANGE) continue;
+            if (quest.getStatus() != ca.bradj.questown.town.quests.Quest.QuestStatus.ACTIVE) continue;
+            String wantedKey = String.valueOf(quest.getWantedId());
+            if (jobChangeDriven.contains(wantedKey)) continue; // in flight; quest closing is the release
+
+            ca.bradj.questown.jobs.JobID wanted = ca.bradj.questown.jobs.JobID.fromRL(
+                    (net.minecraft.resources.ResourceLocation) quest.getWantedId());
+
+            java.util.UUID target = pickJobChangeVillager(wanted);
+            if (target == null) {
+                msg("[job-change] no townie available to drive " + wanted + "; will retry next cycle");
+                return;
+            }
+            flag.addImmediateReward(new ca.bradj.questown.town.rewards.ChangeJobReward(flag, target, wanted.rootId()));
+            jobChangeDriven.add(wantedKey);
+            msg("[job-change] requested " + wanted
+                    + " for townie " + target.toString().substring(0, 8)
+                    + " (ChangeJobReward -> root set, works unlocked, work request posted; quest closes on pickup)");
+            return; // one quest at a time
+        }
+
+        // No open JOB_CHANGE quest to drive (or all in flight).
+        if (roomBuilderTicks % 1000 == 0) {
+            msg("[job-change] no open JOB_CHANGE quests to drive");
+        }
+    }
+
+    /** Pick the townie to drive into {@code wanted}: prefer one outside the
+     *  hunter root (so the conversion does not strip the town of its raw-food
+     *  survival chain and confound the cook/farmer milestone the watch exists to
+     *  measure), else the first townie. Returns {@code null} only when there are
+     *  no townies at all (already guarded by the caller). */
+    private @Nullable java.util.UUID pickJobChangeVillager(ca.bradj.questown.jobs.JobID wanted) {
+        var villagerJobs = flag.getVillagerHandle().getVillagerJobs();
+        java.util.UUID fallback = null;
+        for (var e : villagerJobs.entrySet()) {
+            java.util.UUID uuid = ca.bradj.questown.core.VillagerUUID.get(e.getKey());
+            if (uuid == null) continue;
+            if (fallback == null) fallback = uuid;
+            String root = e.getValue().rootId();
+            if (!root.equals("hunter") && !root.equals(wanted.rootId())) {
+                return uuid;
+            }
+        }
+        return fallback;
     }
 
     /** Find a clear door spot near the flag for a new room. Probes a ring of

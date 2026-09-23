@@ -337,6 +337,23 @@ on its recipe id alone. A batchUUID guard on the build path over-filtered these
 single-recipe rooms (the builder skipped them), so the guard is not on the build
 path; it is only on the dedup key.
 
+**The watch loop drives open JOB_CHANGE quests, not just room quests.** The
+room-builder closes room quests; a parallel driver (`driveJobChange`, on the same
+200-tick cadence) closes the `JOB_CHANGE` quests the follow-up tutorial batches
+open (the `hunter/sword` batch, then the food-job batch that unlocks cook/farmer). 
+Each cycle it enumerates the flag's ACTIVE `JOB_CHANGE` quests and, for the first
+not-yet-driven one, converts a townie into the wanted job via `ChangeJobReward`
+(the seed's own bootstrap path: sets the root, unlocks the root's default works,
+posts the work request) so `TownQuests.processJobChanges` adopts the townie and
+closes the quest. It does not use the player's BOP path
+(`spendBopToRequestJobChange`): a plain BOP resolves to a random root and cannot be
+aimed at the quest's wanted job. The pick prefers a townie outside the hunter root
+when one exists, so the conversion does not strip the raw-food survival chain and
+confound the cook/farmer milestone the watch exists to measure. `jobChangeDriven`
+guards by the wanted job (not the villager) and is pruned to the still-active
+job-change quests each cycle, so a closed quest releases its entry and a later
+identical quest can be driven again.
+
 **The welcome mat is the town gate, not room furniture.** The `town_gate` quest's
 recipe is the welcome mat, a standalone job block placed beside the flag and
 registered (`flag.placeWelcomeMat`, which calls `registerWelcomeMat` ->
