@@ -46,13 +46,19 @@ flowchart TD
 - Env: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8` — the wrong
   JDK breaks Gradle's Groovy compile; a POSIX locale fails javac with
   "unmappable character for encoding US-ASCII".
-- Before relaunching: `pkill -f '[G]radlew runClient'`, `pkill -f '[G]radlew
-  runServer'`, `pkill -f 'questown[.]autotest'` — always bracket one char or
-  the pattern self-matches your own bash argv and kills your shell. A **held**
+- Before relaunching: `pkill -f 'runClient'` then `pkill -f 'questown[.]autotest'`
+  (the server wrapper *and* the server JVM both carry `-Dquestown.autotest`, so
+  one pattern takes both). Do **not** use the old `[G]radlew runClient` /
+  `[G]radlew runServer` form: a held process's argv is `GradleWrapperMain
+  runClient/runServer …`, not `gradlew …`, so it matches nothing and silently
+  no-ops — the client JVM (a child, `… --launchTarget forgeclientuserdev …`) is
+  not killed by the wrapper dying and lingers, so catch it by
+  `pgrep -af 'forgeclientuserdev'` or pid. Keep the bracket in `questown[.]autotest`
+  so the pattern does not self-match your own bash argv. A **held**
   server (one launched with `-Dquestown.autotest.hold=true`) **catches SIGTERM
-  and survives `pkill`** — after `pkill`, re-check with `pgrep -af '[r]unServer'`
-  and `kill -9 <pid>` the java child (the `gradlew` wrapper dies, the server JVM
-  does not) if it is still up. Then
+  and survives `pkill`** — after `pkill`, re-check with
+  `pgrep -af 'questown[.]autotest'` and `kill -9 <pid>` the server JVM if it
+  is still up. Then
   `rm -rf run/world` and confirm port 25565 is free (a surviving held server
   kills the new one with "Address already in use", and holds `session.lock`).
   Note: any `runServer` launch with `-Dquestown.autotest=true` now wipes
