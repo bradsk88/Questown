@@ -2,8 +2,30 @@
 title: held-run console command set can't perform the real player actions for sign/villager-UI/flag-UI beats, so the agent substitutes a code-derived action that hides the gap
 status: needs-triage
 created: 2026-09-08
+closed: 2026-09-23
 priority: p2
 ---
+
+## Closed 2026-09-23
+
+Every beat in this set is now driveable the real-player way (each cross-checked
+in code 2026-09-23):
+
+- **sign / job-board** - `_qtdev place_block <index> sign` places the sign a
+  player would (commit 818381a8); the game's own conversion carries it into the
+  job board (`TownFlagBlock` SIGNS->job-board, `isSignConvertedToJobBoard`
+  observation per the 2026-09-11 note).
+- **villager UI / flag UI** - `_qtdev inspect villagers` / `_qtdev inspect
+  <flag>` advance the beats via the game's own UI-opened observation
+  (`adb4d1be`; the same callback a real UI open fires through
+  `TownVillagerUIs`).
+- **campfire-sleep** - `_qtdev clickheld <campfire bed head>` at night fires the
+  real sleep path; the clock skip is the agent's `time set` action
+  (campfire-sleep-freezes.md, superseded 2026-09-09).
+- **direct deposit** - `_qtdev deposit` removed (01b1e2be), per the 2026-09-11 note.
+
+The skill documents all four, so the gap is no longer fillable with a
+substitute the docs would present as a real action.
 
 # Held-run command set gaps for the chicken-arc beats that need a real player action
 
