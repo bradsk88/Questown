@@ -329,7 +329,7 @@ An item stamped with a biome. Its presence in a town chest is what makes that bi
 ### Requests
 
 **Job board**:
-The in-town surface where the player requests products from townies. It offers only **fulfillable** products — the outputs of jobs the town has currently **unlocked** — so what the player can request matches exactly what a townie will build. The same unlock gate the work-seeker uses to pick up work also filters the board (roadmap #182), so the board never offers a request no townie can satisfy. It is **not aspirational**: a **progression-unlocked** product does not appear until its tier is unlocked. Gatherer-style products are additionally narrowed to **known loot** (plus an always-known floor, e.g. wheat seeds), still behind the job's unlock.
+The in-town surface where the player requests products from townies. It offers only **fulfillable** products — the outputs of jobs the town has currently **unlocked** — so what the player can request matches exactly what a townie will build. The board filters on the **town-wide** unlock (some townie in town has unlocked the job); the work-seeker that assigns work to a *specific* townie filters on the **per-villager** unlock (that townie's own unlocked set). The board therefore offers what the town can make collectively, and a townie picks only what it itself can do (roadmap #182), so the board never offers a request no townie can satisfy. It is **not aspirational**: a **progression-unlocked** product does not appear until its tier is unlocked. Gatherer-style products are additionally narrowed to **known loot** (plus an always-known floor, e.g. wheat seeds), still behind the job's unlock.
 _Avoid_: catalog (the board is not "everything craftable in the game"), quest board.
 
 **Work request**:
