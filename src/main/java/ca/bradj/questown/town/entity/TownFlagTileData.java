@@ -282,6 +282,12 @@ public class TownFlagTileData {
             TownVillagerHandle villagerHandle = t.initializer().getVillagers();
             villagerHandle.associate(t);
             villagerHandle.addHungryListener(e -> {
+                // Only jobs that opt in (CAN_INSTANTLY_SWITCH_TO_EATING) get the direct
+                // dining switch. A working townie instead ends its job and re-enters the
+                // work board, where its carried work output is deposited before it eats.
+                if (!e.canInstantlySwitchToEating()) {
+                    return;
+                }
                 if (t.villagerHandle.isDining(e.getUUID())) {
                     return;
                 }

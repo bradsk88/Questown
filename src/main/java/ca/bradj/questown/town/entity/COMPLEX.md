@@ -161,3 +161,43 @@ flowchart TD
 - `SpinningCube.render` gained a real `color` param — the old `0xF000F0` arg was a
   misnamed light value, not a tint — so the two existing callers pass white and the
   full-BOP passes red.
+
+---
+
+# Hungry townie — deposit work output, then dine
+
+A hungry townie carrying its work output (a hunter with mutton) used to be snapped
+straight to a dining work and eat that output before it was ever counted as
+*produced*. Now the output is deposited first — which is what completes the
+onboarding mutton quest — and only then does the townie eat. Whether a hungry
+townie goes straight to dining or through the board depends on its **current job**.
+
+## The two hungry paths
+
+```mermaid
+flowchart TD
+    Hungry["townie becomes hungry\n(hungry listener fires)"] --> Gate{"current job opts in to\ninstant eating?"}
+    Gate -- "yes: DowntimeWork" --> Direct["diner chain\nDinerWork / DinerNoTableWork\nthen DinerRawFoodWork"]
+    Gate -- "no: a working job\n(hunter, gatherer, ...)" --> Work["keeps its job, finishes it,\nreaches the board"]
+    Work --> Board["changeJobForVisitorFromBoard"]
+    Board --> Deposit["deposit carried work output\n-> nearest chest (counts as produced)"]
+    Deposit --> Starve{"starving and not just\ngave up dining?"}
+    Starve -- yes --> Direct
+    Starve -- no --> Roll["normal work roll / fallback"]
+```
+
+- The opt-in is the `CAN_INSTANTLY_SWITCH_TO_EATING` global rule; only
+  `DowntimeWork` carries it, so a townie *at work* never gets the direct dining
+  snap and always passes through the board first.
+- The board's deposit sub-step runs **before** the starving check and the work
+  roll, so a working townie's output is stored on its way to eating.
+
+## No storage — a deliberate blocker
+
+```mermaid
+flowchart LR
+    Deposit["carrying work output\nbut no chest in the town"] --> Hold["the board holds the townie here\n(no work, no dining)"]
+```
+
+- With no chest the deposit sub-step returns "hold" and the board stops; a townie
+  is never sent to dine before it can store what it carries.

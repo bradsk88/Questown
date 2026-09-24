@@ -25,6 +25,8 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
+import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
+import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
@@ -67,6 +69,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
@@ -841,6 +844,26 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return true;
         }
 
+        // Deposit carried work output before the townie dines: depositing is what counts the
+        // output as produced (and completes the onboarding mutton quest). If the town has no
+        // storage, this is a deliberate blocker state.
+        if (depositCarriedWorkOutput(villager)) {
+            return true;
+        }
+
+        // A starving townie that has not just given up on dining enters the diner chain here,
+        // after its work output has been deposited. (Only reached for jobs that cannot
+        // instantly switch to eating; see addHungryListener.)
+        if (villagerHandle.isStarving(ownerVUID) && !villagerHandle.gaveUpDiningRecently(ownerVUID)) {
+            String rid = currentJob.rootId();
+            ResourceLocation diningRoom = DinerWork.asWork(rid).baseRoom;
+            boolean hasDiningRoom = !roomsHandle.getRoomsMatching(diningRoom).isEmpty();
+            changeJob.accept(hasDiningRoom
+                    ? DinerWork.getIdForRoot(rid)
+                    : DinerNoTableWork.getIdForRoot(rid));
+            return true;
+        }
+
         ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();
         WorksBehaviour.TownData td = getTownData();
         Predicate<JobID> canFit = p -> {
@@ -874,6 +897,54 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (fallback != null) {
             changeJob.accept(fallback);
             return true;
+        }
+        return false;
+    }
+
+    /**
+     * Deposit the townie's carried work output into the nearest chest so it counts as produced
+     * (and completes the onboarding mutton quest) before the townie dines. BOPs are tracked
+     * separately (the {@code hasBlockOfProgress} flag) and are not deposited here.
+     *
+     * @return true if the board should hold the townie here — there is no chest in the town to
+     * store the work output, a deliberate blocker state. Returns false when there was nothing
+     * to carry or the output was deposited, so the board continues.
+     */
+    private boolean depositCarriedWorkOutput(VisitorMobEntity villager) {
+        Container inventory = villager.getInventory();
+        List<MCTownItem> carried = new ArrayList<>();
+        List<Integer> carriedSlots = new ArrayList<>();
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (stack.isEmpty() || stack.is(ItemsInit.BLOCK_OF_PROGRESS.get())) {
+                continue;
+            }
+            carried.add(MCTownItem.fromMCItemStack(stack));
+            carriedSlots.add(slot);
+        }
+        if (carried.isEmpty()) {
+            return false;
+        }
+        ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.findClosestMatching(
+                this, MCTownItem::isEmpty, villager.blockPosition(), carried);
+        if (chest == null) {
+            // No chest in the town to store work output: a deliberate blocker state.
+            return true;
+        }
+        int deposited = 0;
+        for (MCTownItem item : carried) {
+            ContainerTarget<MCContainer, MCTownItem> updated = chest.withItemAdded(item);
+            if (updated == null) {
+                break; // chest full; the rest stays carried until space frees up
+            }
+            chest = updated;
+            deposited++;
+        }
+        for (int i = 0; i < deposited; i++) {
+            inventory.setItem(carriedSlots.get(i), ItemStack.EMPTY);
+        }
+        if (deposited > 0) {
+            inventory.setChanged();
         }
         return false;
     }

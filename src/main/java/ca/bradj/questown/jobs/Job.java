@@ -102,6 +102,15 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     Collection<String> getGlobalSpecialRules();
 
+    /**
+     * Whether the hungry->dining short-circuit may snap this townie straight to a dining
+     * work the moment it becomes hungry. Jobs without this rule end their current work and
+     * re-enter the work board first, where carried work output is deposited before eating.
+     */
+    default boolean canInstantlySwitchToEating() {
+        return getGlobalSpecialRules().contains(SpecialRules.CAN_INSTANTLY_SWITCH_TO_EATING);
+    }
+
     Collection<? extends Runnable> notifyListenersOfNewJob(Function<StatusListener, Runnable> listenToNewJob);
 
     int getExperienceEarned();
