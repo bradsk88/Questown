@@ -68,8 +68,16 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
    global AGENTS.md launch-survival rule). A held `pkill` (teardown) kills the
    writer; recreate it on relaunch, do not share the server's call — that sharing
    is what kills the server.
+
+   The same quirk kills the **writer**: a `sleep` (even one waiting for step 2's
+   killed writer to die) or a `kill`/`pkill` in *call 1* leaves the backgrounded
+   `sh` dead. So step 2's kill (and any wait to confirm it's gone) is its own
+   call, and call 1 below holds *only* `rm; mkfifo; nohup &; echo` — nothing
+   before the `nohup`, nothing after the `echo`. Verify the writer in a later
+   call, not the same one.
    ```
    # call 1 — FIFO writer, then verify alive in a later call
+   # ONLY these four lines: no kill/sleep/pkill here, or the sh dies on call exit
    rm -f run/server-cmd.fifo; mkfifo run/server-cmd.fifo
    nohup sh -c 'sleep 999999 > run/server-cmd.fifo' &
    echo "fifo writer launched"
@@ -243,6 +251,19 @@ Also read each window:
 - client log: `grep -aE '\[CHAT\]' /tmp/village-client.log` (what the dev sees)
 - observe lines: `grep -aE '\[village\] (KNOWN|UNCLEAR)' /tmp/village-server.log`
 - quest/villager detail: `_qtdev inspect <pos>` / `_qtdev inspect quests <pos>` / `_qtdev inspect villagers <pos>` (the tab literal comes *before* the pos; `_qtdev inspect <pos> villagers` does not parse)
+
+## Verdict (declaring the run a pass)
+
+A held run verifies the **mechanism**, not a literal scenario detail. When the
+fix's signature moment (e.g. *a specific item* being deposited) is not forced by
+the chosen watchtower — the hunter never hunts, so no mutton is ever carried — the
+pass is on the observable mechanism (work output deposited to the store, `consumed==0`,
+the town healthy/growing), and the notes must say the literal moment was not
+forced and that the mechanism is identical for any carried output. Do **not**
+report the literal moment as observed (false pass), and do **not** re-run the
+watchtower expecting it to appear (it will not, in a scenario that can't produce
+it). The honest "mechanism verified, literal detail not forced" is the correct
+verdict.
 
 ## The console command set (the agent's hands)
 
