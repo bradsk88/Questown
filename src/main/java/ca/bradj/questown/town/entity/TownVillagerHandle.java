@@ -473,6 +473,10 @@ public final class TownVillagerHandle {
         return delegate.canDine(uuid);
     }
 
+    public boolean isStarving(@Nullable VillagerUUID vuid) {
+        return delegate.isStarving(getUuid(vuid));
+    }
+
     public boolean gaveUpDiningRecently(@Nullable VillagerUUID vuid) {
         return delegate.gaveUpDiningRecently(getUuid(vuid), getTick());
     }

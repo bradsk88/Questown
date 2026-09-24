@@ -47,6 +47,12 @@ public class SpecialRules {
     // idle in the evening.
     public static final String WORK_IN_EVENING = "work_in_evening";
 
+    // Global rule. When a townie holding a job with this rule becomes hungry, the
+    // hungry->dining short-circuit may snap it straight to a dining work. Jobs without
+    // this rule end their current work and re-enter the work board instead, where their
+    // carried work output is deposited before they eat.
+    public static final String CAN_INSTANTLY_SWITCH_TO_EATING = "can_instantly_switch_to_eating";
+
     // If this rule is active (globally) then blocks will only be considered
     // valid for use as workspots if they have empty air above them.
     public static final String REQUIRE_AIR_ABOVE = "require_air_above";

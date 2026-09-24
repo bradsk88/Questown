@@ -1437,6 +1437,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.get().getId();
     }
 
+    /**
+     * Whether the current job lets the hungry->dining short-circuit snap this townie straight
+     * to a dining work. Server-only (the current job is a client-throwing stub on the client).
+     */
+    public boolean canInstantlySwitchToEating() {
+        return job.get().canInstantlySwitchToEating();
+    }
+
     public BlockPos getFlagPos() {
         return town.getTownFlagBasePos();
     }
