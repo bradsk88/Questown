@@ -116,6 +116,13 @@ public final class VillageSelfSufficiencyExecutor {
      *  Keyed by recipe ID (not batch UUID) because a batch can contain multiple
      *  room quests (job_board, store_room, town_gate all share one batch). */
     private final java.util.Set<net.minecraft.resources.ResourceLocation> completedRoomRecipes = new java.util.HashSet<>();
+    /** Room recipes whose room has been built but whose quest is not yet COMPLETE.
+     *  The builder waits for the room to be re-detected and the quest to close,
+     *  then the sweep at the top of {@code driveRoomBuilder} latches the recipe
+     *  into {@code completedRoomRecipes}. Mirrors the town_gate welcome-mat path.
+     *  (Latching at build time would skip the quest before re-detection could
+     *  close it, and a multi-ingredient recipe needs every block placed anyway.) */
+    private final java.util.Set<net.minecraft.resources.ResourceLocation> builtRoomsAwaiting = new java.util.HashSet<>();
     /** Tick counter for the room-builder cadence (every 200 ticks = ~10s). The
      *  job-change driver rides the same cadence. */
     private int roomBuilderTicks = 0;
@@ -1070,6 +1077,21 @@ public final class VillageSelfSufficiencyExecutor {
         if (flag == null || level == null) return;
         var allQuests = flag.getAllQuestsWithRewards();
 
+        // A built room whose quest has closed: latch it as completed so the
+        // builder never rebuilds it. The latch happens here, not at build time,
+        // because the quest only closes once the room is re-detected and matched
+        // against the recipe.
+        for (var entry : allQuests) {
+            var q = entry.getKey();
+            if (q.getType() != ca.bradj.questown.town.quests.Quest.QuestType.ROOM || !q.isComplete()) continue;
+            @SuppressWarnings("unchecked")
+            var rid = (net.minecraft.resources.ResourceLocation) q.getWantedId();
+            if (rid != null && builtRoomsAwaiting.remove(rid)) {
+                completedRoomRecipes.add(rid);
+                msg("[room-builder] " + rid + ": quest complete, room latched");
+            }
+        }
+
         for (var entry : allQuests) {
             var quest = entry.getKey();
             if (quest.getType() != ca.bradj.questown.town.quests.Quest.QuestType.ROOM) continue;
@@ -1083,6 +1105,14 @@ public final class VillageSelfSufficiencyExecutor {
             if (completedRoomRecipes.contains(recipeId)) {
                 if (roomBuilderTicks % 1000 == 0) {
                     msg("[room-builder] skipping " + quest.getWantedId() + " (already completed)");
+                }
+                continue;
+            }
+            // A room is already built for this recipe; wait for re-detection to
+            // close the quest (mirrors the town_gate welcome-mat path).
+            if (builtRoomsAwaiting.contains(recipeId)) {
+                if (roomBuilderTicks % 1000 == 0) {
+                    msg("[room-builder] " + recipeId + ": room built, waiting for re-detection");
                 }
                 continue;
             }
@@ -1127,11 +1157,13 @@ public final class VillageSelfSufficiencyExecutor {
                 return;
             }
 
-            // Resolve the recipe block.
-            net.minecraft.world.level.block.Block recipeBlock = resolveRecipeBlock(
+            // Resolve the recipe's blocks: every ingredient, one entry per slot
+            // (a multi-ingredient recipe like bedroom = light + 2 beds needs all
+            // of them, not just the first).
+            List<net.minecraft.world.level.block.Block> recipeBlocks = resolveRecipeBlocks(
                     (net.minecraft.resources.ResourceLocation) quest.getWantedId());
-            if (recipeBlock == null) {
-                msg("[room-builder] could not resolve recipe block for " + quest.getWantedId());
+            if (recipeBlocks == null) {
+                msg("[room-builder] could not resolve recipe blocks for " + quest.getWantedId());
                 completedRoomRecipes.add(recipeId);
                 continue;
             }
@@ -1144,17 +1176,20 @@ public final class VillageSelfSufficiencyExecutor {
                 return;
             }
 
-            // Build the room atomically: shell + door + recipe block.
-            BlockPos built = flag.buildRoomForRecipe(doorPos, recipeBlock);
+            // Build the room atomically: shell + door + recipe blocks.
+            BlockPos built = flag.buildRoomForRecipe(doorPos, recipeBlocks);
             if (built == null) {
                 msg("[room-builder] buildRoomForRecipe failed at " + doorPos.toShortString());
                 continue;
             }
 
-            completedRoomRecipes.add(recipeId);
+            // Do not latch as completed yet: the quest only closes once the room
+            // is re-detected and matched. The sweep at the top of a later cycle
+            // moves it to completedRoomRecipes when that happens.
+            builtRoomsAwaiting.add(recipeId);
             msg("[room-builder] built room for quest " + quest.getWantedId()
                     + " at door " + doorPos.toShortString()
-                    + ", placed " + recipeBlock);
+                    + ", placed " + recipeBlocks.size() + " block(s): " + recipeBlocks);
             return; // One quest at a time; the room scan will detect it on a later tick.
         }
 
@@ -1286,23 +1321,28 @@ public final class VillageSelfSufficiencyExecutor {
         return dx >= -1 && dx <= s + 1 && dz >= -1 && dz <= s + 1;
     }
 
-    /** Resolve the block to place for a room recipe quest. Looks up the
-     *  RoomRecipe by its id, takes the first ingredient, and returns the
-     *  first matching block. */
+    /** Resolve the blocks to place for a room recipe quest: every ingredient,
+     *  one entry per ingredient slot (multi-slot ingredients repeat), so a
+     *  multi-ingredient recipe (bedroom = light + 2 beds) places every block the
+     *  room needs. The room matcher compares the room's full block multiset
+     *  against the recipe, so a shell with only the first ingredient never
+     *  matches. Returns null when no ingredient resolves to a block item (the
+     *  recipe can't be satisfied by placing blocks). */
     @Nullable
-    private net.minecraft.world.level.block.Block resolveRecipeBlock(net.minecraft.resources.ResourceLocation recipeId) {
+    private List<net.minecraft.world.level.block.Block> resolveRecipeBlocks(net.minecraft.resources.ResourceLocation recipeId) {
         var recipes = ca.bradj.questown.logic.RoomRecipes.hydrate(level.getRecipeManager(), true);
         var recipe = recipes.get(recipeId);
         if (recipe == null) return null;
-        var ingredients = recipe.getIngredients();
-        if (ingredients.isEmpty()) return null;
-        var first = ingredients.get(0);
-        for (var stack : first.getItems()) {
-            if (stack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
-                return bi.getBlock();
+        List<net.minecraft.world.level.block.Block> blocks = new java.util.ArrayList<>();
+        for (var ing : recipe.getIngredients()) {
+            for (var stack : ing.getItems()) {
+                if (stack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
+                    blocks.add(bi.getBlock());
+                    break;
+                }
             }
         }
-        return null;
+        return blocks.isEmpty() ? null : blocks;
     }
 
     private void finish() {

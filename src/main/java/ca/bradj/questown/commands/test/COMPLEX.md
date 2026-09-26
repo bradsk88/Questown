@@ -343,6 +343,24 @@ on its recipe id alone. A batchUUID guard on the build path over-filtered these
 single-recipe rooms (the builder skipped them), so the guard is not on the build
 path; it is only on the dedup key.
 
+**The room-builder places every recipe ingredient, and latches on quest
+completion, not at build.** A room recipe can carry several ingredients (bedroom
+= a light source + 2 beds; big_bedroom = a light + 4 beds). The room matcher is a
+superset test (`NoMCRomRecipe.foundMatchRecipe`: the room's block multiset must
+contain the recipe's) and completion funnels through the room's top match (see
+`.scratch/storeroom-quest-completion/`). The builder therefore resolves *every*
+ingredient of the recipe to a placeable block (`resolveRecipeBlocks`, one entry
+per ingredient slot) and `buildRoomForRecipe` places each in its own interior
+cell (the center, then the spaced cells). A shell carrying only the first
+ingredient — the light, no beds — never contains the recipe, so the quest never
+closed; that was the bedroom bug. The builder also latches the recipe as
+completed on *quest completion*, not at build time: after building it adds the
+recipe to `builtRoomsAwaiting` and skips it (the "waiting for re-detection" line)
+until the sweep at the top of `driveRoomBuilder` sees the quest is COMPLETE and
+moves the recipe to `completedRoomRecipes`. This mirrors the town_gate
+welcome-mat path; latching at build time would skip the quest before re-detection
+could close it.
+
 **The watch loop drives open JOB_CHANGE quests, not just room quests.** The
 room-builder closes room quests; a parallel driver (`driveJobChange`, on the same
 200-tick cadence) closes the `JOB_CHANGE` quests the follow-up tutorial batches
