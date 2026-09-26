@@ -1346,12 +1346,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
      * computes the building's southwest corner from the door position (the door
      * sits at the south wall, two cells in from the west corner).
      *
-     * @param doorPos     the clear ground-level cell for the door
-     * @param recipeBlock the block to place inside the room
+     * @param doorPos      the clear ground-level cell for the door
+     * @param recipeBlocks the recipe's blocks to place inside the room, one per
+     *                     ingredient slot (a multi-ingredient recipe like
+     *                     bedroom = light + 2 beds lists every block it needs)
      * @return the door position if the room was built, or null if the spot was
      *         not clear
      */
-    public @Nullable BlockPos buildRoomForRecipe(BlockPos doorPos, net.minecraft.world.level.block.Block recipeBlock) {
+    public @Nullable BlockPos buildRoomForRecipe(BlockPos doorPos, List<net.minecraft.world.level.block.Block> recipeBlocks) {
         ServerLevel level = getServerLevel();
         if (level == null) return null;
 
@@ -1392,12 +1394,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         getRoomHandle().registerDoor(doorPos);
 
-        BlockPos centerCell = new BlockPos(cornerX + 2, doorPos.getY(), cornerZ + 2);
-        level.setBlockAndUpdate(centerCell, recipeBlock.defaultBlockState());
+        // Place the recipe blocks inside the 3x3 interior (dx/dz 1..3 from the
+        // corner). The first block goes in the center cell; each subsequent block
+        // takes the next distinct interior cell, spaced to the corners, so a
+        // multi-ingredient recipe places every block the room needs in its own
+        // cell. The room matcher counts each cell, so each placed block
+        // contributes one entry to the room's block multiset.
+        int[][] interior = {{2, 2}, {1, 1}, {3, 3}, {1, 3}, {3, 1}, {2, 1}, {1, 2}, {3, 2}, {2, 3}};
+        for (int i = 0; i < recipeBlocks.size() && i < interior.length; i++) {
+            BlockPos cell = new BlockPos(cornerX + interior[i][0], doorPos.getY(), cornerZ + interior[i][1]);
+            level.setBlockAndUpdate(cell, recipeBlocks.get(i).defaultBlockState());
+        }
 
         QT.FLAG_LOGGER.info(
                 "[buildRoomForRecipe] built 5x5 room at corner {} for door {}, placed {} inside, door registered",
-                corner.toShortString(), doorPos.toShortString(), recipeBlock
+                corner.toShortString(), doorPos.toShortString(), recipeBlocks
         );
         return doorPos;
     }
