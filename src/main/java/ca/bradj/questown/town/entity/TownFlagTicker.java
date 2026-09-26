@@ -196,6 +196,15 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
             TickData tickData,
             boolean playersNearbyOnPrevTick
     ) {
+        // Test-only keep-awake: during a held autotest run
+        // (-Dquestown.autotest.hold=true) the flag never sleeps, so its POI scan
+        // runs from server start - before a player joins - letting the seeded
+        // lit campfire be detected and the campfire quest self-complete. Real
+        // game behavior is untouched: the branch is gated on the test property.
+        if ("true".equals(System.getProperty("questown.autotest.hold"))) {
+            return false;
+        }
+
         ServerLevel level = tickData.level();
         BlockPos blockEntityPos = tickData.blockEntityPos();
         Player nearestPlayer = level.getNearestPlayer(
