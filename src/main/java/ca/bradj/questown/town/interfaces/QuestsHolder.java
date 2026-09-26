@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
@@ -40,6 +41,10 @@ public interface QuestsHolder {
             ResourceLocation itemId,
             int count
     );
+
+    // LOOT quests complete on production: complete any open LOOT quest whose wanted item or
+    // tag matches the item a townie just extracted. The extracted item is not consumed.
+    void processLootQuests(MCTownItem extracted);
 
     Optional<JobID> overnightJobOverride();
 }

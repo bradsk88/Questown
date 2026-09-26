@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.core.advancements.TutorialTrigger;
+import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -8,11 +9,6 @@ import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.quests.QuestBatch;
 import ca.bradj.questown.town.special.SpecialQuests;
-import com.google.common.collect.ImmutableList;
-import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
-import ca.bradj.roomrecipes.core.space.InclusiveSpace;
-import ca.bradj.roomrecipes.core.space.Position;
-import ca.bradj.roomrecipes.serialization.MCRoom;
 import net.minecraft.SharedConstants;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.Bootstrap;
@@ -129,8 +125,11 @@ class TutorialPhaseGateTest {
 
         assertEquals(TownQuests.Tutorial.APPLIED, result);
         List<MCQuest> all = quests.questBatches.getAll();
+        // The hunter's food quest is a LOOT quest on the raw food tag: it completes on
+        // extraction (production), not on a chest deposit.
         assertTrue(all.stream().anyMatch(q ->
-                Compat.getItemId(Items.MUTTON).equals(q.getWantedId())
+                TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location().equals(q.getWantedId())
+                        && q.getType() == Quest.QuestType.LOOT
         ));
         assertTrue(all.stream().anyMatch(q ->
                 Compat.getItemId(Items.STONE_SWORD).equals(q.getWantedId())
@@ -205,7 +204,7 @@ class TutorialPhaseGateTest {
         // Complete the hunter job change quest to have one JOB_CHANGE
         ResourceLocation hunterJob = JobID.toRL(new JobID("hunter", "sword"));
         quests.questBatches.markRecipeAsComplete(null, hunterJob);
-        quests.questBatches.markRecipeAsComplete(null, Compat.getItemId(Items.MUTTON));
+        quests.questBatches.markRecipeAsComplete(null, TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location());
         quests.questBatches.markRecipeAsComplete(null, Compat.getItemId(Items.STONE_SWORD));
         quests.questBatches.markRecipeAsComplete(null, SpecialQuests.BEDROOM);
 

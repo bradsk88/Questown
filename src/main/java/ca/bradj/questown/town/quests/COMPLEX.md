@@ -83,3 +83,37 @@ The quest UI should show **"a superset of this room exists, but not this exact
 room"** as a distinct status from active / completed / lost. Deferred to a
 later change; it needs a new `QuestStatus` and rendering in the flag's quest
 tab (`TownQuestsContainer`).
+
+## LOOT quests — completion on extraction, not chest deposit
+
+Item quests come in two contracts. An `ITEM` quest completes when the wanted
+item is **deposited in a store-room chest** (`processItemQuests`). A `LOOT`
+quest completes the moment a townie **extracts** matching loot from their job
+— no deposit, no accumulation, first match wins. The raw-food onboarding quest
+(`#questown:villager_simple_furnace_food_raw`) is a LOOT quest.
+
+```mermaid
+flowchart TD
+    Ext["Townie extracts loot (RealtimeWorldInteraction.postExtractHook)"] --> Hook["PostExtractHook.run (deposit / hunger / knowledge, as before)"]
+    Hook --> Has{"extracted stack non-empty?"}
+    Has -- yes --> PLQ["TownQuests.processLootQuests(stack)"]
+    PLQ --> Scan["scan incomplete LOOT quests"]
+    Scan --> Match{"Ingredients.asIngredient(wantedId).test(stack)?"}
+    Match -- yes --> Done["markRecipeAsComplete(wantedId) + quest_completed broadcast"]
+    Match -- no --> Skip["no change; the item keeps its normal fate"]
+```
+
+- **Matching goes through `Ingredients.asIngredient(wantedId)`** — an item id
+  resolves to a single-item ingredient, a tag id to a tag ingredient. LOOT
+  quests want a tag, so any tag member (mutton, porkchop, beef, …) satisfies
+  the quest. `ITEM` quest matching uses the same resolution
+  (`questMatchesStack`), so an ITEM quest with a tag want matches its members
+  too.
+- **The hook runs after the extract path, not instead of it.**
+  `PostExtractHook.run` decides the item's fate (deposit, hunger, knowledge)
+  first; quest completion is a side observation on the already-extracted stack
+  and never consumes it.
+- **The chest path never sees LOOT quests.** `QuestBatches.processItemQuests`
+  filters to `type == ITEM`, so the extraction hook is the only completion
+  route for a LOOT quest — a LOOT quest going COMPLETED is, by construction,
+  proof the extraction path fired.

@@ -94,6 +94,14 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.quests.add(this.questFactory.newItemQuest(dep(ownerId), itemId, count));
     }
 
+    public void addLootQuest(
+            @Nullable VillagerUUID ownerId,
+            KEY itemId,
+            int count
+    ) {
+        this.quests.add(this.questFactory.newLootQuest(dep(ownerId), itemId, count));
+    }
+
     public ImmutableList<QUEST> getAll() {
         return ImmutableList.copyOf(this.quests);
     }

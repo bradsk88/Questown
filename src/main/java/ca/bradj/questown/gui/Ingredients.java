@@ -14,6 +14,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.IForgeRegistry;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -134,6 +135,20 @@ public class Ingredients {
     public static Ingredient fromRL(ResourceLocation value) {
         @Nullable Item l = ForgeRegistries.ITEMS.getValue(value);
         return Ingredient.of(l);
+    }
+
+    /**
+     * Resolve a ResourceLocation to an ingredient, item-first: a registered item id yields
+     * the item ingredient; anything else (a tag id, or an unknown id) yields a tag
+     * ingredient. A tag ingredient for an unregistered tag simply matches nothing, so a
+     * missing id fails safe instead of throwing.
+     */
+    public static Ingredient asIngredient(ResourceLocation value) {
+        IForgeRegistry<Item> items = ForgeRegistries.ITEMS;
+        if (items.containsKey(value)) {
+            return Ingredient.of(items.getValue(value));
+        }
+        return Ingredient.of(TagKey.create(Registry.ITEM_REGISTRY, value));
     }
 
     public static List<Ingredient> fromItems(ImmutableList<ItemStack> result) {

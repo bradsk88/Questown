@@ -168,7 +168,7 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     }
 
     public enum QuestType {
-        ITEM, ROOM, JOB_CHANGE, CONCURRENT_JOBS, UNKNOWN;
+        ITEM, ROOM, JOB_CHANGE, CONCURRENT_JOBS, LOOT, UNKNOWN;
     }
 
     protected interface QuestFactory<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>> {
@@ -184,6 +184,12 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         );
 
         QUEST newItemQuest(
+                @Nullable UUID ownerId,
+                KEY itemId,
+                int count
+        );
+
+        QUEST newLootQuest(
                 @Nullable UUID ownerId,
                 KEY itemId,
                 int count

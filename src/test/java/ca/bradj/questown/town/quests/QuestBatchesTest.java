@@ -40,6 +40,15 @@ class QuestBatchesTest {
         }
 
         @Override
+        public TestQuest newLootQuest(
+                @Nullable UUID ownerId,
+                Integer itemId,
+                int count
+        ) {
+            throw new UnsupportedOperationException("Not Implemented");
+        }
+
+        @Override
         public TestQuest newJobQuest(Integer id) {
             throw new UnsupportedOperationException("Not implemented");
         }

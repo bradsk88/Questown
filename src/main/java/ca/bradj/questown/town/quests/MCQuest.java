@@ -70,6 +70,18 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return new MCQuest(batchUUID, ownerId, itemId, null, QuestType.ITEM, count);
     }
 
+    // A LOOT quest is satisfied when a townie extracts (produces) matching loot from their
+    // job, not by a chest deposit. The wanted id is an item or a tag; see
+    // ca.bradj.questown.gui.Ingredients#asIngredient for the resolution.
+    public static MCQuest loot(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            ResourceLocation itemId,
+            int count
+    ) {
+        return new MCQuest(batchUUID, ownerId, itemId, null, QuestType.LOOT, count);
+    }
+
     public static MCQuest jobChange(
             UUID batchUUID,
             @Nullable VillagerUUID ownerId,
