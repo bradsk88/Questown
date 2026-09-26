@@ -72,6 +72,16 @@ the run produces.
   assertion's level access, not a console command.
 - A held server is a `java` process; match with `pgrep -af '[r]unServer'` or
   `pgrep -af forgeserveruserdev`, not `pgrep -af 'runServer'`.
+- **Hunting is off-town; no animals in the world are ever needed.** A leaver
+  (hunter/gatherer/miner/fisher) is sent to an imaginary off-town location
+  and the "work" is a biome **loot-table roll**, not entity collection — a
+  town with zero animals still hunts and brings back meat (CONTEXT.md
+  "leaver job"). Do not `summon` prey to make a hunt happen, do not wait
+  for the townie to "find" animals, and do not read a world without mobs as
+  a blocker. The evidence of a hunt is the townie returning with carried
+  meat / the inventory delta, not watching it interact with an entity. A
+  leaver with nothing to bring back is missing **known loot / biome
+  knowledge**, not missing mobs.
 
 ## When a unit test is enough
 
