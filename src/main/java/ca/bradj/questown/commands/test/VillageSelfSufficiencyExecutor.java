@@ -30,7 +30,7 @@ import java.util.UUID;
  * lock-detection dumps, keyed by day, on the {@code [village]} log prefix.
  *
  * <p>The seed is code-built each run (no save snapshot): an arena, a handful of
- * buildings, a flag + lit campfire + welcome mat (town gate) + job board in a
+ * buildings, a flag + lit campfire + job board in a
  * registered store room, ~5 villagers via SpawnVisitorReward, and jobs
  * assigned directly (a hunter for food plus the starting jobs). The chicken
  * arc is skipped entirely.
@@ -140,9 +140,8 @@ public final class VillageSelfSufficiencyExecutor {
     /** Night-sleep counter; the daily report keys its day number on this (one
      *  report per completed night, plus a baseline at watch start). */
     private int nightsSlept = 0;
-    /** True once the first night has been slept through. The welcome mat (town
-     *  gate) can only be placed after the campfire quest completes and this flag
-     *  is set, so the room-builder gates the town_gate placement on it. */
+    /** True once the first night has been slept through; reported as a milestone
+     *  in the daily report. */
     private boolean firstNightPassed = false;
     /** Milestones, latched once and reported from then on: a townie holding a
      *  cook job (the food chain is producing cooked food) and/or a farmer job. */
@@ -417,8 +416,8 @@ public final class VillageSelfSufficiencyExecutor {
     }
 
     private void buildSeed() {
-        // A just-past-onboarding town: flag + lit campfire + welcome mat (town
-        // gate) + a job board in a registered room + one registered store room
+        // A just-past-onboarding town: flag + lit campfire + a job board in a
+        // registered room + one registered store room
         // with a seeded supply chest. The rooms are laid as clean rectangular
         // shells (the growth scenario's building shape, which the wall walk closes
         // cleanly) and their doors are registered with the flag, so they are
@@ -504,13 +503,12 @@ public final class VillageSelfSufficiencyExecutor {
         flag = TownFlagBlockEntity.getFromPos(level, flagPos);
         if (flag != null) {
             // The welcome mat (town gate) is NOT placed here. It is the town gate:
-            // the gatherer and hunter jobs anchor to special_quest.town_gate, and
-            // that quest is only satisfiable after the campfire quest completes and
-            // the first night passes (the town must be past the kickoff batch). Placing
-            // it in the seed registers a mat the town is not ready for, so the quest
-            // never closes and the builder then lays a second mat inside a room shell.
-            // The room-builder places it (via placeWelcomeMat, which registers it)
-            // once the campfire room is built and the first night has passed.
+            // the gatherer and hunter jobs anchor to special_quest.town_gate.
+            // Placing it in the seed (before the quest is open) registers a mat
+            // the quest never picks up, so the quest never closes and the builder
+            // then lays a second mat inside a room shell. The room-builder places
+            // it (via placeWelcomeMat, which registers it) once the quest becomes
+            // available.
 
             // Register both room doors with the flag (the same path a wand click
             // on a door takes). The rectangular shells were laid in buildSeed; the
@@ -1119,22 +1117,13 @@ public final class VillageSelfSufficiencyExecutor {
 
             // The town_gate quest's recipe is the welcome mat, a standalone job
             // block placed beside the flag and registered, not a block inside a
-            // room. The seed already places a mat at flagPos.east(); if one is
-            // registered, the quest will complete on re-detection and the builder
-            // has nothing to do. If none is registered (the seed's mat was not
-            // detected as a room), place one via placeWelcomeMat (which places
-            // and registers) so the quest can complete.
+            // room. The seed does not place one (a mat laid before the quest is
+            // open is never picked up), so if none is registered yet, place one
+            // via placeWelcomeMat (which places and registers) the moment the
+            // quest is open: the mat completes it on re-detection, with no
+            // night-cycle requirement. If one is already registered, the quest
+            // will complete on re-detection and the builder has nothing to do.
             if (recipeId.getPath().equals("special_quest.town_gate")) {
-                // The town gate can only be placed after the campfire quest
-                // completes and the first night passes (the town must be past the
-                // kickoff batch). Until then the quest is not satisfiable, so the
-                // builder waits rather than placing a mat the town is not ready for.
-                if (!firstNightPassed) {
-                    if (roomBuilderTicks % 1000 == 0) {
-                        msg("[room-builder] town_gate: waiting for first night to pass before placing welcome mat");
-                    }
-                    continue;
-                }
                 if (!flag.getWelcomeMats().isEmpty()) {
                     // A mat is registered; the quest will complete on re-detection.
                     // Skip this cycle without marking it done, so the builder keeps
