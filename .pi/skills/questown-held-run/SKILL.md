@@ -192,6 +192,18 @@ start working?" is settled by `_qtdev inspect villagers <flag>` (its
 job + need + status line) on the first probe; reserve time-elapsed windows
 (daily report, milestone) for questions that actually need time to pass.
 
+**Hunting (and all leaver work) is off-town — the townie "disappears."**
+A hunter/gatherer/miner/fisher sent to work is teleported to an imaginary
+off-town location and the "work" is a **biome loot-table roll**
+(`data/questown/loot_tables/jobs/<job>/<biome>.json`, gated by known loot),
+not collecting entities in the world. A town with **zero animals in the
+world still hunts** and brings back meat. So: never `summon` pigs/rabbits
+near the flag to "give the hunter prey", never chase a hunting townie
+off-map, and never read "no animals in the world" as a reason the townie
+won't work. If a leaver comes back with nothing, suspect **missing known
+loot / biome knowledge** (a gatherer map / explorer), not missing mobs.
+CONTEXT.md "leaver job" is the source of truth.
+
 **Confirm against the latest observe cycle, not the last line you grepped.**
 Observe lines and the need/job lines interleave, and a line you grepped a
 window ago is not the current state. Before reporting a townie's need or job
