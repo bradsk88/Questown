@@ -45,6 +45,22 @@ flowchart TD
   `SimpleVillagerHandle.tickDamage`, inside `tickVillagers`, below the gate — that
   is the one the interval table further down applies to.
 
+## Sleep gate and the held-run keep-awake
+
+`tickInner` runs the flag's full tick only while the flag is awake. The awake
+decision is `allPlayersLeftArea` in `TownFlagTicker`: it returns true, the flag
+sleeps, when no player is within `TOWN_TICK_RADIUS`, and false, the flag stays
+awake, when one is. The POI scan (`tickPOIs`) is a full-tick phase, so a
+sleeping flag does not scan for POIs.
+
+Held autotest runs keep the flag awake. When `-Dquestown.autotest.hold=true`,
+`allPlayersLeftArea` short-circuits to false before the player-distance check,
+so the flag ticks from server start, before any player joins. That is what lets
+the headless `village/self_sufficiency` watchtower's seeded lit campfire be
+detected by `tickPOIs` and the campfire quest self-complete without a client
+(see the watchtower seed in `commands/test/COMPLEX.md`). The branch is gated on
+the test property, so real game behavior is untouched.
+
 ## Container-scan throttle (inside `updateStoredData`)
 
 ```mermaid
