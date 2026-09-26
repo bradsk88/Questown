@@ -383,11 +383,13 @@ recipe is the welcome mat, a standalone job block placed beside the flag and
 registered (`flag.placeWelcomeMat`, which calls `registerWelcomeMat` ->
 `roomsHandle.registerBlockAsRoom(SpecialQuests.TOWN_GATE, pos)`), not a block
 inside a room shell. Placing it in a room via `buildRoomForRecipe` lays a mat in
-room furniture where it does nothing. The mat is also *gated*: the town_gate
-quest is only satisfiable after the campfire quest completes and the first night
-passes (the town must be past the kickoff batch). The builder places it only
-after `firstNightPassed` is set, so it does not register a mat the town is not
-ready for.
+room furniture where it does nothing. The builder places the mat the moment the
+town_gate quest is open: the quest completes on re-detection whenever a mat is
+registered, with no night-cycle requirement (verified day-1, before any night).
+The one real hazard is a mat laid before the quest is open, which the quest never
+picks up — that is why the seed does not pre-place one. (An earlier
+`firstNightPassed` gate on the placement gated on nothing the quest required;
+it only delayed the mat until after the first night.)
 
 **The watch loop sleeps through nights.** A realtime 5-day watch spends ~10 real
 minutes per game day waiting for the night to pass. The watch loop detects
