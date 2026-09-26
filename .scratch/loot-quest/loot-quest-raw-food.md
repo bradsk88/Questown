@@ -1,10 +1,16 @@
 ---
 title: LOOT quest type, onboarding raw-food quest completes on production
 status: ready-for-agent
+closed: 2026-09-27
 created: 2026-09-26
 ---
 
-## Context
+## Triage notes
+
+2026-09-27: implemented and verified. The raw-food LOOT quest completed on extraction in a held
+`village/self_sufficiency` run (two hunters, off-town loot-table roll, `quest_completed`
+broadcast, no chest deposit). The follow-on apple ITEM quest stayed ACTIVE with deposit wording.
+Closed in the commit that landed the feature.
 
 The hunter's onboarding quest "get mutton" is a specific-item `ITEM` quest completed by a chest
 deposit. It should be "get raw food" and complete when a townie *produces* (extracts) the loot,

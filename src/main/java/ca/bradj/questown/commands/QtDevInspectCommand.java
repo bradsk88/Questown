@@ -531,10 +531,13 @@ public class QtDevInspectCommand {
 
     private static String explain(UIQuest q) {
         Quest.QuestType type = q.getType();
-        if (type == Quest.QuestType.ITEM) {
+        // ITEM and LOOT both carry their want as ingredients (an item or a tag); LOOT's
+        // are satisfied by production rather than a chest deposit, but the "wants" line
+        // reads the same.
+        if (type == Quest.QuestType.ITEM || type == Quest.QuestType.LOOT) {
             return q.getIngredients().isEmpty()
                     ? "item " + q.getWantedId()
-                    : q.getIngredients().iterator().next().toString();
+                    : Ingredients.toString(q.getIngredients().iterator().next());
         }
         if (type == Quest.QuestType.ROOM) {
             return "room recipe " + q.getWantedId();

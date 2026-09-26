@@ -102,6 +102,9 @@ public class TownMessages {
         if (quest.getType() == Quest.QuestType.ITEM) {
             name = Compat.translatable("menu.common.quantity", Compat.getItemName(quest.getWantedId()), quest.getCountNeeded());
         }
+        if (quest.getType() == Quest.QuestType.LOOT) {
+            name = Compat.translatable("menu.quests.raw_food");
+        }
         broadcastMessage(
                 "messages.town_flag.quest_completed",
                 name
@@ -112,6 +115,9 @@ public class TownMessages {
         Component name = RoomRecipes.getName(quest.getWantedId());
         if (quest.getType() == Quest.QuestType.ITEM) {
             name = Compat.translatable("menu.common.quantity", Compat.getItemName(quest.getWantedId()), quest.getCountNeeded());
+        }
+        if (quest.getType() == Quest.QuestType.LOOT) {
+            name = Compat.translatable("menu.quests.raw_food");
         }
         broadcastMessage(
                 "messages.town_flag.quest_lost",

@@ -800,9 +800,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
 
-        MCQuest muttonQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.MUTTON), 1);
-        muttonQuest.setFlavorText("Hunt a sheep and place the mutton in a store room chest. Your villagers need food.");
-        q.addNewQuest(muttonQuest);
+        MCQuest rawFoodQuest = MCQuest.loot(
+                batchUUID, null, TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location(), 1
+        );
+        rawFoodQuest.setFlavorText("Your villagers need food. A villager must bring back raw food.");
+        q.addNewQuest(rawFoodQuest);
 
         MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.STONE_SWORD), 1);
         swordQuest.setFlavorText("Upgrade your villager's weapon. Craft a stone sword and place it in a store room chest.");
@@ -1144,6 +1146,29 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             ResourceLocation wantedId,
             MCTownItem stack
     ) {
-        return wantedId.equals(Compat.getItemId(stack.get()));
+        // asIngredient resolves item ids to item ingredients and tag ids to tag
+        // ingredients, so ITEM quests with a tag want now match their tag members.
+        return Ingredients.asIngredient(wantedId).test(stack.toQTItemStack());
+    }
+
+    /**
+     * LOOT quests complete on production: when a townie extracts loot matching an open
+     * LOOT quest, the first match completes it (no accumulation). The extracted item is
+     * not consumed here; the normal deposit / eat path decides what happens to it.
+     */
+    public void processLootQuests(MCTownItem extracted) {
+        if (extracted == null || extracted.isEmpty()) {
+            return;
+        }
+        ItemStack stack = extracted.toQTItemStack();
+        for (MCQuest quest : questBatches.getAll()) {
+            if (quest.getType() != Quest.QuestType.LOOT || quest.isComplete()) {
+                continue;
+            }
+            if (Ingredients.asIngredient(quest.getWantedId()).test(stack)) {
+                questBatches.markRecipeAsComplete(null, quest.getWantedId());
+                return;
+            }
+        }
     }
 }

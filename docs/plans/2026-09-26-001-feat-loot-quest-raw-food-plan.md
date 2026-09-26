@@ -1,6 +1,6 @@
 # Feat: LOOT quest type, the onboarding raw-food quest completes on production
 
-Status: planned (2026-09-26).
+Status: done (2026-09-27), verified in a held `village/self_sufficiency` run.
 
 ## Problem
 
@@ -149,16 +149,20 @@ back raw food. The quest stays in the `jobChangeAndFood` onboarding phase.
 
 ## Test ledger
 
-- [ ] Unit: `asIngredient`. An item RL yields `Ingredient.of(item)`; a tag RL yields
+- [x] Unit: `asIngredient`. An item RL yields `Ingredient.of(item)`; a tag RL yields
       `Ingredient.of(tag)`; a missing RL has a defined behavior.
-- [ ] Unit: a LOOT quest matches a tag member via `asIngredient(...).test(stack)`. An ITEM quest
+- [x] Unit: a LOOT quest matches a tag member via `asIngredient(...).test(stack)`. An ITEM quest
       still matches only its exact item.
-- [ ] Unit: `QuestType.LOOT` round-trips through `QuestTypes.serializeNBT` / `deserializeNBT` and
+- [x] Unit: `QuestType.LOOT` round-trips through `QuestTypes.serializeNBT` / `deserializeNBT` and
       `toNetwork` / `fromNetwork`.
-- [ ] Update: any mutton-quest assertion in `TutorialPhaseGateTest` / `QuestsTest` that pins
+- [x] Update: any mutton-quest assertion in `TutorialPhaseGateTest` / `QuestsTest` that pins
       `ITEM` plus the mutton wanted id, to `LOOT` plus the raw-food tag.
-- [ ] Held run: the raw-food LOOT quest completes on extraction (a townie hunts, the quest is done)
-      with no chest deposit. The sword / apple / wood quests still require a deposit.
+- [x] Held run: the raw-food LOOT quest completes on extraction (a townie hunts, the quest is done)
+      with no chest deposit. Verified 2026-09-27 in a held `village/self_sufficiency` run: two
+      hunters extracted off-town, the `quest_completed` broadcast for
+      `questown:villager_simple_furnace_food_raw` fired, and the quest showed COMPLETED. The
+      follow-on apple quest (ITEM) stayed ACTIVE with deposit wording, confirming the deposit
+      contract is intact.
 
 ## Decisions (resolved 2026-09-26)
 

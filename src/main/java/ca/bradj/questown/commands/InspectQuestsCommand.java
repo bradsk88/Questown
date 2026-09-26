@@ -73,6 +73,12 @@ public class InspectQuestsCommand {
             String item = resolveItemName(q.getWantedId());
             return (item != null ? item : "item " + q.getWantedId()) + " x" + q.getCountNeeded();
         }
+        if (type == Quest.QuestType.LOOT) {
+            // Same shape as ITEM (item or tag id), but the want is satisfied by production:
+            // a townie extracting the loot, not by a chest deposit.
+            String item = resolveItemName(q.getWantedId());
+            return (item != null ? item : "item " + q.getWantedId()) + " x" + q.getCountNeeded() + " (loot: completes on production)";
+        }
         if (type == Quest.QuestType.ROOM) {
             return "room recipe " + q.getWantedId();
         }

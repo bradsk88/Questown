@@ -139,6 +139,7 @@ public class UIQuest implements Comparable<UIQuest> {
         return switch (v.getType()) {
             case ROOM -> getRoomIngredients(v, rMap);
             case ITEM -> Collections.nCopies(v.getCountNeeded(), Ingredient.of(reg.getValue(v.getWantedId())));
+            case LOOT -> Collections.nCopies(v.getCountNeeded(), Ingredients.asIngredient(v.getWantedId()));
             case JOB_CHANGE -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case CONCURRENT_JOBS -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case UNKNOWN -> ImmutableList.of();
@@ -200,6 +201,7 @@ public class UIQuest implements Comparable<UIQuest> {
         return switch (type) {
             case ROOM -> RoomRecipes.getName(wantedId);
             case ITEM -> Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size());
+            case LOOT -> Compat.translatable("menu.quests.raw_food");
             case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractJobName());
             case CONCURRENT_JOBS -> Compat.literal("Multiple Jobs Active");
             case UNKNOWN -> Compat.literal("ERROR");

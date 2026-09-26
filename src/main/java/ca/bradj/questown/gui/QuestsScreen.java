@@ -270,6 +270,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
         return switch (recipe.getType()) {
             case ITEM -> renderItemQuestTooltip(recipe);
+            case LOOT -> renderLootQuestTooltip(recipe);
             case ROOM -> {
                 if (SpecialQuests.CAMPFIRE.equals(recipe.getWantedId())) {
                     yield ImmutableList.of(Compat.translatable("menu.quests.campfire_quest"));
@@ -286,6 +287,16 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         int size = recipe.getIngredients().size();
         Component name = Compat.getItemName(recipe.getWantedId());
         return ImmutableList.of(Compat.translatable("menu.quests.item_quest", size, name));
+    }
+
+    // A LOOT quest is satisfied by production (a townie extracting the loot), not by a chest
+    // deposit, so the tooltip must not promise the storage path the ITEM tooltip describes.
+    private static ImmutableList<Component> renderLootQuestTooltip(UIQuest recipe) {
+        int size = recipe.getIngredients().size();
+        Component name = recipe.getIngredients().isEmpty()
+                ? Compat.getItemName(recipe.getWantedId())
+                : Ingredients.getName(recipe.getIngredients().iterator().next());
+        return ImmutableList.of(Compat.translatable("menu.quests.loot_quest", size, name));
     }
 
     private static ImmutableList<Component> renderJobQuestTooltip(UIQuest recipe) {
@@ -489,7 +500,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         return switch (type) {
             case JOB_CHANGE -> new ResourceLocation(Questown.MODID, "entries/lesson_bop");
             case ROOM -> new ResourceLocation(Questown.MODID, "entries/lesson_room_recipes");
-            case ITEM -> new ResourceLocation(Questown.MODID, "entries/lesson_needs");
+            case ITEM, LOOT -> new ResourceLocation(Questown.MODID, "entries/lesson_needs");
             case CONCURRENT_JOBS -> new ResourceLocation(Questown.MODID, "entries/014-supply-chains");
             default -> null;
         };

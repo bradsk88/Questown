@@ -446,6 +446,8 @@
   "menu.quests.confirm_remove_top": "Decline this batch of %d quests?",
   "menu.quests.confirm_remove_bottom": "More will come after sleeping",
   "menu.quests.item_quest": "Add %d %s to town storage (Can be done by villagers or players)",
+  "menu.quests.loot_quest": "A villager must produce %d %s for the town",
+  "menu.quests.raw_food": "Raw food",
   "menu.quests.room_quest": "Build a room containing the blocks shown here",
   "menu.quests.campfire_quest": "Place a campfire near the town flag",
   "message.flag_crafting.created": "Created %s",

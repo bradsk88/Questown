@@ -444,7 +444,7 @@ public class RealtimeWorldInteraction extends
             BlockPos position,
             @Nullable MCHeldItem extractedItem
     ) {
-        return PostExtractHook.run(
+        Boolean hooked = PostExtractHook.run(
                 aBoolean,
                 inputs.town().getTownFlagBasePos(),
                 rules,
@@ -473,6 +473,13 @@ public class RealtimeWorldInteraction extends
                     return in;
                 }
         );
+        // A LOOT quest completes on production, here at the extract step: the townie has
+        // just received this loot from their job. The item itself is not consumed; the
+        // deposit / eat path still decides its fate.
+        if (extractedItem != null && !extractedItem.isEmpty()) {
+            inputs.town().getQuestHandle().processLootQuests(extractedItem.get());
+        }
+        return hooked;
     }
 
     @Override

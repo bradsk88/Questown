@@ -86,7 +86,6 @@ public class QuestBatches<
         Map<ITEM_KEY, Integer> itemCounts = new HashMap<>();
         for (ITEM stack : allStacks) {
             Optional<QUEST> quest = stacksToFind.stream()
-                                                // TODO: Also handle tags
                                                 .filter(v -> questMatchesStack.test(v.getWantedId(), stack))
                                                 .findFirst();
             if (quest.isEmpty()) {
@@ -179,6 +178,7 @@ public class QuestBatches<
             v.getAll().forEach(q -> {
                 switch (q.getType()) {
                     case ITEM -> e.addItemQuest(owner, q.getWantedId(), q.getCountNeeded());
+                    case LOOT -> e.addLootQuest(owner, q.getWantedId(), q.getCountNeeded());
                     case ROOM -> e.addNewQuest(owner, q.getWantedId());
                     case JOB_CHANGE -> e.addJobChangeQuest(q.getWantedId());
                     case CONCURRENT_JOBS -> e.addNewQuest(owner, q.getWantedId());
