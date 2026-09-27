@@ -51,10 +51,13 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -218,6 +221,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("relocate_far", relocateFarBlueprint()));
         jobs.add(flagEntry("deed_consumed_on_place", deedConsumedOnPlaceBlueprint()));
         jobs.add(flagEntry("campfire_sleep_preserves_flag", campfireSleepPreservesFlagBlueprint()));
+        jobs.add(flagEntry("campfire_safety", campfireSafetyBlueprint()));
         jobs.add(flagEntry("dead_door_bubbled", deadDoorBubbledBlueprint()));
         jobs.add(flagEntry("too_short_room_dead", tooShortRoomBlueprint()));
         jobs.add(flagEntry("floating_chest_room", floatingChestRoomBlueprint()));
@@ -325,6 +329,121 @@ public class TestBlueprintRegistry {
                             + " (flag present=" + flagPresent + ")");
                     return flagPresent;
                 });
+    }
+
+    /**
+     * Campfire safety (held-run incident: a townie burned to death walking across the lit
+     * campfire). Real-code probes against the townie's own navigation
+     * ({@code VillagerPathNavigation}) and its {@code hurt} override:
+     * <ol>
+     *   <li>No path TO a lit campfire block: vanilla classifies it as DANGER_FIRE
+     *       (walkable, cost 8), so a goal on the block is reachable and burns the townie
+     *       in about a second ({@code CampfireBlock.entityInside} deals 1 fire damage per
+     *       tick, no armor, no burn time). The incident itself: a townie's active path
+     *       crossed the campfire position, which was lit while the townie was mid-route.</li>
+     *   <li>Open ground: a path across the campfire's lane still exists (a detour) and
+     *       never touches the campfire block — the block must not be over-blocked.</li>
+     *   <li>Fire damage from a campfire the townie is inside or standing on is ignored:
+     *       whatever route (stale path, campfire placed under a standing townie,
+     *       stuck-unstick shove) ends up in the block's space, the townie does not burn.</li>
+     * </ol>
+     * The lit campfire is left in place through the realtime soak, and the assertion
+     * confirms no townie died while it was live.
+     */
+    private static TestBlueprint campfireSafetyBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::campfireSafetyProbe)
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    long roster = town.getVillagerHandle().size();
+                    output.msg("Roster after campfire soak: " + roster);
+                    return roster == 2;
+                });
+    }
+
+    private static boolean campfireSafetyProbe(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        var entities = town.getVillagerHandle().entities();
+        if (entities.isEmpty()) {
+            output.error("campfire safety: no townie present");
+            return false;
+        }
+        VisitorMobEntity townie = (VisitorMobEntity) entities.iterator().next();
+
+        BlockPos north = flagPos.north().north();
+        BlockPos fire = flagPos.south().south();
+        // Lit campfire two blocks south of the flag: open ground (the same position the
+        // village seed scenarios use).
+        level.setBlockAndUpdate(fire.below(), Blocks.DIRT.defaultBlockState());
+        level.setBlockAndUpdate(fire,
+                Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, true));
+        level.setBlockAndUpdate(fire.above(), Blocks.AIR.defaultBlockState());
+
+        townie.setPos(north.getX() + 0.5, flagPos.getY(), north.getZ() + 0.5);
+
+        // Probe 1: no path node on the lit campfire block. createPath returns a
+        // best-effort path for an unreachable goal (the closest reachable node), so
+        // non-null is expected when the campfire is hard-blocked; the campfire block
+        // itself must not be a path node. stop() first: createPath short-circuits and
+        // returns the current active path when its target is in the requested set, so
+        // without it this probe could return a path the townie's own brain computed to
+        // that very block before the campfire was lit (the incident: a mid-route
+        // townie whose destination block became a lit campfire).
+        townie.getNavigation().stop();
+        Path toFire = townie.getNavigation().createPath(fire, 0);
+        townie.getNavigation().stop();
+        if (toFire != null && pathTouches(toFire, fire)) {
+            output.error("campfire safety: navigation routes onto the lit campfire block itself ("
+                    + fire + "); path ends at " + toFire.getNodePos(toFire.getNodeCount() - 1));
+            return false;
+        }
+        output.msg("campfire safety: no path node on the lit campfire block (goal path ends at "
+                + (toFire == null ? "n/a" : toFire.getNodePos(toFire.getNodeCount() - 1)) + ")");
+
+        // Probe 2: open ground, a path across the lane still exists and never touches the campfire.
+        BlockPos south = fire.south();
+        Path detour = townie.getNavigation().createPath(south, 0);
+        townie.getNavigation().stop();
+        if (detour == null) {
+            output.error("campfire safety: no path from " + north + " to " + south
+                    + " (expected a detour around the campfire at " + fire + ")");
+            return false;
+        }
+        if (pathTouches(detour, fire)) {
+            output.error("campfire safety: open-ground path " + north + " -> " + south
+                    + " crosses the lit campfire at " + fire);
+            return false;
+        }
+        output.msg("campfire safety: open-ground path detours around the campfire ("
+                + detour.getNodeCount() + " nodes)");
+
+        // Probe 3: fire damage from a campfire the townie is inside or standing on is ignored.
+        float h0 = townie.getHealth();
+        townie.setPos(fire.getX() + 0.5, fire.getY() + 0.5, fire.getZ() + 0.5);
+        boolean inBlock = townie.hurt(DamageSource.IN_FIRE, 1.0f);
+        townie.setPos(fire.getX() + 0.5, fire.getY() + 1.5, fire.getZ() + 0.5);
+        boolean onBlock = townie.hurt(DamageSource.IN_FIRE, 1.0f);
+        townie.setPos(north.getX() + 0.5, flagPos.getY(), north.getZ() + 0.5);
+        if (inBlock || onBlock || townie.getHealth() != h0) {
+            output.error("campfire safety: hurt in-block=" + inBlock
+                    + " on-block=" + onBlock + " health " + h0 + " -> " + townie.getHealth());
+            return false;
+        }
+        output.msg("campfire safety: campfire fire damage ignored (in-block and on-block)");
+        return true;
+    }
+
+    /** True if any node of the path sits on the given block position. */
+    private static boolean pathTouches(Path path, BlockPos pos) {
+        for (int i = 0; i < path.getNodeCount(); i++) {
+            if (path.getNodePos(i).equals(pos)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Where the lone door stands relative to the flag: clear of the farm base (x 4..10, z -3..3)
