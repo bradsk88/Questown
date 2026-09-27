@@ -7,6 +7,7 @@ import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
@@ -40,6 +41,14 @@ public class VillagerPathNavigation extends GroundPathNavigation {
                     int z
             ) {
                 BlockPos pos = new BlockPos(x, y, z);
+                // The town's campfire is furniture, not a route: vanilla classifies a lit
+                // campfire as DANGER_FIRE (walkable, cost 8), so a townie whose path crosses
+                // it burns to death in about a second (CampfireBlock.entityInside deals 1
+                // fire damage per tick with no armor and no burn time). Hard-block it so no
+                // townie path ever routes through a lit campfire.
+                if (CampfireBlock.isLitCampfire(getr.getBlockState(pos))) {
+                    return BlockPathTypes.BLOCKED;
+                }
                 FluidState fs = getr.getFluidState(pos);
                 if (!fs.isEmpty()) {
                     BlockState above = getr.getBlockState(pos.above());
@@ -76,6 +85,10 @@ public class VillagerPathNavigation extends GroundPathNavigation {
                     BlockPathTypes defaultType
             ) {
                 defaultType = super.evaluateBlockPathType(getr, pos, defaultType);
+
+                if (CampfireBlock.isLitCampfire(getr.getBlockState(pos))) {
+                    return BlockPathTypes.BLOCKED;
+                }
 
                 if (defaultType == BlockPathTypes.FENCE && (getr.getBlockState(pos)
                                                                 .getBlock() instanceof FenceGateBlock)) {

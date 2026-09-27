@@ -83,6 +83,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -1393,7 +1394,25 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return false;
         }
 
+        // The town's campfire is furniture: vanilla's CampfireBlock.entityInside burns any
+        // LivingEntity inside a lit campfire block to death in about a second (1 fire damage
+        // per tick, no armor, no burn time). Pathfinding already hard-blocks lit campfires for
+        // townies (VillagerPathNavigation), so this covers the routes it cannot: a campfire
+        // placed under a standing townie, or a stuck-unstick shove into the block. Fire from
+        // any other source (lava, real flames) still hurts.
+        if (p_21016_.isFire() && !level.isClientSide() && inOrOnLitCampfire()) {
+            return false;
+        }
+
         return super.hurt(p_21016_, p_21017_);
+    }
+
+    /** The feet block or the block below the feet is a lit campfire: the two ways a townie's
+     *  body can end up inside the campfire block's space. */
+    private boolean inOrOnLitCampfire() {
+        BlockPos feet = blockPosition();
+        return CampfireBlock.isLitCampfire(level.getBlockState(feet))
+                || CampfireBlock.isLitCampfire(level.getBlockState(feet.below()));
     }
 
     @Override
