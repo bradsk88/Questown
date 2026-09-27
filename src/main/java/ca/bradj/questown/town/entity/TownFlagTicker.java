@@ -139,6 +139,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         e.possibleWork.invalidate();
         e.quests.processItemQuests(TownContainers.getAllStacks(e, e.getServerLevel()));
         e.quests.processJobChanges(e.getVillagerHandle().getVillagerJobs());
+        e.quests.processJobUnlocks(e.getVillagerHandle().getUnlockedJobs());
         e.quests.processConcurrentJobs(e.getVillagerHandle().getVillagerJobs());
     }
 

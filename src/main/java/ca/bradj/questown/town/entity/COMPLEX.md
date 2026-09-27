@@ -201,3 +201,68 @@ flowchart LR
 
 - With no chest the deposit sub-step returns "hold" and the board stops; a townie
   is never sent to dine before it can store what it carries.
+
+---
+
+# Stuck townie -> JOB_UNLOCK quest (the diagnostic quest)
+
+A root whose townies have a job but no material for it sits in `UNMET_ITEM`
+and the town soft-locks. That state was invisible in play (only a cryptic
+need-bubble icon), so `TownQuests` posts a **JOB_UNLOCK** quest that names the
+missing item and the root that produces it. The quest completes the moment
+*any* townie unlocks that producer root (the normal BOP path) and is **lost**
+when the stuck state no longer maps to that producer (e.g. the player stocked
+the missing item directly).
+
+## Post / complete / lose
+
+```mermaid
+flowchart TD
+    Tick["TownQuests.tick (flag tick)"] --> Scan["tickUnmetUnlockQuests:\nscan townies with need = UNMET_ITEM\nand a non-empty unmet item"]
+    Scan --> Since["stuckRootSince: root -> first-stuck tick\nretainAll: pruned when the root unsticks"]
+    Since --> Gate{"onboarding driving?\n(open onboarding- or JOB_CHANGE-type quest)"}
+    Gate -- yes --> Hold["no post, no re-check"]
+    Gate -- no --> Grace{"now - since >=\nConfig.UNMET_UNLOCK_QUEST_GRACE_TICKS\n(default 12000 = 1 in-game day)?"}
+    Grace -- no --> Hold
+    Grace -- yes --> Prod["producerRootsForItem:\njob-registry results inverted\n(roots whose work produces the missing item)"]
+    Prod --> Pick["chooseProducerRoot:\nfirst sorted, excluding the stuck root itself\nand roots already unlocked by some townie"]
+    Pick --> Dup{"open JOB_UNLOCK on that root?"}
+    Dup -- yes --> Hold
+    Dup -- no --> Post["add batch: MCQuest.jobUnlock\nflavor names stuck root, missing item, producer\n'New quests are available!' broadcast"]
+
+    Unl["TownFlagTicker.handleNewStoredData\n-> processJobUnlocks (unlocked jobs)"] --> Match{"wanted root now unlocked\nby some townie?"}
+    Match -- yes --> Done["markRecipeAsComplete(wantedId)"]
+
+    Tick --> Lose{"open JOB_UNLOCK quest whose producer\nno stuck root maps to anymore?"}
+    Lose -- yes --> Lost["markRecipeAsLostByKey(wantedId)"]
+```
+
+- **The grace timer is per-root and restarts on unstick.** `stuckRootSince` is
+  pruned to the roots stuck *right now* before being re-seeded, so a town that
+  flaps in and out of the stuck state is not posted a quest until it has been
+  stuck for the full grace continuously.
+- **Nothing posts while onboarding drives jobs.** An open onboarding- or
+  `JOB_CHANGE`-type quest means the town is mid-tutorial and the tutorial owns
+  job assignment; a diagnostic quest on top is noise. The gate is on quest
+  existence, not townie state.
+- **Completion is event-driven, loss is scan-driven.** Unlocks land through
+  `processJobUnlocks` (stateless, run every flag tick, mirrors
+  `processJobChanges`). Loss is decided by the per-tick scan: when no stuck
+  root maps to the quest's producer anymore the quest is withdrawn.
+- **The lost placeholder follows pre-existing `lost()` semantics** (all quest
+types): the journal keeps a `ROOM`-typed ACTIVE placeholder, not a
+  LOST-status quest (see the TODO on `MCQuest.lost`). What loss guarantees for
+  this feature is that no open JOB_UNLOCK remains, so a re-stuck root can get
+  a fresh quest.
+- **Exclusions keep the quest honest.** `chooseProducerRoot` skips the stuck
+  root itself (its capacity already exists) and any root some townie already
+  has unlocked (an unlocked producer means the stuck state has a different
+  cause and the quest would not help). Producer candidates come from the live
+  job registry (`ServerJobsRegistry.getResults`), not a static table.
+- **The unlocked-jobs seam is `VillagerHolder.getUnlockedJobs`** — the one
+  handle surface that exposes per-townie unlocked `JobID` sets, read
+  server-side via `TownVillagerHandles`.
+- Verified by `TownQuestsJobUnlockTest` (producer selection, unlock
+  detection, batch completion/lost plumbing). Post timing and live
+  completion/loss are covered by the held `village/self_sufficiency` run;
+  plan: `docs/plans/2026-09-27-001-feat-unmet-unlock-quest-plan.md`.

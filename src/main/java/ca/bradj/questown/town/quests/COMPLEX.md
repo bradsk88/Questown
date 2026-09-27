@@ -117,3 +117,13 @@ flowchart TD
   filters to `type == ITEM`, so the extraction hook is the only completion
   route for a LOOT quest — a LOOT quest going COMPLETED is, by construction,
   proof the extraction path fired.
+
+## JOB_UNLOCK quests — a different completion trigger
+
+`JOB_UNLOCK` quests (the "a townie can't find work" diagnostic, posted by
+`TownQuests` when a root sits stuck in `UNMET_ITEM` past a grace) complete on
+neither of the triggers above: **no room match and no item deposit**. They
+complete when some townie *unlocks the wanted root job*
+(`TownQuests.processJobUnlocks`) and are lost when the stuck state clears. The
+state machine (grace, onboarding gate, dedupe, loss) is mapped in
+`town/entity/COMPLEX.md`, "Stuck townie -> JOB_UNLOCK quest".
