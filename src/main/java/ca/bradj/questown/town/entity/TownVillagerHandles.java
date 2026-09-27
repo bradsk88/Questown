@@ -9,6 +9,7 @@ import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -283,6 +284,11 @@ public class TownVillagerHandles {
             @Override
             public boolean isUnlocked(JobID jobID) {
                 return villagerHandle.learning.isUnlocked(jobID);
+            }
+
+            @Override
+            public ImmutableMap<VillagerUUID, ImmutableSet<JobID>> getUnlockedJobs() {
+                return villagerHandle.getUnlockedJobs();
             }
 
             @Override

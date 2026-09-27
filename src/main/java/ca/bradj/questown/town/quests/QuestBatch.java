@@ -78,6 +78,12 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.quests.add(this.questFactory.newJobQuest(id));
     }
 
+    public void addJobUnlockQuest(
+            KEY id
+    ) {
+        this.quests.add(this.questFactory.newJobUnlockQuest(id));
+    }
+
     public void addNewUpgradeQuest(
             @Nullable VillagerUUID ownerId,
             KEY fromID,
@@ -239,6 +245,28 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         if (foundQuest == null) {
             return false;
         }
+        if (this.quests.remove(foundQuest)) {
+            this.quests.add(questFactory.lost(foundQuest));
+            this.changeListener.questLost(foundQuest);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Lost for quests that carry no room (JOB_UNLOCK): match on the wanted id alone,
+     * first incomplete match wins, same as {@link #markRecipeAsComplete}.
+     */
+    public boolean markRecipeAsLostByKey(
+            @NotNull KEY recipeID
+    ) {
+        Optional<QUEST> found = this.quests.stream()
+                                           .filter(v -> recipeID.equals(v.getWantedId()) && !v.isComplete())
+                                           .findFirst();
+        if (found.isEmpty()) {
+            return false;
+        }
+        QUEST foundQuest = found.get();
         if (this.quests.remove(foundQuest)) {
             this.quests.add(questFactory.lost(foundQuest));
             this.changeListener.questLost(foundQuest);

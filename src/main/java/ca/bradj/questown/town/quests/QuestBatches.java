@@ -181,6 +181,7 @@ public class QuestBatches<
                     case LOOT -> e.addLootQuest(owner, q.getWantedId(), q.getCountNeeded());
                     case ROOM -> e.addNewQuest(owner, q.getWantedId());
                     case JOB_CHANGE -> e.addJobChangeQuest(q.getWantedId());
+                    case JOB_UNLOCK -> e.addJobUnlockQuest(q.getWantedId());
                     case CONCURRENT_JOBS -> e.addNewQuest(owner, q.getWantedId());
                     case UNKNOWN -> QT.QUESTS_LOGGER.error("Unexpected type: {}. Skipping duplicate check.", q.getType());
                 }

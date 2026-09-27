@@ -48,6 +48,11 @@ class QuestsTest {
             }
 
             @Override
+            public TestQuest newJobUnlockQuest(Integer id) {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+
+            @Override
             public TestQuest newItemQuest(
                     @Nullable UUID ownerId,
                     Integer itemId,

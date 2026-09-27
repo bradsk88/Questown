@@ -70,6 +70,11 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             }
 
             @Override
+            public MCQuest newJobUnlockQuest(ResourceLocation id) {
+                return MCQuest.jobUnlock(batchUUID, null, id);
+            }
+
+            @Override
             public MCQuest completed(
                     @Nullable MCRoom room,
                     MCQuest input

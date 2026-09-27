@@ -296,6 +296,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 yield ImmutableList.of(Compat.translatable("menu.quests.room_quest"));
             }
             case JOB_CHANGE -> renderJobQuestTooltip(recipe);
+            case JOB_UNLOCK -> renderJobUnlockTooltip(recipe);
             case CONCURRENT_JOBS -> ImmutableList.of(Compat.literal("Have all listed jobs active at the same time"));
             case UNKNOWN -> null;
         };
@@ -322,6 +323,14 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         return ImmutableList.of(
                 Compat.translatable("menu.questown.quests.job_quest_1", job.jobId()),
                 Compat.translatable("menu.questown.quests.job_quest_2", job.rootId()),
+                Compat.literal("Click for more info")
+        );
+    }
+
+    private static ImmutableList<Component> renderJobUnlockTooltip(UIQuest recipe) {
+        JobID job = JobID.fromRL(recipe.getWantedId());
+        return ImmutableList.of(
+                Compat.translatable("menu.questown.quests.job_unlock_1", job.rootId()),
                 Compat.literal("Click for more info")
         );
     }
@@ -516,6 +525,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private static @Nullable ResourceLocation lessonEntryForQuestType(Quest.QuestType type) {
         return switch (type) {
             case JOB_CHANGE -> new ResourceLocation(Questown.MODID, "entries/lesson_bop");
+            case JOB_UNLOCK -> new ResourceLocation(Questown.MODID, "entries/lesson_bop");
             case ROOM -> new ResourceLocation(Questown.MODID, "entries/lesson_room_recipes");
             case ITEM, LOOT -> new ResourceLocation(Questown.MODID, "entries/lesson_needs");
             case CONCURRENT_JOBS -> new ResourceLocation(Questown.MODID, "entries/014-supply-chains");

@@ -105,6 +105,9 @@ public class TownMessages {
         if (quest.getType() == Quest.QuestType.LOOT) {
             name = Compat.translatable("menu.quests.raw_food");
         }
+        if (quest.getType() == Quest.QuestType.JOB_UNLOCK) {
+            name = Compat.translatable("questown.menu.quests.job_unlock", JobID.fromRL(quest.getWantedId()).rootId());
+        }
         broadcastMessage(
                 "messages.town_flag.quest_completed",
                 name
@@ -118,6 +121,9 @@ public class TownMessages {
         }
         if (quest.getType() == Quest.QuestType.LOOT) {
             name = Compat.translatable("menu.quests.raw_food");
+        }
+        if (quest.getType() == Quest.QuestType.JOB_UNLOCK) {
+            name = Compat.translatable("questown.menu.quests.job_unlock", JobID.fromRL(quest.getWantedId()).rootId());
         }
         broadcastMessage(
                 "messages.town_flag.quest_lost",

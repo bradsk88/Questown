@@ -105,6 +105,16 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return q;
     }
 
+    public static MCQuest jobUnlock(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            ResourceLocation rootJobId
+    ) {
+        // Flavor text is set by the creator (TownQuests): it names the missing item and
+        // the stuck townie, which this type-specific factory does not know.
+        return new MCQuest(batchUUID, ownerId, rootJobId, null, QuestType.JOB_UNLOCK, 1);
+    }
+
     public static MCQuest concurrentJobs(
             UUID batchUUID,
             Collection<ResourceLocation> jobIds

@@ -7,6 +7,7 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.VillagerStatsData;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -180,6 +181,13 @@ public interface VillagerHolder {
     );
 
     boolean isUnlocked(JobID jobID);
+
+    /**
+     * Per-townie unlocked jobs. The JOB_UNLOCK quest checks the town-wide unlocked set to
+     * confirm a producer root is held by no one before suggesting the unlock, and to complete
+     * the quest once a root is unlocked by any townie.
+     */
+    ImmutableMap<VillagerUUID, ImmutableSet<JobID>> getUnlockedJobs();
 
     /**
      * Whether a specific townie has unlocked this work (per-villager). The town-wide
