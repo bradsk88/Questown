@@ -2,6 +2,7 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
+import ca.bradj.questown.loader.ItemHandler;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.BlockOfProgress;
 import ca.bradj.questown.blocks.FlagPhase;
@@ -80,11 +81,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.EntityEvent;
-import net.minecraftforge.items.IItemHandler;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
@@ -217,7 +214,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     int completedProceduralBatches = 0;
     private boolean flagpoleBuilt = false;
 
-    private final LazyOptional<IItemHandler> itemHandler = LazyOptional.of(() -> new TownFlagBOPItemHandler(this));
+    public ItemHandler bopItemHandler() {
+        return new TownFlagBOPItemHandler(this);
+    }
+
     boolean givenBonusFood;
 
     // Helper-chicken onboarding arc state (U1). Storage only — logic lives in ChickenArcController (U3+).
@@ -247,13 +247,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private transient boolean chickenObservedFlagUiOpen = false;
     private transient boolean chickenObservedSeedsGiven = false;
 
-    @Override
-    public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap) {
-        if (!ForgeCapabilities.ITEM_HANDLER.equals(cap)) {
-            return super.getCapability(cap);
-        }
-        return this.itemHandler.cast();
-    }
 
     public static void logStoredData(
             TownFlagBlockEntity entity,

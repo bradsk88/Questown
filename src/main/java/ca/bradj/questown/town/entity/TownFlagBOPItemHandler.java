@@ -9,10 +9,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.IItemHandler;
+import ca.bradj.questown.loader.ItemHandler;
 import org.jetbrains.annotations.NotNull;
 
-public class TownFlagBOPItemHandler implements IItemHandler {
+public class TownFlagBOPItemHandler implements ItemHandler {
 
     /** The flag holds at most this many Blocks of Progress; a full flag silently drops further ones. */
     public static final int CAP = 64;
@@ -114,5 +114,14 @@ public class TownFlagBOPItemHandler implements IItemHandler {
             return false;
         }
         return itemStack.is(ItemsInit.BLOCK_OF_PROGRESS.get());
+    }
+    @Override
+    public void setStackInSlot(int slot, @NotNull ItemStack stack) {
+        throw new UnsupportedOperationException("BOP handler is deposit-only; setStackInSlot is not supported.");
+    }
+
+    @Override
+    public void setChanged() {
+        // No-op: the flag owns the bopStacks list and marks itself changed on deposit/eject.
     }
 }

@@ -39,8 +39,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.IItemHandler;
+import ca.bradj.questown.loader.ItemHandler;
+import ca.bradj.questown.loader.Loader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -713,11 +713,11 @@ public class TownFlagState {
                 QT.FLAG_LOGGER.error("Entity is null at {}, but was expected to be a container", bp);
                 continue;
             }
-            LazyOptional<IItemHandler> cap = entity.getCapability(Compat.itemHandler());
-            if (!cap.isPresent()) {
+            Optional<ItemHandler> opt = Loader.handlerOf(entity);
+            if (opt.isEmpty()) {
                 continue;
             }
-            int newValue = determineValue(cap.resolve().get());
+            int newValue = determineValue(opt.get());
             if (listenedBlocks.containsKey(bp)) {
                 Integer oldValue = listenedBlocks.get(bp);
                 if (!oldValue.equals(newValue)) {
@@ -734,7 +734,7 @@ public class TownFlagState {
         return containersChanged;
     }
 
-    private static int determineValue(IItemHandler cap) {
+    private static int determineValue(ItemHandler cap) {
         ArrayList<String> itemNames = new ArrayList<>(cap.getSlots());
         for (int i = 0; i < cap.getSlots(); i++) {
             itemNames.add(cap.getStackInSlot(i).toString());
