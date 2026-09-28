@@ -3,13 +3,12 @@ package ca.bradj.questown.core.network;
 import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.jobs.JobID;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
+import ca.bradj.questown.loader.Channel;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 
 import java.util.Collection;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public final class OpenVillagerAdvancementsMenuMessage {
     private final BlockPos flagPos;
@@ -37,7 +36,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
 
     public static void encode(
             OpenVillagerAdvancementsMenuMessage msg,
-            FriendlyByteBuf buffer
+            RegistryFriendlyByteBuf buffer
     ) {
         buffer.writeInt(msg.flagPos.getX());
         buffer.writeInt(msg.flagPos.getY());
@@ -49,7 +48,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
         buffer.writeBoolean(msg.showBlockOfProgressTab);
     }
 
-    public static OpenVillagerAdvancementsMenuMessage decode(FriendlyByteBuf buffer) {
+    public static OpenVillagerAdvancementsMenuMessage decode(RegistryFriendlyByteBuf buffer) {
         return new OpenVillagerAdvancementsMenuMessage(
                 new BlockPos(buffer.readInt(), buffer.readInt(), buffer.readInt()),
                 buffer.readUUID(),
@@ -61,7 +60,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
         ToClientMessage.handle(
                 ctx,

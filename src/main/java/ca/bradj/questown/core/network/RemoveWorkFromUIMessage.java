@@ -5,12 +5,11 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import ca.bradj.questown.loader.Channel;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 public record RemoveWorkFromUIMessage(
         WorkRequest requested,
@@ -19,7 +18,7 @@ public record RemoveWorkFromUIMessage(
 
     public static void encode(
             RemoveWorkFromUIMessage msg,
-            FriendlyByteBuf buffer
+            RegistryFriendlyByteBuf buffer
     ) {
         msg.requested.toNetwork(buffer);
         buffer.writeInt(msg.flagX);
@@ -28,7 +27,7 @@ public record RemoveWorkFromUIMessage(
 
     }
 
-    public static RemoveWorkFromUIMessage decode(FriendlyByteBuf buffer) {
+    public static RemoveWorkFromUIMessage decode(RegistryFriendlyByteBuf buffer) {
         WorkRequest requested = WorkRequest.fromNetwork(buffer);
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();
@@ -38,11 +37,11 @@ public record RemoveWorkFromUIMessage(
 
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
             // Do stuff
             Optional<TownFlagBlockEntity> flag = sender.level()
                                                        .getBlockEntity(
@@ -56,7 +55,6 @@ public record RemoveWorkFromUIMessage(
             flag.get().getWorkHandle().removeWorkRequest(requested);
             flag.get().openJobsMenu(sender, false);
         });
-        ctx.get().setPacketHandled(true);
 
     }
 }

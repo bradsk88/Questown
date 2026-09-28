@@ -52,7 +52,7 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
         super.init();
         this.unlockButton = this.addRenderableWidget(Button.builder(
                 Compat.translatable("menu.block_of_progress.take"), (p_96776_) -> {
-            QuestownNetwork.CHANNEL.sendToServer(new GiveBOPMessage(menu.getFlagInfo().flagPos()));
+            QuestownNetwork.sendToServer(new GiveBOPMessage(menu.getFlagInfo().flagPos()));
             Minecraft.getInstance().setScreen(null);
         }).bounds(0, 0, backgroundWidth - 8, 20).build());
     }
@@ -87,7 +87,7 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
     ) {
         unlockButton.setX(buttonX + 4);
         unlockButton.setY(buttonY);
-        this.renderBackground(gui);
+        this.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;

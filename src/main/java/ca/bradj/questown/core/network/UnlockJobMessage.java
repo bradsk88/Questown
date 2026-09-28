@@ -11,7 +11,8 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import ca.bradj.questown.loader.Channel;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,18 +21,16 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraftforge.network.NetworkEvent;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, boolean confirmFirst) {
 
     public static void encode(
             UnlockJobMessage msg,
-            FriendlyByteBuf buffer
+            RegistryFriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos);
         buffer.writeUUID(msg.villagerUUID);
@@ -39,7 +38,7 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
         buffer.writeBoolean(msg.confirmFirst);
     }
 
-    public static UnlockJobMessage decode(FriendlyByteBuf buffer) {
+    public static UnlockJobMessage decode(RegistryFriendlyByteBuf buffer) {
         BlockPos flagPos = buffer.readBlockPos();
         UUID uuid = buffer.readUUID();
         JobID jobId = Jobs.getIdFromNetwork(buffer);
@@ -47,13 +46,13 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
             // Do stuff
-            Optional<TownFlagBlockEntity> flag = sender.level().getBlockEntity(flagPos, TilesInit.TOWN_FLAG.get());
+            Optional<TownFlagBlockEntity> flag = Optional.ofNullable(sender.level().getBlockEntity(flagPos)).filter(TownFlagBlockEntity.class::isInstance).map(TownFlagBlockEntity.class::cast);
             if (flag.isEmpty()) {
                 QT.GUI_LOGGER.error("No flag at position {}. Quest will not be removed.", flagPos);
                 return;
@@ -90,7 +89,6 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
             AdvancementsInit.TUTORIAL_TRIGGER.trigger(sender, TutorialTrigger.Triggers.FirstBopSpend);
             unlockJob(flag, sender);
         });
-        ctx.get().setPacketHandled(true);
 
     }
 

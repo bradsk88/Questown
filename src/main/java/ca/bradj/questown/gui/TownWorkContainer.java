@@ -97,7 +97,7 @@ public class TownWorkContainer extends AbstractContainerMenu {
     }
 
     public void sendRemoveRequest(UIWork jobPosting) {
-        QuestownNetwork.CHANNEL.sendToServer(
+        QuestownNetwork.sendToServer(
                 new RemoveWorkFromUIMessage(jobPosting.getResultWanted(), flag.getX(), flag.getY(), flag.getZ())
         );
     }

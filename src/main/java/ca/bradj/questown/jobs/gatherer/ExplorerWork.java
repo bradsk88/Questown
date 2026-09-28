@@ -147,7 +147,7 @@ public class ExplorerWork {
                         NewLeaverWork.standardRules()
                 ),
                 new SoundInfo(
-                        SoundEvents.ARMOR_EQUIP_LEATHER.getLocation(),
+                        SoundEvents.ARMOR_EQUIP_LEATHER.value().getLocation(),
                         100,
                         100
                 )

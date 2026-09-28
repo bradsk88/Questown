@@ -6,9 +6,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
-import net.minecraftforge.registries.ForgeRegistries;
+
 
 import ca.bradj.questown.mc.Compat;
 
@@ -128,7 +129,7 @@ public final class TownieNames {
      */
     public static Map<String, String> generatePool() {
         Map<String, String> pool = new LinkedHashMap<>();
-        for (Item item : ForgeRegistries.ITEMS.getValues()) {
+        for (Item item : BuiltInRegistries.ITEM.stream().toList()) {
             ResourceLocation id = Compat.getItemId(item);
             if (id == null || !DEFAULT_NAMESPACE.equals(id.getNamespace())) {
                 continue;

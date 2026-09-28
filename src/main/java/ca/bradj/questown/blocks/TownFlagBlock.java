@@ -19,6 +19,8 @@ import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -60,6 +62,15 @@ import java.util.function.Supplier;
 
 
 public class TownFlagBlock extends BaseEntityBlock {
+
+    public static final com.mojang.serialization.MapCodec<TownFlagBlock> CODEC =
+            com.mojang.serialization.MapCodec.unit(TownFlagBlock::new);
+
+    @Override
+    public com.mojang.serialization.MapCodec<TownFlagBlock> codec() {
+        return CODEC;
+    }
+
 
     public static final String ITEM_ID = "flag_base";
     public static final Item.Properties ITEM_PROPS = new Item.Properties();
@@ -110,62 +121,71 @@ public class TownFlagBlock extends BaseEntityBlock {
     }
 
     public static @Nullable BlockPos GetParentPosFromNBT(ItemStack itemInHand) {
-        if (itemInHand.getTag() == null) {
+        CustomData data = customData(itemInHand);
+        if (data.isEmpty()) {
             QT.ITEM_LOGGER.error("Missing NBT tag on {}", itemInHand);
             return null;
         }
         int x, y, z;
         String xTag = String.format("%s.parent_pos_x", Questown.MODID);
-        if (!itemInHand.getTag().contains(xTag)) {
-            QT.ITEM_LOGGER.error("Missing X tag from {}", itemInHand.getTag());
+        if (!data.contains(xTag)) {
+            QT.ITEM_LOGGER.error("Missing X tag from {}", data);
             return null;
         }
         String yTag = String.format("%s.parent_pos_y", Questown.MODID);
-        if (!itemInHand.getTag().contains(yTag)) {
-            QT.ITEM_LOGGER.error("Missing Y tag from {}", itemInHand.getTag());
+        if (!data.contains(yTag)) {
+            QT.ITEM_LOGGER.error("Missing Y tag from {}", data);
             return null;
         }
         String zTag = String.format("%s.parent_pos_z", Questown.MODID);
-        if (!itemInHand.getTag().contains(zTag)) {
-            QT.ITEM_LOGGER.error("Missing Z tag from {}", itemInHand.getTag());
+        if (!data.contains(zTag)) {
+            QT.ITEM_LOGGER.error("Missing Z tag from {}", data);
             return null;
         }
-        x = itemInHand.getOrCreateTag().getInt(xTag);
-        y = itemInHand.getOrCreateTag().getInt(yTag);
-        z = itemInHand.getOrCreateTag().getInt(zTag);
+        x = data.copyTag().getInt(xTag);
+        y = data.copyTag().getInt(yTag);
+        z = data.copyTag().getInt(zTag);
 
 
         BlockPos bp = new BlockPos(x, y, z);
         return bp;
     }
 
+    private static CustomData customData(ItemStack stack) {
+        return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
+    }
+
     public static void CopyParentFromNBT(
             ItemStack input,
             ItemStack output
     ) {
-        if (input.getTag() == null) {
-            QT.ITEM_LOGGER.error("No parent stored on item: {}", input.getTag());
+        CustomData in = customData(input);
+        if (in.isEmpty()) {
+            QT.ITEM_LOGGER.error("No parent stored on item: {}", in);
             return;
         }
         int x, y, z;
         String xTag = String.format("%s.parent_pos_x", Questown.MODID);
-        if (!input.getTag().contains(xTag)) {
-            QT.ITEM_LOGGER.error("No parent X coord stored on item: {}", input.getTag());
+        if (!in.contains(xTag)) {
+            QT.ITEM_LOGGER.error("No parent X coord stored on item: {}", in);
             return;
         }
         String yTag = String.format("%s.parent_pos_y", Questown.MODID);
-        if (!input.getTag().contains(yTag)) {
-            QT.ITEM_LOGGER.error("No parent Y coord stored on item: {}", input.getTag());
+        if (!in.contains(yTag)) {
+            QT.ITEM_LOGGER.error("No parent Y coord stored on item: {}", in);
             return;
         }
         String zTag = String.format("%s.parent_pos_z", Questown.MODID);
-        if (!input.getTag().contains(zTag)) {
-            QT.ITEM_LOGGER.error("No parent Z coord stored on item: {}", input.getTag());
+        if (!in.contains(zTag)) {
+            QT.ITEM_LOGGER.error("No parent Z coord stored on item: {}", in);
             return;
         }
-        output.getOrCreateTag().putInt(xTag, input.getTag().getInt(xTag));
-        output.getOrCreateTag().putInt(yTag, input.getTag().getInt(yTag));
-        output.getOrCreateTag().putInt(zTag, input.getTag().getInt(zTag));
+        CompoundTag inTag = in.copyTag();
+        CustomData.update(DataComponents.CUSTOM_DATA, output, out -> {
+            out.putInt(xTag, inTag.getInt(xTag));
+            out.putInt(yTag, inTag.getInt(yTag));
+            out.putInt(zTag, inTag.getInt(zTag));
+        });
     }
 
     @Nullable
@@ -274,11 +294,11 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
 
         if (ItemsInit.HOSPITAL_BED.get().equals(itemInHand.getItem())) {
-            converted = GetFlagInputFromItemNBT(itemInHand);
+            converted = GetFlagInputFromItemNBT(level.registryAccess(), itemInHand);
         }
 
         if (converted != null) {
-            StoreFlagInputOnOutputNBT(itemInHand, converted);
+            StoreFlagInputOnOutputNBT(level.registryAccess(), itemInHand, converted);
             player.setItemInHand(hand, converted);
             QT.FLAG_LOGGER.debug(
                     "{} created at {}",
@@ -313,7 +333,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         // Pre-select BOP tab if the player hasn't viewed it yet
         ResourceLocation advId = new ResourceLocation(Questown.MODID, "first_bop_view");
-        net.minecraft.advancements.Advancement adv = player.getServer().getAdvancements().getAdvancement(advId);
+        net.minecraft.advancements.AdvancementHolder adv = player.getServer().getAdvancements().get(advId);
         if (adv == null) {
             return true;
         }
@@ -343,7 +363,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             ItemStack itemInHand,
             BlockPos p
     ) {
-        getParentData(p).forEach((key, value) -> itemInHand.getOrCreateTag().putInt(key, value));
+        getParentData(p).forEach((key, value) -> CustomData.update(DataComponents.CUSTOM_DATA, itemInHand, tag -> tag.putInt(key, value)));
     }
 
     public static ImmutableMap<String, Integer> getParentData(
@@ -357,22 +377,24 @@ public class TownFlagBlock extends BaseEntityBlock {
     }
 
     public static void StoreFlagInputOnOutputNBT(
+            net.minecraft.core.HolderLookup.Provider ctx,
             ItemStack input,
             ItemStack output
     ) {
         String key = String.format("%s.flag_input_itemstack", Questown.MODID);
-        output.getOrCreateTag().put(key, input.serializeNBT());
+        CustomData.update(DataComponents.CUSTOM_DATA, output, tag -> tag.put(key, input.save(ctx)));
     }
 
     public static @Nullable ItemStack GetFlagInputFromItemNBT(
+            net.minecraft.core.HolderLookup.Provider ctx,
             ItemStack item
     ) {
         String key = String.format("%s.flag_input_itemstack", Questown.MODID);
-        CompoundTag serialized = item.getOrCreateTag().getCompound(key);
+        CompoundTag serialized = item.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getCompound(key);
         if (serialized.isEmpty()) {
             return null;
         }
-        return ItemStack.of(serialized);
+        return ItemStack.parse(ctx, serialized).orElse(null);
     }
 
     @Override
@@ -436,23 +458,47 @@ public class TownFlagBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(
-            BlockState p_60503_,
+    public InteractionResult useWithoutItem(
+            BlockState blockState,
+            Level level,
+            BlockPos pos,
+            Player player,
+            BlockHitResult hitResult
+    ) {
+        InteractionHand hand = player.getOffhandItem().isEmpty() ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+        return useFlag(level, pos, player, hand);
+    }
+
+    @Override
+    public net.minecraft.world.ItemInteractionResult useItemOn(
+            ItemStack stack,
+            BlockState blockState,
             Level level,
             BlockPos pos,
             Player player,
             InteractionHand hand,
-            BlockHitResult p_60508_
+            BlockHitResult hitResult
+    ) {
+        InteractionResult r = useFlag(level, pos, player, hand);
+        if (r == InteractionResult.PASS) {
+            return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+        return net.minecraft.world.ItemInteractionResult.sidedSuccess(true);
+    }
+
+    private InteractionResult useFlag(
+            Level level,
+            BlockPos pos,
+            Player player,
+            InteractionHand hand
     ) {
         if (!(level instanceof ServerLevel sl)) {
             return InteractionResult.sidedSuccess(true);
         }
 
-        Optional<TownFlagBlockEntity> oEntity = level.getBlockEntity(pos, TilesInit.TOWN_FLAG.get());
-        if (oEntity.isEmpty()) {
+        if (!(level.getBlockEntity(pos) instanceof TownFlagBlockEntity entity)) {
             return InteractionResult.sidedSuccess(true);
         }
-        TownFlagBlockEntity entity = oEntity.get();
 
         if (entity.isDeedAvailable()) {
             entity.collectDeed((ServerPlayer) player);
@@ -464,7 +510,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             return sidedSuccess;
         }
 
-        if (oEntity.get().isInitialized()) {
+        if (entity.isInitialized()) {
             // A full flag opens the BOP menu unconditionally (not gated on first_bop_view), so the
             // warning shows even once the player has seen the tab.
             if (entity.isBopFull() || shouldPreSelectBopTab(entity, (ServerPlayer) player)) {
@@ -475,11 +521,11 @@ public class TownFlagBlock extends BaseEntityBlock {
                         entity.getBlocksOfProgress()
                 );
             } else {
-                oEntity.get().getVillagerHandle().showMultiStatusUI((ServerPlayer) player);
+                entity.getVillagerHandle().showMultiStatusUI((ServerPlayer) player);
             }
         } else {
-            if (!oEntity.get().isInitializing()) {
-                oEntity.get().initializeFreshFlag(true);
+            if (!entity.isInitializing()) {
+                entity.initializeFreshFlag(true);
             }
             player.displayClientMessage(Compat.translatable("messages.town_flag.loading"), false);
         }

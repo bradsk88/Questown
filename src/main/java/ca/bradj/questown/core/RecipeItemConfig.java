@@ -183,7 +183,16 @@ public class RecipeItemConfig {
         add(assumePresent(Items.LANTERN), LANTERN);
         add(String.format("#%s", TagsInit.Items.LANTERNS.location()), LANTERN);
         add(assumePresent(Items.CHEST), CHEST);
-        add(String.format("#%s", ItemTags.CHESTS.location()), CHEST);
+        add(
+                String.format(
+                        "#%s",
+                        net.minecraft.tags.TagKey.create(
+                                net.minecraft.core.registries.Registries.ITEM,
+                                new net.minecraft.resources.ResourceLocation("minecraft:chests")
+                        ).location()
+                ),
+                CHEST
+        );
         add(assumePresent(Items.FURNACE), FURNACE);
         add(String.format("#%s", ItemTags.SIGNS.location()), SIGN);
         add(assumePresent(Items.BOOKSHELF), BOOKSHELF);
@@ -195,20 +204,20 @@ public class RecipeItemConfig {
         add(SoupPotBlock.ITEM_ID, BIG_SOUP_POT);
         add(assumePresent(Items.COMPOSTER), COMPOSTER);
         // TODO: Bring back hunger/dining and reduce this cost to represent plate recipe
-        add(ItemsInit.PLATE_BLOCK.getId(), Integer.MAX_VALUE);
+        add(ItemsInit.PLATE_BLOCK.id(), Integer.MAX_VALUE);
         add(String.format("#%s", TagsInit.Items.SOUP_POTS.location()), SMALL_SOUP_POT);
         // TODO: Add a crafter job for building bowl racks (should probably upgrade job board so we can make "one time" requests)
-        add(ItemsInit.BOWL_RACK_BLOCK.getId(), Integer.MAX_VALUE);
-        add(ItemsInit.ORE_PROCESSING_BLOCK.getId(), ORE_PROCESSING_BLOCK);
-        add(ItemsInit.BREAD_OVEN_BLOCK.getId(), BREAD_OVEN_BLOCK);
-        add(ItemsInit.FOOD_DISPLAY_BLOCK.getId(), FOOD_DISPLAY);
+        add(ItemsInit.BOWL_RACK_BLOCK.id(), Integer.MAX_VALUE);
+        add(ItemsInit.ORE_PROCESSING_BLOCK.id(), ORE_PROCESSING_BLOCK);
+        add(ItemsInit.BREAD_OVEN_BLOCK.id(), BREAD_OVEN_BLOCK);
+        add(ItemsInit.FOOD_DISPLAY_BLOCK.id(), FOOD_DISPLAY);
         add(String.format("#%s", TagsInit.Items.JOB_BOARD_INPUTS.location()), Integer.MAX_VALUE); // Never recommend job board
 //        add(ForgeRegistries.ITEMS.getKey(ItemsInit.HOSPITAL_BED.get()).toString(), HOSPITAL_BED);
     }
 
     @SuppressWarnings("DataFlowIssue")
     private static @NotNull ResourceLocation assumePresent(Item item) {
-        return net.minecraft.core.Registry.BuiltInRegistries.ITEM.getKey(item);
+        return net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
     }
     private static void add(
             ResourceLocation itemOrTagKey,

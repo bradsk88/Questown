@@ -17,7 +17,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
@@ -83,15 +82,15 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
         ResourceLocation tex = ServerJobsRegistry.getTexture(jobId, newStatus);
         @NotNull ImmutableList<Component> text = ServerJobsRegistry.getStatusText(jobId, newStatus);
         if (newStatus instanceof ProductionStatus ps) {
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.PLAYER.with(() -> sp),
+            QuestownNetwork.sendToPlayer(
+                    sp,
                     new SyncStatusArtMessage(jobId, ps, tex)
             );
             if (text.isEmpty()) {
                 return;
             }
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.PLAYER.with(() -> sp),
+            QuestownNetwork.sendToPlayer(
+                    sp,
                     new SyncStatusTextMessage(ps, new StatusPacket(jobId, text, tex))
             );
         }
@@ -146,12 +145,11 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
             ServerPlayer sender
     ) {
         JobWantedIngredientsMessage msg = buildMessage(e);
-        PacketDistributor.PacketTarget tgt = PacketDistributor.PLAYER.with(() -> sender);
-        Consumer<ImmutableList<Ingredient>> listener = ingr -> QuestownNetwork.CHANNEL.send(tgt, msg);
+        Consumer<ImmutableList<Ingredient>> listener = ingr -> QuestownNetwork.sendToPlayer(sender, msg);
 
         e.addWantedIngredientsListener(listener);
         this.closers.add(() -> e.removeWantedIngredientsListener(listener));
-        QuestownNetwork.CHANNEL.send(tgt, buildMessage(e));
+        QuestownNetwork.sendToPlayer(sender, buildMessage(e));
     }
 
     private static @NotNull JobWantedIngredientsMessage buildMessage(

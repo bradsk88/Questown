@@ -122,7 +122,7 @@ public class VillagerTabs extends Tabs implements SubUI {
             UUID gathererId,
             String type
     ) {
-        Runnable fn = () -> QuestownNetwork.CHANNEL.sendToServer(new OpenVillagerMenuMessage(
+        Runnable fn = () -> QuestownNetwork.sendToServer(new OpenVillagerMenuMessage(
                 fp.getX(),
                 fp.getY(),
                 fp.getZ(),

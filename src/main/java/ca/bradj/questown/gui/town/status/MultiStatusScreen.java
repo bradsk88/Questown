@@ -62,7 +62,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - super.backgroundHeight()) / 2;
-        super.renderBackground(stack);
+        super.renderBackground(stack, mouseX, mouseY, partialTicks);
         super.render(stack, mouseX, mouseY, partialTicks);
         tabs.draw(new RenderContext(Compat.itemRenderer(), stack), bgX, bgY);
     }
@@ -221,7 +221,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             int x = getStatusX(coords);
             int y = getStatusY(v.coords());
             if (UtilClean.isCoordInBox(p_97748_, p_97749_, x, y, 32, 32)) {
-                QuestownNetwork.CHANNEL.sendToServer(new OpenJobMessage(
+                QuestownNetwork.sendToServer(new OpenJobMessage(
                         menu.getFlagInfo().flagPos(), syncedData.getJob(v.data())
                 ));
                 return true;

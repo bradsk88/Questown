@@ -151,6 +151,16 @@ public class Compat {
         return e.getPersistentData();
     }
 
+    public static void writeIngredient(net.minecraft.network.FriendlyByteBuf buf, net.minecraft.world.item.crafting.Ingredient i) {
+        net.minecraft.world.item.crafting.Ingredient.CONTENTS_STREAM_CODEC.encode(
+                (net.minecraft.network.RegistryFriendlyByteBuf) buf, i);
+    }
+
+    public static net.minecraft.world.item.crafting.Ingredient readIngredient(net.minecraft.network.FriendlyByteBuf buf) {
+        return net.minecraft.world.item.crafting.Ingredient.CONTENTS_STREAM_CODEC.decode(
+                (net.minecraft.network.RegistryFriendlyByteBuf) buf);
+    }
+
     public static void openScreen(
             ServerPlayer sender,
             MenuProvider menuProvider,
@@ -178,10 +188,10 @@ public class Compat {
             ItemStack inserted,
             int targetSize
     ) {
-        if (inserted.getOrCreateTag().isEmpty()) {
+        if (!inserted.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)) {
             for (int i = 0; i < iItemHandler.getSlots(); i++) {
                 ItemStack stackInSlot = iItemHandler.getStackInSlot(i);
-                if (stackInSlot.getOrCreateTag().isEmpty() && ItemStack.isSameItem(stackInSlot, inserted)) {
+                if (!stackInSlot.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA) && ItemStack.isSameItem(stackInSlot, inserted)) {
                     if (stackInSlot.getCount() < targetSize) {
                         iItemHandler.insertItem(i, inserted, false);
                         return true;

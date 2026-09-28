@@ -2,13 +2,13 @@ package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.gui.villager.advancements.VillagerAdvancements;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
-import java.util.function.Supplier;
 
 public record SyncVillagerAdvancementsMessage(
         Map<JobID, @Nullable JobID> parents,
@@ -17,13 +17,13 @@ public record SyncVillagerAdvancementsMessage(
 
     public static void encode(
             SyncVillagerAdvancementsMessage msg,
-            FriendlyByteBuf buffer
+            RegistryFriendlyByteBuf buffer
     ) {
         buffer.writeMap(msg.parents, NetworkCompat::toNetwork, NetworkCompat::toNetworkNullable);
         buffer.writeMap(msg.icons, NetworkCompat::toNetwork, FriendlyByteBuf::writeResourceLocation);
     }
 
-    public static SyncVillagerAdvancementsMessage decode(FriendlyByteBuf buffer) {
+    public static SyncVillagerAdvancementsMessage decode(RegistryFriendlyByteBuf buffer) {
         Map<JobID, @Nullable JobID> jobs = buffer.readMap(
                 NetworkCompat::fromNetworkJobID,
                 NetworkCompat::fromNetworkJobIDNullable
@@ -38,7 +38,7 @@ public record SyncVillagerAdvancementsMessage(
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
         ToClientMessage.handle(ctx, this);
     }

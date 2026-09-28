@@ -25,7 +25,7 @@ public class TownFenceGateItem extends Item {
     @Override
     public InteractionResult useOn(net.minecraft.world.item.context.UseOnContext ctx) {
         @Nullable ItemStack input = TownFlagBlock.GetFlagInputFromItemNBT(
-                ctx.getItemInHand());
+                ctx.getLevel().registryAccess(), ctx.getItemInHand());
         if (input == null) {
             QT.BLOCK_LOGGER.error("{} is missing flag input", Loader.itemIdOf(ctx.getItemInHand().getItem()));
             return InteractionResult.FAIL;

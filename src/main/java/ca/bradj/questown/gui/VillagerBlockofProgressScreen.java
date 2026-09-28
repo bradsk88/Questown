@@ -67,7 +67,7 @@ public class VillagerBlockofProgressScreen extends AbstractContainerScreen<Villa
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(gui);
+        this.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;

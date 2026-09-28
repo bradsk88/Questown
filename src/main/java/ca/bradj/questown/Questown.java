@@ -9,26 +9,23 @@ import ca.bradj.questown.core.RecipeItemConfig;
 import ca.bradj.questown.core.init.EntitiesInit;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.init.TilesInit;
+import ca.bradj.questown.gui.QuestsScreen;
+import ca.bradj.questown.gui.QuestRemoveConfirmScreen;
+import ca.bradj.questown.gui.WorkScreen;
 import ca.bradj.questown.gui.CreateStockRequestScreen;
+import ca.bradj.questown.gui.VillagerStatsScreen;
+import ca.bradj.questown.gui.VillagerEconomicsScreen;
+import ca.bradj.questown.gui.TownEconomicsScreen;
+import ca.bradj.questown.gui.JobUnlockConfirmScreen;
 import ca.bradj.questown.gui.InventoryAndStatusScreen;
 import ca.bradj.questown.gui.JobChangeConfirmScreen;
-import ca.bradj.questown.gui.JobUnlockConfirmScreen;
-import ca.bradj.questown.gui.QuestRemoveConfirmScreen;
-import ca.bradj.questown.gui.QuestsScreen;
-import ca.bradj.questown.gui.TownEconomicsScreen;
-import ca.bradj.questown.gui.TownBlockofProgressScreen;
 import ca.bradj.questown.gui.VillagerBlockofProgressScreen;
-import ca.bradj.questown.gui.VillagerEconomicsScreen;
-import ca.bradj.questown.gui.VillagerStatsScreen;
-import ca.bradj.questown.gui.WorkScreen;
-import ca.bradj.questown.gui.TownQuestsContainer;
-import ca.bradj.questown.gui.VillagerQuestsContainer;
+import ca.bradj.questown.gui.TownBlockofProgressScreen;
 import ca.bradj.questown.gui.town.status.MultiStatusScreen;
 import ca.bradj.questown.loader.Loader;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.helperchicken.HelperChickenRenderer;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
-import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.resources.ResourceLocation;
@@ -80,24 +77,6 @@ public class Questown {
         Compat.setCutoutRenderType(ca.bradj.questown.core.init.BlocksInit.FALSE_DOOR_BLOCK.get());
         Compat.setCutoutRenderType(ca.bradj.questown.core.init.BlocksInit.FALSE_WALL_BLOCK.get());
 
-        MenuScreens.<TownQuestsContainer, QuestsScreen<TownQuestsContainer>>register(
-                MenuTypesInit.TOWN_QUESTS.get(), QuestsScreen::forTown);
-        MenuScreens.<VillagerQuestsContainer, QuestsScreen<VillagerQuestsContainer>>register(
-                MenuTypesInit.VILLAGER_QUESTS.get(), QuestsScreen::forVillager);
-        MenuScreens.register(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), QuestRemoveConfirmScreen::new);
-        MenuScreens.register(MenuTypesInit.TOWN_WORK.get(), WorkScreen::new);
-        MenuScreens.register(MenuTypesInit.CREATE_STOCK_REQUEST.get(), CreateStockRequestScreen::new);
-        MenuScreens.register(MenuTypesInit.GATHERER_INVENTORY.get(), InventoryAndStatusScreen::new);
-        MenuScreens.register(MenuTypesInit.MULTI_VILLAGER.get(), MultiStatusScreen::new);
-        MenuScreens.register(MenuTypesInit.VILLAGER_STATS.get(), VillagerStatsScreen::new);
-        MenuScreens.register(MenuTypesInit.VILLAGER_ECONOMICS.get(), VillagerEconomicsScreen::new);
-        MenuScreens.register(MenuTypesInit.TOWN_ECONOMICS.get(), TownEconomicsScreen::new);
-        MenuScreens.register(MenuTypesInit.CONFIRM_JOB_UPGRADE.get(), JobUnlockConfirmScreen::new);
-        MenuScreens.register(MenuTypesInit.CONFIRM_JOB_CHANGE.get(), JobChangeConfirmScreen::new);
-        MenuScreens.register(MenuTypesInit.VILLAGER_BLOCKS_OF_PROGRESS.get(), VillagerBlockofProgressScreen::new);
-        MenuScreens.register(MenuTypesInit.TOWN_BLOCKS_OF_PROGRESS.get(), TownBlockofProgressScreen::new);
-        MenuScreens.register(MenuTypesInit.FLAG_CRAFTING.get(), ca.bradj.questown.gui.FlagCraftingScreen::new);
-
         EntityRenderers.register(EntitiesInit.VISITOR.get(), VisitorMobRenderer::new);
         EntityRenderers.register(EntitiesInit.HELPER_CHICKEN.get(), HelperChickenRenderer::new);
 
@@ -106,5 +85,28 @@ public class Questown {
         BlockEntityRenderers.register(TilesInit.AXE_RACK.get(), AxeRackBlockEntityRenderer::new);
         BlockEntityRenderers.register(TilesInit.HOSPITAL_BED.get(), HospitalBedEntityRenderer::new);
         BlockEntityRenderers.register(TilesInit.TOWN_FLAG.get(), ca.bradj.questown.blocks.entity.renderer.TownFlagDeedRenderer::new);
+    }
+
+    /**
+     * Menu-screen captures, invoked from the per-loader {@code @Mod} constructor on the client.
+     * NeoForge fires its menu-screen registration event at client init, before any mod-bus setup
+     * event, so the captures must exist before then: see {@code NeoLoader#onRegisterMenuScreens}.
+     */
+    public static void registerScreens() {
+        Loader.registerScreen(MenuTypesInit.TOWN_QUESTS.get(), (menu, inv, title) -> QuestsScreen.forTown(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.VILLAGER_QUESTS.get(), (menu, inv, title) -> QuestsScreen.forVillager(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), (menu, inv, title) -> new QuestRemoveConfirmScreen(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.TOWN_WORK.get(), (menu, inv, title) -> new WorkScreen(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.CREATE_STOCK_REQUEST.get(), (menu, inv, title) -> new CreateStockRequestScreen(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.GATHERER_INVENTORY.get(), (menu, inv, title) -> new InventoryAndStatusScreen(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.MULTI_VILLAGER.get(), (menu, inv, title) -> new MultiStatusScreen(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.VILLAGER_STATS.get(), (menu, inv, title) -> new VillagerStatsScreen(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.VILLAGER_ECONOMICS.get(), (menu, inv, title) -> new VillagerEconomicsScreen(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.TOWN_ECONOMICS.get(), (menu, inv, title) -> new TownEconomicsScreen(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.CONFIRM_JOB_UPGRADE.get(), (menu, inv, title) -> new JobUnlockConfirmScreen(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.CONFIRM_JOB_CHANGE.get(), (menu, inv, title) -> new JobChangeConfirmScreen(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.VILLAGER_BLOCKS_OF_PROGRESS.get(), (menu, inv, title) -> new VillagerBlockofProgressScreen(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.TOWN_BLOCKS_OF_PROGRESS.get(), (menu, inv, title) -> new TownBlockofProgressScreen(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.FLAG_CRAFTING.get(), (menu, inv, title) -> new ca.bradj.questown.gui.FlagCraftingScreen(menu, inv, title));
     }
 }

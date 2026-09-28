@@ -139,7 +139,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(gui);
+        this.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
 
         int position = 0;

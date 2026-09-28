@@ -9,7 +9,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.network.PacketDistributor;
 
 public class PlateBlockEntity extends BlockEntity implements ItemAccepting<MCTownItem> {
     private ItemStack food = Items.AIR.getDefaultInstance();
@@ -35,11 +34,9 @@ public class PlateBlockEntity extends BlockEntity implements ItemAccepting<MCTow
         if (level.isClientSide()) {
             return false;
         }
-        QuestownNetwork.CHANNEL.send(
-                PacketDistributor.ALL.noArg(), new SyncBlockItemMessage(
-                        getBlockPos(), this.food, index
-                )
-        );
+        QuestownNetwork.sendToAll(level, new SyncBlockItemMessage(
+                getBlockPos(), this.food, index
+        ));
         return true;
     }
 

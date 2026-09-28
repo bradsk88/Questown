@@ -4,29 +4,28 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import ca.bradj.questown.loader.Channel;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
 
-    public static void encode(FlagCraftMessage msg, FriendlyByteBuf buffer) {
+    public static void encode(FlagCraftMessage msg, RegistryFriendlyByteBuf buffer) {
         buffer.writeBlockPos(msg.flagPos);
         buffer.writeInt(msg.recipeIndex);
     }
 
-    public static FlagCraftMessage decode(FriendlyByteBuf buffer) {
+    public static FlagCraftMessage decode(RegistryFriendlyByteBuf buffer) {
         return new FlagCraftMessage(buffer.readBlockPos(), buffer.readInt());
     }
 
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer sender = ctx.get().getSender();
+    public void handle(Channel.Context ctx) {
+        ctx.enqueueWork(() -> {
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             if (sender == null) {
                 return;
             }
@@ -36,7 +35,6 @@ public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
                 default -> QT.GUI_LOGGER.error("Unknown flag craft recipe index: {}", recipeIndex);
             }
         });
-        ctx.get().setPacketHandled(true);
     }
 
     private void craftWand(ServerPlayer player) {

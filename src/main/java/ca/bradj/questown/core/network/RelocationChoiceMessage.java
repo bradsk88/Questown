@@ -6,14 +6,13 @@ import ca.bradj.questown.town.entity.TownRelocation;
 import ca.bradj.questown.town.entity.TownRelocation.FarFixturePolicy;
 import ca.bradj.questown.town.entity.TownRelocation.RelocationResult;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import ca.bradj.questown.loader.Channel;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 /**
  * Client → server: the player's answer to the relocation "too far away" confirmation screen
@@ -29,21 +28,21 @@ public record RelocationChoiceMessage(
 
     public static void encode(
             RelocationChoiceMessage msg,
-            FriendlyByteBuf buffer
+            RegistryFriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.targetPos());
         buffer.writeBoolean(msg.leaveBehind());
     }
 
-    public static RelocationChoiceMessage decode(FriendlyByteBuf buffer) {
+    public static RelocationChoiceMessage decode(RegistryFriendlyByteBuf buffer) {
         BlockPos targetPos = buffer.readBlockPos();
         boolean leaveBehind = buffer.readBoolean();
         return new RelocationChoiceMessage(targetPos, leaveBehind);
     }
 
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer sender = ctx.get().getSender();
+    public void handle(Channel.Context ctx) {
+        ctx.enqueueWork(() -> {
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             if (sender == null) {
                 return;
             }
@@ -62,7 +61,6 @@ public record RelocationChoiceMessage(
             }
             RelocationDeedItem.consumeFrom(sender, hand);
         });
-        ctx.get().setPacketHandled(true);
     }
 
     private static InteractionHand deedHand(ServerPlayer player) {

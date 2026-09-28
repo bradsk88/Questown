@@ -4,13 +4,12 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import ca.bradj.questown.loader.Channel;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public record RemoveQuestFromUIMessage(
         UUID questIndex,
@@ -18,7 +17,7 @@ public record RemoveQuestFromUIMessage(
         boolean promptForConfirmation
 ) {
 
-    public static void encode(RemoveQuestFromUIMessage msg, FriendlyByteBuf buffer) {
+    public static void encode(RemoveQuestFromUIMessage msg, RegistryFriendlyByteBuf buffer) {
         buffer.writeUUID(msg.questIndex);
         buffer.writeInt(msg.flagX);
         buffer.writeInt(msg.flagY);
@@ -26,7 +25,7 @@ public record RemoveQuestFromUIMessage(
         buffer.writeBoolean(msg.promptForConfirmation);
     }
 
-    public static RemoveQuestFromUIMessage decode(FriendlyByteBuf buffer) {
+    public static RemoveQuestFromUIMessage decode(RegistryFriendlyByteBuf buffer) {
         UUID questIndex = buffer.readUUID();
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();
@@ -37,21 +36,18 @@ public record RemoveQuestFromUIMessage(
 
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
             // Do stuff
-            Optional<TownFlagBlockEntity> flag = sender.level()
-                    .getBlockEntity(new BlockPos(flagX, flagY, flagZ), TilesInit.TOWN_FLAG.get());
-            if (flag.isEmpty()) {
+            if (!(sender.level().getBlockEntity(new BlockPos(flagX, flagY, flagZ)) instanceof TownFlagBlockEntity flag)) {
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Quest will not be removed.", flagX, flagY, flagZ);
                 return;
             }
-            flag.get().getQuestHandle().requestRemovalOfQuestAtIndex(questIndex, sender, promptForConfirmation);
+            flag.getQuestHandle().requestRemovalOfQuestAtIndex(questIndex, sender, promptForConfirmation);
         });
-        ctx.get().setPacketHandled(true);
 
     }
 }

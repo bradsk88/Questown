@@ -36,11 +36,11 @@ public class BlockOfProgressItem extends BlockItem {
     @Override
     public void appendHoverText(
             ItemStack stack,
-            @Nullable Level level,
+            net.minecraft.world.item.Item.TooltipContext ctx,
             List<Component> tooltip,
             TooltipFlag flag
     ) {
-        super.appendHoverText(stack, level, tooltip, flag);
+        super.appendHoverText(stack, ctx, tooltip, flag);
         BlockOfProgress.getBlessedJob(stack)
                        .ifPresent(job -> tooltip.add(Compat.translatableStyled(
                                "tooltip.block_of_progress.guaranteed_job",

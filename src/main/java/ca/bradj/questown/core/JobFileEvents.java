@@ -7,15 +7,14 @@ import ca.bradj.questown.jobs.*;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.server.ServerAboutToStartEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 
 ;
 
-@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@net.neoforged.fml.common.EventBusSubscriber(modid = Questown.MODID, bus = net.neoforged.fml.common.EventBusSubscriber.Bus.MOD)
 public class JobFileEvents {
 
     @SubscribeEvent
@@ -33,7 +32,7 @@ public class JobFileEvents {
         }
         ImmutableList<JobID> ids = ImmutableList.copyOf(Works.ids());
         SyncWorkForCommandsMessage ms = new SyncWorkForCommandsMessage(ids);
-        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sp), ms);
+        QuestownNetwork.sendToPlayer(sp, ms);
     }
 
 }

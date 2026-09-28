@@ -266,12 +266,20 @@ public class HelperChickenSunsetChestGoal extends Goal {
                     false
             );
             net.minecraft.world.item.MapItem.renderBiomePreviewMap(sl, filledMap);
-            net.minecraft.world.level.saveddata.maps.MapItemSavedData.addTargetDecoration(
-                    filledMap,
-                    flag.getTownFlagBasePos(),
-                    "+",
-                    net.minecraft.world.level.saveddata.maps.MapDecoration.Type.TARGET_X
-            );
+            {
+                var mapDecos = sl.registryAccess().registryOrThrow(
+                        net.minecraft.core.registries.Registries.MAP_DECORATION_TYPE);
+                var targetX = mapDecos.getHolderOrThrow(
+                        net.minecraft.resources.ResourceKey.create(
+                                net.minecraft.core.registries.Registries.MAP_DECORATION_TYPE,
+                                new net.minecraft.resources.ResourceLocation("target_x")));
+                net.minecraft.world.level.saveddata.maps.MapItemSavedData.addTargetDecoration(
+                        filledMap,
+                        flag.getTownFlagBasePos(),
+                        "+",
+                        targetX
+                );
+            }
             chestBe.setItem(0, filledMap);
             chestBe.setItem(1, new ItemStack(Items.WOODEN_AXE));
         }

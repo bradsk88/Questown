@@ -104,7 +104,7 @@ public class FlagTabs extends Tabs implements SubUI {
             FlagTabsEmbedding.FlagInfo fp,
             String type
     ) {
-        Runnable fn = () -> QuestownNetwork.CHANNEL.sendToServer(new OpenFlagMenuMessage(fp, type));
+        Runnable fn = () -> QuestownNetwork.sendToServer(new OpenFlagMenuMessage(fp, type));
         return fn;
     }
 

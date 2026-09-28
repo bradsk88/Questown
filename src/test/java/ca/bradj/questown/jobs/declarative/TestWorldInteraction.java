@@ -17,7 +17,7 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -283,7 +283,7 @@ public class TestWorldInteraction extends
             value = value.substring(1);
         }
         ResourceLocation rl = new ResourceLocation(value);
-        net.minecraft.world.item.Item mcItem = ForgeRegistries.ITEMS.getValue(rl);
+        net.minecraft.world.item.Item mcItem = BuiltInRegistries.ITEM.get(rl);
         if (mcItem == null) {
             return ItemStack.EMPTY;
         }
@@ -307,7 +307,7 @@ public class TestWorldInteraction extends
             return PreExtractHook.run(
                     aBoolean, rules, worldAccess,
                     (town, mcHeldItem, strategy) -> {
-                        ResourceLocation itemRL = ForgeRegistries.ITEMS.getKey(mcHeldItem.get().get());
+                        ResourceLocation itemRL = BuiltInRegistries.ITEM.getKey(mcHeldItem.get().get());
                         if (itemRL == null) {
                             return town;
                         }

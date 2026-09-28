@@ -63,7 +63,7 @@ public class WorkRequestConfirmScreen extends Screen {
         this.backToRequestedJobs = () -> this.send(flagPos, REJECTED);
         this.openJobsInfoScreen = () -> {
             OpenItemJobsMessage msg = new OpenItemJobsMessage(flagPos, this.itemRequested);
-            QuestownNetwork.CHANNEL.sendToServer(msg);
+            QuestownNetwork.sendToServer(msg);
         };
     }
 
@@ -72,7 +72,7 @@ public class WorkRequestConfirmScreen extends Screen {
             AddWorkFromUIMessage.Action action
     ) {
         AddWorkFromUIMessage m = new AddWorkFromUIMessage(itemRequested, p, action);
-        QuestownNetwork.CHANNEL.sendToServer(m);
+        QuestownNetwork.sendToServer(m);
     }
 
     @Override
@@ -125,7 +125,7 @@ public class WorkRequestConfirmScreen extends Screen {
             float partialTicks
     ) {
         gui.fillGradient(0, 0, this.width, this.height, -1072689136, -804253680);
-        this.renderBackground(gui);
+        this.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
         int x = pageLeftX;
         x = x + PAGE_PADDING;
@@ -175,7 +175,7 @@ public class WorkRequestConfirmScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics gui) {
+    public void renderBackground(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         this.background.draw(gui, x, y, backgroundWidth, backgroundHeight);

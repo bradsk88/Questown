@@ -416,16 +416,16 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(visible, true);
-        this.entityData.define(hasBOP, true);
-        this.entityData.define(status, ProductionStatus.IDLE.name());
-        this.entityData.define(jobName, "jobs.gatherer");
-        this.entityData.define(heldItem, ItemStack.EMPTY);
-        this.entityData.define(lastHeldItem, ItemStack.EMPTY);
-        this.entityData.define(need, TownieNeed.NONE.name());
-        this.entityData.define(unmetItem, "");
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(visible, true);
+        builder.define(hasBOP, true);
+        builder.define(status, ProductionStatus.IDLE.name());
+        builder.define(jobName, "jobs.gatherer");
+        builder.define(heldItem, ItemStack.EMPTY);
+        builder.define(lastHeldItem, ItemStack.EMPTY);
+        builder.define(need, TownieNeed.NONE.name());
+        builder.define(unmetItem, "");
     }
 
     /**
@@ -896,7 +896,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         super.addAdditionalSaveData(p_21484_);
         ListTag items = new ListTag();
         Jobs.getItems(job.get())
-            .forEach(v -> items.add(v.serializeNBT()));
+            .forEach(v -> items.add(v.save(registryAccess())));
         p_21484_.put("items", items);
     }
 
@@ -906,8 +906,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         ListTag items = p_21450_.getList("items", Tag.TAG_COMPOUND);
         List<MCHeldItem> itemz = items
                 .stream()
-                .map(v -> ItemStack.of((CompoundTag) v))
-                .map(MCHeldItem::fromMCItemStack)
+                .map(v -> MCHeldItem.fromMCItemStack(net.minecraft.world.item.ItemStack.parse(registryAccess(), (CompoundTag) v).orElse(net.minecraft.world.item.ItemStack.EMPTY)))
                 .toList();
         job.get().initializeItems(itemz);
         entityData.set(status, p_21450_.getString("status"));
@@ -1061,8 +1060,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
 
         BlockState blockstate = this.level().getBlockState(p_21141_);
-        if (blockstate.isBed(level(), p_21141_, this)) {
-            blockstate.setBedOccupied(level(), p_21141_, this, true);
+        if (blockstate.getBlock() instanceof ca.bradj.questown.blocks.HospitalBedBlock) {
+            level().setBlock(p_21141_, blockstate.setValue(ca.bradj.questown.blocks.HospitalBedBlock.OCCUPIED, Boolean.TRUE), 3);
         }
 
         this.setPose(SLEEPING);
@@ -1100,8 +1099,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         Optional<BlockPos> sleepingPos = this.getSleepingPos();
         sleepingPos.filter((p_147227_) -> this.level().hasChunkAt(p_147227_)).ifPresent((p_147228_) -> {
             BlockState blockstate = this.level().getBlockState(p_147228_);
-            if (blockstate.isBed(this.level(), p_147228_, this)) {
-                blockstate.setBedOccupied(this.level(), p_147228_, this, false);
+            if (blockstate.getBlock() instanceof ca.bradj.questown.blocks.HospitalBedBlock) {
+                this.level().setBlock(p_147228_, blockstate.setValue(ca.bradj.questown.blocks.HospitalBedBlock.OCCUPIED, Boolean.FALSE), 3);
                 Vec3 vec31 = BedBlock.findStandUpPosition(this.getType(), this.level(), p_147228_, this.getDirection(), this.getYRot())
                                      .orElseGet(() -> {
                                          BlockPos blockpos = p_147228_.above();

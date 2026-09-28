@@ -7,26 +7,25 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.network.FriendlyByteBuf;
+import ca.bradj.questown.loader.Channel;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean instant) {
 
     public static void encode(
             JobRootChangeMessage msg,
-            FriendlyByteBuf buffer
+            RegistryFriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos);
         buffer.writeUUID(msg.villagerUUID);
         buffer.writeBoolean(msg.instant());
     }
 
-    public static JobRootChangeMessage decode(FriendlyByteBuf buffer) {
+    public static JobRootChangeMessage decode(RegistryFriendlyByteBuf buffer) {
         BlockPos flagPos = buffer.readBlockPos();
         UUID uuid = buffer.readUUID();
         boolean instant = buffer.readBoolean();
@@ -34,12 +33,11 @@ public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean 
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer sender = ctx.get().getSender();
-            Optional<TownFlagBlockEntity> flag = sender.level().getBlockEntity(flagPos, TilesInit.TOWN_FLAG.get());
-            if (flag.isEmpty()) {
+        ctx.enqueueWork(() -> {
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
+            if (!(sender.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)) {
                 QT.GUI_LOGGER.error("No flag at position {}. Job root will not be changed.", flagPos);
                 return;
             }
@@ -47,9 +45,8 @@ public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean 
             // forces the specified root instead of the usual random choice.
             ItemStack consumed = BopTransactionSyncer.syncConsumedBOP(sender);
             Optional<JobID> guarantee = ca.bradj.questown.blocks.BlockOfProgress.getBlessedJob(consumed);
-            flag.get().getVillagerHandle().scheduleJobRootChange(villagerUUID, instant, guarantee);
+            flag.getVillagerHandle().scheduleJobRootChange(villagerUUID, instant, guarantee);
         });
-        ctx.get().setPacketHandled(true);
 
     }
 }

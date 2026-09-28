@@ -23,7 +23,7 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
+public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> implements ScrollableScreen {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
     private static final int borderPadding = 6;
@@ -105,8 +105,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
     }
 
 
-    @Override
-    public boolean mouseScrolled(
+        public boolean mouseScrolled(
             double scrollX,
             double scrollY,
             double scrollDelta
@@ -122,7 +121,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
                 return true;
             }
         }
-        return super.mouseScrolled(scrollX, scrollY, scrollDelta);
+        return false;
     }
 
     @Override
@@ -145,7 +144,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(gui);
+        this.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
 
         int x = ((this.width - backgroundWidth) / 2);

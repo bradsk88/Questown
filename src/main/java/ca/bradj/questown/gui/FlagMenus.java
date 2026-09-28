@@ -16,7 +16,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
-import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
@@ -77,7 +76,7 @@ public class FlagMenus {
     ) {
         TownQuestsContainer.write(buf, quests, flagInfo.flagPos(), summary);
         MultiStatusScreenSyncMessage msg = new MultiStatusScreenSyncMessage(makeSyncData(es, morningSpawnPending.get()));
-        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), msg);
+        QuestownNetwork.sendToPlayer(player, msg);
         for (VisitorMobEntity e : es) {
             e.addStatusListener(new StatusListener() {
                 @Override
@@ -88,8 +87,7 @@ public class FlagMenus {
                 @Override
                 public void statusChanged(IStatus<?> newStatus) {
                     MultiStatusScreen.SyncedData data1 = makeSyncData(es, morningSpawnPending.get());
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(() -> player),
+                    QuestownNetwork.sendToPlayer(player,
                             new MultiStatusScreenSyncMessage(data1)
                     );
                 }

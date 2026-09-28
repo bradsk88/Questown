@@ -7,6 +7,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -37,6 +38,11 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlock {
+    public static final MapCodec<BowlRackBlock> CODEC = MapCodec.unit(BowlRackBlock::new);
+
+    @Override
+    public MapCodec<BowlRackBlock> codec() { return CODEC; }
+
     public static final String ITEM_ID = "bowl_rack";
 
     protected static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 4.0D, 16.0D);
@@ -130,15 +136,14 @@ public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlo
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level p_60504_,
             BlockPos p_60505_,
             Player p_60506_,
-            InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
-        InteractionResult r = super.use(p_60503_, p_60504_, p_60505_, p_60506_, p_60507_, p_60508_);
+        InteractionResult r = super.useWithoutItem(p_60503_, p_60504_, p_60505_, p_60506_, p_60508_);
         if (p_60504_.isClientSide()) {
             return InteractionResult.CONSUME;
         }

@@ -2,6 +2,7 @@ package ca.bradj.questown.blocks;
 
 import ca.bradj.questown._vanilla.DeployFishingHookRule;
 import ca.bradj.questown.mc.Compat;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -24,6 +25,11 @@ import org.jetbrains.annotations.Nullable;
 import static net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
 
 public class FishingStationBlock extends RoomBlock {
+    public static final MapCodec<FishingStationBlock> CODEC = MapCodec.unit(FishingStationBlock::new);
+
+    @Override
+    public MapCodec<FishingStationBlock> codec() { return CODEC; }
+
     public static final String ITEM_ID = "fishing_station";
 
     public FishingStationBlock(
@@ -87,22 +93,18 @@ public class FishingStationBlock extends RoomBlock {
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level p_60504_,
             BlockPos p_60505_,
             Player p_60506_,
-            InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
-        if (p_60507_ != InteractionHand.MAIN_HAND) {
-            return super.use(p_60503_, p_60504_, p_60505_, p_60506_, p_60507_, p_60508_);
-        }
         if (!(p_60504_ instanceof ServerLevel sl)) {
-            return super.use(p_60503_, p_60504_, p_60505_, p_60506_, p_60507_, p_60508_);
+            return super.useWithoutItem(p_60503_, p_60504_, p_60505_, p_60506_, p_60508_);
         }
         if (DeployFishingHookRule.deployHere(sl, p_60505_, p_60506_) != null) {
-            return super.use(p_60503_, p_60504_, p_60505_, p_60506_, p_60507_, p_60508_);
+            return super.useWithoutItem(p_60503_, p_60504_, p_60505_, p_60506_, p_60508_);
         }
         return InteractionResult.CONSUME;
     }

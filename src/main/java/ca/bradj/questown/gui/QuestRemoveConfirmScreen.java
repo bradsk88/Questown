@@ -30,7 +30,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemoveQuestsContainer> {
+public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemoveQuestsContainer> implements ScrollableScreen {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
     private static final int borderPadding = 6;
@@ -82,7 +82,14 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
                 return null;
             }
             ItemStack head = new ItemStack(Items.PLAYER_HEAD);
-            head.getOrCreateTag().putString(PlayerHeadItem.TAG_SKULL_OWNER, v.villagerUUID());
+            head.set(
+                    net.minecraft.core.component.DataComponents.PROFILE,
+                    new net.minecraft.world.item.component.ResolvableProfile(
+                            java.util.Optional.empty(),
+                            java.util.Optional.of(java.util.UUID.fromString(v.villagerUUID())),
+                            new com.mojang.authlib.properties.PropertyMap()
+                    )
+            );
             return head;
         }).toList();
 
@@ -141,7 +148,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(gui);
+        this.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
 
         int x = ((this.width - backgroundWidth) / 2);
@@ -358,8 +365,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
     }
 
 
-    @Override
-    public boolean mouseScrolled(
+        public boolean mouseScrolled(
             double scrollX,
             double scrollY,
             double scrollDelta
@@ -375,7 +381,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
                 return true;
             }
         }
-        return super.mouseScrolled(scrollX, scrollY, scrollDelta);
+        return false;
     }
 
     @Override

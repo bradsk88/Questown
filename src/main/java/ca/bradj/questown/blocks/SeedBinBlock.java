@@ -115,15 +115,14 @@ public class SeedBinBlock extends Block implements InsertedItemAware, EntityBloc
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level p_60504_,
             BlockPos p_60505_,
             Player p_60506_,
-            InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
-        InteractionResult r = super.use(p_60503_, p_60504_, p_60505_, p_60506_, p_60507_, p_60508_);
+        InteractionResult r = super.useWithoutItem(p_60503_, p_60504_, p_60505_, p_60506_, p_60508_);
         if (p_60504_.isClientSide()) {
             return InteractionResult.CONSUME;
         }

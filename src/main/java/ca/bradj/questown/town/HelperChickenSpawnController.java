@@ -114,7 +114,7 @@ public final class HelperChickenSpawnController {
                 0.0F
         );
         chicken.setOwnerFlagPos(flagPos);
-        chicken.finalizeSpawn(sl, sl.getCurrentDifficultyAt(spawnPos), MobSpawnType.EVENT, null, null);
+        chicken.finalizeSpawn(sl, sl.getCurrentDifficultyAt(spawnPos), MobSpawnType.EVENT, null);
         sl.addFreshEntity(chicken);
 
         flag.setChickenEverSpawned(true);

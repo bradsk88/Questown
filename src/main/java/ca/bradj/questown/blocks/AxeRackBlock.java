@@ -9,6 +9,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Containers;
 import ca.bradj.questown.jobs.declarative.MCExtra;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
@@ -30,10 +31,14 @@ import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 public class AxeRackBlock extends Block implements InsertedItemAware, EntityBlock {
+    public static final MapCodec<AxeRackBlock> CODEC = MapCodec.unit(AxeRackBlock::new);
+
+    @Override
+    public MapCodec<AxeRackBlock> codec() { return CODEC; }
+
     public static final String ITEM_ID = "axe_rack_block";
 
     public static final int MAX = 1;
@@ -118,15 +123,14 @@ public class AxeRackBlock extends Block implements InsertedItemAware, EntityBloc
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level level,
             BlockPos p_60505_,
             Player p_60506_,
-            InteractionHand hand,
             BlockHitResult p_60508_
     ) {
-        if (hand != InteractionHand.MAIN_HAND) {
+        if (false) {
             return InteractionResult.CONSUME;
         }
         if (!(level instanceof ServerLevel sl)) {
@@ -138,7 +142,7 @@ public class AxeRackBlock extends Block implements InsertedItemAware, EntityBloc
             return InteractionResult.CONSUME;
         }
 
-        ItemStack itemInHand = p_60506_.getItemInHand(hand);
+        ItemStack itemInHand = p_60506_.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND);
         if (itemInHand.isEmpty()) {
             return take(rack, p_60506_);
         }
@@ -149,8 +153,7 @@ public class AxeRackBlock extends Block implements InsertedItemAware, EntityBloc
         ItemStack copy = itemInHand.copy();
         int index = Containers.addIfPossible(itemInHand, rack);
         if (index >= 0) {
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.ALL.noArg(),
+            QuestownNetwork.sendToAll(level,
                     new SyncBlockItemMessage(p_60505_, copy, index)
             );
         }
@@ -171,8 +174,7 @@ public class AxeRackBlock extends Block implements InsertedItemAware, EntityBloc
             p_60506_.setItemInHand(InteractionHand.MAIN_HAND, stack);
 
             entity.removeItem(i);
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.ALL.noArg(),
+            QuestownNetwork.sendToAll(entity.getLevel(),
                     new SyncBlockItemMessage(entity.getBlockPos(), ItemStack.EMPTY, i)
             );
         }

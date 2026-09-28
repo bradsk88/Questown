@@ -36,7 +36,7 @@ public class BlockAsRoomEntity extends BlockEntity implements TownFlagSubEntity 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static <B extends RoomBlock> Holder<Block> register(Holder<B> register) {
         ALL.add(register::get);
-        return (RegistryObject) register;
+        return (Holder) register;
     }
 
     @Override

@@ -99,18 +99,17 @@ public class SoupPotBlock extends Block implements InsertedItemAware, ExtractedI
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level p_60504_,
             BlockPos p_60505_,
             Player p_60506_,
-            InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
         if (p_60504_.isClientSide()) {
             return InteractionResult.CONSUME;
         }
 
-        return tryTakeSoup(p_60504_, p_60505_, LEVEL, 2, p_60506_, p_60507_);
+        return tryTakeSoup(p_60504_, p_60505_, LEVEL, 2, p_60506_, net.minecraft.world.InteractionHand.MAIN_HAND);
     }
 }

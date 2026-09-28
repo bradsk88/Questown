@@ -72,7 +72,7 @@ public class ItemJobsScreen extends Screen {
             return;
         }
         AddWorkFromUIMessage m = new AddWorkFromUIMessage(Ingredient.of(first), flagPos, CONFIRMED);
-        QuestownNetwork.CHANNEL.sendToServer(m);
+        QuestownNetwork.sendToServer(m);
     }
 
     private ItemStack getFirst() {
@@ -127,7 +127,7 @@ public class ItemJobsScreen extends Screen {
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(gui);
+        this.renderBackground(gui, mouseX, mouseY, partialTicks);
         this.addButton.visible = !getFirst().isEmpty();
         this.delegate.renderBg(gui, partialTicks, mouseX, mouseY);
         super.render(gui, mouseX, mouseY, partialTicks);
@@ -155,7 +155,7 @@ public class ItemJobsScreen extends Screen {
         Supplier<Boolean> in = () -> UtilClean.isCoordInBox(x, y, ta.getX(), ta.getY(), ta.getWidth(), ta.getHeight());
         if (in.get() && !requestedItem.isEmpty()) {
             AddWorkFromUIMessage m = new AddWorkFromUIMessage(requestedItem, flagPos, REJECTED);
-            QuestownNetwork.CHANNEL.sendToServer(m);
+            QuestownNetwork.sendToServer(m);
         }
         return super.mouseClicked(x, y, p_94697_);
     }
@@ -198,7 +198,6 @@ public class ItemJobsScreen extends Screen {
         }
     }
 
-    @Override
     public boolean mouseScrolled(
             double p_94686_,
             double p_94687_,

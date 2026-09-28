@@ -100,7 +100,7 @@ public class FishingHook extends Projectile {
             int p_37108_,
             int p_37109_
     ) {
-        this(EntitiesInit.FISHIN_HOOK.get(), p_37107_, p_37108_, p_37109_);
+        this((EntityType<FishingHook>) EntitiesInit.FISHIN_HOOK.get(), p_37107_, p_37108_, p_37109_);
         this.setOwner(p_37106_);
         float f = p_37106_.getXRot();
         float f1 = p_37106_.getYRot();
@@ -126,12 +126,12 @@ public class FishingHook extends Projectile {
         this.xRotO = this.getXRot();
     }
 
-    protected void defineSynchedData() {
-        this.getEntityData().define(DATA_HOOKED_ENTITY, 0);
-        this.getEntityData().define(DATA_BITING, false);
-        this.getEntityData().define(DATA_ATTACH_POINT_X, 0f);
-        this.getEntityData().define(DATA_ATTACH_POINT_Y, 0f);
-        this.getEntityData().define(DATA_ATTACH_POINT_Z, 0f);
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        builder.define(DATA_HOOKED_ENTITY, 0);
+        builder.define(DATA_BITING, false);
+        builder.define(DATA_ATTACH_POINT_X, 0f);
+        builder.define(DATA_ATTACH_POINT_Y, 0f);
+        builder.define(DATA_ATTACH_POINT_Z, 0f);
     }
 
     public void onSyncedDataUpdated(EntityDataAccessor<?> p_37153_) {
@@ -296,10 +296,9 @@ public class FishingHook extends Projectile {
 
     private void checkCollision() {
         HitResult hitresult = ProjectileUtil.getHitResultOnMoveVector(this, this::canHitEntity);
-        if (hitresult.getType() == HitResult.Type.MISS || !net.minecraftforge.event.ForgeEventFactory.onProjectileImpact(
-                this,
-                hitresult
-        )) this.onHit(hitresult);
+        if (hitresult.getType() != HitResult.Type.MISS) {
+            this.onHit(hitresult);
+        }
     }
 
     protected boolean canHitEntity(Entity p_37135_) {

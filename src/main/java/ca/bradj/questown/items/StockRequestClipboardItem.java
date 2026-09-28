@@ -23,7 +23,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 
 public class StockRequestClipboardItem extends Item {
@@ -43,7 +42,7 @@ public class StockRequestClipboardItem extends Item {
         TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sp.serverLevel(), itemInHand);
         if (parent == null) {
             OnScreenTextMessage msg = new OnScreenTextMessage("message.flag_item.no_flag");
-            QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sp), msg);
+            QuestownNetwork.sendToPlayer(sp, msg);
             return InteractionResultHolder.fail(itemInHand);
         }
 

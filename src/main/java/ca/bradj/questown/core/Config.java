@@ -274,19 +274,19 @@ public class Config {
         BUILDER.push("Villagers");
         MAX_DOWNTIME_TICKS = BUILDER.comment(
                 "The number of ticks that a villager will spend on downtime before they decide to go back to work"
-        ).defineInRange("MaxDowntimeTicks", 1000L, 1, 24000);
+        ).defineInRange("MaxDowntimeTicks", 1000L, 1L, 24000L);
         MAX_TICKS_BETWEEN_DOWNTIME = BUILDER.comment(
                 "The minimum number of ticks that a villager may work constantly before stopping to relax"
-        ).defineInRange("MaxTicksBetweenDowntime", 4000L, 1, 24000);
+        ).defineInRange("MaxTicksBetweenDowntime", 4000L, 1L, 24000L);
         WANDER_GIVEUP_TICKS = BUILDER.comment(
                 "The limit of time that villagers will spend trying to reach their next destination"
         ).defineInRange("WanderGiveUpTicks", 2000, 1, 24000);
         VILLAGER_DISTRACT_DURATION = BUILDER.comment(
                 "The number of ticks that a villager will be distracted by (i.e. look at) a nearby entity"
-        ).defineInRange("VillagerDistractDurationV0.2", 100L, 1, 24000);
+        ).defineInRange("VillagerDistractDurationV0.2", 100L, 1L, 24000L);
         VILLAGER_DISTRACT_COOLDOWN = BUILDER.comment(
                 "The number of ticks that a villager will avoid being re-distracted by the same entity"
-        ).defineInRange("VillagerDistractCooldownV0.1", 200L, 1, 24000);
+        ).defineInRange("VillagerDistractCooldownV0.1", 200L, 1L, 24000L);
         BASE_FULLNESS = BUILDER.comment(
                 "The amount of fullness that a typical villager starts with. Fullness ticks down throughout the day. " +
                         "When it reaches zero, the villager will seek out food."
@@ -355,11 +355,11 @@ public class Config {
 
         NORMAL_BED_HEAL_MULTIPLIER = BUILDER.comment(
                 "How much faster a villager will heal damage from sleeping in a hospital bed instead of standing/walking/working"
-        ).defineInRange("HospitalBedHealMultiplier", 1.5, 0.5, 100);
+        ).defineInRange("HospitalBedHealMultiplier", 1.5, 0.5, 100D);
 
         HOSPITAL_BED_HEAL_MULTIPLIER = BUILDER.comment(
                 "How much faster a villager will heal damage from sleeping in a hospital bed instead of standing/walking/working"
-        ).defineInRange("HospitalBedHealMultiplier", 2.0, 0.5, 100);
+        ).defineInRange("HospitalBedHealMultiplier", 2.0, 0.5, 100D);
 
         // End Blocks Config
         BUILDER.pop();
@@ -387,14 +387,14 @@ public class Config {
         ).defineInRange("MetaRoomDiameter", 2, 1, 100);
         BLOCK_CLAIMS_TICK_LIMIT = BUILDER.comment(
                 "If a job claims a block. It will hold that claim for this many ticks. (Or until they finish their work, whatever happens first)"
-        ).defineInRange("BlockClaimsTickLimit", 1000L, 1, 24000);
+        ).defineInRange("BlockClaimsTickLimit", 1000L, 1L, 24000L);
         FLAG_TICK_INTERVAL = BUILDER.comment(
                 "The number of game ticks that pass for every tick that the town flag does"
         ).defineInRange("FlagTickIntervalV2", 10L, 1L, 24000L);
         CONTAINER_SCAN_INTERVAL = BUILDER.comment(
-                "The number of game ticks between town-wide container scans (detecting items the",
-                "player added to or removed from chests). Cost scales with the number of rooms, so",
-                "raise this in large towns. Lower values detect chest changes sooner."
+                "The number of game ticks between town-wide container scans (detecting items the " +
+                        "player added to or removed from chests). Cost scales with the number of rooms, so " +
+                        "raise this in large towns. Lower values detect chest changes sooner."
         ).defineInRange("ContainerScanInterval", 10L, 1L, 24000L);
         ECONOMIC_RECORDS_DEPTH = BUILDER.comment(
                 "This essentially controls how \"far back\" the data goes on the \"Economics\" screens."

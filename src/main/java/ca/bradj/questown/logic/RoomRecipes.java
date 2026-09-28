@@ -58,7 +58,8 @@ public class RoomRecipes {
 
     @NotNull
     public static List<RoomRecipe> getAllRecipes(Level level) {
-        return level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
+        return level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM)
+                .stream().map(net.minecraft.world.item.crafting.RecipeHolder::value).collect(java.util.stream.Collectors.toList());
     }
 
     public static Component getName(ResourceLocation id) {
@@ -80,7 +81,7 @@ public class RoomRecipes {
         } else {
             rMapB.put(SpecialQuests.FARM, SpecialQuests.SPECIAL_QUESTS.get(SpecialQuests.FARM));
         }
-        List<RoomRecipe> allRecipesFor = recipes.getAllRecipesFor(RecipesInit.ROOM);
+        List<RoomRecipe> allRecipesFor = recipes.getAllRecipesFor(RecipesInit.ROOM).stream().map(net.minecraft.world.item.crafting.RecipeHolder::value).collect(java.util.stream.Collectors.toList());
         allRecipesFor.forEach(v -> rMapB.put(v.getId(), v));
         return rMapB.build();
     }
@@ -130,7 +131,10 @@ public class RoomRecipes {
 
     private static JsonObject getAsJsonObject(Ingredient js) {
         try {
-            return js.toJson().getAsJsonObject();
+            com.google.gson.JsonElement j = Ingredient.CODEC_NONEMPTY
+                    .encode(js, com.mojang.serialization.JsonOps.INSTANCE, com.mojang.serialization.JsonOps.INSTANCE.empty())
+                    .getOrThrow();
+            return j.getAsJsonObject();
         } catch (IllegalStateException e) {
             throw new IllegalStateException("Not a JSON object: " + js, e);
         }

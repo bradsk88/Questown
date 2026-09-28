@@ -90,7 +90,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             int mouseY,
             float partialTicks
     ) {
-        super.renderBackground(gui);
+        super.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
         renderTooltips(mouseX, mouseY);
     }
@@ -179,7 +179,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             return true;
         }
         if (status.mouseClicked((int) mouseX, (int) mouseY)) {
-            QuestownNetwork.CHANNEL.sendToServer(new OpenJobMessage(menu.flagPos, menu.jobId));
+            QuestownNetwork.sendToServer(new OpenJobMessage(menu.flagPos, menu.jobId));
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, p_97750_);

@@ -75,7 +75,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         this.level = level;
         this.recipeResolver = ingredient -> level.getRecipeManager()
                 .getRecipeFor(RecipeType.SMELTING, new net.minecraft.world.SimpleContainer(ingredient), level)
-                .map(r -> new SmeltResult(r.recipe().getResultItem(level.registryAccess()).copy(), r.recipe().getCookingTime()));
+                .map(r -> new SmeltResult(r.value().getResultItem(level.registryAccess()).copy(), r.value().getCookingTime()));
         this.fuelTimeProvider = fuel -> AbstractFurnaceBlockEntity.getFuel().getOrDefault(fuel.getItem(), 0);
         for (BlockPos pos : positions) {
             blockStates.put(pos, level.getBlockState(pos));
@@ -515,7 +515,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
                 dirtyContainers.add(pos);
                 return true;
             }
-            if (ItemStack.isSameItemSameTags(existing, item)
+            if (ItemStack.isSameItemSameComponents(existing, item)
                     && existing.getCount() < existing.getMaxStackSize()) {
                 int space = existing.getMaxStackSize() - existing.getCount();
                 int toAdd = Math.min(space, item.getCount());
@@ -600,7 +600,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
                 ItemStack existingOutput = slots.get(2);
                 if (existingOutput.isEmpty()) {
                     slots.set(2, output);
-                } else if (ItemStack.isSameItemSameTags(existingOutput, output)
+                } else if (ItemStack.isSameItemSameComponents(existingOutput, output)
                         && existingOutput.getCount() < existingOutput.getMaxStackSize()) {
                     existingOutput.grow(output.getCount());
                 } else {

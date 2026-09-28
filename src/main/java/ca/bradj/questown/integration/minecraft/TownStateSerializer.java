@@ -181,8 +181,7 @@ public class TownStateSerializer {
             ListTag items = ccTag.getList("items", Tag.TAG_COMPOUND);
             for (Tag item : items) {
                 CompoundTag icTag = (CompoundTag) item;
-                ItemStack stack = ItemStack.of(icTag.getCompound("item"));
-                cItems.add(MCTownItem.fromMCItemStack(stack));
+                cItems.add(MCTownItem.of(icTag));
             }
 
             int x = ccTag.getInt("x");

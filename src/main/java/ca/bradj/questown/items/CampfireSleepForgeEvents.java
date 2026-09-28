@@ -16,7 +16,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.MOD)
 public final class CampfireSleepForgeEvents {
 
     private static long heartbeatTick = -1;

@@ -48,7 +48,8 @@ class EmptyTownGrassThinnerTest {
         int grassIdx = -1;
         for (int i = 0; i < finalPalette.size(); i++) {
             CompoundTag p = finalPalette.getCompound(i);
-            if ("minecraft:grass".equals(p.getString("Name")) && !p.contains("Properties")) {
+            // 1.20.6: the short grass plant is minecraft:short_grass (minecraft:grass no longer exists).
+            if ("minecraft:short_grass".equals(p.getString("Name")) && !p.contains("Properties")) {
                 grassIdx = i;
                 break;
             }
@@ -141,7 +142,7 @@ class EmptyTownGrassThinnerTest {
     private static CompoundTag sampleTagWithGrass(int n) {
         CompoundTag tag = new CompoundTag();
         ListTag palette = new ListTag();
-        palette.add(NbtUtils.writeBlockState(Blocks.GRASS.defaultBlockState())); // idx 0
+        palette.add(NbtUtils.writeBlockState(Blocks.SHORT_GRASS.defaultBlockState())); // idx 0
         tag.put("palette", palette);
         ListTag blocks = new ListTag();
         for (int i = 0; i < n; i++) {

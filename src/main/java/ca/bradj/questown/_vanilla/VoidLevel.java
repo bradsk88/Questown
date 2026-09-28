@@ -136,7 +136,7 @@ public class VoidLevel implements WorldGenLevel {
 
     @Override
     public void gameEvent(
-            GameEvent p_220404_,
+            net.minecraft.core.Holder<GameEvent> p_220404_,
             Vec3 p_220405_,
             GameEvent.Context p_220406_
     ) {

@@ -42,6 +42,29 @@ public interface LoaderApi {
     /** Neutral menu registration: the loader wraps the mod-owned factory with its own container type. */
     <T extends net.minecraft.world.inventory.AbstractContainerMenu>
     Holder<net.minecraft.world.inventory.MenuType<T>> registerMenu(String name, MenuFactory<T> factory);
+    /**
+     * Neutral menu-screen registration (client only). NeoForge fires its
+     * {@code RegisterMenuScreensEvent} at client init — before any mod-bus setup event — so the
+     * loader captures these at construction time and replays them when the event arrives.
+     */
+    /**
+     * The neutral shape of a menu screen factory (a vanilla {@code MenuScreens.ScreenConstructor}
+     * minus its load-bearing bound): javac refuses to infer a lambda's descriptor against the
+     * vanilla interface's {@code U extends Screen & MenuAccess<T>} when T arrives via a wildcard
+     * target, so main code hands the loader a plain factory and the loader adapts it.
+     */
+    @FunctionalInterface
+    interface ScreenFactory<T extends net.minecraft.world.inventory.AbstractContainerMenu> {
+        net.minecraft.client.gui.screens.Screen create(
+                T menu,
+                net.minecraft.world.entity.player.Inventory playerInventory,
+                net.minecraft.network.chat.Component title);
+    }
+
+    <T extends net.minecraft.world.inventory.AbstractContainerMenu>
+    void registerScreen(
+            net.minecraft.world.inventory.MenuType<T> menuType,
+            ScreenFactory<T> screenFactory);
 
     /** Touch the {@code *Init} classes so their static registries exist; the api then binds them to the mod bus. */
     void defineRegistries();
@@ -50,8 +73,10 @@ public interface LoaderApi {
     
     net.minecraft.world.item.@Nullable Item itemFromId(ResourceLocation id);
     net.minecraft.resources.@Nullable ResourceLocation itemIdOf(net.minecraft.world.item.Item item);
+    net.minecraft.sounds.@Nullable SoundEvent soundFromId(ResourceLocation id);
     net.minecraft.resources.@Nullable ResourceLocation blockIdOf(net.minecraft.world.level.block.Block block);
-    net.minecraft.resources.@Nullable ResourceLocation biomeKeyOf(net.minecraft.world.level.biome.Biome biome);
+    net.minecraft.world.level.block.@Nullable Block blockFromId(ResourceLocation id);
+    net.minecraft.resources.@Nullable ResourceLocation biomeKeyOf(net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> biome);
 
     // Item handlers
     Optional<ItemHandler> handlerOfEntity(Entity e);
@@ -64,6 +89,7 @@ public interface LoaderApi {
     // Networking
     Channel channel(String id);
     <T> void sendToPlayer(Player p, T msg);
+    <T> void sendToAll(net.minecraft.world.level.Level level, T msg);
     <T> void sendToServer(T msg);
 
     // Lifecycle

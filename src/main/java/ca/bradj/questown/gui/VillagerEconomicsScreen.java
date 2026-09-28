@@ -104,7 +104,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(gui);
+        this.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
         renderTooltips(gui, mouseX, mouseY);
     }
@@ -180,7 +180,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
                 Ingredient ing = Ingredients.fromString(card.data().ingredientKey());
                 AddWorkFromUIMessage.Action inquired = AddWorkFromUIMessage.Action.INQUIRED;
                 AddWorkFromUIMessage msg = new AddWorkFromUIMessage(ing, menu.getFlagPos(), inquired);
-                QuestownNetwork.CHANNEL.sendToServer(msg);
+                QuestownNetwork.sendToServer(msg);
                 return true;
             }
         }

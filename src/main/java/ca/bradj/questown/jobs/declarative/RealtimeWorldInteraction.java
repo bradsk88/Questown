@@ -209,8 +209,10 @@ public class RealtimeWorldInteraction extends
             int idx = journal.getItems().indexOf(foundTool.get());
             ItemStack is = foundTool.get().get().toQTItemStack();
             is.hurtAndBreak(
-                    1, mcExtra.entity(), (x) -> {
-                    }
+                    1,
+                    mcExtra.entity().level().getRandom(),
+                    mcExtra.entity(),
+                    () -> {}
             );
             journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
             return true;
@@ -454,7 +456,7 @@ public class RealtimeWorldInteraction extends
                     if (extractedItem == null || extractedItem.isEmpty()) {
                         return town;
                     }
-                    CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
+                    CompoundTag t = extractedItem.get().toMCItemStack().getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
                     itemData.forEach(t::putInt);
                     return town;
                 },

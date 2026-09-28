@@ -57,7 +57,7 @@ class EmptyTownGrassPrunerTest {
     void pruneDistantGrass_keepsNearGrassAndRemovesFarGrass() {
         CompoundTag tag = new CompoundTag();
         ListTag palette = new ListTag();
-        palette.add(NbtUtils.writeBlockState(Blocks.GRASS.defaultBlockState())); // idx 0
+        palette.add(NbtUtils.writeBlockState(Blocks.SHORT_GRASS.defaultBlockState())); // idx 0
         // Real Questown flag block name; the pruner finds it by suffix match.
         palette.add(flagBasePaletteEntry()); // idx 1
         tag.put("palette", palette);
@@ -161,7 +161,7 @@ class EmptyTownGrassPrunerTest {
     private static CompoundTag sampleTag() {
         CompoundTag tag = new CompoundTag();
         ListTag palette = new ListTag();
-        palette.add(NbtUtils.writeBlockState(Blocks.GRASS.defaultBlockState()));
+        palette.add(NbtUtils.writeBlockState(Blocks.SHORT_GRASS.defaultBlockState()));
         palette.add(flagBasePaletteEntry());
         tag.put("palette", palette);
         ListTag blocks = new ListTag();

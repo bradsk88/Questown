@@ -317,7 +317,7 @@ class ChickenScaffoldingNbtEditorTest {
 
         CompoundTag reloaded;
         try (var in = Files.newInputStream(structure)) {
-            reloaded = NbtIo.readCompressed(in);
+            reloaded = NbtIo.readCompressed(in, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
         }
         List<ChickenScaffoldingLayout.BlockPlacement> plan =
                 ChickenScaffoldingLayout.forRotation(Rotation.NONE);

@@ -117,10 +117,7 @@ public final class TestArenaPreparer {
             // from origin. Use a wide sweep so later scenarios start clean, and
             // additionally discard any entity bound to this origin via ownerFlagPos
             // so wanderers outside the bounds still get cleaned up.
-            AABB wide = new AABB(
-                    origin.offset(-128, -16, -128),
-                    origin.offset(128, 32, 128)
-            );
+            AABB wide = new AABB(origin.offset(-128, -16, -128)).minmax(new AABB(origin.offset(128, 32, 128)));
             for (HelperChickenEntity e : level.getEntitiesOfClass(HelperChickenEntity.class, wide)) {
                 e.discard();
                 chickens++;
@@ -201,9 +198,6 @@ public final class TestArenaPreparer {
 
     private static AABB strayAreaAround(BlockPos origin, int halfWidth) {
         int stray = halfWidth + 13; // retain legacy +20/origin=+13/half=7 relationship
-        return new AABB(
-                origin.offset(-stray, -5, -stray),
-                origin.offset(stray, 10, stray)
-        );
+        return new AABB(origin.offset(-stray, -5, -stray)).minmax(new AABB(origin.offset(stray, 10, stray)));
     }
 }

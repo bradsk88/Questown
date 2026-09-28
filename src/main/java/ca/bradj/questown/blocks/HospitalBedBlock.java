@@ -6,6 +6,7 @@ import ca.bradj.questown.blocks.entity.HospitalBedBlockEntity;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -50,6 +51,11 @@ import java.util.Optional;
 import static net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART;
 
 public class HospitalBedBlock extends HorizontalDirectionalBlock implements EntityBlock, Healing {
+    public static final MapCodec<HospitalBedBlock> CODEC = MapCodec.unit(HospitalBedBlock::new);
+
+    @Override
+    public MapCodec<HospitalBedBlock> codec() { return CODEC; }
+
     public static final BooleanProperty OCCUPIED = BlockStateProperties.OCCUPIED;
     public static final String ITEM_ID = "hospital_bed";
     protected static final int HEIGHT = 9;
@@ -83,7 +89,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
         return blockstate.getBlock() instanceof net.minecraft.world.level.block.BedBlock ? blockstate.getValue(FACING) : null;
     }
 
-    public InteractionResult use(BlockState p_49515_, Level p_49516_, BlockPos p_49517_, Player p_49518_, InteractionHand p_49519_, BlockHitResult p_49520_) {
+    public InteractionResult useWithoutItem(BlockState p_49515_, Level p_49516_, BlockPos p_49517_, Player p_49518_, BlockHitResult p_49520_) {
         if (p_49516_.isClientSide) {
             return InteractionResult.CONSUME;
         } else {
@@ -170,7 +176,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
         return p_49534_ == BedPart.FOOT ? p_49535_ : p_49535_.getOpposite();
     }
 
-    public void playerWillDestroy(Level p_49505_, BlockPos p_49506_, BlockState p_49507_, Player p_49508_) {
+    public BlockState playerWillDestroy(Level p_49505_, BlockPos p_49506_, BlockState p_49507_, Player p_49508_) {
         if (!p_49505_.isClientSide && p_49508_.isCreative()) {
             BedPart bedpart = p_49507_.getValue(BED_PART);
             if (bedpart == BedPart.FOOT) {
@@ -183,7 +189,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
             }
         }
 
-        super.playerWillDestroy(p_49505_, p_49506_, p_49507_, p_49508_);
+        return super.playerWillDestroy(p_49505_, p_49506_, p_49507_, p_49508_);
     }
 
     @Nullable
@@ -351,13 +357,4 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
         return new int[][]{{0, 0}, {-p_49537_.getStepX(), -p_49537_.getStepZ()}};
     }
 
-    @Override
-    public boolean isBed(
-            BlockState state,
-            BlockGetter level,
-            BlockPos pos,
-            @org.jetbrains.annotations.Nullable Entity player
-    ) {
-        return true;
-    }
 }

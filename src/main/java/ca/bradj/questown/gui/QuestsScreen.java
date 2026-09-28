@@ -10,6 +10,7 @@ import ca.bradj.questown.gui.PagedCardScreen.CardCoordinates;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.Journal;
 import ca.bradj.questown.mc.JEI;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.quests.Quest;
@@ -27,7 +28,6 @@ import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
-import vazkii.patchouli.api.PatchouliAPI;
 
 import java.util.*;
 
@@ -491,10 +491,11 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             if (entry == null) {
                 continue;
             }
-            // A wrong/unknown entry id makes Patchouli return a null BookEntry and NPE
-            // inside openBookEntry, crashing the client. Never let that take the click down.
+            // A wrong/unknown entry id used to NPE inside the journal call, crashing
+            // the client. The journal facade never throws, but keep the guard in case
+            // a future target restores strict entry lookup.
             try {
-                PatchouliAPI.get().openBookEntry(BOOK_ID, entry, 0);
+                Journal.openBookEntry(null, BOOK_ID, entry, 0);
             } catch (RuntimeException e) {
                 QT.GUI_LOGGER.warn("Could not open book entry {} (quest type {})", entry, quest.getType(), e);
                 return false;

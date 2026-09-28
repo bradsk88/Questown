@@ -5,7 +5,7 @@ import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
-@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.MOD)
 public final class IntegrationForgeEvents {
 
     @SubscribeEvent()

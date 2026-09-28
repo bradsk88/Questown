@@ -193,7 +193,7 @@ public class TimeWarpWorldInteraction extends
             if (!itemStack.isDamageableItem()) {
                 return tuwn;
             }
-            itemStack.hurt(1, mcTownState.level.getRandom(), null);
+            itemStack.setDamageValue(itemStack.getDamageValue() + 1);
             if (itemStack.getDamageValue() >= itemStack.getMaxDamage()) {
                 itemStack = ItemStack.EMPTY;
             }
@@ -344,7 +344,7 @@ public class TimeWarpWorldInteraction extends
                     if (extractedItem == null || extractedItem.isEmpty()) {
                         return ctx;
                     }
-                    CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
+                    CompoundTag t = extractedItem.get().toMCItemStack().getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
                     itemData.forEach(t::putInt);
                     return ctx;
                 }, (in, up) -> in,

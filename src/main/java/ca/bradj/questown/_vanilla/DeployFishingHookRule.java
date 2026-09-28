@@ -9,6 +9,7 @@ import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -25,7 +26,7 @@ public class DeployFishingHookRule extends JobPhaseModifier {
             BlockPos blockPos,
             LivingEntity owner
     ) {
-        FishingHook e = EntitiesInit.FISHIN_HOOK.get().create(sl);
+        FishingHook e = ((EntityType<FishingHook>) EntitiesInit.FISHIN_HOOK.get()).create(sl);
         if (e == null) {
             return null;
         }

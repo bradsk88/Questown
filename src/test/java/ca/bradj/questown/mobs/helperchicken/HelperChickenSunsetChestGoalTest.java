@@ -46,7 +46,7 @@ class HelperChickenSunsetChestGoalTest {
 
     @Test
     void isReplaceable_tallGrassAndShortGrass_areTrue() {
-        Assertions.assertTrue(call(Blocks.GRASS.defaultBlockState()));
+        Assertions.assertTrue(call(Blocks.SHORT_GRASS.defaultBlockState()));
         Assertions.assertTrue(call(Blocks.TALL_GRASS.defaultBlockState()));
     }
 

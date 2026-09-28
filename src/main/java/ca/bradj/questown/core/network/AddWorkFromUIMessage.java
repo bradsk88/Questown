@@ -8,15 +8,13 @@ import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import ca.bradj.questown.loader.Channel;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Objects;
-import java.util.function.Supplier;
 
 /**
  */
@@ -53,14 +51,14 @@ public final class AddWorkFromUIMessage {
 
     public static void encode(
             AddWorkFromUIMessage msg,
-            FriendlyByteBuf buffer
+            RegistryFriendlyByteBuf buffer
     ) {
         buffer.writeInt(msg.action().ordinal());
         Ingredients.toNetwork(msg.requested, buffer);
         buffer.writeBlockPos(msg.flagPos);
     }
 
-    public static AddWorkFromUIMessage decode(FriendlyByteBuf buffer) {
+    public static AddWorkFromUIMessage decode(RegistryFriendlyByteBuf buffer) {
         Action action = Action.values()[buffer.readInt()];
         Ingredient request = Ingredients.fromNetwork(buffer);
         BlockPos flagPos = buffer.readBlockPos();
@@ -69,11 +67,11 @@ public final class AddWorkFromUIMessage {
 
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
             // Do stuff
             BlockEntity flag = sender.level().getBlockEntity(flagPos);
             if (!(flag instanceof TownFlagBlockEntity tfbe)) {
@@ -84,8 +82,8 @@ public final class AddWorkFromUIMessage {
                 case INQUIRED -> {
                     WorksBehaviour.TownData td = tfbe.getTownData();
                     Ingredient result = (Ingredient) requested;
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(() -> sender),
+                    QuestownNetwork.sendToPlayer(
+                            sender,
                             new WorkRequestConfirmMessage(
                                     (Ingredient) requested(),
                                     ServerJobsRegistry.getAllJobsThatProduce(td, result),
@@ -95,14 +93,13 @@ public final class AddWorkFromUIMessage {
                 }
                 case CONFIRMED -> {
                     VisitorTrigger.Triggers adv = VisitorTrigger.Triggers.FirstJobRequest;
-                    AdvancementsInit.VISITOR_TRIGGER.trigger(ctx.get().getSender(), adv);
+                    AdvancementsInit.VISITOR_TRIGGER.trigger((net.minecraft.server.level.ServerPlayer) ctx.sender(), adv);
                     tfbe.getWorkHandle().requestWork(Ingredients.asWorkRequest(requested));
                     tfbe.openJobsMenu(sender, false);
                 }
                 case REJECTED -> tfbe.openJobsMenu(sender, true);
             }
         });
-        ctx.get().setPacketHandled(true);
 
     }
 

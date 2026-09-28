@@ -25,7 +25,7 @@ public class VisitorArrowLayer extends VisitorStuckInBodyLayer {
 
     protected void renderStuckItem(PoseStack p_116569_, MultiBufferSource p_116570_, int p_116571_, Entity p_116572_, float p_116573_, float p_116574_, float p_116575_, float p_116576_) {
         float f = Mth.sqrt(p_116573_ * p_116573_ + p_116575_ * p_116575_);
-        Arrow arrow = new Arrow(p_116572_.level(), p_116572_.getX(), p_116572_.getY(), p_116572_.getZ());
+        Arrow arrow = new Arrow(p_116572_.level(), p_116572_.getX(), p_116572_.getY(), p_116572_.getZ(), net.minecraft.world.item.ItemStack.EMPTY);
         arrow.setYRot((float)(Math.atan2((double)p_116573_, (double)p_116575_) * (double)(180F / (float)Math.PI)));
         arrow.setXRot((float)(Math.atan2((double)p_116574_, (double)f) * (double)(180F / (float)Math.PI)));
         arrow.yRotO = arrow.getYRot();

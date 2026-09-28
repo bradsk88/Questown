@@ -3,6 +3,7 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableList;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -33,6 +34,11 @@ import java.util.List;
 import static net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
 
 public class JobBoardBlock extends RoomBlock {
+    public static final MapCodec<JobBoardBlock> CODEC = MapCodec.unit(JobBoardBlock::new);
+
+    @Override
+    public MapCodec<JobBoardBlock> codec() { return CODEC; }
+
     public static final String ITEM_ID = "job_board_block";
     private final ArrayList<OpenMenuListener> openMenuListeners = new ArrayList<>();
 
@@ -93,12 +99,11 @@ public class JobBoardBlock extends RoomBlock {
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level p_60504_,
             BlockPos p_60505_,
             Player p_60506_,
-            InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
         boolean clientSide = p_60504_.isClientSide();

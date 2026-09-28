@@ -27,6 +27,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.ReloadableServerRegistries;
+import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.tags.BlockTags;
@@ -44,9 +48,6 @@ import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.LootDataManager;
-import net.minecraft.world.level.storage.loot.LootDataType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -313,8 +314,9 @@ public class ResourceJobLoader {
                 RegistryAccess ra,
                 Item iconItem
         ) {
-            List<SmeltingRecipe> all = rm.getAllRecipesFor(RecipeType.SMELTING);
+            List<net.minecraft.world.item.crafting.RecipeHolder<SmeltingRecipe>> all = rm.getAllRecipesFor(RecipeType.SMELTING);
             return all.stream()
+                      .map(v -> v.value())
                       .filter(v -> isSingleItemRecipeMatch(iconItem, v))
                       .findFirst().orElseThrow().getResultItem(ra).getItem();
         }
@@ -721,8 +723,8 @@ public class ResourceJobLoader {
                     ServerLevel level,
                     Collection<MCHeldItem> heldItems
             ) {
-                LootDataManager tables = level.getServer().getLootData();
-                LootTable loot = tables.getElement(LootDataType.TABLE, ResourceLocation.tryParse(table));
+                ReloadableServerRegistries.Holder tables = level.getServer().reloadableRegistries();
+                LootTable loot = tables.getLootTable(ResourceKey.create(Registries.LOOT_TABLE, ResourceLocation.tryParse(table)));
                 return Loots.loadFromTables(level, loot, 1, maxResults).stream().map(MCHeldItem::fromTown).toList();
             }
 
@@ -812,10 +814,10 @@ public class ResourceJobLoader {
             }
         }
 
-        Optional<CraftingRecipe> match = level.getServer().getRecipeManager()
+        Optional<net.minecraft.world.item.crafting.RecipeHolder<CraftingRecipe>> match = level.getServer().getRecipeManager()
                                               .getRecipeFor(RecipeType.CRAFTING, cc, level);
         if (match.isPresent()) {
-            return match.get().assemble(cc, level.registryAccess());
+            return match.get().value().assemble(cc, level.registryAccess());
         }
         return ItemStack.EMPTY;
     }
@@ -1045,7 +1047,7 @@ public class ResourceJobLoader {
     private static @NotNull Predicate<BlockState> getBlockCheck(String block) {
         if (block.startsWith("#")) {
             TagKey<Block> tag = BlockTags.create(new ResourceLocation(block.replace("#", "")));
-            return bs -> bs.getBlock().is(tag);
+            return bs -> bs.is(tag);
         }
         return (BlockState bs) -> {
             ResourceLocation resourceLocation = new ResourceLocation(block);

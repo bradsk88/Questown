@@ -98,7 +98,7 @@ public final class ChickenScaffoldingNbtEditor {
         }
         CompoundTag tag;
         try (var in = Files.newInputStream(path)) {
-            tag = NbtIo.readCompressed(in);
+            tag = NbtIo.readCompressed(in, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
         }
         CompoundTag updated = applyScaffolding(tag);
 

@@ -106,7 +106,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(gui);
+        this.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
         this.renderTooltips(gui, mouseX, mouseY);
     }
@@ -195,7 +195,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
                 Ingredient ing = Ingredients.fromString(card.data().ingredientKey());
                 AddWorkFromUIMessage.Action inquired = AddWorkFromUIMessage.Action.INQUIRED;
                 AddWorkFromUIMessage msg = new AddWorkFromUIMessage(ing, menu.getFlagInfo().flagPos(), inquired);
-                QuestownNetwork.CHANNEL.sendToServer(msg);
+                QuestownNetwork.sendToServer(msg);
                 return true;
             }
         }

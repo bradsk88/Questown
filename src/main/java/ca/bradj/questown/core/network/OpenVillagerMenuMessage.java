@@ -4,13 +4,12 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import ca.bradj.questown.loader.Channel;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public record OpenVillagerMenuMessage(
         int flagX, int flagY, int flagZ, UUID villagerUUID, String type
@@ -24,7 +23,7 @@ public record OpenVillagerMenuMessage(
     public static final String ECONOMICS = "economics";
     public static final String BOP = "bop";
 
-    public static void encode(OpenVillagerMenuMessage msg, FriendlyByteBuf buffer) {
+    public static void encode(OpenVillagerMenuMessage msg, RegistryFriendlyByteBuf buffer) {
         buffer.writeInt(msg.flagX());
         buffer.writeInt(msg.flagY());
         buffer.writeInt(msg.flagZ());
@@ -32,7 +31,7 @@ public record OpenVillagerMenuMessage(
         buffer.writeUtf(msg.type());
     }
 
-    public static OpenVillagerMenuMessage decode(FriendlyByteBuf buffer) {
+    public static OpenVillagerMenuMessage decode(RegistryFriendlyByteBuf buffer) {
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();
         int flagZ = buffer.readInt();
@@ -43,24 +42,21 @@ public record OpenVillagerMenuMessage(
 
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
             // Do stuff
-            Optional<TownFlagBlockEntity> flag = sender.level()
-                    .getBlockEntity(new BlockPos(flagX, flagY, flagZ), TilesInit.TOWN_FLAG.get());
-            if (flag.isEmpty()) {
+            if (!(sender.level().getBlockEntity(new BlockPos(flagX, flagY, flagZ)) instanceof TownFlagBlockEntity flag)) {
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Quest will not be removed.", flagX, flagY, flagZ);
                 return;
             }
-            flag.get().getVillagerHandle().showUI(sender, type(), villagerUUID());
+            flag.getVillagerHandle().showUI(sender, type(), villagerUUID());
         }).exceptionally((ex) -> {
             QT.GUI_LOGGER.error("Failed to open villager menu", ex);
             return null;
         });
-        ctx.get().setPacketHandled(true);
 
     }
 }

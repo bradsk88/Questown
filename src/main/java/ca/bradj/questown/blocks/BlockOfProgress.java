@@ -3,7 +3,10 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.JobID;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -36,7 +39,7 @@ public class BlockOfProgress extends Block {
 
     /** Marks the stack as a plain (fungible) Block of Progress. */
     public static void bless(ItemStack item) {
-        QTNBT.putBoolean(item.getOrCreateTag(), BLESSED, true);
+        CustomData.update(DataComponents.CUSTOM_DATA, item, tag -> QTNBT.putBoolean(tag, BLESSED, true));
     }
 
     /**
@@ -45,20 +48,26 @@ public class BlockOfProgress extends Block {
      * bless their BOPs with the root job that earned them (see TownFlagBlockEntity).
      */
     public static void bless(ItemStack item, JobID job) {
-        QTNBT.putBoolean(item.getOrCreateTag(), BLESSED, true);
-        QTNBT.put(item.getOrCreateTag(), GUARANTEED_JOB, JobID.toTag(job));
+        CustomData.update(DataComponents.CUSTOM_DATA, item, tag -> {
+            QTNBT.putBoolean(tag, BLESSED, true);
+            QTNBT.put(tag, GUARANTEED_JOB, JobID.toTag(job));
+        });
     }
 
     public static boolean isBlessed(ItemStack item) {
-        return QTNBT.getBoolean(item.getOrCreateTag(), BLESSED, false);
+        return QTNBT.getBoolean(customData(item), BLESSED, false);
     }
 
     /** The job a blessed BOP guarantees, or empty for a plain BOP. */
     public static Optional<JobID> getBlessedJob(ItemStack item) {
-        if (!isBlessed(item) || !QTNBT.contains(item.getOrCreateTag(), GUARANTEED_JOB)) {
+        if (!isBlessed(item) || !QTNBT.contains(customData(item), GUARANTEED_JOB)) {
             return Optional.empty();
         }
-        return Optional.of(JobID.fromTag(QTNBT.getCompound(item.getOrCreateTag(), GUARANTEED_JOB)));
+        return Optional.of(JobID.fromTag(QTNBT.getCompound(customData(item), GUARANTEED_JOB)));
+    }
+
+    private static CompoundTag customData(ItemStack stack) {
+        return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
     }
 
     private static final String BLESSED = "blessed";

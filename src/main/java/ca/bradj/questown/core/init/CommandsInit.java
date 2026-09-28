@@ -5,7 +5,6 @@ import ca.bradj.questown.loader.HolderRegistry;
 import ca.bradj.questown.loader.Loader;
 import net.minecraft.core.registries.Registries;
 
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.commands.JobArgument;
 import net.minecraft.commands.synchronization.ArgumentTypeInfo;
@@ -14,7 +13,7 @@ import net.minecraft.commands.synchronization.SingletonArgumentInfo;
 
 public class CommandsInit {
 
-    public static final HolderRegistry<ArgumentTypeInfo<?, ?>> COMMAND_TYPES = Loader.registry(Registries.COMMAND_ARGUMENT_TYPES);
+    public static final HolderRegistry<ArgumentTypeInfo<?, ?>> COMMAND_TYPES = Loader.registry(Registries.COMMAND_ARGUMENT_TYPE);
 
     public static final Holder<ArgumentTypeInfo<JobArgument, ?>> SET_JOB = COMMAND_TYPES.register(
             "setjob",

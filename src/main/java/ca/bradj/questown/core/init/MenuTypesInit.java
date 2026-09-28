@@ -3,9 +3,7 @@ package ca.bradj.questown.core.init;
 import ca.bradj.questown.loader.Holder;
 import ca.bradj.questown.loader.Loader;
 
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.*;
-import ca.bradj.questown.mc.Compat;
 import net.minecraft.world.inventory.MenuType;
 
 public class MenuTypesInit {
@@ -43,12 +41,6 @@ public class MenuTypesInit {
         Loader.registerMenu("town_blocks_of_progress", TownBlockofProgressMenu::ForClientSide);
     public static final Holder<MenuType<FlagCraftingMenu>> FLAG_CRAFTING =
         Loader.registerMenu("flag_crafting", FlagCraftingMenu::ForClientSide);
-
-    public static void register(IEventBus eventBus) {
-        MENUS.register(eventBus);
-    }
-
-
 
     public static void boot() {}
 }

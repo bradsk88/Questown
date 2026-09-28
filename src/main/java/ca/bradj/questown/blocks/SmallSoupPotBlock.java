@@ -92,19 +92,18 @@ public class SmallSoupPotBlock extends Block implements InsertedItemAware, State
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level level,
             BlockPos blockPos,
             Player player,
-            InteractionHand hand,
             BlockHitResult p_60508_
     ) {
         if (level.isClientSide()) {
             return InteractionResult.CONSUME;
         }
 
-        return tryTakeSoup(level, blockPos, LEVEL, 1, player, hand);
+        return tryTakeSoup(level, blockPos, LEVEL, 1, player, net.minecraft.world.InteractionHand.MAIN_HAND);
     }
 
     public static InteractionResult tryTakeSoup(

@@ -242,7 +242,7 @@ public class Jobs {
 
                             @Override
                             public String toString() {
-                                return v.toJson().toString();
+                                return v.toString();
                             }
                         },
                         (inner) -> v.isEmpty(),

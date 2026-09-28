@@ -43,13 +43,13 @@ public final class NeoConfigBuilder implements ConfigBuilder {
     @Override
     public <T extends Comparable<T>> ConfigValue<T> defineInRange(String name, T defaultVal, T min, T max) {
         if (defaultVal instanceof Integer) {
-            return new NeoConfigValue<>(builder.defineInRange(name, (int) defaultVal, (int) min, (int) max));
+            return (ConfigValue<T>) (ConfigValue<?>) new NeoConfigValue<>(builder.defineInRange(name, (Integer) defaultVal, (Integer) min, (Integer) max));
         }
         if (defaultVal instanceof Long) {
-            return new NeoConfigValue<>(builder.defineInRange(name, (long) defaultVal, (long) min, (long) max));
+            return (ConfigValue<T>) (ConfigValue<?>) new NeoConfigValue<>(builder.defineInRange(name, (Long) defaultVal, (Long) min, (Long) max));
         }
         if (defaultVal instanceof Double) {
-            return new NeoConfigValue<>(builder.defineInRange(name, (double) defaultVal, (double) min, (double) max));
+            return (ConfigValue<T>) (ConfigValue<?>) new NeoConfigValue<>(builder.defineInRange(name, (Double) defaultVal, (Double) min, (Double) max));
         }
         throw new UnsupportedOperationException("Neo defineInRange: unsupported value type " + defaultVal.getClass());
     }

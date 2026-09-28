@@ -6,12 +6,11 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import ca.bradj.questown.loader.Channel;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 public record OpenJobMessage(
         BlockPos flagPos,
@@ -20,13 +19,13 @@ public record OpenJobMessage(
 
     public static void encode(
             OpenJobMessage msg,
-            FriendlyByteBuf buffer
+            RegistryFriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos);
         Jobs.writeIdToNetwork(buffer, msg.jobToShow);
     }
 
-    public static OpenJobMessage decode(FriendlyByteBuf buffer) {
+    public static OpenJobMessage decode(RegistryFriendlyByteBuf buffer) {
         BlockPos flagPos = buffer.readBlockPos();
         JobID j = Jobs.getIdFromNetwork(buffer);
         return new OpenJobMessage(flagPos, j);
@@ -34,11 +33,11 @@ public record OpenJobMessage(
 
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
             // Do stuff
             Optional<TownFlagBlockEntity> flag = sender.level()
                                                        .getBlockEntity(
@@ -51,7 +50,6 @@ public record OpenJobMessage(
             }
             flag.get().getVillagerHandle().showJobUI(sender, jobToShow);
         });
-        ctx.get().setPacketHandled(true);
 
     }
 }

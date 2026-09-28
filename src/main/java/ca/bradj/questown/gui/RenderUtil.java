@@ -113,10 +113,10 @@ public class RenderUtil {
         RenderSystem.enableBlend();
         RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        PoseStack posestack = RenderSystem.getModelViewStack();
-        posestack.pushPose();
+        org.joml.Matrix4fStack posestack = RenderSystem.getModelViewStack();
+        posestack.pushMatrix();
         posestack.translate(x, y, 100.0F);
-        posestack.translate(8.0D, 8.0D, 0.0D);
+        posestack.translate(8.0F, 8.0F, 0.0F);
         posestack.scale(1.0F, -1.0F, 1.0F);
         float size = 16.0F * scale;
         posestack.scale(size, size, size);
@@ -136,7 +136,7 @@ public class RenderUtil {
         );
         multibuffersource$buffersource.endBatch();
         RenderSystem.enableDepthTest();
-        posestack.popPose();
+        posestack.popMatrix();
         RenderSystem.applyModelViewMatrix();
     }
 

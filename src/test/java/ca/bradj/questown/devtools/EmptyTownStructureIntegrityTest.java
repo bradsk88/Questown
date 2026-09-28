@@ -49,7 +49,7 @@ class EmptyTownStructureIntegrityTest {
         // Locks the EmptyTownTerrainShaper output into the committed resource
         // so manual NBT surgery / schema migrations can't silently regress
         // the dirt floor, air ceiling, or grass cascade ring.
-        CompoundTag root = NbtIo.readCompressed(Files.newInputStream(STRUCTURE));
+        CompoundTag root = NbtIo.readCompressed(Files.newInputStream(STRUCTURE), net.minecraft.nbt.NbtAccounter.unlimitedHeap());
         ListTag palette = root.getList("palette", Tag.TAG_COMPOUND);
         ListTag blocks = root.getList("blocks", Tag.TAG_COMPOUND);
 
@@ -80,7 +80,7 @@ class EmptyTownStructureIntegrityTest {
 
     @Test
     void emptyTownHasExactlyOneCampfireAtFlagPlusCampfireOffset() throws IOException {
-        CompoundTag root = NbtIo.readCompressed(Files.newInputStream(STRUCTURE));
+        CompoundTag root = NbtIo.readCompressed(Files.newInputStream(STRUCTURE), net.minecraft.nbt.NbtAccounter.unlimitedHeap());
         ListTag palette = root.getList("palette", Tag.TAG_COMPOUND);
         ListTag blocks = root.getList("blocks", Tag.TAG_COMPOUND);
 

@@ -5,9 +5,12 @@ import ca.bradj.questown.blocks.FalseWallBlock;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.AbstractGlassBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.IronBarsBlock;
 import net.minecraft.world.level.block.StairBlock;
@@ -89,12 +92,19 @@ public class WallDetection {
         return bs.getBlock() instanceof DoorBlock && DoubleBlockHalf.LOWER.equals(bs.getOptionalValue(DoorBlock.HALF).orElse(null));
     }
 
+    // 1.20.6 dropped the vanilla glass tags; the community standard keeps them under c:
+    private static final TagKey<Block> C_GLASS_BLOCKS =
+            TagKey.create(Registries.BLOCK, new ResourceLocation("c", "glass_blocks"));
+    private static final TagKey<Block> C_GLASS_PANES =
+            TagKey.create(Registries.BLOCK, new ResourceLocation("c", "glass_panes"));
+
     public static boolean isSolid(
             BlockPos bp,
             Level level,
             BlockState blockState
     ) {
-        if (blockState.getBlock() instanceof AbstractGlassBlock || blockState.getBlock() instanceof IronBarsBlock) {
+        if (blockState.is(C_GLASS_BLOCKS) || blockState.is(C_GLASS_PANES)
+                || blockState.getBlock() instanceof IronBarsBlock) {
             return true;
         }
         if (blockState.getBlock() instanceof StairBlock) {

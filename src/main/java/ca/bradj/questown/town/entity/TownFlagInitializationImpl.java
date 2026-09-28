@@ -88,7 +88,7 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         CompoundTag t = new CompoundTag();
         ListTag stacks = new ListTag();
         for (ItemStack bop : flag.bopStacks) {
-            stacks.add(bop.save(new CompoundTag()));
+            stacks.add(bop.save(flag.getLevel().registryAccess(), new CompoundTag()));
         }
         t.put("stacks", stacks);
         t.putBoolean("tutorial_bop_granted", flag.tutorialBopGranted);
@@ -103,7 +103,7 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         if (tag.contains("stacks")) {
             ListTag stacks = tag.getList("stacks", Tag.TAG_COMPOUND);
             for (Tag s : stacks) {
-                flag.bopStacks.add(ItemStack.of((CompoundTag) s));
+                flag.bopStacks.add(ItemStack.parseOptional(flag.getLevel().registryAccess(), (CompoundTag) s));
             }
         } else if (tag.contains("count")) {
             // Legacy saves stored a bare count (bless NBT did not survive the flag yet):

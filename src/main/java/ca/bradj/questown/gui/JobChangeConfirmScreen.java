@@ -57,7 +57,7 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         int buttonWidth = (backgroundWidth / 2) - 8;
         this.unlockButton = this.addRenderableWidget(Button.builder(
                 Compat.translatable("menu.common.unlock"), (p_96776_) -> {
-            QuestownNetwork.CHANNEL.sendToServer(new JobRootChangeMessage(
+            QuestownNetwork.sendToServer(new JobRootChangeMessage(
                     menu.flagPos,
                     menu.villagerUUID,
                     Minecraft.getInstance().player.isCreative()
@@ -87,7 +87,7 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         int jobIconX = bgX + 8 + slot.getWidth() + 4;
-        super.renderBackground(gui);
+        super.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
         if (menu.alreadyPending.get() == 1) {
             renderStatusText(gui, bgX, bgY + menu.gathererInventoryYOffset + 24);

@@ -7,6 +7,8 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 /**
  * NeoForge 1.20.6 {@code @Mod} entry.
@@ -30,9 +32,22 @@ public class QuestownMod {
         if (loader.isClient()) {
             bus.addListener(FMLClientSetupEvent.class, e -> e.enqueueWork(Questown::onClientSetup));
         }
+        // NeoForge fires this in the "Network registry lock" step, after common setup — by then
+        // Questown.onCommonSetup() has filled the neutral message registry.
+        bus.addListener(RegisterPayloadHandlersEvent.class, loader::onRegisterPayloadHandlers);
+
+        // Fired at client init (before client setup), so the captures in QuestownMod's
+        // constructor must have already registered every screen.
+        if (loader.isClient()) {
+            Questown.registerScreens();
+            bus.addListener(RegisterMenuScreensEvent.class, loader::onRegisterMenuScreens);
+        }
 
         // Game (common) bus handlers. The item-interaction binder is the first; the dev-only bridges
         // (AgentMessageBridge, ServerTickProfiler) join the same pattern in the events slice.
         loader.registerCommonHandlers(new ItemsInteract());
+        if (loader.isClient()) {
+            loader.registerCommonHandlers(new NeoMouseScrollDispatch());
+        }
     }
 }

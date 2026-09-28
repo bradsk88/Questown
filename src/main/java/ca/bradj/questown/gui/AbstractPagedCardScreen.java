@@ -15,7 +15,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.List;
 
-public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D> extends AbstractContainerScreen<T> {
+public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D> extends AbstractContainerScreen<T> implements ScrollableScreen {
 
     private final PagedCardScreen<D> delegate;
     protected final int cardHeight;
@@ -111,13 +111,12 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
         this.setTooltipForNextRenderPass(tt);
     }
 
-    @Override
     public boolean mouseScrolled(
             double p_94686_,
             double p_94687_,
             double p_94688_
     ) {
-        return this.delegate.mouseScrolled(p_94686_, p_94687_, p_94688_, this::isMouseOver, super::mouseScrolled);
+        return this.delegate.mouseScrolled(p_94686_, p_94687_, p_94688_, this::isMouseOver, (x, y, d) -> false);
     }
 
     public List<Rect2i> getExtraAreas() {

@@ -31,7 +31,7 @@ public class AddWorkContainer extends AbstractContainerMenu {
 
     public static Collection<Ingredient> readWorkResults(FriendlyByteBuf data) {
         int size = data.readInt();
-        ArrayList<Ingredient> r = data.readCollection(c -> new ArrayList<>(size), Ingredient::fromNetwork);
+        ArrayList<Ingredient> r = data.readCollection(c -> new ArrayList<>(size), ca.bradj.questown.mc.Compat::readIngredient);
         return r;
     }
 
@@ -40,7 +40,7 @@ public class AddWorkContainer extends AbstractContainerMenu {
             FriendlyByteBuf data
     ) {
         data.writeInt(allOutputs.size());
-        data.writeCollection(allOutputs, (v, i) -> i.toNetwork(v));
+        data.writeCollection(allOutputs, ca.bradj.questown.mc.Compat::writeIngredient);
     }
 
     public static BlockPos readFlagPosition(FriendlyByteBuf buf) {
@@ -73,7 +73,7 @@ public class AddWorkContainer extends AbstractContainerMenu {
 
     public void sendRequest(Ingredient item) {
         AddWorkFromUIMessage msg = new AddWorkFromUIMessage(item, flag, AddWorkFromUIMessage.Action.INQUIRED);
-        QuestownNetwork.CHANNEL.sendToServer(msg);
+        QuestownNetwork.sendToServer(msg);
     }
 
     public boolean canRequest(Ingredient item) {

@@ -33,24 +33,23 @@ public class SaplingTesterBlock extends Block {
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level level,
             BlockPos blockPos,
             Player player,
-            InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
         if (!(level instanceof ServerLevel sl)) {
             return InteractionResult.CONSUME;
         }
 
-        ItemStack itemInHand = player.getItemInHand(p_60507_);
+        ItemStack itemInHand = player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND);
         if (!(itemInHand.getItem() instanceof BlockItem bi)) {
-            return super.use(p_60503_, level, blockPos, player, p_60507_, p_60508_);
+            return super.useWithoutItem(p_60503_, level, blockPos, player, p_60508_);
         }
         if (!(bi.getBlock() instanceof SaplingBlock)) {
-            return super.use(p_60503_, level, blockPos, player, p_60507_, p_60508_);
+            return super.useWithoutItem(p_60503_, level, blockPos, player, p_60508_);
         }
         boolean allowed = new CheckTreePlantable().postJobBlockCheckPassed(new JobBlockTestContext(
                 new MinecraftWorldAccess(sl), new WorkLocation.BlockInfo() {

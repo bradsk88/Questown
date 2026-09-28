@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableList;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -31,6 +32,11 @@ import java.util.List;
 import static net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
 
 public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
+    public static final MapCodec<WelcomeMatBlock> CODEC = MapCodec.unit(WelcomeMatBlock::new);
+
+    @Override
+    public MapCodec<WelcomeMatBlock> codec() { return CODEC; }
+
     public static final String ITEM_ID = "welcome_mat_block";
     protected static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 1.0D, 16.0D);
 

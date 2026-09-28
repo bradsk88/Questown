@@ -5,13 +5,12 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import ca.bradj.questown.loader.Channel;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public record ChangeVillagerJobMessage(
         int flagX, int flagY, int flagZ, UUID villagerUUID, JobID newJob, boolean announce
@@ -19,7 +18,7 @@ public record ChangeVillagerJobMessage(
 
     public static void encode(
             ChangeVillagerJobMessage msg,
-            FriendlyByteBuf buffer
+            RegistryFriendlyByteBuf buffer
     ) {
         buffer.writeInt(msg.flagX());
         buffer.writeInt(msg.flagY());
@@ -29,7 +28,7 @@ public record ChangeVillagerJobMessage(
         buffer.writeBoolean(msg.announce());
     }
 
-    public static ChangeVillagerJobMessage decode(FriendlyByteBuf buffer) {
+    public static ChangeVillagerJobMessage decode(RegistryFriendlyByteBuf buffer) {
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();
         int flagZ = buffer.readInt();
@@ -41,24 +40,18 @@ public record ChangeVillagerJobMessage(
 
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
             // Do stuff
-            Optional<TownFlagBlockEntity> flag = sender.level()
-                                                       .getBlockEntity(
-                                                               new BlockPos(flagX, flagY, flagZ),
-                                                               TilesInit.TOWN_FLAG.get()
-                                                       );
-            if (flag.isEmpty()) {
+            if (!(sender.level().getBlockEntity(new BlockPos(flagX, flagY, flagZ)) instanceof TownFlagBlockEntity flag)) {
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Quest will not be removed.", flagX, flagY, flagZ);
                 return;
             }
-            flag.get().getVillagerHandle().changeJobForVillager(villagerUUID, newJob, announce);
+            flag.getVillagerHandle().changeJobForVillager(villagerUUID, newJob, announce);
         });
-        ctx.get().setPacketHandled(true);
 
     }
 }

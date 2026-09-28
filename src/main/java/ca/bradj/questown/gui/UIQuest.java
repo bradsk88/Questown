@@ -96,7 +96,7 @@ public class UIQuest implements Comparable<UIQuest> {
             RoomBlock vv = v.get();
             rMapB.put(RoomBlock.getRoomId(vv), vv.asRecipe());
         });
-        level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
+        level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.id(), v.value()));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
         return aQ.stream().map(z -> {

@@ -1944,7 +1944,14 @@ public class TestBlueprintRegistry {
             BlockPos ingredientChest = flagPos.offset(ORGANIZER_INGREDIENT_CHEST);
 
             ItemStack request = ItemsInit.STOCK_REQUEST.get().getDefaultInstance();
-            StockRequestItem.writeToNBT(request.getOrCreateTag(), WorkRequest.of(Items.EMERALD));
+            {
+                net.minecraft.nbt.CompoundTag t = request.getOrDefault(
+                        net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                        net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
+                StockRequestItem.writeToNBT(t, WorkRequest.of(Items.EMERALD));
+                request.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                        net.minecraft.world.item.component.CustomData.of(t));
+            }
             if (!putInChest(level, targetChest, request)) {
                 output.error("[organizer] target chest not found at " + targetChest.toShortString());
                 return false;

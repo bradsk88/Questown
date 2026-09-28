@@ -14,6 +14,6 @@ public class ModItemGroup {
             .title(Component.translatable("itemGroup.questown"))
             .icon(() -> new ItemStack(ItemsInit.TOWN_FLAG_BLOCK.get()))
             .displayItems((parameters, output) ->
-                    ItemsInit.ITEMS.getEntries().forEach(reg -> output.accept(reg.get())))
+                    ItemsInit.ITEMS.entries().forEach(reg -> output.accept(reg.get())))
             .build();
 }

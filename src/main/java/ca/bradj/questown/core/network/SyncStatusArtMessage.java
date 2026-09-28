@@ -4,25 +4,24 @@ import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.production.ProductionStatus;
-import net.minecraft.network.FriendlyByteBuf;
+import ca.bradj.questown.loader.Channel;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 public record SyncStatusArtMessage(JobID id, ProductionStatus status, ResourceLocation artID) implements
         ClientRunnable {
 
     public static void encode(
             SyncStatusArtMessage msg,
-            FriendlyByteBuf buffer
+            RegistryFriendlyByteBuf buffer
     ) {
         Jobs.writeIdToNetwork(buffer, msg.id());
         buffer.writeUtf(msg.status().name());
         buffer.writeResourceLocation(msg.artID());
     }
 
-    public static SyncStatusArtMessage decode(FriendlyByteBuf buffer) {
+    public static SyncStatusArtMessage decode(RegistryFriendlyByteBuf buffer) {
         return new SyncStatusArtMessage(
                 Jobs.getIdFromNetwork(buffer),
                 ProductionStatus.fromNumber(buffer.readUtf()),
@@ -31,7 +30,7 @@ public record SyncStatusArtMessage(JobID id, ProductionStatus status, ResourceLo
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
         ToClientMessage.handle(ctx, this);
     }

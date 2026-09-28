@@ -2,22 +2,23 @@ package ca.bradj.questown.mobs.visitor;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.level.pathfinder.PathFinder;
+import net.minecraft.world.level.pathfinder.PathType;
+import net.minecraft.world.level.pathfinder.PathfindingContext;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.tags.ITag;
-import org.jetbrains.annotations.NotNull;
 
+/**
+ * Visitor mob pathfinding. In 1.20.6 the per-cell hook is
+ * {@link WalkNodeEvaluator#getPathType(PathfindingContext, int, int, int)} — Questown's routing
+ * overrides (campfire hard-block, water-with-roof, fence-gate walkability, fence hard-block) are
+ * applied on top of the vanilla result.
+ */
 @SuppressWarnings("NullableProblems")
 public class VillagerPathNavigation extends GroundPathNavigation {
     public VillagerPathNavigation(
@@ -30,88 +31,56 @@ public class VillagerPathNavigation extends GroundPathNavigation {
     }
 
     @Override
-    protected PathFinder createPathFinder(int p_26453_) {
+    protected PathFinder createPathFinder(int maxVisitedNodes) {
         this.nodeEvaluator = new WalkNodeEvaluator() {
-
             @Override
-            public BlockPathTypes getBlockPathType(
-                    BlockGetter getr,
-                    int x,
-                    int y,
-                    int z
-            ) {
+            public PathType getPathType(PathfindingContext context, int x, int y, int z) {
                 BlockPos pos = new BlockPos(x, y, z);
-                // The town's campfire is furniture, not a route: vanilla classifies a lit
-                // campfire as DANGER_FIRE (walkable, cost 8), so a townie whose path crosses
-                // it burns to death in about a second (CampfireBlock.entityInside deals 1
-                // fire damage per tick with no armor and no burn time). Hard-block it so no
-                // townie path ever routes through a lit campfire.
-                if (CampfireBlock.isLitCampfire(getr.getBlockState(pos))) {
-                    return BlockPathTypes.BLOCKED;
-                }
-                FluidState fs = getr.getFluidState(pos);
-                if (!fs.isEmpty()) {
-                    BlockState above = getr.getBlockState(pos.above());
-                    if (above.isAir()) {
-                        BlockState roof = getr.getBlockState(pos.above()
-                                                                .above());
-                        if (!roof.isAir()) {
-                            return BlockPathTypes.BLOCKED;
-                        }
-                    }
-                }
-
-                TagKey<Block> fenceGates = BlockTags.FENCE_GATES;
-                ITag<Block> gates = getTag(fenceGates);
-                if (gates.contains(getr.getBlockState(pos).getBlock())) {
-                    return BlockPathTypes.DOOR_WOOD_CLOSED;
-                }
-
-                ITag<Block> fences = getTag(BlockTags.FENCES);
-                if (fences.contains(getr.getBlockState(pos).getBlock())) {
-                    return BlockPathTypes.BLOCKED;
-                }
-                if (fences.contains(getr.getBlockState(pos.below()).getBlock())) {
-                    return BlockPathTypes.BLOCKED;
-                }
-
-                return super.getBlockPathType(getr, x, y, z);
-            }
-
-            @Override
-            protected BlockPathTypes evaluateBlockPathType(
-                    BlockGetter getr,
-                    BlockPos pos,
-                    BlockPathTypes defaultType
-            ) {
-                defaultType = super.evaluateBlockPathType(getr, pos, defaultType);
-
-                if (CampfireBlock.isLitCampfire(getr.getBlockState(pos))) {
-                    return BlockPathTypes.BLOCKED;
-                }
-
-                if (defaultType == BlockPathTypes.FENCE && (getr.getBlockState(pos)
-                                                                .getBlock() instanceof FenceGateBlock)) {
-                    return BlockPathTypes.DOOR_OPEN;
-                }
-
-                ITag<Block> fences = getTag(BlockTags.FENCES);
-                if (fences.contains(getr.getBlockState(pos).getBlock())) {
-                    return BlockPathTypes.BLOCKED;
-                }
-                if (fences.contains(getr.getBlockState(pos.below()).getBlock())) {
-                    return BlockPathTypes.BLOCKED;
-                }
-
-                return defaultType;
+                return overridePathType(context, pos, super.getPathType(context, x, y, z));
             }
         };
         this.nodeEvaluator.setCanPassDoors(true);
-        return new PathFinder(this.nodeEvaluator, p_26453_);
+        return new PathFinder(this.nodeEvaluator, maxVisitedNodes);
     }
 
-    @SuppressWarnings("DataFlowIssue")
-    private static @NotNull ITag<Block> getTag(TagKey<Block> fenceGates) {
-        return ForgeRegistries.BLOCKS.tags().getTag(fenceGates);
+    private PathType overridePathType(PathfindingContext context, BlockPos pos, PathType type) {
+        // The town's campfire is furniture, not a route: vanilla classifies a lit
+        // campfire as walkable, so a townie whose path crosses it takes fire damage
+        // (CampfireBlock.entityInside deals damage per tick with no armor and no burn
+        // time). Hard-block it so no townie path ever routes through a lit campfire.
+        BlockState state = context.getBlockState(pos);
+        if (CampfireBlock.isLitCampfire(state)) {
+            return PathType.BLOCKED;
+        }
+
+        FluidState fs = context.level().getFluidState(pos);
+        if (!fs.isEmpty()) {
+            BlockState above = context.getBlockState(pos.above());
+            if (above.isAir()) {
+                BlockState roof = context.getBlockState(pos.above()
+                                                        .above());
+                if (!roof.isAir()) {
+                    return PathType.BLOCKED;
+                }
+            }
+        }
+
+        if (state.is(BlockTags.FENCE_GATES)) {
+            return PathType.DOOR_WOOD_CLOSED;
+        }
+
+        if (state.is(BlockTags.FENCES)) {
+            return PathType.BLOCKED;
+        }
+        if (context.getBlockState(pos.below()).is(BlockTags.FENCES)) {
+            return PathType.BLOCKED;
+        }
+
+        // A fence gate reading as FENCE is actually openable (the old evaluate hook).
+        if (type == PathType.FENCE && state.getBlock() instanceof FenceGateBlock) {
+            return PathType.DOOR_OPEN;
+        }
+
+        return type;
     }
 }

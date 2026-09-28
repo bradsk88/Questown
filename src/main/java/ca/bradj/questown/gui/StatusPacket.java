@@ -20,13 +20,13 @@ public record StatusPacket(
             StatusPacket statusPacket
     ) {
         Jobs.writeIdToNetwork(b, statusPacket.jobId);
-        b.writeCollection(statusPacket.texts, FriendlyByteBuf::writeComponent);
+        b.writeCollection(statusPacket.texts, (buf, c) -> buf.writeUtf(c.getString()));
         b.writeResourceLocation(statusPacket.image);
     }
 
     public static StatusPacket fromNetwork(FriendlyByteBuf b) {
         JobID j = Jobs.getIdFromNetwork(b);
-        List<Component> textKeys = b.readList(FriendlyByteBuf::readComponent);
+        List<Component> textKeys = b.readList(buf -> net.minecraft.network.chat.Component.literal(buf.readUtf()));
         ResourceLocation img = b.readResourceLocation();
         return new StatusPacket(j, ImmutableList.copyOf(textKeys), img);
     }

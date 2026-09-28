@@ -20,7 +20,9 @@ public class QTNBT {
             String key,
             String value
     ) {
-        map.getOrCreateTag().putString(keyify(key), value);
+        CompoundTag t = map.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
+        t.putString(keyify(key), value);
+        map.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(t));
     }
 
     public static @Nullable String getString(

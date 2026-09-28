@@ -42,14 +42,14 @@ public class CreateStockRequestContainer extends AbstractContainerMenu {
         int size = data.readInt();
         ArrayList<Ingredient> r = data.readCollection(
                 c -> new ArrayList<>(size),
-                Ingredient::fromNetwork
+                ca.bradj.questown.mc.Compat::readIngredient
         );
         return r;
     }
 
     public static void writeWorkResults(ImmutableCollection<Ingredient> allOutputs, FriendlyByteBuf data) {
         data.writeInt(allOutputs.size());
-        data.writeCollection(allOutputs, (v, i) -> i.toNetwork(v));
+        data.writeCollection(allOutputs, ca.bradj.questown.mc.Compat::writeIngredient);
     }
 
     public static BlockPos readFlagPosition(FriendlyByteBuf buf) {
@@ -81,7 +81,7 @@ public class CreateStockRequestContainer extends AbstractContainerMenu {
     }
 
     public void sendRequest(WorkRequest item, UUID uuid) {
-        QuestownNetwork.CHANNEL.sendToServer(
+        QuestownNetwork.sendToServer(
                 new CreateStockRequestFromUIMessage(item, flag.getX(), flag.getY(), flag.getZ(), uuid)
         );
     }

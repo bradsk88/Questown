@@ -13,6 +13,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -25,6 +26,11 @@ import java.util.function.Consumer;
  * (NeoForge 1.20.6 primary, a legacy Forge 1.19.2 api) can be swapped behind it. Every method here uses
  * vanilla ({@code net.minecraft}) or {@code ca.bradj.questown.loader} types, so main code carries zero
  * loader imports.
+ *
+ * <p>Contexts without a mod (unit tests) supply their {@link LoaderApi} on the classpath instead:
+ * the first unresolved call picks up the implementation named by
+ * {@code META-INF/services/ca.bradj.questown.loader.LoaderApi}. An explicit {@link #init(LoaderApi)}
+ * always wins.
  */
 public final class Loader {
 
@@ -39,10 +45,25 @@ public final class Loader {
         API.set(api);
     }
 
+    private static final Object API_LOCK = new Object();
+
     private static LoaderApi api() {
         LoaderApi api = API.get();
         if (api == null) {
-            throw new IllegalStateException("No loader installed (Loader.init not called); got here before mod start.");
+            synchronized (API_LOCK) {
+                api = API.get();
+                if (api == null) {
+                    api = ServiceLoader.load(LoaderApi.class).stream().findFirst()
+                            .map(ServiceLoader.Provider::get)
+                            .orElse(null);
+                    if (api != null) {
+                        API.set(api);
+                    }
+                }
+            }
+        }
+        if (api == null) {
+            throw new IllegalStateException("No loader installed (Loader.init not called, no LoaderApi on the classpath); got here before mod start.");
         }
         return api;
     }
@@ -96,6 +117,14 @@ public final class Loader {
         return api().registerMenu(name, factory);
     }
 
+    public static <T extends net.minecraft.world.inventory.AbstractContainerMenu>
+    void registerScreen(
+            net.minecraft.world.inventory.MenuType<T> menuType,
+            LoaderApi.ScreenFactory<T> screenFactory
+    ) {
+        api().registerScreen(menuType, screenFactory);
+    }
+
     /** Force the {@code *Init} classes' static registries to be created; called from the mod entry. */
     public static void defineRegistries() {
         api().defineRegistries();
@@ -121,7 +150,7 @@ public final class Loader {
         return api().soundFromId(id);
     }
 
-    public static net.minecraft.resources.@Nullable ResourceLocation biomeKeyOf(net.minecraft.world.level.biome.Biome biome) {
+    public static net.minecraft.resources.@Nullable ResourceLocation biomeKeyOf(net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> biome) {
         return api().biomeKeyOf(biome);
     }
 
@@ -154,6 +183,10 @@ public final class Loader {
 
     public static <T> void sendToPlayer(Player p, T msg) {
         api().sendToPlayer(p, msg);
+    }
+
+    public static <T> void sendToAll(net.minecraft.world.level.Level level, T msg) {
+        api().sendToAll(level, msg);
     }
 
     public static <T> void sendToServer(T msg) {

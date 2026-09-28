@@ -124,7 +124,7 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
         this.addRenderableWidget(Button.builder(
                 Compat.translatable("menu.flag_crafting.begin_moving"),
                 btn -> {
-                    QuestownNetwork.CHANNEL.sendToServer(new BeginTownRelocationMessage(flagPos));
+                    QuestownNetwork.sendToServer(new BeginTownRelocationMessage(flagPos));
                     this.onClose();
                 }
         ).bounds(bgX + MARGIN, bgY + moveButtonY, TEXT_WIDTH, BTN_HEIGHT).build());
@@ -134,7 +134,7 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
         return Button.builder(
                 Compat.translatable("menu.flag_crafting.craft"),
                 btn -> {
-                    QuestownNetwork.CHANNEL.sendToServer(new FlagCraftMessage(flagPos, recipeIndex));
+                    QuestownNetwork.sendToServer(new FlagCraftMessage(flagPos, recipeIndex));
                     this.onClose();
                 }
         ).bounds(x, y, CRAFT_BTN_W, BTN_HEIGHT).build();
@@ -182,7 +182,7 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
         updateCraftButtonStates();
-        this.renderBackground(gui);
+        this.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
 
         int bgX = (this.width - backgroundWidth) / 2;

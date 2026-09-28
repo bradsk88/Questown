@@ -82,7 +82,7 @@ public class VillagerAdvancementsContent {
                             Compat.translatable(adv.id().jobId()),
                             Compat.literal(""),
                             display.getBackground(),
-                            display.getFrame(),
+                            display.getType(),
                             false,
                             false,
                             false
@@ -117,7 +117,7 @@ public class VillagerAdvancementsContent {
                     Compat.translatable(allJobs.id().jobId()),
                     Compat.literal(""),
                     display.getBackground(),
-                    display.getFrame(),
+                    display.getType(),
                     false,
                     false,
                     false
@@ -206,7 +206,7 @@ public class VillagerAdvancementsContent {
         RenderSystem.depthFunc(518);
         p_97164_.fill(234, 113, 0, 0, -16777216);
         RenderSystem.depthFunc(515);
-        ResourceLocation resourcelocation = this.display.getBackground();
+        net.minecraft.resources.ResourceLocation resourcelocation = this.display.getBackground().orElse(null);
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         if (resourcelocation != null) {
             RenderSystem.setShaderTexture(0, resourcelocation);

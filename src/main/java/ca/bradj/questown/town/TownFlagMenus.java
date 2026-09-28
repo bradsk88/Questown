@@ -30,7 +30,6 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 
@@ -85,10 +84,7 @@ public class TownFlagMenus {
                 ),
                 OpenFlagMenuMessage.ECONOMICS,
                 () -> {
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(() -> sender),
-                            new EconomicsUpdate(flag.getEconomicsHandle().getAggregatedItems(null))
-                    );
+                    QuestownNetwork.sendToPlayer(sender, new EconomicsUpdate(flag.getEconomicsHandle().getAggregatedItems(null)));
                     openMenu(
                             sender, (windowId, inv, p) -> new TownEconomicsMenu(
                                     windowId, realFlagInfo
@@ -128,7 +124,10 @@ public class TownFlagMenus {
             Collection<? extends Quest<ResourceLocation, ?>> q
     ) {
         List<RoomRecipe> farmRecipes = p.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).stream()
-                                              .filter(RoomRecipe::isFarmRecipe).toList();
+                                              
+                                              .map(v -> v.value())
+                                              .filter(RoomRecipe::isFarmRecipe)
+                                              .toList();
         for (Quest<?, ?> mcQuest : q) {
             if (farmRecipes.stream().noneMatch(z -> z.getId().equals(mcQuest.getWantedId()))) {
                 continue;

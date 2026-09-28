@@ -371,6 +371,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 () -> {
                     List<RoomRecipe> rs = level.getRecipeManager()
                                                .getAllRecipesFor(RecipesInit.ROOM).stream()
+                                               
+                                               .map(v -> v.value())
                                                .filter(v -> TownQuests.isNotSpecial(v.getId()))
                                                .toList();
                     List<RoomRecipe> recipes = new ArrayList<>(rs);

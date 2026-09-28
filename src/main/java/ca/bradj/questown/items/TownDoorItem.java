@@ -33,7 +33,7 @@ public class TownDoorItem extends Item {
     @NotNull
     private static InteractionResult placeAndRegisterContainedItem(net.minecraft.world.item.context.UseOnContext ctx) {
         @Nullable ItemStack input = TownFlagBlock.GetFlagInputFromItemNBT(
-                ctx.getItemInHand());
+                ctx.getLevel().registryAccess(), ctx.getItemInHand());
         if (input == null) {
             QT.ITEM_LOGGER.error("{} is missing flag input", Loader.itemIdOf(ctx.getItemInHand().getItem()));
             return InteractionResult.FAIL;

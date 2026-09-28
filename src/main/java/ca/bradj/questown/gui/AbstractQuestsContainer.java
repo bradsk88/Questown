@@ -107,7 +107,7 @@ public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
 
     public void sendRemoveRequest(UUID batchUUID) {
         BlockPos f = flagInfo.flagPos();
-        QuestownNetwork.CHANNEL.sendToServer(
+        QuestownNetwork.sendToServer(
                 new RemoveQuestFromUIMessage(batchUUID, f.getX(), f.getY(), f.getZ(), true)
         );
     }

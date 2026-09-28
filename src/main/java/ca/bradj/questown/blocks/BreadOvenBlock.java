@@ -6,6 +6,7 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -36,6 +37,11 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class BreadOvenBlock extends HorizontalDirectionalBlock implements StatefulJobBlock {
+    public static final MapCodec<BreadOvenBlock> CODEC = MapCodec.unit(BreadOvenBlock::new);
+
+    @Override
+    public MapCodec<BreadOvenBlock> codec() { return CODEC; }
+
     public static final String ITEM_ID = "bread_oven_block";
 
     public static final IntegerProperty BAKE_STATE = IntegerProperty.create(
@@ -173,12 +179,11 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState blockState,
             Level level,
             BlockPos pos,
             Player player,
-            InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
         if (!(level instanceof ServerLevel sl)) {

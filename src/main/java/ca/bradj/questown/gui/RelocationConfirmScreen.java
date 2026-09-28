@@ -74,7 +74,7 @@ public class RelocationConfirmScreen extends Screen {
     }
 
     private void choose(boolean leaveBehind) {
-        QuestownNetwork.CHANNEL.sendToServer(new RelocationChoiceMessage(targetPos, leaveBehind));
+        QuestownNetwork.sendToServer(new RelocationChoiceMessage(targetPos, leaveBehind));
         this.onClose();
     }
 
@@ -86,7 +86,7 @@ public class RelocationConfirmScreen extends Screen {
             float partialTicks
     ) {
         stack.fillGradient(0, 0, this.width, this.height, -1072689136, -804253680);
-        this.renderBackground(stack);
+        this.renderBackground(stack, mouseX, mouseY, partialTicks);
         super.render(stack, mouseX, mouseY, partialTicks);
         int textX = pageLeftX + PAGE_PADDING;
         Compat.drawDarkText(this.font, stack, title, textX, pageTopY);
@@ -103,7 +103,7 @@ public class RelocationConfirmScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics poseStack) {
+    public void renderBackground(GuiGraphics poseStack, int mouseX, int mouseY, float partialTicks) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         this.background.draw(poseStack, x, y, backgroundWidth, backgroundHeight);

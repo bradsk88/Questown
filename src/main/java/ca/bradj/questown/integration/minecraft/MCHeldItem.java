@@ -7,7 +7,9 @@ import ca.bradj.questown.jobs.gatherer.GathererTools;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -38,9 +40,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     }
 
     public static MCHeldItem fromTag(CompoundTag tag) {
-        CompoundTag nbt = tag.getCompound("item");
-        ItemStack stack = ItemStack.of(nbt);
-        MCTownItem ti = new MCTownItem(stack.getItem(), stack.getCount(), nbt);
+        MCTownItem ti = MCTownItem.of(tag.getCompound("item"));
         boolean loqued = tag.getBoolean("locked");
         String prefix = QTNBT.getString(tag, "prefix");
         String biome = QTNBT.getString(tag, "biome");
@@ -51,11 +51,12 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
         if (item.isEmpty()) {
             return MCHeldItem.Air();
         }
+        CompoundTag data = item.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         return new MCHeldItem(
                 MCTownItem.fromMCItemStack(item),
                 false,
-                QTNBT.getString(item.getOrCreateTag(), "prefix"),
-                QTNBT.getString(item.getOrCreateTag(), "biome")
+                QTNBT.getString(data, "prefix"),
+                QTNBT.getString(data, "biome")
         );
     }
 
@@ -158,7 +159,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     }
 
     public static MCHeldItem deserialize(CompoundTag v) {
-        ItemStack del = ItemStack.of(v.getCompound("item"));
+        MCTownItem ti = MCTownItem.of(v.getCompound("item"));
         boolean locked = false;
         if (v.contains("locked")) {
             locked = v.getBoolean("locked");
@@ -171,7 +172,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
         if (v.contains("prefix")) {
             prefix = v.getString("prefix");
         }
-        return new MCHeldItem(MCTownItem.fromMCItemStack(del), locked, prefix, biome);
+        return new MCHeldItem(ti, locked, prefix, biome);
     }
 
     public MCTownItem toItem() {

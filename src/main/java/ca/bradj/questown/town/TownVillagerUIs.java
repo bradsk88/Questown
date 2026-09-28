@@ -36,7 +36,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -134,7 +133,7 @@ public class TownVillagerUIs {
 
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
-        sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
+        sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.id(), v.value()));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
@@ -164,7 +163,7 @@ public class TownVillagerUIs {
             ));
         }
         Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build(), unsafeTown.getTownFlagBasePos());
-        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
+        QuestownNetwork.sendToPlayer(sender, msg);
     }
 
     private static @NotNull ImmutableList<Ingredient> getRoomIngredients(
@@ -198,7 +197,7 @@ public class TownVillagerUIs {
 
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
-        sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
+        sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.id(), v.value()));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
         ImmutableList<JobID> jubz = ServerJobsRegistry.getAllJobs()
@@ -228,7 +227,7 @@ public class TownVillagerUIs {
         }
 
         Object msg = new ShowItemJobsMessage(Ingredient.of(ItemStack.EMPTY), b.build(), unsafe.getTownFlagBasePos());
-        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
+        QuestownNetwork.sendToPlayer(sender, msg);
     }
 
     public static void showUI(
@@ -280,7 +279,6 @@ public class TownVillagerUIs {
     }
 
     private static void syncWorkToClient(ServerPlayer sender) {
-        PacketDistributor.PacketTarget tgt = PacketDistributor.PLAYER.with(() -> sender);
         Map<JobID, @Nullable JobID> b = new HashMap<>();
         Map<JobID, ResourceLocation> b2 = new HashMap<>();
         Works.values().forEach(w -> {
@@ -288,7 +286,7 @@ public class TownVillagerUIs {
             b.put(work.id, work.parentID);
             b2.put(work.id, Compat.getItemId(work.icon.getItem()));
         });
-        QuestownNetwork.CHANNEL.send(tgt, new SyncVillagerAdvancementsMessage(b, b2));
+        QuestownNetwork.sendToPlayer(sender, new SyncVillagerAdvancementsMessage(b, b2));
     }
 
     record ShowerData(
@@ -379,7 +377,7 @@ public class TownVillagerUIs {
                             d.entity().getJobId(),
                             d.entity().hasBlockOfProgress()
                     );
-                    QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(d::sender), msg);
+                    QuestownNetwork.sendToPlayer(d.sender(), msg);
                 }
         );
         b.put(
@@ -404,10 +402,7 @@ public class TownVillagerUIs {
                 OpenVillagerMenuMessage.ECONOMICS, (ShowerData d) -> {
                     NoMCEconomics tEcon = d.econHandle.get();
                     ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(d.villagerId());
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(d::sender),
-                            new EconomicsUpdate(aggregated)
-                    );
+                    QuestownNetwork.sendToPlayer(d.sender(), new EconomicsUpdate(aggregated));
                     openMenu(
                             d.sender(), (windowId, inv, p) -> new VillagerEconomicsMenu(
                                     windowId,
@@ -423,10 +418,7 @@ public class TownVillagerUIs {
                 OpenVillagerMenuMessage.BOP, (ShowerData d) -> {
                     NoMCEconomics tEcon = d.econHandle.get();
                     ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(d.villagerId());
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(d::sender),
-                            new EconomicsUpdate(aggregated)
-                    );
+                    QuestownNetwork.sendToPlayer(d.sender(), new EconomicsUpdate(aggregated));
                     openMenu(
                             d.sender(), (windowId, inv, p) -> new VillagerBlockofProgressMenu(
                                     windowId,

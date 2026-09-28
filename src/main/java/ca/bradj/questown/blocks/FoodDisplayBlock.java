@@ -5,6 +5,7 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
@@ -25,6 +26,11 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 public class FoodDisplayBlock extends HorizontalDirectionalBlock implements InsertedItemAware, EntityBlock {
+    public static final MapCodec<FoodDisplayBlock> CODEC = MapCodec.unit(FoodDisplayBlock::new);
+
+    @Override
+    public MapCodec<FoodDisplayBlock> codec() { return CODEC; }
+
     public static final String ITEM_ID = "food_display";
 
     public FoodDisplayBlock(
@@ -93,12 +99,11 @@ public class FoodDisplayBlock extends HorizontalDirectionalBlock implements Inse
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level p_60504_,
             BlockPos pos,
             Player p_60506_,
-            InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
 
@@ -106,11 +111,7 @@ public class FoodDisplayBlock extends HorizontalDirectionalBlock implements Inse
             return InteractionResult.PASS;
         }
 
-        if (!InteractionHand.MAIN_HAND.equals(p_60507_)) {
-            return InteractionResult.PASS;
-        }
-
-        ItemStack item = p_60506_.getItemInHand(p_60507_);
+        ItemStack item = p_60506_.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND);
 
         BlockEntity blockentity = sl.getBlockEntity(pos);
         if (!(blockentity instanceof FoodDisplayEntity fde)) {

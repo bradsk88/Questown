@@ -40,7 +40,9 @@ public final class EmptyTownGrassThinner {
     private static final String HALF_KEY = "half";
 
     private static final String TALL_GRASS = "minecraft:tall_grass";
-    private static final String GRASS = "minecraft:grass";
+    // 1.20.6: minecraft:grass was removed; the short grass plant is short_grass
+    // (written below via Blocks.SHORT_GRASS).
+    private static final String GRASS = "minecraft:short_grass";
 
     /** Fraction of grass blocks (after lowering tall_grass) kept. 0.5 = remove ~50%. */
     static final double KEEP_FRACTION = 0.5;
@@ -58,7 +60,7 @@ public final class EmptyTownGrassThinner {
         }
         CompoundTag tag;
         try (var in = Files.newInputStream(path)) {
-            tag = NbtIo.readCompressed(in);
+            tag = NbtIo.readCompressed(in, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
         }
         CompoundTag updated = mode == Mode.LOWER_AND_THIN ? thinGrass(tag) : lowerTallGrass(tag);
 
@@ -143,7 +145,7 @@ public final class EmptyTownGrassThinner {
                 return i;
             }
         }
-        CompoundTag entry = NbtUtils.writeBlockState(Blocks.GRASS.defaultBlockState());
+        CompoundTag entry = NbtUtils.writeBlockState(Blocks.SHORT_GRASS.defaultBlockState());
         palette.add(entry);
         return palette.size() - 1;
     }

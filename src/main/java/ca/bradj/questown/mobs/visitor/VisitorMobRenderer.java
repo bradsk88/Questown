@@ -44,11 +44,10 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
     }
 
     public static ResourceLocation getTextureLocation(UUID uuid) {
-        int index = Math.abs(uuid.hashCode()) % (customSkins.size() + 2);
-        if (index < 2) {
-            return DefaultPlayerSkin.getDefaultSkin(uuid);
-        }
-        return customSkins.get(index - 2);
+        // 1.20.6 has no DefaultPlayerSkin; fall back to the custom skin list,
+        // keeping the per-UUID deterministic pick.
+        int index = Math.abs(uuid.hashCode()) % customSkins.size();
+        return customSkins.get(index);
     }
 
     @Override

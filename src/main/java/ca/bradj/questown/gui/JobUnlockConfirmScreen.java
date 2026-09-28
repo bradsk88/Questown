@@ -58,7 +58,7 @@ public class JobUnlockConfirmScreen extends AbstractContainerScreen<JobUnlockCon
         int buttonWidth = (backgroundWidth / 2) - 8;
         this.unlockButton = this.addRenderableWidget(Button.builder(
                 Compat.translatable("menu.common.unlock"), (p_96776_) -> {
-            QuestownNetwork.CHANNEL.sendToServer(new UnlockJobMessage(
+            QuestownNetwork.sendToServer(new UnlockJobMessage(
                     menu.flagPos,
                     menu.villagerUUID,
                     menu.jobId,
@@ -84,7 +84,7 @@ public class JobUnlockConfirmScreen extends AbstractContainerScreen<JobUnlockCon
         if (unlockButton != null) {
             unlockButton.active = menu.hasBlockOfProgress();
         }
-        super.renderBackground(gui);
+        super.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;

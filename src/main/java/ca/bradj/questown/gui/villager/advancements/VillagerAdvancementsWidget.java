@@ -5,7 +5,6 @@ import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.advancements.DisplayInfo;
-import net.minecraft.advancements.FrameType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.StringSplitter;
 import net.minecraft.client.gui.GuiGraphics;
@@ -74,7 +73,7 @@ public class VillagerAdvancementsWidget {
         this.description = Language.getInstance().getVisualOrder(this.findOptimalLines(
                 ComponentUtils.mergeStyles(
                         p_97258_.getDescription().copy(),
-                        Style.EMPTY.withColor(p_97258_.getFrame().getChatColor())
+                        Style.EMPTY.withColor(net.minecraft.ChatFormatting.GOLD)
                 ), l
         ));
 
@@ -203,13 +202,15 @@ public class VillagerAdvancementsWidget {
     }
 
     private int getFrameType() {
+        // 1.20.6 dropped FrameType; these are the vanilla advancement-sprite rows the
+        // FrameType enum's getTexture() pointed at (task=10, goal=9, challenge=8).
         int ft = -1;
         if (unlocked) {
-            ft = FrameType.TASK.getTexture();
+            ft = 10; // TASK
         } else if (canUnlock) {
-            ft = FrameType.GOAL.getTexture();
+            ft = 9; // GOAL
         } else if (minecraft.player.isCreative()) {
-            ft = FrameType.CHALLENGE.getTexture();
+            ft = 8; // CHALLENGE
         }
         return ft;
     }

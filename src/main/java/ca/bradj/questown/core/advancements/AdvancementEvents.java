@@ -2,16 +2,16 @@ package ca.bradj.questown.core.advancements;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.Journal;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.entity.player.AdvancementEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import vazkii.patchouli.api.PatchouliAPI;
+import net.neoforged.neoforge.event.entity.player.AdvancementEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@net.neoforged.fml.common.EventBusSubscriber(modid = Questown.MODID, bus = net.neoforged.fml.common.EventBusSubscriber.Bus.MOD)
 public class AdvancementEvents {
 
     private static final ResourceLocation BOOK_ID = new ResourceLocation(Questown.MODID, "intro");
@@ -71,10 +71,10 @@ public class AdvancementEvents {
         if (!(event.getEntity() instanceof ServerPlayer sp)) {
             return;
         }
-        if (!Questown.MODID.equals(event.getAdvancement().getId().getNamespace())) {
+        if (!Questown.MODID.equals(event.getAdvancement().id().getNamespace())) {
             return;
         }
-        String path = event.getAdvancement().getId().getPath();
+        String path = event.getAdvancement().id().getPath();
         if ("root".equals(path)) {
             // R20/R21: journal is no longer handed out on first visit — the helper
             // chicken is the onboarding guide now. The chat line stays as flavour,
@@ -87,7 +87,7 @@ public class AdvancementEvents {
         }
         String entry = ADVANCEMENT_TO_ENTRY.get(path);
         if (entry != null) {
-            PatchouliAPI.get().openBookEntry(sp, BOOK_ID, new ResourceLocation(Questown.MODID, entry), 0);
+            Journal.openBookEntry(sp, BOOK_ID, new ResourceLocation(Questown.MODID, entry), 0);
         } else {
             Compat.sendMessage(sp, Compat.translatable("messages.town_flag.journal_page"));
         }

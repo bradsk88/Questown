@@ -50,7 +50,37 @@ QuestownMod.clientSetup (client)          # Questown.onClientSetup() (menus, ren
 
 ## Status / pending slices
 
-This is a **WIP checkpoint** (the tree does not yet compile). Done and
+This is a **WIP checkpoint**, now **compiling (main + test)** and the unit
+suite is green (965 tests, 43 skipped; the only red is the deliberate
+`ChickenArcHintsTest.todo_…` marker, which always fails by design: it lists
+beats that need a loader mod-bus harness a plain JVM cannot give).
+
+**Unit-test harness (verified).** Plain JUnit JVMs have no NeoForge mod-bus
+window, and the facade requires a `LoaderApi`: `Loader.api()` falls back to a
+`ServiceLoader` lookup of `ca.bradj.questown.loader.LoaderApi` (named in
+`src/test/resources/META-INF/services/…LoaderApi`) and resolves to
+`loader/TestLoader` — a plain-JVM `LoaderApi` impl (lazy registered holders,
+`NeoConfigBuilder` config, `IMenuTypeExtension` menus, no-op networking).
+An explicit `Loader.init(...)` always wins, so production is untouched.
+
+**1.20.6 traps resolved here (verify in code, not from this note):**
+- The vanilla item/block registries are **defaulted**: `BuiltInRegistries.ITEM.get(unknown)`
+  returns AIR, not null — `itemFromId`/`blockFromId` must guard with `containsKey` (both `NeoLoader`
+  and `TestLoader` do).
+- `minecraft:grass` no longer exists in 1.20.6: the short grass plant is
+  `minecraft:short_grass` (`Blocks.SHORT_GRASS`), tall is `minecraft:tall_grass`
+  (`half` property). `EmptyTownGrassPruner`/`Thinner` recognize the new name
+  (old names kept for legacy palettes); a `Blocks.GRASS`→`Blocks.GRASS_BLOCK`
+  port would be wrong — the solid floor block is a different plant.
+- Criterion trigger registration (`CriteriaTriggers.register`) goes through
+  NeoForge's dynamic registry and is **frozen outside the mod-bus registry
+  phase** — fine in `QuestownMod`'s constructor, not in a plain test JVM. Tests
+  that only need the object construct it directly (see `FlagCommandCrashReproTest`).
+- `Ingredient` round-tripping: `Ingredient.CODEC_NONEMPTY` rejects a tag
+  ingredient with zero members ("Item array cannot be empty") — encode with
+  `Ingredient.CODEC` instead.
+
+Done and
 compiling to the facade: registries (`*Init` + `RegistryDefinitions`), config
 (`Config` + `RecipeItemConfig`), menus (`MenuTypesInit`), `Compat` helpers, the
 mod entry split (`Questown` bootstrap + `QuestownMod` + `ItemsInteract`), the
@@ -65,7 +95,8 @@ re-pointed to Neo `SlotItemHandler`/`InvWrapper`, the Forge `getCapability` over
 removed), and **tool-actions** (slice 3 — DONE, below: Neo `ToolAction(s)` re-point +
 `RecipeHolder`/`AbstractFurnaceBlockEntity.getFuel()`) (see the slice bullets).
 
-Remaining slices (each a focused pass; file lists are the compiler's surface):
+Slice ledger (compile-level work is all done as of this checkpoint; what remains is
+runtime verification — a held 1.20.6 hold-run autotest — not more ports):
 
 - **advancement triggers** (4 + init) — **DONE, cleared.** `TutorialTrigger`,
   `ApproachTownTrigger`, `VisitorTrigger`, `RoomTrigger` + `AdvancementsInit` now use the
@@ -77,30 +108,38 @@ Remaining slices (each a focused pass; file lists are the compiler's surface):
 - **item-handler capability** (~7 files) — **DONE for compile.** TownFlagBOPItemHandler implements the neutral ItemHandler; TownFlagState + MinecraftWorldAccess consume via Loader.handlerOf(BlockEntity) (was getCapability + LazyOptional); AbstractVillagerMenu + LockableInventoryWrapper re-point to Neo SlotItemHandler/InvWrapper(Container); TownFlagBlockEntity dropped the LazyOptional<IItemHandler> field + getCapability override (removed in 1.20.6) and exposes a neutral bopItemHandler().
   **Follow-up (strangler end-state):** the runtime provider/consumer path is not wired — Neo 1.20.6 removed BlockEntity.getCapability, so a working BOP handler needs (a) a loader.neo binder registering the flag's bopItemHandler() via RegisterCapabilitiesEvent.registerBlockEntity(Capabilities.ItemHandler.BLOCK, FLAG type, ...) wrapped in a loader IItemHandler, and (b) the neutral facade gaining a handlerAt(Level, BlockPos) (level-based retrieval via level.getCapability(...)), since the BE-only handlerOf(BlockEntity) can't find a registered BLOCK capability. At this checkpoint the consumers return Optional.empty and degrade gracefully.
 - **tool-actions** (~2 files) — **DONE, cleared.** MinecraftWorldAccess + WarpWorldAccess both drove hoe/axe/shovel via `BlockState.getToolModifiedState(UseOnContext, ToolAction, boolean)` with `net.minecraftforge.common.ToolAction(s)`. That `getToolModifiedState` is a **NeoForge patch onto vanilla `BlockState`** in 1.20.6 (vanilla `HoeItem` calls it with `net.neoforged.neoforge.common.ToolActions`), so the fix was an import re-point — `forge` → `neoforged.neoforge.common.ToolAction(s)` — not a rework. WarpWorldAccess also: `getRecipeFor` now returns `RecipeHolder<T>` (resolver uses `r.recipe()`), and burn time moved from the removed `ForgeHooks.getBurnTime` to the vanilla `AbstractFurnaceBlockEntity.getFuel()` table (Map<Item,Integer>).
-- **network** (~10 files) — `TownMessages`, `TownFlagMenus`, `mc/Util`,
-  `StockRequestClipboardItem`, `RelocationDeedItem`, `PlateBlockEntity`,
-  `FoodDisplayEntity`, `AxeRackBlock`, and the `core/network/*.java` message
-  classes (still `PacketDistributor` + `Dist.CLIENT`). Onto Neo
-  `Payload`/`StreamCodec`; the send paths are currently log-and-skip no-ops at
-  `QuestownNetwork.init()`.
-- **events** (~11 files) — `AutoTestRunner`, `HelperChickenEntityEvents`, `QuestownSpecialRules`,
-  `IntegrationForgeEvents`, `CampfireSleepForgeEvents`, `CampfireSleepClientEvents`, `CommandInit`,
-  `TestCommand`, `TestAllCommand`, `GuiLayoutCheckClientEvents`, `TownFlagBlockEntity`. Mapping confirmed
-  against the Neo jars: `SubscribeEvent` → `net.neoforged.bus.api.SubscribeEvent`; `@Mod.EventBusSubscriber`
-  → standalone `@net.neoforged.fml.common.EventBusSubscriber` (`Bus.FORGE`/`MOD` unchanged); the `Phase` enum
-  is GONE — tick handlers now target abstract base + nested `Pre`/`Post` (`ServerTickEvent.Post`,
-  `ClientTickEvent.Post`); `FMLCommonSetupEvent` → `net.neoforged.fml.event.lifecycle`; `MinecraftForge` →
-  `NeoForge`; `ServerAboutToStartEvent`/`PlayerWakeUpEvent`/`ServerLifecycleHooks`/`ScreenEvent`/`EntityEvent`
-  re-point to `net.neoforged.neoforge.*`. (End-state: neutral core + `loader.neo` bus binder.)
-- **journal (Patchouli) drop** — `ServerJobsRegistry` + `PagedCardScreen` **DONE** (TriPredicate →`neutral
-  loader.TriPredicate`). Remaining: `QuestsScreen` line ~497 `PatchouliAPI.get().openBookEntry(...)` — the
-  journal-open action; with Patchouli out of the classpath it becomes a no-op/log (journal dropped per user).
-  See `.scratch/bring-back-journal`.
-- **loot API** (2 files) — `Loots` + `ResourceJobLoader`: `LootDataManager` is gone in 1.20.6, map onto the
-  vanilla 1.20.6 loot API (`LootTable`/`LootPool`/`LootContext`).
-- **gui FrameType** (2 files) — `VillagerAdvancementsWidget` + `VillagerAdvancementsScreen` import
-  `net.minecraft.advancements.FrameType` (`TASK`/`GOAL`/`CHALLENGE`, `.getTexture()`); it moved in 1.20.x —
-  not yet located, needs the 1.20.6 name before mapping.
+- **network** — **DONE, verified.** All 32 message classes are neutral POJOs with
+  wire `encode`/`decode` over `RegistryFriendlyByteBuf` + `Channel.Context` handlers;
+  `QuestownNetwork.init()` fills the neutral registry (`Questown.onCommonSetup()`, which runs in
+  the `FMLCommonSetup` phase — before NeoForge's `RegisterPayloadHandlersEvent`, so the
+  registration order holds). `NeoChannel` adapts to NeoForge: one envelope payload
+  (`NeoEnvelope`, `questown:network_message`) whose wire is a **varint message id + the message's
+  encoder bytes**; `NeoChannel.onRegisterPayloadHandlers` registers it with one
+  `IPayloadHandler` for `playToClient`/`playToServer`. Main code only sees
+  `QuestownNetwork.sendToPlayer/sendToAll/sendToServer` (all send sites re-pointed).
+  **Wire round-trip verified** by `NeoChannelWireTest` (it caught a real bug this session: the
+  encode side did not write the id varint the decode side reads first — every message would have
+  misrouted/crashed on the wire; fixed + regression-test locked). Note for hold-run: message
+  bodies that carry `ItemStack` (e.g. `SyncBlockItemMessage`) use the vanilla
+  `ItemStack.STREAM_CODEC`, which needs a live `RegistryAccess`; a plain unit JVM's
+  `RegistryAccess.EMPTY` has no item registry ("Missing registry minecraft:item"), so those
+  bodies are settled by the live hold-run, not the unit suite.
+- **events** — **DONE, compiled + verified.** All listed files ported to the Neo namespaces:
+  `net.neoforged.bus.api.SubscribeEvent`, standalone `net.neoforged.fml.common.EventBusSubscriber`
+  (`bus = Bus.MOD`/`Bus.FORGE` unchanged), tick handlers onto `net.neoforged.neoforge.event.tick.ServerTickEvent`
+  (the `Phase` enum is gone in 1.20.6), `PlayerWakeUpEvent` / `ServerLifecycleHooks` /
+  `ServerAboutToStartEvent` under `net.neoforged.neoforge.*`. (The one remaining `net.minecraftforge.`
+  string in the tree is a dead commented-out sample in `_vanilla/entities/FishingHook.java` — comment only.)
+- **journal (Patchouli) drop** — **DONE.** `ServerJobsRegistry` + `PagedCardScreen` neutralized
+  (TriPredicate via the neutral `loader.TriPredicate`); the journal-open action is a neutral `mc.Journal`
+  facade (`QuestsScreen` → `Journal.openBookEntry(...)`) with the NeoForge impl in `loader.neo.NeoJournal`
+  (journal dropped per user — see `.scratch/bring-back-journal`).
+- **loot API** — **DONE.** `Loots` + `ResourceJobLoader` on the vanilla 1.20.6 loot API
+  (`LootTable`/`LootParams`/`LootContextParamSets` in `net.minecraft.world.level.storage.loot.*`);
+  `LootDataManager` is gone in 1.20.6.
+- **gui FrameType** — **DONE.** `VillagerAdvancementsWidget` / `VillagerAdvancementsScreen`: 1.20.6 dropped
+  the `FrameType` enum; `getFrameType()` now returns the vanilla advancement-sprite row the enum's
+  `getTexture()` pointed at (task=10, goal=9, challenge=8).
 
 The neutral contract (what `Loader` must offer) is enumerated in
 `LoaderApi`. The strangler goal: 1 codebase, any loader / MC.

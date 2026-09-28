@@ -115,13 +115,13 @@ public class TownRemoveQuestsContainer extends AbstractContainerMenu {
     }
 
     public void sendConfirmRemoveRequest() {
-        QuestownNetwork.CHANNEL.sendToServer(
+        QuestownNetwork.sendToServer(
                 new RemoveQuestFromUIMessage(batchUUID, flagPos.getX(), flagPos.getY(), flagPos.getZ(), false)
         );
     }
 
     public void sendOpenQuestsMenuRequest() {
-        QuestownNetwork.CHANNEL.sendToServer(
+        QuestownNetwork.sendToServer(
                 new OpenQuestsMenuMessage(flagPos.getX(), flagPos.getY(), flagPos.getZ())
         );
     }

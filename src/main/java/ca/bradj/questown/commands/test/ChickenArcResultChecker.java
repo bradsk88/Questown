@@ -225,10 +225,7 @@ public final class ChickenArcResultChecker {
             ChickenArcExpectation expectation,
             TestOutput output
     ) {
-        AABB area = new AABB(
-                flagPos.offset(-halfWidth, -5, -halfWidth),
-                flagPos.offset(halfWidth, 10, halfWidth)
-        );
+        AABB area = new AABB(flagPos.offset(-halfWidth, -5, -halfWidth)).minmax(new AABB(flagPos.offset(halfWidth, 10, halfWidth)));
         // Count only chickens bound to THIS flag. Prior-scenario chickens may
         // wander into the arena bounds, producing spurious counts.
         int live = 0;

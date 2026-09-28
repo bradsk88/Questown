@@ -15,7 +15,7 @@ public class EntitiesInit {
 
     public static final HolderRegistry<EntityType<?>> ENTITY_TYPES = Loader.entityTypes();
 
-    public static final Holder<EntityType<FishingHook>> FISHIN_HOOK = ENTITY_TYPES.register(
+    public static final Holder<EntityType<?>> FISHIN_HOOK = ENTITY_TYPES.register(
             "fishing_hook",
             () -> EntityType.Builder.of(
                             (EntityType<FishingHook> a, Level b) -> new FishingHook(a, b),

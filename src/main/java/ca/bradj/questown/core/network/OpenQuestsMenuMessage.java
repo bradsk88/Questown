@@ -4,24 +4,23 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import ca.bradj.questown.loader.Channel;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 public record OpenQuestsMenuMessage(
         int flagX, int flagY, int flagZ
 ) {
 
-    public static void encode(OpenQuestsMenuMessage msg, FriendlyByteBuf buffer) {
+    public static void encode(OpenQuestsMenuMessage msg, RegistryFriendlyByteBuf buffer) {
         buffer.writeInt(msg.flagX);
         buffer.writeInt(msg.flagY);
         buffer.writeInt(msg.flagZ);
     }
 
-    public static OpenQuestsMenuMessage decode(FriendlyByteBuf buffer) {
+    public static OpenQuestsMenuMessage decode(RegistryFriendlyByteBuf buffer) {
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();
         int flagZ = buffer.readInt();
@@ -30,21 +29,18 @@ public record OpenQuestsMenuMessage(
 
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
             // Do stuff
-            Optional<TownFlagBlockEntity> flag = sender.level()
-                    .getBlockEntity(new BlockPos(flagX, flagY, flagZ), TilesInit.TOWN_FLAG.get());
-            if (flag.isEmpty()) {
+            if (!(sender.level().getBlockEntity(new BlockPos(flagX, flagY, flagZ)) instanceof TownFlagBlockEntity flag)) {
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Quest will not be removed.", flagX, flagY, flagZ);
                 return;
             }
-            flag.get().getQuestHandle().showQuestsUI(sender);
+            flag.getQuestHandle().showQuestsUI(sender);
         });
-        ctx.get().setPacketHandled(true);
 
     }
 }

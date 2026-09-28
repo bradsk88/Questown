@@ -36,10 +36,10 @@ public class FishingHookRenderer extends EntityRenderer<FishingHook> {
             Matrix4f poseMatrix = lastPose.pose();
             Matrix3f normalMatrix = lastPose.normal();
             VertexConsumer quadConsumer = bufferSource.getBuffer(RENDER_TYPE);
-            vertex(quadConsumer, poseMatrix, normalMatrix, packedLight, 0.0F, 0, 0, 1);
-            vertex(quadConsumer, poseMatrix, normalMatrix, packedLight, 1.0F, 0, 1, 1);
-            vertex(quadConsumer, poseMatrix, normalMatrix, packedLight, 1.0F, 1, 1, 0);
-            vertex(quadConsumer, poseMatrix, normalMatrix, packedLight, 0.0F, 1, 0, 0);
+            vertex(quadConsumer, poseMatrix, lastPose, packedLight, 0.0F, 0, 0, 1);
+            vertex(quadConsumer, poseMatrix, lastPose, packedLight, 1.0F, 0, 1, 1);
+            vertex(quadConsumer, poseMatrix, lastPose, packedLight, 1.0F, 1, 1, 0);
+            vertex(quadConsumer, poseMatrix, lastPose, packedLight, 0.0F, 1, 0, 0);
             poseStack.popPose();
 
             // Attach string to attachPoint instead of player
@@ -72,13 +72,13 @@ public class FishingHookRenderer extends EntityRenderer<FishingHook> {
         return (float)numerator / (float)denominator;
     }
 
-    private static void vertex(VertexConsumer consumer, Matrix4f poseMatrix, Matrix3f normalMatrix, int packedLight, float u, int v, int texU, int texV) {
+    private static void vertex(VertexConsumer consumer, Matrix4f poseMatrix, PoseStack.Pose lastPose, int packedLight, float u, int v, int texU, int texV) {
         consumer.vertex(poseMatrix, u - 0.5F, (float)v - 0.5F, 0.0F)
             .color(255, 255, 255, 255)
             .uv((float)texU, (float)texV)
             .overlayCoords(OverlayTexture.NO_OVERLAY)
             .uv2(packedLight)
-            .normal(normalMatrix, 0.0F, 1.0F, 0.0F)
+            .normal(lastPose, 0.0F, 1.0F, 0.0F)
             .endVertex();
     }
 
@@ -95,7 +95,7 @@ public class FishingHookRenderer extends EntityRenderer<FishingHook> {
         z1 /= length;
         consumer.vertex(pose.pose(), x0, y0, z0)
             .color(0, 0, 0, 255)
-            .normal(pose.normal(), x1, y1, z1)
+            .normal(pose, x1, y1, z1)
             .endVertex();
     }
 

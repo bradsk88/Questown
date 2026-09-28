@@ -19,8 +19,12 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class Ingredients {
+    private static com.google.gson.JsonElement toJson(Ingredient item) {
+        return Ingredient.CODEC_NONEMPTY.encode(item, com.mojang.serialization.JsonOps.INSTANCE, com.mojang.serialization.JsonOps.INSTANCE.empty()).getOrThrow();
+    }
+
     public static Component getName(Ingredient item) {
-        JsonElement j = item.toJson();
+        JsonElement j = toJson(item);
         String tag = getTag(j);
         if (tag != null) {
             return Compat.translatable("#" + tag);
@@ -36,7 +40,7 @@ public class Ingredients {
     }
 
     public static WorkRequest asWorkRequest(Ingredient item) {
-        JsonElement j = item.toJson();
+        JsonElement j = toJson(item);
         String tag = getTag(j);
         if (tag != null) {
             return WorkRequest.of(new TagKey<>(Registries.ITEM, new ResourceLocation(tag)));
@@ -62,7 +66,7 @@ public class Ingredients {
     }
 
     public static String toString(Ingredient item) {
-        JsonElement j = item.toJson();
+        JsonElement j = toJson(item);
         String tag = getTag(j);
         if (tag != null) {
             String tKey = "#" + tag;
@@ -76,7 +80,7 @@ public class Ingredients {
     }
 
     public static @Nullable String getTag(Ingredient ing) {
-        JsonElement j = ing.toJson();
+        JsonElement j = toJson(ing);
         return getTag(j);
     }
 

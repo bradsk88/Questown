@@ -24,7 +24,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStockRequestContainer> {
+public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStockRequestContainer> implements ScrollableScreen {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
     private static final int borderPadding = 6;
@@ -107,7 +107,7 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(gui);
+        this.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
 
         int x = ((this.width - backgroundWidth) / 2);
@@ -282,8 +282,7 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
     }
 
 
-    @Override
-    public boolean mouseScrolled(
+        public boolean mouseScrolled(
             double scrollX,
             double scrollY,
             double scrollDelta
@@ -299,7 +298,7 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
                 return true;
             }
         }
-        return super.mouseScrolled(scrollX, scrollY, scrollDelta);
+        return false;
     }
 
     @Override

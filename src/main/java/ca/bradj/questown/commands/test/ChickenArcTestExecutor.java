@@ -532,10 +532,7 @@ public final class ChickenArcTestExecutor {
             return;
         }
         int hw = blueprint.effectiveHalfWidth();
-        AABB area = new AABB(
-                flagPos.offset(-hw, -5, -hw),
-                flagPos.offset(hw, 10, hw)
-        );
+        AABB area = new AABB(flagPos.offset(-hw, -5, -hw)).minmax(new AABB(flagPos.offset(hw, 10, hw)));
         // Filter by ownerFlagPos — prior-scenario chickens may wander in.
         HelperChickenEntity chicken = null;
         for (HelperChickenEntity e : level.getEntitiesOfClass(HelperChickenEntity.class, area)) {
@@ -622,7 +619,7 @@ public final class ChickenArcTestExecutor {
         TestArenaPreparer.destroyNearbyFlags(level, origin, opts, fakePlayer);
         TestArenaPreparer.flatten(level, origin, opts);
         // Kill any lingering visitors just in case.
-        AABB area = new AABB(origin.offset(-20, -5, -20), origin.offset(20, 10, 20));
+        AABB area = new AABB(origin.offset(-20, -5, -20)).minmax(new AABB(origin.offset(20, 10, 20)));
         for (VisitorMobEntity e : level.getEntitiesOfClass(VisitorMobEntity.class, area)) {
             e.kill();
         }

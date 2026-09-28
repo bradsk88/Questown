@@ -1,6 +1,7 @@
 package ca.bradj.questown.blocks;
 
 import ca.bradj.questown.core.init.items.ItemsInit;
+import com.mojang.serialization.MapCodec;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -20,6 +21,15 @@ import net.minecraft.world.phys.BlockHitResult;
 import java.util.List;
 
 public class BlacksmithsTableBlock extends Block {
+
+    public static final MapCodec<BlacksmithsTableBlock> CODEC =
+            MapCodec.unit(BlacksmithsTableBlock::new);
+
+    @Override
+    public MapCodec<BlacksmithsTableBlock> codec() {
+        return CODEC;
+    }
+
     public static final String ITEM_ID = "blacksmiths_table";
 
     public BlacksmithsTableBlock(
@@ -43,13 +53,12 @@ public class BlacksmithsTableBlock extends Block {
     }
 
     @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState blockState,
             Level level,
             BlockPos pos,
             Player player,
-            InteractionHand p_60507_,
-            BlockHitResult p_60508_
+            BlockHitResult hitResult
     ) {
         if (!(level instanceof ServerLevel sl)) {
             return InteractionResult.sidedSuccess(level.isClientSide);

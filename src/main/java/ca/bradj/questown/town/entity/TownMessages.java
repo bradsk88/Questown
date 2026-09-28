@@ -15,7 +15,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
@@ -52,10 +51,8 @@ public class TownMessages {
         }
         QT.FLAG_LOGGER.info("Broadcasting tutorial toast: {} {}", titleKey, descriptionKey);
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.PLAYER.with(() -> p),
-                    new ShowTutorialToastMessage(titleKey, descriptionKey)
-            );
+            QuestownNetwork.sendToPlayer(p,
+                    new ShowTutorialToastMessage(titleKey, descriptionKey));
         }
     }
 
