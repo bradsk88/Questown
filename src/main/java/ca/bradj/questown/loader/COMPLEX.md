@@ -59,7 +59,10 @@ neutral facade types above, the facade's own 1.20.6 type references
 mechanical registry/dist/straggler files (TownFlagBlock, TownRoomsMap,
 HospitalBedBlock, TownQuests, TownKnownBiomes, MCTownItem, UIQuest), and the
 client renderers (FishingHook/Bubble `@OnlyIn` markers dropped, hospital-bed
-`Material` on 1.20.6).
+`Material` on 1.20.6), the **advancement triggers** (slice 1 — DONE, below), and the
+**item-handler** slice (slice 2 — DONE, below: BOP handler + consumers neutral, menus
+re-pointed to Neo `SlotItemHandler`/`InvWrapper`, the Forge `getCapability` override
+removed).
 
 Remaining slices (each a focused pass; file lists are the compiler's surface):
 
@@ -70,16 +73,9 @@ Remaining slices (each a focused pass; file lists are the compiler's surface):
   SimpleCriterionTrigger.SimpleInstance` with a `RecordCodecBuilder` CODEC (player via
   `EntityPredicate.ADVANCEMENT_CODEC.optionalFieldOf("player")`), a `codec()` override,
   and `CriteriaTriggers.register(id, trigger)` (2-arg). `Triggers.fromJSON`/`getID()` kept.
-- **item-handler capability** (~7 files) — `MinecraftWorldAccess`,
-  `WarpWorldAccess`, `TownFlagState`, `AbstractVillagerMenu`,
-  `TownFlagBlockEntity`, `TownFlagBOPItemHandler`, `LockableInventoryWrapper`.
-  Neo 1.20.6 model: `BlockEntity.getCapability` is GONE. Provider: `TownFlagBOPItemHandler`
-  implements the neutral `ItemHandler`; a `loader.neo` binder registers it via
-  `RegisterCapabilitiesEvent.registerBlockEntity(Capabilities.ItemHandler.BLOCK,
-  FLAG type, ICapabilityProvider)` wrapping the neutral handler in a loader `IItemHandler`.
-  Consumer: main uses `Loader.handlerOf(BlockEntity)` → `Optional<ItemHandler>`; the Neo
-  impl retrieves via `level.getCapability(Capabilities.ItemHandler.BLOCK, pos, state, be, side)`.
-  `AbstractVillagerMenu`/`LockableInventoryWrapper` use `net.neoforged...InvWrapper(Container)`.
+- **item-handler capability** (~7 files) — **DONE for compile.** TownFlagBOPItemHandler implements the neutral ItemHandler; TownFlagState + MinecraftWorldAccess consume via Loader.handlerOf(BlockEntity) (was getCapability + LazyOptional); AbstractVillagerMenu + LockableInventoryWrapper re-point to Neo SlotItemHandler/InvWrapper(Container); TownFlagBlockEntity dropped the LazyOptional<IItemHandler> field + getCapability override (removed in 1.20.6) and exposes a neutral bopItemHandler().
+  **Follow-up (strangler end-state):** the runtime provider/consumer path is not wired — Neo 1.20.6 removed BlockEntity.getCapability, so a working BOP handler needs (a) a loader.neo binder registering the flag's bopItemHandler() via RegisterCapabilitiesEvent.registerBlockEntity(Capabilities.ItemHandler.BLOCK, FLAG type, ...) wrapped in a loader IItemHandler, and (b) the neutral facade gaining a handlerAt(Level, BlockPos) (level-based retrieval via level.getCapability(...)), since the BE-only handlerOf(BlockEntity) can't find a registered BLOCK capability. At this checkpoint the consumers return Optional.empty and degrade gracefully.
+- **tool-actions** (~2 files) — NEW slice, MinecraftWorldAccess + WarpWorldAccess: both use the pre-1.20.4 ToolAction(s) + BlockState.getToolModifiedState(UseOnContext, ToolAction, boolean) for hoe/axe/shovel transformations (QTToolAction). That shape is gone in 1.20.6 (tool effects became Item.useOn + data-component / Item.Properties based), so this needs a 1.20.6 tool-action mapping — not yet investigated; listed to flag the unknown API rather than be skipped.
 - **network** (~10 files) — `TownMessages`, `TownFlagMenus`, `mc/Util`,
   `StockRequestClipboardItem`, `RelocationDeedItem`, `PlateBlockEntity`,
   `FoodDisplayEntity`, `AxeRackBlock`, and the `core/network/*.java` message
