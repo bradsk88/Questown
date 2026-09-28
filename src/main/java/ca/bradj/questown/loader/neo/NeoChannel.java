@@ -2,8 +2,6 @@ package ca.bradj.questown.loader.neo;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -76,15 +74,21 @@ public final class NeoChannel implements Channel {
         }
     }
 
+    private java.util.function.Consumer<NeoEnvelope> clientSend;
+
+    /** Installed by the client island; the common path never names client classes. */
+    public void setClientSend(java.util.function.Consumer<NeoEnvelope> hook) {
+        this.clientSend = hook;
+    }
+
     @Override
     public <T> void sendToServer(T msg) {
-        Minecraft mc = Minecraft.getInstance();
-        LocalPlayer player = mc.player;
-        if (player != null) {
-            ((ICommonPacketListener) player.connection).send(wrap(msg));
-        } else {
-            QT.LOGGER.warn("[questown] sendToServer dropped (no player/level): {}", msg);
+        java.util.function.Consumer<NeoEnvelope> hook = clientSend;
+        if (hook == null) {
+            QT.LOGGER.warn("[questown] sendToServer dropped (no client send hook installed)");
+            return;
         }
+        hook.accept(wrap(msg));
     }
 
     private NeoEnvelope wrap(Object msg) {
@@ -104,8 +108,9 @@ public final class NeoChannel implements Channel {
             }
         }
         PayloadRegistrar reg = event.registrar(channelId);
-        reg.playToClient(NeoEnvelope.TYPE, wireCodec(), payloadHandler());
-        reg.playToServer(NeoEnvelope.TYPE, wireCodec(), payloadHandler());
+        // 20.6 API: one bidirectional registration per ResourceLocation; playToClient + playToServer
+        // both key on the same location and the second throws "already registered".
+        reg.playBidirectional(NeoEnvelope.TYPE, wireCodec(), payloadHandler());
         QT.LOGGER.info("[questown] registered {} message types on the Neo payload channel '{}'", entries.size(), channelId);
     }
 

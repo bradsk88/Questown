@@ -10,7 +10,7 @@
     "type": "uses_special_rules"
   },
   "block": {
-    "id": "#forge:chests"
+    "id": "#c:chests"
   },
   "room": "questown:kitchen_stocked",
   "work_states": [

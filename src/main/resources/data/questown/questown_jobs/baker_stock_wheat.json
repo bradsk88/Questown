@@ -9,7 +9,7 @@
     "type": "item",
     "item": "minecraft:air"
   },
-  "block": "#forge:chests",
+  "block": "#c:chests",
   "room": "questown:breadmaker_stocked",
   "work_states": [
     {

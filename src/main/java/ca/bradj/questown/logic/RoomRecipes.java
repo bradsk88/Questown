@@ -47,10 +47,11 @@ public class RoomRecipes {
             Level level,
             ResourceLocation id
     ) {
-        List<RoomRecipe> recipes = getAllRecipes(level);
-        for (RoomRecipe r : recipes) {
-            if (id.equals(r.getId())) {
-                return Optional.of(r);
+        // The holder owns the id in 1.20.2+; the codec-constructed RoomRecipe carries a null id.
+        for (net.minecraft.world.item.crafting.RecipeHolder<RoomRecipe> h
+                : level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM)) {
+            if (id.equals(h.id())) {
+                return Optional.of(h.value());
             }
         }
         return Optional.empty();
@@ -81,8 +82,8 @@ public class RoomRecipes {
         } else {
             rMapB.put(SpecialQuests.FARM, SpecialQuests.SPECIAL_QUESTS.get(SpecialQuests.FARM));
         }
-        List<RoomRecipe> allRecipesFor = recipes.getAllRecipesFor(RecipesInit.ROOM).stream().map(net.minecraft.world.item.crafting.RecipeHolder::value).collect(java.util.stream.Collectors.toList());
-        allRecipesFor.forEach(v -> rMapB.put(v.getId(), v));
+        // The holder owns the id in 1.20.2+; the codec-constructed RoomRecipe carries a null id.
+        recipes.getAllRecipesFor(RecipesInit.ROOM).forEach(h -> rMapB.put(h.id(), h.value()));
         return rMapB.build();
     }
 

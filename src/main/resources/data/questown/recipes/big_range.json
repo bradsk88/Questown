@@ -1,6 +1,7 @@
 {
   "type": "roomrecipes:room",
   "recipe_strength": 1,
+  "farm": false,
   "ingredients": [
     {
       "tag": "questown:light_sources"
@@ -15,7 +16,7 @@
       "item": "minecraft:target"
     },
     {
-      "tag": "forge:chests"
+      "tag": "c:chests"
     }
   ]
 }

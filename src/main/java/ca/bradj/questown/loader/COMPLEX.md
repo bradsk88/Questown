@@ -115,7 +115,9 @@ runtime verification — a held 1.20.6 hold-run autotest — not more ports):
   registration order holds). `NeoChannel` adapts to NeoForge: one envelope payload
   (`NeoEnvelope`, `questown:network_message`) whose wire is a **varint message id + the message's
   encoder bytes**; `NeoChannel.onRegisterPayloadHandlers` registers it with one
-  `IPayloadHandler` for `playToClient`/`playToServer`. Main code only sees
+  `IPayloadHandler`, via `registrar.playBidirectional(...)` — the per-direction
+  `playToClient`+`playToServer` pair keys on the same ResourceLocation and the second call
+  throws "already registered" in the 1.20.6 registry. Main code only sees
   `QuestownNetwork.sendToPlayer/sendToAll/sendToServer` (all send sites re-pointed).
   **Wire round-trip verified** by `NeoChannelWireTest` (it caught a real bug this session: the
   encode side did not write the id varint the decode side reads first — every message would have
@@ -126,7 +128,7 @@ runtime verification — a held 1.20.6 hold-run autotest — not more ports):
   bodies are settled by the live hold-run, not the unit suite.
 - **events** — **DONE, compiled + verified.** All listed files ported to the Neo namespaces:
   `net.neoforged.bus.api.SubscribeEvent`, standalone `net.neoforged.fml.common.EventBusSubscriber`
-  (`bus = Bus.MOD`/`Bus.FORGE` unchanged), tick handlers onto `net.neoforged.neoforge.event.tick.ServerTickEvent`
+  (`bus = Bus.MOD`/`Bus.GAME` — the 1.20.6 constants are `MOD`/`GAME`, not `FORGE`), tick handlers onto `net.neoforged.neoforge.event.tick.ServerTickEvent`
   (the `Phase` enum is gone in 1.20.6), `PlayerWakeUpEvent` / `ServerLifecycleHooks` /
   `ServerAboutToStartEvent` under `net.neoforged.neoforge.*`. (The one remaining `net.minecraftforge.`
   string in the tree is a dead commented-out sample in `_vanilla/entities/FishingHook.java` — comment only.)
@@ -140,6 +142,50 @@ runtime verification — a held 1.20.6 hold-run autotest — not more ports):
 - **gui FrameType** — **DONE.** `VillagerAdvancementsWidget` / `VillagerAdvancementsScreen`: 1.20.6 dropped
   the `FrameType` enum; `getFrameType()` now returns the vanilla advancement-sprite row the enum's
   `getTexture()` pointed at (task=10, goal=9, challenge=8).
+
+- **runtime boot (dedicated server)** — **DONE, verified end to end**
+  (`runServer -Dquestown.autotest=true -Dquestown.autotest.only=perf/town_large`: `1/1 passed`).
+  Findings that are API facts, not one-offs:
+  - **Client/common segregation is enforced at class-load time.** The dist-scanner
+    (RuntimeDistCleaner) rejects any *class* whose constant pool names an `@OnlyIn(CLIENT)`
+    type on a dedicated server — imports in the pool are enough, whether the method runs.
+    `Questown` (screen registration, renderer setup, the 12 client screen types), the
+    network client send, and `NeoMouseScrollDispatch` moved to a separate
+    `questownclient` mod entry (`@Mod(value="questownclient", dist=Dist.CLIENT)` — a distinct
+    mod id; a dotted id fails toml validation in 1.20.6). `NeoChannel.sendToServer` is now a
+    neutral hook installed by the client island; `LoaderApi.ScreenFactory` returns `Object`
+    so the common interface pool carries no `Screen`. `RegisterMenuScreensEvent` was removed
+    (client-only in 1.20.6, and screens are registered by the client entry instead).
+  - **Event bus classification matters per event, and 1.20.6 changed which side several events
+    live on.** A `@SubscribeEvent` on the wrong bus throws "not valid for this busclass" at
+    construction — and Neo *rejects* a subscriber class with no `@SubscribeEvent` methods
+    outright. Classification is by the event's interfaces: `IModBusEvent` (e.g.
+    `EntityAttributeCreationEvent`, `FMLCommonSetup`, `NewRegistryEvent`) → `Bus.MOD`;
+    bare `bus.api.Event` (`ServerStartedEvent`, `ServerTick`, `PlayerWakeUp`, `Screen*`,
+    `ServerAboutToStartEvent`, `RegisterCommands`, `AdvancementEvent`) → `Bus.GAME`. A mixed
+    handler class must be split (see `HelperChickenEntityEvents`); client-event classes take
+    `Bus.GAME, value = Dist.CLIENT`.
+  - **Criterion triggers are baked at Bootstrap in 1.20.6.**
+    `CriteriaTriggers.register(...)` from any mod phase throws "Registry is already frozen",
+    and no `RegisterEvent` arrives for the frozen registry. The sanctioned path (Neo 20.6 docs):
+    `DeferredRegister.create(Registries.TRIGGER_TYPE, MOD)` + one
+    `register(name, Trigger::new)` per trigger, bound in the mod constructor
+    (`AdvancementsInit.init`). The trigger classes must be `codec()`-driven (they already were).
+  - **The recipe `id` moved onto the holder (1.19.3+).**
+    `RecipeManager.getAllRecipesFor(...)` returns `RecipeHolder<T>`; the codec-constructed
+    recipe object has a **null** `id` by design. Key maps on `recipe.getId()` build a null-key
+    entry (Guava `ImmutableMap` NPEs). `RoomRecipes.hydrate`/`getById` now read the holder id.
+  - **Data format changes (1.20.5+ recipe/taxonomy migration).** Single-ingredient objects keep
+    `{"item": ...}` / `{"tag": ...}` (NOT the 1.20.5-array form, which the 1.20.6 codec rejects);
+    `result` is `{"id", "count"}`. `forge:` tags are gone — use the Neo `c:` conventions
+    (`forge:chests`→`c:chests`, `forge:mushrooms`→`c:mushrooms`, which exist in the Neo jar for
+    both item and block taxonomies); the removed `minecraft:grass` block becomes
+    `minecraft:short_grass` (not `grass_block`); `#forge:is_plains` / `#forge:seeds` have no
+    `c:` biome equivalent, so the affected tags enumerate explicit biome/item values.
+    `RoomRecipes`' `roomrecipes:room` recipe gained a required `farm` boolean — every Questown
+    recipe carries it (`*_farm` rooms true, the rest false).
+  - **RoomRecipes boilerplate:** the `@Mod` constructor's `NeoForge.EVENT_BUS.register(this)` on a
+    handler-less class is rejected by the Neo bus; removed in the RoomRecipes 1.20.6 branch.
 
 The neutral contract (what `Loader` must offer) is enumerated in
 `LoaderApi`. The strangler goal: 1 codebase, any loader / MC.

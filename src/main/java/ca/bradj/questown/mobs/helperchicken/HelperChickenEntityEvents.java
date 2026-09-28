@@ -28,7 +28,7 @@ public class HelperChickenEntityEvents {
      * toward it and plays the eat animation, which is jarring during onboarding.
      * Cancel-on-target nips that off at the source.
      */
-    @EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.MOD)
+    @EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.GAME)
     public static class ForgeBus {
         @SubscribeEvent
         public static void onTargetChange(LivingChangeTargetEvent event) {

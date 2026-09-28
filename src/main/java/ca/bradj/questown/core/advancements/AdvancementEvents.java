@@ -7,11 +7,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.event.entity.player.AdvancementEvent;
+import net.neoforged.neoforge.event.entity.player.AdvancementEvent.AdvancementEarnEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 
-@net.neoforged.fml.common.EventBusSubscriber(modid = Questown.MODID, bus = net.neoforged.fml.common.EventBusSubscriber.Bus.MOD)
+@net.neoforged.fml.common.EventBusSubscriber(modid = Questown.MODID, bus = net.neoforged.fml.common.EventBusSubscriber.Bus.GAME)
 public class AdvancementEvents {
 
     private static final ResourceLocation BOOK_ID = new ResourceLocation(Questown.MODID, "intro");
@@ -67,7 +67,7 @@ public class AdvancementEvents {
             .build();
 
     @SubscribeEvent
-    public static void entityAttrEvent(AdvancementEvent event) {
+    public static void entityAttrEvent(AdvancementEarnEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer sp)) {
             return;
         }

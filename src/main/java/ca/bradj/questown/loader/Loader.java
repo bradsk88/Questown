@@ -47,7 +47,7 @@ public final class Loader {
 
     private static final Object API_LOCK = new Object();
 
-    private static LoaderApi api() {
+    public static LoaderApi api() {
         LoaderApi api = API.get();
         if (api == null) {
             synchronized (API_LOCK) {

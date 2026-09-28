@@ -16,6 +16,6 @@
     }
   },
   "result": {
-    "item": "questown:ore_processing_block"
+    "id": "questown:ore_processing_block"
   }
 }

@@ -26,7 +26,7 @@ import java.util.List;
  * description that overruns its row into the next element is caught as an overlap. Runs once per
  * screen open (no per-frame spam). Inert in shipped jars via {@link FMLEnvironment#production}.
  */
-@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class GuiLayoutCheckClientEvents {
 
     private static final String QUESTOWN_GUI_PACKAGE = "ca.bradj.questown.gui.";

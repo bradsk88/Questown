@@ -20,13 +20,9 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.client.gui.screens.MenuScreens;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.MenuAccess;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
-import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -70,10 +66,16 @@ public final class NeoLoader implements LoaderApi {
     private final List<NeoHolderRegistry<?>> createdRegistries = new CopyOnWriteArrayList<>();
     private boolean registriesBound = false;
 
-    /** Menu-screen registrations captured client-side; replayed on {@code RegisterMenuScreensEvent}. */
+    /** Menu-screen registrations captured client-side; the client island (NeoLoaderClient) replays them. */
     private final List<PendingScreen> pendingScreens = new CopyOnWriteArrayList<>();
 
-    private record PendingScreen(MenuType<?> menuType, MenuScreens.ScreenConstructor<?, ?> constructor) {
+    /** Neutral capture of a menu-screen factory (client classes stay out of this common class). */
+    public record PendingScreen<T extends net.minecraft.world.inventory.AbstractContainerMenu>(
+            net.minecraft.world.inventory.MenuType<T> menuType, LoaderApi.ScreenFactory<T> factory) {
+    }
+
+    public List<PendingScreen> pendingScreens() {
+        return pendingScreens;
     }
 
 
@@ -259,6 +261,14 @@ public final class NeoLoader implements LoaderApi {
         return neoChannel;
     }
 
+    /** The concrete channel (client island installs the local-player send hook). */
+    public synchronized NeoChannel channelObj() {
+        if (neoChannel == null) {
+            neoChannel = new NeoChannel(CHANNEL_ID);
+        }
+        return neoChannel;
+    }
+
     @Override
     public <T> void sendToPlayer(Player p, T msg) {
         channel(CHANNEL_ID).sendToPlayer(p, msg);
@@ -300,26 +310,7 @@ public final class NeoLoader implements LoaderApi {
             MenuType<T> menuType,
             LoaderApi.ScreenFactory<T> screenFactory
     ) {
-        net.minecraft.client.gui.screens.MenuScreens.ScreenConstructor<T,
-                net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<T>> sc =
-                (menu, inv, title) -> (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<T>)
-                        screenFactory.create(menu, inv, title);
-        pendingScreens.add(new PendingScreen(menuType, sc));
-    }
-
-    /**
-     * NeoForge fires this at client init, before any mod-bus setup event, so the pending list
-     * (filled at construction time) is already complete by then.
-     */
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    public void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
-        for (PendingScreen p : pendingScreens) {
-            event.register(
-                    (MenuType<? extends AbstractContainerMenu>) (MenuType) p.menuType(),
-                    (MenuScreens.ScreenConstructor<AbstractContainerMenu, ?>) (MenuScreens.ScreenConstructor) p.constructor()
-            );
-        }
-        pendingScreens.clear();
+        pendingScreens.add(new PendingScreen(menuType, screenFactory));
     }
 
     private static IllegalStateException notYet(String what) {

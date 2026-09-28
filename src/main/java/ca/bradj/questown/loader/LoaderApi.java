@@ -53,9 +53,14 @@ public interface LoaderApi {
      * vanilla interface's {@code U extends Screen & MenuAccess<T>} when T arrives via a wildcard
      * target, so main code hands the loader a plain factory and the loader adapts it.
      */
+    /**
+     * Neutral menu-screen factory: the return type is {@code Object} so this common interface
+     * carries no client class reference; the client island (NeoLoaderClient) knows the result
+     * is a vanilla screen and adapts it.
+     */
     @FunctionalInterface
     interface ScreenFactory<T extends net.minecraft.world.inventory.AbstractContainerMenu> {
-        net.minecraft.client.gui.screens.Screen create(
+        Object create(
                 T menu,
                 net.minecraft.world.entity.player.Inventory playerInventory,
                 net.minecraft.network.chat.Component title);

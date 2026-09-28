@@ -26,6 +26,7 @@ public final class RegistryDefinitions {
         RewardsInit.boot();
         ScheduleInit.boot();
         CommandsInit.boot();
-        AdvancementsInit.register();
+        // AdvancementsInit triggers are registered via the mod-bus RegisterEvent (1.20.6 freezes
+        // the trigger_type registry before mod construction); see QuestownMod#onRegister.
     }
 }

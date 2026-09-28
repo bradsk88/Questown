@@ -374,7 +374,7 @@ class JobIntegrationTest {
 
         Assertions.assertEquals(new JobID("soup_cook", "fill_big_pot"), definition.jobId());
         Assertions.assertEquals(1, definition.maxState());
-        Assertions.assertEquals("#forge:mushrooms", definition.ingredientsRequiredAtStates().get(0));
+        Assertions.assertEquals("#c:mushrooms", definition.ingredientsRequiredAtStates().get(0));
         Assertions.assertEquals("minecraft:air", definition.result());
     }
 
@@ -384,7 +384,7 @@ class JobIntegrationTest {
 
         Assertions.assertEquals(new JobID("soup_cook", "one_mushroom_stew"), definition.jobId());
         Assertions.assertEquals(3, definition.maxState());
-        Assertions.assertEquals("#forge:mushrooms", definition.ingredientsRequiredAtStates().get(0));
+        Assertions.assertEquals("#c:mushrooms", definition.ingredientsRequiredAtStates().get(0));
         Assertions.assertEquals("#questown:shovels", definition.toolsRequiredAtStates().get(1));
         Assertions.assertEquals(Integer.valueOf(50), definition.workRequiredAtStates().get(1));
         Assertions.assertEquals("minecraft:bowl", definition.ingredientsRequiredAtStates().get(2));

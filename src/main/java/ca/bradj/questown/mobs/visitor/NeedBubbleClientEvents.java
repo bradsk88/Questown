@@ -14,7 +14,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Drives {@link NeedBubbleFocus} once per client tick, and draws the dead-door bubble. */
-@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class NeedBubbleClientEvents {
 
     @SubscribeEvent

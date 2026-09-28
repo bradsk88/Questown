@@ -25,7 +25,7 @@ import ca.bradj.questown.commands.test.TestBlueprintRegistry.AnyTestEntry;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 
-@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.GAME)
 public class AutoTestRunner {
 
     private static final String SYSPROP = "questown.autotest";

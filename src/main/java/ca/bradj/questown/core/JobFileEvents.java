@@ -14,7 +14,7 @@ import net.neoforged.fml.common.Mod;
 
 ;
 
-@net.neoforged.fml.common.EventBusSubscriber(modid = Questown.MODID, bus = net.neoforged.fml.common.EventBusSubscriber.Bus.MOD)
+@net.neoforged.fml.common.EventBusSubscriber(modid = Questown.MODID, bus = net.neoforged.fml.common.EventBusSubscriber.Bus.GAME)
 public class JobFileEvents {
 
     @SubscribeEvent

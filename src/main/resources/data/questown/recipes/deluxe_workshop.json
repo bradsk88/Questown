@@ -1,6 +1,7 @@
 {
   "type": "roomrecipes:room",
   "recipe_strength": 1,
+  "farm": false,
   "ingredients": [
     {
       "tag": "questown:lanterns"
@@ -15,10 +16,10 @@
       "item": "minecraft:crafting_table"
     },
     {
-      "tag": "forge:chests"
+      "tag": "c:chests"
     },
     {
-      "tag": "forge:chests"
+      "tag": "c:chests"
     }
   ]
 }
