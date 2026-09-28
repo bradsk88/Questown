@@ -8,7 +8,7 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.inventory.AbstractInventory;
+import net.minecraft.world.Container;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import org.jetbrains.annotations.Nullable;
 
@@ -78,7 +78,7 @@ public final class Loader {
         return api().blocks();
     }
 
-    public static HolderRegistry<net.minecraft.world.MenuType<?>> menuTypes() {
+    public static HolderRegistry<net.minecraft.world.inventory.MenuType<?>> menuTypes() {
         return api().menuTypes();
     }
 
@@ -92,7 +92,7 @@ public final class Loader {
 
     /** Neutral menu registration: the loader wraps the mod-owned factory with its own container type. */
     public static <T extends net.minecraft.world.inventory.AbstractContainerMenu>
-    Holder<net.minecraft.world.MenuType<T>> registerMenu(String name, MenuFactory<T> factory) {
+    Holder<net.minecraft.world.inventory.MenuType<T>> registerMenu(String name, MenuFactory<T> factory) {
         return api().registerMenu(name, factory);
     }
 
@@ -117,8 +117,12 @@ public final class Loader {
         return api().blockFromId(id);
     }
 
-    public static net.minecraft.world.level.SoundEvent soundFromId(ResourceLocation id) {
+    public static net.minecraft.sounds.SoundEvent soundFromId(ResourceLocation id) {
         return api().soundFromId(id);
+    }
+
+    public static net.minecraft.resources.@Nullable ResourceLocation biomeKeyOf(net.minecraft.world.level.biome.Biome biome) {
+        return api().biomeKeyOf(biome);
     }
 
     // ---- Item handlers (capabilities) -------------------------------------
@@ -130,7 +134,7 @@ public final class Loader {
         return api().handlerOfBlockEntity(b);
     }
 
-    public static ItemHandler handlerForInventory(AbstractInventory inv) {
+    public static ItemHandler handlerForInventory(Container inv) {
         return api().handlerForInventory(inv);
     }
 

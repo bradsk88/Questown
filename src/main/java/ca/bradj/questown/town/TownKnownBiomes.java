@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.loader.Loader;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCContainer;
@@ -17,7 +18,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -44,7 +44,7 @@ public class TownKnownBiomes {
             QT.FLAG_LOGGER.error("TownKnownBiomes is not connected to town. Fallback biome will be used");
         }
         nearbyBiomes.forEach(v -> {
-            ResourceLocation key = ForgeRegistries.BIOMES.getKey(v);
+            ResourceLocation key = Loader.biomeKeyOf(v);
             if (key == null) {
                 return;
             }
@@ -78,7 +78,7 @@ public class TownKnownBiomes {
             computeNearbyBiomes(this);
         }
         Biome biome = Util.getRandom(nearbyBiomes, town.getServerLevelUnsafe().getRandom());
-        return ForgeRegistries.BIOMES.getKey(biome);
+        return Loader.biomeKeyOf(biome);
     }
 
     public void tick() {

@@ -14,10 +14,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-
-@OnlyIn(Dist.CLIENT)
 public class FishingHookRenderer extends EntityRenderer<FishingHook> {
     private static final ResourceLocation TEXTURE_LOCATION = new ResourceLocation("textures/entity/fishing_hook.png");
     private static final RenderType RENDER_TYPE = RenderType.entityCutout(TEXTURE_LOCATION);

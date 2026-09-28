@@ -53,23 +53,54 @@ QuestownMod.clientSetup (client)          # Questown.onClientSetup() (menus, ren
 This is a **WIP checkpoint** (the tree does not yet compile). Done and
 compiling to the facade: registries (`*Init` + `RegistryDefinitions`), config
 (`Config` + `RecipeItemConfig`), menus (`MenuTypesInit`), `Compat` helpers, the
-mod entry split (`Questown` bootstrap + `QuestownMod` + `ItemsInteract`), and
-the neutral facade types above. Not yet migrated to the facade, to be handled
-as slices:
+mod entry split (`Questown` bootstrap + `QuestownMod` + `ItemsInteract`), the
+neutral facade types above, the facade's own 1.20.6 type references
+(`Container` / `MenuType` / `SoundEvent`), a `biomeKeyOf` lookup, all the
+mechanical registry/dist/straggler files (TownFlagBlock, TownRoomsMap,
+HospitalBedBlock, TownQuests, TownKnownBiomes, MCTownItem, UIQuest), and the
+client renderers (FishingHook/Bubble `@OnlyIn` markers dropped, hospital-bed
+`Material` on 1.20.6).
 
-- **facade's own type references** — a few `Loader`/`LoaderApi`/`NeoLoader`
-  signatures still name 1.20.6 packages that moved or were removed
-  (`AbstractInventory` → `Container`, `MenuType`, `SoundEvent`).
-- **item-handler capability** slice (6 files) — `IItemHandler` /
-  `getCapability(ForgeCapabilities.ITEM_HANDLER)` / `LazyOptional` behind
-  `Loader.handlerOfEntity/BlockEntity` returning the neutral `ItemHandler`.
-- **network** slice (8 files) — `PacketDistributor.send` and the
-  `QuestownNetwork.CHANNEL` send paths onto the Neo Payload + `StreamCodec`
-  APIs (currently a log-and-skip no-op at `QuestownNetwork.init()`).
-- **events** slice (6 files) — `@SubscribeEvent` / `Mod.EventBusSubscriber`
-  and `MinecraftForge.EVENT_BUS` behind the neutral core + a Neo bus binder.
-- **client rendering** — `@OnlyIn(Dist.CLIENT)` markers (dropped where
-  annotation-only) and the hospital-bed `Material`/texture path.
+Remaining slices (each a focused pass; file lists are the compiler's surface):
+
+- **advancement triggers** (4 + init) — `TutorialTrigger`,
+  `ApproachTownTrigger`, `VisitorTrigger`, `RoomTrigger` +
+  `AdvancementsInit`. The 1.20.4+ trigger rework replaces
+  `getId()`+`createInstance(JsonObject, ContextAwarePredicate,
+  DeserializationContext)`+`AbstractCriterionTriggerInstance` with
+  `SimpleCriterionTrigger.SimpleInstance` (nested interface, `player()` →
+  `Optional<ContextAwarePredicate>`, custom `matches(...)`), a `codec()` that
+  returns an instance `Codec` (RecordCodecBuilder, player via
+  `EntityPredicate.ADVANCEMENT_CODEC`), and registration via
+  `CriteriaTriggers.register("questown:<id>", new XxxTrigger())` (2-arg id).
+- **item-handler capability** (~7 files) — `MinecraftWorldAccess`,
+  `WarpWorldAccess`, `TownFlagState`, `AbstractVillagerMenu`,
+  `TownFlagBlockEntity`, `TownFlagBOPItemHandler`, `LockableInventoryWrapper`
+  — replace `IItemHandler` / `getCapability(ForgeCapabilities.ITEM_HANDLER)` /
+  `InvWrapper` / `LazyOptional` with the neutral `ItemHandler` +
+  `Loader.handlerForInventory/handlerOfBlockEntity`; the Neo
+  `RegisterCapabilities` event stays a `loader.neo` binder, consumed via the
+  facade.
+- **network** (~10 files) — `TownMessages`, `TownFlagMenus`, `mc/Util`,
+  `StockRequestClipboardItem`, `RelocationDeedItem`, `PlateBlockEntity`,
+  `FoodDisplayEntity`, `AxeRackBlock`, and the `core/network/*.java` message
+  classes (still `PacketDistributor` + `Dist.CLIENT`). Onto Neo
+  `Payload`/`StreamCodec`; the send paths are currently log-and-skip no-ops at
+  `QuestownNetwork.init()`.
+- **events** (~8 files) — `AutoTestRunner`, `QuestownSpecialRules`,
+  `IntegrationForgeEvents`, `CampfireSleepForgeEvents`,
+  `CampfireSleepClientEvents`, `CommandInit`, `TestCommand`, `TestAllCommand`,
+  and the `TownFlagBlockEntity` event. Replace `@SubscribeEvent` /
+  `Mod.EventBusSubscriber` / `TickEvent` / `FMLCommonSetupEvent` /
+  `ServerAboutToStartEvent` with a neutral core + a `loader.neo` bus binder
+  (Neo `RegisterEventListener` + its event types).
+- **journal (Patchouli) drop** (1 file) — `ServerJobsRegistry` imports
+  `vazkii.patchouli.api.TriPredicate`; replace with a neutral
+  `TriPredicate<T,U,V>` functional interface (or three `Predicate`s). See the
+  `.scratch/bring-back-journal` TODO.
+- **loot API** (2 files) — `Loots` and `ResourceJobLoader` use the pre-1.20.4
+  `LootTable` / `LootDataManager` / `LootDataType` shapes; `LootDataManager` is
+  gone in 1.20.6, so map onto the vanilla 1.20.6 loot tables API.
 
 The neutral contract (what `Loader` must offer) is enumerated in
 `LoaderApi`. The strangler goal: 1 codebase, any loader / MC.

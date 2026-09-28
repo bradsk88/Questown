@@ -29,7 +29,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.Tags;
+import net.minecraft.tags.ItemTags;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -97,12 +97,12 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             BlockPos bPos
     ) {
         BlockState bs = level.getBlockState(bPos);
-        return Ingredient.of(Tags.Items.FENCES)
+        return Ingredient.of(ItemTags.FENCES)
                          .test(new ItemStack(
                                  bs.getBlock()
                                    .asItem(), 1
                          )) ||
-                Ingredient.of(Tags.Items.FENCE_GATES)
+                Ingredient.of(ItemTags.FENCE_GATES)
                           .test(new ItemStack(
                                   bs.getBlock()
                                     .asItem(), 1

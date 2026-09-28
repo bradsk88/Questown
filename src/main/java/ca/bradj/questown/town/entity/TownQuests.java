@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.loader.Loader;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.commands.DebugLogArgument;
@@ -49,7 +50,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -256,7 +256,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     @NotNull
     private static List<List<String>> getItemKeyStrings(NonNullList<Ingredient> ing) {
         return ing.stream()
-                  .map(v -> Arrays.stream(v.getItems()).map(ItemStack::getItem).map(ForgeRegistries.ITEMS::getKey)
+                  .map(v -> Arrays.stream(v.getItems()).map(ItemStack::getItem).map(Loader::itemIdOf)
                                   .filter(Objects::nonNull).map(ResourceLocation::toString).toList()).toList();
     }
 

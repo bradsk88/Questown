@@ -21,7 +21,8 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.BrightnessCombiner;
-import net.minecraft.client.resources.model.BlocksLocation;
+import net.minecraft.client.resources.model.Material;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
@@ -31,11 +32,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 public class HospitalBedEntityRenderer implements BlockEntityRenderer<HospitalBedBlockEntity> {
-    private static final BlocksLocation MATERIAL;
+    private static final Material MATERIAL;
 
     static {
         ResourceLocation TEXTURE = Questown.ResourceLocation("blocks/hospital_bed");
-        MATERIAL = BlocksLocation.fromResource(TEXTURE);
+        MATERIAL = new Material(TextureAtlas.LOCATION_BLOCKS, TEXTURE);
     }
 
     private final ModelPart headRoot;
@@ -96,7 +97,7 @@ public class HospitalBedEntityRenderer implements BlockEntityRenderer<HospitalBe
             int p_112209_,
             int p_112210_
     ) {
-        BlocksLocation material = MATERIAL;
+        Material material = MATERIAL;
         Level level = p_112205_.getLevel();
         if (level != null) {
             BlockState blockstate = p_112205_.getBlockState();
@@ -153,7 +154,7 @@ public class HospitalBedEntityRenderer implements BlockEntityRenderer<HospitalBe
             MultiBufferSource buffer,
             ModelPart p_173544_,
             Direction p_173545_,
-            BlocksLocation material,
+            Material material,
             int p_173547_,
             int p_173548_,
             boolean p_173549_

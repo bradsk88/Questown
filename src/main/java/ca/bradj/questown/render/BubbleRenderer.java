@@ -14,8 +14,6 @@ import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * World-space speech-bubble renderer shared across the helper chicken, the
@@ -44,9 +42,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  *   <li>Fullbright: bubbles use {@code packedLight = 0xF000F0} so they stay
  *       legible in dark scenes.</li>
  * </ul>
- */
-@OnlyIn(Dist.CLIENT)
-public final class BubbleRenderer {
+ */public final class BubbleRenderer {
 
     private static final int FULLBRIGHT = 0xF000F0;
     private static final double VISIBILITY_RANGE_SQR = 16.0 * 16.0;

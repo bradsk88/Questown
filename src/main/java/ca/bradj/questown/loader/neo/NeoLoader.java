@@ -24,7 +24,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractInventory;
+import net.minecraft.world.Container;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.neoforged.api.distmarker.Dist;
@@ -109,7 +109,7 @@ public final class NeoLoader implements LoaderApi {
     }
 
     @Override
-    public HolderRegistry<net.minecraft.world.MenuType<?>> menuTypes() {
+    public HolderRegistry<net.minecraft.world.inventory.MenuType<?>> menuTypes() {
         return track(DeferredRegister.create(Registries.MENU_TYPES, MODID));
     }
 
@@ -126,16 +126,16 @@ public final class NeoLoader implements LoaderApi {
     @Override
     @SuppressWarnings("unchecked")
     public <T extends net.minecraft.world.inventory.AbstractContainerMenu>
-    Holder<net.minecraft.world.MenuType<T>> registerMenu(String name, MenuFactory<T> factory) {
-        DeferredRegister<net.minecraft.world.MenuType<?>> reg = DeferredRegister.create(Registries.MENU_TYPES, MODID);
+    Holder<net.minecraft.world.inventory.MenuType<T>> registerMenu(String name, MenuFactory<T> factory) {
+        DeferredRegister<net.minecraft.world.inventory.MenuType<?>> reg = DeferredRegister.create(Registries.MENU_TYPES, MODID);
         createdRegistries.add(new NeoHolderRegistry<>(reg));
         net.neoforged.neoforge.network.IContainerFactory<T> container = factory::create;
         net.minecraft.world.inventory.MenuType<T> type =
                 net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(container);
-        net.neoforged.neoforge.registries.DeferredHolder<net.minecraft.world.MenuType<?>, net.minecraft.world.inventory.MenuType<T>> holder
+        net.neoforged.neoforge.registries.DeferredHolder<net.minecraft.world.inventory.MenuType<?>, net.minecraft.world.inventory.MenuType<T>> holder
                 = reg.register(name, () -> type);
-        return new NeoHolder<net.minecraft.world.MenuType<T>>(
-                (net.neoforged.neoforge.registries.DeferredHolder<net.minecraft.world.MenuType<T>, net.minecraft.world.MenuType<T>>) (Object) holder
+        return new NeoHolder<net.minecraft.world.inventory.MenuType<T>>(
+                (net.neoforged.neoforge.registries.DeferredHolder<net.minecraft.world.inventory.MenuType<T>, net.minecraft.world.inventory.MenuType<T>>) (Object) holder
         );
     }
 
@@ -184,8 +184,13 @@ public final class NeoLoader implements LoaderApi {
     }
 
     @Override
-    public net.minecraft.world.level.SoundEvent soundFromId(ResourceLocation id) {
+    public net.minecraft.sounds.SoundEvent soundFromId(ResourceLocation id) {
         return net.minecraft.core.Registry.BuiltInRegistries.SOUND_EVENT.get(id);
+    }
+
+    @Override
+    public net.minecraft.resources.@Nullable ResourceLocation biomeKeyOf(net.minecraft.world.level.biome.Biome biome) {
+        return BuiltInRegistries.BIOME.getKey(biome);
     }
 
     // ---- Item handlers ----------------------------------------------------
@@ -200,7 +205,7 @@ public final class NeoLoader implements LoaderApi {
     }
 
     @Override
-    public ItemHandler handlerForInventory(AbstractInventory inv) {
+    public ItemHandler handlerForInventory(Container inv) {
         return new NeoItemHandler(new InvWrapper(inv));
     }
 

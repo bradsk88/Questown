@@ -50,7 +50,6 @@ import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.common.Tags;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;

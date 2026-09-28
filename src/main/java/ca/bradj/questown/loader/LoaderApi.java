@@ -8,7 +8,7 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.inventory.AbstractInventory;
+import net.minecraft.world.Container;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,13 +35,13 @@ public interface LoaderApi {
     // Registries
     HolderRegistry<net.minecraft.world.item.Item> items();
     HolderRegistry<net.minecraft.world.level.block.Block> blocks();
-    HolderRegistry<net.minecraft.world.MenuType<?>> menuTypes();
+    HolderRegistry<net.minecraft.world.inventory.MenuType<?>> menuTypes();
     HolderRegistry<net.minecraft.world.entity.EntityType<?>> entityTypes();
     <T> HolderRegistry<T> registry(ResourceKey<Registry<T>> key);
 
     /** Neutral menu registration: the loader wraps the mod-owned factory with its own container type. */
     <T extends net.minecraft.world.inventory.AbstractContainerMenu>
-    Holder<net.minecraft.world.MenuType<T>> registerMenu(String name, MenuFactory<T> factory);
+    Holder<net.minecraft.world.inventory.MenuType<T>> registerMenu(String name, MenuFactory<T> factory);
 
     /** Touch the {@code *Init} classes so their static registries exist; the api then binds them to the mod bus. */
     void defineRegistries();
@@ -51,11 +51,12 @@ public interface LoaderApi {
     net.minecraft.world.item.@Nullable Item itemFromId(ResourceLocation id);
     net.minecraft.resources.@Nullable ResourceLocation itemIdOf(net.minecraft.world.item.Item item);
     net.minecraft.resources.@Nullable ResourceLocation blockIdOf(net.minecraft.world.level.block.Block block);
+    net.minecraft.resources.@Nullable ResourceLocation biomeKeyOf(net.minecraft.world.level.biome.Biome biome);
 
     // Item handlers
     Optional<ItemHandler> handlerOfEntity(Entity e);
     Optional<ItemHandler> handlerOfBlockEntity(BlockEntity b);
-    ItemHandler handlerForInventory(AbstractInventory inv);
+    ItemHandler handlerForInventory(Container inv);
 
     // Open screen
     void openScreen(ServerPlayer p, MenuProvider provider, @Nullable Consumer<RegistryFriendlyByteBuf> extra);

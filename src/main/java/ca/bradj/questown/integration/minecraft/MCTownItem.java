@@ -1,6 +1,7 @@
 package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.loader.Loader;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -8,7 +9,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -135,7 +135,7 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     @Override
     public String getShortName() {
         String name = "[unknown]";
-        ResourceLocation registryName = ForgeRegistries.ITEMS.getKey(get());
+        ResourceLocation registryName = Loader.itemIdOf(get());
         if (registryName != null) {
             name = registryName.toString();
         }
