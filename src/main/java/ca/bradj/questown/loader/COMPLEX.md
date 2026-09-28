@@ -62,7 +62,8 @@ client renderers (FishingHook/Bubble `@OnlyIn` markers dropped, hospital-bed
 `Material` on 1.20.6), the **advancement triggers** (slice 1 — DONE, below), and the
 **item-handler** slice (slice 2 — DONE, below: BOP handler + consumers neutral, menus
 re-pointed to Neo `SlotItemHandler`/`InvWrapper`, the Forge `getCapability` override
-removed).
+removed), and **tool-actions** (slice 3 — DONE, below: Neo `ToolAction(s)` re-point +
+`RecipeHolder`/`AbstractFurnaceBlockEntity.getFuel()`) (see the slice bullets).
 
 Remaining slices (each a focused pass; file lists are the compiler's surface):
 
@@ -75,7 +76,7 @@ Remaining slices (each a focused pass; file lists are the compiler's surface):
   and `CriteriaTriggers.register(id, trigger)` (2-arg). `Triggers.fromJSON`/`getID()` kept.
 - **item-handler capability** (~7 files) — **DONE for compile.** TownFlagBOPItemHandler implements the neutral ItemHandler; TownFlagState + MinecraftWorldAccess consume via Loader.handlerOf(BlockEntity) (was getCapability + LazyOptional); AbstractVillagerMenu + LockableInventoryWrapper re-point to Neo SlotItemHandler/InvWrapper(Container); TownFlagBlockEntity dropped the LazyOptional<IItemHandler> field + getCapability override (removed in 1.20.6) and exposes a neutral bopItemHandler().
   **Follow-up (strangler end-state):** the runtime provider/consumer path is not wired — Neo 1.20.6 removed BlockEntity.getCapability, so a working BOP handler needs (a) a loader.neo binder registering the flag's bopItemHandler() via RegisterCapabilitiesEvent.registerBlockEntity(Capabilities.ItemHandler.BLOCK, FLAG type, ...) wrapped in a loader IItemHandler, and (b) the neutral facade gaining a handlerAt(Level, BlockPos) (level-based retrieval via level.getCapability(...)), since the BE-only handlerOf(BlockEntity) can't find a registered BLOCK capability. At this checkpoint the consumers return Optional.empty and degrade gracefully.
-- **tool-actions** (~2 files) — NEW slice, MinecraftWorldAccess + WarpWorldAccess: both use the pre-1.20.4 ToolAction(s) + BlockState.getToolModifiedState(UseOnContext, ToolAction, boolean) for hoe/axe/shovel transformations (QTToolAction). That shape is gone in 1.20.6 (tool effects became Item.useOn + data-component / Item.Properties based), so this needs a 1.20.6 tool-action mapping — not yet investigated; listed to flag the unknown API rather than be skipped.
+- **tool-actions** (~2 files) — **DONE, cleared.** MinecraftWorldAccess + WarpWorldAccess both drove hoe/axe/shovel via `BlockState.getToolModifiedState(UseOnContext, ToolAction, boolean)` with `net.minecraftforge.common.ToolAction(s)`. That `getToolModifiedState` is a **NeoForge patch onto vanilla `BlockState`** in 1.20.6 (vanilla `HoeItem` calls it with `net.neoforged.neoforge.common.ToolActions`), so the fix was an import re-point — `forge` → `neoforged.neoforge.common.ToolAction(s)` — not a rework. WarpWorldAccess also: `getRecipeFor` now returns `RecipeHolder<T>` (resolver uses `r.recipe()`), and burn time moved from the removed `ForgeHooks.getBurnTime` to the vanilla `AbstractFurnaceBlockEntity.getFuel()` table (Map<Item,Integer>).
 - **network** (~10 files) — `TownMessages`, `TownFlagMenus`, `mc/Util`,
   `StockRequestClipboardItem`, `RelocationDeedItem`, `PlateBlockEntity`,
   `FoodDisplayEntity`, `AxeRackBlock`, and the `core/network/*.java` message

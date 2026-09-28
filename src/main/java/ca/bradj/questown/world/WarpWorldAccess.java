@@ -26,9 +26,9 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.ForgeHooks;
-import net.minecraftforge.common.ToolAction;
-import net.minecraftforge.common.ToolActions;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+import net.neoforged.neoforge.common.ToolAction;
+import net.neoforged.neoforge.common.ToolActions;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -75,8 +75,8 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         this.level = level;
         this.recipeResolver = ingredient -> level.getRecipeManager()
                 .getRecipeFor(RecipeType.SMELTING, new net.minecraft.world.SimpleContainer(ingredient), level)
-                .map(r -> new SmeltResult(r.getResultItem(level.registryAccess()).copy(), r.getCookingTime()));
-        this.fuelTimeProvider = fuel -> ForgeHooks.getBurnTime(fuel, RecipeType.SMELTING);
+                .map(r -> new SmeltResult(r.recipe().getResultItem(level.registryAccess()).copy(), r.recipe().getCookingTime()));
+        this.fuelTimeProvider = fuel -> AbstractFurnaceBlockEntity.getFuel().getOrDefault(fuel.getItem(), 0);
         for (BlockPos pos : positions) {
             blockStates.put(pos, level.getBlockState(pos));
             snapshotContainer(pos);
