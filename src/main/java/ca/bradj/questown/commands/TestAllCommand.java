@@ -13,9 +13,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class TestAllCommand {
@@ -83,7 +83,7 @@ public class TestAllCommand {
         TestAllExecutor executor = new TestAllExecutor(level, output, origin, warpAmount, category);
 
         TestAllTickListener listener = new TestAllTickListener(executor);
-        MinecraftForge.EVENT_BUS.register(listener);
+        NeoForge.EVENT_BUS.register(listener);
 
         String scope = category != null ? category : "all";
         Compat.sendMessage(player, Component.literal(
@@ -101,12 +101,9 @@ public class TestAllCommand {
         }
 
         @SubscribeEvent
-        public void onTick(TickEvent.ServerTickEvent event) {
-            if (event.phase != TickEvent.Phase.END) {
-                return;
-            }
+        public void onTick(ServerTickEvent.Post event) {
             if (executor.tick()) {
-                MinecraftForge.EVENT_BUS.unregister(this);
+                NeoForge.EVENT_BUS.unregister(this);
             }
         }
     }

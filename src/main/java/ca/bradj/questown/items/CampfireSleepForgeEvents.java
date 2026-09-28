@@ -10,13 +10,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerWakeUpEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.server.ServerLifecycleHooks;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.FORGE)
 public final class CampfireSleepForgeEvents {
 
     private static long heartbeatTick = -1;
@@ -44,10 +44,7 @@ public final class CampfireSleepForgeEvents {
     //   - SleepFinishedTimeEvent fires but the server then goes silent
     //     -> the wake path (onMorning / onWake) is the stall
     @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) {
-            return;
-        }
+    public static void onServerTick(ServerTickEvent.Post event) {
         if (CampfireSleepHandler.getCampfireSleeperCount() == 0) {
             return;
         }

@@ -16,9 +16,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 public class TestCommand {
 
@@ -89,7 +89,7 @@ public class TestCommand {
         TestExecutor executor = new TestExecutor(level, output, origin, jobId, warpAmount, blueprint);
 
         TestTickListener listener = new TestTickListener(executor);
-        MinecraftForge.EVENT_BUS.register(listener);
+        NeoForge.EVENT_BUS.register(listener);
 
         Compat.sendMessage(player, Component.literal(
                 "[qt test] Starting test for " + jobId.rootId() + ":" + jobId.jobId() +
@@ -107,12 +107,9 @@ public class TestCommand {
         }
 
         @SubscribeEvent
-        public void onTick(TickEvent.ServerTickEvent event) {
-            if (event.phase != TickEvent.Phase.END) {
-                return;
-            }
+        public void onTick(ServerTickEvent.Post event) {
             if (executor.tick()) {
-                MinecraftForge.EVENT_BUS.unregister(this);
+                NeoForge.EVENT_BUS.unregister(this);
             }
         }
     }

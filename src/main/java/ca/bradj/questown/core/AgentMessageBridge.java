@@ -4,10 +4,10 @@ import ca.bradj.questown.mc.Compat;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.loading.FMLEnvironment;
-import net.minecraftforge.server.ServerLifecycleHooks;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,11 +29,8 @@ public final class AgentMessageBridge {
     private static int ticks = 0;
 
     @SubscribeEvent
-    public void onServerTick(TickEvent.ServerTickEvent event) {
+    public void onServerTick(ServerTickEvent.Post event) {
         if (FMLEnvironment.production) {
-            return;
-        }
-        if (event.phase != TickEvent.Phase.END) {
             return;
         }
         if (++ticks < POLL_INTERVAL_TICKS) {

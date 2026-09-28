@@ -7,21 +7,18 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
 import net.minecraft.core.BlockPos;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /** Drives {@link NeedBubbleFocus} once per client tick, and draws the dead-door bubble. */
-@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class NeedBubbleClientEvents {
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) {
-            return;
-        }
+    public static void onClientTick(ClientTickEvent.Post event) {
         NeedBubbleFocus.tick(Minecraft.getInstance());
         ca.bradj.questown.mobs.helperchicken.ChickenArcHintFocus.tick(Minecraft.getInstance());
     }

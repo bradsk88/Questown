@@ -8,11 +8,11 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.loading.FMLEnvironment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +26,7 @@ import java.util.List;
  * description that overruns its row into the next element is caught as an overlap. Runs once per
  * screen open (no per-frame spam). Inert in shipped jars via {@link FMLEnvironment#production}.
  */
-@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public final class GuiLayoutCheckClientEvents {
 
     private static final String QUESTOWN_GUI_PACKAGE = "ca.bradj.questown.gui.";

@@ -80,8 +80,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.entity.EntityEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.EntityEvent;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
@@ -686,7 +686,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     private void grantAdvancementOnApproach() {
-        MinecraftForge.EVENT_BUS.addListener((EntityEvent.EnteringSection event) -> {
+        NeoForge.EVENT_BUS.addListener((EntityEvent.EnteringSection event) -> {
             if (event.getEntity() instanceof ServerPlayer sp) {
                 double v = event.getEntity().distanceToSqr(
                         this.worldPosition.getX() + 0.5D,

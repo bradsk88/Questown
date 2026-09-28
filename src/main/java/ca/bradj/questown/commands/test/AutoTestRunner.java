@@ -8,12 +8,12 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.util.FakePlayerFactory;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ import ca.bradj.questown.commands.test.TestBlueprintRegistry.AnyTestEntry;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 
-@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.FORGE)
 public class AutoTestRunner {
 
     private static final String SYSPROP = "questown.autotest";
@@ -107,7 +107,7 @@ public class AutoTestRunner {
             // The growth scenario runs for many minutes; let a spectator client
             // join and watch while it plays, not only in post-run hold mode.
             if ("true".equals(System.getProperty(SYSPROP_HOLD))) {
-                MinecraftForge.EVENT_BUS.register(new VillageWatchListener());
+                NeoForge.EVENT_BUS.register(new VillageWatchListener());
                 QT.FLAG_LOGGER.info("[village] watch: spectator camera armed (join anytime)");
             }
         }
@@ -139,7 +139,7 @@ public class AutoTestRunner {
         AutoTestTickListener listener = new AutoTestTickListener(
                 server, jobsExecutor, chickenExecutor, villageExecutor, selfSuffExecutor
         );
-        MinecraftForge.EVENT_BUS.register(listener);
+        NeoForge.EVENT_BUS.register(listener);
     }
 
     private static boolean shouldRunChickenTrack(@Nullable String category) {
@@ -267,7 +267,7 @@ public class AutoTestRunner {
         }
 
         @SubscribeEvent
-        public void onLogin(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+        public void onLogin(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
             if (!(event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp)) {
                 return;
             }
@@ -285,15 +285,12 @@ public class AutoTestRunner {
         }
 
         @SubscribeEvent
-        public void onTick(net.minecraftforge.event.TickEvent.ServerTickEvent event) {
-            if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) {
-                return;
-            }
+        public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
             if (++ticks < REAIM_TICKS) {
                 return;
             }
             ticks = 0;
-            net.minecraft.server.MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+            net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
             if (server == null) {
                 return;
             }
@@ -390,7 +387,7 @@ public class AutoTestRunner {
         private int ticks = 0;
 
         @SubscribeEvent
-        public void onLogin(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+        public void onLogin(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
             if (!(event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp)) {
                 return;
             }
@@ -402,7 +399,7 @@ public class AutoTestRunner {
             // dead player). Peaceful removes the whole class of dead-player stalls deterministically,
             // so the agent does not have to remember to set it via the FIFO.
             sp.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
-            net.minecraft.server.MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+            net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
             if (server != null) {
                 server.setDifficulty(net.minecraft.world.Difficulty.PEACEFUL, true);
             }
@@ -412,7 +409,7 @@ public class AutoTestRunner {
         }
 
         @SubscribeEvent
-        public void onTick(net.minecraftforge.event.TickEvent.ServerTickEvent event) {
+        public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
             // No-op: the login handler gives each spectator an initial viewpoint
             // (aimed at the flag) and then leaves them alone, so the user can fly
             // around and observe on their own. The former per-tick re-aim kept
@@ -473,10 +470,7 @@ public class AutoTestRunner {
         }
 
         @SubscribeEvent
-        public void onTick(TickEvent.ServerTickEvent event) {
-            if (event.phase != TickEvent.Phase.END) {
-                return;
-            }
+        public void onTick(ServerTickEvent.Post event) {
             if (!jobsDone) {
                 if (jobsExecutor == null) {
                     jobsDone = true;
@@ -525,7 +519,7 @@ public class AutoTestRunner {
                     selfSuffDone = true;
                 }
             }
-            MinecraftForge.EVENT_BUS.unregister(this);
+            NeoForge.EVENT_BUS.unregister(this);
             reportAndShutdown();
         }
 
@@ -556,7 +550,7 @@ public class AutoTestRunner {
             if ("true".equals(System.getProperty(SYSPROP_HOLD))) {
                 QT.FLAG_LOGGER.info("[autotest] HOLDING: server left running for client inspection");
                 if (villageExecutor == null && selfSuffExecutor == null) {
-                    MinecraftForge.EVENT_BUS.register(new HoldModeLoginListener());
+                    NeoForge.EVENT_BUS.register(new HoldModeLoginListener());
                 } // village runs already registered VillageWatchListener at startup
                 return;
             }

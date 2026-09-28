@@ -3,14 +3,14 @@ package ca.bradj.questown.mobs.helperchicken;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.EntitiesInit;
 import net.minecraft.world.entity.animal.Chicken;
-import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
-import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 public class HelperChickenEntityEvents {
 
-    @Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+    @EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.MOD)
     public static class ModBus {
         @SubscribeEvent
         public static void entityAttrEvent(EntityAttributeCreationEvent event) {
@@ -28,7 +28,7 @@ public class HelperChickenEntityEvents {
      * toward it and plays the eat animation, which is jarring during onboarding.
      * Cancel-on-target nips that off at the source.
      */
-    @Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+    @EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.FORGE)
     public static class ForgeBus {
         @SubscribeEvent
         public static void onTargetChange(LivingChangeTargetEvent event) {
