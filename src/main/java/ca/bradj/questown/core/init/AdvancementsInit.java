@@ -14,9 +14,9 @@ public class AdvancementsInit {
     public static TutorialTrigger TUTORIAL_TRIGGER;
 
     public static void register() {
-        VISITOR_TRIGGER = CriteriaTriggers.register(new VisitorTrigger());
-        ROOM_TRIGGER = CriteriaTriggers.register(new RoomTrigger());
-        APPROACH_TOWN_TRIGGER = CriteriaTriggers.register(new ApproachTownTrigger());
-        TUTORIAL_TRIGGER = CriteriaTriggers.register(new TutorialTrigger());
+        VISITOR_TRIGGER = CriteriaTriggers.register(VisitorTrigger.ID.toString(), new VisitorTrigger());
+        ROOM_TRIGGER = CriteriaTriggers.register(RoomTrigger.ID.toString(), new RoomTrigger());
+        APPROACH_TOWN_TRIGGER = CriteriaTriggers.register(ApproachTownTrigger.ID.toString(), new ApproachTownTrigger());
+        TUTORIAL_TRIGGER = CriteriaTriggers.register(TutorialTrigger.ID.toString(), new TutorialTrigger());
     }
 }

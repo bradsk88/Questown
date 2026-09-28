@@ -1,6 +1,6 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.Questown
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.loader.Loader;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;

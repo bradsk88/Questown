@@ -4,10 +4,10 @@ import ca.bradj.questown.Questown;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import net.minecraft.advancements.critereon.AbstractCriterionTriggerInstance;
-import net.minecraft.advancements.critereon.DeserializationContext;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.advancements.critereon.ContextAwarePredicate;
+import net.minecraft.advancements.critereon.EntityPredicate;
 import net.minecraft.advancements.critereon.SimpleCriterionTrigger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -15,7 +15,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 
-import java.util.function.Predicate;
+import java.util.Optional;
 
 public class TutorialTrigger extends SimpleCriterionTrigger<TutorialTrigger.Instance> {
 
@@ -63,6 +63,17 @@ public class TutorialTrigger extends SimpleCriterionTrigger<TutorialTrigger.Inst
                 .put(Triggers.FirstCampfireSleep, "first_campfire_sleep")
                 .build();
 
+                public static final Codec<Triggers> CODEC = Codec.STRING.xmap(
+                key -> {
+                    Triggers t = stringVals.inverse().get(key);
+                    if (t == null) {
+                        throw new IllegalArgumentException(String.format("Trigger string is unexpected: %s", key));
+                    }
+                    return t;
+                },
+                Triggers::getID
+        );
+
         public static Triggers fromJSON(JsonElement element) {
             String key = element.getAsString();
             if (!stringVals.inverse().containsKey(key)) {
@@ -79,32 +90,8 @@ public class TutorialTrigger extends SimpleCriterionTrigger<TutorialTrigger.Inst
     }
 
     @Override
-    public ResourceLocation getId() {
-        return ID;
-    }
-
-    @Override
-    public Instance createInstance(
-            JsonObject json,
-            ContextAwarePredicate predicate,
-            DeserializationContext parser
-    ) {
-        if (!json.has("context")) {
-            throw new IllegalStateException(String.format(
-                    "Trigger of type %s is missing context [ID: %s]",
-                    ID, parser.getAdvancementId()
-            ));
-        }
-
-        return new TutorialTrigger.Instance(predicate, Triggers.fromJSON(json.get("context")));
-    }
-
-    @Override
-    protected void trigger(
-            ServerPlayer player,
-            Predicate<Instance> predicate
-    ) {
-        super.trigger(player, predicate);
+    public Codec<Instance> codec() {
+        return Instance.CODEC;
     }
 
     public void trigger(
@@ -114,22 +101,22 @@ public class TutorialTrigger extends SimpleCriterionTrigger<TutorialTrigger.Inst
         super.trigger(player, instance -> instance.matches(trigger));
     }
 
-    public static class Instance extends AbstractCriterionTriggerInstance {
-        private final Triggers context;
-
-        public Instance(
-                ContextAwarePredicate predicate,
-                Triggers context
-        ) {
-            super(TutorialTrigger.ID, predicate);
+    public record Instance(Optional<ContextAwarePredicate> player, Triggers context) implements SimpleCriterionTrigger.SimpleInstance {
+        public Instance {
             if (Triggers.Invalid.equals(context)) {
                 throw new IllegalArgumentException("context must not be invalid");
             }
-            this.context = context;
         }
 
-        public boolean matches(Triggers trigger) {
-            return this.context.equals(trigger);
+        public boolean matches(Triggers triggerID) {
+            return this.context.equals(triggerID);
         }
+
+        public static final Codec<Instance> CODEC = RecordCodecBuilder.create(
+                instance -> instance.group(
+                        EntityPredicate.ADVANCEMENT_CODEC.optionalFieldOf("player").forGetter(Instance::player),
+                        Triggers.CODEC.fieldOf("context").forGetter(Instance::context)
+                ).apply(instance, Instance::new)
+        );
     }
 }

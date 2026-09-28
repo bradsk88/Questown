@@ -4,15 +4,15 @@ import ca.bradj.questown.Questown;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import net.minecraft.advancements.critereon.AbstractCriterionTriggerInstance;
-import net.minecraft.advancements.critereon.DeserializationContext;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.advancements.critereon.ContextAwarePredicate;
+import net.minecraft.advancements.critereon.EntityPredicate;
 import net.minecraft.advancements.critereon.SimpleCriterionTrigger;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.function.Predicate;
+import java.util.Optional;
 
 public class ApproachTownTrigger extends SimpleCriterionTrigger<ApproachTownTrigger.Instance> {
 
@@ -26,6 +26,17 @@ public class ApproachTownTrigger extends SimpleCriterionTrigger<ApproachTownTrig
 
         private static final BiMap<Triggers, String> stringVals = ImmutableBiMap.of(
                 Triggers.FirstVisit, "first_visit"
+        );
+
+                public static final Codec<Triggers> CODEC = Codec.STRING.xmap(
+                key -> {
+                    Triggers t = stringVals.inverse().get(key);
+                    if (t == null) {
+                        throw new IllegalArgumentException(String.format("Trigger string is unexpected: %s", key));
+                    }
+                    return t;
+                },
+                Triggers::getID
         );
 
         public static Triggers fromJSON(JsonElement trick_id) {
@@ -44,32 +55,8 @@ public class ApproachTownTrigger extends SimpleCriterionTrigger<ApproachTownTrig
     }
 
     @Override
-    public ResourceLocation getId() {
-        return ID;
-    }
-
-    @Override
-    public Instance createInstance(
-            JsonObject json,
-            ContextAwarePredicate predicate,
-            DeserializationContext parser
-    ) {
-        if (!json.has("context")) {
-            throw new IllegalStateException(String.format(
-                    "Trigger of type %s is missing context [ID: %s]",
-                    ID, parser.getAdvancementId()
-            ));
-        }
-
-        return new ApproachTownTrigger.Instance(predicate, Triggers.fromJSON(json.get("context")));
-    }
-
-    @Override
-    protected void trigger(
-            ServerPlayer p_235959_1_,
-            Predicate<Instance> p_235959_2_
-    ) {
-        super.trigger(p_235959_1_, p_235959_2_);
+    public Codec<Instance> codec() {
+        return Instance.CODEC;
     }
 
     public void trigger(
@@ -85,24 +72,22 @@ public class ApproachTownTrigger extends SimpleCriterionTrigger<ApproachTownTrig
         super.trigger(player, instance -> instance.matches(trickID));
     }
 
-    public static class Instance extends AbstractCriterionTriggerInstance {
-        private final Triggers trickID;
-
-        public Instance(
-                ContextAwarePredicate p_i231464_2_,
-                Triggers trickID
-        ) {
-            super(ApproachTownTrigger.ID, p_i231464_2_);
+    public record Instance(Optional<ContextAwarePredicate> player, Triggers trickID) implements SimpleCriterionTrigger.SimpleInstance {
+        public Instance {
             if (Triggers.Invalid.equals(trickID)) {
                 throw new IllegalArgumentException("context must not be invalid");
             }
-            this.trickID = trickID;
         }
 
-        public boolean matches(
-                Triggers trickID
-        ) {
-            return this.trickID.equals(trickID);
+        public boolean matches(Triggers triggerID) {
+            return this.trickID.equals(triggerID);
         }
+
+        public static final Codec<Instance> CODEC = RecordCodecBuilder.create(
+                instance -> instance.group(
+                        EntityPredicate.ADVANCEMENT_CODEC.optionalFieldOf("player").forGetter(Instance::player),
+                        Triggers.CODEC.fieldOf("context").forGetter(Instance::trickID)
+                ).apply(instance, Instance::new)
+        );
     }
 }

@@ -63,24 +63,23 @@ client renderers (FishingHook/Bubble `@OnlyIn` markers dropped, hospital-bed
 
 Remaining slices (each a focused pass; file lists are the compiler's surface):
 
-- **advancement triggers** (4 + init) — `TutorialTrigger`,
-  `ApproachTownTrigger`, `VisitorTrigger`, `RoomTrigger` +
-  `AdvancementsInit`. The 1.20.4+ trigger rework replaces
-  `getId()`+`createInstance(JsonObject, ContextAwarePredicate,
-  DeserializationContext)`+`AbstractCriterionTriggerInstance` with
-  `SimpleCriterionTrigger.SimpleInstance` (nested interface, `player()` →
-  `Optional<ContextAwarePredicate>`, custom `matches(...)`), a `codec()` that
-  returns an instance `Codec` (RecordCodecBuilder, player via
-  `EntityPredicate.ADVANCEMENT_CODEC`), and registration via
-  `CriteriaTriggers.register("questown:<id>", new XxxTrigger())` (2-arg id).
+- **advancement triggers** (4 + init) — **DONE, cleared.** `TutorialTrigger`,
+  `ApproachTownTrigger`, `VisitorTrigger`, `RoomTrigger` + `AdvancementsInit` now use the
+  1.20.4+ shape: a `Triggers.CODEC` (`Codec.STRING.xmap`), a nested
+  `record Instance(Optional<ContextAwarePredicate> player, Triggers …) implements
+  SimpleCriterionTrigger.SimpleInstance` with a `RecordCodecBuilder` CODEC (player via
+  `EntityPredicate.ADVANCEMENT_CODEC.optionalFieldOf("player")`), a `codec()` override,
+  and `CriteriaTriggers.register(id, trigger)` (2-arg). `Triggers.fromJSON`/`getID()` kept.
 - **item-handler capability** (~7 files) — `MinecraftWorldAccess`,
   `WarpWorldAccess`, `TownFlagState`, `AbstractVillagerMenu`,
-  `TownFlagBlockEntity`, `TownFlagBOPItemHandler`, `LockableInventoryWrapper`
-  — replace `IItemHandler` / `getCapability(ForgeCapabilities.ITEM_HANDLER)` /
-  `InvWrapper` / `LazyOptional` with the neutral `ItemHandler` +
-  `Loader.handlerForInventory/handlerOfBlockEntity`; the Neo
-  `RegisterCapabilities` event stays a `loader.neo` binder, consumed via the
-  facade.
+  `TownFlagBlockEntity`, `TownFlagBOPItemHandler`, `LockableInventoryWrapper`.
+  Neo 1.20.6 model: `BlockEntity.getCapability` is GONE. Provider: `TownFlagBOPItemHandler`
+  implements the neutral `ItemHandler`; a `loader.neo` binder registers it via
+  `RegisterCapabilitiesEvent.registerBlockEntity(Capabilities.ItemHandler.BLOCK,
+  FLAG type, ICapabilityProvider)` wrapping the neutral handler in a loader `IItemHandler`.
+  Consumer: main uses `Loader.handlerOf(BlockEntity)` → `Optional<ItemHandler>`; the Neo
+  impl retrieves via `level.getCapability(Capabilities.ItemHandler.BLOCK, pos, state, be, side)`.
+  `AbstractVillagerMenu`/`LockableInventoryWrapper` use `net.neoforged...InvWrapper(Container)`.
 - **network** (~10 files) — `TownMessages`, `TownFlagMenus`, `mc/Util`,
   `StockRequestClipboardItem`, `RelocationDeedItem`, `PlateBlockEntity`,
   `FoodDisplayEntity`, `AxeRackBlock`, and the `core/network/*.java` message
