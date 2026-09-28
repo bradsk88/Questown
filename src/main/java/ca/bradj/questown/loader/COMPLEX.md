@@ -83,20 +83,24 @@ Remaining slices (each a focused pass; file lists are the compiler's surface):
   classes (still `PacketDistributor` + `Dist.CLIENT`). Onto Neo
   `Payload`/`StreamCodec`; the send paths are currently log-and-skip no-ops at
   `QuestownNetwork.init()`.
-- **events** (~8 files) — `AutoTestRunner`, `QuestownSpecialRules`,
-  `IntegrationForgeEvents`, `CampfireSleepForgeEvents`,
-  `CampfireSleepClientEvents`, `CommandInit`, `TestCommand`, `TestAllCommand`,
-  and the `TownFlagBlockEntity` event. Replace `@SubscribeEvent` /
-  `Mod.EventBusSubscriber` / `TickEvent` / `FMLCommonSetupEvent` /
-  `ServerAboutToStartEvent` with a neutral core + a `loader.neo` bus binder
-  (Neo `RegisterEventListener` + its event types).
-- **journal (Patchouli) drop** (1 file) — `ServerJobsRegistry` imports
-  `vazkii.patchouli.api.TriPredicate`; replace with a neutral
-  `TriPredicate<T,U,V>` functional interface (or three `Predicate`s). See the
-  `.scratch/bring-back-journal` TODO.
-- **loot API** (2 files) — `Loots` and `ResourceJobLoader` use the pre-1.20.4
-  `LootTable` / `LootDataManager` / `LootDataType` shapes; `LootDataManager` is
-  gone in 1.20.6, so map onto the vanilla 1.20.6 loot tables API.
+- **events** (~11 files) — `AutoTestRunner`, `HelperChickenEntityEvents`, `QuestownSpecialRules`,
+  `IntegrationForgeEvents`, `CampfireSleepForgeEvents`, `CampfireSleepClientEvents`, `CommandInit`,
+  `TestCommand`, `TestAllCommand`, `GuiLayoutCheckClientEvents`, `TownFlagBlockEntity`. Mapping confirmed
+  against the Neo jars: `SubscribeEvent` → `net.neoforged.bus.api.SubscribeEvent`; `@Mod.EventBusSubscriber`
+  → standalone `@net.neoforged.fml.common.EventBusSubscriber` (`Bus.FORGE`/`MOD` unchanged); the `Phase` enum
+  is GONE — tick handlers now target abstract base + nested `Pre`/`Post` (`ServerTickEvent.Post`,
+  `ClientTickEvent.Post`); `FMLCommonSetupEvent` → `net.neoforged.fml.event.lifecycle`; `MinecraftForge` →
+  `NeoForge`; `ServerAboutToStartEvent`/`PlayerWakeUpEvent`/`ServerLifecycleHooks`/`ScreenEvent`/`EntityEvent`
+  re-point to `net.neoforged.neoforge.*`. (End-state: neutral core + `loader.neo` bus binder.)
+- **journal (Patchouli) drop** — `ServerJobsRegistry` + `PagedCardScreen` **DONE** (TriPredicate →`neutral
+  loader.TriPredicate`). Remaining: `QuestsScreen` line ~497 `PatchouliAPI.get().openBookEntry(...)` — the
+  journal-open action; with Patchouli out of the classpath it becomes a no-op/log (journal dropped per user).
+  See `.scratch/bring-back-journal`.
+- **loot API** (2 files) — `Loots` + `ResourceJobLoader`: `LootDataManager` is gone in 1.20.6, map onto the
+  vanilla 1.20.6 loot API (`LootTable`/`LootPool`/`LootContext`).
+- **gui FrameType** (2 files) — `VillagerAdvancementsWidget` + `VillagerAdvancementsScreen` import
+  `net.minecraft.advancements.FrameType` (`TASK`/`GOAL`/`CHALLENGE`, `.getTexture()`); it moved in 1.20.x —
+  not yet located, needs the 1.20.6 name before mapping.
 
 The neutral contract (what `Loader` must offer) is enumerated in
 `LoaderApi`. The strangler goal: 1 codebase, any loader / MC.
