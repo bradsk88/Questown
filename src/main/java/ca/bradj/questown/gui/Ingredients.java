@@ -13,8 +13,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.IForgeRegistry;
+import ca.bradj.questown.loader.Loader;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -28,7 +27,7 @@ public class Ingredients {
         }
         if (j.isJsonObject() && j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
-            Item i = ForgeRegistries.ITEMS.getValue(new ResourceLocation(tKey));
+            Item i = Loader.itemFromId(new ResourceLocation(tKey));
             if (i != null) {
                 return i.getName(i.getDefaultInstance());
             }
@@ -44,7 +43,7 @@ public class Ingredients {
         }
         if (j.isJsonObject() && j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
-            Item i = ForgeRegistries.ITEMS.getValue(new ResourceLocation(tKey));
+            Item i = Loader.itemFromId(new ResourceLocation(tKey));
             if (i != null) {
                 return WorkRequest.of(i);
             }
@@ -59,7 +58,7 @@ public class Ingredients {
                     new ResourceLocation(block.replace("#", ""))
             ));
         }
-        return Ingredient.of(ForgeRegistries.ITEMS.getValue(new ResourceLocation(block)));
+        return Ingredient.of(Loader.itemFromId(new ResourceLocation(block)));
     }
 
     public static String toString(Ingredient item) {
@@ -133,7 +132,7 @@ public class Ingredients {
     }
 
     public static Ingredient fromRL(ResourceLocation value) {
-        @Nullable Item l = ForgeRegistries.ITEMS.getValue(value);
+        @Nullable Item l = Loader.itemFromId(value);
         return Ingredient.of(l);
     }
 
@@ -144,9 +143,9 @@ public class Ingredients {
      * missing id fails safe instead of throwing.
      */
     public static Ingredient asIngredient(ResourceLocation value) {
-        IForgeRegistry<Item> items = ForgeRegistries.ITEMS;
-        if (items.containsKey(value)) {
-            return Ingredient.of(items.getValue(value));
+        Item asItem = Loader.itemFromId(value);
+        if (asItem != null) {
+            return Ingredient.of(asItem);
         }
         return Ingredient.of(TagKey.create(Registries.ITEM, value));
     }

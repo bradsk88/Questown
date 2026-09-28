@@ -40,7 +40,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import vazkii.patchouli.api.TriPredicate;
+import ca.bradj.questown.loader.TriPredicate;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

@@ -4,7 +4,7 @@ import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
+import ca.bradj.questown.loader.Loader;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -73,6 +73,6 @@ public class VillagerAdvancements {
 
     public static ItemStack getIcon(JobID prerequisite) {
         // TODO: Handle item not found
-        return ForgeRegistries.ITEMS.getValue(icons.get(prerequisite)).getDefaultInstance();
+        return Loader.itemFromId(icons.get(prerequisite)).getDefaultInstance();
     }
 }

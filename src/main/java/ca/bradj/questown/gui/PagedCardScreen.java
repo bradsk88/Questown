@@ -18,7 +18,7 @@ import net.minecraft.network.chat.Component;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import vazkii.patchouli.api.TriPredicate;
+import ca.bradj.questown.loader.TriPredicate;
 
 import java.util.Collection;
 import java.util.List;
