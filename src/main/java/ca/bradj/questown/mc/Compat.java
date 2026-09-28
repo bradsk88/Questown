@@ -32,18 +32,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraftforge.network.simple.SimpleChannel;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.IForgeRegistry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -62,19 +50,6 @@ import java.util.function.Supplier;
  */
 public class Compat {
     public static final RandomSource RANDOM = RandomSource.create();
-
-    private static class ForgeRefs {
-        static final IForgeRegistry<EntityType<?>> ENTITY_TYPES = ForgeRegistries.ENTITY_TYPES;
-        static final @NotNull Capability<IItemHandler> ITEM_HANDLER = ForgeCapabilities.ITEM_HANDLER;
-    }
-
-    public static IForgeRegistry<EntityType<?>> entityTypes() {
-        return ForgeRefs.ENTITY_TYPES;
-    }
-
-    public static @NotNull Capability<IItemHandler> itemHandler() {
-        return ForgeRefs.ITEM_HANDLER;
-    }
 
     public static void playNeutralSound(
             ServerLevel serverLevel,
@@ -172,13 +147,6 @@ public class Compat {
         // Render layer is set via model JSON files
     }
 
-    public static <MSG> SimpleChannel.MessageBuilder<MSG> withConsumer(
-            SimpleChannel.MessageBuilder<MSG> decoder,
-            BiConsumer<MSG, Supplier<NetworkEvent.Context>> consumer
-    ) {
-        return decoder.consumerNetworkThread(consumer);
-    }
-
     public static CompoundTag getBlockStoredTagData(TownFlagBlockEntity e) {
         return e.getPersistentData();
     }
@@ -186,29 +154,16 @@ public class Compat {
     public static void openScreen(
             ServerPlayer sender,
             MenuProvider menuProvider,
-            Consumer<FriendlyByteBuf> writer
-    ) {
-        NetworkHooks.openScreen(sender, menuProvider, writer);
+            Consumer<net.minecraft.network.RegistryFriendlyByteBuf> writer) {
+        sender.openMenu(menuProvider, writer == null ? buf -> {} : writer);
     }
 
-    public static DeferredRegister<MenuType<?>> CreateMenuRegister(String modid) {
-        return DeferredRegister.create(ForgeRegistries.MENU_TYPES, modid);
+    public static void enqueueOrLog(Runnable staticInitialize) {
+        ca.bradj.questown.loader.Loader.enqueueWork(staticInitialize);
     }
 
-    public static void enqueueOrLog(
-            FMLCommonSetupEvent event,
-            Runnable staticInitialize
-    ) {
-        event.enqueueWork(staticInitialize).exceptionally(
-                ex -> {
-                    QT.INIT_LOGGER.error("Enqueued work failed", ex);
-                    return null;
-                }
-        );
-    }
-
-    public static <X> Supplier<X> configGet(ForgeConfigSpec.ConfigValue<X> cfg) {
-        return cfg::get;
+    public static <X> Supplier<X> configGet(ca.bradj.questown.loader.ConfigValue<X> cfg) {
+        return cfg;
     }
 
     public static TownPosition townPos(
@@ -219,7 +174,7 @@ public class Compat {
     }
 
     public static boolean insertInNextOpenSlot(
-            IItemHandler iItemHandler,
+            ca.bradj.questown.loader.ItemHandler iItemHandler,
             ItemStack inserted,
             int targetSize
     ) {
@@ -275,7 +230,8 @@ public class Compat {
     }
 
     public static Component getItemName(ResourceLocation wantedId) {
-        return getItemName(ForgeRegistries.ITEMS.getValue(wantedId));
+        net.minecraft.world.item.Item it = ca.bradj.questown.loader.Loader.itemFromId(wantedId);
+        return it == null ? net.minecraft.network.chat.Component.empty() : getItemName(it);
     }
 
     public static Component getItemName(Item item) {
@@ -283,11 +239,11 @@ public class Compat {
     }
 
     public static ResourceLocation getItemId(Item item) {
-        return ForgeRegistries.ITEMS.getKey(item);
+        return ca.bradj.questown.loader.Loader.itemIdOf(item);
     }
 
     public static ResourceLocation getItemId(Block block) {
-        return ForgeRegistries.BLOCKS.getKey(block);
+        return ca.bradj.questown.loader.Loader.blockIdOf(block);
     }
 
     public static boolean getRandomBool(@Nullable ServerLevel serverLevel) {
@@ -306,10 +262,6 @@ public class Compat {
             Component message
     ) {
         sender.sendSystemMessage(message);
-    }
-
-    public static void initCommands(IEventBus bus) {
-        CommandsInit.register(bus);
     }
 
     /**

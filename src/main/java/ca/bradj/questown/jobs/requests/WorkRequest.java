@@ -1,4 +1,5 @@
 package ca.bradj.questown.jobs.requests;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.mc.Compat;
@@ -11,7 +12,6 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -67,7 +67,7 @@ public class WorkRequest {
     }
 
     public void toNetwork(FriendlyByteBuf buffer) {
-        buffer.writeUtf(item == null ? "" : ForgeRegistries.ITEMS.getKey(item).toString());
+        buffer.writeUtf(item == null ? "" : Loader.itemIdOf(item).toString());
         buffer.writeUtf(tag == null ? "" : tag.location().toString());
     }
 
@@ -80,7 +80,7 @@ public class WorkRequest {
         if (i.isEmpty()) {
             return new WorkRequest(new TagKey<>(Registries.ITEM, new ResourceLocation(t)), null);
         }
-        return new WorkRequest(null, ForgeRegistries.ITEMS.getValue(new ResourceLocation(i)));
+        return new WorkRequest(null, Loader.itemFromId(new ResourceLocation(i)));
     }
 
     @Override

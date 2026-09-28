@@ -9,17 +9,13 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.animal.Chicken;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * Renders the helper-chicken onboarding trophy: the vanilla chicken model
  * coloured stone and scaled to sit inside the statue's block, so the
  * finished chicken reads as a pickable stone statue rather than a stone
  * cube. The block's own model is empty; this layer draws over it.
- */
-@OnlyIn(Dist.CLIENT)
-public class ChickenStatueBlockEntityRenderer
+ */public class ChickenStatueBlockEntityRenderer
         implements BlockEntityRenderer<ChickenStatueBlockEntity> {
 
     // The chicken's own texture is not registered as a model layer in 1.19.2, so

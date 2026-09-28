@@ -1,4 +1,7 @@
 package ca.bradj.questown.commands.test;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
@@ -52,15 +55,13 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.damagesource.DamageSource;
+
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
-import net.minecraftforge.common.util.FakePlayer;
-import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.Container;
 import net.minecraft.world.level.block.Blocks;
@@ -71,7 +72,6 @@ import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -424,9 +424,9 @@ public class TestBlueprintRegistry {
         // Probe 3: fire damage from a campfire the townie is inside or standing on is ignored.
         float h0 = townie.getHealth();
         townie.setPos(fire.getX() + 0.5, fire.getY() + 0.5, fire.getZ() + 0.5);
-        boolean inBlock = townie.hurt(DamageSource.IN_FIRE, 1.0f);
+        boolean inBlock = townie.hurt(townie.level().damageSources().inFire(), 1.0f);
         townie.setPos(fire.getX() + 0.5, fire.getY() + 1.5, fire.getZ() + 0.5);
-        boolean onBlock = townie.hurt(DamageSource.IN_FIRE, 1.0f);
+        boolean onBlock = townie.hurt(townie.level().damageSources().inFire(), 1.0f);
         townie.setPos(north.getX() + 0.5, flagPos.getY(), north.getZ() + 0.5);
         if (inBlock || onBlock || townie.getHealth() != h0) {
             output.error("campfire safety: hurt in-block=" + inBlock
@@ -3439,7 +3439,7 @@ public class TestBlueprintRegistry {
         Set<String> names = new HashSet<>();
         for (Ingredient ingredient : ingredients) {
             for (ItemStack stack : ingredient.getItems()) {
-                names.add(String.valueOf(ForgeRegistries.ITEMS.getKey(stack.getItem())));
+                names.add(String.valueOf(Loader.itemIdOf(stack.getItem())));
             }
         }
         return names;

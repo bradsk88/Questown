@@ -1,4 +1,5 @@
 package ca.bradj.questown.items;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
@@ -10,7 +11,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,7 +35,7 @@ public class TownDoorItem extends Item {
         @Nullable ItemStack input = TownFlagBlock.GetFlagInputFromItemNBT(
                 ctx.getItemInHand());
         if (input == null) {
-            QT.ITEM_LOGGER.error("{} is missing flag input", ForgeRegistries.ITEMS.getKey(ctx.getItemInHand().getItem()));
+            QT.ITEM_LOGGER.error("{} is missing flag input", Loader.itemIdOf(ctx.getItemInHand().getItem()));
             return InteractionResult.FAIL;
         }
         InteractionResult interactionResult = input.getItem().useOn(new UseOnContext(ctx, input));

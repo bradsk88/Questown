@@ -1,23 +1,21 @@
 package ca.bradj.questown._vanilla.entities;
 
+import ca.bradj.questown.loader.Holder;
+import ca.bradj.questown.loader.HolderRegistry;
+import ca.bradj.questown.loader.Loader;
+
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.RegistryObject;
 
 public class EntitiesInit {
 
-    public static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(
-            Compat.entityTypes(),
-            Questown.MODID
-    );
+    public static final HolderRegistry<EntityType<?>> ENTITY_TYPES = Loader.entityTypes();
 
-    public static final RegistryObject<EntityType<FishingHook>> FISHIN_HOOK = ENTITY_TYPES.register(
+    public static final Holder<EntityType<FishingHook>> FISHIN_HOOK = ENTITY_TYPES.register(
             "fishing_hook",
             () -> EntityType.Builder.of(
                             (EntityType<FishingHook> a, Level b) -> new FishingHook(a, b),
@@ -27,7 +25,5 @@ public class EntitiesInit {
                     .build(new ResourceLocation(Questown.MODID, "fishing_hook").toString())
     );
 
-    public static void register(IEventBus bus) {
-        ENTITY_TYPES.register(bus);
-    }
+    public static void boot() {}
 }

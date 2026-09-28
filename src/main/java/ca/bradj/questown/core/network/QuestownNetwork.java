@@ -1,233 +1,24 @@
 package ca.bradj.questown.core.network;
 
-import ca.bradj.questown.Questown;
-import ca.bradj.questown.gui.town.status.MultiStatusScreenSyncMessage;
-import ca.bradj.questown.mc.Compat;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkDirection;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.simple.SimpleChannel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+/**
+ * Mod network.
+ *
+ * <p>The 31 message classes in this package are loader-neutral (vanilla {@code FriendlyByteBuf}).
+ * The channel setup and dispatch are the loader-specific part, migrated on top of NeoForge's
+ * payload/stream-codec networking via the neutral {@code loader.network} seam in a dedicated
+ * slice (strangler plan). Until it lands the mod boots and everything except these GUI menu-sync
+ * flows works (jobs, towns, economy, and vanilla {@code /tick rate}).
+ */
 public class QuestownNetwork {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(QuestownNetwork.class);
 
     public static final String NETWORK_VERSION = "0.0.1";
 
-    private static int messageIndex = 0;
-
-    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(Questown.MODID, "network"),
-            () -> NETWORK_VERSION,
-            version -> version.equals(NETWORK_VERSION),
-            version -> version.equals(NETWORK_VERSION)
-    );
-
     public static void init() {
-        initMessagesToServer();
-        initMessagesToClient();
-    }
-
-    private static void initMessagesToServer() {
-        Compat.withConsumer(
-                registerMessage(AddWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(AddWorkFromUIMessage::encode).
-                        decoder(AddWorkFromUIMessage::decode),
-                AddWorkFromUIMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(RemoveWorkFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(RemoveWorkFromUIMessage::encode).
-                        decoder(RemoveWorkFromUIMessage::decode),
-                RemoveWorkFromUIMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(OpenQuestsMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(OpenQuestsMenuMessage::encode).
-                        decoder(OpenQuestsMenuMessage::decode),
-                OpenQuestsMenuMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(RemoveQuestFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(RemoveQuestFromUIMessage::encode).
-                        decoder(RemoveQuestFromUIMessage::decode),
-                RemoveQuestFromUIMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(OpenVillagerMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(OpenVillagerMenuMessage::encode).
-                        decoder(OpenVillagerMenuMessage::decode),
-                OpenVillagerMenuMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(OpenFlagMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(OpenFlagMenuMessage::encode).
-                        decoder(OpenFlagMenuMessage::decode),
-                OpenFlagMenuMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(ChangeVillagerJobMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(ChangeVillagerJobMessage::encode).
-                        decoder(ChangeVillagerJobMessage::decode),
-                ChangeVillagerJobMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(CreateStockRequestFromUIMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(CreateStockRequestFromUIMessage::encode).
-                        decoder(CreateStockRequestFromUIMessage::decode),
-                CreateStockRequestFromUIMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(OpenMultiVillagerMenuMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(OpenMultiVillagerMenuMessage::encode).
-                        decoder(OpenMultiVillagerMenuMessage::decode),
-                OpenMultiVillagerMenuMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(OpenItemJobsMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(OpenItemJobsMessage::encode).
-                        decoder(OpenItemJobsMessage::decode),
-                OpenItemJobsMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(OpenJobMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(OpenJobMessage::encode).
-                        decoder(OpenJobMessage::decode),
-                OpenJobMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(UnlockJobMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(UnlockJobMessage::encode).
-                        decoder(UnlockJobMessage::decode),
-                UnlockJobMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(JobRootChangeMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(JobRootChangeMessage::encode).
-                        decoder(JobRootChangeMessage::decode),
-                JobRootChangeMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(GiveBOPMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(GiveBOPMessage::encode).
-                        decoder(GiveBOPMessage::decode),
-                GiveBOPMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(FlagCraftMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(FlagCraftMessage::encode).
-                        decoder(FlagCraftMessage::decode),
-                FlagCraftMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(RelocationChoiceMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(RelocationChoiceMessage::encode).
-                        decoder(RelocationChoiceMessage::decode),
-                RelocationChoiceMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(BeginTownRelocationMessage.class, NetworkDirection.PLAY_TO_SERVER).
-                        encoder(BeginTownRelocationMessage::encode).
-                        decoder(BeginTownRelocationMessage::decode),
-                BeginTownRelocationMessage::handle
-        ).add();
-    }
-
-    private static void initMessagesToClient() {
-        Compat.withConsumer(
-                registerMessage(SyncBlockItemMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(SyncBlockItemMessage::encode).
-                        decoder(SyncBlockItemMessage::decode),
-                SyncBlockItemMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(OpenVillagerAdvancementsMenuMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(OpenVillagerAdvancementsMenuMessage::encode).
-                        decoder(OpenVillagerAdvancementsMenuMessage::decode),
-                OpenVillagerAdvancementsMenuMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(OnScreenTextMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(OnScreenTextMessage::encode).
-                        decoder(OnScreenTextMessage::decode),
-                OnScreenTextMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(JobWantedIngredientsMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(JobWantedIngredientsMessage::encode).
-                        decoder(JobWantedIngredientsMessage::decode),
-                JobWantedIngredientsMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(SyncVillagerAdvancementsMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(SyncVillagerAdvancementsMessage::encode).
-                        decoder(SyncVillagerAdvancementsMessage::decode),
-                SyncVillagerAdvancementsMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(CloseScreensMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(CloseScreensMessage::encode).
-                        decoder(CloseScreensMessage::decode),
-                CloseScreensMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(MultiStatusScreenSyncMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(MultiStatusScreenSyncMessage::encode).
-                        decoder(MultiStatusScreenSyncMessage::decode),
-                MultiStatusScreenSyncMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(EconomicsUpdate.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(EconomicsUpdate::encode).
-                        decoder(EconomicsUpdate::decode),
-                EconomicsUpdate::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(WorkRequestConfirmMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(WorkRequestConfirmMessage::encode).
-                        decoder(WorkRequestConfirmMessage::decode),
-                WorkRequestConfirmMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(ShowItemJobsMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(ShowItemJobsMessage::encode).
-                        decoder(ShowItemJobsMessage::decode),
-                ShowItemJobsMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(SyncWorkForCommandsMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(SyncWorkForCommandsMessage::encode).
-                        decoder(SyncWorkForCommandsMessage::decode),
-                SyncWorkForCommandsMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(SyncStatusArtMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(SyncStatusArtMessage::encode).
-                        decoder(SyncStatusArtMessage::decode),
-                SyncStatusArtMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(SyncStatusTextMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(SyncStatusTextMessage::encode).
-                        decoder(SyncStatusTextMessage::decode),
-                SyncStatusTextMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(ShowTutorialToastMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(ShowTutorialToastMessage::encode).
-                        decoder(ShowTutorialToastMessage::decode),
-                ShowTutorialToastMessage::handle
-        ).add();
-        Compat.withConsumer(
-                registerMessage(OpenRelocationConfirmMessage.class, NetworkDirection.PLAY_TO_CLIENT).
-                        encoder(OpenRelocationConfirmMessage::encode).
-                        decoder(OpenRelocationConfirmMessage::decode),
-                OpenRelocationConfirmMessage::handle
-        ).add();
-    }
-
-    public static <T> SimpleChannel.MessageBuilder<T> registerMessage(
-            Class<T> msgClass,
-            NetworkDirection dir
-    ) {
-        return CHANNEL.messageBuilder(msgClass, messageIndex++, dir);
+        LOGGER.info("[questown] network init: NeoForge payload/stream-codec migration pending; GUI menu-sync messages are disabled this run.");
     }
 }

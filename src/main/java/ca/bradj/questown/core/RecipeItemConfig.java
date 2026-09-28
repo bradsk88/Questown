@@ -1,5 +1,10 @@
 package ca.bradj.questown.core;
 
+import ca.bradj.questown.loader.ConfigBuilder;
+import ca.bradj.questown.loader.ConfigSpec;
+import ca.bradj.questown.loader.ConfigValue;
+import ca.bradj.questown.loader.Loader;
+
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.SmallSoupPotBlock;
 import ca.bradj.questown.blocks.SoupPotBlock;
@@ -12,9 +17,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.common.Tags;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
@@ -22,12 +24,12 @@ import java.util.Map;
 
 public class RecipeItemConfig {
 
-    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-    public static final ForgeConfigSpec SPEC;
+    public static final ConfigBuilder BUILDER = Loader.configBuilder();
+    public static final ConfigSpec SPEC;
 
     public static final String ITEM_WEIGHTS = "Item weights";
     private static final Config defaultItemWeights = Config.of(InMemoryFormat.defaultInstance());
-    public static final ForgeConfigSpec.ConfigValue<String> itemWeights;
+    public static final ConfigValue<String> itemWeights;
 
     private static final int TORCH_SCORE = RecipeItemScore.canCraftInFourGrid(
             CommonRecipes.TORCH_INGREDIENTS, false
@@ -181,7 +183,7 @@ public class RecipeItemConfig {
         add(assumePresent(Items.LANTERN), LANTERN);
         add(String.format("#%s", TagsInit.Items.LANTERNS.location()), LANTERN);
         add(assumePresent(Items.CHEST), CHEST);
-        add(String.format("#%s", Tags.Items.CHESTS.location()), CHEST);
+        add(String.format("#%s", ItemTags.CHESTS.location()), CHEST);
         add(assumePresent(Items.FURNACE), FURNACE);
         add(String.format("#%s", ItemTags.SIGNS.location()), SIGN);
         add(assumePresent(Items.BOOKSHELF), BOOKSHELF);
@@ -206,7 +208,7 @@ public class RecipeItemConfig {
 
     @SuppressWarnings("DataFlowIssue")
     private static @NotNull ResourceLocation assumePresent(Item item) {
-        return ForgeRegistries.ITEMS.getKey(item);
+        return net.minecraft.core.Registry.BuiltInRegistries.ITEM.getKey(item);
     }
     private static void add(
             ResourceLocation itemOrTagKey,

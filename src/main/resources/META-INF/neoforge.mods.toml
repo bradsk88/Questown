@@ -1,0 +1,47 @@
+# NeoForge mods.toml - loaded by ModLoader for this mod.
+modLoader="javafml"
+loaderVersion="[20,)"
+license="All rights reserved"
+issueTrackerURL=""
+displayURL="https://modrinth.com/mod/questown/versions"
+updateJSONURL="https://api.modrinth.com/updates/questown/neoforge_updates.json"
+
+[[mods]]
+modId="questown"
+version="${file.jarVersion}"
+displayName="Questown"
+authors="bradsk88"
+description='''
+Questown is a new mod that intends to add a quest-based component to village building.
+'''
+
+[[dependencies.questown]]
+    modId="neoforge"
+    mandatory=true
+    versionRange="[20.6,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.questown]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.6,1.21)"
+    ordering="NONE"
+    side="BOTH"
+
+# RoomRecipes must load before Questown: Questown's room/job logic depends on RoomRecipes'
+# LevelRoomDetector / recipe detection.
+[[dependencies.questown]]
+    modId="roomrecipes"
+    mandatory=true
+    ordering="BEFORE"
+    versionRange="[1.20.6,)"
+    side="BOTH"
+
+# JEI is a client-only dependency (recipe browsing in the journal replacement UI).
+[[dependencies.questown]]
+    modId="jei"
+    mandatory=true
+    ordering="BEFORE"
+    versionRange="[18.0.0,)"
+    side="CLIENT"

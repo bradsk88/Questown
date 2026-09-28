@@ -5,7 +5,6 @@ import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -149,7 +148,7 @@ public class Ingredients {
         if (items.containsKey(value)) {
             return Ingredient.of(items.getValue(value));
         }
-        return Ingredient.of(TagKey.create(Registry.ITEM_REGISTRY, value));
+        return Ingredient.of(TagKey.create(Registries.ITEM, value));
     }
 
     public static List<Ingredient> fromItems(ImmutableList<ItemStack> result) {

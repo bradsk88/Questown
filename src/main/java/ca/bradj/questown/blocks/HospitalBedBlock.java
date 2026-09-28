@@ -50,7 +50,7 @@ import java.util.Optional;
 
 import static net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART;
 
-public class HospitalBedBlock extends HorizontalDirectionalBlock implements EntityBlock, Healing, IForgeBlock {
+public class HospitalBedBlock extends HorizontalDirectionalBlock implements EntityBlock, Healing {
     public static final BooleanProperty OCCUPIED = BlockStateProperties.OCCUPIED;
     public static final String ITEM_ID = "hospital_bed";
     protected static final int HEIGHT = 9;

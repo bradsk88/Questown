@@ -1,4 +1,5 @@
 package ca.bradj.questown.mc;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
@@ -27,7 +28,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -409,10 +409,10 @@ public class Util {
                     continue;
                 }
             }
-            if (ForgeRegistries.ITEMS.getKey(item) == null) {
+            if (Loader.itemIdOf(item) == null) {
                 names.add("<No ID>");
             } else {
-                names.add(ForgeRegistries.ITEMS.getKey(item).getPath());
+                names.add(Loader.itemIdOf(item).getPath());
             }
         }
         return String.join(", ", names.build());

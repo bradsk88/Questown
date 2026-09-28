@@ -1,4 +1,5 @@
 package ca.bradj.questown.commands;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
@@ -10,7 +11,6 @@ import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -90,9 +90,9 @@ public class FlagPlaceBlockCommand {
     }
 
     private static @Nullable Block resolveBlock(String id) {
-        Block block = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(id));
+        Block block = Loader.blockFromId(new ResourceLocation(id));
         if (block == null) {
-            block = ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft", id));
+            block = Loader.blockFromId(new ResourceLocation("minecraft", id));
         }
         return block;
     }

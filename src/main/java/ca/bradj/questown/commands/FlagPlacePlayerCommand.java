@@ -93,7 +93,7 @@ public class FlagPlacePlayerCommand {
                 for (int y : new int[]{shell.yCoord, shell.yCoord + 1}) {
                     BlockPos c = new BlockPos(p.x, y, p.z);
                     BlockState state = flag.getServerLevel().getBlockState(c);
-                    if (state.isAir() || state.getMaterial().isReplaceable()) {
+                    if (state.isAir() || state.canBeReplaced()) {
                         return c;
                     }
                 }

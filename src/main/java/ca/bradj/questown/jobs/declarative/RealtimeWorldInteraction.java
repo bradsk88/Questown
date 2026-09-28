@@ -1,4 +1,5 @@
 package ca.bradj.questown.jobs.declarative;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.blocks.ExtractedItemAware;
 import ca.bradj.questown.blocks.InsertedItemAware;
@@ -31,7 +32,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -327,7 +327,7 @@ public class RealtimeWorldInteraction extends
         if (sound == null) {
             return;
         }
-        @Nullable SoundEvent s = ForgeRegistries.SOUND_EVENTS.getValue(sound.sound());
+        @Nullable SoundEvent s = Loader.soundFromId(sound.sound());
         int dieRoll = mcExtra.town().getServerLevel().getRandom().nextInt(100);
         int chance = sound.chance() == null ? 10 : sound.chance();
         if (dieRoll < chance) {

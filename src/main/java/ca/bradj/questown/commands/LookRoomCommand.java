@@ -1,4 +1,5 @@
 package ca.bradj.questown.commands;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.town.WallDetection;
@@ -119,7 +120,7 @@ public class LookRoomCommand {
         if (level.getBlockState(bp).isAir() && level.getBlockState(bp.above()).isAir()) {
             return '.';
         }
-        ResourceLocation id = net.minecraftforge.registries.ForgeRegistries.BLOCKS.getKey(
+        ResourceLocation id = Loader.blockIdOf(
                 level.getBlockState(bp).getBlock());
         String path = id == null ? "unknown" : id.toString();
         char c = Character.toLowerCase(path.charAt(path.indexOf(':') + 1));

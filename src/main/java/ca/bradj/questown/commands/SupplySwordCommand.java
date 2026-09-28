@@ -1,4 +1,5 @@
 package ca.bradj.questown.commands;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.minecraft.MCContainer;
@@ -14,7 +15,6 @@ import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -57,7 +57,7 @@ public class SupplySwordCommand {
         net.minecraft.commands.CommandSourceStack source = level.getServer().createCommandSourceStack().withPermission(4);
         boolean any = false;
         for (MCQuest quest : swordQuests) {
-            Item item = ForgeRegistries.ITEMS.getValue(quest.getWantedId());
+            Item item = Loader.itemFromId(quest.getWantedId());
             if (item == null || item == Items.AIR) {
                 continue;
             }
@@ -83,7 +83,7 @@ public class SupplySwordCommand {
             }
             boolean all = true;
             for (MCQuest quest : swordQuests) {
-                Item item = ForgeRegistries.ITEMS.getValue(quest.getWantedId());
+                Item item = Loader.itemFromId(quest.getWantedId());
                 if (item == null || item == Items.AIR) {
                     QT.FLAG_LOGGER.warn("[complete_sword_quest] cannot resolve the wanted item {} for flag {}",
                             quest.getWantedId(), flag.getUUID());

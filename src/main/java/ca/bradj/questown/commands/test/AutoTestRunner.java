@@ -422,7 +422,7 @@ public class AutoTestRunner {
         private void aim(net.minecraft.server.level.ServerPlayer sp) {
             // Prefer the newest needy townie; otherwise hover over the flag.
             net.minecraft.world.phys.Vec3 target = net.minecraft.world.phys.Vec3.atCenterOf(ORIGIN);
-            java.util.List<VisitorMobEntity> townies = sp.getLevel().getEntitiesOfClass(
+            java.util.List<VisitorMobEntity> townies = sp.level().getEntitiesOfClass(
                     VisitorMobEntity.class, sp.getBoundingBox().inflate(96));
             townies.sort((a, b) -> Double.compare(a.distanceTo(sp), b.distanceTo(sp)));
             for (VisitorMobEntity v : townies) {
@@ -440,7 +440,7 @@ public class AutoTestRunner {
             double hor = Math.sqrt(dx * dx + dz * dz);
             float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
             float pitch = (float) -Math.toDegrees(Math.atan2(dy, hor));
-            sp.teleportTo((net.minecraft.server.level.ServerLevel) sp.level,
+            sp.teleportTo((net.minecraft.server.level.ServerLevel) sp.level(),
                     from.x, from.y - 1.62, from.z, yaw, pitch);
         }
     }

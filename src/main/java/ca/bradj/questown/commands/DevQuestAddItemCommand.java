@@ -1,4 +1,5 @@
 package ca.bradj.questown.commands;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.rewards.AddItemQuestReward;
@@ -11,7 +12,6 @@ import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.commands.arguments.coordinates.Coordinates;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 
@@ -56,7 +56,7 @@ public class DevQuestAddItemCommand {
         }
 
         tfbe.addImmediateReward(
-                new AddItemQuestReward(tfbe, ForgeRegistries.ITEMS.getKey(Items.APPLE), 10)
+                new AddItemQuestReward(tfbe, Loader.itemIdOf(Items.APPLE), 10)
         );
 
         return 0;

@@ -9,7 +9,8 @@ import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.quests.QuestBatch;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.item.Item;
@@ -56,9 +57,9 @@ class TownQuestsLootTest {
         // villager_simple_furnace_food_raw.json) and are verified by the held run.
         // Forge's bindTags rejects direct holders, so bind named holders for the items.
         List<Holder<Item>> members = Stream.of(Items.MUTTON, Items.PORKCHOP, Items.BEEF)
-                .map(i -> Registry.ITEM.getHolderOrThrow(ResourceKey.create(Registry.ITEM_REGISTRY, Compat.getItemId(i))))
+                .map(i -> BuiltInRegistries.ITEM.getHolderOrThrow(ResourceKey.create(Registries.ITEM, Compat.getItemId(i))))
                 .collect(Collectors.toList());
-        Registry.ITEM.bindTags(Map.of(
+        BuiltInRegistries.ITEM.bindTags(Map.of(
                 TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW,
                 members
         ));

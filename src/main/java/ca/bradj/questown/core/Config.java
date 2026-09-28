@@ -1,108 +1,113 @@
 package ca.bradj.questown.core;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import ca.bradj.questown.loader.ConfigBuilder;
+import ca.bradj.questown.loader.ConfigSpec;
+import ca.bradj.questown.loader.ConfigValue;
+import ca.bradj.questown.loader.Loader;
+
+
 
 public class Config {
 
-    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-    public static final ForgeConfigSpec SPEC;
+    public static final ConfigBuilder BUILDER = Loader.configBuilder();
+    public static final ConfigSpec SPEC;
 
     public static final String VILLAGE_START_QUESTS = "Village start quests";
 
     public static final String FILENAME = "questown-server.toml";
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> DOOR_SEARCH_RADIUS;
-    public static final ForgeConfigSpec.ConfigValue<Integer> TOWN_TICK_RADIUS;
-    public static final ForgeConfigSpec.ConfigValue<Integer> TOWN_SHUTDOWN_TICKS;
+    public static final ConfigValue<Integer> DOOR_SEARCH_RADIUS;
+    public static final ConfigValue<Integer> TOWN_TICK_RADIUS;
+    public static final ConfigValue<Integer> TOWN_SHUTDOWN_TICKS;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> CAMPFIRE_SEARCH_RADIUS;
+    public static final ConfigValue<Integer> CAMPFIRE_SEARCH_RADIUS;
 
-    public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_QUEST_BATCH_GENERATION;
+    public static final ConfigValue<Boolean> LOG_QUEST_BATCH_GENERATION;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> IDEAL_QUEST_THRESHOLD_TICKS;
+    public static final ConfigValue<Integer> IDEAL_QUEST_THRESHOLD_TICKS;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> QUEST_GENERATION_MAX_TICKS;
+    public static final ConfigValue<Integer> QUEST_GENERATION_MAX_TICKS;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> DEFAULT_ITEM_WEIGHT;
+    public static final ConfigValue<Integer> DEFAULT_ITEM_WEIGHT;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> FARM_ACTION_INTERVAL;
+    public static final ConfigValue<Integer> FARM_ACTION_INTERVAL;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> BAKING_TIME_REQUIRED_BASELINE;
+    public static final ConfigValue<Integer> BAKING_TIME_REQUIRED_BASELINE;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> TICK_SAMPLING_RATE;
+    public static final ConfigValue<Integer> TICK_SAMPLING_RATE;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> MIN_WEIGHT_PER_QUEST_BATCH;
-    public static final ForgeConfigSpec.ConfigValue<Long> UNMET_UNLOCK_QUEST_GRACE_TICKS;
+    public static final ConfigValue<Integer> MIN_WEIGHT_PER_QUEST_BATCH;
+    public static final ConfigValue<Long> UNMET_UNLOCK_QUEST_GRACE_TICKS;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> QUEST_BATCH_VILLAGER_BOOST_FACTOR;
+    public static final ConfigValue<Integer> QUEST_BATCH_VILLAGER_BOOST_FACTOR;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> BIOME_SCAN_RADIUS;
+    public static final ConfigValue<Integer> BIOME_SCAN_RADIUS;
 
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_DOWNTIME_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_BETWEEN_DOWNTIME;
+    public static final ConfigValue<Long> MAX_DOWNTIME_TICKS;
+    public static final ConfigValue<Long> MAX_TICKS_BETWEEN_DOWNTIME;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> WANDER_GIVEUP_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Long> VILLAGER_DISTRACT_DURATION;
-    public static final ForgeConfigSpec.ConfigValue<Long> VILLAGER_DISTRACT_COOLDOWN;
+    public static final ConfigValue<Integer> WANDER_GIVEUP_TICKS;
+    public static final ConfigValue<Long> VILLAGER_DISTRACT_DURATION;
+    public static final ConfigValue<Long> VILLAGER_DISTRACT_COOLDOWN;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> FARMER_WEEDS_RARITY;
+    public static final ConfigValue<Integer> FARMER_WEEDS_RARITY;
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> SMELTER_WORK_REQUIRED;
+    public static final ConfigValue<Integer> SMELTER_WORK_REQUIRED;
 
-    public static final ForgeConfigSpec.ConfigValue<Boolean> SCAN_FOR_DOORS;
+    public static final ConfigValue<Boolean> SCAN_FOR_DOORS;
 
-    public static final ForgeConfigSpec.ConfigValue<Double> DUPLICATE_QUEST_COST_FACTOR;
+    public static final ConfigValue<Double> DUPLICATE_QUEST_COST_FACTOR;
 
-    public static final ForgeConfigSpec.ConfigValue<Boolean> INFINITE_TOWN_DOORS;
-    public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_RETENTION_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_REMOVED_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_DETECTION_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Integer> META_ROOM_DIAMETER;
-    public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_TIME_REQUIRED_BASELINE;
-    public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_QUARTER_DAY_LOOT_AMOUNT;
-    public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_HALF_DAY_LOOT_AMOUNT;
-    public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_FULL_DAY_LOOT_AMOUNT;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> JOB_BOARD_ENABLED;
-    public static final ForgeConfigSpec.ConfigValue<Long> WORK_SEEKER_COOLDOWN;
-    public static final ForgeConfigSpec.ConfigValue<Long> WORKED_RECENTLY_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Double> MIN_JOB_ACCEPTANCE;
-    public static final ForgeConfigSpec.ConfigValue<Double> PREFERRED_JOB_ACCEPTANCE;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_INVALID_JOBS;
-    public static final ForgeConfigSpec.ConfigValue<Long> WORK_PRECOMPUTE_FREQUENCY;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_FAILED_WARP;
-    public static final ForgeConfigSpec.ConfigValue<Integer> TIME_WARP_MAX_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_WARP_RESULT;
-    public static final ForgeConfigSpec.ConfigValue<Integer> BASE_MAX_LOOP;
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_INITIAL_TICKS_WITHOUT_SUPPLIES;
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_SUPPLIES;
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_STICK_TICKS_WITH_TARGET;
-    public static final ForgeConfigSpec.ConfigValue<Integer> BASE_FULLNESS;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> HUNGER_ENABLED;
-    public static final ForgeConfigSpec.ConfigValue<Long> BLOCK_CLAIMS_TICK_LIMIT;
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_DINING_TABLE;
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_FOOD;
-    public static final ForgeConfigSpec.ConfigValue<Long> BUFFER_TICKS_AFTER_FOOD_ATTEMPT;
-    public static final ForgeConfigSpec.ConfigValue<Long> DAMAGE_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Long> MOOD_TICK_INTERVAL;
-    public static final ForgeConfigSpec.ConfigValue<Integer> NEUTRAL_MOOD;
-    public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY;
-    public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_COMFORTABLY;
-    public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_DIMENSION;
-    public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_SCAN_ITERATIONS;
-    public static final ForgeConfigSpec.ConfigValue<Double> MIN_ROOM_WALKABLE_FRACTION;
-    public static final ForgeConfigSpec.ConfigValue<Integer> EXPERIENCE_REQUIRED_AT_LEVEL_1;
-    public static final ForgeConfigSpec.ConfigValue<Double> EXPERIENCE_RAMP_FACTOR;
-    public static final ForgeConfigSpec.ConfigValue<Long> FLAG_TICK_INTERVAL;
-    public static final ForgeConfigSpec.ConfigValue<Long> CONTAINER_SCAN_INTERVAL;
-    public static final ForgeConfigSpec.ConfigValue<Integer> ECONOMIC_RECORDS_DEPTH;
-    public static final ForgeConfigSpec.ConfigValue<Double> NORMAL_BED_HEAL_MULTIPLIER;
-    public static final ForgeConfigSpec.ConfigValue<Double> HOSPITAL_BED_HEAL_MULTIPLIER;
-    public static final ForgeConfigSpec.ConfigValue<Integer> JOB_TREE_GROWTH;
-    public static final ForgeConfigSpec.ConfigValue<Double> PROFICIENCY_MIN_MULTIPLIER;
-    public static final ForgeConfigSpec.ConfigValue<Double> PROFICIENCY_MAX_MULTIPLIER;
-    public static final ForgeConfigSpec.ConfigValue<Integer> PROFICIENCY_SEED_COUNT;
-    public static final ForgeConfigSpec.ConfigValue<Double> PROFICIENCY_GAIN_PER_TICK;
-    public static final ForgeConfigSpec.ConfigValue<Double> PROFICIENCY_DECAY_PER_TICK;
+    public static final ConfigValue<Boolean> INFINITE_TOWN_DOORS;
+    public static final ConfigValue<Integer> FLAG_SUB_BLOCK_RETENTION_TICKS;
+    public static final ConfigValue<Integer> FLAG_SUB_BLOCK_REMOVED_TICKS;
+    public static final ConfigValue<Integer> FLAG_SUB_BLOCK_DETECTION_TICKS;
+    public static final ConfigValue<Integer> META_ROOM_DIAMETER;
+    public static final ConfigValue<Integer> GATHERER_TIME_REQUIRED_BASELINE;
+    public static final ConfigValue<Integer> GATHERER_QUARTER_DAY_LOOT_AMOUNT;
+    public static final ConfigValue<Integer> GATHERER_HALF_DAY_LOOT_AMOUNT;
+    public static final ConfigValue<Integer> GATHERER_FULL_DAY_LOOT_AMOUNT;
+    public static final ConfigValue<Boolean> JOB_BOARD_ENABLED;
+    public static final ConfigValue<Long> WORK_SEEKER_COOLDOWN;
+    public static final ConfigValue<Long> WORKED_RECENTLY_TICKS;
+    public static final ConfigValue<Double> MIN_JOB_ACCEPTANCE;
+    public static final ConfigValue<Double> PREFERRED_JOB_ACCEPTANCE;
+    public static final ConfigValue<Boolean> CRASH_ON_INVALID_JOBS;
+    public static final ConfigValue<Long> WORK_PRECOMPUTE_FREQUENCY;
+    public static final ConfigValue<Boolean> CRASH_ON_FAILED_WARP;
+    public static final ConfigValue<Integer> TIME_WARP_MAX_TICKS;
+    public static final ConfigValue<Boolean> LOG_WARP_RESULT;
+    public static final ConfigValue<Integer> BASE_MAX_LOOP;
+    public static final ConfigValue<Long> MAX_INITIAL_TICKS_WITHOUT_SUPPLIES;
+    public static final ConfigValue<Long> MAX_TICKS_WITHOUT_SUPPLIES;
+    public static final ConfigValue<Long> MAX_STICK_TICKS_WITH_TARGET;
+    public static final ConfigValue<Integer> BASE_FULLNESS;
+    public static final ConfigValue<Boolean> HUNGER_ENABLED;
+    public static final ConfigValue<Long> BLOCK_CLAIMS_TICK_LIMIT;
+    public static final ConfigValue<Long> MAX_TICKS_WITHOUT_DINING_TABLE;
+    public static final ConfigValue<Long> MAX_TICKS_WITHOUT_FOOD;
+    public static final ConfigValue<Long> BUFFER_TICKS_AFTER_FOOD_ATTEMPT;
+    public static final ConfigValue<Long> DAMAGE_TICKS;
+    public static final ConfigValue<Long> MOOD_TICK_INTERVAL;
+    public static final ConfigValue<Integer> NEUTRAL_MOOD;
+    public static final ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY;
+    public static final ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_COMFORTABLY;
+    public static final ConfigValue<Integer> MAX_ROOM_DIMENSION;
+    public static final ConfigValue<Integer> MAX_ROOM_SCAN_ITERATIONS;
+    public static final ConfigValue<Double> MIN_ROOM_WALKABLE_FRACTION;
+    public static final ConfigValue<Integer> EXPERIENCE_REQUIRED_AT_LEVEL_1;
+    public static final ConfigValue<Double> EXPERIENCE_RAMP_FACTOR;
+    public static final ConfigValue<Long> FLAG_TICK_INTERVAL;
+    public static final ConfigValue<Long> CONTAINER_SCAN_INTERVAL;
+    public static final ConfigValue<Integer> ECONOMIC_RECORDS_DEPTH;
+    public static final ConfigValue<Double> NORMAL_BED_HEAL_MULTIPLIER;
+    public static final ConfigValue<Double> HOSPITAL_BED_HEAL_MULTIPLIER;
+    public static final ConfigValue<Integer> JOB_TREE_GROWTH;
+    public static final ConfigValue<Double> PROFICIENCY_MIN_MULTIPLIER;
+    public static final ConfigValue<Double> PROFICIENCY_MAX_MULTIPLIER;
+    public static final ConfigValue<Integer> PROFICIENCY_SEED_COUNT;
+    public static final ConfigValue<Double> PROFICIENCY_GAIN_PER_TICK;
+    public static final ConfigValue<Double> PROFICIENCY_DECAY_PER_TICK;
 
     static {
         // Scanning Config

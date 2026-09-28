@@ -1,4 +1,5 @@
 package ca.bradj.questown.integration.minecraft;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.HeldItem;
@@ -8,7 +9,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -110,7 +110,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     @Override
     public String getShortName() {
         String name = "[unknown]";
-        ResourceLocation registryName = ForgeRegistries.ITEMS.getKey(delegate.get());
+        ResourceLocation registryName = Loader.itemIdOf(delegate.get());
         if (registryName != null) {
             name = registryName.toString();
         }
@@ -189,7 +189,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     }
 
     public String toShortString() {
-        String itemName = ForgeRegistries.ITEMS.getKey(delegate.get()).toString();
+        String itemName = Loader.itemIdOf(delegate.get()).toString();
         return String.format("{item=%s, prefix=%s, biome=%s}", itemName, prefix, biome);
     }
 

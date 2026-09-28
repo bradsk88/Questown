@@ -56,6 +56,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -1400,7 +1401,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         // townies (VillagerPathNavigation), so this covers the routes it cannot: a campfire
         // placed under a standing townie, or a stuck-unstick shove into the block. Fire from
         // any other source (lava, real flames) still hurts.
-        if (p_21016_.isFire() && !level.isClientSide() && inOrOnLitCampfire()) {
+        if ((p_21016_.is(DamageTypes.IN_FIRE) || p_21016_.is(DamageTypes.ON_FIRE)) && !level().isClientSide() && inOrOnLitCampfire()) {
             return false;
         }
 
@@ -1411,8 +1412,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
      *  body can end up inside the campfire block's space. */
     private boolean inOrOnLitCampfire() {
         BlockPos feet = blockPosition();
-        return CampfireBlock.isLitCampfire(level.getBlockState(feet))
-                || CampfireBlock.isLitCampfire(level.getBlockState(feet.below()));
+        return CampfireBlock.isLitCampfire(level().getBlockState(feet))
+                || CampfireBlock.isLitCampfire(level().getBlockState(feet.below()));
     }
 
     @Override

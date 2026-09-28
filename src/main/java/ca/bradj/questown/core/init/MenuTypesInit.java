@@ -1,70 +1,54 @@
 package ca.bradj.questown.core.init;
 
+import ca.bradj.questown.loader.Holder;
+import ca.bradj.questown.loader.Loader;
+
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.world.inventory.MenuType;
-import net.minecraftforge.common.extensions.IForgeMenuType;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.RegistryObject;
 
 public class MenuTypesInit {
 
     // NOTE: You can't have more than one menu per container type.
-
-    public static final DeferredRegister<MenuType<?>> MENUS = Compat.CreateMenuRegister(Questown.MODID);
-    public static RegistryObject<MenuType<TownQuestsContainer>> TOWN_QUESTS = MENUS.register(
-            "town_quests", () -> IForgeMenuType.create(TownQuestsContainer::ForClient)
-    );
-    public static RegistryObject<MenuType<VillagerQuestsContainer>> VILLAGER_QUESTS = MENUS.register(
-            "villager_quests", () -> IForgeMenuType.create(VillagerQuestsContainer::ForClient)
-    );
-    public static RegistryObject<MenuType<TownRemoveQuestsContainer>> TOWN_QUESTS_REMOVE = MENUS.register(
-            "town_quests_remove", () -> IForgeMenuType.create(TownRemoveQuestsContainer::read)
-    );
-    public static RegistryObject<MenuType<TownWorkContainer>> TOWN_WORK = MENUS.register(
-            "town_work", () -> IForgeMenuType.create(TownWorkContainer::ForClientSide)
-    );
-    public static RegistryObject<MenuType<VisitorQuestsContainer>> VISITOR_QUESTS = MENUS.register(
-            "visitor_quests", () -> IForgeMenuType.create(VisitorQuestsContainer::new)
-    );
-    public static RegistryObject<MenuType<InventoryAndStatusMenu>> GATHERER_INVENTORY = MENUS.register(
-            "gatherer_inventory", () -> IForgeMenuType.create(InventoryAndStatusMenu::ForClientSide)
-    );
-    public static RegistryObject<MenuType<MultiStatusMenu>> MULTI_VILLAGER = MENUS.register(
-            "multi_villager_status", () -> IForgeMenuType.create(MultiStatusMenu::ForClientSide)
-    );
-    public static RegistryObject<MenuType<VillagerStatsMenu>> VILLAGER_STATS = MENUS.register(
-            "villager_stats", () -> IForgeMenuType.create(VillagerStatsMenu::ForClientSide)
-    );
-    public static RegistryObject<MenuType<VillagerEconomicsMenu>> VILLAGER_ECONOMICS = MENUS.register(
-            "villager_economics", () -> IForgeMenuType.create(VillagerEconomicsMenu::ForClientSide)
-    );
-    public static RegistryObject<MenuType<VillagerBlockofProgressMenu>> VILLAGER_BLOCKS_OF_PROGRESS = MENUS.register(
-            "blocks_of_progress", () -> IForgeMenuType.create(VillagerBlockofProgressMenu::ForClientSide)
-    );
-    public static RegistryObject<MenuType<TownEconomicsMenu>> TOWN_ECONOMICS = MENUS.register(
-            "town_economics", () -> IForgeMenuType.create(TownEconomicsMenu::ForClientSide)
-    );
-    public static RegistryObject<MenuType<CreateStockRequestContainer>> CREATE_STOCK_REQUEST = MENUS.register(
-            "create_stock_request", () -> IForgeMenuType.create(CreateStockRequestContainer::ForClientSide)
-    );
-    public static RegistryObject<MenuType<JobUnlockConfirmMenu>> CONFIRM_JOB_UPGRADE = MENUS.register(
-            "confirm_job_upgrade", () -> IForgeMenuType.create(JobUnlockConfirmMenu::ForClientSide)
-    );
-    public static RegistryObject<MenuType<JobChangeConfirmMenu>> CONFIRM_JOB_CHANGE = MENUS.register(
-            "confirm_job_change", () -> IForgeMenuType.create(JobChangeConfirmMenu::ForClientSide)
-    );
-    public static RegistryObject<MenuType<TownBlockofProgressMenu>> TOWN_BLOCKS_OF_PROGRESS = MENUS.register(
-            "town_blocks_of_progress", () -> IForgeMenuType.create(TownBlockofProgressMenu::ForClientSide)
-    );
-    public static RegistryObject<MenuType<FlagCraftingMenu>> FLAG_CRAFTING = MENUS.register(
-            "flag_crafting", () -> IForgeMenuType.create(FlagCraftingMenu::ForClientSide)
-    );
+    public static final Holder<MenuType<TownQuestsContainer>> TOWN_QUESTS =
+        Loader.registerMenu("town_quests", TownQuestsContainer::ForClient);
+    public static final Holder<MenuType<VillagerQuestsContainer>> VILLAGER_QUESTS =
+        Loader.registerMenu("villager_quests", VillagerQuestsContainer::ForClient);
+    public static final Holder<MenuType<TownRemoveQuestsContainer>> TOWN_QUESTS_REMOVE =
+        Loader.registerMenu("town_quests_remove", TownRemoveQuestsContainer::read);
+    public static final Holder<MenuType<TownWorkContainer>> TOWN_WORK =
+        Loader.registerMenu("town_work", TownWorkContainer::ForClientSide);
+    public static final Holder<MenuType<VisitorQuestsContainer>> VISITOR_QUESTS =
+        Loader.registerMenu("visitor_quests", VisitorQuestsContainer::new);
+    public static final Holder<MenuType<InventoryAndStatusMenu>> GATHERER_INVENTORY =
+        Loader.registerMenu("gatherer_inventory", InventoryAndStatusMenu::ForClientSide);
+    public static final Holder<MenuType<MultiStatusMenu>> MULTI_VILLAGER =
+        Loader.registerMenu("multi_villager_status", MultiStatusMenu::ForClientSide);
+    public static final Holder<MenuType<VillagerStatsMenu>> VILLAGER_STATS =
+        Loader.registerMenu("villager_stats", VillagerStatsMenu::ForClientSide);
+    public static final Holder<MenuType<VillagerEconomicsMenu>> VILLAGER_ECONOMICS =
+        Loader.registerMenu("villager_economics", VillagerEconomicsMenu::ForClientSide);
+    public static final Holder<MenuType<VillagerBlockofProgressMenu>> VILLAGER_BLOCKS_OF_PROGRESS =
+        Loader.registerMenu("blocks_of_progress", VillagerBlockofProgressMenu::ForClientSide);
+    public static final Holder<MenuType<TownEconomicsMenu>> TOWN_ECONOMICS =
+        Loader.registerMenu("town_economics", TownEconomicsMenu::ForClientSide);
+    public static final Holder<MenuType<CreateStockRequestContainer>> CREATE_STOCK_REQUEST =
+        Loader.registerMenu("create_stock_request", CreateStockRequestContainer::ForClientSide);
+    public static final Holder<MenuType<JobUnlockConfirmMenu>> CONFIRM_JOB_UPGRADE =
+        Loader.registerMenu("confirm_job_upgrade", JobUnlockConfirmMenu::ForClientSide);
+    public static final Holder<MenuType<JobChangeConfirmMenu>> CONFIRM_JOB_CHANGE =
+        Loader.registerMenu("confirm_job_change", JobChangeConfirmMenu::ForClientSide);
+    public static final Holder<MenuType<TownBlockofProgressMenu>> TOWN_BLOCKS_OF_PROGRESS =
+        Loader.registerMenu("town_blocks_of_progress", TownBlockofProgressMenu::ForClientSide);
+    public static final Holder<MenuType<FlagCraftingMenu>> FLAG_CRAFTING =
+        Loader.registerMenu("flag_crafting", FlagCraftingMenu::ForClientSide);
 
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);
     }
 
+
+
+    public static void boot() {}
 }

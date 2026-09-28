@@ -1,4 +1,5 @@
 package ca.bradj.questown.blocks;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
@@ -50,7 +51,6 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.Tags;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -259,7 +259,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (itemInHand.getItem().equals(ItemsInit.FALSE_WALL_BLOCK.get())) {
             converted = ItemsInit.FALSE_DOOR.get().getDefaultInstance();
         }
-        if (Ingredient.of(Tags.Items.FENCE_GATES).test(itemInHand)) {
+        if (Ingredient.of(ItemTags.FENCE_GATES).test(itemInHand)) {
             converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();
         }
         if (itemInHand.getItem().equals(ItemsInit.TOWN_FENCE_GATE.get())) {
@@ -283,7 +283,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             player.setItemInHand(hand, converted);
             QT.FLAG_LOGGER.debug(
                     "{} created at {}",
-                    ForgeRegistries.ITEMS.getKey(converted.getItem()),
+                    Loader.itemIdOf(converted.getItem()),
                     entity.getTownFlagBasePos()
             );
             ItemStack toDrop = null;
@@ -298,7 +298,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             StoreParentOnNBT(converted, entity.getTownFlagBasePos());
             QT.FLAG_LOGGER.debug(
                     "{} has been paired with {} at {}",
-                    ForgeRegistries.ITEMS.getKey(converted.getItem()), entity.getUUID(), entity.getTownFlagBasePos()
+                    Loader.itemIdOf(converted.getItem()), entity.getUUID(), entity.getTownFlagBasePos()
             );
             if (converted.getItem().equals(ItemsInit.TOWN_WAND.get())) {
                 AdvancementsInit.ROOM_TRIGGER.trigger((ServerPlayer) player, RoomTrigger.Triggers.WandGet);

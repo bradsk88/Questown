@@ -1,4 +1,5 @@
 package ca.bradj.questown.commands.test;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.items.ItemsInit;
@@ -26,7 +27,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.AbstractMap;
@@ -422,7 +422,7 @@ public final class VillageGrowthExecutor {
             if (wanted == null || !"minecraft".equals(wanted.getNamespace())) {
                 continue; // room/special quests handled elsewhere (door registration)
             }
-            Item item = ForgeRegistries.ITEMS.getValue(wanted);
+            Item item = Loader.itemFromId(wanted);
             if (item == null || item == net.minecraft.world.item.Items.AIR) {
                 continue;
             }
@@ -564,7 +564,7 @@ public final class VillageGrowthExecutor {
         // Fallback: treat key as a plain item name (single item, no tag).
         String name = key.replace("item:", "").trim();
         ResourceLocation rl = ResourceLocation.tryParse(name.contains(":") ? name : "minecraft:" + name);
-        return rl == null ? null : ForgeRegistries.ITEMS.getValue(rl);
+        return rl == null ? null : Loader.itemFromId(rl);
     }
 
     private static String shortId(VisitorMobEntity v) {

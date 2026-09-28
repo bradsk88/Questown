@@ -78,7 +78,7 @@ public class HelperChickenRoomBuildGoal extends Goal {
         if (flag == null || flag.getChickenBeatState() != ChickenBeatState.WAITING_FOR_ROOM_BUILD) {
             return false;
         }
-        if (!(this.chicken.level instanceof ServerLevel sl)) {
+        if (!(this.chicken.level() instanceof ServerLevel sl)) {
             return false;
         }
         if (doorHasRoom(flag)) {
@@ -180,7 +180,7 @@ public class HelperChickenRoomBuildGoal extends Goal {
 
     private void placeTarget() {
         TownFlagBlockEntity flag = resolveFlag();
-        if (flag == null || !(this.chicken.level instanceof ServerLevel sl)) {
+        if (flag == null || !(this.chicken.level() instanceof ServerLevel sl)) {
             return;
         }
         BlockPos p = this.targetPos;
@@ -236,7 +236,7 @@ public class HelperChickenRoomBuildGoal extends Goal {
     }
 
     private void teleportToTargetWithPoof() {
-        if (!(this.chicken.level instanceof ServerLevel sl)) {
+        if (!(this.chicken.level() instanceof ServerLevel sl)) {
             return;
         }
         double tx = this.targetPos.getX() + 0.5D;
@@ -270,7 +270,7 @@ public class HelperChickenRoomBuildGoal extends Goal {
         if (flagPos == null) {
             return null;
         }
-        if (this.chicken.level.getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
+        if (this.chicken.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
             return flag;
         }
         return null;

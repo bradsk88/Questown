@@ -1,4 +1,5 @@
 package ca.bradj.questown.jobs;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
@@ -46,7 +47,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.LootDataManager;
 import net.minecraft.world.level.storage.loot.LootDataType;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -222,7 +222,7 @@ public class ResourceJobLoader {
                     if (crafted.isEmpty()) {
                         String fb = optional(resultObj, "fallback", JsonElement::getAsString);
                         if (fb != null) {
-                            Item fbItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation(fb));
+                            Item fbItem = Loader.itemFromId(new ResourceLocation(fb));
                             if (fbItem != null) {
                                 return Ingredient.of(fbItem);
                             }
@@ -239,7 +239,7 @@ public class ResourceJobLoader {
                 );
 
                 String armorItemId = "minecraft:" + prefix + "_" + templatePiece;
-                Item iconItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation(armorItemId));
+                Item iconItem = Loader.itemFromId(new ResourceLocation(armorItemId));
                 if (iconItem == null) {
                     iconItem = materialItem;
                 }
@@ -335,7 +335,7 @@ public class ResourceJobLoader {
         }
 
         private Work workFromJsonV1(JsonObject object) {
-            Item iconItem = ForgeRegistries.ITEMS.getValue(required(object, "icon"));
+            Item iconItem = Loader.itemFromId(required(object, "icon"));
             if (iconItem == null) {
                 throw new IllegalArgumentException("Icon image does not exist: " + object.get("icon").getAsString());
             }
@@ -346,7 +346,7 @@ public class ResourceJobLoader {
             );
             Function<ServerLevel, Ingredient> initReq = sl -> null;
             if (initialRequest != null) {
-                @Nullable Item r = ForgeRegistries.ITEMS.getValue(initialRequest);
+                @Nullable Item r = Loader.itemFromId(initialRequest);
                 if (r == null) {
                     throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
                                                                                                        .getAsString());
@@ -438,7 +438,7 @@ public class ResourceJobLoader {
         }
 
         private Work workFromJsonV2(JsonObject obj) {
-            Item iconItem = ForgeRegistries.ITEMS.getValue(required(obj, "icon"));
+            Item iconItem = Loader.itemFromId(required(obj, "icon"));
             if (iconItem == null) {
                 throw new IllegalArgumentException("Icon image does not exist: " + obj.get("icon").getAsString());
             }
@@ -652,7 +652,7 @@ public class ResourceJobLoader {
             JsonObject object,
             JsonObject rizz
     ) {
-        Item resultItem = ForgeRegistries.ITEMS.getValue(required(rizz, "item"));
+        Item resultItem = Loader.itemFromId(required(rizz, "item"));
         return new ResultGenerator<>() {
             @Override
             public Iterable<MCHeldItem> generate(
@@ -755,7 +755,7 @@ public class ResourceJobLoader {
                 Item itemForGrid = resolveGridItem(fillItem, heldItems);
                 ItemStack itemstack = assembleCraftingResult(l, ingredientChar, itemForGrid);
                 if (itemstack.isEmpty() && fallback != null) {
-                    itemstack = ForgeRegistries.ITEMS.getValue(new ResourceLocation(fallback)).getDefaultInstance();
+                    itemstack = Loader.itemFromId(new ResourceLocation(fallback)).getDefaultInstance();
                 }
                 itemstack.setCount(1);
                 return ImmutableList.copyOf(Collections.nCopies(qty, MCHeldItem.fromMCItemStack(itemstack)));
@@ -1045,7 +1045,7 @@ public class ResourceJobLoader {
     private static @NotNull Predicate<BlockState> getBlockCheck(String block) {
         if (block.startsWith("#")) {
             TagKey<Block> tag = BlockTags.create(new ResourceLocation(block.replace("#", "")));
-            return bs -> ForgeRegistries.BLOCKS.tags().getTag(tag).contains(bs.getBlock());
+            return bs -> bs.getBlock().is(tag);
         }
         return (BlockState bs) -> {
             ResourceLocation resourceLocation = new ResourceLocation(block);

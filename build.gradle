@@ -1,16 +1,19 @@
-buildscript {
-    repositories {
-        maven { url = 'https://maven.minecraftforge.net' }
-        mavenCentral()
-    }
-    dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
+plugins {
+    id 'java-library'
+    id 'eclipse'
+    id 'maven-publish'
+    id 'net.neoforged.gradle.userdev' version '7.1.39'
+}
+
+group = 'ca.bradj.questown' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
+archivesBaseName = 'questown'
+
+// Minecraft 1.20.6 requires Java 21 (Mojang ships Java 21 to end users).
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
-apply plugin: 'net.minecraftforge.gradle'
-// Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
-apply plugin: 'eclipse'
-apply plugin: 'maven-publish'
 
 // Load .env file if present (gitignored — store secrets like MODRINTH_TOKEN here)
 def dotEnv = new Properties()
@@ -20,142 +23,64 @@ if (dotEnvFile.exists()) {
     dotEnv.each { k, v -> ext.set(k as String, v as String) }
 }
 
-group = 'ca.bradj.questown' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = 'questown'
-
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
-
 repositories {
     mavenLocal()
+    maven { url = 'https://maven.neoforged.net/releases' }
     maven {
-        // location of the maven that hosts JEI files
         name = "Progwml6 maven"
         url = "https://dvs1.progwml6.com/files/maven/"
     }
-    // REMOVED 2026-08-09: modmaven.dev (JEI mirror fallback) now serves an HTML redirect
-    // page (to maven.knifepoint.net) with HTTP 200 for artifacts it doesn't have — e.g. the
-    // Forge userdev jar — which ForgeGradle then caches as the real artifact and fails with
-    // "Invalid patcher dependency". JEI remains available via Progwml6 and BlameJared above/below.
     maven { url 'https://maven.blamejared.com' }
+    mavenCentral()
 }
 
 println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
-minecraft {
-    // The mappings can be changed at any time, and must be in the following format.
-    // Channel:   Version:
-    // snapshot   YYYYMMDD   Snapshot are built nightly.
-    // stable     #          Stables are built at the discretion of the MCP team.
-    // official   MCVersion  Official field/method names from Mojang mapping files
-    //
-    // You must be aware of the Mojang license when using the 'official' mappings.
-    // See more information here: https://github.com/MinecraftForge/MCPConfig/blob/master/Mojang.md
-    //
-    // Use non-default mappings at your own risk. they may not always work.
-    // Simply re-run your setup task after changing the mappings to update your workspace.
-    mappings channel: 'official', version: '1.20.1'
-    // makeObfSourceJar = false // an Srg named sources jar is made by default. uncomment this to disable.
-    
-     accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
 
-    // Default run configurations.
-    // These can be tweaked, removed, or duplicated as needed.
-    runs {
-        client {
+accessTransformers {
+    file 'src/main/resources/META-INF/accesstransformer.cfg'
+}
+
+runs {
+    configureEach {
             workingDirectory project.file('run')
+            modSource project.sourceSets.main
+            // JDK 21 modules: netty (used by NeoForge networking) reflectively touches
+            // jdk.internal.misc.Unsafe. --add-opens keeps the client booting on JDK 21.
+            jvmArgument '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED'
+            jvmArgument '--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED'
+            systemProperty 'neoForge.logging.markers', 'REGISTRIES'
+            systemProperty 'neoForge.logging.console.level', 'info'
+        }
 
-            // JDK 17+ modules: netty (used by Forge networking) reflectively touches
-            // jdk.internal.misc.Unsafe. Without these add-opens the client dies at
-            // ForgeMod.<init> with "module java.base does not export jdk.internal.misc
-            // to module io.netty.common" / "Reflective setAccessible(true) disabled".
-            jvmArg '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED'
-            jvmArg '--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED'
-
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
-
+        client {
             // Dev-only: -Pautojoin makes the client skip the title screen and
             // connect straight to a local (hold-mode autotest) server.
             if (project.hasProperty('autojoin')) {
-                args '--server', 'localhost', '--port', '25565'
-            }
-
-            mods {
-                questown {
-                    source sourceSets.main
-                }
+                argument '--server', 'localhost', '--port', '25565'
             }
         }
 
         server {
-            workingDirectory project.file('run')
-
             // Keep the Swing server GUI out of the dev box: it steals focus and
             // screen space, and headless screenshots (grim) can't see past it.
-            args '--nogui'
+            argument '--nogui'
+            systemProperty 'neoForge.logging.console.level', 'info'
 
-            // Recommended logging data for a userdev environment
-            // The markers can be changed as needed.
-            // "SCAN": For mods scan.
-            // "REGISTRIES": For firing of registry events.
-            // "REGISTRYDUMP": For getting the contents of all registries.
-            property 'forge.logging.markers', 'REGISTRIES'
-
-            // Recommended logging level for the console
-            // You can set various levels here.
-            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            property 'forge.logging.console.level', 'info'
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
-
-            jvmArg '-Dquestown.autotest=' + System.getProperty('questown.autotest', 'false')
-            jvmArg '-Dquestown.autotest.warp=' + System.getProperty('questown.autotest.warp', '24000')
-            jvmArg '-Dquestown.autotest.hold=' + System.getProperty('questown.autotest.hold', 'false')
+            jvmArgument '-Dquestown.autotest=' + System.getProperty('questown.autotest', 'false')
+            jvmArgument '-Dquestown.autotest.warp=' + System.getProperty('questown.autotest.warp', '24000')
+            jvmArgument '-Dquestown.autotest.hold=' + System.getProperty('questown.autotest.hold', 'false')
             // Forward the category/scenario filters to the forked server JVM so the
             // runbook's documented -D invocations reach AutoTestRunner.parseCategory.
             if (System.getProperty('QUESTOWN_AUTOTEST_CATEGORY') != null) {
-                jvmArg '-DQUESTOWN_AUTOTEST_CATEGORY=' + System.getProperty('QUESTOWN_AUTOTEST_CATEGORY')
+                jvmArgument '-DQUESTOWN_AUTOTEST_CATEGORY=' + System.getProperty('QUESTOWN_AUTOTEST_CATEGORY')
             }
             if (System.getProperty('questown.autotest.only') != null) {
-                jvmArg '-Dquestown.autotest.only=' + System.getProperty('questown.autotest.only')
+                jvmArgument '-Dquestown.autotest.only=' + System.getProperty('questown.autotest.only')
             }
             if (System.getProperty('questown.village.agentDrive') != null) {
-                jvmArg '-Dquestown.village.agentDrive=' + System.getProperty('questown.village.agentDrive')
-            }
-
-            mods {
-                questown {
-                    source sourceSets.main
-                }
+                jvmArgument '-Dquestown.village.agentDrive=' + System.getProperty('questown.village.agentDrive')
             }
         }
-
-        data {
-            workingDirectory project.file('run')
-
-            // Recommended logging data for a userdev environment
-            // The markers can be changed as needed.
-            // "SCAN": For mods scan.
-            // "REGISTRIES": For firing of registry events.
-            // "REGISTRYDUMP": For getting the contents of all registries.
-            property 'forge.logging.markers', 'REGISTRIES'
-
-            // Recommended logging level for the console
-            // You can set various levels here.
-            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            property 'forge.logging.console.level', 'debug'
-
-            // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-            args '--mod', 'questown', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
-
-            mods {
-                questown {
-                    source sourceSets.main
-                }
-            }
-        }
-    }
 }
 
 // Include resources generated by data generators.
@@ -166,14 +91,16 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:3.12.4'
     testImplementation 'junit:junit:4.13.1'
 
-    minecraft 'net.minecraftforge:forge:1.20.1-47.1.3'
+    // NeoForge — the userdev plugin detects this and builds the dev runtime from it.
+    implementation 'net.neoforged:neoforge:20.6.141'
 
-    implementation fg.deobf("mezz.jei:jei-1.20.1-forge:15.0.0.16")
+    implementation 'mezz.jei:jei-1.20.6-neoforge:18.0.0.66'
 
-    implementation 'ca.bradj:RoomRecipes:1.20.1'
-
-    compileOnly fg.deobf("vazkii.patchouli:Patchouli:1.20.1-83-FORGE:api")
-    runtimeOnly fg.deobf("vazkii.patchouli:Patchouli:1.20.1-83-FORGE")
+    implementation 'ca.bradj:roomrecipes:1.20.6-neoforge'
+    // NOTE: Patchouli (journal) is intentionally NOT on the NeoForge 1.20.6 classpath —
+    // it has no Forge build past 1.20.1. The journal GUI is dropped for this release and
+    // scheduled to return as a neutral-screen rework. See
+    // .scratch/bring-back-journal/bring-back-journal.md (status: needs-triage).
 }
 
 test {
@@ -195,13 +122,12 @@ def getVersion() {
 
 version = getVersion();
 
-// Example for how to get properties into the manifest for reading by the runtime..
 jar {
     manifest {
         attributes([
             "Specification-Title": "questown",
             "Specification-Vendor": "questown",
-            "Specification-Version": "1", // We are version 1 of ourselves
+            "Specification-Version": "1",
             "Implementation-Title": project.name,
             "Implementation-Version": "${getVersion()}",
             "Implementation-Vendor" :"ca.bradj",
@@ -215,20 +141,16 @@ publish {
         attributes([
             "Specification-Title": "questown",
             "Specification-Vendor": "questown",
-            "Specification-Version": "1", // We are version 1 of ourselves
+            "Specification-Version": "1",
             "Implementation-Title": project.name,
             "Implementation-Version": "${version}",
-            "Implementation-Vendor" :"questown",
+            "Implementation-Vendor" :"ca.bradj",
             "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
 }
 
-// Example configuration to allow publishing using the maven-publish task
-// This is the preferred method to reobfuscate your jar file
-jar.finalizedBy('reobfJar')
-publish.finalizedBy('reobfJar')
-// However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing
+publish.dependsOn('reobfJar')
 
 publishing {
     publications {
@@ -255,7 +177,7 @@ task publishModrinth(dependsOn: 'reobfJar') {
         def cleanVersion = "git rev-parse --abbrev-ref HEAD".execute().text.trim()
         def versionType = cleanVersion.contains("alpha") ? "alpha" : cleanVersion.contains("beta") ? "beta" : "release"
         def projectId = project.findProperty("MODRINTH_PROJECT_ID") ?: System.getenv("MODRINTH_PROJECT_ID") ?: "QY0XuBVZ"
-        def data = """{"name":"Questown ${cleanVersion}","version_number":"${cleanVersion}","version_type":"${versionType}","featured":false,"game_versions":["1.20.1"],"loaders":["forge"],"project_id":"${projectId}","changelog":"${changelog}","dependencies":[],"file_parts":["file"],"primary_file":"file"}"""
+        def data = """{"name":"Questown ${cleanVersion}","version_number":"${cleanVersion}","version_type":"${versionType}","featured":false,"game_versions":["1.20.6"],"loaders":["neoforge"],"project_id":"${projectId}","changelog":"${changelog}","dependencies":[],"file_parts":["file"],"primary_file":"file"}"""
         // curl truncates an inline -F "data=${data}" field at ~270 chars, 400ing a long
         // changelog with "EOF while parsing a string at column 270" (the version string
         // alone pushes the skeleton past 270). Send the data from a file instead.

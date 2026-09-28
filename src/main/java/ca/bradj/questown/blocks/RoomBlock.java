@@ -1,4 +1,5 @@
 package ca.bradj.questown.blocks;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
@@ -17,7 +18,6 @@ import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,7 +40,7 @@ public abstract class RoomBlock extends TownFlagSubBlock<BlockAsRoomEntity> impl
             String namespaced = parts[1];
             String[] ps = namespaced.split("\\.");
             if (ps.length > 0) {
-                Item value = ForgeRegistries.ITEMS.getValue(Questown.ResourceLocation(ps[1]));
+                Item value = Loader.itemFromId(Questown.ResourceLocation(ps[1]));
                 if (value == null) {
                     return null;
                 }
