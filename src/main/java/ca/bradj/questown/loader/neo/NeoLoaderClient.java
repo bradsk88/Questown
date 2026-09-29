@@ -45,10 +45,18 @@ public final class NeoLoaderClient {
     @SuppressWarnings({"rawtypes", "unchecked"})
     public static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
         NeoLoader neo = (NeoLoader) Loader.api();
+        // This event fires before the FMLClientSetupEvent work queue runs, so the capture that
+        // sits in that queue is still pending. Capture here (guarded, so the later queue call is
+        // a no-op) instead of replaying an empty list and silently dropping every menu screen.
+        if (neo.pendingScreens().isEmpty()) {
+            ca.bradj.questown.QuestownClient.registerScreens();
+        }
+        int count = neo.pendingScreens().size();
         for (NeoLoader.PendingScreen<?> p : neo.pendingScreens()) {
             NeoLoaderClient.registerOne(event, (NeoLoader.PendingScreen) p);
         }
         neo.pendingScreens().clear();
+        ca.bradj.questown.QT.LOGGER.info("[questown] registered {} menu screens on the client", count);
     }
 
     private static <T extends AbstractContainerMenu> void registerOne(RegisterMenuScreensEvent event, NeoLoader.PendingScreen<T> p) {

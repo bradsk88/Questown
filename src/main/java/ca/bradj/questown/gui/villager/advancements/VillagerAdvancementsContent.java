@@ -4,12 +4,10 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AtomicDouble;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -197,43 +195,26 @@ public class VillagerAdvancementsContent {
             this.initializedToCenter = true;
         }
         p_97164_.pose().pushPose();
-        p_97164_.pose().translate(0.0, 0.0, 950.0);
-        RenderSystem.enableDepthTest();
-        RenderSystem.colorMask(false, false, false, false);
-        p_97164_.fill(4680, 2260, -4680, -2260, -16777216);
-        RenderSystem.colorMask(true, true, true, true);
-        p_97164_.pose().translate(0.0, 0.0, -950.0);
-        RenderSystem.depthFunc(518);
         p_97164_.fill(234, 113, 0, 0, -16777216);
-        RenderSystem.depthFunc(515);
         net.minecraft.resources.ResourceLocation resourcelocation = this.display.getBackground().orElse(null);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
         if (resourcelocation != null) {
-            RenderSystem.setShaderTexture(0, resourcelocation);
-        } else {
-            RenderSystem.setShaderTexture(0, TextureManager.INTENTIONAL_MISSING_TEXTURE);
-        }
+            int i = Mth.floor(this.scrollX);
+            int j = Mth.floor(this.scrollY);
+            int k = i % 16;
+            int l = j % 16;
 
-        int i = Mth.floor(this.scrollX);
-        int j = Mth.floor(this.scrollY);
-        int k = i % 16;
-        int l = j % 16;
-
-        for (int i1 = -1; i1 <= 15; ++i1) {
-            for (int j1 = -1; j1 <= 8; ++j1) {
-                p_97164_.blit(resourcelocation, k + 16 * i1, l + 16 * j1, 0, 0, 16, 16);
+            for (int i1 = -1; i1 <= 15; ++i1) {
+                for (int j1 = -1; j1 <= 8; ++j1) {
+                    p_97164_.blit(resourcelocation, k + 16 * i1, l + 16 * j1, 0, 0, 16, 16);
+                }
             }
         }
 
-        this.root.drawConnectivity(p_97164_, i, j, true);
-        this.root.drawConnectivity(p_97164_, i, j, false);
-        this.root.draw(p_97164_, i, j);
-        RenderSystem.depthFunc(518);
-        p_97164_.pose().translate(0.0, 0.0, -950.0);
-        RenderSystem.colorMask(false, false, false, false);
-        p_97164_.fill(4680, 2260, -4680, -2260, -16777216);
-        RenderSystem.colorMask(true, true, true, true);
-        RenderSystem.depthFunc(515);
+        int i2 = Mth.floor(this.scrollX);
+        int j2 = Mth.floor(this.scrollY);
+        this.root.drawConnectivity(p_97164_, i2, j2, true);
+        this.root.drawConnectivity(p_97164_, i2, j2, false);
+        this.root.draw(p_97164_, i2, j2);
         p_97164_.pose().popPose();
     }
 

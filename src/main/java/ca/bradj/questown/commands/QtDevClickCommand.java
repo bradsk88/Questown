@@ -5,8 +5,16 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.commands.arguments.coordinates.Coordinates;
+import ca.bradj.questown.core.init.BlocksInit;
+import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.rewards.SpawnVisitorReward;
+import ca.bradj.questown.town.entity.TownFlags;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -33,6 +41,15 @@ public class QtDevClickCommand {
 
         // @formatter:off
         var qtdev = Commands.literal("_qtdev");
+        // openvillager: open a villager's tabbed menu for the nearest player —
+        // the flag right-click path (showMultiStatusUI / showUI) without input.
+        var openvillager = Commands.literal("openvillager")
+                .then(Commands.argument("type", StringArgumentType.word())
+                    .suggests((ctx, b) -> SharedSuggestionProvider.suggest(
+                            new String[]{OpenVillagerMenuMessage.INVENTORY, OpenVillagerMenuMessage.QUESTS,
+                                    OpenVillagerMenuMessage.STATS, OpenVillagerMenuMessage.SKILLS,
+                                    OpenVillagerMenuMessage.ECONOMICS, OpenVillagerMenuMessage.BOP}, b))
+                    .executes(css -> runOpenVillager(css.getSource(), css.getArgument("type", String.class))));
         var clickwand = Commands.literal("clickwand")
                 .then(posArg
                     .executes(css -> runWand(
@@ -51,7 +68,21 @@ public class QtDevClickCommand {
                             css.getSource(),
                             BlockPosArgument.getLoadedBlockPos(css, "pos")
                     )));
-        qtdev.then(clickwand).then(clickheld);
+        // townplace / townspawn: minimal flag + villager fixture for the port-test
+        // GUI captures (no village-arc gameplay required).
+        var townplace = Commands.literal("townplace")
+                .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                    .executes(css -> runTownPlace(
+                            css.getSource(),
+                            BlockPosArgument.getLoadedBlockPos(css, "pos")
+                    )));
+        var townspawn = Commands.literal("townspawn")
+                .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                    .executes(css -> runTownSpawn(
+                            css.getSource(),
+                            BlockPosArgument.getLoadedBlockPos(css, "pos")
+                    )));
+        qtdev.then(clickwand).then(clickheld).then(openvillager).then(townplace).then(townspawn);
         src.register(qtdev);
         // @formatter:on
     }
@@ -121,6 +152,59 @@ public class QtDevClickCommand {
                 "[click held] {} right-clicked {} with held {} -> {}",
                 player.getGameProfile().getName(), pos, held.getItem().toString(), result
         );
+        return 0;
+    }
+
+    /**
+     * Open the assigned villager's menu (flag right-click equivalent) for the
+     * nearest player: "inventory" type = the tabbed parent (multi-status),
+     * anything else a direct tab. No permission gate (console/FIFO drive).
+     */
+    private static int runOpenVillager(CommandSourceStack source, String type) {
+        if (TownFlags.all().isEmpty()) {
+            QT.FLAG_LOGGER.warn("[openvillager] no flags registered");
+            return 1;
+        }
+        TownFlagBlockEntity flag = TownFlags.all().iterator().next();
+        BlockPos pos = flag.getBlockPos();
+        ServerPlayer player = findPlayer(source, pos);
+        if (player == null) {
+            QT.FLAG_LOGGER.warn("[openvillager] no player near {}", pos);
+            return 1;
+        }
+        var holder = flag.getVillagerHandle();
+        if (holder.entities().isEmpty()) {
+            QT.FLAG_LOGGER.warn("[openvillager] flag {} has no assigned villager", pos);
+            return 1;
+        }
+        UUID villager = holder.entities().iterator().next().getUUID();
+        // All types open the per-villager TABBED menu (VillagerTabsEmbedding),
+        // so the client-side port-test hook can read flag pos + villager UUID
+        // from it and drive `tab` switches. INVENTORY is the tabbed parent.
+        holder.showUI(player, type, villager);
+        QT.FLAG_LOGGER.info("[openvillager] {} menu for {} (villager {})", type,
+                player.getGameProfile().getName(), villager);
+        return 0;
+    }
+
+    private static int runTownPlace(CommandSourceStack source, BlockPos pos) {
+        source.getLevel().setBlockAndUpdate(
+                pos, BlocksInit.COBBLESTONE_TOWN_FLAG.get().defaultBlockState());
+        QT.FLAG_LOGGER.info("[townplace] flag placed at {}", pos);
+        return 0;
+    }
+
+    private static int runTownSpawn(CommandSourceStack source, BlockPos pos) {
+        if (!(source.getLevel().getBlockEntity(pos) instanceof TownFlagBlockEntity flag)) {
+            QT.FLAG_LOGGER.warn("[townspawn] no town flag block entity at {}", pos);
+            return 1;
+        }
+        if (flag.getVillagerHandle().entities().iterator().hasNext()) {
+            QT.FLAG_LOGGER.info("[townspawn] flag {} already has a villager", pos);
+            return 0;
+        }
+        SpawnVisitorReward.spawnNew(flag);
+        QT.FLAG_LOGGER.info("[townspawn] villager spawned for flag {}", pos);
         return 0;
     }
 

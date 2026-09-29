@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
@@ -104,7 +105,10 @@ public class FlagTabs extends Tabs implements SubUI {
             FlagTabsEmbedding.FlagInfo fp,
             String type
     ) {
-        Runnable fn = () -> QuestownNetwork.sendToServer(new OpenFlagMenuMessage(fp, type));
+        Runnable fn = () -> {
+            QT.LOGGER.info("[gui] flag menu request: {}", type);
+            QuestownNetwork.sendToServer(new OpenFlagMenuMessage(fp, type));
+        };
         return fn;
     }
 

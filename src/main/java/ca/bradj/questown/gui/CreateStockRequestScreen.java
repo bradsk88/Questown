@@ -32,7 +32,7 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
     private static final int buttonWidth = 13;
     private static final int buttonHeight = 13;
 
-    private static final int TEXT_COLOR = 0x404040;
+    private static final int TEXT_COLOR = 0xFF404040;
 
     private static final int CARD_PADDING = 1;
     private static final int PAGE_PADDING = 10;
@@ -130,7 +130,7 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
 
         int idX = x + PAGE_PADDING;
         int idY = y - 10;
-        gui.drawString(this.font, Compat.translatable("job_board.add_work.title"), idX, idY, TEXT_COLOR);
+        gui.drawString(this.font, Compat.translatable("job_board.add_work.title"), idX, idY, TEXT_COLOR, false);
         slots.clear();
         slots.addAll(b.build());
 

@@ -216,7 +216,7 @@ public class Compat {
             int x,
             int y
     ) {
-        gui.drawString(font, translatable, x, y, 0x00000000);
+        gui.drawString(font, translatable, x, y, 0xFF404040, false);
     }
 
     public static void drawDarkText(
@@ -226,9 +226,18 @@ public class Compat {
             int x,
             int y
     ) {
-        gui.drawString(font, translatable, x, y, 0x00000000);
+        gui.drawString(font, translatable, x, y, 0xFF404040, false);
     }
 
+    public static void drawDarkText(
+            Font font,
+            GuiGraphics gui,
+            String translatable,
+            int x,
+            int y
+    ) {
+        gui.drawString(font, translatable, x, y, 0xFF404040, false);
+    }
     public static void drawLightText(
             Font font,
             GuiGraphics gui,
@@ -284,7 +293,7 @@ public class Compat {
             int textWidth,
             Component translatable
     ) {
-        return drawTextWrap(font, gui, topLeft, textWidth, translatable, 0x00000000);
+        return drawTextWrap(font, gui, topLeft, textWidth, translatable, 0xFF404040, false);
     }
 
     public static int drawRedTextWrap(
@@ -294,7 +303,7 @@ public class Compat {
             int textWidth,
             Component translatable
     ) {
-        return drawTextWrap(font, gui, topLeft, textWidth, translatable, 0xFFFF0000);
+        return drawTextWrap(font, gui, topLeft, textWidth, translatable, 0xFFFF0000, true);
     }
 
     /**
@@ -310,13 +319,14 @@ public class Compat {
             Coordinate topLeft,
             int textWidth,
             Component translatable,
-            int color
+            int color,
+            boolean dropShadow
     ) {
         boolean capture = ca.bradj.questown.gui.GuiLayoutCapture.isActive();
         int out = 0;
         int maxLineWidth = 0;
         for (FormattedCharSequence line : font.split(translatable, textWidth)) {
-            gui.drawString(font, line, topLeft.x(), topLeft.y() + out, color);
+            gui.drawString(font, line, topLeft.x(), topLeft.y() + out, color, dropShadow);
             if (capture) {
                 maxLineWidth = Math.max(maxLineWidth, font.width(line));
             }

@@ -31,7 +31,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> imple
     private static final int buttonWidth = 13;
     private static final int buttonHeight = 13;
 
-    private static final int TEXT_COLOR = 0x404040;
+    private static final int TEXT_COLOR = 0xFF404040;
 
     private static final int CARD_PADDING = 1;
     private static final int PAGE_PADDING = 10;
@@ -179,16 +179,13 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> imple
 
             int idX = x + PAGE_PADDING;
             int idY = iconY - 10;
-            gui.drawString(font, Compat.translatable("job_board.default_name"), idX, idY, TEXT_COLOR);
+            gui.drawString(font, Compat.translatable("job_board.default_name"), idX, idY, TEXT_COLOR, false);
 
             int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
-            gui.drawString(
-                    font,
-                    Compat.literal("x"),
+            Compat.drawLightText(
+                    font, gui, "x",
                     removeX + borderPadding - 1,
-                    iconY + borderPadding - 1,
-                    0xFFFFFF,
-                    true
+                    iconY + borderPadding - 1
             );
             highlightAndTooltip(
                     gui,

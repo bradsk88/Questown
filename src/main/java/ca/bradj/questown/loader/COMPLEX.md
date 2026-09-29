@@ -158,10 +158,13 @@ runtime verification — a held 1.20.6 hold-run autotest — not more ports):
     (client-only in 1.20.6, and screens are registered by the client entry instead).
     Mod entry constructor order is not guaranteed between the two entries, so the client
     entry does nothing that can reach `Loader.api()` in its constructor: the island init
-    and the screen captures both run in `FMLClientSetupEvent` `enqueueWork` (always after
-    every mod constructor, and still before `RegisterMenuScreensEvent`). Running either in
-    the constructor crashed the client with "No loader installed" whenever
-    `questownclient` was constructed first.
+    runs in `FMLClientSetupEvent` `enqueueWork` (always after every mod constructor). The
+    menu-screen capture runs at `RegisterMenuScreensEvent` instead: that event fires
+    *before* the FMLClientSetupEvent work queue runs, so a capture parked in the queue
+    would see an empty pending list and silently drop every menu screen. The client entry
+    guards (`pendingScreens().isEmpty()`), so if the queue call does run first the later
+    event is a no-op. Running either in the constructor crashed the client with
+    "No loader installed" whenever `questownclient` was constructed first.
   - **Event bus classification matters per event, and 1.20.6 changed which side several events
     live on.** A `@SubscribeEvent` on the wrong bus throws "not valid for this busclass" at
     construction — and Neo *rejects* a subscriber class with no `@SubscribeEvent` methods

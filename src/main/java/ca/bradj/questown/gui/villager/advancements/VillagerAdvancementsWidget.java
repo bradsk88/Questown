@@ -26,7 +26,7 @@ import java.util.stream.Stream;
 
 public class VillagerAdvancementsWidget {
     private static final ResourceLocation WIDGETS_LOCATION = new ResourceLocation(
-            "textures/gui/advancements/widgets.png");
+            "questown", "textures/gui/advancements/widgets.png");
     private static final int[] TEST_SPLIT_OFFSETS = new int[]{0, 10, -10, 25, -25};
     private static final int OBTAINED = 0;
     private static final int UNOBTAINED = 1;

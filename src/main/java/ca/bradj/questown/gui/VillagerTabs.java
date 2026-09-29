@@ -84,7 +84,9 @@ public class VillagerTabs extends Tabs implements SubUI {
         b.add(new Tab(
                 (rc, x, y) -> {
                     int txBefore = RenderSystem.getShaderTexture(0);
+                    RenderSystem.setShaderColor(0.25f, 0.25f, 0.25f, 1f);
                     Util.blitTab(rc.gui(), x, y, 1);
+                    RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
                     RenderSystem.setShaderTexture(0, txBefore);
                 }, setScreen(changeRootScreenFn), "tooltips.change_root", skillScreenFn == null, false
         ));

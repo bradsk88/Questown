@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
@@ -19,6 +20,7 @@ import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -115,6 +117,7 @@ public class TownFlagMenus {
         if (runnable == null) {
             throw new IllegalArgumentException("Unexpected menu type: \"" + type + "\"");
         }
+        QT.GUI_LOGGER.info("Opening flag menu: {}", type);
         runnable.run();
     }
 
@@ -123,13 +126,15 @@ public class TownFlagMenus {
             ServerPlayer p,
             Collection<? extends Quest<ResourceLocation, ?>> q
     ) {
-        List<RoomRecipe> farmRecipes = p.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).stream()
-                                              
-                                              .map(v -> v.value())
-                                              .filter(RoomRecipe::isFarmRecipe)
-                                              .toList();
-        for (Quest<?, ?> mcQuest : q) {
-            if (farmRecipes.stream().noneMatch(z -> z.getId().equals(mcQuest.getWantedId()))) {
+        // The holder owns the id in 1.20.2+; the codec-constructed RoomRecipe carries a null id.
+        List<RecipeHolder<RoomRecipe>> farmRecipes = p.level().getRecipeManager()
+                                                              .getAllRecipesFor(RecipesInit.ROOM)
+                                                              .stream()
+                                                              .filter(v -> v.value().isFarmRecipe())
+                                                              .toList();
+        for (Quest<ResourceLocation, ?> mcQuest : q) {
+            ResourceLocation wanted = mcQuest.getWantedId();
+            if (wanted == null || farmRecipes.stream().noneMatch(z -> z.id().equals(wanted))) {
                 continue;
             }
             AdvancementsInit.VISITOR_TRIGGER.trigger(p, VisitorTrigger.Triggers.FirstFarmQuest);

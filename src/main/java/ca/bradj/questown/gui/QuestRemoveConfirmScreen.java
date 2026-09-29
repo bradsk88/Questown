@@ -38,7 +38,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
     private static final int buttonWidth = 13;
     private static final int buttonHeight = 13;
 
-    private static final int TEXT_COLOR = 0x404040;
+    private static final int TEXT_COLOR = 0xFF404040;
 
     private static final int CARD_PADDING = 1;
     private static final int PAGE_PADDING = 10;
@@ -170,7 +170,8 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
                 Compat.translatable("menu.quests.confirm_remove_top", quests.size()),
                 x,
                 y,
-                TEXT_COLOR
+                TEXT_COLOR,
+        false
         );
 
         y = y + this.font.lineHeight + CARD_PADDING;
@@ -207,7 +208,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
 
             int idX = x + PAGE_PADDING;
             int idY = iconY - 10;
-            gui.drawString(font, recipeName.getString(), idX, idY, TEXT_COLOR);
+            gui.drawString(font, recipeName.getString(), idX, idY, TEXT_COLOR, false);
             String vID = recipe.villagerUUID();
             String jobName = recipe.jobName();
 
@@ -240,7 +241,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
         slots.addAll(b.build());
 
         int botY = y + (endIndex - startIndex) * (CARD_HEIGHT + CARD_PADDING) + 2;
-        gui.drawString(font, Compat.translatable("menu.quests.confirm_remove_bottom"), x, botY, TEXT_COLOR);
+        gui.drawString(font, Compat.translatable("menu.quests.confirm_remove_bottom"), x, botY, TEXT_COLOR, false);
 
         // Render the page buttons
         this.previousPage.render(gui, mouseX, mouseY, partialTicks);

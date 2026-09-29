@@ -37,7 +37,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
 
-    private static final int TEXT_COLOR = 0x404040;
+    private static final int TEXT_COLOR = 0xFF404040;
     private static final int TEXT_MARGIN = 12;
     private static final int BLOCK_GAP = 6;
     private static final int BUTTON_HEIGHT = 20;
@@ -179,7 +179,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         int dy = 0;
         for (FormattedCharSequence line : Compat.splitText(this.font, text, maxWidth)) {
             int x = centerX - (this.font.width(line) / 2);
-            gui.drawString(this.font, line, x, y + dy, color);
+            gui.drawString(this.font, line, x, y + dy, color, false);
             dy += this.font.lineHeight;
         }
         return dy;
@@ -211,7 +211,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
         int idX = card.coords().leftXPadded();
         int idY = card.coords().topYPadded();
-        gui.drawString(this.font, recipeName.getString(), idX, card.coords().topYPadded(), TEXT_COLOR);
+        gui.drawString(this.font, recipeName.getString(), idX, card.coords().topYPadded(), TEXT_COLOR, false);
         String vID = recipe.villagerUUID();
         String jobName = recipe.jobName();
 
@@ -365,13 +365,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     ) {
         int removeButtonX = coords.rightXPadded() - buttonWidth;
         int removeButtonY = coords.topYPadded();
-        gui.drawString(
-                this.font,
-                Compat.literal("x"),
+        Compat.drawLightText(
+                this.font, gui, "x",
                 (int) (removeButtonX + ((float) buttonWidth / 2) - 1),
-                (int) (removeButtonY + ((float) buttonWidth / 2) - 3),
-                0xFFFFFF,
-                true
+                (int) (removeButtonY + ((float) buttonWidth / 2) - 3)
         );
         this.removes.put(new Position(removeButtonX, removeButtonY), () -> menu.sendRemoveRequest(index));
         return highlightAndTooltip(

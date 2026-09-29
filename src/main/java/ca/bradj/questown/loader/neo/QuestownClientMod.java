@@ -27,14 +27,28 @@ public class QuestownClientMod {
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
         // The neutral loader seam is installed by the questown mod's constructor; mod
         // constructor order between the two entries is not guaranteed, so nothing that
-        // needs Loader.api() runs in this constructor. Both the island init (client send
-        // hook, scroll dispatch) and the screen captures are deferred to client setup,
-        // which fires after every mod constructor and before RegisterMenuScreensEvent.
-        bus.addListener(FMLClientSetupEvent.class, e -> e.enqueueWork(() -> {
-            NeoLoaderClient.init();
-            QuestownClient.registerScreens();
-        }));
+        // needs Loader.api() runs in this constructor. Island init (client send hook,
+        // scroll dispatch) is deferred to client setup. Menu-screen capture happens at
+        // RegisterMenuScreensEvent (see NeoLoaderClient) rather than in this queue.
+        bus.addListener(FMLClientSetupEvent.class, e -> e.enqueueWork(NeoLoaderClient::init));
         bus.addListener(FMLClientSetupEvent.class, e -> e.enqueueWork(QuestownClient::onClientSetup));
         bus.addListener(RegisterMenuScreensEvent.class, NeoLoaderClient::onRegisterMenuScreens);
+        // TEMP migration diagnostic (villager-menu blank textures); remove after confirmation.
+        // Port-test hook (active only with -Dquestown.diag=true; see QtDiagClient).
+        // ClientChatReceivedEvent is a game-bus event, not a mod-bus event.
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS
+                .addListener(net.neoforged.neoforge.client.event.ClientChatReceivedEvent.class,
+                        e -> QtDiagClient.onChat(e));
+        QtDiagClient.install();
+        bus.addListener(net.neoforged.neoforge.client.event.TextureAtlasStitchedEvent.class, e -> {
+            TexDiag.run("stitch");
+            var timer = new java.util.Timer(true);
+            timer.schedule(new java.util.TimerTask() {
+                @Override
+                public void run() {
+                    TexDiag.run("settled");
+                }
+            }, 6000L);
+        });
     }
 }

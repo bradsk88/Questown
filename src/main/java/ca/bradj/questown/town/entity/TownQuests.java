@@ -369,17 +369,17 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 () -> getNeededRooms(town.getEconomicsHandle()).stream().filter(v -> TownQuests.isNotSpecial(v.id()))
                                                                .toList(),
                 () -> {
-                    List<RoomRecipe> rs = level.getRecipeManager()
-                                               .getAllRecipesFor(RecipesInit.ROOM).stream()
-                                               
-                                               .map(v -> v.value())
-                                               .filter(v -> TownQuests.isNotSpecial(v.getId()))
-                                               .toList();
-                    List<RoomRecipe> recipes = new ArrayList<>(rs);
+                    // 1.20.6: the recipe id lives on the RecipeHolder, not the recipe
+                    // object (RoomRecipe.getId() is null for registry recipes - this
+                    // used to NPE the flag tick in QuestBatchSeed.getRandomRoom).
+                    List<ResourceLocation> ids = new ArrayList<>(level.getRecipeManager()
+                                                                   .getAllRecipesFor(RecipesInit.ROOM).stream()
+                                                                   .filter(v -> TownQuests.isNotSpecial(v.id()))
+                                                                   .map(v -> v.id())
+                                                                   .toList());
                     for (Supplier<RoomBlock> roomBlockSupplier : BlockAsRoomEntity.ALL) {
-                        recipes.add(roomBlockSupplier.get().asRecipe());
+                        ids.add(roomBlockSupplier.get().asRecipe().getId());
                     }
-                    List<ResourceLocation> ids = recipes.stream().map(RoomRecipe::getId).toList();
                     return ids;
                 }
         );

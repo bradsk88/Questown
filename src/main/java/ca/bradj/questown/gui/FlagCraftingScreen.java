@@ -205,7 +205,7 @@ public class FlagCraftingScreen extends AbstractContainerScreen<FlagCraftingMenu
 
     private void renderRecipeRow(GuiGraphics gui, int x, int iconY, ItemStack input, ItemStack output) {
         Compat.renderItemAndDecorations(gui, input, x + MARGIN, iconY + 2);
-        gui.drawString(font, "→", x + 36, iconY + 6, 0x404040);
+        Compat.drawDarkText(font, gui, "→", x + 36, iconY + 6);
         Compat.renderItemAndDecorations(gui, output, x + 50, iconY + 2);
     }
 

@@ -54,6 +54,15 @@ public class SpawnVisitorReward extends MCReward {
         return () -> spawnVisitorNearby(town, villagerUUID);
     }
 
+    /**
+     * Dev/test hook: spawn a fresh visitor for this flag using the reward's
+     * own path. Lets a headless run build a minimal flag + villager fixture
+     * without driving the village-arc gameplay.
+     */
+    public static void spawnNew(TownInterface town) {
+        spawnVisitorNearby(town, null);
+    }
+
     private static void spawnVisitorNearby(
             TownInterface entity,
             @Nullable VillagerUUID villagerUUID

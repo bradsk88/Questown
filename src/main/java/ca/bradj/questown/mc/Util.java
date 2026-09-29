@@ -315,15 +315,12 @@ public class Util {
             int drawNumPixelsX,
             int drawNumPixelsY
     ) {
-        gui.blit(
-                texture,
-                screenX,
-                screenY,
-                drawNumPixelsX,
-                drawNumPixelsY,
-                (int) firstPixelInFilex,
-                (int) firstPixelInFileY
-        );
+        // 1.20.6: blit(loc, x, y, u, v, width, height, sourceWidth, sourceHeight).
+        // The 1.19.2 helper passed texW/texH = the draw size, so the whole native
+        // texture fitted into the box; keep that by using the draw size as source size.
+        // 1.20.6 blit(loc, x, y, u, v, W, H, SW, SH): uv in pixels, sheet size 256
+        // (all questown sheet textures are 256x256).
+        gui.blit(texture, screenX, screenY, firstPixelInFilex, firstPixelInFileY, drawNumPixelsX, drawNumPixelsY, 256, 256);
     }
 
     public static void blitTab(
@@ -332,14 +329,17 @@ public class Util {
             Integer y,
             int i
     ) {
+        // tabs.png is a 256x256 sheet of 16x16 icons; keep the explicit 256 source size.
         gui.blit(
                 Questown.ResourceLocation("textures/menu/tabs.png"),
                 x + 12,
                 y + 10,
-                16,
-                16,
                 i * 16,
-                0
+                0,
+                16,
+                16,
+                256,
+                256
         );
     }
 
@@ -374,15 +374,17 @@ public class Util {
         float texStartX = 8;
         float texStartY = 8;
         ResourceLocation texture = VisitorMobRenderer.getTextureLocation(uuid);
-        Util.blit(
-                gui,
+        // Player skins are 64x64; the face block sits at (8,8)-(16,16).
+        gui.blit(
                 texture,
                 x,
                 y,
                 texStartX,
                 texStartY,
                 faceWidth * scale,
-                faceWidth * scale
+                faceWidth * scale,
+                64,
+                64
         );
     }
 

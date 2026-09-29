@@ -85,7 +85,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     ) {
         if (MORNING_ARRIVAL_SENTINEL.equals(card.data())) {
             poseStack.drawString(font, Compat.translatable("gui.status.villager_arriving_morning"),
-                    card.coords().leftXPadded(), card.coords().topYPadded(), 0x808080);
+                    card.coords().leftXPadded(), card.coords().topYPadded(), 0xFF808080, false);
             return null;
         }
         renderStatus(poseStack, card.coords(), card.data());
@@ -140,7 +140,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int destX = getStatusX(coords);
         int destY = getStatusY(coords);
         @NotNull StatusPacket status = getSmoothedStatus(uuid);
-        stack.blit(status.image(), destX, destY, 0, 0, drawWidth, drawHeight);
+        stack.blit(status.image(), destX, destY, 0, 0, drawWidth, drawHeight, drawWidth, drawHeight);
     }
 
     private static int getStatusY(CardCoordinates coords) {
