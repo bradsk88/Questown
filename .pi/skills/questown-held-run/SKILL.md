@@ -180,6 +180,14 @@ before the next run.
 
 ## The observation cadence (~10s windows)
 
+**Timeout discipline: a 60s hard cap on every command.** No batched
+multi-minute polling loops in one tool call. Drive the run in short
+steps — launch, then a bounded wait, then check state in a fresh
+call — and keep each `timeout`/wait under a minute. A long held wait is
+wasted money if it stalls, and it hides the moment something wedged.
+If you need to poll a long-running boot, loop *short* sleeps (each
+command ≤ 60s) instead of one big sleep.
+
 Observe in ~10s windows — one observe cycle (the flag's `--- observe ---` line
 is 200 ticks, ~10s). Start at 10s and go **up**, not down, if the state has not
 changed by the next cycle. After each window, report (a) what is **clear** about
