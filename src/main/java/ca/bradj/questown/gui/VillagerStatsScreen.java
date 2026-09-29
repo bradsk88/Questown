@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
@@ -19,7 +20,7 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
     public static final int HALF_WIDTH = 82;
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
-    private static final ResourceLocation icons = new ResourceLocation("textures/gui/icons.png");
+    private static final ResourceLocation icons = Questown.ResourceLocation("textures/gui/bars.png");
     private final JEI.NineNine background;
     private final VillagerTabs tabs;
     private ImmutableRect2i expBar = new ImmutableRect2i(0, 0, 0, 0);
@@ -132,6 +133,19 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         }
     }
 
+    // 1.19.2 parity: the 1.19.2 background here was the (blurred) world, not an opaque
+    // gradient; the HUD was drawn above it. See QuestownHudEvents for the HUD redraw.
+    @Override
+    public void renderBackground(
+            GuiGraphics guiGraphics,
+            int mouseX,
+            int mouseY,
+            float partialTick
+    ) {
+        this.renderBlurredBackground(partialTick);
+        this.renderBg(guiGraphics, partialTick, mouseX, mouseY);
+    }
+
     @Override
     public void render(
             GuiGraphics gui,
@@ -139,7 +153,6 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
 
         int position = 0;
@@ -203,19 +216,21 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         int bgX = (this.width - backgroundWidth) / 2;
         int bxY = (this.height - backgroundHeight) / 2;
         bxY = bxY + (25 * index);
-        gui.drawString(font, title, bgX + 8, bxY + 16, 0x00000000);
+        Compat.drawDarkText(font, gui, title, bgX + 8, bxY + 16);
         int x = 8 + bgX;
         int y = 28 + bxY;
         int height = 5;
         int barLeftX = x - 1;
-        gui.blit(icons, barLeftX, y, 0, 0, 64, HALF_WIDTH, height, 256, 256);
-        gui.blit(icons, x + 78, y, 0, 100, 64, HALF_WIDTH, height, 256, 256);
+        // 1.20.6 blit(RL, x, y, z, u, v, W, H, SW, SH) over the rebaked bars.png:
+        // track = the dark-green band (v64), fill = the bright band (v70), both 5px tall.
+        // Two halves: left shows 0..50% fullness, right shows 50..100%.
+        gui.blit(icons, barLeftX, y, 0, 0, 64, 64, height, 256, 256);
+        gui.blit(icons, x + 78, y, 0, 0, 64, 64, height, 256, 256);
         float fP = fullnessPercent / 100f;
-        int greenY = 69;
         int leftWidth = (int) (HALF_WIDTH * (2 * (Math.min(0.5, fP))));
         int rightWidth = (int) (HALF_WIDTH * (2 * (Math.min(0.5, (fP) - 0.5))));
-        gui.blit(icons, barLeftX, y, 0, 0, greenY, leftWidth, height, 256, 256);
-        gui.blit(icons, x + 78, y, 0, 100, greenY, rightWidth, height, 256, 256);
+        gui.blit(icons, barLeftX, y, 0, 0, 70, leftWidth, height, 256, 256);
+        gui.blit(icons, x + 78, y, 0, 0, 70, rightWidth, height, 256, 256);
         return new ImmutableRect2i(barLeftX, y, HALF_WIDTH * 2, height);
     }
 

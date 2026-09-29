@@ -2,7 +2,6 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
@@ -68,6 +67,21 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
             int i1
     ) {
         this.delegate.renderBg(poseStack, v, i, i1);
+    }
+
+    // 1.19.2 parity: these screens had no full-canvas background. The vanilla 1.20.6
+    // renderBackground fills the whole canvas with an opaque dark gradient; since 1.20.6
+    // draws the HUD before the screen, that fill hides the hearts/hunger/XP/hotbar that
+    // 1.19.2 showed above the menu. Draw only the window's own background so the world
+    // and the HUD stay visible around the window.
+    @Override
+    public void renderBackground(
+            GuiGraphics guiGraphics,
+            int mouseX,
+            int mouseY,
+            float partialTick
+    ) {
+        this.renderBg(guiGraphics, partialTick, mouseX, mouseY);
     }
 
     @Override

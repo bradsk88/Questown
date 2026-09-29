@@ -10,7 +10,6 @@ import ca.bradj.questown.gui.VillagerTabsEmbedding;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.advancements.AdvancementType;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.client.Minecraft;
@@ -101,6 +100,19 @@ public class VillagerAdvancementsScreen extends Screen implements ScrollableScre
 //        this.advancements.setListener(this);
     }
 
+    // 1.19.2 parity: the 1.19.2 background here was the (blurred) world, not the opaque
+    // 1.20.6 menu background; the HUD was drawn above it. See QuestownHudEvents for the
+    // HUD redraw.
+    @Override
+    public void renderBackground(
+            GuiGraphics guiGraphics,
+            int mouseX,
+            int mouseY,
+            float partialTick
+    ) {
+        this.renderBlurredBackground(partialTick);
+    }
+
     public void render(
             GuiGraphics p_97361_,
             int p_97362_,
@@ -159,15 +171,13 @@ public class VillagerAdvancementsScreen extends Screen implements ScrollableScre
             p_97374_.drawCenteredString(this.font, NO_ADVANCEMENTS_LABEL, i, p_97378_ + 18 + 56 - 4, -1);
             p_97374_.drawCenteredString(this.font, VERY_SAD_LABEL, i, p_97378_ + 18 + 113 - 9, -1);
         } else {
-            org.joml.Matrix4fStack posestack = RenderSystem.getModelViewStack();
-            posestack.pushMatrix();
-            posestack.translate(p_97377_ + 9, p_97378_ + 18, 0.0F);
-            RenderSystem.applyModelViewMatrix();
+            // 1.20.6: GUI transforms live on guiGraphics.pose(); touching the global
+            // modelview stack here corrupts the u_ModelView uniform that the
+            // RenderType.gui() pipeline (fill/drawString) applies, clipping content.
+            p_97374_.pose().pushPose();
+            p_97374_.pose().translate(p_97377_ + 9, p_97378_ + 18, 0.0F);
             advancementtab.drawContents(p_97374_);
-            posestack.popMatrix();
-            RenderSystem.applyModelViewMatrix();
-            RenderSystem.depthFunc(515);
-            RenderSystem.disableDepthTest();
+            p_97374_.pose().popPose();
         }
 
     }
@@ -199,15 +209,10 @@ public class VillagerAdvancementsScreen extends Screen implements ScrollableScre
     ) {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         if (this.content != null) {
-            org.joml.Matrix4fStack posestack = RenderSystem.getModelViewStack();
-            posestack.pushMatrix();
-            posestack.translate(mouseX + 9, mouseY + 18, 400.0F);
-            RenderSystem.applyModelViewMatrix();
-            RenderSystem.enableDepthTest();
+            p_97382_.pose().pushPose();
+            p_97382_.pose().translate(mouseX + 9, mouseY + 18, 0.0F);
             this.content.drawTooltips(p_97382_, p_97383_ - mouseX - 9, p_97384_ - mouseY - 18, mouseX, mouseY);
-            RenderSystem.disableDepthTest();
-            posestack.popMatrix();
-            RenderSystem.applyModelViewMatrix();
+            p_97382_.pose().popPose();
         }
     }
 

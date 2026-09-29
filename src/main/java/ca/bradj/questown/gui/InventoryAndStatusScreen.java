@@ -5,8 +5,6 @@ import ca.bradj.questown.core.network.OpenJobMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
-import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import net.minecraft.client.gui.components.Button;
@@ -14,12 +12,9 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.crafting.Ingredient;
-import org.jetbrains.annotations.NotNull;
 
-import java.util.Optional;
 
 import static ca.bradj.questown.gui.InventoryAndStatusMenu.TE_INVENTORY_FIRST_SLOT_INDEX;
 
@@ -90,9 +85,21 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             int mouseY,
             float partialTicks
     ) {
-        super.renderBackground(gui, mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
         renderTooltips(mouseX, mouseY);
+    }
+
+    // 1.19.2 parity: the 1.19.2 background here was the (blurred) world, not an opaque
+    // gradient; the HUD was drawn above it. See QuestownHudEvents for the HUD redraw.
+    @Override
+    public void renderBackground(
+            GuiGraphics guiGraphics,
+            int mouseX,
+            int mouseY,
+            float partialTick
+    ) {
+        this.renderBlurredBackground(partialTick);
+        this.renderBg(guiGraphics, partialTick, mouseX, mouseY);
     }
 
     @Override
