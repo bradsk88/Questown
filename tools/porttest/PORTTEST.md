@@ -119,9 +119,26 @@ a long tp is what triggers the desync here.
 - **Kill loops match their own shell.** A `case "$cmdline" in *java*)` scan
   matches the scanning shell (its cmdline contains the pattern text);
   killing it yields a bare `(no output)` from the harness that looks like a
-  mysterious failure. Run the sweep from a script file
-  (`tools/porttest/sweep.sh`): the script's own cmdline is
-  `bash sweep.sh` and cannot match.
+  mysterious failure. Same trap when the ad-hoc command contains a pattern
+  as literal text (e.g. `*--username*` in the case statement itself — the
+  shell's own cmdline then matches it). First keystroke for any kill:
+  `tools/porttest/sweep.sh`, or `kill <exact-PID>` from a `/proc` scan in a
+  separate command. Run the sweep from a script file: the script's own
+  cmdline is `bash sweep.sh` and cannot match.
+- **Name the image you are measuring.** After a capture the FRESH shot is
+  in `<QT_DIAG_DIR>/diags/<screen>.png`; the banked copy in
+  `tools/porttest/live/<ver>/` is only refreshed after the gate banks it.
+  Measuring the banked copy after a code fix reports the pre-fix pixels and
+  makes a working fix look broken (this session: "still (41,33,35)" was the
+  old bank; the new capture already showed the stone texture). Check the
+  path and mtime before reporting a pixel verdict.
+- **GUI render regression: probe, don't speculate.** Add a 30×20 red
+  `guiGraphics.fill` probe at the top of `Screen.render` (after
+  `renderBackground`) AND inside the suspected method; measure the
+  red-pixel fraction in the capture. A probe that draws at top level but
+  fails in-method pins the corruption to in-method state. Log
+  `RenderSystem.getModelViewMatrix()` translation and `gui.pose()`
+  alongside; guard with `-Dquestown.diag` and remove both when verified.
 - **One client window at a time** on the tiling WM; piling up windows
   wrecked the WM layout and once crashed the agent harness.
 - **Process identity**: runServer's java cmdline uses relative classpath
@@ -153,6 +170,7 @@ a long tp is what triggers the desync here.
 
 ```
 tools/porttest/capture.sh <stage> <proj> <port> <gamedir> [out] [screen]
+tools/porttest/iterate.sh <stage> <screen> <proj> <port> <gamedir> [version]   # shoot|gate|bank|all
 tools/porttest/check.sh <screens-dir> [screen]    # content gate (vision)
 tools/porttest/run.sh [check|diff|all]            # gate + canvas + cv diff
 cv diff goldens/1.19.2/stats.png live/1.20.6/stats.png   # ad-hoc one-screen

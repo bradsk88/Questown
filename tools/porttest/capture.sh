@@ -34,12 +34,13 @@ MAN=$TOOL/manifest.json
 SLOG=/tmp/porttest-$(basename "$PROJ")-server.log
 CLOG=/tmp/porttest-$(basename "$PROJ")-client.log
 SLOG4=$PROJ/run/logs/latest.log
-FIFO=$PROJ/run/server-cmd.fIFO
+FIFO=$PROJ/run/server-cmd.fifo
 
 say() { echo "[capture:$STAGE] $*" >&2; }
 die() { echo "[capture:$STAGE] FATAL: $*" >&2; exit 1; }
 fifo_cmd() { echo "$1" > "$FIFO"; }
-file_cmd() { echo "$1" > "$PROJ/$GAME/.qtdiag-cmd"; }
+# client game dir may differ from the server dir (wip: server=run, client=run-client)
+file_cmd() { echo "$1" > "${QT_DIAG_DIR:-$PROJ/$GAME}/.qtdiag-cmd"; }
 port_hex() { printf '%X' "$PORT"; }
 port_listening() { # verified pattern: local=field2 state=field4 in /proc/net/tcp{,6}
   local n
@@ -71,6 +72,10 @@ launch-server)
   ;;
 
 wait-server)
+  # "Done (Xs)!" = world loaded (1.19.2 and 1.20.6 both use this line).
+  # An OLD line from a previous run can match before this run's log
+  # rotates in - harmless, because the port-LISTEN check below is the
+  # real gate (each side binds a distinct port).
   t=0
   until LC_ALL=C grep -aq "Done (" "$SLOG4" 2>/dev/null; do
     if LC_ALL=C grep -aq "BUILD FAILED" "$SLOG"; then
@@ -81,11 +86,13 @@ wait-server)
   done
   want=$(grep -o 'gradle-[0-9.]*-bin' "$PROJ/gradle/wrapper/gradle-wrapper.properties" 2>/dev/null | sed 's/gradle-//;s/-bin//')
   got=$(LC_ALL=C grep -aom1 'Welcome to Gradle [0-9.]*' "$SLOG" | grep -o '[0-9.]*$')
-  if [ -n "$want" ] && [ "$got" != "$want" ]; then
+  if [ -n "$got" ] && [ -n "$want" ] && [ "$got" != "$want" ]; then
     die "gradle version mismatch: wanted $want (wrapper of $PROJ), log says $got - wrong project was launched"
   fi
-  port_listening || die "nothing LISTEN on :$PORT (hex $(port_hex)) after 'Done ('"
-  say "server up: gradle $got listening on :$PORT"
+  # daemon-mode logs carry no banner; the port-LISTEN check is the identity
+  # check (each side binds a distinct port).
+  port_listening || die "nothing LISTEN on :$PORT (hex $(port_hex)) after 'Done for load'"
+  say "server up: listening on :$PORT${got:+ (gradle $got)}"
   ;;
 
 launch-client)
@@ -129,31 +136,42 @@ fixture)
 x, y, z = [float(v) for v in '$XYZ'.replace(',', ' ').split()]
 print(int(x), int(y), int(z), int(y) - 1)")"
   [ -n "$X" ] && [ -n "$YB" ] || die "could not parse spawn from: $line"
-  fifo_cmd "_qtdev townplace $X $YB $Z"
-  sleep 6
+  # townplace can silently no-op while the spawn chunks are still
+  # generating right after join - retry until the flag's initializer
+  # chain appears in the log.
+  t=0
+  while ! LC_ALL=C grep -aq 'Running initializer' "$SLOG4"; do
+    fifo_cmd "_qtdev townplace $X $YB $Z"
+    t=$((t+10)); [ $t -ge 50 ] && die "townplace: flag never initialized after ${t}s"
+    sleep 10
+  done
+  sleep 2
   fifo_cmd "_qtdev townspawn $X $YB $Z"
-  sleep 4
-  tail -5 "$SLOG4" | grep -a '_qtdev\|town' || say "check $SLOG4 for the townplace/townspawn results"
+  sleep 6
+  LC_ALL=C grep -a '\[townspawn\]' "$SLOG4" | tail -1 | cut -c1-120 || die "no [townspawn] log line - check $SLOG4"
   say "fixture placed at $X $YB $Z"
   ;;
 
 shot)
   [ -n "$NAME" ] || die "shot stage needs a screen name: capture.sh shot $PROJ $PORT $GAME $OUT <name>"
-  guard=$(LC_ALL=C tail -80 "$SLOG4" | grep -ac 'moved too quickly\|has died\|died with\|left the game' || true)
-  [ "$guard" -eq 0 ] || die "death/desync signal in log tail: $guard line(s) - do NOT shoot; re-read PORTTEST.md guard"
+  # full-log grep: latest.log starts at this server's boot, so any
+  # death/desync event is caught regardless of the villager-log spam
+  # that buries a tail-N window ("Fullness changed" lines, ~20/s).
+  guard=$(LC_ALL=C grep -ac 'moved too quickly\|died with\|Killed' "$SLOG4" || true)
+  [ "$guard" -eq 0 ] || die "death/desync lines in log: $guard - do NOT shoot; re-read PORTTEST.md guard"
   fifo_cmd "list"
-  sleep 2
-  LC_ALL=C tail -6 "$SLOG4" | grep -q "1 players online" || die "'list' does not show 1 player - client not in game"
+  sleep 3
+  LC_ALL=C tail -200 "$SLOG4" | grep -Eq 'There are [1-9][0-9]* of a max' || die "'list' does not show a player online - client not in game"
   open=$(python3 -c "
 import json,sys
 m=json.load(open('$MAN'))
 print([s['open'] for s in m['screens'] if s['name']=='$NAME'][0])")
   fifo_cmd "_qtdev $open"
   sleep 3
-  rm -f "$PROJ/$GAME/diags/$NAME.png"
+  rm -f "${QT_DIAG_DIR:-$PROJ/$GAME}/diags/$NAME.png"
   file_cmd "shot $NAME"
   t=0
-  until [ -e "$PROJ/$GAME/diags/$NAME.png" ]; do
+  until [ -e "${QT_DIAG_DIR:-$PROJ/$GAME}/diags/$NAME.png" ]; do
     t=$((t+2)); [ $t -ge 60 ] && die "shot $NAME never landed (check $CLOG for the hook)"
     sleep 2
   done
@@ -162,7 +180,7 @@ print([s['open'] for s in m['screens'] if s['name']=='$NAME'][0])")
 
 collect)
   mkdir -p "$OUT"
-  cp -v "$PROJ/$GAME"/diags/*.png "$OUT"/ >/dev/null
+  cp -v "${QT_DIAG_DIR:-$PROJ/$GAME}"/diags/*.png "$OUT"/ >/dev/null
   say "collected: $(ls "$OUT"/*.png | wc -l) pngs -> $OUT"
   ;;
 
