@@ -55,7 +55,7 @@ description="Client-side registrations only (screens, renderers, dispatchers). S
 [[dependencies.questownclient]]
     modId="questown"
     mandatory=true
-    versionRange="[0.0.10,)"
+    versionRange="[*,)"
     ordering="BEFORE"
     side="CLIENT"
 

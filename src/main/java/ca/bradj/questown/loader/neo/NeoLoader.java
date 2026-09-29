@@ -234,12 +234,23 @@ public final class NeoLoader implements LoaderApi {
 
     @Nullable
     private IItemHandler handler(Object o) {
-        IItemHandler h = o instanceof IItemHandler ih ? ih : null;
-        if (h != null) {
-            return h;
+        if (o instanceof IItemHandler ih) {
+            return ih;
         }
-        ca.bradj.questown.QT.LOGGER.warn("[questown] item-handler capability lookup not yet implemented for NeoForge; returning none ("+(o == null ? "null" : o.getClass().getSimpleName())+")");
-        return null;
+        // NeoForge 1.20.4+ caps: vanilla container BEs (chests, barrels, hoppers) and entity
+        // inventories register Capabilities.ItemHandler; a null direction/ctx means "default side".
+        IItemHandler h = null;
+        if (o instanceof BlockEntity be) {
+            h = net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK
+                    .getCapability(be.getLevel(), be.getBlockPos(), be.getBlockState(), be, null);
+        } else if (o instanceof Entity e) {
+            h = net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.ENTITY.getCapability(e, null);
+        }
+        if (h == null) {
+            ca.bradj.questown.QT.LOGGER.warn("[questown] no item-handler capability for "+(o == null ? "null" : o.getClass().getSimpleName()));
+            return null;
+        }
+        return h;
     }
 
     // ---- Open screen ------------------------------------------------------

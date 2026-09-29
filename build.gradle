@@ -42,8 +42,15 @@ accessTransformers {
 
 runs {
     configureEach {
-            workingDirectory project.file('run')
-            modSource project.sourceSets.main
+        // Server keeps run/; the client gets run-client/ so the two JVMs never share
+        // the same log4j appender files (that contention wedged a client join).
+        workingDirectory (it.name == 'client' ? project.file('run-client') : project.file('run'))
+        modSource project.sourceSets.main
+            // Force Netty onto the pure-Java NIO transport. The epoll native transport
+            // silently stalls in this sandbox: server accepts connections but its event
+            // loop never delivers reads (idle in epollWait), so handshakes die with the
+            // client stuck on the "Connecting" screen.
+            jvmArgument '-Dio.netty.transport.noNative=true'
             // JDK 21 modules: netty (used by NeoForge networking) reflectively touches
             // jdk.internal.misc.Unsafe. --add-opens keeps the client booting on JDK 21.
             jvmArgument '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED'
@@ -55,8 +62,10 @@ runs {
         client {
             // Dev-only: -Pautojoin makes the client skip the title screen and
             // connect straight to a local (hold-mode autotest) server.
+            // (Vanilla 1.20.6 dropped the old --server/--port client args;
+            // --quickPlayMultiplayer is the supported form.)
             if (project.hasProperty('autojoin')) {
-                argument '--server', 'localhost', '--port', '25565'
+                arguments '--quickPlayMultiplayer', 'localhost:25565'
             }
         }
 
