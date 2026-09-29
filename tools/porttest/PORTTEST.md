@@ -39,7 +39,11 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
 - `QtDiagClient` (client, dev-gated by `-Dquestown.diag=true`):
   - command file channel: `<gameDir>/.qtdiag-cmd`, one line per command
     (the 1.20.6 hook also accepts the same commands as `[qtdiag] <cmd>`
-    whispers; the 1.19.2 hook is file-channel only)
+    whispers; the 1.19.2 hook is file-channel only).
+    **The client gameDir is per-branch `build.gradle`** (`workingDirectory`
+    of the `client` run) — currently `run-client/` on both branches, not
+    `run/`. If a `shot` "never lands", check the client process's CWD
+    (`readlink /proc/<pid>/cwd`) and write the command file there.
   - `shot <name>` → screenshot to `<gameDir>/diags/<name>.png`
   - `tab <type>` → `OpenVillagerMenuMessage` (same message a tab click sends;
     types: inventory|quests|stats|skills|economics|bop)
@@ -147,6 +151,25 @@ a long tp is what triggers the desync here.
   makes a working fix look broken (this session: "still (41,33,35)" was the
   old bank; the new capture already showed the stone texture). Check the
   path and mtime before reporting a pixel verdict.
+- **All captures are 634x675 RGBA.** Any hand-rolled pixel scan must use
+  `x*4` stride into the row; `x*3` (RGB) produces fake checkerboards and
+  fake missing-texture patterns.
+- **Sample the pixel distribution before cross-correlating.** A pane that
+  "matches the texture at factor 1.0" can still be wrong: a solid color
+  equals one stretched texture pixel, and correlation against the claimed
+  source will say "it matches" for the wrong reason. First dump the
+  Counter of top colors in the region and check the mottle values are
+  actually present (stone.png: 127/116/143/104); a single dominant value
+  means the tile is sampling one pixel, not the texture.
+- **The `fixture` stage assumes a fresh world.** Its success marker,
+  `Running initializer`, is logged once when a *new* flag's module chain
+  initializes. Re-running `townplace` on top of an existing flag replaces
+  the flag but the new town's modules start uninitialized: `townspawn`
+  throws `Town has not been initialized on class …SleepModule`, and the
+  stage's 50s retry loop dies with "flag never initialized" even though
+  the log shows `[townplace] flag placed` repeating. On an already-set-up
+  world, use the *initialized* flag's coordinates (from the original
+  fixture log lines) for `townspawn`/`openvillager`, or `prep` first.
 - **GUI render regression: probe, don't speculate.** Add a 30×20 red
   `guiGraphics.fill` probe at the top of `Screen.render` (after
   `renderBackground`) AND inside the suspected method; measure the
@@ -199,3 +222,8 @@ cv diff goldens/1.19.2/stats.png live/1.20.6/stats.png   # ad-hoc one-screen
   menu differs; judge the menu region, not the skybox.
 - Villager face pixels are data-driven (seeded per entity UUID) — the two
   townies are different entities; the face region is expected to diff.
+- The skills pane content is fixture-driven: the two towns unlock different
+  job sets, so the widget arrangement *and* the scroll offset (which shifts
+  the 16px stone-tile phase) differ. Expect a multi-digit % center diff even
+  when the rendering is pixel-correct; judge the pane by texture values and
+  widget frames, not by full-pixel match.
