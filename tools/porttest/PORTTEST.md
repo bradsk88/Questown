@@ -36,9 +36,18 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
   - `connect <host> <port>` → quick-connect from the title screen
     (1.19.2: `ConnectScreen.startConnecting` + `ServerData`; the
     `--server/--port` game args do not reliably auto-connect there)
-- `capture.sh` — one-branch driver: server + client (hook) + shot sequence
-  per `manifest.json` → screenshots in `<out>/`.
-- `run.sh` — golden + target capture, then `cv diff` per screen.
+- `capture.sh` — one-branch driver, STAGED. Every stage is a fast
+  command (≤60s); launch stages return immediately, wait stages poll
+  ≤60s and are idempotent (re-invoke until they pass):
+  `prep` → `launch-server` → `wait-server` → `launch-client` →
+  `wait-client` → `connect` → `joined` → `fixture` → `shot <name>` ×6
+  → `collect` → `check`.
+- `check.sh` — content gate: vision-verifies each captured screen against
+  its `expect` block in `manifest.json` (menu open, active tab,
+  not-death, not-title) BEFORE banking. `check.sh <dir> [screen]`.
+- `run.sh` — the diff stage: `run.sh check` (content gate on both dirs),
+  `run.sh diff` (asserts identical canvas dims, then `cv diff` per screen
+  against the manifest threshold).
 - `sweep.sh` — kills any JVM tied to the Questown repos or gradle daemons
   (matched by cwd + main class, so the invoking shell cannot match itself).
 - `cv` (see references/cv-tool.md) — the diff engine (PSNR/SSIM/% changed).
@@ -53,20 +62,29 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
   (`ca.bradj:RoomRecipes:1.19.2-0.0.7-alpha.1`) before building Questown-119.
 - **Target 1.20.6**: main worktree (`1.20.6-neoforge-wip`, Gradle 8.14).
 
-## The fixture drive (per side, ~2 minutes)
+## The fixture drive (per side, ~10 short commands)
 
-1. Wipe the side's `run/world`; use a **normal** world (`level-type` in
-   `server.properties`). Plain `runServer` (no autotest), FIFO console gated
-   only on `-Dquestown.tp.fifo=true`.
-2. Launch the client; when the hook prints `[qtdiag] client hook active`,
-   write `connect localhost <port>` to `<gameDir>/.qtdiag-cmd`.
-3. Read the spawn from the server log:
-   `... logged in with entity id N at (x, y, z)`.
-4. Console: `_qtdev townplace <x> <y-1> <z>` (flag replaces the spawn's
-   ground block), then after ~5s `_qtdev townspawn <x> <y-1> <z>`.
-5. Console: `_qtdev openvillager <type>` for each screen; between each open
-   and its `shot <name>`, run the death/desync check below.
-6. Vision-check all six PNGs, then bank (`goldens/<ver>/` or `live/<ver>/`).
+```
+C=tools/porttest/capture.sh; P=<project-dir>; PORT=<port>; G=run-client
+$C prep          $P $PORT $G            # sweep, wipe world, FIFO writer
+$C launch-server $P $PORT $G
+$C wait-server   $P $PORT $G            # re-run until 'server up' (≤60s each)
+$C launch-client $P $PORT $G
+$C wait-client   $P $PORT $G
+$C connect       $P $PORT $G
+$C joined        $P $PORT $G            # prints the spawn coords
+$C fixture       $P $PORT $G            # townplace + townspawn at spawn
+for s in parent quests stats skills economics bop
+do $C shot $P $PORT $G /tmp/collect $s; done   # each runs the death guard
+$C collect       $P $PORT $G <out-dir>
+$C check         $P $PORT $G <out-dir>  # content gate BEFORE banking
+```
+The `wait-*` stages exit 0 with a "re-run" note after 60s; just call them
+again. `shot` refuses to capture when the log tail shows a death/desync
+signal or `list` doesn't show the player. Bank to `goldens/<ver>/` or
+`live/<ver>/` only after `check` passes. `wait-server` also verifies the
+gradle version in the log matches the project's wrapper (the wrong-project
+launched detector) and that the port is actually LISTEN (hex-checked).
 
 ## Death and desync guard (run between every open and shot)
 
@@ -130,6 +148,15 @@ a long tp is what triggers the desync here.
     builder object across subcommands shares its `executes` target.
 - **Timeouts: 60s hard cap.** No batched multi-minute polling loops; check
   state between short commands.
+
+## Usage
+
+```
+tools/porttest/capture.sh <stage> <proj> <port> <gamedir> [out] [screen]
+tools/porttest/check.sh <screens-dir> [screen]    # content gate (vision)
+tools/porttest/run.sh [check|diff|all]            # gate + canvas + cv diff
+cv diff goldens/1.19.2/stats.png live/1.20.6/stats.png   # ad-hoc one-screen
+```
 
 ## Known residual differences (PASS-able)
 

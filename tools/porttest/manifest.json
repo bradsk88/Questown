@@ -1,0 +1,58 @@
+{
+  "canvas": {
+    "width": null,
+    "height": null,
+    "note": "The dev box's tiling WM forces every client window to the same tile size (observed 634x675 on both 1.19.2 and 1.20.6 despite --width 1280 --height 720). The diff invariant is therefore: both captures have IDENTICAL dimensions. run.sh diff asserts that before diffing; if they differ, it reports the mismatch instead of diffing."
+  },
+  "fixture": {
+    "world": "normal",
+    "spawnSource": "server log line: 'logged in with entity id N at (x, y, z)'",
+    "note": "Fresh NORMAL world per side. Flag placed at the world spawn via the console command `_qtdev townplace <x> <y-1> <z>`; the townie spawned with `_qtdev townspawn <x> <y-1> <z>` (owner paths: TownFlags.register + SpawnVisitorReward.spawnNew). No tp across distance - a long tp desyncs client/server Y by ~64 in this box and kills the player; the death screen then gets captured as a 'screen'."
+  },
+  "screens": [
+    {
+      "name": "parent",
+      "open": "openvillager inventory",
+      "expect": {
+        "activeTab": "inventory",
+        "mustNotBe": ["death", "title", "no menu"]
+      },
+      "note": "InventoryAndStatusMenu = the tabbed parent (tabs + inventory + status strip)"
+    },
+    {
+      "name": "quests",
+      "open": "openvillager quests",
+      "expect": { "activeTab": "quests", "mustNotBe": ["death", "title", "no menu"] }
+    },
+    {
+      "name": "stats",
+      "open": "openvillager stats",
+      "expect": { "activeTab": "stats", "mustNotBe": ["death", "title", "no menu"] }
+    },
+    {
+      "name": "skills",
+      "open": "openvillager skills",
+      "expect": { "activeTab": "skills", "mustNotBe": ["death", "title", "no menu"] }
+    },
+    {
+      "name": "economics",
+      "open": "openvillager economics",
+      "expect": { "activeTab": "economics", "mustNotBe": ["death", "title", "no menu"] }
+    },
+    {
+      "name": "bop",
+      "open": "openvillager bop",
+      "expect": { "activeTab": "bop", "mustNotBe": ["death", "title", "no menu"] },
+      "note": "best-of-both / bop tab"
+    }
+  ],
+  "check": {
+    "provider": "openrouter",
+    "model": "moonshotai/kimi-k3",
+    "note": "content gate: check.sh vision-verifies each screen against its expect block before banking. Distinct file sizes or md5s prove screens differ from each other; only this gate proves they show the right thing."
+  },
+  "diff": {
+    "threshold_pct": 0.5,
+    "note": "PASS if changed-pixels <= threshold per screen; antialiasing at text edges and the villager face (seeded per entity UUID) are the expected residuals"
+  }
+}
