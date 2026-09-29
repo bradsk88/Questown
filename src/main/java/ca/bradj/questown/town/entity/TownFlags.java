@@ -22,6 +22,11 @@ public class TownFlags {
         flags.put(uuid, entity);
     }
 
+    /** All registered flags (dev tooling + commands). */
+    public static java.util.Collection<TownFlagBlockEntity> all() {
+        return flags.values();
+    }
+
     @SubscribeEvent
     public static void OnWake(SleepFinishedTimeEvent event) {
         // Diagnostic: this is the definitive "did morning come" signal. In the

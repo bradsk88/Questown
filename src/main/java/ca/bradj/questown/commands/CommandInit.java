@@ -14,6 +14,7 @@ public class CommandInit {
         DevQuestAddItemCommand.register(event.getDispatcher());
         DevQuestDeserializeCommand.register(event.getDispatcher());
         DevFlagDebugToggleCommand.register(event.getDispatcher(), event.getBuildContext());
+        OpenVillagerMenuDevCommand.register(event.getDispatcher());
         DevMakeStarvingCommand.register(event.getDispatcher());
         DevFlagDebugTurboCommand.register(event.getDispatcher());
 

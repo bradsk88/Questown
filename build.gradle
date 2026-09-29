@@ -61,7 +61,9 @@ minecraft {
     // These can be tweaked, removed, or duplicated as needed.
     runs {
         client {
-            workingDirectory project.file('run')
+            // Client owns run-client/ (server keeps run/; shared log4j files
+            // wedge the client join otherwise).
+            workingDirectory project.file('run-client')
 
             // JDK 17+ modules: netty (used by Forge networking) reflectively touches
             // jdk.internal.misc.Unsafe. Without these add-opens the client dies at
@@ -69,16 +71,24 @@ minecraft {
             // to module io.netty.common" / "Reflective setAccessible(true) disabled".
             jvmArg '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED'
             jvmArg '--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED'
+            // Force Netty off the epoll native transport: in this sandbox the epoll
+            // client transport stalls the handshake ("Connecting" forever). Same
+            // fix the 1.20.6 branch uses.
+            jvmArg '-Dio.netty.transport.noNative=true'
 
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
 
+            // Port-test hook (QtDiagClient); inert without the [qtdiag] command file.
+            property 'questown.diag', 'true'
             // Dev-only: -Pautojoin makes the client skip the title screen and
             // connect straight to a local (hold-mode autotest) server.
             if (project.hasProperty('autojoin')) {
-                args '--server', 'localhost', '--port', '25565'
+                def port = System.getProperty('questown.diag.port',
+                        project.findProperty('autoport') ?: '25565')
+                args '--server', 'localhost', '--port', port
             }
 
             mods {
@@ -90,6 +100,10 @@ minecraft {
 
         server {
             workingDirectory project.file('run')
+
+            // Netty: pure-Java NIO transport (epoll native stalls handshakes in
+            // this sandbox) — both server and client JVMs.
+            jvmArg '-Dio.netty.transport.noNative=true'
 
             // Keep the Swing server GUI out of the dev box: it steals focus and
             // screen space, and headless screenshots (grim) can't see past it.
@@ -266,6 +280,15 @@ task publishModrinth(dependsOn: 'reobfJar') {
 // Autotest suites start from a clean world: residue from prior suite runs
 // accumulates in run/world and makes results run-count dependent
 // (.scratch/autotest-suite/organizer-fetch-warp-fails-only-in-full-suite.md).
+// Dev console via FIFO: feeds the server's stdin from run/server-cmd.fifo so
+// console commands can be driven headlessly. Gated ONLY on -Dquestown.tp.fifo
+// (independent of autotest, so plain dev servers get a console too).
+if (System.getProperty('questown.tp.fifo') != null) {
+    tasks.matching { it.name == 'runServer' }.configureEach {
+        standardInput = new java.io.FileInputStream(project.file('run/server-cmd.fifo'))
+    }
+}
+
 if (System.getProperty('questown.autotest', 'false') == 'true') {
     tasks.matching { it.name == 'runServer' }.configureEach {
         doFirst {

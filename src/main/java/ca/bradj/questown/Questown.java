@@ -92,6 +92,8 @@ public class Questown {
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {
+        // Port-test hook (gated by -Dquestown.diag=true; see devtools/QtDiagClient).
+        ca.bradj.questown.devtools.QtDiagClient.install();
         Compat.setCutoutRenderType(BlocksInit.FALSE_DOOR_BLOCK.get());
         Compat.setCutoutRenderType(BlocksInit.FALSE_WALL_BLOCK.get());
         MenuScreens.<TownQuestsContainer, QuestsScreen<TownQuestsContainer>>register(
