@@ -16,8 +16,18 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
   **No `tp` across distance** — see "player death" below.
 - **Zero-click menu open**: the console command `_qtdev openvillager <type>`
   opens the per-villager tabbed menu (`showUI` for every type, including
-  inventory — the flag-level `showMultiStatusUI` menu has no villager UUID
+  inventory - the flag-level `showMultiStatusUI` menu has no villager UUID
   and the hook cannot tab it) for the connected player.
+- **Same fixture age**: the fixture state is time-dependent - townies
+  work, jobs complete, quests and job unlocks progress while the world is
+  up. A re-capture against a world that has been running for hours will
+  diff against a bank shot minutes after `prep`, independent of any code
+  change (observed: the golden skills pane and quest pages drift within
+  the hour). Re-bank a screen from a freshly `prep`-ed world, or from a
+  world at the same age as the bank it is compared against. Both
+  branches can run **in parallel** (separate worktree + port, e.g.
+  1.20.6 on 25565, 1.19.2 on 25571); keep both servers up and switch
+  clients per branch instead of killing a server to free its port.
 - **Content-verified before banking**: each captured PNG is vision-checked
   (recipe in `references/vision-check-local-images.md`) to confirm the
   expected tab is active. Distinct file sizes / md5s prove the screens
@@ -36,6 +46,11 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
   - `connect <host> <port>` → quick-connect from the title screen
     (1.19.2: `ConnectScreen.startConnecting` + `ServerData`; the
     `--server/--port` game args do not reliably auto-connect there)
+  - `cursor <x> <y>` → park the pointer at a fixed window-pixel position
+    (reflection into `MouseHandler.xpos/ypos`). The `shot` stage sends it
+    before every screenshot, so hover-dependent render state (the
+    advancements-pane tooltip fade dims the pane to 70% when the cursor is
+    over it; hovered card highlights) is identical across captures
 - `capture.sh` — one-branch driver, STAGED. Every stage is a fast
   command (≤60s); launch stages return immediately, wait stages poll
   ≤60s and are idempotent (re-invoke until they pass):

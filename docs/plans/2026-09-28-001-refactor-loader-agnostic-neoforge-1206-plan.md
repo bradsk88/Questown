@@ -109,6 +109,7 @@ from **vanilla-version-specific** to **loader-agnostic (forge↔neo) + version-s
 | 1 | `./gradlew compileJava` (Questown) green against Neo 1.20.6; `./gradlew test` green | pending |
 | 2 | event paths still fire (a held run tick/placement smoke) | pending |
 | 4 | `gui-lint` oracle on the reworked screens: open in dev client, `[gui-lint] <Screen> … no layout violations` | pending |
+| 4 | `tools/porttest` pixel oracle: 6 golden screens. Center-region diff: parent 2.2%, stats 2.8%, economics 1.0%, bop 7.8%, quests 10.6% (fixture: wip town has zero quests), skills 22.7% (residual = fixture content, not rendering: different job sets → different widgets + scroll phase; pane background verified identical after the 1.20.6 blit-UV fix, `gui/COMPLEX.md`) | verified (2026-09-30) |
 | 5 | held `runServer` autotest with `/tick rate` set, wall-clock measured | pending |
 
 ## Open decisions / risks

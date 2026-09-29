@@ -21,7 +21,13 @@
      "no menu"
     ]
    },
-   "note": "InventoryAndStatusMenu = the tabbed parent (tabs + inventory + status strip)"
+   "note": "InventoryAndStatusMenu = the tabbed parent (tabs + inventory + status strip)",
+   "center": [
+    223,
+    248,
+    411,
+    426
+   ]
   },
   {
    "name": "quests",
@@ -33,7 +39,13 @@
      "title",
      "no menu"
     ]
-   }
+   },
+   "center": [
+    223,
+    248,
+    411,
+    426
+   ]
   },
   {
    "name": "stats",
@@ -45,7 +57,13 @@
      "title",
      "no menu"
     ]
-   }
+   },
+   "center": [
+    223,
+    248,
+    411,
+    426
+   ]
   },
   {
    "name": "skills",
@@ -58,7 +76,13 @@
      "no menu"
     ],
     "panelLabel": "jobs"
-   }
+   },
+   "center": [
+    185,
+    261,
+    449,
+    413
+   ]
   },
   {
    "name": "economics",
@@ -71,7 +95,13 @@
      "no menu"
     ],
     "panelLabel": "food"
-   }
+   },
+   "center": [
+    223,
+    248,
+    411,
+    426
+   ]
   },
   {
    "name": "bop",
@@ -84,7 +114,13 @@
      "no menu"
     ]
    },
-   "note": "best-of-both / bop tab"
+   "note": "best-of-both / bop tab",
+   "center": [
+    223,
+    248,
+    411,
+    426
+   ]
   }
  ],
  "check": {

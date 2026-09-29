@@ -169,6 +169,11 @@ print([s['open'] for s in m['screens'] if s['name']=='$NAME'][0])")
   fifo_cmd "_qtdev $open"
   sleep 3
   rm -f "${QT_DIAG_DIR:-$PROJ/$GAME}/diags/$NAME.png"
+  # Park the pointer at the window corner so hover-dependent render state
+  # (advancements-pane tooltip fade, cursor under a widget) is identical
+  # across captures and branches.
+  file_cmd "cursor 1 1"
+  sleep 1
   file_cmd "shot $NAME"
   t=0
   until [ -e "${QT_DIAG_DIR:-$PROJ/$GAME}/diags/$NAME.png" ]; do

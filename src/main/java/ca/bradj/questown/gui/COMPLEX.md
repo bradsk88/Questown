@@ -70,6 +70,24 @@ flowchart TD
   gated, and banked post-fix; the heart/hotbar rows now match the golden
   positions (`run.sh diff`).
 
+## 1.20.6 blit UV: the 7-arg `GuiGraphics.blit` divides by 256
+
+1.20.6 changed the GUI blit pipeline to normalized UV: the quad's UVs are
+`u / maxU`, `v / maxV`. The 7-arg `blit(rl, x, y, u, v, w, h)` overload
+**defaults maxU/maxV to 256**, so a 16x16 texture blit samples only the
+texture's top-left 1/16 (one pixel) and stretches it across the tile. In
+1.19.2 the equivalent `PoseStack.blit` used raw texture-pixel UVs, so the
+ported call that looked identical renders as a solid color on 1.20.6.
+
+Caught in the port-test oracle: the skills-pane background
+(`VillagerAdvancementsContent.drawContents` tiles `stone.png`) rendered as one
+solid 0x8F gray (stone.png pixel (0,0)) instead of the mottled texture.
+Fix: pass the texture dimensions, the way vanilla's own 1.20.6
+`AdvancementTab.drawContents` does -
+`blit(rl, x, y, 0.0F, 0.0F, 16, 16, 16, 16)` (9-arg form). Blits into 256x256
+atlas textures (widgets.png, bars.png) are correct as-is because their
+maxU/maxV happen to equal 256.
+
 ## Flow layout (FlagCraftingScreen)
 
 `computeLayout()` stacks blocks top-to-bottom, advancing the `y` cursor past each block's

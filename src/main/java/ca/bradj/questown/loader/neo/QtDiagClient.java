@@ -27,9 +27,11 @@ import java.util.List;
  *       server console at all (the dev server's stdin may be a dead fifo).</li>
  * </ul>
  * Commands: {@code tab <type>} (open a villager tab from the current tabbed
- * menu, same {@link OpenVillagerMenuMessage} a tab click sends) and
+ * menu, same {@link OpenVillagerMenuMessage} a tab click sends),
  * {@code shot <name>} (render-thread {@link Screenshot} to
- * {@code <gameDir>/diags/<name>.png}).
+ * {@code <gameDir>/diags/<name>.png}), and {@code cursor <x> <y>} (park the
+ * pointer at a fixed window-pixel position so hover-dependent render state —
+ * e.g. the advancements-pane tooltip fade — is identical across captures).
  */
 public class QtDiagClient {
 
@@ -89,6 +91,7 @@ public class QtDiagClient {
             switch (parts[0]) {
                 case "tab" -> tab(mc, parts[1]);
                 case "shot" -> shot(mc, parts.length > 1 ? parts[1] : "shot");
+                case "cursor" -> cursor(mc, Double.parseDouble(parts[1]), Double.parseDouble(parts[2]));
                 default -> System.out.println("[qtdiag] unknown command: " + parts[0]);
             }
         } catch (Throwable t) {
@@ -114,6 +117,32 @@ public class QtDiagClient {
                 type
         ));
         System.out.println("[qtdiag] tab " + type + " requested");
+    }
+
+    /**
+     * Park the pointer at a fixed window-pixel position. The screen's
+     * mouseX/mouseY come from {@code MouseHandler.xpos()/ypos()}; those are
+     * private, so set them by reflection. Dev-diag only; the pointer only
+     * moves again on a real OS mouse event.
+     */
+    private static void cursor(Minecraft mc, double x, double y) {
+        try {
+            java.lang.reflect.Field fx = mc.mouseHandler.getClass().getDeclaredField("xpos");
+            java.lang.reflect.Field fy = mc.mouseHandler.getClass().getDeclaredField("ypos");
+            fx.setAccessible(true);
+            fy.setAccessible(true);
+            mc.execute(() -> {
+                try {
+                    fx.set(mc.mouseHandler, x);
+                    fy.set(mc.mouseHandler, y);
+                    System.out.println("[qtdiag] cursor parked at " + x + "," + y);
+                } catch (Throwable t) {
+                    System.out.println("[qtdiag] cursor failed: " + t);
+                }
+            });
+        } catch (Throwable t) {
+            System.out.println("[qtdiag] cursor failed: " + t);
+        }
     }
 
     private static void shot(Minecraft mc, String name) {

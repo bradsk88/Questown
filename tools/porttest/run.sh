@@ -45,6 +45,14 @@ diff_all() {
     if [ -f "$GG/$s.png" ] && [ -f "$LL/$s.png" ]; then
       r=$(cv diff "$GG/$s.png" "$LL/$s.png" 2>/dev/null || true)
       echo "-- $s: $r"
+      c=$(python3 -c "import json;[print(*[v for v in s.get('center',[])]) for s in json.load(open('$MAN'))['screens'] if s['name']=='$s']")
+      if [ -n "$c" ]; then
+        set -- $c
+        python3 "$TOOL/crop.py" "$GG/$s.png" /tmp/porttest-center-$s-g.png $1 $2 $3 $4 >/dev/null
+        python3 "$TOOL/crop.py" "$LL/$s.png" /tmp/porttest-center-$s-l.png $1 $2 $3 $4 >/dev/null
+        rc=$(cv diff /tmp/porttest-center-$s-g.png /tmp/porttest-center-$s-l.png 2>/dev/null || true)
+        echo "   center [$c]: $rc"
+      fi
     else
       echo "-- $s: MISSING (golden=$([ -f "$GG/$s.png" ] && echo ok || echo no) live=$([ -f "$LL/$s.png" ] && echo ok || echo no))"
       fail=1
