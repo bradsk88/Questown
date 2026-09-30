@@ -218,6 +218,16 @@ bank)
   for png in "$DIAGS"/*.png; do
     [ -e "$png" ] || continue
     name=$(basename "$png")
+    # dimension guard: don't mix capture widths in one bank. The tiling WM
+    # can give each client a different window width (this session: wip
+    # 634, a11 420), and a 420 shot banked next to a 634 one makes every
+    # later diff garbage. If a same-named banked PNG exists at a different
+    # canvas size, refuse to overwrite it.
+    if [ -f "$BANKDIR/$name" ]; then
+      d1=$(python3 -c "import struct;d=open('$png','rb').read(24);print(*struct.unpack('>II',d[16:24]))")
+      d2=$(python3 -c "import struct;d=open('$BANKDIR/$name','rb').read(24);print(*struct.unpack('>II',d[16:24]))")
+      [ "$d1" = "$d2" ] || die "canvas mismatch $name: fresh [$d1] vs banked [$d2] - client window size changed; re-bank from a clean bank or confirm the resize deliberately"
+    fi
     # only bank screens the manifest knows about (test artifacts like
     # v1.png stay out of the bank)
     python3 -c "import json,sys; sys.exit(0 if any(s['name']=='${name%.png}' for s in json.load(open('$MAN'))['screens']) else 1)" || continue

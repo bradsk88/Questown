@@ -188,24 +188,43 @@ a long tp is what triggers the desync here.
   hotbar render differently in creative vs survival (creative: no hearts/
   hunger, different XP bar + hotbar). The wip side had drifted to
   `gamemode=creative` in `run/server.properties` while golden stayed
-  `survival`; both must be survival for a comparable HUD. (Dev-only
-  config; never commit a world's `server.properties`.)
-- **A fresh-world rebank does NOT converge the data screens.** Run on
-  2026-09-30: after `rebank.sh both` (both worlds wiped + re-prepped,
-  same fixture, survival on both sides, world age 3 vs 15 min), the
-  parent center diff was 61% vs the mature bank's 2.2%; even
-  golden-vs-golden (old bank vs fresh re-shot, same branch, same code)
-  was 72%. The parent/stats/skills/economics/quests screens render
-  live town data (villager inventories, stats, quest lists, item-panel
-  pages), and two different worlds hold different data — the fixture is
-  deterministic per world, not across worlds. A useful bank comes from a
-  *mature* fixture world where the data has settled; `rebank` from a
-  fresh world is useful for chrome/layout-only screens (bop stayed at
-  2.5%) and for regenerating sidecars, not for the data screens.
+  `survival`; both must be survival for a comparable HUD. `state` prints
+  each side's gamemode, and `rebank.sh` dies fast on a mismatch before
+  generating any world. (Dev-only config; never commit a world's
+  `server.properties`.)
+- **A fresh-world rebank does NOT converge the data screens.** 2026-09-30
+  run: after `rebank.sh both` (both worlds fresh, same fixture, same
+  canvas, ~same age), the full-frame fresh-vs-fresh diff was parent 77%,
+  stats 79%, skills 79%, economics 72%, quests 72% — against bop at 2.9%
+  — while the mature bank pair sits at 7-13% full-frame / 2.2-22% center.
+  Those screens render live town data (villager inventories, stats, quest
+  lists, item-panel pages); two different worlds hold different data, and
+  the fixture is deterministic *per world*, not across worlds. A useful
+  bank comes from a *mature* fixture world where the data has settled;
+  `rebank` from a fresh world is useful for chrome/layout-only screens
+  (bop) and for regenerating sidecars, not for the data screens.
   Also learned the same run: `connect` issued while `-Pautojoin` is
   still mid-handshake opens a second connection and can stall the client
   forever (hit on 1.19.2); `rebank.sh` now only falls back to `connect`
   when no `logged in with entity id` line exists yet.
+- **Client window size is capture state.** The tiling WM gave the two
+  clients different widths (wip 634, a11 420) in the same run, and the
+  banked PNG is whatever width the window had. `run.sh diff`'s canvas
+  check only compares the two *current* sides, so both sides changing in
+  unison sails through; a later 634-vs-420 diff is silent garbage. The
+  `bank` stage now dies when a fresh shot's canvas differs from the
+  same-named banked PNG. `cv info <png>` before banking is the ten-second
+  check; a resize is a capture-state change, record it in the sidecar-era
+  docs when it happens.
+- **`cv diff` + targeted crops is the oracle; vision is not a differ.**
+  Asked to enumerate the differences between two captures, the vision
+  model (OpenRouter) swapped and merged features across the two images
+  and its "structural vs data" verdict was wrong. Use vision for
+  "what is on this one screen" (menu state, active tab, content sanity)
+  one image at a time; use `cv diff` on the full canvas, the center crop,
+  and small self-diffs (old-bank vs new-bank of the *same* branch — the
+  cheapest way to separate world-data drift from a real regression).
+  Self-diff first, diff the sides second.
 - **GUI render regression: probe, don't speculate.** Add a 30×20 red
   `guiGraphics.fill` probe at the top of `Screen.render` (after
   `renderBackground`) AND inside the suspected method; measure the

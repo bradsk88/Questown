@@ -4,6 +4,8 @@ When the user reports a behaviour that does not work ("X sits idle after Y", "th
 
 A perf/lag report ("grinds to a halt", "can't keep up", "half-waiting for server") is the same kind of verification question. Before asserting which code costs the tick, run the perf autotest: `./gradlew runServer -Dquestown.autotest=true -Dquestown.autotest.only=perf/town_large` — its `TickProfile` reports the flag-tick average vs the 50ms budget and the per-phase µs (which phase is hot). A perf test that disproves a suspected cause *is* the finding, not a nuisance to work around; do not commit a perf fix before running it.
 
+GUI pixel-oracle work (the 1.19.2↔1.20.6 screen banks, `capture.sh` stages, `rebank.sh`, the drift/sidecar checks) lives in `tools/porttest/` — read `tools/porttest/PORTTEST.md` before the first capture in a GUI-parity session. It carries the capture-state traps (gamemode match, fixture age, hover/cursor parking, the fresh-world rebank limit) that each cost a re-run when re-derived from scratch.
+
 ## Running the dev client (`./gradlew runClient`)
 
 The dev is a secondary observer via `runClient`; the agent is the main driver. When a held `runServer` autotest or play-test needs a verification pass, run `runClient -Pautojoin` and hand control back — never ask, offer, or defer it, and do not decline because the box has no capturable window (grim captures 0 bytes; the client still renders). The one skip is when a unit test or the existing autotest suite already settles the question.

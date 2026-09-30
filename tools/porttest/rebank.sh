@@ -47,6 +47,18 @@ run_branch() { # <proj> <port> <bank-dir>
   local proj=$1 port=$2 bank=$3
   local name s out
   name=$(basename "$proj")
+  # gamemode guard: creative vs survival HUDs differ enough to wreck a
+  # diff (this session: one side drifted to creative; a whole rebank
+  # cycle was spent on the resulting 60% diffs before the mismatch
+  # was found). Fail fast, before any world is generated.
+  local gm other other_dir
+  gm=$(grep -m1 '^gamemode=' "$proj/run/server.properties" 2>/dev/null | cut -d= -f2)
+  [ "$proj" = "$WIP" ] && other_dir=$A11 || other_dir=$WIP
+  other=$(grep -m1 '^gamemode=' "$other_dir/run/server.properties" 2>/dev/null | cut -d= -f2)
+  if [ -n "$gm" ] && [ -n "$other" ] && [ "$gm" != "$other" ]; then
+    echo "[rebank:$name] gamemode mismatch: this side '$gm', other '$other' - fix the run/server.properties file and re-run" >&2
+    return 1
+  fi
   echo "[rebank:$name] start"
   stage 2  prep "$proj" "$port" || return 1
   stage 1  launch-server "$proj" "$port" || return 1
@@ -75,18 +87,20 @@ run_branch() { # <proj> <port> <bank-dir>
   echo "[rebank:$name] done"
 }
 
+rc=0
 case $only in
-  wip) run_branch "$WIP" "$WIP_PORT" "$BANKROOT/live/1.20.6" ;;
-  a11) run_branch "$A11" "$A11_PORT" "$BANKROOT/goldens/1.19.2" ;;
+  wip) run_branch "$WIP" "$WIP_PORT" "$BANKROOT/live/1.20.6" || rc=1 ;;
+  a11) run_branch "$A11" "$A11_PORT" "$BANKROOT/goldens/1.19.2" || rc=1 ;;
   both)
     run_branch "$WIP" "$WIP_PORT" "$BANKROOT/live/1.20.6" & wp=$!
     run_branch "$A11" "$A11_PORT" "$BANKROOT/goldens/1.19.2" & ap=$!
     wait $wp; wr=$?
     wait $ap; ar=$?
-    [ $wr -eq 0 ] && [ $ar -eq 0 ] || exit 1
+    [ $wr -eq 0 ] && [ $ar -eq 0 ] || rc=1
     ;;
   *) echo "usage: rebank.sh [wip|a11|both]"; exit 2 ;;
 esac
+[ $rc -eq 0 ] || { echo "[rebank] failed - banks unchanged, no diff"; exit 1; }
 
 echo "[rebank] banks refreshed; diffing:"
 bash "$TOOL/run.sh" diff 2>&1 | tail -16
