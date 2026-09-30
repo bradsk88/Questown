@@ -56,7 +56,7 @@ public class StatusGraphic {
             GuiGraphics gui
     ) {
         if (getSmoothedStatus() instanceof ProductionStatus ps) {
-            blit(gui, ClientAccess.getArt(jobId, ps), topLeft.get().x(), topLeft.get().y(), 0, 0, 32, 32);
+            blit(gui, ClientAccess.getArt(jobId, ps), topLeft.get().x(), topLeft.get().y(), 0, 0, 32, 32, 32, 32);
         }
     }
 

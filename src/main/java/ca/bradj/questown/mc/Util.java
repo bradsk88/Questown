@@ -339,6 +339,31 @@ public class Util {
         gui.blit(texture, screenX, screenY, firstPixelInFilex, firstPixelInFileY, drawNumPixelsX, drawNumPixelsY, 256, 256);
     }
 
+    /**
+     * Blit of a region of a texture that is not the 256x256 sheet, passing the texture's
+     * true native size as "widthOfEntireFile"/"texFileHeight".
+     *
+     * <p>1.20.6's blit normalises u/v by that declared size ("u / texWidth") - see the
+     * package-private "GuiGraphics.blit": with "256" the 32x32 job-status art sampled
+     * only its leftmost 4 px and drew it stretched over the box (the "flat grey box"
+     * status-icon bug). 1.19.2 passed the draw size; callers of 32x32 art pass "32, 32".
+     */
+    public static void blit(
+            GuiGraphics gui,
+            ResourceLocation texture,
+            int screenX,
+            int screenY,
+            float firstPixelInFilex,
+            float firstPixelInFileY,
+            int drawNumPixelsX,
+            int drawNumPixelsY,
+            int widthOfEntireFile,
+            int texFileHeight
+    ) {
+        blitState();
+        gui.blit(texture, screenX, screenY, firstPixelInFilex, firstPixelInFileY, drawNumPixelsX, drawNumPixelsY, widthOfEntireFile, texFileHeight);
+    }
+
     public static void blitTab(
             GuiGraphics gui,
             Integer x,
