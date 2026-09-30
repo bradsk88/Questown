@@ -49,7 +49,10 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
     types: inventory|quests|stats|skills|economics|bop)
   - `connect <host> <port>` → quick-connect from the title screen
     (1.19.2: `ConnectScreen.startConnecting` + `ServerData`; the
-    `--server/--port` game args do not reliably auto-connect there)
+    `--server/--port` game args do not reliably auto-connect there). **1.19.2-only**: the 1.20.6 hook logs `[qtdiag] unknown
+    command: connect` (observed 2026-09-30) — the 1.20.6 path is
+    `-Pautojoin` (`--quickPlayMultiplayer`), which only takes effect when
+    the server is already LISTEN.
   - `cursor <x> <y>` → park the pointer at a fixed window-pixel position
     (reflection into `MouseHandler.xpos/ypos`). The `shot` stage sends it
     before every screenshot, so hover-dependent render state (the
@@ -308,7 +311,37 @@ tools/porttest/run.sh [check|diff|all]            # gate + canvas + cv diff
 cv diff goldens/1.19.2/stats.png live/1.20.6/stats.png   # ad-hoc one-screen
 ```
 
+## Parity verdict (where `diff green` stops being enough)
+
+`run.sh diff` green is a threshold pass *inside the manifest's center
+rects*, not proof of parity. The rects can exclude a screen's failing
+rows — real case 2026-09-30: on the 1.20.6 bank the stats tab-strip
+rendered its tool/leftmost icons blank and the skills tab lost its slot
+frames + `{ }` braces (icon-area background a near-black (24,15,7) where
+1.19.2 has the light-grey pane, (222,222,222)), yet the oracle rows
+passed and the ledger row was committed as "verified". It was flipped
+back to open after the dev named the breakage. So before calling parity
+settled: (a) confirm the center rect covers the rows that tab's content
+actually draws in, not just its body; (b) vision-compare a central-pane
+crop (x ~296-640, y ~200-450) of each tab, with both sides described in
+one prompt, not each half in isolation; (c) ask the dev what specifically
+looks broken on the tab they are watching, before re-deriving the cause
+from code or defending a passing test.
+
+A `Connection-refused` client (`Caused by: java.net.ConnectException`)
+means the server is not LISTEN — verify the port (wait-server /
+netstat) before relaunching the client; the second launch will not fix
+it, and a perf-server that died without autosave leaves no world.
+
 ## Known residual differences (PASS-able)
+
+- **Diff elements may be native client chrome, not mod UI.** The 1.19.2
+  client draws a `ControlsScreen` WASD hint panel ("Move with w,a,s and
+d", "Jump with Space", d-pad icon, ~x477-630 y31-143 in a centered
+  634x585 capture); 1.20.6 does not. Confirm with the dev which side an
+  element belongs to before hunting mod assets for it — a whole probe
+  loop was burned looking for that panel in Questown/RoomRecipes/
+  Patchouli resources (2026-09-30).
 
 - Text antialiasing edges differ between renderers (expect ~0.1–0.5%
   changed pixels on text-heavy screens).
