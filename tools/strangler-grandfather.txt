@@ -48,13 +48,11 @@ gui/AbstractVillagerMenu.java
 gui/AddWorkScreen.java
 gui/COMPLEX.md
 gui/CreateStockRequestScreen.java
-gui/FlagCraftingScreen.java
 gui/GuiLayoutCheckClientEvents.java
 gui/IngredientRenderer.java
 gui/Ingredients.java
 gui/InventoryAndStatusScreen.java
 gui/ItemJobsScreen.java
-gui/JobChangeConfirmScreen.java
 gui/LockableInventoryWrapper.java
 gui/PagedCardScreen.java
 gui/QuestRemoveConfirmScreen.java

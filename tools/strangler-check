@@ -20,7 +20,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
 # Single ERE alternation (bare |: a \ | in ERE matches nothing).
-MARKERS='GuiGraphics|ItemDisplayContext|LootParams|MapColor|net\.minecraft\.core\.registries|net\.minecraft\.core\.component|net\.minecraft\.world\.item\.component|DataComponents|CustomData|org\.joml|net\.neoforged|RecipeHolder|RegistryAccess|HolderLookup|ItemInteractionResult|InteractionResultHolder|net\.minecraft\.network\.protocol|StreamCodec|net\.minecraft\.core\.Holder|getVisualOrderText|Button\.builder|renderTooltip|DamageTypes|CreativeModeTab\.Builder'
+MARKERS='GuiGraphics|ItemDisplayContext|LootParams|MapColor|net\.minecraft\.core\.registries|net\.minecraft\.core\.component|net\.minecraft\.world\.item\.component|DataComponents|CustomData|org\.joml|net\.neoforged|RecipeHolder|RegistryAccess|HolderLookup|ItemInteractionResult|InteractionResultHolder|net\.minecraft\.network\.protocol|StreamCodec|net\.minecraft\.core\.Holder|getVisualOrderText|Button\.builder|DamageTypes|CreativeModeTab\.Builder'
 
 # Seam family: expected to carry version-specific code.
 SEAM='^(mc/|loader/|core/network/)'

@@ -6,7 +6,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -53,12 +52,8 @@ public abstract class CompatScreen extends Screen {
         this.setTooltipForNextRenderPass(tooltip);
     }
 
-    protected void showTooltip(List<Component> tooltips) {
-        List<FormattedCharSequence> ordered = new ArrayList<>();
-        for (Component tooltip : tooltips) {
-            ordered.add(tooltip.getVisualOrderText());
-        }
-        this.setTooltipForNextRenderPass(ordered);
+    protected void showTooltip(List<FormattedCharSequence> lines) {
+        this.setTooltipForNextRenderPass(lines);
     }
 
     protected RenderContext renderContext(GuiGraphics gui) {

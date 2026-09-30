@@ -209,12 +209,19 @@ Proven on the `fillGradient` + NineNine pattern by migrating one screen of each 
 (RelocationConfirmScreen → `CompatScreen`, JobUnlockConfirmScreen → `CompatContainerScreen`): both
 are marker-free, `./gradlew stranglerCheck` stays green, and the grandfather set dropped 124→122.
 
-Pending: the other ~25 screens, plus helpers that still take `gui` (Ingredients, IngredientRenderer,
-StatusGraphic, Tabs, PagedCardScreen, the `villager/advancements` widgets, QuestownHudEvents), and —
-most care needed — the render-layering family above (the screens that override `renderBackground` to a
-blurred world and whose HUD is re-rendered by QuestownHudEvents). Those must route through these
-same hooks without losing the blur + HUD layering that is verified against the golden captures, and
-they are not pixel-checkable on a headless box, so they need a dev-client visual pass.
+Pending: the remaining SAFE-tier confirm screens (VillagerBlockofProgressScreen,
+TownBlockofProgressScreen, CreateStockRequestScreen, WorkScreen, QuestRemoveConfirmScreen,
+AddWorkScreen), plus helpers that still take `GuiGraphics` (Ingredients, IngredientRenderer,
+StatusGraphic, `Tabs.draw`, PagedCardScreen, the `villager/advancements` widgets,
+QuestownHudEvents), and — most care needed — the render-layering family above (the screens
+that override `renderBackground` to a blurred world and whose HUD is re-rendered by
+QuestownHudEvents). Those must route through these same hooks without losing the blur + HUD
+layering that is verified against the golden captures in `tools/porttest/goldens/`, and the
+oracle pipeline in `tools/porttest/run.sh` is the way to catch any regression on this machine.
+
+FlagCraftingScreen (flow layout + craft tooltips + tabs) and JobChangeConfirmScreen (early-
+return + tabs tooltip + centered text) are the two remaining SAFE-tier leaves with non-trivial
+toobar/tooltip interaction; both are done via the same two-tier pattern.
 
 ## Flow layout (FlagCraftingScreen)
 

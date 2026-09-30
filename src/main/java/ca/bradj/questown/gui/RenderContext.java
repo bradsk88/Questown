@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.mc.JEI;
 import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawable;
@@ -132,5 +133,14 @@ public record RenderContext(
     // -- text geometry
     public List<FormattedCharSequence> split(Component text, int width) {
         return font.split(text, width);
+    }
+
+    // -- wrapped text (routes through Compat so the gui-lint capture hook is preserved)
+    public int darkTextWrap(Coordinate topLeft, int width, Component text) {
+        return ca.bradj.questown.mc.Compat.drawDarkTextWrap(font, gui, topLeft, width, text);
+    }
+
+    public int redTextWrap(Coordinate topLeft, int width, Component text) {
+        return ca.bradj.questown.mc.Compat.drawRedTextWrap(font, gui, topLeft, width, text);
     }
 }

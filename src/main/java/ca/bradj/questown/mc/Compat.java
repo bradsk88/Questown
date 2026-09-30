@@ -400,4 +400,17 @@ public class Compat {
     public static FormattedCharSequence componentText(Component component) {
         return component.getVisualOrderText();
     }
+
+    /**
+     * The vanilla per-frame state setters the SAFE-tier card screens used to name directly
+     * ({@code RenderSystem.setShaderColor(r, g, b, a)} before/after a tinted card). The version-bound
+     * static stays here; leaves call this.
+     */
+    public static void setShaderColor(float r, float g, float b, float a) {
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(r, g, b, a);
+    }
+
+    public static void resetShaderColor() {
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+    }
 }
