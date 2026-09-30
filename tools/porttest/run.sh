@@ -41,6 +41,7 @@ diff_all() {
   fi
   echo "canvas: $g (identical)"
   fail=0
+  noted=0
   for s in $(screens); do
     # fixture-drift check: banks carry .json sidecars with world-age-min
     if [ -f "$GG/$s.png.json" ] && [ -f "$LL/$s.png.json" ]; then
@@ -52,6 +53,9 @@ if ga is None or la is None: print('')
 elif abs(ga - la) > 30: print('DRIFT: world ages differ by %d min (golden %s, live %s) - fixture content may have moved; rebank for a clean diff' % (abs(ga - la), ga, la))
 " 2>/dev/null)
       [ -n "$d" ] && { echo "   $d"; fail=1; }
+    elif [ ! -f "$GG/$s.png.json" ] && [ ! -f "$LL/$s.png.json" ] && [ -f "$GG/$s.png" ] && [ -f "$LL/$s.png" ] && [ $noted -eq 0 ]; then
+      echo "   (no sidecars - drift check disabled; bank predates sidecars, re-bank to record world age)"
+      noted=1
     fi
     if [ -f "$GG/$s.png" ] && [ -f "$LL/$s.png" ]; then
       r=$(cv diff "$GG/$s.png" "$LL/$s.png" 2>/dev/null || true)
