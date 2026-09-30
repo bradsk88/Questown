@@ -90,6 +90,18 @@ to 256. A different overload normalizes differently: the
 `VillagerStatsScreen` bar fix below was a 10-arg call with the bar height
 landing in the maxU slot.
 
+## 1.20.6 Ingredient: `CODEC_NONEMPTY` throws on an empty ingredient
+
+`gui/Ingredients.toJson` serializes an `Ingredient` to the `{"items":[...]}`
+shape the job-request and work-request readers (`isTag`, `getName`, `toString`)
+parse. On 1.19.2 the built-in `Ingredient.toJson()` returned `{"items":[]}`
+for an empty ingredient; 1.20.6 only exposes the validating `CODEC_NONEMPTY`,
+which throws (`IllegalStateException`, "Item array cannot be empty") on the same
+input. So an empty ingredient in a work job took the whole card down
+(`putRequestedItemFirst -> isTag`, the skills pane). `toJson` now guards
+`item.isEmpty()` and returns the golden's `{"items":[]}` shape, so those readers
+fall through as on 1.19.2 instead of throwing.
+
 ## VillagerStatsScreen stat bars: the two half-bands and the 10-arg blit trap
 
 Each stat bar (EXP, HUNGER) is two 82px half-bands, 0-50% and 50-100%, drawn

@@ -20,6 +20,16 @@ import java.util.List;
 
 public class Ingredients {
     private static com.google.gson.JsonElement toJson(Ingredient item) {
+        // 1.20.6's CODEC_NONEMPTY rejects an empty ingredient ("Item array cannot be
+        // empty"); 1.19.2's built-in Ingredient.toJson() produced {"items":[]}. Return
+        // that empty-items shape so isTag/getName/toString fall through the way the
+        // golden does (isTag -> false) instead of throwing and taking the whole
+        // skills-pane card render down (putRequestedItemFirst -> isTag).
+        if (item.isEmpty()) {
+            com.google.gson.JsonObject empty = new com.google.gson.JsonObject();
+            empty.add("items", new com.google.gson.JsonArray());
+            return empty;
+        }
         return Ingredient.CODEC_NONEMPTY.encode(item, com.mojang.serialization.JsonOps.INSTANCE, com.mojang.serialization.JsonOps.INSTANCE.empty()).getOrThrow();
     }
 
