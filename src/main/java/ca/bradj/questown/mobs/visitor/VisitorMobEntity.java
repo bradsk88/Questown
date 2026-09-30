@@ -48,6 +48,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Items;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -895,8 +896,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public void addAdditionalSaveData(CompoundTag p_21484_) {
         super.addAdditionalSaveData(p_21484_);
         ListTag items = new ListTag();
+        // 1.20.5+: ItemStack.save throws on EMPTY (1.19.2 wrote an air tag).
+        // Keep the per-slot size by saving an air tag for empty slots; the
+        // load side already parses those back through MCHeldItem.fromMCItemStack.
         Jobs.getItems(job.get())
-            .forEach(v -> items.add(v.save(registryAccess())));
+            .forEach(v -> items.add(v.isEmpty() ? new ItemStack(Items.AIR).save(registryAccess())
+                : v.save(registryAccess())));
         p_21484_.put("items", items);
     }
 
