@@ -62,7 +62,8 @@ public class VillagerTabs extends Tabs implements SubUI {
                 (rc, x, y) -> {
                     int txBefore = RenderSystem.getShaderTexture(0);
                     RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
-                    Util.blit(rc.gui(), Questown.ResourceLocation("textures/menu/gatherer/menu.png"), x + 13, y + 11, 0, 9, 9, 9);
+                    // 1.19.2 golden: blit(stack, x+13, y+11, z=0, u=0, v=0, 9, 9, 256, 256).
+                    Util.blit(rc.gui(), Questown.ResourceLocation("textures/menu/gatherer/menu.png"), x + 13, y + 11, 0, 0, 9, 9);
                     RenderSystem.setShaderTexture(0, txBefore);
                 }, setScreen(sScreenFn), "tooltips.stats", sScreenFn == null, false
         ));
@@ -75,7 +76,8 @@ public class VillagerTabs extends Tabs implements SubUI {
                     stack.scale(15f / 30f, 15f / 30f, 1);
                     int adjustedX = (int) ((x + 11) / (15f / 30f));
                     int adjustedY = (int) ((y + 7) / (15f / 30f));
-                    Util.blit(rc.gui(), Questown.ResourceLocation("textures/menu/gatherer/menu.png"), adjustedX, adjustedY, 0, 17, 7, 30);
+                    // 1.19.2 golden: blit(stack, adjX, adjY, z=0, u=17, v=7, 30, 30, 256, 256).
+                    Util.blit(rc.gui(), Questown.ResourceLocation("textures/menu/gatherer/menu.png"), adjustedX, adjustedY, 17, 7, 30, 30);
                     stack.popPose();
 
                     RenderSystem.setShaderTexture(0, txBefore);

@@ -171,6 +171,12 @@ public class VillagerAdvancementsScreen extends Screen implements ScrollableScre
             p_97374_.drawCenteredString(this.font, NO_ADVANCEMENTS_LABEL, i, p_97378_ + 18 + 56 - 4, -1);
             p_97374_.drawCenteredString(this.font, VERY_SAD_LABEL, i, p_97378_ + 18 + 113 - 9, -1);
         } else {
+            // 1.20.6: clip the stone-tile content to the pane so it does not bleed
+            // past the window border. enableScissor(x, y, right, bottom) takes
+            // absolute canvas edges (not width/height - confirmed from the
+            // ScreenRectangle(x, y, p3 - x, p4 - y) ctor), so it wraps the
+            // pose push/translate block.
+            p_97374_.enableScissor(p_97377_ + 9, p_97378_ + 18, p_97377_ + 9 + 234, p_97378_ + 18 + 113);
             // 1.20.6: GUI transforms live on guiGraphics.pose(); touching the global
             // modelview stack here corrupts the u_ModelView uniform that the
             // RenderType.gui() pipeline (fill/drawString) applies, clipping content.
@@ -178,6 +184,7 @@ public class VillagerAdvancementsScreen extends Screen implements ScrollableScre
             p_97374_.pose().translate(p_97377_ + 9, p_97378_ + 18, 0.0F);
             advancementtab.drawContents(p_97374_);
             p_97374_.pose().popPose();
+            p_97374_.disableScissor();
         }
 
     }
