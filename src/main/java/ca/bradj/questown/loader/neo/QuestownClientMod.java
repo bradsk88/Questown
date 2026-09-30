@@ -33,22 +33,11 @@ public class QuestownClientMod {
         bus.addListener(FMLClientSetupEvent.class, e -> e.enqueueWork(NeoLoaderClient::init));
         bus.addListener(FMLClientSetupEvent.class, e -> e.enqueueWork(QuestownClient::onClientSetup));
         bus.addListener(RegisterMenuScreensEvent.class, NeoLoaderClient::onRegisterMenuScreens);
-        // TEMP migration diagnostic (villager-menu blank textures); remove after confirmation.
         // Port-test hook (active only with -Dquestown.diag=true; see QtDiagClient).
         // ClientChatReceivedEvent is a game-bus event, not a mod-bus event.
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS
                 .addListener(net.neoforged.neoforge.client.event.ClientChatReceivedEvent.class,
                         e -> QtDiagClient.onChat(e));
         QtDiagClient.install();
-        bus.addListener(net.neoforged.neoforge.client.event.TextureAtlasStitchedEvent.class, e -> {
-            TexDiag.run("stitch");
-            var timer = new java.util.Timer(true);
-            timer.schedule(new java.util.TimerTask() {
-                @Override
-                public void run() {
-                    TexDiag.run("settled");
-                }
-            }, 6000L);
-        });
     }
 }

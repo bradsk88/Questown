@@ -15,6 +15,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.GameRenderer;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
@@ -305,6 +307,19 @@ public class Util {
     }
 
 
+    /**
+     * Force the default GUI blit state. 1.19.2's GuiComponent.blit set shader/blend/shaderColor
+     * itself; the 1.20.6 immediate blit/fill path does not, so a prior draw (e.g. a dimming or
+     * tinted fill) can leave the state such that the next blit renders wrong. Call before the
+     * advancement widget frame/brace draws so they match 1.19.2 behaviour.
+     */
+    public static void blitState() {
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+    }
+
     public static void blit(
             GuiGraphics gui,
             ResourceLocation texture,
@@ -320,6 +335,7 @@ public class Util {
         // texture fitted into the box; keep that by using the draw size as source size.
         // 1.20.6 blit(loc, x, y, u, v, W, H, SW, SH): uv in pixels, sheet size 256
         // (all questown sheet textures are 256x256).
+        blitState();
         gui.blit(texture, screenX, screenY, firstPixelInFilex, firstPixelInFileY, drawNumPixelsX, drawNumPixelsY, 256, 256);
     }
 

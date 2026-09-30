@@ -2,6 +2,7 @@ package ca.bradj.questown.gui.villager.advancements;
 
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.advancements.DisplayInfo;
@@ -202,15 +203,17 @@ public class VillagerAdvancementsWidget {
     }
 
     private int getFrameType() {
-        // 1.20.6 dropped FrameType; these are the vanilla advancement-sprite rows the
-        // FrameType enum's getTexture() pointed at (task=10, goal=9, challenge=8).
+        // 1.20.6 dropped FrameType and the vanilla advancement widget sheet, so the
+        // sheet is bundled as questown:textures/gui/advancements/widgets.png.
+        // These u-origins are the frame columns of that bundled sheet (task x1,
+        // challenge x26, goal x54; obtained row v128, unobtained v154).
         int ft = -1;
         if (unlocked) {
-            ft = 10; // TASK
+            ft = 1; // TASK
         } else if (canUnlock) {
-            ft = 9; // GOAL
+            ft = 54; // GOAL
         } else if (minecraft.player.isCreative()) {
-            ft = 8; // CHALLENGE
+            ft = 26; // CHALLENGE
         }
         return ft;
     }
@@ -224,6 +227,7 @@ public class VillagerAdvancementsWidget {
             int width,
             int height
     ) {
+        Util.blitState(); // 1.19.2's GuiComponent.blit set the blit state itself
         gui.blit(WIDGETS_LOCATION, x, y, u, v, width, height);
     }
 
@@ -236,6 +240,7 @@ public class VillagerAdvancementsWidget {
     ) {
         int min = Math.min(x1, x2);
         int max = Math.max(x1, x2);
+        Util.blitState(); // 1.19.2 parity: frame draw state (Util.blitState)
         gui.fill(min, y, max + 1, y + 1, color);
     }
 
@@ -248,6 +253,7 @@ public class VillagerAdvancementsWidget {
     ) {
         int min = Math.min(y1, y2);
         int max = Math.max(y1, y2);
+        Util.blitState(); // 1.19.2 parity: frame draw state (Util.blitState)
         gui.fill(x, min, x + 1, max + 1, color);
     }
 
