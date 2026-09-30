@@ -84,9 +84,38 @@ Caught in the port-test oracle: the skills-pane background
 solid 0x8F gray (stone.png pixel (0,0)) instead of the mottled texture.
 Fix: pass the texture dimensions, the way vanilla's own 1.20.6
 `AdvancementTab.drawContents` does -
-`blit(rl, x, y, 0.0F, 0.0F, 16, 16, 16, 16)` (9-arg form). Blits into 256x256
-atlas textures (widgets.png, bars.png) are correct as-is because their
-maxU/maxV happen to equal 256.
+`blit(rl, x, y, 0.0F, 0.0F, 16, 16, 16, 16)` (9-arg form). In this 7-arg form
+blits into 256x256 atlas textures are correct as-is because maxU/maxV default
+to 256. A different overload normalizes differently: the
+`VillagerStatsScreen` bar fix below was a 10-arg call with the bar height
+landing in the maxU slot.
+
+## VillagerStatsScreen stat bars: the two half-bands and the 10-arg blit trap
+
+Each stat bar (EXP, HUNGER) is two 82px half-bands, 0-50% and 50-100%, drawn
+as a 5px track with a 5px green fill over it. The golden (1.19.2) art carries
+one half-band at u0 and a second at u100 with a capped right end; the wip rebake had only the u0 band (u100 onward transparent in `bars.png`) and a
+10-arg `gui.blit` whose maxU slot held the bar height (5), so the right half
+drew as a bare repeat of the left band and the track span read about 80px
+short: pre-fix capture, track x236..299 + x315..378 against the golden's
+x236..395 with a dark #09100c column at its right end.
+
+Fix (2026-10-13, dev-accepted):
+
+- rebaked `bars.png` with both half-bands: left at u0..94, right at u100..181
+  with its 1px dark end column at u181; track rows v64..68, fill rows v69..73
+  (v74 down is the purple bands; the fill sits at v69 like the golden, not
+  v70, which would bleed a purple row in).
+- `renderBar` now calls `Util.blit` (maxU/maxV fixed at 256, the shape the
+  verified tab-icon fix uses) at u1/u100 for the track (v64) and the fill
+  (v69), with the existing leftWidth/rightWidth split: left half 0-50%, right
+  half 50-100%.
+- Live pixel check (grim capture of the 1.20.6 client window, 2026-10-13):
+  band spans 5 rows, green fill from the bar's left edge, stripe track across
+  the rest, a dark #09100c column at the right end, then the window background
+  #c6c6c6.
+- Accepted deviation: the right end renders as a squared 1px cap, not the
+  golden's rounded corner (dev-accepted on the same date; not re-baked).
 
 ## 1.20.6 scissor clip: `enableScissor(x, y, right, bottom)`
 

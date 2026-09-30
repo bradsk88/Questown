@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import mezz.jei.common.util.ImmutableRect2i;
 import net.minecraft.client.gui.GuiGraphics;
@@ -221,16 +222,18 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         int y = 28 + bxY;
         int height = 5;
         int barLeftX = x - 1;
-        // 1.20.6 blit(RL, x, y, z, u, v, W, H, SW, SH) over the rebaked bars.png:
-        // track = the dark-green band (v64), fill = the bright band (v70), both 5px tall.
-        // Two halves: left shows 0..50% fullness, right shows 50..100%.
-        gui.blit(icons, barLeftX, y, 0, 0, 64, 64, height, 256, 256);
-        gui.blit(icons, x + 78, y, 0, 0, 64, 64, height, 256, 256);
+        // bars.png (256x256): left half-bands at u0..94, right half-bands at u100..181
+        // (rebaked with the dark right cap the golden had). Band rows: track v64..68,
+        // fill v69..73 (v74 down is the purple bands). Each 82px half fills 0..50% /
+        // 50..100%, like the golden's two-half layout. Util.blit is the verified
+        // 1:1 pixel blit over the 256 sheet.
+        Util.blit(gui, icons, barLeftX, y, 1, 64, HALF_WIDTH, height);
+        Util.blit(gui, icons, x + 78, y, 100, 64, HALF_WIDTH, height);
         float fP = fullnessPercent / 100f;
         int leftWidth = (int) (HALF_WIDTH * (2 * (Math.min(0.5, fP))));
         int rightWidth = (int) (HALF_WIDTH * (2 * (Math.min(0.5, (fP) - 0.5))));
-        gui.blit(icons, barLeftX, y, 0, 0, 70, leftWidth, height, 256, 256);
-        gui.blit(icons, x + 78, y, 0, 0, 70, rightWidth, height, 256, 256);
+        Util.blit(gui, icons, barLeftX, y, 1, 69, leftWidth, height);
+        Util.blit(gui, icons, x + 78, y, 100, 69, rightWidth, height);
         return new ImmutableRect2i(barLeftX, y, HALF_WIDTH * 2, height);
     }
 
