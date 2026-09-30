@@ -254,3 +254,24 @@ task importCheck {
     }
 }
 check.dependsOn importCheck
+
+// stranglerCheck: version-API gate (see tools/strangler-check). Fails when a
+// file outside the seam family (mc/, gui/RenderUtil, gui/RenderContext,
+// loader/, core/network/) touches a 1.20+-only API and is not in the
+// grandfather list. The grandfather list (tools/strangler-grandfather.txt,
+// 124 files from the 1.19.2 probe report) is expected to shrink to zero as
+// clusters are routed through seams.
+task stranglerCheck {
+    group = 'verification'
+    description = 'Fail if a non-seam, non-grandfathered file uses a version-specific (1.20+) MC API. Fix: route through a seam, or add the path to tools/strangler-grandfather.txt if tracked in the probe report.'
+    doLast {
+        def proc = new ProcessBuilder(project.file('tools/strangler-check').absolutePath).redirectErrorStream(true).start()
+        def output = proc.inputStream.text
+        def code = proc.waitFor()
+        if (code != 0) {
+            logger.lifecycle(output)
+            throw new GradleException("stranglerCheck: version-specific API outside the seam (see output)")
+        }
+    }
+}
+check.dependsOn stranglerCheck

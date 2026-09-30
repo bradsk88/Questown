@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Strangler gate.
+#
+# Fails when a file OUTSIDE the seam family carries a version-specific
+# (1.20+/1.20.6-only) API marker. The seam is allowed to carry the version-
+# specific surface; everything else should route through the seam.
+#
+# The current known leak set is grandfathered in tools/strangler-grandfather.txt
+# (one relative path per line, from the 1.19.2 probe report). It shrinks
+# as clusters are fixed; the goal is an empty list. A NEW file that touches a
+# 1.20-only API fails here instead of silently re-leaking the strangler.
+#
+# Run standalone:  tools/strangler-check
+# Or via gradle:   ./gradlew stranglerCheck
+#
+# Report and marker source: docs/plans/strangler-1.19.2-probe-report.md
+
+set -u
+root="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$root"
+
+# Single ERE alternation (bare |: a \ | in ERE matches nothing).
+MARKERS='GuiGraphics|ItemDisplayContext|LootParams|MapColor|net\.minecraft\.core\.registries|net\.minecraft\.core\.component|net\.minecraft\.world\.item\.component|DataComponents|CustomData|org\.joml|net\.neoforged|RecipeHolder|RegistryAccess|HolderLookup|ItemInteractionResult|InteractionResultHolder|net\.minecraft\.network\.protocol|StreamCodec|net\.minecraft\.core\.Holder|getVisualOrderText|Button\.builder|renderTooltip|DamageTypes|CreativeModeTab\.Builder'
+
+# Seam family: expected to carry version-specific code.
+SEAM='^(mc/|loader/|core/network/)'
+SEAM_FILES='gui/RenderUtil\.java$|gui/RenderContext\.java$'
+
+GFX='tools/strangler-grandfather.txt'
+
+# Allow regenerating the grandfather list from the current tree:
+#   tools/strangler-check --gen-grandfather
+if [ "${1:-}" = '--gen-grandfather' ]; then
+    grep -rlE "$MARKERS" src/main/java src/test/java 2>/dev/null \
+        | sed -E 's@src/(main|test)/java/ca/bradj/questown/@@' \
+        | grep -vE "$SEAM|$SEAM_FILES" | sort | tee "$GFX"
+    echo "wrote $(grep -cvE '^\s*(#|$)' "$GFX") grandfathered files" >&2
+    exit 0
+fi
+
+hits="$(grep -rlE "$MARKERS" src/main/java src/test/java 2>/dev/null \
+    | sed -E 's@src/(main|test)/java/ca/bradj/questown/@@' \
+    | grep -vE "$SEAM|$SEAM_FILES" | sort)"
+[ -z "$hits" ] && exit 0
+
+allowed="$( { [ -f "$GFX" ] && grep -vE '^\s*(#|$)' "$GFX"; } | sort)"
+
+bad=""
+for f in $hits; do
+    if ! printf '%s\n' "$allowed" | grep -qxF "$f"; then
+        bad="$bad$f
+"
+    fi
+done
+
+if [ -n "$bad" ]; then
+    echo "strangler-check: version-specific API outside the seam and not grandfathered:" >&2
+    printf '%s' "$bad" | sed 's/^/  /' >&2
+    echo "" >&2
+    echo "route it through a seam (mc/Compat, mc/Util, gui/RenderContext, loader/) or, if it is deliberate and tracked in the probe report, add the path to tools/strangler-grandfather.txt" >&2
+    exit 1
+fi
+exit 0

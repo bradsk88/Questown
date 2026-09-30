@@ -143,6 +143,8 @@ through them.
 
 ## Suggested fix order (on the 1.20 side)
 
+Live as of the fix pass that this report drives: the strangler gate (tools/strangler-check, gradle stranglerCheck, wired to check) enforces the rule - the current 122 main + 2 test leak files are grandfathered in tools/strangler-grandfather.txt and must shrink to zero as the clusters below are fixed. A new file outside the seams that carries a 1.20+-only API fails the build.
+
 1. G1 RenderContext expansion: biggest file count (29), one seam, mechanical per-screen
    change.
 2. G2 block/BE wrappers: one call site each in 25 files, high repeat per port.
