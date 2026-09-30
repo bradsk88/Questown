@@ -213,9 +213,12 @@ a long tp is what triggers the desync here.
   check only compares the two *current* sides, so both sides changing in
   unison sails through; a later 634-vs-420 diff is silent garbage. The
   `bank` stage now dies when a fresh shot's canvas differs from the
-  same-named banked PNG. `cv info <png>` before banking is the ten-second
-  check; a resize is a capture-state change, record it in the sidecar-era
-  docs when it happens.
+  same-named banked PNG. The `manifest.json` `canvas` field pins the
+  capture size (634x675, the bank's reference) and the `shot` stage dies
+  at capture time when the client window is a different width, so a
+  wrong-size shot never reaches the bank. `cv info <png>` before
+  banking is the ten-second check; a resize is a capture-state change,
+  record it when it happens.
 - **`cv diff` + targeted crops is the oracle; vision is not a differ.**
   Asked to enumerate the differences between two captures, the vision
   model (OpenRouter) swapped and merged features across the two images

@@ -1,8 +1,8 @@
 {
  "canvas": {
-  "width": null,
-  "height": null,
-  "note": "The dev box's tiling WM forces every client window to the same tile size (observed 634x675 on both 1.19.2 and 1.20.6 despite --width 1280 --height 720). The diff invariant is therefore: both captures have IDENTICAL dimensions. run.sh diff asserts that before diffing; if they differ, it reports the mismatch instead of diffing."
+  "width": 634,
+  "height": 675,
+  "note": "Pinned capture canvas: the bank's reference size. The tiling WM does NOT hold every client to one width (this session: wip 634, a11 420 in the same run), so window width is capture state, not a constant. capture.sh shot dies when a fresh shot's canvas differs from this pin; capture.sh bank dies when a fresh shot differs from the same-named banked PNG; run.sh diff asserts the two sides match each other. To run at a different size deliberately, resize the client AND update this pin plus the per-screen center rects together."
  },
  "fixture": {
   "world": "normal",

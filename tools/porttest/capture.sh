@@ -188,6 +188,13 @@ print([s['open'] for s in m['screens'] if s['name']=='$NAME'][0])")
     t=$((t+2)); [ $t -ge 60 ] && die "shot $NAME never landed (check $CLOG for the hook)"
     sleep 2
   done
+  # canvas pin: the bank's reference size. The tiling WM can give a client
+  # a different window width (this session: 420 vs 634 in the same run);
+  # a shot at the wrong size is silently useless against the bank, so die
+  # here, at capture time, instead of corrupting the bank.
+  want=$(python3 -c "import json;c=json.load(open('$MAN'))['canvas'];print(c['width'],c['height'])")
+  got=$(python3 -c "import struct;d=open('${QT_DIAG_DIR:-$PROJ/$GAME}/diags/$NAME.png','rb').read(24);print(*struct.unpack('>II',d[16:24]))")
+  [ "$want" = "$got" ] || die "canvas mismatch: shot $NAME is [$got], manifest pin is [$want] - client window was resized (tiling WM); restore the window size or update manifest.json canvas + center rects deliberately"
   say "shot $NAME landed"
   ;;
 

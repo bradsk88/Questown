@@ -39,6 +39,10 @@ diff_all() {
     echo "FATAL: canvas mismatch - golden [$g] vs live [$l]; a diff is meaningless, re-capture"
     return 1
   fi
+  pin=$(python3 -c "import json;c=json.load(open('$MAN'))['canvas'];print(c['width'],c['height'])")
+  if [ -n "$pin" ] && [ "$g" != "$pin" ]; then
+    echo "WARN: both sides are [$g] but the manifest pin is [$pin] - the bank is off-pin; the per-screen center rects (derived for $pin) may be wrong. Re-capture at the pinned size or update the manifest deliberately."
+  fi
   echo "canvas: $g (identical)"
   fail=0
   noted=0
