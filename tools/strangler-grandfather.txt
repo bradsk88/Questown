@@ -55,13 +55,11 @@ gui/Ingredients.java
 gui/InventoryAndStatusScreen.java
 gui/ItemJobsScreen.java
 gui/JobChangeConfirmScreen.java
-gui/JobUnlockConfirmScreen.java
 gui/LockableInventoryWrapper.java
 gui/PagedCardScreen.java
 gui/QuestRemoveConfirmScreen.java
 gui/QuestownHudEvents.java
 gui/QuestsScreen.java
-gui/RelocationConfirmScreen.java
 gui/StatusGraphic.java
 gui/SubUI.java
 gui/Tabs.java

@@ -163,6 +163,59 @@ Pixel evidence (tab cells on the capture): pre-fix bank 0 colored pixels in
 both cells (pure tab-base grey); post-fix 27 green icon px (stats, menu.png
 (0,0)-(9,9)) and 36 white/shaded px (skills, menu.png (17,7)-(47,37)).
 
+## Render-argument absorption (CompatScreen / CompatContainerScreen)
+
+The strangler's standing goal: a version switch should touch the seam family, not the 29 gui
+screens. The render pipeline was the part the seam could not absorb before. Each leaf still
+overrode `render(GuiGraphics, ...)` (1.19.2: `render(PoseStack, ...)`) directly, so every screen
+named the render-argument type. Two base classes now own those version-bound override signatures,
+and the leaves express the draw order through version-neutral hooks over `RenderContext`.
+
+`RenderContext` (record: `font`, `itemRenderer`, `gui`) is the faithful pass-through handle: each
+method invokes the exact 1.20.6 `GuiGraphics`/JEI/widget method with the same arguments, so
+rendering is preserved by construction (`ctx.fill` → `gui.fill`, `ctx.drawNineNine` →
+`NineNine.draw(gui, ...)`, `ctx.renderWidget(button)` → `button.render(gui, ...)`, `ctx.centered` →
+`gui.drawCenteredString`). A two-arg constructor fills `font` from the running client so the eleven
+pre-existing `new RenderContext(itemRenderer, gui)` call sites keep compiling unchanged.
+
+The hooks reproduce the decompiled 1.20.6 chain. `Screen.render` = `renderBackground(virtual)` +
+widgets; `AbstractContainerScreen.render` = `renderBackground(→renderBg) + widgets + slots +
+renderLabels`. So both bases reduce to `renderPrologue → super.render → renderScreenContent`, with
+the per-screen background/labels folded into the vanilla hooks the base already overrides:
+
+- **`CompatScreen`** (plain `Screen` leaves): `renderPrologue` (a full-canvas fill) → `super.render`
+  (which calls `renderBackground` → `renderScreenSurface` — the panel, e.g. `ctx.drawNineNine` — then
+  the renderable widgets) → `renderScreenContent` (text, item icons).
+- **`CompatContainerScreen`** (`AbstractContainerScreen` leaves): `renderPrologue` (per-frame state,
+  e.g. the button active flag) → `super.render` (which calls `renderBackground` → `renderBgContent`
+  — the NineNine panel + inventory slots — then the widgets, the slots, and `renderLabelsContent`)
+  → `renderScreenContent` (the screen-specific content).
+
+`super.render` already re-invokes the version-bound `renderBackground`/`renderBg`, so a leaf's
+direct `this.renderBackground(...)` / `super.render(...)` calls are dropped. The original drew the
+NineNine panel a second time there; folding to once is pixel-identical.
+
+`showTooltip(Component | List<Component>)` on both bases exposes the 1.20.6
+`setTooltipForNextRenderPass` (its single-`Component` overload is `protected`, so a screen in another
+package cannot call it — only a `Screen` subclass can; that is why a base class, not a static
+`Compat` method, carries this). `Compat.button(...)` and `Compat.componentText(...)` are the
+remaining render-side seams (the `Button.builder` construction and the `getVisualOrderText()` call,
+each named only in the seam family, not the leaves).
+
+`tools/strangler-check` admits the two base classes (`gui/CompatScreen`, `gui/CompatContainerScreen`)
+to the seam family alongside the existing `gui/RenderUtil` and `gui/RenderContext`.
+
+Proven on the `fillGradient` + NineNine pattern by migrating one screen of each tier
+(RelocationConfirmScreen → `CompatScreen`, JobUnlockConfirmScreen → `CompatContainerScreen`): both
+are marker-free, `./gradlew stranglerCheck` stays green, and the grandfather set dropped 124→122.
+
+Pending: the other ~25 screens, plus helpers that still take `gui` (Ingredients, IngredientRenderer,
+StatusGraphic, Tabs, PagedCardScreen, the `villager/advancements` widgets, QuestownHudEvents), and —
+most care needed — the render-layering family above (the screens that override `renderBackground` to a
+blurred world and whose HUD is re-rendered by QuestownHudEvents). Those must route through these
+same hooks without losing the blur + HUD layering that is verified against the golden captures, and
+they are not pixel-checkable on a headless box, so they need a dev-client visual pass.
+
 ## Flow layout (FlagCraftingScreen)
 
 `computeLayout()` stacks blocks top-to-bottom, advancing the `y` cursor past each block's

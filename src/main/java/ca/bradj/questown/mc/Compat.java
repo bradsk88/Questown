@@ -1,8 +1,6 @@
 package ca.bradj.questown.mc;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Coordinate;
-import ca.bradj.questown.core.init.CommandsInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.rooms.TownPosition;
 import com.google.common.collect.ImmutableCollection;
@@ -26,20 +24,16 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.MenuProvider;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -381,5 +375,29 @@ public class Compat {
             int width
     ) {
         return font.split(text, width);
+    }
+
+    /**
+     * The 1.20.6 button construction (a protected ctor, built via the builder). A leaf calls this
+     * with the version-bound {@code net.minecraft.client.gui.components.Button} type, so it appears
+     * nowhere outside the seam.
+     */
+    public static net.minecraft.client.gui.components.Button button(
+            Component text,
+            net.minecraft.client.gui.components.Button.OnPress onPress,
+            int x,
+            int y,
+            int width,
+            int height
+    ) {
+        return net.minecraft.client.gui.components.Button.builder(text, onPress).bounds(x, y, width, height).build();
+    }
+
+    /**
+     * The 1.20.6 way to turn a {@link Component} into its display order text (1.19.2: a {@code
+     * FormattedCharSequence} cast). The version-bound {@code getVisualOrderText()} call stays here.
+     */
+    public static FormattedCharSequence componentText(Component component) {
+        return component.getVisualOrderText();
     }
 }

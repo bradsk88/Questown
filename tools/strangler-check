@@ -24,7 +24,7 @@ MARKERS='GuiGraphics|ItemDisplayContext|LootParams|MapColor|net\.minecraft\.core
 
 # Seam family: expected to carry version-specific code.
 SEAM='^(mc/|loader/|core/network/)'
-SEAM_FILES='gui/RenderUtil\.java$|gui/RenderContext\.java$'
+SEAM_FILES='gui/RenderUtil\.java$|gui/RenderContext\.java$|gui/CompatScreen\.java$|gui/CompatContainerScreen\.java$'
 
 GFX='tools/strangler-grandfather.txt'
 
