@@ -1,19 +1,12 @@
 ---
 name: questown-behavior-verify
 description: >-
-  Verifies a Questown behavior (navigation, jobs, movement) on a live server when a visual play-test cannot run (this box has no capturable window). TRIGGER when asked to "watch" a Questown behavior, run a before/after, or "see" a villager/townie do something live, or when a unit test cannot settle a broken-behaviour report. SKIP when a unit test or the existing autotest suite already proves it. The key fact: this box's runClient opens no window (grim captures 0 bytes), so the evidence must come from the server log, not a screenshot.
+  Verifies a Questown behavior (navigation, jobs, movement) on a live server when a unit test already settles the question. TRIGGER when asked to "watch" a Questown behavior, run a before/after, or "see" a villager/townie do something live. SKIP when a unit test or the existing autotest suite already proves it. The box is headless, so the evidence for a *behavior* comes from the server log (server-side state, not pixels) — not because there is no window: the game's own window **is** capturable from inside via the client hook, and the `tools/porttest` oracle (goldens in `tools/porttest/goldens/` are the proof) is the right tool for *GUI pixel parity*.
 ---
 
 # Questown behavior verification (no window)
 
-A visual play-test cannot run on this box: `runClient` connects but opens no
-window (`grim` captures 0 bytes, `xdotool search --name Minecraft` finds
-nothing). So the evidence for a live behavior must come from the **server log**,
-not a screenshot. See `references/questown-dev-launch.md`. For the full held-run
-sequence (server-first launch order, 30s observation cadence, chat/observe
-channels, the console command set) load the `questown-held-run` skill; this
-skill is for verifying a specific behavior on a live world, not driving the town
-through onboarding.
+The box is headless: **external** screen tools fail (`grim` captures 0 bytes, `xdotool search --name Minecraft` finds nothing), so you cannot screenshot from outside. But the game's own window **is** capturable from inside — the client hook (`QtDiagClient.shot` → vanilla `Screenshot.grab`) writes `diags/<name>.png`, which is what the `tools/porttest` oracle uses, and it works headless (the golden bank `tools/porttest/goldens/1.19.2/` is six real PNGs, captured this box 2026-09-30). So: **GUI pixel parity → the `tools/porttest` oracle** (see `tools/porttest/PORTTEST.md`); **behavior** → the server log, because the state you're measuring is server-side (entity positions, needs, room state), not pixels. See `references/questown-dev-launch.md` for the launch plumbing. For the full held-run sequence (server-first launch order, 30s observation cadence, chat/observe channels, the console command set) load the `questown-held-run` skill; this skill is for verifying a specific behavior on a live world, not driving the town through onboarding.
 
 **The user wants the client run, and a held server is the verification path — never ask, offer, or defer it.**
 When a held `runServer` autotest or play-test needs a verification pass, just run

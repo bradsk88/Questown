@@ -20,6 +20,15 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
 # Single ERE alternation (bare |: a \ | in ERE matches nothing).
+#
+# renderTooltip was DELIBERATELY removed from this list (2026-09, curlew pass).
+# It matched questown's own version-neutral helpers (Tabs.renderTooltip,
+# StatusGraphic.renderTooltip, SubUI.renderTooltip, and the plural renderTooltips)
+# - never a vanilla override. Do NOT re-add it: it only blocks clean screens from
+# being de-grandfathered. Its one real target, the vanilla override, is still
+# grandfathered and is absorbed by the render-argument migration. General rule:
+# a name-based marker is a leak only if the codebase actually carries a 1.20-only
+# usage of that name; a same-named domain helper is a name collision, not a leak.
 MARKERS='GuiGraphics|ItemDisplayContext|LootParams|MapColor|net\.minecraft\.core\.registries|net\.minecraft\.core\.component|net\.minecraft\.world\.item\.component|DataComponents|CustomData|org\.joml|net\.neoforged|RecipeHolder|RegistryAccess|HolderLookup|ItemInteractionResult|InteractionResultHolder|net\.minecraft\.network\.protocol|StreamCodec|net\.minecraft\.core\.Holder|getVisualOrderText|Button\.builder|DamageTypes|CreativeModeTab\.Builder'
 
 # Seam family: expected to carry version-specific code.
