@@ -45,9 +45,7 @@ core/init/ScheduleInit.java
 core/init/TilesInit.java
 gui/AbstractPagedCardScreen.java
 gui/AbstractVillagerMenu.java
-gui/AddWorkScreen.java
 gui/COMPLEX.md
-gui/CreateStockRequestScreen.java
 gui/GuiLayoutCheckClientEvents.java
 gui/IngredientRenderer.java
 gui/Ingredients.java
@@ -61,13 +59,10 @@ gui/QuestsScreen.java
 gui/StatusGraphic.java
 gui/SubUI.java
 gui/Tabs.java
-gui/TownBlockofProgressScreen.java
 gui/TownEconomicsScreen.java
-gui/VillagerBlockofProgressScreen.java
 gui/VillagerEconomicsScreen.java
 gui/VillagerStatsScreen.java
 gui/WorkRequestConfirmScreen.java
-gui/WorkScreen.java
 gui/town/status/MultiStatusScreen.java
 gui/villager/advancements/VillagerAdvancementsContent.java
 gui/villager/advancements/VillagerAdvancementsScreen.java

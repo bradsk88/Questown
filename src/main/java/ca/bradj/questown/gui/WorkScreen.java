@@ -4,13 +4,10 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.systems.RenderSystem;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import net.minecraft.client.gui.GuiGraphics;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -23,7 +20,7 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> implements ScrollableScreen {
+public class WorkScreen extends CompatContainerScreen<TownWorkContainer> implements ScrollableScreen {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
     private static final int borderPadding = 6;
@@ -81,7 +78,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> imple
         addWorkScreen = new AddWorkScreen(menu.addWorkContainer, playerInv, title);
         this.addMoreBtn = JEI.guiIconButtonSmall(
                 btnX, 0, buttonWidth, buttonHeight, plusIcon, b -> addMoreWork()
-        );
+                );
     }
 
     @Override
@@ -105,7 +102,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> imple
     }
 
 
-        public boolean mouseScrolled(
+    public boolean mouseScrolled(
             double scrollX,
             double scrollY,
             double scrollDelta
@@ -138,20 +135,12 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> imple
     }
 
     @Override
-    public void render(
-            GuiGraphics gui,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        this.renderBackground(gui, mouseX, mouseY, partialTicks);
-        super.render(gui, mouseX, mouseY, partialTicks);
-
+    protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int x = ((this.width - backgroundWidth) / 2);
         int y = (this.height - backgroundHeight) / 2;
         int pageStringY = y + PAGE_PADDING;
 
-        renderPageNum(gui, x);
+        renderPageNum(ctx, x);
 
         y = pageStringY + PAGE_PADDING;
 
@@ -170,25 +159,25 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> imple
             if (jobPosting == null) {
                 continue;
             }
-            this.cardBackground.draw(gui, x, cardY, CARD_WIDTH, CARD_HEIGHT);
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            ctx.drawNineNine(this.cardBackground, x, cardY, CARD_WIDTH, CARD_HEIGHT);
+            Compat.resetShaderColor();
 
             int iconY = cardY + CARD_HEIGHT - 24;
-            ImmutableList<Slot> slotz = renderJobCardIcons(gui, jobPosting, x, iconY, mouseX, mouseY);
+            ImmutableList<Slot> slotz = renderJobCardIcons(ctx, jobPosting, x, iconY, mouseX, mouseY);
             b.addAll(slotz);
 
             int idX = x + PAGE_PADDING;
             int idY = iconY - 10;
-            gui.drawString(font, Compat.translatable("job_board.default_name"), idX, idY, TEXT_COLOR, false);
+            ctx.text(Compat.translatable("job_board.default_name"), idX, idY, TEXT_COLOR, false);
 
             int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
-            Compat.drawLightText(
-                    font, gui, "x",
+            ctx.lightText(
+                    "x",
                     removeX + borderPadding - 1,
                     iconY + borderPadding - 1
             );
             highlightAndTooltip(
-                    gui,
+                    ctx,
                     mouseX,
                     mouseY,
                     removeX,
@@ -201,15 +190,15 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> imple
         slots.addAll(b.build());
 
         // Render the page buttons
-        this.addMoreBtn.render(gui, mouseX, mouseY, partialTicks);
-        this.previousPage.render(gui, mouseX, mouseY, partialTicks);
-        this.nextPage.render(gui, mouseX, mouseY, partialTicks);
+        ctx.renderWidget(this.addMoreBtn, mouseX, mouseY, partialTicks);
+        ctx.renderWidget(this.previousPage, mouseX, mouseY, partialTicks);
+        ctx.renderWidget(this.nextPage, mouseX, mouseY, partialTicks);
     }
 
     private List<Slot> slots = new ArrayList<>();
 
     private ImmutableList<Slot> renderJobCardIcons(
-            GuiGraphics gui,
+            RenderContext ctx,
             UIWork recipe,
             int x,
             int y,
@@ -222,9 +211,10 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> imple
 
         int iconX = x + 8;
 
-        ItemStack itemStack = Ingredients.render(gui, ing, iconX, y);
+        ItemStack itemStack = Ingredients.representativeItemStack(ing);
         if (itemStack != null) {
-            highlightAndTooltip(gui, mouseX, mouseY, iconX, y, itemStack.getItem().getName(itemStack));
+            ctx.renderItemAndDecorations(itemStack, iconX, y);
+            highlightAndTooltip(ctx, mouseX, mouseY, iconX, y, itemStack.getItem().getName(itemStack));
             Slot element = new Slot(dummyInv, 0, iconX, y + 1);
             element.set(itemStack);
             b.add(element);
@@ -233,7 +223,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> imple
     }
 
     private void highlightAndTooltip(
-            GuiGraphics gui,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             int iconX,
@@ -242,9 +232,9 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> imple
     ) {
         if (mouseX >= iconX && mouseY >= iconY && mouseX < iconX + 16 && mouseY < iconY + 17) {
             // transparent white square behind hovered item slot
-            gui.fill(iconX, iconY + 1, iconX + 16, iconY + 17, 0x80FFFFFF);
+            ctx.fill(iconX, iconY + 1, iconX + 16, iconY + 17, 0x80FFFFFF);
             // render hovered item's name as a tooltip
-            this.setTooltipForNextRenderPass(tooltipText);
+            this.showTooltip(tooltipText);
         }
     }
 
@@ -266,11 +256,11 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> imple
     }
 
     private void renderPageNum(
-            GuiGraphics gui,
+            RenderContext ctx,
             int x
     ) {
         // Draw page numbers
-        gui.fill(
+        ctx.fill(
                 x + borderPadding + buttonWidth,
                 nextPage.getY(),
                 x + backgroundWidth - borderPadding - buttonWidth,
@@ -281,20 +271,15 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> imple
         String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        Compat.drawLightText(font, gui, pageString, textArea.getX(), textArea.getY());
+        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, this.font, pageString);
+        ctx.lightText(pageString, textArea.getX(), textArea.getY());
     }
 
     @Override
-    protected void renderBg(
-            GuiGraphics gui,
-            float partialTicks,
-            int mouseX,
-            int mouseY
-    ) {
+    protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(gui, x, y, backgroundWidth, backgroundHeight);
+        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
     }
 
 
