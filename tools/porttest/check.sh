@@ -23,7 +23,10 @@ m = json.load(open(man))
 # Vision backend: default = the live Nova GPU proxy (qwen3.8:27b has
 # vision). The vast-era box 154.37.220.220 is dead (port answers TCP,
 # HTTP returns empty), so it is no longer a default. Override with
-# VISION_URL / VISION_KEY / VISION_MODEL (e.g. back to OpenRouter).
+# VISION_URL / VISION_MODEL (e.g. back to OpenRouter).
+# Precedence: the manifest's `check` block overrides these defaults for
+# the MODEL - a dead/renamed model pinned there 404s the whole gate even
+# when the default URL is fine. Switch both together.
 # Reasoning level "medium": low/under levels spend the token budget on
 # reasoning and return null content; medium answers in seconds.
 import os as _os

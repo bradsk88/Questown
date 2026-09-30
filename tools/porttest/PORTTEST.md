@@ -246,7 +246,13 @@ a long tp is what triggers the desync here.
   (`setsid nohup sh -c 'sleep 999999 > run/server-cmd.fifo'`); with the
   writer holding the fd, repeated `echo cmd > fifo` writes are fine
   (verified: 15+ commands on the 1.19.2 side, no wedge). The wedge only
-  bites without the persistent writer.
+  bites without the persistent writer. `tellraw/say` to zero online
+  players prints *nothing and no error* - with the client dropped (e.g.
+  after the Connection-Lost kick) a successful probe is indistinguishable
+  from an empty world; use `data get entity` (non-destructive, needs the
+  exact id/uuid) or the server log, and remember `kill @e[type=...]`
+  reports presence by killing it - fine only in a re-bankable fixture
+  world.
 - **`Screenshot.grab` takes a *directory* on both versions** (bytecode:
   `new File(file, "screenshots")`). The hooks pass `diags/` + a token and
   move the result to `diags/<name>.png`.
