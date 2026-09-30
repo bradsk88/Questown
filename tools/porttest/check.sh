@@ -30,8 +30,39 @@ m = json.load(open(man))
 # Reasoning level "medium": low/under levels spend the token budget on
 # reasoning and return null content; medium answers in seconds.
 import os as _os
-url = _os.environ.get(
-    'VISION_URL', 'http://localhost:42827/v1/chat/completions')
+url = _os.environ.get('VISION_URL')
+if not url:
+    # The local proxy's port rotates per session, and even models.json can
+    # be stale, so probe candidates and use the first that is live. Order:
+    # providers carrying the target model first, then remaining localhost
+    # providers, then the legacy port.
+    target = m.get('check', {}).get('model', 'qwen3.8:27b')
+    cands, seen = [], set()
+    def _add(c):
+        c = (c or '').rstrip('/')
+        if c.startswith('http://localhost') and c not in seen:
+            seen.add(c); cands.append(c)
+    provs = []
+    try:
+        with open(_os.path.expanduser('~/.pi/agent/models.json')) as _f:
+            provs = [p for p in json.load(_f).get('providers', {}).values()
+                     if str(p.get('baseUrl', '')).startswith('http://localhost')]
+    except Exception:
+        pass
+    provs.sort(key=lambda p: not any(x.get('id') == target for x in p.get('models', [])))
+    for p in provs:
+        _add(p.get('baseUrl'))
+    _add('http://localhost:42827/v1')
+    import urllib.request as _ur
+    for c in cands:
+        try:
+            if _ur.urlopen(c + '/models', timeout=4).status in (200, 401, 403):
+                url = c; break
+        except Exception:
+            continue
+    if not url:
+        raise SystemExit('FAIL: no live Nova vision endpoint; set VISION_URL')
+    url += '/chat/completions'
 key = ''
 if _os.environ.get('VISION_KEY_FILE'):
     key = open(_os.environ['VISION_KEY_FILE']).read().strip()
