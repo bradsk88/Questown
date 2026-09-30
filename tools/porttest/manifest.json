@@ -124,9 +124,9 @@
   }
  ],
  "check": {
-  "provider": "vast-vllm",
-  "model": "qwen38-nvfp4",
-  "note": "content gate: check.sh vision-verifies each capture against its expect block before banking. Backend = the rented vLLM box (qwen3.8:27b NVFP4 has vision; chat_template_kwargs.reasoning_effort=low keeps calls ~3s). check.sh/compare2.py honor VISION_URL/VISION_KEY/VISION_MODEL env overrides. OpenRouter route is out of credits (402) as of 2026-09-29. Tab highlights are icon-based, so the TAB question asks about panel content, not highlight pixels."
+  "provider": "nova-vllm",
+  "model": "qwen3.8:27b",
+  "note": "content gate: check.sh vision-verifies each capture against its expect block before banking. Backend = the live Nova GPU proxy at localhost:42827 (qwen3.8:27b has vision; chat_template_kwargs.reasoning_effort=medium - lower budgets return null content, higher overthink). check.sh/compare2.py honor VISION_URL/VISION_KEY/VISION_MODEL env overrides. The old vast box 154.37.220.220 is dead as of 2026-09-30. OpenRouter was out of credits (402) as of 2026-09-29. Tab highlights are icon-based, so the TAB question asks about panel content, not highlight pixels."
  },
  "diff": {
   "threshold_pct": 0.5,

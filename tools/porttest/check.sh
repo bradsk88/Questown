@@ -20,16 +20,18 @@ import json, base64, urllib.request, sys, os
 
 d, man, one = sys.argv[1], sys.argv[2], sys.argv[3]
 m = json.load(open(man))
-# Vision backend: default = the rented vLLM box (qwen3.8:27b has vision,
-# reasoning_effort=low keeps it a few seconds per shot). Override with
+# Vision backend: default = the live Nova GPU proxy (qwen3.8:27b has
+# vision). The vast-era box 154.37.220.220 is dead (port answers TCP,
+# HTTP returns empty), so it is no longer a default. Override with
 # VISION_URL / VISION_KEY / VISION_MODEL (e.g. back to OpenRouter).
+# Reasoning level "medium": low/under levels spend the token budget on
+# reasoning and return null content; medium answers in seconds.
 import os as _os
 url = _os.environ.get(
-    'VISION_URL', 'http://154.37.220.220:30389/v1/chat/completions')
+    'VISION_URL', 'http://localhost:42827/v1/chat/completions')
+key = ''
 if _os.environ.get('VISION_KEY_FILE'):
     key = open(_os.environ['VISION_KEY_FILE']).read().strip()
-else:
-    key = open('/home/retro/.config/vastai/qwen_vllm_key').read().strip()
 model = m.get('check', {}).get('model', _os.environ.get('VISION_MODEL', 'qwen38-nvfp4'))
 
 fail = 0
@@ -45,21 +47,21 @@ for s in m['screens']:
     prompt = (
         "Look at this Minecraft screenshot. Answer ONLY these lines, each "
         "just 'yes' or 'no' after the colon:\n"
-        "MENU: (is a tabbed villager menu open on screen?)\n"
-        "TAB: (is the menu currently showing the '%s' panel - e.g. the %s content rather than some other panel?)\n"
+        "MENU: (is the tabbed villager menu open on screen - a centre panel over a dimmed world, with a row of small tab icons across the top edge?)\n"
+        "TAB: (is that panel showing the '%s' view, or content clearly about %s, rather than another panel?)\n"
         "DEATH: (is this the 'You Died' death screen?)\n"
         "TITLE: (is this the title or connect screen?)" % (want, want))
     b64 = base64.b64encode(open(p, 'rb').read()).decode()
-    body = json.dumps({"model": model, "max_tokens": 500,
-        "chat_template_kwargs": {"reasoning_effort": "low"},
+    body = json.dumps({"model": model, "max_tokens": 3000,
+        "chat_template_kwargs": {"reasoning_effort": "medium"},
         "messages": [{"role": "user",
         "content": [{"type": "image_url",
                      "image_url": {"url": "data:image/png;base64," + b64}},
                     {"type": "text", "text": prompt}]}]})
-    req = urllib.request.Request(
-        url, data=body.encode(),
-        headers={"Content-Type": "application/json",
-                 "Authorization": "Bearer " + key})
+    headers = {"Content-Type": "application/json"}
+    if key:
+        headers["Authorization"] = "Bearer " + key
+    req = urllib.request.Request(url, data=body.encode(), headers=headers)
     ans = None
     import signal
     class HardTimeout(Exception): pass

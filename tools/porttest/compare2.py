@@ -6,20 +6,20 @@ import json, base64, urllib.request, signal, sys, os
 def timeout_handler(signum, frame):
     raise TimeoutError()
 signal.signal(signal.SIGALRM, timeout_handler)
-url = os.environ.get('VISION_URL', 'http://154.37.220.220:30389/v1/chat/completions')
+url = os.environ.get('VISION_URL', 'http://localhost:42827/v1/chat/completions')
+key = ''
 if os.environ.get('VISION_KEY_FILE'):
     key = open(os.environ['VISION_KEY_FILE']).read().strip()
-else:
-    key = open('/home/retro/.config/vastai/qwen_vllm_key').read().strip()
+MODEL = os.environ.get('VISION_MODEL', 'qwen3.8:27b')
 
 def img(p):
     return base64.b64encode(open(p, 'rb').read()).decode()
 
 g, w = img(sys.argv[1]), img(sys.argv[2])
 body = json.dumps({
-    "model": "qwen38-nvfp4",
-    "max_tokens": 1200,
-    "chat_template_kwargs": {"reasoning_effort": "low"},
+    "model": MODEL,
+    "max_tokens": 3000,
+    "chat_template_kwargs": {"reasoning_effort": "medium"},
     "messages": [{"role": "user", "content": [
         {"type": "text", "text": "Two screenshots of the same Minecraft mod UI screen: image 1 is the KNOWN-GOOD older version, image 2 is the ported newer version. Ignore minor font antialiasing and slight vanilla-texture differences. List the VISIBLE LAYOUT OR CONTENT differences (what is missing, added, moved, different colors, different lists/text, different panel structure). Be specific and short."},
         {"type": "image_url", "image_url": {"url": "data:image/png;base64," + g}},

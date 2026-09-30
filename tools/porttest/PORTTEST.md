@@ -261,6 +261,36 @@ a long tp is what triggers the desync here.
     builder object across subcommands shares its `executes` target.
 - **Timeouts: 60s hard cap.** No batched multi-minute polling loops; check
   state between short commands.
+- **The menu needs the townie inside the client's tracking range.**
+  `VillagerMenus.doFromNetwork` resolves the payload's raw entity id via
+  `level().getEntity(id)`; out of range it is null, the server-side write
+  and the six `init*` calls NPE, the client opens the menu with "Failed
+  to open a screen with advanced data" and DROPS the connection (all six
+  shots then capture the Connection-Lost dialog, every gate fails with
+  "no menu on screen"). A live/mature world's townies wander, so this
+  hits only a world hours old. Fresh fixture drive = townie at spawn = in
+  range (the golden side never saw this). If you must use a live town,
+  `tp <uuid> <player>` the townie next to the player first - never
+  `tp` the player, that is the desync/death trigger.
+- **Vision gate backend = the live Nova GPU proxy**,
+  `http://localhost:42827/v1/chat/completions`, model `qwen3.8:27b`
+  (`check.sh` defaults + the manifest `check` block agree). The vast-era
+  box 154.37.220.220 answers TCP but returns empty HTTP (dead box); the
+  manifest pinned its model name `qwen38-nvfp4`, which Nova 404s.
+  Reasoning level is **medium**: lower budgets spend the completion
+  tokens on reasoning and return `content: null`; pure-yes/no MENU
+  questions misfire on dimmed-world captures, so the question names
+  concrete visuals (centre panel over a dimmed world, tab-icon row).
+- **A world that failed the empty-ItemStack save (1.20.6:
+  `ItemStack.save` throws on EMPTY slots) loses its townies across chunk
+  cycles** - "An Entity type entity.questown.visitor ... will not
+  persist" in the autosave log, then `data get entity <uuid>` finds
+  nothing while `kill @e[type=questown:visitor]` still finds a
+  half-registered one. That made "mature the live wip world" a dead end
+  (no stable townie for the menu); the fix (commit `7785c651`, air tag
+  per empty slot) only takes effect on a server RESTART, so any
+  pre-fix world keeps bleeding townies. A fresh `rebank` drive is the
+  reliable fixture.
 
 ## Usage
 
