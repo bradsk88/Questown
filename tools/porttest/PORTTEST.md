@@ -69,6 +69,20 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
   against the manifest threshold).
 - `sweep.sh` — kills any JVM tied to the Questown repos or gradle daemons
   (matched by cwd + main class, so the invoking shell cannot match itself).
+- `state.py` (`capture.sh state`) — verified state for both branches in one
+  printout: server pid → LISTEN port (from /proc fds), client CWD (= its
+  gameDir), gradle wrappers, FIFO-writer, stale `.qtdiag-cmd`, fresh-shot
+  mtime. Run it before assuming anything about what is running — process
+  listings alone cannot tell the two branches' servers apart.
+- `rebank.sh [wip|a11|both]` — full deterministic bank refresh: per branch
+  `prep → launch → join → fixture → shot ×6 → gate → bank`, both branches
+  in parallel (wip on 25565, a11 on 25571; ~45 min). Wipes both worlds.
+- Banks carry **sidecars**: every banked `<screen>.png` gets a
+  `<screen>.png.json` (captured-at, world-age-min, cursor state, branch,
+  commit) written by `capture.sh bank`. `run.sh diff` compares the two
+  sidecars' `world-age-min` and prints a DRIFT line + fails when they
+  differ by >30 min, so fixture drift is visible without pixel forensics.
+  Banks shot before sidecars existed have none; `rebank` creates them.
 - `cv` (see references/cv-tool.md) — the diff engine (PSNR/SSIM/% changed).
 
 ## Branch pinning (do not trust names)
@@ -170,6 +184,28 @@ a long tp is what triggers the desync here.
   the log shows `[townplace] flag placed` repeating. On an already-set-up
   world, use the *initialized* flag's coordinates (from the original
   fixture log lines) for `townspawn`/`openvillager`, or `prep` first.
+- **Match `gamemode` across the two sides before diffing.** The HUD and
+  hotbar render differently in creative vs survival (creative: no hearts/
+  hunger, different XP bar + hotbar). The wip side had drifted to
+  `gamemode=creative` in `run/server.properties` while golden stayed
+  `survival`; both must be survival for a comparable HUD. (Dev-only
+  config; never commit a world's `server.properties`.)
+- **A fresh-world rebank does NOT converge the data screens.** Run on
+  2026-09-30: after `rebank.sh both` (both worlds wiped + re-prepped,
+  same fixture, survival on both sides, world age 3 vs 15 min), the
+  parent center diff was 61% vs the mature bank's 2.2%; even
+  golden-vs-golden (old bank vs fresh re-shot, same branch, same code)
+  was 72%. The parent/stats/skills/economics/quests screens render
+  live town data (villager inventories, stats, quest lists, item-panel
+  pages), and two different worlds hold different data — the fixture is
+  deterministic per world, not across worlds. A useful bank comes from a
+  *mature* fixture world where the data has settled; `rebank` from a
+  fresh world is useful for chrome/layout-only screens (bop stayed at
+  2.5%) and for regenerating sidecars, not for the data screens.
+  Also learned the same run: `connect` issued while `-Pautojoin` is
+  still mid-handshake opens a second connection and can stall the client
+  forever (hit on 1.19.2); `rebank.sh` now only falls back to `connect`
+  when no `logged in with entity id` line exists yet.
 - **GUI render regression: probe, don't speculate.** Add a 30×20 red
   `guiGraphics.fill` probe at the top of `Screen.render` (after
   `renderBackground`) AND inside the suspected method; measure the

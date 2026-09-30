@@ -42,6 +42,17 @@ diff_all() {
   echo "canvas: $g (identical)"
   fail=0
   for s in $(screens); do
+    # fixture-drift check: banks carry .json sidecars with world-age-min
+    if [ -f "$GG/$s.png.json" ] && [ -f "$LL/$s.png.json" ]; then
+      d=$(python3 -c "
+import json
+ga = json.load(open('$GG/$s.png.json')).get('world-age-min')
+la = json.load(open('$LL/$s.png.json')).get('world-age-min')
+if ga is None or la is None: print('')
+elif abs(ga - la) > 30: print('DRIFT: world ages differ by %d min (golden %s, live %s) - fixture content may have moved; rebank for a clean diff' % (abs(ga - la), ga, la))
+" 2>/dev/null)
+      [ -n "$d" ] && { echo "   $d"; fail=1; }
+    fi
     if [ -f "$GG/$s.png" ] && [ -f "$LL/$s.png" ]; then
       r=$(cv diff "$GG/$s.png" "$LL/$s.png" 2>/dev/null || true)
       echo "-- $s: $r"
@@ -58,7 +69,7 @@ diff_all() {
       fail=1
     fi
   done
-  [ $fail -eq 0 ] || { echo "(screens missing - capture first, then 'run.sh diff')"; return 1; }
+  [ $fail -eq 0 ] || { echo "(diff not clean: missing screens and/or fixture drift above - capture first, then 'run.sh diff')"; return 1; }
 }
 
 case "${1:-all}" in

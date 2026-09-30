@@ -18,15 +18,26 @@
 #   shot <name>    death/desync guard, then openvillager <type> + shot <name>
 #   collect        copy diags/*.png -> out-dir
 #   check          run check.sh on out-dir (content gate; run before banking)
+#   bank <dir>     copy <proj>/<game>/diags/*.png -> <dir> + write <name>.png.json
+#                  sidecars (captured-at, world-age, cursor, branch, commit)
+#                  (usage: capture.sh bank <proj> <bank-dir>)
+#   state          verified state summary (server pid/port, client CWD, FIFO
+#                  writer, stale .qtdiag-cmd, fresh-shot mtime) for this branch
 #
 # The screen list and expect blocks come from manifest.json.
 set -uo pipefail
 STAGE=${1:?stage}
-PROJ=${2:?project dir}
-PORT=${3:?server port}
-GAME=${4:?client gameDir relative to project}
+PROJ=${2:-}
+PORT=${3:-}
+GAME=${4:-}
 OUT=${5:-/tmp/porttest-coll}
 NAME=${6:-}
+# `state` and `bank` have their own arg shapes; the rest need PROJ/PORT.
+case $STAGE in
+  state) ;;
+  bank) [ -n "$PROJ" ] || die "bank stage needs a project dir" ;;
+  *) [ -n "$PROJ" ] && [ -n "$PORT" ] || die "usage: capture.sh <stage> <project-dir> <server-port> [client-game-dir] [out-dir] [name]" ;;
+esac
 
 QJDK=/home/retro/.gradle/jdks/jdk-17.0.20+8
 TOOL=$(cd "$(dirname "$0")" && pwd)
@@ -53,6 +64,7 @@ prep)
   say "sweep"
   "$TOOL/sweep.sh" "$PROJ"
   rm -rf "$PROJ/run/world"
+  date +%s > "$PROJ/run/.world-prep-at"
   say "world wiped (fresh normal world will generate)"
   if grep -q '^level-type=flat\b' "$PROJ/run/server.properties" 2>/dev/null; then
     die "level-type=flat: flat-world spawn is broken here (server y=-60, client Y desyncs ~64, player dies). Use a normal world."
@@ -72,12 +84,11 @@ launch-server)
   ;;
 
 wait-server)
-  # "Done (Xs)!" = world loaded (1.19.2 and 1.20.6 both use this line).
-  # An OLD line from a previous run can match before this run's log
-  # rotates in - harmless, because the port-LISTEN check below is the
-  # real gate (each side binds a distinct port).
+  # Port LISTEN is the real gate: "Done (" in $SLOG4 can be an OLD line
+  # from a previous run (latest.log persists across restarts), and a
+  # fresh world's generation takes minutes before the port binds.
   t=0
-  until LC_ALL=C grep -aq "Done (" "$SLOG4" 2>/dev/null; do
+  until port_listening; do
     if LC_ALL=C grep -aq "BUILD FAILED" "$SLOG"; then
       die "gradle failed: $(LC_ALL=C grep -am1 'error\|FAILED' "$SLOG" | cut -c1-140)"
     fi
@@ -89,9 +100,6 @@ wait-server)
   if [ -n "$got" ] && [ -n "$want" ] && [ "$got" != "$want" ]; then
     die "gradle version mismatch: wanted $want (wrapper of $PROJ), log says $got - wrong project was launched"
   fi
-  # daemon-mode logs carry no banner; the port-LISTEN check is the identity
-  # check (each side binds a distinct port).
-  port_listening || die "nothing LISTEN on :$PORT (hex $(port_hex)) after 'Done for load'"
   say "server up: listening on :$PORT${got:+ (gradle $got)}"
   ;;
 
@@ -191,6 +199,47 @@ collect)
 
 check)
   "$TOOL/check.sh" "$OUT" "$MAN"
+  ;;
+
+bank)
+  [ -n "$PROJ" ] || die "bank stage needs a project dir: capture.sh bank $PROJ <bank-dir>"
+  BANKDIR=${3:-}
+  [ -n "$BANKDIR" ] || die "bank stage needs a bank dir: capture.sh bank $PROJ <bank-dir>"
+  GAME=${4:-run-client}
+  DIAGS=${QT_DIAG_DIR:-$PROJ/$GAME}/diags
+  mkdir -p "$BANKDIR"
+  branch=$(git -C "$PROJ" branch --show-current 2>/dev/null || echo '?')
+  commit=$(git -C "$PROJ" rev-parse --short HEAD 2>/dev/null || echo '?')
+  now=$(date +%s)
+  stamp=$(cat "$PROJ/run/.world-prep-at" 2>/dev/null || echo '')
+  age_json='null'
+  [ -n "$stamp" ] && age_json=$(( (now - stamp) / 60 ))
+  n=0
+  for png in "$DIAGS"/*.png; do
+    [ -e "$png" ] || continue
+    name=$(basename "$png")
+    # only bank screens the manifest knows about (test artifacts like
+    # v1.png stay out of the bank)
+    python3 -c "import json,sys; sys.exit(0 if any(s['name']=='${name%.png}' for s in json.load(open('$MAN'))['screens']) else 1)" || continue
+    cp "$png" "$BANKDIR/$name"
+    cat > "$BANKDIR/$name.json" <<EOF
+{
+  "screen": "$(basename "$name" .png)",
+  "captured-at": "$(date -Iseconds -d "@$([ -f "$png" ] && stat -c %Y "$png")" 2>/dev/null)",
+  "world-age-min": $age_json,
+  "cursor": "parked 1,1 (shot stage)",
+  "branch": "$branch",
+  "commit": "$commit",
+  "source": "$png"
+}
+EOF
+    n=$((n+1))
+  done
+  say "banked $n screens + sidecars -> $BANKDIR"
+  ;;
+
+state)
+  python3 "$TOOL/state.py"
   ;;
 
 *)
