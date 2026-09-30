@@ -896,11 +896,13 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public void addAdditionalSaveData(CompoundTag p_21484_) {
         super.addAdditionalSaveData(p_21484_);
         ListTag items = new ListTag();
-        // 1.20.5+: ItemStack.save throws on EMPTY (1.19.2 wrote an air tag).
-        // Keep the per-slot size by saving an air tag for empty slots; the
-        // load side already parses those back through MCHeldItem.fromMCItemStack.
+        // 1.20.5+: ItemStack.save throws on EMPTY (1.19.2 wrote a raw air tag).
+        // Keep the per-slot size by writing an empty compound for empty slots;
+        // the load side parses those back through MCHeldItem.fromMCItemStack (which
+        // maps an EMPTY stack to Air()). A saved AIR stack does NOT work either -
+        // new ItemStack(Items.AIR) is itself empty, so save() throws the same way.
         Jobs.getItems(job.get())
-            .forEach(v -> items.add(v.isEmpty() ? new ItemStack(Items.AIR).save(registryAccess())
+            .forEach(v -> items.add(v.isEmpty() ? new CompoundTag()
                 : v.save(registryAccess())));
         p_21484_.put("items", items);
     }
