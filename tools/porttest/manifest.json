@@ -121,6 +121,26 @@
     411,
     426
    ]
+  },
+  {
+   "name": "work",
+   "open": "open_jobs",
+   "expect": {
+    "panelLabel": "Work",
+    "mustNotBe": [
+     "death",
+     "title",
+     "no menu"
+    ]
+   },
+   "note": "WorkScreen (job board): standalone container menu, opened with _qtdev open_jobs on both branches (thin wrapper over TownFlagBlockEntity.openJobsMenu; golden mirror committed to Questown-119). A blank board means zero work requests in the fixture world (check the server log for 'Request added to job board'), not a render bug. 2026-10-01: the fixture world had no requests, so add one via the owner's request path before banking a card-rich capture. The work-tab face fix and the card hover/tooltip are the oracle's real targets.",
+   "center": [
+    140,
+    170,
+    492,
+    502
+   ],
+   "centerNote": "computed for GUI scale 2: 176x166 window centered in the 317-wide (634/2) GUI space -> (70, 85)-(246, 251) GUI px, doubled to (140, 170)-(492, 502) canvas px. Verify against the first live work.png before trusting the rect as the parity diff region."
   }
  ],
  "check": {
