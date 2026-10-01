@@ -8,13 +8,16 @@ import ca.bradj.questown.town.entity.TownFlags;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.commands.arguments.coordinates.Coordinates;
+import net.minecraft.commands.arguments.item.ItemArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Item;
 
 import java.util.Comparator;
 import java.util.UUID;
@@ -23,13 +26,13 @@ import java.util.UUID;
 // the flag right-click path (showMultiStatusUI / showUI) without input injection.
 // Drives the port-test GUI captures headlessly. No permission gate (console/FIFO).
 public class OpenVillagerMenuDevCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> src) {
+    public static void register(CommandDispatcher<CommandSourceStack> src, CommandBuildContext ctx) {
         // @formatter:off
         src.register(
             Commands.literal("_qtdev")
                 .then(Commands.literal("openvillager")
                     .then(Commands.argument("type", StringArgumentType.word())
-                        .suggests((ctx, b) -> SharedSuggestionProvider.suggest(
+                        .suggests((sugC, b) -> SharedSuggestionProvider.suggest(
                                 new String[]{OpenVillagerMenuMessage.INVENTORY, OpenVillagerMenuMessage.QUESTS,
                                         OpenVillagerMenuMessage.STATS, OpenVillagerMenuMessage.SKILLS,
                                         OpenVillagerMenuMessage.ECONOMICS, OpenVillagerMenuMessage.BOP}, b))
@@ -44,6 +47,11 @@ public class OpenVillagerMenuDevCommand {
                                 BlockPosArgument.getLoadedBlockPos(css, "pos")))))
                 .then(Commands.literal("open_jobs")
                     .executes(css -> runOpenJobs(css.getSource())))
+                .then(Commands.literal("board_request")
+                    .then(Commands.argument("item", ItemArgument.item(ctx))
+                        .executes(css -> runBoardRequest(
+                                css.getSource(),
+                                ItemArgument.getItem(css, "item").getItem()))))
         );
         // @formatter:on
     }
@@ -120,6 +128,23 @@ public class OpenVillagerMenuDevCommand {
         flag.openJobsMenu(player, false);
         QT.FLAG_LOGGER.info("[open_jobs] work board for {} (flag {})",
                 player.getGameProfile().getName(), flag.getBlockPos());
+        return 0;
+    }
+
+    // board_request: post one work request to the job board (thin wrapper over
+    // WorkHandle.requestWork(item), the same call AddWorkFromUIMessage.handle
+    // makes) so a headless capture can drive a card-rich board. Mirrored from the
+    // 1.20.6 wip (QtDevClickCommand) for the work-screen bank pair. The item
+    // takes the vanilla ItemArgument (a word argument misparses
+    // minecraft:ids over the console FIFO).
+    private static int runBoardRequest(CommandSourceStack source, Item item) {
+        if (TownFlags.all().isEmpty()) {
+            QT.FLAG_LOGGER.warn("[board_request] no flags registered");
+            return 1;
+        }
+        TownFlagBlockEntity flag = TownFlags.all().iterator().next();
+        flag.getWorkHandle().requestWork(item);
+        QT.FLAG_LOGGER.info("[board_request] work request posted for {} (flag {})", item, flag.getBlockPos());
         return 0;
     }
 
