@@ -61,3 +61,9 @@ logs
 /log.txt
 /log[0-9]*.txt
 /output.txt
+
+# local agent/client/Python runtime noise
+.pi/prompts/
+/assets/
+/run-client/
+__pycache__/
