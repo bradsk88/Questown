@@ -183,10 +183,15 @@ One guard note from 2026-10-01: the post-join `Health` read must be a
 POLLED 0.0f (capture.sh polls ~25s) - a single read at ~8s can race the
 modern client's ~20s auto-respawn and FATAL on a player who was about to
 recover; the polling kills a genuinely stuck death but tolerates the
-auto-respawn window. (The 1.19.2 golden client has a different death
-latch - a "You Died" overlay on every join, no server-side death event;
-see wip `.scratch/work-board-request/golden-client-death-overlay.md`
-- unstick does not fix that one.)
+auto-respawn window. The 1.19.2 golden side's "You Died on every join"
+overlay had the SAME root cause - a latched death state (Health 0.0f +
+DeathTime) persisted in the playerdata .dat, but that .dat is named by
+PLAYER UUID on this box, and the old unstick wiped/verified a literal
+`Dev.dat` that never existed (false success; the 380df991-…-9527.dat
+sat untouched through three "fresh playerdata" attempts). unstick now
+wipes all player .dat files and verifies none survive; the latch is
+cleared by the normal sequence (root cause 2026-10-01, verified clean:
+Health 20.0f on rejoin, no death overlay, work board captured).
 
 ### Cursor / hover drive (WorkScreen)
 
@@ -296,10 +301,17 @@ townie - pre-existing golden-identical code; tracker:
   empty-hand click. Cards on the board are the town's work requests
   (`TownWorkHandle.requestedResults`; server logs "Request added to job
   board") — a board with zero requests renders zero cards, so confirm one
-  exists in the server log before reading a blank board as a render bug. The
-  golden (1.19.2) repo has no `open_jobs` (its dev commands are
-  `OpenVillagerMenuDevCommand` et al.): a golden-side work-board capture
-  needs the same thin command added there — not yet run, open question. The tiling WM gave the two
+  exists in the server log before reading a blank board as a render bug.
+  The golden (1.19.2) repo carries the same thin `_qtdev open_jobs`
+  command (mirrored to Questown-119) and `_qtdev board_request <item>`
+  to post a card; the work board itself is a standalone panel ("Page 1 / 1"
+  title bar, request-card rows like "An item was requested") with NO tab
+  strip, so the content gate's MENU/TAB lines use its own description from
+  the manifest `expect.menu` (added 2026-10-01: the tab-icon wording
+  misfired on both the golden and the wip work capture). The work capture is
+  banked on both sides (goldens/1.19.2/work.png, live/1.20.6/work.png);
+  its center diff (26.9%) is fixture content - the two worlds hold 3 vs 1
+  posted requests - with the card structure confirmed identical by vision. The tiling WM gave the two
   clients different widths (wip 634, a11 420) in the same run, and the
   banked PNG is whatever width the window had. `run.sh diff`'s canvas
   check only compares the two *current* sides, so both sides changing in

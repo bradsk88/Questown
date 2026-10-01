@@ -307,10 +307,18 @@ unstick)
     case "$cwd" in "$PROJ"/*) kill -9 "$p" && say "killed $p ($cwd)";; esac
   done
   sleep 2
-  say "wipe $PNAME player data (while server is DOWN)"
-  rm -f "$PROJ/run/world/playerdata/$PNAME.dat"* || true
-  ls "$PROJ/run/world/playerdata/$PNAME".dat* >/dev/null 2>&1 && die "wipe failed: $PNAME.dat survived"
-  say "verify: port closed, dat gone - clean"
+  say "wipe player data (while server is DOWN)"
+  # playerdata files are named by UUID, never by player name - a literal
+  # $PNAME.dat wipe proves nothing here (the 09-30 'fresh playerdata' trap;
+  # the latch sat in 380df991-…-9527.dat the whole time). These fixture worlds
+  # hold one human player, so wiping all of them IS the reset: server is down,
+  # nothing will re-save the dead state.
+  for d in "$PROJ/run/world/playerdata"/*.dat "$PROJ/run/world/playerdata"/*.dat_old; do
+    [ -e "$d" ] && rm -f "$d"
+  done
+  ls "$PROJ/run/world/playerdata/"*.dat* >/dev/null 2>&1 \
+    && { say "surviving player dats:"; ls -la "$PROJ/run/world/playerdata/"; die "wipe failed: player .dat survived"; }
+  say "verify: port closed, playerdata clear - clean"
   say "boot server (fresh process)"
   setsid nohup env JAVA_HOME=$QJDK LANG=C.UTF-8 "$PROJ/gradlew" -p "$PROJ" \
     runServer -Dquestown.tp.fifo=true > "$SLOG" 2>&1 &

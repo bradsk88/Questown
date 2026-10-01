@@ -78,13 +78,18 @@ for s in m['screens']:
         print('FAIL %s: missing %s' % (name, p)); fail = 1; continue
     expect = s.get('expect', {})
     want = expect.get('panelLabel') or expect.get('activeTab', '')
+    # the six tabbed screens have a tab-icon strip; standalone panels (the
+    # work board) do not - a wrong MENU description misfires the gate there
+    menu_desc = expect.get('menu') or (
+        "a centre panel over a dimmed world, with a row of small tab icons "
+        "across the top edge")
     prompt = (
         "Look at this Minecraft screenshot. Answer ONLY these lines, each "
         "just 'yes' or 'no' after the colon:\n"
-        "MENU: (is the tabbed villager menu open on screen - a centre panel over a dimmed world, with a row of small tab icons across the top edge?)\n"
+        "MENU: (is %s on screen?)\n"
         "TAB: (is that panel showing the '%s' view, or content clearly about %s, rather than another panel?)\n"
         "DEATH: (is this the 'You Died' death screen?)\n"
-        "TITLE: (is this the title or connect screen?)" % (want, want))
+        "TITLE: (is this the title or connect screen?)" % (menu_desc, want, want))
     b64 = base64.b64encode(open(p, 'rb').read()).decode()
     body = json.dumps({"model": model, "max_tokens": 3000,
         "chat_template_kwargs": {"reasoning_effort": "medium"},

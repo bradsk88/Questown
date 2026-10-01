@@ -126,14 +126,15 @@
       "name": "work",
       "open": "open_jobs",
       "expect": {
-        "panelLabel": "Work",
+        "panelLabel": "work request board",
+        "menu": "a work-request board panel over a dimmed world: a grey centre panel with a 'Page 1 / 1' title bar, pagination arrows and a close cross, containing card rows like 'An item was requested' with an item icon",
         "mustNotBe": [
           "death",
           "title",
           "no menu"
         ]
       },
-      "note": "WorkScreen (job board): standalone container menu, opened with _qtdev open_jobs on both branches (thin wrapper over TownFlagBlockEntity.openJobsMenu; golden mirror committed to Questown-119 - _qtdev board_request <item> posts the card via WorkHandle.requestWork, the owner's request path). A blank board means zero work requests in the fixture world (check the server log for 'Request added to job board'), not a render bug. 2026-10-01: the fixture world had no requests, so add one via the owner's request path before banking a card-rich capture. The work-tab face fix and the card hover/tooltip are the oracle's real targets. 2026-10-01 goldens status: wip work.png banked and oracle-verified (job-card + wheat_seeds card + face). The GOLDEN work capture is blocked by a client-side 'You Died' overlay that shows on every 1.19.2 client join on this box (fresh world, peaceful, clean playerdata - yet the death screen renders with the server having logged NO death event; live-verified 2026-10-01 evening; the 09-30 golden bank of the other six screens proves this client renders menus fine, so the latch entered during this evening's runs and is not world state) - filed; the 1.20.6 work bank stands alone in the meantime.",
+      "note": "WorkScreen (job board): standalone container menu, opened with _qtdev open_jobs on both branches (thin wrapper over TownFlagBlockEntity.openJobsMenu; golden mirror committed to Questown-119 - _qtdev board_request <item> posts the card via WorkHandle.requestWork, the owner's request path). A blank board means zero work requests in the fixture world (check the server log for 'Request added to job board'), not a render bug. 2026-10-01: the fixture world had no requests, so add one via the owner's request path before banking a card-rich capture. The work-tab face fix and the card hover/tooltip are the oracle's real targets. 2026-10-01 goldens status: wip work.png banked and oracle-verified (job-card + wheat_seeds card + face). 2026-10-01 evening: GOLDEN SIDE BANKED (goldens/1.19.2/work.png) after the death latch was cleared - root cause: a latched death state (Health 0.0f + DeathTime) persisted in the UUID-named playerdata .dat that the old unstick's literal Dev.dat wipe/verify never touched (false 'dat gone'); capture.sh unstick now wipes/verifies ALL player .dat files. Verified clean: Health 20.0f on rejoin, no overlay, board captured and gate-passed. Golden board holds 3 posted requests (2 pre-existing + wheat_seeds) vs wip's 1 - the 26.9% center diff is fixture content in the same class as skills/quests; card structure and 'Page 1 / 1' title bar vision-confirmed identical.",
       "center": [
         232,
         258,

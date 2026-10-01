@@ -51,3 +51,25 @@ captures the death overlay.
 The work-screen golden capture (the 1.19.2 half of the parity pair) is the one
 blocked item; the wip half is banked and oracle-verified, and the other six golden
 screens still stand.
+
+## RESOLVED 2026-10-01 evening
+
+Root cause: the "latch" WAS the documented stuck-death state (Health 0.0f +
+DeathTime persisted on the server-side entity), NOT a separate client-side
+overlay. It lived in the playerdata .dat — which is named by PLAYER UUID on
+this box (380df991-f603-344c-a090-369bad2a924a.dat, mtime 05:17 from the
+zombie-death session). `capture.sh unstick` wiped and verified a LITERAL
+`Dev.dat` that never existed, so it reported "dat gone - clean" while the
+real dat sat untouched; every fresh client then re-loaded the death state
+and the server replayed the death screen, with `data get entity Dev Health`
+= 0.0f and DeathTime = 24833 ticks.
+
+Fix: `capture.sh unstick` now wipes ALL `playerdata/*.dat{,_old}` and
+verifies the directory is clear (fixture worlds hold one human player).
+After a manual wipe of that one dat (server down), the rejoin was clean:
+Health 20.0f, zero death lines in the client log, no overlay on the
+vision-checked capture, and the golden work board was captured, gate-passed
+and banked (goldens/1.19.2/work.png).
+
+status: resolved
+closed: 2026-10-01
