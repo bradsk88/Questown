@@ -84,7 +84,69 @@ evidence than a live run and is faster. Reserve this skill for behavior that
 only settles on a live world (interaction timing, pathfinding end-state,
 real-time effects).
 
+## Scenario selection: which scenario proves which behavior
+
+Do not pick a scenario because it runs autonomously or looks convenient. The
+scenario name is the wrong selector; the behavior you want to prove is.
+The full table (every scenario, its time model, what it staffs, run mode) and
+the three-"warp" / TPS breakdown live in
+`src/main/java/ca/bradj/questown/commands/test/AUTOTESTS.md`; the reasoning in
+`.../commands/test/COMPLEX.md`. The two picks to never mix up:
+
+- **Cook / leaver / food timing / anything that only ticks in realtime** ->
+  `village/self_sufficiency`. This runs **realtime** and must be **held** with a
+  player near the flag (flag ticks need a player). This is where the cooking and
+  food-lock behavior lives.
+- `village/growth` **warps the clock with `time set`** and, per COMPLEX.md,
+  "structurally cannot exercise leaver/timed-work behavior (which only ticks in
+  realtime). A warp skips exactly the behavior it is meant to watch." It also
+  does not staff a cook (food comes from the town's own jobs, never seeded).
+  So `village/growth` is the wrong scenario to prove a cook/food behavior, even
+  though it runs without a client.
+- **`warps` are not tick-rate boosts — they skip real ticks and simulate.** The
+  harness's `warp` (`time set`, `warpAmount`, default 24000, injected by
+  `build.gradle`) fast-forwards the day/night clock. The mod's
+  `TimeWarpCommand` / `flag.warpTime(ticks)` / `MCTownState.warp` path
+  **skips the intervening real ticks and computes the end state** (evaluates
+  each job's "important ticks" in one analytic pass); it does NOT run those
+  ticks faster. A "Warp took N ms" log line is the *computation* time, not N
+  accelerated ticks. Because it bypasses the tick loop, it **skips** the
+  behavior that only ticks in realtime, so it cannot substitute for a realtime
+  proof. There is no "drive real ticks faster" lever (vanilla TPS is fixed at
+  20): a realtime proof runs real ticks (the realtime watch); warp is the
+  end-state tool behind the single-job tests (`cook`/`farmer`).
+- **Before launching a "prove phase X live" run, pin the seed vs the gate AND the batch's room
+  requirements.** If the behavior is a phase with a roster/state threshold (e.g. the cook phase
+  `PHASE_JOB_CHANGE_FOOD` opens only at **roster ≥ 3**), confirm the chosen seed starts at/above
+  that threshold BEFORE spending a launch: `grep VILLAGER_COUNT` (or the seed's roster) in the
+  scenario's executor, and `grep villagerCount\|tryPhase2_5`
+  in `TownQuests` for the gate. A 2-villager seed proves nothing about a roster-3
+  phase. Caught this way it is a one-line seed change; re-derived as a live run it
+  costs a launch + a multi-day watch and still ends at the same threshold.
+  Then read the phase's *batch* (`addQuestsFor...`): for every job it staffs, the job JSON
+  (`data/questown/questown_jobs/<root>_<work>.json`) carries `room` and `block` requirements
+  the town must be able to build. If the batch has no quest that creates that room and the
+  scenario's seed/room-builder can't supply one, the staffed townie loops
+  `seeking_work`↔`downtime` forever (no selectable work), its JOB_CHANGE quest never closes,
+  and the batch reward never fires — and no amount of watch-cadence finds it, because the
+  town "looks alive." The cook phase's live run (2026-10, egret) spent ~15 min of real ticks
+  plus deep extract-pipeline code reads on that loop: every `cook/*` job requires
+  `room: questown:kitchen_small`, the 2.5 batch has no kitchen quest (it only appears in
+  phase 5, gated behind 2.5), and the diagnosis was two greps (`cook_simple_furnace_food.json`
+  `room` field + `grep kitchen_small TownQuests.java`).
+- If the scenario is stuck at roster 0 with "no villagers and no open quests"
+across several observe windows, that is a scenario limitation, not transient.
+  Stop and reassess the scenario choice rather than keep polling.
+
 ## Driving a run (vs. observing it)
+
+**A staffed townie idling across 2+ cycles: first read is its job JSON's
+`room`/`block`/`tools` requirements vs the town's registered rooms and held items — never
+the loot/extract pipeline.** Idle-ness of a townie that *has* an open quest is a missing
+world prerequisite (a room nobody can build, a tool nobody has), and the fix is the
+missing quest/room — not the pipeline. The extract pipeline only looks broken when the
+item flow is visibly wrong (carrying without depositing, `cannot deposit` lines); with no
+such line, the work was never selected.
 
 **The observation standard.** The two modes have different rules. Verification
 (this skill's main job) may read code freely: code says what to *measure*. A

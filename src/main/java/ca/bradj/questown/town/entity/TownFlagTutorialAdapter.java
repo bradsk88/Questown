@@ -5,26 +5,17 @@ import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import net.minecraft.world.item.ItemStack;
-import ca.bradj.questown.gui.ItemEconomicsData;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
-import ca.bradj.questown.jobs.WorksBehaviour;
-import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.town.CoreProgression;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.Ingredient;
 
-import javax.annotation.Nullable;
-import java.util.Collection;
 import java.util.Map;
 
 import static ca.bradj.questown.town.entity.TownQuests.defaultQuestCompletionRewards;
@@ -92,24 +83,6 @@ class TownFlagTutorialAdapter implements TutorialTownView {
     }
 
     @Override
-    @Nullable
-    public JobID chooseJobForTutorial(MCQuestBatches questBatches) {
-        WorksBehaviour.TownData data = flag.getTownData();
-        CoreProgression<JobID, ResourceLocation> prog = new CoreProgression<>(
-                flag.getEconomicsHandle().getAggregatedItems(null),
-                GathererUnmappedNoToolWorkQtrDay.ID::equals,
-                jobs -> Compat.shuffle(jobs.iterator(), flag.getServerLevel()).get(0),
-                j -> producesFood(j),
-                (j, needs) -> resourceImpact(needs, data, j)
-        );
-        return prog.getFirstJobChange(
-                ServerJobsRegistry.getAllRootJobs(),
-                ServerJobsRegistry::getRoomForJobId,
-                q -> questBatches.includes(v -> q.equals(v.getWantedId()))
-        );
-    }
-
-    @Override
     public ResourceLocation getRoomForJob(JobID job) {
         return ServerJobsRegistry.getRoomForJobId(job);
     }
@@ -130,29 +103,10 @@ class TownFlagTutorialAdapter implements TutorialTownView {
                         new AddBatchOfQuestsForVisitorReward(flag, VillagerUUID.get(nextVisitorUUID))
                 );
             }
-            case TutorialTownView.PHASE_NEW_JOB_ROOM, TutorialTownView.PHASE_7 ->
+            case TutorialTownView.PHASE_NEW_JOB_ROOM, TutorialTownView.PHASE_7, TutorialTownView.PHASE_JOB_CHANGE_FOOD ->
                     new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
             default -> new AddBatchOfQuestsForVisitorReward(flag, null);
         };
-    }
-
-    private boolean producesFood(JobID j) {
-        return ServerJobsRegistry.getResults(flag.getTownData(), j).stream().anyMatch(
-                i -> Ingredient.of(ca.bradj.questown.core.init.TagsInit.Items.VILLAGER_FOOD).test(i.toMCItemStack())
-        );
-    }
-
-    private Collection<ItemEconomicsData> resourceImpact(
-            ImmutableList<ItemEconomicsData> needs,
-            WorksBehaviour.TownData data,
-            JobID j
-    ) {
-        ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(data, j);
-        return needs.stream().filter(v -> results.stream().anyMatch(z -> sameItem(v, z))).toList();
-    }
-
-    private static boolean sameItem(ItemEconomicsData v, MCTownItem z) {
-        return ca.bradj.questown.gui.Ingredients.fromString(v.ingredientKey()).test(z.toMCItemStack());
     }
 
     static ResourceLocation chooseExoticWood(String biomePath) {

@@ -664,6 +664,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             return Tutorial.SKIPPED;
         }
         if (questBatches.getAll().stream().filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE).count() < 2) {
+            if (!hunterRawFoodLootComplete()) {
+                return Tutorial.SKIPPED;
+            }
             addQuestsForJobChangeAndFood(view);
             notifyNewQuests(view);
             return Tutorial.APPLIED;
@@ -1018,18 +1021,32 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         QT.QUESTS_LOGGER.debug("Tutorial batch #1.5 was added to town: {}", qq.toNiceString());
     }
 
+    private boolean hunterRawFoodLootComplete() {
+        ResourceLocation rawFood = TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location();
+        return questBatches.getAll().stream().anyMatch(
+                q -> q.getType() == Quest.QuestType.LOOT
+                        && rawFood.equals(q.getWantedId())
+                        && q.isComplete()
+        );
+    }
+
     private void addQuestsForJobChangeAndFood(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
-        JobID jc = view.chooseJobForTutorial(questBatches);
 
-        MCQuest appleQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.APPLE), 10);
-        appleQuest.setFlavorText("Gather apples and place them in a store room chest. A growing village needs supplies.");
-        q.addNewQuest(appleQuest);
+        MCQuest cookJobQuest = MCQuest.jobChange(batchUUID, null, new JobID("cook", "simple_furnace_food"));
+        cookJobQuest.setFlavorText("Your town needs a cook. Teach a villager the cook job so raw food becomes a meal.");
+        q.addNewQuest(cookJobQuest);
 
-        MCQuest jobQuest = MCQuest.jobChange(batchUUID, null, jc);
-        jobQuest.setFlavorText("Your town needs variety. Open a villager's skill tree and assign a new job.");
-        q.addNewQuest(jobQuest);
+        MCQuest cookedFoodQuest = MCQuest.loot(
+                batchUUID, null, TagsInit.Items.VILLAGER_FOOD.location(), 8
+        );
+        cookedFoodQuest.setFlavorText("Feed your growing village. Produce eight pieces of food from the raw food you have gathered.");
+        q.addNewQuest(cookedFoodQuest);
+
+        MCQuest kitchenQuest = MCQuest.standalone(batchUUID, null, KITCHEN_SMALL);
+        kitchenQuest.setFlavorText("The cook needs a kitchen. Place a furnace in a room and register the door.");
+        q.addNewQuest(kitchenQuest);
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_JOB_CHANGE_FOOD));
         questBatches.add(qq);

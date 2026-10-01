@@ -19,6 +19,14 @@ driver**; the dev is a **secondary observer** via `runClient`. The agent places
 blocks, registers rooms, supplies items, and flips the clock; the dev watches
 in survival. Do not ask the dev to place blocks or drive the run.
 
+**Pick the scenario from the behavior, not the convenience.** If the behavior
+is cook / food / leaver timing (only ticks in realtime), the scenario is
+`village/self_sufficiency` (realtime, held), **not** `village/growth` (that one
+warps the clock with `time set` and cannot exercise realtime job work, and does
+not staff a cook). The full mapping, the `warp` != tick-rate distinction, and
+the "stuck at roster 0" read-out live in
+`questown-behavior-verify` under *Scenario selection*.
+
 **The observation standard.** In this context the agent plays as a new player:
 it may use only what the game surfaces (the server log, the `inspect` tabs,
 the chicken's narration, broadcasts, chat). This skill documents what each
@@ -76,12 +84,25 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
    before the `nohup`, nothing after the `echo`. Verify the writer in a later
    call, not the same one.
    ```
-   # call 1 — FIFO writer, then verify alive in a later call
-   # ONLY these four lines: no kill/sleep/pkill here, or the sh dies on call exit
+   # call 1 — FIFO writer, then verify it HOLDS the fifo fd in a later call.
+   # CRITICAL: use `<>` (O_RDWR), NOT `>` (O_WRONLY). The runServer task config
+   # opens the fifo O_RDONLY (new FileInputStream); an O_WRONLY `>` open blocks
+   # until a reader opens, and an O_RDONLY read-open blocks until a writer opens
+   # — so a `>` writer + the build's read-open DEADLOCK (build hangs forever at
+   # "Configure project", daemon idle in FileInputStream.open0). `<>` opens
+   # non-blocking and holds the write fd before the build opens the read end.
+   # (Verified 2026-10-01: `<>` writer held the fd, console write unblocked, the
+   # build's O_RDONLY completed and BOOT_OK fired; `>` deadlocked until killed.)
+   # Do NOT kill the one fd-holding writer to replace it (removing it left only a
+   # still-pending writer and re-created the deadlock).
+   # Keep ONLY these lines here: no kill/sleep/pkill, or the sh dies on call exit.
    rm -f run/server-cmd.fifo; mkfifo run/server-cmd.fifo
-   nohup sh -c 'sleep 999999 > run/server-cmd.fifo' &
+   nohup sh -c 'sleep 999999 <> run/server-cmd.fifo' &
    echo "fifo writer launched"
-   # later call: pgrep -af 'sleep 999999'  (confirm the sh is alive)
+   # later call: confirm it HOLDS the fifo fd, not just "process present"
+   # (present-but-blocked is still not ready):
+   #   ls -la /proc/<pid>/fd | grep server-cmd.fifo
+   #   (pgrep -af 'sleep 999999' lists it, but that only proves the sh is alive)
    # call 2 — server alone: only nohup + echo + pid capture, no FIFO writer, no sleep
    rm -f /tmp/village-server.log
    JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8 nohup ./gradlew \
@@ -94,19 +115,36 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
    # a new server launches. A capture done later (after other work) has already
    # gone stale and the next teardown kills the wrong pid.
    sleep 3   # let the java child spawn before pgrep sees it
+   # THIS BOX RUNS TWO REPOS: Questown-119 carries its own `sleep 999999` fifo writer
+   # and a similar process tree, so `pgrep -af 'sleep 999999'` / 'forgeserveruserdev'
+   # can list foreign matches. Disambiguate by the fifo fd held (ls /proc/<pid>/fd must
+   # point at THIS repo's run/server-cmd.fifo), and the server pid is the forge java
+   # (cmdline has --launchTarget forgeserveruserdev), not the bash wrapper that launched
+   # it (2026-10: first capture wrote the bash wrapper's pid and a 119 writer pid).
    pgrep -af 'forgeserveruserdev' | head -1 | awk '{print $1}' > run/hold-server.pid
    pgrep -af 'questown.autotest.hol[d]' | grep -v 'bash\|pgrep' | head -1 | awk '{print $1}' > run/hold-wrapper.pid
    pgrep -af 'sleep 999999' | grep -v pgrep | head -1 | awk '{print $1}' > run/hold-fifo.pid
    ```
 4. Verify it booted (separate call): `grep -a 'Flag block entity live'
    /tmp/village-server.log` and `pgrep -af '[f]orgeserveruserdev'`, and confirm the
-   FIFO writer is alive — `pgrep -af 'sleep 999999'`. A dead writer blocks every
+   FIFO writer HOLDS its fd — `ls -la /proc/<writer-pid>/fd | grep server-cmd.fifo`
+   (not just `pgrep -af 'sleep 999999'`: present-but-blocked-in-open is the FIFO
+   O_WRONLY deadlock signature from call 1). A dead or fd-less writer blocks every
    later FIFO write, so catch it here, not on the first `qt` command. A stale
    `:compileJava UP-TO-DATE` means the edit did not compile — force with
    `--rerun-tasks` or confirm a fresh boot line, not the old timestamps.
 5. **Then** launch the client (it reconnects to the live server):
    `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8 nohup ./gradlew
    runClient -Pautojoin > /tmp/village-client.log 2>&1 &`.
+   **Client focus-steal (reported 2026-10-01, unverified fix):** a client
+   launched this way held the dev's keyboard focus hostage — they could not
+   move the cursor back to the IDE and had to exit the game to reply. The
+   suspected cause is the client JVM staying in the terminal's session;
+   the porttest 119 launcher detaches with `setsid nohup sh -c '…'`. Try
+   launching the client through `setsid` and let the dev confirm focus
+   returns to the IDE on the next client launch before treating it as fixed. The
+   agent's own `echo`/pid-capture lines are fine to keep in the call; only the
+   client chain goes under `setsid`.
    The client joins in survival mode with the world set to peaceful
    (deterministic, set by `VillageWatchListener.onLogin` on the server) —
    no FIFO `gamemode`/`difficulty` commands needed. A dead player is the

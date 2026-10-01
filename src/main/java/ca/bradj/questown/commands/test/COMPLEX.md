@@ -1,5 +1,8 @@
 # commands/test — hold mode (visual inspection after a suite)
 
+Choosing *which* scenario proves *which* behavior (realtime vs warped, what each
+staffs, the three "warp" meanings): see `AUTOTESTS.md` (same directory).
+
 The autotest harness normally halts the JVM when the last scenario reports
 (`/tmp/...log` shows `RESULT: N/N passed`). Hold mode keeps the world alive
 afterwards so a dev client can join and *see* the end state — built for
@@ -209,13 +212,38 @@ behavior it is meant to watch.
 **The purpose is to measure food-locks, not to help the town win.** The town is
 supposed to be completely run by its villagers; the watchtower measures how often
 it food-locks (villagers stuck `UNMET_ITEM(#questown:villager_food)` with no cook
-producing) under natural progression. Cooking jobs arrive from *random* job-change
-quests as the town levels up — the scenario does not and must not staff a cook.
-The agent/seed provides only what a player would: the room quests (the room-builder)
-and the player-supplied sword quests (the real-player deposit path). Food is the
-town's own jobs, never something the seed tops up on demand — a seed that feeds the
-town on a timer hides the very lock the test exists to find. The seed is a one-time
-bootstrap (opening food block + sword unblock + the initial job changes), not a supply.
+producing) under natural progression. The seed spawns three villagers — roster 3 is
+the threshold for the reworked onboarding tutorial phase 2.5
+(`PHASE_JOB_CHANGE_FOOD`), which opens at this roster: the batch is the
+cook's JOB_CHANGE, the `kitchen_small` room quest, and 8x `villager_food`
+(so the cook now arrives through the reworked tutorial phase rather than a
+random job-change quest). The kitchen ROOM quest is load-bearing: every
+`cook/*` job requires room `kitchen_small` (see
+`cook_simple_furnace_food.json`), so without it the staffed cook has no
+selectable work and the batch can never complete; with it, the room-builder
+builds the kitchen and the cook works under real ticks.
+Roster 2 (the old seed) plateaued just below the threshold, so the phase never
+opened. The agent/seed provides only what a player would: the room quests (the
+room-builder) and the player-supplied sword quests (the real-player deposit path).
+Food is the town's own jobs, never something the seed tops up on demand — a seed
+that feeds the town on a timer hides the very lock the test exists to find. The
+seed is a one-time bootstrap (opening food block + sword unblock + the initial job
+changes, 2 of the 3 villagers assigned hunter/gatherer; the third unassigned so
+phase 2.5 can staff it as cook), not a supply.
+
+**Verified 2026-10-01 (one held realtime run, roster-3 seed).** The 2.5
+batch opened with the `kitchen_small` ROOM quest; the room-builder built the
+kitchen unaided; the cook was staffed and cycled `cook/extract` (the
+smelt-warp work) and was the named producer of the cooked output — the
+fix's signature (staff → kitchen built → cook works) held under real
+ticks. The run then surfaced a storage soft-lock instead of completing the
+batch: the cook's JOB_CHANGE and the 8x `villager_food` LOOT could not
+close because every townie hit `NO_SPACE` ("every town chest is full") —
+the seed's single store room plus the 144-block opening food block
+saturate before the 2.5→3 gate (needs 2 JOB_CHANGE completions) opens the
+phases that add more storage. The lock is a seed/progression capacity
+question, distinct from the kitchen fix (the kitchen adds zero storage),
+and is open as of that run.
 
 **The seed is gated on the flag ticking, which needs a player.** `SpawnVisitorReward`
 claims and the room scan both run on flag ticks; the flag ticks only with a player

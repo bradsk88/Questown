@@ -211,28 +211,78 @@ class TutorialPhaseGateTest {
         return quests;
     }
 
+    /**
+     * Same state as {@link #questsAtPhase2_5()} except the raw-food LOOT quest is left
+     * incomplete: no live raw-food producer exists yet, so phase 2.5 must not open.
+     */
+    private TownQuests questsAfterHunterRawLootOutstanding() {
+        TownQuests quests = questsWithCampfireDone();
+        addKickoffQuests(quests);
+        completeAllKickoffQuests(quests);
+
+        TestTutorialTownView view = TestTutorialTownView.builder()
+                .villagerCount(2)
+                .build();
+        quests.addTutorialBatches(view);
+
+        ResourceLocation hunterJob = JobID.toRL(new JobID("hunter", "sword"));
+        quests.questBatches.markRecipeAsComplete(null, hunterJob);
+        // Raw-food LOOT deliberately left incomplete.
+        quests.questBatches.markRecipeAsComplete(null, Compat.getItemId(Items.STONE_SWORD));
+        quests.questBatches.markRecipeAsComplete(null, SpecialQuests.BEDROOM);
+
+        return quests;
+    }
+
     @Test
     void whenHunterDoneAndThreeVillagers_jobChangeAndFoodAdded() {
         TownQuests quests = questsAtPhase2_5();
 
-        JobID farmerJob = new JobID("farmer", "wheat");
         TestTutorialTownView view = TestTutorialTownView.builder()
                 .villagerCount(3)
-                .jobForTutorial(farmerJob)
                 .build();
 
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
 
         assertEquals(TownQuests.Tutorial.APPLIED, result);
         List<MCQuest> all = quests.questBatches.getAll();
-        assertTrue(all.stream().anyMatch(q ->
-                Compat.getItemId(Items.APPLE).equals(q.getWantedId())
-                && q.getType() == Quest.QuestType.ITEM
-        ));
+        // Phase 2.5 teaches the cheap cook and then proves it cooks.
         assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.JOB_CHANGE
-                && q.getWantedId().equals(JobID.toRL(farmerJob))
+                        && q.getWantedId().equals(JobID.toRL(new JobID("cook", "simple_furnace_food")))
         ));
+        assertTrue(all.stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.LOOT
+                        && q.getWantedId().equals(TagsInit.Items.VILLAGER_FOOD.location())
+        ));
+        // The batch carries the cook's room quest too: every cook/* job requires
+        // kitchen_small (see cook_simple_furnace_food.json), and without it the
+        // staffed cook has no selectable work and the batch can never complete.
+        ResourceLocation kitchenSmall = new ResourceLocation("questown", "kitchen_small");
+        assertTrue(all.stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.ROOM
+                        && q.getWantedId().equals(kitchenSmall)
+        ), "phase 2.5 batch must carry the kitchen_small room quest");
+    }
+
+    @Test
+    void whenRawFoodLootNotComplete_phase2_5Skipped() {
+        TownQuests quests = questsAfterHunterRawLootOutstanding();
+
+        TestTutorialTownView view = TestTutorialTownView.builder()
+                .villagerCount(3)
+                .build();
+
+        TownQuests.Tutorial result = quests.addTutorialBatches(view);
+
+        // Phase 2.5 must wait until a raw-food producer has actually produced; the ladder
+        // stops here with SKIPPED rather than advancing to later phases.
+        assertEquals(TownQuests.Tutorial.SKIPPED, result);
+        boolean cookAdded = quests.questBatches.getAll().stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.JOB_CHANGE
+                        && q.getWantedId().equals(JobID.toRL(new JobID("cook", "simple_furnace_food")))
+        );
+        assertFalse(cookAdded, "cook job change should not be added before raw food is produced");
     }
 
     @Test
@@ -252,16 +302,16 @@ class TutorialPhaseGateTest {
     private TownQuests questsWithTwoJobChangesDone() {
         TownQuests quests = questsAtPhase2_5();
 
-        JobID farmerJob = new JobID("farmer", "wheat");
         TestTutorialTownView view = TestTutorialTownView.builder()
                 .villagerCount(3)
-                .jobForTutorial(farmerJob)
                 .build();
-        quests.addTutorialBatches(view);
+        quests.addTutorialBatches(view);   // applies phase 2.5: cook JOB_CHANGE + kitchen ROOM + VILLAGER_FOOD LOOT
 
-        // Complete the second job change and apple quest
-        quests.questBatches.markRecipeAsComplete(null, JobID.toRL(farmerJob));
-        quests.questBatches.markRecipeAsComplete(null, Compat.getItemId(Items.APPLE));
+        // Complete the second job change (the cook) and the cooked-food LOOT quest.
+        // (The kitchen ROOM quest is not needed for the phase gate, which tracks
+        // JOB_CHANGE completions; the batch reward does need it.)
+        quests.questBatches.markRecipeAsComplete(null, JobID.toRL(new JobID("cook", "simple_furnace_food")));
+        quests.questBatches.markRecipeAsComplete(null, TagsInit.Items.VILLAGER_FOOD.location());
 
         return quests;
     }
@@ -298,17 +348,16 @@ class TutorialPhaseGateTest {
     void whenOneJobChangeDone_noAdvance() {
         TownQuests quests = questsAtPhase2_5();
 
-        // Only the hunter job change is done, second one not added yet
-        // But we need 3 villagers for it to proceed past the villager check
+        // Only the hunter job change is done, the cook job change is not added yet.
+        // We need 3 villagers for phase 2.5 to proceed past the villager check.
         TestTutorialTownView view = TestTutorialTownView.builder()
                 .villagerCount(3)
-                .jobForTutorial(new JobID("farmer", "wheat"))
                 .build();
 
-        // This should add the second job change quest (phase 2.5), not advance to phase 4
+        // This should add the cook job change quest (phase 2.5), not advance to phase 4.
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
         assertEquals(TownQuests.Tutorial.APPLIED, result);
-        // The count of JOB_CHANGE quests should be 2 now (hunter + farmer)
+        // The count of JOB_CHANGE quests should be 2 now (hunter + cook).
         long jobChangeCount = quests.questBatches.getAll().stream()
                 .filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE)
                 .count();
@@ -319,14 +368,12 @@ class TutorialPhaseGateTest {
     void whenTwoJobChangesDoneButNotComplete_noAdvance() {
         TownQuests quests = questsAtPhase2_5();
 
-        JobID farmerJob = new JobID("farmer", "wheat");
         TestTutorialTownView view = TestTutorialTownView.builder()
                 .villagerCount(3)
-                .jobForTutorial(farmerJob)
                 .build();
         quests.addTutorialBatches(view);
 
-        // Don't complete second job change
+        // Don't complete the second job change
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
         assertEquals(TownQuests.Tutorial.SKIPPED, result);
     }

@@ -76,9 +76,14 @@ public final class VillageSelfSufficiencyExecutor {
     private static final int MAX_DAYS = 10;
     private static final int TICKS_PER_DAY = 24000;
 
-    /** Spawn N villagers at the town gate. Onboarding ends with one hunter and
-     *  one gatherer; that is the seed's effective end state. */
-    private static final int VILLAGER_COUNT = 2;
+    /** Spawn N villagers at the town gate. Two are assigned by the seed (one
+     *  hunter, one gatherer); the third is left unassigned. Roster 3 is the
+     *  threshold that opens the reworked onboarding tutorial phase 2.5
+     *  (PHASE_JOB_CHANGE_FOOD): the batch staffs the cook (JOB_CHANGE), needs
+     *  the kitchen_small room (built by the room-builder below), and completes
+     *  via 8x villager_food under real ticks; roster 2 (the old seed) plateaus
+     *  at the threshold and the phase never opens. */
+    private static final int VILLAGER_COUNT = 3;
 
     /** Opening food block per cooked-meat item in the store chest. The seed is a
      *  one-time bootstrap, not a supply: the town is meant to outproduce its diner
@@ -674,13 +679,16 @@ public final class VillageSelfSufficiencyExecutor {
     }
 
     private void assignJobs() {
-        // The seed is just past onboarding: exactly one hunter (food chain is
+        // The seed is just past onboarding: one hunter (food chain is
         // hunter-only; villagers eat raw meat via the raw-food diner work) and
-        // one gatherer. Assign them via ChangeJobReward (not raw
+        // one gatherer, assigned here via ChangeJobReward (not raw
         // changeJobForVillager): the reward both sets the job AND posts the job's
         // output item as a work request on the job board. Without the work request
         // the job has nothing to produce and the villager sits in downtime forever
         // (work requests are not quests, and a job with no request has no work).
+        // The third villager (i == 2) is deliberately left unassigned: the
+        // reworked onboarding tutorial phase 2.5 staffs the cook via its own
+        // JOB_CHANGE quest (roster >= 3 gate), not via the seed.
         int i = 0;
         for (VillagerUUID vuid : flag.getVillagerHandle().getVillagerJobs().keySet()) {
             UUID uuid = VillagerUUID.get(vuid);
