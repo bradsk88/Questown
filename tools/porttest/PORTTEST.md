@@ -124,6 +124,12 @@ launched detector) and that the port is actually LISTEN (hex-checked).
 
 ## Death and desync guard (run between every open and shot)
 
+This guard applies to **manual drives too** (hand-written FIFO/`.qtdiag-cmd`
+sequences): `capture.sh shot` is the only place it is automatic, so skipping
+that stage means re-applying it by hand — grep the server log for a death,
+confirm `list` shows a live player, and vision-check the capture before
+trusting it.
+
 The 1.19.2 side desyncs client/server Y by ~64 in this box (observed:
 server y=110, client reports y=45; on a superflat world the server spawn
 itself is y=-60). The desync ends with "moved too quickly" log lines and a
@@ -140,7 +146,15 @@ So between `_qtdev openvillager` and its `shot`:
 Place the fixture at spawn and **never `tp` the player across distance** —
 a long tp is what triggers the desync here.
 
-## Operational pitfalls (learned the hard way)
+2026-10-01: a zombie at spawn killed the player between join and the first
+menu open (`Dev was slain by Zombie` in the client log); a manual `shot` then
+landed the **You Died** screen, which was initially misread as the work board.
+Fixes: `difficulty peaceful` from the FIFO right after `wait-server`
+(`echo 'difficulty peaceful' > run/server-cmd.fifo`; server log: "The
+difficulty has been set to Peaceful"; persists in `run/server.properties`,
+which is dev-only and never committed), and never treat a successful `_qtdev`
+server-log line as proof the screen is up — the vision content check is the
+proof.
 
 - **Launch server/client with `setsid nohup ... &`** — the tiling-WM
   session kills the whole process group on disconnect.
@@ -210,7 +224,20 @@ a long tp is what triggers the desync here.
   still mid-handshake opens a second connection and can stall the client
   forever (hit on 1.19.2); `rebank.sh` now only falls back to `connect`
   when no `logged in with entity id` line exists yet.
-- **Client window size is capture state.** The tiling WM gave the two
+- **The WorkScreen (job board) is not one of the six canonical tabs.** It is a
+  standalone container menu, opened on the wip side with `_qtdev open_jobs`
+  (thin wrapper over `TownFlagBlockEntity.openJobsMenu`, added to
+  `QtDevClickCommand` this session; smoke-tested via FIFO: "[open_jobs] work
+  board for Dev"). `_qtdev clickheld <board pos>` does NOT open it: `runHeld`
+  refuses an empty main hand ("Dev has nothing in the main hand") and the
+  board's real path (`JobBoardBlock.useWithoutItem`) only fires on a genuine
+  empty-hand click. Cards on the board are the town's work requests
+  (`TownWorkHandle.requestedResults`; server logs "Request added to job
+  board") — a board with zero requests renders zero cards, so confirm one
+  exists in the server log before reading a blank board as a render bug. The
+  golden (1.19.2) repo has no `open_jobs` (its dev commands are
+  `OpenVillagerMenuDevCommand` et al.): a golden-side work-board capture
+  needs the same thin command added there — not yet run, open question. The tiling WM gave the two
   clients different widths (wip 634, a11 420) in the same run, and the
   banked PNG is whatever width the window had. `run.sh diff`'s canvas
   check only compares the two *current* sides, so both sides changing in
