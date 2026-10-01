@@ -1,0 +1,35 @@
+
+## driver v2 — 2026-10-01T05:35:09+01:00 (v1 aborted run 1 on the nc-missing port bug; server survived)
+runs: attach run 1 if live, then up to 6 fresh runs; per-run harvest in /workspace/IdeaProjects/Questown/.scratch/village-self-sufficiency/run-N.md
+  ATTACHED: live autotest server + active client already present
+run 1: attached at 2026-10-01T05:35:09+01:00
+  player in world
+run 1: completed at 2026-10-01T07:02:10+01:00 -> /workspace/IdeaProjects/Questown/.scratch/village-self-sufficiency/run-1.md
+  port freed
+run 2: start 2026-10-01T07:02:13+01:00 (server pid 284022)
+[capture:launch-client] client (hook) -> /tmp/porttest-Questown-client.log
+[capture:launch-client] launched (pid 284647); run 'wait-client'
+run 2: cut at 2026-10-01T08:53:17+01:00 -> /workspace/IdeaProjects/Questown/.scratch/village-self-sufficiency/run-2.md
+  port freed
+run 3: start 2026-10-01T08:53:20+01:00 (server pid 302622)
+[capture:launch-client] client (hook) -> /tmp/porttest-Questown-client.log
+[capture:launch-client] launched (pid 303242); run 'wait-client'
+run 3: cut at 2026-10-01T10:44:24+01:00 -> /workspace/IdeaProjects/Questown/.scratch/village-self-sufficiency/run-3.md
+  port freed
+run 4: start 2026-10-01T10:44:27+01:00 (server pid 321061)
+[capture:launch-client] client (hook) -> /tmp/porttest-Questown-client.log
+[capture:launch-client] launched (pid 321553); run 'wait-client'
+run 4: cut at 2026-10-01T12:35:26+01:00 -> /workspace/IdeaProjects/Questown/.scratch/village-self-sufficiency/run-4.md
+  port freed
+run 5: start 2026-10-01T12:35:29+01:00 (server pid 338814)
+[capture:launch-client] client (hook) -> /tmp/porttest-Questown-client.log
+[capture:launch-client] launched (pid 339333); run 'wait-client'
+run 5: cut at 2026-10-01T14:26:32+01:00 -> /workspace/IdeaProjects/Questown/.scratch/village-self-sufficiency/run-5.md
+  port freed
+run 6: start 2026-10-01T14:26:35+01:00 (server pid 356599)
+[capture:launch-client] client (hook) -> /tmp/porttest-Questown-client.log
+[capture:launch-client] launched (pid 357122); run 'wait-client'
+run 6: cut at 2026-10-01T16:17:39+01:00 -> /workspace/IdeaProjects/Questown/.scratch/village-self-sufficiency/run-6.md
+  port freed
+stop: 15:00 window (completed through run 6)
+BATCH DONE 2026-10-01T16:17:42+01:00
