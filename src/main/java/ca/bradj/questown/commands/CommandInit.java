@@ -26,6 +26,7 @@ public class CommandInit {
         FlagShutdownCommand.register(event.getDispatcher());
         DebugCommand.register(event.getDispatcher());
         DebugDoorsCommand.register(event.getDispatcher());
+        FindFlagCommand.register(event.getDispatcher());
         DebugAllDoorsCommand.register(event.getDispatcher());
         SpawnVillagerCommand.register(event.getDispatcher());
         AddDamageCommand.register(event.getDispatcher());

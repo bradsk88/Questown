@@ -50,6 +50,8 @@ public class QtDevClickCommand {
                                     OpenVillagerMenuMessage.STATS, OpenVillagerMenuMessage.SKILLS,
                                     OpenVillagerMenuMessage.ECONOMICS, OpenVillagerMenuMessage.BOP}, b))
                     .executes(css -> runOpenVillager(css.getSource(), css.getArgument("type", String.class))));
+        var openJobs = Commands.literal("open_jobs")
+                .executes(css -> runOpenJobs(css.getSource()));
         var clickwand = Commands.literal("clickwand")
                 .then(posArg
                     .executes(css -> runWand(
@@ -82,7 +84,7 @@ public class QtDevClickCommand {
                             css.getSource(),
                             BlockPosArgument.getLoadedBlockPos(css, "pos")
                     )));
-        qtdev.then(clickwand).then(clickheld).then(openvillager).then(townplace).then(townspawn);
+        qtdev.then(clickwand).then(clickheld).then(openvillager).then(townplace).then(townspawn).then(openJobs);
         src.register(qtdev);
         // @formatter:on
     }
@@ -184,6 +186,28 @@ public class QtDevClickCommand {
         holder.showUI(player, type, villager);
         QT.FLAG_LOGGER.info("[openvillager] {} menu for {} (villager {})", type,
                 player.getGameProfile().getName(), villager);
+        return 0;
+    }
+
+    /**
+     * Open the job board (WorkScreen) for the nearest player: the flag's
+     * {@code openJobsMenu} owner path (AddWork/RemoveWork flows reach the same
+     * call), so no board block or hand item is needed for a console/FIFO drive.
+     */
+    private static int runOpenJobs(CommandSourceStack source) {
+        if (TownFlags.all().isEmpty()) {
+            QT.FLAG_LOGGER.warn("[open_jobs] no flags registered");
+            return 1;
+        }
+        TownFlagBlockEntity flag = TownFlags.all().iterator().next();
+        BlockPos pos = flag.getBlockPos();
+        ServerPlayer player = findPlayer(source, pos);
+        if (player == null) {
+            QT.FLAG_LOGGER.warn("[open_jobs] no player near {}", pos);
+            return 1;
+        }
+        flag.openJobsMenu(player, false);
+        QT.FLAG_LOGGER.info("[open_jobs] work board for {} (flag {})", player.getGameProfile().getName(), pos);
         return 0;
     }
 
