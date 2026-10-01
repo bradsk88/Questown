@@ -177,6 +177,16 @@ FIFO is in-memory only until a graceful `stop` rewrites
 `server.properties`; a `kill -9` loses it - and hostiles spawned
 before the peaceful setting keep acting, so set peaceful in
 `server.properties` (or before world gen) for a no-death fixture.
+This exact sequence is now a stage: `capture.sh unstick <proj> <port>
+<game> <pname>` (server-first, one client, dat-verification included).
+One guard note from 2026-10-01: the post-join `Health` read must be a
+POLLED 0.0f (capture.sh polls ~25s) - a single read at ~8s can race the
+modern client's ~20s auto-respawn and FATAL on a player who was about to
+recover; the polling kills a genuinely stuck death but tolerates the
+auto-respawn window. (The 1.19.2 golden client has a different death
+latch - a "You Died" overlay on every join, no server-side death event;
+see wip `.scratch/work-board-request/golden-client-death-overlay.md`
+- unstick does not fix that one.)
 
 ### Cursor / hover drive (WorkScreen)
 

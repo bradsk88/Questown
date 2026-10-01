@@ -1,155 +1,155 @@
 {
- "canvas": {
-  "width": 634,
-  "height": 675,
-  "note": "Pinned capture canvas: the bank's reference size. The tiling WM does NOT hold every client to one width (this session: wip 634, a11 420 in the same run), so window width is capture state, not a constant. capture.sh shot dies when a fresh shot's canvas differs from this pin; capture.sh bank dies when a fresh shot differs from the same-named banked PNG; run.sh diff asserts the two sides match each other. To run at a different size deliberately, resize the client AND update this pin plus the per-screen center rects together."
- },
- "fixture": {
-  "world": "normal",
-  "spawnSource": "server log line: 'logged in with entity id N at (x, y, z)'",
-  "note": "Fresh NORMAL world per side. Flag placed at the world spawn via the console command `_qtdev townplace <x> <y-1> <z>`; the townie spawned with `_qtdev townspawn <x> <y-1> <z>` (owner paths: TownFlags.register + SpawnVisitorReward.spawnNew). No tp across distance - a long tp desyncs client/server Y by ~64 in this box and kills the player; the death screen then gets captured as a 'screen'."
- },
- "screens": [
-  {
-   "name": "parent",
-   "open": "openvillager inventory",
-   "expect": {
-    "activeTab": "inventory",
-    "mustNotBe": [
-     "death",
-     "title",
-     "no menu"
-    ]
-   },
-   "note": "InventoryAndStatusMenu = the tabbed parent (tabs + inventory + status strip)",
-   "center": [
-    223,
-    248,
-    411,
-    426
-   ]
+  "canvas": {
+    "width": 634,
+    "height": 675,
+    "note": "Pinned capture canvas: the bank's reference size. The tiling WM does NOT hold every client to one width (this session: wip 634, a11 420 in the same run), so window width is capture state, not a constant. capture.sh shot dies when a fresh shot's canvas differs from this pin; capture.sh bank dies when a fresh shot differs from the same-named banked PNG; run.sh diff asserts the two sides match each other. To run at a different size deliberately, resize the client AND update this pin plus the per-screen center rects together."
   },
-  {
-   "name": "quests",
-   "open": "openvillager quests",
-   "expect": {
-    "activeTab": "quests",
-    "mustNotBe": [
-     "death",
-     "title",
-     "no menu"
-    ]
-   },
-   "center": [
-    223,
-    248,
-    411,
-    426
-   ]
+  "fixture": {
+    "world": "normal",
+    "spawnSource": "server log line: 'logged in with entity id N at (x, y, z)'",
+    "note": "Fresh NORMAL world per side. Flag placed at the world spawn via the console command `_qtdev townplace <x> <y-1> <z>`; the townie spawned with `_qtdev townspawn <x> <y-1> <z>` (owner paths: TownFlags.register + SpawnVisitorReward.spawnNew). No tp across distance - a long tp desyncs client/server Y by ~64 in this box and kills the player; the death screen then gets captured as a 'screen'."
   },
-  {
-   "name": "stats",
-   "open": "openvillager stats",
-   "expect": {
-    "activeTab": "stats",
-    "mustNotBe": [
-     "death",
-     "title",
-     "no menu"
-    ]
-   },
-   "center": [
-    223,
-    248,
-    411,
-    426
-   ]
+  "screens": [
+    {
+      "name": "parent",
+      "open": "openvillager inventory",
+      "expect": {
+        "activeTab": "inventory",
+        "mustNotBe": [
+          "death",
+          "title",
+          "no menu"
+        ]
+      },
+      "note": "InventoryAndStatusMenu = the tabbed parent (tabs + inventory + status strip)",
+      "center": [
+        223,
+        248,
+        411,
+        426
+      ]
+    },
+    {
+      "name": "quests",
+      "open": "openvillager quests",
+      "expect": {
+        "activeTab": "quests",
+        "mustNotBe": [
+          "death",
+          "title",
+          "no menu"
+        ]
+      },
+      "center": [
+        223,
+        248,
+        411,
+        426
+      ]
+    },
+    {
+      "name": "stats",
+      "open": "openvillager stats",
+      "expect": {
+        "activeTab": "stats",
+        "mustNotBe": [
+          "death",
+          "title",
+          "no menu"
+        ]
+      },
+      "center": [
+        223,
+        248,
+        411,
+        426
+      ]
+    },
+    {
+      "name": "skills",
+      "open": "openvillager skills",
+      "expect": {
+        "activeTab": "skills",
+        "mustNotBe": [
+          "death",
+          "title",
+          "no menu"
+        ],
+        "panelLabel": "jobs"
+      },
+      "center": [
+        185,
+        261,
+        449,
+        413
+      ]
+    },
+    {
+      "name": "economics",
+      "open": "openvillager economics",
+      "expect": {
+        "activeTab": "economics",
+        "mustNotBe": [
+          "death",
+          "title",
+          "no menu"
+        ],
+        "panelLabel": "food"
+      },
+      "center": [
+        223,
+        248,
+        411,
+        426
+      ]
+    },
+    {
+      "name": "bop",
+      "open": "openvillager bop",
+      "expect": {
+        "activeTab": "bop",
+        "mustNotBe": [
+          "death",
+          "title",
+          "no menu"
+        ]
+      },
+      "note": "best-of-both / bop tab",
+      "center": [
+        223,
+        248,
+        411,
+        426
+      ]
+    },
+    {
+      "name": "work",
+      "open": "open_jobs",
+      "expect": {
+        "panelLabel": "Work",
+        "mustNotBe": [
+          "death",
+          "title",
+          "no menu"
+        ]
+      },
+      "note": "WorkScreen (job board): standalone container menu, opened with _qtdev open_jobs on both branches (thin wrapper over TownFlagBlockEntity.openJobsMenu; golden mirror committed to Questown-119 - _qtdev board_request <item> posts the card via WorkHandle.requestWork, the owner's request path). A blank board means zero work requests in the fixture world (check the server log for 'Request added to job board'), not a render bug. 2026-10-01: the fixture world had no requests, so add one via the owner's request path before banking a card-rich capture. The work-tab face fix and the card hover/tooltip are the oracle's real targets. 2026-10-01 goldens status: wip work.png banked and oracle-verified (job-card + wheat_seeds card + face). The GOLDEN work capture is blocked by a client-side 'You Died' overlay that shows on every 1.19.2 client join on this box (fresh world, peaceful, clean playerdata - yet the death screen renders with the server having logged NO death event; live-verified 2026-10-01 evening; the 09-30 golden bank of the other six screens proves this client renders menus fine, so the latch entered during this evening's runs and is not world state) - filed; the 1.20.6 work bank stands alone in the meantime.",
+      "center": [
+        232,
+        258,
+        402,
+        418
+      ],
+      "centerNote": "measured 2026-10-01 from live work_base.png (tools/porttest/probe.py, flat band): window spans canvas x[232..402] y[258..418] = 170x160 px ~= 176x166 GUI units. The screen logical width here is ~660 GUI units, NOT 634/2=317: 1.20.6 mouseX = floor(xpos * guiScaledWidth / screenWidth) (Gui.java), so GUI-unit assumptions from 1.19.2 notes do not transfer to this capture."
+    }
+  ],
+  "check": {
+    "provider": "nova-vllm",
+    "model": "qwen3.8:27b",
+    "note": "content gate: check.sh vision-verifies each capture against its expect block before banking. Backend = the live Nova GPU proxy at localhost:42827 (qwen3.8:27b has vision; chat_template_kwargs.reasoning_effort=medium - lower budgets return null content, higher overthink). check.sh/compare2.py honor VISION_URL/VISION_KEY/VISION_MODEL env overrides. The old vast box 154.37.220.220 is dead as of 2026-09-30. OpenRouter was out of credits (402) as of 2026-09-29. Tab highlights are icon-based, so the TAB question asks about panel content, not highlight pixels."
   },
-  {
-   "name": "skills",
-   "open": "openvillager skills",
-   "expect": {
-    "activeTab": "skills",
-    "mustNotBe": [
-     "death",
-     "title",
-     "no menu"
-    ],
-    "panelLabel": "jobs"
-   },
-   "center": [
-    185,
-    261,
-    449,
-    413
-   ]
-  },
-  {
-   "name": "economics",
-   "open": "openvillager economics",
-   "expect": {
-    "activeTab": "economics",
-    "mustNotBe": [
-     "death",
-     "title",
-     "no menu"
-    ],
-    "panelLabel": "food"
-   },
-   "center": [
-    223,
-    248,
-    411,
-    426
-   ]
-  },
-  {
-   "name": "bop",
-   "open": "openvillager bop",
-   "expect": {
-    "activeTab": "bop",
-    "mustNotBe": [
-     "death",
-     "title",
-     "no menu"
-    ]
-   },
-   "note": "best-of-both / bop tab",
-   "center": [
-    223,
-    248,
-    411,
-    426
-   ]
-  },
-  {
-   "name": "work",
-   "open": "open_jobs",
-   "expect": {
-    "panelLabel": "Work",
-    "mustNotBe": [
-     "death",
-     "title",
-     "no menu"
-    ]
-   },
-   "note": "WorkScreen (job board): standalone container menu, opened with _qtdev open_jobs on both branches (thin wrapper over TownFlagBlockEntity.openJobsMenu; golden mirror committed to Questown-119). A blank board means zero work requests in the fixture world (check the server log for 'Request added to job board'), not a render bug. 2026-10-01: the fixture world had no requests, so add one via the owner's request path before banking a card-rich capture. The work-tab face fix and the card hover/tooltip are the oracle's real targets.",
-   "center": [
-    140,
-    170,
-    492,
-    502
-   ],
-   "centerNote": "computed for GUI scale 2: 176x166 window centered in the 317-wide (634/2) GUI space -> (70, 85)-(246, 251) GUI px, doubled to (140, 170)-(492, 502) canvas px. Verify against the first live work.png before trusting the rect as the parity diff region."
+  "diff": {
+    "threshold_pct": 0.5,
+    "note": "PASS if changed-pixels <= threshold per screen; antialiasing at text edges and the villager face (seeded per entity UUID) are the expected residuals"
   }
- ],
- "check": {
-  "provider": "nova-vllm",
-  "model": "qwen3.8:27b",
-  "note": "content gate: check.sh vision-verifies each capture against its expect block before banking. Backend = the live Nova GPU proxy at localhost:42827 (qwen3.8:27b has vision; chat_template_kwargs.reasoning_effort=medium - lower budgets return null content, higher overthink). check.sh/compare2.py honor VISION_URL/VISION_KEY/VISION_MODEL env overrides. The old vast box 154.37.220.220 is dead as of 2026-09-30. OpenRouter was out of credits (402) as of 2026-09-29. Tab highlights are icon-based, so the TAB question asks about panel content, not highlight pixels."
- },
- "diff": {
-  "threshold_pct": 0.5,
-  "note": "PASS if changed-pixels <= threshold per screen; antialiasing at text edges and the villager face (seeded per entity UUID) are the expected residuals"
- }
 }

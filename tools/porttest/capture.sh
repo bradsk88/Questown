@@ -15,7 +15,15 @@
 #   connect        write 'connect localhost <port>' to .qtdiag-cmd
 #   joined         <=60s: "logged in with entity id" in server log; prints spawn
 #   fixture        _qtdev townplace + townspawn at the logged spawn (no tp)
-#   shot <name>    death/desync guard, then openvillager <type> + shot <name>
+#   shot <name>    death/desync guard (grep + Health probe), then openvillager
+#                  <type> + shot <name>
+#   unstick <proj> <port> <game> [player]  stuck-death reset in the verified
+#                  order: stop server, kill ALL client javas, wipe
+#                  playerdata/<player>.dat while the server is down, verify,
+#                  boot fresh server + ONE client. The death state (Health
+#                  0.0f + DeathTime) replays on every rejoin and only clears
+#                  with process restart + wipe - the order above is the fix,
+#                  so it lives as one stage
 #   collect        copy diags/*.png -> out-dir
 #   check          run check.sh on out-dir (content gate; run before banking)
 #   bank <dir>     copy <proj>/<game>/diags/*.png -> <dir> + write <name>.png.json
@@ -165,8 +173,25 @@ shot)
   # full-log grep: latest.log starts at this server's boot, so any
   # death/desync event is caught regardless of the villager-log spam
   # that buries a tail-N window ("Fullness changed" lines, ~20/s).
-  guard=$(LC_ALL=C grep -ac 'moved too quickly\|died with\|Killed' "$SLOG4" || true)
-  [ "$guard" -eq 0 ] || die "death/desync lines in log: $guard - do NOT shoot; re-read PORTTEST.md guard"
+  guard=$(LC_ALL=C grep -ac 'moved too quickly\|died with\|slain by\|[Kk]illed' "$SLOG4" || true)
+  [ "$guard" -eq 0 ] || die "death/desync lines in log: $guard (incl. 'slain by' zombie kills) - do NOT shoot; run 'capture.sh unstick' and re-read the PORTTEST.md guard"
+  # health probe: the death-state persist replays with NO new death log line, so
+  # the grep above passes on a dead player. Health 0.0f at join is the dead
+  # state; a non-zero value is alive.
+  PNAME=${7:-Dev}
+  hline=""
+  for i in 1 2 3 4; do
+    timeout 15 sh -c "echo 'data get entity $PNAME Health' > $FIFO" >/dev/null 2>&1 || true
+    sleep 5
+    hline=$(LC_ALL=C grep -a 'following entity data: ' "$SLOG4" | tail -1)
+    case "$hline" in
+      *entity\ data:\ 0.0f*) ;;                 # still dead - retry
+      *entity\ data:\[0-9]*) break;;            # alive - done
+    esac
+  done
+  case "$hline" in
+    *entity\ data:\ 0.0f*) [ -n "$hline" ] && die "player $PNAME Health = 0.0f ~25s after join - stuck death state, not a zombie. Run: capture.sh unstick $PROJ $PORT $GAME $PNAME";;
+  esac
   fifo_cmd "list"
   sleep 3
   LC_ALL=C tail -200 "$SLOG4" | grep -Eq 'There are [1-9][0-9]* of a max' || die "'list' does not show a player online - client not in game"
@@ -253,6 +278,54 @@ EOF
     n=$((n+1))
   done
   say "banked $n screens + sidecars -> $BANKDIR"
+  ;;
+
+unstick)
+  # The stuck-death reset. A player death persists as Health 0.0f + DeathTime
+  # and the server replays the death screen on EVERY rejoin; data merge heals,
+  # tp, and playerdata wipes do NOT clear it while a server that saw the death
+  # (or a stale auto-join client java) is still alive to re-save it.
+  # The ORDER is the fix - run it in one stage, not by hand:
+  # (own arg shape: capture.sh unstick <proj> <port> <game> [player])
+  PNAME=${5:-Dev}
+  say "stop server (graceful)"
+  timeout 15 sh -c "echo 'stop' > $FIFO" >/dev/null 2>&1 || true
+  t=0
+  until ! port_listening; do
+    t=$((t+2)); [ $t -ge 30 ] && {
+      say "port still up; killing server java (cwd $PROJ/run)"
+      pgrep -f bootstraplauncher | while read -r p; do
+        [ "$(readlink /proc/$p/cwd 2>/dev/null)" = "$PROJ/run" ] && { kill -9 "$p"; say "killed server $p"; };
+      done
+      t=0; sleep 3; until ! port_listening; do sleep 2; [ $t -ge 30 ] && die "server would not die; investigate by hand"; done
+    }
+    sleep 2
+  done
+  say "kill stale client javas (cwd under $PROJ)"
+  pgrep -f bootstraplauncher | while read -r p; do
+    cwd=$(readlink /proc/$p/cwd 2>/dev/null || true)
+    case "$cwd" in "$PROJ"/*) kill -9 "$p" && say "killed $p ($cwd)";; esac
+  done
+  sleep 2
+  say "wipe $PNAME player data (while server is DOWN)"
+  rm -f "$PROJ/run/world/playerdata/$PNAME.dat"* || true
+  ls "$PROJ/run/world/playerdata/$PNAME".dat* >/dev/null 2>&1 && die "wipe failed: $PNAME.dat survived"
+  say "verify: port closed, dat gone - clean"
+  say "boot server (fresh process)"
+  setsid nohup env JAVA_HOME=$QJDK LANG=C.UTF-8 "$PROJ/gradlew" -p "$PROJ" \
+    runServer -Dquestown.tp.fifo=true > "$SLOG" 2>&1 &
+  say "wait for the port (server first, then client - a client that boots
+  while the port is down autojoin-fails and does not retry)"
+  t=0
+  until port_listening; do
+    t=$((t+5)); [ $t -ge 60 ] && { say "server not up yet; run wait-server, THEN kill the client java (cwd under $PROJ) and re-launch it with: capture.sh launch-client $PROJ $PORT ${3:-run-client}"; exit 0; }
+    sleep 5
+  done
+  say "boot ONE client"
+  setsid nohup env JAVA_HOME=$QJDK LANG=C.UTF-8 "$PROJ/gradlew" -p "$PROJ" \
+    runClient -Pautojoin -Pautoport=$PORT > "$CLOG" 2>&1 &
+  say "now: wait-client, joined - in that order (the 1.20.6 hook has no
+  'connect' command; autojoin handles the connection once the port is up)"
   ;;
 
 state)
