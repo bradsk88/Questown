@@ -190,11 +190,26 @@ the first card's icon hover box sits at ~canvas x 250-265, y 305-320
 (park `cursor 255 310` to trigger it). The highlight fill is
 `0x80FFFFFF` over the card gray, which **blends to ~215, not 255** - a
 probe threshold of 245+ misses a perfectly good hover box (this cost
-6+ probe cycles). A card icon only exists when the request's ingredient
+6+ probe cycles).
+
+Two measurement guards from the same pass:
+
+- `data get block <x> <y> <z>` only reads **block entities**; a plain
+  block answers "The target block is not a block entity" - that reply is
+  not an error and tells you nothing about the block state (10 queries
+  in the 2026-10-01 burial check learned this the slow way).
+- Vision on a sub-~50px crop is not a ruler: it reported a "60px wide
+  icon" inside a 42px crop on 2026-10-01. Use vision to confirm gestalt
+  (face present, tooltip text, blur vs gray) and pixel masks (a
+  `crop.py`-style grid, the hover_probe band-scan) for size and
+  position - and when a probe returns "absent" three times in a row,
+  audit the probe (threshold, coordinate space) before trusting the
+  absence. A card icon only exists when the request's ingredient
 is non-null, so a blank board has nothing to hover: post one first with
 `_qtdev board_request wheat_seeds` (request still posts even though a
 listener NPEs in `updateWorkersAfterRequestChange` on a downtime
-townie - pre-existing golden-identical code).
+townie - pre-existing golden-identical code; tracker:
+`.scratch/work-board-request/downtime-townie-listener-npe.md`).
 - **`cd X && setsid nohup ./gradlew ... &` backgrounds the `cd` too** —
   the whole list runs in the background subshell and the foreground `echo
   $(pwd)` reports the *old* directory. Use `./gradlew -p <project-dir>` with
