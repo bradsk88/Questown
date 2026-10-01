@@ -42,6 +42,8 @@ public class OpenVillagerMenuDevCommand {
                     .then(Commands.argument("pos", BlockPosArgument.blockPos())
                         .executes(css -> runTownSpawn(css.getSource(),
                                 BlockPosArgument.getLoadedBlockPos(css, "pos")))))
+                .then(Commands.literal("open_jobs")
+                    .executes(css -> runOpenJobs(css.getSource())))
         );
         // @formatter:on
     }
@@ -95,6 +97,29 @@ public class OpenVillagerMenuDevCommand {
         flag.getVillagerHandle().showUI(player, type, villager);
         QT.FLAG_LOGGER.info("[openvillager] {} menu for {} (villager {})", type,
                 player.getGameProfile().getName(), villager);
+        return 0;
+    }
+
+    /**
+     * Open the job board (WorkScreen) for the nearest player: the flag's
+     * {@code openJobsMenu} owner path (AddWork/RemoveWork flows reach the same
+     * call), so no board block or hand item is needed for a console/FIFO drive.
+     */
+    private static int runOpenJobs(CommandSourceStack source) {
+        if (TownFlags.all().isEmpty()) {
+            QT.FLAG_LOGGER.warn("[open_jobs] no flags registered");
+            return 1;
+        }
+        TownFlagBlockEntity flag = TownFlags.all().iterator().next();
+        ServerPlayer player = nearestPlayerTo(
+                net.minecraft.world.phys.Vec3.atCenterOf(flag.getBlockPos()), source.getLevel());
+        if (player == null) {
+            QT.FLAG_LOGGER.warn("[open_jobs] no player near {}", flag.getBlockPos());
+            return 1;
+        }
+        flag.openJobsMenu(player, false);
+        QT.FLAG_LOGGER.info("[open_jobs] work board for {} (flag {})",
+                player.getGameProfile().getName(), flag.getBlockPos());
         return 0;
     }
 
