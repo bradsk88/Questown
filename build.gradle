@@ -95,6 +95,12 @@ runs {
             if (System.getProperty('questown.village.agentDrive') != null) {
                 jvmArgument '-Dquestown.village.agentDrive=' + System.getProperty('questown.village.agentDrive')
             }
+            // Optional: point the forked server JVM at a custom log4j2 config so a
+            // held run can bump a single logger (e.g. Questown:Quests) to DEBUG while
+            // everything else stays at the vanilla level.
+            if (System.getProperty('questown.log4j.config') != null) {
+                jvmArgument '-Dlog4j2.configurationFile=' + System.getProperty('questown.log4j.config')
+            }
         }
 }
 
