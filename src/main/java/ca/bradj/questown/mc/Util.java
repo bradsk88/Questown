@@ -412,21 +412,17 @@ public class Util {
             int y,
             int scale
     ) {
-        float texStartX = 8;
-        float texStartY = 8;
         ResourceLocation texture = VisitorMobRenderer.getTextureLocation(uuid);
-        // Player skins are 64x64; the face block sits at (8,8)-(16,16).
-        gui.blit(
-                texture,
-                x,
-                y,
-                texStartX,
-                texStartY,
-                faceWidth * scale,
-                faceWidth * scale,
-                64,
-                64
-        );
+        // Player skins are 64x64; the face block sits at (8,8)-(16,16). The golden blits the
+        // 8x8 face region and DISPLAYS it at 8*scale (magnified by `scale`). In 1.20.6 the
+        // GuiGraphics.blit width/height are the REGION (blitted 1:1), so a larger display size
+        // is not an argument -- it is a gui-pose scale. (Scaling the UV region instead grabs
+        // `scale`x more of the skin and squishes the face; that was the port regression.)
+        gui.pose().pushPose();
+        gui.pose().translate(x, y, 0f);
+        gui.pose().scale(scale, scale, 1f);
+        gui.blit(texture, 0, 0, 8, 8, faceWidth, faceWidth, 64, 64);
+        gui.pose().popPose();
     }
 
     public static <X> X ifNull(

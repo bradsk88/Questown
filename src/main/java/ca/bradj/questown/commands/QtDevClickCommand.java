@@ -3,11 +3,14 @@ package ca.bradj.questown.commands;
 import ca.bradj.questown.QT;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import net.minecraft.commands.arguments.item.ItemArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.world.item.Item;
 import net.minecraft.commands.arguments.coordinates.Coordinates;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
@@ -34,7 +37,7 @@ import net.minecraft.world.phys.Vec3;
 // it runs from the console (FIFO). The player is the nearest live player to the
 // target, matching the arc's nearest-player search.
 public class QtDevClickCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> src) {
+    public static void register(CommandDispatcher<CommandSourceStack> src, CommandBuildContext itemCtx) {
         RequiredArgumentBuilder<CommandSourceStack, Coordinates> posArg = Commands.argument(
                 "pos", BlockPosArgument.blockPos()
         );
@@ -52,6 +55,17 @@ public class QtDevClickCommand {
                     .executes(css -> runOpenVillager(css.getSource(), css.getArgument("type", String.class))));
         var openJobs = Commands.literal("open_jobs")
                 .executes(css -> runOpenJobs(css.getSource()));
+        // board_request: post one work request to the job board (the board's cards are
+        // the town's work requests; a board with none renders zero cards). Thin wrapper
+        // over the owner's WorkHandle.requestWork, the same call the AddWork confirm
+        // flow makes - so a headless capture can drive a card-rich board without the
+        // full add-work UI flow.
+        var boardRequest = Commands.literal("board_request")
+                .then(Commands.argument("item", ItemArgument.item(itemCtx))
+                    .executes(css -> runBoardRequest(
+                            css.getSource(),
+                            ItemArgument.getItem(css, "item").getItem()
+                    )));
         var clickwand = Commands.literal("clickwand")
                 .then(posArg
                     .executes(css -> runWand(
@@ -84,7 +98,7 @@ public class QtDevClickCommand {
                             css.getSource(),
                             BlockPosArgument.getLoadedBlockPos(css, "pos")
                     )));
-        qtdev.then(clickwand).then(clickheld).then(openvillager).then(townplace).then(townspawn).then(openJobs);
+        qtdev.then(clickwand).then(clickheld).then(openvillager).then(townplace).then(townspawn).then(openJobs).then(boardRequest);
         src.register(qtdev);
         // @formatter:on
     }
@@ -208,6 +222,17 @@ public class QtDevClickCommand {
         }
         flag.openJobsMenu(player, false);
         QT.FLAG_LOGGER.info("[open_jobs] work board for {} (flag {})", player.getGameProfile().getName(), pos);
+        return 0;
+    }
+
+    private static int runBoardRequest(CommandSourceStack source, Item item) {
+        if (TownFlags.all().isEmpty()) {
+            QT.FLAG_LOGGER.warn("[board_request] no flags registered");
+            return 1;
+        }
+        TownFlagBlockEntity flag = TownFlags.all().iterator().next();
+        flag.getWorkHandle().requestWork(item);
+        QT.FLAG_LOGGER.info("[board_request] work request posted for {} (flag {})", item, flag.getBlockPos());
         return 0;
     }
 

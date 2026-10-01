@@ -46,29 +46,34 @@ flowchart TD
     GR["GameRenderer.render (1.20.6)"] --> HUD["Gui.render - HUD layers"]
     HUD --> Render["screen.render()"]
     Render --> RB["renderBackground (overridden)"]
-    RB -->|paged family| BgOnly["renderBg only - no full-canvas fill"]
+    RB -->|paged + container families| Blur["renderBlurredBackground + renderBg"]
     RB -->|parent / stats / skills| Blur["renderBlurredBackground + renderBg"]
     Render --> Post["ScreenEvent.Render.Post"]
     Post -->|QuestownHudEvents, one of the 4 base classes| Redraw["Minecraft.getInstance().gui.render(...) - HUD again, on top"]
 ```
 
-- `AbstractPagedCardScreen.renderBackground` draws only `renderBg` (the
-  1.19.2 paged screens had no full-canvas background), so the world and the
-  HUD drawn earlier stay visible around the window.
+- `AbstractPagedCardScreen.renderBackground` and `CompatContainerScreen.renderBackground`
+  both draw `renderBlurredBackground` + `renderBg`: the 1.19.2 golden blurs the
+  world behind *every* container/paged window (its `Screen.renderBackground` is
+  the blur path when a level is present). Before the 2026-10-01 fix the paged
+  family skipped the blur (`renderBg` only) and the container family inherited
+  the 1.20.6 vanilla opaque gray gradient (`renderTransparentBackground`) - the
+  "some tabs blur, some are flat gray" split the oracle caught.
 - `InventoryAndStatusScreen` / `VillagerStatsScreen` / `VillagerAdvancementsScreen`
   override `renderBackground` to the blurred world (the 1.19.2 default-blur
   look) instead of the opaque gradient / menu texture.
 - `QuestownHudEvents` re-renders the HUD after the screen for those four base
   classes, restoring the 1.19.2 layering where the HUD sits above the menu
-  background. Without it the blurred-world background (opaque) would cover the
-  HUD just like the gradient did.
-- Scoped to the four base classes that match the golden set; the other mod
-  screens (WorkScreen, JobChangeConfirmScreen, ...) still inherit the vanilla
-  background and still hide the HUD - extending them means adding the class
-  to `QuestownHudEvents` plus the same `renderBackground` override.
-- Verified with the `tools/porttest/` capture oracle: all six screens re-shot,
-  gated, and banked post-fix; the heart/hotbar rows now match the golden
-  positions (`run.sh diff`).
+  background. The blur is semi-transparent, so the HUD drawn *before* the screen
+  also stays visible through it - which is why the container family needs no
+  `QuestownHudEvents` entry of its own.
+- The two `*ConfirmScreen` keep their own flat gray `renderBackground`: their
+  golden equivalents are opaque gray, so matching them is correct - do not
+  "unify" them onto the blur.
+- Verified with the `tools/porttest/` capture oracle on 2026-10-01 (work =
+  container family, quests = paged family): both captures show the out-of-focus
+  world at the screen edges; the six golden-bank screens are gated and banked
+  post-fix, heart/hotbar rows matching via `run.sh diff`.
 
 ## 1.20.6 blit UV: the 7-arg `GuiGraphics.blit` divides by 256
 
@@ -89,6 +94,27 @@ blits into 256x256 atlas textures are correct as-is because maxU/maxV default
 to 256. A different overload normalizes differently: the
 `VillagerStatsScreen` bar fix below was a 10-arg call with the bar height
 landing in the maxU slot.
+
+## 1.20.6 `Util.blitFace`: display size is a gui-pose scale, not a blit argument
+
+The 1.19.2 `blitFace` passed `faceWidth * scale` as the blit draw size - the
+8x8 face region sampled and *stretched* to 8*scale. In 1.20.6 the
+`GuiGraphics.blit` width/height arguments are the **source region blitted 1:1**
+(see the 7-arg section above): passing `faceWidth * scale` there samples
+`scale`x more of the 64x64 skin and squishes the face into the box (the port
+regression - a smeared, shifted head, not a magnified one).
+
+The 1.20.6 equivalent of "display at 8*scale" is a gui-pose scale around the
+blit: `pose().translate(x, y); pose().scale(scale, scale, 1); blit(tex, 0, 0,
+8, 8, faceWidth, faceWidth, 64, 64)` (nearest-neighbor keeps the pixel blocks
+distinct). Same seam rule as every other 1.20.6 pose note in this file: gui
+pose only, never the global modelview stack.
+
+Oracle check (2026-10-01, economics screen "Food" row face icon vs the 1.19.2
+golden bank): same left/top origin (canvas 246,294 on both), same 12x9
+non-flat footprint, same 8x8 source structure magnified - wip 12x9 at 2x
+nearest-neighbor blocks, matching the golden; the wider wip mask in a naive
+bbox probe is the row's item icon to the right, not the face.
 
 ## 1.20.6 Ingredient: `CODEC_NONEMPTY` throws on an empty ingredient
 

@@ -69,11 +69,13 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
         this.delegate.renderBg(poseStack, v, i, i1);
     }
 
-    // 1.19.2 parity: these screens had no full-canvas background. The vanilla 1.20.6
-    // renderBackground fills the whole canvas with an opaque dark gradient; since 1.20.6
-    // draws the HUD before the screen, that fill hides the hearts/hunger/XP/hotbar that
-    // 1.19.2 showed above the menu. Draw only the window's own background so the world
-    // and the HUD stay visible around the window.
+    // 1.19.2 parity: on the golden (1.19.2) these screens show the world behind
+    // the window BLURRED (their Screen.renderBackground is the blur path) with the
+    // window on top and the HUD visible - and no opaque canvas fill. The vanilla
+    // 1.20.6 default instead fills the canvas with an opaque gray gradient
+    // (renderTransparentBackground), which hides the world and does not match the
+    // golden. So skip the gradient and blur the world instead, keeping the window's
+    // own background (renderBg) as the opaque surface.
     @Override
     public void renderBackground(
             GuiGraphics guiGraphics,
@@ -81,6 +83,7 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
             int mouseY,
             float partialTick
     ) {
+        this.renderBlurredBackground(partialTick);
         this.renderBg(guiGraphics, partialTick, mouseX, mouseY);
     }
 

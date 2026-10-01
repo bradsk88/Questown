@@ -40,3 +40,33 @@ and `getTimeToNextState` (time-left) from the town's real work-status handle —
 This is dev-only observability; it is how the town-leaver night-return bug was
 confirmed (see
 `.scratch/warp-night-handling/town-leaver-returns-empty-at-night.md`).
+
+## The `_qtdev` fixture drive set (QtDevClickCommand)
+
+The same `qtdev` literal carries a small fixture-drive set for headless
+capture; each is a thin wrapper over the owner's method (no re-implemented
+action paths, no permission gates):
+
+- `townplace <pos>` / `townspawn <pos>` - place the flag, spawn one townie at
+  its `pos` (the spawner resolves the flag block entity *at that pos*, so pass
+  the flag coordinates again, not a nearby air block).
+- `openvillager <tab>` - the flag right-click villager menu on a named tab
+  (`stats`, `quests`, `economics`, ...); `economics` is the screen that shows
+  a `blitFace` portrait (left of the Food row) - the face-scale oracle target.
+- `open_jobs` / `board_request <item>` - open the job board / post one work
+  request. `board_request` wraps `WorkHandle.requestWork(item)`, the same call
+  the AddWork confirm flow makes, so a headless capture can drive a card-rich
+  board. A blank board is not a render bug: a card only exists per request, and
+  the card icon only when the request's ingredient is non-null. Known pre-
+  existing edge (golden-identical code): the request's change listener runs
+  `updateWorkersAfterRequestChange`, which NPEs on a DOWNTIME townie's null
+  `getStatusForServer()` - the NPE lands *after* the request is posted, so the
+  card still appears (a server-log stack, not a drive failure).
+- `inspect villagers <flag-pos>` - the eyes-level readout above. The flag pos
+  argument is the flag coordinates, not a search radius.
+
+The 1.19.2 golden branch carries only `openvillager`, `townspawn` (pos form),
+and (mirrored 2026-10-01) `open_jobs`; it has **no** `board_request`, so a
+card-rich work board on the golden side must be driven through the AddWork
+confirm flow or the same command mirrored over (the golden's `WorkScreen`
+card path is otherwise the same).

@@ -156,8 +156,45 @@ which is dev-only and never committed), and never treat a successful `_qtdev`
 server-log line as proof the screen is up — the vision content check is the
 proof.
 
-- **Launch server/client with `setsid nohup ... &`** — the tiling-WM
+- **Launch server/client with `setsid nohup ... &`** - the tiling-WM
   session kills the whole process group on disconnect.
+
+### Stuck death loop (verified 2026-10-01)
+
+A player death (e.g. the 02:35 zombie) leaves the player in the
+"waiting for respawn" state - `Health: 0.0f` plus a large `DeathTime`
+tag - and the server *replays the death screen on every rejoin*: `data
+merge entity Dev {Health: 20.0f}` does not clear it, a `tp` does not,
+and deleting `playerdata/Dev.dat` while a server that saw the death is
+still running does not (it can re-save the state on disconnect, and
+old auto-join client javas keep the loop alive - kill every
+`bootstraplauncher` java whose cwd is `run-client` first). Working
+sequence, in order: kill all client javas, stop the **server
+process**, `rm run/world/playerdata/Dev.dat*`, verify the file is
+gone while the server is down, boot the server, then boot exactly one
+client. A fresh world sidesteps it entirely. `difficulty` set via the
+FIFO is in-memory only until a graceful `stop` rewrites
+`server.properties`; a `kill -9` loses it - and hostiles spawned
+before the peaceful setting keep acting, so set peaceful in
+`server.properties` (or before world gen) for a no-death fixture.
+
+### Cursor / hover drive (WorkScreen)
+
+`cursor <x> <y>` writes `mouseHandler.xpos/ypos` in **window/canvas
+pixels** (634x675). The screen receives
+`floor(xpos * guiScaledWidth / screenWidth)` (1.20.6 `Gui.java`,
+`int i = ...xpos() * window.getGuiScaledWidth() / window.getScreenWidth()`),
+so the hover box the screen tests is *not* at the canvas position of the
+same numbers - for this window the scale is ~0.96 px per GUI unit and
+the first card's icon hover box sits at ~canvas x 250-265, y 305-320
+(park `cursor 255 310` to trigger it). The highlight fill is
+`0x80FFFFFF` over the card gray, which **blends to ~215, not 255** - a
+probe threshold of 245+ misses a perfectly good hover box (this cost
+6+ probe cycles). A card icon only exists when the request's ingredient
+is non-null, so a blank board has nothing to hover: post one first with
+`_qtdev board_request wheat_seeds` (request still posts even though a
+listener NPEs in `updateWorkersAfterRequestChange` on a downtime
+townie - pre-existing golden-identical code).
 - **`cd X && setsid nohup ./gradlew ... &` backgrounds the `cd` too** —
   the whole list runs in the background subshell and the foreground `echo
   $(pwd)` reports the *old* directory. Use `./gradlew -p <project-dir>` with

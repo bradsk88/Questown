@@ -44,6 +44,20 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
         this.renderBgContent(this.renderContext(gui), partialTicks, mouseX, mouseY);
     }
 
+    // 1.19.2 parity: the golden container screens draw the blurred world behind the
+    // window (1.19.2 Screen.renderBackground -> renderBlurredBackground when a level
+    // is present) plus their own window background. The vanilla 1.20.6
+    // renderBackground instead fills the canvas with an opaque gray gradient
+    // (renderTransparentBackground), which neither matches the golden nor leaves the
+    // world visible - so skip that fill and blur instead. Screens that truly want
+    // the flat gray surface (the two *ConfirmScreen) keep their own override, which
+    // matches their golden equivalents.
+    @Override
+    public void renderBackground(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
+        this.renderBlurredBackground(partialTicks);
+        this.renderBg(gui, partialTicks, mouseX, mouseY);
+    }
+
     @Override
     protected void renderLabels(GuiGraphics gui, int mouseX, int mouseY) {
         this.renderLabelsContent(this.renderContext(gui), mouseX, mouseY);
