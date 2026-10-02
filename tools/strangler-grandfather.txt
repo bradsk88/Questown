@@ -43,7 +43,6 @@ core/init/CommandsInit.java
 core/init/ModItemGroup.java
 core/init/ScheduleInit.java
 core/init/TilesInit.java
-gui/AbstractPagedCardScreen.java
 gui/AbstractVillagerMenu.java
 gui/COMPLEX.md
 gui/GuiLayoutCheckClientEvents.java
@@ -55,13 +54,9 @@ gui/LockableInventoryWrapper.java
 gui/PagedCardScreen.java
 gui/QuestRemoveConfirmScreen.java
 gui/QuestownHudEvents.java
-gui/QuestsScreen.java
 gui/StatusGraphic.java
 gui/Tabs.java
-gui/TownEconomicsScreen.java
-gui/VillagerEconomicsScreen.java
 gui/VillagerStatsScreen.java
-gui/town/status/MultiStatusScreen.java
 gui/villager/advancements/VillagerAdvancementsContent.java
 gui/villager/advancements/VillagerAdvancementsScreen.java
 gui/villager/advancements/VillagerAdvancementsWidget.java

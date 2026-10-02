@@ -245,17 +245,26 @@ to the seam family alongside the existing `gui/RenderUtil` and `gui/RenderContex
 
 Proven on the `fillGradient` + NineNine pattern by migrating one screen of each tier
 (RelocationConfirmScreen → `CompatScreen`, JobUnlockConfirmScreen → `CompatContainerScreen`) plus
-WorkRequestConfirmScreen: all marker-free, `./gradlew stranglerCheck` stays green, and the
-grandfather set keeps dropping as they land (now 114). WorkRequestConfirmScreen also fixes the
+WorkRequestConfirmScreen, and the **paged cluster** (2026-10-13): `AbstractPagedCardScreen`
+(added to the gate's `SEAM_FILES` - its `renderTooltip(GuiGraphics,int,int)` hook is the one spot that
+carries the render argument to `ctx.gui()`) with its four leaves `QuestsScreen`, `TownEconomicsScreen`,
+`VillagerEconomicsScreen`, `MultiStatusScreen` onto `CompatContainerScreen` - paged surface via
+`renderBgContent`/`renderScreenContent`, leaf extras via `renderScreenExtras`. All marker-free, `./gradlew
+stranglerCheck` green, grandfather set 113 → 108; gui-lint OK on Quests/MultiStatus/TownEconomics via the
+`qtdiag flagtab` hook (the console FIFO was a dead pipe on that launch), and the `Util.blit` 8→10-arg fix
+verified by vision (the "flat grey box" status-icon bug the 8-arg form reintroduces - see the 10-arg
+javadoc in `mc/Util.java` and the AGENTS.md blit note).
+WorkRequestConfirmScreen also fixes the
 idiom for the one seam helper that still takes the render argument directly: `Ingredients.render` and
 `RenderUtil.highlight` take the argument as `ctx.gui()` (a record accessor, no type named in the leaf),
 while `Compat.drawDarkText` collapses to `ctx.darkText`.
 
 Pending: the remaining SAFE-tier confirm screens (VillagerBlockofProgressScreen,
 TownBlockofProgressScreen, CreateStockRequestScreen, WorkScreen, QuestRemoveConfirmScreen,
-AddWorkScreen), plus helpers that still take `GuiGraphics` (Ingredients, IngredientRenderer,
-StatusGraphic, `Tabs.draw`, PagedCardScreen, the `villager/advancements` widgets,
-QuestownHudEvents), and — most care needed — the render-layering family above (the screens
+AddWorkScreen), the **live gui-lint + vision pass on `VillagerEconomicsScreen`** (code-migrated with its
+twin but not yet opened on a held run - open via the villager menu's economics tab or the flagtab
+`economics` twin), plus helpers that still take `GuiGraphics` (Ingredients, IngredientRenderer,
+StatusGraphic, `Tabs.draw`, PagedCardScreen, the `villager/advancements` widgets, QuestownHudEvents), and — most care needed — the render-layering family above (the screens
 that override `renderBackground` to a blurred world and whose HUD is re-rendered by
 QuestownHudEvents). Those must route through these same hooks without losing the blur + HUD
 layering that is verified against the golden captures in `tools/porttest/goldens/`, and the

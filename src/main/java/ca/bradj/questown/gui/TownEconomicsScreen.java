@@ -6,17 +6,13 @@ import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
-import java.util.Optional;
 
 import static ca.bradj.questown.gui.PagedCardScreen.*;
 
@@ -58,15 +54,17 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
     }
 
     @Override
-    protected void renderLabels(
-            GuiGraphics p_97808_,
-            int p_97809_,
-            int p_97810_
+    protected void renderScreenExtras(
+            RenderContext ctx,
+            int mouseX,
+            int mouseY,
+            float partialTicks
     ) {
+        renderTooltips(ctx, mouseX, mouseY);
     }
 
     private void renderTooltips(
-            GuiGraphics gui,
+            RenderContext ctx,
             int mouseX,
             int mouseY
     ) {
@@ -77,7 +75,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
                 bgY,
                 mouseX,
                 mouseY,
-                key -> this.setTooltipForNextRenderPass(Compat.translatable(key))
+                key -> this.showTooltip(Compat.translatable(key))
         )) {
             return;
         }
@@ -91,39 +89,27 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
                 Ingredient ingr = Ingredients.fromString(card.data().ingredientKey());
                 Component itemName = Ingredients.getName(ingr);
                 int timesNeeded = card.data().timesNeeded();
-                this.setTooltipForNextRenderPass(List.of(
-                        Compat.translatable(key1, itemName, timesNeeded).getVisualOrderText(),
-                        Compat.translatable(key2, ItemEconomicsData.PERIOD_DAYS).getVisualOrderText()
+                this.showTooltip(List.of(
+                        Compat.componentText(Compat.translatable(key1, itemName, timesNeeded)),
+                        Compat.componentText(Compat.translatable(key2, ItemEconomicsData.PERIOD_DAYS))
                 ));
             }
         }
     }
 
     @Override
-    public void render(
-            GuiGraphics gui,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        this.renderBackground(gui, mouseX, mouseY, partialTicks);
-        super.render(gui, mouseX, mouseY, partialTicks);
-        this.renderTooltips(gui, mouseX, mouseY);
-    }
-
-    @Override
     protected List<Component> renderCardContent(
-            GuiGraphics gui,
+            RenderContext ctx,
             Card<ItemEconomicsData> card,
             int mouseX,
             int mouseY
     ) {
-        renderDataAndIcons(gui, card.coords(), card.data(), mouseX, mouseY);
+        renderDataAndIcons(ctx, card.coords(), card.data(), mouseX, mouseY);
         return null;
     }
 
     private void renderDataAndIcons(
-            GuiGraphics gui,
+            RenderContext ctx,
             CardCoordinates c,
             ItemEconomicsData data,
             int mouseX,
@@ -133,15 +119,15 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         int iconY = getIconY(c);
         Ingredient item = Ingredients.fromString(data.ingredientKey());
         if (UtilClean.isCoordInBox(mouseX, mouseY, iconX, iconY, 16, 16)) {
-            gui.fill(iconX, iconY, iconX + 16, iconY + 16, RenderUtil.SHADOW);
+            ctx.fill(iconX, iconY, iconX + 16, iconY + 16, RenderUtil.SHADOW);
         }
-        ingredientRenderer.render(gui, item, iconX, iconY);
+        ingredientRenderer.render(ctx.gui(), item, iconX, iconY);
         int textX = iconX + ingredientRenderer.getSize() + SMALL_PADDING + SMALL_PADDING;
         int textY = c.topYPadded();
-        Compat.drawDarkText(font, gui, Ingredients.getName(item), textX, textY);
+        ctx.darkText(Ingredients.getName(item), textX, textY);
         String count = Integer.toString(data.timesNeeded());
         int countX = c.rightXPadded() - font.width(count);
-        Compat.drawDarkText(font, gui, Compat.literal(count), countX, textY);
+        ctx.darkText(Compat.literal(count), countX, textY);
     }
 
     private static int getIconY(CardCoordinates coords) {
@@ -152,16 +138,17 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         return coords.leftX() + MED_PADDING;
     }
 
-    protected void renderBg(
-            GuiGraphics gui,
+    @Override
+    protected void renderBgContent(
+            RenderContext ctx,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
-        super.renderBg(gui, partialTicks, mouseX, mouseY);
+        super.renderBgContent(ctx, partialTicks, mouseX, mouseY);
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight()) / 2;
-        this.tabs.draw(new RenderContext(Compat.itemRenderer(), gui), bgX, bgY);
+        this.tabs.draw(ctx, bgX, bgY);
     }
 
     @Override

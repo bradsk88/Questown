@@ -3,7 +3,6 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -14,23 +13,47 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.List;
 
-public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D> extends AbstractContainerScreen<T> implements ScrollableScreen {
+/**
+ * Paged-card container base for questown's screen family (quests, economics, town status).
+ * Extends {@link CompatContainerScreen}, so the version-bound entry points and the blurred-world
+ * background are the compat base's; the paged surface (page-number strip, arrow buttons, cards)
+ * plugs in through the neutral hooks:
+ *
+ * <ul>
+ *   <li>{@link #renderBgContent} — the paged NineNine panel (decomposed from the 1.20.6
+ *       {@code renderBg} override);</li>
+ *   <li>{@link #renderScreenContent} — the paged {@code afterRender} (page buttons + cards, plus
+ *       the card's tooltip) and then {@link #renderScreenExtras}, the leaf's extra content
+ *       (tabs, the "all done" state). The leaf extras land after the paged content, matching the
+ *       former leaf {@code render} overrides that ran after {@code super.render};</li>
+ *   <li>{@link #renderCardContent} — the per-card content, now over {@link RenderContext} so the
+ *       leaf names no render-argument type.</li>
+ * </ul>
+ *
+ * The {@link PagedCardScreen} delegate keeps its 1.20.6 {@code GuiGraphics} calls; this base is
+ * the hand-off (the render argument only crosses as {@code ctx.gui()}). One vanilla hook stays
+ * version-bound here — the per-frame {@code renderTooltip} override, which forwards to the
+ * neutral {@link #renderTooltipContent} (the same hand-off {@code CompatContainerScreen} makes
+ * for its hooks) — so the base joins the gate's seam family rather than the grandfather list.
+ */
+public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D>
+        extends CompatContainerScreen<T> implements ScrollableScreen {
 
     private final PagedCardScreen<D> delegate;
     protected final int cardHeight;
 
     public AbstractPagedCardScreen(
-            T p_97741_,
-            Inventory p_97742_,
-            Component p_97743_
+            T menu,
+            Inventory playerInventory,
+            Component title
     ) {
-        super(p_97741_, p_97742_, p_97743_);
+        super(menu, playerInventory, title);
         this.delegate = new PagedCardScreen<>(
                 () -> height,
                 () -> width,
                 this::cardsData,
                 this::setRenderColorForCard,
-                (s, c, p) -> this.renderCardContent(s, c, p.x(), p.y()),
+                (s, c, p) -> this.renderCardContent(this.renderContext(s), c, p.x(), p.y()),
                 1,
                 0,
                 0
@@ -39,7 +62,7 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
     }
 
     protected abstract List<Component> renderCardContent(
-            GuiGraphics stack,
+            RenderContext ctx,
             PagedCardScreen.Card<D> dCard,
             int mouseX,
             int mouseY
@@ -60,47 +83,24 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
     }
 
     @Override
-    protected void renderBg(
-            GuiGraphics poseStack,
-            float v,
-            int i,
-            int i1
-    ) {
-        this.delegate.renderBg(poseStack, v, i, i1);
-    }
-
-    // 1.19.2 parity: on the golden (1.19.2) these screens show the world behind
-    // the window BLURRED (their Screen.renderBackground is the blur path) with the
-    // window on top and the HUD visible - and no opaque canvas fill. The vanilla
-    // 1.20.6 default instead fills the canvas with an opaque gray gradient
-    // (renderTransparentBackground), which hides the world and does not match the
-    // golden. So skip the gradient and blur the world instead, keeping the window's
-    // own background (renderBg) as the opaque surface.
-    @Override
-    public void renderBackground(
-            GuiGraphics guiGraphics,
-            int mouseX,
-            int mouseY,
-            float partialTick
-    ) {
-        this.renderBlurredBackground(partialTick);
-        this.renderBg(guiGraphics, partialTick, mouseX, mouseY);
+    protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
+        this.delegate.renderBg(ctx.gui(), partialTicks, mouseX, mouseY);
     }
 
     @Override
-    public void render(
-            GuiGraphics p_97795_,
-            int p_97796_,
-            int p_97797_,
-            float p_97798_
-    ) {
-        super.render(p_97795_, p_97796_, p_97797_, p_97798_);
+    protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
+        renderPagedContent(ctx, mouseX, mouseY, partialTicks);
+        this.renderScreenExtras(ctx, mouseX, mouseY, partialTicks);
+    }
+
+    /** The paged surface: page-number strip + arrow buttons + cards (and the hovered card's tooltip). */
+    protected void renderPagedContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         @Nullable List<Component> tooltips = this.delegate.afterRender(
-                p_97795_,
-                font,
-                p_97796_,
-                p_97797_,
-                p_97798_,
+                ctx.gui(),
+                ctx.font(),
+                mouseX,
+                mouseY,
+                partialTicks,
                 cardsData(),
                 true
         );
@@ -109,12 +109,28 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
             return;
         }
 
-        renderTooltipWithDynamicWrapping(p_97795_, p_97796_, p_97797_, tooltips);
+        renderTooltipWithDynamicWrapping(ctx, mouseX, mouseY, tooltips);
     }
+
+    /**
+     * The leaf's extra content (tabs, the all-done state), drawn after the paged surface — the
+     * same relative position the leaves' former {@code render} overrides had.
+     */
+    protected void renderScreenExtras(RenderContext ctx, int mouseX, int mouseY, float partialTicks) { }
+
+    // The per-frame tooltip hook: 1.20.6's AbstractContainerScreen calls renderTooltip during its
+    // render chain, so leaves keep it as a version-neutral content hook (the render argument only
+    // crosses as the render context).
+    @Override
+    protected void renderTooltip(GuiGraphics gui, int mouseX, int mouseY) {
+        this.renderTooltipContent(this.renderContext(gui), mouseX, mouseY);
+    }
+
+    protected void renderTooltipContent(RenderContext ctx, int mouseX, int mouseY) { }
 
     // TODO: Move to RenderUtils for reuse
     private void renderTooltipWithDynamicWrapping(
-            GuiGraphics stack,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             List<Component> tooltip
@@ -123,17 +139,19 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
         int rightMargin = screenWidthMargin / 2;
         int rightEdge = width - rightMargin;
         int widthRightOfCursor = Math.max(rightEdge - mouseX, 80); // Ensure at least 150px for tooltips
-        List<FormattedCharSequence> tt = tooltip.stream().map(t -> Compat.splitText(font, t, widthRightOfCursor))
+        List<FormattedCharSequence> tt = tooltip.stream()
+                                                .map(t -> Compat.splitText(ctx.font(), t, widthRightOfCursor))
                                                 .flatMap(Collection::stream).toList();
-        this.setTooltipForNextRenderPass(tt);
+        this.showTooltip(tt);
     }
 
+    @Override
     public boolean mouseScrolled(
-            double p_94686_,
-            double p_94687_,
-            double p_94688_
+            double scrollX,
+            double scrollY,
+            double scrollDelta
     ) {
-        return this.delegate.mouseScrolled(p_94686_, p_94687_, p_94688_, this::isMouseOver, (x, y, d) -> false);
+        return this.delegate.mouseScrolled(scrollX, scrollY, scrollDelta, this::isMouseOver, (x, y, d) -> false);
     }
 
     public List<Rect2i> getExtraAreas() {

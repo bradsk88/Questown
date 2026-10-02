@@ -9,7 +9,6 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
@@ -54,17 +53,15 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     }
 
     @Override
-    public void render(
-            GuiGraphics stack,
+    protected void renderScreenExtras(
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - super.backgroundHeight()) / 2;
-        super.renderBackground(stack, mouseX, mouseY, partialTicks);
-        super.render(stack, mouseX, mouseY, partialTicks);
-        tabs.draw(new RenderContext(Compat.itemRenderer(), stack), bgX, bgY);
+        tabs.draw(ctx, bgX, bgY);
     }
 
     @Override
@@ -78,24 +75,24 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
 
     @Override
     protected List<Component> renderCardContent(
-            GuiGraphics poseStack,
+            RenderContext ctx,
             Card<UUID> card,
             int mouseX,
             int mouseY
     ) {
         if (MORNING_ARRIVAL_SENTINEL.equals(card.data())) {
-            poseStack.drawString(font, Compat.translatable("gui.status.villager_arriving_morning"),
+            ctx.text(Compat.translatable("gui.status.villager_arriving_morning"),
                     card.coords().leftXPadded(), card.coords().topYPadded(), 0xFF808080, false);
             return null;
         }
-        renderStatus(poseStack, card.coords(), card.data());
-        renderInventory(poseStack, card.coords(), card.data());
-        renderFace(poseStack, card.coords(), card.data());
+        renderStatus(ctx, card.coords(), card.data());
+        renderInventory(ctx, card.coords(), card.data());
+        renderFace(ctx, card.coords(), card.data());
         return null;
     }
 
     private void renderInventory(
-            GuiGraphics gui,
+            RenderContext ctx,
             CardCoordinates coords,
             UUID uuid
     ) {
@@ -104,31 +101,25 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         for (Item item : items) {
             int destX = iconX + SMALL_PADDING;
             int destY = coords.topYPadded() + BIG_PADDING;
-            Compat.renderItemAndDecorations(gui, new ItemStack(item), destX, destY);
+            Compat.renderItemAndDecorations(ctx.gui(), new ItemStack(item), destX, destY);
             iconX += 16;
         }
     }
 
     private void renderFace(
-            GuiGraphics stack,
+            RenderContext ctx,
             CardCoordinates coords,
             UUID uuid
     ) {
         int x = coords.leftXPadded();
         int destY = coords.topYPadded();
-        Util.blitFace(stack, uuid, x, destY);
+        Util.blitFace(ctx.gui(), uuid, x, destY);
         int nameX = x + Util.faceWidth + 4;
-        Compat.drawDarkText(
-                font,
-                stack,
-                Compat.translatable(syncedData.villagerStatuses.get(uuid).jobId().rootId()),
-                nameX,
-                destY
-        );
+        ctx.darkText(Compat.translatable(syncedData.villagerStatuses.get(uuid).jobId().rootId()), nameX, destY);
     }
 
     private void renderStatus(
-            GuiGraphics stack,
+            RenderContext ctx,
             PagedCardScreen.CardCoordinates coords,
             UUID uuid
     ) {
@@ -140,7 +131,9 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int destX = getStatusX(coords);
         int destY = getStatusY(coords);
         @NotNull StatusPacket status = getSmoothedStatus(uuid);
-        stack.blit(status.image(), destX, destY, 0, 0, drawWidth, drawHeight, drawWidth, drawHeight);
+        // 32x32 status art: pass the draw size as the sheet (the 8-arg Util.blit normalises
+        // against the 256 sheet and would sample only the leftmost 4 px - the "flat grey box" bug).
+        Util.blit(ctx.gui(), status.image(), destX, destY, 0, 0, drawWidth, drawHeight, drawWidth, drawHeight);
     }
 
     private static int getStatusY(CardCoordinates coords) {
@@ -171,8 +164,8 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     }
 
     @Override
-    protected void renderTooltip(
-            @NotNull GuiGraphics stack,
+    protected void renderTooltipContent(
+            RenderContext ctx,
             int mouseX,
             int mouseY
     ) {
@@ -184,7 +177,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
                 bgY,
                 mouseX,
                 mouseY,
-                key -> this.setTooltipForNextRenderPass(Compat.translatable(key))
+                key -> this.showTooltip(Compat.translatable(key))
         )) {
             return;
         }
@@ -196,13 +189,11 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             int y = getStatusY(v.coords());
             if (UtilClean.isCoordInBox(mouseX, mouseY, x, y, 32, 32)) {
                 @NotNull StatusPacket status = getSmoothedStatus(v.data());
-                this.setTooltipForNextRenderPass(
-                        status.texts().stream().map(Component::getVisualOrderText).toList()
-                );
+                this.showTooltip(status.texts().stream().map(Compat::componentText).toList());
                 return;
             }
         }
-        super.renderTooltip(stack, mouseX, mouseY);
+        super.renderTooltipContent(ctx, mouseX, mouseY);
     }
 
     @Override

@@ -17,7 +17,6 @@ import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.util.FormattedCharSequence;
@@ -87,14 +86,15 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         }
         Component link = Compat.translatable("menu.quests.view_completed");
         int btnW = this.font.width(link) + BUTTON_H_PADDING;
-        this.viewCompletedButton = Button.builder(
+        this.viewCompletedButton = Compat.button(
                 link,
                 btn -> {
                     showingCompleted = true;
                     btn.visible = false;
                     btn.active = false;
-                }
-        ).bounds((this.width - btnW) / 2, emptyStateButtonY(), btnW, BUTTON_HEIGHT).build();
+                },
+                (this.width - btnW) / 2, emptyStateButtonY(), btnW, BUTTON_HEIGHT
+        );
         this.addRenderableWidget(this.viewCompletedButton);
     }
 
@@ -132,35 +132,26 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     }
 
     @Override
-    protected void renderLabels(
-            GuiGraphics p_97808_,
-            int p_97809_,
-            int p_97810_
-    ) {
-    }
-
-    @Override
-    public void render(
-            GuiGraphics gui,
+    protected void renderScreenExtras(
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
-        super.render(gui, mouseX, mouseY, partialTicks);
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        this.tabs.draw(new RenderContext(Compat.itemRenderer(), gui), bgX, bgY);
-        this.tabs.renderTooltip(bgX, bgY, mouseX, mouseY, key -> this.setTooltipForNextRenderPass(Compat.translatable(key)));
+        this.tabs.draw(ctx, bgX, bgY);
+        this.tabs.renderTooltip(bgX, bgY, mouseX, mouseY, key -> this.showTooltip(Compat.translatable(key)));
         if (allComplete && !showingCompleted) {
-            renderAllDoneState(gui);
+            renderAllDoneState(ctx);
         }
     }
 
-    private void renderAllDoneState(GuiGraphics gui) {
+    private void renderAllDoneState(RenderContext ctx) {
         // Draw the wrapped subtitle above the "View completed" button (which is a real widget added
         // in init() at emptyStateButtonY(), so it renders and hit-tests itself).
         int textWidth = backgroundWidth - 2 * TEXT_MARGIN;
-        drawCenteredWrapped(gui, subtitleComponent(), this.width / 2, emptyStateTop(), textWidth, TEXT_COLOR);
+        drawCenteredWrapped(ctx, subtitleComponent(), this.width / 2, emptyStateTop(), textWidth, TEXT_COLOR);
     }
 
     private int wrappedHeight(Component text, int maxWidth) {
@@ -169,7 +160,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
     /** Draw {@code text} wrapped to {@code maxWidth}, each line centred on {@code centerX}. Returns height. */
     private int drawCenteredWrapped(
-            GuiGraphics gui,
+            RenderContext ctx,
             Component text,
             int centerX,
             int y,
@@ -179,7 +170,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         int dy = 0;
         for (FormattedCharSequence line : Compat.splitText(this.font, text, maxWidth)) {
             int x = centerX - (this.font.width(line) / 2);
-            gui.drawString(this.font, line, x, y + dy, color, false);
+            ctx.text(line, x, y + dy, color, false);
             dy += this.font.lineHeight;
         }
         return dy;
@@ -188,7 +179,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
     @Override
     protected List<Component> renderCardContent(
-            GuiGraphics gui,
+            RenderContext ctx,
             Card<UIQuest> card,
             int mouseX,
             int mouseY
@@ -211,7 +202,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
         int idX = card.coords().leftXPadded();
         int idY = card.coords().topYPadded();
-        gui.drawString(this.font, recipeName.getString(), idX, card.coords().topYPadded(), TEXT_COLOR, false);
+        ctx.text(recipeName.getString(), idX, card.coords().topYPadded(), TEXT_COLOR, false);
         String vID = recipe.villagerUUID();
         String jobName = recipe.jobName();
 
@@ -220,17 +211,17 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         CardCoordinates shiftedUp = card.coords().shiftedUp(5);
         @Nullable Component removalTooltip = null;
         if (recipe.getBatchUUID() != null) {
-            removalTooltip = renderRemovalButton(gui, mouseX, mouseY, shiftedUp, recipe.getBatchUUID());
+            removalTooltip = renderRemovalButton(ctx, mouseX, mouseY, shiftedUp, recipe.getBatchUUID());
         }
 
         Coordinate mouse = new Coordinate(mouseX, mouseY);
         @Nullable Component renderedHeadTooltip = null;
         if (!vID.isEmpty()) {
-            renderedHeadTooltip = renderHead(gui, card, mouse, jobName, tooltip, vID, shiftedUp);
+            renderedHeadTooltip = renderHead(ctx, card, mouse, jobName, tooltip, vID, shiftedUp);
         }
 
         @Nullable List<Component> renderedItemTooltip = renderRecipeCardIcons(
-                gui,
+                ctx,
                 recipe,
                 new Coordinate(card.coords().leftXPadded(), iconY),
                 card.coords().padded().bottomRight(),
@@ -318,7 +309,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     }
 
     private @Nullable Component renderHead(
-            GuiGraphics gui,
+            RenderContext ctx,
             Card<UIQuest> card,
             Coordinate mouse,
             String jobName,
@@ -339,13 +330,13 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         if (showHead) {
             int headX = card.coords().rightX() - 19 - 20;
             int headY = shiftedUp.topYPadded() - 1;
-            Util.blitFace(gui, UUID.fromString(vID), headX, headY + 1, 2);
+            Util.blitFace(ctx.gui(), UUID.fromString(vID), headX, headY + 1, 2);
             if (UtilClean.isCoordInBox(
                     mouse,
                     new Coordinate(headX, headY + 1),
                     new Coordinate(headX + 16, headY + 17)
             )) {
-                gui.fill(headX, headY + 1, headX + 16, headY + 17, 0x80FFFFFF);
+                ctx.fill(headX, headY + 1, headX + 16, headY + 17, 0x80FFFFFF);
                 return tooltip;
             }
         }
@@ -357,7 +348,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     }
 
     private @Nullable Component renderRemovalButton(
-            GuiGraphics gui,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             CardCoordinates coords,
@@ -365,14 +356,14 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     ) {
         int removeButtonX = coords.rightXPadded() - buttonWidth;
         int removeButtonY = coords.topYPadded();
-        Compat.drawLightText(
-                this.font, gui, "x",
+        ctx.lightText(
+                "x",
                 (int) (removeButtonX + ((float) buttonWidth / 2) - 1),
                 (int) (removeButtonY + ((float) buttonWidth / 2) - 3)
         );
         this.removes.put(new Position(removeButtonX, removeButtonY), () -> menu.sendRemoveRequest(index));
         return highlightAndTooltip(
-                gui,
+                ctx,
                 mouseX,
                 mouseY,
                 removeButtonX,
@@ -383,7 +374,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
 
     private @Nullable Component highlightAndTooltip(
-            GuiGraphics gui,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             int iconX,
@@ -397,13 +388,13 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 bgY,
                 mouseX,
                 mouseY,
-                key -> this.setTooltipForNextRenderPass(Compat.translatable(key))
+                key -> this.showTooltip(Compat.translatable(key))
         )) {
             return null;
         }
         if (mouseX >= iconX && mouseY >= iconY && mouseX < iconX + 16 && mouseY < iconY + 16) {
             // transparent white square behind hovered item slot
-            gui.fill(iconX, iconY, iconX + 16, iconY + 16, 0x80FFFFFF);
+            ctx.fill(iconX, iconY, iconX + 16, iconY + 16, 0x80FFFFFF);
             // return hovered item's name as a tooltip to be rendered
             return tooltipText;
         }
@@ -434,7 +425,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     }
 
     private @Nullable List<Component> renderRecipeCardIcons(
-            GuiGraphics gui,
+            RenderContext ctx,
             UIQuest recipe,
             Coordinate stripTopLeft,
             Coordinate cardBottomRight,
@@ -444,10 +435,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
 
         return RenderUtil.stripOfRequestableItems(
-                (ing, coord) -> Ingredients.render(gui, ing, coord.x(), coord.y()),
+                (ing, coord) -> Ingredients.render(ctx.gui(), ing, coord.x(), coord.y()),
                 (ing) -> ImmutableList.of(Ingredients.getName(ing)),
-                (text, coord) -> Compat.drawDarkText(font, gui, text, coord.x(), coord.y()),
-                (topLeft, botRight) -> RenderUtil.highlight(gui, topLeft, botRight),
+                (text, coord) -> ctx.darkText(text, coord.x(), coord.y()),
+                (topLeft, botRight) -> RenderUtil.highlight(ctx.gui(), topLeft, botRight),
                 ImmutableList.copyOf(ingredients),
                 stripTopLeft,
                 cardBottomRight,
@@ -456,15 +447,16 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     }
 
     @Override
-    protected void renderBg(
-            GuiGraphics gui,
+    protected void renderBgContent(
+            RenderContext ctx,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
+        super.renderBgContent(ctx, partialTicks, mouseX, mouseY);
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(gui, x, y, backgroundWidth, backgroundHeight);
+        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
     }
 
     @Override

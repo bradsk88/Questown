@@ -1,6 +1,7 @@
 package ca.bradj.questown.loader.neo;
 
 import ca.bradj.questown.core.network.AddWorkFromUIMessage;
+import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.VillagerTabsEmbedding;
@@ -41,7 +42,10 @@ import java.util.List;
  * {@code inquire <x> <y> <z> [item]} (send the work-board card's
  * {@code AddWorkFromUIMessage(INQUIRED)} so the server answers with a
  * {@code WorkRequestConfirmMessage} and the confirm screen opens on the
- * render thread — the same message pair a card click produces).
+ * render thread — the same message pair a card click produces) and
+ * {@code flagtab <type> [x y z]} (send the flag tab's {@code OpenFlagMenuMessage}
+ * so the server opens the flag-scoped screen — {@code villagers} or
+ * {@code economics} — the same message a flag-tab click sends).
  */
 public class QtDiagClient {
 
@@ -103,6 +107,10 @@ public class QtDiagClient {
                 case "shot" -> shot(mc, parts.length > 1 ? parts[1] : "shot");
                 case "cursor" -> cursor(mc, Double.parseDouble(parts[1]), Double.parseDouble(parts[2]));
                 case "inquire" -> inquire(mc, parts[1], parts[2], parts[3], parts.length > 4 ? parts[4] : null);
+                case "flagtab" -> flagtab(mc, parts[1],
+                        parts.length > 2 ? parts[2] : "0",
+                        parts.length > 3 ? parts[3] : "64",
+                        parts.length > 4 ? parts[4] : "0");
                 default -> System.out.println("[qtdiag] unknown command: " + parts[0]);
             }
         } catch (Throwable t) {
@@ -180,6 +188,28 @@ public class QtDiagClient {
                 AddWorkFromUIMessage.Action.INQUIRED
         ));
         System.out.println("[qtdiag] inquire " + item + " at " + x + "," + y + "," + z + " sent");
+    }
+
+    private static void flagtab(
+            Minecraft mc,
+            String type,
+            String x,
+            String y,
+            String z
+    ) {
+        if (mc.player == null) {
+            System.out.println("[qtdiag] flagtab: no local player");
+            return;
+        }
+        QuestownNetwork.sendToServer(new OpenFlagMenuMessage(
+                ca.bradj.questown.gui.FlagTabsEmbedding.FlagInfo.dumb(
+                        new BlockPos(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)),
+                        false,
+                        false
+                ),
+                type
+        ));
+        System.out.println("[qtdiag] flagtab " + type + " at " + x + "," + y + "," + z + " sent");
     }
 
     private static void shot(Minecraft mc, String name) {
