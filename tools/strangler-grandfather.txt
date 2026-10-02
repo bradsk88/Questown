@@ -44,7 +44,6 @@ gui/ItemJobsScreen.java
 gui/LockableInventoryWrapper.java
 gui/PagedCardScreen.java
 gui/QuestownHudEvents.java
-gui/VillagerStatsScreen.java
 gui/villager/advancements/VillagerAdvancementsContent.java
 gui/villager/advancements/VillagerAdvancementsScreen.java
 gui/villager/advancements/VillagerAdvancementsWidget.java

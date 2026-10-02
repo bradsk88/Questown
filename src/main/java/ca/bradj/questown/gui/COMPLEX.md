@@ -260,7 +260,7 @@ idiom for the one seam helper that still takes the render argument directly: `In
 while `Compat.drawDarkText` collapses to `ctx.darkText`.
 
 Pending: the remaining full G1 screens that still take the render argument
-(`VillagerStatsScreen`, `InventoryAndStatusScreen`, `ItemJobsScreen`), the helpers that still
+(`InventoryAndStatusScreen`, `ItemJobsScreen`), the helpers that still
 take `GuiGraphics` (`Ingredients`, `PagedCardScreen`, the `villager/advancements` widgets,
 QuestownHudEvents), and - most care needed - the render-layering
 family above (the screens that override `renderBackground` to a blurred world and whose HUD is
@@ -269,7 +269,10 @@ the blur + HUD layering that is verified against the golden captures in `tools/p
 and the oracle pipeline in `tools/porttest/run.sh` is the way to catch any regression on this
 machine. The SAFE-tier confirm screens (VillagerBlockofProgressScreen, TownBlockofProgressScreen,
 CreateStockRequestScreen, WorkScreen, AddWorkScreen, FlagCraftingScreen, JobChangeConfirmScreen)
-and the render-argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs` are done.
+and the render-argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs` are done,
+as is `VillagerStatsScreen` (2026-10-13: onto `CompatContainerScreen` - the stat bars and
+two-half-band art are verbatim `Util.blit`/`ctx.darkText` calls - gui-lint OK, vision
+confirmed the bars + HUD-over-blur layering, bank diff in fixture-drift range).
 
 Render-argument helpers taking `RenderContext` (2026-10-13): `IngredientRenderer.render`,
 `StatusGraphic.render`, and `Tabs.draw` (plus the inlined notification-dot `fill`) now take
