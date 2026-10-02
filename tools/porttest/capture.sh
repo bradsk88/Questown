@@ -17,6 +17,9 @@
 #   fixture        _qtdev townplace + townspawn at the logged spawn (no tp)
 #   shot <name>    death/desync guard (grep + Health probe), then openvillager
 #                  <type> + shot <name>
+#   teardown|sweep stop the pair: run sweep.sh (kill repo JVMs + gradle daemons)
+#                  and verify none remain - the terminator (there is no other
+#                  kill stage; prep also runs it first)
 #   unstick <proj> <port> <game> [player]  stuck-death reset in the verified
 #                  order: stop server, kill ALL client javas, wipe
 #                  playerdata/<player>.dat while the server is down, verify,
@@ -365,6 +368,15 @@ unstick)
 
 state)
   python3 "$TOOL/state.py"
+  ;;
+
+teardown|sweep)
+  "$TOOL/sweep.sh" "$PROJ"
+  sleep 1
+  left=$(pgrep -cf 'runServer|runClient|forgeserveruserdev' 2>/dev/null) || true
+  left=${left:-0}
+  say "teardown: repo JVMs remaining: $left"
+  [ "$left" -eq 0 ] || die "repo JVMs still up after sweep"
   ;;
 
 *)

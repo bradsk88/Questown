@@ -50,9 +50,14 @@ reference - read it before the next leaf.
    `executed`.
 3. **Live gui-lint on a held run** (AGENTS.md): open the screen in a dev
    client, confirm `[gui-lint] <Screen> — OK, no layout violations` in the
-   client log. Open it via the console `_qtdev` command when the FIFO is
-   alive; otherwise the diag channel (`.pi/skills/questown-held-run` skill
-   carries the launch + console traps).
+   client log. Headless openers: the manifest `shot <name>` entries, `flagtab
+   <type> <flag x y z>` (hook-native - raw in `.qtdiag-cmd`, **no** `cmd`
+   prefix, see PORTTEST.md), and the thin `_qtdev` wrappers (`show_item_jobs`
+   pattern in `QtDevClickCommand`, doc'd in `commands/COMPLEX.md`). If a
+   screen has no headless opener, add the thin `_qtdev` wrapper first - one
+   that delegates to the owner call the click path already makes - rather
+   than driving it by state. If the FIFO is alive the `cmd` channel works;
+   the `.pi/skills/questown-held-run` skill carries the launch + console traps.
 4. **Vision-check before trusting the pixels**: the `capture.sh` stage
    `shot` is async — poll `run-client/diags/<name>.png` for a few seconds;
    a capture that shows "Connection Lost" means the client was mid-reconnect,
