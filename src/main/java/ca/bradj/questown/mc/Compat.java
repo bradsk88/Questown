@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -381,6 +382,25 @@ public class Compat {
     ) {
         gui.renderItem(stack, x, y);
         gui.renderItemDecorations(Minecraft.getInstance().font, stack, x, y);
+    }
+
+    /**
+     * Static-render an item in the GUI display context (1.20.6 {@code ItemDisplayContext.GUI};
+     * 1.19.2 would use {@code DisplayType.GUI}), so item renderers name only this helper and the
+     * version-bound display-context enum stays inside the seam.
+     */
+    public static void renderItemStaticGui(
+            ItemRenderer renderer,
+            ItemStack stack,
+            int lightLevel,
+            com.mojang.blaze3d.vertex.PoseStack poseStack,
+            net.minecraft.client.renderer.MultiBufferSource buffer,
+            net.minecraft.world.level.Level level,
+            int shade
+    ) {
+        renderer.renderStatic(stack, ItemDisplayContext.GUI, lightLevel,
+                net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY,
+                poseStack, buffer, level, shade);
     }
 
     public static List<FormattedCharSequence> splitText(

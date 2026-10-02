@@ -154,6 +154,16 @@ wrapper in Compat would close this cluster.
 Per the mission rule, joml import moves are mechanical and may stay inline; the
 DisplayType/ItemDisplayContext split is a real API edge and belongs in Compat.
 
+G5 shipped (2026-10-13): `Compat.renderItemStaticGui(...)` owns the GUI display-context
+render (the helper passes identical `renderStatic` arguments to the old call site, so the
+four leaves are behavior-identical), and the gate's `org.joml` marker was removed as
+mechanical (precedent comment in `tools/strangler-check` beside the renderTooltip removal).
+Eight lines de-grandfathered: AxeRack / FoodDisplay / HospitalBed / Plate renderers,
+SpinningCube, BubbleRenderer, FishingHookRenderer, TownFlagTicker - 77 -> 69, gate green,
+`compileJava`+`compileTestJava` executed. The two G5 test files (TestWorldInteraction,
+TownQuestsLootTest) still carry G4 registry markers and stay grandfathered for the
+registry facade.
+
 ### G6. Loader and event tier (50 files, ~31 outside the loader seam)
 
 `net.neoforged.*` (events, `IItemHandler`/`InvWrapper`, `CommandRegisterEvent`,

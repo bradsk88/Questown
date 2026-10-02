@@ -1,6 +1,7 @@
 package ca.bradj.questown.render;
 
 import ca.bradj.questown.mobs.helperchicken.BubbleRenderType;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.helperchicken.HelperChickenEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -8,10 +9,8 @@ import org.joml.Matrix4f;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.ItemRenderer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 
@@ -283,11 +282,10 @@ import net.minecraft.world.item.ItemStack;
         // icon sits inside it regardless of item kind.
         poseStack.pushPose();
         poseStack.translate(0.0, ICON_CENTRE_Y_INNER, 0.0);
-        itemRenderer.renderStatic(
+        Compat.renderItemStaticGui(
+                itemRenderer,
                 shown,
-                ItemDisplayContext.GUI,
                 FULLBRIGHT,
-                OverlayTexture.NO_OVERLAY,
                 poseStack,
                 effectiveBuffer,
                 Minecraft.getInstance().level,

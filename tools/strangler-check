@@ -29,7 +29,13 @@ cd "$root"
 # grandfathered and is absorbed by the render-argument migration. General rule:
 # a name-based marker is a leak only if the codebase actually carries a 1.20-only
 # usage of that name; a same-named domain helper is a name collision, not a leak.
-MARKERS='GuiGraphics|ItemDisplayContext|LootParams|MapColor|net\.minecraft\.core\.registries|net\.minecraft\.core\.component|net\.minecraft\.world\.item\.component|DataComponents|CustomData|org\.joml|net\.neoforged|RecipeHolder|RegistryAccess|HolderLookup|ItemInteractionResult|InteractionResultHolder|net\.minecraft\.network\.protocol|StreamCodec|net\.minecraft\.core\.Holder|getVisualOrderText|Button\.builder|DamageTypes|CreativeModeTab\.Builder'
+#
+# org.joml was DELIBERATELY removed from this list (2026-10, G5 pass). It is the
+# com.mojang.math -> org.joml third-party package rename, which the mission rule
+# (AGENTS.md) and the probe report's G5 note both classify as mechanical and fine
+# inline - the 1.19.2 golden carries com.mojang.math imports in the same leaves.
+# Do NOT re-add it: it only keeps the renderer leaves permanently grandfathered.
+MARKERS='GuiGraphics|ItemDisplayContext|LootParams|MapColor|net\.minecraft\.core\.registries|net\.minecraft\.core\.component|net\.minecraft\.world\.item\.component|DataComponents|CustomData|net\.neoforged|RecipeHolder|RegistryAccess|HolderLookup|ItemInteractionResult|InteractionResultHolder|net\.minecraft\.network\.protocol|StreamCodec|net\.minecraft\.core\.Holder|getVisualOrderText|Button\.builder|DamageTypes|CreativeModeTab\.Builder'
 
 # Seam family: expected to carry version-specific code.
 SEAM='^(mc/|loader/|core/network/)'

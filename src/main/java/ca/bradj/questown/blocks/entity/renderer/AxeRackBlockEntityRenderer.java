@@ -2,15 +2,14 @@ package ca.bradj.questown.blocks.entity.renderer;
 
 import ca.bradj.questown.blocks.entity.AxeRackBlockEntity;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.mc.Compat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -61,16 +60,7 @@ public class AxeRackBlockEntityRenderer implements BlockEntityRenderer<AxeRackBl
 
         int ll = getLightLevel(pbe.getLevel(), pbe.getBlockPos());
 
-        itemRenderer.renderStatic(
-                itemStack,
-                ItemDisplayContext.GUI,
-                ll,
-                OverlayTexture.NO_OVERLAY,
-                stack,
-                buf,
-                pbe.getLevel(),
-                1
-        );
+        Compat.renderItemStaticGui(itemRenderer, itemStack, ll, stack, buf, pbe.getLevel(), 1);
         stack.popPose();
     }
 

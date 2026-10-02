@@ -1,6 +1,7 @@
 package ca.bradj.questown.blocks.entity.renderer;
 
 import ca.bradj.questown.blocks.entity.PlateBlockEntity;
+import ca.bradj.questown.mc.Compat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -10,9 +11,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
@@ -56,10 +55,7 @@ public class PlateBlockEntityRenderer implements BlockEntityRenderer<PlateBlockE
 
         int ll = getLightLevel(pbe.getLevel(), pbe.getBlockPos());
 
-        itemRenderer.renderStatic(
-                itemStack, ItemDisplayContext.GUI, ll,
-                OverlayTexture.NO_OVERLAY, stack, buf, pbe.getLevel(), 1
-        );
+        Compat.renderItemStaticGui(itemRenderer, itemStack, ll, stack, buf, pbe.getLevel(), 1);
         stack.popPose();
 
     }

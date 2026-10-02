@@ -28,7 +28,11 @@ neoforged → G5 renderers → G7 client events. Each cluster has a note in
 `docs/plans/strangler-1.19.2-probe-report.md`; read the note for the
 cluster you are opening before touching a file.
 
-As of 2026-10-13 the txt is at 77 entries. The G1 SAFE-tier confirm screens
+As of 2026-10-13 the txt is at 69 entries. The G5 renderer cluster is done
+(`Compat.renderItemStaticGui` owns the GUI `renderStatic` call for AxeRack / FoodDisplay /
+Plate / BubbleRenderer; the `org.joml` marker is off the gate as mechanical - the
+`com.mojang.math` → `org.joml` rename the mission rule calls inline-fine, so joml imports
+no longer grandfather anything). The G1 SAFE-tier confirm screens
 (Work, AddWork, FlagCrafting, JobChange, Bop×2, CreateStock, QuestRemove), the render-
 argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs`, `Ingredients`,
 the `villager/advancements` widget trio, the two client event subscribers
@@ -125,7 +129,8 @@ content gate + bank diff in fixture-drift range. Note: `renderTooltips`'s
 to keep the swap visible)
 
 and the last two `gui/` neoforged menus (2026-10-13, 79 → 77 - `gui/` is now
-leak-free). `AbstractVillagerMenu`'s three neoforged imports
+leak-free), and the G5 renderers (2026-10-13, 77 → 69 - see the shipped note in the
+probe report). `AbstractVillagerMenu`'s three neoforged imports
 (`IItemHandler`/`SlotItemHandler`/`InvWrapper`) are gone - the menu holds the
 original vanilla `Container`/`Inventory` directly and builds plain vanilla
 `Slot(container, index, x, y)` boxes. That is provably equivalent: its custom
@@ -148,7 +153,8 @@ surface was only the item-handler, and that is what the vanilla-
 `Slot`-over-`Container` swap removed. The `protected` fields the five villager
 screens read (`flagPos`/`villagerUUID`/`gathererInventoryYOffset`) are untouched.
 
-The frontier is now the non-"gui/" clusters: G2/G4 multi-marker files
+The frontier is now the non-"gui/" and non-G5 clusters: G2/G4 multi-marker files
 (HospitalBedBlock's dynamic MapColor lambda, the LootParams blocks,
 TownFlagBlock/BlockOfProgress data-components, MCTownItem/TestBlueprintRegistry
-registries), G5 renderers, G6 neoforged, G7 client events.
+registries), the G6 loader/event seam (the loader/COMPLEX.md rule already decides it:
+loader-neutral facade, `loader/neo` owns the imports), and G7 vanilla packet plumbing.
