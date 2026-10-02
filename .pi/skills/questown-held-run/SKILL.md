@@ -40,7 +40,7 @@ the fix belongs in the game or in a dev command's output, not in this skill.
 This skill consolidates what was scattered across `AGENTS.md`,
 `references/questown-dev-launch.md`, `questown-behavior-verify`, and
 `commands/test/COMPLEX.md`. Before the first launch, read
-`~/.pi/agent/references/questown-dev-launch.md` — it has the full OOM-137 /
+`references/questown-dev-launch.md` — it has the full OOM-137 /
 client-daemon-death / FIFO-survival detail this skill only summarizes, and a
 fresh session that skips it will hit the launch traps. The rest of this skill is
 the sequence a session needs up front.
@@ -171,10 +171,58 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
 Do not restart the server while the client is up - it kills the client and
 wipes the world. If you must load a new command, kill the client, restart the
 server alone, relaunch the client after. Full traps (OOM 137, client daemon
-death, FIFO) are in `~/.pi/agent/references/questown-dev-launch.md`.
+death, FIFO) are in `references/questown-dev-launch.md`.
 
 `-Dquestown.village.agentDrive=true` makes `VillageGrowthExecutor` only call
 `observe()` (no `act()`), so the executor does not fight the agent's actions.
+
+## Per-logger DEBUG on a held run (log-capture mode, client-free)
+
+To read a DEBUG-level trace that INFO hides (e.g. a recruit trail:
+`Spawned visitor …` / `Applying quests: [ … visitorUUID=… ]`), bump ONE logger
+to DEBUG rather than the whole run. A held run can run **client-free** — the
+flag ticks in realtime without a nearby player — so for pure log capture you do
+not need the `runClient` Dev at all; just launch the server and read the
+console capture.
+
+- **Hook (committed to `build.gradle`, `server {}` block):** an optional
+  `-Dquestown.log4j.config=<file>` is forwarded to the forked server JVM as
+  `-Dlog4j2.configurationFile=<file>`. No effect when the flag is absent.
+- **Config recipe — two traps that `run/log4j2.debug.xml` fell into.** That file
+  is a **never-loaded decoy** (its `AsyncLogger` + `File`+`filePattern` are both
+  wrong on this classpath), so do **not** copy it as a template:
+  - Use a **synchronous** `<Logger>`, not `<AsyncLogger>` — async needs the LMAX
+    disruptor (`com.lmax.disruptor`), which is absent; log4j logs
+    `NoClassDefFoundError: com/lmax/disruptor/EventHandler`, falls back to the
+    vanilla config, and your DEBUG silently never fires.
+  - Use a **plain** `<File>` appender — `File` does **not** accept `filePattern`
+    or `<Policies>` (that is `RollingFile`-only); log4j logs `invalid element
+    "filePattern"` and rejects the appender.
+  - Root at `info` so everything else stays quiet; only the target logger at `debug`.
+  Minimal working config (bumps `Questown:Quests`):
+  ```xml
+  <Configuration status="WARN">
+    <Appenders><Console name="sysout" target="SYSTEM_OUT">
+      <PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level] [%logger{36}/]: %msg%n"/></Console>
+    </Appenders>
+    <Loggers>
+      <Logger name="Questown:Quests" level="debug"><AppenderRef ref="sysout"/></Logger>
+      <Root level="info"><AppenderRef ref="sysout"/></Root>
+    </Loggers>
+  </Configuration>
+  ```
+- **Launch (verified; on the 1.20.6/neoforge branch the pinned JDK is 21,
+  `java-21-openjdk-amd64` — the JDK-17 lines elsewhere in this skill are the
+  1.19.2 track, and `gradle.properties` pins the branch's own JDK):**
+  ```
+  JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 LANG=C.UTF-8 nohup ./gradlew \
+    runServer -Dquestown.autotest=true -Dquestown.autotest.hold=true \
+    -Dquestown.autotest.only=village/self_sufficiency \
+    -Dquestown.log4j.config=file://$PWD/run/log4j2.quests-debug.xml > /tmp/log 2>&1 &
+  ```
+- **Verify it loaded:** the target logger's DEBUG lines appear in the console
+  capture (e.g. `Questown:Quests/]: Spawned visitor …`). If they do not, log4j
+  fell back to the vanilla config — the config has one of the two traps above.
 
 ## Teardown (when the run ends — do not orphan the server)
 
