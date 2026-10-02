@@ -152,6 +152,8 @@ Note: `TownTickRadius` in `questown-server.toml` is compared against **squared**
 
 Project skills live under `.pi/skills/` and are **tracked in git** — commit a new skill with the work that created it. An untracked skill exists only in your working tree and vanishes on a clean checkout.
 
+- `questown-strangler` — the strangler-shrink loop (gate as source of truth, cluster order, per-leaf G1 pipeline, the session-learned traps). Load it before continuing G1 de-grandfathering.
+
 
 ### Issue tracker
 
