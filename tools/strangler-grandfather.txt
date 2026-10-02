@@ -57,7 +57,6 @@ gui/QuestRemoveConfirmScreen.java
 gui/QuestownHudEvents.java
 gui/QuestsScreen.java
 gui/StatusGraphic.java
-gui/SubUI.java
 gui/Tabs.java
 gui/TownEconomicsScreen.java
 gui/VillagerEconomicsScreen.java
