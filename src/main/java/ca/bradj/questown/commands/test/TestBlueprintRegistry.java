@@ -1,4 +1,6 @@
 package ca.bradj.questown.commands.test;
+
+import ca.bradj.questown.mc.Compat;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import ca.bradj.questown.loader.Loader;
@@ -1945,12 +1947,9 @@ public class TestBlueprintRegistry {
 
             ItemStack request = ItemsInit.STOCK_REQUEST.get().getDefaultInstance();
             {
-                net.minecraft.nbt.CompoundTag t = request.getOrDefault(
-                        net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                        net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
+                net.minecraft.nbt.CompoundTag t = Compat.itemDataTag(request);
                 StockRequestItem.writeToNBT(t, WorkRequest.of(Items.EMERALD));
-                request.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                        net.minecraft.world.item.component.CustomData.of(t));
+                Compat.setItemDataTag(request, t);
             }
             if (!putInChest(level, targetChest, request)) {
                 output.error("[organizer] target chest not found at " + targetChest.toShortString());

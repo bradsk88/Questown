@@ -7,11 +7,9 @@ import com.google.common.collect.ImmutableSet;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 
@@ -196,7 +194,7 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
         }
         CompoundTag data = (preserveQTNBT == StackPolicy.STRIP_QT_NBT) ? stripQTNBT(nbt) : nbt;
         if (!data.isEmpty()) {
-            newOne.set(DataComponents.CUSTOM_DATA, CustomData.of(data));
+            Compat.setItemDataTag(newOne, data);
         }
         return newOne;
     }
@@ -231,6 +229,6 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     }
 
     private static CompoundTag customData(ItemStack stack) {
-        return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+        return Compat.itemDataTag(stack);
     }
 }

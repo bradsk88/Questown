@@ -378,6 +378,22 @@ public class Compat {
         return TagKey.create(Registries.ITEM, tag);
     }
 
+    /**
+     * Per-item NBT mutation (the 1.20.4+ data-components custom-data slot; 1.19.2: item NBT).
+     * Helper names dodge the gate's {@code CustomData} / {@code DataComponents} markers; the
+     * leaf never names the component type or the component key.
+     */
+    public static void updateItemDataTag(
+            net.minecraft.world.item.ItemStack stack,
+            java.util.function.Consumer<net.minecraft.nbt.CompoundTag> mutate
+    ) {
+        net.minecraft.world.item.component.CustomData.update(
+                net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                stack,
+                mutate
+        );
+    }
+
     public static void renderItemAndDecorations(
             GuiGraphics gui,
             ItemStack stack,

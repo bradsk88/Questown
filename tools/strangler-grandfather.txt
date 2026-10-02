@@ -3,7 +3,6 @@ _vanilla/VoidLevel.java
 _vanilla/entities/FishingHook.java
 jobs/declarative/TestWorldInteraction.java
 blocks/BlacksmithsTableBlock.java
-blocks/BlockOfProgress.java
 blocks/BowlRackBlock.java
 blocks/BreadOvenBlock.java
 blocks/JobBoardBlock.java
@@ -19,7 +18,6 @@ blocks/entity/HospitalBedBlockEntity.java
 commands/test/AutoTestRunner.java
 commands/test/TestBlueprintRegistry.java
 core/init/ModItemGroup.java
-integration/minecraft/MCTownItem.java
 items/StockRequestClipboardItem.java
 jobs/gatherer/Loots.java
 mobs/visitor/VisitorMobEntity.java

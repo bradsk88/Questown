@@ -20,8 +20,6 @@ import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import net.minecraft.world.item.component.CustomData;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -120,7 +118,7 @@ public class TownFlagBlock extends BaseEntityBlock {
     }
 
     public static @Nullable BlockPos GetParentPosFromNBT(ItemStack itemInHand) {
-        CustomData data = customData(itemInHand);
+        net.minecraft.nbt.CompoundTag data = Compat.itemDataTag(itemInHand);
         if (data.isEmpty()) {
             QT.ITEM_LOGGER.error("Missing NBT tag on {}", itemInHand);
             return null;
@@ -141,24 +139,24 @@ public class TownFlagBlock extends BaseEntityBlock {
             QT.ITEM_LOGGER.error("Missing Z tag from {}", data);
             return null;
         }
-        x = data.copyTag().getInt(xTag);
-        y = data.copyTag().getInt(yTag);
-        z = data.copyTag().getInt(zTag);
+        x = data.getInt(xTag);
+        y = data.getInt(yTag);
+        z = data.getInt(zTag);
 
 
         BlockPos bp = new BlockPos(x, y, z);
         return bp;
     }
 
-    private static CustomData customData(ItemStack stack) {
-        return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
+    private static net.minecraft.nbt.CompoundTag customData(ItemStack stack) {
+        return Compat.itemDataTag(stack);
     }
 
     public static void CopyParentFromNBT(
             ItemStack input,
             ItemStack output
     ) {
-        CustomData in = customData(input);
+        net.minecraft.nbt.CompoundTag in = customData(input);
         if (in.isEmpty()) {
             QT.ITEM_LOGGER.error("No parent stored on item: {}", in);
             return;
@@ -179,8 +177,8 @@ public class TownFlagBlock extends BaseEntityBlock {
             QT.ITEM_LOGGER.error("No parent Z coord stored on item: {}", in);
             return;
         }
-        CompoundTag inTag = in.copyTag();
-        CustomData.update(DataComponents.CUSTOM_DATA, output, out -> {
+        CompoundTag inTag = in;
+        Compat.updateItemDataTag(output, out -> {
             out.putInt(xTag, inTag.getInt(xTag));
             out.putInt(yTag, inTag.getInt(yTag));
             out.putInt(zTag, inTag.getInt(zTag));
@@ -362,7 +360,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             ItemStack itemInHand,
             BlockPos p
     ) {
-        getParentData(p).forEach((key, value) -> CustomData.update(DataComponents.CUSTOM_DATA, itemInHand, tag -> tag.putInt(key, value)));
+        getParentData(p).forEach((key, value) -> Compat.updateItemDataTag(itemInHand, tag -> tag.putInt(key, value)));
     }
 
     public static ImmutableMap<String, Integer> getParentData(
@@ -381,7 +379,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             ItemStack output
     ) {
         String key = String.format("%s.flag_input_itemstack", Questown.MODID);
-        CustomData.update(DataComponents.CUSTOM_DATA, output, tag -> tag.put(key, input.save(ctx)));
+        Compat.updateItemDataTag(output, tag -> tag.put(key, input.save(ctx)));
     }
 
     public static @Nullable ItemStack GetFlagInputFromItemNBT(
@@ -389,7 +387,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             ItemStack item
     ) {
         String key = String.format("%s.flag_input_itemstack", Questown.MODID);
-        CompoundTag serialized = item.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getCompound(key);
+        CompoundTag serialized = Compat.itemDataTag(item).getCompound(key);
         if (serialized.isEmpty()) {
             return null;
         }
