@@ -100,6 +100,21 @@ Remaining G2 mapColor: HospitalBedBlock (a *dynamic* `state -> MapColor` lambda,
 SoupPot, WelcomeMat) which also carry `LootParams`, plus BlockOfProgress (data-components) and TownFlagBlock
 (HolderLookup/ItemInteractionResult/data-components) — the multi-marker files that need their other seams first.
 
+MapColor cluster finished (2026-10-13, this session): the earlier `CompatBlockColor` one-value helper was
+equivalent in spirit but the 13 blocks' chains differ per block and one leaf (HospitalBed) carries a
+*per-state* `state -> MapColor` lambda, so the seam grew into two parts: `MapC` (a value-alias enum -
+may name `MapColor` in its body, it is a seam file; `BLACK` is 1.20.6's `MapColor.COLOR_BLACK`, not the
+1.19.2 `BLACK_` - javap the branch's jar before aliasing a constant) + `Compat.P` (a fluent
+`of()/mapColor(MapC)/mapColor(Function<BlockState,MapColor>)/strength/noOcclusion/noCollission/sound/
+lightLevel/impl()` wrapper over `BlockBehaviour.Properties`). Web-verified that the 1.20.2+
+`Properties#mapColor(MapColor)` + function overload is a real version edge (1.19.2 has
+`color(MaterialColor)` overloads, no `mapColor`), so a seam, not a rename. 13 leaves rewired;
+HospitalBedBlock de-grandfathered (26 > 25). The 12 siblings keep their
+`LootParams` `getDrops(BlockState, LootParams.Builder)` overrides - a signature-intrinsic version edge
+(an intermediate `DropsBlock extends Block` seam is impossible for the 3
+`HorizontalDirectionalBlock`/`RoomBlock`/`TownFlagSubBlock` leaves' hierarchies), so the 11 block
+leaves + `Loots` stay grandfathered as the documented G2 residue.
+
 ### G3. Items and data components (Component/NBT, 12 files)
 
 `DataComponents`/`CustomData` (1.20 component stack) directly in:
@@ -220,6 +235,74 @@ Note (pre-existing, not changed by this pass): `ServerTickProfiler`'s instance
 addListener; the NeoLoader comment says "join the same pattern in the events slice" -
 never done). The move preserves that exact wiring, so the gap is carried forward, not
 created.
+
+This session (2026-10-13) continued the shrink with four more batches on top of rounds 1-4 above:
+
+- **G4 recipe-holder seam** - new `mc/RecipeRef` owns the 1.20 recipe-holder split (`recipesOf` /
+  `recipeById` / `assembleMatching` (generic over the vanilla `IN extends Container`) / `idsOf` /
+  `RecipePair`; `Assembler`/`RecipePair` naming kept neutral). Leaves call vanilla `RecipeManager`
+  methods and never name `RecipeHolder`. Compile lesson (the only real trap of the batch):
+  vanilla's generic shape has *two* variables (`<IN extends Container, T extends Recipe<IN>>`) and the
+  helper bounds must mirror it exactly - the single-T wildcard form `T extends Recipe<?>` is
+  rejected by javac ("getAllRecipesFor cannot be applied"), confirmed by a scratch-class compile
+  before committing the shape to the seam file. RoomRecipes, TownFlagMenus and
+  TownQuests de-grandfathered (39 > 35, gate + compile green);
+  ResourceJobLoader's last two markers (RegistryAccess + registries) came off in the next
+  batch - `cooked(...)` now takes the level and calls `level.registryAccess()` internally, and
+  its loot-table lookup routes through `Compat.lootTable`.
+- **G4 registry constants, second pass** - `Compat.lootTable(ServerLevel, ResourceLocation)` +
+  `Compat.hasLootTable(...)` own the `Registries.LOOT_TABLE` key-lookup (1.20 reloadable-registries
+  holder + `ResourceKey` stay in Compat), `Compat.itemTag(ResourceLocation)` (already shipped in the
+  G3 round) owns the `Registries.ITEM` TagKey. Leaves pass a `ResourceLocation` and get back
+  `LootTable`/`boolean`/`TagKey<Item>`; `Loots` drops its `tables` local and `ReloadableServerRegistries`
+  parameter in the process. WorkRequest + WorkRequestSerializer de-grandfathered (list at 26,
+  after re-adding the two `src/test` entries a mis-scoped drop-check had falsely cleared - see
+  the audit warning below); Loots keeps the `LootParams` builder (G2 residue), TestBlueprintRegistry keeps
+  the `net.neoforged.neoforge` + `registries` edge (`ResourceKey.builder().registry(Registries.STRUCTURE)`
+  is 1.20-only shape - the 1.19.2 port would be a different registration, not a compat swap).
+- **G6 binder moves, round 5** - `CommandInit` moves whole to `loader/neo` (its body is 40
+  command-class `.register(...)` calls, so explicit imports; the registration wiring is
+  package-independent, behavior unchanged). `TestTickListener` + `TestAllTickListener` (per-command
+  `@SubscribeEvent` server-tick pump + self-unregister on done) extract to `loader/neo`, the command
+  leaves keep the executor and call `Loader.registerCommonHandlers(listener)` - the existing neutral
+  seam, no new facade (`registerCommonHandlers` predates this batch). `AdvancementEvents` (pure
+  `AdvancementEarnEvent` binder) moves whole; the new `NeoAdvampaignTriggers` (typo-corrected to
+  `NeoAdvancementTriggers`) owns `DeferredRegister(Registries.TRIGGER_TYPE)` + the RegisterEvent that
+  binds `AdvancementsInit`'s four statics - the `init(IEventBus)` entry call in `QuestownMod` was
+  retargeted at the binder, the statics kept their names/signatures so all ~9 trigger call sites are
+  untouched. 5 files de-grandfathered (34 > 29, gate green each step).
+
+- **G3 data-components triad, completion** - `Compat.updateItemDataTag(ItemStack,
+  Consumer<CompoundTag>)` joins the existing `itemDataTag`/`setItemDataTag` (do NOT re-add the two -
+  they already shipped in the G3 round; the only new member is `updateItemDataTag`). All four
+  remaining leaves (BlockOfProgress, MCTownItem, TownFlagBlock, TestBlueprintRegistry) now call the
+  neutral triad on `CompoundTag` (whose `isEmpty/contains/getInt` are version-neutral; the
+  `CustomData#copyTag` step is subsumed into `Compat.itemDataTag`). BlockOfProgress + MCTownItem
+  de-grandfathered (25 > 23); TownFlagBlock keeps `ItemInteractionResult useItemOn(...)` +
+  `HolderLookup.Provider` in two `save(ctx)`-shaped statics (signature-intrinsic 1.20 API),
+  TestBlueprintRegistry keeps the neoforge+registries edge above.
+
+False-negative audit warning (caught twice in this session): the per-leaf drop-check greps a
+package-relative path under the wrong source root - `jobs/declarative/TestWorldInteraction.java` and
+`town/entity/TownQuestsLootTest.java` live under **`src/test/java/`**, so a grep under `src/main/java`
+returned CLEAN from a *missing file* (not a clean file), and the dropped line then trips the gate's
+"listed-but-file-missing" branch on the next run. Before dropping any line: confirm the path exists,
+then re-audit the true path. (The two test files stayed listed; the `src/main` `TownQuests.java` was
+the one that came off.)
+
+Frontier (2026-10-13, at 25 > 23 after this session's G1/G2/G3/G4/G5/G6 passes): the residual
+grandfathered set is dominated by *signature-intrinsic* 1.20 shapes - `LootParams.Builder` in the
+ten block `getDrops` overrides + `Loots.loadFromTables`, `HolderLookup.Provider` in the BE tag
+round-trips + `VisitorMobEntity`/`TownFlagBlockEntity`/`TownFlagBlock` NBT-provider statics,
+`ItemInteractionResult`/`InteractionResultHolder` in `use/useOn` overrides, the
+`net.minecraft.network.protocol` payload construction in
+`HospitalBedBlockEntity`/`VisitorMobEntity`/`TownFlagBlockEntity`, and `CreativeModeTab.Builder` in
+`ModItemGroup` (1.19.2's tab is a Forge event registration, not a `.Builder` chain - a shape difference
+a compat swap cannot paper over). The one non-intrinsic remainder is `AutoTestRunner`'s
+`FakePlayerFactory`/`ServerStartedEvent` - seamable but it is a dev-only test harness, not a
+production path, so the cost/benefit favors leaving it. Recommendation: stop here; 25 > 23 is the
+natural floor of the compat seam for this branch, and the residual is the *set of files that must
+port to a different shape in 1.19.2*, which is exactly what the gate measures.
 
 ### G7. Vanilla payload/packet plumbing (4 files outside the network seam)
 

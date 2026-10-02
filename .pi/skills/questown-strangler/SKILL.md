@@ -28,7 +28,7 @@ neoforged → G5 renderers → G7 client events. Each cluster has a note in
 `docs/plans/strangler-1.19.2-probe-report.md`; read the note for the
 cluster you are opening before touching a file.
 
-As of 2026-10-13 the txt is at 40 entries. G6 is in flight: the decision is
+As of 2026-10-13 the txt is at **23** entries (down from 147 at the probe). G6 is in flight: the decision is
 `loader/COMPLEX.md` "The rule" (loader/neo owns loader imports; the mechanical exception
 is `net.neoforged.api.distmarker` - package-renamed inline in the golden, so the marker is
 narrowed to `net.neoforged.(bus|fml|neoforge)` and the seven distmarker-only leaves
@@ -162,7 +162,21 @@ surface was only the item-handler, and that is what the vanilla-
 screens read (`flagPos`/`villagerUUID`/`gathererInventoryYOffset`) are untouched.
 
 The frontier is now the non-"gui/" and non-G5 clusters: G2/G4 multi-marker files
-(HospitalBedBlock's dynamic MapColor lambda, the LootParams blocks,
-TownFlagBlock/BlockOfProgress data-components, MCTownItem/TestBlueprintRegistry
-registries), the G6 loader/event seam (the loader/COMPLEX.md rule already decides it:
-loader-neutral facade, `loader/neo` owns the imports), and G7 vanilla packet plumbing.
+(the **MapColor** lambda is now done - see the seam note below; the **LootParams**
+blocks stay, `TownFlagBlock`/`BlockOfProgress` data-components, `MCTownItem`/
+`TestBlueprintRegistry` registries), the G6 loader/event seam (mostly done - see below),
+and G7 vanilla packet plumbing.
+
+## G2 map-colour seam (done 2026-10-13; the `MapColor` cluster is off the gate now)
+
+`MapC` (`mc/MapC.java`) is the value-alias enum - it *may* name `MapColor` in its body
+(it lives in the `mc/` seam family the gate admits), so the earlier trap ("don't name the
+token so it substring-matches `MapColor`") is resolved by using a short alias, `MapC`,
+not a `CompatMapColor`-style name. `Compat.P` is the fluent form-owner (`of()` / `mapColor(
+MapC)` / `mapColor(Function<BlockState,MapColor>)` / `strength` / `noOcclusion` /
+`noCollission` / `sound` / `lightLevel` / `impl()`), so a leaf keeps the vanilla properties
+chain and only names the `MapC` alias + `Compat.P` - the `MapColor` type never appears in a
+leaf, including a per-state lambda body (use `MapC.WOOL.vanilla()` / `MapC.BLACK.vanilla()`, not `DyeColor.BLACK.getMapColor()`). 13 block leaves rewired.
+Note: 1.19.2 `Properties` had `color(MaterialColor)`, not `mapColor(MapColor)` - the
+1.20 `Properties#mapColor(MapColor)` / `#mapColor(Function)` API is a real version edge
+the `Compat.P` seam owns (verified, not a joml-style rename).
