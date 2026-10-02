@@ -259,8 +259,8 @@ idiom for the one seam helper that still takes the render argument directly: `In
 `RenderUtil.highlight` take the argument as `ctx.gui()` (a record accessor, no type named in the leaf),
 while `Compat.drawDarkText` collapses to `ctx.darkText`.
 
-Pending: the remaining full G1 screens that still take the render argument
-(`InventoryAndStatusScreen`, `ItemJobsScreen`), the helpers that still
+Pending: the remaining full G1 screen that still takes the render argument
+(`ItemJobsScreen`), the helpers that still
 take `GuiGraphics` (`Ingredients`, `PagedCardScreen`, the `villager/advancements` widgets,
 QuestownHudEvents), and - most care needed - the render-layering
 family above (the screens that override `renderBackground` to a blurred world and whose HUD is
@@ -272,7 +272,12 @@ CreateStockRequestScreen, WorkScreen, AddWorkScreen, FlagCraftingScreen, JobChan
 and the render-argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs` are done,
 as is `VillagerStatsScreen` (2026-10-13: onto `CompatContainerScreen` - the stat bars and
 two-half-band art are verbatim `Util.blit`/`ctx.darkText` calls - gui-lint OK, vision
-confirmed the bars + HUD-over-blur layering, bank diff in fixture-drift range).
+confirmed the bars + HUD-over-blur layering, bank diff in fixture-drift range), and
+`InventoryAndStatusScreen` (2026-10-13: `render`/`renderBg` onto the base hooks, the
+`Button.builder` quest-button onto `Compat.button`, the status-tooltip
+`Component::getVisualOrderText` lambda onto a `Compat::componentText` map into
+`showTooltip(List<FormattedCharSequence>)` - gui-lint OK, vision confirmed tabs/status
+icon/slots/Quests button + HUD over blur, bank diff in drift range).
 
 Render-argument helpers taking `RenderContext` (2026-10-13): `IngredientRenderer.render`,
 `StatusGraphic.render`, and `Tabs.draw` (plus the inlined notification-dot `fill`) now take

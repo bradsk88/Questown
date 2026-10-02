@@ -93,16 +93,17 @@ reference - read it before the next leaf.
 ## Remaining G1 leaves (as of 2026-10-13)
 
 Done: every SAFE-tier confirm screen + the paged cluster + the helper
-pass-throughs above. Still to do, in order of care: full screens `InventoryAndStatusScreen`
-(blurred `renderBackground` + tabs + status icons) and `ItemJobsScreen`; helper
-`Ingredients` (GuiGraphics + core.registries) and `PagedCardScreen` (390 lines, 8 hits);
-the `villager/advancements` widgets (3 files, Critereon/predicate territory); and - most
-care - the render-layering family (QuestownHudEvents HUD re-render), verified against
-`tools/porttest/goldens/` via the porttest oracle before de-grandfathering. `VillagerStatsScreen`
-is done (2026-10-13: `CompatContainerScreen` hooks; the blurred-background override is
-absorbed into the base identically; stat bars + two-half-band art verbatim; held run
-gui-lint OK + vision confirmed bars and HUD-over-blur layering, bank diff in fixture-drift
-range). The carried-over **live gui-lint + vision pass on `VillagerEconomicsScreen`** is done
+pass-throughs above. Still to do, in order of care: `ItemJobsScreen` (6 `GuiGraphics`
+hits + `getVisualOrderText`×2 + `Button.builder`); helper `Ingredients` (GuiGraphics +
+core.registries) and `PagedCardScreen` (390 lines, 8 hits); the `villager/advancements`
+widgets (3 files, Critereon/predicate territory); and - most care - the render-layering
+family (QuestownHudEvents HUD re-render), verified against `tools/porttest/goldens/` via
+the porttest oracle before de-grandfathering. `VillagerStatsScreen` and
+`InventoryAndStatusScreen` are done (2026-10-13: `CompatContainerScreen` hooks, both
+blurred-background overrides absorbed into the base identically; stat bars, tabs, status
+icon, the `Compat.button` quest button and the `Compat::componentText` tooltip map all
+verified - gui-lint OK + vision on held runs, bank diffs in fixture-drift range). The
+carried-over **live gui-lint + vision pass on `VillagerEconomicsScreen`** is done
 (2026-10-13: gui-lint OK + vision real-art in the ingredient grid, alongside the helper
 pass-throughs).
 Then G2/G4 multi-marker files (HospitalBedBlock's dynamic MapColor lambda,

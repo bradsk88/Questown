@@ -39,7 +39,6 @@ core/init/TilesInit.java
 gui/AbstractVillagerMenu.java
 gui/GuiLayoutCheckClientEvents.java
 gui/Ingredients.java
-gui/InventoryAndStatusScreen.java
 gui/ItemJobsScreen.java
 gui/LockableInventoryWrapper.java
 gui/PagedCardScreen.java

@@ -5,10 +5,7 @@ import ca.bradj.questown.core.network.OpenJobMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
-import net.minecraft.client.gui.GuiGraphics;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -18,7 +15,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 import static ca.bradj.questown.gui.InventoryAndStatusMenu.TE_INVENTORY_FIRST_SLOT_INDEX;
 
-public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryAndStatusMenu> {
+public class InventoryAndStatusScreen extends CompatContainerScreen<InventoryAndStatusMenu> {
 
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
@@ -65,12 +62,13 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
         int maybeY = ((this.height - backgroundHeight) / 2) + 32 + 16 + 8;
 
         this.addRenderableWidget(
-                Button.builder(
+                Compat.button(
                         Compat.translatable("menu.quests"),
                         (p_96776_) -> {
                             openQuestsScreen();
-                        }
-                ).bounds(maybeX, maybeY, 48, 20).build()
+                        },
+                        maybeX, maybeY, 48, 20
+                )
         );
     }
 
@@ -79,43 +77,28 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     }
 
     @Override
-    public void render(
-            GuiGraphics gui,
+    protected void renderScreenContent(
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
-        super.render(gui, mouseX, mouseY, partialTicks);
         renderTooltips(mouseX, mouseY);
     }
 
-    // 1.19.2 parity: the 1.19.2 background here was the (blurred) world, not an opaque
-    // gradient; the HUD was drawn above it. See QuestownHudEvents for the HUD redraw.
     @Override
-    public void renderBackground(
-            GuiGraphics guiGraphics,
-            int mouseX,
-            int mouseY,
-            float partialTick
-    ) {
-        this.renderBlurredBackground(partialTick);
-        this.renderBg(guiGraphics, partialTick, mouseX, mouseY);
-    }
-
-    @Override
-    protected void renderBg(
-            GuiGraphics gui,
+    protected void renderBgContent(
+            RenderContext ctx,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        RenderContext rc = new RenderContext(Compat.itemRenderer(), gui);
-        this.background.draw(gui, bgX, bgY, backgroundWidth, backgroundHeight);
-        this.tabs.draw(rc, bgX, bgY);
-        renderInventory(rc);
-        status.render(rc);
+        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.tabs.draw(ctx, bgX, bgY);
+        renderInventory(ctx);
+        status.render(ctx);
     }
 
     private void renderInventory(RenderContext rc) {
@@ -143,14 +126,14 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
         if (this.tabs.renderTooltip(
                 x, y, mouseX, mouseY,
-                key -> this.setTooltipForNextRenderPass(Compat.translatable(key))
+                key -> this.showTooltip(Compat.translatable(key))
         )) {
             return;
         }
 
         if (status.renderTooltip(
                 mouseX, mouseY,
-                key -> this.setTooltipForNextRenderPass(key.stream().map(Component::getVisualOrderText).toList())
+                key -> this.showTooltip(key.stream().map(Compat::componentText).toList())
         )) {
             return;
         }
@@ -206,7 +189,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 Component component = Compat.translatable(
                         "tooltips.villagers.job.inventory.locked"
                 );
-                this.setTooltipForNextRenderPass(component);
+                this.showTooltip(component);
                 return true;
             }
         }
@@ -228,7 +211,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 Component component = Compat.translatable(
                         "tooltips.villagers.job.needs", jPart, Ingredients.getName(item)
                 );
-                this.setTooltipForNextRenderPass(component);
+                this.showTooltip(component);
                 return true;
             }
         }
