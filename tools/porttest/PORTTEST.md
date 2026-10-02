@@ -132,6 +132,10 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
   against the manifest threshold).
 - `sweep.sh` — kills any JVM tied to the Questown repos or gradle daemons
   (matched by cwd + main class, so the invoking shell cannot match itself).
+  **This is the terminator: `capture.sh` has no `teardown`/`sweep` stage** (the
+  `sweep` case is inside `prep`; calling it as a stage dies with `unknown stage
+  'sweep'`). To confirm a kill, `pgrep -cf 'runServer'` or append `| cut -c1-80`
+  to `pgrep -af` — `-af` on the java server dumps its whole classpath (5 KB).
 - `state.py` (`capture.sh state`) — verified state for both branches in one
   printout: server pid → LISTEN port (from /proc fds), client CWD (= its
   gameDir), gradle wrappers, FIFO-writer, stale `.qtdiag-cmd`, fresh-shot
