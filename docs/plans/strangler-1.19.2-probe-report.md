@@ -1,5 +1,12 @@
 # Strangler probe: 1.20.6-wip compiled against 1.19.2
 
+Status: **closed 2026-10-13** — the grandfather list was shrunk 147 → 23 across the
+G1–G6 passes documented in the per-cluster "shipped" notes below. The developer called
+the strangler done at 23 residual entries; the residual is classified as
+signature-intrinsic 1.20 shape (not a missed seam) in the frontier note before G7,
+and the gate (`tools/strangler-check`) keeps it frozen - the list may only shrink further,
+never grow.
+
 Date: 2026-07-23
 Probe branch: `probe/strangler-1.19.2` (throwaway; keep for re-runs)
 Method: the wip source tree is unchanged. Only the build was flipped to the golden
@@ -290,7 +297,7 @@ returned CLEAN from a *missing file* (not a clean file), and the dropped line th
 then re-audit the true path. (The two test files stayed listed; the `src/main` `TownQuests.java` was
 the one that came off.)
 
-Frontier (2026-10-13, at 25 > 23 after this session's G1/G2/G3/G4/G5/G6 passes): the residual
+Frontier (2026-10-13, the list reaches 23 after this session's G1/G2/G3/G4/G5/G6 passes): the residual
 grandfathered set is dominated by *signature-intrinsic* 1.20 shapes - `LootParams.Builder` in the
 ten block `getDrops` overrides + `Loots.loadFromTables`, `HolderLookup.Provider` in the BE tag
 round-trips + `VisitorMobEntity`/`TownFlagBlockEntity`/`TownFlagBlock` NBT-provider statics,
@@ -300,7 +307,8 @@ round-trips + `VisitorMobEntity`/`TownFlagBlockEntity`/`TownFlagBlock` NBT-provi
 `ModItemGroup` (1.19.2's tab is a Forge event registration, not a `.Builder` chain - a shape difference
 a compat swap cannot paper over). The one non-intrinsic remainder is `AutoTestRunner`'s
 `FakePlayerFactory`/`ServerStartedEvent` - seamable but it is a dev-only test harness, not a
-production path, so the cost/benefit favors leaving it. Recommendation: stop here; 25 > 23 is the
+production path, so the cost/benefit favors leaving it. **Closed here by developer decision
+(2026-10-13): "let's call strangler done."** 23 is the
 natural floor of the compat seam for this branch, and the residual is the *set of files that must
 port to a different shape in 1.19.2*, which is exactly what the gate measures.
 

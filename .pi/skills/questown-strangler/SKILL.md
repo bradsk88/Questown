@@ -28,7 +28,11 @@ neoforged → G5 renderers → G7 client events. Each cluster has a note in
 `docs/plans/strangler-1.19.2-probe-report.md`; read the note for the
 cluster you are opening before touching a file.
 
-As of 2026-10-13 the txt is at **23** entries (down from 147 at the probe). G6 is in flight: the decision is
+As of 2026-10-13 the txt is at **23** entries (down from 147 at the probe).
+**Status: closed** - the developer called the strangler done at 23 (see the frontier note in
+the probe report). The gate keeps the list frozen: a new 1.20-shape leak in a leaf file fails
+the build, and removing a line still needs the gate green. Do not start shrinking again unless
+the branch itself changes (an MC port) or a specific residual is explicitly reopened. G6 is in flight: the decision is
 `loader/COMPLEX.md` "The rule" (loader/neo owns loader imports; the mechanical exception
 is `net.neoforged.api.distmarker` - package-renamed inline in the golden, so the marker is
 narrowed to `net.neoforged.(bus|fml|neoforge)` and the seven distmarker-only leaves
