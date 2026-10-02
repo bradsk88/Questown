@@ -10,9 +10,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.SlotItemHandler;
-import net.neoforged.neoforge.items.wrapper.InvWrapper;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -21,8 +18,11 @@ import java.util.UUID;
 public abstract class AbstractVillagerMenu extends AbstractContainerMenu {
     protected final BlockPos flagPos;
     protected final UUID villagerUUID;
-    private final InvWrapper gathererInventory;
-    protected final InvWrapper playerInventory;
+    // Item slots sit directly on these vanilla Containers (was a neoforged `InvWrapper` + `SlotItemHandler`
+    // pair). These menus carry a custom quickMoveStack that only uses Slot.set/get/mayPlace and never
+    // insertItem/extractItem, so plain Slots over the Container are behaviourally equivalent.
+    private final Container gathererInventory;
+    protected final Inventory playerInventory;
     private static final int inventoryLeftX = 8;
     private static final int boxHeight = 18;
     protected int gathererInventoryYOffset = boxHeight;
@@ -40,8 +40,8 @@ public abstract class AbstractVillagerMenu extends AbstractContainerMenu {
         super(p_38851_, p_38852_);
         this.flagPos = flagPos;
         this.villagerUUID = villagerUUID;
-        this.gathererInventory = new InvWrapper(villagerInventory);
-        this.playerInventory = new InvWrapper(playerInventory);
+        this.gathererInventory = villagerInventory;
+        this.playerInventory = playerInventory;
     }
 
     public BlockPos getFlagPos() {
@@ -85,7 +85,7 @@ public abstract class AbstractVillagerMenu extends AbstractContainerMenu {
     }
 
     protected void addRectangleOfBoxes(
-            IItemHandler handler,
+            Container container,
             int inventoryIndex,
             int leftX,
             int topY,
@@ -95,14 +95,14 @@ public abstract class AbstractVillagerMenu extends AbstractContainerMenu {
         int y = topY;
         int nextInvIndex = inventoryIndex;
         for (int j = 0; j < yBoxes; j++) {
-            addLineOfBoxes(handler, nextInvIndex, leftX, y, xBoxes);
+            addLineOfBoxes(container, nextInvIndex, leftX, y, xBoxes);
             nextInvIndex += xBoxes;
             y += boxHeight;
         }
     }
 
     protected void addLineOfBoxes(
-            IItemHandler handler,
+            Container container,
             int index,
             int leftX,
             int topY,
@@ -114,7 +114,7 @@ public abstract class AbstractVillagerMenu extends AbstractContainerMenu {
         int x = leftX;
         int nextInvIndex = index;
         for (int i = 0; i < numBoxes; i++) {
-            this.addSlot(new SlotItemHandler(handler, nextInvIndex, x, topY));
+            this.addSlot(new Slot(container, nextInvIndex, x, topY));
             nextInvIndex++;
             x += boxWidth;
         }
@@ -146,7 +146,7 @@ public abstract class AbstractVillagerMenu extends AbstractContainerMenu {
         ItemStack copyOfSourceStack = sourceStack.copy();
 
         // Check if the slot clicked is one of the vanilla container slots
-        int upperBound = TE_INVENTORY_FIRST_SLOT_INDEX + gathererInventory.getSlots();
+        int upperBound = TE_INVENTORY_FIRST_SLOT_INDEX + gathererInventory.getContainerSize();
         if (index < VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT) {
             // This is a vanilla container slot so merge the stack into the tile inventory
             int lowerBound = TE_INVENTORY_FIRST_SLOT_INDEX;
@@ -237,13 +237,10 @@ public abstract class AbstractVillagerMenu extends AbstractContainerMenu {
     }
 
     protected @Nullable Player getPlayer() {
-        if (playerInventory.getInv() instanceof Inventory i) {
-            return i.player;
-        }
-        return null;
+        return (playerInventory != null) ? playerInventory.player : null;
     }
 
     protected void clearContainer(Player p38940) {
-        clearContainer(p38940, gathererInventory.getInv());
+        clearContainer(p38940, gathererInventory);
     }
 }

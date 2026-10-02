@@ -1,9 +1,9 @@
 {
   "screen": "economics",
-  "captured-at": "2026-10-02T05:22:23+01:00",
-  "world-age-min": 20,
+  "captured-at": "2026-10-02T05:58:04+01:00",
+  "world-age-min": 21,
   "cursor": "parked 1,1 (shot stage)",
   "branch": "1.20.6-neoforge-wip",
-  "commit": "43cd8ff7",
+  "commit": "f12470e0",
   "source": "/workspace/IdeaProjects/Questown/run-client/diags/economics.png"
 }

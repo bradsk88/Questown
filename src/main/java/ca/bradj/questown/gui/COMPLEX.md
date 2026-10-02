@@ -304,13 +304,27 @@ the wiring only: the bus is package-independent, so both still register
 (verified live - the gui-lint line fires and the porttest content gate confirms
 the HUD-over-blur layering on the affected screens). Neither file's logic
 changed; the layering it keeps is still the one `run.sh` diffs against
-`tools/porttest/goldens/`. The only `gui/` neoforged files left are
-`AbstractVillagerMenu` and `LockableInventoryWrapper`; they are NOT package-
-movable (the villager menus subclass `AbstractVillagerMenu` and read its
-protected package-local fields - five screens break the moment it leaves the
-package). Their leak is only the item-handler (`IItemHandler`/
-`SlotItemHandler`/`InvWrapper`), which is the neutral `loader/ItemHandler`
-seam to route through in its own leaf - see `loader/COMPLEX.md`.
+`tools/porttest/goldens/`. The only `gui/` neoforged files (81 → 79) are resolved, and `gui/` is now
+leak-free (2026-10-13, 79 → 77). `AbstractVillagerMenu` no longer wraps its
+inventories in a neoforged `InvWrapper` or builds `SlotItemHandler`s:
+both were the item-handler surface, and the three neoforged imports
+(`IItemHandler`/`SlotItemHandler`/`InvWrapper`) are gone. The menus hold the
+original vanilla `Container`/`Inventory` directly and build plain vanilla
+`Slot(container, index, x, y)` slot boxes; this is provably equivalent because
+the menu's custom `quickMoveStack`/`moveItemStackTo` only use
+`Slot.set/get/mayPlace` and never the handler's `insertItem`/`extractItem`
+(verified with `jmembers`: `Slot(Container,int,int,int)` and
+`Container.getContainerSize()` are the 1.20.6 vanilla API; `Container` is not
+a strangler marker). `LockableInventoryWrapper` was **deleted**: a neoforged
+`InvWrapper` subclass with zero references in main or test (dead code that
+could only be de-grandfathered by removing it). Evidence: `compileJava` +
+`compileTestJava --rerun-tasks` green; 968 tests (only the deliberate
+`ChickenArcHintsTest.todo_` marker red); strangler-check green at 77;
+gui-lint OK on every affected menu (InventoryAndStatus, Quests,
+VillagerStats, VillagerEconomics, VillagerBlockofProgress, Work); and the
+slot-rendering `parent` (inventory) tab pixel-diffing against the 1.19.2
+golden at a 0.0447% center-rect (slot region) delta - the slots render
+identically to the golden branch.
 The SAFE-tier confirm screens (VillagerBlockofProgressScreen,
 TownBlockofProgressScreen, CreateStockRequestScreen, WorkScreen, AddWorkScreen,
 FlagCraftingScreen, JobChangeConfirmScreen)

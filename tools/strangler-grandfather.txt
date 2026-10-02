@@ -36,8 +36,6 @@ core/init/CommandsInit.java
 core/init/ModItemGroup.java
 core/init/ScheduleInit.java
 core/init/TilesInit.java
-gui/AbstractVillagerMenu.java
-gui/LockableInventoryWrapper.java
 integration/IntegrationForgeEvents.java
 integration/QuestownSpecialRules.java
 integration/minecraft/MCTownItem.java

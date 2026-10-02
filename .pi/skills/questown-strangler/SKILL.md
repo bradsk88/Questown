@@ -28,14 +28,16 @@ neoforged → G5 renderers → G7 client events. Each cluster has a note in
 `docs/plans/strangler-1.19.2-probe-report.md`; read the note for the
 cluster you are opening before touching a file.
 
-As of 2026-10-13 the txt is at 79 entries. The G1 SAFE-tier confirm screens
+As of 2026-10-13 the txt is at 77 entries. The G1 SAFE-tier confirm screens
 (Work, AddWork, FlagCrafting, JobChange, Bop×2, CreateStock, QuestRemove), the render-
 argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs`, `Ingredients`,
-the `villager/advancements` widget trio, and the two client event subscribers
+the `villager/advancements` widget trio, the two client event subscribers
 (QuestownHudEvents' HUD-over-blur redraw + GuiLayoutCheckClientEvents' dev gui-lint,
-moved into the `loader/neo` seam - see below) are landed (gate now ignores `.md`
-files so `gui/COMPLEX.md` prose is not a leak). `gui/COMPLEX.md` is the per-screen
-pattern reference - read it before the next leaf.
+moved into the `loader/neo` seam), and the last two `gui/` neoforged menus
+(`AbstractVillagerMenu` item-handler swap to vanilla `Slot`, `LockableInventoryWrapper`
+deleted as dead code) are landed (gate now ignores `.md` files so `gui/COMPLEX.md`
+prose is not a leak). `gui/` is now leak-free. `gui/COMPLEX.md` is the per-screen
+pattern reference - read it before the next leaf (G2/G4/G5/G7 clusters).
 
 ## Per-leaf loop (G1 confirm screens)
 
@@ -118,27 +120,35 @@ bank drive in fixture-drift range) and the `villager/advancements` trio
 `RenderContext`, render arg never names `GuiGraphics`; the HUD-over-blur order
 `QuestownHudEvents` depends on is preserved because the surface hook is where
 `Screen.renderBackground` used to paint; 84 → 81; gui-lint OK on this screen,
-content gate + bank diff on all seven canonical screens in fixture-drift range.
-Note: `renderTooltips`'s 3rd/4th params are the pane origin, not the mouse -
-renamed `paneX`/`paneY` to keep the swap visible)
+content gate + bank diff in fixture-drift range. Note: `renderTooltips`'s
+3rd/4th params are the pane origin, not the mouse - renamed `paneX`/`paneY`
+to keep the swap visible)
 
-and the two `gui/` client event subscribers (2026-10-13: `QuestownHudEvents`
-- the HUD-over-blur redraw for the 1.19.2-parity screen family - and
-`GuiLayoutCheckClientEvents` - the dev gui-lint - both `@EventBusSubscriber`
-neoforged wiring, moved verbatim into `loader/neo` (the seam package; the
-same home `ItemsInteract`/`NeoMouseScrollDispatch` already hold), 81 → 79;
-bus registration is package-independent, so a live gui-lint line + the
-porttest content gate's HUD-layering confirms both still fire). The render-
-layering family is resolved by this move - there is no G1 gui file left.
+and the last two `gui/` neoforged menus (2026-10-13, 79 → 77 - `gui/` is now
+leak-free). `AbstractVillagerMenu`'s three neoforged imports
+(`IItemHandler`/`SlotItemHandler`/`InvWrapper`) are gone - the menu holds the
+original vanilla `Container`/`Inventory` directly and builds plain vanilla
+`Slot(container, index, x, y)` boxes. That is provably equivalent: its custom
+`quickMoveStack`/`moveItemStackTo` only use `Slot.set/get/mayPlace`, never the
+handler's `insertItem`/`extractItem` (`jmembers` confirms `Slot(
+Container,int,int,int)` + `Container.getContainerSize()` are the vanilla 1.20.6
+API). `LockableInventoryWrapper` - a neoforged `InvWrapper` subclass with zero
+references in main or test - was deleted (dead code; nothing to route through
+a seam). Evidence: `compileJava`+`compileTestJava --rerun-tasks` green; 968
+tests (only the deliberate `ChickenArcHintsTest.todo_` marker red);
+strangler-check green at 77; gui-lint OK on every affected menu (Inventory-
+AndStatus, Quests, VillagerStats, VillagerEconomics, VillagerBlockofProgress,
+Work); the slot-rendering `parent` (inventory) tab pixel-diffs against the
+1.19.2 golden at a 0.0447% center-rect (slot region) delta - slots render
+identically to the golden branch. Note: the `gui/` class boundary is a
+Java-protected design constraint (a `gui/` class may `protected`-reference
+loader-neutral types, and a `loader/` type may not reverse-`protected`-extend
+one) - it is NOT the reason these two were de-grandfathered; their neoforged
+surface was only the item-handler, and that is what the vanilla-
+`Slot`-over-`Container` swap removed. The `protected` fields the five villager
+screens read (`flagPos`/`villagerUUID`/`gathererInventoryYOffset`) are untouched.
 
-Still to do in the `gui/` package: `AbstractVillagerMenu` +
-`LockableInventoryWrapper` - NOT a package move (the menus subclass
-`AbstractVillagerMenu` and use its protected package-local fields; five gui
-screens break the moment it leaves the package). Their neoforged surface is
-only the item-handler (`IItemHandler`/`SlotItemHandler`/`InvWrapper`) - route
-it through the neutral `loader/ItemHandler` seam (see `loader/COMPLEX.md`
-"item-handler capability") in its own leaf with the full evidence bar.
-
-Then G2/G4 multi-marker files (HospitalBedBlock's dynamic MapColor lambda,
-the LootParams blocks, TownFlagBlock/BlockOfProgress data-components,
-MCTownItem/TestBlueprintRegistry registries), G6 neoforged, G5 renderers, G7 client events.
+The frontier is now the non-"gui/" clusters: G2/G4 multi-marker files
+(HospitalBedBlock's dynamic MapColor lambda, the LootParams blocks,
+TownFlagBlock/BlockOfProgress data-components, MCTownItem/TestBlueprintRegistry
+registries), G5 renderers, G6 neoforged, G7 client events.

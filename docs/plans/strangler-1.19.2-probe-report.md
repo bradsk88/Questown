@@ -64,10 +64,15 @@ content in `renderScreenContent`; the content + widget files onto `RenderContext
 see `gui/COMPLEX.md`); grandfather 84 → 81, gate green. The `gui/` client event
 subscribers (`QuestownHudEvents` HUD-over-blur redraw, `GuiLayoutCheckClientEvents`
 dev gui-lint) moved into the `loader/neo` seam (package-independent bus, both
-verified live) — grandfather 81 → 79, gate green. Remaining `gui/`: the
-`AbstractVillagerMenu` + `LockableInventoryWrapper` item-handler pair (a seam-helper
-migration, not a package move — the menus subclass the former and use its protected
-package-local fields; see `loader/COMPLEX.md`), then the G2–G7 clusters.
+verified live) — grandfather 81 → 79, gate green. The last two `gui/` neoforged
+files: `AbstractVillagerMenu`'s item-handler surface (`IItemHandler`/
+`SlotItemHandler`/`InvWrapper`) was replaced by vanilla `Slot(container,
+index, x, y)` over the original `Container`/`Inventory` (its custom
+quickMoveStack only uses `Slot.set/get/mayPlace`, never the handler's
+`insertItem`/`extractItem`), and the zero-reference `LockableInventoryWrapper`
+was deleted — grandfather 79 → 77, gate green, `gui/` now leak-free. Frontier
+is the G2–G7 clusters (MapColor blocks, LootParams, data-components,
+registries, renderers, the remaining `net.neoforged` surfaces).
 
 ### G2. Block and block-entity definitions (blocks/, _vanilla/, 25 files)
 
