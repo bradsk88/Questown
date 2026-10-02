@@ -56,7 +56,13 @@ window you actually care about (not a settled one) and take the highest rate wit
 zero `Can't keep up` across that window; expect the number to shift ±10–30 t/s
 with town and box load. Working recommendation: **200 t/s for speed with zero
 stalls under observed load**; treat 250+ as stutter-prone, 300+ as headroom only.
-Either way,
+**Caveat (2026-10-15):** the 150-300 band was measured with a cook staffing gap
+live (the cook re-selecting `extract → extract` every `cooldown_ticks`, 73 of
+these job JSONs at `src/main/resources/data/questown/questown_jobs/` — `cooldown_ticks`
+itself is the loop period). The fix is a design feature (new cooks get ≥2 jobs
+unlocked via an `unlocked_with_root_job` tag — see the 2026-10-15 handoff), so
+**re-run this sweep band after the staffing fix lands** before treating the
+240/270 numbers as the ceiling for a correct town. Either way,
 `warpTime` does not run ticks faster — it skips them and simulates the end
 state, so it **bypasses** the realtime behavior a realtime proof depends on and
 cannot substitute for it, *even on 1.20.6*. To prove a realtime behavior you

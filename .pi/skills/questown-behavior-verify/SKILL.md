@@ -148,6 +148,17 @@ missing quest/room — not the pipeline. The extract pipeline only looks broken 
 item flow is visibly wrong (carrying without depositing, `cannot deposit` lines); with no
 such line, the work was never selected.
 
+**A re-select loop (`Job changed to X [from X]` storming on every `cooldown_ticks`,
+visible as a `Can't keep up` wall only at high tick rate) is the same read: the job set
+the townie was staffed with, not the per-tick cost.** Cost is the symptom at the rate
+you happen to be running; at 20 t/s it is amortized away, at 150-200 t/s it becomes
+the whole budget, and a "rate ceiling" you measure there is really the cost of a thin
+job set the feature does not give the cook. Read staffing (what jobs are unlocked for
+that job, and what they can make with what is in the world) before concluding anything
+about the tick rate (5-day run, 2026-10-15: cook on `extract` with
+`cooldown_ticks: 50` re-selected `extract → extract` ~every 50 ticks; dev fix
+= unlock ≥2 jobs at cook staffing via a job-JSON tag).
+
 **The observation standard.** The two modes have different rules. Verification
 (this skill's main job) may read code freely: code says what to *measure*. A
 driven run is the opposite: the agent plays as a new player and may use only

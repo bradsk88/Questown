@@ -120,8 +120,12 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
    # can list foreign matches. Disambiguate by the fifo fd held (ls /proc/<pid>/fd must
    # point at THIS repo's run/server-cmd.fifo), and the server pid is the forge java
    # (cmdline has --launchTarget forgeserveruserdev), not the bash wrapper that launched
-   # it (2026-10: first capture wrote the bash wrapper's pid and a 119 writer pid).
-   pgrep -af 'forgeserveruserdev' | head -1 | awk '{print $1}' > run/hold-server.pid
+   # it — **filter the pgrep on `launchTarget`**, because an unfiltered
+   # `pgrep -af 'forgeserveruserdev' | head -1` twice in the 2026-10-15 session
+   # picked a non-java pid and the first teardown killed nothing, leaving the live
+   # server behind (caught only by a later `netstat 25565` check). (2026-10: first
+   # capture wrote the bash wrapper's pid and a 119 writer pid.)
+   pgrep -af 'forgeserveruserdev' | grep 'launchTarget' | awk '{print $1}' > run/hold-server.pid
    pgrep -af 'questown.autotest.hol[d]' | grep -v 'bash\|pgrep' | head -1 | awk '{print $1}' > run/hold-wrapper.pid
    pgrep -af 'sleep 999999' | grep -v pgrep | head -1 | awk '{print $1}' > run/hold-fifo.pid
    ```
