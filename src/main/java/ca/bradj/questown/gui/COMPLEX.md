@@ -244,8 +244,12 @@ each named only in the seam family, not the leaves).
 to the seam family alongside the existing `gui/RenderUtil` and `gui/RenderContext`.
 
 Proven on the `fillGradient` + NineNine pattern by migrating one screen of each tier
-(RelocationConfirmScreen → `CompatScreen`, JobUnlockConfirmScreen → `CompatContainerScreen`): both
-are marker-free, `./gradlew stranglerCheck` stays green, and the grandfather set dropped 124→122.
+(RelocationConfirmScreen → `CompatScreen`, JobUnlockConfirmScreen → `CompatContainerScreen`) plus
+WorkRequestConfirmScreen: all marker-free, `./gradlew stranglerCheck` stays green, and the
+grandfather set keeps dropping as they land (now 114). WorkRequestConfirmScreen also fixes the
+idiom for the one seam helper that still takes the render argument directly: `Ingredients.render` and
+`RenderUtil.highlight` take the argument as `ctx.gui()` (a record accessor, no type named in the leaf),
+while `Compat.drawDarkText` collapses to `ctx.darkText`.
 
 Pending: the remaining SAFE-tier confirm screens (VillagerBlockofProgressScreen,
 TownBlockofProgressScreen, CreateStockRequestScreen, WorkScreen, QuestRemoveConfirmScreen,

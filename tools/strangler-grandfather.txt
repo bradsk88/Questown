@@ -62,7 +62,6 @@ gui/Tabs.java
 gui/TownEconomicsScreen.java
 gui/VillagerEconomicsScreen.java
 gui/VillagerStatsScreen.java
-gui/WorkRequestConfirmScreen.java
 gui/town/status/MultiStatusScreen.java
 gui/villager/advancements/VillagerAdvancementsContent.java
 gui/villager/advancements/VillagerAdvancementsScreen.java

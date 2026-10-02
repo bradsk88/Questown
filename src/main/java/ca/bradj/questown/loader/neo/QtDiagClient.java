@@ -1,11 +1,17 @@
 package ca.bradj.questown.loader.neo;
 
+import ca.bradj.questown.core.network.AddWorkFromUIMessage;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.VillagerTabsEmbedding;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
 
 import java.io.File;
@@ -29,9 +35,13 @@ import java.util.List;
  * Commands: {@code tab <type>} (open a villager tab from the current tabbed
  * menu, same {@link OpenVillagerMenuMessage} a tab click sends),
  * {@code shot <name>} (render-thread {@link Screenshot} to
- * {@code <gameDir>/diags/<name>.png}), and {@code cursor <x> <y>} (park the
+ * {@code <gameDir>/diags/<name>.png}), {@code cursor <x> <y>} (park the
  * pointer at a fixed window-pixel position so hover-dependent render state —
- * e.g. the advancements-pane tooltip fade — is identical across captures).
+ * e.g. the advancements-pane tooltip fade — is identical across captures), and
+ * {@code inquire <x> <y> <z> [item]} (send the work-board card's
+ * {@code AddWorkFromUIMessage(INQUIRED)} so the server answers with a
+ * {@code WorkRequestConfirmMessage} and the confirm screen opens on the
+ * render thread — the same message pair a card click produces).
  */
 public class QtDiagClient {
 
@@ -92,6 +102,7 @@ public class QtDiagClient {
                 case "tab" -> tab(mc, parts[1]);
                 case "shot" -> shot(mc, parts.length > 1 ? parts[1] : "shot");
                 case "cursor" -> cursor(mc, Double.parseDouble(parts[1]), Double.parseDouble(parts[2]));
+                case "inquire" -> inquire(mc, parts[1], parts[2], parts[3], parts.length > 4 ? parts[4] : null);
                 default -> System.out.println("[qtdiag] unknown command: " + parts[0]);
             }
         } catch (Throwable t) {
@@ -143,6 +154,32 @@ public class QtDiagClient {
         } catch (Throwable t) {
             System.out.println("[qtdiag] cursor failed: " + t);
         }
+    }
+
+    private static void inquire(
+            Minecraft mc,
+            String x,
+            String y,
+            String z,
+            String item
+    ) {
+        if (mc.player == null) {
+            System.out.println("[qtdiag] inquire: no local player");
+            return;
+        }
+        Item resolved = item == null
+                ? Items.WHEAT
+                : net.minecraft.core.registries.BuiltInRegistries.ITEM.get(new ResourceLocation(item));
+        if (resolved == null) {
+            System.out.println("[qtdiag] inquire: unknown item " + item);
+            return;
+        }
+        QuestownNetwork.sendToServer(new AddWorkFromUIMessage(
+                Ingredient.of(resolved),
+                new BlockPos(Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z)),
+                AddWorkFromUIMessage.Action.INQUIRED
+        ));
+        System.out.println("[qtdiag] inquire " + item + " at " + x + "," + y + "," + z + " sent");
     }
 
     private static void shot(Minecraft mc, String name) {
