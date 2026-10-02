@@ -40,9 +40,6 @@ gui/AbstractVillagerMenu.java
 gui/GuiLayoutCheckClientEvents.java
 gui/LockableInventoryWrapper.java
 gui/QuestownHudEvents.java
-gui/villager/advancements/VillagerAdvancementsContent.java
-gui/villager/advancements/VillagerAdvancementsScreen.java
-gui/villager/advancements/VillagerAdvancementsWidget.java
 integration/IntegrationForgeEvents.java
 integration/QuestownSpecialRules.java
 integration/minecraft/MCTownItem.java

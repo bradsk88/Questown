@@ -272,13 +272,33 @@ Bank drive (fresh fixture world) against `goldens/1.19.2/`: all six screens in
 fixture-drift range, `quests` at 0.83% (the prior round's pass line was 0.89%). The
 `check` content gate's "active tab" heuristic misfires on this fixture's `quests`
 (world-state dependent: which quest category is active shifts with the world); the pixel
-diff is the parity signal here, and it clears. The next leaves are the `villager/advancements`
-widgets, and - most care needed - the render-layering family
-(the screens that override `renderBackground` to a blurred world and whose HUD is
-re-rendered by QuestownHudEvents). Those must route through the same hooks without
-losing the blur + HUD layering verified against the golden captures in
-`tools/porttest/goldens/`, and the oracle pipeline in `tools/porttest/run.sh` is the way to
-catch any regression on this machine. The SAFE-tier confirm screens (VillagerBlockofProgressScreen,
+diff is the parity signal here, and it clears.
+
+`VillagerAdvancementsScreen` + `VillagerAdvancementsContent` + `VillagerAdvancementsWidget`
+de-grandfathered (2026-10-13, 84 → 81): the screen is now a `CompatScreen` and the
+1.19.2 `render` sandwich decomposes onto the compat hooks - `renderBlurredBackground`
+in `renderScreenSurface` (the surface runs where `Screen.renderBackground` used to
+paint, so the HUD-over-blur layering `QuestownHudEvents` depends on is unchanged),
+window + pane + tooltips in `renderScreenContent`. All three files name
+`RenderContext`, never `GuiGraphics`: `fill`/`drawString(int)` through `ctx.fill`/
+`ctx.text`, blits through `ctx.gui().blit` (the 256×256 `widgets.png` and vanilla
+`window.png` are both byte-identical in the 1.19.2 and 1.20.6 client jars, so the
+7-arg blits sample the same UV in both), pose blocks through `ctx.pose()`, and the
+scissor clip through `ctx.gui().enableScissor`/`disableScissor` (absolute canvas
+edges, verified from the `ScreenRectangle` ctor). One naming trap survived the port:
+`renderTooltips`'s 3rd/4th params are the pane origin (i, j), not the mouse, and the
+tooltip translate is pane-based - it now reads `paneX`/`paneY`, so the swap is
+obvious instead of a latent bug. `QuestownHudEvents` matches by class name and
+stays unharmed. Evidence: `compileJava --rerun-tasks` green, gate green at 81,
+`[gui-lint] VillagerAdvancementsScreen (634x675) — OK`, `check.sh` content gate PASS
+on all seven canonical screens (active tab vision-confirmed), and `run.sh diff` with
+every screen in fixture-drift range (`skills` - the screen rendered by this leaf - at
+0.51% full-frame).
+
+What remains in G1 is the render-layering family (QuestownHudEvents HUD re-render).
+It must keep the blur + HUD layering verified against `tools/porttest/goldens/`; the
+porttest oracle in `tools/porttest/run.sh` is the way to catch a regression on this
+machine. The SAFE-tier confirm screens (VillagerBlockofProgressScreen,
 TownBlockofProgressScreen, CreateStockRequestScreen, WorkScreen, AddWorkScreen,
 FlagCraftingScreen, JobChangeConfirmScreen)
 and the render-argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs` are done,

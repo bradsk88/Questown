@@ -28,12 +28,12 @@ neoforged → G5 renderers → G7 client events. Each cluster has a note in
 `docs/plans/strangler-1.19.2-probe-report.md`; read the note for the
 cluster you are opening before touching a file.
 
-As of 2026-10-13 the txt is at 84 entries and the G1 frontier is: the SAFE-tier
-confirm screens (Work, AddWork, FlagCrafting, JobChange, Bop×2, CreateStock, QuestRemove)
-**and** the render-argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs` are
-landed (helpers take `RenderContext` directly; gate now ignores `.md` files so
-`gui/COMPLEX.md` prose is not a leak). `gui/COMPLEX.md` is the per-screen pattern
-reference - read it before the next leaf.
+As of 2026-10-13 the txt is at 81 entries. The G1 SAFE-tier confirm screens
+(Work, AddWork, FlagCrafting, JobChange, Bop×2, CreateStock, QuestRemove), the render-
+argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs`, `Ingredients`,
+and the `villager/advancements` widget trio are landed (gate now ignores `.md`
+files so `gui/COMPLEX.md` prose is not a leak). `gui/COMPLEX.md` is the per-screen
+pattern reference - read it before the next leaf.
 
 ## Per-leaf loop (G1 confirm screens)
 
@@ -110,13 +110,19 @@ card rows; opener `_qtdev show_item_jobs` added, see commands/COMPLEX.md) and
 `Registries.ITEM` tag constructions through the new `Compat.itemTag(ResourceLocation)`
 seam helper - name chosen to dodge the gate's `net.minecraft.core.registries`
 package marker; callers pass `ctx`/`rc` directly; 85 → 84; gui-lint + vision +
-bank drive in fixture-drift range).
+bank drive in fixture-drift range) and the `villager/advancements` trio
+(2026-10-13: screen onto `CompatScreen` - `renderBlurredBackground` in
+`renderScreenSurface`, content in `renderScreenContent`; all three files take
+`RenderContext`, render arg never names `GuiGraphics`; the HUD-over-blur order
+`QuestownHudEvents` depends on is preserved because the surface hook is where
+`Screen.renderBackground` used to paint; 84 → 81; gui-lint OK on this screen,
+content gate + bank diff on all seven canonical screens in fixture-drift range.
+Note: `renderTooltips`'s 3rd/4th params are the pane origin, not the mouse -
+renamed `paneX`/`paneY` to keep the swap visible).
 
-Still to do, in order of care: the `villager/advancements` widgets (3 files,
-Critereon/predicate territory, not pure render), and - most care needed - the
-render-layering family (QuestownHudEvents HUD re-render), which must verify
-against `tools/porttest/goldens/` via the porttest oracle before
-de-grandfathering.
+Still to do first in G1: the render-layering family (QuestownHudEvents HUD
+re-render), which must verify against `tools/porttest/goldens/` via the
+porttest oracle before de-grandfathering.
 
 Then G2/G4 multi-marker files (HospitalBedBlock's dynamic MapColor lambda,
 the LootParams blocks, TownFlagBlock/BlockOfProgress data-components,

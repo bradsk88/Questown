@@ -3,6 +3,7 @@ package ca.bradj.questown.gui.villager.advancements;
 import ca.bradj.questown.core.network.ChangeVillagerJobMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.UnlockJobMessage;
+import ca.bradj.questown.gui.CompatScreen;
 import ca.bradj.questown.gui.RenderContext;
 import ca.bradj.questown.gui.ScrollableScreen;
 import ca.bradj.questown.gui.VillagerTabs;
@@ -13,7 +14,6 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.advancements.AdvancementType;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
@@ -25,7 +25,7 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
-public class VillagerAdvancementsScreen extends Screen implements ScrollableScreen {
+public class VillagerAdvancementsScreen extends CompatScreen implements ScrollableScreen {
     private static final ResourceLocation WINDOW_LOCATION = new ResourceLocation("textures/gui/advancements/window.png");
     private static final Component VERY_SAD_LABEL = Compat.translatable("advancements.sad_label");
     private static final Component NO_ADVANCEMENTS_LABEL = Compat.translatable("advancements.empty");
@@ -102,29 +102,30 @@ public class VillagerAdvancementsScreen extends Screen implements ScrollableScre
 
     // 1.19.2 parity: the 1.19.2 background here was the (blurred) world, not the opaque
     // 1.20.6 menu background; the HUD was drawn above it. See QuestownHudEvents for the
-    // HUD redraw.
+    // HUD redraw. The compat base routes Screen.renderBackground here, so the surface
+    // hook keeps the blur where the golden's render drew it (before the content).
     @Override
-    public void renderBackground(
-            GuiGraphics guiGraphics,
+    protected void renderScreenSurface(
+            RenderContext ctx,
             int mouseX,
             int mouseY,
-            float partialTick
+            float partialTicks
     ) {
-        this.renderBlurredBackground(partialTick);
+        this.renderBlurredBackground(partialTicks);
     }
 
-    public void render(
-            GuiGraphics p_97361_,
-            int p_97362_,
-            int p_97363_,
-            float p_97364_
+    @Override
+    protected void renderScreenContent(
+            RenderContext ctx,
+            int mouseX,
+            int mouseY,
+            float partialTicks
     ) {
         int i = (this.width - 252) / 2;
         int j = (this.height - 140) / 2;
-        this.renderBackground(p_97361_, p_97362_, p_97363_, p_97364_);
-        this.renderInside(p_97361_, p_97362_, p_97363_, i, j);
-        this.renderWindow(p_97361_, i, j);
-        this.renderTooltips(p_97361_, p_97362_, p_97363_, i, j);
+        this.renderInside(ctx, i, j);
+        this.renderWindow(ctx, i, j);
+        this.renderTooltips(ctx, mouseX, mouseY, i, j);
     }
 
     public boolean mouseDragged(
@@ -158,39 +159,37 @@ public class VillagerAdvancementsScreen extends Screen implements ScrollableScre
     }
 
     private void renderInside(
-            GuiGraphics p_97374_,
-            int p_97375_,
-            int p_97376_,
+            RenderContext ctx,
             int p_97377_,
             int p_97378_
     ) {
         VillagerAdvancementsContent advancementtab = this.content;
         if (advancementtab == null) {
-            p_97374_.fill(p_97377_ + 9, p_97378_ + 18, p_97377_ + 9 + 234, p_97378_ + 18 + 113, -16777216);
+            ctx.fill(p_97377_ + 9, p_97378_ + 18, p_97377_ + 9 + 234, p_97378_ + 18 + 113, -16777216);
             int i = p_97377_ + 9 + 117;
-            p_97374_.drawCenteredString(this.font, NO_ADVANCEMENTS_LABEL, i, p_97378_ + 18 + 56 - 4, -1);
-            p_97374_.drawCenteredString(this.font, VERY_SAD_LABEL, i, p_97378_ + 18 + 113 - 9, -1);
+            ctx.centered(NO_ADVANCEMENTS_LABEL, i, p_97378_ + 18 + 56 - 4, -1);
+            ctx.centered(VERY_SAD_LABEL, i, p_97378_ + 18 + 113 - 9, -1);
         } else {
             // 1.20.6: clip the stone-tile content to the pane so it does not bleed
             // past the window border. enableScissor(x, y, right, bottom) takes
             // absolute canvas edges (not width/height - confirmed from the
             // ScreenRectangle(x, y, p3 - x, p4 - y) ctor), so it wraps the
             // pose push/translate block.
-            p_97374_.enableScissor(p_97377_ + 9, p_97378_ + 18, p_97377_ + 9 + 234, p_97378_ + 18 + 113);
+            ctx.gui().enableScissor(p_97377_ + 9, p_97378_ + 18, p_97377_ + 9 + 234, p_97378_ + 18 + 113);
             // 1.20.6: GUI transforms live on guiGraphics.pose(); touching the global
             // modelview stack here corrupts the u_ModelView uniform that the
             // RenderType.gui() pipeline (fill/drawString) applies, clipping content.
-            p_97374_.pose().pushPose();
-            p_97374_.pose().translate(p_97377_ + 9, p_97378_ + 18, 0.0F);
-            advancementtab.drawContents(p_97374_);
-            p_97374_.pose().popPose();
-            p_97374_.disableScissor();
+            ctx.pose().pushPose();
+            ctx.pose().translate(p_97377_ + 9, p_97378_ + 18, 0.0F);
+            advancementtab.drawContents(ctx);
+            ctx.pose().popPose();
+            ctx.gui().disableScissor();
         }
 
     }
 
     public void renderWindow(
-            GuiGraphics p_97357_,
+            RenderContext ctx,
             int p_97358_,
             int p_97359_
     ) {
@@ -198,28 +197,28 @@ public class VillagerAdvancementsScreen extends Screen implements ScrollableScre
         RenderSystem.enableBlend();
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderTexture(0, WINDOW_LOCATION);
-        p_97357_.blit(WINDOW_LOCATION, p_97358_, p_97359_, 0, 0, 252, 140);
+        ctx.gui().blit(WINDOW_LOCATION, p_97358_, p_97359_, 0, 0, 252, 140);
 
-        p_97357_.drawString(this.font, TITLE, p_97358_ + 8, p_97359_ + 6, 4210752, false);
+        ctx.text(TITLE, p_97358_ + 8, p_97359_ + 6, 4210752, false);
 
         int bgX = (this.width - 252) / 2;
         int bgY = (this.height - 140) / 2;
-        this.tabs.draw(new RenderContext(Compat.itemRenderer(), p_97357_), bgX, bgY);
+        this.tabs.draw(ctx, bgX, bgY);
     }
 
     private void renderTooltips(
-            GuiGraphics p_97382_,
-            int p_97383_,
-            int p_97384_,
+            RenderContext ctx,
             int mouseX,
-            int mouseY
+            int mouseY,
+            int paneX,
+            int paneY
     ) {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         if (this.content != null) {
-            p_97382_.pose().pushPose();
-            p_97382_.pose().translate(mouseX + 9, mouseY + 18, 0.0F);
-            this.content.drawTooltips(p_97382_, p_97383_ - mouseX - 9, p_97384_ - mouseY - 18, mouseX, mouseY);
-            p_97382_.pose().popPose();
+            ctx.pose().pushPose();
+            ctx.pose().translate(paneX + 9, paneY + 18, 0.0F);
+            this.content.drawTooltips(ctx, mouseX - paneX - 9, mouseY - paneY - 18, paneX, paneY);
+            ctx.pose().popPose();
         }
     }
 

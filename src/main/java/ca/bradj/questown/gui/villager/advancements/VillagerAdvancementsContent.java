@@ -1,12 +1,12 @@
 package ca.bradj.questown.gui.villager.advancements;
 
+import ca.bradj.questown.gui.RenderContext;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AtomicDouble;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -188,14 +188,14 @@ public class VillagerAdvancementsContent {
         return this.display;
     }
 
-    public void drawContents(GuiGraphics p_97164_) {
+    public void drawContents(RenderContext ctx) {
         if (!this.initializedToCenter) {
             this.scrollX = (double) (117 - (this.maxX + this.minX) / 2);
             this.scrollY = (double) (56 - (this.maxY + this.minY) / 2);
             this.initializedToCenter = true;
         }
-        p_97164_.pose().pushPose();
-        p_97164_.fill(234, 113, 0, 0, -16777216);
+        ctx.pose().pushPose();
+        ctx.fill(234, 113, 0, 0, -16777216);
         net.minecraft.resources.ResourceLocation resourcelocation = this.display.getBackground().orElse(null);
         if (resourcelocation != null) {
             int i = Mth.floor(this.scrollX);
@@ -210,29 +210,29 @@ public class VillagerAdvancementsContent {
                     // tile samples only the texture's top-left pixel (the pane
                     // renders as one solid color). Vanilla's own
                     // AdvancementTab passes the texture dimensions.
-                    p_97164_.blit(resourcelocation, k + 16 * i1, l + 16 * j1, 0.0F, 0.0F, 16, 16, 16, 16);
+                    ctx.gui().blit(resourcelocation, k + 16 * i1, l + 16 * j1, 0.0F, 0.0F, 16, 16, 16, 16);
                 }
             }
         }
 
         int i2 = Mth.floor(this.scrollX);
         int j2 = Mth.floor(this.scrollY);
-        this.root.drawConnectivity(p_97164_, i2, j2, true);
-        this.root.drawConnectivity(p_97164_, i2, j2, false);
-        this.root.draw(p_97164_, i2, j2);
-        p_97164_.pose().popPose();
+        this.root.drawConnectivity(ctx, i2, j2, true);
+        this.root.drawConnectivity(ctx, i2, j2, false);
+        this.root.draw(ctx, i2, j2);
+        ctx.pose().popPose();
     }
 
     public void drawTooltips(
-            GuiGraphics p_97184_,
+            RenderContext ctx,
             int p_97185_,
             int p_97186_,
             int p_97187_,
             int p_97188_
     ) {
-        p_97184_.pose().pushPose();
-        p_97184_.pose().translate(0.0, 0.0, -200.0);
-        p_97184_.fill(0, 0, 234, 113, Mth.floor(this.fade * 255.0F) << 24);
+        ctx.pose().pushPose();
+        ctx.pose().translate(0.0, 0.0, -200.0);
+        ctx.fill(0, 0, 234, 113, Mth.floor(this.fade * 255.0F) << 24);
         boolean flag = false;
         int i = Mth.floor(this.scrollX);
         int j = Mth.floor(this.scrollY);
@@ -250,7 +250,7 @@ public class VillagerAdvancementsContent {
                     continue;
                 }
                 flag = true;
-                advancementwidget.drawHover(p_97184_, i, j, this.fade, p_97187_, p_97188_);
+                advancementwidget.drawHover(ctx, i, j, this.fade, p_97187_, p_97188_);
                 this.hoveredWidget = advancementwidget;
                 found = true;
                 break;
@@ -261,7 +261,7 @@ public class VillagerAdvancementsContent {
 
         }
 
-        p_97184_.pose().popPose();
+        ctx.pose().popPose();
         if (flag) {
             this.fade = Mth.clamp(this.fade + 0.02F, 0.0F, 0.3F);
         } else {

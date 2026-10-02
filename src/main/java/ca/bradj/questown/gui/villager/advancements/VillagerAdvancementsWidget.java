@@ -1,14 +1,13 @@
 package ca.bradj.questown.gui.villager.advancements;
 
+import ca.bradj.questown.gui.RenderContext;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.StringSplitter;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
@@ -131,7 +130,7 @@ public class VillagerAdvancementsWidget {
     }
 
     public void drawConnectivity(
-            GuiGraphics p_97299_,
+            RenderContext ctx,
             int p_97300_,
             int p_97301_,
             boolean p_97302_
@@ -147,18 +146,18 @@ public class VillagerAdvancementsWidget {
             int i1 = p_97301_ + this.y + 13;
             int j1 = p_97302_ ? -16777216 : -1;
             if (p_97302_) {
-                this.hLine(p_97299_, j, i, k - 1, j1);
-                this.hLine(p_97299_, j + 1, i, k, j1);
-                this.hLine(p_97299_, j, i, k + 1, j1);
-                this.hLine(p_97299_, l, j - 1, i1 - 1, j1);
-                this.hLine(p_97299_, l, j - 1, i1, j1);
-                this.hLine(p_97299_, l, j - 1, i1 + 1, j1);
-                this.vLine(p_97299_, j - 1, i1, k, j1);
-                this.vLine(p_97299_, j + 1, i1, k, j1);
+                this.hLine(ctx, j, i, k - 1, j1);
+                this.hLine(ctx, j + 1, i, k, j1);
+                this.hLine(ctx, j, i, k + 1, j1);
+                this.hLine(ctx, l, j - 1, i1 - 1, j1);
+                this.hLine(ctx, l, j - 1, i1, j1);
+                this.hLine(ctx, l, j - 1, i1 + 1, j1);
+                this.vLine(ctx, j - 1, i1, k, j1);
+                this.vLine(ctx, j + 1, i1, k, j1);
             } else {
-                this.hLine(p_97299_, j, i, k, j1);
-                this.hLine(p_97299_, l, j, i1, j1);
-                this.vLine(p_97299_, j, i1, k, j1);
+                this.hLine(ctx, j, i, k, j1);
+                this.hLine(ctx, l, j, i1, j1);
+                this.vLine(ctx, j, i1, k, j1);
             }
         }
 
@@ -166,13 +165,13 @@ public class VillagerAdvancementsWidget {
 
         while (var11.hasNext()) {
             VillagerAdvancementsWidget advancementwidget = (VillagerAdvancementsWidget) var11.next();
-            advancementwidget.drawConnectivity(p_97299_, p_97300_, p_97301_, p_97302_);
+            advancementwidget.drawConnectivity(ctx, p_97300_, p_97301_, p_97302_);
         }
 
     }
 
     public void draw(
-            GuiGraphics p_97267_,
+            RenderContext ctx,
             int p_97268_,
             int p_97269_
     ) {
@@ -188,8 +187,8 @@ public class VillagerAdvancementsWidget {
             int y = p_97269_ + this.y;
             int ft = getFrameType();
             if (ft >= 0) {
-                this.blit(p_97267_, x, y, ft, v1, v2, v3);
-                Compat.renderItemAndDecorations(p_97267_, this.display.getIcon(), p_97268_ + this.x + 8, p_97269_ + this.y + 5);
+                this.blit(ctx, x, y, ft, v1, v2, v3);
+                ctx.renderItemAndDecorations(this.display.getIcon(), p_97268_ + this.x + 8, p_97269_ + this.y + 5);
             }
         }
 
@@ -197,7 +196,7 @@ public class VillagerAdvancementsWidget {
 
         while (var6.hasNext()) {
             VillagerAdvancementsWidget advancementwidget = (VillagerAdvancementsWidget) var6.next();
-            advancementwidget.draw(p_97267_, p_97268_, p_97269_);
+            advancementwidget.draw(ctx, p_97268_, p_97269_);
         }
 
     }
@@ -219,7 +218,7 @@ public class VillagerAdvancementsWidget {
     }
 
     private void blit(
-            GuiGraphics gui,
+            RenderContext ctx,
             int x,
             int y,
             int u,
@@ -228,11 +227,11 @@ public class VillagerAdvancementsWidget {
             int height
     ) {
         Util.blitState(); // 1.19.2's GuiComponent.blit set the blit state itself
-        gui.blit(WIDGETS_LOCATION, x, y, u, v, width, height);
+        ctx.gui().blit(WIDGETS_LOCATION, x, y, u, v, width, height);
     }
 
     private void hLine(
-            GuiGraphics gui,
+            RenderContext ctx,
             int x1,
             int x2,
             int y,
@@ -241,11 +240,11 @@ public class VillagerAdvancementsWidget {
         int min = Math.min(x1, x2);
         int max = Math.max(x1, x2);
         Util.blitState(); // 1.19.2 parity: frame draw state (Util.blitState)
-        gui.fill(min, y, max + 1, y + 1, color);
+        ctx.fill(min, y, max + 1, y + 1, color);
     }
 
     private void vLine(
-            GuiGraphics gui,
+            RenderContext ctx,
             int x,
             int y1,
             int y2,
@@ -254,7 +253,7 @@ public class VillagerAdvancementsWidget {
         int min = Math.min(y1, y2);
         int max = Math.max(y1, y2);
         Util.blitState(); // 1.19.2 parity: frame draw state (Util.blitState)
-        gui.fill(x, min, x + 1, max + 1, color);
+        ctx.fill(x, min, x + 1, max + 1, color);
     }
 
     public void addChild(VillagerAdvancementsWidget p_97307_) {
@@ -262,7 +261,7 @@ public class VillagerAdvancementsWidget {
     }
 
     public void drawHover(
-            GuiGraphics p_97271_,
+            RenderContext ctx,
             int p_97272_,
             int p_97273_,
             float p_97274_,
@@ -297,9 +296,9 @@ public class VillagerAdvancementsWidget {
         int j1 = 32 + this.description.size() * 9;
         if (!this.description.isEmpty()) {
             if (flag1) {
-                this.render9Sprite(p_97271_, i1, l + 26 - j1, this.width, j1, 10, 200, 26, 0, 52);
+                this.render9Sprite(ctx, i1, l + 26 - j1, this.width, j1, 10, 200, 26, 0, 52);
             } else {
-                this.render9Sprite(p_97271_, i1, l, this.width, j1, 10, 200, 26, 0, 52);
+                this.render9Sprite(ctx, i1, l, this.width, j1, 10, 200, 26, 0, 52);
             }
         }
 
@@ -308,7 +307,7 @@ public class VillagerAdvancementsWidget {
             return;
         }
         this.blit(
-                p_97271_,
+                ctx,
                 p_97272_ + this.x + 3,
                 p_97273_ + this.y,
                 texture,
@@ -317,13 +316,12 @@ public class VillagerAdvancementsWidget {
                 26
         );
         if (flag) {
-            p_97271_.drawString(this.minecraft.font, this.title, (float) (i1 + 5), (float) (p_97273_ + this.y + 9), -1, true);
+            ctx.text(this.title, i1 + 5, p_97273_ + this.y + 9, -1, true);
         } else {
-            p_97271_.drawString(
-                    this.minecraft.font,
+            ctx.text(
                     this.title,
-                    (float) (p_97272_ + this.x + 32),
-                    (float) (p_97273_ + this.y + 9),
+                    p_97272_ + this.x + 32,
+                    p_97273_ + this.y + 9,
                     -1,
                     true
             );
@@ -332,33 +330,31 @@ public class VillagerAdvancementsWidget {
         int k1;
         if (flag1) {
             for (k1 = 0; k1 < this.description.size(); ++k1) {
-                p_97271_.drawString(
-                        this.minecraft.font,
+                ctx.text(
                         (FormattedCharSequence) this.description.get(k1),
-                        (float) (i1 + 5),
-                        (float) (l + 26 - j1 + 7 + k1 * 9),
+                        i1 + 5,
+                        l + 26 - j1 + 7 + k1 * 9,
                         -5592406,
                         false
                 );
             }
         } else {
             for (k1 = 0; k1 < this.description.size(); ++k1) {
-                p_97271_.drawString(
-                        this.minecraft.font,
+                ctx.text(
                         (FormattedCharSequence) this.description.get(k1),
-                        (float) (i1 + 5),
-                        (float) (p_97273_ + this.y + 9 + 17 + k1 * 9),
+                        i1 + 5,
+                        p_97273_ + this.y + 9 + 17 + k1 * 9,
                         -5592406,
                         false
                 );
             }
         }
 
-        Compat.renderItemAndDecorations(p_97271_, this.display.getIcon(), p_97272_ + this.x + 8, p_97273_ + this.y + 5);
+        ctx.renderItemAndDecorations(this.display.getIcon(), p_97272_ + this.x + 8, p_97273_ + this.y + 5);
     }
 
     protected void render9Sprite(
-            GuiGraphics p_97288_,
+            RenderContext ctx,
             int p_97289_,
             int p_97290_,
             int p_97291_,
@@ -369,9 +365,9 @@ public class VillagerAdvancementsWidget {
             int p_97296_,
             int p_97297_
     ) {
-        this.blit(p_97288_, p_97289_, p_97290_, p_97296_, p_97297_, p_97293_, p_97293_);
+        this.blit(ctx, p_97289_, p_97290_, p_97296_, p_97297_, p_97293_, p_97293_);
         this.renderRepeating(
-                p_97288_,
+                ctx,
                 p_97289_ + p_97293_,
                 p_97290_,
                 p_97291_ - p_97293_ - p_97293_,
@@ -382,7 +378,7 @@ public class VillagerAdvancementsWidget {
                 p_97295_
         );
         this.blit(
-                p_97288_,
+                ctx,
                 p_97289_ + p_97291_ - p_97293_,
                 p_97290_,
                 p_97296_ + p_97294_ - p_97293_,
@@ -391,7 +387,7 @@ public class VillagerAdvancementsWidget {
                 p_97293_
         );
         this.blit(
-                p_97288_,
+                ctx,
                 p_97289_,
                 p_97290_ + p_97292_ - p_97293_,
                 p_97296_,
@@ -400,7 +396,7 @@ public class VillagerAdvancementsWidget {
                 p_97293_
         );
         this.renderRepeating(
-                p_97288_,
+                ctx,
                 p_97289_ + p_97293_,
                 p_97290_ + p_97292_ - p_97293_,
                 p_97291_ - p_97293_ - p_97293_,
@@ -411,7 +407,7 @@ public class VillagerAdvancementsWidget {
                 p_97295_
         );
         this.blit(
-                p_97288_,
+                ctx,
                 p_97289_ + p_97291_ - p_97293_,
                 p_97290_ + p_97292_ - p_97293_,
                 p_97296_ + p_97294_ - p_97293_,
@@ -420,7 +416,7 @@ public class VillagerAdvancementsWidget {
                 p_97293_
         );
         this.renderRepeating(
-                p_97288_,
+                ctx,
                 p_97289_,
                 p_97290_ + p_97293_,
                 p_97293_,
@@ -431,7 +427,7 @@ public class VillagerAdvancementsWidget {
                 p_97295_ - p_97293_ - p_97293_
         );
         this.renderRepeating(
-                p_97288_,
+                ctx,
                 p_97289_ + p_97293_,
                 p_97290_ + p_97293_,
                 p_97291_ - p_97293_ - p_97293_,
@@ -442,7 +438,7 @@ public class VillagerAdvancementsWidget {
                 p_97295_ - p_97293_ - p_97293_
         );
         this.renderRepeating(
-                p_97288_,
+                ctx,
                 p_97289_ + p_97291_ - p_97293_,
                 p_97290_ + p_97293_,
                 p_97293_,
@@ -455,7 +451,7 @@ public class VillagerAdvancementsWidget {
     }
 
     protected void renderRepeating(
-            GuiGraphics p_97278_,
+            RenderContext ctx,
             int p_97279_,
             int p_97280_,
             int p_97281_,
@@ -472,7 +468,7 @@ public class VillagerAdvancementsWidget {
             for (int l = 0; l < p_97282_; l += p_97286_) {
                 int i1 = p_97280_ + l;
                 int j1 = Math.min(p_97286_, p_97282_ - l);
-                this.blit(p_97278_, j, i1, p_97283_, p_97284_, k, j1);
+                this.blit(ctx, j, i1, p_97283_, p_97284_, k, j1);
             }
         }
 

@@ -58,8 +58,11 @@ panel-under-second-background draw-order regression; see `gui/COMPLEX.md`); gran
 93 → 85, gate green. `Ingredients` then landed (`render` onto `RenderContext`, the
 direct callers pass `ctx`/`rc`, and the three `Registries.ITEM` tag constructions route
 through the new `Compat.itemTag(ResourceLocation)` seam - see `gui/COMPLEX.md`);
-grandfather 85 → 84, gate green. Remaining G1: the `villager/advancements` widgets,
-and - most care - the render-layering family (QuestownHudEvents).
+grandfather 85 → 84, gate green. The `villager/advancements` trio then landed (the
+screen onto `CompatScreen` with the blurred background in `renderScreenSurface` and
+content in `renderScreenContent`; the content + widget files onto `RenderContext`;
+see `gui/COMPLEX.md`); grandfather 84 → 81, gate green. Remaining G1: the
+render-layering family (QuestownHudEvents).
 
 ### G2. Block and block-entity definitions (blocks/, _vanilla/, 25 files)
 

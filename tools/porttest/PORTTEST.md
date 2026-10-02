@@ -124,6 +124,19 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
     old FIFO writer + `rm -rf run/logs`, then relaunch. A `state.py`
     fresh-shot/server list is the cheapest pre-check that you aren't
     intermixed with a live prior run.
+  - **A missing FIFO writer hangs the server launch silently (2026-10-13,
+    15 min lost).** The `runServer` task wires its console as
+    `standardInput = new FileInputStream(run/server-cmd.fifo)`; that O_RDONLY
+    open blocks until a writer opens the fifo, and if `prep`'s writer died in
+    transit (the box's nohup quirk), the build just sits after "Configure
+    project" with zero CPU and `wait-server` says "not up yet" forever. The
+    daemon is not dead - it is blocked on the open. Diagnosis: `pgrep -af
+    'sleep 999999'` finds nothing (or a pid that does NOT hold the repo's fifo
+    fd - check `ls /proc/<pid>/fd | grep server-cmd.fifo`, not the process
+    list). Fix: relaunch the writer
+    (`nohup sh -c 'sleep 999999 <> run/server-cmd.fifo' &`), the daemon's
+    read-open unblocks, the server boots. Verify the writer holds the fd in a
+    separate call BEFORE treating the launch as safe, not after a stall.
 - `check.sh` — content gate: vision-verifies each captured screen against
   its `expect` block in `manifest.json` (menu open, active tab,
   not-death, not-title) BEFORE banking. `check.sh <dir> [screen]`.
