@@ -60,6 +60,17 @@ die() { echo "[capture:$STAGE] FATAL: $*" >&2; exit 1; }
 fifo_cmd() { echo "$1" > "$FIFO"; }
 # client game dir may differ from the server dir (wip: server=run, client=run-client)
 file_cmd() { echo "$1" > "${QT_DIAG_DIR:-$PROJ/$GAME}/.qtdiag-cmd"; }
+# dual_cmd CMD - dispatch one console command through BOTH channels: the
+# diag file's 'cmd' hook (a player-sourced ServerboundChatCommandPacket;
+# this is the live path when the gradle daemon's stdin bridge is a dead
+# pipe - verified 1.20.6), then the console FIFO (the live path on the
+# 1.19.2 side, whose hook predates 'cmd' and logs it as unknown).
+# Receiving it twice is harmless (a screen re-opens; list/data just
+# re-log, and the readers take tail -1).
+dual_cmd() {
+  file_cmd "cmd $1"; sleep 1
+  fifo_cmd "$1"
+}
 port_hex() { printf '%X' "$PORT"; }
 port_listening() { # verified pattern: local=field2 state=field4 in /proc/net/tcp{,6}
   local n
@@ -72,8 +83,15 @@ prep)
   say "sweep"
   "$TOOL/sweep.sh" "$PROJ"
   rm -rf "$PROJ/run/world"
+  # fresh log + fresh diags for this run: a prior session's server can
+  # still be writing run/logs/latest.log, and its joined/fixture/townspawn
+  # lines then interleave this run's (a stale line read as verified state
+  # bit the 10-02 session); stale diags corrupt a bank. Sweep already
+  # killed the repo's JVMs, so there is no live writer to race.
+  rm -rf "$PROJ/run/logs" 2>/dev/null
+  [ -n "$GAME" ] && rm -rf "${QT_DIAG_DIR:-$PROJ/$GAME}/diags" "$PROJ/$GAME/.qtdiag-cmd" 2>/dev/null
   date +%s > "$PROJ/run/.world-prep-at"
-  say "world wiped (fresh normal world will generate)"
+  say "world + logs + diags wiped (fresh normal world will generate)"
   if grep -q '^level-type=flat\b' "$PROJ/run/server.properties" 2>/dev/null; then
     die "level-type=flat: flat-world spawn is broken here (server y=-60, client Y desyncs ~64, player dies). Use a normal world."
   fi
@@ -157,12 +175,12 @@ print(int(x), int(y), int(z), int(y) - 1)")"
   # chain appears in the log.
   t=0
   while ! LC_ALL=C grep -aq 'Running initializer' "$SLOG4"; do
-    fifo_cmd "_qtdev townplace $X $YB $Z"
+    dual_cmd "_qtdev townplace $X $YB $Z"
     t=$((t+10)); [ $t -ge 50 ] && die "townplace: flag never initialized after ${t}s"
     sleep 10
   done
   sleep 2
-  fifo_cmd "_qtdev townspawn $X $YB $Z"
+  dual_cmd "_qtdev townspawn $X $YB $Z"
   sleep 6
   LC_ALL=C grep -a '\[townspawn\]' "$SLOG4" | tail -1 | cut -c1-120 || die "no [townspawn] log line - check $SLOG4"
   say "fixture placed at $X $YB $Z"
@@ -181,7 +199,7 @@ shot)
   PNAME=${7:-Dev}
   hline=""
   for i in 1 2 3 4; do
-    timeout 15 sh -c "echo 'data get entity $PNAME Health' > $FIFO" >/dev/null 2>&1 || true
+    dual_cmd "data get entity $PNAME Health" >/dev/null 2>&1 || true
     sleep 5
     hline=$(LC_ALL=C grep -a 'following entity data: ' "$SLOG4" | tail -1)
     case "$hline" in
@@ -192,14 +210,23 @@ shot)
   case "$hline" in
     *entity\ data:\ 0.0f*) [ -n "$hline" ] && die "player $PNAME Health = 0.0f ~25s after join - stuck death state, not a zombie. Run: capture.sh unstick $PROJ $PORT $GAME $PNAME";;
   esac
-  fifo_cmd "list"
+  dual_cmd "list"
   sleep 3
-  LC_ALL=C tail -200 "$SLOG4" | grep -Eq 'There are [1-9][0-9]* of a max' || die "'list' does not show a player online - client not in game"
+  if ! LC_ALL=C tail -200 "$SLOG4" 2>/dev/null | grep -Eq 'There are [1-9][0-9]* of a max'; then
+    # A player-sourced list (the diag `cmd` channel) logs NOTHING to the
+    # server log (chat-only; the console/operator source is what logs the
+    # output). With a dead console the fallback is: this run's join line is
+    # present (a fresh `prep` makes latest.log single-run, so any join line
+    # is ours) and the death guard above found no death/desync lines.
+    LC_ALL=C grep -aq 'logged in with entity id' "$SLOG4" \
+      || die "no operator 'list' output in log and no join line - client not in game"
+    say "'list' response not log-visible (console dead; player list is chat-only) - liveness via join line + death-guard passing"
+  fi
   open=$(python3 -c "
 import json,sys
 m=json.load(open('$MAN'))
 print([s['open'] for s in m['screens'] if s['name']=='$NAME'][0])")
-  fifo_cmd "_qtdev $open"
+  dual_cmd "_qtdev $open"
   sleep 3
   rm -f "${QT_DIAG_DIR:-$PROJ/$GAME}/diags/$NAME.png"
   # Park the pointer at the window corner so hover-dependent render state

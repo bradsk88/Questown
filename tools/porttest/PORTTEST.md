@@ -87,11 +87,16 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
     (String)` is a working player-source command packet — verified by
     effect, the command dispatches as the player) — do not invent a
     player send-chat method
-  - **The shot stage's menu open is the console's `fifo_cmd "_qtdev $open"`**
-    — with a dead console it opens nothing and the shot is the previous
-    screen's. The diag-driven loop above (flagtab/vopen) is the working
-    replacement and was used for the 1.20.6 re-bank 2026-10-02 (all 7
-    screens: check PASS, run.sh diff PASS)
+  - **`dual_cmd` (fixture + shot stages): every console command is now
+    sent BOTH through the diag `cmd` hook and the console FIFO.** Whichever
+    bridge is live per branch/environment lands; the dead one just doesn't
+    respond. A double delivery is harmless (a screen re-opens; list/data
+    re-log and the readers take `tail -1`). `cmd` is unknown to the 1.19.2
+    hook (it logs it), where the console is the live half; on 1.20.6 the
+    `cmd` hook is the live half when the console is a dead pipe. If you drive
+    by hand, the loop above (flagtab/vopen/cursor/shot) still works and was
+    used for the 1.20.6 re-bank 2026-10-02 (all 7 screens: check PASS,
+    run.sh diff PASS).
   - **`shot` is async** — the mover polls up to 8s; `diags/<name>.png` may
     appear a few seconds after the send. `ls` once and miss it, don't
     re-capture. A capture that shows the "Connection Lost / Server closed"
@@ -107,10 +112,14 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
     server can still be writing it.** A `joined`/`fixture`/`townspawn` line
     you grepped may belong to the previous session, not yours — read the
     generation, not the line: the timestamp must be AFTER your own
-    launch/writer start. Cleanest reset (done while the server is DOWN):
-    `sweep.sh` + kill the old FIFO writer + `rm -rf run/logs`, then relaunch.
-    A `state.py` fresh-shot/server list is the cheapest pre-check that you
-    aren't intermixed with a live prior run.
+    launch/writer start. `prep` now handles this: after `sweep.sh` it also
+    wipes `run/logs` and the client's `diags/` + stale `.qtdiag-cmd` (the
+    sweep already killed the repo's JVMs, so no live writer to race) — the
+    log and the shot bank are single-run by construction. If you drive
+    manually without `prep`, apply the reset yourself: `sweep.sh` + kill any
+    old FIFO writer + `rm -rf run/logs`, then relaunch. A `state.py`
+    fresh-shot/server list is the cheapest pre-check that you aren't
+    intermixed with a live prior run.
 - `check.sh` — content gate: vision-verifies each captured screen against
   its `expect` block in `manifest.json` (menu open, active tab,
   not-death, not-title) BEFORE banking. `check.sh <dir> [screen]`.
