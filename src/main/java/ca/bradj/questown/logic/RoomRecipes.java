@@ -3,6 +3,7 @@ package ca.bradj.questown.logic;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.RecipeItemConfig;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.RecipeRef;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
@@ -48,19 +49,12 @@ public class RoomRecipes {
             ResourceLocation id
     ) {
         // The holder owns the id in 1.20.2+; the codec-constructed RoomRecipe carries a null id.
-        for (net.minecraft.world.item.crafting.RecipeHolder<RoomRecipe> h
-                : level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM)) {
-            if (id.equals(h.id())) {
-                return Optional.of(h.value());
-            }
-        }
-        return Optional.empty();
+        return RecipeRef.recipeById(level.getRecipeManager(), RecipesInit.ROOM, id);
     }
 
     @NotNull
     public static List<RoomRecipe> getAllRecipes(Level level) {
-        return level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM)
-                .stream().map(net.minecraft.world.item.crafting.RecipeHolder::value).collect(java.util.stream.Collectors.toList());
+        return RecipeRef.recipesOf(level.getRecipeManager(), RecipesInit.ROOM);
     }
 
     public static Component getName(ResourceLocation id) {

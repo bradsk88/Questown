@@ -15,6 +15,7 @@ import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.RecipeRef;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -314,9 +315,7 @@ public class ResourceJobLoader {
                 RegistryAccess ra,
                 Item iconItem
         ) {
-            List<net.minecraft.world.item.crafting.RecipeHolder<SmeltingRecipe>> all = rm.getAllRecipesFor(RecipeType.SMELTING);
-            return all.stream()
-                      .map(v -> v.value())
+            return RecipeRef.recipesOf(rm, RecipeType.SMELTING).stream()
                       .filter(v -> isSingleItemRecipeMatch(iconItem, v))
                       .findFirst().orElseThrow().getResultItem(ra).getItem();
         }
@@ -814,12 +813,9 @@ public class ResourceJobLoader {
             }
         }
 
-        Optional<net.minecraft.world.item.crafting.RecipeHolder<CraftingRecipe>> match = level.getServer().getRecipeManager()
-                                              .getRecipeFor(RecipeType.CRAFTING, cc, level);
-        if (match.isPresent()) {
-            return match.get().value().assemble(cc, level.registryAccess());
-        }
-        return ItemStack.EMPTY;
+        return RecipeRef.assembleMatching(
+                level.getServer().getRecipeManager(), RecipeType.CRAFTING, cc, level
+        );
     }
 
     private static WorkStates workStates(

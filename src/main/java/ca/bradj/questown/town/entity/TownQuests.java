@@ -21,6 +21,7 @@ import ca.bradj.questown.jobs.Works;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.RecipeRef;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.TownieNeed;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -369,14 +370,14 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 () -> getNeededRooms(town.getEconomicsHandle()).stream().filter(v -> TownQuests.isNotSpecial(v.id()))
                                                                .toList(),
                 () -> {
-                    // 1.20.6: the recipe id lives on the RecipeHolder, not the recipe
+                    // 1.20.6: the recipe id lives on the holder, not the recipe
                     // object (RoomRecipe.getId() is null for registry recipes - this
                     // used to NPE the flag tick in QuestBatchSeed.getRandomRoom).
-                    List<ResourceLocation> ids = new ArrayList<>(level.getRecipeManager()
-                                                                   .getAllRecipesFor(RecipesInit.ROOM).stream()
-                                                                   .filter(v -> TownQuests.isNotSpecial(v.id()))
-                                                                   .map(v -> v.id())
-                                                                   .toList());
+                    List<ResourceLocation> ids = new ArrayList<>(
+                            RecipeRef.idsOf(level.getRecipeManager(), RecipesInit.ROOM).stream()
+                                    .filter(TownQuests::isNotSpecial)
+                                    .toList()
+                    );
                     for (Supplier<RoomBlock> roomBlockSupplier : BlockAsRoomEntity.ALL) {
                         ids.add(roomBlockSupplier.get().asRecipe().getId());
                     }

@@ -20,7 +20,7 @@ import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
+import ca.bradj.questown.mc.RecipeRef;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -127,14 +127,13 @@ public class TownFlagMenus {
             Collection<? extends Quest<ResourceLocation, ?>> q
     ) {
         // The holder owns the id in 1.20.2+; the codec-constructed RoomRecipe carries a null id.
-        List<RecipeHolder<RoomRecipe>> farmRecipes = p.level().getRecipeManager()
-                                                              .getAllRecipesFor(RecipesInit.ROOM)
-                                                              .stream()
-                                                              .filter(v -> v.value().isFarmRecipe())
-                                                              .toList();
+        // Eligibility = (holder-id match) AND (value is a farm recipe) - both, in that order.
         for (Quest<ResourceLocation, ?> mcQuest : q) {
             ResourceLocation wanted = mcQuest.getWantedId();
-            if (wanted == null || farmRecipes.stream().noneMatch(z -> z.id().equals(wanted))) {
+            RecipeRef.RecipePair<RoomRecipe> pair = wanted == null
+                    ? null
+                    : RecipeRef.findById(p.level().getRecipeManager(), RecipesInit.ROOM, wanted);
+            if (pair == null || !pair.value().isFarmRecipe()) {
                 continue;
             }
             AdvancementsInit.VISITOR_TRIGGER.trigger(p, VisitorTrigger.Triggers.FirstFarmQuest);

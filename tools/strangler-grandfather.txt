@@ -31,9 +31,7 @@ jobs/declarative/TestWorldInteraction.java
 jobs/gatherer/Loots.java
 jobs/requests/WorkRequest.java
 jobs/requests/WorkRequestSerializer.java
-logic/RoomRecipes.java
 mobs/visitor/VisitorMobEntity.java
-town/TownFlagMenus.java
 town/TownKnownBiomes.java
 town/entity/TownFlagBlockEntity.java
 town/entity/TownQuests.java
