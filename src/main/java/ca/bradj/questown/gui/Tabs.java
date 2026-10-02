@@ -4,7 +4,6 @@ import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import net.minecraft.client.gui.GuiGraphics;
 
 import java.util.function.Consumer;
 
@@ -55,14 +54,9 @@ public class Tabs {
             tab.draw(rc.gui(), tabX + X_OFFSET, tabY + Y_OFFSET);
             tabs.get(i).renderFunc().accept(rc, tabX, tabY);
             if (tabs.get(i).hasNotification()) {
-                drawNotificationDot(rc.gui(), tabX + tab.getWidth() - 2, tabY + Y_OFFSET + 2);
+                rc.fill(tabX + tab.getWidth() - 2, tabY + Y_OFFSET + 2, tabX + tab.getWidth() + 2, tabY + Y_OFFSET + 6, 0xFFFF3333);
             }
         }
-    }
-
-    private void drawNotificationDot(GuiGraphics gui, int x, int y) {
-        int red = 0xFFFF3333;
-        gui.fill(x, y, x + 4, y + 4, red);
     }
 
     public boolean mouseClicked(

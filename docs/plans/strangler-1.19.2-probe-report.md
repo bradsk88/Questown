@@ -43,6 +43,15 @@ screens plus a small set of Compat wrappers (button build, tooltip set, componen
 Afterwards the 29 screens should name none of `GuiGraphics`, `Button.builder`,
 `renderTooltip`, or `RenderSystem`.
 
+Shipped: the SAFE-tier confirm screens (Work, AddWork, FlagCrafting, JobChangeConfirm, the
+Block-of-Progress pair, CreateStockRequest, QuestRemoveConfirm) are on `CompatScreen` /
+`CompatContainerScreen` hooks, and the render-argument helpers `IngredientRenderer` /
+`StatusGraphic` / `Tabs` now take `RenderContext` directly (verbatim draw calls; callers
+pass `ctx`). Grandfather 93 → 89, gate green; the gate also ignores `.md` files (prose
+names markers on purpose), dropping `gui/COMPLEX.md` from the list. Remaining G1:
+VillagerStatsScreen, InventoryAndStatusScreen, ItemJobsScreen, `Ingredients`,
+`PagedCardScreen`, the `villager/advancements` widgets, QuestownHudEvents.
+
 ### G2. Block and block-entity definitions (blocks/, _vanilla/, 25 files)
 
 - `BlockBehaviour.Properties.of().mapColor(MapColor.X)` per block (19 blocks; 1.19.2 form

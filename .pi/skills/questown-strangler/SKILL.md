@@ -28,10 +28,12 @@ neoforged → G5 renderers → G7 client events. Each cluster has a note in
 `docs/plans/strangler-1.19.2-probe-report.md`; read the note for the
 cluster you are opening before touching a file.
 
-As of 2026-10-02 the txt is at 108 entries and the paged cluster
-(`AbstractPagedCardScreen` + 4 leaves) plus `WorkRequestConfirmScreen` are
-landed. `gui/COMPLEX.md` is the per-screen pattern reference — read it
-before the next leaf.
+As of 2026-10-13 the txt is at 89 entries and the G1 frontier is: the SAFE-tier
+confirm screens (Work, AddWork, FlagCrafting, JobChange, Bop×2, CreateStock, QuestRemove)
+**and** the render-argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs` are
+landed (helpers take `RenderContext` directly; gate now ignores `.md` files so
+`gui/COMPLEX.md` prose is not a leak). `gui/COMPLEX.md` is the per-screen pattern
+reference - read it before the next leaf.
 
 ## Per-leaf loop (G1 confirm screens)
 
@@ -88,14 +90,20 @@ before the next leaf.
   admits). Second hit on G3 for the same reason: the item-NBT helpers are `itemDataTag`/`setItemDataTag`,
   not `itemCustomDataTag` (the `CustomData` marker would substring-match that in every leaf that calls it).
 
-## Remaining SAFE leaves to land (as of 2026-10-02)
+## Remaining G1 leaves (as of 2026-10-13)
 
-`QuestsScreen`-cluster done (paged): QuestsScreen, TownEconomicsScreen,
-VillagerEconomicsScreen, MultiStatusScreen. Still to do:
-VillagerBlockofProgressScreen, TownBlockofProgressScreen,
-CreateStockRequestScreen, WorkScreen, QuestRemoveConfirmScreen,
-AddWorkScreen, FlagCraftingScreen, JobChangeConfirmScreen. Then
-FlagCrafting/JobChange flow layouts (with craft tooltips + tabs), and the
-render-layering family (`renderBackground` blur + QuestownHudEvents HUD
-re-render) — the careful one, verify against `tools/porttest/goldens/`
-via the porttest oracle before de-grandfathering.
+Done: every SAFE-tier confirm screen + the paged cluster + the helper
+pass-throughs above. Still to do, in order of care: full screens
+`VillagerStatsScreen` (stat bars + the 10-arg blit trap - see COMPLEX.md),
+`InventoryAndStatusScreen` (blurred `renderBackground` + tabs + status
+icons), `ItemJobsScreen`; helper `Ingredients` (GuiGraphics + core.registries)
+and `PagedCardScreen` (390 lines, 8 hits); the `villager/advancements` widgets
+(3 files, Critereon/predicate territory); and - most care - the render-layering
+family (`renderBackground` blur + QuestownHudEvents HUD re-render), verified
+against `tools/porttest/goldens/` via the porttest oracle before
+de-grandfathering. The carried-over **live gui-lint + vision pass on
+`VillagerEconomicsScreen`** is done (2026-10-13: gui-lint OK + vision real-art in
+the ingredient grid, alongside the helper pass-throughs above).
+Then G2/G4 multi-marker files (HospitalBedBlock's dynamic MapColor lambda,
+the LootParams blocks, TownFlagBlock/BlockOfProgress data-components,
+MCTownItem/TestBlueprintRegistry registries), G6 neoforged, G5 renderers, G7 client events.

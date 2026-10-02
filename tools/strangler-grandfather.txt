@@ -37,17 +37,13 @@ core/init/ModItemGroup.java
 core/init/ScheduleInit.java
 core/init/TilesInit.java
 gui/AbstractVillagerMenu.java
-gui/COMPLEX.md
 gui/GuiLayoutCheckClientEvents.java
-gui/IngredientRenderer.java
 gui/Ingredients.java
 gui/InventoryAndStatusScreen.java
 gui/ItemJobsScreen.java
 gui/LockableInventoryWrapper.java
 gui/PagedCardScreen.java
 gui/QuestownHudEvents.java
-gui/StatusGraphic.java
-gui/Tabs.java
 gui/VillagerStatsScreen.java
 gui/villager/advancements/VillagerAdvancementsContent.java
 gui/villager/advancements/VillagerAdvancementsScreen.java

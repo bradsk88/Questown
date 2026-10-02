@@ -111,13 +111,14 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
+        RenderContext rc = new RenderContext(Compat.itemRenderer(), gui);
         this.background.draw(gui, bgX, bgY, backgroundWidth, backgroundHeight);
-        this.tabs.draw(new RenderContext(Compat.itemRenderer(), gui), bgX, bgY);
-        renderInventory(gui);
-        status.render(gui);
+        this.tabs.draw(rc, bgX, bgY);
+        renderInventory(rc);
+        status.render(rc);
     }
 
-    private void renderInventory(GuiGraphics gui) {
+    private void renderInventory(RenderContext rc) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         int yCoord = 0;
@@ -125,11 +126,11 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             Slot s = menu.slots.get(i);
             int xCoord = x - 1 + s.x;
             yCoord = y - 1 + s.y;
-            this.slot.draw(gui, xCoord, yCoord);
+            this.slot.draw(rc.gui(), xCoord, yCoord);
         }
         int iconX = x - 8;
         for (Ingredient i : ClientJobWantedResources.wantedIngredients) {
-            this.ingredientRenderer.render(gui, i, iconX += 16, yCoord + 32);
+            this.ingredientRenderer.render(rc, i, iconX += 16, yCoord + 32);
         }
     }
 

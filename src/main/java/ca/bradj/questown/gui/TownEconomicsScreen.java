@@ -121,7 +121,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         if (UtilClean.isCoordInBox(mouseX, mouseY, iconX, iconY, 16, 16)) {
             ctx.fill(iconX, iconY, iconX + 16, iconY + 16, RenderUtil.SHADOW);
         }
-        ingredientRenderer.render(ctx.gui(), item, iconX, iconY);
+        ingredientRenderer.render(ctx, item, iconX, iconY);
         int textX = iconX + ingredientRenderer.getSize() + SMALL_PADDING + SMALL_PADDING;
         int textY = c.topYPadded();
         ctx.darkText(Ingredients.getName(item), textX, textY);

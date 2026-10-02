@@ -259,15 +259,30 @@ idiom for the one seam helper that still takes the render argument directly: `In
 `RenderUtil.highlight` take the argument as `ctx.gui()` (a record accessor, no type named in the leaf),
 while `Compat.drawDarkText` collapses to `ctx.darkText`.
 
-Pending: the remaining SAFE-tier confirm screens (VillagerBlockofProgressScreen,
-TownBlockofProgressScreen, CreateStockRequestScreen, WorkScreen, AddWorkScreen), the **live gui-lint + vision pass on `VillagerEconomicsScreen`** (code-migrated with its
-twin but not yet opened on a held run - open via the villager menu's economics tab or the flagtab
-`economics` twin), plus helpers that still take `GuiGraphics` (Ingredients, IngredientRenderer,
-StatusGraphic, `Tabs.draw`, PagedCardScreen, the `villager/advancements` widgets, QuestownHudEvents), and — most care needed — the render-layering family above (the screens
-that override `renderBackground` to a blurred world and whose HUD is re-rendered by
-QuestownHudEvents). Those must route through these same hooks without losing the blur + HUD
-layering that is verified against the golden captures in `tools/porttest/goldens/`, and the
-oracle pipeline in `tools/porttest/run.sh` is the way to catch any regression on this machine.
+Pending: the remaining full G1 screens that still take the render argument
+(`VillagerStatsScreen`, `InventoryAndStatusScreen`, `ItemJobsScreen`), the helpers that still
+take `GuiGraphics` (`Ingredients`, `PagedCardScreen`, the `villager/advancements` widgets,
+QuestownHudEvents), and - most care needed - the render-layering
+family above (the screens that override `renderBackground` to a blurred world and whose HUD is
+re-rendered by QuestownHudEvents). Those must route through these same hooks without losing
+the blur + HUD layering that is verified against the golden captures in `tools/porttest/goldens/`,
+and the oracle pipeline in `tools/porttest/run.sh` is the way to catch any regression on this
+machine. The SAFE-tier confirm screens (VillagerBlockofProgressScreen, TownBlockofProgressScreen,
+CreateStockRequestScreen, WorkScreen, AddWorkScreen, FlagCraftingScreen, JobChangeConfirmScreen)
+and the render-argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs` are done.
+
+Render-argument helpers taking `RenderContext` (2026-10-13): `IngredientRenderer.render`,
+`StatusGraphic.render`, and `Tabs.draw` (plus the inlined notification-dot `fill`) now take
+`RenderContext` directly instead of `GuiGraphics` - the version-neutral record is the same
+admitted type the screens use, so no new seam API. Callers (`TownEconomicsScreen`,
+`VillagerEconomicsScreen`, `InventoryAndStatusScreen`) pass `ctx` rather than `ctx.gui()`.
+Every draw call underneath is verbatim (`Compat.renderItemAndDecorations`, the 10-arg
+`ClientAccess`/32×32 `blit`, the 4×4 notification dot), so these landed without a fresh
+held-run gui-lint - the same rationale as the player-head item (pass-through, not layout).
+Grandfather set 93 → 89; the gate also stopped counting `.md` files (their prose names
+markers on purpose), which dropped `gui/COMPLEX.md` from the list. The carried-over live pass
+on `VillagerEconomicsScreen` was done in the same run: gui-lint OK + vision (real item art in
+the ingredient grid) on 2026-10-13.
 
 FlagCraftingScreen (flow layout + craft tooltips + tabs) and JobChangeConfirmScreen (early-
 return + tabs tooltip + centered text) are the two remaining SAFE-tier leaves with non-trivial

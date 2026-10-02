@@ -116,7 +116,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
         int iconX = coords.leftX() + MED_PADDING;
         int iconY = coords.topY() + MED_PADDING;
         Ingredient item = Ingredients.fromString(data.ingredientKey());
-        ingredientRenderer.render(ctx.gui(), item, iconX, iconY);
+        ingredientRenderer.render(ctx, item, iconX, iconY);
         int textX = iconX + ingredientRenderer.getSize() + SMALL_PADDING + SMALL_PADDING;
         int textY = coords.topYPadded();
         ctx.darkText(Ingredients.getName(item), textX, textY);

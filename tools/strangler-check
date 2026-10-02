@@ -42,14 +42,14 @@ GFX='tools/strangler-grandfather.txt'
 if [ "${1:-}" = '--gen-grandfather' ]; then
     grep -rlE "$MARKERS" src/main/java src/test/java 2>/dev/null \
         | sed -E 's@src/(main|test)/java/ca/bradj/questown/@@' \
-        | grep -vE "$SEAM|$SEAM_FILES" | sort | tee "$GFX"
+        | grep -vE "$SEAM|$SEAM_FILES|\.md$" | sort | tee "$GFX"
     echo "wrote $(grep -cvE '^\s*(#|$)' "$GFX") grandfathered files" >&2
     exit 0
 fi
 
 hits="$(grep -rlE "$MARKERS" src/main/java src/test/java 2>/dev/null \
     | sed -E 's@src/(main|test)/java/ca/bradj/questown/@@' \
-    | grep -vE "$SEAM|$SEAM_FILES" | sort)"
+    | grep -vE "$SEAM|$SEAM_FILES|\.md$" | sort)"
 [ -z "$hits" ] && exit 0
 
 allowed="$( { [ -f "$GFX" ] && grep -vE '^\s*(#|$)' "$GFX"; } | sort)"

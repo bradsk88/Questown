@@ -8,7 +8,6 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
@@ -53,10 +52,10 @@ public class StatusGraphic {
     }
 
     public void render(
-            GuiGraphics gui
+            RenderContext rc
     ) {
         if (getSmoothedStatus() instanceof ProductionStatus ps) {
-            blit(gui, ClientAccess.getArt(jobId, ps), topLeft.get().x(), topLeft.get().y(), 0, 0, 32, 32, 32, 32);
+            blit(rc.gui(), ClientAccess.getArt(jobId, ps), topLeft.get().x(), topLeft.get().y(), 0, 0, 32, 32, 32, 32);
         }
     }
 
