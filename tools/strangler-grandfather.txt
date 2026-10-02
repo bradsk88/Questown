@@ -38,7 +38,6 @@ core/init/ScheduleInit.java
 core/init/TilesInit.java
 gui/AbstractVillagerMenu.java
 gui/GuiLayoutCheckClientEvents.java
-gui/Ingredients.java
 gui/LockableInventoryWrapper.java
 gui/QuestownHudEvents.java
 gui/villager/advancements/VillagerAdvancementsContent.java

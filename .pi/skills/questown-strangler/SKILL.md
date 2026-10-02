@@ -28,7 +28,7 @@ neoforged → G5 renderers → G7 client events. Each cluster has a note in
 `docs/plans/strangler-1.19.2-probe-report.md`; read the note for the
 cluster you are opening before touching a file.
 
-As of 2026-10-13 the txt is at 89 entries and the G1 frontier is: the SAFE-tier
+As of 2026-10-13 the txt is at 84 entries and the G1 frontier is: the SAFE-tier
 confirm screens (Work, AddWork, FlagCrafting, JobChange, Bop×2, CreateStock, QuestRemove)
 **and** the render-argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs` are
 landed (helpers take `RenderContext` directly; gate now ignores `.md` files so
@@ -98,20 +98,26 @@ reference - read it before the next leaf.
 ## Remaining G1 leaves (as of 2026-10-13)
 
 Done: every SAFE-tier confirm screen + the paged cluster + the helper
-pass-throughs above. Still to do, in order of care: the `Ingredients` helper (GuiGraphics +
-core.registries), the `villager/advancements` widgets (3 files,
-Critereon/predicate territory), and - most care - the render-layering family
-(QuestownHudEvents HUD re-render), verified against `tools/porttest/goldens/` via
-the porttest oracle before de-grandfathering. Done 2026-10-13 since the last note:
-`ItemJobsScreen` + `PagedCardScreen` (delegate public surface + CardRenderer over
-RenderContext; the leaf onto `CompatScreen`, which also fixes the 1.20.6 panel-under-
-second-background draw-order regression; held run gui-lint OK on ItemJobsScreen + the
-four Abstract leaves, vision confirmed the ItemJobsScreen panel/nav/buttons/card rows and
-re-confirmed the paged consumers; opener `_qtdev show_item_jobs` added, see
-commands/COMPLEX.md). `VillagerStatsScreen` and `InventoryAndStatusScreen` are done
-(2026-10-13: `CompatContainerScreen` hooks, gui-lint OK + vision on held runs).
-The carried-over **live gui-lint + vision pass on `VillagerEconomicsScreen`** is done
-(2026-10-13: gui-lint OK + vision real-art in the ingredient grid).
+pass-throughs above, plus `VillagerStatsScreen` / `InventoryAndStatusScreen`
+(2026-10-13: `CompatContainerScreen` hooks, gui-lint OK + vision on held runs),
+`VillagerEconomicsScreen` (2026-10-13: gui-lint OK + vision real-art in the
+ingredient grid), `ItemJobsScreen` + `PagedCardScreen` (2026-10-13: delegate
+public surface onto `RenderContext`; leaf onto `CompatScreen`, which also fixes
+the 1.20.6 panel-under-second-background draw-order regression; gui-lint OK on
+ItemJobsScreen + the four Abstract leaves; vision confirmed the panel/nav/buttons/
+card rows; opener `_qtdev show_item_jobs` added, see commands/COMPLEX.md) and
+`Ingredients` (2026-10-13: `render` takes `RenderContext` and routes the three
+`Registries.ITEM` tag constructions through the new `Compat.itemTag(ResourceLocation)`
+seam helper - name chosen to dodge the gate's `net.minecraft.core.registries`
+package marker; callers pass `ctx`/`rc` directly; 85 → 84; gui-lint + vision +
+bank drive in fixture-drift range).
+
+Still to do, in order of care: the `villager/advancements` widgets (3 files,
+Critereon/predicate territory, not pure render), and - most care needed - the
+render-layering family (QuestownHudEvents HUD re-render), which must verify
+against `tools/porttest/goldens/` via the porttest oracle before
+de-grandfathering.
+
 Then G2/G4 multi-marker files (HospitalBedBlock's dynamic MapColor lambda,
 the LootParams blocks, TownFlagBlock/BlockOfProgress data-components,
 MCTownItem/TestBlueprintRegistry registries), G6 neoforged, G5 renderers, G7 client events.

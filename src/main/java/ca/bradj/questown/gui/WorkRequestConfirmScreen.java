@@ -134,7 +134,7 @@ public class WorkRequestConfirmScreen extends CompatScreen {
         int xRef = x;
 
         ctx.darkText(title, x, pageTopY);
-        Ingredients.render(ctx.gui(), itemRequested, x, mainItemIconY);
+        Ingredients.render(ctx, itemRequested, x, mainItemIconY);
         x += 24;
         ctx.darkText(
                 Compat.translatable(
@@ -161,7 +161,7 @@ public class WorkRequestConfirmScreen extends CompatScreen {
         RenderUtil.stripOfRequestableItems(
                 (ingr, coord) -> {
                     Ingredient ing = Ingredients.fromRL(ingr.getValue());
-                    Ingredients.render(ctx.gui(), ing, coord.x(), coord.y());
+                    Ingredients.render(ctx, ing, coord.x(), coord.y());
                 },
                 (ingr) -> Jobs.getComponentsForTooltip(ingr.getKey()),
                 (text, coord) -> ctx.darkText(text, coord.x(), coord.y()),

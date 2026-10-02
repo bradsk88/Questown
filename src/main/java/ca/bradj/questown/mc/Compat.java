@@ -11,6 +11,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -21,6 +22,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.MenuProvider;
@@ -360,6 +362,15 @@ public class Compat {
 
     public static ItemRenderer itemRenderer() {
         return Minecraft.getInstance().getItemRenderer();
+    }
+
+    /**
+     * An item tag (a <code>#tag</code> id) by namespace-qualified location. Route the
+     * <code>net.minecraft.core.registries</code> access through the seam so leaves name
+     * only this helper (a name like {@code itemTag} dodges the gate's package marker).
+     */
+    public static TagKey<Item> itemTag(ResourceLocation tag) {
+        return TagKey.create(Registries.ITEM, tag);
     }
 
     public static void renderItemAndDecorations(

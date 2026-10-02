@@ -55,7 +55,10 @@ also routes `Button.builder` through `Compat.button` and the status-tooltip
 off the render argument together (the delegate's public surface + `CardRenderer` onto
 `RenderContext`, the leaf onto `CompatScreen` - which also fixed the 1.20.6
 panel-under-second-background draw-order regression; see `gui/COMPLEX.md`); grandfather
-93 → 85, gate green. Remaining G1: `Ingredients`, the `villager/advancements` widgets,
+93 → 85, gate green. `Ingredients` then landed (`render` onto `RenderContext`, the
+direct callers pass `ctx`/`rc`, and the three `Registries.ITEM` tag constructions route
+through the new `Compat.itemTag(ResourceLocation)` seam - see `gui/COMPLEX.md`);
+grandfather 85 → 84, gate green. Remaining G1: the `villager/advancements` widgets,
 and - most care - the render-layering family (QuestownHudEvents).
 
 ### G2. Block and block-entity definitions (blocks/, _vanilla/, 25 files)

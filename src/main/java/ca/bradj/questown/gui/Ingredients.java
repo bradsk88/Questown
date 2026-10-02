@@ -4,12 +4,9 @@ import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -53,7 +50,7 @@ public class Ingredients {
         JsonElement j = toJson(item);
         String tag = getTag(j);
         if (tag != null) {
-            return WorkRequest.of(new TagKey<>(Registries.ITEM, new ResourceLocation(tag)));
+            return WorkRequest.of(Compat.itemTag(new ResourceLocation(tag)));
         }
         if (j.isJsonObject() && j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
@@ -67,10 +64,7 @@ public class Ingredients {
 
     public static Ingredient fromString(String block) {
         if (block.startsWith("#")) {
-            return Ingredient.of(TagKey.create(
-                    Registries.ITEM,
-                    new ResourceLocation(block.replace("#", ""))
-            ));
+            return Ingredient.of(Compat.itemTag(new ResourceLocation(block.replace("#", ""))));
         }
         return Ingredient.of(Loader.itemFromId(new ResourceLocation(block)));
     }
@@ -118,7 +112,7 @@ public class Ingredients {
     }
 
     public static @Nullable ItemStack render(
-            GuiGraphics gui,
+            RenderContext ctx,
             Ingredient ing,
             int iconX,
             int y
@@ -127,7 +121,7 @@ public class Ingredients {
         if (itemStack == null) {
             return null;
         }
-        Compat.renderItemAndDecorations(gui, itemStack, iconX, y + 1);
+        Compat.renderItemAndDecorations(ctx.gui(), itemStack, iconX, y + 1);
         return itemStack;
     }
 
@@ -161,7 +155,7 @@ public class Ingredients {
         if (asItem != null) {
             return Ingredient.of(asItem);
         }
-        return Ingredient.of(TagKey.create(Registries.ITEM, value));
+        return Ingredient.of(Compat.itemTag(value));
     }
 
     public static List<Ingredient> fromItems(ImmutableList<ItemStack> result) {

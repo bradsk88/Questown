@@ -255,15 +255,28 @@ stranglerCheck` green, grandfather set 113 → 108; gui-lint OK on Quests/MultiS
 verified by vision (the "flat grey box" status-icon bug the 8-arg form reintroduces - see the 10-arg
 javadoc in `mc/Util.java` and the AGENTS.md blit note).
 WorkRequestConfirmScreen also fixes the
-idiom for the one seam helper that still takes the render argument directly: `Ingredients.render` and
-`RenderUtil.highlight` take the argument as `ctx.gui()` (a record accessor, no type named in the leaf),
-while `Compat.drawDarkText` collapses to `ctx.darkText`.
+idiom for the seam helper that still takes the render argument: `Ingredients.render`
+takes a `RenderContext` and reaches the raw graphics through `ctx.gui()` (so the leaf
+names `RenderContext`, never `GuiGraphics`), while `RenderUtil.highlight` keeps taking
+the argument as `ctx.gui()` (a record accessor, no type named in the leaf; `RenderUtil`
+itself is a gate seam file), and `Compat.drawDarkText` collapses to `ctx.darkText`.
 
-Pending: the remaining G1 files are the `Ingredients` helper (GuiGraphics +
-core.registries) and the `villager/advancements` widgets, plus - most care needed - the
-render-layering family above (the screens that override `renderBackground` to a blurred world
-and whose HUD is re-rendered by QuestownHudEvents). Those must route through these same hooks
-without losing the blur + HUD layering that is verified against the golden captures in
+`Ingredients` de-grandfathered (2026-10-13): `render` takes `RenderContext`, and the
+three `Registries.ITEM` tag constructions route through `Compat.itemTag(ResourceLocation)`
+(the `net.minecraft.core.registries` seam keeps the registry access; the helper name dodges
+the gate's package marker). `QuestsScreen`, `WorkRequestConfirmScreen` and `ItemJobsScreen`
+pass `ctx`/`rc` directly. `compileJava --rerun-tasks` green; `strangler-check` green, the
+grandfather set 85 → 84; held run gui-lint OK on `ItemJobsScreen`; vision confirmed the
+`Jobs:` panel, card rows with real item art (no flat boxes), and the title/nav/button row.
+Bank drive (fresh fixture world) against `goldens/1.19.2/`: all six screens in
+fixture-drift range, `quests` at 0.83% (the prior round's pass line was 0.89%). The
+`check` content gate's "active tab" heuristic misfires on this fixture's `quests`
+(world-state dependent: which quest category is active shifts with the world); the pixel
+diff is the parity signal here, and it clears. The next leaves are the `villager/advancements`
+widgets, and - most care needed - the render-layering family
+(the screens that override `renderBackground` to a blurred world and whose HUD is
+re-rendered by QuestownHudEvents). Those must route through the same hooks without
+losing the blur + HUD layering verified against the golden captures in
 `tools/porttest/goldens/`, and the oracle pipeline in `tools/porttest/run.sh` is the way to
 catch any regression on this machine. The SAFE-tier confirm screens (VillagerBlockofProgressScreen,
 TownBlockofProgressScreen, CreateStockRequestScreen, WorkScreen, AddWorkScreen,

@@ -152,7 +152,7 @@ public class ItemJobsScreen extends CompatScreen {
         ImmutableRect2i textArea = getTitleArea();
         ctx.lightText(renderString, textArea.getX(), textArea.getY());
         Ingredients.render(
-                ctx.gui(),
+                ctx,
                 requestedItem,
                 textArea.getX() + textArea.getWidth() - 16,
                 textArea.getY() - 6
@@ -241,7 +241,7 @@ public class ItemJobsScreen extends CompatScreen {
 
         TriFunction<CardCoordinates, List<Ingredient>, Boolean, List<Component>> renderStrip = (cc, ings, shiftRight) ->
                 RenderUtil.stripOfRequestableItems(
-                        (ing, coord) -> Ingredients.render(rc.gui(), ing, coord.x(), coord.y()),
+                        (ing, coord) -> Ingredients.render(rc, ing, coord.x(), coord.y()),
                         (ing) -> ImmutableList.of(Ingredients.getName(ing)),
                         (text, coord) -> rc.darkText(text, coord.x(), coord.y()),
                         (topLeft, botRight) -> RenderUtil.highlight(rc.gui(), topLeft, botRight),

@@ -435,7 +435,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
 
         return RenderUtil.stripOfRequestableItems(
-                (ing, coord) -> Ingredients.render(ctx.gui(), ing, coord.x(), coord.y()),
+                (ing, coord) -> Ingredients.render(ctx, ing, coord.x(), coord.y()),
                 (ing) -> ImmutableList.of(Ingredients.getName(ing)),
                 (text, coord) -> ctx.darkText(text, coord.x(), coord.y()),
                 (topLeft, botRight) -> RenderUtil.highlight(ctx.gui(), topLeft, botRight),
