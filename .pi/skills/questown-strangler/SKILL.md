@@ -28,7 +28,11 @@ neoforged → G5 renderers → G7 client events. Each cluster has a note in
 `docs/plans/strangler-1.19.2-probe-report.md`; read the note for the
 cluster you are opening before touching a file.
 
-As of 2026-10-13 the txt is at 69 entries. The G5 renderer cluster is done
+As of 2026-10-13 the txt is at 62 entries. G6 is open: the decision is
+`loader/COMPLEX.md` "The rule" (loader/neo owns loader imports; the mechanical exception
+is `net.neoforged.api.distmarker` - package-renamed inline in the golden, so the marker is
+narrowed to `net.neoforged.(bus|fml|neoforge)` and the seven distmarker-only leaves
+dropped in the G6 opener). The G5 renderer cluster is done
 (`Compat.renderItemStaticGui` owns the GUI `renderStatic` call for AxeRack / FoodDisplay /
 Plate / BubbleRenderer; the `org.joml` marker is off the gate as mechanical - the
 `com.mojang.math` → `org.joml` rename the mission rule calls inline-fine, so joml imports

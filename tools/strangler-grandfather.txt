@@ -43,17 +43,11 @@ jobs/gatherer/Loots.java
 jobs/requests/WorkRequest.java
 jobs/requests/WorkRequestSerializer.java
 logic/RoomRecipes.java
-mobs/helperchicken/BubbleRenderType.java
-mobs/helperchicken/ChickenArcHintFocus.java
 mobs/helperchicken/HelperChickenEntityEvents.java
-mobs/helperchicken/HelperChickenRenderer.java
 mobs/helperchicken/HelperChickenSunsetChestGoal.java
 mobs/visitor/NeedBubbleClientEvents.java
-mobs/visitor/NeedBubbleFocus.java
-mobs/visitor/VisitorArrowLayer.java
 mobs/visitor/VisitorMobEntity.java
 mobs/visitor/VisitorMobEntityEvents.java
-mobs/visitor/VisitorStuckInBodyLayer.java
 town/TownEvents.java
 town/TownFlagMenus.java
 town/TownKnownBiomes.java
@@ -64,6 +58,5 @@ town/entity/TownQuests.java
 town/entity/TownQuestsLootTest.java
 town/names/TownieNames.java
 town/rewards/RegistryEvents.java
-town/rooms/DeadDoorBubbles.java
 world/MinecraftWorldAccess.java
 world/WarpWorldAccess.java

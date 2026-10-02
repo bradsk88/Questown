@@ -183,6 +183,14 @@ registration and item-handler slots (most of these call sites), or the port rule
 exempts "loader package move" imports as mechanical (like joml). Decide one way and stop
 mixing the two.
 
+G6 decision (2026-10-13, per `loader/COMPLEX.md` "The rule"): the loader seam owns all
+loader imports - main code programs the neutral `loader/` surface, binders move to
+`loader/neo` (the QuestownHudEvents / GuiLayoutCheckClientEvents precedent). One
+mechanical-exception class follows the joml precedent: `net.neoforged.api.distmarker`
+(@OnlyIn/@Dist) survives in the 1.19.2 golden in the same leaves with only the package
+renamed, so the marker is narrowed to `net.neoforged.(bus|fml|neoforge)` and the seven
+distmarker-only leaves de-grandfathered (69 -> 62), gate green.
+
 ### G7. Vanilla payload/packet plumbing (4 files outside the network seam)
 
 `net.minecraft.network.protocol` packet construction in `HospitalBedBlockEntity`,

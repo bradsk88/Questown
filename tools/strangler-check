@@ -35,7 +35,13 @@ cd "$root"
 # (AGENTS.md) and the probe report's G5 note both classify as mechanical and fine
 # inline - the 1.19.2 golden carries com.mojang.math imports in the same leaves.
 # Do NOT re-add it: it only keeps the renderer leaves permanently grandfathered.
-MARKERS='GuiGraphics|ItemDisplayContext|LootParams|MapColor|net\.minecraft\.core\.registries|net\.minecraft\.core\.component|net\.minecraft\.world\.item\.component|DataComponents|CustomData|net\.neoforged|RecipeHolder|RegistryAccess|HolderLookup|ItemInteractionResult|InteractionResultHolder|net\.minecraft\.network\.protocol|StreamCodec|net\.minecraft\.core\.Holder|getVisualOrderText|Button\.builder|DamageTypes|CreativeModeTab\.Builder'
+#
+# net.neoforged.api.distmarker was DELIBERATELY narrowed OUT of the net.neoforged
+# marker (2026-10, G6 pass). @OnlyIn(Dist.CLIENT) is the one neoforged surface that
+# survives in the 1.19.2 golden in the same leaves with only the package renamed
+# (net.minecraftforge.api.distmarker) - a mechanical import, same status as joml.
+# The marker now reaches the real edges: bus / fml / neoforge sub-packages.
+MARKERS='GuiGraphics|ItemDisplayContext|LootParams|MapColor|net\.minecraft\.core\.registries|net\.minecraft\.core\.component|net\.minecraft\.world\.item\.component|DataComponents|CustomData|net\.neoforged\.(bus|fml|neoforge)|RecipeHolder|RegistryAccess|HolderLookup|ItemInteractionResult|InteractionResultHolder|net\.minecraft\.network\.protocol|StreamCodec|net\.minecraft\.core\.Holder|getVisualOrderText|Button\.builder|DamageTypes|CreativeModeTab\.Builder'
 
 # Seam family: expected to carry version-specific code.
 SEAM='^(mc/|loader/|core/network/)'
