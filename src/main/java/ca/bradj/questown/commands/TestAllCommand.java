@@ -2,6 +2,8 @@ package ca.bradj.questown.commands;
 
 import ca.bradj.questown.commands.test.TestAllExecutor;
 import ca.bradj.questown.commands.test.PlayerTestOutput;
+import ca.bradj.questown.loader.Loader;
+import ca.bradj.questown.loader.neo.TestAllTickListener;
 import ca.bradj.questown.mc.Compat;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -13,9 +15,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.bus.api.SubscribeEvent;
 import org.jetbrains.annotations.Nullable;
 
 public class TestAllCommand {
@@ -83,7 +82,7 @@ public class TestAllCommand {
         TestAllExecutor executor = new TestAllExecutor(level, output, origin, warpAmount, category);
 
         TestAllTickListener listener = new TestAllTickListener(executor);
-        NeoForge.EVENT_BUS.register(listener);
+        Loader.registerCommonHandlers(listener);
 
         String scope = category != null ? category : "all";
         Compat.sendMessage(player, Component.literal(
@@ -91,20 +90,5 @@ public class TestAllCommand {
         ));
 
         return 1;
-    }
-
-    static class TestAllTickListener {
-        private final TestAllExecutor executor;
-
-        TestAllTickListener(TestAllExecutor executor) {
-            this.executor = executor;
-        }
-
-        @SubscribeEvent
-        public void onTick(ServerTickEvent.Post event) {
-            if (executor.tick()) {
-                NeoForge.EVENT_BUS.unregister(this);
-            }
-        }
     }
 }

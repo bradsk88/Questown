@@ -16,9 +16,6 @@ blocks/TownFlagBlock.java
 blocks/WelcomeMatBlock.java
 blocks/entity/FoodDisplayEntity.java
 blocks/entity/HospitalBedBlockEntity.java
-commands/CommandInit.java
-commands/TestAllCommand.java
-commands/TestCommand.java
 commands/test/AutoTestRunner.java
 commands/test/TestBlueprintRegistry.java
 core/advancements/AdvancementEvents.java

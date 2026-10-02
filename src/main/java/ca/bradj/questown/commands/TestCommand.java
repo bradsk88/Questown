@@ -2,8 +2,11 @@ package ca.bradj.questown.commands;
 
 import ca.bradj.questown.commands.test.TestBlueprint;
 import ca.bradj.questown.commands.test.TestBlueprintRegistry;
+import ca.bradj.questown.commands.test.TestBlueprintRegistry;
 import ca.bradj.questown.commands.test.TestExecutor;
 import ca.bradj.questown.commands.test.PlayerTestOutput;
+import ca.bradj.questown.loader.Loader;
+import ca.bradj.questown.loader.neo.TestTickListener;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import com.mojang.brigadier.CommandDispatcher;
@@ -16,9 +19,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.bus.api.SubscribeEvent;
 
 public class TestCommand {
 
@@ -89,7 +89,7 @@ public class TestCommand {
         TestExecutor executor = new TestExecutor(level, output, origin, jobId, warpAmount, blueprint);
 
         TestTickListener listener = new TestTickListener(executor);
-        NeoForge.EVENT_BUS.register(listener);
+        Loader.registerCommonHandlers(listener);
 
         Compat.sendMessage(player, Component.literal(
                 "[qt test] Starting test for " + jobId.rootId() + ":" + jobId.jobId() +
@@ -97,20 +97,5 @@ public class TestCommand {
         ));
 
         return 1;
-    }
-
-    static class TestTickListener {
-        private final TestExecutor executor;
-
-        TestTickListener(TestExecutor executor) {
-            this.executor = executor;
-        }
-
-        @SubscribeEvent
-        public void onTick(ServerTickEvent.Post event) {
-            if (executor.tick()) {
-                NeoForge.EVENT_BUS.unregister(this);
-            }
-        }
     }
 }
