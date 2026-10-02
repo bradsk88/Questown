@@ -396,3 +396,24 @@ panel to the total. `init()` (widgets) and `render()` (text) both read the same 
 offsets, so a longer/translated string pushes everything down instead of overlapping —
 overlap-proof by construction. This replaced hardcoded Y positions + a 56px wrap width that
 overran their rows.
+
+## Villager menu wire: `VillagerMenusPayload` carries UUID + slot locks
+
+Opening any villager menu (quests / stats / economics / BOP / job-change) goes
+server → `VillagerMenus.write` → `openScreen` → client
+`VillagerMenus.fromNetwork`, where **one payload decodes into all six menus**.
+The payload carries the villager's **UUID and slot locks**: the client builds
+purely from wire data and must never need the local entity. Before this, the
+client resolved the townie by raw entity id and read the UUID/slot locks off
+it — a townie despawned between the packet send and the read NPE'd the screen
+open ("Failed to open a screen") and disconnected the client (`.scratch/
+work-board-request/quests-menu-null-townie-client-crash.md`). `entityId` still
+rides the wire as a **best-effort** pointer: `VillagerStatsMenu.attach(e)` wires
+live stats updates when the local entity happens to still be present; without
+it the menu degrades to the wire's static stats data instead of crashing.
+
+- `entityId` (best-effort pointer) → `attach` if present, else static wire data.
+- Payload layout: id, uuid, jobId, invSize, quests, flagPos, stats, 2 booleans,
+  slot locks — read order must match write; econ is wire-dead (`none()` both ends).
+- `VillagerMenusPayloadTest` pins the round-trip; the menu-construction half is
+  not unit-testable (registry-bound menu types).

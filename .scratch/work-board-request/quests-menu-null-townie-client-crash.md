@@ -2,6 +2,7 @@
 title: Opening the villager quests menu crashes the client (null townie UUID)
 status: needs-triage
 created: 2026-10-01
+closed: 2026-10-02
 ---
 
 ## Context
@@ -35,3 +36,13 @@ The shot-stage health/list guards do not catch a client that is crashing,
 because the player is *online* while the client tears itself down. A guard
 that vision-checks the first frame after an open-menu command (or checks the
 client log for "Failed to open") would have caught it.
+
+## Resolved 2026-10-02
+
+The client no longer resolves the townie from a raw entity id: the wire
+payload (`VillagerMenusPayload`) carries the UUID + slot locks, and a
+best-effort entity lookup only feeds `VillagerStatsMenu.attach()` live
+stats updates. A despawned local entity now degrades the menu to the
+wire's static data instead of NPE-ing the screen open. Round-trip pinned
+by `VillagerMenusPayloadTest`; flow documented in
+`gui/COMPLEX.md` ("Villager menu wire").

@@ -3,7 +3,6 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.jobs.IStatus;
-import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -12,6 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Collection;
+import java.util.UUID;
 
 public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements VillagerTabsEmbedding {
     private static final Collection<String> ENABLED_TABS = ImmutableList.of(
@@ -35,12 +35,12 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
 
     public <S extends IStatus<S>> VillagerEconomicsMenu(
             int windowId,
-            VisitorMobEntity entity,
+            UUID villager,
             BlockPos flagPos,
             VillagerEconomicsData initialData,
             boolean showBlockOfProgressTab
     ) {
-        super(MenuTypesInit.VILLAGER_ECONOMICS.get(), null, null, windowId, flagPos, entity.getUUID());
+        super(MenuTypesInit.VILLAGER_ECONOMICS.get(), null, null, windowId, flagPos, villager);
         this.showBlockOfProgressTab = showBlockOfProgressTab;
     }
 

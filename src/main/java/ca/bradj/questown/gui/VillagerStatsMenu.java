@@ -14,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.Collection;
 import java.util.Stack;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Consumer<VillagerStatsData>,
@@ -39,12 +40,12 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
 
     public <S extends IStatus<S>> VillagerStatsMenu(
             int windowId,
-            VisitorMobEntity entity,
+            UUID villager,
             BlockPos flagPos,
             VillagerStatsData initialData,
             boolean showBlockOfProgressTab
     ) {
-        super(MenuTypesInit.VILLAGER_STATS.get(), null, null, windowId, flagPos, entity.getUUID());
+        super(MenuTypesInit.VILLAGER_STATS.get(), null, null, windowId, flagPos, villager);
         this.showBlockOfProgressTab = showBlockOfProgressTab;
 
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
@@ -60,9 +61,15 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
 
         this.addDataSlot(this.damageSlot = DataSlot.standalone());
         this.damageSlot.set((int) (initialData.damageLevelPercent() * 100));
+    }
 
-        entity.addStatsListener(this);
-        this.closers.add(() -> entity.removeStatsListener(this));
+    /**
+     * Subscribe this menu to the townie's live stats updates; degrades to the
+     * static wire data when the local entity is unavailable.
+     */
+    public void attach(VisitorMobEntity e) {
+        e.addStatsListener(this);
+        this.closers.add(() -> e.removeStatsListener(this));
     }
 
     public static VillagerStatsData read(FriendlyByteBuf buf) {

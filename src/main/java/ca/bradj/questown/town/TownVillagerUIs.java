@@ -347,13 +347,17 @@ public class TownVillagerUIs {
                     VisitorMobEntity e = d.entity();
                     openMenu(
                             d.sender(),
-                            (windowId, inv, p) -> new VillagerStatsMenu(
-                                    windowId,
-                                    e,
-                                    e.getFlagPos(),
-                                    d.stats(),
-                                    e.hasBlockOfProgress()
-                            ),
+                            (windowId, inv, p) -> {
+                                VillagerStatsMenu m = new VillagerStatsMenu(
+                                        windowId,
+                                        e.getUUID(),
+                                        e.getFlagPos(),
+                                        d.stats(),
+                                        e.hasBlockOfProgress()
+                                );
+                                m.attach(e);
+                                return m;
+                            },
                             d.quests(),
                             e,
                             d.stats(),
@@ -406,7 +410,7 @@ public class TownVillagerUIs {
                     openMenu(
                             d.sender(), (windowId, inv, p) -> new VillagerEconomicsMenu(
                                     windowId,
-                                    d.entity(),
+                                    d.entity().getUUID(),
                                     d.entity().getFlagPos(),
                                     d.econ(),
                                     d.entity().hasBlockOfProgress()
