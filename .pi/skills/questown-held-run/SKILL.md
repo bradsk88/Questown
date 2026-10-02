@@ -235,6 +235,8 @@ blocks the next run's console and makes the next session's `qt`/`time` commands
 fail).
 
 **Kill the pids *you* launched, never by the shared pattern.** The dev runs
+
+**A teardown call that returns empty output did not prove the kill** - it may have died mid-command (seen twice this session: `kill <pids>` + verify in one call printed nothing, and the server/writers were still alive minutes later; `bash run/capture.sh state` exposed it). Verify teardown in a *later* call with fresh evidence: `pgrep -f forgeserveruserdev` empty **and** `netstat -ltnp | grep 25565/25571` empty. `bash tools/porttest/sweep.sh` is the safe cleaner for stragglers (matches by cwd + main class; cannot match the invoking shell).
 their *own* `runClient`/`runServer` gradle task in a *separate terminal tab*
 that you are not watching. `pkill -9 -f 'runClient'` / `'runServer'` matches
 *any* process with that string — including the dev's tab — and drops it. The

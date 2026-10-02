@@ -58,6 +58,21 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
     before every screenshot, so hover-dependent render state (the
     advancements-pane tooltip fade dims the pane to 70% when the cursor is
     over it; hovered card highlights) is identical across captures
+  - `inquire <x> <y> <z> [item]` → send `AddWorkFromUIMessage(INQUIRED)` for
+    a job block at the coords (the same message a work-board card click
+    sends), opening the WorkRequestConfirmScreen — the console-command
+    stand-in for "click this work card" (added for the G1 gui migration)
+  - `flagtab <type> [x y z]` → `OpenFlagMenuMessage(FlagInfo.dumb(pos,false,false),
+    type)` at a flag pos (default 0 64 0): opens the FLAG-scoped menu tab —
+    `quests`/`villagers` → QuestsScreen/MultiStatusScreen, `economics` →
+    TownEconomicsScreen, `bop` → the block-of-progress screen (added for
+    the paged-screen migration; the console path may be a dead pipe on a
+    fresh launch, the diag file is not)
+  - **`shot` is async** — the mover polls up to 8s; `diags/<name>.png` may
+    appear a few seconds after the send. `ls` once and miss it, don't
+    re-capture. A capture that shows the "Connection Lost / Server closed"
+    screen means the client was mid-reconnect at grab time - wait for the
+    client to settle and re-capture; do not read it as a GUI failure
 - `capture.sh` — one-branch driver, STAGED. Every stage is a fast
   command (≤60s); launch stages return immediately, wait stages poll
   ≤60s and are idempotent (re-invoke until they pass):
