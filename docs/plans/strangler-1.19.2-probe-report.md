@@ -201,7 +201,11 @@ HelperChickenEntityEvents. 62 -> 52, gate green, `compileJava`+`compileTestJava`
 then round 2: QuestownSpecialRules' rule list becomes the neutral public
 `registerRules()` + new `NeoSpecialRulesInit` binder (class-level
 @EventBusSubscriber dropped), and NeedBubbleClientEvents / AgentMessageBridge move whole
-(git-mv + NeedBubbleFocus sibling import) - 52 -> 49, same verification.
+(git-mv + NeedBubbleFocus sibling import) - 52 -> 49, same verification; round 3:
+the two world-access implementations' Forge tool surface collapses into
+`Compat.toolModifiedState(state, useOnContext, QTToolAction)` (the private
+`forgeToolAction` switch moved into it - the call is arg-identical; the vanilla,
+marker-free `toolForAction`/`toolContext` stay local) - 49 -> 47, same verification.
 
 Note (pre-existing, not changed by this pass): `ServerTickProfiler`'s instance
 `@SubscribeEvent` handlers have no bus attachment in either era (no annotation, no

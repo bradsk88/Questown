@@ -3,6 +3,7 @@ package ca.bradj.questown.mc;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.rooms.TownPosition;
+import ca.bradj.questown.world.QTToolAction;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
@@ -42,6 +43,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import net.neoforged.neoforge.common.ToolAction;
+import net.neoforged.neoforge.common.ToolActions;
 
 /**
  * Compat executes the "strangler" pattern. Putting all code that changes
@@ -475,6 +479,34 @@ public class Compat {
      */
     public static void setItemDataTag(ItemStack stack, CompoundTag t) {
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(t));
+    }
+
+    /**
+     * The Forge {@link ToolAction} a neutral {@link QTToolAction} maps to, so a leaf names
+     * neither marker type (used by {@link #toolModifiedState}; private because no leaf
+     * needs the raw Forge type).
+     */
+    private static ToolAction forgeToolAction(QTToolAction toolAction) {
+        return switch (toolAction) {
+            case HOE_TILL -> ToolActions.HOE_TILL;
+            case AXE_STRIP -> ToolActions.AXE_STRIP;
+            case AXE_SCRAPE -> ToolActions.AXE_SCRAPE;
+            case SHOVEL_FLATTEN -> ToolActions.SHOVEL_FLATTEN;
+        };
+    }
+
+    /**
+     * The tool-modified state a block takes under a neutral {@code QTToolAction}, or {@code null}
+     * when it is not tool-transformable. Wraps
+     * {@code BlockState#getToolModifiedState(state, forgeToolAction, false)} - the exact call the
+     * world-access leaves made privately - so their only tool-surface name is the enum.
+     */
+    public static net.minecraft.world.level.block.state.BlockState toolModifiedState(
+            net.minecraft.world.level.block.state.BlockState state,
+            net.minecraft.world.item.context.UseOnContext context,
+            QTToolAction toolAction
+    ) {
+        return state.getToolModifiedState(context, forgeToolAction(toolAction), false);
     }
 
     /**

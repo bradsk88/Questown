@@ -45,5 +45,3 @@ town/entity/TownFlagBlockEntity.java
 town/entity/TownQuests.java
 town/entity/TownQuestsLootTest.java
 town/names/TownieNames.java
-world/MinecraftWorldAccess.java
-world/WarpWorldAccess.java

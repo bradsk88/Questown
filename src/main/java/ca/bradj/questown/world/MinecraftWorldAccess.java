@@ -25,8 +25,7 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.ToolAction;
-import net.neoforged.neoforge.common.ToolActions;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.loader.ItemHandler;
 import ca.bradj.questown.loader.Loader;
 import org.jetbrains.annotations.Nullable;
@@ -193,15 +192,6 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         };
     }
 
-    private static ToolAction forgeToolAction(QTToolAction toolAction) {
-        return switch (toolAction) {
-            case HOE_TILL -> ToolActions.HOE_TILL;
-            case AXE_STRIP -> ToolActions.AXE_STRIP;
-            case AXE_SCRAPE -> ToolActions.AXE_SCRAPE;
-            case SHOVEL_FLATTEN -> ToolActions.SHOVEL_FLATTEN;
-        };
-    }
-
     private UseOnContext toolContext(BlockPos pos, QTToolAction toolAction) {
         BlockHitResult bhr = new BlockHitResult(
                 Vec3.atCenterOf(pos), Direction.UP, pos, false
@@ -215,8 +205,8 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     @Override
     public boolean canToolTransformBlock(BlockPos pos, QTToolAction toolAction) {
         BlockState bs = level.getBlockState(pos);
-        BlockState modified = bs.getToolModifiedState(
-                toolContext(pos, toolAction), forgeToolAction(toolAction), false
+        BlockState modified = Compat.toolModifiedState(
+                bs, toolContext(pos, toolAction), toolAction
         );
         return modified != null;
     }
@@ -224,8 +214,8 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     @Override
     public void applyToolTransformation(BlockPos pos, QTToolAction toolAction) {
         BlockState bs = level.getBlockState(pos);
-        BlockState modified = bs.getToolModifiedState(
-                toolContext(pos, toolAction), forgeToolAction(toolAction), false
+        BlockState modified = Compat.toolModifiedState(
+                bs, toolContext(pos, toolAction), toolAction
         );
         if (modified == null) {
             return;

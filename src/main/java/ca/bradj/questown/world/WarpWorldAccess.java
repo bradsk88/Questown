@@ -27,8 +27,7 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
-import net.neoforged.neoforge.common.ToolAction;
-import net.neoforged.neoforge.common.ToolActions;
+import ca.bradj.questown.mc.Compat;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -399,13 +398,13 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
     @Override
     public boolean canToolTransformBlock(BlockPos pos, QTToolAction toolAction) {
         BlockState bs = blockStates.getOrDefault(pos, level.getBlockState(pos));
-        return bs.getToolModifiedState(toolContext(pos, toolAction), forgeToolAction(toolAction), false) != null;
+        return Compat.toolModifiedState(bs, toolContext(pos, toolAction), toolAction) != null;
     }
 
     @Override
     public void applyToolTransformation(BlockPos pos, QTToolAction toolAction) {
         BlockState bs = blockStates.getOrDefault(pos, level.getBlockState(pos));
-        BlockState modified = bs.getToolModifiedState(toolContext(pos, toolAction), forgeToolAction(toolAction), false);
+        BlockState modified = Compat.toolModifiedState(bs, toolContext(pos, toolAction), toolAction);
         if (modified == null) {
             return;
         }
@@ -420,15 +419,6 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
     private UseOnContext toolContext(BlockPos pos, QTToolAction toolAction) {
         BlockHitResult bhr = new BlockHitResult(Vec3.atCenterOf(pos), net.minecraft.core.Direction.UP, pos, false);
         return new UseOnContext(level, null, InteractionHand.MAIN_HAND, toolForAction(toolAction), bhr);
-    }
-
-    private static ToolAction forgeToolAction(QTToolAction toolAction) {
-        return switch (toolAction) {
-            case HOE_TILL -> ToolActions.HOE_TILL;
-            case AXE_STRIP -> ToolActions.AXE_STRIP;
-            case AXE_SCRAPE -> ToolActions.AXE_SCRAPE;
-            case SHOVEL_FLATTEN -> ToolActions.SHOVEL_FLATTEN;
-        };
     }
 
     private static ItemStack toolForAction(QTToolAction toolAction) {
