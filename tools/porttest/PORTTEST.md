@@ -82,7 +82,11 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
     player chat command) so the server dispatches the line with the player
     as source — the bridge for ANY console command when the stdin fifo is a
     dead pipe (e.g. fixture `cmd _qtdev townplace <x y z>`, `cmd _qtdev
-    townspawn <x y z>`, `cmd _qtdev open_jobs`). The 1.20.6 `Player` API has
+    townspawn <x y z>`, `cmd _qtdev open_jobs`). **Trap (2026-10-13):** hook-native
+    commands (`flagtab`, `vopen`, `shot`, `cursor`, …) must go in the `.qtdiag-cmd` file
+    RAW, no `cmd` prefix — `cmd flagtab …` sends the words into player chat (they echo as
+    a chat line, the screen never opens), because `flagtab` is a hook name, not a server
+    command. `_qtdev …` lines are server commands and take the `cmd` prefix. The 1.20.6 `Player` API has
     no `chat(String)` (it died in the port; `ServerboundChatCommandPacket
     (String)` is a working player-source command packet — verified by
     effect, the command dispatches as the player) — do not invent a

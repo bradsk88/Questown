@@ -17,6 +17,7 @@ import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.entity.TownFlags;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -66,6 +67,12 @@ public class QtDevClickCommand {
                             css.getSource(),
                             ItemArgument.getItem(css, "item").getItem()
                     )));
+        // show_item_jobs: open the ItemJobsScreen for the first townie's job - the
+        // OpenJobMessage.handle owner call (flag -> villager handle -> showJobUI),
+        // which the parent screen's status-icon click sends - so a headless run can
+        // drive the screen without the click.
+        var showItemJobs = Commands.literal("show_item_jobs")
+                .executes(css -> runShowItemJobs(css.getSource()));
         var clickwand = Commands.literal("clickwand")
                 .then(posArg
                     .executes(css -> runWand(
@@ -98,7 +105,7 @@ public class QtDevClickCommand {
                             css.getSource(),
                             BlockPosArgument.getLoadedBlockPos(css, "pos")
                     )));
-        qtdev.then(clickwand).then(clickheld).then(openvillager).then(townplace).then(townspawn).then(openJobs).then(boardRequest);
+        qtdev.then(clickwand).then(clickheld).then(openvillager).then(townplace).then(townspawn).then(openJobs).then(boardRequest).then(showItemJobs);
         src.register(qtdev);
         // @formatter:on
     }
@@ -233,6 +240,35 @@ public class QtDevClickCommand {
         TownFlagBlockEntity flag = TownFlags.all().iterator().next();
         flag.getWorkHandle().requestWork(item);
         QT.FLAG_LOGGER.info("[board_request] work request posted for {} (flag {})", item, flag.getBlockPos());
+        return 0;
+    }
+
+    // The status-icon click of the parent screen sends OpenJobMessage, whose handle
+    // delegates to exactly this call - this wrapper keeps the domain on the owner.
+    private static int runShowItemJobs(CommandSourceStack source) {
+        if (TownFlags.all().isEmpty()) {
+            QT.FLAG_LOGGER.warn("[show_item_jobs] no flags registered");
+            return 1;
+        }
+        TownFlagBlockEntity flag = TownFlags.all().iterator().next();
+        BlockPos pos = flag.getBlockPos();
+        ServerPlayer player = findPlayer(source, pos);
+        if (player == null) {
+            QT.FLAG_LOGGER.warn("[show_item_jobs] no player near {}", pos);
+            return 1;
+        }
+        VisitorMobEntity townie = flag.getVillagerHandle().entities().stream()
+                .filter(VisitorMobEntity.class::isInstance)
+                .map(VisitorMobEntity.class::cast)
+                .findFirst()
+                .orElse(null);
+        if (townie == null) {
+            QT.FLAG_LOGGER.warn("[show_item_jobs] no townie with a job at {}", pos);
+            return 1;
+        }
+        flag.getVillagerHandle().showJobUI(player, townie.getJobId());
+        QT.FLAG_LOGGER.info("[show_item_jobs] item-jobs screen for {} (job {} / flag {})",
+                player.getGameProfile().getName(), townie.getJobId(), pos);
         return 0;
     }
 

@@ -39,9 +39,7 @@ core/init/TilesInit.java
 gui/AbstractVillagerMenu.java
 gui/GuiLayoutCheckClientEvents.java
 gui/Ingredients.java
-gui/ItemJobsScreen.java
 gui/LockableInventoryWrapper.java
-gui/PagedCardScreen.java
 gui/QuestownHudEvents.java
 gui/villager/advancements/VillagerAdvancementsContent.java
 gui/villager/advancements/VillagerAdvancementsScreen.java

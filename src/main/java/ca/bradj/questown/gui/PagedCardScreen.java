@@ -11,8 +11,6 @@ import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import org.apache.logging.log4j.util.TriConsumer;
@@ -38,7 +36,7 @@ public final class PagedCardScreen<D> {
 
     public interface CardRenderer<D> {
         List<Component> renderAndReturnTooltip(
-                GuiGraphics gui,
+                RenderContext ctx,
                 Card<D> card,
                 Coordinate mousePosition
         );
@@ -168,32 +166,30 @@ public final class PagedCardScreen<D> {
     }
 
     protected void renderBg(
-            GuiGraphics stack,
+            RenderContext ctx,
             float v,
             int i,
             int i1
     ) {
         int bgX = (this.width.get() - backgroundWidth) / 2;
         int bgY = (this.height.get() - backgroundHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
+        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
     }
 
     public @Nullable List<Component> afterRender(
-            GuiGraphics gui,
-            Font font,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             float partialTicks,
             List<D> cardsData,
             boolean drawCardBg
     ) {
-        renderButtons(gui, font, mouseX, mouseY, partialTicks, cardsData);
-        return renderCards(gui, mouseX, mouseY, drawCardBg);
+        renderButtons(ctx, mouseX, mouseY, partialTicks, cardsData);
+        return renderCards(ctx, mouseX, mouseY, drawCardBg);
     }
 
     public void renderButtons(
-            GuiGraphics gui,
-            Font font,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             float partialTicks,
@@ -201,18 +197,18 @@ public final class PagedCardScreen<D> {
     ) {
         int bgX = (this.width.get() - backgroundWidth) / 2;
         renderPageNum(
-                gui, font, bgX, cardsData, (s, pos, size) -> s.fill(
+                ctx, bgX, cardsData, (rc, pos, size) -> rc.fill(
                         pos.a(), pos.b(), size.a(), size.b(), 0x30000000
                 )
         );
 
         // Render the page buttons
-        this.previousPage.render(gui, mouseX, mouseY, partialTicks);
-        this.nextPage.render(gui, mouseX, mouseY, partialTicks);
+        this.previousPage.render(ctx.gui(), mouseX, mouseY, partialTicks);
+        this.nextPage.render(ctx.gui(), mouseX, mouseY, partialTicks);
     }
 
     private @Nullable List<Component> renderCards(
-            GuiGraphics gui,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             boolean drawCardBg
@@ -225,10 +221,10 @@ public final class PagedCardScreen<D> {
                 setRenderColorForCard.accept(card.data());
                 int x2 = card.coords().leftX();
                 int y2 = card.coords.topY();
-                this.cardBackground.draw(gui, x2, y2, CARD_WIDTH, cardHeight);
+                ctx.drawNineNine(this.cardBackground, x2, y2, CARD_WIDTH, cardHeight);
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             }
-            List<Component> tt = renderCardContent.renderAndReturnTooltip(gui, card, mousePosition);
+            List<Component> tt = renderCardContent.renderAndReturnTooltip(ctx, card, mousePosition);
             if (tt == null) {
                 continue;
             }
@@ -253,11 +249,10 @@ public final class PagedCardScreen<D> {
     }
 
     private void renderPageNum(
-            GuiGraphics gui,
-            Font font,
+            RenderContext ctx,
             int x,
             List<D> cardsData,
-            TriConsumer<GuiGraphics, Pair<Integer, Integer>, Pair<Integer, Integer>> fill
+            TriConsumer<RenderContext, Pair<Integer, Integer>, Pair<Integer, Integer>> fill
     ) {
         // Draw page numbers
         int xx = x + borderPadding + buttonWidth;
@@ -265,7 +260,7 @@ public final class PagedCardScreen<D> {
         int width = xx + backgroundWidth - borderPadding - buttonWidth;
         int height = nextPage.getY() + buttonHeight;
         fill.accept(
-                gui,
+                ctx,
                 new Pair<>(xx, y),
                 new Pair<>(width, height)
         );
@@ -273,8 +268,8 @@ public final class PagedCardScreen<D> {
         String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        Compat.drawLightText(font, gui, pageString, textArea.getX(), textArea.getY());
+        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, ctx.font(), pageString);
+        ctx.lightText(pageString, textArea.getX(), textArea.getY());
     }
 
     private void nextPage() {

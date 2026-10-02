@@ -51,9 +51,12 @@ pass `ctx`). Grandfather 93 → 87, gate green; the gate also ignores `.md` file
 names markers on purpose), dropping `gui/COMPLEX.md` from the list. `VillagerStatsScreen` and `InventoryAndStatusScreen` followed onto
 `CompatContainerScreen` (the last absorbs the blurred-background override; InventoryAndStatus
 also routes `Button.builder` through `Compat.button` and the status-tooltip
-`getVisualOrderText` map through `Compat.componentText` + `showTooltip`). Remaining G1:
-`ItemJobsScreen`, `Ingredients`, `PagedCardScreen`, the `villager/advancements` widgets,
-QuestownHudEvents.
+`getVisualOrderText` map through `Compat.componentText` + `showTooltip`). `ItemJobsScreen` and `PagedCardScreen` then landed
+off the render argument together (the delegate's public surface + `CardRenderer` onto
+`RenderContext`, the leaf onto `CompatScreen` - which also fixed the 1.20.6
+panel-under-second-background draw-order regression; see `gui/COMPLEX.md`); grandfather
+93 → 85, gate green. Remaining G1: `Ingredients`, the `villager/advancements` widgets,
+and - most care - the render-layering family (QuestownHudEvents).
 
 ### G2. Block and block-entity definitions (blocks/, _vanilla/, 25 files)
 

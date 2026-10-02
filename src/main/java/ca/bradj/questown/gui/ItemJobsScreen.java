@@ -11,9 +11,7 @@ import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -33,7 +31,7 @@ import static ca.bradj.questown.core.network.AddWorkFromUIMessage.Action.CONFIRM
 import static ca.bradj.questown.core.network.AddWorkFromUIMessage.Action.REJECTED;
 import static ca.bradj.questown.gui.PagedCardScreen.*;
 
-public class ItemJobsScreen extends Screen {
+public class ItemJobsScreen extends CompatScreen {
 
     public static final int EXTRA_HEIGHT = 56;
     private final List<UIJob> jobs;
@@ -108,41 +106,59 @@ public class ItemJobsScreen extends Screen {
         int pageLeftX = ((this.width - backgroundWidth) / 2);
         int buttonHeight = (2 * font.lineHeight) + 2;
         this.addButton = this.addRenderableWidget(
-                Button.builder(
+                Compat.button(
                         Compat.translatable("menu.item_jobs.add_to_work_requests"),
-                        (p_96776_) -> this.send()
-                ).bounds(
+                        (p_96776_) -> this.send(),
                         pageLeftX + BIG_PADDING,
                         pageTopY + delegate.backgroundHeight - buttonHeight - BIG_PADDING,
                         backgroundWidth - (2 * BIG_PADDING),
                         buttonHeight
-                ).build()
+                )
         );
     }
 
     @Override
-    public void render(
-            GuiGraphics gui,
+    protected void renderPrologue(
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(gui, mouseX, mouseY, partialTicks);
         this.addButton.visible = !getFirst().isEmpty();
-        this.delegate.renderBg(gui, partialTicks, mouseX, mouseY);
-        super.render(gui, mouseX, mouseY, partialTicks);
+    }
 
+    @Override
+    protected void renderScreenSurface(
+            RenderContext ctx,
+            int mouseX,
+            int mouseY,
+            float partialTicks
+    ) {
+        this.delegate.renderBg(ctx, partialTicks, mouseX, mouseY);
+    }
+
+    // 1.20.6 parity note: vanilla Screen.render here draws the flat blurred/gradient
+    // surface for us (CompatScreen.renderBackground -> renderScreenSurface), so the
+    // paged panel sits between the surface and the renderables - the same relative
+    // order the 1.19.2 leaf's explicit renderBackground call produced.
+    @Override
+    protected void renderScreenContent(
+            RenderContext ctx,
+            int mouseX,
+            int mouseY,
+            float partialTicks
+    ) {
         String renderString = "Jobs:";
         ImmutableRect2i textArea = getTitleArea();
-        Compat.drawLightText(font, gui, renderString, textArea.getX(), textArea.getY());
+        ctx.lightText(renderString, textArea.getX(), textArea.getY());
         Ingredients.render(
-                gui,
+                ctx.gui(),
                 requestedItem,
                 textArea.getX() + textArea.getWidth() - 16,
                 textArea.getY() - 6
         );
-        this.delegate.afterRender(gui, font, mouseX, mouseY, partialTicks, jobs, false);
-        renderTooltips(gui, mouseX, mouseY, textArea.expandBy(4));
+        this.delegate.afterRender(ctx, mouseX, mouseY, partialTicks, jobs, false);
+        renderTooltips(ctx, mouseX, mouseY, textArea.expandBy(4));
     }
 
     @Override
@@ -169,7 +185,7 @@ public class ItemJobsScreen extends Screen {
     }
 
     private void renderTooltips(
-            GuiGraphics gui,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             ImmutableRect2i textArea
@@ -182,17 +198,17 @@ public class ItemJobsScreen extends Screen {
                 textArea.getWidth(),
                 textArea.getHeight()
         )) {
-            gui.fill(
+            ctx.fill(
                     textArea.getX(),
                     textArea.getY(),
                     textArea.getX() + textArea.getWidth(),
                     textArea.getY() + textArea.getHeight(),
                     0x30000000
             );
-            this.setTooltipForNextRenderPass(
+            this.showTooltip(
                     List.of(
-                            Compat.translatable("menu.item_jobs.title_tooltip").getVisualOrderText(),
-                            Ingredients.getName(requestedItem).getVisualOrderText()
+                            Compat.componentText(Compat.translatable("menu.item_jobs.title_tooltip")),
+                            Compat.componentText(Ingredients.getName(requestedItem))
                     )
             );
         }
@@ -207,7 +223,7 @@ public class ItemJobsScreen extends Screen {
     }
 
     private List<Component> renderCardContent(
-            GuiGraphics gui,
+            RenderContext rc,
             Card<UIJob> card,
             Coordinate mouse
     ) {
@@ -221,14 +237,14 @@ public class ItemJobsScreen extends Screen {
         Function<PagedCardScreen.CardCoordinates, PagedCardScreen.CardCoordinates> down2 = (cc) -> cc.shiftedDown(24);
         Function<PagedCardScreen.CardCoordinates, PagedCardScreen.CardCoordinates> down3 = (cc) -> cc.shiftedDown(30);
 
-        renderJobTitle(gui, d);
+        renderJobTitle(rc, d);
 
         TriFunction<CardCoordinates, List<Ingredient>, Boolean, List<Component>> renderStrip = (cc, ings, shiftRight) ->
                 RenderUtil.stripOfRequestableItems(
-                        (ing, coord) -> Ingredients.render(gui, ing, coord.x(), coord.y()),
+                        (ing, coord) -> Ingredients.render(rc.gui(), ing, coord.x(), coord.y()),
                         (ing) -> ImmutableList.of(Ingredients.getName(ing)),
-                        (text, coord) -> Compat.drawDarkText(font, gui, text, coord.x(), coord.y()),
-                        (topLeft, botRight) -> RenderUtil.highlight(gui, topLeft, botRight),
+                        (text, coord) -> rc.darkText(text, coord.x(), coord.y()),
+                        (topLeft, botRight) -> RenderUtil.highlight(rc.gui(), topLeft, botRight),
                         ings,
                         shiftRight ? cc.topLeft().shifted(64, 0) : cc.topLeft(),
                         cc.bottomRight(),
@@ -239,37 +255,37 @@ public class ItemJobsScreen extends Screen {
 
         int labelOffset = 5;
 
-        Compat.drawDarkText(font, gui, itemsText, x, (c = down2.apply(c)).topY() + labelOffset);
+        rc.darkText(itemsText, x, (c = down2.apply(c)).topY() + labelOffset);
 
         List<Component> tt1 = renderStrip.apply(c, d.ingredients(), true);
         c = c.shiftedDown(font.lineHeight);
 
         Component toolsText = Compat.translatable("menu.item_jobs.tools_used");
-        Compat.drawDarkText(font, gui, toolsText, x, (c = down.apply(c)).topY() + labelOffset);
+        rc.darkText(toolsText, x, (c = down.apply(c)).topY() + labelOffset);
         List<Component> tt2 = renderStrip.apply(c, d.tools(), true);
         c = c.shiftedDown(font.lineHeight);
 
         Component producesText = Compat.translatable("menu.item_jobs.produces");
-        Compat.drawDarkText(font, gui, producesText, x, (c = down.apply(c)).topY() + labelOffset);
+        rc.darkText(producesText, x, (c = down.apply(c)).topY() + labelOffset);
         List<Ingredient> v = Ingredients.fromItems(d.result());
         List<Component> tt3 = renderStrip.apply(c, putRequestedItemFirst(v), true);
         c = c.shiftedDown(font.lineHeight);
 
         Component roomName = Compat.translatable("room." + d.roomNameTranslationKey().getPath());
         Component translatable = Compat.translatable("menu.item_jobs.room", roomName);
-        Compat.drawDarkText(font, gui, translatable, x, (c = down.apply(c)).topY());
+        rc.darkText(translatable, x, (c = down.apply(c)).topY());
         List<Component> tt4 = renderStrip.apply(scootch.apply(c), d.roomRecipe(), false);
 
         int bgX = (width - backgroundWidth) / 2;
         int bgY = (height - delegate.backgroundHeight) / 2;
         int stripHeight = Util.faceWidth * 3;
         int stripY = bgY + delegate.backgroundHeight - stripHeight - buttonHeight - 4 - (BIG_PADDING * 2);
-        gui.fill(bgX, stripY, bgX + backgroundWidth, stripY + stripHeight - 2, RenderUtil.SHADOW);
+        rc.fill(bgX, stripY, bgX + backgroundWidth, stripY + stripHeight - 2, RenderUtil.SHADOW);
         int i = 0;
         for (UUID uuid : d.villagersWhoCanDoJob()) {
             int stripOffset = (stripHeight - (Util.faceWidth * 2)) / 2;
             stripOffset -= 1;
-            blitFace(gui, bgX + Util.faceWidth - 3, stripY + stripOffset, uuid, i++);
+            blitFace(rc, bgX + Util.faceWidth - 3, stripY + stripOffset, uuid, i++);
         }
         return UtilClean.lastNonNull(tt1, tt2, tt3, tt4);
     }
@@ -288,7 +304,7 @@ public class ItemJobsScreen extends Screen {
     }
 
     private void renderJobTitle(
-            GuiGraphics gui,
+            RenderContext rc,
             UIJob d
     ) {
         ImmutableRect2i pageArea = MathUtil.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
@@ -299,17 +315,17 @@ public class ItemJobsScreen extends Screen {
                 Compat.literal(d.jobId().jobId())
         );
         ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, jobName);
-        Compat.drawDarkText(font, gui, jobName, textArea.getX(), textArea.getY());
+        rc.darkText(jobName, textArea.getX(), textArea.getY());
     }
 
     private static void blitFace(
-            GuiGraphics gui,
+            RenderContext rc,
             int x,
             int y,
             UUID uuid,
             int i
     ) {
-        Util.blitFace(gui, uuid, x + (Util.faceWidth * 4 * i), y, 2);
+        Util.blitFace(rc.gui(), uuid, x + (Util.faceWidth * 4 * i), y, 2);
     }
 
     @Override

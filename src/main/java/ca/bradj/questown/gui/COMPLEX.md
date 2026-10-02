@@ -259,16 +259,15 @@ idiom for the one seam helper that still takes the render argument directly: `In
 `RenderUtil.highlight` take the argument as `ctx.gui()` (a record accessor, no type named in the leaf),
 while `Compat.drawDarkText` collapses to `ctx.darkText`.
 
-Pending: the remaining full G1 screen that still takes the render argument
-(`ItemJobsScreen`), the helpers that still
-take `GuiGraphics` (`Ingredients`, `PagedCardScreen`, the `villager/advancements` widgets,
-QuestownHudEvents), and - most care needed - the render-layering
-family above (the screens that override `renderBackground` to a blurred world and whose HUD is
-re-rendered by QuestownHudEvents). Those must route through these same hooks without losing
-the blur + HUD layering that is verified against the golden captures in `tools/porttest/goldens/`,
-and the oracle pipeline in `tools/porttest/run.sh` is the way to catch any regression on this
-machine. The SAFE-tier confirm screens (VillagerBlockofProgressScreen, TownBlockofProgressScreen,
-CreateStockRequestScreen, WorkScreen, AddWorkScreen, FlagCraftingScreen, JobChangeConfirmScreen)
+Pending: the remaining G1 files are the `Ingredients` helper (GuiGraphics +
+core.registries) and the `villager/advancements` widgets, plus - most care needed - the
+render-layering family above (the screens that override `renderBackground` to a blurred world
+and whose HUD is re-rendered by QuestownHudEvents). Those must route through these same hooks
+without losing the blur + HUD layering that is verified against the golden captures in
+`tools/porttest/goldens/`, and the oracle pipeline in `tools/porttest/run.sh` is the way to
+catch any regression on this machine. The SAFE-tier confirm screens (VillagerBlockofProgressScreen,
+TownBlockofProgressScreen, CreateStockRequestScreen, WorkScreen, AddWorkScreen,
+FlagCraftingScreen, JobChangeConfirmScreen)
 and the render-argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs` are done,
 as is `VillagerStatsScreen` (2026-10-13: onto `CompatContainerScreen` - the stat bars and
 two-half-band art are verbatim `Util.blit`/`ctx.darkText` calls - gui-lint OK, vision
@@ -277,7 +276,27 @@ confirmed the bars + HUD-over-blur layering, bank diff in fixture-drift range), 
 `Button.builder` quest-button onto `Compat.button`, the status-tooltip
 `Component::getVisualOrderText` lambda onto a `Compat::componentText` map into
 `showTooltip(List<FormattedCharSequence>)` - gui-lint OK, vision confirmed tabs/status
-icon/slots/Quests button + HUD over blur, bank diff in drift range).
+icon/slots/Quests button + HUD over blur, bank diff in drift range), and `ItemJobsScreen`
+(2026-10-13, below).
+
+`PagedCardScreen` + `ItemJobsScreen` onto `RenderContext` (2026-10-13): the delegate's
+public surface now takes `RenderContext` (`renderBg`, `afterRender` - dropped its `Font`
+parameter, `renderButtons`, the per-card `CardRenderer` interface, and the page-number
+`fill` consumer), so the composing `ItemJobsScreen` leaf names no render-argument type at
+all (onto `CompatScreen`: panel in `renderScreenSurface`, content + `Compat.button` + the
+`Compat.componentText` tooltip in the neutral hooks) - **fixing a live 1.20.6 draw-order
+regression in the process**: a vanilla 1.20.6 `Screen.render` draws its background *inside
+`render`*, so the leaf's old sandwich (background, panel, `super.render`→background again)
+painted the paged panel under the second background; in 1.19.2 `Screen.render` draws no
+background at all, so the golden never hit it. The compat base makes the panel sit between
+surface and renderables - the golden's relative order - and that is why this leaf's
+verification is a fresh held run (gui-lint OK; vision confirmed the panel, `Jobs:` title,
+Page 1/14 nav, Add-To-Work-Requests button and the card rows) rather than a bank diff -
+there is no correct 1.20.6 pixels to compare against. The four Abstract leaves are
+re-verified intact in the same run (gui-lint OK on Quests/TownEconomics/VillagerEconomics/
+MultiStatus; bank diffs in fixture-drift range). Opener added for the headless drive:
+`_qtdev show_item_jobs` (thin wrapper over the `OpenJobMessage` owner call; see
+`commands/COMPLEX.md`).
 
 Render-argument helpers taking `RenderContext` (2026-10-13): `IngredientRenderer.render`,
 `StatusGraphic.render`, and `Tabs.draw` (plus the inlined notification-dot `fill`) now take

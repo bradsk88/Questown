@@ -62,6 +62,11 @@ action paths, no permission gates):
   `updateWorkersAfterRequestChange`, which NPEs on a DOWNTIME townie's null
   `getStatusForServer()` - the NPE lands *after* the request is posted, so the
   card still appears (a server-log stack, not a drive failure).
+- `show_item_jobs` - open the ItemJobsScreen (the work-request job list) for the
+  first townie's current job: the same owner call the parent screen's status-icon
+  click makes (`OpenJobMessage` -> the flag's villager handle `showJobUI`), no
+  click or board needed (added 2026-10-13 for the ItemJobsScreen strangler pass;
+  logged `[show_item_jobs] item-jobs screen for <player> (job <JobID> / flag <pos>)`).
 - `inspect villagers <flag-pos>` - the eyes-level readout above. The flag pos
   argument is the flag coordinates, not a search radius.
 

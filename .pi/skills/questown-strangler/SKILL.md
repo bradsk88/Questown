@@ -93,19 +93,20 @@ reference - read it before the next leaf.
 ## Remaining G1 leaves (as of 2026-10-13)
 
 Done: every SAFE-tier confirm screen + the paged cluster + the helper
-pass-throughs above. Still to do, in order of care: `ItemJobsScreen` (6 `GuiGraphics`
-hits + `getVisualOrderText`×2 + `Button.builder`); helper `Ingredients` (GuiGraphics +
-core.registries) and `PagedCardScreen` (390 lines, 8 hits); the `villager/advancements`
-widgets (3 files, Critereon/predicate territory); and - most care - the render-layering
-family (QuestownHudEvents HUD re-render), verified against `tools/porttest/goldens/` via
-the porttest oracle before de-grandfathering. `VillagerStatsScreen` and
-`InventoryAndStatusScreen` are done (2026-10-13: `CompatContainerScreen` hooks, both
-blurred-background overrides absorbed into the base identically; stat bars, tabs, status
-icon, the `Compat.button` quest button and the `Compat::componentText` tooltip map all
-verified - gui-lint OK + vision on held runs, bank diffs in fixture-drift range). The
-carried-over **live gui-lint + vision pass on `VillagerEconomicsScreen`** is done
-(2026-10-13: gui-lint OK + vision real-art in the ingredient grid, alongside the helper
-pass-throughs).
+pass-throughs above. Still to do, in order of care: the `Ingredients` helper (GuiGraphics +
+core.registries), the `villager/advancements` widgets (3 files,
+Critereon/predicate territory), and - most care - the render-layering family
+(QuestownHudEvents HUD re-render), verified against `tools/porttest/goldens/` via
+the porttest oracle before de-grandfathering. Done 2026-10-13 since the last note:
+`ItemJobsScreen` + `PagedCardScreen` (delegate public surface + CardRenderer over
+RenderContext; the leaf onto `CompatScreen`, which also fixes the 1.20.6 panel-under-
+second-background draw-order regression; held run gui-lint OK on ItemJobsScreen + the
+four Abstract leaves, vision confirmed the ItemJobsScreen panel/nav/buttons/card rows and
+re-confirmed the paged consumers; opener `_qtdev show_item_jobs` added, see
+commands/COMPLEX.md). `VillagerStatsScreen` and `InventoryAndStatusScreen` are done
+(2026-10-13: `CompatContainerScreen` hooks, gui-lint OK + vision on held runs).
+The carried-over **live gui-lint + vision pass on `VillagerEconomicsScreen`** is done
+(2026-10-13: gui-lint OK + vision real-art in the ingredient grid).
 Then G2/G4 multi-marker files (HospitalBedBlock's dynamic MapColor lambda,
 the LootParams blocks, TownFlagBlock/BlockOfProgress data-components,
 MCTownItem/TestBlueprintRegistry registries), G6 neoforged, G5 renderers, G7 client events.
