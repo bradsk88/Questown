@@ -1,4 +1,8 @@
-package ca.bradj.questown.core.advancements;
+package ca.bradj.questown.loader.neo;
+
+import ca.bradj.questown.core.advancements.RoomTrigger;
+import ca.bradj.questown.core.advancements.TutorialTrigger;
+import ca.bradj.questown.core.advancements.VisitorTrigger;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.mc.Compat;

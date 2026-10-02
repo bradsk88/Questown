@@ -37,6 +37,6 @@ public class QuestownMod {
 
         // 1.20.6 bakes the criterion-trigger registry at bootstrap, so the triggers join the
         // mod-bus registration phase through a DeferredRegister on Registries.TRIGGER_TYPE.
-        ca.bradj.questown.core.init.AdvancementsInit.init(bus);
+        NeoAdvancementTriggers.init(bus);
     }
 }
