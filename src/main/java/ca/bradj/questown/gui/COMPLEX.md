@@ -260,8 +260,7 @@ idiom for the one seam helper that still takes the render argument directly: `In
 while `Compat.drawDarkText` collapses to `ctx.darkText`.
 
 Pending: the remaining SAFE-tier confirm screens (VillagerBlockofProgressScreen,
-TownBlockofProgressScreen, CreateStockRequestScreen, WorkScreen, QuestRemoveConfirmScreen,
-AddWorkScreen), the **live gui-lint + vision pass on `VillagerEconomicsScreen`** (code-migrated with its
+TownBlockofProgressScreen, CreateStockRequestScreen, WorkScreen, AddWorkScreen), the **live gui-lint + vision pass on `VillagerEconomicsScreen`** (code-migrated with its
 twin but not yet opened on a held run - open via the villager menu's economics tab or the flagtab
 `economics` twin), plus helpers that still take `GuiGraphics` (Ingredients, IngredientRenderer,
 StatusGraphic, `Tabs.draw`, PagedCardScreen, the `villager/advancements` widgets, QuestownHudEvents), and — most care needed — the render-layering family above (the screens
@@ -273,6 +272,19 @@ oracle pipeline in `tools/porttest/run.sh` is the way to catch any regression on
 FlagCraftingScreen (flow layout + craft tooltips + tabs) and JobChangeConfirmScreen (early-
 return + tabs tooltip + centered text) are the two remaining SAFE-tier leaves with non-trivial
 toobar/tooltip interaction; both are done via the same two-tier pattern.
+
+## Player-head profile: `Compat.resolvablePlayerHead` (components, not NBT)
+
+A player head whose face resolves to a villager's UUID is a version surgery, and *where it is
+named* is the trap. The component stack builds it as `head.set(DataComponents.PROFILE, new
+ResolvableProfile(...))`; both `DataComponents` and `net.minecraft.world.item.component.
+ResolvableProfile` are strangler markers, so a leaf must not name them. `QuestRemoveConfirmScreen`
+(the one screen that needed it, now a `CompatContainerScreen` leaf) calls `Compat.resolvablePlayerHead(UUID)`, and the exact 3-arg construction `ResolvableProfile(Optional.empty(),
+Optional.of(uuid), new PropertyMap())` plus `new ItemStack(Items.PLAYER_HEAD)` lives in `mc/Compat`
+- the seam family the gate admits. Off the grandfather list (108 -> 107), `strangler-check` green,
+`compileJava` executed; the layout is inherited from the base-class migration and the sibling
+confirm screens (already gui-linted), and the only pixel delta is a verbatim item construction
+rather than a new layout, so this landed without a fresh held-run capture.
 
 ## Flow layout (FlagCraftingScreen)
 

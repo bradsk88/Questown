@@ -60,15 +60,17 @@ Seam to finish: a `Compat.blockProperties(mapColor)` (or equivalent) so block ct
 one form, and `Compat`/existing `jobs/gatherer/Loots` owning the loot builder, plus a
 `Compat` BE tag-round-trip pair (provider goes inside).
 
-### G3. Items and data components (Component/NBT, 13 files)
+### G3. Items and data components (Component/NBT, 12 files)
 
 `DataComponents`/`CustomData` (1.20 component stack) directly in:
 `TownFlagBlock`, `BlockOfProgress`, `RelocationDeedItem`, `StockRequestItem`,
 `items/QTNBT`, `items/GathererMap`, `MCTownItem`, `MCHeldItem`,
 `jobs/declarative/RealtimeWorldInteraction`, `TimeWarpWorldInteraction`,
-`QuestRemoveConfirmScreen`, `core/network/CreateStockRequestFromUIMessage`,
+`core/network/CreateStockRequestFromUIMessage`,
 `commands/test/TestBlueprintRegistry`. `mc/Compat` already wraps component access for some
-call sites and is the right seam; the 13 files above skip it.
+call sites and is the right seam; the files above skip it. (`QuestRemoveConfirmScreen` is resolved: its
+`ResolvableProfile`/`DataComponents.PROFILE` player head moved to `Compat.resolvablePlayerHead`
+in `mc/Compat`; no longer a marker, off the grandfather list, gate green.)
 
 ### G4. Registries, holders, recipes (18 files)
 

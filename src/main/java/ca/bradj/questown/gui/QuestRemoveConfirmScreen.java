@@ -14,7 +14,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.lwjgl.glfw.GLFW;
 
@@ -76,16 +75,7 @@ public class QuestRemoveConfirmScreen extends CompatContainerScreen<TownRemoveQu
             if (v.villagerUUID() == null) {
                 return null;
             }
-            ItemStack head = new ItemStack(Items.PLAYER_HEAD);
-            head.set(
-                    net.minecraft.core.component.DataComponents.PROFILE,
-                    new net.minecraft.world.item.component.ResolvableProfile(
-                            java.util.Optional.empty(),
-                            java.util.Optional.of(java.util.UUID.fromString(v.villagerUUID())),
-                            new com.mojang.authlib.properties.PropertyMap()
-                    )
-            );
-            return head;
+            return Compat.resolvablePlayerHead(java.util.UUID.fromString(v.villagerUUID()));
         }).toList();
 
     }

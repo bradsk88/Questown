@@ -52,7 +52,6 @@ gui/InventoryAndStatusScreen.java
 gui/ItemJobsScreen.java
 gui/LockableInventoryWrapper.java
 gui/PagedCardScreen.java
-gui/QuestRemoveConfirmScreen.java
 gui/QuestownHudEvents.java
 gui/StatusGraphic.java
 gui/Tabs.java

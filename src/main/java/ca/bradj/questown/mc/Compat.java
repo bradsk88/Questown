@@ -413,4 +413,25 @@ public class Compat {
     public static void resetShaderColor() {
         com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
+
+    /**
+     * A player head whose face resolves to the given UUID (empty texture, the profile's UUID,
+     * no authlib properties). The 1.20.4+ data-component surface behind this --
+     * {@link net.minecraft.core.component.DataComponents#PROFILE}, a
+     * {@link net.minecraft.world.item.component.ResolvableProfile}, and {@code ItemStack.set} -- is
+     * version-bound and stays here so no leaf outside the seam names it (NBT in 1.19.2, components
+     * from 1.20.4 up).
+     */
+    public static ItemStack resolvablePlayerHead(java.util.UUID uuid) {
+        ItemStack head = new ItemStack(net.minecraft.world.item.Items.PLAYER_HEAD);
+        head.set(
+                net.minecraft.core.component.DataComponents.PROFILE,
+                new net.minecraft.world.item.component.ResolvableProfile(
+                        java.util.Optional.empty(),
+                        java.util.Optional.of(uuid),
+                        new com.mojang.authlib.properties.PropertyMap()
+                )
+        );
+        return head;
+    }
 }
