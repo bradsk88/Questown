@@ -78,8 +78,8 @@ prep)
     die "level-type=flat: flat-world spawn is broken here (server y=-60, client Y desyncs ~64, player dies). Use a normal world."
   fi
   if [ ! -p "$FIFO" ]; then
-    say "creating FIFO writer"
-    setsid nohup sh -c "sleep 999999 > $FIFO" >/dev/null 2>&1 &
+    say "creating FIFO writer (O_RDWR: the build's O_RDONLY read-open plus an O_WRONLY '>' writer deadlocks; '<>' opens non-blocking and holds the write fd first - verified 2026-10-01)"
+    setsid nohup sh -c "sleep 999999 <> $FIFO" >/dev/null 2>&1 &
   fi
   say "ok"
   ;;

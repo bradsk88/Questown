@@ -34,7 +34,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         }
     }
 
-    static SyncedData syncedData = new SyncedData(new HashMap<>(), new HashMap<>(), false);
+    static public SyncedData syncedData = new SyncedData(new HashMap<>(), new HashMap<>(), false);
 
     public MultiStatusScreen(
             MultiStatusMenu menu,

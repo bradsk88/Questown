@@ -1,9 +1,9 @@
 {
   "screen": "work",
-  "captured-at": "2026-10-01T03:43:46+01:00",
-  "world-age-min": 280,
+  "captured-at": "2026-10-02T02:32:13+01:00",
+  "world-age-min": 17,
   "cursor": "parked 1,1 (shot stage)",
   "branch": "1.20.6-neoforge-wip",
-  "commit": "ba2b00da",
+  "commit": "9eca92d8",
   "source": "/workspace/IdeaProjects/Questown/run-client/diags/work.png"
 }

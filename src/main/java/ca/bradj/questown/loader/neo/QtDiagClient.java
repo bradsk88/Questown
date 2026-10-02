@@ -45,7 +45,11 @@ import java.util.List;
  * render thread — the same message pair a card click produces) and
  * {@code flagtab <type> [x y z]} (send the flag tab's {@code OpenFlagMenuMessage}
  * so the server opens the flag-scoped screen — {@code villagers} or
- * {@code economics} — the same message a flag-tab click sends).
+ * {@code economics} — the same message a flag-tab click sends) and
+ * {@code vopen <type>} (open a villager's own tab menu the
+ * {@code _qtdev openvillager <type>} console path uses, read as a fallback from
+ * the open flag-menu screen context: the flag pos + first synced villager UUID,
+ * via the same {@link OpenVillagerMenuMessage} a tab click sends).
  */
 public class QtDiagClient {
 
@@ -107,6 +111,8 @@ public class QtDiagClient {
                 case "shot" -> shot(mc, parts.length > 1 ? parts[1] : "shot");
                 case "cursor" -> cursor(mc, Double.parseDouble(parts[1]), Double.parseDouble(parts[2]));
                 case "inquire" -> inquire(mc, parts[1], parts[2], parts[3], parts.length > 4 ? parts[4] : null);
+                case "vopen" -> vopen(mc, parts[1]);
+                case "cmd" -> chat(mc, parts);
                 case "flagtab" -> flagtab(mc, parts[1],
                         parts.length > 2 ? parts[2] : "0",
                         parts.length > 3 ? parts[3] : "64",
@@ -210,6 +216,50 @@ public class QtDiagClient {
                 type
         ));
         System.out.println("[qtdiag] flagtab " + type + " at " + x + "," + y + "," + z + " sent");
+    }
+
+    private static void vopen(Minecraft mc, String type) {
+        // open a VILLAGER's tab menu without the console (/_qtdev openvillager<>)
+        // when the server's stdin is a dead pipe: needs the flag's villagers
+        // menu open first (flagtab villagers) for the flag pos + villager UUIDs
+        // (the flag menu's synced villager list, static on MultiStatusScreen).
+        if (mc.player == null) {
+            System.out.println("[qtdiag] vopen: no local player");
+            return;
+        }
+        if (!(mc.player.containerMenu instanceof ca.bradj.questown.gui.MultiStatusMenu flagMenu)) {
+            System.out.println("[qtdiag] vopen: open the flag villagers menu first (flagtab villagers)");
+            return;
+        }
+        BlockPos pos = flagMenu.getFlagInfo().flagPos();
+        var villagers = ca.bradj.questown.gui.town.status.MultiStatusScreen.syncedData.villagerStatuses();
+        if (villagers.isEmpty()) {
+            System.out.println("[qtdiag] vopen: no villager UUIDs synced to the flag menu yet");
+            return;
+        }
+        java.util.UUID villager = villagers.keySet().iterator().next();
+        QuestownNetwork.sendToServer(new OpenVillagerMenuMessage(
+                pos.getX(), pos.getY(), pos.getZ(), villager, type
+        ));
+        System.out.println("[qtdiag] vopen " + type + " for villager " + villager + " at " + pos.toShortString() + " sent");
+    }
+
+    private static void chat(Minecraft mc, String[] parts) {
+        // the bridge when the server's stdin/console fifo is a dead pipe:
+        // sends a ServerboundChatCommandPacket (a '/"-prefixed player chat
+        // command) so the server dispatches _qtdev with the player as source,
+        // exactly like a player typing it in the chat box.
+        if (mc.player == null) {
+            System.out.println("[qtdiag] cmd: no local player");
+            return;
+        }
+        String line = String.join(" ", java.util.Arrays.copyOfRange(parts, 1, parts.length));
+        if (line.isEmpty()) {
+            System.out.println("[qtdiag] cmd: empty command");
+            return;
+        }
+        mc.player.connection.send(new net.minecraft.network.protocol.game.ServerboundChatCommandPacket(line));
+        System.out.println("[qtdiag] cmd sent: " + line);
     }
 
     private static void shot(Minecraft mc, String name) {

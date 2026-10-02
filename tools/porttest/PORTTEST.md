@@ -63,11 +63,34 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
     sends), opening the WorkRequestConfirmScreen — the console-command
     stand-in for "click this work card" (added for the G1 gui migration)
   - `flagtab <type> [x y z]` → `OpenFlagMenuMessage(FlagInfo.dumb(pos,false,false),
-    type)` at a flag pos (default 0 64 0): opens the FLAG-scoped menu tab —
+    type)` at a flag pos (default **0 64 0 — pass the real flag pos**, the
+    server refuses a pos with no flag block): opens the FLAG-scoped menu tab —
     `quests`/`villagers` → QuestsScreen/MultiStatusScreen, `economics` →
     TownEconomicsScreen, `bop` → the block-of-progress screen (added for
     the paged-screen migration; the console path may be a dead pipe on a
     fresh launch, the diag file is not)
+  - `vopen <type>` → a villager's own tab menu from the open flag
+    villagers-menu context: reads `MultiStatusMenu.getFlagInfo().flagPos()` +
+    the first villager UUID synced to the screen (`MultiStatusScreen
+    .syncedData`, public static), sends the same `OpenVillagerMenuMessage`
+    the console's `_qtdev openvillager <type>` does. Sequence per screen:
+    `flagtab villagers <x y z>` → `vopen <type>` → `cursor 1 1` → `shot
+    <name>` (types: inventory|quests|stats|skills|economics|bop). Added this
+    session because the server stdin bridge (fifo console) was a dead pipe
+    and the `_qtdev openvillager` opener had no diag equivalent
+  - `cmd <line…>` → sends a `ServerboundChatCommandPacket` (a `/`-prefixed
+    player chat command) so the server dispatches the line with the player
+    as source — the bridge for ANY console command when the stdin fifo is a
+    dead pipe (e.g. fixture `cmd _qtdev townplace <x y z>`, `cmd _qtdev
+    townspawn <x y z>`, `cmd _qtdev open_jobs`). The 1.20.6 `Player` API has
+    no `chat(String)` (it died in the port; `ServerboundChatCommandPacket
+    (String)` is the packet ChatScreen sends) — do not look for a player
+    send-chat method
+  - **The shot stage's menu open is the console's `fifo_cmd "_qtdev $open"`**
+    — with a dead console it opens nothing and the shot is the previous
+    screen's. The diag-driven loop above (flagtab/vopen) is the working
+    replacement and was used for the 1.20.6 re-bank 2026-10-02 (all 7
+    screens: check PASS, run.sh diff PASS)
   - **`shot` is async** — the mover polls up to 8s; `diags/<name>.png` may
     appear a few seconds after the send. `ls` once and miss it, don't
     re-capture. A capture that shows the "Connection Lost / Server closed"
