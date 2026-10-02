@@ -84,8 +84,9 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
     dead pipe (e.g. fixture `cmd _qtdev townplace <x y z>`, `cmd _qtdev
     townspawn <x y z>`, `cmd _qtdev open_jobs`). The 1.20.6 `Player` API has
     no `chat(String)` (it died in the port; `ServerboundChatCommandPacket
-    (String)` is the packet ChatScreen sends) — do not look for a player
-    send-chat method
+    (String)` is a working player-source command packet — verified by
+    effect, the command dispatches as the player) — do not invent a
+    player send-chat method
   - **The shot stage's menu open is the console's `fifo_cmd "_qtdev $open"`**
     — with a dead console it opens nothing and the shot is the previous
     screen's. The diag-driven loop above (flagtab/vopen) is the working
@@ -102,6 +103,14 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
   `prep` → `launch-server` → `wait-server` → `launch-client` →
   `wait-client` → `connect` → `joined` → `fixture` → `shot <name>` ×6
   → `collect` → `check`.
+  - **`run/logs/latest.log` is shared across sessions and a prior run's
+    server can still be writing it.** A `joined`/`fixture`/`townspawn` line
+    you grepped may belong to the previous session, not yours — read the
+    generation, not the line: the timestamp must be AFTER your own
+    launch/writer start. Cleanest reset (done while the server is DOWN):
+    `sweep.sh` + kill the old FIFO writer + `rm -rf run/logs`, then relaunch.
+    A `state.py` fresh-shot/server list is the cheapest pre-check that you
+    aren't intermixed with a live prior run.
 - `check.sh` — content gate: vision-verifies each captured screen against
   its `expect` block in `manifest.json` (menu open, active tab,
   not-death, not-title) BEFORE banking. `check.sh <dir> [screen]`.
