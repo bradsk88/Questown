@@ -22,6 +22,7 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
@@ -629,7 +630,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         Stream<VisitorMobEntity> relevantWorkers = villagerHandle.stream().filter(Objects::nonNull).filter(e -> {
             for (WorkRequest r : workHandle.getRequestedResults()) {
                 if (ServerJobsRegistry.canSatisfy(td, e.getJobId(), r.asIngredient())) {
-                    if (e.getStatusForServer().isBusy()) {
+                    // A downtime townie has no server status; null counts as not busy.
+                    if (IStatus.isBusy(e.getStatusForServer())) {
                         return false;
                     }
                 }

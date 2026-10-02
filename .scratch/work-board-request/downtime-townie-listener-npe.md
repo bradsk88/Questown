@@ -2,6 +2,7 @@
 title: updateWorkersAfterRequestChange NPEs on a downtime townie
 status: needs-triage
 created: 2026-10-01
+closed: 2026-10-02
 ---
 
 ## Context
@@ -37,6 +38,16 @@ java.lang.NullPointerException: Cannot invoke
   method body (verified by direct diff of
   `TownFlagBlockEntity.updateWorkersAfterRequestChange`), so the same NPE
   should reproduce there for a downtime townie.
+
+## Resolved 2026-10-02
+
+Null status now counts as "not busy" via the documented
+`IStatus.isBusy(@Nullable)` guard (`ca.bradj.questown.jobs.IStatus`), wired into
+`TownFlagBlockEntity.updateWorkersAfterRequestChange` and pinned by
+`IStatusTest.townieWithNoServerStatusIsNotBusy`. Downstream check (requested
+above): `SimpleVillagerHandle.changeJobForVillager` never reads a server
+status (job IDs + `DowntimeWork.matches` / dining checks only), so no further
+null-status assumption in that path.
 
 ## Suggested shape
 
