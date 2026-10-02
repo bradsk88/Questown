@@ -3,7 +3,7 @@ package ca.bradj.questown.core.init;
 import ca.bradj.questown.loader.Holder;
 import ca.bradj.questown.loader.HolderRegistry;
 import ca.bradj.questown.loader.Loader;
-import net.minecraft.core.registries.Registries;
+import ca.bradj.questown.mc.Compat;
 
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.commands.JobArgument;
@@ -13,7 +13,7 @@ import net.minecraft.commands.synchronization.SingletonArgumentInfo;
 
 public class CommandsInit {
 
-    public static final HolderRegistry<ArgumentTypeInfo<?, ?>> COMMAND_TYPES = Loader.registry(Registries.COMMAND_ARGUMENT_TYPE);
+    public static final HolderRegistry<ArgumentTypeInfo<?, ?>> COMMAND_TYPES = Loader.registry(Compat.commandArgumentTypeRegistry());
 
     public static final Holder<ArgumentTypeInfo<JobArgument, ?>> SET_JOB = COMMAND_TYPES.register(
             "setjob",

@@ -1,11 +1,12 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.mc.Compat;
+
 import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.blocks.FalseWallBlock;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
@@ -94,9 +95,9 @@ public class WallDetection {
 
     // 1.20.6 dropped the vanilla glass tags; the community standard keeps them under c:
     private static final TagKey<Block> C_GLASS_BLOCKS =
-            TagKey.create(Registries.BLOCK, new ResourceLocation("c", "glass_blocks"));
+            Compat.blockTag(new ResourceLocation("c", "glass_blocks"));
     private static final TagKey<Block> C_GLASS_PANES =
-            TagKey.create(Registries.BLOCK, new ResourceLocation("c", "glass_panes"));
+            Compat.blockTag(new ResourceLocation("c", "glass_panes"));
 
     public static boolean isSolid(
             BlockPos bp,

@@ -267,12 +267,8 @@ public class HelperChickenSunsetChestGoal extends Goal {
             );
             net.minecraft.world.item.MapItem.renderBiomePreviewMap(sl, filledMap);
             {
-                var mapDecos = sl.registryAccess().registryOrThrow(
-                        net.minecraft.core.registries.Registries.MAP_DECORATION_TYPE);
-                var targetX = mapDecos.getHolderOrThrow(
-                        net.minecraft.resources.ResourceKey.create(
-                                net.minecraft.core.registries.Registries.MAP_DECORATION_TYPE,
-                                new net.minecraft.resources.ResourceLocation("target_x")));
+                var targetX = Compat.mapDecorationHolder(
+                        sl, new net.minecraft.resources.ResourceLocation("target_x"));
                 net.minecraft.world.level.saveddata.maps.MapItemSavedData.addTargetDecoration(
                         filledMap,
                         flag.getTownFlagBasePos(),

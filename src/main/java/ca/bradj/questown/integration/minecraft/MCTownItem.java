@@ -2,8 +2,8 @@ package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.loader.Loader;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableSet;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
@@ -38,12 +38,12 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
         CompoundTag nbt;
         if (itemTag.contains("item", Tag.TAG_STRING)) {
             // New format (1.20.6): {item: <name>, count: <int>, data: <compound>}
-            item = BuiltInRegistries.ITEM.get(new ResourceLocation(itemTag.getString("item")));
+            item = Compat.itemFromId(new ResourceLocation(itemTag.getString("item")));
             quantity = itemTag.getInt("count");
             nbt = itemTag.getCompound("data");
         } else if (itemTag.contains("id")) {
             // Legacy format (1.19): {id: <name>, Count: <int>, tag: <compound>}
-            item = BuiltInRegistries.ITEM.get(new ResourceLocation(itemTag.getString("id")));
+            item = Compat.itemFromId(new ResourceLocation(itemTag.getString("id")));
             quantity = itemTag.getInt("Count");
             nbt = itemTag.getCompound("tag");
         } else {

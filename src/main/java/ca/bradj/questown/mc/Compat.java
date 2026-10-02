@@ -509,6 +509,53 @@ public class Compat {
         return state.getToolModifiedState(context, forgeToolAction(toolAction), false);
     }
 
+    /* Registry-access seam (G4). Each helper owns one 1.20 Registries constant so the
+     * init/holder leaves pass only a neutral id and never name the marked package. */
+
+    /** The item registry keyed by name - the 1.20 lookup behind the item-id read/write. */
+    public static Item itemFromId(net.minecraft.resources.ResourceLocation id) {
+        return net.minecraft.core.registries.BuiltInRegistries.ITEM.get(id);
+    }
+
+    /** The item registry as a stream (the pool generator iterates it; the golden iterates
+     * the same 1.19.2 item registry inline). */
+    public static java.util.stream.Stream<Item> itemRegistryStream() {
+        return net.minecraft.core.registries.BuiltInRegistries.ITEM.stream();
+    }
+
+    /** The map-decoration holder a sunset-map target stamp needs (the
+     * target_x decoration id), so the helper-chicken map never names the Registries edge. */
+    public static net.minecraft.core.Holder<net.minecraft.world.level.saveddata.maps.MapDecorationType> mapDecorationHolder(
+            net.minecraft.world.level.Level level,
+            net.minecraft.resources.ResourceLocation decorationId
+    ) {
+        var registry = level.registryAccess().registryOrThrow(Registries.MAP_DECORATION_TYPE);
+        return registry.getHolderOrThrow(
+                net.minecraft.resources.ResourceKey.create(Registries.MAP_DECORATION_TYPE, decorationId)
+        );
+    }
+
+    /** The SCHEDULE registry key, for the HolderRegistry the visitor schedule registers onto. */
+    public static net.minecraft.resources.ResourceKey<net.minecraft.core.Registry<net.minecraft.world.entity.schedule.Schedule>> scheduleRegistry() {
+        return Registries.SCHEDULE;
+    }
+
+    /** The BLOCK_ENTITY_TYPE registry key, for the block-entity-type HolderRegistries. */
+    public static net.minecraft.resources.ResourceKey<net.minecraft.core.Registry<net.minecraft.world.level.block.entity.BlockEntityType<?>>> blockEntityTypeRegistry() {
+        return Registries.BLOCK_ENTITY_TYPE;
+    }
+
+    /** The COMMAND_ARGUMENT_TYPE registry key, for the command-argument HolderRegistry. */
+    public static net.minecraft.resources.ResourceKey<net.minecraft.core.Registry<net.minecraft.commands.synchronization.ArgumentTypeInfo<?, ?>>> commandArgumentTypeRegistry() {
+        return Registries.COMMAND_ARGUMENT_TYPE;
+    }
+
+    /** A block tag key (1.20 TagKey over a block registry) so the wall-detection glass
+     * tags never name the Registries constant. */
+    public static TagKey<Block> blockTag(net.minecraft.resources.ResourceLocation id) {
+        return TagKey.create(Registries.BLOCK, id);
+    }
+
     /**
      * A player head whose face resolves to the given UUID (empty texture, the profile's UUID,
      * no authlib properties). The 1.20.4+ data-component surface behind this --

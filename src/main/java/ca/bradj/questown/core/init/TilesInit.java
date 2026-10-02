@@ -3,7 +3,7 @@ package ca.bradj.questown.core.init;
 import ca.bradj.questown.loader.Holder;
 import ca.bradj.questown.loader.HolderRegistry;
 import ca.bradj.questown.loader.Loader;
-import net.minecraft.core.registries.Registries;
+import ca.bradj.questown.mc.Compat;
 
 import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.blocks.entity.*;
@@ -14,7 +14,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import java.util.function.Supplier;
 
 public class TilesInit {
-    public static final HolderRegistry<BlockEntityType<?>> TILES = Loader.registry(Registries.BLOCK_ENTITY_TYPE);
+    public static final HolderRegistry<BlockEntityType<?>> TILES = Loader.registry(Compat.blockEntityTypeRegistry());
 
     public static final Holder<BlockEntityType<TownFlagBlockEntity>> TOWN_FLAG = TILES.register(
             TownFlagBlockEntity.ID, () -> BlockEntityType.Builder.of(

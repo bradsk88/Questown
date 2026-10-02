@@ -204,8 +204,16 @@ then round 2: QuestownSpecialRules' rule list becomes the neutral public
 (git-mv + NeedBubbleFocus sibling import) - 52 -> 49, same verification; round 3:
 the two world-access implementations' Forge tool surface collapses into
 `Compat.toolModifiedState(state, useOnContext, QTToolAction)` (the private
-`forgeToolAction` switch moved into it - the call is arg-identical; the vanilla,
-marker-free `toolForAction`/`toolContext` stay local) - 49 -> 47, same verification.
+`forgeToolAction` switch moved into it - the call is arg-identical; the vanilla
+(marker-free) `toolForAction`/`toolContext` stay local) - 49 -> 47, same verification;
+round 4 (G4 registry facade): seven new `Compat` helpers own the 1.20 registry
+constants - `itemFromId`/`itemRegistryStream` (BuiltInRegistries.ITEM lookups for
+MCTownItem / TownieNames), `mapDecorationHolder` (the sunset-map target_x chain in
+HelperChickenSunsetChestGoal), `scheduleRegistry`/`blockEntityTypeRegistry`/
+`commandArgumentTypeRegistry` (the three init HolderRegistries, now
+`Loader.registry(Compat.x())`), and `blockTag` (the c:glass tags in WallDetection).
+7 files de-grandfathered - 47 -> 40, same verification; MCTownItem stays (other G3
+markers remain).
 
 Note (pre-existing, not changed by this pass): `ServerTickProfiler`'s instance
 `@SubscribeEvent` handlers have no bus attachment in either era (no annotation, no

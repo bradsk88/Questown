@@ -21,13 +21,9 @@ commands/TestAllCommand.java
 commands/TestCommand.java
 commands/test/AutoTestRunner.java
 commands/test/TestBlueprintRegistry.java
-core/RecipeItemConfig.java
 core/advancements/AdvancementEvents.java
 core/init/AdvancementsInit.java
-core/init/CommandsInit.java
 core/init/ModItemGroup.java
-core/init/ScheduleInit.java
-core/init/TilesInit.java
 integration/minecraft/MCTownItem.java
 items/StockRequestClipboardItem.java
 jobs/ResourceJobLoader.java
@@ -36,12 +32,9 @@ jobs/gatherer/Loots.java
 jobs/requests/WorkRequest.java
 jobs/requests/WorkRequestSerializer.java
 logic/RoomRecipes.java
-mobs/helperchicken/HelperChickenSunsetChestGoal.java
 mobs/visitor/VisitorMobEntity.java
 town/TownFlagMenus.java
 town/TownKnownBiomes.java
-town/WallDetection.java
 town/entity/TownFlagBlockEntity.java
 town/entity/TownQuests.java
 town/entity/TownQuestsLootTest.java
-town/names/TownieNames.java

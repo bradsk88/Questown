@@ -1,5 +1,6 @@
 package ca.bradj.questown.core;
 
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.loader.ConfigBuilder;
 import ca.bradj.questown.loader.ConfigSpec;
 import ca.bradj.questown.loader.ConfigValue;
@@ -186,8 +187,7 @@ public class RecipeItemConfig {
         add(
                 String.format(
                         "#%s",
-                        net.minecraft.tags.TagKey.create(
-                                net.minecraft.core.registries.Registries.ITEM,
+                        Compat.itemTag(
                                 new net.minecraft.resources.ResourceLocation("minecraft:chests")
                         ).location()
                 ),
@@ -217,7 +217,7 @@ public class RecipeItemConfig {
 
     @SuppressWarnings("DataFlowIssue")
     private static @NotNull ResourceLocation assumePresent(Item item) {
-        return net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
+        return Compat.getItemId(item);
     }
     private static void add(
             ResourceLocation itemOrTagKey,
