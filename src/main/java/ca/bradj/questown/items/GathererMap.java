@@ -11,7 +11,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -25,7 +24,7 @@ public class GathererMap extends Item {
     }
 
     public static @Nullable ResourceLocation getBiome(ItemStack itemStack) {
-        CompoundTag tag = itemStack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
+        CompoundTag tag = Compat.itemDataTag(itemStack);
         if (QTNBT.contains(tag, "biome")) {
             return QTNBT.getResourceLocation(tag, "biome");
         }

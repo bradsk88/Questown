@@ -81,6 +81,16 @@ call sites and is the right seam; the files above skip it. (`QuestRemoveConfirmS
 `ResolvableProfile`/`DataComponents.PROFILE` player head moved to `Compat.resolvablePlayerHead`
 in `mc/Compat`; no longer a marker, off the grandfather list, gate green.)
 
+Data-components part shipped: `Compat.itemDataTag(ItemStack)` + `Compat.setItemDataTag(ItemStack, CompoundTag)`
+own the 1.19.2 "arbitrary item NBT" surface (the `DataComponents.CUSTOM_DATA` read/write; 1.19.2 held that NBT
+in the stack's own `CompoundTag`). Named `*DataTag`, not *CustomData*, for the bare-name-marker substring
+collision above. 7 clean leaves de-grandfathered (RelocationDeedItem, StockRequestItem, QTNBT, GathererMap,
+MCHeldItem, RealtimeWorldInteraction, TimeWarpWorldInteraction); grandfather 100 -> 93, gate green. Remaining G3:
+the multi-marker files (MCTownItem + TestBlueprintRegistry also carry `net.minecraft.core.registries`;
+TownFlagBlock + BlockOfProgress also carry `MapColor`/`ItemInteractionResult`/`core.Holder`) and
+`core/network/CreateStockRequestFromUIMessage`, which is already in the `core/network/` seam family so was
+never a gate hit.
+
 ### G4. Registries, holders, recipes (18 files)
 
 - `net.minecraft.core.registries.BuiltInRegistries` (1.19.2: `Registry`): `MCTownItem`,

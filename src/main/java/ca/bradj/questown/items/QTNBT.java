@@ -1,6 +1,7 @@
 package ca.bradj.questown.items;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.mc.Compat;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -20,9 +21,9 @@ public class QTNBT {
             String key,
             String value
     ) {
-        CompoundTag t = map.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
+        CompoundTag t = Compat.itemDataTag(map);
         t.putString(keyify(key), value);
-        map.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(t));
+        Compat.setItemDataTag(map, t);
     }
 
     public static @Nullable String getString(

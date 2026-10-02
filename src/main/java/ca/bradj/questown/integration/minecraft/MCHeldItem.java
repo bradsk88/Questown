@@ -7,9 +7,8 @@ import ca.bradj.questown.jobs.gatherer.GathererTools;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.core.component.DataComponents;
+import ca.bradj.questown.mc.Compat;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -51,7 +50,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
         if (item.isEmpty()) {
             return MCHeldItem.Air();
         }
-        CompoundTag data = item.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+        CompoundTag data = Compat.itemDataTag(item);
         return new MCHeldItem(
                 MCTownItem.fromMCItemStack(item),
                 false,

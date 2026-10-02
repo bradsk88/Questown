@@ -85,7 +85,8 @@ before the next leaf.
   gate's `MapColor` substring matches it (verified: it kept every migrated block flagged until the
   enum was renamed). Name the token to dodge the collision: `CompatBlockColor` + `Compat.blockProps(...)`
   as the form-owner (the enum *body* may name `MapColor`; it lives in the `mc/` seam family the gate
-  admits).
+  admits). Second hit on G3 for the same reason: the item-NBT helpers are `itemDataTag`/`setItemDataTag`,
+  not `itemCustomDataTag` (the `CustomData` marker would substring-match that in every leaf that calls it).
 
 ## Remaining SAFE leaves to land (as of 2026-10-02)
 

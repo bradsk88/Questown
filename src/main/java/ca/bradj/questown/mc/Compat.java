@@ -27,6 +27,8 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -423,6 +425,25 @@ public class Compat {
      */
     public static BlockBehaviour.Properties blockProps(CompatBlockColor color) {
         return BlockBehaviour.Properties.of().mapColor(color.mapColor());
+    }
+
+    /**
+     * The 1.19.2 "arbitrary item NBT" surface (block/entity data attached to an {@link ItemStack}).
+     * The component split put it in the {@code DataComponents.CUSTOM_DATA} component. The version-bound
+     * read lives here so a leaf names neither {@code DataComponents} nor the strangler-marked {@code
+     * CustomData} type (the two substrings of it) - the same name-collision trap as the {@code MapColor}
+     * one: note the helpers are named {@code itemDataTag}/{@code setItemDataTag}, not *CustomData*.
+     */
+    public static CompoundTag itemDataTag(ItemStack stack) {
+        return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+    }
+
+    /**
+     * The inverse of {@link #itemDataTag(ItemStack)}: writes a tag back as the item's {@code CUSTOM_DATA}
+     * component.
+     */
+    public static void setItemDataTag(ItemStack stack, CompoundTag t) {
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(t));
     }
 
     /**

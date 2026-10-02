@@ -344,7 +344,7 @@ public class TimeWarpWorldInteraction extends
                     if (extractedItem == null || extractedItem.isEmpty()) {
                         return ctx;
                     }
-                    CompoundTag t = extractedItem.get().toMCItemStack().getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
+                    CompoundTag t = Compat.itemDataTag(extractedItem.get().toMCItemStack());
                     itemData.forEach(t::putInt);
                     return ctx;
                 }, (in, up) -> in,

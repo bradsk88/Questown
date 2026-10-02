@@ -15,7 +15,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -104,7 +103,7 @@ public class StockRequestItem extends Item {
             List<Component> tooltips,
             TooltipFlag p_41424_
     ) {
-        CompoundTag tag = p_41421_.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
+        CompoundTag tag = Compat.itemDataTag(p_41421_);
         if (hasRequest(tag)) {
             tooltips.add(Ingredients.getName(getRequest(tag).asIngredient()));
         }

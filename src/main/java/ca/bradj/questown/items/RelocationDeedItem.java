@@ -7,8 +7,7 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.RelocationChoiceMessage;
 import ca.bradj.questown.town.entity.TownRelocation;
 import ca.bradj.questown.town.entity.TownRelocation.RelocationResult;
-import net.minecraft.world.item.component.CustomData;
-import net.minecraft.core.component.DataComponents;
+import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -66,12 +65,9 @@ public class RelocationDeedItem extends Item {
         ref.putLong(NBT_FLAG_POS, flagPos.asLong());
         ref.putString(NBT_DIM, dimension.toString());
         {
-            net.minecraft.nbt.CompoundTag t = stack.getOrDefault(
-                    net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                    net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
+            CompoundTag t = Compat.itemDataTag(stack);
             t.put(NBT_ROOT, ref);
-            stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                    net.minecraft.world.item.component.CustomData.of(t));
+            Compat.setItemDataTag(stack, t);
         }
         return stack;
     }
@@ -178,10 +174,10 @@ public class RelocationDeedItem extends Item {
         if (!isDeed(stack)) {
             return null;
         }
-        CustomData data = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
+        CompoundTag data = Compat.itemDataTag(stack);
         if (data.isEmpty() || !data.contains(NBT_ROOT)) {
             return null;
         }
-        return data.copyTag().getCompound(NBT_ROOT);
+        return data.getCompound(NBT_ROOT);
     }
 }
