@@ -4,15 +4,15 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown._vanilla.VanillaSpecialRules;
 import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.special.*;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 
-@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.MOD)
 public final class QuestownSpecialRules {
 
-    @SubscribeEvent()
-    public static void register(FMLCommonSetupEvent event) {
+    /**
+     * The mod's own special-rule set - the neutral registration list other mods
+     * can model theirs on. The loader bus binding that calls it at common setup
+     * lives in {@code loader.neo.NeoSpecialRulesInit} (G6 events slice).
+     */
+    public static void registerRules() {
         // This is what other mods should do if they want to implement special rules
 
         // If this rule is enabled for the "extract product" step and the workspot

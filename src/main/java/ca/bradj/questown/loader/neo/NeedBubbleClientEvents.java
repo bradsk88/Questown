@@ -1,5 +1,6 @@
-package ca.bradj.questown.mobs.visitor;
+package ca.bradj.questown.loader.neo;
 
+import ca.bradj.questown.mobs.visitor.NeedBubbleFocus;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.render.BubbleRenderer;
 import ca.bradj.questown.town.rooms.DoorTrouble;

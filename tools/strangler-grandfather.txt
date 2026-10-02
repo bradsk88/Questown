@@ -21,7 +21,6 @@ commands/TestAllCommand.java
 commands/TestCommand.java
 commands/test/AutoTestRunner.java
 commands/test/TestBlueprintRegistry.java
-core/AgentMessageBridge.java
 core/RecipeItemConfig.java
 core/advancements/AdvancementEvents.java
 core/init/AdvancementsInit.java
@@ -29,7 +28,6 @@ core/init/CommandsInit.java
 core/init/ModItemGroup.java
 core/init/ScheduleInit.java
 core/init/TilesInit.java
-integration/QuestownSpecialRules.java
 integration/minecraft/MCTownItem.java
 items/StockRequestClipboardItem.java
 jobs/ResourceJobLoader.java
@@ -39,7 +37,6 @@ jobs/requests/WorkRequest.java
 jobs/requests/WorkRequestSerializer.java
 logic/RoomRecipes.java
 mobs/helperchicken/HelperChickenSunsetChestGoal.java
-mobs/visitor/NeedBubbleClientEvents.java
 mobs/visitor/VisitorMobEntity.java
 town/TownFlagMenus.java
 town/TownKnownBiomes.java

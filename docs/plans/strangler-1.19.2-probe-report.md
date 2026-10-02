@@ -197,7 +197,11 @@ and TownFlags' `OnWake` handler splits into the new `NeoTownWakeEvents` binder d
 to the owner's new public `TownFlags.onSleepFinished(long)` - the wiring is registration-
 identical (@EventBusSubscriber is package-independent), so behavior is unchanged;
 FoundationRegistrationTest's `Class.forName` FQN updated for the moved
-HelperChickenEntityEvents. 62 -> 52, gate green, `compileJava`+`compileTestJava` green.
+HelperChickenEntityEvents. 62 -> 52, gate green, `compileJava`+`compileTestJava` green;
+then round 2: QuestownSpecialRules' rule list becomes the neutral public
+`registerRules()` + new `NeoSpecialRulesInit` binder (class-level
+@EventBusSubscriber dropped), and NeedBubbleClientEvents / AgentMessageBridge move whole
+(git-mv + NeedBubbleFocus sibling import) - 52 -> 49, same verification.
 
 Note (pre-existing, not changed by this pass): `ServerTickProfiler`'s instance
 `@SubscribeEvent` handlers have no bus attachment in either era (no annotation, no
