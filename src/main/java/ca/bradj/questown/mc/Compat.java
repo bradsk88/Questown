@@ -557,6 +557,21 @@ public class Compat {
     }
 
     /**
+     * The loot table with the given id, looked up on the server's reloadable registries.
+     * The 1.20.2+ {@code ResourceKey} + {@code Reloader} registry lookup stays here so no leaf
+     * outside the seam names the registries package; 1.19.2 would read the registry accessor
+     * straight from the server.
+     */
+    public static net.minecraft.world.level.storage.loot.LootTable lootTable(
+            ServerLevel level,
+            ResourceLocation id
+    ) {
+        return level.getServer()
+                .reloadableRegistries()
+                .getLootTable(net.minecraft.resources.ResourceKey.create(Registries.LOOT_TABLE, id));
+    }
+
+    /**
      * A player head whose face resolves to the given UUID (empty texture, the profile's UUID,
      * no authlib properties). The 1.20.4+ data-component surface behind this --
      * {@link net.minecraft.core.component.DataComponents#PROFILE}, a

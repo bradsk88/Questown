@@ -25,12 +25,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.ReloadableServerRegistries;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
@@ -136,7 +132,7 @@ public class ResourceJobLoader {
             for (ItemStack item : ing.getItems()) {
                 Item iconItem = item.getItem();
                 // FIXME: Make "initial request" a function that provides recipe manager as input
-                Function<ServerLevel, Ingredient> initReq = sl -> Ingredient.of(cooked(sl.getRecipeManager(), sl.registryAccess(), item.getItem()));
+                Function<ServerLevel, Ingredient> initReq = sl -> Ingredient.of(cooked(sl.getRecipeManager(), sl, item.getItem()));
                 WorkSpecialRules special = loadRulesV2(obj);
                 if (!obj.get("block").isJsonObject()) {
                     throw new IllegalArgumentException("block must be an object");
@@ -312,12 +308,12 @@ public class ResourceJobLoader {
 
         private Item cooked(
                 RecipeManager rm,
-                RegistryAccess ra,
+                ServerLevel level,
                 Item iconItem
         ) {
             return RecipeRef.recipesOf(rm, RecipeType.SMELTING).stream()
                       .filter(v -> isSingleItemRecipeMatch(iconItem, v))
-                      .findFirst().orElseThrow().getResultItem(ra).getItem();
+                      .findFirst().orElseThrow().getResultItem(level.registryAccess()).getItem();
         }
 
         private static boolean isSingleItemRecipeMatch(
@@ -546,7 +542,7 @@ public class ResourceJobLoader {
             ResultGenerator<MCHeldItem> g = new ResultGenerator<>() {
                 @Override
                 public Iterable<MCHeldItem> generate(ServerLevel level, Collection<MCHeldItem> heldItems) {
-                    Item cookedItem = cooked(level.getRecipeManager(), level.registryAccess(), rawItem);
+                    Item cookedItem = cooked(level.getRecipeManager(), level, rawItem);
                     return ImmutableList.of(MCHeldItem.fromMCItemStack(cookedItem.getDefaultInstance()));
                 }
 
@@ -722,8 +718,7 @@ public class ResourceJobLoader {
                     ServerLevel level,
                     Collection<MCHeldItem> heldItems
             ) {
-                ReloadableServerRegistries.Holder tables = level.getServer().reloadableRegistries();
-                LootTable loot = tables.getLootTable(ResourceKey.create(Registries.LOOT_TABLE, ResourceLocation.tryParse(table)));
+                LootTable loot = Compat.lootTable(level, ResourceLocation.tryParse(table));
                 return Loots.loadFromTables(level, loot, 1, maxResults).stream().map(MCHeldItem::fromTown).toList();
             }
 

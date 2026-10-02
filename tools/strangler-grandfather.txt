@@ -26,7 +26,6 @@ core/init/AdvancementsInit.java
 core/init/ModItemGroup.java
 integration/minecraft/MCTownItem.java
 items/StockRequestClipboardItem.java
-jobs/ResourceJobLoader.java
 jobs/declarative/TestWorldInteraction.java
 jobs/gatherer/Loots.java
 jobs/requests/WorkRequest.java
