@@ -31,13 +31,19 @@ exercise behavior X." Per-scenario depth lives in each executor and in
 
 ## TPS
 
-Vanilla server TPS is fixed at 20; there is **no config knob to raise it past
-20**, so there is **no "faster than realtime" / increased-TPS lever**.
+**Branch-dependent.** The **1.20.6 branch (this one)** has a vanilla tick-rate
+lever: the `/tick` command group — `query`, **`rate <float>`** (set the TPS
+rate; `ServerTickRateManager.setTickRate`), `step`, `sprint`, `stop`, `time`,
+`freeze`, `unfreeze` — stable since 1.20.3 (snapshot `23w43a`). So a held
+realtime run here can tick *faster* than realtime: feed
+`/tick rate 30` from the FIFO (verified in the branch's 1.20.6
+`TickCommand`, 2026-10-12). The **1.19.2 legacy line (Questown-119)** predates
+it: there TPS is fixed at 20 and no lever exists. Either way,
 `warpTime` does not run ticks faster — it skips them and simulates the end
 state, so it **bypasses** the realtime behavior a realtime proof depends on and
-cannot substitute for it. To prove a realtime behavior you run real ticks (the
-realtime watch); `warpTime` is the skip-and-simulate end-state tool behind the
-single-job tests (`cook`/`farmer`).
+cannot substitute for it, *even on 1.20.6*. To prove a realtime behavior you
+run real ticks (the realtime watch); `warpTime` is the skip-and-simulate
+end-state tool behind the single-job tests (`cook`/`farmer`).
 
 ## Related
 
