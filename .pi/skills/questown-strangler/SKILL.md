@@ -80,6 +80,12 @@ before the next leaf.
 - A green `./gradlew build` is red by default here (`ChickenArcHintsTest`
   is a deliberate failing marker). Gate on `compileJava`/`jar` executed,
   or `./gradlew build -x test`.
+- A seam-token type must not **substring-match a bare-name marker**. `MapColor` is a bare name (not a
+  `Button.builder`-style call), so a leaf naming a `CompatMapColor` enum is *still* a gate hit — the
+  gate's `MapColor` substring matches it (verified: it kept every migrated block flagged until the
+  enum was renamed). Name the token to dodge the collision: `CompatBlockColor` + `Compat.blockProps(...)`
+  as the form-owner (the enum *body* may name `MapColor`; it lives in the `mc/` seam family the gate
+  admits).
 
 ## Remaining SAFE leaves to land (as of 2026-10-02)
 

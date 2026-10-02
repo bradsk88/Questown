@@ -27,6 +27,7 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -412,6 +413,16 @@ public class Compat {
 
     public static void resetShaderColor() {
         com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+    }
+
+    /**
+     * The block-property form-owner for a strangler colour token: builds the {@code Properties} a
+     * block's map colour attaches to, so a block ctor names {@link CompatBlockColor} (not the strangler-
+     * marked {@code MapColor}) and the version-bound {@code Properties.of().mapColor(...)} form stays
+     * in the seam. See {@link CompatBlockColor}.
+     */
+    public static BlockBehaviour.Properties blockProps(CompatBlockColor color) {
+        return BlockBehaviour.Properties.of().mapColor(color.mapColor());
     }
 
     /**

@@ -21,13 +21,13 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.material.MapColor;
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.CompatBlockColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -45,7 +45,7 @@ public class AxeRackBlock extends Block implements InsertedItemAware, EntityBloc
 
     public AxeRackBlock(
     ) {
-        super(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1.0F, 10.0F).noOcclusion());
+        super(Compat.blockProps(CompatBlockColor.WOOD).strength(1.0F, 10.0F).noOcclusion());
         this.registerDefaultState(this.stateDefinition.any());
     }
 

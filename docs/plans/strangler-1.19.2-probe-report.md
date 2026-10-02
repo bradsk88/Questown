@@ -60,6 +60,15 @@ Seam to finish: a `Compat.blockProperties(mapColor)` (or equivalent) so block ct
 one form, and `Compat`/existing `jobs/gatherer/Loots` owning the loot builder, plus a
 `Compat` BE tag-round-trip pair (provider goes inside).
 
+MapColor part shipped: `mc/CompatBlockColor` (a version-neutral enum) + `Compat.blockProps(CompatBlockColor)`.
+The enum is named *Block*Color, not `MapColor`, because the gate's bare `MapColor` marker would substring-match a
+`CompatMapColor` type in a leaf (and keep it flagged). 7 constant block leaves de-grandfathered (SaplingTester,
+AxeRack, FalseDoor, FalseWall, FishingStation, FoodDisplay, Mineshaft); grandfather 107 -> 100, gate green.
+Remaining G2 mapColor: HospitalBedBlock (a *dynamic* `state -> MapColor` lambda, a different shape) + the 10
+`LootParams` blocks (BlacksmithsTable, BowlRack, BreadOven, JobBoard, OreProcessing, Plate, SeedBin, SmallSoupPot,
+SoupPot, WelcomeMat) which also carry `LootParams`, plus BlockOfProgress (data-components) and TownFlagBlock
+(HolderLookup/ItemInteractionResult/data-components) — the multi-marker files that need their other seams first.
+
 ### G3. Items and data components (Component/NBT, 12 files)
 
 `DataComponents`/`CustomData` (1.20 component stack) directly in:
