@@ -1,5 +1,8 @@
 package ca.bradj.questown.blocks;
 
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
+
 import ca.bradj.questown.QT;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableList;
@@ -17,14 +20,12 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,10 +46,10 @@ public class JobBoardBlock extends RoomBlock {
     public JobBoardBlock(
     ) {
         super(
-                BlockBehaviour.Properties
-                        .of().mapColor(MapColor.COLOR_BROWN)
+                Compat.P
+                        .of().mapColor(MapC.COLOR_BROWN)
                         .strength(1.0F, 10.0F).
-                        noOcclusion()
+                        noOcclusion().impl()
         );
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }

@@ -1,5 +1,8 @@
 package ca.bradj.questown.blocks;
 
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
+
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.JobID;
 import net.minecraft.core.BlockPos;
@@ -9,9 +12,7 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -24,7 +25,7 @@ public class BlockOfProgress extends Block {
 
     public BlockOfProgress(
     ) {
-        super(BlockBehaviour.Properties.of().mapColor(MapColor.SNOW).strength(1.0F, 10.0F).noOcclusion());
+        super(Compat.P.of().mapColor(MapC.SNOW).strength(1.0F, 10.0F).noOcclusion().impl());
     }
 
     @Override

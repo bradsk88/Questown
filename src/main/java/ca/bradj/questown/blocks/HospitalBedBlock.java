@@ -5,6 +5,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.entity.HospitalBedBlockEntity;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -33,7 +34,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.AABB;
@@ -72,9 +72,19 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
     private final DyeColor color;
 
     public HospitalBedBlock() {
-        this(DyeColor.BLACK, BlockBehaviour.Properties.of().mapColor((p_152613_) -> {
-            return p_152613_.getValue(BedBlock.PART) == BedPart.FOOT ? DyeColor.BLACK.getMapColor() : MapColor.WOOL;
-        }).sound(SoundType.WOOD).strength(0.2F).noOcclusion());
+        this(
+            DyeColor.BLACK,
+            Compat.P.of()
+                .mapColor((p_152613_) -> {
+                    return p_152613_.getValue(BedBlock.PART) == BedPart.FOOT
+                        ? MapC.BLACK.vanilla()
+                        : MapC.WOOL.vanilla();
+                })
+                .sound(SoundType.WOOD)
+                .strength(0.2F)
+                .noOcclusion()
+                .impl()
+        );
     }
 
     public HospitalBedBlock(DyeColor p_49454_, BlockBehaviour.Properties p_49455_) {

@@ -6,7 +6,6 @@ blocks/BlacksmithsTableBlock.java
 blocks/BlockOfProgress.java
 blocks/BowlRackBlock.java
 blocks/BreadOvenBlock.java
-blocks/HospitalBedBlock.java
 blocks/JobBoardBlock.java
 blocks/OreProcessingBlock.java
 blocks/PlateBlock.java

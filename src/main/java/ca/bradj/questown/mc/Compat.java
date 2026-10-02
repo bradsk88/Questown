@@ -583,6 +583,78 @@ public class Compat {
     }
 
     /**
+     * A fluent block-properties chain that carries the 1.20 map-colour API (and the 1.19.2
+     * {@code Properties#color(MaterialColor)} equivalent when porting). Everything else is a
+     * pass-through, so a leaf keeps the vanilla chain shape - only the map colour goes through
+     * the {@link MapC} alias. The 1.20-only {@code MapColor} type never appears in a leaf.
+     */
+    public static final class P {
+
+        private final net.minecraft.world.level.block.state.BlockBehaviour.Properties props;
+
+        private P(net.minecraft.world.level.block.state.BlockBehaviour.Properties props) {
+            this.props = props;
+        }
+
+        public static P of() {
+            return new P(net.minecraft.world.level.block.state.BlockBehaviour.Properties.of());
+        }
+
+        /** The block's static map colour (1.20.x {@code Properties#mapColor(MapColor)}). */
+        public P mapColor(MapC c) {
+            props.mapColor(c.vanilla());
+            return this;
+        }
+
+        /** A per-state map colour (1.20.x {@code Properties#mapColor(Function<BlockState, MapColor>)}). */
+        public P mapColor(
+                java.util.function.Function<
+                    net.minecraft.world.level.block.state.BlockState,
+                    net.minecraft.world.level.material.MapColor
+                > f
+        ) {
+            props.mapColor(f);
+            return this;
+        }
+
+        public P strength(float destroyTime, float explosionResistance) {
+            props.strength(destroyTime, explosionResistance);
+            return this;
+        }
+
+        public P strength(float destroyTime) {
+            props.strength(destroyTime);
+            return this;
+        }
+
+        public P noOcclusion() {
+            props.noOcclusion();
+            return this;
+        }
+
+        public P noCollission() {
+            props.noCollission();
+            return this;
+        }
+
+        public P sound(net.minecraft.world.level.block.SoundType s) {
+            props.sound(s);
+            return this;
+        }
+
+        public P lightLevel(
+                java.util.function.ToIntFunction<net.minecraft.world.level.block.state.BlockState> f
+        ) {
+            props.lightLevel(f);
+            return this;
+        }
+
+        public net.minecraft.world.level.block.state.BlockBehaviour.Properties impl() {
+            return props;
+        }
+    }
+
+    /**
      * A player head whose face resolves to the given UUID (empty texture, the profile's UUID,
      * no authlib properties). The 1.20.4+ data-component surface behind this --
      * {@link net.minecraft.core.component.DataComponents#PROFILE}, a

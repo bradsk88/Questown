@@ -5,6 +5,7 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
@@ -21,13 +22,11 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
-import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -46,10 +45,10 @@ public class SmallSoupPotBlock extends Block implements InsertedItemAware, State
     public SmallSoupPotBlock(
     ) {
         super(
-                BlockBehaviour.Properties
-                        .of().mapColor(MapColor.TERRACOTTA_BROWN)
+                Compat.P
+                        .of().mapColor(MapC.TERRACOTTA_BROWN)
                         .strength(1.0F, 10.0F)
-                        .noOcclusion()
+                        .noOcclusion().impl()
         );
         this.registerDefaultState(this.stateDefinition.any()
                                                       .setValue(LEVEL, 0)

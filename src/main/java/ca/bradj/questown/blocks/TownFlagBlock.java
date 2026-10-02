@@ -13,6 +13,7 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
@@ -43,14 +44,12 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
@@ -87,9 +86,9 @@ public class TownFlagBlock extends BaseEntityBlock {
 
     public TownFlagBlock() {
         super(
-                BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY)
+                Compat.P.of().mapColor(MapC.COLOR_GRAY)
                                          .strength(10.0F, 1200.0F)
-                                         .noOcclusion()
+                                         .noOcclusion().impl()
         );
         this.registerDefaultState(this.stateDefinition.any()
                                                        .setValue(INACTIVE, false)
