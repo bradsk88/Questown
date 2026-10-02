@@ -2,11 +2,9 @@ package ca.bradj.questown.jobs.requests;
 import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.items.QTNBT;
-import net.minecraft.core.Registry;
-import net.minecraft.core.registries.Registries;
+import ca.bradj.questown.mc.Compat;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.tags.TagKey;
 
 public class WorkRequestSerializer {
     public static final WorkRequestSerializer INSTANCE = new WorkRequestSerializer();
@@ -24,7 +22,7 @@ public class WorkRequestSerializer {
 
     public WorkRequest deserialize(CompoundTag t) {
         if (QTNBT.contains(t, "tag")) {
-            return WorkRequest.of(new TagKey<>(Registries.ITEM, QTNBT.getResourceLocation(t, "tag")));
+            return WorkRequest.of(Compat.itemTag(QTNBT.getResourceLocation(t, "tag")));
         }
         if (QTNBT.contains(t, "item")) {
             return WorkRequest.of(Loader.itemFromId(QTNBT.getResourceLocation(t, "item")));

@@ -1,6 +1,7 @@
 _vanilla/TreeFeatureResolver.java
 _vanilla/VoidLevel.java
 _vanilla/entities/FishingHook.java
+jobs/declarative/TestWorldInteraction.java
 blocks/BlacksmithsTableBlock.java
 blocks/BlockOfProgress.java
 blocks/BowlRackBlock.java
@@ -21,12 +22,8 @@ commands/test/TestBlueprintRegistry.java
 core/init/ModItemGroup.java
 integration/minecraft/MCTownItem.java
 items/StockRequestClipboardItem.java
-jobs/declarative/TestWorldInteraction.java
 jobs/gatherer/Loots.java
-jobs/requests/WorkRequest.java
-jobs/requests/WorkRequestSerializer.java
 mobs/visitor/VisitorMobEntity.java
 town/TownKnownBiomes.java
 town/entity/TownFlagBlockEntity.java
-town/entity/TownQuests.java
 town/entity/TownQuestsLootTest.java

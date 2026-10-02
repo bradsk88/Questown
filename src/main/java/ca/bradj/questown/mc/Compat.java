@@ -571,6 +571,17 @@ public class Compat {
                 .getLootTable(net.minecraft.resources.ResourceKey.create(Registries.LOOT_TABLE, id));
     }
 
+    /** Whether a loot table with the given id exists on the server (loot-table registry keys). */
+    public static boolean hasLootTable(
+            ServerLevel level,
+            ResourceLocation id
+    ) {
+        return level.getServer()
+                .reloadableRegistries()
+                .getKeys(Registries.LOOT_TABLE)
+                .contains(id);
+    }
+
     /**
      * A player head whose face resolves to the given UUID (empty texture, the profile's UUID,
      * no authlib properties). The 1.20.4+ data-component surface behind this --

@@ -4,7 +4,6 @@ import ca.bradj.questown.loader.Loader;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -78,7 +77,7 @@ public class WorkRequest {
             throw new IllegalArgumentException("Invalid work request on buffer.");
         }
         if (i.isEmpty()) {
-            return new WorkRequest(new TagKey<>(Registries.ITEM, new ResourceLocation(t)), null);
+            return new WorkRequest(Compat.itemTag(new ResourceLocation(t)), null);
         }
         return new WorkRequest(null, Loader.itemFromId(new ResourceLocation(i)));
     }
