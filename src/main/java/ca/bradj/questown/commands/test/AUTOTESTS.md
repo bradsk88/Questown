@@ -38,7 +38,25 @@ rate; `ServerTickRateManager.setTickRate`), `step`, `sprint`, `stop`, `time`,
 realtime run here can tick *faster* than realtime: feed
 `/tick rate 30` from the FIFO (verified in the branch's 1.20.6
 `TickCommand`, 2026-10-12). The **1.19.2 legacy line (Questown-119)** predates
-it: there TPS is fixed at 20 and no lever exists. Either way,
+it: there TPS is fixed at 20 and no lever exists.
+
+**The upper limit is measured, not set.** Vanilla only clamps the *minimum*
+(20) — no maximum; the ceiling is where the *effective* rate stops tracking the
+target under load. Sweep (2026-10-15, held `self_sufficiency`, Dev near flag,
+this box): **20 / 30 / 60 / 120 / 200 / 240 t/s held exactly at target, zero
+`Can't keep up`** (effective = target across 55–60s spans, counted on the 200-tick
+`tick diag` cycle); **270 t/s sustained a ~3% shortfall (261.8 eff, stalls on both
+passes)**; 255 and 300 *failed* on first pass (232–244 eff, stalls) but **held on
+clean retest** (254.5 and 300.0 eff, no new stalls) once the town's load settled.
+The limit is therefore **load-dependent, not rate-dependent** — the server
+stutters when peak-town-load cost × rate exceeds the per-tick budget, and 270 t/s
+is where a town *with* load hits it on this box, while a settled town holds
+beyond it. **Reading the limit:** sweep the rate up *during* the busiest load
+window you actually care about (not a settled one) and take the highest rate with
+zero `Can't keep up` across that window; expect the number to shift ±10–30 t/s
+with town and box load. Working recommendation: **200 t/s for speed with zero
+stalls under observed load**; treat 250+ as stutter-prone, 300+ as headroom only.
+Either way,
 `warpTime` does not run ticks faster — it skips them and simulates the end
 state, so it **bypasses** the realtime behavior a realtime proof depends on and
 cannot substitute for it, *even on 1.20.6*. To prove a realtime behavior you
