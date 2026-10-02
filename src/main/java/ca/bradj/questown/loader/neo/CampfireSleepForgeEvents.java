@@ -1,8 +1,9 @@
-package ca.bradj.questown.items;
+package ca.bradj.questown.loader.neo;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
+import ca.bradj.questown.items.CampfireSleepHandler;
 import ca.bradj.questown.QT;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;

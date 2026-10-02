@@ -1,7 +1,8 @@
-package ca.bradj.questown.mobs.helperchicken;
+package ca.bradj.questown.loader.neo;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.EntitiesInit;
+import ca.bradj.questown.mobs.helperchicken.HelperChickenEntity;
 import net.minecraft.world.entity.animal.Chicken;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent;

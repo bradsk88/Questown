@@ -1,7 +1,8 @@
-package ca.bradj.questown.town;
+package ca.bradj.questown.loader.neo;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.town.TownVillagerMoods;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;

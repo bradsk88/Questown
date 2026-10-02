@@ -1,5 +1,6 @@
-package ca.bradj.questown.items;
+package ca.bradj.questown.loader.neo;
 
+import ca.bradj.questown.items.TownWand;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.mc.Compat;

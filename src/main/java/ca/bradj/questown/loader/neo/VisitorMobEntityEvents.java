@@ -1,5 +1,6 @@
-package ca.bradj.questown.mobs.visitor;
+package ca.bradj.questown.loader.neo;
 
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.EntitiesInit;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;

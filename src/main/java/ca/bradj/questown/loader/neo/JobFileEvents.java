@@ -1,4 +1,4 @@
-package ca.bradj.questown.core;
+package ca.bradj.questown.loader.neo;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.network.QuestownNetwork;

@@ -185,11 +185,25 @@ mixing the two.
 
 G6 decision (2026-10-13, per `loader/COMPLEX.md` "The rule"): the loader seam owns all
 loader imports - main code programs the neutral `loader/` surface, binders move to
-`loader/neo` (the QuestownHudEvents / GuiLayoutCheckClientEvents precedent). One
-mechanical-exception class follows the joml precedent: `net.neoforged.api.distmarker`
+`loader/neo` (the QuestownHudEvents / GuiLayoutCheckClientEvents precedent). Two passes
+landed: (1) the one mechanical-exception class - `net.neoforged.api.distmarker`
 (@OnlyIn/@Dist) survives in the 1.19.2 golden in the same leaves with only the package
-renamed, so the marker is narrowed to `net.neoforged.(bus|fml|neoforge)` and the seven
-distmarker-only leaves de-grandfathered (69 -> 62), gate green.
+renamed, so the marker narrows to `net.neoforged.(bus|fml|neoforge)` and the seven
+distmarker-only leaves de-grandfather (69 -> 62); (2) the nine pure event binders
+(TownEvents, IntegrationForgeEvents, VisitorMobEntityEvents, RegistryEvents, JobFileEvents,
+HelperChickenEntityEvents, ServerTickProfiler, CampfireSleepClient/ForgeEvents) move
+whole into `loader/neo` (git-mv + package line + same-package sibling imports restored),
+and TownFlags' `OnWake` handler splits into the new `NeoTownWakeEvents` binder delegating
+to the owner's new public `TownFlags.onSleepFinished(long)` - the wiring is registration-
+identical (@EventBusSubscriber is package-independent), so behavior is unchanged;
+FoundationRegistrationTest's `Class.forName` FQN updated for the moved
+HelperChickenEntityEvents. 62 -> 52, gate green, `compileJava`+`compileTestJava` green.
+
+Note (pre-existing, not changed by this pass): `ServerTickProfiler`'s instance
+`@SubscribeEvent` handlers have no bus attachment in either era (no annotation, no
+addListener; the NeoLoader comment says "join the same pattern in the events slice" -
+never done). The move preserves that exact wiring, so the gap is carried forward, not
+created.
 
 ### G7. Vanilla payload/packet plumbing (4 files outside the network seam)
 

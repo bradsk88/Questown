@@ -19,7 +19,7 @@ public class TownVillagerMoods {
     static Map<ResourceLocation, Integer> buffs;
     private static boolean staticInitialized = false;
 
-    static void staticInitialize() {
+    public static void staticInitialize() {
         ImmutableMap.Builder<ResourceLocation, Integer> b = ImmutableMap.builder();
 
         b.put(MoodEffects.COMFORTABLE_EATING, 5);

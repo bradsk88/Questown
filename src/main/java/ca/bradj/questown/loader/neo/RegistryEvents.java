@@ -1,6 +1,7 @@
-package ca.bradj.questown.town.rewards;
+package ca.bradj.questown.loader.neo;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.town.rewards.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.registries.NewRegistryEvent;
