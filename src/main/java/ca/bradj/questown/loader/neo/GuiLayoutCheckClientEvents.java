@@ -1,7 +1,9 @@
-package ca.bradj.questown.gui;
+package ca.bradj.questown.loader.neo;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.gui.GuiLayoutCapture;
+import ca.bradj.questown.gui.GuiLayoutLinter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.AbstractWidget;

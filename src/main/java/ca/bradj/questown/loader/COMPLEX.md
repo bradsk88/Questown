@@ -16,7 +16,12 @@ different `LoaderApi` impl, with zero changes to `loader/` or to Questown core.
   `Loader.handlerOfBlockEntity(...)`, ...).
 - per-loader code lives in `loader.neo/` (the `@Mod` entry, the `LoaderApi`
   impl, the loader event binders). That is the only place a loader import is
-  allowed.
+  allowed. `@EventBusSubscriber` client event wiring belongs here with the
+  other binders (`ItemsInteract`, `NeoMouseScrollDispatch`): `QuestownHudEvents`
+  (the HUD-over-blur redraw for the Questown screens) and
+  `GuiLayoutCheckClientEvents` (the dev gui-lint) moved in from `gui/` on
+  2026-10-13 for this reason (strangler grandfather 81 → 79; the bus is
+  package-independent, so the move is wiring-only and both were verified live).
 
 ## Type map (neutral → NeoForge)
 

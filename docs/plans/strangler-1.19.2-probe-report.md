@@ -61,8 +61,13 @@ through the new `Compat.itemTag(ResourceLocation)` seam - see `gui/COMPLEX.md`);
 grandfather 85 → 84, gate green. The `villager/advancements` trio then landed (the
 screen onto `CompatScreen` with the blurred background in `renderScreenSurface` and
 content in `renderScreenContent`; the content + widget files onto `RenderContext`;
-see `gui/COMPLEX.md`); grandfather 84 → 81, gate green. Remaining G1: the
-render-layering family (QuestownHudEvents).
+see `gui/COMPLEX.md`); grandfather 84 → 81, gate green. The `gui/` client event
+subscribers (`QuestownHudEvents` HUD-over-blur redraw, `GuiLayoutCheckClientEvents`
+dev gui-lint) moved into the `loader/neo` seam (package-independent bus, both
+verified live) — grandfather 81 → 79, gate green. Remaining `gui/`: the
+`AbstractVillagerMenu` + `LockableInventoryWrapper` item-handler pair (a seam-helper
+migration, not a package move — the menus subclass the former and use its protected
+package-local fields; see `loader/COMPLEX.md`), then the G2–G7 clusters.
 
 ### G2. Block and block-entity definitions (blocks/, _vanilla/, 25 files)
 

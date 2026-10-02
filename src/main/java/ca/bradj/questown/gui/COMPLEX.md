@@ -295,10 +295,23 @@ on all seven canonical screens (active tab vision-confirmed), and `run.sh diff` 
 every screen in fixture-drift range (`skills` - the screen rendered by this leaf - at
 0.51% full-frame).
 
-What remains in G1 is the render-layering family (QuestownHudEvents HUD re-render).
-It must keep the blur + HUD layering verified against `tools/porttest/goldens/`; the
-porttest oracle in `tools/porttest/run.sh` is the way to catch a regression on this
-machine. The SAFE-tier confirm screens (VillagerBlockofProgressScreen,
+The render-layering family is resolved (2026-10-13, 81 → 79): `QuestownHudEvents`
+(the HUD-over-blur redraw this package's screens depend on) and
+`GuiLayoutCheckClientEvents` (the dev gui-lint) are both `@EventBusSubscriber`
+neoforged wiring and now live in `loader/neo` (the seam package - the same home
+`ItemsInteract` and `NeoMouseScrollDispatch` already hold). A package move of
+the wiring only: the bus is package-independent, so both still register
+(verified live - the gui-lint line fires and the porttest content gate confirms
+the HUD-over-blur layering on the affected screens). Neither file's logic
+changed; the layering it keeps is still the one `run.sh` diffs against
+`tools/porttest/goldens/`. The only `gui/` neoforged files left are
+`AbstractVillagerMenu` and `LockableInventoryWrapper`; they are NOT package-
+movable (the villager menus subclass `AbstractVillagerMenu` and read its
+protected package-local fields - five screens break the moment it leaves the
+package). Their leak is only the item-handler (`IItemHandler`/
+`SlotItemHandler`/`InvWrapper`), which is the neutral `loader/ItemHandler`
+seam to route through in its own leaf - see `loader/COMPLEX.md`.
+The SAFE-tier confirm screens (VillagerBlockofProgressScreen,
 TownBlockofProgressScreen, CreateStockRequestScreen, WorkScreen, AddWorkScreen,
 FlagCraftingScreen, JobChangeConfirmScreen)
 and the render-argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs` are done,

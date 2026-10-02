@@ -28,10 +28,12 @@ neoforged → G5 renderers → G7 client events. Each cluster has a note in
 `docs/plans/strangler-1.19.2-probe-report.md`; read the note for the
 cluster you are opening before touching a file.
 
-As of 2026-10-13 the txt is at 81 entries. The G1 SAFE-tier confirm screens
+As of 2026-10-13 the txt is at 79 entries. The G1 SAFE-tier confirm screens
 (Work, AddWork, FlagCrafting, JobChange, Bop×2, CreateStock, QuestRemove), the render-
 argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs`, `Ingredients`,
-and the `villager/advancements` widget trio are landed (gate now ignores `.md`
+the `villager/advancements` widget trio, and the two client event subscribers
+(QuestownHudEvents' HUD-over-blur redraw + GuiLayoutCheckClientEvents' dev gui-lint,
+moved into the `loader/neo` seam - see below) are landed (gate now ignores `.md`
 files so `gui/COMPLEX.md` prose is not a leak). `gui/COMPLEX.md` is the per-screen
 pattern reference - read it before the next leaf.
 
@@ -118,11 +120,24 @@ bank drive in fixture-drift range) and the `villager/advancements` trio
 `Screen.renderBackground` used to paint; 84 → 81; gui-lint OK on this screen,
 content gate + bank diff on all seven canonical screens in fixture-drift range.
 Note: `renderTooltips`'s 3rd/4th params are the pane origin, not the mouse -
-renamed `paneX`/`paneY` to keep the swap visible).
+renamed `paneX`/`paneY` to keep the swap visible)
 
-Still to do first in G1: the render-layering family (QuestownHudEvents HUD
-re-render), which must verify against `tools/porttest/goldens/` via the
-porttest oracle before de-grandfathering.
+and the two `gui/` client event subscribers (2026-10-13: `QuestownHudEvents`
+- the HUD-over-blur redraw for the 1.19.2-parity screen family - and
+`GuiLayoutCheckClientEvents` - the dev gui-lint - both `@EventBusSubscriber`
+neoforged wiring, moved verbatim into `loader/neo` (the seam package; the
+same home `ItemsInteract`/`NeoMouseScrollDispatch` already hold), 81 → 79;
+bus registration is package-independent, so a live gui-lint line + the
+porttest content gate's HUD-layering confirms both still fire). The render-
+layering family is resolved by this move - there is no G1 gui file left.
+
+Still to do in the `gui/` package: `AbstractVillagerMenu` +
+`LockableInventoryWrapper` - NOT a package move (the menus subclass
+`AbstractVillagerMenu` and use its protected package-local fields; five gui
+screens break the moment it leaves the package). Their neoforged surface is
+only the item-handler (`IItemHandler`/`SlotItemHandler`/`InvWrapper`) - route
+it through the neutral `loader/ItemHandler` seam (see `loader/COMPLEX.md`
+"item-handler capability") in its own leaf with the full evidence bar.
 
 Then G2/G4 multi-marker files (HospitalBedBlock's dynamic MapColor lambda,
 the LootParams blocks, TownFlagBlock/BlockOfProgress data-components,

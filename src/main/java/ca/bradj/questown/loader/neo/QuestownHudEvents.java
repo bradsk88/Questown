@@ -1,6 +1,9 @@
-package ca.bradj.questown.gui;
+package ca.bradj.questown.loader.neo;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.gui.AbstractPagedCardScreen;
+import ca.bradj.questown.gui.InventoryAndStatusScreen;
+import ca.bradj.questown.gui.VillagerStatsScreen;
 import ca.bradj.questown.gui.villager.advancements.VillagerAdvancementsScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
