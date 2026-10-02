@@ -89,7 +89,7 @@ public final class VillagerMenusPayload {
         buf.writeInt(stats.experienceTarget());
         buf.writeFloat(stats.moodPercent());
         buf.writeFloat(stats.damageLevelPercent());
-        // econ: wire-dead today (VillagerEconomicsMenu.write is a no-op)
+        // econ is passed through, not serialized (see note on VillagerEconomicsMenu)
         buf.writeBoolean(showBlockOfProgressTab);
         buf.writeBoolean(jobChangeAlreadyPending);
         buf.writeVarInt(slotLocks.size());
@@ -121,7 +121,8 @@ public final class VillagerMenusPayload {
         VillagerStatsData stats = new VillagerStatsData(
                 buf.readFloat(), buf.readInt(), buf.readInt(), buf.readFloat(), buf.readFloat()
         );
-        // econ is wire-dead (VillagerEconomicsMenu.read returns none())
+        // econ is passed through, not serialized: economics data flows via the
+        // separate `EconomicsUpdate` message, so decoded payloads always carry none().
         VillagerEconomicsData econ = VillagerEconomicsData.none();
         boolean showBlockOfProgressTab = buf.readBoolean();
         boolean jobChangeAlreadyPending = buf.readBoolean();

@@ -44,15 +44,10 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
         this.showBlockOfProgressTab = showBlockOfProgressTab;
     }
 
-    public static VillagerEconomicsData read(FriendlyByteBuf buf) {
-        return new VillagerEconomicsData(ImmutableList.of());
-    }
-
-    public static void write(
-            VillagerEconomicsData data,
-            FriendlyByteBuf buf
-    ) {
-    }
+    // NOTE: economics data is NOT part of the villager-menu wire — it flows
+    // via the separate `EconomicsUpdate` message sent before openScreen.
+    // There is deliberately no read/write codec here, and there must not be
+    // one added: `VillagerMenusPayload` is the single wire source of truth.
 
     @Override
     public ItemStack quickMoveStack(
