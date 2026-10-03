@@ -156,8 +156,31 @@ the whole budget, and a "rate ceiling" you measure there is really the cost of a
 job set the feature does not give the cook. Read staffing (what jobs are unlocked for
 that job, and what they can make with what is in the world) before concluding anything
 about the tick rate (5-day run, 2026-10-15: cook on `extract` with
-`cooldown_ticks: 50` re-selected `extract → extract` ~every 50 ticks; dev fix
-= unlock ≥2 jobs at cook staffing via a job-JSON tag).
+`cooldown_ticks: 50` re-selected `extract → extract` ~every 50 ticks; fix
+shipped 2026-10-16: `extract`+`fuel` unlocked for any new cook via the
+`unlocked_with_root_job` JSON flag, plus `cook/mutton` granted to the
+onboarding cook — see `.scratch/cook-skill-unlock/`).
+
+— but a re-select loop is **not always a staffing problem**; it can be **supply
+starvation** (the townie *has* the jobs, none workable — no item, no site, can't
+deposit). The fastest discriminator, before any job-JSON read, is the townie's
+**ProductionStatus** via `_qtdev inspect villagers <pos>`: `NO_SUPPLIES` (has the
+job, lacks the item) / `NO_JOBSITE` (no workable block at all) / `NO_SPACE`
+(can't deposit). It says supply-vs-staffing in one command. (This session, 2026-10:
+the cook loop *looked* like a job-count problem, but `inspect` showed `NO_JOBSITE`
+for `extract` and `NO_SUPPLIES` for `fuel` — starved of coal + a loaded furnace,
+not short of jobs; the `unlocked_with_root_job` fix was valid but orthogonal to
+the storm.)
+
+**When it IS the staffing set, enumerate the staffing PATHS before editing.**
+A cook is staffed by ≥2 routes (`register` on spawn, `ChangeJobReward` on
+job-change — the self_sufficiency cook takes this one), and the onboarding
+identity is *not* a path but a **quest event** (owner adoption in
+`processJobChanges`). A per-root grant belongs on the universal path; an
+onboarding-only grant belongs on the quest event. Putting the onboarding grant
+in `ChangeJobReward` leaks it to every job change (the 2026-10-16 near-miss).
+Check `grep -n 'changeJobForVillager\|register(\|processJobChanges'` before
+assuming one path.
 
 **The observation standard.** The two modes have different rules. Verification
 (this skill's main job) may read code freely: code says what to *measure*. A
