@@ -26,6 +26,8 @@ Do not make design decisions without first consulting the local docs/ files. The
 
 Before asserting a domain fact as a constraint or a negative — "villagers can't eat X", "no gate exists for Y", "job Z works this way" — grep `CONTEXT.md` and `docs/adr/` for the term first. The two times a session asserted one of these from a single code read (raw food, the `canFit` start-gate), the correct model was already in `CONTEXT.md` or the selection path, and the dev had to correct it. A single-file or single-call-site read is not grounds for "X doesn't exist."
 
+The same rule for **job mechanics and item producers/consumers** (three false assertions were user-caught on this in one session: "hunts need live mobs", "swords have no producer", "top need = swords shortage"): the data layer is the oracle, and the job *name* is not the schema — `hunter/sword` is a hunter that *carries* a sword, not one that makes them. First move: `python3 scripts/job-producers.py <item>` (OUTPUT = `initial_request`+`result`, biome_loot = the union of its tables; INPUT = `work_states`; tools are held, not produced), then read that job's JSON in `data/questown/questown_jobs/` and the Leaver section of `CONTEXT.md`. Skill: `.pi/skills/questown-item-producers`.
+
 Do not build large functions unless there is a compelling reason to do so.
 
 Do not choose nesting over early returns.

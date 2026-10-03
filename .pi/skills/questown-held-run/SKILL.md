@@ -27,6 +27,13 @@ not staff a cook). The full mapping, the `warp` != tick-rate distinction, and
 the "stuck at roster 0" read-out live in
 `questown-behavior-verify` under *Scenario selection*.
 
+**World-generation deadlocks are world facts, not code bugs.** If the whole
+roster sits `CANT_REACH` (watch line shows every townie `*:CANT_REACH`) for
+several minutes, that is an arena-nav failure of *that* world: kill it and
+re-seed a fresh one. Do not debug navigation, do not count it as a result
+(server8, 2026-10-03: 3/3 townies blocked 10+ min; the reseeded world
+worked fine).
+
 **The observation standard.** In this context the agent plays as a new player:
 it may use only what the game surfaces (the server log, the `inspect` tabs,
 the chicken's narration, broadcasts, chat). This skill documents what each
