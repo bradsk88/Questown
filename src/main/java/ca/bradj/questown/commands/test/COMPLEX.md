@@ -200,6 +200,19 @@ which returns null for a tag.
 
 ## The `village/self_sufficiency` watchtower seed
 
+**Stall diagnostic (DEV-DIAG, grep `stall score-dump`).** The watch loop's
+heartbeat (`ticks % 400`) also runs a one-shot latch:
+when 2+ townies sit in `seeking_work` for 3+ consecutive beats (~60s real),
+it dumps `TownPossibleWork.scoreDump(root)` per stalled root (per-job
+scores, gate-failure reasons, board requests) to the server log and never
+fires again. Added because three fresh seeds (runs 10–12) sat in that
+stall with no `hunter/sword` transition while comparable worlds (3b, 13)
+hunted within ~90s, and the hold-mode server reads neither the console nor
+the FIFO (`runServer` drops the task's `standardInput`; server `fd 0` is
+`/dev/null`), so the only log-reachable window into the work-seeker's
+scoring is the executor's own. Read-only except the latch state; healthy
+worlds never trigger it (run 13). See `.scratch/gannet-top-need/top-need-measure.md`
+
 A self-driving realtime scenario that plays a just-past-onboarding town forward
 and surfaces soft-locks (a watchtower, not a pass/fail gate). It differs from
 `village/growth` in two load-bearing ways:

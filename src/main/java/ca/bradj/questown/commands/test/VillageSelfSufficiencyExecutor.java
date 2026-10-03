@@ -148,6 +148,9 @@ public final class VillageSelfSufficiencyExecutor {
     /** True once the first night has been slept through; reported as a milestone
      *  in the daily report. */
     private boolean firstNightPassed = false;
+    // DEV-DIAG: stall score-dump, 2026-10-03 (wigeon) — keep/remove per handoff
+    private int seekingStallPasses = 0;
+    private boolean seekingStallDiagEmitted = false;
     /** Milestones, latched once and reported from then on: a townie holding a
      *  cook job (the food chain is producing cooked food) and/or a farmer job. */
     private boolean cookUnlocked = false;
@@ -770,6 +773,7 @@ public final class VillageSelfSufficiencyExecutor {
         // Periodic heartbeat so a held run is readable: roster, jobs, needs.
         if (ticks % 400 == 0) {
             heartbeat();
+            maybeEmitSeekingStallDiag(); // DEV-DIAG: stall score-dump, 2026-10-03 (wigeon)
         }
         // Sleep through nights: the town's overnight phase (job changes taking
         // effect, the chicken arc's overnight steps) requires night passage, but a
@@ -1071,6 +1075,50 @@ public final class VillageSelfSufficiencyExecutor {
                     .append(need == null || need.equals("NONE") ? "" : ":" + need);
         }
         msg("watch " + sb);
+    }
+
+    // DEV-DIAG: stall score-dump, 2026-10-03 (wigeon) — keep/remove per handoff
+    /** When 2+ townies sit in seeking_work for 3+ heartbeat passes (~60s real),
+     *  dump the work-seeker's per-job scores, gate-failure reasons, and board
+     *  requests for each stalled root. One-shot (latched); read-only; fires only
+     *  on a stall, so a healthy world is unaffected. Lets a log-only session
+     *  distinguish a score regression from a selection-predicate rejection
+     *  (unlocks / canAlwaysStart / day-fit) without a console or client. */
+    private void maybeEmitSeekingStallDiag() {
+        if (seekingStallDiagEmitted || flag == null) {
+            return;
+        }
+        java.util.Set<String> seekingRoots = new java.util.HashSet<>();
+        int seekingCount = 0;
+        for (LivingEntity v : flag.getVillagerHandle().entities()) {
+            var jid = ((VisitorMobEntity) v).getJobId();
+            if (ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.isSeekingWork(jid)) {
+                seekingCount++;
+                seekingRoots.add(jid.rootId());
+            }
+        }
+        if (seekingCount < 2) {
+            seekingStallPasses = 0;
+            return;
+        }
+        if (++seekingStallPasses < 3) {
+            return;
+        }
+        seekingStallDiagEmitted = true;
+        QT.FLAG_LOGGER.info("[self_suff] [scoredump] stall signature: {} townies in seeking_work over 3+ heartbeat passes; dumping roots: {}",
+                seekingCount, seekingRoots);
+        for (String root : seekingRoots) {
+            String dump;
+            try {
+                dump = flag.getPossibleWork().scoreDump(root);
+            } catch (Exception e) {
+                QT.FLAG_LOGGER.info("[self_suff] [scoredump] root={}: scoreDump failed: {}", root, e);
+                continue;
+            }
+            for (String line : dump.split("\n")) {
+                QT.FLAG_LOGGER.info("[self_suff] [scoredump] root={} | {}", root, line);
+            }
+        }
     }
 
     // ---- self-driving room builder ----

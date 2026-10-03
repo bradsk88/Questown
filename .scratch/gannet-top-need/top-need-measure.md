@@ -214,6 +214,55 @@ Change: `TownQuests` sword quest qty 1 to 4 (uncommitted, user hypothesis).
   in the chest; quest close lags the deposit). Idempotency fix: check quest
   state before depositing (see handoff for the build list).
 
+## Run 13 — new typed registration (post a817854c), healthy world — `/tmp/gannet-run13.log`
+
+First run on the **new** unmet-need mechanism (typed `GateReason` + idempotent
+`UnmetNeedTracker`, commit `a817854c`). World drawn healthy (hunting by ~90s);
+same knobs as runs 1/3b (days=3, coal=16).
+
+- **Labels are concrete, not random-tool fallback (the run-2 defect is fixed
+  where it matters):** days 1–2 `top needs:` =
+  `minecraft:wheat_seeds=14 minecraft:cod=12 minecraft:oak_wood=12
+  minecraft:cobblestone=10 minecraft:white_wool=2` — actual item keys from
+  `GateReason.classify` naming, matching the real gather/hunt/fish gaps. The
+  old `#questown:swords` tool-fallback noise (runs 1/2) does not appear.
+- **`#questown:villager_food` now appears only as a genuine input deficit:**
+  day-3 report day 3: `#questown:villager_food=21` (3 townies × 7) leads while
+  the gather-side needs persist — i.e. the cooked-food wall (cook never
+  unlocked; the dine-vs-chest race of run 3b still holds), and *only then*.
+- **Demand is windowed and bounded:** report `demand=` = registrations fired
+  *during that day* (`NoMCEconomics.getUnmetNeedsWindowTotal`): 51 → 6 → 17
+  (day 1 → day 2 → day 3). Day-2 decay (51→6, `consumed=37`) shows enter/exit
+  clearing as needs are met — the run-2 unbounded growth (16→61 decay-less
+  swords) is not reproducible: the per-(townie, item-key) rows cannot
+  re-accumulate while a townie is hunting (root has viable work →
+  `clearUnmetItemNeeds`), they only re-enter on genuine gaps.
+- **Milestones all three days:** `cookUnlocked=false farmerUnlocked=false`,
+  `locks fired: none` (3b's `NO_FORWARD_PROGRESS` did not fire this world).
+- **Phase-2.75 batch still never triggered:** gate `jobChangesComplete() >= 2`
+  never passed (only 1 job-change quest claimed — the hunter); same structural
+  gap as runs 1/2 (open finding #1), now measured on the *new* registration.
+- The one-shot `scoreDump` stall diagnostic added to this run (DEV-DIAG,
+  executor) never fired — the healthy world never sat in `seeking_work` for
+  3 heartbeat passes; the 60s stall it targets was absent.
+
+**World-health note (this session):** three fresh seeds (runs 10, 11, 12/12b)
+stalled in `seeking_work` 3–6 min with zero hunts before run 13 drew healthy
+on the identical tree/knobs. Consistent with the run-3a reseed doctrine
+(world-gen variance), but 1-in-4 healthy is a low hit rate; the stall shows
+up as `townie/seeking_work` heartbeat lines with no `Job changed to hunter/sword`
+follow-up — if it is a code path, that transition is where to start (this run's
+diagnostic dumps `scoreDump(root)` on the same signature).
+
+**FIFO verdict (asked to use):** `build.gradle`'s FIFO gate (238, gated on
+`-Dquestown.tp.fifo`, independent of autotest) is wired at task config
+(verified via init-script probe: `standardInput = FileInputStream(run/server-cmd.fifo)`),
+but the forked server's `fd 0` is `/dev/null` regardless (checked run 12 and
+12b, with and without `--no-daemon`) — the runServer fork does not carry the
+stream. Combined with hold mode not polling the console, dev-command
+injection on this branch remains **scenario code / forwarded system
+properties only** (open finding #6, re-confirmed by direct fd inspection).
+
 ## Working-tree state (for the committer)
 
 - ~~`build.gradle` — selfsuff forwarding~~ — **committed (b3953906)**.
