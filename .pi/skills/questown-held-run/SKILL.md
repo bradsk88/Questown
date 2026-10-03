@@ -299,6 +299,16 @@ start working?" is settled by `_qtdev inspect villagers <flag>` (its
 job + need + status line) on the first probe; reserve time-elapsed windows
 (daily report, milestone) for questions that actually need time to pass.
 
+**seeking_work stall (scenario runs).** A roster sitting in `seeking_work`
+with no first real job picked after 2 windows (the healthy pattern for
+self_sufficiency is hunting within ~90s; 3 of 6 fresh seeds on 2026-10-03
+stalled this way — the rate is in `.scratch/gannet-top-need/top-need-measure.md`)
+is world-health or a workseek issue, not a quest bug: before a blind 4th
+reseed, confirm the one-shot stall `scoreDump` is in the tree (grep
+`stall score-dump`; documented in `commands/test/COMPLEX.md`) — if it
+fires it converts the stall from "resed and hope" into logged work-seeker
+scoring for the stuck roots.
+
 **Hunting (and all leaver work) is off-town — the townie "disappears."**
 A hunter/gatherer/miner/fisher sent to work is teleported to an imaginary
 off-town location and the "work" is a **biome loot-table roll**
