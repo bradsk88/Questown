@@ -62,7 +62,7 @@ build.gradle forwarding fix is verified by this line). 3-day window (7 days of
 slept nights inside it), ended `07:56:47 WATCH complete`.
 
 - **The cook never came up** (`cookUnlocked=false`) — the raw-food loot quest
-  (the hunter's realtime hunt) never closed in this world's draw, so batch 2.5
+  (the hunter's leaver run) never closed in this world's draw, so batch 2.5
   never even posted. This is a stochastic pre-cook bottleneck, independent of
   the coal setting (run 1's identical seed closed it in ~8 min).
 - **Top needs over the run:** `villager_food` led early (70→77→81→73→58),
@@ -88,11 +88,16 @@ label key**:
 
 Per the runs:
 
-- **`#questown:swords`**: the hunter job's input side is empty (hunting is a
-  world output), so every failed start labels the hunter's first tool.
-  Run 2's 61 = ~61 failed hunt starts, not 61 missing swords. One durable
-  sword serves many runs; the log shows the same hunter reusing it
-  (repeated `[Experience] +200 from hunter:sword`).
+- **`#questown:swords`**: the hunter job's input side is empty — it is a
+  *leaver* job whose off-town work is an abstract **biome loot-table** roll,
+  not entity collection (`CONTEXT.md`, Leaver; the loot comes from
+  `loot_tables/jobs/hunter_sword/<biome>.json`) — so every failed work select
+  labels the job's first tool.
+  Run 2's 61 = ~61 failed work selects on that leaver job, not 61 missing
+  swords. One durable sword serves all of it; the log shows the same
+  leaver reusing it (repeated `[Experience] +200 from hunter:sword`).
+  **No mobs are required for this job to run** (leavers run even with no
+  animals in the world; `CONTEXT.md`).
 - **`#questown:villager_food`** *is* a real input deficit — worker-sustenance
   ingredient (gatherer/hunter works declare it as an ingredient); the counts
   = failed worker feedings against an empty cooked-food stock.
@@ -114,7 +119,7 @@ Per the runs:
 
 1. In both worlds the **real consumable deficit** is cooked food
    (`#questown:villager_food`). The `swords` entries are mislabeled
-   hunt-start failures, not a weapon deficit.
+   work-select failures on a leaver job, not a weapon deficit.
 2. **Coal never surfaced** because neither run held a cook in a sustained
    coal-starved fuel state (run 1 stocked 16; run 2 never reached a cook) —
    and because the batch reader only looks at `needs.get(0)`, which in run 2
