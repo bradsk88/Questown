@@ -352,6 +352,44 @@ flowchart TD
   `sword_half_day` / `sword_full_day` tiers. The town-wide `isUnlocked` remains
   for the board/knowledge gate; the per-villager overload gates work selection.
 
+### Unmet-need registration: typed reason, idempotent enter/exit
+
+When a root's best job cannot run, the town records *why* as a type
+(`town/needs/GateReason`), not a label:
+
+- `NO_ROOM(room)` — no state of the job has its job site built; the fix is
+  self-contained (unlock this producer, place its room).
+- `BLOCKED(state, missingIngredients, missingTools)` — first failing state;
+  the supply key is the first missing ingredient, else the first missing tool.
+- `NO_REQUEST` — inputs fine, product not on the board; **not** a supply need,
+  so it is registered (diagnostic) but never actionable.
+- `Ok` — nothing missing.
+
+The decision — which class wins, which key it names — is pure
+(`GateReason.classify`), and the bookkeeping behind it is a small state machine
+(`UnmetNeedTracker`): enter/exit is idempotent per **(townie, item key)**,
+`since` is first-enter, attempts grow per recompute pass, an enter under a new
+key replaces the townie's earlier key for the same root, and `rank()` groups the
+actionable rows by key, ordered **townies-desc then since-asc**. All of that is
+unit-tested without a Forge world (`GateReasonTest`, `UnmetNeedTrackerTest`).
+
+Why this shape (design lock: `.scratch/gannet-top-need/unmet-need-design.md`):
+the old `registerUnmetNed` re-added a **random** work's first ingredient to the
+econ queue on every recompute pass, so a single idle hunter produced
+`swords=61` and non-sword failures got labelled as swords. Now the townie's
+need is bound to the root's **best-scoring** job (deterministic given the world
+state), registered exactly once per (townie, key), and bounded by the roster —
+the run-2 failure mode cannot recur by construction. The townie bubble and the
+econ queue both receive the record on first-enter only; `clearUnmetItemNeeds`
+clears the tracker for the root the moment work exists again.
+
+The pure classifier only receives labels and booleans: the town side supplies
+them from the registry-bound job data and container scans (`evaluateJob` /
+`gateFacts` in `TownPossibleWork`), and the NO_REQUEST / supply key come from
+the work's product (`Work.initialRequest`). That registry-bound half is covered
+by compile plus the held `village/self_sufficiency` run, per the
+registry-bound-untestable doctrine.
+
 ## Wander-target search: deferred retry + reasoned failure log
 
 `TownPois.getWanderTarget` picks a random room and a random interior position

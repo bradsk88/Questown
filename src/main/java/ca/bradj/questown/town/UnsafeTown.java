@@ -20,6 +20,11 @@ public class UnsafeTown {
         this.town = t;
     }
 
+    /** @return true once {@link #initialize} has run. Callers on optional town-read paths gate on this instead of catching. */
+    public boolean isInitialized() {
+        return town != null;
+    }
+
     // Only safe to call after initialized
     public @NotNull TownFlagBlockEntity getUnsafe() {
         if (town == null) {

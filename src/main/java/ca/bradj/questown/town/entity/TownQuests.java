@@ -623,6 +623,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         r = tryPhase1_campfireToKickoff(view);       if (r != null) return r;
         r = tryPhase2_hunterGatherer(view);           if (r != null) return r;
         r = tryPhase2_5_jobChangeAndFood(view);       if (r != null) return r;
+        r = tryPhase2_75_topNeedUnlock(view);         if (r != null) return r;
         r = tryPhase3_newJobRoom(view);               if (r != null) return r;
         r = tryPhase4_crafter(view);                  if (r != null) return r;
         r = tryPhase5_supplyChain(view);              if (r != null) return r;
@@ -676,6 +677,80 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             return Tutorial.SKIPPED;
         }
         return null;
+    }
+
+    /**
+     * The emergent batch after the cook lands: names the town's most-requested
+     * unmet supply (ranked from the economics need queue) and posts "unlock the
+     * job that produces it" + "build that job's base room". The content is
+     * need-driven, not scripted: whichever root produces the top need wins
+     * (coal -> miner today), and if nothing can produce the top supply the batch
+     * is skipped and the fixed phases continue. Posted once per top need: an
+     * already-open JOB_UNLOCK for the producer, or the producer being unlocked
+     * by some townie, ends this phase.
+     */
+    private @Nullable Tutorial tryPhase2_75_topNeedUnlock(TutorialTownView view) {
+        if (jobChangesComplete() < 2) {
+            // Two completed job changes (hunter + cook) = "after cook".
+            return Tutorial.SKIPPED;
+        }
+        if (!town.isInitialized()) {
+            // No town state to read from; nothing to name yet. Continue the fixed phases.
+            return null;
+        }
+        TownFlagBlockEntity t = town.getUnsafe();
+        TownInterface ti = town.getUnsafe();
+        NoMCEconomics econ = t.getEconomicsHandle();
+        econ.update();
+        ImmutableList<ItemEconomicsData> needs = econ.getAggregatedItems(null);
+        if (needs.isEmpty()) {
+            // No unmet supply registered yet; nothing to name. Continue the fixed phases.
+            QT.QUESTS_LOGGER.info("Top-need batch: no unmet item needs registered; falling through");
+            return null;
+        }
+        ItemEconomicsData top = needs.get(0);
+        Set<String> producerRoots = producerRootsForItem(t, Ingredients.fromString(top.ingredientKey()));
+        String producer = chooseProducerRoot(producerRoots, "cook", unlockedRoots(ti));
+        QT.QUESTS_LOGGER.info("Top-need batch: top need {} (x{}); producer candidates {} (unlocked {}); chosen {}",
+                top.ingredientKey(), top.timesNeeded(),
+                producerRoots, unlockedRoots(ti), producer);
+        if (producer == null) {
+            // No un-unlocked job can make it; the supply is a player input, not a job.
+            return null;
+        }
+        if (openJobUnlockQuestExists(producer)) {
+            return Tutorial.SKIPPED;
+        }
+
+        JobID rootJob = ServerJobsRegistry.getAllRootJobs().stream()
+                .filter(j -> producer.equals(j.rootId()))
+                .findFirst()
+                .orElse(new JobID(producer, producer));
+        ResourceLocation room = view.getRoomForJob(rootJob);
+        String itemName = Ingredients.getName(Ingredients.fromString(top.ingredientKey())).getString();
+
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        MCQuest unlockQuest = MCQuest.jobUnlock(batchUUID, null, JobID.toRL(rootJob));
+        unlockQuest.setFlavorText("Your town's stock of " + itemName + " has run dry and no one can make it. "
+                + "Unlock the " + producer + " job with a Block of Progress so the town can produce it.");
+        q.addNewQuest(unlockQuest);
+        MCQuest roomQuest = MCQuest.standalone(batchUUID, null, room);
+        roomQuest.setFlavorText("The " + producer + " needs a room to work in. Build the "
+                + producer + " room (" + room.getPath().replaceFirst(".*block\\.", "") + ") and register its door.");
+        q.addNewQuest(roomQuest);
+        MCQuestBatch qb = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_NEW_JOB_ROOM));
+        questBatches.add(qb);
+        QT.QUESTS_LOGGER.info("Top-need batch posted: unlock {} + room {} (top need {})",
+                producer, room, top.ingredientKey());
+        notifyNewQuests(view);
+        return Tutorial.APPLIED;
+    }
+
+    private int jobChangesComplete() {
+        return (int) questBatches.getAll().stream()
+                .filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE && q.isComplete())
+                .count();
     }
 
     private @Nullable Tutorial tryPhase3_newJobRoom(TutorialTownView view) {

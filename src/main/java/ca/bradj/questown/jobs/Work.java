@@ -33,7 +33,7 @@ public class Work {
     public final ResourceLocation baseRoom;
     final IStatus<?> initialStatus;
     public final Function<WorksBehaviour.TownData, ImmutableSet<MCTownItem>> results;
-    final Function<ServerLevel, @Nullable Ingredient> initialRequest;
+    public final Function<ServerLevel, @Nullable Ingredient> initialRequest;
     final Function<List<MCHeldItem>, Collection<Ingredient>> needs;
     private final Function<WorksBehaviour.WarpInput, Warper<ServerLevel, MCTownState>> warper;
     final int priority;

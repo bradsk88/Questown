@@ -20,6 +20,8 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.TownieNeed;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.econ.NoMCEconomics;
+import ca.bradj.questown.town.needs.GateReason;
+import ca.bradj.questown.town.needs.UnmetNeedTracker;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
 import ca.bradj.questown.world.MinecraftWorldAccess;
@@ -57,6 +59,12 @@ public class TownPossibleWork {
     private @Nullable RootScoring scoringInProgress;
     private boolean shouldRecompute = true;
     private int buffer;
+
+    /**
+     * The town's live unmet needs (design: .scratch/gannet-top-need/unmet-need-design.md):
+     * idempotent per (townie, item key), since-at-first-enter, bounded by the roster.
+     */
+    private final UnmetNeedTracker unmetNeeds = new UnmetNeedTracker();
 
     /** Half a millisecond: a tenth of what a hitch needs to be visible, out of a 50ms server tick. */
     private static final long RECOMPUTE_NANOS_PER_TICK = 500_000;
@@ -139,7 +147,7 @@ public class TownPossibleWork {
         TownFlagBlockEntity t = town.getUnsafe();
         Map.Entry<JobID, Supplier<Work>> job = scoringInProgress.remainingJobs.poll();
         if (job != null) {
-            scoringInProgress.scored.add(new JobPossibility(job.getKey(), getWorkPercentPossible(t, job)));
+            scoringInProgress.scored.add(evaluateJob(t, job));
             return true;
         }
         RootScoring finished = scoringInProgress;
@@ -188,7 +196,7 @@ public class TownPossibleWork {
         ImmutableList<JobID> preselected = jobs.stream().map(v -> v.jobID).collect(ImmutableList.toImmutableList());
         preselectedJobs.put(root, preselected);
         if (jobs.isEmpty()) {
-            registerUnmetNeeds(root);
+            registerUnmetNeeds(root, unfilteredJobs);
         } else {
             clearUnmetItemNeeds(root);
         }
@@ -219,44 +227,79 @@ public class TownPossibleWork {
         );
     }
 
-    private void registerUnmetNeeds(String root) {
+    private void registerUnmetNeeds(String root, List<JobPossibility> unfilteredJobs) {
         try {
-            ServerLevel sl = town.getServerLevelUnsafe();
+            TownFlagBlockEntity t = town.getUnsafe();
+            ServerLevel sl = t.getServerLevel();
             long tick = Util.getTick(sl);
-            VillagerHolder vh = town.getUnsafe().getVillagerHandle();
-            Work work = ServerJobsRegistry.getRandomWork(sl, root, vh::isUnlocked);
-            NoMCEconomics econ = town.getUnsafe().getEconomicsHandle();
-            vh.entities().stream().map(v -> (VisitorMobEntity) v).filter(v -> root.equals(v.getJobId().rootId()))
-              .forEach(villager -> this.registerUnmetNed(work, econ, tick, villager));
+            JobPossibility best = unfilteredJobs.stream()
+                    .filter(p -> p.facts() != null && p.board() != null)
+                    .max(
+                            Comparator
+                                    .comparingDouble((JobPossibility p) -> -p.score.value)
+                                    .thenComparing(p -> p.jobID().jobId())
+                    )
+                    .orElse(null);
+            if (best == null) {
+                return;
+            }
+            GateReason reason = gateReason(t, best);
+            NoMCEconomics econ = t.getEconomicsHandle();
+            t.getVillagerHandle().entities().stream()
+              .map(v -> (VisitorMobEntity) v)
+              .filter(v -> root.equals(v.getJobId().rootId()))
+              .forEach(villager -> {
+                  String key = reason.itemKey();
+                  // First enter of this (townie, key) only: one econ record and one bubble,
+                  // not one per recompute pass (the run-2 swords=61 failure mode).
+                  if (unmetNeeds.enter(tick, root, villager.getUUID(), key, reason) && key != null) {
+                      villager.setNeed(TownieNeed.UNMET_ITEM);
+                      villager.setUnmetItem(key);
+                      econ.registerUnmetNeed(tick, villager.getUUID(), key);
+                  }
+              });
         } catch (Exception e) {
             QT.FLAG_LOGGER.error("Failed to register unmet needs for root: {}", root, e);
         }
     }
 
-    private void registerUnmetNed(
-            Work work,
-            NoMCEconomics econ,
-            long tick,
-            VisitorMobEntity villager
-    ) {
-        UUID uuid = villager.getUUID();
-        DeclarativeJob x = (DeclarativeJob) work.jobFunc.apply(uuid);
-        Ingredient xx = x.initialIngredients.get(0);
-        if (xx == null) {
-            xx = x.initialTools.get(0);
-            if (xx == null) {
-                return;
-            }
+    /**
+     * The best-scoring job's typed gate reason. Best-scoring (not random — the old
+     * path picked a random work's first ingredient and mislabelled non-sword
+     * failures as "swords"): the town's own statement of what it waits for.
+     */
+    private static GateReason gateReason(TownFlagBlockEntity t, JobPossibility p) {
+        JobFacts facts = p.facts();
+        RequestCheck board = p.board();
+        return GateReason.classify(
+                facts.anyStateHasRoom(),
+                facts.roomKey(),
+                facts.firstBlockedState(),
+                facts.missingIngredientLabel() == null ? List.of() : List.of(facts.missingIngredientLabel()),
+                facts.missingToolLabel() == null ? List.of() : List.of(facts.missingToolLabel()),
+                board.satisfied() != null,
+                supplyKey(t, p.work())
+        );
+    }
+
+    /** The job's product supply key, or null when the job names no single product. */
+    private static @Nullable String supplyKey(TownFlagBlockEntity t, Work work) {
+        if (work.initialRequest == null) {
+            return null;
         }
-        String itemKey = Ingredients.toString(xx);
-        villager.setNeed(TownieNeed.UNMET_ITEM);
-        villager.setUnmetItem(itemKey);
-        econ.registerUnmetNeed(tick, uuid, itemKey);
+        try {
+            Ingredient product = work.initialRequest.apply(t.getServerLevel());
+            return product == null ? null : Ingredients.toString(product);
+        } catch (RuntimeException e) {
+            QT.FLAG_LOGGER.error("Failed to name supply item for job {}", work.id, e);
+            return null;
+        }
     }
 
     /** A townie with viable work again is no longer waiting on supplies. */
     private void clearUnmetItemNeeds(String root) {
         try {
+            unmetNeeds.exitRoot(root);
             town.getUnsafe().getVillagerHandle().entities().stream()
                 .map(v -> (VisitorMobEntity) v)
                 .filter(v -> root.equals(v.getJobId().rootId()))
@@ -269,7 +312,10 @@ public class TownPossibleWork {
 
     private record JobPossibility(
             JobID jobID,
-            WithReason<Double> score
+            WithReason<Double> score,
+            @Nullable JobFacts facts,
+            @Nullable RequestCheck board,
+            Work work
     ) {
         @Override
         public String toString() {
@@ -281,50 +327,83 @@ public class TownPossibleWork {
         }
     }
 
-    private static WithReason<Double> getWorkPercentPossible(
+    private static JobPossibility evaluateJob(
             TownFlagBlockEntity t,
             Map.Entry<JobID, Supplier<Work>> w
     ) {
         Work work = w.getValue().get();
         Job<?, ?, ?> j = work.jobFunc.apply(UUID.randomUUID());
         if (!(j instanceof DeclarativeJob dj)) {
-            return WithReason.always(0.0, "Unsupported job class " + j.getClass().getName());
+            return new JobPossibility(
+                    w.getKey(),
+                    WithReason.always(0.0, "Unsupported job class " + j.getClass().getName()),
+                    null,
+                    null,
+                    work
+            );
         }
 
         dj.initialize(t.getServerLevel(), dj.getJournalSnapshot());
 
         // Check if product is requested
-        String requestStatus = getRequestStatus(t, j.getId());
+        RequestCheck board = boardCheck(t, j.getId());
 
-        WithReason<Integer> hps = getHighestPossibleState(t, dj);
-        double v = (double) hps.value / dj.getMaxState();
+        JobFacts facts = gateFacts(t, dj);
+        double v = (double) facts.highestState() / dj.getMaxState();
         float shuffler = Compat.nextRandomInt(t.getServerLevel(), 100) / 10000f;
-        return WithReason.always(
-                v + shuffler,
-                "Highest possible job state: " + hps + " (out of " + dj.getMaxState() + ", with randomizer " + shuffler + ")" + requestStatus
+        return new JobPossibility(
+                w.getKey(),
+                WithReason.always(
+                        v + shuffler,
+                        "Highest possible job state: " + facts.highestState() + " because " + facts.description()
+                        + " (out of " + dj.getMaxState() + ", with randomizer " + shuffler + ")" + board.description()
+                ),
+                facts,
+                board,
+                work
         );
     }
 
-    private static String getRequestStatus(TownFlagBlockEntity t, JobID jobId) {
-        ImmutableList<ca.bradj.questown.jobs.requests.WorkRequest> requests = t.getWorkHandle().getRequestedResults();
-        if (requests.isEmpty()) {
-            return " [No items requested on job board]";
-        }
-        WorksBehaviour.TownData td = t.getTownData();
-        for (ca.bradj.questown.jobs.requests.WorkRequest r : requests) {
-            if (ServerJobsRegistry.canSatisfy(td, jobId, r.asIngredient())) {
-                return " [Satisfies request: " + r + "]";
-            }
-        }
-        return " [Product not requested]";
+    private record JobFacts(
+            int highestState,
+            String description,
+            boolean anyStateHasRoom,
+            @Nullable String roomKey,
+            int firstBlockedState,
+            @Nullable String missingIngredientLabel,
+            @Nullable String missingToolLabel
+    ) {
     }
 
-    private static WithReason<Integer> getHighestPossibleState(
-            TownFlagBlockEntity t,
-            DeclarativeJob dj
-    ) {
+    private record RequestCheck(boolean boardEmpty, @Nullable WorkRequest satisfied) {
+        String description() {
+            if (boardEmpty) {
+                return " [No items requested on job board]";
+            }
+            if (satisfied != null) {
+                return " [Satisfies request: " + satisfied + "]";
+            }
+            return " [Product not requested]";
+        }
+    }
+
+    private static RequestCheck boardCheck(TownFlagBlockEntity t, JobID jobId) {
+        ImmutableList<WorkRequest> requests = t.getWorkHandle().getRequestedResults();
+        if (requests.isEmpty()) {
+            return new RequestCheck(true, null);
+        }
+        WorksBehaviour.TownData td = t.getTownData();
+        for (WorkRequest r : requests) {
+            if (ServerJobsRegistry.canSatisfy(td, jobId, r.asIngredient())) {
+                return new RequestCheck(false, r);
+            }
+        }
+        return new RequestCheck(false, null);
+    }
+
+    private static JobFacts gateFacts(TownFlagBlockEntity t, DeclarativeJob dj) {
         if (dj.specialGlobalRules.contains(SpecialRules.ALWAYS_CONSIDER)) {
-            return WithReason.always(dj.getMaxState(), "Special rule ALWAYS_CONSIDER present");
+            return new JobFacts(dj.getMaxState(), "Special rule ALWAYS_CONSIDER present", true, null, -1, null, null);
         }
         WithReason<Boolean> lastRoomCheck = null;
         boolean townHasJobSite = false;
@@ -341,7 +420,15 @@ public class TownPossibleWork {
         }
         if (!townHasJobSite) {
             String roomReason = lastRoomCheck != null ? lastRoomCheck.reason() : "No states checked";
-            return WithReason.always(0, "Town lacks required job site (or descendant) of: " + dj.location().baseRoom() + " (" + roomReason + ")");
+            return new JobFacts(
+                    0,
+                    "Town lacks required job site (or descendant) of: " + dj.location().baseRoom() + " (" + roomReason + ")",
+                    false,
+                    dj.location().baseRoom().toString(),
+                    -1,
+                    null,
+                    null
+            );
         }
         ServerLevel sl = Preconditions.checkNotNull(t.getServerLevel());
         // The scan only depends on the job's location (not on the state), and it does not change
@@ -378,19 +465,33 @@ public class TownPossibleWork {
 
             if (!townHasIngredient || !townHasTool) {
                 int max = Math.max(0, i - 1);
-                return WithReason.always(
+                return new JobFacts(
                         max,
                         "Lacking " +
                                 (townHasIngredient ? "" : "ingredients ") +
                                 (townHasTool ? "" : "tools ") +
-                                "for job state " + ii + "/" + dj.getMaxState()
+                                "for job state " + ii + "/" + dj.getMaxState(),
+                        true,
+                        null,
+                        ii,
+                        !townHasIngredient ? label(dj.initialIngredients.get(ii)) : null,
+                        !townHasTool ? label(dj.initialTools.get(ii)) : null
                 );
             }
         }
-        return WithReason.always(
+        return new JobFacts(
                 dj.getMaxState(),
-                "All ingredients and tools available for all job states"
+                "All ingredients and tools available for all job states",
+                true,
+                null,
+                -1,
+                null,
+                null
         );
+    }
+
+    private static @Nullable String label(@Nullable net.minecraft.world.item.crafting.Ingredient ingredient) {
+        return ingredient == null ? null : Ingredients.toString(ingredient);
     }
 
     /**
@@ -436,6 +537,27 @@ public class TownPossibleWork {
 
     public ImmutableList<JobID> getFor(JobID jobId) {
         return UtilClean.getOrDefaultCollection(preselectedJobs, jobId.rootId(), ImmutableList.of());
+    }
+
+    /**
+     * Dev/observation: score every regular job of a root and return each job's
+     * id, score and the reason the gate scanner stopped (missing room / lacking
+     * tools or ingredients for state N), plus the current job-board requests.
+     * Mirrors what {@link #applyScores} sees, without needing the debug-log toggle.
+     */
+    // DEV-DIAG: raw_food hunt investigation, 2026-10-02 — grep 'DEV-DIAG' to enumerate; keep/remove per handoff
+    public String scoreDump(String root) {
+        TownFlagBlockEntity t = town.getUnsafe();
+        StringBuilder b = new StringBuilder();
+        b.append("preselected=").append(getFor(new JobID(root, "x"))).append("\n");
+        t.getWorkHandle().getRequestedResults().forEach(r -> b.append("board request: ").append(r).append("\n"));
+        for (Map.Entry<JobID, Supplier<Work>> job : Works.regularJobs().stream().filter(v -> root.equals(v.getKey().rootId())).toList()) {
+            JobPossibility p = evaluateJob(t, job);
+            WithReason<Double> sc = p.score;
+            b.append(job.getKey()).append(" score=").append(sc.map(v -> Math.round(v * 1000.0) / 1000.0))
+             .append(" | ").append(sc.reason()).append("\n");
+        }
+        return b.toString();
     }
 
     public @Nullable JobID nextForVillager(
