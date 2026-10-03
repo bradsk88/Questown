@@ -134,7 +134,32 @@ Per the runs:
    output-side failures as "missing first tool";
    (b) the batch reads only rank #1 and dies on no-producer labels.
 
+## Which jobs produce an item — verified route (added 2026-10-03)
+
+`scripts/job-producers.py <item>` answers producer/consumer from the job data
+(schema: OUTPUT = `initial_request`+`result`; biome_loot output space = the
+union of the biome tables; INPUT = `work_states[].ingredients`; TOOLS = held,
+durable, not the product; BASE ROOM = `room`/`block`). Skill:
+`.pi/skills/questown-item-producers`.
+
+- **Swords: no job producer — verified, not inferred.** Full data scan (all
+  60+ job files' `initial_request`/`result`, all 8 hunter biome tables,
+  gatherer tables, recipes, job archive): the only sword references are the
+  `hunter/sword*` family's **tool** (`#questown:swords`) and the
+  player-crafted ITEM quests (wooden → stone, satisfied by
+  `SupplySwordCommand` in held runs). The engine's own mapping
+  (`TownQuests.producerRootsForItem` ← `ServerJobsRegistry.getResults` ←
+  `work.results`) would also return ∅. Note: user held that swords *do* have
+  an unlockable producer — this scan contradicts; confirm which producer was
+  meant before the batch treats "swords" as producible.
+- **Coal: producer `miner/coal` (room `block_room/block.questown.mineshaft`)**;
+  consumers (input side): `cook/fuel` (`#minecraft:coals`), `baker/bread`
+  (`#minecraft:coals`), `baker/stock_coal`. So the coal chain in data is:
+  cook/baker demand → miner/coal produces → miner needs pickaxes + the
+  mineshaft room built.
+
 ## Open findings for the next session
+
 
 1. **Cook quest adoption gap** (design decision). Batch 2.5 closes only on the
    exact job `cook/simple_furnace_food` (`processJobChanges`, exact-match
