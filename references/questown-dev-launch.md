@@ -22,6 +22,19 @@ after the failure.
   reading the dead server's log. A client stuck at `Connecting to localhost`
   for minutes with no join is the same tell from the other side - check
   `pgrep -f forgeserveruserdev` before assuming the server is up.
+- **`pkill -f <pattern>` self-kills (and the "no output" launch is its symptom).**
+  `pkill -f` matches the *full command line* of every process, and the `bash -c`
+  string that runs it contains the literal pattern — so the shell dies before
+  the `nohup … runServer` launch on the same line executes, returning empty
+  output. Worse, a broad pattern takes down a *live held server*: a "quick"
+  `pkill -9 -f runServer` demo this session killed the held server with it
+  (it was still writing at 05:41:51, gone by 05:42:09). The safe form brackets
+  one char so the shell's own text no longer matches the regex: `[r]unServer`
+  or `forgeserveruserde[v]` — verified: `bash -c 'echo START; pkill -9 -f
+  "zz[9]x"; echo END_SAFE'` prints both lines (plain `zz9x`-style tokens print
+  only START). Use bracket patterns for both `pkill` and `pgrep`, or kill in a
+  separate call and confirm the target is gone with
+  `pgrep -af 'forgeserveruserde[v]'` before launching.
 - **A held server can die silently minutes after a clean boot** (log just
   stops mid-tick, no exception, pid gone). Observed when a second gradle
   `runServer` (an autotest) overlapped the held one; run autotests only
@@ -106,6 +119,12 @@ of the client. If you must restart, expect the client to drop and reconnect it
 after the server is back. **Never `pkill -f 'runClient'`/`'runServer'` to tear
 down your own run — it also matches the dev's gradle task in another terminal
 tab.** Kill the pids you launched, by pid (see `questown-held-run` teardown).
+The same trap bites inside one session: a `pkill -f`/`pgrep -f` pattern typed
+verbatim anywhere in the tool call's own command line matches the wrapper shell
+and kills it mid-call — the call returns with *zero* output, terminator `echo`
+included (twice in the 2026-10-03 wigeon session). Bracket the pattern
+(`[r]unServer`, `[s]leep 999999`) or kill by explicit pid, then confirm the
+outcome in a fresh call — a dead call proves nothing.
 
 ## Client + server + recompile together OOM-kill the server (exit 137)
 
@@ -142,6 +161,9 @@ RCON does not work in this build. Feed a command to the server through a FIFO:
 - `run/server-cmd.fifo` must have a writer open *before* launch, or the JVM's
   open-for-read blocks: `nohup sh -c 'sleep 999999 > run/server-cmd.fifo' &`.
 - Send a command: `echo 'qt tickprofile' > run/server-cmd.fifo`.
+- **Verify a command exists in this build before sending, and treat a parse failure as *not-executed*.** The `_qtdev`/`qt` set differs across branches. Before a first send, grep the leaf literal — e.g.
+  `grep -rl 'literal("prepare")' src/main/java/ca/bradj/questown/commands/` → `PrepareWorkCommand.java`, so it is `qt jobs prepare <pos>`, **not** `prepare_work`. To enumerate the whole current leaf set run `grep -rho 'literal("[a-z_]*")' src/main/java/ca/bradj/questown/commands/*Command.java | sort -u` (run it, don't trust a doc's table — the set changes per branch). If you echoed into the FIFO and the server log then shows the command followed by `Incorrect argument for command`, that command **did not run** — the absence of follow-up output is your probe having failed, not evidence about the system. Fix the command and resend before reading behaviour from the log. (The `.scratch/*/*.log` transcripts can contain *failed* sends, i.e. an echo + `Incorrect argument`, so a command's presence in an old log is not proof it works in this build.)
+- **DEV-DIAG scaffolding convention:** when you add a dev-only diagnostic command or log line for an investigation, mark it `// DEV-DIAG: <what, date> — keep/remove per handoff` so it is grep-enumerable (`grep -rn 'DEV-DIAG' src/main/java`), and list each tag in the handoff with a keep/remove recommendation. Six tags exist from the 2026-10-02 raw_food hunt investigation (DevLootFireCommand, DevWorkScoreCommand, LOOTTRACE ×2, [jcscan], scoreDump).
 - A blocked FIFO write (the `echo` never returns) or an aborted command usually
   means the **server process is dead**, not slow — check `pgrep -af '[r]unServer'`
   or `forgeserveruserdev` before assuming the pipe is backed up. **Exception: an
@@ -155,7 +177,11 @@ RCON does not work in this build. Feed a command to the server through a FIFO:
   (including a persistent `sleep 999999 > fifo` writer, which hangs in open and
   must be killed, not waited on). Check fd 0 before writing; the workaround is a
   chat command from the dev's client (`qt`/`_qtdev` work from the game chat) or
-  relaunching the server with the FIFO writer first.
+  relaunching the server with the FIFO writer first. Prefer driving it yourself —
+  ask the user for a command only as a last resort (the 2026-10-03
+  "don't rely on me, use FIFO" correction); when client+console are both dead,
+  see the next bullet (1.20.6: injection goes through scenario code / forwarded
+  properties).
 - **Launch the FIFO writer in a *separate* call, before `./gradlew runServer`**
   (verify the `sh -c 'sleep 999999 > …'` is alive, then launch the server in its
   own call). A `sleep`/second background job in the *server's* call kills the
@@ -163,7 +189,21 @@ RCON does not work in this build. Feed a command to the server through a FIFO:
   the global AGENTS.md launch-survival rule). A held `pkill` (teardown) kills the
   `sleep 999999` writer and a FIFO write then blocks (nothing reads it); recreate
   the FIFO and relaunch the writer before each relaunch, not by sharing the
-  server's call.
+  server's call. The same "no process, no log" result has a third shape
+  (2026-10-03): a failing command earlier in the launch chain
+  (`rm -f run/world` on a directory) aborts before the server starts while a
+  pattern match on the chain's own text reads as "running" — after any
+  "launch issued" line, confirm in a fresh call that the server pid exists
+  *and* the log file exists.
+- **1.20.6-neoforge branch (verified 2026-10-03, runs 12/12b): the forked
+  server doesn't carry `standardInput` regardless** — `ls -l /proc/<pid>/fd/0`
+  → `/dev/null` even though the `questown.tp.fifo` gate provably fired (an
+  init-script probe read the task's `standardInput = FileInputStream(run/server-
+  cmd.fifo)`) and `--no-daemon` doesn't change it (the sibling `-Dquestown.autotest`
+  gate fired in the same build, so the -D is visible to build scripts). Command
+  injection on this branch is scenario/executor code or a `server{}`-whitelisted
+  system property; note the two bullets above are not proved dead by this — the
+  hold-mode console-poll question was never reached (no live stdin to poll).
 - **A `build.gradle` edit is not applied by a cached `:compileJava UP-TO-DATE`.**
   After editing `build.gradle`, the run re-reads it, but a stale `UP-TO-DATE`
   task skips recompiling the source — the edit is not in the class. Force with
