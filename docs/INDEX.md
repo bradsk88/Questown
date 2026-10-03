@@ -1,5 +1,9 @@
 # Questown Documentation Index
 
+## Design principles
+
+- **[design-principles.md](design-principles.md)** — Standing design rules: unlock ≠ workability (`NO_SUPPLIES`/`NO_JOBSITE`/`NO_SPACE` are distinct), quests are division-of-labor pedagogy (coal = player supplies, mutton = town produces), the self-sufficiency test seeds player-inputs and must not read a missing-player-input as a bug, and onboarding communicates roles + trims aids that don't change the player's next action. Read before diagnosing townie stalls or before adding onboarding beats.
+
 ## Architecture & Decisions
 
 - **[special-rules-decoupling.md](special-rules-decoupling.md)** — Plan for decoupling special rules from Minecraft code to support time warp simulation and testing. Lists jobs using special rules and proposes QTWorldAccess methods.
