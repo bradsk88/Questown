@@ -66,33 +66,68 @@ slept nights inside it), ended `07:56:47 WATCH complete`.
   never even posted. This is a stochastic pre-cook bottleneck, independent of
   the coal setting (run 1's identical seed closed it in ~8 min).
 - **Top needs over the run:** `villager_food` led early (70→77→81→73→58),
-  then **swords flipped to #1** (16→16→19→27→42→61) as the hunters' weapon
-  path kept registering needs. Coal: **absent from every report** — with no
+  then `swords` overtook (16→16→19→27→42→61) — **a mislabel, not a sword
+  deficit** (see "What the line counts" below); the hunters demonstrably had
+  a sword (see that section). Coal: **absent from every report** — with no
   cook, no fuel work ever registered a coal need.
 - `[lock] NO_FORWARD_PROGRESS` fired at 2 days (roster 5, 1 quest open, stock
   130 flat).
 
-## Combined read (the measurement)
+## What the `top needs:` line actually counts (correction, user-caught)
 
-1. In both worlds the town's top economic need is **cooked food
-   (`#questown:villager_food`)** in the early days, with **swords** (#2 rising;
-   #1 by the end of the coal=0 world). **Coal never surfaces as a top need in
-   either world.**
-2. Why coal can't be a top need yet: it only enters the unmet-need queue via
-   the cook's fuel job. Run 1 stocked it (16 covered the whole window); run 2
-   never reached the cook at all. So the "coal runs out → miner is the answer"
-   beat is not yet *reachable* in play; it is gated behind (a) a settled cook
-   chain and (b) fuel actually being demanded.
-3. The suspected batch "after cook → unlock top-need producer → build its room"
-   exists (`tryPhase2_75_topNeedUnlock`) but was **never triggered in either
-   run**: its gate is `jobChangesComplete() >= 2`, and the cook's JOB_CHANGE
-   quest (exact-job `cook/simple_furnace_food`) never closed (run 1) or never
-   posted (run 2).
-4. The real gating constraint is the **cook-chain settle** (raw-food supply →
-   cook holds a recipe job → batch closes), which in turn is limited by the
-   hunter's raw-food hunt pace and the 2-job starter unlock leaving the cook on
-   extract/fuel. That is where design attention belongs before the emergent
-   top-need batch can be exercised end-to-end.
+The line is **not** a stock deficit. It is a **work-attempt-failure count per
+label key**:
+
+- `TownPossibleWork.applyScores` — when a root has no work above
+  `MIN_JOB_ACCEPTANCE`, `registerUnmetNeeds(root)` fires for every townie in
+  that root (`TownPossibleWork.java:188-192`).
+- The label (`registerUnmetNed`, `TownPossibleWork.java:245-260`): **first
+  initial ingredient of a random work in the root — falling back to its first
+  *tool* when the input side is empty** (`x.initialIngredients.get(0)` or
+  else `x.initialTools.get(0)`).
+
+Per the runs:
+
+- **`#questown:swords`**: the hunter job's input side is empty (hunting is a
+  world output), so every failed start labels the hunter's first tool.
+  Run 2's 61 = ~61 failed hunt starts, not 61 missing swords. One durable
+  sword serves many runs; the log shows the same hunter reusing it
+  (repeated `[Experience] +200 from hunter:sword`).
+- **`#questown:villager_food`** *is* a real input deficit — worker-sustenance
+  ingredient (gatherer/hunter works declare it as an ingredient); the counts
+  = failed worker feedings against an empty cooked-food stock.
+- **`#minecraft:coals`** would register when the cook's fuel work gates on
+  coal (its states declare `#minecraft:coals` as both tool and ingredient) —
+  the one label that is a true coal signal; neither run held a cook in a
+  coal-starved fuel state long enough to see it.
+- Cross-category ranks are not comparable: a standing gate on an output-side
+  job pins its tool label at the top (run 2 day 7: `swords 61` shadowing the
+  real food deficit `39`).
+- **Design impact on the emergent batch**: `tryPhase2_75_topNeedUnlock` reads
+  `needs.get(0)` only and dies on no-producer labels (`chooseProducerRoot`
+  returns null, batch skipped) — a `swords` at #1 would block the batch even
+  if a real need with a producer sat at #2. It should walk the ranking to the
+  first need with an unlockable producer, or the registration should stop
+  tool-fallback labels for output-side jobs.
+
+## Combined read (the measurement, corrected)
+
+1. In both worlds the **real consumable deficit** is cooked food
+   (`#questown:villager_food`). The `swords` entries are mislabeled
+   hunt-start failures, not a weapon deficit.
+2. **Coal never surfaced** because neither run held a cook in a sustained
+   coal-starved fuel state (run 1 stocked 16; run 2 never reached a cook) —
+   and because the batch reader only looks at `needs.get(0)`, which in run 2
+   was a no-producer tool label that would *block* the batch even if coal had
+   ranked #2.
+3. The batch itself (`tryPhase2_75_topNeedUnlock`) was **never triggered in
+   either run**: its gate is `jobChangesComplete() >= 2`, and the cook's
+   JOB_CHANGE quest (exact-job `cook/simple_furnace_food`) never closed (run
+   1) or never posted (run 2).
+4. Before this ranking can steer a top-need → producer beat, two defects to
+   fix (independent design calls): (a) the registration mislabels
+   output-side failures as "missing first tool";
+   (b) the batch reads only rank #1 and dies on no-producer labels.
 
 ## Open findings for the next session
 
@@ -111,22 +146,26 @@ slept nights inside it), ended `07:56:47 WATCH complete`.
    Run 2 removed coal *and* the cook's chance to register it; run 1 kept coal
    in stock. A third run (cook-settled world, coal=0 after cook is live) is the
    missing cell.
-3. The daily report's `top needs:` line is the working measurement channel
-   (it read coal-absence/presence correctly in both runs).
-4. **build.gradle forwarding** (this session, verified by run 2's `+ 0 coal`
-   seed line): the `server` block only forwards a whitelist of `-D` properties
-   to the forked server JVM; `questown.village.selfsuff.days` / `.coal` were
-   missing, so they silently fell back to defaults (run 1 ran on
-   `DEFAULT_DAYS=5`, truncated by hand, and coal default 16). Added them to the
-   whitelist. **Not yet committed** (see working-tree note).
-5. DevLootFire/DevWorkScore (`_qtdev loot_fire`, `_qtdev workscore`, DEV-DIAG)
+3. The daily report's `top needs:` line is the working measurement channel,
+   but only for **input-side** (consumable) failures; tool-fallback labels
+   (output-side jobs) are noise for the "unlock a producer" purpose.
+4. **Sword mislabel** (user-caught, 2026-10-03): see "What the line counts"
+   above. The two design defects the emergent batch must fix first: the
+   registration tool-fallback (`TownPossibleWork.registerUnmetNed`) and the
+   `needs.get(0)`-only batch read.
+5. **build.gradle forwarding** (verified by run 2's `+ 0 coal` seed line):
+   the `server` block only forwards a whitelist of `-D` properties to the
+   forked server JVM; `questown.village.selfsuff.days` / `.coal` were missing
+   and silently fell back to defaults. Added to the whitelist —
+   **committed as b3953906** (with the AUTOTESTS.md note and this doc).
+6. DevLootFire/DevWorkScore (`_qtdev loot_fire`, `_qtdev workscore`, DEV-DIAG)
    cannot be injected in hold mode (the autotest server does not poll the
    console/FIFO). Run controls for held self_suff must be scenario code or
    system properties (now forwarded).
 
 ## Working-tree state (for the committer)
 
-- `build.gradle` — selfsuff `.days`/`.coal` whitelist forwarding (verified).
+- ~~`build.gradle` — selfsuff forwarding~~ — **committed (b3953906)**.
 - `TownQuests.java` — uncommitted: 2-job starter unlock + `tryPhase2_75_topNeedUnlock`
   (the emergent top-need batch) + the stuck-root `JOB_UNLOCK` path helpers.
 - `VillageSelfSufficiencyExecutor.java` — uncommitted: `coalSeed()` knob +
