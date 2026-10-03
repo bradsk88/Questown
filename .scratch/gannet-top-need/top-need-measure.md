@@ -193,6 +193,27 @@ durable, not the product; BASE ROOM = `room`/`block`). Skill:
    console/FIFO). Run controls for held self_suff must be scenario code or
    system properties (now forwarded).
 
+## Run 3/3b — 4-wooden-sword quest (A/B against run 2)
+
+Change: `TownQuests` sword quest qty 1 to 4 (uncommitted, user hypothesis).
+
+- Run 3a (`run/server8.log`): world-specific nav deadlock: all 3 townies
+  `CANT_REACH` for 10+ min, zero hunts. Not the sword variable. Killed, reseeded.
+- Run 3b (`run/server9.log`): both hunters + gatherer working by ~2.5 min
+  (run 2's second hunter sat out for the stone-sword delay) — **4x hypothesis
+  confirmed for the second-hunter idle**. But: 8+ hunts, 25 dining events,
+  zero LOOTTRACE meat matches; `[lock] NO_FORWARD_PROGRESS` at 3 days
+  (roster 5, meat quest still ACTIVE, cook never unlocked).
+- **Pre-cook gate refined:** not sword count, not meat-draw RNG alone — it is
+  the **dine-vs-chest race**: each hunter eats its own drawn meat
+  (`hunter:dining_raw_food` / `dining_no_table`), so the 1-meat loot quest
+  closes only when a drawn meat survives deposit (run 1's 13-minute luck;
+  runs 2 and 3b: never within the window).
+- **Deposit quirk (bug, uncommitted):** the watch loop re-deposits the sword
+  every 10s even after the quest is satisfied (4x x4 runs = ~16 wooden swords
+  in the chest; quest close lags the deposit). Idempotency fix: check quest
+  state before depositing (see handoff for the build list).
+
 ## Working-tree state (for the committer)
 
 - ~~`build.gradle` — selfsuff forwarding~~ — **committed (b3953906)**.
