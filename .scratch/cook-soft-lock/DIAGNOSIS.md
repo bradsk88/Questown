@@ -164,6 +164,42 @@ block in `changeJobForVisitorFromBoard` that mirrors `JobCycler.isValid` per can
 - **Confirms the original diagnosis** and the Tier-1 unit pin; refines (does not refute) the
   Tier-2 "zero per-ask rejection" reading, which was a seed-specific scheduling mode.
 
+## Trace (b) — why the SOFT hunter's seeks miss the window (2026-10-04, handoff `pintail`)
+
+A live `village/self_sufficiency` SOFT seed (hunt/food chain stalled: `cook_qt_simple_
+furnace_food` `ACTIVE`, cook `NO_JOBSITE` in a `[lock]` dump, `2 hunter` townies stuck at
+`selected=null` for 2,000+ board-asks), `ENABLE_DEV_COMMANDS` in the daemon env, the
+`[jobcyc]` mirror of `JobCycler.isValid` per candidate. `/tmp/tier3b-server.log` (local;
+`run/` gitignored).
+
+- **The SOFT hunter REACHES the board and asks** (not bailing before it): **2,036**
+  `REJECT@canFit(gate1)` vs **24** `ACCEPT(satisfy)` (in-window). Zero `REJECT@canSatisfy`
+  for the hunter. So this is **mode b2** (ask reaches the gate + out-of-window), not b1
+  (empty-candidate / bail before the board). `canFit` is re-confirmed as *the* live gate
+  on a real SOFT seed (Tier-3 was a Mode-A/GREEN seed where the hunter adopted 24×).
+- **The DAY CYCLES** — 8 nights slept, day reports 1–5, `time set day` firing (the
+  harness skips night: `if (level.isNight()) time set day`, → day-time 1000). So the
+  in-window band `[1000, 9500)` is present every day; the stall is **not** a stuck clock.
+- **THE ASKS ARE PHASE-LOCKED OUT-OF-WINDOW:** even with the in-window band present daily
+  (the effective harness day is `[1000,13000)`, in-window = `[1000,9500)` = 71%), the
+  hunter's board-asks land overwhelmingly in the out-of-window band `[9500,13000]`
+  (2,036 out-of-window asks vs 24 in-window). The acceptance window
+  (`DayWindowTest` `t ∈ [0,9500)` = dawn→~09:30, D=2000) denies them; the hunter
+  (re)enters seeking_work in a cycle (sword hunt D=2000 → dining → seek-retry) whose ask
+  phase is scheduling-locked to the out-of-window band, so `canFit` (gate 1)
+  (`ServerJobsRegistry.canFit`, `fit=false`) denies and the hunter never re-adopts → the
+  hunt/food chain can't keep up → the cook food quest stays `ACTIVE` and the cook is left
+  partial (`NO_JOBSITE`).
+
+**Answer to (b):** the SOFT hunter's seeks miss the window because the **ask phase is
+phase-locked to the out-of-window band** (a scheduling/interference between the hunter's
+hunt→dine→seek cycle and the day clock), and **`canFit` is the gate that then denies
+them**. This is the scheduling facet (Mode B) the Tier-2 probe pointed at, now reproduced
+and shown to be `canFit`-denied (not an empty candidate set, not canSatisfy, not a stuck
+clock). The remaining open root-cause is *why the phase is locked out-of-window* — the
+precise timing of the hunter's cycle vs the `[1000,9500)` band (would need dayTime-at-ask
+logging, which `[jobcyc]` does not yet emit).
+
 ## Remaining options (none applied; `always_consider` rejected by the dev)
 
 1. `always_consider` — **REJECTED (dev, 2026-10-04); do not re-propose.**
