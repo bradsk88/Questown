@@ -165,11 +165,17 @@ RCON does not work in this build. Feed a command to the server through a FIFO:
   `grep -rl 'literal("prepare")' src/main/java/ca/bradj/questown/commands/` → `PrepareWorkCommand.java`, so it is `qt jobs prepare <pos>`, **not** `prepare_work`. To enumerate the whole current leaf set run `grep -rho 'literal("[a-z_]*")' src/main/java/ca/bradj/questown/commands/*Command.java | sort -u` (run it, don't trust a doc's table — the set changes per branch). If you echoed into the FIFO and the server log then shows the command followed by `Incorrect argument for command`, that command **did not run** — the absence of follow-up output is your probe having failed, not evidence about the system. Fix the command and resend before reading behaviour from the log. (The `.scratch/*/*.log` transcripts can contain *failed* sends, i.e. an echo + `Incorrect argument`, so a command's presence in an old log is not proof it works in this build.)
 - **DEV-DIAG scaffolding convention:** when you add a dev-only diagnostic command or log line for an investigation, mark it `// DEV-DIAG: <what, date> — keep/remove per handoff` so it is grep-enumerable (`grep -rn 'DEV-DIAG' src/main/java`), and list each tag in the handoff with a keep/remove recommendation. Six tags exist from the 2026-10-02 raw_food hunt investigation (DevLootFireCommand, DevWorkScoreCommand, LOOTTRACE ×2, [jcscan], scoreDump).
 - A blocked FIFO write (the `echo` never returns) or an aborted command usually
-  means the **server process is dead**, not slow — check `pgrep -af '[r]unServer'`
-  or `forgeserveruserdev` before assuming the pipe is backed up. **Exception: an
-  autotest hold run (`-Dquestown.autotest…`) does not poll the console**, so the
-  write blocks with the server alive and no command ever lands — read the log for
-  state there (the autotest logs its own progress); do not fight the FIFO.
+  means the **server process is dead** or the **reader is not open** — check
+  `pgrep -af '[r]unServer'` before assuming the pipe is backed up. The reader is the
+  task's stdin; it exists only while the gradle task is up **and** its worker has the
+  fifo open. It was **proven to work on an autotest hold run** (the 2026-10-04
+  200-t/s battery: days landed ~60 s apart — impossible at 20 TPS — so `/tick rate 200`
+  delivered). It **blocked indefinitely on the same kind of run** minutes later, the
+  bash tool call hanging ~2 h (7532 s) until aborted, server up and healthy the whole
+  time. The difference is reader-open timing (cold daemon start vs warm task; server up
+  vs between launches), not autotest-vs-dev. **Rule: never bare-`echo` into
+  `run/server-cmd.fifo` from a tool call — wrap it in `timeout 15` and confirm delivery
+  in the server log (`Tick rate set to …`) before believing it landed.**
 - **Third block case (verified 2026-10-13): the server's stdin is a plain pipe,
   not the FIFO** — `ls -l /proc/<pid>/fd` shows fd 0 → `pipe:[NNN]` instead of
   the FIFO path. The server was launched from a terminal shell without the FIFO
