@@ -1,6 +1,6 @@
 # Why the cook/food chain sometimes never staffs (self_sufficiency soft-lock)
 
-2026-10-04 (battery v3 + canFit clock-window resolution appended). Verified from 19 fresh
+2026-10-04 (battery v3 + canFit clock-window resolution + **live-gate pin** appended). Verified from 19 fresh
 `village/self_sufficiency` samples (~50%–80% soft-lock, env/seed-dependent) + code reads.
 This is a **continuation** of the DEV-DIAG `raw_food hunt` investigation (2026-10-02 →
 10-04; `DevWorkScore`/`DevLootFire` exist).
@@ -57,12 +57,13 @@ never extracts in the first place.** The claim is not the blocker; the hunter st
   a SOFT seed those evaluations never land inside [dawn, 9:07). In a GREEN seed the hunter
   asks immediately after the sword is posted and adopts within seconds (probe-s1: posted
   20:51:33, adopted ~20:51:35; GREEN 1933_f4 same shape).
-- **Evidence gap (honest):** the per-line rejection (`Villager will not do {hunter/sword}
-  because there is not enough time left in the day` — logged by that very `canFit`
-  closure, `TownFlagBlockEntity.changeJobForVisitorFromBoard` L865) was never captured:
-  the debug toggle is dev-env-gated (`ENABLE_DEV_COMMANDS` must be in the *gradle daemon*
-  env) and this box's FIFO console feed blocked one feeder for ~2 h before abort
-  (`run/samples/probe-*.log`). Every other link above is code/log-verified.
+- **Evidence gap (honest) → resolved by Tier 3 (2026-10-04):** the per-line rejection
+  (`Villager will not do {hunter/sword} because there is not enough time
+  left in the day` — logged by that very `canFit` closure,
+  `TownFlagBlockEntity.changeJobForVisitorFromBoard`) was NOT captured in Tier 2
+  (that seed's hunter never reached the out-of-window ask — a scheduling mode);
+  **Tier 3 captured it live: 490× `REJECT@canFit(gate1)` (`fit=false`), 0 canSatisfy
+  rejects, `cas=false`.** See the Tier-3 section below. Every other link is code/log-verified.
 - **Window arithmetic — now unit-pinned (2026-10-04, handoff `pintail` Tier 1):**
   `DayWindowTest` (`src/test/java/ca/bradj/questown/jobs/DayWindowTest.java`) rests the whole-day
   sweep of the `canFit` predicate on the registry-free `Signals` seam and asserts the accepted
@@ -136,19 +137,50 @@ probe-20261004.md` (local; `run/` is gitignored).
   a job that actually reaches the gate). The live stall is at a gate the rejection line
   does not cover.
 
+## Tier-3 live-gate pin — the pin IS `canFit` (2026-10-04, handoff `pintail`)
+
+A held `village/self_sufficiency` seed at ~200 t/s, `Questown:Flag` at DEBUG,
+**`ENABLE_DEV_COMMANDS=1` in the fresh gradle-daemon env**, with a targeted `DEV-DIAG`
+block in `changeJobForVisitorFromBoard` that mirrors `JobCycler.isValid` per candidate
+(logs each candidate + which `return false`). Evidence:
+`run/samples/tier3-canfit-livegate-20261004.md` (`/tmp/tier3-server.log` full log).
+
+- **THE GATE IS `canFit` (gate 1), verified live:** the hunter's `hunter/sword` ask,
+  evaluated after the in-day window (day-time ≥ 9500 ≈ 09:30), is
+  `cas=false fit=false satAny=false → REJECT@canFit(gate1)`. The cycler
+  **has** a candidate (`candidates=1/3` → `hunter/sword` is the sole unlocked one) and it
+  is **rejected** — this is *not* the "empty `possible` set" branch.
+- **Tallies:** `hunter/sword` → **490** `REJECT@canFit`, **24** `ACCEPT(satisfy)`
+  (in-window, the hunter does adopt — `cur → sword → dining`), **0** `REJECT@canSatisfy`.
+  `always_consider` stays **off** (`cas=false`). The `canFit` closure's own "not enough
+  time" line fires **13,326×** this run — the logger/capture is proven to work.
+- **Reconciliation (honest):** Tier 2 and this are *different* seeds. Tier 2's stall was
+  **Mode B** — the hunter never reached the in-window ask (a scheduling symptom of the same
+  narrow window). This seed was **Mode A** — the hunter reaches the ask and is denied by
+  `canFit` out-of-window, adopts in-window. **Both are downstream of `canFit` being a narrow
+  in-start-window check** (the Tier-1 `DayWindowTest` `t ∈ [0,9500)` pin). So the pinned
+  rejection gate is `canFit`; the residual SOFT question is whether the hunter's seeks land
+  inside the window (Mode B), not which predicate denies them outside it.
+- **Confirms the original diagnosis** and the Tier-1 unit pin; refines (does not refute) the
+  Tier-2 "zero per-ask rejection" reading, which was a seed-specific scheduling mode.
+
 ## Remaining options (none applied; `always_consider` rejected by the dev)
 
 1. `always_consider` — **REJECTED (dev, 2026-10-04); do not re-propose.**
-2. **Pin the live gate (now the leading question)** — the Tier-2 probe shows variant B is
-   *not* per-ask `canFit` rejection. Settle which silent branch it is (empty `possible`
-   set / seek never reaches evaluation / `canFit`-pass + `canSatisfy` silent-fail) with a
-   targeted dev-log in `JobCycler.isValid` (log each candidate + which `return false`)
-   or a `changeJobForVisitorFromBoard` entry probe on a SOFT seed — *not* by re-reading
-   code.
+2. ~~Pin the live gate~~ — **RESOLVED (Tier 3, 2026-10-04):** a targeted `DEV-DIAG`
+   block in `changeJobForVisitorFromBoard` (mirrors `JobCycler.isValid` per candidate)
+   on a live SOFT-arena seed shows the hunter's `hunter/sword` ask is rejected **by
+   `canFit` (gate 1, `fit=false`)** 490×, with **0** `REJECT@canSatisfy` and
+   `cas=false`. The live rejection gate is `canFit` — confirming the Tier-1 unit pin
+   (`t ∈ [0,9500)`) and the original diagnosis. The residual SOFT question is now
+   *scheduling* (Mode B: the hunter's seeks miss the narrow [dawn, ~09:30) window), not
+   *which predicate denies* (that is `canFit`). `run/samples/tier3-canfit-livegate-20261004.md`.
 3. **Variant C** (room-builder `could not resolve recipe blocks`) — separate bug, separate
    repro. 1/4 of the residual but a permanent stall when it fires.
-4. **Harness timing** — deprioritized: the SOFTs sat in `seeking_work` the whole 5-day
-   watch; not a missed one-day window, the hunt never starts at all.
+4. **Widen the admissible band / shorten the hunt / accept morning-only starts** (dev's
+   call, not applied) — the non-`always_consider` fixes for the gate; note they don't help
+   a Mode-B hunter that never *seeks* inside the window. Deprioritized: the SOFTs sat in
+   `seeking_work` the whole 5-day watch.
 
 ## Confound worth checking with the observer
 Have the hunter "stuck early, no cook ever unlocks" been seen on a live server? That pins

@@ -876,6 +876,50 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 requestedResults,
                 td
         );
+        // DEV-DIAG: job-cycler gate breakdown, 2026-10-04 (cook-soft-lock variant B) — keep/remove per handoff.
+        // Mirrors JobCycler.isValid faithfully so we can see, per candidate, which gate rejects:
+        //   gate1 passes if canAlwaysStart || canFit; REJECT@canFit(gate1) fires when both are false (the "not enough time" clock gate)
+        //   gate2 = an empty request OR canSatisfy(some request)   (REJECT@canSatisfy is the request gate)
+        // Log-only: no effect on the returned work / fallback. Gated on ENABLE_DEV_COMMANDS so it is
+        // inert in production. "not enough time ..." lines are ALSO emitted from the canFit predicate
+        // when gate1 rejects — see both together to confirm a live clock rejection.
+        if (System.getenv("ENABLE_DEV_COMMANDS") != null) {
+            ImmutableList<JobID> candidates = possibleWork.getFor(villager.getJobId()).stream()
+                    .filter(j -> getVillagerHandle().isUnlocked(ownerUUID, j))
+                    .collect(ImmutableList.toImmutableList());
+            getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
+                    "[jobcyc] townie={} cur={} candidates={}/{} req={} selected={}",
+                    ownerUUID, villager.getJobId(),
+                    candidates.size(), possibleWork.getFor(villager.getJobId()).size(),
+                    requestedResults.isEmpty() ? "<none>" : requestedResults, work);
+            for (JobID c : candidates) {
+                boolean cas = canAlwaysStart.test(c);
+                boolean fit = cas ? false : canFit.test(c);   // faithful short-circuit: fit only evaluated when cas is false
+                boolean gate1 = cas || fit;
+                boolean satAny = false;
+                if (gate1 && !requestedResults.isEmpty()) {
+                    for (WorkRequest r : requestedResults) {
+                        if (ServerJobsRegistry.canSatisfy(td, c, r.asIngredient())) {
+                            satAny = true;
+                            break;
+                        }
+                    }
+                }
+                String verdict;
+                if (!gate1) {
+                    verdict = "REJECT@canFit(gate1)";
+                } else if (requestedResults.isEmpty()) {
+                    verdict = "ACCEPT(emptyReq)";
+                } else if (satAny) {
+                    verdict = "ACCEPT(satisfy)";
+                } else {
+                    verdict = "REJECT@canSatisfy(gate2)";
+                }
+                getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
+                        "[jobcyc]   cand={} cas={} fit={} satAny={} -> {}",
+                        c, cas, cas ? "n/a" : fit, satAny, verdict);
+            }
+        }
         if (work != null) {
             changeJob.accept(work);
             return true;
