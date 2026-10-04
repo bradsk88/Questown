@@ -21,6 +21,17 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
     // Key: villager index, Value: map of (workBlockPos -> list of inserted items)
     private final ImmutableMap<Integer, ImmutableMap<BlockPos, ImmutableList<MCHeldItem>>> insertedItems;
 
+    /**
+     * Warp-path LOOT-quest channel: non-empty extractions the warper recorded
+     * during the warp. Mutated in place and shared by reference through the
+     * state-copy paths (like the {@code knowledge} list) so the settle point
+     * (next to the knowledge settle in {@code TownFlagState.warp}) sees every
+     * record and applies it once through the live quest handle. Keeping the
+     * record on the snapshot — not on the warper — keeps the warper pure
+     * (no live flag/QuestsHolder reference).
+     */
+    private final ArrayList<MCHeldItem> recordedLootExtractions;
+
     public MCTownState(
             @NotNull List<VillagerData<MCHeldItem>> villagers,
             @NotNull List<ContainerTarget<MCContainer, MCTownItem>> containers,
@@ -31,7 +42,7 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
             @NotNull ImmutableMap<UUID, Boolean> blocksOfProgress,
             long worldTimeAtSleep
     ) {
-        this(villagers, containers, workStates, workTimers, gates, knowledge, blocksOfProgress, worldTimeAtSleep, ImmutableMap.of());
+        this(villagers, containers, workStates, workTimers, gates, knowledge, blocksOfProgress, worldTimeAtSleep, ImmutableMap.of(), new ArrayList<>());
     }
 
     public MCTownState(
@@ -43,11 +54,13 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
             @NotNull ImmutableList<MCHeldItem> knowledge,
             @NotNull ImmutableMap<UUID, Boolean> blocksOfProgress,
             long worldTimeAtSleep,
-            @NotNull ImmutableMap<Integer, ImmutableMap<BlockPos, ImmutableList<MCHeldItem>>> insertedItems
+            @NotNull ImmutableMap<Integer, ImmutableMap<BlockPos, ImmutableList<MCHeldItem>>> insertedItems,
+            @NotNull ArrayList<MCHeldItem> recordedLootExtractions
     ) {
         super(villagers, containers, workStates, workTimers, gates, blocksOfProgress, worldTimeAtSleep);
         this.knowledge.addAll(knowledge);
         this.insertedItems = insertedItems;
+        this.recordedLootExtractions = recordedLootExtractions;
     }
 
     @Override
@@ -60,6 +73,8 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
             ImmutableMap<UUID, Boolean> blocksOfProgress,
             long worldTimeAtSleep
     ) {
+        // The recorded-LOOT list is shared by reference so a warper record made
+        // on an earlier step still reaches the final state the settle point reads.
         return new MCTownState(
                 villagers,
                 containers,
@@ -69,8 +84,28 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
                 ImmutableList.copyOf(knowledge),
                 blocksOfProgress,
                 worldTimeAtSleep,
-                insertedItems
+                insertedItems,
+                recordedLootExtractions
         );
+    }
+
+    /** Records a non-empty extraction during warp, for the settle point to apply. */
+    public void recordLootExtract(MCHeldItem item) {
+        recordedLootExtractions.add(item);
+    }
+
+    /** All extractions recorded during this warp (a copy; the list itself is mutable). */
+    public ImmutableList<MCHeldItem> recordedLootExtractions() {
+        return ImmutableList.copyOf(recordedLootExtractions);
+    }
+
+    /**
+     * Consumes the recorded extractions exactly once. Returns this so the
+     * settle point can thread it into the store/send order.
+     */
+    public MCTownState clearRecordedLootExtractions() {
+        recordedLootExtractions.clear();
+        return this;
     }
 
     /**
@@ -93,7 +128,8 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
                 ImmutableList.copyOf(knowledge),
                 blocksOfProgress,
                 worldTimeAtSleep,
-                ImmutableMap.copyOf(newOuter)
+                ImmutableMap.copyOf(newOuter),
+                recordedLootExtractions
         );
     }
 
@@ -117,7 +153,8 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
                 ImmutableList.copyOf(knowledge),
                 blocksOfProgress,
                 worldTimeAtSleep,
-                ImmutableMap.copyOf(newOuter)
+                ImmutableMap.copyOf(newOuter),
+                recordedLootExtractions
         );
         return new java.util.AbstractMap.SimpleEntry<>(newState, allItems.build());
     }

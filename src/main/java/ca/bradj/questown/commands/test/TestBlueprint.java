@@ -73,10 +73,14 @@ public record TestBlueprint(
     }
 
     /**
-     * A custom end-state assertion with live world access. Runs in the realtime result-check phase;
-     * return {@code false} to fail the scenario. Use for outcomes the standard item/fullness/held/
-     * knowledge expectations cannot express — e.g. reading {@code level.getBlockState(flagPos)} or
-     * counting townies via {@code town.getVillagerHandle().size()}.
+     * A custom end-state assertion with live world access. Runs in the result-check phase
+     * that governs the scenario (the realtime check, or the warp check for warp-only
+     * scenarios; both for mixed scenarios — keep assertions read-only/idempotent);
+     * return {@code false} to fail the scenario. Use for outcomes the standard
+     * item/fullness/held/knowledge expectations cannot express — e.g. reading
+     * {@code level.getBlockState(flagPos)} or counting townies via
+     * {@code town.getVillagerHandle().size()}. (2026-10-04: the warp check used to skip it
+     * entirely, making a warp-only scenario's assertion vacuous.)
      */
     @FunctionalInterface
     public interface CustomAssertion {

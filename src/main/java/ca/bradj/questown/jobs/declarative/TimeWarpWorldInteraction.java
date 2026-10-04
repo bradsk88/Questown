@@ -441,6 +441,31 @@ public class TimeWarpWorldInteraction extends
     }
 
     /**
+     * Warp-path mirror of {@code RealtimeWorldInteraction.onLootExtracted}:
+     * instead of closing the matching LOOT quest immediately (the warper must
+     * stay pure — no live quest handle), record non-empty extractions onto the
+     * {@link MCTownState} snapshot. The settle point in
+     * {@code TownFlagState.warp} applies them through
+     * {@code getQuestHandle().processLootQuests(...)} so warp and realtime
+     * yield the same quest outcome. Same {@link LootExtractGuard} contract as
+     * realtime (non-empty item, independent of the job's {@code EXTRACTING_PRODUCT}
+     * rule).
+     */
+    @Override
+    protected @Nullable MCTownState postExtractHook(
+            Inputs inputs,
+            MCTownState currentState,
+            @Nullable MCHeldItem item
+    ) {
+        if (LootExtractGuard.questCheckFires(
+                item != null && !item.isEmpty(),
+                hasExtractingProductRule())) {
+            currentState.recordLootExtract(item);
+        }
+        return super.postExtractHook(inputs, currentState, item);
+    }
+
+    /**
      * Injects ticks to simulate time passing during warp.
      * Ensures ticksSinceLastAction is at least equal to the work interval
      * so that work can happen on each warp tick.

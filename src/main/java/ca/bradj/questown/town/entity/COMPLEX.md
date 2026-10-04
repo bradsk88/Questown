@@ -320,3 +320,46 @@ rule-gated 5-arg path is otherwise unchanged.
   GREEN after the fix.
 - Verified by `LootExtractGuardTest` (non-empty+no-rule fires; non-empty+rule
   fires; empty never fires). The oracle: `loot_on_extract`.
+- **Two independent axes — the gate and the engine.** The
+  `EXTRACTING_PRODUCT` early-return (the 3-arg bridge) is *engine-agnostic* and
+  runs before per-engine dispatch. "warp" vs "realtime" is a separate axis:
+  `TimeWarpWorldInteraction` over the `MCTownState` loot snapshot vs
+  `RealtimeWorldInteraction` over `MCExtra`'s live town; a *leaver* is a job
+  category, not an engine. So when a per-engine side effect (like this quest
+  close) doesn't fire, check for the engine-agnostic gate early-return **first**
+  — a missing per-engine log line (e.g. `[LOOTTRACE]`) is not evidence the engine
+  ran, it is evidence it was never reached. (2026-10-04: this was misdiagnosed
+  as "the warp engine omits it"; the real gate was the rule early-return, and the
+  warp/leaver conflation was dev-caught.)
+- **Warp now closes it too (Option B, 2026-10-04).** Dev decision: warp must
+  yield the same quest outcome as realtime, and the warper must stay *pure*
+  (testable without a live quest handle) — so the close is *recorded in the
+  snapshot, applied at settle*:
+  - `TimeWarpWorldInteraction` overrides the 3-arg `postExtractHook` bridge (not
+    `onLootExtracted`, which has no return value) and, under the same
+    `LootExtractGuard.questCheckFires` contract, calls
+    `currentState.recordLootExtract(item)` on the `MCTownState`.
+  - `TownFlagState.warp` (the shared settle, covers dev `warpTime` *and*
+    sleep-warp) applies each record via
+    `e.getQuestHandle().processLootQuests(extracted.get())` — exactly
+    realtime's call — then `clearRecordedLootExtractions()` (consumed once,
+    never stored).
+  - `MCTownState.recordedLootExtractions` is a per-state `ArrayList` shared *by
+    reference* through the copy paths (`newTownState`, `withInsertedItem`, …),
+    the `knowledge`-list pattern.
+  - **Trap the unit tests do not catch:** `MCAdvanceTime.finalizeState` is the
+    *terminal* rebuild (`AbstractAdvanceTime` hands the warp result through it —
+    it drops instance fields, so it had to carry the list explicitly). The
+    first oracle run proved it: 8 `warp-record` lines, then `warp-settle: 0`
+    — records recorded, then silently dropped.
+  - **Harness gap this work also closed:** `TestExecutor.checkResults` (the
+    warp-only path) never ran the blueprint's `withCustomAssertion` (only the
+    realtime check did) — so a warp-only scenario's assertion was vacuous and
+    `loot_on_extract_warp` passed on a trivial item check with the quest never
+    closed. The assertion now runs in the warp check too (keep assertions
+    read-only: mixed scenarios run it in both phases).
+  - Unit: `MCTownStateLootExtractTest` (record order, copy survival, consume
+    once). The settle call itself (TFBE → QuestsHolder) is registry-bound —
+    oracle-pinned. Oracles: `loot_on_extract` (realtime regression) and
+    `loot_on_extract_warp` (warp), both GREEN — the warp run's log shows the
+    records, the settle applying them, and `quest complete=true`.

@@ -488,7 +488,12 @@ public class TestExecutor {
         warpDeltas = result.deltas();
         boolean containerPassed = checkContainerContentsIfNeeded(
                 beforeContainerContents, afterState, blueprint.expectation());
-        warpPassed = result.passed() && checkKnowledgeGrowthIfNeeded() && containerPassed;
+        // A warp-only scenario has no realtime check phase — the custom assertion must
+        // still gate here or a warp scenario's customAssertion is vacuous (2026-10-04:
+        // loot_on_extract_warp passed with the quest never closed). Mixed realtime+warp
+        // scenarios run it in both — assertions must be read-only/idempotent.
+        boolean customPassed = checkCustomAssertionIfNeeded();
+        warpPassed = result.passed() && checkKnowledgeGrowthIfNeeded() && containerPassed && customPassed;
         broadcastResult("WARP", result);
         if (warpOnly) {
             phase = Phase.DONE;

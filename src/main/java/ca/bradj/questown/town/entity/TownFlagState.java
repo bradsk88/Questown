@@ -526,6 +526,14 @@ public class TownFlagState {
         try {
             newState = TownFlagState.advanceTime(parent, level, warpTicks);
             if (newState != null) {
+                // Warp-path LOOT parity: apply the non-empty extractions the warper
+                // recorded on the snapshot (same outcome as
+                // RealtimeWorldInteraction.onLootExtracted), then consume them so
+                // they are applied exactly once and never stored.
+                for (MCHeldItem extracted : newState.recordedLootExtractions()) {
+                    e.getQuestHandle().processLootQuests(extracted.get());
+                }
+                newState.clearRecordedLootExtractions();
                 e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Storing state on {}: {}", e.getUUID(), newState);
                 Compat.getBlockStoredTagData(e).put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
                 TownFlagState.recoverMobs(parent, level);
