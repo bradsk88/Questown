@@ -142,8 +142,10 @@ channels, the console command set) load the `questown-held-run` skill.
 `/tick rate 200` through the FIFO console to run a tick-budgeted watch ~10× faster
 (vanilla `/tick` command, since 1.20.3; `Questown-119`/1.19.2 has no lever, TPS
 fixed there). It is not `turbo_mode` (a debug-log toggle) and not `warpTime`
-(skip-the-ticks end-state). See the `questown-held-run` skill +
-`commands/test/AUTOTESTS.md` "TPS".
+(skip-the-ticks end-state). **The FIFO write must be `timeout`-bounded — a bare
+`echo` can hang the caller ~2 h when the reader is not open — and delivery must
+be confirmed by in-game day pace, not by another command over the FIFO.** See the
+`questown-held-run` skill + `commands/test/AUTOTESTS.md` "TPS".
 
 Checking for a held server: `pgrep -af 'gradlew runServer'` **returns nothing** for a
 running held server — the held server is a `java` process (its `runServer` is in `-D`

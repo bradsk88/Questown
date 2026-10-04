@@ -61,9 +61,17 @@ command group (since 1.20.3 / snapshot `23w43a`): `query`, **`rate <float>`**
 (1.0–10000.0; `ServerTickRateManager.setTickRate`), `step`, `sprint`, `stop`,
 `time`, `freeze`, `unfreeze`.
 
-- **Feed it through the FIFO console** like any other command, after boot:
-  `echo '/tick rate 200' > run/server-cmd.fifo`. Read back with `/tick query`;
-  pause with `/tick freeze`, resume with `/tick unfreeze`.
+- **Feed it through the FIFO console** after boot — but the write must be
+  *bounded*: `timeout 15 bash -c "echo '/tick rate 200' > run/server-cmd.fifo"`.
+  A bare `echo` blocks until a reader has the fifo open; if the gradle task's
+  reader is absent (cold daemon start, server between launches, or a reader that
+  closed) the caller hangs — one such 2026-10-04 hang cost ~2 h (7532 s,
+  server up the whole time). Do NOT "read back" by writing the next FIFO command
+  if the first write hung: that second write blocks identically. **Confirm
+  delivery by effect instead**: at 20 t/s one in-game day takes ~20 min of wall
+  time; at 200 t/s ~60 s. Two day-reports landing ~60 s apart in wall time is
+  proof the rate landed; nothing in the log is. (Pause `/tick freeze`, resume
+  `/tick unfreeze`, same bounded-write discipline.)
 - **Default to 200 t/s.** The 2026-10-15 sweep on this box held 20/30/60/120/200/
   240 at target with zero `Can't keep up`; 270 lost ~3% (261.8 eff); 255/300
   failed-then-held on retest. Vanilla enforces a ~20 minimum, there is no maximum —
