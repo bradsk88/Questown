@@ -8,7 +8,7 @@ description: Fixes a Questown bug by TDD at the unit level — extract the
   `questown-held-run` instead), for MC version migrations
   (`questown-mc-version-migration`), or for refactors with no bug to red-test.
   Codifies the loop the work-board fixes (2026-10-02) re-derived from AGENTS
-  fragments: seam choice, the registry-bound-untestable doctrine, the
+  fragments — seam choice, the registry-bound-untestable doctrine, the
   build/verify facts, and the same-commit close-out through prep-commit.
 ---
 
@@ -30,10 +30,20 @@ Three proven shapes, in decreasing preference:
 
 ## 2. Red, then green
 
+- **Assert with JUnit `org.junit.jupiter.api.Assertions`** — AssertJ is *not* on
+  the test classpath (`testImplementation` is `junit-jupiter` + `mockito`
+  + `junit4` only), so an `org.assertj` import is a compile-red before your real
+  red. (Repo convention: ~100 tests on JUnit Assertions, 0 on AssertJ.)
 - Write the test file first. `LANG=C.UTF-8 timeout 600 ./gradlew :compileTestJava` must FAIL (the method/class does not exist — compile-red is the accepted red for seams).
 - Implement the seam at minimum; wire the production call site(s); rebuild `:compileJava :compileTestJava`.
 
 ## 3. Verify (in this order)
+
+### Oracle discipline (autotest PASS ≠ the assertion ran)
+
+- **Trust a scenario PASS only after its assertion's log line appears for the run under test.** Grep the run's section for the assertion message; a `PASS` whose assertion output exists only in the *other* phase's section is a hollow pass — the harness skipped it. (2026-10-04: `loot_on_extract_warp` passed on a trivial item check while its `quest complete=` line existed only in the realtime run; the gap was `TestExecutor.checkResults` not running `withCustomAssertion` — now fixed. Audit at the time: only this scenario was exposed.)
+- `-Dquestown.autotest.only` matches with **contains** — `only=loot_on_extract` runs both the realtime and warp entries in one server boot (`Test 1/2`, `Test 2/2` in one log, `/tmp/<run>.log`).
+- **A field on `MCTownState` must be carried through `MCAdvanceTime.finalizeState`** — the terminal rebuild (called by `AbstractAdvanceTime` before the warp result is returned) drops instance fields: unit-tested copy semantics do *not* cover it (2026-10-04: 8 records written, settle read 0). See `town/entity/COMPLEX.md` “LOOT quest close”.
 
 - `:test --tests "package.TheNewTest"` — then **read `build/test-results/test/TEST-<class>.xml`**: `tests="N"` matching the methods, `failures="0"`. `BUILD SUCCESSFUL` + `executed` does not name the suite (repo AGENTS build-verification).
 - Affected-area slice: `--tests "ca.bradj.questown.gui.*" --tests "ca.bradj.questown.town.*" --tests "ca.bradj.questown.jobs.*"`.
