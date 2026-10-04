@@ -225,6 +225,13 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     }
 
     @Override
+    public CompoundTag serializeFirstHunterLootGuaranteeFired() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.isFirstHunterLootGuaranteeFired());
+        return t;
+    }
+
+    @Override
     public CompoundTag serializeChickenArcForfeit() {
         CompoundTag t = new CompoundTag();
         t.putBoolean("value", flag.getChickenArcForfeit());

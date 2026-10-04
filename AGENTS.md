@@ -138,6 +138,13 @@ check that precede every held `runServer -Dquestown.autotest.hold=true
 held-run sequence (server-first launch, 30s observation cadence, chat/observe
 channels, the console command set) load the `questown-held-run` skill.
 
+**A realtime held run is NOT capped at 20 TPS on the 1.20.6 branch** — feed
+`/tick rate 200` through the FIFO console to run a tick-budgeted watch ~10× faster
+(vanilla `/tick` command, since 1.20.3; `Questown-119`/1.19.2 has no lever, TPS
+fixed there). It is not `turbo_mode` (a debug-log toggle) and not `warpTime`
+(skip-the-ticks end-state). See the `questown-held-run` skill +
+`commands/test/AUTOTESTS.md` "TPS".
+
 Checking for a held server: `pgrep -af 'gradlew runServer'` **returns nothing** for a
 running held server — the held server is a `java` process (its `runServer` is in `-D`
 args, not a `gradlew runServer` string), and so is the gradle wrapper. Use

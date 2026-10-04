@@ -53,6 +53,8 @@ public interface TownFlagInitialization {
 
     CompoundTag serializeChickenFirstGatherWorldlySeedsFired();
 
+    CompoundTag serializeFirstHunterLootGuaranteeFired();
+
     CompoundTag serializeChickenArcForfeit();
 
     CompoundTag serializeChickenStructureRotation();

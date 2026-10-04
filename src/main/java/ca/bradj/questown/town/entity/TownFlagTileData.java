@@ -45,6 +45,9 @@ public class TownFlagTileData {
     private static final String NBT_CHICKEN_FIRST_GATHER_WORLDLY_SEEDS_FIRED = QTNBT.keyify(
             "chicken_first_gather_worldly_seeds_fired"
     );
+    private static final String NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED = QTNBT.keyify(
+            "first_hunter_loot_guarantee_fired"
+    );
     private static final String NBT_CHICKEN_ARC_FORFEIT = QTNBT.keyify("chicken_arc_forfeit");
     private static final String NBT_CHICKEN_STRUCTURE_ROTATION = QTNBT.keyify("chicken_structure_rotation");
     private static final String NBT_CHICKEN_ROTATION_DETECTED = QTNBT.keyify("chicken_rotation_detected");
@@ -68,6 +71,7 @@ public class TownFlagTileData {
         b.put(NBT_CHICKEN_EVER_SPAWNED, initChickenEverSpawned());
         b.put(NBT_CHICKEN_BEAT_STATE, initChickenBeatState());
         b.put(NBT_CHICKEN_FIRST_GATHER_WORLDLY_SEEDS_FIRED, initChickenFirstGatherWorldlySeedsFired());
+        b.put(NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED, initFirstHunterLootGuaranteeFired());
         b.put(NBT_CHICKEN_ARC_FORFEIT, initChickenArcForfeit());
         b.put(NBT_CHICKEN_STRUCTURE_ROTATION, initChickenStructureRotation());
         b.put(NBT_CHICKEN_ROTATION_DETECTED, initChickenRotationDetected());
@@ -102,6 +106,16 @@ public class TownFlagTileData {
                     return true;
                 },
                 flag -> flag.chickenFirstGatherWorldlySeedsFired = false
+        );
+    }
+
+    private static InitPair initFirstHunterLootGuaranteeFired() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.firstHunterLootGuaranteeFired = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.firstHunterLootGuaranteeFired = false
         );
     }
 
@@ -352,6 +366,7 @@ public class TownFlagTileData {
         write(t, NBT_CHICKEN_EVER_SPAWNED, flag.serializeChickenEverSpawned());
         write(t, NBT_CHICKEN_BEAT_STATE, flag.serializeChickenBeatState());
         write(t, NBT_CHICKEN_FIRST_GATHER_WORLDLY_SEEDS_FIRED, flag.serializeChickenFirstGatherWorldlySeedsFired());
+        write(t, NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED, flag.serializeFirstHunterLootGuaranteeFired());
         write(t, NBT_CHICKEN_ARC_FORFEIT, flag.serializeChickenArcForfeit());
         write(t, NBT_CHICKEN_STRUCTURE_ROTATION, flag.serializeChickenStructureRotation());
         write(t, NBT_CHICKEN_ROTATION_DETECTED, flag.serializeChickenRotationDetected());

@@ -227,6 +227,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             ca.bradj.questown.mobs.helperchicken.ChickenBeatState.WAITING_FOR_STICK;
     boolean chickenFirstGatherWorldlySeedsFired = false;
     boolean chickenArcForfeit = false;
+    /**
+     * Persisted: true once the first hunter has delivered a raw-meat that closes the
+     * raw-food LOOT (ADR-0014's hunter equivalent). Gates
+     * {@link ca.bradj.questown.jobs.declarative.FirstHunterLootGuarantee#shouldPrepend}
+     * and the LOOT-extract flip hook.
+     */
+    boolean firstHunterLootGuaranteeFired = false;
     net.minecraft.world.level.block.Rotation chickenStructureRotation =
             net.minecraft.world.level.block.Rotation.NONE;
     boolean chickenRotationDetected = false;
@@ -1658,6 +1665,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public void setChickenFirstGatherWorldlySeedsFired(boolean v) {
         this.chickenFirstGatherWorldlySeedsFired = v;
+    }
+
+    public boolean isFirstHunterLootGuaranteeFired() {
+        return firstHunterLootGuaranteeFired;
+    }
+
+    public void setFirstHunterLootGuaranteeFired(boolean v) {
+        this.firstHunterLootGuaranteeFired = v;
     }
 
     public boolean getChickenArcForfeit() {

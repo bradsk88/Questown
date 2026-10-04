@@ -11,6 +11,7 @@ import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
+import ca.bradj.questown.jobs.declarative.FirstHunterLootGuarantee;
 import ca.bradj.questown.jobs.declarative.WarpTickHook;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
@@ -530,8 +531,18 @@ public class TownFlagState {
                 // recorded on the snapshot (same outcome as
                 // RealtimeWorldInteraction.onLootExtracted), then consume them so
                 // they are applied exactly once and never stored.
+                // Flip the hunter loot-guarantee once-bit if a raw-food extraction
+                // just closed the raw-food LOOT (ADR-0014's hunter equivalent).
+                // Capture the pre-settle state, then check if the settle closed it.
+                boolean rawLootActiveBefore = FirstHunterLootGuarantee.rawFoodLootQuestActive(e)
+                        && !e.isFirstHunterLootGuaranteeFired();
+                boolean anyRawFoodExtract = newState.recordedLootExtractions().stream()
+                        .anyMatch(FirstHunterLootGuarantee::matchesFirstHunterItem);
                 for (MCHeldItem extracted : newState.recordedLootExtractions()) {
                     e.getQuestHandle().processLootQuests(extracted.get());
+                }
+                if (rawLootActiveBefore && anyRawFoodExtract) {
+                    FirstHunterLootGuarantee.flipOnceBit(e);
                 }
                 newState.clearRecordedLootExtractions();
                 e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Storing state on {}: {}", e.getUUID(), newState);

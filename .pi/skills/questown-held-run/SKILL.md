@@ -52,6 +52,34 @@ client-daemon-death / FIFO-survival detail this skill only summarizes, and a
 fresh session that skips it will hit the launch traps. The rest of this skill is
 the sequence a session needs up front.
 
+## Speeding a held realtime run (the tick-rate lever — 1.20.6 only)
+
+When a realtime held run (self_sufficiency, a behavior proof, a perf sweep) is too
+slow, **raise the tick rate — do not assume 20 TPS is a cap.** 20 is only the
+vanilla *default*; on the 1.20.6 branch (this one) vanilla added the `/tick`
+command group (since 1.20.3 / snapshot `23w43a`): `query`, **`rate <float>`**
+(1.0–10000.0; `ServerTickRateManager.setTickRate`), `step`, `sprint`, `stop`,
+`time`, `freeze`, `unfreeze`.
+
+- **Feed it through the FIFO console** like any other command, after boot:
+  `echo '/tick rate 200' > run/server-cmd.fifo`. Read back with `/tick query`;
+  pause with `/tick freeze`, resume with `/tick unfreeze`.
+- **Default to 200 t/s.** The 2026-10-15 sweep on this box held 20/30/60/120/200/
+  240 at target with zero `Can't keep up`; 270 lost ~3% (261.8 eff); 255/300
+  failed-then-held on retest. Vanilla enforces a ~20 minimum, there is no maximum —
+  the ceiling is **load-dependent** (peak-town-load cost × rate vs the per-tick
+  budget), so expect it to shift ±10–30 t/s with town and box load.
+- **It is direct on a tick-budgeted scenario.** A watch of N in-game days is
+  N×24000 ticks of `level.getGameTime()`, so at 200 t/s a 3-day self_sufficiency
+  window is ~6 min wall-clock, not ~60 min at the 20 default.
+- **This is NOT `turbo_mode`** (a per-flag DEBUG-log toggle) and **NOT `warpTime`**
+  (skip-and-simulate the end state — that bypasses realtime behavior and cannot be
+  the realtime proof). Raising TPS runs real ticks, just faster.
+- **1.19.2 / Questown-119 has no such command — TPS is fixed at 20 there.**
+
+Sweep detail + the "upper limit is measured, not set" reasoning:
+`src/main/java/ca/bradj/questown/commands/test/AUTOTESTS.md` ("TPS").
+
 ## Launch (server first, then client — order matters)
 
 Launch the server **alone** first (it compiles; the client + server + recompile

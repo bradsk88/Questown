@@ -112,9 +112,16 @@ the three-"warp" / TPS breakdown live in
   ticks faster. A "Warp took N ms" log line is the *computation* time, not N
   accelerated ticks. Because it bypasses the tick loop, it **skips** the
   behavior that only ticks in realtime, so it cannot substitute for a realtime
-  proof. There is no "drive real ticks faster" lever (vanilla TPS is fixed at
-  20): a realtime proof runs real ticks (the realtime watch); warp is the
-  end-state tool behind the single-job tests (`cook`/`farmer`).
+  proof. Warps skip real ticks; they do not speed them up. **Speeding a realtime
+  proof is a separate lever, and it EXISTS on the 1.20.6 branch** (20 TPS is only
+  the vanilla *default*, not a cap): feed `/tick rate <float>` (1.0–10000.0)
+  through the FIFO console after boot, `/tick query` to read back, `/tick freeze`
+  / `unfreeze` to pause/resume. Safe sweet spot on this box is 200 t/s. **1.19.2
+  (Questown-119) has no such lever — TPS is fixed at 20 there.** Warp is still the
+  skip-and-simulate end-state tool behind the single-job tests (`cook`/`farmer`).
+  Sweep + "upper limit is measured, not set":
+  `.../commands/test/AUTOTESTS.md` ("TPS"); the feed command + per-run default
+  live in `questown-held-run`.
 - **Before launching a "prove phase X live" run, pin the seed vs the gate AND the batch's room
   requirements.** If the behavior is a phase with a roster/state threshold (e.g. the cook phase
   `PHASE_JOB_CHANGE_FOOD` opens only at **roster ≥ 3**), confirm the chosen seed starts at/above

@@ -386,9 +386,10 @@ public class TimeWarpWorldInteraction extends
             Collection<MCHeldItem> mcHeldItems
     ) {
         Iterable<MCHeldItem> base = resultGenerator.apply(inputs.level, mcHeldItems);
-        return ca.bradj.questown.mobs.helperchicken.ChickenArcLootGuarantee.maybePrepend(
-                resolveFlagAtTownPos(inputs), base
-        );
+        ca.bradj.questown.town.entity.TownFlagBlockEntity flag = resolveFlagAtTownPos(inputs);
+        base = ca.bradj.questown.mobs.helperchicken.ChickenArcLootGuarantee.maybePrepend(flag, base);
+        base = FirstHunterLootGuarantee.maybePrepend(flag, getJobId(), base);
+        return base;
     }
 
     private ca.bradj.questown.town.entity.TownFlagBlockEntity resolveFlagAtTownPos(Inputs inputs) {

@@ -271,9 +271,10 @@ public class RealtimeWorldInteraction extends
             Collection<MCHeldItem> mcHeldItems
     ) {
         Iterable<MCHeldItem> base = resultGenerator.apply(inputs.town().getServerLevel(), mcHeldItems);
-        return ca.bradj.questown.mobs.helperchicken.ChickenArcLootGuarantee.maybePrepend(
-                resolveFlagFromTown(inputs), base
-        );
+        ca.bradj.questown.town.entity.TownFlagBlockEntity flag = resolveFlagFromTown(inputs);
+        base = ca.bradj.questown.mobs.helperchicken.ChickenArcLootGuarantee.maybePrepend(flag, base);
+        base = FirstHunterLootGuarantee.maybePrepend(flag, getJobId(), base);
+        return base;
     }
 
     private static ca.bradj.questown.town.entity.TownFlagBlockEntity resolveFlagFromTown(MCExtra inputs) {
@@ -495,7 +496,14 @@ public class RealtimeWorldInteraction extends
         if (LootExtractGuard.questCheckFires(
                 item != null && !item.isEmpty(),
                 hasExtractingProductRule())) {
+            ca.bradj.questown.town.entity.TownFlagBlockEntity flag = resolveFlagFromTown(inputs);
+            boolean rawWasActive = FirstHunterLootGuarantee.rawFoodLootQuestActive(flag)
+                    && flag != null && "hunter".equals(getJobId() != null ? getJobId().rootId() : null)
+                    && !flag.isFirstHunterLootGuaranteeFired();
             inputs.town().getQuestHandle().processLootQuests(item.get());
+            if (rawWasActive && FirstHunterLootGuarantee.matchesFirstHunterItem(item)) {
+                FirstHunterLootGuarantee.flipOnceBit(flag);
+            }
         }
     }
 
