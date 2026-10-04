@@ -49,6 +49,7 @@ never extracts in the first place.** The claim is not the blocker; the hunter st
   [11500,22000), NIGHT [22000,24000) — and D=2000, the **acceptance window is
   day-time `t ∈ [0, 9500)`**: the hunter may only START the hunt between dawn and ~9:07
   in-game. 9500 → next dawn (60% of the clock) is a hard NO regardless of tools/score/request.
+  *(Unit-pinned by `DayWindowTest`, see the evidence note further down.)*
 - So "fitting in a day" = "can finish by end-of-noon". The stall is a **scheduling**
   interaction, not an availability one: the hunter (re)asks on the board only at its
   state-transitions, the seek job itself bails to downtime after 1000 ticks
@@ -61,8 +62,21 @@ never extracts in the first place.** The claim is not the blocker; the hunter st
   closure, `TownFlagBlockEntity.changeJobForVisitorFromBoard` L865) was never captured:
   the debug toggle is dev-env-gated (`ENABLE_DEV_COMMANDS` must be in the *gradle daemon*
   env) and this box's FIFO console feed blocked one feeder for ~2 h before abort
-  (`run/samples/probe-*.log`). Every other link above is code/log-verified. The window
-  arithmetic follows directly from the two constants (6000/11500) + D=2000.
+  (`run/samples/probe-*.log`). Every other link above is code/log-verified.
+- **Window arithmetic — now unit-pinned (2026-10-04, handoff `pintail` Tier 1):**
+  `DayWindowTest` (`src/test/java/ca/bradj/questown/jobs/DayWindowTest.java`) rests the whole-day
+  sweep of the `canFit` predicate on the registry-free `Signals` seam and asserts the accepted
+  start set is **exactly `t ∈ [0, 9500)`** (boundary pair 9499→NOON fit / 9500→EVENING miss,
+  no overnight wrap, window contiguous), plus the `fromDayTime` segment boundaries (6000, 11500,
+  22000). Green 7/7. The registry-bound half of `canFit` itself (the `Work` supplier +
+  `getTotalDuration` lookup, `D=2000` known from the `hunter/sword` job JSON
+  `work_states["time":2000]`) is NOT unit-loadable without a Forge harness — pinned by
+  `ServerJobsRegistryCanFitTest`'s single `todo_canFit…` failing assertion per the repo
+  doctrine, so the suite stays honest about what the Forge environment still owns.
+- **Remaining runtime gap (handoff `pintail` Tier 2):** the single-line per-ask rejection
+  (`TownFlagBlockEntity.changeJobForVisitorFromBoard` L865) and the SOFT hunter's board-ask
+  cadence against the [dawn, 9:07) window. The diagnosis's *why does the window never get
+  entered* question is live only in a held run; the window's *shape* is now a unit fact.
 - **Fix implication (unchanged, not applied):** `always_consider` on the sword jobs IS the
   bypass for exactly this predicate (`!canAlwaysStart && !canFit → skip`) — per the
   rule's own comment and the only Java-side precedent (`DowntimeWork.java:93`).
