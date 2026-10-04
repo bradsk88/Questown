@@ -263,6 +263,64 @@ stream. Combined with hold mode not polling the console, dev-command
 injection on this branch remains **scenario code / forwarded system
 properties only** (open finding #6, re-confirmed by direct fd inspection).
 
+## LOOT-quest-on-extraction — deterministic autotest built (2026-10-04)
+
+Mission: make `villager_simple_furnace_food_raw` (raw-food LOOT) close
+**deterministically** when a hunter extracts meat, so the run-3b dine-vs-chest
+race ("closes only when a drawn meat survives deposit") stops gating cook/unlock.
+
+**Proven in code (this session, not inferred):**
+- `TownQuests.processLootQuests(MCTownItem)` (`TownQuests.java:1470`) is the
+  only LOOT-quest completor. Tag-aware (`Ingredients.asIngredient(wantedId)`
+  matches tag members), **non-consuming** (item fate decided by deposit/eat).
+- Its **only production caller** is `RealtimeWorldInteraction.postExtractHook`
+  (`RealtimeWorldInteraction.java:443` area) — the extract step of the
+  declarative job engine (`tryExtractProduct` → `tryGiveItems` →
+  `postExtractHook`).
+- **Asymmetry:** `TimeWarpWorldInteraction.postExtractHook` does **not** call
+  `processLootQuests` (offline MCTownState, no live flag entity — by design:
+  warp cannot complete quests). So any meat "extracted" in the warp phase can
+  never close the quest; only the realtime extract path can.
+
+**`loot_on_extract` autotest** (registered in `TestBlueprintRegistry`; entry
+`jobs:loot_on_extract`, job `hunter:sword`, realtime-only `skipWarp=true`,
+`realtimeTicks=4800`): posts a raw-food LOOT quest, spawns 1 hunter, asserts
+the quest is LOOT-type + complete after a full hunt cycle. First clean run
+(2026-10-04, `/tmp/loot_on_extract1.log`):
+- `raw-food LOOT quest posted=true` ✓, hunter spawned + assigned ✓,
+  `jobs:hunter:sword [PASS] REALTIME (extrapolated): All expectations met`,
+  snapshot `After: {minecraft:mutton=5, minecraft:stone_sword=0,
+  minecraft:cooked_beef=0}` (real `captureCurrentState`, not a projection),
+  then `quest complete=false (type LOOT=true)` → `CUSTOM assertion: FAIL` →
+  `0/1 passed (FAILURES)`. **RED for the reported bug.**
+- **`LOOTTRACE` count = 0** in that run: `postExtractHook` (the only
+  `processLootQuests` caller) **never fired**, even though mutton landed in
+  the town state. So the meat reached the villager via a path that bypasses
+  the extract/quest seam — the user's exact report.
+
+**Open (must settle before the green fix — not settled in code yet):**
+1. In that run, is `mutton=5` *hunted* loot or the hunter job's
+   `initial_request: minecraft:mutton` material? (The job declares
+   `initial_request: minecraft:mutton`, `result.type: biome_loot`.) If it is
+   the initial request, `mutton=5` is not proof a hunt extracted, and the
+   real hunt extract may have produced air/leather (biome table) this draw.
+2. The hunter's special rule `remove_from_world` (specials at
+   `processing_state:1` and `WAITING_FOR_TIMED_STATE`) — need to confirm
+   whether it grants the loot via a `beforeExtract` applier that returns
+   non-null and thereby short-circuits `tryExtractProduct` (skipping
+   `postExtractHook`), or whether the loot simply never routes through
+   `tryExtractProduct` in realtime.
+
+**Fix seam (intended, pending #1/#2):** wire `processLootQuests(item)` onto the
+hunted-loot grant path (the seam that delivers the biome_loot result to the
+villager) so a matching LOOT quest completes the instant the loot is granted —
+matching the existing realtime design (item not consumed), and independent of
+whether the meat is then eaten or deposited (kills the dine-vs-chest race).
+The natural single choke point for any loot grant to a townie is
+`VisitorMobEntity.tryGiveItem` / `addToEmptySlot` (the job-inventory grant),
+which the gatherer/cook extract path and the BOP grant both funnel through —
+verify the hunter's biome_loot grant uses it before wiring there.
+
 ## Working-tree state (for the committer)
 
 - ~~`build.gradle` — selfsuff forwarding~~ — **committed (b3953906)**.
