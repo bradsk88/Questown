@@ -73,13 +73,15 @@ never extracts in the first place.** The claim is not the blocker; the hunter st
   `work_states["time":2000]`) is NOT unit-loadable without a Forge harness — pinned by
   `ServerJobsRegistryCanFitTest`'s single `todo_canFit…` failing assertion per the repo
   doctrine, so the suite stays honest about what the Forge environment still owns.
-- **Remaining runtime gap (handoff `pintail` Tier 2):** the single-line per-ask rejection
-  (`TownFlagBlockEntity.changeJobForVisitorFromBoard` L865) and the SOFT hunter's board-ask
-  cadence against the [dawn, 9:07) window. The diagnosis's *why does the window never get
-  entered* question is live only in a held run; the window's *shape* is now a unit fact.
-- **Fix implication (unchanged, not applied):** `always_consider` on the sword jobs IS the
-  bypass for exactly this predicate (`!canAlwaysStart && !canFit → skip`) — per the
-  rule's own comment and the only Java-side precedent (`DowntimeWork.java:93`).
+- **Tier 2 RAN (2026-10-04) — the per-ask rejection is a measured ZERO, not a gap:** the
+  held SOFT run (6 days, `Questown:Flag` at DEBUG) reproduced the stall and captured **zero**
+  `not enough time left in the day` lines — see the Tier-2 section below. The window's
+  *shape* is a unit fact; the live stall is at a gate this rejection line does not cover.
+- **Fix implication — REJECTED (user, 2026-10-04):** `always_consider` on the sword jobs
+  IS the bypass for exactly this predicate (`!canAlwaysStart && !canFit → skip`) — per the
+  rule's own comment and the only Java-side precedent (`DowntimeWork.java:93`). **The dev
+  does not want `always_consider` on this job; do not re-propose it.** (And see the
+  Tier-2 probe below — the predicate may not even be the live gate.)
 
 ## Battery v3 — the guarantee helped, but the stall survives (post `08249841`)
 
@@ -104,15 +106,45 @@ of `run/suff-batch-fast.sh`.)
      `… farmer_qt_harvest_wheat`; the sword ITEM quests never even opened; roster frozen
      {gatherer=2, hunter=1}. A **separate** RoomRecipes-resolution bug, not the hunt gate.
 
-## Remaining options (none applied since the guarantee landed; pick before touching code)
+## Tier-2 live probe — the predicted canFit rejection NEVER fires (2026-10-04, handoff `pintail`)
 
-1. **Job-JSON (data-only, leading candidate)** — add `always_consider` to the global
-   special rules of `hunter/sword`, `sword_half_day`, `sword_full_day`. Targets variant B
-   (3/4 of the residual soft) directly: it is precisely the `canFit` bypass.
-2. **Ask-cadence question (still open)** — *why* the SOFT hunter's board-asks never land
-   in [dawn, 9:07): settle with the per-line rejection log (needs a working debug-toggle
-   feed — see the evidence gap) or a direct cadence probe of `changeJobForVisitorFromBoard`
-   calls per day on a SOFT seed.
+A held `village/self_sufficiency` SOFT seed at ~200 t/s (6 in-game days), `Questown:Flag`
+logger at DEBUG so the rejection line would surface. Evidence: `run/samples/tier2-canfit-
+probe-20261004.md` (local; `run/` is gitignored).
+
+- **Stall reproduces live (verified):** the hunter sits in `hunter/seeking_work`
+  (31.5k journal-snapshot lines), wooden+stone swords `COMPLETED`,
+  `JOB_CHANGE/hunter_qt_sword` `ACTIVE`, 0 adoption, hands empty.
+- **Score/canSatisfy ruled out live (verified):** the executor's stall score-dump (the
+  DEV-DIAG in `VillageSelfSufficiencyExecutor.maybeEmitSeekingStallDiag`) shows
+  `hunter/sword` **1.009**, `sword_half_day` **1.005**, `sword_full_day` **1.008** —
+  "Satisfies request: mutton; all ingredients and tools available."
+- **THE PREDICTED REJECTION IS ABSENT (verified):** across all 6 days there are **zero**
+  `Villager will not do … not enough time left in the day` lines, although `canFit`
+  denies 60% of each day. (The capture is proven to work — other `Questown:Flag` DEBUG
+  lines DO fire in the same run; the logger is not the gap.)
+- **Inference (not yet proven):** in `JobCycler.isValid` that line is *the* runtime
+  signature of an ask that **reached** the clock-window gate and was **denied**
+  (`!canAlwaysStart && !canFit → return false`; `always_consider` is off, so
+  `canAlwaysStart=false`). Six days without it means the stalling hunter is **not** being
+  denied per-ask — the board-ask either yields **no adoptable candidate** (empty/filtered
+  `possible` set → cycler returns null with no gate evaluation → no line, no adopt) or the
+  seek never reaches `nextForVillager`, or — the one silent branch — `canFit` passes
+  (in-window) and `canSatisfy` fails on the live `requestedResults`, which `JobCycler`
+  rejects with **no log line**. **This refutes "asked-but-clock-rejected" for this SOFT
+  seed** and does not invalidate the Tier-1 unit pin (the window math is still correct for
+  a job that actually reaches the gate). The live stall is at a gate the rejection line
+  does not cover.
+
+## Remaining options (none applied; `always_consider` rejected by the dev)
+
+1. `always_consider` — **REJECTED (dev, 2026-10-04); do not re-propose.**
+2. **Pin the live gate (now the leading question)** — the Tier-2 probe shows variant B is
+   *not* per-ask `canFit` rejection. Settle which silent branch it is (empty `possible`
+   set / seek never reaches evaluation / `canFit`-pass + `canSatisfy` silent-fail) with a
+   targeted dev-log in `JobCycler.isValid` (log each candidate + which `return false`)
+   or a `changeJobForVisitorFromBoard` entry probe on a SOFT seed — *not* by re-reading
+   code.
 3. **Variant C** (room-builder `could not resolve recipe blocks`) — separate bug, separate
    repro. 1/4 of the residual but a permanent stall when it fires.
 4. **Harness timing** — deprioritized: the SOFTs sat in `seeking_work` the whole 5-day
