@@ -887,9 +887,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             ImmutableList<JobID> candidates = possibleWork.getFor(villager.getJobId()).stream()
                     .filter(j -> getVillagerHandle().isUnlocked(ownerUUID, j))
                     .collect(ImmutableList.toImmutableList());
+            long dt = Util.getDayTime(getServerLevel()).dayTime();   // DEV-DIAG 2b: correlate each ask with the in/out window band
             getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
-                    "[jobcyc] townie={} cur={} candidates={}/{} req={} selected={}",
-                    ownerUUID, villager.getJobId(),
+                    "[jobcyc] townie={} cur={} dt={} candidates={}/{} req={} selected={}",
+                    ownerUUID, villager.getJobId(), dt,
                     candidates.size(), possibleWork.getFor(villager.getJobId()).size(),
                     requestedResults.isEmpty() ? "<none>" : requestedResults, work);
             for (JobID c : candidates) {
@@ -916,8 +917,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                     verdict = "REJECT@canSatisfy(gate2)";
                 }
                 getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
-                        "[jobcyc]   cand={} cas={} fit={} satAny={} -> {}",
-                        c, cas, cas ? "n/a" : fit, satAny, verdict);
+                        "[jobcyc]   cand={} dt={} cas={} fit={} satAny={} -> {}",
+                        c, dt, cas, cas ? "n/a" : fit, satAny, verdict);
             }
         }
         if (work != null) {

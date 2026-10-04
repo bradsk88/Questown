@@ -194,11 +194,45 @@ furnace_food` `ACTIVE`, cook `NO_JOBSITE` in a `[lock]` dump, `2 hunter` townies
 **Answer to (b):** the SOFT hunter's seeks miss the window because the **ask phase is
 phase-locked to the out-of-window band** (a scheduling/interference between the hunter's
 hunt→dine→seek cycle and the day clock), and **`canFit` is the gate that then denies
-them**. This is the scheduling facet (Mode B) the Tier-2 probe pointed at, now reproduced
-and shown to be `canFit`-denied (not an empty candidate set, not canSatisfy, not a stuck
-clock). The remaining open root-cause is *why the phase is locked out-of-window* — the
-precise timing of the hunter's cycle vs the `[1000,9500)` band (would need dayTime-at-ask
-logging, which `[jobcyc]` does not yet emit).
+them**. The precise phase-lock mechanism (why it locks) and its effect on the chain are
+pinned below with the dayTime column (trace b.2).
+
+## Trace b.2 — the phase-lock, pinned with the dayTime column (2026-10-04, handoff `pintail`)
+
+`[jobcyc]` now emits `dt=` (day-time, [0,24000)); re-ran `village/self_sufficiency` at 200
+t/s (`/tmp/tier4-server.log`, local). The hunter's asks are **bimodal in the day — no
+overlap, a dead middle band** (`dt` in ticks; in-window band = `[1000, ~9500]` per the
+Tier-1 pin `t∈[0,9500)`):
+
+- **Morning asks = ACCEPT (adoptive):** `dt` only in `[1376, 8881]` — values 1376, 1436,
+  1573, 3761, 3851, 6484, 6567, 8410, 8791, 8881 (all in-window → the hunter adopts the
+  sword hunt, hunts, dines, re-adopts the next in-window slot).
+- **Lates-day asks = REJECT@canFit (stalled):** `dt` only in `[11986, ~13999]` — 28 at
+  `[11986,11999]`, 466 at `[12000,13999]` (~494 total). `dt=[9500,11986]` and the band
+  `[8881,9500]` have **zero** asks (the hunter simply does not ask there).
+- **Structure:** the day's in-window band is *early* (`[1000,~9500]`) and the hunter's
+  lates-day asks (its "I want to hunt again but canFit says not enough time left" retries)
+  fall in the *late* out-of-window band `[9500,13999]`, which sits at the tail of the
+  harness day (before `time set day` night-wraps → 1000). So lates-day seeks miss the
+  window **structurally**: the next in-window opportunity is only after the night-wrap
+  (morning). The hunter therefore hunts productively in the morning, then idles in a
+  lates-day seek→REJECT loop (~494 lates-day asks) until the day wraps and the morning
+  window returns. 8 day-wraps observed.
+- **Effect in THIS run (honest):** the chain still advanced — `hunter_qt_sword` and
+  `villager_simple_furnace_food_raw` are **COMPLETED**, `cook_qt_simple_furnace_food`
+  **ACTIVE** (the morning hunts sufficed to open the cook). So here the narrow window is
+  a *symptom* (a lates-day seek-reject loop), not a full SOFT lock. The full SOFT lock
+  occurs when the town's food demand needs **more hunts than the morning in-window band
+  can absorb** — the window then caps the hunter's daily productive time to the morning
+  (no lates-day hunting), and the chain stalls. The lates-day REJECT loop is the visible
+  signature of that cap.
+
+**Answer to (b), refined:** the SOFT hunter's seeks that miss the window are its **lates-day
+asks**; they are out-of-window because the in-day window (dawn→~09:30, D=2000) is early in
+the day and those asks fall in the lates-day band `[~9500, ~14000]`, which is out-of-window
+by design (`canFit`). The gate is `canFit`; the cap is the narrow early in-window band that
+gives the hunter only a morning slot for hunting, so lates-day demand hits the reject loop
+(and the chain stalls if the morning can't absorb the day's food demand).
 
 ## Remaining options (none applied; `always_consider` rejected by the dev)
 
