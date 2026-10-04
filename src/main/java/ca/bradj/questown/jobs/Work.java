@@ -42,6 +42,14 @@ public class Work {
     private boolean hasNoOutput;
     private @Nullable SlotPrecondition slotPrecondition;
     private @Nullable String proficiencyId;
+    /**
+     * True when the job's JSON opts it into its root's initial unlock set via
+     * `unlocked_with_root_job` — e.g. `cook/fuel`, so a freshly staffed cook
+     * unlocks a working set (extract + fuel) instead of a single root job that
+     * re-selects itself every cooldown. Recipes stay progression-gated;
+     * see `.scratch/cook-skill-unlock/cook-skill-unlock.md`.
+     */
+    private boolean unlockedWithRootJob;
 
     public Work(
             JobID id,
@@ -93,8 +101,33 @@ public class Work {
         return proficiencyId;
     }
 
+    public boolean isUnlockedWithRootJob() {
+        return unlockedWithRootJob;
+    }
+
+    /**
+     * Pure "unlocked with the root job at staff" decision: a job joins its
+     * root's initial set when it is a progression root (no parent) or its JSON
+     * opted in via `unlocked_with_root_job`. Kept as a plain (parent, flag)
+     * static so it is unit-testable without a Forge registry — the
+     * `ResourceJobLoader` parse and the `getDefaultWork` consumers are the
+     * registry-bound half (compile + held-run coverage).
+     */
+    public static boolean isUnlockedInitially(
+            @Nullable JobID parentID,
+            boolean unlockedWithRootJob
+    ) {
+        return parentID == null || unlockedWithRootJob;
+    }
+
     public Work withProficiencyId(@Nullable String proficiencyId) {
         this.proficiencyId = proficiencyId;
+        return this;
+    }
+
+    /** Chains the `unlocked_with_root_job` JSON flag parsed by {@code ResourceJobLoader}. */
+    public Work withUnlockedWithRootJob(boolean unlockedWithRootJob) {
+        this.unlockedWithRootJob = unlockedWithRootJob;
         return this;
     }
 
@@ -118,6 +151,7 @@ public class Work {
                 specialGlobalRules
         );
         work.proficiencyId = proficiencyId;
+        work.unlockedWithRootJob = unlockedWithRootJob;
         return work;
     }
 
@@ -143,6 +177,7 @@ public class Work {
                 specialGlobalRules
         );
         work.proficiencyId = proficiencyId;
+        work.unlockedWithRootJob = unlockedWithRootJob;
         return work;
     }
 
@@ -177,6 +212,7 @@ public class Work {
         );
         work.overrides = overrides;
         work.proficiencyId = proficiencyId;
+        work.unlockedWithRootJob = unlockedWithRootJob;
         return work;
     }
 
@@ -189,6 +225,7 @@ public class Work {
         work.overrides = this.overrides;
         work.slotPrecondition = sp;
         work.proficiencyId = proficiencyId;
+        work.unlockedWithRootJob = unlockedWithRootJob;
         return work;
     }
 

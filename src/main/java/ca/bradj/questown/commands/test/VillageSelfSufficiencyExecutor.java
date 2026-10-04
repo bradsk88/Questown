@@ -858,10 +858,15 @@ public final class VillageSelfSufficiencyExecutor {
             c.setItem(0, new ItemStack(net.minecraft.world.item.Items.COOKED_MUTTON, FOOD_SEED_PER_ITEM));
             c.setItem(1, new ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, FOOD_SEED_PER_ITEM));
             c.setItem(2, new ItemStack(net.minecraft.world.item.Items.COOKED_PORKCHOP, FOOD_SEED_PER_ITEM));
+            int coal = coalSeed();
+            if (coal > 0) {
+                c.setItem(3, new ItemStack(net.minecraft.world.item.Items.COAL, coal));
+            }
             c.setChanged();
             flowTracker.track(level, storeChestPos);
             openingFoodSeeded = true;
-            msg("[seed] seeded " + (FOOD_SEED_PER_ITEM * 3) + " opening food into the store chest at "
+            msg("[seed] seeded " + (FOOD_SEED_PER_ITEM * 3) + " opening food + " + coal + " coal"
+                    + " (player-input stand-in) into the store chest at "
                     + storeChestPos.toShortString() + "; flow tracker pointed there");
         }
         // Otherwise the chest block entity is not up yet; leave the latch unset and retry next cycle.
@@ -1002,6 +1007,15 @@ public final class VillageSelfSufficiencyExecutor {
         msg("  economy produced=" + producedTotal + " consumed=" + consumedTotal
                 + " stock=" + stockTotal + " demand=" + demandTotal
                 + delta(stockTotal, prev.stockTotal));
+        // Top unmet needs, ranked: the "top need" the post-cook emergent batch keys on.
+        StringBuilder topNeeds = new StringBuilder("  top needs:");
+        int shown = 0;
+        for (ca.bradj.questown.gui.ItemEconomicsData nd : flag.getEconomicsHandle().getAggregatedItems(null)) {
+            if (shown++ >= 5) break;
+            topNeeds.append(" ").append(nd.ingredientKey()).append("=").append(nd.timesNeeded());
+        }
+        if (shown == 0) topNeeds.append(" (none)");
+        msg(topNeeds.toString());
         msg("  mood none=" + noneNeed + " unmet=" + unmetItem + " cant_reach=" + cantReach
                 + delta(unmetItem, prev.unmetItem));
         msg("  locks fired: " + activeLockSummary());
@@ -1263,6 +1277,11 @@ public final class VillageSelfSufficiencyExecutor {
         if (flag.getVillagerHandle().size() < 1) return; // no townie to convert yet
         var allQuests = flag.getAllQuestsWithRewards();
 
+        // DEV-DIAG: raw_food hunt investigation, 2026-10-02 — grep 'DEV-DIAG' to enumerate; keep/remove per handoff
+        QT.FLAG_LOGGER.info("[self_suff] [jcscan] executor sees {} quests: {}",
+                allQuests.size(),
+                allQuests.stream().map(e -> e.getKey().getType() + "/" + e.getKey().getStatus() + ":" + e.getKey().getWantedId())
+                        .reduce((a, b) -> a + " | " + b).orElse("<empty>"));
         // Release entries whose quest has closed (no longer ACTIVE), so a later
         // identical quest in a new batch can still be driven.
         java.util.Set<String> activeJobChanges = new java.util.HashSet<>();
@@ -1290,7 +1309,16 @@ public final class VillageSelfSufficiencyExecutor {
                 msg("[job-change] no townie available to drive " + wanted + "; will retry next cycle");
                 return;
             }
-            flag.addImmediateReward(new ca.bradj.questown.town.rewards.ChangeJobReward(flag, target, wanted.rootId()));
+            ca.bradj.questown.town.rewards.ChangeJobReward reward
+                    = new ca.bradj.questown.town.rewards.ChangeJobReward(flag, target, wanted.rootId());
+            // The onboarding cook (tutorial job-change-and-food batch) is onboarding-flagged
+            // (markOnboarding in addQuestsForJobChangeAndFood); the applier grants it one
+            // starter recipe (cook/mutton) on top of the universal extract+fuel set. A plain
+            // (non-onboarding) job change leaves recipe jobs locked.
+            if (quest.isOnboarding()) {
+                reward.onboarding(true);
+            }
+            flag.addImmediateReward(reward);
             jobChangeDriven.add(wantedKey);
             msg("[job-change] requested " + wanted
                     + " for townie " + target.toString().substring(0, 8)
@@ -1414,6 +1442,26 @@ public final class VillageSelfSufficiencyExecutor {
             // fall through to default
         }
         return DEFAULT_DAYS;
+    }
+
+    private static final int COAL_SEED_DEFAULT = 16;
+
+    /**
+     * Test-only player-input stand-in (open decision #1 from the gannet handoff, decided:
+     * *town storage*, i.e. the store chest): the player's coal is what the cook runs on
+     * before a miner exists. Set to 0 for a no-coal world to see the town top-need
+     * without player supplies. Logged at seed time.
+     */
+    private int coalSeed() {
+        try {
+            int coal = Integer.parseInt(System.getProperty("questown.village.selfsuff.coal", ""));
+            if (coal >= 0 && coal <= 64) {
+                return coal;
+            }
+        } catch (NumberFormatException ignored) {
+            // fall through to default
+        }
+        return COAL_SEED_DEFAULT;
     }
 
     private void msg(String s) {

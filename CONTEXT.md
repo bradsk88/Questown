@@ -108,7 +108,7 @@ The namespace half of a `JobID` (`rootId()`) that groups jobs into one **cycling
 _Avoid_: "root job" for this (that means a **starter job**); job type, category.
 
 **Starter job**:
-A job unlocked from the start — `Work.parentID == null` (`ServerJobsRegistry.getAllRootJobs()` / `isUnlockedInitially()`). The opposite is a progression-unlocked job, which names a **progression parent**.
+A job unlocked from the start: either the progression root (`Work.parentID == null`) or an explicit opt-in via the `unlocked_with_root_job` flag in its job JSON (`Work.isUnlockedInitially(parent, flag)`). `cook/fuel` is the flag-carrying example — a non-root job that still belongs in the cook's initial set (extract + fuel) so a staffed cook has a working pair instead of a single self-re-selecting job. The opposite is a progression-unlocked job, which names a **progression parent**. The onboarding flow may additionally grant a starter recipe to the onboarding cook (`TownQuests` — `cook/mutton`); that is a one-off grant, not a starter job.
 _Avoid_: "root job" (collides with **job root**), default job.
 
 **Progression parent**:

@@ -750,7 +750,7 @@ public class ServerJobsRegistry {
     }
 
     private static boolean isUnlockedInitially(Work job) {
-        return job.parentID == null;
+        return Work.isUnlockedInitially(job.parentID, job.isUnlockedWithRootJob());
     }
 
     private record Jerb(ImmutableList<JobID> preferredWork, ImmutableList<JobID> defaultWork) {

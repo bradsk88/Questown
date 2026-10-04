@@ -172,6 +172,7 @@ public class ResourceJobLoader {
                         cookWork = cookWork.withSlotPrecondition(slotPrecondition.get());
                     }
                     cookWork = cookWork.withProficiencyId(proficiencyId(obj));
+                    cookWork = cookWork.withUnlockedWithRootJob(unlockedWithRootJob(obj));
                     b.put(od, cookWork);
                 } catch (Exception e) {
                     throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
@@ -374,6 +375,7 @@ public class ResourceJobLoader {
             if (overrides != null) {
                 wb = wb.withOverrides(overrides);
             }
+            wb = wb.withUnlockedWithRootJob(unlockedWithRootJob(object));
             return wb.withProficiencyId(proficiencyId(object));
         }
 
@@ -474,6 +476,7 @@ public class ResourceJobLoader {
                 if (slotPrecondition.isPresent()) {
                     work = work.withSlotPrecondition(slotPrecondition.get());
                 }
+                work = work.withUnlockedWithRootJob(unlockedWithRootJob(obj));
                 return work.withProficiencyId(proficiencyId(obj));
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
@@ -1066,6 +1069,17 @@ public class ResourceJobLoader {
 
     private static @Nullable String proficiencyId(JsonObject object) {
         return optional(object, "proficiency_id", JsonElement::getAsString);
+    }
+
+    /**
+     * The `unlocked_with_root_job` flag: a job in a non-starter position that
+     * still belongs in its root's initial unlock set at staff (e.g.
+     * `cook/fuel` next to the `cook/extract` root). Absent = false.
+     * See `.scratch/cook-skill-unlock/cook-skill-unlock.md`.
+     */
+    private static boolean unlockedWithRootJob(JsonObject object) {
+        Boolean flag = optional(object, "unlocked_with_root_job", JsonElement::getAsBoolean);
+        return Boolean.TRUE.equals(flag);
     }
 
     private static <X> X required(

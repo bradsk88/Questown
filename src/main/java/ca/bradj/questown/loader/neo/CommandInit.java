@@ -10,6 +10,8 @@ import ca.bradj.questown.commands.DebugCommand;
 import ca.bradj.questown.commands.DebugDoorsCommand;
 import ca.bradj.questown.commands.DevFlagDebugToggleCommand;
 import ca.bradj.questown.commands.DevFlagDebugTurboCommand;
+import ca.bradj.questown.commands.DevLootFireCommand;
+import ca.bradj.questown.commands.DevWorkScoreCommand;
 import ca.bradj.questown.commands.DevMakeStarvingCommand;
 import ca.bradj.questown.commands.DevQuestAddItemCommand;
 import ca.bradj.questown.commands.DevQuestDeserializeCommand;
@@ -56,6 +58,8 @@ public class CommandInit {
         DevFlagDebugToggleCommand.register(event.getDispatcher(), event.getBuildContext());
         DevMakeStarvingCommand.register(event.getDispatcher());
         DevFlagDebugTurboCommand.register(event.getDispatcher());
+        DevLootFireCommand.register(event.getDispatcher());
+        DevWorkScoreCommand.register(event.getDispatcher());
 
         // Player commands
         SetJobCommand.register(event.getDispatcher(), event.getBuildContext());
