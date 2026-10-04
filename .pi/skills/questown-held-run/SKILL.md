@@ -61,17 +61,17 @@ command group (since 1.20.3 / snapshot `23w43a`): `query`, **`rate <float>`**
 (1.0–10000.0; `ServerTickRateManager.setTickRate`), `step`, `sprint`, `stop`,
 `time`, `freeze`, `unfreeze`.
 
-- **Feed it through the FIFO console** after boot — but the write must be
-  *bounded*: `timeout 15 bash -c "echo '/tick rate 200' > run/server-cmd.fifo"`.
-  A bare `echo` blocks until a reader has the fifo open; if the gradle task's
-  reader is absent (cold daemon start, server between launches, or a reader that
-  closed) the caller hangs — one such 2026-10-04 hang cost ~2 h (7532 s,
-  server up the whole time). Do NOT "read back" by writing the next FIFO command
-  if the first write hung: that second write blocks identically. **Confirm
-  delivery by effect instead**: at 20 t/s one in-game day takes ~20 min of wall
-  time; at 200 t/s ~60 s. Two day-reports landing ~60 s apart in wall time is
-  proof the rate landed; nothing in the log is. (Pause `/tick freeze`, resume
-  `/tick unfreeze`, same bounded-write discipline.)
+- **Feed it through the ONE proven recipe, not a hand-rolled `echo`**: after boot,
+  `run/ffeed.sh setup` then
+  `run/ffeed.sh feed "/tick rate 200" --expect "Set the target tick rate" <log>`.
+  The old bare-`echo` form can hang the caller indefinitely (a 2026-10-04 write
+  cost ~2 h, server up the whole time) — ffeed bounds the write to 15 s and
+  confirms delivery, so it never can. Do NOT retry with a second FIFO command
+  after a hang; that second write blocks identically.
+  **Delivery truth is in-game pace, not echoes**: ~60 s per day at 200 t/s vs
+  ~20 min at 20; `run/pace-guard.sh <log> <claimed-rate>` enforces it (an
+  unapplied `/tick rate` is silent — pace is what proves it landed). Full
+  root-cause + the 7532 s case: `references/questown-dev-launch.md`.
 - **Default to 200 t/s.** The 2026-10-15 sweep on this box held 20/30/60/120/200/
   240 at target with zero `Can't keep up`; 270 lost ~3% (261.8 eff); 255/300
   failed-then-held on retest. Vanilla enforces a ~20 minimum, there is no maximum —

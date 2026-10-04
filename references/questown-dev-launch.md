@@ -158,9 +158,23 @@ evidence — do not delete the logs you are investigating from.
 
 RCON does not work in this build. Feed a command to the server through a FIFO:
 
-- `run/server-cmd.fifo` must have a writer open *before* launch, or the JVM's
-  open-for-read blocks: `nohup sh -c 'sleep 999999 > run/server-cmd.fifo' &`.
-- Send a command: `echo 'qt tickprofile' > run/server-cmd.fifo`.
+- THE ONE recipe on this box is **`run/ffeed.sh`** (bounded write + delivery
+  confirm; never hand-roll the FIFO):
+  `run/ffeed.sh setup` (fifo + idempotent holder) then
+  `run/ffeed.sh feed "/tick rate 200" --expect "Set the target tick rate" <log>`.
+- Root cause of every historical hang: a bare `echo … > fifo` **blocks the writer
+  until something holds the fifo's READ end open**. The holder must therefore open
+  the fifo **read-write**: `nohup sh -c 'sleep 999999 <> run/server-cmd.fifo' &`
+  (`<>`, not `>` — a write-only holder opens *no* read end, and is indistinguishable
+  from none at all). The 2026-10-04 200-t/s battery worked because its holder was
+  `<>`; minutes later, probes with `>`-style holders (or a server whose stdin was a
+  plain pipe, not the FIFO — case 3 below) hung the caller 7532 s, server up the
+  entire time. `run/ffeed.sh` bounds the write to 15 s regardless.
+- **Pace, not echo, is delivery truth:** at 20 t/s one in-game day takes ~20 min of
+  wall time, at 200 t/s ~60 s. `run/pace-guard.sh <log> <claimed-rate>` enforces
+  exactly this (threshold = expected day gap × 1.5 + 30 s). An unapplied `/tick rate`
+  is SILENT — a day gap of ~10 min is rate-20 data wearing a rate-200 label. Do not
+  cite a log as rate-R data until pace-guard says GREEN on it.
 - **Verify a command exists in this build before sending, and treat a parse failure as *not-executed*.** The `_qtdev`/`qt` set differs across branches. Before a first send, grep the leaf literal — e.g.
   `grep -rl 'literal("prepare")' src/main/java/ca/bradj/questown/commands/` → `PrepareWorkCommand.java`, so it is `qt jobs prepare <pos>`, **not** `prepare_work`. To enumerate the whole current leaf set run `grep -rho 'literal("[a-z_]*")' src/main/java/ca/bradj/questown/commands/*Command.java | sort -u` (run it, don't trust a doc's table — the set changes per branch). If you echoed into the FIFO and the server log then shows the command followed by `Incorrect argument for command`, that command **did not run** — the absence of follow-up output is your probe having failed, not evidence about the system. Fix the command and resend before reading behaviour from the log. (The `.scratch/*/*.log` transcripts can contain *failed* sends, i.e. an echo + `Incorrect argument`, so a command's presence in an old log is not proof it works in this build.)
 - **DEV-DIAG scaffolding convention:** when you add a dev-only diagnostic command or log line for an investigation, mark it `// DEV-DIAG: <what, date> — keep/remove per handoff` so it is grep-enumerable (`grep -rn 'DEV-DIAG' src/main/java`), and list each tag in the handoff with a keep/remove recommendation. Six tags exist from the 2026-10-02 raw_food hunt investigation (DevLootFireCommand, DevWorkScoreCommand, LOOTTRACE ×2, [jcscan], scoreDump).
@@ -172,10 +186,10 @@ RCON does not work in this build. Feed a command to the server through a FIFO:
   200-t/s battery: days landed ~60 s apart — impossible at 20 TPS — so `/tick rate 200`
   delivered). It **blocked indefinitely on the same kind of run** minutes later, the
   bash tool call hanging ~2 h (7532 s) until aborted, server up and healthy the whole
-  time. The difference is reader-open timing (cold daemon start vs warm task; server up
-  vs between launches), not autotest-vs-dev. **Rule: never bare-`echo` into
-  `run/server-cmd.fifo` from a tool call — wrap it in `timeout 15` and confirm delivery
-  in the server log (`Tick rate set to …`) before believing it landed.**
+  time. **The concrete difference is who holds the read end** (see the holder bullet
+  above), not autotest-vs-dev or daemon warmth. **Rule: use `run/ffeed.sh` (bounded
+  write + `--expect` confirm); and confirm by in-game day pace with
+  `run/pace-guard.sh` — nothing in the log proves the rate landed on its own.**
 - **Third block case (verified 2026-10-13): the server's stdin is a plain pipe,
   not the FIFO** — `ls -l /proc/<pid>/fd` shows fd 0 → `pipe:[NNN]` instead of
   the FIFO path. The server was launched from a terminal shell without the FIFO
