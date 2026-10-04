@@ -266,3 +266,57 @@ types): the journal keeps a `ROOM`-typed ACTIVE placeholder, not a
   detection, batch completion/lost plumbing). Post timing and live
   completion/loss are covered by the held `village/self_sufficiency` run;
   plan: `docs/plans/2026-09-27-001-feat-unmet-unlock-quest-plan.md`.
+
+# LOOT quest close — extraction-satisfiable, decoupled from the job's post-extract rule
+
+A **LOOT** quest (the raw-food family, e.g. the 2.5-gate
+`villager_simple_furnace_food_raw` tag) satisfies the moment a townie *extracts*
+the matching item — the meat the hunter just carried in, the ore the miner
+just pulled. It is production-completable (like JOB_UNLOCK's
+`processJobUnlocks`), not scan-completable, and it does **not** consume the
+item: the deposit / eat path still decides its fate.
+
+## Why the check used to be skipped for the hunter
+
+`Quests.processLootQuests(item)` used to live inside
+`RealtimeWorldInteraction`'s 5-arg `postExtractHook`. That hook is reached only
+through the abstract 3-arg bridge, which short-circuits when the job declares
+**no** `EXTRACTING_PRODUCT` special rule:
+
+```java
+Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
+if (rules == null || rules.isEmpty()) return currentState;   // hook never runs
+```
+
+The other post-extract behaviours (hunger fill, `take_from_slot_2`, …) correctly
+key off that rule. The sword-hunter job declares none — only `remove_from_world`
+— so its raw-meat grant fell into the early-return and the quest never closed,
+while a rule-bearing job (gatherer `hunger_fill*`, cook `take_from_slot_2`) did.
+
+## The fix — the check is now unconditional on the extract path
+
+`AbstractWorldInteraction`'s 3-arg bridge now calls a small virtual seam
+**before** the rule gate:
+
+```java
+protected void onLootExtracted(EXTRA inputs, @Nullable HELD_ITEM item) {}   // default no-op
+```
+
+`RealtimeWorldInteraction.onLootExtracted` is the only override that fires it;
+it calls `processLootQuests(item)` for any non-empty extraction, so a job
+without an `EXTRACTING_PRODUCT` rule (the hunter) closes its quest too. The
+warp engine inherits the no-op (it has no live flag to broadcast to), and the
+rule-gated 5-arg path is otherwise unchanged.
+
+- **The decoupling decision is `LootExtractGuard.questCheckFires(nonEmpty, rule)`**
+  → `nonEmpty`. Extracted Forge-free so the contract ("fires for the hunter,
+  independent of the rule") is unit-pinned even though the live wiring is not.
+- **The untestable half is the live wiring** — `RealtimeWorldInteraction` and the
+  declarative engine both pull Forge registries at `<clinit>`, so they cannot be
+  loaded in a unit test (`ExceptionInInitializerError`, see the registry-bound
+  doctrine). The end-to-end "hunter → raw meat → raw-food quest closes" is
+  verified by the `loot_on_extract` autotest (`RealtimeWorldInteraction` path),
+  which the six prior runs showed RED (`quest complete=false`) and which is
+  GREEN after the fix.
+- Verified by `LootExtractGuardTest` (non-empty+no-rule fires; non-empty+rule
+  fires; empty never fires). The oracle: `loot_on_extract`.

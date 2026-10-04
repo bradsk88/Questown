@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.loader.Loader;
+import ca.bradj.questown.QT;
 
 import ca.bradj.questown.blocks.ExtractedItemAware;
 import ca.bradj.questown.blocks.InsertedItemAware;
@@ -475,13 +476,27 @@ public class RealtimeWorldInteraction extends
                     return in;
                 }
         );
-        // A LOOT quest completes on production, here at the extract step: the townie has
-        // just received this loot from their job. The item itself is not consumed; the
-        // deposit / eat path still decides its fate.
-        if (extractedItem != null && !extractedItem.isEmpty()) {
-            inputs.town().getQuestHandle().processLootQuests(extractedItem.get());
-        }
+        // The LOOT-quest close runs in onLootExtracted (the abstract 3-arg bridge's
+        // unconditional extract path), so a job that declares no EXTRACTING_PRODUCT
+        // special rule (e.g. the sword hunter) still closes its raw-food quest.
+        // The item itself is not consumed — the deposit / eat path still decides its fate.
         return hooked;
+    }
+
+    /**
+     * Close matching LOOT quests on a non-empty extraction. Lives on the
+     * unconditional extract path (the abstract 3-arg {@code postExtractHook}
+     * bridge) rather than the rule-gated 5-arg hook, so a hunt that declares no
+     * {@code EXTRACTING_PRODUCT} special rule (e.g. the sword hunter) still
+     * closes its quest. See {@link LootExtractGuard}.
+     */
+    @Override
+    protected void onLootExtracted(MCExtra inputs, @Nullable MCHeldItem item) {
+        if (LootExtractGuard.questCheckFires(
+                item != null && !item.isEmpty(),
+                hasExtractingProductRule())) {
+            inputs.town().getQuestHandle().processLootQuests(item.get());
+        }
     }
 
     @Override

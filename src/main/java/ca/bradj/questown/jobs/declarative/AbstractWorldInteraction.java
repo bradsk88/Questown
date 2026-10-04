@@ -632,11 +632,36 @@ public abstract class AbstractWorldInteraction<
             TOWN currentState,
             @Nullable HELD_ITEM item
     ) {
+        // Always notify a non-empty extraction on the unconditional extract path.
+        // The live engine (RealtimeWorldInteraction) overrides this to close a
+        // matching LOOT quest. Deliberately NOT gated by the
+        // EXTRACTING_PRODUCT special-rule check below — the quest check is
+        // independent of the job's post-extract rule (see LootExtractGuard).
+        onLootExtracted(inputs, item);
         Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
         if (rules == null || rules.isEmpty()) {
             return currentState;
         }
         return postExtractHook(currentState, rules, inputs, getTownPos(inputs), item);
+    }
+
+    /**
+     * Fired on every extraction (including the null/empty placeholder). Forge-
+     * free no-op by default; the live engine overrides it to close matching LOOT
+     * quests. Kept separate from the rule-gated 5-arg hook so a job that has no
+     * EXTRACTING_PRODUCT rule (e.g. the sword hunter) still closes its quest.
+     */
+    protected void onLootExtracted(EXTRA inputs, @Nullable HELD_ITEM item) {}
+
+    /**
+     * Whether this job registered any special rule under
+     * {@link ProductionStatus#EXTRACTING_PRODUCT}. Passed to
+     * {@link LootExtractGuard#questCheckFires} for its contract documentation;
+     * the guard itself does not consult it.
+     */
+    protected boolean hasExtractingProductRule() {
+        Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
+        return rules != null && !rules.isEmpty();
     }
 
     protected abstract POS getTownPos(EXTRA inputs);
