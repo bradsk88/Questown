@@ -26,6 +26,10 @@ import ca.bradj.questown.commands.test.TestBlueprint.RoomType;
 import ca.bradj.questown.commands.test.TestExpectation.ExpectedProduct;
 import ca.bradj.questown.commands.test.TestExpectation.ExpectedContainerContent;
 import ca.bradj.questown.core.init.BlocksInit;
+import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.town.quests.MCQuest;
+import ca.bradj.questown.town.quests.Quest;
+import java.util.AbstractMap;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.mobs.visitor.TownieNeed;
@@ -171,6 +175,16 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("gatherer", "axe"), gathererBlueprint()));
         jobs.add(entry(new JobID("explorer", "explore"), explorerBlueprint()));
         jobs.add(entry(new JobID("hunter", "sword"), hunterBlueprint()));
+        // loot_on_extract: the 2.5 raw-food gate as a deterministic measurement. Posts the
+        // raw-meat LOOT quest, drives one hunter cycle on the REALTIME path (the quest check
+        // lives in RealtimeWorldInteraction.postExtractHook -> Quests.processLootQuests),
+        // and asserts the quest is complete at the end — meat may have been eaten, held,
+        // or dropped; extraction (not deposit/dine) must be what satisfies it.
+        jobs.add(new TestEntry("loot_on_extract", new JobID("hunter", "sword"), lootOnExtractBlueprint(), "loot"));
+        // loot_on_extract_warp: same raw-food LOOT quest, driven through the WARP path — the
+        // warper records the extraction on the state snapshot and the settle point in
+        // TownFlagState.warp closes the quest through the live handle (warp == realtime outcome).
+        jobs.add(new TestEntry("loot_on_extract_warp", new JobID("hunter", "sword"), lootOnExtractBlueprint(true), "loot"));
         jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
         jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
         jobs.add(entry(new JobID("crafter", "leather_boots"), armorerBlueprint()));
@@ -2505,6 +2519,85 @@ public class TestBlueprintRegistry {
                         new ItemStack(Items.COOKED_BEEF, 8)
                 )
         );
+    }
+
+    /** The quest want: one of the raw meats, expressed as the tag the 2.5 gate uses. */
+    private static ResourceLocation rawFoodTag() {
+        return TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location();
+    }
+
+    private static TestExpectation noProducts() {
+        return new TestExpectation(List.of(), 0, 0);
+    }
+
+    /**
+     * Hunt a cycle with a raw-meat LOOT quest open, then assert the quest is
+     * COMPLETE — proving extraction satisfies it (the design intent), independent
+     * of what the dine path does with the meat afterwards.
+     *
+     * @param warpPath false: realtime path (the quest check lives in
+     *                 RealtimeWorldInteraction.onLootExtracted); true: the warp
+     *                 path (the warper records the extraction on the snapshot and
+     *                 TownFlagState.warp settles it through the live quest
+     *                 handle) — both must yield the same outcome.
+     */
+    private static TestBlueprint lootOnExtractBlueprint() {
+        return lootOnExtractBlueprint(false);
+    }
+
+    private static TestBlueprint lootOnExtractBlueprint(boolean warpPath) {
+        TestBlueprint base = hunterBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),          // item deltas are not the gate — the meat may be eaten on the dine path
+                base.supplyDoorOffset(),
+                warpPath ? 24000 : null, // warpAmountOverride — well past full hunt cycles (2000-tick timed states)
+                null,                  // startTimeTick
+                1,                     // villagerCount
+                !warpPath,             // realtimePhase
+                warpPath ? null : 4800, // realtimeTicks — at least full hunt cycles with margin
+                false,                 // drainHungerBeforeTest
+                !warpPath,             // skipWarp — realtime path only drives the live quest check; warp settles after
+                null, null, null, null, null, false
+        )
+                .withSetupHook((level, flagPos, town, output) -> {
+                    ResourceLocation tag = rawFoodTag();
+                    town.getQuestHandle().addLootQuest(tag, 1);
+                    boolean posted = town.getQuestHandle().getAllQuestsWithRewards().stream()
+                            .anyMatch(e -> e.getKey().getType() == Quest.QuestType.LOOT
+                                    && tag.equals(e.getKey().getWantedId())
+                                    && !e.getKey().isComplete());
+                    output.msg("loot_on_extract: raw-food LOOT quest posted=" + posted);
+                    return posted;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    ResourceLocation tag = rawFoodTag();
+                    MCQuest quest = null;
+                    for (AbstractMap.SimpleEntry<MCQuest, ?> e : town.getQuestHandle().getAllQuestsWithRewards()) {
+                        if (tag.equals(e.getKey().getWantedId())) {
+                            quest = e.getKey();
+                        }
+                    }
+                    if (quest == null) {
+                        output.msg("loot_on_extract: FAIL — posted quest not found in town state");
+                        return false;
+                    }
+                    boolean typeOk = quest.getType() == Quest.QuestType.LOOT;
+                    boolean complete = quest.isComplete();
+                    output.msg("loot_on_extract: quest complete=" + complete + " (type LOOT=" + typeOk + ")");
+                    // DEV-DIAG (2026-10-04, keep/remove per handoff): pin where the extracted mutton
+                    // physically sits — villager-held (journal) vs which container — so the grant path
+                    // (dine/deposit vs job-inventory vs extract) is settled from the state, not inferred.
+                    MCTownState state = town.captureCurrentState();
+                    if (state != null) {
+                        Map<String, Integer> held = TestResultChecker.snapshotVillagerHeldCounts(state);
+                        Map<BlockPos, Map<String, Integer>> containers =
+                                TestResultChecker.snapshotContainerContents(state);
+                        output.msg("loot_on_extract: state held=" + held + " containers=" + containers);
+                    }
+                    return typeOk && complete;
+                });
     }
 
     private static TestBlueprint welcomeMatBlueprint(List<ItemStack> supplies) {

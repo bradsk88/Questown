@@ -284,6 +284,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             MCHeldItem v,
             InventoryFullStrategy inventoryFullStrategy
     ) {
+        // DEV-DIAG: LOOTTRACE grant-site trace, 2026-10-04 — pin the hunted-meat grant path; grep 'DEV-DIAG' to enumerate; keep/remove per handoff
+        QT.VILLAGER_LOGGER.info("[LOOTTRACE] tryGiveItem: item={} strategy={} uuid={}",
+                v == null ? "null" : v.get().toString(),
+                inventoryFullStrategy,
+                UtilClean.truncateMiddle(getUUID()));
         if (job.get().addToEmptySlot(v)) {
             return true;
         }

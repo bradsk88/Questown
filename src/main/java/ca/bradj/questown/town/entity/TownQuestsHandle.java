@@ -165,6 +165,15 @@ public class TownQuestsHandle implements QuestsHolder {
     }
 
     @Override
+    public void addLootQuest(
+            ResourceLocation itemId,
+            int count
+    ) {
+        TownFlagBlockEntity t = unsafeGetTown();
+        TownQuests.addLootQuest(t, t.quests, itemId, count);
+    }
+
+    @Override
     public void processLootQuests(MCTownItem extracted) {
         unsafeGetTown().quests.processLootQuests(extracted);
     }

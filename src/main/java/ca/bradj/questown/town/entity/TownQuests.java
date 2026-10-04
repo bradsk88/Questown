@@ -90,6 +90,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
     };
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
+
     private final Stack<PendingReward> questRequests = new Stack<>();
     private final UnsafeTown town = new UnsafeTown(getClass());
     boolean playerDiscardedLastBatch;
@@ -281,6 +282,18 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         @NotNull MCRewardList reward = defaultQuestCompletionRewards(t);
         MCQuestBatch batch = new MCQuestBatch(null, null, new MCDelayedReward(t, reward));
         batch.addItemQuest(null, itemId, count);
+        quests.addBatch(batch);
+    }
+
+    public static void addLootQuest(
+            TownFlagBlockEntity t,
+            TownQuests quests,
+            ResourceLocation itemId,
+            int count
+    ) {
+        @NotNull MCRewardList reward = defaultQuestCompletionRewards(t);
+        MCQuestBatch batch = new MCQuestBatch(null, null, new MCDelayedReward(t, reward));
+        batch.addLootQuest(null, itemId, count);
         quests.addBatch(batch);
     }
 
@@ -1053,8 +1066,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         gateQuest.setFlavorText("Build a fence gate entrance for your town. Villagers need a way in.");
         q.addNewQuest(gateQuest);
 
-        MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.WOODEN_SWORD), 1);
-        swordQuest.setFlavorText("Craft a wooden sword and place it in your store room chest. Your villager will need it.");
+        MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.WOODEN_SWORD), 4);
+        swordQuest.setFlavorText("Craft 4 wooden swords and place them in your store room chest. Your villagers will need them - each hunter carries one.");
         q.addNewQuest(swordQuest);
 
         MCQuestBatch qb = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_KICKOFF));
@@ -1125,6 +1138,16 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         q.addNewQuest(kitchenQuest);
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_JOB_CHANGE_FOOD));
+        // Onboarding-flow quest: like the other tutorial-phase batches, it is
+        // onboarding-flagged (see `.scratch/cook-skill-unlock/cook-skill-unlock.md`). That
+        // flag is the discriminator the onboarding-cook starter grant keys on — when the
+        // executor drives this job change, it marks `ChangeJobReward.onboarding(true)`,
+        // and the applier then unlocks `cook/mutton` on top of the universal starter set
+        // (see ChangeJobReward.getApplier). A random/procedural cook quest stays
+        // unmarked and its cook gets only the universal set, leaving recipe jobs
+        // gated on the job tree. Its room quest completes on a superset room per the
+        // storeroom design (.scratch/storeroom-quest-completion).
+        markOnboarding(qq);
         questBatches.add(qq);
         QT.QUESTS_LOGGER.debug("Tutorial batch #2 was added to town: {}", qq.toNiceString());
     }
@@ -1445,18 +1468,30 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
      * not consumed here; the normal deposit / eat path decides what happens to it.
      */
     public void processLootQuests(MCTownItem extracted) {
+        // DEV-DIAG: raw_food hunt investigation, 2026-10-02 — the [LOOTTRACE] log calls below are diagnostic; grep 'DEV-DIAG' to enumerate; keep/remove per handoff
         if (extracted == null || extracted.isEmpty()) {
+            QT.QUESTS_LOGGER.info("[LOOTTRACE] processLootQuests: extracted is null/empty; skipping");
             return;
         }
         ItemStack stack = extracted.toQTItemStack();
+        int lootQuestsSeen = 0;
         for (MCQuest quest : questBatches.getAll()) {
             if (quest.getType() != Quest.QuestType.LOOT || quest.isComplete()) {
                 continue;
             }
-            if (Ingredients.asIngredient(quest.getWantedId()).test(stack)) {
+            lootQuestsSeen++;
+            boolean match = quest.getWantedId() != null
+                    && Ingredients.asIngredient(quest.getWantedId()).test(stack);
+            QT.QUESTS_LOGGER.info("[LOOTTRACE] extract '{}' vs LOOT quest {} -> {}",
+                    stack.getItem() != null ? stack.getItem().getName(stack).getString() : "?",
+                    quest.getWantedId(), match);
+            if (match) {
                 questBatches.markRecipeAsComplete(null, quest.getWantedId());
                 return;
             }
+        }
+        if (lootQuestsSeen == 0) {
+            QT.QUESTS_LOGGER.info("[LOOTTRACE] extracted '{}' but no open LOOT quests exist", stack);
         }
     }
 }

@@ -42,6 +42,14 @@ public interface QuestsHolder {
             int count
     );
 
+    // Post a LOOT-type quest (production-satisfiable, like the 2.5 raw-food gate). Unlike
+    // addItemQuest's ITEM quest, LOOT quests are matched by Quests.processLootQuests when a
+    // townie extracts loot; the caller chooses the quest type to match the completion path.
+    void addLootQuest(
+            ResourceLocation itemId,
+            int count
+    );
+
     // LOOT quests complete on production: complete any open LOOT quest whose wanted item or
     // tag matches the item a townie just extracted. The extracted item is not consumed.
     void processLootQuests(MCTownItem extracted);
