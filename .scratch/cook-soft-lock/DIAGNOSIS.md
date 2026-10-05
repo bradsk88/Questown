@@ -27,6 +27,30 @@ This session's "LOOT-quest closure on extraction" work fixed **`extract → LOOT
 That half works. The self_sufficiency soft-lock is the **upstream** half: **the hunter
 never extracts in the first place.** The claim is not the blocker; the hunter stall is.
 
+## CORRECTION (2026-10-04, handoff `pintail`): the stuck stage is the **cook**, not the hunter window
+
+The `THE ANSWER` / Tier-3 / trace-(b) sections below attribute the soft-lock to the hunter's
+`canFit` in-day window (lates-day `REJECT@canFit`). That was a mis-attribution, caught by
+measuring the **per-stage terminal state** in fresh SOFT runs (`/tmp/tier3b-server.log`,
+`/tmp/tier4-server.log`):
+
+```
+Stage (quest)                               tier3b            tier4
+Hunter raw LOOT  villager_simple_furnace…   COMPLETED 620     COMPLETED 768   ← hunter IS producing raw food
+Cook JOB_CHANGE  cook_qt_simple_furnace_f…  COMPLETED  0      COMPLETED  0    ← the stuck stage
+Cook ProductionStatus                       NO_JOBSITE / NO_SPACE (both runs)
+```
+
+The hunter stage is already **`COMPLETED`** (it extracts raw meat); the lates-day
+`REJECT@canFit` loop is a **lates-day cap, a side symptom, not the cause**. The stuck stage is
+the **cook**: its JOB_CHANGE quest stays `ACTIVE` and **never reaches `COMPLETED`**, and the
+driver is `NO_JOBSITE` / `NO_SPACE` (a job it can't place at / a room nobody can provide). That
+matches the `questown-behavior-verify` skill's egret diagnosis (cook phase requires the
+`kitchen_small` room the 2.5 batch doesn't provide) — the likely mechanism to confirm via
+`_qtdev inspect villagers <pos>`, **not** the hunter's `canFit` window. The Tier-3/b.2 window
+analysis here is therefore of the **upstream (working)** stage — the wrong layer; keep it for the
+`canFit` arithmetic (Tier-1 pin) but read the bottleneck as the **cook staffing**.
+
 ## THE ANSWER: `canFit` is an in-day clock window — the hunt only starts between dawn and ~9:07
 
 - Selection gate: `JobCycler.isValid` (`jobs/town/JobCycler.java:50`) rejects a candidate
