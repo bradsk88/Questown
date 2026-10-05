@@ -459,3 +459,28 @@ resolve, *no* cook job can work), compounded by (2) **selection pinning** onto n
 jobs (`fuel`'s broad `villager_food` claim). Both are **production** code/data paths (room/work-spot
 resolution + `cook_fuel.json`), not merely a test-seed gap. The `canFit`/hunter-window / "missing
 kitchen" / "fuel shortage" theories are all **ruled out** by this.
+
+## HUNT RESULT (2026-10-05) — the flaky factor, code-traced to `getRoomsMatching`
+The decisive factor for "can the cook work" is
+**`getRoomHandle().getRoomsMatching(job.location().baseRoom())`** (DeclarativeJobTickerDependencies
+`getJobSites()` L70, recipe `questown:kitchen_small`). Tracing that:
+
+- `TownRoomsMap.getRoomsMatching(recipeId)` (L528) returns a room **only if**:
+  1. the room's **door is registered** in `registeredDoors`/`registeredFenceGates`, **AND**
+  2. a **room with that `doorPos` exists** in the live room set (`rooms.getAll()`), **AND**
+  3. the room matches the recipe.
+- These are **live, transient detection state** — `activeRooms`/`activeRecipes` (L43,45) are
+  updated by the **resumable, spread-across-ticks room detector** (`pendingRooms.proceed()` L210),
+  and `RandomShortLivedWorkSpot` explicitly handles the "town has no valid room" retry state.
+  So the kitchen match is **not a stable registration** — it comes and goes with detection timing.
+
+**Root cause (code-traced):** the built kitchen's **door registration + room detection (doorPos match)
+is intermittently unsatisfied in some seeds** — so `getRoomsMatching(kitchen_small)` returns empty at
+the moments the cook checks → `jobRooms` empty → `roomsWithState` finds no spots →
+`containsWorkableBlocksAtAnyState()` false → `NO_JOBSITE` → `isWorkingOnProduction()` false → the cook
+never works. When detection has the door+room registered at the right time (other seeds) it works.
+
+**This is a door-registration / room-detection race** (Questown `TownRoomsMap` + door registration +
+the resumable RoomRecipes detector), **non-deterministic by construction** (spread across ticks), not a
+single-line bug. It spans Questown + RoomRecipes (two repos). The `canFit`/hunter-window, missing-kitchen,
+and fuel-shortage theories are all **ruled out**; the true root is this live room-match timing.
