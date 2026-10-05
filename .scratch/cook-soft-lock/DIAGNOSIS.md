@@ -570,6 +570,10 @@ supplied village" in the test; drive insight via logs.
   hit it). Keep it for the arithmetic, read the bottleneck as the ask-loop + demand coherence.
 
 ### 5-run storage sweep (2026-10-05 evening, 150 t/s, probes off — confirms the stall)
+**Verdict capture (raw, reproducible from repo): `evidence-5run.txt` next to this file** —
+per-run first-[lock] line, lock mix, journal histogram, stores line, progress, worldTime,
+extracted verbatim from the run logs (still in /tmp as of 2026-10-05: `sweep5-run1.log`,
+`sweep-run1.log`, `run4.log`, `run5.log`).
 Task: "do 5 runs and confirm they all stall on storage space." **Result: 5/5 runs stall, and
 in all 5 the stores are physically stuffed with cooked surplus (48× = ¾ of a max stack of
 `cooked_mutton`/`cooked_beef`/`cooked_porkchop`), with `NO_SPACE` the dominant townie state (3/5
@@ -603,3 +607,11 @@ cook job (cook loops its `always_consider` setup pair) and cooked surplus accumu
       `NO_SPACE` wall (production logic).
 None of these uses `always_consider` or pre-supplies the village. Which locus the dev wants is the
 single decision that unblocks implementing "fix both A and B."
+
+**Probe-strip pairing (2026-10-05 retro, rec 3):** the six uncommitted DEV-DIAG probe files
+(`jobs/JobLogic.java`, `jobs/declarative/AbstractWorldInteraction.java`,
+`jobs/declarative/DeclarativeJobTicker.java`, `jobs/declarative/WorkSeekerJob.java`,
+`town/entity/TownFlagBlockEntity.java`, `town/rooms/TownRoomsMap.java`) are throwaway and are
+removed in the **same session that commits the chosen fix locus** — the `safeReason`
+`hasSupplies` probe (DeclarativeJobTicker) stays available until then, and the sweep's
+storage-wall verdict no longer depends on any of them.

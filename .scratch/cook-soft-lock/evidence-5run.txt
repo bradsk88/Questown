@@ -1,0 +1,68 @@
+=============== /tmp/sweep5-run1.log ===============
+--- pace:
+[20:02:37] [Server thread/INFO] [net.minecraft.server.Minecr
+--- first lock:
+--- lock mix:
+--- journal last:
+     18 name='NO_SPACE'
+     12 name='EXTRACTING_PRODUCT'
+      4 name='NO_JOBSITE'
+      2 name='IDLE'
+--- stores last:
+containers=[ContainerTarget{position=Position{x=-11, z=-11}, container=MCContainer{container.items=[minecraft:wooden_sword, 41xminecraft:cooked_beef, 48xminecraft:cooked_porkchop, 15xminecraft:coal, minecraft:cooked_mutton, minecraft:cooked_mutton, minecraft:c
+--- progress:
+stock=132
+--- worldTime last:
+worldTimeAtSleep=34599
+
+=============== /tmp/sweep-run1.log ===============
+--- pace:
+[21:16:02] [Server thread/INFO] [net.minecraft.server.Minecr
+--- first lock:
+[21:21:16] [Server thread/INFO] [Questown:Flag/]: [self_suff] [lock] NO_FORWARD_PROGRESS: no change in (roster, questsOpen, questsDone, stock) across 2 consecutive days: roster=5 questsOpen=2 questsDo
+--- lock mix:
+    554 [lock] NO_FORWARD_PROGRESS
+--- journal last:
+     21 name='IDLE'
+     16 name='COLLECTING_SUPPLIES'
+--- stores last:
+containers=[ContainerTarget{position=Position{x=-11, z=-11}, container=MCContainer{container.items=[48xminecraft:cooked_mutton, 48xminecraft:cooked_beef, 48xminecraft:cooked_porkchop, 16xminecraft:coal, minecraft:wooden_sword, minecraft:wooden_sword, minecraft
+--- progress:
+questsDone=7
+stock=165
+--- worldTime last:
+worldTimeAtSleep=1269
+
+=============== /tmp/run4.log ===============
+--- pace:
+[21:38:08] [Server thread/INFO] [net.minecraft.server.Minecr
+--- first lock:
+[21:43:19] [Server thread/INFO] [Questown:Flag/]: [self_suff] [lock] NO_FORWARD_PROGRESS: no change in (roster, questsOpen, questsDone, stock) across 2 consecutive days: roster=5 questsOpen=2 questsDo
+--- lock mix:
+   9744 [lock] NO_FORWARD_PROGRESS
+--- journal last:
+     24 name='IDLE'
+     16 name='COLLECTING_SUPPLIES'
+--- stores last:
+containers=[ContainerTarget{position=Position{x=-11, z=-11}, container=MCContainer{container.items=[48xminecraft:cooked_mutton, 48xminecraft:cooked_beef, 48xminecraft:cooked_porkchop, 16xminecraft:coal, minecraft:wooden_sword, minecraft:wooden_sword, minecraft
+--- progress:
+questsDone=7
+stock=165
+--- worldTime last:
+worldTimeAtSleep=5871
+
+=============== /tmp/run5.log ===============
+--- pace:
+[21:44:22] [Server thread/INFO] [net.minecraft.server.Minecr
+--- first lock:
+--- lock mix:
+--- journal last:
+     40 name='NO_SPACE'
+      8 name='NO_JOBSITE'
+--- stores last:
+containers=[ContainerTarget{position=Position{x=-11, z=-11}, container=MCContainer{container.items=[4xminecraft:cooked_mutton, 48xminecraft:cooked_beef, 48xminecraft:cooked_porkchop, 15xminecraft:coal, minecraft:oak_sapling, minecraft:leather, minecraft:cooked
+--- progress:
+stock=139
+--- worldTime last:
+worldTimeAtSleep=6353
+
