@@ -313,6 +313,53 @@ what kills the dev's tab. Re-check with `pgrep -af '[f]orgeserveruserdev'`
 and `pgrep -af 'sleep 999999'` after; confirm the java child is actually gone
 before the next run.
 
+## Batch-verification sweep (multi-run confirmation, client-free)
+
+When the question is "does this scenario stall, and on what" — run it N
+separate times and collect one verdict per run — not "drive one live run",
+this is a **sweep**: N client-free held runs, each driven in short calls.
+This session built `run/onerun.sh` + `run/log4j2.sweep.xml` (gitignored
+scratch — if they are gone, the recipe below is self-contained).
+
+- **No blocking envelope per run — a run and its polling live in many ≤60 s
+calls, never one `timeout 2900` bash call or an internal 40-min poll loop**
+(the cadence section's caps apply here; a 5-min job in a 48-min envelope was
+the 2026-10-05 stumble: 8× the box-time billing AND the abort that ended the
+call killed the run's process tree with it. A short polling call dying is
+harmless — the server is in a different tree and you re-poll).
+- **Budget (measured, 2026-10-05):** a `village/self_sufficiency` run is ~6
+min at 150 t/s on this box — ~3 min boot, then pace→`[lock]` in 5:11 / 5:14
+across two runs. Size polling from that, not from worst case.
+- **Per-run phase list (each its own ≤60 s call):** (1) kill stragglers by
+  pid + port check; (2) launch — `nohup ./gradlew runServer <scenario flags>
+> /tmp/runN.log 2>&1 &`, echo, done; (3) boot check (`worldTimeAtSleep=`
+line); (4) pace via `run/ffeed.sh feed` — the confirm races the log write,
+expect 2–6 tries until `Set the target tick rate to <N>.0 per second` is in
+the log; (5) 45–60 s polls: `grep -c '\[lock\]'` + last `watch day=` + last
+`container.items=`; (6) verdict capture; (7) kill by pid; (8) port re-check.
+- **Verdict capture (all from the run's log):** first `[lock]` line; lock
+type mix `grep -ao '\[lock\] [A-Z_]*' | sort | uniq -c`; last journal
+statuses `tail -400 <log> | grep 'journal=Journal.Snapshot' | grep -o
+"name='[A-Z_]*'" | sort | uniq -c`; last `container.items=` line;
+`worldTimeAtSleep` last; `questsDone=`/`stock=` last. The self_sufficiency
+storage-stall signature (5/5 runs, 2026-10-05): `NO_FORWARD_PROGRESS` lock
+or `NO_SPACE`-dominant journal + stores at 48× cooked stacks
+(cooked_mutton/beef/porkchop) + `stock` frozen (~165).
+- **Tame the log or the log kills the run.** Probes-on +
+`Questown:Jobs` DEBUG → 409 MB in a 20-min run, `Can't keep up`, effective
+TPS collapse. Sweep log4j: `Questown:Flag` at debug (the scenario's own
+`[lock]`/`[Tile]`/watch lines), `Questown:Jobs` at info, root info.
+- **Kill by captured pid, never a `pkill -f` inside a call whose own text
+holds the target pattern as plain text** (the invoking `bash -c` line is a
+match for its own pattern → empty-output call, self-kill; three times on
+2026-10-05, each caught by a later `pgrep`+port-25565 check). Launch call
+writes the pid; teardown is `kill -9 $(cat <pidfile>)` in a call containing
+no bare target string, verified in a *later* read-only call.
+- **Worlds are assumed-fresh per launch** (4/4 runs started at
+`worldTimeAtSleep`≈9, 2026-10-05) — treat each run as an independent sample,
+but confirm the first `worldTimeAtSleep` line of a new log before comparing
+runs.
+
 ## The observation cadence (~10s windows)
 
 **Timeout discipline: a 60s hard cap on every command.** No batched
