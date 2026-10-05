@@ -1,6 +1,7 @@
 # Why the cook/food chain sometimes never staffs (self_sufficiency soft-lock)
 
-2026-10-04 (battery v3 + canFit clock-window resolution + **live-gate pin** appended). Verified from 19 fresh
+2026-10-04 (battery v3 + canFit clock-window resolution + **live-gate pin**) + a
+**2026-10-05 live `_qtdev inspect` mode confirmation** appended. Verified from 19 fresh
 `village/self_sufficiency` samples (~50%–80% soft-lock, env/seed-dependent) + code reads.
 This is a **continuation** of the DEV-DIAG `raw_food hunt` investigation (2026-10-02 →
 10-04; `DevWorkScore`/`DevLootFire` exist).
@@ -53,6 +54,97 @@ NO_SUPPLIES = lacks the item); `scripts/stage-probe.py <serverlog>` names the st
 past log — **not** the hunter's `canFit` window. The Tier-3/b.2 window
 analysis here is therefore of the **upstream (working)** stage — the wrong layer; keep it for the
 `canFit` arithmetic (Tier-1 pin) but read the bottleneck as the **cook staffing**.
+
+## CONFIRMED (2026-10-05, live `_qtdev inspect villagers`) — the exact mode of the stuck stage
+
+The CORRECTION above landed the stuck stage on the **cook** but left its *mode* to confirm
+(“confirm which mode with `_qtdev inspect villagers`”). Done on a fresh **cook-stuck** seed
+(fresh code-built seed, 200 t/s **pace-good**, day-2 `STAGES stuck=JOB_CHANGE:cook_qt_simple_
+furnace_food=ACTIVE`), `_qtdev inspect villagers 0 64 0` (flag at 0,64,0):
+
+- **The cook’s exact mode:** the cook townie is on sub-job **`cook/fuel`** with status
+  **`NO_JOBSITE`** (need=NONE) — it cannot find a workable `minecraft:furnace`.
+  `cook/fuel` (`questown_jobs/cook_fuel.json`) requests `#minecraft:coals`, works the
+  `kitchen_small` furnace, and **already has** `always_consider` on. But the village’s stuck
+  quest is **`cook_qt_simple_furnace_food`** (cook beef) — a *different* sub-job than the one
+  the cook is parked on. So the cook is **not working the wanted food job**; it is stuck on
+  the fuel sub-job (`NO_JOBSITE`). That is a **sub-job mismatch + no workable furnace**.
+- **The village-wide dominant stall:** every active producer is blocked by “cannot deposit :
+  **every town chest is full**” — the **`NO_SPACE`** mode — carried loot they can’t drop:
+  - hunter (downtime) carrying `wooden_sword` + `cooked_mutton`
+  - hunter (seeking_work) carrying `stone_sword` + `leather` + `cooked_mutton`
+  - gatherer (seeking_work) carrying `brown_mushroom`
+
+  This is the `NO_SPACE` aggregate the stage-probe tallied (68k) — it is the **main** stall,
+  not a downstream symptom.
+- **Confirmed NOT the bottleneck (live):** the hunter IS producing (`stone_sword`/
+  `wooden_sword` + raw `villager_simple_furnace_food_raw` `COMPLETE`, cooked mutton carried)
+  → **not** the `canFit` window (the handoff’s leading fix); `kitchen_small` `COMPLETE` →
+  **not** a missing kitchen; raw `COMPLETE` → **not** a supply gap. All three earlier
+  hypotheses (window / kitchen / supply) are ruled out by the same run.
+
+**Reframed mechanism:**
+- **Verified:** the soft-lock is a **store-capacity / deposit stall** (chests full →
+  `NO_SPACE` blocks every producer) **plus a cook job-site + sub-job stall** (`cook/fuel`
+  `NO_JOBSITE`; not doing the wanted food job).
+- **Inferred (not yet pinned):** the chest stays full because food accumulates with no
+  consumption/expansion sink in this seed (the stored cooked meat is not visibly being eaten).
+
+**Fix implication:** neither handoff fix #1 (hunter `always_consider`) nor “missing kitchen”
+touches the confirmed stall. The levers are (a) the **cook sub-job / furnace availability**
+(wanted food job vs. the `cook/fuel` `NO_JOBSITE` it’s parked on), and (b) the **`NO_SPACE` /
+store-full** stall (a consumption sink, or a bigger store room when one fills). The hunting-
+window analysis below (Tier 1–b.2) stays correct for a job that *reaches* the gate, but it is
+**not** the bottleneck in these seeds — the stuck stage does not get there (or is the cook, not
+the hunter).
+
+> Evidence (live, this run): stage table `STAGES stuck=JOB_CHANGE:cook_qt_simple_furnace_
+> food=ACTIVE  done=… hunter_qt_sword=COMPLETE … villager_simple_furnace_food_raw=COMPLETE …
+> kitchen_small=COMPLETE  status=… NO_SPACE=…`; per-villager inspect (cook=`cook/fuel`
+> `NO_JOBSITE`; 2 hunters + 1 gatherer “cannot deposit: every town chest is full”;
+> 2 gatherers `WAITING_FOR_TIMED_STATE` at `-5,64,0`). Full log: the session’s
+> `/tmp/cookmode-server.log`.
+
+## PINNED (2026-10-05, follow-up) — the stove is placed; the cook’s work-site lookup returns null
+
+The CONFIRMED section left “why no workable furnace” open. Pinned from the same run’s
+room-builder log + the inspect (the cook is townie `00f99e63`):
+
+- **The furnace IS placed and latched** — and the cook was requested to the wanted food job
+  the *same instant* the kitchen finished:
+  ```
+  [02:40:02] [buildRoomForRecipe] built 5x5 room at corner 3,64,1 for door 5,64,5,
+             placed [Block{minecraft:furnace}] inside, door registered
+  [02:40:02] [room-builder] questown:kitchen_small: quest complete, room latched
+  [02:40:02] [job-change]   requested JobID{rootId='cook', jobId='simple_furnace_food'} for townie 00f99e63
+  [02:42:08] [_qtdev inspect] villager 00f99e63  job=cook/fuel   need=NONE   status: NO_JOBSITE
+  ```
+- **So it is not** a missing kitchen, **not** a missing furnace, and **not** a coal shortage
+  (`need=NONE`; `NO_JOBSITE` is the work-site status, not the `NO_SUPPLIES` item status — a
+  coal gap would read `need=UNMET_ITEM` + `NO_SUPPLIES`).
+- **The pinned bug is the work-site lookup:** in `JobLogic`, `NO_JOBSITE` tracks
+  `getWorkSpot()==null` — the cook can’t resolve the placed, latched `minecraft:furnace` as
+  its work site. At the time it is on a `cook/fuel` sub-job and was requested to
+  `cook/simple_furnace_food` (the wanted quest); both carry `block: minecraft:furnace` /
+  `room: questown:kitchen_small` (all three — `fuel`, `simple_furnace_food`, and the shared
+  `extract` root — do), and neither can find that block as a work site.
+- **CORRECTION (chased, 2026-10-05) — the work-site-null premise is REFUTED:** a `DEV-DIAG`
+  in `JobLogic.doTryWorking`’s work-spot-null branch (gated on `ENABLE_DEV_COMMANDS`) fired
+  **0 times across two cook-stuck runs** (the cook sits `NO_JOBSITE` the whole time). The
+  `NO_JOBSITE` status is in fact a **state classification** from the `JobStatuses` decision
+  tree (`jobs/JobStatuses.java` L193-213). The leading `noJobSite` branch (L201-202) is
+  `dTownHasSupplies + dInventoryEmpty` — “stop when nowhere to work and town has items” — and
+  it **does not check workable blocks** (`dHasNoWorkableBlocks` only appears in the *second*,
+  “no supplies” branch at L215-217; the code’s own `TODO` at `DeclarativeJob:645` says the
+  “`isJobBlockReady`” predicate is still needed). With the stove placed (kitchen latched) and
+  `need=NONE` (not coal-out), the cook is classified `noJobSite` by being **idle** (empty
+  hands) while the town is full — an *idle* classification, **not** a “furnace missing” signal.
+  So the soft-lock is **not** a missing-furnace / work-site bug.
+- **The real question, re-located:** off the room/furnace/work-site layer entirely →
+  **why does the cook sit idle on `cook/fuel` (empty hands, town full) and never work the
+  wanted `simple_furnace_food`?** That is a **job-routing/selection** question — the next,
+  different, deeper layer, not yet instrumented. (`DEV-DIAG` left in `JobLogic.doTryWorking`,
+  gated, zero-firing — confirms the work-site branch is not the cause; remove on close-out.)
 
 ## THE ANSWER: `canFit` is an in-day clock window — the hunt only starts between dawn and ~9:07
 
