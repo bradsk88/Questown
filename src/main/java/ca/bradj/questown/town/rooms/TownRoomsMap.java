@@ -63,6 +63,8 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
     private final Set<TownPosition> registeredFenceGates = new HashSet<>();
 
+    private static long kitchenDiagN = 0L;
+
     private void updateActiveFarms(
             ServerLevel level,
             int scanLevel,
@@ -563,7 +565,38 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 }
             }
         }
-        return b.build();
+        Collection<RoomRecipeMatch<MCRoom>> out = b.build();
+        // DEV-DIAG (2026-10-06, cook-soft-lock): for the kitchen recipe, break down WHY 0 (or few)
+        // match the (door-registered /& room-with-that-doorPos /& recipe) join. Gated + sampled (log
+        // always when empty, otherwise every 300th). Remove with the rest of the cook-soft-lock probes.
+        if (System.getenv("ENABLE_DEV_COMMANDS") != null && recipeId.toString().contains("kitchen")) {
+            if (out.isEmpty() || (kitchenDiagN++ % 300) == 0) {
+                int doors = registeredDoors.size() + registeredFenceGates.size();
+                int doorsWithRoom = 0;
+                for (TownPosition p : all) {
+                    Position pz = new Position(p.x, p.z);
+                    if (getOrCreateRooms(p.scanLevel).getAll().stream().anyMatch(v -> v.getDoorPos().equals(pz))
+                            || getOrCreateFarms(p.scanLevel).getAll().stream().anyMatch(v -> v.getDoorPos().equals(pz))) {
+                        doorsWithRoom++;
+                    }
+                }
+                int totalRooms = 0;
+                for (TownRooms tr : activeRooms.values()) {
+                    totalRooms += tr.getAll().size();
+                }
+                int roomsMatchingRecipe = 0;
+                for (var lvl : activeRecipes.values()) {
+                    for (Map.Entry<MCRoom, RoomRecipeMatch<MCRoom>> m : lvl.entrySet()) {
+                        if (m.getValue().getRecipeIDs().contains(recipeId)) {
+                            roomsMatchingRecipe++;
+                        }
+                    }
+                }
+                Questown.LOGGER.warn("[DEV-DIAG:kitchen] recipe={} matches={} doors={} doorsWithRoom={} totalRooms={} roomsMatchingRecipe={}",
+                        recipeId, out.size(), doors, doorsWithRoom, totalRooms, roomsMatchingRecipe);
+            }
+        }
+        return out;
     }
 
     public Collection<MCRoom> getFarms() {

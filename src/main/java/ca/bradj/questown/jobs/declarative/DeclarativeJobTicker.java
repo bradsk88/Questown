@@ -364,6 +364,8 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
     }
 
 
+    private static long cookNoJoBSiteN = 0L;
+
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected <RECIPE, TOWN_ITEM extends Item<TOWN_ITEM>> @NotNull Supplier<ProductionStatus> getStateComputer(
             Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA, ?> deps,
@@ -384,7 +386,24 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                 return s;
             }
             journal.tryUpdateStatus(jtp, elp, defaultEntityInvProvider(deps), DeclarativeJobs.STATUS_FACTORY, deps.prioritizesExtraction());
-            return journal.getStatus();
+            ProductionStatus now = journal.getStatus();
+            // DEV-DIAG (2026-10-06, cook-soft-lock): for COOK jobs sitting at NO_JOBSITE, log which
+            // branch it is — town-has-supplies (Branch A: supply-pickup stall) vs town-no-supplies
+            // (Branch B: no supplies/workable) — plus the workable state and inventory. Gated + sampled.
+            if (System.getenv("ENABLE_DEV_COMMANDS") != null
+                    && deps.getJobId().rootId().contains("cook")
+                    && now == ProductionStatus.NO_JOBSITE
+                    && (cookNoJoBSiteN++ % 200) < 1L) {
+                ca.bradj.questown.jobs.TownStateProvider tps = ca.bradj.questown.jobs.JobTownStates.forTown(jtp);
+                ca.bradj.questown.Questown.LOGGER.warn("[DEV-DIAG:cook] NO_JOBSITE job={} hasSupplies={!} hasSpace={!} workable={!} invFull={} hasItems={}",
+                        deps.getJobId(),
+                        tps.hasSupplies().describe(),
+                        tps.hasSpace().describe(),
+                        tps.containsWorkableBlocksAtAnyState().describe(),
+                        journal.isInventoryFull(),
+                        journal.hasAnyLootToDrop());
+            }
+            return now;
         };
     }
 

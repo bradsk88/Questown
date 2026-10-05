@@ -490,3 +490,46 @@ for the kitchen specifically, at the moments the cook worked vs. was stuck: (a) 
 instrumentation of `getRoomHandle().getRoomsMatching(job.location().baseRoom())` (logged for the cook
 instance), correlated with the cook's produce/stuck moments — do NOT assert a root from the code skim alone.
 
+## HANDOFF — dedicated-investigation runbook (2026-10-06)
+**State.** Verified: (1) the soft-lock is real + seed-dependent — the kitchen builds and the cook staffs
+in *every* run, and only the cooked-food outcome varies (`villager_food` LOOT completes in some seeds,
+not others). (2) The **room/door/location layer is exonerated and stable** — `getRoomsMatching(kitchen_small)`
+returns the kitchen consistently where it is built (1 match, all doors resolve, never 0). (3) The stuck cook
+sits at **`NO_JOBSITE`**, which is one of **two** branches in `JobStatuses.productionRoutine` — **A: town-has
+supplies && hands empty** (a supply-pickup stall), or **B: hands empty && town-no-supplies && no workable
+blocks** — and is **not** the "no spots found" gate (which fires even in runs where the cook worked, 548×).
+**Unresolved:** which branch the stuck cook is on, and *why* — the seed-dependent discriminator. That is the
+question to answer.
+
+**Two probes are in the tree (gated on `ENABLE_DEV_COMMANDS=1`; remove on close-out):**
+1. **`DEV-DIAG:cook`** — `jobs/declarative/DeclarativeJobTicker.java`, `getStateComputer`. For a COOK job at
+   `NO_JOBSITE`, logs `hasSupplies` / `hasSpace` / `workable` (via the same `JobTownStates.forTown(jtp)`
+   `TownStateProvider` the decision uses) plus inventory. **This directly separates Branch A from B.**
+2. **`DEV-DIAG:kitchen`** — `town/rooms/TownRoomsMap.java`, `getRoomsMatching`. Logs the join breakdown
+   (`matches / doors / doorsWithRoom / totalRooms / roomsMatchingRecipe`) for the kitchen recipe. Confirms
+   the room layer is present (expected: `matches=1`).
+
+**Repro (a single cook-stuck seed is what's flaky — expect to run until the kitchen builds AND the cook is
+staffed AND stuck; some seeds work (cook produces cooked food) and some stall before the kitchen):**
+```
+ss -tlnp | grep ':25565 '; run/ffeed.sh setup          # port free + FIFO holder
+ENABLE_DEV_COMMANDS=1 LANG=C.UTF-8 JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 \
+  nohup ./gradlew runServer -Dquestown.autotest=true -Dquestown.autotest.hold=true \
+    -Dquestown.autotest.only=village/self_sufficiency -Dquestown.tp.fifo=true \
+    -Dquestown.village.selfsuff.days=5 > /tmp/pin.log 2>&1 &
+bash run/ffeed.sh feed "/tick rate 200" --expect "Set the target tick rate" --timeout 15   # pace once realtime
+```
+**Read / interpret:**
+```
+grep -a 'DEV-DIAG:cook' /tmp/pin.log     # the decisive line
+# hasSupplies=TRUE (town has supplies)  -> BRANCH A: the cook has empty hands while the town holds supplies
+#   -> the stall is in COLLECTING supplies / supply pickup (why does the cook not pull the supplies?).
+# hasSupplies=FALSE (town has no supplies) -> BRANCH B: nothing to collect -> trace UPSTREAM (who was to
+#   produce the supplies, and why did they not). Both branches keep the cook in NO_JOBSITE; the DIFFERENT
+#   `hasSupplies` is the discriminator.
+grep -a 'DEV-DIAG:kitchen' /tmp/pin.log  # expect matches=1 (room layer present, not the factor)
+```
+**Tear down:** kill the `forageserveruserdev` + `runServer` PIDs, `pkill -f 'sleep 999999'`, stop the gradle
+daemon; confirm `:25565` free. Compile with `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./gradlew compileJava`.
+**Do NOT** assert a root from a code skim — the discriminator is the runtime `hasSupplies` value above.
+
