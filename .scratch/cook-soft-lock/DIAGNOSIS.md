@@ -428,3 +428,34 @@ gives the hunter only a morning slot for hunting, so lates-day demand hits the r
 ## Confound worth checking with the observer
 Have the hunter "stuck early, no cook ever unlocks" been seen on a live server? That pins
 whether the autotest arena's day clock is representative of live play.
+
+## EXECUTION PIN (2026-10-05, live-instrumented) — the soft-lock is a FLAKY work-site resolution
+This is the deepest, most likely real root, verified across two seeds of the same scenario.
+
+- **The execution gate** (idle vs. working) is `status.isWorkingOnProduction()`, computed by the
+  `JobStatuses.usualRoutine` decision tree. Its load-bearing dependency is
+  **`dHasWorkableBlocks = town.containsWorkableBlocksAtAnyState()`** (JobTownStates:33 →
+  `roomsWithWorkableStatefulBlocks()` → `RoomsWithWorkableBlocksAtAnyState.apply()`).
+  **When it is FALSE, the tree returns `NO_JOBSITE`**, and JobLogic:217 then skips
+  `doTryWorking` — the cook sits **idle, hands empty, produces nothing**.
+- **Live-instrumented the FALSE verdict** (gated `DEV-DIAG` in `RoomsWithWorkableBlocksAtAnyState.apply`,
+  then reverted): the reason is **`RoomsContainWorkState=false because no spots found` for every
+  state `[0,1,2,3,4,5,6,7,8]`** — **zero work spots are resolvable in any room, any state.**
+- **It is NON-DETERMINISTIC (flaky)** — same `self_sufficiency` seed, opposite outcomes:
+    * `cookexec` run: kitchen built (`kitchen_small` COMPLETED) + work-spot **resolves** → cook works
+      → `extract 'Cooked Mutton' vs LOOT quest questown:villager_food -> true` (produces cooked mutton).
+    * `cookmode` run: kitchen built + latched but work-spot **does not resolve** → cook stuck →
+      `villager_food` stays `ACTIVE`.
+  → **Same setup, opposite result: the kitchen's furnace work-spot/room resolution is flaky.**
+- **Selection layer (compounding):** the cook is pinned on set-up jobs
+  (`fuel` 422 / `extract` 424 / `mutton` 0); `cook/fuel`'s **broad `#questown:villager_food`
+  `initial_request` + `always_consider`** is a genuine contributor (a non-producing job selectable
+  exactly like a real recipe). So even the jobs the cook does get selected are the wrong ones AND
+  can't work (no spot).
+
+**Bottom line:** the soft-lock is **not a single cause.** It is (1) a **flaky work-spot/room
+resolution** of the placed kitchen's furnace (the dominant, real root — when the spot doesn't
+resolve, *no* cook job can work), compounded by (2) **selection pinning** onto non-producing set-up
+jobs (`fuel`'s broad `villager_food` claim). Both are **production** code/data paths (room/work-spot
+resolution + `cook_fuel.json`), not merely a test-seed gap. The `canFit`/hunter-window / "missing
+kitchen" / "fuel shortage" theories are all **ruled out** by this.
