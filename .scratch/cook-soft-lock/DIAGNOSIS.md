@@ -44,10 +44,13 @@ Cook ProductionStatus                       NO_JOBSITE / NO_SPACE (both runs)
 The hunter stage is already **`COMPLETED`** (it extracts raw meat); the lates-day
 `REJECT@canFit` loop is a **lates-day cap, a side symptom, not the cause**. The stuck stage is
 the **cook**: its JOB_CHANGE quest stays `ACTIVE` and **never reaches `COMPLETED`**, and the
-driver is `NO_JOBSITE` / `NO_SPACE` (a job it can't place at / a room nobody can provide). That
-matches the `questown-behavior-verify` skill's egret diagnosis (cook phase requires the
-`kitchen_small` room the 2.5 batch doesn't provide) — the likely mechanism to confirm via
-`_qtdev inspect villagers <pos>`, **not** the hunter's `canFit` window. The Tier-3/b.2 window
+driver is `NO_JOBSITE` / `NO_SPACE`. `scripts/stage-probe.py` on both runs shows `kitchen_small`
+and the raw-food LOOT are both **COMPLETED** here — so the room *exists* and the hunter produced;
+the cook is stuck at the furnace-level "no workable block / can't deposit" (NO_JOBSITE / NO_SPACE).
+That also **disproves** the "missing room" (egret) reading for this scenario. Confirm which mode
+with `_qtdev inspect villagers <pos>` (NO_JOBSITE = no workable block; NO_SPACE = can't deposit;
+NO_SUPPLIES = lacks the item); `scripts/stage-probe.py <serverlog>` names the stuck stage from any
+past log — **not** the hunter's `canFit` window. The Tier-3/b.2 window
 analysis here is therefore of the **upstream (working)** stage — the wrong layer; keep it for the
 `canFit` arithmetic (Tier-1 pin) but read the bottleneck as the **cook staffing**.
 

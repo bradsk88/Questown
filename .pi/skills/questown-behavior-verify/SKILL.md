@@ -157,9 +157,11 @@ thin job set), not the cause — the lock can be held downstream of it. This ses
 cook-soft-lock) I chased a SOFT run's 2,036× `REJECT@canFit` and blamed the hunter's `canFit`
 window, but the hunter stage (raw LOOT `villager_simple_furnace_food_raw`) was already
 **COMPLETED** (620/768) — the actually-stuck stage was the **cook** (`cook_qt_simple_furnace_food`
-`COMPLETED=0`, `NO_JOBSITE`/`NO_SPACE`), matching the egret note below (cook phase requires the
-`kitchen_small` room the 2.5 batch doesn't provide). One `COMPLETED-count` grep per stage finds
-the stuck stage and skips the upstream detour.
+`COMPLETED=0`, `NO_JOBSITE`/`NO_SPACE`); `scripts/stage-probe.py` on both runs shows
+`kitchen_small` is COMPLETED here, so the cause is stage-specific (furnace-level
+NO_JOBSITE/NO_SPACE), not a missing room. One `COMPLETED-count` grep per stage finds
+the stuck stage and skips the upstream detour (or run `scripts/stage-probe.py <serverlog>`
+for the offline table).
 
 **A staffed townie idling across 2+ cycles: first read is its job JSON's
 `room`/`block`/`tools` requirements vs the town's registered rooms and held items — never

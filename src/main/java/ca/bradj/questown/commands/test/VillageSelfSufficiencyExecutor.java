@@ -1022,6 +1022,54 @@ public final class VillageSelfSufficiencyExecutor {
         msg("  milestones: firstNight=" + firstNightPassed
                 + " cookUnlocked=" + cookUnlocked
                 + " farmerUnlocked=" + farmerUnlocked);
+        emitStageReport();
+    }
+
+    /** Per-stage terminal-state table for the daily report — which quest is stuck
+     *  (never COMPLETED) and in what mode (the townie's ProductionStatus). This is
+     *  the "find the stuck stage first" read: a stage with the most activity (a
+     *  lates-day canFit REJECT / seeking loop) can be a working upstream stage, not
+     *  the cause. Mirrors scripts/stage-probe.py offline. */
+    private void emitStageReport() {
+        if (flag == null) return;
+        long day = nightsSlept + 1;
+        java.util.List<String> stuck = new java.util.ArrayList<>();
+        java.util.List<String> done = new java.util.ArrayList<>();
+        for (var entry : flag.getAllQuestsWithRewards()) {
+            var quest = entry.getKey();
+            String id = quest.getWantedId() == null ? "?" : String.valueOf(quest.getWantedId());
+            String type = quest.getType() == null ? "?" : quest.getType().name();
+            if (quest.isComplete()) {
+                done.add(type + ":" + id + "=COMPLETE");
+            } else {
+                String state = quest.getStatus() == null ? "OPEN" : quest.getStatus().name();
+                stuck.add(type + ":" + id + "=" + state);
+            }
+        }
+        stuck.sort((a, b) -> a.compareTo(b));
+        done.sort((a, b) -> a.compareTo(b));
+        msg("[village] day=" + day + " STAGES stuck="
+                + (stuck.isEmpty() ? "(none)" : String.join(" ", stuck)));
+        msg("[village] day=" + day + " STAGES done="
+                + (done.isEmpty() ? "(none)" : String.join(" ", done)));
+        // townies' ProductionStatus: the mode of the stuck stage (NO_JOBSITE = no
+        // workable block, NO_SPACE = can't deposit, NO_SUPPLIES = lacks the item).
+        java.util.Map<String, Long> status = new java.util.TreeMap<>();
+        for (LivingEntity v : flag.getVillagerHandle().entities()) {
+            VisitorMobEntity t = (VisitorMobEntity) v;
+            Object st = t.getStatusForServer();
+            String s = (st instanceof ca.bradj.questown.jobs.production.ProductionStatus ps)
+                    ? ps.nameV2()
+                    : (st == null ? "(none)" : st.toString());
+            status.merge(s, 1L, Long::sum);
+        }
+        String top = status.entrySet().stream()
+                .sorted(java.util.Map.Entry.<String, Long>comparingByValue().reversed())
+                .limit(3)
+                .map(e -> e.getKey() + "=" + e.getValue())
+                .reduce((a, b) -> a + " " + b)
+                .orElse("(none)");
+        msg("[village] day=" + day + " status=" + top);
     }
 
     /** Detect the run-end milestone: a townie holding a cook job (the food chain
