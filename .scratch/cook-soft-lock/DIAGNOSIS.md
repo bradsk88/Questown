@@ -143,8 +143,23 @@ room-builder log + the inspect (the cook is townie `00f99e63`):
 - **The real question, re-located:** off the room/furnace/work-site layer entirely →
   **why does the cook sit idle on `cook/fuel` (empty hands, town full) and never work the
   wanted `simple_furnace_food`?** That is a **job-routing/selection** question — the next,
-  different, deeper layer, not yet instrumented. (`DEV-DIAG` left in `JobLogic.doTryWorking`,
-  gated, zero-firing — confirms the work-site branch is not the cause; remove on close-out.)
+  different, deeper layer, not yet instrumented.
+- **ROUTING (traced 2026-10-05, from the `[jobcyc]` board-selection history):** the cook
+  loops/idles on the **`always_consider` setup sub-jobs** `cook/fuel` + `cook/extract`
+  (both `cas=true` → always `ACCEPT`; the cook ping-pongs `extract→fuel→extract…` or sits
+  idle on one, seed-dependent). The **actual food-cooking job** that appears as a candidate
+  (`cook/mutton`) is **`REJECT@canSatisfy` (gate2, `satAny=false`) on every board ask** —
+  so the cook never does the real cook → the food quest never completes. `canSatisfy`
+  (ServerJobsRegistry:579) is a **pure job-output ⇄ board-request match** (no NO_SPACE /
+  deposit check): the cook's food job is rejected because its **output doesn't match the
+  board's current requests** (tier3b request list was raw `mutton`×3, `wheat_seeds`×2,
+  `bread`, `cooked_cod` — the cook's `mutton` job produces *cooked* mutton, which none
+  of those is). → **the routing mechanism of the soft-lock: gate2 (`canSatisfy`) prunes
+  the real cook job, leaving only the `always_consider` setup jobs, so the cook loops
+  on them forever.** The layer below (uninvestigated): *why* the cook's food outputs don't
+  match what the board/Leaver actually want = job-board **request generation** (data level).
+  *(The `JobLogic.doTryWorking` `DEV-DIAG` was **removed** — the work-site hypothesis it
+  tested was refuted and it had zero value; the tree is clean.)*
 
 ## THE ANSWER: `canFit` is an in-day clock window — the hunt only starts between dawn and ~9:07
 
