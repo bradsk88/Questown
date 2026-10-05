@@ -156,8 +156,29 @@ room-builder log + the inspect (the cook is townie `00f99e63`):
   `bread`, `cooked_cod` — the cook's `mutton` job produces *cooked* mutton, which none
   of those is). → **the routing mechanism of the soft-lock: gate2 (`canSatisfy`) prunes
   the real cook job, leaving only the `always_consider` setup jobs, so the cook loops
-  on them forever.** The layer below (uninvestigated): *why* the cook's food outputs don't
-  match what the board/Leaver actually want = job-board **request generation** (data level).
+  on them forever.** "
+- **DESIGN GROUNDING (from `CONTEXT.md` + ADRs, 2026-10-05 — not code-guess):**
+  - `CONTEXT.md` L111: **`cook/extract` + `cook/fuel` are the cook's *initial* job set** —
+    "a working pair instead of a single self-re-selecting job"; `cook/mutton` is a **one-off
+    starter-recipe grant** (onboarding `TownQuests`), *not* a starter. **So the cook looping
+    `extract↔fuel` *is* looping its own initial pair; the `mutton` REJECT is the one rejected
+    starter recipe.** (Matches the `[jobcyc]` candidates exactly: `fuel`, `mutton`, `extract`.)
+  - `CONTEXT.md` L101/123 + ADR-0007/0003 + INDEX: the food chain is **leaver (hunter→raw)
+    → in-town cook (cooks) → dining** — `cook/simple_furnace_food` cooks beef; dining has
+    `ATE_RAW_FOOD` *and* cooked. The cook is a first-class producer (not redundant).
+  - **Request generation is job-driven:** each job-change **posts the job's output as a board
+    request** (`AddWorkFromUI` / `ChangeJobReward`); the `self_sufficiency` seed posts **raw
+    `mutton` + `wheat_seeds`** (`VillageSelfSufficiencyExecutor:711`). Selection is
+    **request-driven** (`JobCycler.isValid`): a job is picked only if its **output matches a
+    board request** (or it's `always_consider`) — so the cook's recipe is dead unless the
+    board asks for something its recipe *produces*.
+- **REFINED ROOT (design/data level):** the cook's cooking-recipe outputs (cooked mutton /
+  cooked beef, per recipe) **don't name-match the board's requests** (raw `mutton`,
+  `wheat_seeds`, `bread`, `cooked_cod`), so gate2 prunes the recipe and the cook loops its
+  initial `always_consider` setup pair forever. **The real fix is a data/design question:**
+  make the board's food request name a cooked output *the cook can produce* (or the dine /
+  demand system request the right item) so gate2 admits a real cook job. Not a selection-code
+  bug.
   *(The `JobLogic.doTryWorking` `DEV-DIAG` was **removed** — the work-site hypothesis it
   tested was refuted and it had zero value; the tree is clean.)*
 
