@@ -569,10 +569,26 @@ supplied village" in the test; drive insight via logs.
   showed a satisfiable `sword` at day-1 morning; the seekers never reached the ask that would
   hit it). Keep it for the arithmetic, read the bottleneck as the ask-loop + demand coherence.
 
-### The open question (unchanged, probe now safe)
-linnet's discriminator — the cook's `hasSupplies` at `NO_JOBSITE` — still needs one clean run
-where the cook is stuck. The crash-safe probe will print it; the `safeReason()` fix removes the
-server-killing artifact.
+### 5-run storage sweep (2026-10-05 evening, 150 t/s, probes off — confirms the stall)
+Task: "do 5 runs and confirm they all stall on storage space." **Result: 5/5 runs stall, and
+in all 5 the stores are physically stuffed with cooked surplus (48× = ¾ of a max stack of
+`cooked_mutton`/`cooked_beef`/`cooked_porkchop`), with `NO_SPACE` the dominant townie state (3/5
+runs) or the `NO_FORWARD_PROGRESS` lock's consequence (2/5, lock line: stock frozen at ~165,
+questsDone=7 — the raw-food quest never completes in any run).** The cook bounces
+`fuel↔extract` (the `always_consider` setup pair) in every run; hunters never complete the
+LOOT quest. This is the same VALIDATED demand↔stewardship root the fix-decision section hangs
+on — the sweep adds the *mechanism* on top of the root: cooked surplus clogs the store room →
+`NO_SPACE` blocks every producer, not just the cook. So the "open question" above (cook's
+`hasSupplies` discriminator) is superseded: the cook's bounce is one symptom of a storage wall
+that hits all townies. Run-by-run detail + verdict-capture commands:
+`questown-held-run` skill, *Batch-verification sweep* (the sweep protocol itself was the
+2026-10-05 learn: no per-run blocking envelope — 8× the box-time and one lost run).
+
+### The open question (superseded by the sweep above; probe stays safe)
+linnet's discriminator — the cook's `hasSupplies` at `NO_JOBSITE` — is no longer the gating
+unknown: the 5-run sweep shows the wall is `NO_SPACE` (stores clogged with cooked surplus)
+affecting every townie, with the cook's `fuel↔extract` bounce as one symptom. The crash-safe
+`hasSupplies` probe remains available if a future run stalls *without* the storage signature.
 
 ### The fix decision the dev must make (VALIDATED root, A+B)
 The soft-lock's validated root is a **demand↔stewardship/food mismatch**: the scenario models a
