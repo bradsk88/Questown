@@ -474,13 +474,19 @@ The decisive factor for "can the cook work" is
   and `RandomShortLivedWorkSpot` explicitly handles the "town has no valid room" retry state.
   So the kitchen match is **not a stable registration** — it comes and goes with detection timing.
 
-**Root cause (code-traced):** the built kitchen's **door registration + room detection (doorPos match)
-is intermittently unsatisfied in some seeds** — so `getRoomsMatching(kitchen_small)` returns empty at
-the moments the cook checks → `jobRooms` empty → `roomsWithState` finds no spots →
-`containsWorkableBlocksAtAnyState()` false → `NO_JOBSITE` → `isWorkingOnProduction()` false → the cook
-never works. When detection has the door+room registered at the right time (other seeds) it works.
+*Verified*: the mechanism (cook working = the non-empty `getRoomsMatching(kitchen_small)` join;
+rooms persist; the "no spots" verdict is constant background in both runs; the kitchen is built in both;
+the discriminating factor is the cook's **bursty** production — it produced enough in `cookexec` and not
+enough in `cookmode`/`Tier3b`, where the cook was caught even *holding* a `Cooked Mutton`).
+*Verified NOT the factor*: door dropping — `dropDeadDoors`/`deregisterDoor` is the only door removal path,
+and **neither run has a single deregistration event**, so it is not the flaky cause. `canFit`/hunter-window,
+missing-kitchen, fuel-shortage: all **ruled out**.
 
-**This is a door-registration / room-detection race** (Questown `TownRoomsMap` + door registration +
-the resumable RoomRecipes detector), **non-deterministic by construction** (spread across ticks), not a
-single-line bug. It spans Questown + RoomRecipes (two repos). The `canFit`/hunter-window, missing-kitchen,
-and fuel-shortage theories are all **ruled out**; the true root is this live room-match timing.
+*Unverified (my earlier over-claim)*: that the specific flaky factor is a **door/room race.** I asserted it
+from a code skim without per-kitchen evidence; **the logs do not confirm it.** The discriminating data —
+for the kitchen specifically, at the moments the cook worked vs. was stuck: (a) is its door in
+`registeredDoors`? (b) is there a room with that `doorPos`? (c) does the room match `kitchen_small`? —
+**was not captured in either run.** That is the real remaining unknown. Re-pin with per-kitchen
+instrumentation of `getRoomHandle().getRoomsMatching(job.location().baseRoom())` (logged for the cook
+instance), correlated with the cook's produce/stuck moments — do NOT assert a root from the code skim alone.
+
