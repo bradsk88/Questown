@@ -133,3 +133,22 @@ abstract would not actually prevent that — the path of least resistance in a n
 prevent it is a test asserting every concrete production world-interaction resolves its id through
 `ServerJobsRegistry`. That is worth adding when content-tagging makes the feature live, not while
 it is inert.
+
+## Reading an LZCD dependency before `populate()` — the `describe()` NPE trap
+
+`LZCD.Dependency` nodes (`hasSupplies`, `hasSpace`, `containsWorkableBlocksAtAnyState`,
+`RoomsWithWorkableStatefulBlocks`, …) compute lazily: `populate()` fills the `value`
+(`Populated<WithReason<Boolean>>`) field, and **only then** is `value` — and therefore
+`describe()` (which reads `value.value()`) — valid.
+
+The `JobStatuses` decision tree evaluates branches in order and short-circuits, so a node
+on an *unevaluated* branch is never populated in that compute pass. Any code that reads
+such a node "just for a log string" without populating first NPEs — and if that happens
+inside an entity tick, the `ReportedException: Ticking entity` takes the whole server down
+(observed 2026-10-06: a dev-probe in `DeclarativeJobTicker.getStateComputer` read
+`containsWorkableBlocksAtAnyState().describe()` for a `NO_JOBSITE` cook, where the tree had
+chosen the supplies branch and never touched the workable branch).
+
+Rule: a dependency read for display is safe only via `populate()` first (read-only — it
+recomputes from town state, no side effects), or guard a null `value`.
+`RoomsWithWorkableStatefulBlocks.describe()` is now null-safe as defense-in-depth.

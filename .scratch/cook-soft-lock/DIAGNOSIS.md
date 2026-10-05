@@ -533,3 +533,57 @@ grep -a 'DEV-DIAG:kitchen' /tmp/pin.log  # expect matches=1 (room layer present,
 daemon; confirm `:25565` free. Compile with `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./gradlew compileJava`.
 **Do NOT** assert a root from a code skim — the discriminator is the runtime `hasSupplies` value above.
 
+
+## SESSION FINDINGS (2026-10-06, `linnet` resume; mission: fix BOTH stalls A + B)
+
+**Constraint (dev):** do not use `always_consider` as a fix; do not "seed an unrealistically
+supplied village" in the test; drive insight via logs.
+
+### Fixed this session (code, unit-verified or compile-verified)
+- **Server crash (reproduced + fixed):** the already-in-tree `DEV-DIAG:cook` probe crashed the
+  server (`ReportedException: Ticking entity → NPE in describe()`) the instant the cook hit
+  `NO_JOBSITE` — it called `RoomsWithWorkableStatefulBlocks.describe()` on a node the state
+  machine never `populate()`d (an unevaluated LZCD branch reads `value` == null).
+  *Fix:* `describe()` is now null-safe (returns `<not populated>`/`<no reason>`). Unit-tested
+  `RoomsWithWorkableStatefulBlocksTest` (3/3: safe-before-populate, no-match, match).
+  The probe itself now reads via a populate-first `safeReason()` (no crash).
+- **`canSatisfy` special-job ERROR (fixed):** `canSatisfy` on a special-job id
+  (`{root}/downtime`, observed via `updateWorkersAfterRequestChange` → `getWorkSupplier`) fell
+  into the `getWorkSupplier` same-root fallback (wrong job + ERROR spam on every run).
+  *Fix:* `canSatisfy` now short-circuits special jobs (`specialJobs.idTest`) the same way as
+  `isSeekingWork` → `false`. (Worked with the `always_consider`-free constraint.)
+
+### New live evidence (re-pinned today, 200 t/s, `ENABLE_DEV_COMMANDS=1` probes)
+- **Variant B is NOT a board-offer problem.** On a seed that stalled with hunters at
+  `seeking_work`, live `_qtdev work_score <flag> hunter` shows the board prepared
+  `[sword, sword_half_day, sword_full_day]` with `sword score=1.009`, "Highest possible job state:
+  3 … All ingredients and tools available for all job states." The board *offers* a fully
+  satisfiable hunt; the seekers simply **never ask/adopt** it (zero `DEV-DIAG:ask` lines, zero
+  `Timer added` / `Clobbered` — no hunt state was ever started). ⇒ the B stall is a
+  seed-dependent **seeker ask/adopt-loop** failure, not gate2/`canSatisfy`/room.
+- **Seed variance confirmed across the chain:** seed-3 reached the cook (kitchen built, raw
+  `mutton`/`porkchop`+coal in the box) and stalled at `NO_JOBSITE` (where it crashed via the
+  probe, now fixed); seed-4 stalled earlier at the hunters (seeker won't ask). The soft-lock is
+  seed-dependent and spans hunter→cook, consistent with the VALIDATED demand↔stewardship root.
+- **`canFit` window is a real in-day gate but not the observed blocker today** (`work_score`
+  showed a satisfiable `sword` at day-1 morning; the seekers never reached the ask that would
+  hit it). Keep it for the arithmetic, read the bottleneck as the ask-loop + demand coherence.
+
+### The open question (unchanged, probe now safe)
+linnet's discriminator — the cook's `hasSupplies` at `NO_JOBSITE` — still needs one clean run
+where the cook is stuck. The crash-safe probe will print it; the `safeReason()` fix removes the
+server-killing artifact.
+
+### The fix decision the dev must make (VALIDATED root, A+B)
+The soft-lock's validated root is a **demand↔stewardship/food mismatch**: the scenario models a
+**raw** dine while onboarding a **cook** whose recipes are *cooked*, so gate2 prunes the real
+cook job (cook loops its `always_consider` setup pair) and cooked surplus accumulates → `NO_SPACE`
+(chests full) blocks every producer. Three non-cheat fix loci (all satisfy the constraints):
+  (a) demand-side: make self_sufficiency request a **cooked dish the cook can produce** (cooked
+      dine), so the cook is selected and the town *consumes* the cooked food (resolves `NO_SPACE`);
+  (b) onboarding-side: **demand-aware staffing** — don't staff the cook at all when the board's
+      demand is raw-only / unsatisfiable by the cook's recipes (production logic, not test seed);
+  (c) capacity-side: a **consumption/expansion sink** so a full store room stops being a hard
+      `NO_SPACE` wall (production logic).
+None of these uses `always_consider` or pre-supplies the village. Which locus the dev wants is the
+single decision that unblocks implementing "fix both A and B."

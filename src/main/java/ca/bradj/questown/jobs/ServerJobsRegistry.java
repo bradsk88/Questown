@@ -584,6 +584,13 @@ public class ServerJobsRegistry {
         if (isSeekingWork(p)) {
             return false;
         }
+        // Meta-states (downtime / rest / diner / BOP, ...) are not production jobs and are
+        // not registered in `Works`; looking them up fell into getWorkSupplier's same-root
+        // fallback (wrong job + ERROR spam — observed 2026-10-06 via
+        // updateWorkersAfterRequestChange passing a townie's downtime job id).
+        if (specialJobs.stream().anyMatch(sj -> sj.idTest().test(p))) {
+            return false;
+        }
 
         Supplier<Work> w = getWorkSupplier(p);
         if (w == null) {
