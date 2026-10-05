@@ -179,6 +179,24 @@ room-builder log + the inspect (the cook is townie `00f99e63`):
   make the board's food request name a cooked output *the cook can produce* (or the dine /
   demand system request the right item) so gate2 admits a real cook job. Not a selection-code
   bug.
+- **VALIDATED (2026-10-05) — production is NOT the bug; the seed is:** there are **two dine
+  jobs** with **opposite tags** (`DinerWork`/`DinerRawFoodWork`):
+    * `dining` (COOKED) requests **`villager_food`** = `cooked_mutton, cooked_beef, cooked_cod,
+      bread, cooked_chicken/porkchop/salmon/rabbit, stews, baked_potato…` (cooked).
+    * `dining_raw_food` (RAW) requests **`villager_raw_food`** = `mutton, beef, cod, wheat_seeds,
+      potato, mushrooms, …` (raw).
+  The COOK's recipes produce the **cooked** set (`cook/mutton`→cooked_mutton,
+  `simple_furnace_food`→cooked_beef) — which **matches `villager_food` (the cooked dine) and
+  is selected fine.** The RAW dine (`villager_raw_food`: raw `mutton`) is satisfied by the
+  **hunter**, and a cook making *cooked* mutton does **not** match that raw request.
+  **→ the `self_sufficiency` soft-lock is a scenario seed/design mismatch:** it models a
+  **RAW** dine chain (`WorkRequest.of(MUTTON)` + `WHEAT_SEEDS`, "villagers eat raw meat")
+  while **onboarding independently staffs the COOK** (whose recipes are *cooked*). The board
+  only ever asks for raw / non-cook items the cook can't produce → gate2 prunes the cook's
+  recipe → it loops its initial setup pair. **Production cooked-dine towns request
+  `villager_food` (cooked) and select the cook — no production bug.** The fix is a scenario
+  decision: either request a cooked dish the cook can make (cooked dine) or don't staff the
+  cook in a raw-only scenario.
   *(The `JobLogic.doTryWorking` `DEV-DIAG` was **removed** — the work-site hypothesis it
   tested was refuted and it had zero value; the tree is clean.)*
 
