@@ -41,7 +41,14 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     // Unserialized
     final Map<UUID, DATA> customData = new HashMap<>();
-    private final Map<UUID, Long> mostRecentDowntimeTick = new HashMap<>();
+    // Per-townie downtime state — when they last rested (null = never), whether they have
+    // worked, and the town's rest threshold (n) — lives on the DowntimeState value so the
+    // "rest is a reward, not a default" rule and its transitions are owned by the value, not
+    // scattered here (STATE.md § Mission). A fresh / never-worked townie (worked=false) is
+    // never ready-to-rest before it works — the run-19 shape. This replaces the earlier trio
+    // of mostRecentDowntimeTick + restedUuids + workDoneUuids (the latter two were pure
+    // presence-flags, now folded into DowntimeState).
+    private final Map<UUID, DowntimeState> downtime = new HashMap<>();
     private final Map<UUID, Long> mostRecentFoodAttempt = new HashMap<>();
     private final Map<UUID, Boolean> starving = new HashMap<>();
 
@@ -627,6 +634,12 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public void handleMorning(long tick) {
         forEach(delegator.getSleepModule()::stopSleeping);
+        if (System.getenv("ENABLE_DEV_COMMANDS") != null) {
+            forEach(v
+                    -> QT.FLAG_LOGGER.warn("[DEV-DIAG:morning] wake-broadcast reached {} sleeping={}",
+                                   delegator.getUUID(v),
+                                   delegator.getSleepModule().isSleeping(v)));
+        }
         makeAllTotallyHungry();
 //        long tick = Util.getTick(town.getServerLevelUnsafe());
         forEach(v -> registerMostRecentDowntime(delegator.getUUID(v), tick));
@@ -694,17 +707,56 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             UUID from,
             long currentTick
     ) {
-        // TODO[Traits]: Consider augmenting downtime frequency for individual villagers
-        Long maxTicksBeforeDowntime = configs.maxTicksBeforeDowntime;
-        Long mostRecent = UtilClean.getOrDefault(mostRecentDowntimeTick, from, -maxTicksBeforeDowntime);
-        return (currentTick - mostRecent) >= maxTicksBeforeDowntime;
+        // TODO[Traits]: Consider augmenting downtime frequency for individual villagers.
+        // Primary readiness, decided on DowntimeState: worked since the last rest, and that rest is
+        // at least `n` ticks old. A fresh / never-worked townie has no last-work tick, so is never
+        // ready before it works first (the run-19 shape).
+        return downtimeState(from).isReadyForRest(currentTick);
     }
 
+    /**
+     * Fallback readiness for the "no work, no fallback" case: the rest is at least `n` ticks old,
+     * without requiring work-since-rest. A townie with truly nothing to do rests rather than idling
+     * forever (see {@code TownFlagBlockEntity.changeJobForVisitorFromBoard}'s final gate).
+     */
+    public boolean isReadyForDowntimeIfIdle(
+            UUID from,
+            long currentTick
+    ) {
+        return downtimeState(from).isReadyForIdleRest(currentTick);
+    }
+
+    /** The townie's downtime state, defaulting to an unseen fresh (not-yet-ready) state. */
+    private DowntimeState downtimeState(UUID from) {
+        return downtime.getOrDefault(from, DowntimeState.fresh(configs.maxTicksBeforeDowntime));
+    }
+
+    /**
+     * Mark a townie as having just rested (downtime exit, sleep-wake, or the NOON reset).
+     * Advances the "last rest" clock on their DowntimeState; together with having worked,
+     * this is what lets {@link #isReadyForDowntime(UUID, long)} return true.
+     */
+    public void markRested(UUID ownerUUID, long tick) {
+        downtime.put(ownerUUID, downtimeState(ownerUUID).rest(tick));
+    }
+
+    /**
+     * Mark a townie as having adopted into a real work job at {@code tick} (the "earned a rest by
+     * working" signal). Moves their last-work tick past their last rest — that is what makes
+     * {@link #isReadyForDowntime(UUID, long)} (worked since the last rest) able to return true once
+     * that rest is old enough. A fresh townie that has never worked has no last-work tick.
+     */
+    public void markWorked(UUID ownerUUID, long tick) {
+        downtime.put(ownerUUID, downtimeState(ownerUUID).work(tick));
+    }
+
+    // Retained for existing call sites that only know the old name; delegates to
+    // the new state model.
     public void registerMostRecentDowntime(
             UUID ownerUUID,
             long tick
     ) {
-        mostRecentDowntimeTick.put(ownerUUID, tick);
+        markRested(ownerUUID, tick);
     }
 
     private void registerMostRecentFoodAttempt(

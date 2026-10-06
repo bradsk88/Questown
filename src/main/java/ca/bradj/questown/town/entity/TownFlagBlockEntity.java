@@ -876,52 +876,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 requestedResults,
                 td
         );
-        // DEV-DIAG: job-cycler gate breakdown, 2026-10-04 (cook-soft-lock variant B) — keep/remove per handoff.
-        // Mirrors JobCycler.isValid faithfully so we can see, per candidate, which gate rejects:
-        //   gate1 passes if canAlwaysStart || canFit; REJECT@canFit(gate1) fires when both are false (the "not enough time" clock gate)
-        //   gate2 = an empty request OR canSatisfy(some request)   (REJECT@canSatisfy is the request gate)
-        // Log-only: no effect on the returned work / fallback. Gated on ENABLE_DEV_COMMANDS so it is
-        // inert in production. "not enough time ..." lines are ALSO emitted from the canFit predicate
-        // when gate1 rejects — see both together to confirm a live clock rejection.
-        if (System.getenv("ENABLE_DEV_COMMANDS") != null) {
-            ImmutableList<JobID> candidates = possibleWork.getFor(villager.getJobId()).stream()
-                    .filter(j -> getVillagerHandle().isUnlocked(ownerUUID, j))
-                    .collect(ImmutableList.toImmutableList());
-            long dt = Util.getDayTime(getServerLevel()).dayTime();   // DEV-DIAG 2b: correlate each ask with the in/out window band
-            getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
-                    "[jobcyc] townie={} cur={} dt={} candidates={}/{} req={} selected={}",
-                    ownerUUID, villager.getJobId(), dt,
-                    candidates.size(), possibleWork.getFor(villager.getJobId()).size(),
-                    requestedResults.isEmpty() ? "<none>" : requestedResults, work);
-            for (JobID c : candidates) {
-                boolean cas = canAlwaysStart.test(c);
-                boolean fit = cas ? false : canFit.test(c);   // faithful short-circuit: fit only evaluated when cas is false
-                boolean gate1 = cas || fit;
-                boolean satAny = false;
-                if (gate1 && !requestedResults.isEmpty()) {
-                    for (WorkRequest r : requestedResults) {
-                        if (ServerJobsRegistry.canSatisfy(td, c, r.asIngredient())) {
-                            satAny = true;
-                            break;
-                        }
-                    }
-                }
-                String verdict;
-                if (!gate1) {
-                    verdict = "REJECT@canFit(gate1)";
-                } else if (requestedResults.isEmpty()) {
-                    verdict = "ACCEPT(emptyReq)";
-                } else if (satAny) {
-                    verdict = "ACCEPT(satisfy)";
-                } else {
-                    verdict = "REJECT@canSatisfy(gate2)";
-                }
-                getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
-                        "[jobcyc]   cand={} dt={} cas={} fit={} satAny={} -> {}",
-                        c, dt, cas, cas ? "n/a" : fit, satAny, verdict);
-            }
-        }
         if (work != null) {
+            // The townie is being adopted into a **real work job** (not a meta-job like
+            // DowntimeWork — those were handled by the earlier cascade gates). This is
+            // their "I've earned a rest by working" signal — see DowntimeState (ca.bradj.questown.town.entity)
+            // and STATE.md § Mission. markWorked records the last-work tick, so a rest becomes so a rest becomes
+            // available next once another NOON/downtime/sleep event anchors a "last rest"
+            // tick and it is `maxTicksBeforeDowntime` ticks old.
+            villagerHandle.markWorked(VillagerUUID.from(ownerUUID), tick);
             changeJob.accept(work);
             return true;
         }
@@ -933,6 +895,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         );
         if (fallback != null) {
             changeJob.accept(fallback);
+            return true;
+        }
+
+        // Escape hook: the board has no work and no fallback for this townie (the cycler and the
+        // fallback selector both found nothing), so they would otherwise idle without a job. If they
+        // have rested long enough, rest instead of waiting forever — rule (b)'s "worked since the
+        // last rest" gate does not apply when there is truly nothing to do. Guarded on
+        // !DowntimeWork so a townie already resting on DowntimeWork is not re-adopted onto it.
+        if (villagerHandle.isReadyForDowntimeIfIdle(ownerVUID, tick) && !DowntimeWork.matches(currentJob)) {
+            changeJob.accept(DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
         }
         return false;

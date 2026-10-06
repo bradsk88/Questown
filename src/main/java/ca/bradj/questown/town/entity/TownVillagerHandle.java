@@ -375,6 +375,18 @@ public final class TownVillagerHandle {
         return delegate.isReadyForDowntime(getUuid(ownerVUID), tick);
     }
 
+    /** Fallback readiness: rested old enough; used when there is no work and no fallback (idle-rest). */
+    boolean isReadyForDowntimeIfIdle(
+            VillagerUUID ownerVUID,
+            long tick
+    ) {
+        return delegate.isReadyForDowntimeIfIdle(getUuid(ownerVUID), tick);
+    }
+
+    void markWorked(VillagerUUID ownerVUID, long tick) {
+        delegate.markWorked(getUuid(ownerVUID), tick);
+    }
+
     long size() {
         return delegate.size();
     }

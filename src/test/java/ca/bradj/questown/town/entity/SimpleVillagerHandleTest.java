@@ -423,4 +423,173 @@ class SimpleVillagerHandleTest {
                 "re-scheduling without a guarantee replaces the stale one"
         );
     }
+
+    // ---- Downtime "rest is a reward, not a default" state (STATE.md § Mission) ----
+    //
+    // `isReadyForDowntime` gates the "rest now" branch of the job cascade
+    // (TownFlagBlockEntity.changeJobForVisitorFromBoard :834). If it returns true for a
+    // townie that has never actually rested in this lifecycle, a freshly re-rooted
+    // hunter (the run-19 6eeeefa4-at-04:38:59 shape — rootId=hunter, `dt=449`, no
+    // rest record) is parked in DowntimeWork *before* the cycler can hand them a
+    // real job. `markRested(uuid, tick)` is the single entry point for the "a
+    // rest happened" state; both existing call sites (SVH:299 exit-DowntimeWork,
+    // SVH:638 morning) now route through it.
+
+    @Test
+    public void isReadyForDowntime_freshTownie_isNotReady() {
+        SimpleVillagerHandle<String, UUID> handle = newHandle(new TestDelegator());
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        // A townie that has never worked in this lifecycle is not ready for a rest —
+        // rest is a reward for work, not a default. The run-19 6eeeefa4-at-04:38:59
+        // shape: just re-rooted to hunter, no work done, no DowntimeState (fresh: worked=false).
+        // The old `getOrDefault(tick, from, -max)` default made `(now - (-max)) >= max` always
+        // true ⇒ rest; the record's worked=false gate removes that false default.
+        Assertions.assertFalse(
+                handle.isReadyForDowntime(v, 10_000L),
+                "a townie that has never worked is not ready for downtime (rest is a reward, not a default)"
+        );
+
+        // Even after a rest event, a townie that still has not worked is not ready —
+        // the workDone check is the load-bearing one.
+        handle.markRested(v, 0L);
+        Assertions.assertFalse(
+                handle.isReadyForDowntime(v, 10_000L),
+                "a rest event without subsequent work does not make a townie ready again"
+        );
+    }
+
+    @Test
+    public void isReadyForDowntime_afterEnoughTicksSinceWorkedAndRested_isReady() {
+        SimpleVillagerHandle<String, UUID> handle = newHandle(new TestDelegator());
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        long maxTicks = 100L; // matches Configs(…, 100 /* maxTicksBeforeDowntime */) in newHandle()
+        handle.markRested(v, 0L);
+        // Tired only after working: rest at 0, work at 90 (10 ticks before threshold),
+        // ready at 100 (10 ticks of work since the last rest — but we define this as
+        // "enough ticks since last rest", so at 100 they are exactly at the threshold).
+        handle.markWorked(v, 90L);
+
+        Assertions.assertFalse(
+                handle.isReadyForDowntime(v, maxTicks - 1),
+                "one tick short of the downtime threshold is not ready"
+        );
+        Assertions.assertTrue(
+                handle.isReadyForDowntime(v, maxTicks),
+                "at the downtime threshold — having worked — the townie is ready to rest"
+        );
+        Assertions.assertTrue(
+                handle.isReadyForDowntime(v, maxTicks * 10),
+                "well past the rest the townie is still ready"
+        );
+    }
+
+    @Test
+    public void isReadyForDowntime_justRested_isNotReady() {
+        SimpleVillagerHandle<String, UUID> handle = newHandle(new TestDelegator());
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        long maxTicks = 100L;
+        long now = 5_000L;
+        // A townie that just rested (at `now`) and then worked is not ready again until
+        // `maxTicks` more ticks have passed.
+        handle.markRested(v, now);
+        handle.markWorked(v, now + 10L);
+        Assertions.assertFalse(
+                handle.isReadyForDowntime(v, now + 1),
+                "immediately after a rest the townie is not ready again"
+        );
+        Assertions.assertFalse(
+                handle.isReadyForDowntime(v, now + maxTicks - 1),
+                "still not ready one tick before the threshold"
+        );
+    }
+
+    @Test
+    public void registerMostRecentDowntime_delegatesToTheSameStateAsMarkRested() {
+        // The legacy name (registerMostRecentDowntime) now routes through markRested;
+        // it must update the same rested state so the two paths are behaviorally
+        // equivalent (both mark the townie ready at the same threshold tick, if they
+        // have worked).
+        SimpleVillagerHandle<String, UUID> handle = newHandle(new TestDelegator());
+        UUID viaMark = UUID.randomUUID();
+        UUID viaLegacy = UUID.randomUUID();
+        handle.register(viaMark);
+        handle.register(viaLegacy);
+        long threshold = 100L;
+
+        handle.markRested(viaMark, 0L);
+        handle.markWorked(viaMark, 50L);
+        handle.registerMostRecentDowntime(viaLegacy, 0L);
+        handle.markWorked(viaLegacy, 50L);
+
+        Assertions.assertTrue(handle.isReadyForDowntime(viaMark, threshold),
+                "markRested makes the townie ready at the threshold (if they have worked)");
+        Assertions.assertTrue(handle.isReadyForDowntime(viaLegacy, threshold),
+                "legacy registerMostRecentDowntime updates the same state as markRested");
+        Assertions.assertFalse(handle.isReadyForDowntime(viaMark, threshold - 1),
+                "one tick short of the threshold is not ready");
+        Assertions.assertFalse(handle.isReadyForDowntime(viaLegacy, threshold - 1),
+                "one tick short of the threshold is not ready");
+    }
+
+    @Test
+    public void isReadyForDowntime_noWorkDoneNeverReady() {
+        // A townie that has a rest record but has **never worked** (the run-19 shape
+        // for 6eeeefa4: re-rooted to hunter, NOON handler marked them rested, they
+        // never produced a single item) is not ready for any amount of time.
+        SimpleVillagerHandle<String, UUID> handle = newHandle(new TestDelegator());
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+        // Simulate the NOON handler marking them rested, as it would in production.
+        handle.registerMostRecentDowntime(v, 0L);
+        // Even a long time later, with no work, they are not ready for rest —
+        // because they haven't earned one.
+        Assertions.assertFalse(
+                handle.isReadyForDowntime(v, 100_000L),
+                "a townie that has a rest record but has never worked is not ready (even after a long time)"
+        );
+        // …and once they work, they become ready (the reward-for-work rule).
+        handle.markWorked(v, 10L);
+        Assertions.assertTrue(
+                handle.isReadyForDowntime(v, 100_000L),
+                "after a rest event **and** work the townie becomes ready"
+        );
+    }
+
+    @Test
+    public void isReadyForDowntimeIfIdle_fresh_isNotReady() {
+        // A townie that never rested has no last-rest anchor — even the idle fallback does not apply.
+        SimpleVillagerHandle<String, UUID> handle = newHandle(new TestDelegator());
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+        Assertions.assertFalse(
+                handle.isReadyForDowntimeIfIdle(v, 10_000L),
+                "a fresh townie has not rested, so the idle fallback is off"
+        );
+    }
+
+    @Test
+    public void isReadyForDowntimeIfIdle_restedButNeverWorked_isReadyAfterThreshold() {
+        // The escape: a townie that has rested but has NOT worked since (so the primary rule never
+        // fires for them) can still rest when there is truly no work, once the rest is old enough.
+        SimpleVillagerHandle<String, UUID> handle = newHandle(new TestDelegator());
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+        long maxTicks = 100L;
+        handle.markRested(v, 0L); // rested, never worked: primary is never ready
+        Assertions.assertFalse(handle.isReadyForDowntime(v, 10_000L), "primary needs work since the rest");
+        Assertions.assertFalse(
+                handle.isReadyForDowntimeIfIdle(v, maxTicks - 1),
+                "just rested: the idle fallback is not ready yet"
+        );
+        Assertions.assertTrue(
+                handle.isReadyForDowntimeIfIdle(v, maxTicks),
+                "rested long enough with truly no work -> rest instead of idling forever"
+        );
+    }
 }
