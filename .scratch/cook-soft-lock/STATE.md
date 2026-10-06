@@ -261,6 +261,35 @@ test).
 *All `ENABLE_DEV_COMMANDS`-gated. Strip in the commit that closes the issue. DIAGNOSIS.md
 "Probe-strip pairing" is the commit-boundary rule.*
 
+## 2026-10-17 run-22 findings
+
+**Original "no meat" bug — RESOLVED.** Evidence (run-22, ENABLE_DEV_COMMANDS=1, /tick rate 200):
+- `DEV-DIAG:extract` fires: `jobs/hunter_sword` → chicken, porkchop (loot roll IS reached)
+- `food_raw` LOOT quest → COMPLETED (was ACTIVE/stuck in runs 20–21)
+- `villager_food` LOOT quest → COMPLETED
+- `cookUnlocked=true` milestone reached
+- Cook in roster: `cook/mutton` — working (GOING_TO_JOB → COLLECTING_SUPPLIES with mutton in hand)
+
+**NEW deeper issue — the real lock (run-22 and all runs after DowntimeState fix):**
+
+Chain:
+1. `TownQuests.java:1128`: `MCQuest.jobChange(batchUUID, null, JobID("cook", "simple_furnace_food"))`
+2. `processJobChanges` (TownQuests.java:1496): `v.getValue().equals(wantedJobId)` — exact match
+3. `ResourceJobLoader.makeCookJobs`: expands `cook_simple_furnace_food.json` into per-item sub-jobs from
+   `VILLAGER_SIMPLE_FURNACE_FOOD_RAW` tag: `cook/mutton`, `cook/beef`, `cook/chicken`,
+   `cook/porkchop`, `cook/rabbit`, `cook/potato`
+4. `cook/simple_furnace_food` itself is NEVER registered — it is the source/parent JSON ID only
+5. `JobID{cook, mutton} != JobID{cook, simple_furnace_food}` → quest unmatchable → ACTIVE forever
+6. Lock fires at 3 consecutive days unchanged: `cooking quest ACTIVE, other 11 quests COMPLETED`
+
+**Fix (not yet applied):**
+- (a) `processJobChanges`: add `sameRoot(wantedJobId)` in addition to exact `equals` match
+- (b) Change quest definition to a real registered sub-job ID (less clean, one-off)
+- (c) Register `cook/simple_furnace_food` in the job system as a virtual job (most invasive)
+
+Recommended: **(a)** — the quest's intent is "a cook exists", and `sameRoot('cook')` is the correct
+semantics. The `cook/simple_furnace_food` ID is a design artifact of the job-expansion mechanism.
+
 ---
 
 ## How to update this doc (for future sessions)

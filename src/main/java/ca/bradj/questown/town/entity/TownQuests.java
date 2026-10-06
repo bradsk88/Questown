@@ -1495,6 +1495,19 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                         .map(v -> v.getKey())
                         .toList();
                 if (matches.isEmpty()) {
+                    // Fallback: the job file "source" job (e.g. cook/simple_furnace_food) is
+                    // expanded by ResourceJobLoader into per-item sub-jobs (cook/mutton, cook/beef, …).
+                    // The source JobID itself is never registered, so exact-match never fires for
+                    // it. Try matching on the job role (rootId) so the quest still completes when
+                    // a townie holds any job in the same family.
+                    matches = villagerJobs
+                            .entrySet()
+                            .stream()
+                            .filter(v -> v.getValue().sameRoot(wantedJobId))
+                            .map(v -> v.getKey())
+                            .toList();
+                }
+                if (matches.isEmpty()) {
                     continue;
                 }
                 VillagerUUID owner = Compat.shuffle(matches.iterator(), town.getServerLevelUnsafe())
