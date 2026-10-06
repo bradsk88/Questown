@@ -1413,19 +1413,29 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
      */
     private void backfillSatisfiedQuests(TownInterface town) {
         ServerLevel level = town.getServerLevel();
-        List<MCQuest> openRooms = new ArrayList<>();
-        boolean openItems = false;
-        for (MCQuest q : questBatches.getAll()) {
-            if (q.isComplete()) {
-                continue;
-            }
-            switch (q.getType()) {
-                case ROOM -> openRooms.add(q);
-                case ITEM -> openItems = true;
-                default -> { }
-            }
+        if (questBatches.isEmpty()) {
+            return;
         }
-        if (openRooms.isEmpty() && !openItems) {
+        // Walk the journal LAZILY (no full copy): collect only the open ROOM
+        // matches (usually zero in steady state) and test for an open ITEM
+        // quest. This was questBatches.getAll() — a per-tick O(journal) copy of
+        // EVERY quest — and the journal is unbounded (completed batches are never
+        // pruned), so the steady-state cost was a growing flat copy every tick.
+        final boolean[] openItems = {false};
+        List<MCQuest> openRooms = new ArrayList<>();
+        questBatches.getAllBatches().stream()
+            .flatMap(b -> QuestBatch.stream(b))
+            .forEach(q -> {
+                if (q.isComplete()) {
+                    return;
+                }
+                switch (q.getType()) {
+                    case ROOM -> openRooms.add(q);
+                    case ITEM -> openItems[0] = true;
+                    default -> { }
+                }
+            });
+        if (openRooms.isEmpty() && !openItems[0]) {
             return;
         }
         for (MCQuest q : openRooms) {
@@ -1436,7 +1446,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 probeNoRoomMatch(q);
             }
         }
-        if (openItems) {
+        if (openItems[0]) {
             processItemQuests(TownContainers.getAllStacks(this.town.getUnsafe(), level));
         }
     }

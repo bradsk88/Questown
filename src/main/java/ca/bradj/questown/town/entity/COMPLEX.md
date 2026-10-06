@@ -404,9 +404,15 @@ flowchart TD
 - **`getRoomsMatching(wantedId)` covers both room kinds**: a door room
   (`store_room`, `job_board`) and a registered block-room (`town_gate`), since
   `registerBlockAsRoom` feeds the same match store the look-up reads.
-- **The gate is on open-quest existence, not townie state**, so the early-out
-  keeps the steady state to a single `questBatches.getAll()` scan; the room look-up
-  and the container scan run only while a matching quest is still open.
+- **The gate is on open-quest existence, not townie state.** The per-tick scan
+  walks the journal **lazily** (it never copies it) and only materialises the few
+  OPEN room matches; in steady state (nothing open) the cost is a plain iteration
+  with zero allocation. An eager `questBatches.getAll()` copy per tick would grow
+  with the town's history, because completed batches are never pruned (the journal
+  is unbounded) — that was the pre-tighten cost. The room look-up and the container
+  scan run only while a matching quest is still open. Measured on the
+  `perf/town_large` town: the `quests` phase sits at ~47–49µs/tick, ~6% of a
+  flag tick already ~16× under the 50ms budget.
 - Verified: `village/self_sufficiency` run-18 completes all 12 onboarding quests
   (raw→kitchen→cooked chain), staffs both cook and hunter, and
   `NO_FORWARD_PROGRESS` no longer fires. (The deeper flaky `NO_JOBSITE`
