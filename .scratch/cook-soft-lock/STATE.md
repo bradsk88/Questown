@@ -1,5 +1,31 @@
 # Cook soft-lock — investigation STATE
 
+> **STATUS: FIXED 2026-10-06.** Three-part fix committed on `1.20.6-neoforge-wip`:
+> 1. `effb43d6` DowntimeState — rest is a reward for work-since-rest (rule b) + idle-rest escape.
+> 2. `060a457c` TownQuests — same-root fallback for JOB_CHANGE quests (cook quest now matches).
+> 3. `d9fcad5c` Scenario — wait for the gate room (special_quest.town_gate) alongside board + store rooms
+>    before spawning villagers; the gate-room shell is a registered room, not a loose mat.
+>
+> **Run-25 verification (2026-10-06)**: the chain now **completes** — raw-meat LOOT quest COMPLETED,
+> cook JOB_CHANGE quest COMPLETED (the `cook/simple_furnace_food` → `cook/mutton` same-root match),
+> kitchen QUEST COMPLETED, `villager_food` LOOT COMPLETED, `MILESTONE: cook_unlocked` on day=1.
+>
+> **Root cause chain (all three fixes needed for the chain to complete):**
+> - **A. Downtime gate** — `effb43d6` fixes the cascade firing the downtime gate before the
+>   cycler for fresh/never-worked townies (run-19: all 4 cascade entries branched to DowntimeWork,
+>   `reached cycler` 0×). Rule b (work-since-rest) + idle-rest escape.
+> - **B. Cook quest never closes** — `060a457c`. `cook/simple_furnace_food` is expanded by
+>   `ResourceJobLoader` into per-item sub-jobs (`cook/mutton`, …) that never `equals` the source
+>   `JobID`; now matches by same-root (exact match keeps precedence for crafter/hunter source).
+> - **C. Gate room not a registered room shell** — `d9fcad5c`. The leaver jobs anchor to
+>   `special_quest.town_gate`; a loose mat outside a registered room shell produces
+>   `getJobSites()=0` (run-6–11: leavers bounce COLLECTING_SUPPLIES/NO_JOBSITE, no food;
+>   the whole chain soft-locks → NO_FORWARD_PROGRESS after ~15000 days). Now the scenario builds
+>   the gate room before the board/store wait, so it is a real registered room when the leaver
+>   loops start.
+>
+> ---
+
 > **Single source of truth for current state.** `DIAGNOSIS.md` (810 lines) is the *history*
 > archive — tiers, corrections, session findings. New sessions read **this** first.
 >
