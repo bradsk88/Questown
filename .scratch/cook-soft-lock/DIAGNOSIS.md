@@ -615,3 +615,158 @@ single decision that unblocks implementing "fix both A and B."
 removed in the **same session that commits the chosen fix locus** — the `safeReason`
 `hasSupplies` probe (DeclarativeJobTicker) stays available until then, and the sweep's
 storage-wall verdict no longer depends on any of them.
+
+## 2026-10-05 session: (a) implemented, then raw-stall root pinned fresh (supersedes prior framing)
+
+**State at compaction.** Branch `1.20.6-neoforge-wip @ 8a08cbf1`. Codeword `snipe`, but this session
+split into two tracks: (1) implement the (a) demand-side fix, (2) diagnose the RAW stall (the
+upstream raw-meat-chain that gates cook-staffing — user: "dozens of prior sessions").
+
+### Track 1 — the (a) cooked-dine fix: IMPLEMENTED + compile-green (NOT yet behavior-verified)
+- User picked locus **(a)**. Implemented: added a **cooked-food work request** to the board in
+  `VillageSelfSufficiencyExecutor.java` (~:714, after the `WHEAT_SEEDS` request):
+  `flag.getWorkHandle().requestWork(WorkRequest.of(TagsInit.Items.VILLAGER_FOOD))` — the TAG
+  `#questown:villager_food` (broad, matches whichever cook recipe is staffed), added **alongside**
+  the existing raw `MUTTON`+`WHEAT_SEEDS` requests (keeps the raw/hunter chain).
+- **Re-pinned facts (2026-10-05):** there is NO `cooked_villager_food` tag — cooked set is
+  `#questown:villager_food`, raw is `#questown:villager_raw_food`. The staffed cook job
+  `cook/simple_furnace_food` outputs **`cooked_beef`** (JSON `initial_request: cooked_beef`) which
+  ∈ `#villager_food` → gate2 `canSatisfy` (output⇄request match) now admits it. `WorkRequest` has an
+  `of(TagKey<Item>)` factory (line 35). **Data-layer proof is solid; the live NO_SPACE-resolution
+  proof was never reached** because the seed stalled upstream (raw chain) before the cook staffed.
+- `./gradlew compileJava --rerun-tasks` green (JDK21 neoforge branch).
+- Board request confirmed on the board in run logs: `WorkRequest{tag=questown:villager_food}`.
+
+### Track 2 — RAW stall: FRESH root pin (reproduced 2026-10-05 on run1 + run2, NOT re-asserted)
+**Reproduced:** both leavers (hunter→mutton, gatherer→wheat_seeds) sit in `seeking_work` the
+**whole run** (run1: 44,498 samples, log line 988→1,477,327). Raw-meat LOOT
+`villager_simple_furnace_food_raw` never closes → `cookUnlocked=false` → cook never staffs.
+
+**The board is NOT the gap.** Populated the whole time: `Prepared for hunter: [sword,
+sword_half_day,sword_full_day]` 8852× / `hunter: []` 32×; `gatherer: [gather…]` 12496× /
+`gatherer: []` 70× (run1 `applyScores`). Satisfiable candidate on offer (INFO scoreDump:
+`score≈1.006, satisfies mutton, all tools`).
+
+**The ask never fires (both runs):** `ask firing at board` (WorkSeekerJob.tryExtractProduct) = **0**;
+`changeJobForVisitorFromBoard` = **0**; `reached cycler` DEV-DIAG:ask = **0**; `DowntimeWork` 98×;
+`ResterWork` 0×; `signal=MORNING` (in-window). So the DIAGNOSIS's `canFit` in-day window is **not**
+the active reject — the ask never reaches the cycler at all.
+
+**THE GATE (decisive split, run2 probe `DEV-DIAG:loop` in `JobLogic.tick` ~:104, throttled %200):**
+```
+[DEV-DIAG:loop] hunter/seeking_work   inJobSite=false status=NO_WORK_POSSIBLE
+[DEV-DIAG:loop] gatherer/seeking_work inJobSite=false status=NO_WORK_POSSIBLE
+```
+The ask gate is `JobLogic:219 if (isEntityInJobSite && status.isWorkingOnProduction())`.
+**Both inputs false:** `inJobSite=false` (townie not at its job site = the job board) AND
+`status=NO_WORK_POSSIBLE` (non-working: `isWorkingOnProduction = EXTRACTING_PRODUCT || value<10`; IDLE=12/
+NO_WORK_POSSIBLE=20 both fail). `WorkSeekerJob` job-site = `SpecialQuests.JOB_BOARD`; the board room IS
+placed (seed completed `questown:job_board`). So it's not a missing board — the leaver neither arrives at
+the board nor enters a working/go-to-board state. `NO_WORK_POSSIBLE` is the stuck state; `inJobSite=false`
+looks like its consequence (not en-route to the board).
+`hasBOP=false` on both leavers too (so the BOP adopt path in `changeJobForVisitorFromBoard:823` would
+also be bypassed — secondary, not the primary gate).
+
+**Root (fresh):** the leaver `seeking_work` job is stuck in `NO_WORK_POSSIBLE` + `inJobSite=false`; it never
+transitions to a GOING_TO_JOB / working state, so it never reaches the board / never asks. **Open
+question the next dig answers:** why does the special-job status computer return `NO_WORK_POSSIBLE` (or
+leave `inJobSite=false`) when the board is populated+placed, instead of a working/moving status? That is
+the `getStateComputer` standard-status path for the seeker (the `getComputeStatusOverrideForSpecialJobs`
+returns null when board non-empty → standard computation). NOT yet confirmed which of the two (status vs
+job-site) is the causal driver.
+
+### Probe state in the working tree (uncommitted; strip per the pairing rule when a fix commits)
+- 6 DEV-DIAG probe files from before (JobLogic, AbstractWorldInteraction, DeclarativeJobTicker,
+  WorkSeekerJob, TownFlagBlockEntity, TownRoomsMap) + **NEW this session: `JobLogic` `DEV-DIAG:loop`
+  probe flipped `.debug`→`.warn`** so it surfaces at the sweep's `Questown:Jobs=info` level (it was
+  filtered at debug). All gated on `ENABLE_DEV_COMMANDS != null`.
+- Launch: `ENABLE_DEV_COMMANDS=1` (+ `run/log4j2.sweep.xml`) surfaces them. `QT.JOB_LOGGER=Questown:Jobs`.
+- Untracked unrelated: `docs/todo/build-and-release.md`.
+- run2 held server was live at compaction (kill by pid: forge `pgrep -f 'forgeserveruserdev'` filtered
+  on `launchTarget`; fifo holder via `run/ffeed.sh`; verify teardown in a LATER call + port 25565).
+
+### Next (uncommitted, continue) — dig
+Trace the seeker's standard status computation: why `NO_WORK_POSSIBLE` when board is populated. Look at
+`getStateComputer`/`usualRoute` for the WorkSeekerJob (root `seeking_work`), the job-site resolution
+(`getWorkSpot`) → `isEntityInJobSite`, and the `NO_WORK_POSSIBLE` register path (`registerUnmetNeeds`).
+Distinguish: (a) status computer picks NO_WORK_POSSIBLE (no work → the seeker's `possible` list empty at
+query time), vs (b) job-site unresolved so inJobSite=false. Then decide the fix locus (seed vs code) for
+the user.
+
+### Dig result (run2, 23:15–23:26, worldTime up to ~9173 = day ~2) — REFUTES the DIAGNOSIS mechanism
+**run2 hard pin:** raw-meat LOOT `1186 ACTIVE / 0 COMPLETED`; cookUnlocked=false; and DECISIVELY:
+- `changeJobForVisitorFromBoard` (the board-ask) fired **0×** the whole run.
+- `hasBlockOfProgress` (`hasBOP`) was **0× true**.
+- Every `DEV-DIAG:seeker-branch` sample through 23:16:16 showed `preselectedEmpty=true` (board empty
+  AT QUERIES), while the board for hunter was actually `[]` until ~23:16:20 then populated
+  (`sword`, Satisfies mutton) by 23:16:23 (`scoreDump`). So board and seek-view DISAGREED in time:
+  the seeker sees `getFor(getId())` empty while scoreDump (`tfbe.getPossibleWork()`) later shows populated.
+
+**The ask (adopt a job from the board) is UNREACHABLE on BOTH paths (fresh, probe-measured):**
+1. **Special-job override** (`WorkSeekerJob.getComputeStatusOverrideForSpecialJobs:155`): the ask
+   `changeJobForVisitorFromBoard` is wrapped in `if (hasBlockOfProgress(ownerUUID))`. For a fresh leaver
+   `hasBOP` is **never true** (0×) → this path never fires. `hasBlockOfProgress` is a *pending
+   job-change transaction* (the GUI `BopTransactionSyncer`/`JobUnlockConfirmMenu.path` concept, not
+   "made progress") — i.e., the *confirm* flow, not the first-job-acquire flow.
+2. **JobLogic work-ask** (`JobLogic:219  if (isEntityInJobSite && status.isWorkingOnProduction())` →
+   `doTryWorking` → `tryExtractProduct` → `changeJobForVisitorFromBoard` via `DeclarativeLogicWorld:135`):
+   gated on `inJobSite` AND a *working* status. Both false: `inJobSite=false`, `status=NO_WORK_POSSIBLE`.
+
+**`inJobSite` is a PHYSICAL-PRESENCE check** (`DeclarativeJobTicker:321,350` → `getEntityCurrentJobSite` →
+`JobsClean.getEntityCurrentJobSite:204`): non-null only if the entity block position is inside/near a room
+in `roomsWithCompletedProduct` OR `roomsNeedingIngredientsOrTools`. A leaver at the **job board** is not
+inside a work room → `inJobSite=false`. So the board-ask the leaver needs (adopt `sword` from the job board)
+is gated behind a *work-room-presence* check it never satisfies — **the ask never fires, so the
+DIAGNOSIS's "the ask fires and fails" is refuted: the ask is gated OFF (inJobSite=false /
+NO_WORK_POSSIBLE / hasBOP=false), not fired-and-rejected.**
+
+**Open design question (fix locus, for the user):** for a leaver's first job, the board-ask
+(`changeJobForVisitorFromBoard`) is only reachable through (1) a `hasBlockOfProgress` confirm transaction,
+or (2) a `inJobSite && working` work-cycle. Neither is in the right state for a *fresh* leaver at the job
+board. So the root is: **the seek→adopt path a new leaver is supposed to use is gated on a condition that
+is false at that moment — the leaver can't even reach `changeJobForVisitorFromBoard`.** Which is wrong:
+(a) the ask should be reachable for a leaver at the job board without being inside a *work* room (the
+`inJobSite` gate is the wrong gate for special/seek jobs), or (b) the leaver is supposed to be positioned
+inside/near the job-board room when it asks (a positioning / room-registration bug — is JOB_BOARD in
+`roomsNeedingIngredientsOrTools`/`roomsWithCompletedProduct` for the seek job?) — these are two different
+fixes.
+
+### Dig result 2 (run2, 23:15:40-23:16:18) - REFRAME: it is a patience/race, NEITHER (a) NOR (b)
+The leavers did NOT get stuck *at the board*; they **gave up on seeking before the board finished
+populating** and dropped into a `DowntimeWork` that has no job site, then never re-seek.
+Observed timeline (/tmp/run2.log):
+- `23:15:40 Prepared for hunter: []` - board empty; leavers seeking, NO_WORK_POSSIBLE.
+- `23:16:15/16 DEV-DIAG:loop ... NO_WORK_POSSIBLE inJobSite=false (t=800 -> 1000)`.
+- `23:16:16 Job changed [gatherer/downtime] [from seeking_work]` AND `[hunter/downtime] [from seeking_work]`
+  - both leavers **fell to DowntimeWork** at `ticksSinceStart=1000` (the seek job's
+  `withMaxTickLimit(1000)` fallback -> `DowntimeWork::getIdFor`).
+- `23:16:16 Prepared for hunter: [sword,sword_half_day,sword_full_day]` - board becomes satisfiable the SAME second.
+- `23:16:17 watch: 684g/downtime . 3a1c/downtime` (third townie `f15` still seeking).
+- `23:16:18 [job-change] requested JobID{hunter/sword} for 684b (ChangeJobReward)` - leavers ALREADY on Downtime.
+- `23:16:17+ journal downtime -> IDLE(15) -> NO_JOBSITE(19)`; raw-meat LOOT stays ACTIVE; never re-seeks.
+
+ROOT (fresh, run2): the seek job gives up at its `withMaxTickLimit(1000)` (-> DowntimeWork) at the exact
+moment the board becomes satisfiable (a workSpot-null / board-empty race at the check), and `DowntimeWork`
+has **no job site** (`NO_JOBSITE`) and does not re-seek - so the leavers sit on Downtime/IDLE while a
+satisfiable sword job sits on the board. The ask never fires not because of `inJobSite`, but because
+**they are off `seeking_work` by the time work exists.** This supersedes the (a)/(b) fork.
+Fix loci: (1) extend the seek job's patience so it outlives board-fill (bump `withMaxTickLimit(1000)`);
+(2) make `DowntimeWork` re-seek (`changeJobForVisitorFromBoard`) when the board has a satisfiable job for
+that root; (3) hold the leaver on `seeking_work` as a last resort. (1) and (2) are the real candidates; (3) band-aid.
+
+## STATUS (2026-10-07, run-18) — a separate, earlier gate is now fixed; the work-site issue remains
+Two distinct soft-lock mechanisms were tangled in this thread. This doc
+tracks the **flaky `NO_JOBSITE` work-site resolution** (`getRoomsMatching`).
+A *separate*, earlier blocker — the Phase-1 kickoff gate (`job_board` /
+`store_room` / `town_gate` / `wooden_sword` stalling `ACTIVE` because the room
+recipes registered before the tutorial issued the quests) — is now fixed by
+`TownQuests.backfillSatisfiedQuests` (per-tick re-evaluation of open ROOM/ITEM
+quests against current town state; see `town/entity/COMPLEX.md`).
+
+- **Verified (run-18):** all 12 onboarding quests complete (raw→kitchen→cooked
+  chain), cook + hunter both staffed, `NO_FORWARD_PROGRESS` no longer fires.
+- **Still open:** the `NO_JOBSITE` work-site resolution this doc chases — in
+  run-18 the cook bounces `NO_SUPPLIES → IDLE → NO_JOBSITE` once it clears the
+  gate. The `getRoomsMatching` flaky factor below is the live suspect; the
+  Phase-1 fix unblocked, did not fix, this one.
+

@@ -363,3 +363,53 @@ rule-gated 5-arg path is otherwise unchanged.
     oracle-pinned. Oracles: `loot_on_extract` (realtime regression) and
     `loot_on_extract_warp` (warp), both GREEN — the warp run's log shows the
     records, the settle applying them, and `quest complete=true`.
+
+---
+
+# Quest backfill — state that predates the quest still completes it
+
+The tutorial issues its gate quests (the Phase-1 kickoff — `job_board`,
+`store_room`, `town_gate`, `wooden_sword` — and the Phase-2/2.5 cook chain)
+after campfire, but quest *satisfaction* normally completes a quest via a
+one-shot event **at satisfaction time**: a room recipe fires `roomRecipeCreated`
+once when it registers, and an item count is tallied only on a stored-data
+change. When the satisfying world state already exists by the time the quest is
+added — exactly what the `village/self_sufficiency` drive does, building the
+rooms and swords *before* the tutorial issues the gates — that event has
+already fired and never re-fires, so the gate quests stall `ACTIVE` forever and
+`allVillagerKickoffQuestsDone()` never holds (NO_FORWARD_PROGRESS, the whole
+town frozen at the job board).
+
+## Per-tick re-evaluation (happy path)
+
+```mermaid
+flowchart TD
+    Tick["TownQuests.tick (every tick)"] --> Gather["backfillSatisfiedQuests:\ncollect open ROOM / ITEM quests"]
+    Gather --> Any{"any open?"}
+    Any -- no --> Ret["return (steady state = one list scan)"]
+    Any -- yes --> Rooms["per open ROOM quest:\ngetRoomHandle().getRoomsMatching(wantedId)"]
+    Rooms --> RM{"a registered\nroom matches?"}
+    RM -- yes --> Done["markQuestAsComplete(room, wantedId)\n(reward + batch claim as usual)"]
+    RM -- no --> Skip["(gated) probe: 'no matching room'"]
+    Gather --> Items["open ITEM quest?\nprocessItemQuests(TownContainers.getAllStacks)"]
+    Items --> IC{"count >= needed?"}
+    IC -- yes --> Done
+```
+
+- **It reuses the existing completion plumbing**, not a parallel mechanism: rooms
+  go through `markQuestAsComplete` (→ `markRecipeAsComplete` → the usual reward /
+  batch-claim); item quests go through `processItemQuests`, the same tally
+  `handleNewStoredData` uses. A backfilled quest completes exactly as an
+  event-driven one does.
+- **`getRoomsMatching(wantedId)` covers both room kinds**: a door room
+  (`store_room`, `job_board`) and a registered block-room (`town_gate`), since
+  `registerBlockAsRoom` feeds the same match store the look-up reads.
+- **The gate is on open-quest existence, not townie state**, so the early-out
+  keeps the steady state to a single `questBatches.getAll()` scan; the room look-up
+  and the container scan run only while a matching quest is still open.
+- Verified: `village/self_sufficiency` run-18 completes all 12 onboarding quests
+  (raw→kitchen→cooked chain), staffs both cook and hunter, and
+  `NO_FORWARD_PROGRESS` no longer fires. (The deeper flaky `NO_JOBSITE`
+  work-site resolution `getRoomsMatching` traces — see
+  `.scratch/cook-soft-lock/DIAGNOSIS.md` — is a separate, still-open issue that
+  this unblocks.)

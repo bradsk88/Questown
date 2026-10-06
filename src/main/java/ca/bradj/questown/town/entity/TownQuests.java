@@ -25,6 +25,7 @@ import ca.bradj.questown.mc.RecipeRef;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.TownieNeed;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -338,6 +339,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     public void tick(TownInterface town) {
         tickUnmetUnlockQuests(town);
+        backfillSatisfiedQuests(town);
 
         ServerLevel level = town.getServerLevel();
         int size = getVillagers(this).size();
@@ -1199,6 +1201,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     @Override
     public void questCompleted(MCQuest quest) {
+        if (System.getenv("ENABLE_DEV_COMMANDS") != null) {
+            QT.QUESTS_LOGGER.warn("[DEV-DIAG:quest-done] {} {}", quest.getType(), quest.getWantedId());
+        }
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         t.messages.questCompleted(quest);
         t.setChanged();
@@ -1393,6 +1398,65 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     public void processItemQuests(ImmutableList<MCTownItem> allStacks) {
         questBatches.processItemQuests(allStacks, this::questMatchesStack, TownQuests.TRACKER);
     }
+
+    /**
+     * Completes open ROOM and ITEM quests that the current town state already satisfies (a
+     * registered room for the recipe, or enough item copies in town containers).
+     *
+     * <p>Quest completion is otherwise event-driven at satisfaction time: a room recipe fires a
+     * one-shot {@code roomRecipeCreated} on registration, and item counts are tallied only on
+     * stored-data changes. When a quest is added <em>after</em> the satisfying state already
+     * exists (the tutorial issues the kickoff quests after the rooms and swords were placed),
+     * that one-shot event never fires for them and they stall ACTIVE forever. Re-evaluating open
+     * quests against current state each tick closes the ordering gap; the early-out makes the
+     * steady state (no open room/item quests) a single list scan.
+     */
+    private void backfillSatisfiedQuests(TownInterface town) {
+        ServerLevel level = town.getServerLevel();
+        List<MCQuest> openRooms = new ArrayList<>();
+        boolean openItems = false;
+        for (MCQuest q : questBatches.getAll()) {
+            if (q.isComplete()) {
+                continue;
+            }
+            switch (q.getType()) {
+                case ROOM -> openRooms.add(q);
+                case ITEM -> openItems = true;
+                default -> { }
+            }
+        }
+        if (openRooms.isEmpty() && !openItems) {
+            return;
+        }
+        for (MCQuest q : openRooms) {
+            Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(q.getWantedId());
+            if (!rooms.isEmpty()) {
+                markQuestAsComplete(rooms.iterator().next().getRoom(), q.getWantedId());
+            } else {
+                probeNoRoomMatch(q);
+            }
+        }
+        if (openItems) {
+            processItemQuests(TownContainers.getAllStacks(this.town.getUnsafe(), level));
+        }
+    }
+    // DEV-DIAG backfill probe, 2026-10-02 — gated on ENABLE_DEV_COMMANDS; grep 'DEV-DIAG' to enumerate; remove when the soft-lock is confirmed fixed
+    private static final Object BackfillProbeLock = new Object();
+    private static long BackfillProbeLastNanos = 0L;
+    private void probeNoRoomMatch(MCQuest q) {
+        if (System.getenv("ENABLE_DEV_COMMANDS") == null) {
+            return;
+        }
+        synchronized (BackfillProbeLock) {
+            long now = System.nanoTime();
+            if (now - BackfillProbeLastNanos <= 10_000_000_000L) {
+                return;
+            }
+            BackfillProbeLastNanos = now;
+        }
+        QT.QUESTS_LOGGER.warn("[DEV-DIAG:backfill] open ROOM quest {} has no matching registered room", q.getWantedId());
+    }
+    // === end DEV-DIAG backfill probe ===
 
     public void processJobChanges(ImmutableMap<VillagerUUID, JobID> villagerJobs) {
         // TODO: Consider putting on QuestBatches and testing
