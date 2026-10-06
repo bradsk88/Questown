@@ -137,6 +137,48 @@ GB free, so it is not system-wide OOM — it is the per-process budget. The fix:
 launch the server **alone** (precompiled, so no compile spike) first, let it
 boot, then launch the client. Keep the client down while the server compiles.
 
+## Parallel confirmation sweep: N standalone servers from one captured command
+
+For N parallel held runs (a confirmation sweep), do not re-derive the JVM
+command from build.gradle — capture the exact one gradle runs and replicate it:
+
+1. Launch one server the normal way; `pgrep -f BootstrapLauncher` for its pid.
+2. Dump the args (null-separated tokens; `-p` and `-cp` are single long args):
+   `rm -rf /tmp/sweep-cmd; mkdir /tmp/sweep-cmd; i=0; while IFS= read -r -d '' a; do i=$((i+1)); printf '%s' "$a" > /tmp/sweep-cmd/arg$(printf '%02d' $i); done < /proc/<pid>/cmdline`
+3. Per run N: fresh gameDir `/tmp/ksweep-N` with `server.properties` (`server-port=2556<N>`, `level-name=world`, `online-mode=false`), replace the `--gameDir .` value with that dir, prepend `-Xmx3G -Xms1G`, and **skip arg01** (it is the java binary, already the command). Launch from the gameDir so relative paths land inside it.
+
+Facts that cost a session to find (2026-10-06):
+
+- **The classpath split is structural, not incidental**: `-p` (module path)
+carries exactly 8 loader-infra jars (bootstraplauncher, securejarhandler,
+5×asm, JarJarFileSystems) and **everything else, including modlauncher-11,
+sits on `-cp`**. If modlauncher lands module-path-only, the FML loader dies
+`java.lang.NumberFormatException: Empty version string` (`Package
+.isCompatibleWith("4.0")` — a named-module package version is null; from the
+classpath it reads the jar manifest, `11.0.2+...`). Replicate the captured
+split verbatim; do not "clean it up".
+- **`MOD_CLASSES` is an env var the gradle *daemon* injects. Export it for
+any standalone java or the mod silently vanishes**:
+  `export MOD_CLASSES='questown%%<repo>/build/resources/main:questown%%<repo>/build/classes/java/main'`
+  (verify the live value with `tr '\0' '\n' < /proc/<pid>/environ | grep MOD_CLASSES`).
+  Without it, discovery still logs `Found mod file "main"` but the mod never
+  constructs: empty registry (tag/recipe parse errors for `questown:*`), zero
+  `[questown]` log lines, and the autotest scenario never starts (no
+  `[autotest] BOOT_OK`). Loaded-marker: `[questown] bound N deferred registries
+to the mod bus`.
+- A fresh empty gameDir equals a wiped world: the `run/world` wipe is a
+  build.gradle `doFirst`, and the scenario executor builds the world
+  programmatically (flag/mat/rooms) — a standalone start is simply pristine.
+- Kill sweep servers by **explicit pid** (`kill -9 <pid>`), never a pattern —
+a broad `java` pkill has crashed the box once.
+- **Parallel load is the independent variable**: the 2026-10-06 sweep got 1/3
+  runs through the raw-meat chain (a `LOOTTRACE extract 'Raw Mutton' vs … ->
+  true` line) while 2/3 sat days in `COLLECTING_SUPPLIES` with **zero**
+  extraction lines. A stall under load is the confirmation data the sweep
+  exists to catch (a timing-dependent extraction), not a launcher failure —
+  tell them apart by the log (extraction lines present or absent), not by the
+  process still running.
+
 ## The held server is the verification path; a held run has no client
 
 A held `runServer` autotest is the verification path, not a play-test for a
