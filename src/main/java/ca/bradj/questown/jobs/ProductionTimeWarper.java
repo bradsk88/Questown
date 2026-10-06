@@ -120,6 +120,20 @@ public class ProductionTimeWarper {
 
         @Nullable Map.Entry<TOWN, I> removeResult = inState.withContainerItemRemoved(i -> fingr.test(grabber.apply(i)));
         if (removeResult == null) {
+            // PROBE (2026-10-06, cook-soft-lock drill): the stuck gatherer never leaves
+            // COLLECTING_SUPPLIES - log exactly what the container scan sees so the pass/stuck
+            // worlds can be told apart in the log. Remove once the root cause is pinned.
+            QT.JOB_LOGGER.warn(
+                    "[PROBE:collectNull] villager={} state={} holding={} containers={} contItems={}",
+                    villagerIndex, processingState,
+                    String.join(",", getHeldItems(inState, villagerIndex).stream()
+                            .filter(h -> !h.isEmpty()).map(h -> h.toString()).limit(6).toList()),
+                    inState.containers.size(),
+                    inState.containers.stream()
+                            .map(c -> c.getItems().stream()
+                                    .filter(i -> !i.isEmpty()).limit(4)
+                                    .map(Object::toString).toList() + "(full=" + c.isFull() + ")")
+                            .limit(6).toList());
             return null;
         }
 

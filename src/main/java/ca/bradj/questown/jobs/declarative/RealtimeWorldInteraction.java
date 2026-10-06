@@ -360,11 +360,25 @@ public class RealtimeWorldInteraction extends
             MCExtra mcExtra
     ) {
         VisitorMobEntity.WorkToUndo wtu = mcExtra.entity().getWorkToUndo();
+        boolean res;
         if (wtu == null) {
-            return true;
+            res = true;
+        } else {
+            res = tryGiveItems(mcExtra, wtu.itemsInserted(), wtu.pos());
         }
-        return tryGiveItems(mcExtra, wtu.itemsInserted(), wtu.pos());
+        // TEMP DEBUG (2026-10-06) - throttled: the give-back latch is the suspected
+        // permanent stall (job=COLLECTING_SUPPLIES, no extraction ever).
+        int n = giveBackProbes++;
+        if (n % 200 == 0) {
+            QT.JOB_LOGGER.warn("[PROBE:giveback] wtu={} inserted={} pos={} result={} probeN={}",
+                    wtu == null ? "null" : "set",
+                    wtu == null ? "-" : wtu.itemsInserted().size(),
+                    wtu == null ? "-" : wtu.pos(), res, n);
+        }
+        return res;
     }
+
+    private volatile int giveBackProbes = 0;
 
     @Override
     public int timesInserted(MCExtra mcExtra) {

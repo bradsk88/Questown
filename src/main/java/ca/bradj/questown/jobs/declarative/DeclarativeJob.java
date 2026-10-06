@@ -375,12 +375,18 @@ public class DeclarativeJob extends
 
     @Override
     protected Collection<? extends Predicate<MCTownItem>> cleanRooms() {
-        return roomsNeedingIngredientsOrTools.cleanFns(
+        Collection<? extends Predicate<MCTownItem>> r = roomsNeedingIngredientsOrTools.cleanFns(
                 checks::getIngredientsForStep,
                 checks::getToolsForStep,
                 MCHeldItem::fromTown
         );
+        if (r.isEmpty() && cleanRoomsProbeN++ % 600 == 0) {
+            QT.JOB_LOGGER.warn("[PROBE:cleanRooms] EMPTY state2rooms={}", roomsNeedingIngredientsOrTools.get());
+        }
+        return r;
     }
+
+    private volatile int cleanRoomsProbeN = 0; // TEMP DEBUG 2026-10-06, remove with probe
 
 //    private @NotNull JobTownProvider<MCRoom> makeTownProviderForTick(
 //            MCExtra extra,

@@ -11,6 +11,7 @@ import ca.bradj.questown.roomrecipes.Matches;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.WallDetection;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rooms.MultiLevelRoomDetector;
@@ -242,8 +243,32 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
 
     @Override
     public Collection<RoomRecipeMatch<MCRoom>> getMatches(Predicate<RoomRecipeMatch<MCRoom>> include) {
-        return this.roomsMap.getAllMatches(include);
+        Collection<RoomRecipeMatch<MCRoom>> matches;
+        // 2026-10-06 flake fix: the TOWN_GATE match normally comes from the gate DOOR ROOM's
+        // recipe, captured by the room-detection pump at door registration. In ~half of seeded
+        // worlds the pump completed before the welcome mat was placed, so the door room never
+        // matches special_quest.town_gate and leavers stay in COLLECTING_SUPPLIES forever
+        // (their supplies scan - Containers.get via this method - has no candidate container).
+        // The welcome mat defines its own meta room (getWelcomeMatMetaRooms); when no room-map
+        // entry carries the TOWN_GATE recipe, add it so the mat's room (and the seeded mat chest
+        // inside it) is visible to the selector regardless of detection ordering.
+        java.util.List<RoomRecipeMatch<MCRoom>> result = new java.util.ArrayList<>(roomsMap.getAllMatches(include));
+        boolean hasGate = result.stream().anyMatch(m -> m.anyMatch(SpecialQuests.TOWN_GATE));
+        if (!hasGate) {
+            java.util.List<RoomRecipeMatch<MCRoom>> matRooms = getWelcomeMatMetaRooms(town.getUnsafe());
+            int pn = gateMetaRoomProbes++;
+            if (pn % 200 == 0) {
+                QT.JOB_LOGGER.warn("[PROBE:matRooms] mats={} rooms={} includeIsConst={}",
+                        matRooms.size(), matRooms.size(), true);
+            }
+            matRooms.stream()
+                    .filter(include)
+                    .forEach(result::add);
+        }
+        return result;
     }
+
+    private volatile int gateMetaRoomProbes = 0;
 
     public void registerDoor(BlockPos clickedPos) {
         @NotNull TownFlagBlockEntity t = town.getUnsafe();

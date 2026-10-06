@@ -33,6 +33,7 @@ import net.minecraft.world.ContainerListener;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.Marker;
@@ -73,6 +74,8 @@ public abstract class ProductionJob<
     private final WorkLocation location;
     protected ContainerTarget<MCContainer, MCTownItem> successTarget;
     protected ContainerTarget<MCContainer, MCTownItem> suppliesTarget;
+    private int suppliesNullProbes = 0; // PROBE (2026-10-06): throttle counter, remove with the probe block
+    private int checkFnProbeN = 0; // PROBE (2026-10-06): same
     private boolean dropping;
 
     protected final UUID ownerUUID;
@@ -460,6 +463,14 @@ public abstract class ProductionJob<
                     .toList();
             for (ContainerTarget<MCContainer, MCTownItem> chest : closeChests) {
                 if (!chest.hasItem(checkFn)) {
+                    // PROBE (2026-10-06) - shouldTakeItem refuses when ANY held item is
+                    // non-empty: journal.getItems() is the blocker's likely identity.
+                    int cn = checkFnProbeN++;
+                    if (cn % 400 == 0) {
+                        QT.JOB_LOGGER.warn("[PROBE:checkFn] chest={} journalHeld={} neededPredicates={} cap={} probeN={}",
+                                chest.getBlockPos(), journal.getItems(),
+                                cleanRooms().size(), journal.getCapacity(), cn);
+                    }
                     continue;
                 }
                 if (!shouldUseBlockForSupplies(currentTick, chest.getBlockPos())) {
@@ -478,6 +489,32 @@ public abstract class ProductionJob<
             town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
                     "Located supplies at {}", this.suppliesTarget.getPosition()
             );
+        } else {
+            // PROBE (2026-10-06, cook-soft-lock drill): the stuck leaver never gets a supplies
+            // target - print every link of the selector chain to see which one breaks.
+            // Throttled to ~1 line / 10 s per job instance so the log stays usable.
+            int probeN = suppliesNullProbes++;
+            String jobTag = "prodJob@" + Integer.toHexString(System.identityHashCode(this));
+            if (probeN % 200 == 0) {
+            try {
+                List<RoomRecipeMatch<MCRoom>> matches = java.util.List.copyOf(town.getRoomHandle().getMatches(r -> true));
+                java.util.function.Predicate<RoomRecipeMatch<MCRoom>> isSite = m -> m.getRecipeIDs().stream().anyMatch(rr -> location.baseRoom().equals(rr));
+                List<String> siteRooms = matches.stream()
+                        .filter(isSite)
+                        .map(m -> m.getRecipeIDs() + " blocks=" + m.getContainedBlocks().size())
+                        .toList();
+                long totalChests = matches.stream()
+                        .filter(isSite)
+                        .mapToLong(m -> m.getContainedBlocks().entrySet().stream()
+                                .filter(z -> town.getServerLevel().getBlockState(z.getKey()).getBlock() instanceof ChestBlock)
+                                .count()).sum();
+                QT.JOB_LOGGER.warn(
+                        "[PROBE:suppliesNull] job={} baseRoom={} matches={} siteRooms={} siteChests={}",
+                        jobTag, location.baseRoom(), matches.size(), siteRooms, totalChests);
+            } catch (Throwable t) {
+                QT.JOB_LOGGER.warn("[PROBE:suppliesNull] {} probe-exception={}", jobTag, t);
+            }
+            } // end throttle
         }
     }
 

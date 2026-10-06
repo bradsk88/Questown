@@ -331,3 +331,44 @@ semantics. The `cook/simple_furnace_food` ID is a design artifact of the job-exp
    leave it in the table — do not delete, the record matters.
 5. **Do not implement a code fix until the `ASSUMED` item it depends on is `CERTAIN` or
    `RESOLVED`.** The failure mode is a silent no-op that looks like progress but isn't.
+
+## Round 2 — parallel-only confirmation (2026-10-06 evening)
+
+Gate: serial runs out of scope (user) → N parallel standalone servers from one captured
+gradle command. Tooling: `run/psweep.sh` (gitignored; recipe lives in
+`references/questown-dev-launch.md` "Parallel confirmation sweep"). Launches 3-28
+collected ~50% pass / ~50% stall; stall signature is **uniform**: 2× gatherer +
+hunter stuck `COLLECTING_SUPPLIES`, **zero LOOTTRACE** (extraction never fires),
+day counter advances, raw-meat LOOT quest stays ACTIVE.
+
+### Flakes found and separated (probe chain, all throttled warns, see markers)
+1. **Fix (in tree, to commit):** `TownRoomsHandle.getMatches` now unions the
+   welcome-mat meta room when no room-map entry carries `special_quest.town_gate`.
+   Verified effect: in a world that previously showed `siteRooms=[]`, the selector
+   now sees `mats=1 rooms=1` (probe `[PROBE:matRooms]`). This closes the
+   "gate room invisible to the selector" class.
+2. **Remaining flake (UNFIXED — the exact gap, isolated by probes):** the leaver's
+   `cleanRooms()` returns **0 needed predicates** in stalled worlds
+   (`[PROBE:checkFn] neededPredicates=0` 10/10) vs neededPredicates=2 in passing
+   worlds. `cleanFns` is empty because
+   `roomsNeedingIngredientsOrTools` maps **no room to state 0** and (vs passing)
+   lacks state 1: stalled = `{0=[]} passing = {0=[], 1=[]}`
+   (`[PROBE:cleanRooms] EMPTY state2rooms=…`). Recomputed every tick
+   (DeclarativeJobTicker:193 `computeRoomsNeedingInput(dependencies, work)`), so it
+   is not a stale cache — in stalled worlds the gate room's job-site/state data is
+   simply not there (job-site registration or `work::getJobBlockState` layer).
+   Next suspect files: `RoomsStatusLogic.roomsWithState`, `DeclarativeJobTickerDependencies.getJobSites()`,
+   the job-block work-status registration at furnish/quest-complete.
+3. Give-back latch (`[PROBE:giveback]`) is **not** the blocker: `wtu=null result=true`
+   in every world (stuck incl.) — the latch self-heals; it only explains the
+   job-cycling while supplies can't be taken.
+
+### Live artifacts (2026-10-06 ~midnight)
+- psweep-26 dir=/tmp/psweep-26 port=25586 pid=61111 — PASSING (cook=1, loot=12)
+- psweep-27 dir=/tmp/psweep-27 port=25587 pid=61377 — STALLED (the repro; console: `bash run/psweep.sh feed 27 "…"`; `/data get block`, `/_qtdev inspect villagers|quests 0 64 0` all work)
+- psweep-28 dir=/tmp/psweep-28 port=25588 pid=61652 — STALLED
+- Probes in tree (remove with final fix): ProductionJob `[PROBE:suppliesNull]` +
+  `[PROBE:checkFn]` + `suppliesNullProbes/checkFnProbeN`, RealtimeWorldInteraction
+  `[PROBE:giveback]` + `giveBackProbes`, TownRoomsHandle `[PROBE:matRooms]` +
+  `gateMetaRoomProbes`, DeclarativeJob `[PROBE:cleanRooms]` + `cleanRoomsProbeN`,
+  ProductionTimeWarper `PROBE` probe (never fires — wrong path; remove first).
