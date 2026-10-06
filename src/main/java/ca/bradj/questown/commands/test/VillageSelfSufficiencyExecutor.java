@@ -13,6 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.DoorBlock;
@@ -109,6 +110,13 @@ public final class VillageSelfSufficiencyExecutor {
     private @Nullable BlockPos campfirePos;
     private @Nullable BlockPos boardRoomCorner;
     private @Nullable BlockPos storeRoomCorner;
+    /** Third registered room shell: the town gate (welcome mat + supply chest
+     *  inside). The leaver jobs anchor to questown:special_quest.town_gate,
+     *  which only exists as a room when the mat is IN a registered room shell
+     *  (run-6..run-11: a loose mat produced getJobSites()=0 for sword/gather -
+     *  NO_JOBSITE for the whole run, leavers bounced, NO_FORWARD_PROGRESS lock).
+     *  See buildSeed + seedWelcomeMat. */
+    private @Nullable BlockPos gateRoomCorner;
     private @Nullable BlockPos boardRoomDoorPos;
     private @Nullable BlockPos storeRoomDoorPos;
     private @Nullable BlockPos boardPos;
@@ -161,6 +169,29 @@ public final class VillageSelfSufficiencyExecutor {
      *  tick (which restores chest contents from its captured NBT state and would
      *  flush a chest filled during furnish). */
     private boolean openingFoodSeeded = false;
+    /** Latched once the welcome mat (the town-gate job site) is seeded at watch start.
+     * THE missing anchor (self-sufficiency soft-lock, 2026-10-06): every
+     * hunter/gatherer off-town food job carries base room
+     * questown:special_quest.town_gate (the welcome mat), and TownPossibleWork's
+     * gateFacts scores a job ~0 when the town lacks that job site ("Town lacks
+     * required job site"), so the board stayed preselected=[] and all townies
+     * sat UNMET_ITEM (food) with no production possible - the mat's arrival
+     * raced on the onboarding/tutorial chain and lost to the 2-day
+     * NO_FORWARD_PROGRESS net (run-4: mat at +57s, lock at +4.6min; run-5: mat
+     * never). Seeding is "just past onboarding" by design, so the gate should
+     * already exist; seed it via the owner's placeWelcomeMat (places +
+     * registers) - the same call the room-builder makes when its quest path
+     * reaches it, and the pattern VillageGrowthExecutor proves green. */
+    private boolean openingMatSeeded = false;
+    /** Chest adjacency to the seeded mat: the leaver job's base room (the mat)
+     *  must hold a container for the runtime job-site/ingredient scan to resolve;
+     *  run-6 (2026-10-06) showed the seeded mat alone still left the leaver
+     *  bouncing its job (ticksSinceStart never advances, NO_JOBSITE/COLLECTING_
+     *  SUPPLIES) so no food was ever produced. The chest content fill latches
+     *  separately (seedMatChest) once the chest block entity is up. */
+    private net.minecraft.core.BlockPos matChestPos = null;
+    private boolean matChestSeeded = false;
+    private boolean gatherKnowledgeSeeded = false;
     /** Last day number the daily report was emitted for; -1 before the first report. */
     private long lastReportedDay = -1;
     /** Snapshot of the six report categories at the last report, for the delta. */
@@ -449,10 +480,13 @@ public final class VillageSelfSufficiencyExecutor {
         buildOneBuilding(storeRoomCorner);
         boardRoomDoorPos = boardRoomDoor();
         storeRoomDoorPos = storeRoomDoor();
+        gateRoomCorner = new BlockPos(origin.getX() - 15, origin.getY(), origin.getZ() + 8);
+        buildOneBuilding(gateRoomCorner);
 
         msg("Seed built: campfire at " + campfirePos.toShortString()
                 + ", board room (door " + boardRoomDoorPos.toShortString() + ")"
-                + ", store room (door " + storeRoomDoorPos.toShortString() + ")");
+                + ", store room (door " + storeRoomDoorPos.toShortString() + ")"
+                + ", gate room (door " + gateRoomDoor() + ")");
         phase = Phase.PLACE_FLAG;
     }
 
@@ -493,6 +527,11 @@ public final class VillageSelfSufficiencyExecutor {
         return storeRoomCorner.offset(s / 2, 0, s);
     }
 
+    private BlockPos gateRoomDoor() {
+        int s = BUILDING_SIZE - 1;
+        return gateRoomCorner.offset(s / 2, 0, s);
+    }
+
     private void placeFlag() {
         player.getInventory().clearContent();
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ItemsInit.TOWN_FLAG_BLOCK.get()));
@@ -524,10 +563,12 @@ public final class VillageSelfSufficiencyExecutor {
             // registered.
             flag.getRoomHandle().registerDoor(boardRoomDoorPos);
             flag.getRoomHandle().registerDoor(storeRoomDoorPos);
+            flag.getRoomHandle().registerDoor(gateRoomDoor());
 
             msg("Doors registered at "
                     + boardRoomDoorPos.toShortString() + " (board) and "
-                    + storeRoomDoorPos.toShortString() + " (store)");
+                    + storeRoomDoorPos.toShortString() + " (store), "
+                    + gateRoomDoor() + " (gate)");
             msg("Flag live; waiting for rooms to register");
             phase = Phase.WAIT_FOR_ROOMS;
             waitTicks = 0;
@@ -547,13 +588,18 @@ public final class VillageSelfSufficiencyExecutor {
     private void waitForRooms() {
         boolean boardReady = hasInteriorCell(boardRoomCorner);
         boolean storeReady = hasInteriorCell(storeRoomCorner);
-        if (boardReady && storeReady) {
-            msg("Both rooms registered");
+        // The gate room holds the leaver's job-site mat (seedWelcomeMat places it there
+        // once the flag is live). Without it the leaver job family (and the whole food
+        // chain) resolves no job site and the whole town soft-locks. The board and store
+        // rooms are not the gate room — they must wait too.
+        boolean gateReady = hasInteriorCell(gateRoomCorner);
+        if (boardReady && storeReady && gateReady) {
+            msg("All rooms registered (board, store, gate)");
             phase = Phase.FURNISH_ROOMS;
             return;
         }
         if (++waitTicks % 200 == 0) {
-            msg("waiting for rooms: board=" + boardReady + " store=" + storeReady
+            msg("waiting for rooms: board=" + boardReady + " store=" + storeReady + " gate=" + gateReady
                     + " (the scan runs on flag ticks, which need a player nearby)");
         }
     }
@@ -712,7 +758,17 @@ public final class VillageSelfSufficiencyExecutor {
                 net.minecraft.world.item.Items.MUTTON));
         flag.getWorkHandle().requestWork(ca.bradj.questown.jobs.requests.WorkRequest.of(
                 net.minecraft.world.item.Items.WHEAT_SEEDS));
-        msg("Queued ChangeJobReward (1 hunter + 1 gatherer); posted work requests mutton + wheat_seeds");
+        // (a) demand-side fix: the board must also ask for a COOKED dish so the
+        // staffed cook (cook/simple_furnace_food, output cooked_beef) is selectable --
+        // selection is an output<->request match and a raw-only demand pruned the real
+        // cook job (gate2 canSatisfy), leaving the cook to loop its always_consider setup
+        // pair while cooked surplus clogs the store (the soft-lock's NO_SPACE wall).
+        // This request gives the cook a real job AND a drain: workers consume
+        // #questown:villager_food as their working ingredient. Tag (broad) rather than a
+        // single item so the demand matches whichever cook recipe is staffed.
+        flag.getWorkHandle().requestWork(ca.bradj.questown.jobs.requests.WorkRequest.of(
+                ca.bradj.questown.core.init.TagsInit.Items.VILLAGER_FOOD));
+        msg("Queued ChangeJobReward (1 hunter + 1 gatherer); posted work requests mutton + wheat_seeds + #questown:villager_food (cooked dine)");
         phase = Phase.WAIT_FOR_JOBS;
         waitTicks = 0;
     }
@@ -824,6 +880,19 @@ public final class VillageSelfSufficiencyExecutor {
         if (roomBuilderTicks % 200 == 0) {
             seedOpeningFood();
         }
+        // Seed the welcome mat (town-gate job site), once, same rhythm. Without
+        // it the leaver job family (and thus the whole food chain) is
+        // unscoreable and the town soft-locks (the 2026-10-06 self-sufficiency
+        // lock).
+        if (roomBuilderTicks % 200 == 0) {
+            seedWelcomeMat();
+        }
+        if (roomBuilderTicks % 200 == 0) {
+            seedMatChest();
+        }
+        if (roomBuilderTicks % 200 == 0) {
+            seedGatherKnowledge();
+        }
     }
 
     /** Satisfy the currently-open sword item quest via the real player path, but
@@ -852,6 +921,83 @@ public final class VillageSelfSufficiencyExecutor {
      *  #questown:villager_food (cooked items only); raw meat is the survival food a
      *  raw-food diner work consumes, and seeding raw meat left the town in
      *  NO_WORK_POSSIBLE. */
+    /** Seed the welcome mat (town-gate job site) once at watch start. A
+     *  no-op if a mat is already registered (the quest path got there first).
+     *  Retries next cycle if no clear spot resolves yet. */
+    private void seedWelcomeMat() {
+        if (openingMatSeeded || flag == null) return;
+        if (!flag.getWelcomeMats().isEmpty()) {
+            openingMatSeeded = true;
+            msg("[seed] welcome mat already registered (town gate present)");
+            return;
+        }
+        int s = BUILDING_SIZE - 1;
+        BlockPos matPos = gateRoomCorner.offset(s / 2, 0, s / 2);
+        if (!level.isEmptyBlock(matPos)) {
+            return; // gate room interior not clear yet; retry next cycle
+        }
+        flag.placeWelcomeMat(matPos);
+        // Supply chest inside the same gate room: the leaver job's base room must
+        // hold its inputs (food/sword) where the runtime supply scan looks.
+        matChestPos = gateRoomCorner.offset(1, 0, 1);
+        level.setBlockAndUpdate(matChestPos, Blocks.CHEST.defaultBlockState());
+        openingMatSeeded = true;
+        msg("[seed] seeded the welcome mat inside the gate room at " + matPos.toShortString()
+                + " + supply chest at " + matChestPos.toShortString()
+                + " (loose-mat seeds 6-11 showed special_quest.town_gate was missing from the rooms map,"
+                + " so sword/gather resolved no job site all run)");
+    }
+
+    /** Fill the mat-adjacent chest with the leaver jobs' inputs (cooked working
+     *  food + a sword), once the chest block entity is up. One-shot latch; the
+     *  content write is deferred (as seedOpeningFood is) so the flag's first-tick
+     *  container restore cannot flush it. */
+    private void seedMatChest() {
+        if (matChestSeeded || matChestPos == null || level == null) return;
+        if (level.getBlockEntity(matChestPos) instanceof net.minecraft.world.Container c) {
+            int n = FOOD_SEED_PER_ITEM;
+            c.setItem(0, new ItemStack(net.minecraft.world.item.Items.COOKED_MUTTON, n));
+            c.setItem(1, new ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, n));
+            c.setItem(2, new ItemStack(net.minecraft.world.item.Items.COOKED_PORKCHOP, n));
+            c.setItem(3, new ItemStack(net.minecraft.world.item.Items.WOODEN_SWORD, 1));
+            c.setItem(4, new ItemStack(net.minecraft.world.item.Items.COAL, 16));
+            c.setChanged();
+            flowTracker.track(level, matChestPos);
+            matChestSeeded = true;
+            msg("[seed] seeded the mat supply chest (" + (3 * n) + " cooked food + sword + coal) at "
+                    + matChestPos.toShortString());
+        }
+    }
+
+    /** Seed the town's gather *knowledge* for the leaver's raw-meat loot, once.
+     *  A leaver's biome_loot extract is gated by a known-gather intersection:
+     *  {@code KnowledgeStore.getAllKnownGatherResults(biomes, prefix)} returns only items
+     *  the town has recorded as "known". A fresh town's knowledge = base (wheat seeds)
+     *  + an empty knownGatherResults, so the forest hunter_sword meat
+     *  (mutton/porkchop/beef/chicken) never clears the gate and the leaver brings back
+     *  nothing the cook food phase can use -> raw meat starves -> NO_FORWARD_PROGRESS.
+     *  Container seeding does NOT help: the gate is the knowledge store, not a chest.
+     *  Write path is the same one discovery/serialization use — registerFoundLoots(items),
+     *  each item carrying a biome + loot-table prefix (MCHeldItem.fromLootTable). Biome =
+     *  Loots.fallbackBiome (minecraft:forest), which TownKnownBiomes.getAllInTown() always
+     *  includes, so the biome filter passes. One-shot latch. */
+    private void seedGatherKnowledge() {
+        if (gatherKnowledgeSeeded || flag == null) return;
+        var biome = ca.bradj.questown.jobs.gatherer.Loots.fallbackBiome;
+        var prefix = new ca.bradj.questown.jobs.gatherer.GathererTools.LootTablePrefix("jobs/hunter_sword");
+        var kh = flag.getKnowledgeHandle();
+        var seeds = new java.util.ArrayList<ca.bradj.questown.integration.minecraft.MCHeldItem>();
+        for (var item : java.util.List.of(
+                Items.MUTTON, Items.PORKCHOP, Items.BEEF, Items.CHICKEN)) {
+            var town = ca.bradj.questown.integration.minecraft.MCTownItem.fromMCItemStack(item.getDefaultInstance());
+            seeds.add(ca.bradj.questown.integration.minecraft.MCHeldItem.fromLootTable(town, prefix, biome));
+        }
+        kh.registerFoundLoots(seeds);
+        gatherKnowledgeSeeded = true;
+        msg("[seed] recorded " + seeds.size() + " leaver raw-meat items as known gather results (biome "
+                + biome + ") to open the biome_loot extract gate (was: only wheat seeds known)");
+    }
+
     private void seedOpeningFood() {
         if (openingFoodSeeded || flag == null || level == null || storeChestPos == null) return;
         if (level.getBlockEntity(storeChestPos) instanceof net.minecraft.world.Container c) {
