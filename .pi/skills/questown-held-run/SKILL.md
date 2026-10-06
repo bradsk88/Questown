@@ -360,6 +360,37 @@ no bare target string, verified in a *later* read-only call.
 but confirm the first `worldTimeAtSleep` line of a new log before comparing
 runs.
 
+### Parallel variant (2026-10-06) — when the question is "does X flake under load"
+
+A serial sweep hides load-dependent timing bugs — each run gets the box to
+itself. For those, run N instances at once. `run/psweep.sh` (scratch — this
+block is the canonical shape):
+
+- **Capture the real thing, never reconstruct it** (six wrong guesses cost a
+session on 2026-10-06): boot one instance via gradle, then
+`psweep.sh capture <pid>` (saves each `/proc/<pid>/cmdline` token; also
+`tr '\0' '\n' < /proc/<pid>/environ | grep MOD_CLASSES`). `psweep.sh buildcmd <N>`
+prints the resolved args before any launch — verify this, not the log.
+- **Two fatal traps** (full text: `references/questown-dev-launch.md`,
+"Parallel confirmation sweep"): (a) `-p` (module path) carries exactly 8
+loader jars; modlauncher must sit on `-cp` or the FML loader dies
+`NumberFormatException: Empty version string`. (b) `MOD_CLASSES` is a
+daemon-injected env var — without it the mod is discovered but never
+constructed (empty registries, zero `[questown]` lines, scenario never
+starts). The load-complete marker is `[questown] bound N deferred registries
+to the mod bus` — confirm it in EVERY instance's own log.
+- **Box budget:** 3 instances @ `-Xmx3G` fit the ~12 Gi headroom; a
+fourth gradle-launched server holds its default (larger) heap, so cap
+psweep lower while one is live. Fresh gameDir = wiped world (the wipe is a
+build.gradle `doFirst`; the executor builds the world itself) — no shared
+FIFO needed; pace each instance by grepping its own log.
+- **Verdict — the runs diverging IS the finding.** 2026-10-06: 3 concurrent
+→ 1 completed the raw-meat chain (a `LOOTTRACE extract 'Raw Mutton' vs … -> true`
+line) while 2 stalled days in `COLLECTING_SUPPLIES` with **zero** extraction
+lines. `LOOTTRACE` count is the discriminator: 0 = extraction never happened
+(upstream: nav/state — go there), ≥1 = extraction rolled and matched/missed.
+A quiet-but-alive process is a stalled village, not a broken launch.
+
 ## The observation cadence (~10s windows)
 
 **Timeout discipline: a 60s hard cap on every command.** No batched
