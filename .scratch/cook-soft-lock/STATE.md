@@ -372,3 +372,34 @@ day counter advances, raw-meat LOOT quest stays ACTIVE.
   `[PROBE:giveback]` + `giveBackProbes`, TownRoomsHandle `[PROBE:matRooms]` +
   `gateMetaRoomProbes`, DeclarativeJob `[PROBE:cleanRooms]` + `cleanRoomsProbeN`,
   ProductionTimeWarper `PROBE` probe (never fires — wrong path; remove first).
+
+## Round 3 (same session, "Do it now")
+
+New probes (all throttled): `[PROBE:state0]` (RoomsStatusLogic.compute — jobRooms/matches/
+rwwcbd/qty), `[PROBE:jobSites]` (DeclarativeJobTickerDependencies.getJobSites — fires only
+when a GATE job sees 0 sites), `[PROBE:gateQuery]` (TownRoomsHandle.getRoomsMatching
+TOWN_GATE branch — rooms + raw mats list), `[PROBE:rniot]` (DeclarativeJobTicker, fired
+when a GATE job's inner map is all-empty; also prints canClaim/state of 3 contained blocks).
+
+Findings (worlds 35-46):
+1. The "0 sites / flagMats=0" window is a **pre-seed timing** (fires 01:39:04-10, mat seeds
+   01:39:15, mats=1 from 01:39:16) — NOT a second flag object (identities match: one BE ID
+   per world across both probe contexts) and NOT oscillation (the systematic per-context
+   split in world-42 was actually the two throttles catching different windows).
+2. **After** the seed, job sites DO resolve (gateQuery rooms=1, matRooms=1) — even in stalled
+   worlds (42/45/46) — yet they stall. So the container-visibility fix is in effect and the
+   remaining gate is `RoomsStatusLogic.roomsWithState`:
+   `state` entry requires `getJobBlockState(bp) != null && processingState()==state`
+   (null state is EXCLUDED) reading the **per-owner** work-status handle
+   (leaver rules = [PRIORITIZE_EXTRACTION, NULLIFY_EXCESS_RESULTS] → NO SHARED_WORK_STATUS →
+   `town.getWorkStatusHandle(ownerUUID)`; `ownerUUID` is passed in by the job requestor via
+   `WorksBehaviour.getJobFunc.apply(UUID owner)`).
+3. So the stall = **no work-state record of processingState 0 for (owner, matPos) in that
+   leaver's per-owner store, and nothing bootstraps it**: roomsWithState needs the record,
+   cleanFns needs roomsWithState, supplies need cleanFns, and the record is normally written
+   by the first insert/work at the mat. Passing worlds have the record; stalled worlds don't
+   (50/50). Next code targets: `AbstractWorkStatusStore` write path (claim/insert/
+   `setWorkLeftAtFreshState`), `tryGiveItems` insert path, and why ~half the worlds never
+   record state 0 for the leaver at the mat (owner-identity or initial-claim ordering).
+4. Live stalled world: psweep-45 dir=/tmp/psweep-45 port=25605 (console via
+   `bash run/psweep.sh feed 45 "…"`); 46 similar; 44 passing. All carry the probe set.

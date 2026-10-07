@@ -70,12 +70,24 @@ public class DeclarativeJobTickerDependencies implements
     public ImmutableList<RoomRecipeMatch<MCRoom>> getJobSites() {
         // Use getRoomsMatching() instead of getMatches() because it has
         // special handling for farms (stored in activeFarms, not activeRecipes)
-        return town.getRoomHandle()
+        ImmutableList<RoomRecipeMatch<MCRoom>> out = town.getRoomHandle()
                    .getRoomsMatching(job.location().baseRoom())
                    .stream()
                    .map(v -> new RoomRecipeMatches<>(v.room, v.getRecipeIDs(), v.containedBlocks.entrySet()))
                    .collect(ImmutableList.toImmutableList());
+        // PROBE (2026-10-06) - gate jobs (leaver/hunter, baseRoom=town_gate) seeing zero
+        // job sites is the stall signature; per-instance counter avoids cross-job mix-up.
+        if (out.isEmpty() && ca.bradj.questown.town.special.SpecialQuests.TOWN_GATE.equals(job.location().baseRoom())
+                && jobSitesProbeN++ % 400 == 0) {
+            ca.bradj.questown.QT.JOB_LOGGER.warn(
+                    "[PROBE:jobSites] GATE job sees 0 sites; flag@{}=ID{} flagMats={} baseRoom={}",
+                    town.getBlockPos(), System.identityHashCode(town),
+                    town.getWelcomeMats().size(), job.location().baseRoom());
+        }
+        return out;
     }
+
+    private int jobSitesProbeN = 0; // TEMP DEBUG 2026-10-06
 
     @Override
     public ImmutableList<RoomRecipeMatch<MCRoom>> getRoomsForSupplyCheck() {

@@ -21,6 +21,8 @@ import java.util.stream.Stream;
 
 class RoomsStatusLogic {
 
+    private static int state0ProbeN = 0; // TEMP DEBUG 2026-10-06 (stall drill)
+
     /**
      * Computes which rooms need villager input based on the current state of job blocks.
      *
@@ -74,6 +76,24 @@ class RoomsStatusLogic {
                     stateQty,
                     getContainedBlocks
             );
+            // PROBE (2026-10-06) - state-0 empty in stalled worlds: which sub-filter kills?
+            if (state == 0 && state0ProbeN++ % 600 == 0) {
+                StringBuilder firstBlock = new StringBuilder("n/a");
+                for (MATCH m : jobRooms) {
+                    for (POS bp : getContainedBlocks.apply(m)) {
+                        firstBlock.setLength(0);
+                        firstBlock.append("bp=").append(bp)
+                               .append(" isJobBlock=").append(isJobBlock.test(bp))
+                               .append(" state=").append(getJobBlockState.apply(bp))
+                               .append(" canClaim=").append(canClaim.test(bp));
+                        break;
+                    }
+                    if (firstBlock.charAt(0) != 'n') break;
+                }
+                ca.bradj.questown.QT.JOB_LOGGER.warn(
+                        "[PROBE:state0] jobRooms={} matches={} rwwcbd={} qty={} {}",
+                        jobRooms.size(), matches.size(), rwwcbd.size(), stateQty, firstBlock);
+            }
             UtilClean.addAllOrInitializeList(b, state, rwwcbd.stream().map(v -> maker.apply(v, false)).toList());
         }
 

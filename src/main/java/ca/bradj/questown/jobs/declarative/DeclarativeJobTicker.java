@@ -274,7 +274,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         Function<Integer, PredicateCollection<HELD_ITEM, HELD_ITEM>> getIngredients = state -> deps.item((Integer) state);
         Function<Integer, Integer> getQuantity = state -> deps.getQuantityForStep((Integer) state);
         Function<Integer, PredicateCollection<TOWN_ITEM, TOWN_ITEM>> getTools = state -> deps.tools((Integer) state);
-        return RoomsStatusLogic.<RECIPE, POS, HELD_ITEM, TOWN_ITEM, ROOM, MATCH>compute(
+        RoomsNeedingVillagerInput<ROOM, RECIPE, POS> rni = RoomsStatusLogic.<RECIPE, POS, HELD_ITEM, TOWN_ITEM, ROOM, MATCH>compute(
                 deps.getJobSites(),
                 getJobBlockState,
                 canClaim,
@@ -286,7 +286,35 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                 deps::makeNVIRoom,
                 maxState
         );
+        // PROBE (2026-10-06) - GATE jobs whose inner map is all-empty stay COLLECTING_SUPPLIES.
+        boolean gate = false;
+        java.util.Collection<MATCH> sites = deps.getJobSites();
+        for (MATCH m : sites) {
+            if (m.getRecipeIDs().stream().anyMatch(ca.bradj.questown.town.special.SpecialQuests.TOWN_GATE::equals)) { gate = true; break; }
+        }
+        if (gate
+                && rni.get().values().stream().allMatch(java.util.Collection::isEmpty)
+                && rniotProbeN++ % 400 == 0) {
+            StringBuilder detail = new StringBuilder("n/a");
+            for (MATCH m : sites) {
+                int i = 0;
+                for (POS bp : deps.getContainedBlocks(m)) {
+                    if (i++ >= 3) break;
+                    detail.append("").append(bp)
+                          .append(":cb=").append(deps.canClaim(bp))
+                          .append(":st=").append(work.getJobBlockState(bp)).append(' ');
+                }
+                if (detail.charAt(0) != 'n') break;
+            }
+            ca.bradj.questown.QT.JOB_LOGGER.warn(
+                    "[PROBE:rniot] GATE inner={} sites={} {} maxState={}",
+                    rni.get().entrySet().stream().map(e -> e.getKey() + "=" + e.getValue().size()).toList(),
+                    sites.size(), detail, maxState);
+        }
+        return rni;
     }
+
+    private volatile int rniotProbeN = 0; // TEMP DEBUG 2026-10-06
 
     private <TOWN_ITEM extends Item<TOWN_ITEM>, RECIPE> void tick(
             Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA, ?> deps,
