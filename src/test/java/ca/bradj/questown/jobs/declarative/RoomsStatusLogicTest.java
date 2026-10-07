@@ -13,6 +13,8 @@ import java.util.Collection;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RoomsStatusLogicTest {
 
@@ -71,4 +73,227 @@ class RoomsStatusLogicTest {
         );
         assertEquals(1, foundRooms.getMatches().size());
     }
+
+    // Locks in the contract behind the 2026-10-07 gate soft-lock diagnosis
+    // (worlds 98/99 stall vs 96 pass): the rooms-needing-input map is EMPTY when
+    // the job sees zero sites (stall branch), and NON-EMPTY when the gate mat room
+    // is present with a pending state-0 block (pass branch). The stall fix must
+    // therefore make the mat room visible to the site reader, not change the
+    // needed-input semantics here.
+    @Test
+    void compute_emptyJobSites_yieldsEmptyNeededInput() {
+        RoomsNeedingVillagerInput<String, String, Position> foundRooms = RoomsStatusLogic.compute(
+                ImmutableList.of(),
+                pos -> State.freshAtState(0),
+                p -> true,
+                p -> false,
+                new DeclarativeJobChecks<Void, String, String, RoomRecipeMatch<String>, Position>(
+                        ImmutableMap.of(0, PredicateCollections.fromSimpleEqualityCheck("bread")),
+                        ImmutableMap.of(0, 1),
+                        ImmutableMap.of(),
+                        ImmutableMap.of(0, 0, 1, 1),
+                        ImmutableMap.of(),
+                        room -> true,
+                        p -> true
+                ),
+                m -> ImmutableList.of(),
+                2
+        );
+        assertTrue(foundRooms.getMatches().isEmpty());
+        assertTrue(foundRooms.cleanFns(
+                s -> ca.bradj.questown.mc.PredicateCollections.fromSimpleEqualityCheck("bread"),
+                s -> ca.bradj.questown.mc.PredicateCollections.fromSimpleEqualityCheck("bread"),
+                x -> null).isEmpty(),
+            "no sites -> no needed ingredients (the shouldTakeItem 'needed-empty' reject)");
+    }
+
+    @Test
+    void compute_gateMatRoom_present_state0_yieldsNeededIngredient() {
+        Position matPos = new Position(-13, 64);
+        Collection<IRoomRecipeMatch<String, String, Position, String>> jobRooms = ImmutableList.of(new IRoomRecipeMatch<String, String, Position, String>() {
+            public String getRecipeID() {
+                return "town_gate";
+            }
+
+            @Override
+            public ImmutableList<String> getRecipeIDs() {
+                return ImmutableList.of(getRecipeID());
+            }
+
+            @Override
+            public String getRoom() {
+                return "gate";
+            }
+
+            @Override
+            public ImmutableMap<Position, String> getContainedBlocks() {
+                return ImmutableMap.of(matPos, "welcome_mat");
+            }
+        });
+
+        Map<Position, State> jobStates = ImmutableMap.of(
+                matPos, State.freshAtState(0).setWorkLeft(1)
+        );
+
+        RoomsNeedingVillagerInput<String, String, Position> foundRooms = RoomsStatusLogic.compute(
+                jobRooms,
+                jobStates::get,
+                p -> true,
+                matPos::equals,
+                new DeclarativeJobChecks<Void, String, String, RoomRecipeMatch<String>, Position>(
+                        ImmutableMap.of(0, PredicateCollections.fromSimpleEqualityCheck("villager_food")),
+                        ImmutableMap.of(0, 1),
+                        ImmutableMap.of(),
+                        ImmutableMap.of(0, 0, 1, 1),
+                        ImmutableMap.of(),
+                        room -> true,
+                        matPos::equals
+                ),
+                m -> m.getRoom().equals("gate") ? ImmutableList.of(matPos) : ImmutableList.of(),
+                2
+        );
+        org.junit.jupiter.api.Assertions.assertFalse(foundRooms.getMatches().isEmpty(),
+                "gate mat room at state 0 must be a needed-input site");
+    }
+
+    // ── Lock-ins (2026-10-07): the leaver ACCEPT path — cleanFns on the object the
+    // leaver reads (roomsNeedingIngredientsOrTools) — verified live 2026-10-07:
+    // stall world 401: cleanRooms read {0=[]} (60×) while fresh compute inner=[0=1]
+    // (4×); pass world 400: inner=[0=1] (12×) and a non-empty read at the win moment.
+    // These pin the object contract: a receptive state-0 bucket must survive copying
+    // (which the cache path does: `new RoomsNeedingVillagerInput<>(rniot.get().get())`)
+    // and flooring, and must yield a non-empty needed-item set that accepts the food.
+
+    private static RoomsNeedingVillagerInput<String, String, Position> receptiveMat() {
+        return matAt(0);
+    }
+
+    private static RoomsNeedingVillagerInput<String, String, Position> matAt(int state) {
+        Position matPos = new Position(-13, 64);
+        Collection<IRoomRecipeMatch<String, String, Position, String>> jobRooms = ImmutableList.of(new IRoomRecipeMatch<String, String, Position, String>() {
+            public String getRecipeID() {
+                return "town_gate";
+            }
+
+            @Override
+            public ImmutableList<String> getRecipeIDs() {
+                return ImmutableList.of(getRecipeID());
+            }
+
+            @Override
+            public String getRoom() {
+                return "gate";
+            }
+
+            @Override
+            public ImmutableMap<Position, String> getContainedBlocks() {
+                return ImmutableMap.of(matPos, "welcome_mat");
+            }
+        });
+
+        Map<Position, State> jobStates = ImmutableMap.of(
+                matPos, State.freshAtState(state)
+        );
+
+        return RoomsStatusLogic.compute(
+                jobRooms,
+                jobStates::get,
+                p -> true,
+                matPos::equals,
+                new DeclarativeJobChecks<Void, String, String, RoomRecipeMatch<String>, Position>(
+                        ImmutableMap.of(0, PredicateCollections.fromSimpleEqualityCheck("villager_food")),
+                        ImmutableMap.of(0, 1),
+                        ImmutableMap.of(),
+                        ImmutableMap.of(0, 0, 1, 1),
+                        ImmutableMap.of(),
+                        room -> true,
+                        matPos::equals
+                ),
+                m -> m.getRoom().equals("gate") ? ImmutableList.of(matPos) : ImmutableList.of(),
+                3
+        );
+    }
+
+    @Test
+    void cleanFns_state0Receptive_nonEmptyAndAcceptsFood() {
+        RoomsNeedingVillagerInput<String, String, Position> rni = receptiveMat();
+
+        var fns = rni.cleanFns(
+                s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
+                s -> null,
+                x -> x);
+
+        org.junit.jupiter.api.Assertions.assertFalse(fns.isEmpty(),
+                "a state-0 receptive mat must yield a non-empty needed-item set on the leaver ACCEPT path");
+
+        boolean accepts = false;
+        for (var pc : fns) {
+            if (pc != null && pc.test("villager_food")) {
+                accepts = true;
+                break;
+            }
+        }
+        assertTrue(accepts, "the needed-item predicates must accept the leaver's food item");
+    }
+
+    @Test
+    void copyConstructor_preservesReceptiveState0Bucket() {
+        // The cache path copies via `new RoomsNeedingVillagerInput<>(rniot.get().get())`.
+        // A receptive state-0 bucket must survive that copy (stall signature was a
+        // {0=[]} read while the fresh compute carried the mat in bucket 0).
+        RoomsNeedingVillagerInput<String, String, Position> rni = receptiveMat();
+        RoomsNeedingVillagerInput<String, String, Position> copy = new RoomsNeedingVillagerInput<>(rni.get());
+
+        assertFalse(copy.cleanFns(
+                s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
+                s -> null,
+                x -> x).isEmpty(),
+                "copy of a receptive rni must still yield needed items");
+    }
+
+    @Test
+    void floor_preservesReceptiveState0Bucket() {
+        RoomsNeedingVillagerInput<String, String, Position> rni = receptiveMat();
+        RoomsNeedingVillagerInput<String, String, Position> floored = rni.floor();
+
+        assertTrue(floored.containsKey(0), "floor() must keep a state-0 bucket that had rooms");
+        assertFalse(floored.get(0).isEmpty(), "floor() must not empty the state-0 room list");
+    }
+
+    @Test
+    void matAtWorkState1_notFoodReceptive() {
+        // Locks the receptive-window semantics: during the mat's work phase
+        // (state 1) it does NOT need the leaver's food, so a leaver reading this
+        // state correctly REJECTS. The churn (leavers reject during work/time
+        // phases) is therefore legitimate; the flake is failing to catch the
+        // state-0 window - a timing/contention property, not a logic bug.
+        RoomsNeedingVillagerInput<String, String, Position> rni = matAt(1);
+        var fns = rni.cleanFns(
+                s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
+                s -> null,
+                x -> x);
+        // state 1 requires work, not the state-0 food ingredient
+        boolean needsFood = false;
+        for (var pc : fns) {
+            if (pc != null && pc.test("villager_food")) {
+                needsFood = true;
+                break;
+            }
+        }
+        assertFalse(needsFood, "a mat in its work phase must not request the leaver's food");
+    }
+
+    @Test
+    void cleanFns_allBucketsEmpty_yieldsEmptyNeededSet() {
+        // The stalled read path: all buckets empty -> cleanFns empty -> shouldTakeItem
+        // REJECTs (verified branch on-disk 2026-10-07, worlds 98/99/401).
+        RoomsNeedingVillagerInput<String, String, Position> empty = new RoomsNeedingVillagerInput<>(ImmutableMap.of());
+
+        assertTrue(empty.cleanFns(
+                s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
+                s -> null,
+                x -> x).isEmpty(),
+                "empty rni must yield an empty needed set (REJECT branch)");
+    }
+
 }

@@ -435,3 +435,144 @@ Probe rounds on 50-64 (58/64 passing, 47-49 mixed, 59-61+57 ALL stalled one batc
   TownFlagTicker.updateWorkStatuses (90-97), AbstractTownFlagTicker.tickInner (36-95).
 - World 64 = passing with full probe set (see its log); no world live-stalled right now
   (59-61 killed? no — 59/60/61 are the ALL-STALLED batch; confirm `bash run/psweep.sh status`).
+
+---
+## 2026-10-07 OVERNIGHT — definitive root cause (code + log + executor-comment verified)
+
+**F1 (non-destructive mat check) is IMPLEMENTED + in tree + compiles, but is NOT the
+soft-lock fix.** It is valid hardening (a transient non-mat read on a tick must not
+irreversibly drop a welcome mat + its TOWN_GATE sites) — keep it. But a 4-world sweep
+with F1 in place still went 2 PASS / 2 STALL (same ~50/50), so the mat-list
+non-destructiveness is not the operative cause of the flake.
+
+**THE ACTUAL soft-lock edge case (1.20.6-only; 1.19 leavers worked):**
+The leaver (gatherer/hunter) job anchors on `special_quest.town_gate`. To complete a
+work cycle (mat state 0 = "needs food") it must, in addition to seeing the job site,
+find a supply chest it can take. The supply scan is
+`Containers.get(...)` → `ContainersClean.get(...)` (jobs/Containers.java:23,
+jobs/nomc/ContainersClean.java) over `town.getRoomHandle().getMatches(includeRoom)`
+where `includeRoom = (r)->true` (ALL rooms) and a chest is eligible when
+`!room.isJobSite() || !block.isJobBlock()`. A chest is then accepted only if
+`chest.hasItem(checkFn)` where `checkFn = JobsClean.shouldTakeItem(capacity,
+cleanRooms(), journal.getItems(), item)`. `shouldTakeItem` (jobs/JobsClean.java:83)
+REJECTS when `cleanRooms()` is EMPTY (nothing needed) or the journal has no empty slot.
+
+**The stall (worlds 81/82, on-disk logs) is: `cleanRooms() =
+roomsNeedingIngredientsOrTools` is EMPTY** → `shouldTakeItem` rejects every chest as
+"nothing needed" → `suppliesTarget=null` → the leaver sits at mat state 0 /
+COLLECTING_SUPPLIES forever. Evidence:
+  * `[PROBE:suppliesNull] baseRoom=special_quest.town_gate matches=2 siteRooms=[]
+    siteChests=0` (81) — the gate room is not in the detected room map the scan reads.
+  * `[PROBE:checkFn] journalHled=[...air...] neededPredicates=<empty>` (81) — rejected
+    with an empty journal (NOT "full"), i.e. the `cleanRooms().isEmpty()` branch.
+  * Contrast PASS (83): `shouldTakeItem` accepts, mat advances 0->2->3, extracts,
+    cook_unlocked.
+  * The gate room IS detected+quested (quest `room.special_quest.town_gate` completes in
+    BOTH pass and stall worlds), yet it is absent from the room map the job scan reads.
+
+**Two DISTINCT room sources (the split that causes the flake):**
+  1. `getRoomsMatching(TOWN_GATE)` = `getWelcomeMatMetaRooms(t)` — SYNTHETIC meta-room
+     from the flag's `welcomeMats` list. Present whenever the mat is registered
+     (gateQuery rooms=1 in all post-seed probes). This is the JOB SITES source; it is
+     stable. My F1 protects this list.
+  2. `getMatches(...)` (the detected ROOM MAP) fed to the supply scan +
+     `roomsNeedingIngredientsOrTools` — needs the gate room DETECTED + tagged
+     `special_quest.town_gate`. This attachment is the FLAKY link (~50% of worlds).
+
+**So: the flake is that the gate room is NOT attached to the detected room map /
+room-needing-ingredients that the leaver's supply scan reads, in ~half of worlds — even
+though (a) the mat is registered (source 1 is stable) and (b) the gate room is
+detected+quested. 1.19 did not have this; it is a 1.20.6 detection/room-map/recipe
+attachment edge case, consistent with "core logic works, edge case bug."**
+
+**Fix candidates (ranked; NOT yet implemented — scope/risk decision):**
+  A. [LOWEST RISK / strongest fit] Make the leaver's room-needing-ingredients +
+     supply scan fall back to the STABLE source-1 anchor: when `cleanRooms()` is empty
+     or the gate room is missing from `getMatches`, use the mat's own room
+     (`getWelcomeMatMetaRooms` / the detected room containing the mat) as the room
+     needing the leaver's input. This anchors to data that is provably stable (the mat
+     list) rather than the flaky recipe-tagged detected map. Touches RoomsStatusLogic /
+     DeclarativeJobTicker room source — verify against the 14 equivalence tests.
+  B. [DEEPER / cross-repo] Fix the recipe attachment so the gate room reliably lands in
+     `getMatches` tagged `special_quest.town_gate` (RoomRecipes LevelRoomDetector /
+     TownRoomsMap recipe-assignment). Riskier, lives in the room-detection layer.
+  C. [HARDENING ONLY] Keep F1 (done) + add a backstop re-register of the mat's room on
+     the flag each tick (so source 1 is always present) — does NOT fix the scan's
+     source-2 dependency, so insufficient alone.
+
+**Next read (not yet done):** confirm in a live stall whether the flaky link is
+`getMatches` (gate room absent) vs `roomsNeedingIngredientsOrTools` (empty) vs
+`cleanRooms()` (empty) — one probe at the leaver's `find.get()`/`shouldTakeItem`
+boundary printing all three, to pick A vs B with certainty before touching code.
+
+---
+## 2026-10-07 LATE — Round 4: pipeline locked correct; flake isolated to the first-deposit race
+
+**Method shift (dev-set):** probes B–J + gateMat + clean-room identity reads + live inspect
+(`/_qtdev inspect villagers`, `/data get entity`), 20+ worlds (90-102, 200/201/206/207,
+300/301, 400/401/402). Ruled out with on-disk evidence: BE duplication (G: `live==flag:true`
+everywhere), welcomeMats list flapping (add-only, `registerWelcomeMat` fires once,
+listSizeAfter=1), claims (D: zero claim events on the mat), exceptions (0), isJobBlock
+noise (C: present in pass AND stall — not the split), shouldUseBlockForSupplies gate (drop-loop
+only).
+
+**The refined discriminator (live, worlds 400 pass / 401 stall):**
+- Both: mat registered once; post-seed job sites visible (`[PROBE:jobSites]` silent both);
+  gate compute sees `[PROBE:gateMat] inner=[0=1]` (mat in state-0 bucket) in BOTH.
+- 400 (PASS): mat state cycles (gateMat `st=p2 tt=1000 → tt=250` — the 2000-tick time state
+  elapses) → extract → LOOTTRACE → cook_unlock. 1 leaver deposits.
+- 401 (STALL, 2+ days): mat stays `st=p0/ic0` (state 0, nothing ever inserted). Leavers flip
+  `gatherer/gather ↔ seeking_work` (job-change log), 114 `REJECT needed-empty` (early), then
+  scan stops. **Zero deposits, zero extracts.** All 4 leavers `COLLECTING_SUPPLIES` in the
+  live board, `need=NONE`.
+
+**Why it stalls (verified numbers, both versions):**
+- `MaxInitialTicksWithoutSupplies` = **100 ticks** (pre-ingredient patience) — identical in
+  1.19 and 1.20.6 (`Config.java`, both repos).
+- Gatherer mat cycle = `{food qty1}` → `{work 1}` → `{time 2000}` (both versions, same
+  `gatherer_unmapped_notool_short.json`). The mat is food-receptive (state 0) only a small
+  fraction of its ~2000+ tick cycle; receptive again only after it completes work+time and
+  drops loot.
+- The **one-shot first deposit** must complete (scan → ACCEPT → carry → deposit) inside a
+  leaver's patience window, with 4 leavers contending for the one mat. In ~50% of worlds no
+  leaver's window aligns; they churn (demote → re-adopt → scan → reject while mat is in
+  work/time phase) and the mat is never fed. In ~50%, one leaver lands (worlds 400/206/300),
+  after which the mat cycles and the whole chain completes.
+
+**LOCKED CORRECT (new unit tests, 2026-10-07, all GREEN — the core logic is NOT broken):**
+`src/test/java/ca/bradj/questown/jobs/declarative/RoomsStatusLogicTest.java` (8 tests):
+- `compute_gateMatRoom_present_state0_yieldsNeededIngredient` (pre-existing) — state-0 mat is a needed-input site.
+- `cleanFns_state0Receptive_nonEmptyAndAcceptsFood` — the leaver ACCEPT path on a receptive
+  mat yields a non-empty needed-item set that accepts the food.
+- `copyConstructor_preservesReceptiveState0Bucket` — the cache-copy
+  (`new RoomsNeedingVillagerInput<>(rniot.get().get())`) does not drop the state-0 bucket.
+- `floor_preservesReceptiveState0Bucket`.
+- `cleanFns_allBucketsEmpty_yieldsEmptyNeededSet` — the staked REJECT branch.
+- `matAtWorkState1_notFoodReceptive` — a mat in its work phase does NOT request food ⇒
+  leavers' REJECTs during work/time phases are **legitimate** (not a logic bug).
+Plus the earlier `JobsCleanShouldTakeItemTest` (4 tests, GREEN).
+→ The "REJECT needed-empty" the stalling leavers hit is **correct behavior** when the mat is
+  in its work/time phase or the receptive window is missed. The flake is a
+  **timing/contention window** (first-deposit race), not a broken pipeline.
+
+**Worlds (2026-10-07 batch):** PASS 90/93/94/96/201/206/300/400 (cook=1); STALL 91/92/98/99/
+100/101/102/200/207/301/401/402 (cook=0, LOOTTRACE=0). Still ~50/50.
+
+**Fix candidates (ranked vs "don't cheat" + "edge-case bug" priorities):**
+1. **[RECOMMENDED — the genuine edge-case fix]** Make the first deposit robust to the
+   contention window: stagger/serialize the leavers' supply attempts (per-owner phase offset
+   or a mat-level reservation so 4 leavers don't all time out on the same rare window), so at
+   least one completes a deposit without needing the 100-tick initial patience to align.
+   Not a timeout bump; touches the leaver supply-target lifecycle (ProductionJob target path)
+   and needs a Forge-free seam test.
+2. **[TUNING — borderline "cheat", AVOID]** Raise `MaxInitialTicksWithoutSupplies` (100) so a
+   leaver survives the carry+deposit. Changes a gameplay constant (both-versions shared);
+   would pass the test but is a knob, not a fix.
+3. **[HARDEN, already in tree]** F1 (non-destructive mat list) + Fix A/B
+   (`computeRoomsNeedingInput`) + c3 (WelcomeMatBlock ownership) + the 9f476c37 visibility
+   union — all valid, keep; none is the operative fix.
+
+**Not yet done:** remove ALL TEMP probes (PROBE-B…J, gateMat, roomMatch, rwwcbd, checkFn,
+suppliesNull, giveback, matRooms, cleanRooms, state0, jobSites, ownerStore, matInit,
+scanRoom/scanPos, DEV-DIAG:*) in the closing commit; final clean sweep; commit fix + lock-in
+tests.
