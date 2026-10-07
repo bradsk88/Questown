@@ -47,6 +47,7 @@ import java.util.function.Supplier;
 
 public class DeclarativeJobTickerDependencies implements
         DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra, WorkLocation> {
+    private static int ownerProbeN = 0; // TEMP DEBUG 2026-10-06
     private final TownFlagBlockEntity town;
     private final DeclarativeJob job;
     private final VisitorMobEntity entity;
@@ -190,6 +191,9 @@ public class DeclarativeJobTickerDependencies implements
             work = town.getRealWorkStatusHandle(null);
         } else {
             work = town.getRealWorkStatusHandle(job.getOwnerUUID());
+        }
+        if (ownerProbeN++ % 1200 == 0) {
+            QT.JOB_LOGGER.warn("[PROBE:ownerStore] room={} owner={} store@{} gateMatState={}", job.location().baseRoom(), job.getOwnerUUID(), Integer.toHexString(System.identityHashCode(work)), work.getJobBlockState(town.getWelcomeMats().stream().findFirst().orElse(null)));
         }
         return work;
     }

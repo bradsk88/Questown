@@ -403,3 +403,35 @@ Findings (worlds 35-46):
    record state 0 for the leaver at the mat (owner-identity or initial-claim ordering).
 4. Live stalled world: psweep-45 dir=/tmp/psweep-45 port=25605 (console via
    `bash run/psweep.sh feed 45 "…"`); 46 similar; 44 passing. All carry the probe set.
+
+## Round 3b (same session, world batch 50-64)
+
+Probe rounds on 50-64 (58/64 passing, 47-49 mixed, 59-61+57 ALL stalled one batch):
+- `[PROBE:ownerStore]` (DeclarativeJobTickerDependencies.getWorkStatusHandle — fires
+  throttled, prints room/owner/store identity + that store's gate-mat State).
+- `[PROBE:matInit]` (TownWorkStatusStore factory — the mat block IS registry-eligible;
+  `init=true` everywhere; `State.fresh()` = state 0 confirmed).
+- `[PROBE:scanRoom]` + `[PROBE:scanPos]` (AbstractWorkStatusStore.scanRoom — mat room
+  scanned by multiple stores; per-position containsKey/def).
+- Established: leavers run ONE per-owner store each (jobHandles map); the per-tick driver is
+  TownFlagTicker.updateWorkStatuses (behind isFlagTick = gameTime % FLAG_TICK_INTERVAL).
+  `scanRoom` is the seeder for new rooms (registerNewRooms → scanRoom → factory → put).
+- THE GATE (world 63 stalled, 58/64 passing): the stalled leaver's own store has
+  gateMatState=null PERSISTENTLY while the same-position mat record exists (state 0→2
+  advancing) in at least one other leaver's store in the passing worlds. I.e., the
+  per-owner store of the stalled gatherer never gets the mat's state-0 record, while
+  sibling leaver stores do. All three owners in 63 had gate stores; only one
+  (5bb/17c/1bc…) held null.
+- Open question (the next read, not a new probe): why does `registerNewRooms` +
+  `scanRoom` seed a mat record in some owner stores but not others — same flag tick loop,
+  same `allRooms` (which provably contains the mat room: gateQuery rooms=1 post-seed).
+  Suspects, in order: (1) `scanRoom`'s containsKey/airCheck branch removing it (air =
+  false — mat present); (2) the per-store room set never getting the mat room (rooms Set
+  identity vs value-equals on RoomRecipeMatch meta objects — every-tick new instances?);
+  (3) factory returning null for that store (init=true says no); (4) store created before
+  the mat AND `updateWorkStatuses` throwing before `.tick` in that world (no log evidence
+  of a throw in 63). Files: AbstractWorkStatusStore (tick/registerNewRooms/scanRoom,
+  lines ~150-280), TownFlagBlockEntity.getRealWorkStatusHandle (1826-1850),
+  TownFlagTicker.updateWorkStatuses (90-97), AbstractTownFlagTicker.tickInner (36-95).
+- World 64 = passing with full probe set (see its log); no world live-stalled right now
+  (59-61 killed? no — 59/60/61 are the ALL-STALLED batch; confirm `bash run/psweep.sh status`).

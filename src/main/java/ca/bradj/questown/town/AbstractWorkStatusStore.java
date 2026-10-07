@@ -18,6 +18,13 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements WorkStatusHandle<POS, ITEM> {
+    private static int scanMatProbeN = 0; // TEMP DEBUG 2026-10-06
+    private boolean levelBlockIsMat(TICK_SOURCE ts, POS pp) {
+        if (ts instanceof net.minecraft.server.level.ServerLevel sl && pp instanceof net.minecraft.core.BlockPos bp) {
+            return sl.getBlockState(bp).getBlock().toString().contains("welcome_mat");
+        }
+        return false;
+    }
 
     @FunctionalInterface
     public interface DebugLogger {
@@ -261,7 +268,20 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             TICK_SOURCE tickSource,
             ROOM room
     ) {
+        // TEMP DEBUG 2026-10-06 (remove with probe)
+        boolean debugMat = false;
         for (POS pp : scannablePositionsOf(room)) {
+            if (levelBlockIsMat(tickSource, pp)) {
+                debugMat = true;
+                break;
+            }
+        }
+        if (debugMat && scanMatProbeN++ % 300 == 0) {
+            QT.JOB_LOGGER.warn("[PROBE:scanRoom] log@{} matInScannable=true room@{}",
+                    Integer.toHexString(System.identityHashCode(debugLogger)), Integer.toHexString(System.identityHashCode(room)));
+        }
+        for (POS pp : scannablePositionsOf(room)) {
+            final State def;
             if (jobStatuses.containsKey(pp)) {
                 if (airCheck.apply(tickSource, pp)) {
                     debugLogger.log("Block is gone from {}. Clearing status.", pp);
@@ -269,11 +289,15 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                 }
                 continue;
             }
-            State def = this.defaultStateFactory.apply(tickSource, pp);
+            def = this.defaultStateFactory.apply(tickSource, pp);
             if (def != null) {
                 jobStatuses.put(pp, def);
             }
-
+            // TEMP DEBUG 2026-10-06 (remove with probe)
+            if (levelBlockIsMat(tickSource, pp) && scanMatProbeN % 600 == 0) {
+                QT.JOB_LOGGER.warn("[PROBE:scanPos] log@{} def={}",
+                        Integer.toHexString(System.identityHashCode(debugLogger)), def);
+            }
             @Nullable Function<State, Boolean> cas = cascadingBlockRevealer.apply(tickSource, pp);
             if (cas == null) {
                 continue;
