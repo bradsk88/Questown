@@ -168,8 +168,17 @@ class RoomsStatusLogicTest {
         return matAt(0);
     }
 
+    private static final Position MAT_POS = new Position(-13, 64);
+
     private static RoomsNeedingVillagerInput<String, String, Position> matAt(int state) {
-        Position matPos = new Position(-13, 64);
+        return matAt(state, p -> true, MAT_POS::equals);
+    }
+
+    private static RoomsNeedingVillagerInput<String, String, Position> matAt(
+            int state,
+            java.util.function.Predicate<Position> canClaim,
+            java.util.function.Predicate<Position> isJobBlock
+    ) {
         Collection<IRoomRecipeMatch<String, String, Position, String>> jobRooms = ImmutableList.of(new IRoomRecipeMatch<String, String, Position, String>() {
             public String getRecipeID() {
                 return "town_gate";
@@ -187,19 +196,19 @@ class RoomsStatusLogicTest {
 
             @Override
             public ImmutableMap<Position, String> getContainedBlocks() {
-                return ImmutableMap.of(matPos, "welcome_mat");
+                return ImmutableMap.of(MAT_POS, "welcome_mat");
             }
         });
 
         Map<Position, State> jobStates = ImmutableMap.of(
-                matPos, State.freshAtState(state)
+                MAT_POS, State.freshAtState(state)
         );
 
         return RoomsStatusLogic.compute(
                 jobRooms,
                 jobStates::get,
-                p -> true,
-                matPos::equals,
+                canClaim,
+                isJobBlock,
                 new DeclarativeJobChecks<Void, String, String, RoomRecipeMatch<String>, Position>(
                         ImmutableMap.of(0, PredicateCollections.fromSimpleEqualityCheck("villager_food")),
                         ImmutableMap.of(0, 1),
@@ -207,9 +216,9 @@ class RoomsStatusLogicTest {
                         ImmutableMap.of(0, 0, 1, 1),
                         ImmutableMap.of(),
                         room -> true,
-                        matPos::equals
+                        MAT_POS::equals
                 ),
-                m -> m.getRoom().equals("gate") ? ImmutableList.of(matPos) : ImmutableList.of(),
+                m -> m.getRoom().equals("gate") ? ImmutableList.of(MAT_POS) : ImmutableList.of(),
                 3
         );
     }
@@ -294,6 +303,55 @@ class RoomsStatusLogicTest {
                 s -> null,
                 x -> x).isEmpty(),
                 "empty rni must yield an empty needed set (REJECT branch)");
+    }
+
+    // ── Lock-in (2026-10-07): the stall is EXCLUSION of the gate mat, not the ACCEPT
+    // logic. compute() (verified source) only fills a state-s bucket when isJobBlock(mat)
+    // AND canClaim(mat) are both true alongside the declared state-s ingredient. Pin both
+    // exclusion paths so a fix (whichever predicate the stall trips) is validated here:
+    // an excluded mat must yield an empty needed set = the leaver's 'needed-empty' REJECT.
+
+    @Test
+    void matExcludedByIsJobBlock_yieldsEmptyNeededSet_neededEmptyReject() {
+        RoomsNeedingVillagerInput<String, String, Position> rni = matAt(
+                0,
+                p -> true,   // canClaim: fine
+                p -> false);  // isJobBlock: dropped
+
+        assertTrue(rni.cleanFns(
+                s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
+                s -> null,
+                x -> x).isEmpty(),
+                "an isJobBlock-excluded mat must yield an empty needed set (the leaver's needed-empty REJECT)");
+    }
+
+    @Test
+    void matExcludedByCanClaim_yieldsEmptyNeededSet_neededEmptyReject() {
+        RoomsNeedingVillagerInput<String, String, Position> rni = matAt(
+                0,
+                p -> false,  // canClaim: dropped
+                MAT_POS::equals);                                       // isJobBlock: fine
+
+        assertTrue(rni.cleanFns(
+                s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
+                s -> null,
+                x -> x).isEmpty(),
+                "a canClaim-excluded mat must yield an empty needed set (the leaver's needed-empty REJECT)");
+    }
+
+    @Test
+    void matAvailable_isJobBlockAndCanClaim_yieldsNonEmptyNeededSet_accepts() {
+        RoomsNeedingVillagerInput<String, String, Position> rni = matAt(
+                0,
+                p -> true,   // canClaim: fine
+                MAT_POS::equals);                                       // isJobBlock: fine
+
+        var fns = rni.cleanFns(
+                s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
+                s -> null,
+                x -> x);
+
+        assertFalse(fns.isEmpty(), "a fully-available receptive mat must yield a non-empty needed set (ACCEPT)");
     }
 
 }
