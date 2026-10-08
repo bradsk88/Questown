@@ -1,6 +1,7 @@
 # unseededMat equivalence test — defect map (2026-10-19 session)
 
-Status: **GREEN — both blockers resolved; 62/62 in TickerAdvancerEquivalenceTest, jobs+town sweep green except deliberate `todo_*` markers.**
+Status: **GREEN — unit spec + live held-run sweep; 62/62 in TickerAdvancerEquivalenceTest,
+jobs+town sweep green except deliberate `todo_*` markers.**
 
 ## Bisection results (2026-10-21 session)
 
@@ -80,8 +81,24 @@ Still RED ⇒ the blocker is not seeding; it is one of the two candidates above.
 - `--tests 'ca.bradj.questown.jobs.*' --tests 'ca.bradj.questown.town.*'` → only reds are the
 deliberate `todo_*` registry-bound markers (`ServerJobsRegistryCanFitTest.todo_…`,
 `WorkStatusStoreMatSeedTest.todo_…`), per the "red is default until Forge harness" rule.
-- Held-run re-sweep of `village/self_sufficiency` still owed before declaring the 855 soft-lock closed in
-  the real world (unit spec is green; live proof pending).
+- **Held-run re-sweep (`village/self_sufficiency`, 2026-10-21, ~200 t/s target, hold-mode,
+  client-free, sweep log4j, fifo console via `-Dquestown.tp.fifo=true`): GREEN ×2 independent
+  fresh seeds.**
+  - Run A (~14 min, 6 townies): zero `[lock]`, zero `UNMET_ITEM`, milestones
+    `firstNight=true cookUnlocked=true farmerUnlocked=false` ("town on cooked food"), roster
+    cycling gather/extract/downtime + cook fuel/extract + hunter.
+  - Run B (~15 min, 7 townies, roster grew 3→7 mid-run): zero `[lock]`, zero `UNMET_ITEM`,
+    same milestones, BOP deposits observed.
+  - Pre-fix baseline (this box, 2026-10-05 … 2026-10-08): `[lock]` in 5:11–5:14 / 5/6 runs,
+    `UNMET_ITEM missing=#c:mushrooms` / `NO_WORK_POSSIBLE`, cookUnlocked=false in 5/6.
+  - The `RESULT: 0/0 passed (FAILURES)` banner is the scenario's own report-only shape
+    (`AutoTestRunner.reportAndShutdown`: "self_sufficiency is a watchtower … contributes no
+    assertions"), NOT a behaviour failure - verified in code.
+  - 51 `Can't keep up` warnings in Run A (heavy town at ~124-136 t/s eff) - the run still
+    completed in full; no exceptions in either run.
+- Launch trap hit+fixed this session: the FIFO→console wiring is gated on
+  `-Dquestown.tp.fifo` (build.gradle L237); omitting it drops every console write silently and
+  the `/tick rate` feed never lands (pace stays 20 t/s).
 
 ## Guardrails
 
