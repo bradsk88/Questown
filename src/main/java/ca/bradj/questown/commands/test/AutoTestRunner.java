@@ -24,6 +24,8 @@ import java.util.UUID;
 import ca.bradj.questown.commands.test.TestBlueprintRegistry.AnyTestEntry;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.roomrecipes.serialization.MCRoom;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 
 @EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.GAME)
 public class AutoTestRunner {
@@ -394,6 +396,8 @@ public class AutoTestRunner {
      */
     static class VillageWatchListener {
         private int ticks = 0;
+        private int tickCoverageTries = 0;
+        private boolean tickCoverageDone = false;
 
         @SubscribeEvent
         public void onLogin(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
@@ -419,10 +423,67 @@ public class AutoTestRunner {
 
         @SubscribeEvent
         public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+            checkTickCoverage();
             // No-op: the login handler gives each spectator an initial viewpoint
             // (aimed at the flag) and then leaves them alone, so the user can fly
             // around and observe on their own. The former per-tick re-aim kept
             // resetting the camera and fought the user's own movement.
+        }
+
+        // Invariant: in a headless autotest world there is no player chunk ticket, so
+        // non-player mobs tick ONLY inside entity-ticking chunks. A room laid down
+        // outside an entity-ticking chunk stalls any leaver that crosses into it
+        // (811/812 class soft-lock). Boot force-loads only the 3x3 around the flag, so
+        // this one-shot watches for rooms outside that region and force-loads their
+        // chunks (idempotent), logging what it found. Fails open: never blocks the run.
+        private void checkTickCoverage() {
+            if (tickCoverageDone) {
+                return;
+            }
+            if (++tickCoverageTries % 200 != 0) {
+                return; // once at boot + every ~10 s until the town has rooms
+            }
+            net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+            if (server == null) {
+                return;
+            }
+            ServerLevel over = server.overworld();
+            if (over == null) {
+                return;
+            }
+            if (!(over.getBlockEntity(ORIGIN) instanceof TownFlagBlockEntity flag)) {
+                return;
+            }
+            ChunkPos base = new ChunkPos(ORIGIN);
+            java.util.List<RoomRecipeMatch<MCRoom>> matches;
+            try {
+                matches = java.util.List.copyOf(flag.getRoomHandle().getMatches(r -> true));
+            } catch (RuntimeException e) {
+                return; // room handle not ready yet
+            }
+            if (matches.isEmpty()) {
+                if (tickCoverageTries >= 5400) {
+                    tickCoverageDone = true;
+                    QT.FLAG_LOGGER.warn("[village] tick-coverage: no town rooms found after 9 min; skipping coverage check");
+                }
+                return;
+            }
+            java.util.Set<String> extended = new java.util.TreeSet<>();
+            for (RoomRecipeMatch<MCRoom> m : matches) {
+                for (BlockPos p : m.getContainedBlocks().keySet()) {
+                    ChunkPos cp = new ChunkPos(p);
+                    if (Math.abs(cp.x - base.x) > 1 || Math.abs(cp.z - base.z) > 1) {
+                        over.setChunkForced(cp.x, cp.z, true);
+                        extended.add(cp.x + "," + cp.z);
+                    }
+                }
+            }
+            tickCoverageDone = true;
+            if (extended.isEmpty()) {
+                QT.FLAG_LOGGER.info("[village] tick-coverage OK: all town room chunks are inside the force-loaded 3x3 around {}", base);
+            } else {
+                QT.FLAG_LOGGER.info("[village] tick-coverage EXTENDED: force-loaded town room chunk(s) outside the boot 3x3: {}", extended);
+            }
         }
 
         private void aim(net.minecraft.server.level.ServerPlayer sp) {

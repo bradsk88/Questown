@@ -87,6 +87,15 @@ freezes again, `forceload add <x> <z>` over the door's chunk (block pos /16,
 truncated) unfreezes it in seconds — that is both the diagnostic and the
 workaround.
 
+**The invariant self-checks.** `VillageWatchListener.checkTickCoverage()`
+polls after boot and, the moment the town has rooms, force-loads every room
+chunk outside the boot 3×3 (idempotent) — a future layout that outgrows the
+3×3 self-repairs instead of soft-locking. Read its verdict in the log:
+`[village] tick-coverage OK` (all rooms inside the boot region) or
+`[village] tick-coverage EXTENDED: force-loaded …` (it had to reach outside,
+naming the chunks). If the run still stalls despite `OK` / `EXTENDED`, it is
+not a tick-range issue — stop suspecting chunks.
+
 ## Related
 
 - Per-scenario depth + the realtime/warp reasoning: `COMPLEX.md` (same dir).
