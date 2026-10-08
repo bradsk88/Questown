@@ -18,7 +18,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements WorkStatusHandle<POS, ITEM> {
-    private static int scanMatProbeN = 0; // TEMP DEBUG 2026-10-06
     private boolean levelBlockIsMat(TICK_SOURCE ts, POS pp) {
         if (ts instanceof net.minecraft.server.level.ServerLevel sl && pp instanceof net.minecraft.core.BlockPos bp) {
             return sl.getBlockState(bp).getBlock().toString().contains("welcome_mat");
@@ -94,6 +93,10 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             BiFunction<POS, State, State> mutator
     ) {
         State newV = jobStatuses.compute(pos, mutator);
+        if (newV != null && newV.processingState() > 0) {
+            // p2/p3 writes are the state-advance steps ! capture every one; throttle only the p1 work writes.
+            boolean capAll = newV.processingState() >= 2;
+        }
         debugLogger.log("Job state set to {} at {}", newV.toShortString(), pos);
         if (cascading.containsKey(pos)) {
             if (!cascading.get(pos).apply(newV)) {
@@ -109,8 +112,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             int ticksToNextState
     ) {
         setJobBlockState(bp, bs);
-        Long cur = this.timeJobStatuses.get(bp);
-        if (cur != null && cur > 0) {
+        Long cur = this.timeJobStatuses.get(bp);        if (cur != null && cur > 0) {
             QT.FLAG_LOGGER.error("Clobbered time on block at {} from {} to {}", bp, cur, ticksToNextState);
         }
 
@@ -268,18 +270,6 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             TICK_SOURCE tickSource,
             ROOM room
     ) {
-        // TEMP DEBUG 2026-10-06 (remove with probe)
-        boolean debugMat = false;
-        for (POS pp : scannablePositionsOf(room)) {
-            if (levelBlockIsMat(tickSource, pp)) {
-                debugMat = true;
-                break;
-            }
-        }
-        if (debugMat && scanMatProbeN++ % 300 == 0) {
-            QT.JOB_LOGGER.warn("[PROBE:scanRoom] log@{} matInScannable=true room@{}",
-                    Integer.toHexString(System.identityHashCode(debugLogger)), Integer.toHexString(System.identityHashCode(room)));
-        }
         for (POS pp : scannablePositionsOf(room)) {
             final State def;
             if (jobStatuses.containsKey(pp)) {
@@ -292,11 +282,6 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             def = this.defaultStateFactory.apply(tickSource, pp);
             if (def != null) {
                 jobStatuses.put(pp, def);
-            }
-            // TEMP DEBUG 2026-10-06 (remove with probe)
-            if (levelBlockIsMat(tickSource, pp) && scanMatProbeN % 600 == 0) {
-                QT.JOB_LOGGER.warn("[PROBE:scanPos] log@{} def={}",
-                        Integer.toHexString(System.identityHashCode(debugLogger)), def);
             }
             @Nullable Function<State, Boolean> cas = cascadingBlockRevealer.apply(tickSource, pp);
             if (cas == null) {
@@ -337,13 +322,12 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             POS bp,
             Claim claim
     ) {
-        if (doClaimSpot(bp, claim)) {
+        boolean r = doClaimSpot(bp, claim);
+        if (r) {
             debugLogger.log("Spot {} claimed: {}", bp, claim);
-            return true;
         }
-        return false;
+        return r;
     }
-
     private boolean doClaimSpot(
             POS bp,
             Claim claim
@@ -373,6 +357,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             return true;
         }
         Claim newClaim = makeClaim.get();
-        return prevClaim.owner().equals(newClaim.owner());
+        boolean r = prevClaim.owner().equals(newClaim.owner());
+        return r;
     }
 }

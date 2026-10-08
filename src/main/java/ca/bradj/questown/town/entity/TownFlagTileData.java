@@ -248,7 +248,9 @@ public class TownFlagTileData {
             logInit("Initialized welcome mats from {}", tag);
             return true;
         };
-        Consumer<TownFlagBlockEntity> onPlace = t -> logInit("Initialized welcome mats for new flag");
+        Consumer<TownFlagBlockEntity> onPlace = t -> {
+            logInit("Initialized welcome mats for new flag");
+        };
         return new InitPair(fromTag, onPlace);
     }
 

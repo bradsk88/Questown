@@ -47,7 +47,6 @@ import java.util.function.Supplier;
 
 public class DeclarativeJobTickerDependencies implements
         DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra, WorkLocation> {
-    private static int ownerProbeN = 0; // TEMP DEBUG 2026-10-06
     private final TownFlagBlockEntity town;
     private final DeclarativeJob job;
     private final VisitorMobEntity entity;
@@ -76,19 +75,8 @@ public class DeclarativeJobTickerDependencies implements
                    .stream()
                    .map(v -> new RoomRecipeMatches<>(v.room, v.getRecipeIDs(), v.containedBlocks.entrySet()))
                    .collect(ImmutableList.toImmutableList());
-        // PROBE (2026-10-06) - gate jobs (leaver/hunter, baseRoom=town_gate) seeing zero
-        // job sites is the stall signature; per-instance counter avoids cross-job mix-up.
-        if (out.isEmpty() && ca.bradj.questown.town.special.SpecialQuests.TOWN_GATE.equals(job.location().baseRoom())
-                && jobSitesProbeN++ % 400 == 0) {
-            ca.bradj.questown.QT.JOB_LOGGER.warn(
-                    "[PROBE:jobSites] GATE job sees 0 sites; flag@{}=ID{} flagMats={} baseRoom={}",
-                    town.getBlockPos(), System.identityHashCode(town),
-                    town.getWelcomeMats().size(), job.location().baseRoom());
-        }
         return out;
     }
-
-    private int jobSitesProbeN = 0; // TEMP DEBUG 2026-10-06
 
     @Override
     public ImmutableList<RoomRecipeMatch<MCRoom>> getRoomsForSupplyCheck() {
@@ -191,9 +179,6 @@ public class DeclarativeJobTickerDependencies implements
             work = town.getRealWorkStatusHandle(null);
         } else {
             work = town.getRealWorkStatusHandle(job.getOwnerUUID());
-        }
-        if (ownerProbeN++ % 1200 == 0) {
-            QT.JOB_LOGGER.warn("[PROBE:ownerStore] room={} owner={} store@{} gateMatState={}", job.location().baseRoom(), job.getOwnerUUID(), Integer.toHexString(System.identityHashCode(work)), work.getJobBlockState(town.getWelcomeMats().stream().findFirst().orElse(null)));
         }
         return work;
     }

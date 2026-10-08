@@ -73,6 +73,9 @@ public class DeclarativeJob extends
     private final WorkLocation location;
     private final @NotNull Integer maxState;
     private final JobID jobId;
+
+    // take-driver count: feeds the [PROBE:supplies] TOOK line (psweep verdict oracle; keep)
+    private static final java.util.concurrent.atomic.AtomicLong SUPPLY_TOOK_CNT = new java.util.concurrent.atomic.AtomicLong();
     private final ExpirationRules expiration;
     private final long totalDuration;
     private final int workInterval;
@@ -240,8 +243,9 @@ public class DeclarativeJob extends
     private boolean isJobBlock(
             JobBlockTestContext ctx
     ) {
-        return location.isJobBlock().test(ctx.withBlockAlreadyUsed(ticker.hasWorkedRecently() || hasInserted(0))
+        boolean r = location.isJobBlock().test(ctx.withBlockAlreadyUsed(ticker.hasWorkedRecently() || hasInserted(0))
                                              .withJobAlreadyStarted(true));
+        return r;
     }
 
     @NotNull
@@ -380,13 +384,8 @@ public class DeclarativeJob extends
                 checks::getToolsForStep,
                 MCHeldItem::fromTown
         );
-        if (r.isEmpty() && cleanRoomsProbeN++ % 600 == 0) {
-            QT.JOB_LOGGER.warn("[PROBE:cleanRooms] EMPTY state2rooms={}", roomsNeedingIngredientsOrTools.get());
-        }
         return r;
     }
-
-    private volatile int cleanRoomsProbeN = 0; // TEMP DEBUG 2026-10-06, remove with probe
 
 //    private @NotNull JobTownProvider<MCRoom> makeTownProviderForTick(
 //            MCExtra extra,
@@ -604,6 +603,8 @@ public class DeclarativeJob extends
                 recipe::getRecipe,
                 journal.getItems(),
                 (item) -> {
+                    SUPPLY_TOOK_CNT.incrementAndGet();
+                    QT.JOB_LOGGER.warn("[PROBE:supplies] job={} TOOK item={} (totalTakes={})", jobId, item, SUPPLY_TOOK_CNT.get());
                     this.journal.addItem(MCHeldItem.fromTown(item));
                     this.clearJobSite();
                 },

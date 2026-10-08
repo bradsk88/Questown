@@ -34,7 +34,6 @@ import java.util.function.*;
 import java.util.stream.Stream;
 
 public class DeclarativeJobs {
-
     public static final IProductionStatusFactory<ProductionStatus> STATUS_FACTORY = new IProductionStatusFactory<>() {
         @Override
         public ProductionStatus fromJobBlockState(int s) {
@@ -473,12 +472,14 @@ public class DeclarativeJobs {
             Predicate<POS> isJobBlock,
             Predicate<POS> hasCorrectState
     ) {
+        boolean matched = false;
         for (POS pos : room.getContainedBlocks().keySet()) {
             if (isJobBlock.test(pos) && hasCorrectState.test(pos)) {
-                return true;
+                matched = true;
+                break;
             }
         }
-        return false;
+        return matched;
     }
 
 }

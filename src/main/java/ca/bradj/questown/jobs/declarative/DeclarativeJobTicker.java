@@ -268,7 +268,24 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA, ?> deps,
             WorkStatusHandle<POS, HELD_ITEM> work
     ) {
-        Function<POS, State> getJobBlockState = pos -> work.getJobBlockState((POS) pos);
+        Function<POS, State> getJobBlockState = pos -> {
+            State s = work.getJobBlockState((POS) pos);
+            // A block with no work-state record yet is unstarted work, not "no state": the
+            // bsFn provider path (this file) already reads it as State.fresh(). Keeping the
+            // rooms-needing-input chain raw-excluding null states deadlocked leavers whose
+            // per-owner store had not yet seeded the gate mat (whoever-seeds-first race).
+            if (s == null) {
+                return State.fresh();
+            }
+            // A terminal state with no live timer (a foreign job's bare write, or an expired
+            // timer that overflowed past this job's maxState) will never advance itself: it
+            // matches no bucket for this job and starves the supply loop. Read it as fresh.
+            if (s.processingState() > maxState
+                    || (s.processingState() == maxState && !s.hasWorkLeft() && work.getTimeToNextState((POS) pos) == null)) {
+                return State.fresh();
+            }
+            return s;
+        };
         Predicate<POS> canClaim = pos -> deps.canClaim((POS) pos);
         Predicate<POS> isJobBlock = pos -> deps.isJobBlock((POS) pos);
         Function<Integer, PredicateCollection<HELD_ITEM, HELD_ITEM>> getIngredients = state -> deps.item((Integer) state);
@@ -286,35 +303,8 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                 deps::makeNVIRoom,
                 maxState
         );
-        // PROBE (2026-10-06) - GATE jobs whose inner map is all-empty stay COLLECTING_SUPPLIES.
-        boolean gate = false;
-        java.util.Collection<MATCH> sites = deps.getJobSites();
-        for (MATCH m : sites) {
-            if (m.getRecipeIDs().stream().anyMatch(ca.bradj.questown.town.special.SpecialQuests.TOWN_GATE::equals)) { gate = true; break; }
-        }
-        if (gate
-                && rni.get().values().stream().allMatch(java.util.Collection::isEmpty)
-                && rniotProbeN++ % 400 == 0) {
-            StringBuilder detail = new StringBuilder("n/a");
-            for (MATCH m : sites) {
-                int i = 0;
-                for (POS bp : deps.getContainedBlocks(m)) {
-                    if (i++ >= 3) break;
-                    detail.append("").append(bp)
-                          .append(":cb=").append(deps.canClaim(bp))
-                          .append(":st=").append(work.getJobBlockState(bp)).append(' ');
-                }
-                if (detail.charAt(0) != 'n') break;
-            }
-            ca.bradj.questown.QT.JOB_LOGGER.warn(
-                    "[PROBE:rniot] GATE inner={} sites={} {} maxState={}",
-                    rni.get().entrySet().stream().map(e -> e.getKey() + "=" + e.getValue().size()).toList(),
-                    sites.size(), detail, maxState);
-        }
         return rni;
     }
-
-    private volatile int rniotProbeN = 0; // TEMP DEBUG 2026-10-06
 
     private <TOWN_ITEM extends Item<TOWN_ITEM>, RECIPE> void tick(
             Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA, ?> deps,

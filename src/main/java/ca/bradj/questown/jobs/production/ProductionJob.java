@@ -102,7 +102,6 @@ public abstract class ProductionJob<
                     this::isJobBlock,
                     bp -> bp.relative(Compat.getRandomHorizontal(sl))
             );
-            // PROBE-C (2026-10-07): the findJobSite REASON was silently discarded; a leaver whose spot
             this.jobSite = js.value();
         }
         return jobSite;
