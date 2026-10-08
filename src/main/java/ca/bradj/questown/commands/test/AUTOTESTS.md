@@ -71,6 +71,22 @@ cannot substitute for it, *even on 1.20.6*. To prove a realtime behavior you
 run real ticks (the realtime watch); `warpTime` is the skip-and-simulate
 end-state tool behind the single-job tests (`cook`/`farmer`).
 
+## Headless tick range (why the held world force-loads a 3×3)
+
+A headless held world has no player ticket, so non-player mobs tick **only
+inside entity-ticking chunks**. The autotest therefore force-loads a 3×3
+block of chunks around the flag at boot (`[autotest] Force-loaded 3x3 chunks
+around …`), not just the flag's own chunk: the town's doors/mats/chests sit
+in the chunks west and south of the flag, and a leaver crossing into an
+unticked chunk freezes mid-walk — `TOOK` never fires and the run stalls in
+`COLLECTING_SUPPLIES`. That was the `village/self_sufficiency` soft-lock
+(fail worlds 811/812/815/817/818/820/822; passing ones happened to have their
+vanilla world spawn — the only other tick source — at the town's chunk, which
+is the 50/50: check `SpawnX`/`SpawnZ` bytes in `level.dat`). If a leaver ever
+freezes again, `forceload add <x> <z>` over the door's chunk (block pos /16,
+truncated) unfreezes it in seconds — that is both the diagnostic and the
+workaround.
+
 ## Related
 
 - Per-scenario depth + the realtime/warp reasoning: `COMPLEX.md` (same dir).

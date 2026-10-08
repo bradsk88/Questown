@@ -57,10 +57,19 @@ public class AutoTestRunner {
 
         QT.FLAG_LOGGER.info("[autotest] BOOT_OK");
 
-        // Force-load the test chunk so block entity tickers run without a player
+        // Force-load the test chunks so block entity tickers run without a player, AND mobs
+        // keep ticking. Headless (no player) non-player entities only tick inside
+        // entity-ticking chunks; the town's doors/mats/chests sit past the flag's own chunk
+        // (x<0, z<0), so a single forced chunk at the origin leaves them unticked and any
+        // leaver crossing into that region soft-locks (~50/50 by seed). A 3x3 around the
+        // flag covers the whole town footprint.
         ChunkPos chunkPos = new ChunkPos(ORIGIN);
-        overworld.setChunkForced(chunkPos.x, chunkPos.z, true);
-        QT.FLAG_LOGGER.info("[autotest] Force-loaded chunk at {}", chunkPos);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                overworld.setChunkForced(chunkPos.x + dx, chunkPos.z + dz, true);
+            }
+        }
+        QT.FLAG_LOGGER.info("[autotest] Force-loaded 3x3 chunks around {}", chunkPos);
 
         int warpAmount = parseWarpAmount();
         String category = parseCategory();
