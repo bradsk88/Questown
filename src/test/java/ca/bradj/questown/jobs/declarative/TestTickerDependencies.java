@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.leaver.RankBoost;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -15,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -118,16 +120,84 @@ public class TestTickerDependencies implements
                 return pos.equals(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
             }
 
+            // Blocker #1 (unseededMat defect map): the stand never exposed the leaver's held
+            // items anywhere the `town has supplies` gate (TownHasSupplies) could see them, so
+            // containers=[] and the gate rejected an IDLE->state:0 start. Expose the entity's
+            // held items as the room's container, mirroring production leavers who arrive
+            // carrying their initial_request items.
             @Override
             public @Nullable ContainerTarget<?, GathererJournalTest.TestItem> asContainer() {
-                return null;
+                return pos.equals(HELD_ITEMS_STORE_POS) ? heldItemsContainer() : null;
             }
 
             @Override
             public @Nullable ContainerTarget<?, GathererJournalTest.TestItem> asChest() {
-                return null;
+                return pos.equals(HELD_ITEMS_STORE_POS) ? heldItemsContainer() : null;
             }
         };
+    }
+
+    /** Room block that presents the entity's held items as town storage (live view). */
+    public static final Position HELD_ITEMS_STORE_POS = new Position(3, 3);
+
+    private ContainerTarget<ContainerTarget.Container<GathererJournalTest.TestItem>, GathererJournalTest.TestItem> heldItemsContainer() {
+        ContainerTarget.Container<GathererJournalTest.TestItem> container = new ContainerTarget.Container<>() {
+            @Override
+            public int size() {
+                return inventory.getItems().size();
+            }
+
+            @Override
+            public GathererJournalTest.TestItem getItem(int i) {
+                List<GathererJournalTest.TestItem> items = List.copyOf(inventory.getItems());
+                return i < items.size() ? items.get(i) : new GathererJournalTest.TestItem("");
+            }
+
+            @Override
+            public GathererJournalTest.TestItem removeItem(int index) {
+                return getItem(index);
+            }
+
+            @Override
+            public boolean isFull() {
+                return false;
+            }
+
+            @Override
+            public String toShortString() {
+                return "held-items";
+            }
+
+            @Override
+            public String toShortString(boolean includeAir) {
+                return "held-items";
+            }
+
+            @Override
+            public boolean canAcceptIfSpaceAllows(GathererJournalTest.TestItem item) {
+                return true;
+            }
+
+            @Override
+            public RankBoost getItemAcceptanceRankBoost() {
+                return RankBoost.SAME_AS_VANILLA_CHEST;
+            }
+
+            @Override
+            public boolean setItem(int index, GathererJournalTest.TestItem item) {
+                return false;
+            }
+        };
+        return new ContainerTarget<>(
+                HELD_ITEMS_STORE_POS,
+                64,
+                HELD_ITEMS_STORE_POS,
+                container,
+                () -> true,
+                x -> {},
+                x -> true,
+                1.0f
+        );
     }
 
     @Override
@@ -242,7 +312,39 @@ public class TestTickerDependencies implements
             Supplier<Position> randomWalkTarget,
             UnsafeVillagerData villagerData
     ) {
-        // No-op for tests - special rules not tested yet
+        // Bisection #2 (unseededMat defect map): production's pre-tick hook is the only place the
+        // rooms-needing-input cache gets refreshed; mirror that by serving a FRESH map each tick
+        // instead of letting the first (null-state) computed one stick (drop the cache).
+        cachedRoomsNeedingInput = recomputeRoomsNeedingInput();
+    }
+
+    private RoomsNeedingVillagerInput<Room, String, Position> recomputeRoomsNeedingInput() {
+        // Mirrors DeclarativeJobTicker.computeRoomsNeedingInput (incl. the null->fresh and
+        // terminal-no-timer guards), so the served map matches what the ticker itself computes.
+        AbstractWorkStatusStore<Position, GathererJournalTest.TestItem, Room, ?> store = workStatusHandle;
+        int maxState = getMaxState();
+        return RoomsStatusLogic.<String, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Room, TestRoomMatch>compute(
+                getJobSites(),
+                pos -> {
+                    State s = store.getJobBlockState(pos);
+                    if (s == null) {
+                        return State.fresh();
+                    }
+                    if (s.processingState() > maxState
+                            || (s.processingState() == maxState && !s.hasWorkLeft() && store.getTimeToNextState(pos) == null)) {
+                        return State.fresh();
+                    }
+                    return s;
+                },
+                this::canClaim,
+                this::isJobBlock,
+                this::item,
+                this::getQuantityForStep,
+                this::tools,
+                this::getContainedBlocks,
+                this::makeNVIRoom,
+                maxState
+        );
     }
 
     @Override
@@ -329,7 +431,9 @@ public class TestTickerDependencies implements
     @SuppressWarnings("unchecked")
     @Override
     public <X> RoomsNeedingVillagerInput<Room, X, Position> getCachedRoomsNeedingInput() {
-        return (RoomsNeedingVillagerInput<Room, X, Position>) cachedRoomsNeedingInput;
+        // Bisection #2: do NOT serve the stored field (staleness). Recompute per serve so a
+        // world change (mat seeded / block state written) is visible to supply gates immediately.
+        return (RoomsNeedingVillagerInput<Room, X, Position>) recomputeRoomsNeedingInput();
     }
 
     @Override

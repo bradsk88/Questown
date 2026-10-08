@@ -1,7 +1,35 @@
-# unseededMat equivalence test — remaining defect map (2026-10-19 session)
+# unseededMat equivalence test — defect map (2026-10-19 session)
 
-Status: **RED by design (spec-test), now mapped.** `TickerAdvancerEquivalenceTest.gatherer_notool_unseededMat_shouldStillStartAndExtract`
-fails; 61/62 siblings green. This test is a spec for the 855 raw-food soft-lock.
+Status: **GREEN — both blockers resolved; 62/62 in TickerAdvancerEquivalenceTest, jobs+town sweep green except deliberate `todo_*` markers.**
+
+## Bisection results (2026-10-21 session)
+
+**Blocker #2 (stale rni cache) — RULED OUT.** Made `TestTickerDependencies.runPreTickHook` refresh
+`cachedRoomsNeedingInput` per tick (recomputed via `RoomsStatusLogic.compute`, mirroring the
+production guards) and `getCachedRoomsNeedingInput()` recompute per serve (cache dropped). Test still
+red ⇒ not the cache. (Code confirms it was structurally a no-op: `SpecialRulesRegistry`'s appliers
+never use `roomsReplacer` — grep the `JobPhaseModifier` subclasses — and `DeclarativeJobTicker.tick()`
+recomputes rniot fresh per call anyway.) Kept the fresh-serve change as a faithful mirror of
+production's hook contract.
+
+**Blocker #1 (`containers=[]` at the "TODO" gate) — CONFIRMED + FIXED.** The gate labeled "TODO"
+is `TownHasSupplies`'s own placeholder `describe()` (`TownHasSupplies.java:42 return "TODO"; // TODO?`),
+not an unfinished node. It scans room containers via `ContainersClean.get` → `toBlock(...).asContainer()
+()/asChest()`. The stand returned `null` for everything, AND `TestRoomMatch`'s room contained only the
+job block — which `ContainersClean.get` skips for job-block positions — so `containers=[]` was
+structural, not a data accident. Fixed by exposing the leaver's held items (live
+`inventory.getItems()` view) as a room block: `TestRoomMatch.defaultRoom` now adds
+`TestTickerDependencies.HELD_ITEMS_STORE_POS (3,3)`; `toBlock` returns a read-only `ContainerTarget`
+there mirroring production leavers who arrive carrying their `initial_request` items.
+
+**Spec-test assertion rework (was measuring the wrong moment).** With blocker #1 fixed the leaver runs
+its FULL lifecycle in 6000 ticks: food consumed, loot extracted — and a completed leaver job resets the
+mat (so end-state is 0, exactly like the green `freshMat` sibling's "leaveState0"). The old single
+6000-tick `jobBlockState() > 0` assertion was therefore wrong for a completed job. Test now runs two
+phases: 200 ticks → assert state>0 (proves start with null mat state); then 5800 more → assert
+`productExtracted()` + "loot" in inventory (proves completion+extraction).
+
+## What was already fixed (in-flight working tree, uncommitted — Gate A/B, "Fix A")
 
 ## What was already fixed (in-flight working tree, uncommitted — Gate A/B, "Fix A")
 
@@ -45,12 +73,15 @@ Two candidate blockers (both state-independent — i.e. NOT the null→fresh rea
 `State.welcomeMatSeedState()` at `IntegrationTestWorld.DEFAULT_WORKSPOT_POS` instead of `null`.
 Still RED ⇒ the blocker is not seeding; it is one of the two candidates above.
 
-## Next step (one bisection, ~30 min)
+## Verification
 
-Make `TestTickerDependencies.runPreTickHook` actually refresh/serve a fresh
-`roomsNeedingInput` per tick (drop the cache, or recompute in the hook). If green → blocker #2;
-if still red → blocker #1 (the TODO container node needs the test stands to expose the leaver's
-held items as a container, or the node needs finalizing).
+- `./gradlew :test --tests 'ca.bradj.questown.jobs.declarative.TickerAdvancerEquivalenceTest'` →
+  tests=62 failures=0 (was 61/62 until the blocker-#1 stand fix + assertion rework).
+- `--tests 'ca.bradj.questown.jobs.*' --tests 'ca.bradj.questown.town.*'` → only reds are the
+deliberate `todo_*` registry-bound markers (`ServerJobsRegistryCanFitTest.todo_…`,
+`WorkStatusStoreMatSeedTest.todo_…`), per the "red is default until Forge harness" rule.
+- Held-run re-sweep of `village/self_sufficiency` still owed before declaring the 855 soft-lock closed in
+  the real world (unit spec is green; live proof pending).
 
 ## Guardrails
 
