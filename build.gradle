@@ -238,6 +238,14 @@ if (System.getProperty('questown.tp.fifo') != null) {
     tasks.matching { it.name == 'runServer' }.configureEach {
         standardInput = new java.io.FileInputStream(project.file('run/server-cmd.fifo'))
     }
+} else if (System.getProperty('questown.autotest', 'false') == 'true') {
+    // Autotest (usually held) without the console: every FIFO feed is silently
+    // dropped and e.g. a fed `/tick rate 200` never applies. Observed once: a
+    // run segment at the 20 t/s default until the rate line appeared, with no
+    // other symptom (the pace-guard does not catch it — see sweep pace-guard notes).
+    logger.warn("[questown] autotest run WITHOUT -Dquestown.tp.fifo: the " +
+            "run/server-cmd.fifo console is disabled (see build.gradle). Command " +
+            "feeds (tick rate, TP, ...) will be SILENTLY DROPPED. Add -Dquestown.tp.fifo=true to enable.")
 }
 
 if (System.getProperty('questown.autotest', 'false') == 'true') {

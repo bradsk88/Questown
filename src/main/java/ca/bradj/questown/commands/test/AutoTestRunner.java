@@ -611,10 +611,17 @@ public class AutoTestRunner {
             // self_sufficiency is a watchtower: it reports but is not a pass/fail gate,
             // so it contributes no assertions to the result.
             boolean allPassed = total > 0 && passed == total;
+            // A 0/0 run must not read as a failure: it means no assertion-bearing
+            // scenario ran (a self_sufficiency-only sweep), not that anything
+            // failed — the verdict for those runs is the scenario's own watch lines.
+            // (Exit-code semantics are unchanged: 0/0 still takes the halt(1)
+            // path below, exactly as before this banner tweak.)
+            String verdict = total == 0 ? "no assertions executed (report-only)"
+                    : allPassed ? "ALL PASS" : "FAILURES";
 
             QT.FLAG_LOGGER.info("[autotest] ========================================");
             QT.FLAG_LOGGER.info("[autotest] RESULT: {}/{} passed ({})",
-                    passed, total, allPassed ? "ALL PASS" : "FAILURES");
+                    passed, total, verdict);
             QT.FLAG_LOGGER.info("[autotest] ========================================");
 
             if ("true".equals(System.getProperty(SYSPROP_HOLD))) {
