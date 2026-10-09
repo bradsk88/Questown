@@ -213,6 +213,24 @@ work-only JSON, empty inventory), `JobIntegrationTest.cook_extract_shouldLoadCor
 (the de-stick'd data shape). Timer-wait regression tripwires: the baker/fisher
 equivalence suites (`JobIntegrationTest`, `TickerAdvancerEquivalenceTest`).
 
+### Consequence, found on re-watch (2026-10-09): `roomsAtState` NPE
+
+The admission widened the state set `JobStatuses.tryChoosingItemlessWork` walks
+(`town.getStatesWithUnfinishedItemlessWork()`, fresh-computed) and it reads each
+state from the *cached* room map via `TickTownProvider.roomsAtState`, which did
+`roomsNeedingVillagerInput.get().get(state).stream()` with no null guard. On a
+fresh-world morning (kitchen registered two seconds earlier, no state-0 room in
+the map yet) the held `self_sufficiency` run crashed the server thread
+(`run/crash-reports/crash-2026-10-09_19.45.25-server.txt`;
+`.scratch/cook-stick-rewatch/`). Guard: a state absent from the map answers an
+empty room set, not a crash. Pin-by
+`TickTownProviderTest.roomsAtState_stateAbsentFromRoomMap_yieldsEmptyCollection`
+(the builder's room map is empty, so any state hits the guard). The two
+suppliers diverge in time — fresh state set vs cached room map — so every
+admission-path change has to assume `roomsAtState` can be asked about a state
+the map does not hold. `TimeWarpWorldInteraction.roomsAtState` (the warp side)
+was already guarded.
+
 ## Equivalence tests: equivalence is not completion (2026-10-09, hollow cook tests)
 
 The `…tickerAndAdvancer_shouldProduceEquivalentResults` suites compare two simulation

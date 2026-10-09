@@ -127,9 +127,16 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
 
     @Override
     public Collection<ROOM> roomsAtState(Integer state) {
-        return roomsNeedingVillagerInput.get().get(state).stream()
-                                        .map(RoomsNeedingVillagerInput.NVIRoom::room)
-                                        .map(IRoomRecipeMatch::getRoom).toList();
+        var atState = roomsNeedingVillagerInput.get().get(state);
+        if (atState == null) {
+            // a state absent from the room map has no rooms (the work-only
+            // state-0 admission can ask about a state the map does not hold
+            // yet - fresh-world morning, 2026-10-09 held-run crash)
+            return ImmutableList.of();
+        }
+        return atState.stream()
+                      .map(RoomsNeedingVillagerInput.NVIRoom::room)
+                      .map(IRoomRecipeMatch::getRoom).toList();
     }
 
     @Override

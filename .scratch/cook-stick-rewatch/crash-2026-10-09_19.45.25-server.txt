@@ -1,0 +1,182 @@
+---- Minecraft Crash Report ----
+// Who set us up the TNT?
+
+Time: 2026-10-09 19:45:25
+Description: Ticking entity
+
+java.lang.NullPointerException: Cannot invoke "java.util.Collection.stream()" because the return value of "java.util.Map.get(Object)" is null
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.TickTownProvider.roomsAtState(TickTownProvider.java:130) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses$1.tryChoosingItemlessWork(JobStatuses.java:359) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses$1.tryChoosingItemlessWork(JobStatuses.java:350) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.LZCDs$2.resolve(LZCDs.java:87) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.LZCD.lambda$getValueWithCaching$0(LZCD.java:87) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses$3.apply(JobStatuses.java:529) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses$3.apply(JobStatuses.java:499) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.LZCD.checkConditions(LZCD.java:102) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.LZCD.resolve(LZCD.java:70) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses.usualRoutine(JobStatuses.java:85) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses.usualRoutine(JobStatuses.java:61) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses.productionRoutine(JobStatuses.java:347) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.production.ProductionStatuses.getMorningStatus(ProductionStatuses.java:38) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.production.ProductionStatuses.getNewStatusFromSignal(ProductionStatuses.java:21) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.declarative.ProductionJournal.tryUpdateStatus(ProductionJournal.java:131) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.declarative.DeclarativeJobTicker.lambda$getStateComputer$15(DeclarativeJobTicker.java:408) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobLogic.tick(JobLogic.java:126) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.declarative.DeclarativeJobTicker.tick(DeclarativeJobTicker.java:366) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.declarative.DeclarativeJobTicker.tick(DeclarativeJobTicker.java:243) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.declarative.DeclarativeJob.tick(DeclarativeJob.java:330) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.mobs.visitor.VisitorMobEntity.villagerTick(VisitorMobEntity.java:602) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.mobs.visitor.VisitorMobEntity.tick(VisitorMobEntity.java:525) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.level.ServerLevel.tickNonPassenger(ServerLevel.java:771) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.world.level.Level.guardEntityTick(Level.java:556) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.level.ServerLevel.lambda$tick$2(ServerLevel.java:417) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.world.level.entity.EntityTickList.forEach(EntityTickList.java:53) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.level.ServerLevel.tick(ServerLevel.java:397) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.MinecraftServer.tickChildren(MinecraftServer.java:1013) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.dedicated.DedicatedServer.tickChildren(DedicatedServer.java:313) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.MinecraftServer.tickServer(MinecraftServer.java:893) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java:701) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.MinecraftServer.lambda$spin$2(MinecraftServer.java:261) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at java.base/java.lang.Thread.run(Thread.java:1583) [?:?] {}
+
+
+A detailed walkthrough of the error, its code path and all known details is as follows:
+---------------------------------------------------------------------------------------
+
+-- Head --
+Thread: Server thread
+Stacktrace:
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.TickTownProvider.roomsAtState(TickTownProvider.java:130) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses$1.tryChoosingItemlessWork(JobStatuses.java:359) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses$1.tryChoosingItemlessWork(JobStatuses.java:350) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.LZCDs$2.resolve(LZCDs.java:87) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.LZCD.lambda$getValueWithCaching$0(LZCD.java:87) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses$3.apply(JobStatuses.java:529) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses$3.apply(JobStatuses.java:499) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.LZCD.checkConditions(LZCD.java:102) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.LZCD.resolve(LZCD.java:70) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses.usualRoutine(JobStatuses.java:85) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses.usualRoutine(JobStatuses.java:61) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobStatuses.productionRoutine(JobStatuses.java:347) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.production.ProductionStatuses.getMorningStatus(ProductionStatuses.java:38) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.production.ProductionStatuses.getNewStatusFromSignal(ProductionStatuses.java:21) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.declarative.ProductionJournal.tryUpdateStatus(ProductionJournal.java:131) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.declarative.DeclarativeJobTicker.lambda$getStateComputer$15(DeclarativeJobTicker.java:408) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.JobLogic.tick(JobLogic.java:126) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.declarative.DeclarativeJobTicker.tick(DeclarativeJobTicker.java:366) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.declarative.DeclarativeJobTicker.tick(DeclarativeJobTicker.java:243) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.jobs.declarative.DeclarativeJob.tick(DeclarativeJob.java:330) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.mobs.visitor.VisitorMobEntity.villagerTick(VisitorMobEntity.java:602) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/questown@0.0NONE/ca.bradj.questown.mobs.visitor.VisitorMobEntity.tick(VisitorMobEntity.java:525) ~[%23182!/:?] {re:classloading}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.level.ServerLevel.tickNonPassenger(ServerLevel.java:771) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.world.level.Level.guardEntityTick(Level.java:556) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.level.ServerLevel.lambda$tick$2(ServerLevel.java:417) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.world.level.entity.EntityTickList.forEach(EntityTickList.java:53) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading}
+-- Entity being ticked --
+Details:
+	Entity Type: questown:visitor (ca.bradj.questown.mobs.visitor.VisitorMobEntity)
+	Entity ID: 29
+	Entity Name: entity.questown.visitor
+	Entity's Exact location: 1.60, 64.00, 2.48
+	Entity's Block location: World: (1,64,2), Section: (at 1,0,2 in 0,4,0; chunk contains blocks 0,-64,0 to 15,319,15), Region: (0,0; contains chunks 0,0 to 31,31, blocks 0,-64,0 to 511,319,511)
+	Entity's Momentum: 0.00, -0.08, 0.00
+	Entity's Passengers: []
+	Entity's Vehicle: null
+Stacktrace:
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.world.level.Level.guardEntityTick(Level.java:556) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.level.ServerLevel.lambda$tick$2(ServerLevel.java:417) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.world.level.entity.EntityTickList.forEach(EntityTickList.java:53) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.level.ServerLevel.tick(ServerLevel.java:397) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.MinecraftServer.tickChildren(MinecraftServer.java:1013) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.dedicated.DedicatedServer.tickChildren(DedicatedServer.java:313) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.MinecraftServer.tickServer(MinecraftServer.java:893) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java:701) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.MinecraftServer.lambda$spin$2(MinecraftServer.java:261) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at java.base/java.lang.Thread.run(Thread.java:1583) [?:?] {}
+
+
+-- Affected level --
+Details:
+	All players: 0 total; []
+	Chunk stats: 961
+	Level dimension: minecraft:overworld
+	Level spawn location: World: (0,117,0), Section: (at 0,5,0 in 0,7,0; chunk contains blocks 0,-64,0 to 15,319,15), Region: (0,0; contains chunks 0,0 to 31,31, blocks 0,-64,0 to 511,319,511)
+	Level time: 13286 game time, 1743 day time
+	Level name: world
+	Level game mode: Game mode: survival (ID 0). Hardcore: false. Commands: false
+	Level weather: Rain time: 62403 (now: false), thunder time: 108107 (now: false)
+	Known server brands: neoforge
+	Removed feature flags: 
+	Level was modded: true
+	Level storage version: 0x04ABD - Anvil
+	Loaded entity count: 14
+Stacktrace:
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.level.ServerLevel.fillReportDetails(ServerLevel.java:1730) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.MinecraftServer.tickChildren(MinecraftServer.java:1016) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.dedicated.DedicatedServer.tickChildren(DedicatedServer.java:313) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.MinecraftServer.tickServer(MinecraftServer.java:893) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java:701) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at TRANSFORMER/minecraft@1.20.6/net.minecraft.server.MinecraftServer.lambda$spin$2(MinecraftServer.java:261) ~[neoforge-20.6.141.jar%23180!/:?] {re:classloading,pl:accesstransformer:B}
+	at java.base/java.lang.Thread.run(Thread.java:1583) [?:?] {}
+
+
+-- System Details --
+Details:
+	Minecraft Version: 1.20.6
+	Minecraft Version ID: 1.20.6
+	Operating System: Linux (amd64) version 6.18.49-1-MANJARO
+	Java Version: 21.0.9, Ubuntu
+	Java VM Version: OpenJDK 64-Bit Server VM (mixed mode, sharing), Ubuntu
+	Memory: 272624264 bytes (259 MiB) / 893386752 bytes (852 MiB) up to 8392802304 bytes (8004 MiB)
+	CPUs: 16
+	Processor Vendor: AuthenticAMD
+	Processor Name: AMD Ryzen 7 3800X 8-Core Processor
+	Identifier: AuthenticAMD Family 23 Model 113 Stepping 0
+	Microarchitecture: Zen 2
+	Frequency (GHz): -0.00
+	Number of physical packages: 1
+	Number of physical CPUs: 8
+	Number of logical CPUs: 16
+	Graphics card #0 name: unknown
+	Graphics card #0 vendor: unknown
+	Graphics card #0 VRAM (MB): 0.00
+	Graphics card #0 deviceId: unknown
+	Graphics card #0 versionInfo: unknown
+	Virtual memory max (MB): 51329.86
+	Virtual memory used (MB): 7083.19
+	Swap memory total (MB): 35325.34
+	Swap memory used (MB): 1757.71
+	JVM Flags: 0 total; 
+	Server Running: true
+	Player Count: 0 / 20; []
+	Active Data Packs: vanilla, mod_data, mod/questown,questownclient (incompatible), mod/roomrecipes (incompatible), mod/neoforge, mod/jei (incompatible)
+	Available Data Packs: bundle, trade_rebalance, update_1_21, vanilla, mod/jei (incompatible), mod/neoforge, mod/questown,questownclient (incompatible), mod/roomrecipes (incompatible), mod_data
+	Enabled Feature Flags: minecraft:vanilla
+	World Generation: Stable
+	World Seed: 8513187213030309552
+	Is Modded: Definitely; Server brand changed to 'neoforge'
+	Type: Dedicated Server (map_server.txt)
+	ModLauncher: 11.0.2+main.4612c65f
+	ModLauncher launch target: forgeserveruserdev
+	ModLauncher services: 
+		sponge-mixin-0.13.4+mixin.0.8.5.jar mixin PLUGINSERVICE 
+		loader-3.0.45.jar slf4jfixer PLUGINSERVICE 
+		loader-3.0.45.jar runtime_enum_extender PLUGINSERVICE 
+		at-modlauncher-10.0.1.jar accesstransformer PLUGINSERVICE 
+		loader-3.0.45.jar runtimedistcleaner PLUGINSERVICE 
+		modlauncher-11.0.2.jar mixin TRANSFORMATIONSERVICE 
+		modlauncher-11.0.2.jar mixin-synthetic-package TRANSFORMATIONSERVICE 
+		modlauncher-11.0.2.jar fml TRANSFORMATIONSERVICE 
+	FML Language Providers: 
+		javafml@3.0
+		lowcodefml@3.0
+		minecraft@3.0
+	Mod List: 
+		neoforge-20.6.141.jar                             |Minecraft                     |minecraft                     |1.20.6              |Manifest: NOSIGNATURE
+		main                                              |Questown                      |questown                      |0.0NONE             |Manifest: NOSIGNATURE
+		roomrecipes-1.20.6-neoforge.jar                   |RoomRecipes                   |roomrecipes                   |1.20.6-neoforge     |Manifest: NOSIGNATURE
+		neoforge-20.6.141.jar                             |NeoForge                      |neoforge                      |20.6.141            |Manifest: NOSIGNATURE
+		jei-1.20.6-neoforge-18.0.0.66.jar                 |Just Enough Items             |jei                           |18.0.0.66           |Manifest: NOSIGNATURE
+	Crash Report UUID: f9a1ca37-c793-4ef4-940c-0f06411ae05d
+	FML: 3.0.45
+	NeoForge: 20.6.141
