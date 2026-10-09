@@ -119,6 +119,17 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
 (the wrong JDK breaks Gradle's Groovy compile; a POSIX locale fails javac with
 "unmappable character for encoding US-ASCII").
 
+**World lifecycle: held-run worlds are NOT persistent.** `build.gradle`'s
+autotest block wipes `run/world` in `doFirst` for *every* `runServer` boot
+("<autotest> wiping run/world for a clean suite run</">) — each autotest
+launch is a fresh seed and a fresh quest state; "hot-swap my code onto the
+previous run's world" is not an available option (learned the hard way
+2026-10-09, run 16c: relaunched expecting run 16b's saved state and got a
+fresh single-quest world). Likewise the run logs in `/tmp/runNN-*.log` are
+volatile — `cp` them into `.scratch/<mission>/` (or wherever the record
+lives) before `/tmp` can be cleared, so later citations point at durable
+files.
+
 1. **Compile guard (after any source edit, before launching):**
    `./gradlew compileJava --rerun-tasks` — force a full recompile (do not trust
    a cached `UP-TO-DATE`; it can skip a package and the run then crashes with a
@@ -822,6 +833,20 @@ claim-path checklist — in order, all cheap greps or ≤5-line reads:
    `RoomRecipes.upgradeCandidates` extraction), and only after that reconsider the
    design (the dev's call: e.g. whether a close during a tutorial prefers the
    chain branch over the upgrade one).
+
+4. **Before the diagnosis enters a doc, a handoff, or a reply to the user: verify
+   each link of the causal chain against a second independent line of evidence.**
+   A single anchored log line + a plausible model of the whole system is a
+   hypothesis, not a diagnosis — the gannet wood-gap case (2026-10-09): from one
+   `[WHY] NO_SPACE job_blocks={}` line + the gatherer job JSON's `request=None`,
+   "no wood in reach → gatherer produces nothing → chain blocked" was written
+   into the mission record and the handoff; on the user's "help me understand
+   wood gap" the re-check showed 5 of 7 gatherers cycling `gather →
+   bop_depositing` and one *had extracted a sapling* — the model's job target
+   lived in a `loot_tables/jobs/…` table that had never been opened. Writing a
+   diagnosis down is the moment it stops being revisable: the check belongs
+   before the write, and the trigger is *any* moment you are about to present
+   the chain as a finding (including answering an understanding question about it).
 
 A negative log claim in any of these steps is governed by the AGENTS.md
 "negative claims need a verified source" rule (source + exact wording, before

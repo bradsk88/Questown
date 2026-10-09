@@ -434,3 +434,59 @@ Landed (all in `src/main/java`):
   2026-10-09 04:51; verify nothing references it, then delete);
   `docs/plans/2026-10-09-002-refactor-welcome-mat-gate-room-single-source-plan.md`;
   `docs/todo/{boat-keeper,shopkeep,warehouse}.md`.
+
+## Run 16 — builder fixes verified + the upstream blocker (2026-10-09, held runs)
+
+**Builder defects (the two that stopped the chain at the random batch) — FIXED
++ VERIFIED, commit `5420c202`:**
+
+1. **Recipe-id latch** (`completedRoomRecipes`/`builtRoomsAwaiting` keyed by
+   recipe id): refused every 2nd+ instance of a recipe, so a random batch with
+   `kitchen_stocked` ×2 (16b) / ×3 (16d) could never close. Replaced with a
+   per-recipe **count** gate `builtRoomsForRecipe(rid) < open_ACTIVE(rid)`.
+   **Verified 16d**: `kitchen_stocked` ×3 all built and completed
+   (`built room for quest ... kitchen_stocked at door -5/0,5 / 0,-5 / 5,5`),
+   batch closed, no more `skipping ... (already completed)` stall.
+2. **Single-layer interior** (`buildRoomForRecipe` placed a 3×3×1 = 9 blocks,
+   truncating the 14-block inn to match a smaller recipe): grown to **2 layers
+   (18 blocks)**, WARN (not silently truncate) when a recipe exceeds 18, true
+   placed count logged.
+
+Both live-verified in a held run (16d) with zero exceptions and the NPE fix
+(`af202d27`) holding — no `getUpgradeRecipe` NPE despite the now-active
+upgrade-quest path.
+
+**The coal → miner end-to-end beat: not observed in any run — and the
+re-verification (retro #3) shows this is a genuine self-sufficiency stall,
+not a harness bug.**
+
+- **16b** did have `coals` in the queue (`top needs: … stick=2 #minecraft:coals=1`,
+  later `swords=5 stick=5 villager_food=5 coals=3`) — but **coal was never the
+top need**, and the walk (unit-verified) would have skipped every higher need
+  as satisfied/unlockable, making **stick → crafter** the first actionable
+  beat, not coal → miner.
+- **16d**'s `top needs` never listed `coals` at all (cook in
+  downtime/dining; its fuel gate never registered — `top needs:` stays
+  `villager_food / mutton / stick`).
+- **The chain stopped re-evaluating** (last `falling through` at 07:09:37;
+  needs only populated afterwards) because the last random batch's
+  `kitchen_stocked` instances were refused by the builder's monotonic
+  build-count gate (`skipping … (3 built for 3 open)` — see the harness note
+  in `stall-factors.md`), so no close → no next batch request → no new 2.75
+  pass. **Corrections to my earlier phrasing here:** the gatherer is NOT
+  globally wood-less (5 of 7 cycle and one extracted a sapling; 2/7 are
+  parked `CANT_REACH`/`NO_SPACE`), and the gatherer's target items live in
+  `loot_tables/jobs/gatherer_…` (its job JSON `request` is `None`) — the
+  "no reachable wood in the cell" reading was a single-line
+  over-generalisation, retracted after the dev's "help me understand wood
+gap" push (retro #3, stumble 1).
+
+**Mission closed on the dev's disposition (2026-10-09):** the stall is a real
+supply-chain limit — the three factors are recorded, with evidence, code
+entry points, and the verified/non-verified boundary, in
+**`stall-factors.md`** (same directory) — no-space ×2/7 gatherers, stick
+(only actionable need; producer crafter not yet unlocked; its fixed-phase
+beats sit *behind* 2.75), sword (no job in the registry produces it; sits
+permanently top of the queue). The walk/resolver, NPE fix, and chain through
+2.75's fall-through are verified working (this section and
+`stall-factors.md` §"What IS verified").
