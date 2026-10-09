@@ -1,6 +1,5 @@
 package ca.bradj.questown.items;
 
-import ca.bradj.questown.core.init.ModItemGroup;
 import net.minecraft.world.item.Item;
 
 /**

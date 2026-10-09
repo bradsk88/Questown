@@ -5,7 +5,6 @@ import ca.bradj.questown.loader.HolderRegistry;
 import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.mc.Compat;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;

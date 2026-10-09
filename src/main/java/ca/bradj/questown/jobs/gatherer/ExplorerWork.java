@@ -21,7 +21,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
-import java.util.List;
 
 public class ExplorerWork {
     // The explorer is its OWN root ("explorer"), not a "gatherer" sub-job, so a villager

@@ -1,7 +1,6 @@
 package ca.bradj.questown.jobs.gatherer;
 
 import ca.bradj.questown.integration.jobs.AfterExtractEvent;
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import net.minecraft.core.BlockPos;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
