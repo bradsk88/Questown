@@ -321,13 +321,100 @@ The natural single choke point for any loot grant to a townie is
 which the gatherer/cook extract path and the BOP grant both funnel through —
 verify the hunter's biome_loot grant uses it before wiring there.
 
-## Working-tree state (for the committer)
+## Run 14 — the missing cell (cook-settled world + coal=0), 2026-10-21, `/tmp/suff-coal0.log`
 
-- ~~`build.gradle` — selfsuff forwarding~~ — **committed (b3953906)**.
-- `TownQuests.java` — uncommitted: 2-job starter unlock + `tryPhase2_75_topNeedUnlock`
-  (the emergent top-need batch) + the stuck-root `JOB_UNLOCK` path helpers.
-- `VillageSelfSufficiencyExecutor.java` — uncommitted: `coalSeed()` knob +
-  `COAL_SEED_DEFAULT` + the `questown.village.selfsuff.coal` read.
-- `DevLootFireCommand.java` / `DevWorkScoreCommand.java` — untracked DEV-DIAG
-  (raw_food hunt investigation, 2026-10-02); keep/remove per handoff.
-- None of the above committed this session. Re-pin before committing.
+Open finding #2's cell, finally driven: the tree now has the unmet-need rework
+committed (runs 1–13 are pre-rework readings; commit history past `a817854c`:
+cook universal starter set, gate-room-before-spawn wait, per-stage terminal
+states). Launch: `self_sufficiency hold`, `days=3`, `coal=0`, 200 t/s
+(confirmed `Set the target tick rate to 200.0 per second`).
+
+1. **The top-need batch FIRED this time** (in runs 1–13 its
+   `jobChangesComplete() >= 2` gate never passed) — twice, back-to-back at
+   ~45 s in:
+   `Top-need batch: top need minecraft:oak_wood (x4); producer candidates [] (unlocked [cook, gatherer, hunter]); chosen null`
+   → skipped by its own no-producer fallthrough. **The "coal → miner" beat
+   never engaged**: the engine's observed top non-food need was **oak_wood,
+   not coal**, and no job registers as a producer of oak_wood
+   (`producerRootsForItem` → ∅), so the batch's fixed-phases fallthrough ran.
+2. **`#minecraft:coals` never registered as an unmet need — zero `coals`
+   strings in the whole log.** Both reports' top-need lines:
+   day 1 `(none)`, day 2 `oak_wood=4 cod=2 white_wool=2 mutton=1`. The cook
+   was live (JOB_CHANGE cook COMPLETE, cooking, stock 315) and cycled
+   `cook/extract ↔ cook/fuel` — no coal-starved fuel stall ever registered,
+   even with the store chest at `+ 0 coal`.
+3. **The world was still not coal-less:** the gate-room **mat supply chest**
+   seeds its own coal (this run: `13xminecraft:coal` at -14,9 —
+   `seeded the mat supply chest (144 cooked food + sword + coal)`) — a second
+   seed path `coalSeed()` does not control. Before calling the coal-beat
+   "refuted," drive it with the mat chest's coal also at zero (or with the
+   mat chest absent) — otherwise open finding #2's cell is still not the
+   true coal-starved one.
+4. **Open finding #4 re-confirmed live, on a new label:** the batch reads
+   `needs.get(0)` and dies on labels with no producer — today on
+   `oak_wood` (a real gathered good, not a tool-fallback mislabel; the run-2
+   registration defect is indeed fixed, but its consumer still cannot skip
+   past a no-producer #1).
+5. Cadence note: at 200 t/s the scenario's realtime budget expired after
+   **2 of the 3 watch-days** (clean `BUILD SUCCESSFUL` shutdown, no crash,
+   no lock, 13/14 quests done, only `kitchen_stocked` ACTIVE). Budget scales
+   with TPS — a days=3 window at 200 t/s buys ~2 days now. Size budgets, not
+   days, from the run's realtime budget.
+
+## Leak fix — the `oak_wood` product mislabelled as a supply item (2026-10-09)
+
+Decision-1 mislabel (the `oak_wood` leak) fixed as a pure predicate + the caller guard:
+
+- `GateReason.supplyItem()` (default method, `town/needs/GateReason.java:48`): `true` **only** for a `Blocked` with a nameable missing input/tool. `NoRoom`/`NoRequest`/`Ok` → `false`. A `NoRoom` still carries `itemKey()` = the job's *product* (`initial_request`) as the tracker/producer handle, but `supplyItem()` is `false`, so it must not reach the item store or a `UNMET_ITEM` bubble.
+- Caller `TownPossibleWork.registerUnmetNeeds` (:257) now guards the econ write + villager bubble on `reason.supplyItem()` (was `key != null`). `unmetNeeds.enter(…)` still records the NoRoom row; only the item-store side effect is suppressed.
+- RED→GREEN: red = 6× `cannot find symbol: supplyItem()` (the intended red, no other breakage); green verified on a **standalone** re-run — `TEST-…GateReasonTest.xml` = `tests="13" failures="0"` (8 original + 5 new `supplyItem` cases). (The first green attempt came back empty = dropped output, see AGENTS.md build verification.)
+- **Decision-2 (batch die-on-#1) still OPEN**: `tryPhase2_75_topNeedUnlock` reads `needs.get(0)` and dies when #1 has no producer — run-14's `oak_wood` is exactly that cell.
+- **Decision-3 (producer-lookup knowledge gate — ADJUDICATED)**: producer resolution for the unlock quest is **omniscient** — static capability (`Work.initialRequest` declared product) ∩ the not-yet-unlocked pool (`chooseProducerRoot` unchanged) — *not* discovery-knowledge-gated (`allKnownGatherItemsFn`). (a) use the declared request now; (b) full-loot-table union parked.
+- **Room / job-site visibility (ADJUDICATED)**: no new UI needed — the villager `NO_JOBSITE` status ("has nowhere to work") **and** the room quest are the player-facing channel.
+
+(Date note: the adjacent Run-14 section is headed 2026-10-21; the machine clock here reads 2026-10-09 — flagged, not resolved.)
+
+## Decisions 2 + 3 — implemented (2026-10-09, walked same day)
+
+**Decision 2 (batch walk) — DECIDED with the dev ("go" = all three), implemented, green.**
+Walk semantics as ruled:
+1. walk-skip past non-actionable needs (no producer at all, or all producers already unlocked);
+2. stop at the first *actionable* need — an in-flight unlock quest for its producer is the caller's check and ends the phase (`SKIPPED`); the walk never reaches past an in-flight one to post for a lower need;
+3. item-queue-only scope — `NoRoom`/`NoRequest` are gated out of the item store at registration (`GateReason.supplyItem()`), so room-needs priority and NoRequest-skips fall out for free; room visibility stays on `NO_JOBSITE` + room quest.
+
+Landed:
+- `TownQuests.TopNeedChoice` record + `TownQuests.chooseTopNeed(needs, Function<String,Set<String>>, unlocked)` — pure, static; the walk itself.
+- `TownQuests.chooseProducerRoot` now takes `@Nullable String stuckRoot` (null = no exclusion — the batch is town-wide; the old literal `"cook"` was a copy with no referent). Stuck-path callers pass their real root unchanged.
+- `tryPhase2_75_topNeedUnlock` wiring: the old die-on-#1 `needs.get(0)` block is the walk; nobody actionable → `null` fallthrough (unchanged behaviour); actionable need with an open unlock quest → `SKIPPED`.
+- Receipts: `TownQuestsTopNeedWalkTest` `tests="6" failures="0"` (`build/test-results/test/TEST-…TopNeedWalkTest.xml`), incl. `skipsFirstNeedThatHasNoProducerAtAll` (run-14's `oak_wood` cell) and `skipsFirstNeedWhoseProducersAreAllUnlocked`.
+
+**Decision 3 (omniscient producer lookup) — DECIDED earlier, implemented, green.**
+Landed (all in `src/main/java`):
+- `ServerJobsRegistry.ProducerDeclaration` record `(JobID, @Nullable declared product Ingredient)`.
+- `ServerJobsRegistry.staticProducerRootsFor(Iterable<ProducerDeclaration>, Ingredient wanted)` — **pure core**: roots whose declared product intersects the need (the existing null-safe `matches` helper, `Ingredient.test()` tag/item).
+- `ServerJobsRegistry.staticProducerRootsForItem(@Nullable ServerLevel, Ingredient)` — **glue**: builds the declarations from `Works.regularJobs()` × `Work.initialRequest.apply(level)`. Forge-bound half (the hardcoded `Works` builders are `ItemsInit`-registry-bound and cannot load in a plain unit test) — compile + held-run coverage, the `Work.isUnlockedInitially` precedent.
+- All **three** former `producerRootsForItem` call sites swapped: batch generation, `createUnlockQuestIfAbsent`, and the **still-needed prune** in `tickUnmetUnlockQuests` (settled this session: the prune uses the same omniscient predicate — a quest posted on static capability must not be marked lost by the discovery gate's view).
+- The discovery-gated `TownQuests.producerRootsForItem` (private, `ServerJobsRegistry.getResults`) is **deleted**; the discovery gate (`allKnownGatherItemsFn` via the results function) stays on the job engine's execution path only.
+- Receipts: `StaticProducerRootsTest` `tests="7" failures="0" skipped="2"`. The 2 skips are the **tag-membership** cases, `@Disabled` with the proven reason: vanilla tag *contents* load at server data-pack load, not `Bootstrap.bootStrap()`, so tag ingredients match nothing in a plain unit test (ran them first: `[]` where `[miner]`/`[planksman]` expected; item↔item green). The tag direction (need `#minecraft:coals` vs declared `minecraft:coal`) is the production shape — settled by the held-run re-drive (tag labels already register correctly in runs 13/14, live).
+
+**Sweep (2026-10-09):** `./gradlew test --tests town.needs.* --tests town.entity.* --tests jobs.* --tests TownPossibleWork*` → 549 tests, 1 failure = `ServerJobsRegistryCanFitTest.todo_…` (the intentional `todo_…` marker — "needs Forge mod-loading harness"; known red-by-default, not a regression); `importCheck` green; suites: `GateReasonTest` 13/13 (decision-1 leak fix still green), `TownQuestsJobUnlockTest` 8/8, `WorkUnlockInitiallyTest` 4/4, `TownQuestsLootTest` 3/3.
+
+## Working-tree state (re-pinned against `git status`, 2026-10-09 @ HEAD 9bf04a1f)
+
+- **Committed** (earlier rows stale — re-verified this session):
+  `build.gradle` selfsuff forwarding (b3953906); the `TownQuests.java` top-need
+  batch (`tryPhase2_75_topNeedUnlock` @ :707, die-on-#1 `needs.get(0)` @ :726,
+  producer resolution @ :542/:561) — file clean at HEAD; `VillageSelfSufficiencyExecutor.java`
+  coal knob — clean at HEAD (last touched d9fcad5c); `DevLootFireCommand`/
+  `DevWorkScoreCommand` (under `commands/`) — tracked and clean, not untracked
+  as an older row said.
+- **Uncommitted (this lineage's code + retro docs)**:
+  - decision-1 leak fix: `src/main/java/ca/bradj/questown/town/needs/GateReason.java`, `src/main/java/ca/bradj/questown/town/TownPossibleWork.java`, `src/test/java/ca/bradj/questown/town/needs/GateReasonTest.java` (13/13);
+  - decisions 2+3: `src/main/java/ca/bradj/questown/town/entity/TownQuests.java`, `src/main/java/ca/bradj/questown/jobs/ServerJobsRegistry.java`, new `src/test/java/ca/bradj/questown/town/entity/TownQuestsTopNeedWalkTest.java` (6/6), new `src/test/java/ca/bradj/questown/jobs/StaticProducerRootsTest.java` (5 green + 2 annotated skips);
+  - retro docs: `AGENTS.md`, `.pi/skills/questown-status-why/SKILL.md`, `.pi/skills/questown-item-producers/SKILL.md`, this doc. (Pre-existing, not this lineage: `.pi/skills/questown-strangler/SKILL.md`.)
+- **What's left**: (1) commit the above (proposed: three separate commits — leak fix / decisions 2+3 / retro docs — the pre-existing untracked set below stays the committer's call); (2) re-drive `self_sufficiency` with the **mat chest's coal also zeroed** (Run 14's world was not coal-less) and assert `top needs:` shows supply items (no outputs) and that `coals` → `miner/coal` resolves via the walk + `staticProducerRootsForItem` (`miner_short.json` declares `initial_request: minecraft:coal`), posting JOB_UNLOCK + `block_room/block.questown.mineshaft`. At 200 t/s the realtime budget buys ~2 of 3 watch-days — size the budget, not the days.
+- **Untracked, pre-existing**: `Set` (42-byte junk file at the repo root — one
+  line of bash echo, `=== who builds the Function TownData- ===`, dated
+  2026-10-09 04:51; verify nothing references it, then delete);
+  `docs/plans/2026-10-09-002-refactor-welcome-mat-gate-room-single-source-plan.md`;
+  `docs/todo/{boat-keeper,shopkeep,warehouse}.md`.

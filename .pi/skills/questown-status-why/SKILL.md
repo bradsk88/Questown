@@ -82,6 +82,8 @@ A populated `spots={pos=state}` whose state isn't the leaver's ⇒ state mismatc
 
 3. **A probe/log line that also appears in the passing world is churn, not the cause.** Before treating a logged condition — or a probe you added — as the root cause of a flake, confirm it *discriminates*: present/different when the world fails, absent/normal when it passes. (bittern: `PROBE-C isJobBlock FALSE`, `PROBE:jobSites … flagMats=0`, `PROBE:cleanRooms EMPTY`, and the early `PROBE-J rni-empty … NO-SITES` all appear in the passing 807 too — red herrings. The real discriminator was the first `[PROBE:supplies] TOOK`: 807 TOOK=12 (first grab `cooked_mutton` @02:38:29), 808=18, 809=11 — but 811 and 812 are TOOK=0 for the whole run.)
 
+4. **Do not classify a `top needs:` / econ-store label by guessing from a stale bug.** A need label in the town's item store is the *output* of the gate the job passed, not a mechanism. Before asserting it as "missing room" (`NoRoom`) vs "missing tool/ingredient" (`Blocked`), read the gate: the job's `[WHY]`/`Lacking…` line, and whether the room is *already registered* in the same log (`All rooms registered (…)`). (Bitten 2026-10-09: I called `oak_wood` "no gate room" — a bug the dev had fixed that week; the rooms were registered in the log and the real blocker was a missing input. `NoRoom.itemKey()` returns the job's *product* (`initial_request`) — a tracker/producer handle, not the supply item. The item store must be keyed to the `Blocked` missing input, never the `NoRoom` product. See `GateReason.supplyItem()`.)
+
 ## Deterministic harness for the decision (no live world needed)
 
 `src/test/java/ca/bradj/questown/jobs/JobStatusesTest.java` already drives this

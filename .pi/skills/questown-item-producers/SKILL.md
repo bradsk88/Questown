@@ -75,3 +75,4 @@ the script reports as "no job PRODUCES X" is also null to the batch.
   don't conflate them with `producerRootsForItem` (which only sees job output).
 - Don't read a producer relationship from Java by grepping item ids; the
   data files are the source of truth.
+- `producerRootsForItem` (runtime) is **discovery-knowledge-gated** (`biomeDesc` -> `allKnownGatherItemsFn`) — right for a job's *execution* path, wrong as a *quest* resolver: the unlock-quest lookup is **omniscient** (adjudicated 2026-10-09) — static job capability (`initialRequest` declared product; the full loot-table union is the parked follow-up) ∩ the not-yet-unlocked pool. Do not gate quest resolution on knowledge state.
