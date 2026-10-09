@@ -1,13 +1,18 @@
 ---
 name: questown-strangler
-description: Shrinks `tools/strangler-grandfather.txt` toward zero by migrating
-  files off 1.20.6/NeoForge-only APIs to the Compat seam. Triggers when the
-  user wants to de-grandfather a path, run the strangler gate, or continue
-  the G1..G7 cluster plan in `docs/plans/strangler-1.19.2-probe-report.md`.
-  Skip for a single API-call fix unrelated to the gate.
+description: "**[SHELVED since 2026-10-09]** Shrinks `tools/strangler-grandfather.txt` toward zero by migrating
+  files off 1.20.6/NeoForge-only APIs to the Compat seam. Triggers only when
+  the user explicitly resumes the work — de-grandfather a path, run the
+  strangler gate, or continue the G1..G7 cluster plan in
+  `docs/plans/strangler-1.19.2-probe-report.md`. Skip for a single API-call fix
+  unrelated to the gate; the list is frozen until revived."
 ---
 
 # Questown strangler shrink loop
+
+> **Status: shelved (2026-10-09).** The grandfather list is frozen — no shrink
+> work starts unless the user revives it. Everything below is the state to
+> resume from, not an active task.
 
 The strangler gate is the source of truth for which APIs leak into
 non-seam files. Never decide a de-grandfather from a subset grep — run the
