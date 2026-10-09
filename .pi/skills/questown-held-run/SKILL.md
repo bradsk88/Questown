@@ -32,7 +32,14 @@ roster sits `CANT_REACH` (watch line shows every townie `*:CANT_REACH`) for
 several minutes, that is an arena-nav failure of *that* world: kill it and
 re-seed a fresh one. Do not debug navigation, do not count it as a result
 (server8, 2026-10-03: 3/3 townies blocked 10+ min; the reseeded world
-worked fine).
+worked fine). **The exception: a `CANT_REACH` storm with 4+ recent
+`[buildRoomForRecipe] built 5x5 room` lines is the suite's own placement,
+not the world.** The self-driving room builder's door spiral
+(`findClearDoorSpot`: distances 5/7/9/11/13 in the cardinals from the flag)
+builds a ring of rooms around the flag that the seed buildings close off, so
+townies can no longer reach the flag (2026-10-09 run-2: 123 `CANT_REACH` in
+5 days; run-1: 131 — pre-existing, re-seeding does NOT fix it). Read the
+`built 5x5 room` lines before classifying a CANT_REACH stall as worldgen.
 
 **The observation standard.** In this context the agent plays as a new player:
 it may use only what the game surfaces (the server log, the `inspect` tabs,
@@ -296,6 +303,12 @@ death, FIFO) are in `references/questown-dev-launch.md`.
 `observe()` (no `act()`), so the executor does not fight the agent's actions.
 
 ## Per-logger DEBUG on a held run (log-capture mode, client-free)
+
+`-Dquestown.diag` is **not** a log-level knob — it is the client-side
+port-test hook (`QtDiagClient` shot/canvas capture) and is already a
+hardcoded `systemProperty` on both run blocks (`build.gradle` configureEach).
+It does nothing to the server's log level; DEBUG lines need the log4j config
+below.
 
 To read a DEBUG-level trace that INFO hides (e.g. a recruit trail:
 `Spawned visitor …` / `Applying quests: [ … visitorUUID=… ]`), bump ONE logger
