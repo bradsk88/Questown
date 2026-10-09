@@ -81,6 +81,30 @@ command group (since 1.20.3 / snapshot `23w43a`): `query`, **`rate <float>`**
   does not (console unused there) — if you want to feed commands, add it, then
   smoke-test with ONE confirmed echo before observing (the log must show
   `Set the target tick rate to 200.0 per second`).
+- **A `-Dquestown.*` flag does not reach the server JVM unless `build.gradle`
+  forwards it (hit this 2026-10-09, twice in one session):** the `server{}`
+  block carries an explicit allowlist (`-Dquestown.autotest*`, the
+  `questown.village.selfsuff.*` knobs, `questown.log4j.config`; `tp.fifo` is
+  task-level only and is not in the fork's cmdline). A new property on the
+  gradle line lands nowhere and fails SILENTLY — same class as the
+  unapplied `/tick rate`. The oracle is the server's own cmdline:
+  `tr '\0' '\n' < /proc/<serverpid>/cmdline | grep questown.` Before adding a
+  `-Dquestown.foo` knob, add its forward entry to `build.gradle`'s server
+  block (the `questown.village.selfsuff.skipnight` + `questown.beddiag`
+  entries added 2026-10-09 are the shape).
+- **A gated dev probe that prints nothing is ambiguous — prove the gate is
+  OPEN before trusting the silence.** Check the execution context first:
+  sysprop gate → `/proc/<pid>/cmdline`; env gate → `/proc/<pid>/environ`
+  (a gradle-launched server does NOT inherit your shell's env for dev
+  gates — `ENABLE_DEV_COMMANDS` was absent on this box's held servers,
+  which killed a whole probe cycle, 2026-10-09). Gate new probes on a
+  forwarded sysprop, not an env var.
+- **Heavy flag work is throttled to `FlagTickIntervalV2` (default 10
+  world-ticks, `Config.java:397`):** the villager-handle tick (beds
+  assignment, hunger, the SLEEPLESS ledger edge) runs every Nth tick, not
+  every tick. Sample probes in handle-ticks, not world-ticks (a 2000-sample
+  probe ≈ 100 s at 200 t/s, not 10 s), and don't read "no log lines" as
+  "not running" before the interval has elapsed.
 - **A pace-guard GREEN is NOT evidence of the tick rate on self_sufficiency runs**:
   both 2026-10-21 GREENs scored a 0h00m00s **same-day** REPORT pair (pace-guard now
   refuses same-day pairs and carries the caveat in its header). And the day gap
@@ -178,6 +202,13 @@ files.
    # (present-but-blocked is still not ready):
    #   ls -la /proc/<pid>/fd | grep server-cmd.fifo
    #   (pgrep -af 'sleep 999999' lists it, but that only proves the sh is alive)
+   # AND check the (deleted) marker: after an rm+mkfifo, an old writer's fd
+   # points at the deleted inode — `ls -la /proc/<pid>/fd` shows
+   # `... -> run/server-cmd.fifo (deleted)`. That writer is dead weight: it
+   # holds nothing the new server can read, so kill it and relaunch a fresh
+   # writer (bitten 2026-10-09: a same-call kill/sleep combo left the old
+   # writer alive over a fresh fifo; the fd-NAME check alone did not reveal
+   # the delete — read the whole /proc/<pid>/fd line, not just the name).
    # call 2 — server alone: only nohup + echo + pid capture, no FIFO writer, no sleep
    rm -f /tmp/village-server.log
    JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8 nohup ./gradlew \
@@ -203,6 +234,13 @@ files.
    pgrep -af 'forgeserveruserdev' | grep 'launchTarget' | awk '{print $1}' > run/hold-server.pid
    # Cleaner match (verified 2026-10-21: it alone lists the java server, never the
    # bash launch line or gradle wrapper): pgrep -af 'BootstrapLauncher'
+   # BUT do not trust `head -1`/`tail -1` on it (bitten 2026-10-09, twice):
+   # two java processes can transiently match, and the picked pid can be a
+   # dead/transient one. A stale capture reads
+   # "/proc/<pid>/cmdline: No such file or directory" — that proves the
+   # CAPTURE is stale, NOT that the server died. Verify every captured pid:
+   # its cmdline must contain `--launchTarget forgeserveruserdev` AND it must
+   # still be alive (`kill -0 <pid>`). Re-capture live before acting on it.
    pgrep -af 'questown.autotest.hol[d]' | grep -v 'bash\|pgrep' | head -1 | awk '{print $1}' > run/hold-wrapper.pid
    pgrep -af 'sleep 999999' | grep -v pgrep | head -1 | awk '{print $1}' > run/hold-fifo.pid
    ```
@@ -317,7 +355,7 @@ fail).
 
 **Kill the pids *you* launched, never by the shared pattern.** The dev runs
 
-**A teardown call that returns empty output did not prove the kill** - it may have died mid-command (seen twice this session: `kill <pids>` + verify in one call printed nothing, and the server/writers were still alive minutes later; `bash run/capture.sh state` exposed it). Verify teardown in a *later* call with fresh evidence: `pgrep -f forgeserveruserdev` empty **and** `netstat -ltnp | grep 25565/25571` empty. `bash tools/porttest/sweep.sh` is the safe cleaner for stragglers (matches by cwd + main class; cannot match the invoking shell).
+**A teardown call that returns empty output did not prove the kill** - it may have died mid-command (seen twice this session: `kill <pids>` + verify in one call printed nothing, and the server/writers were still alive minutes later; `bash run/capture.sh state` exposed it). Verify teardown in a *later* call with fresh evidence: `pgrep -f forgeserveruserdev` empty **and** `netstat -ltnp | grep 25565/25571` empty. **On this box the port check is UNRELIABLE:** `ss -ltn | grep 25565` came back empty while a held server was provably alive (2026-10-09, verified against a running probe server) — treat an empty port as "inconclusive" and trust the `pgrep` + cmdline oracle instead. `bash tools/porttest/sweep.sh` is the safe cleaner for stragglers (matches by cwd + main class; cannot match the invoking shell).
 their *own* `runClient`/`runServer` gradle task in a *separate terminal tab*
 that you are not watching. `pkill -9 -f 'runClient'` / `'runServer'` matches
 *any* process with that string — including the dev's tab — and drops it. The

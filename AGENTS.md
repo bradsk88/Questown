@@ -104,6 +104,10 @@ log line contradicts the expected result, check the *effect* (what is in the
 world / inventory) before trusting the log line, and ask the user rather than
 keep re-reading code.
 
+## Staging
+
+- **`git add -A` is a trap on this tree: it routinely carries prior-session untracked files** — `HANDOFF-*.md` in the repo root, plan docs under `docs/plans/`, `docs/todo/*.md` — that do not belong to your commit. 2026-10-09 sleepless session: 5 foreign untracked files were staged before the status read caught them. `git status` first; stage paths explicitly.
+
 ## Build verification
 
 - Run gradle compile/test with `LANG=C.UTF-8` (the hold-mode env): a POSIX locale fails javac with "unmappable character" on unicode sources.
