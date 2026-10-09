@@ -16,7 +16,8 @@ description: Fixes a Questown bug by TDD at the unit level — extract the
 
 ## 0. Pre-flight (once)
 
-- `pgrep -af '[r]unServer|[r]unClient'` — a live dev session contests the build; ask to kill it first.
+- `pgrep -af '[r]unServer|[r]unClient'` — a live dev session contests the build; ask to kill it first. **Triage it before asking**: an idle post-finish server (tail `run/logs/latest.log` for the run's completion marker, e.g. `WATCH complete` / `autotest PASS|FAIL`) has nothing left to observe — present the kill as the recommendation with the finish timestamp; a still-observing run gets the ask/wait treatment.
+- **A diagnosis is unconfirmed until something ran.** Before declaring the mechanism found, establish a baseline (run the one existing test in the target class) and write the failing variant — the red test is the first deliverable of an investigation, not the last.
 - Read the `.scratch` issue in full; grep `CONTEXT.md`/`docs/adr/` for the subject before asserting a domain negative.
 - `jmembers <Type> [anchor]` for ANY API shape you have not compile-checked (FriendlyByteBuf members bit the 2026-10-02 session: no `readBooleanList`, no `Boolean::writeBoolean` encoder — it is `writeCollection(col, (buf, v) -> ...)` or a varint+loop).
 
@@ -34,6 +35,21 @@ Three proven shapes, in decreasing preference:
   the test classpath (`testImplementation` is `junit-jupiter` + `mockito`
   + `junit4` only), so an `org.assertj` import is a compile-red before your real
   red. (Repo convention: ~100 tests on JUnit Assertions, 0 on AssertJ.)
+- **Assert the terminal effect, traced.** Before choosing the assertion target,
+  trace the flow's terminal step to the end: `AbstractWorldInteraction.getResetFunc`
+  resets a job block to `State.fresh()` after a successful extraction, so
+  "block at maxState" is the WRONG terminal observation for a completed
+  extract cycle — assert `productExtracted` + the item in the inventory
+  instead (2026-10-09 cook_extract red test: first assertion set was
+  refuted by one extra run + a read of the reset func).
+- **Pin the data shape when a later step mutates it.** If the fix plan has a
+  later step that changes the data file your test reads (e.g. de-sticking a
+  job JSON), don't write the test against the live file: load-and-mutate the
+  JSON in the test (strip the key in-memory) + a precondition assert on the
+  shape. Otherwise the test stays red after the code fix, failing on the data
+  state instead of the gate you're settling (2026-10-09 cook/stick: the
+  de-stick was step 4; the red test had to be tool-stripped in-memory to fail
+  on the gates, not the stick).
 - Write the test file first. `LANG=C.UTF-8 timeout 600 ./gradlew :compileTestJava` must FAIL (the method/class does not exist — compile-red is the accepted red for seams).
 - Implement the seam at minimum; wire the production call site(s); rebuild `:compileJava :compileTestJava`.
 
@@ -69,7 +85,7 @@ Questown logic. Instead:
 
 1. **Issue**: set `closed: <ISO date>` in the `.scratch/…` frontmatter + a short `## Resolved` body note (what shipped, test name, anything requested-and-checked). Read the exact bytes (`sed -n`) before `edit` — a failed `edit` call is atomic (no block applies) and a misread continuation-indent is the classic miss.
 2. **COMPLEX.md**: if the fix adds a non-obvious mechanism or contract, add/extend the section in the nearest co-located doc (`gui/COMPLEX.md`, `town/entity/COMPLEX.md`, …) — mechanism + why + which test pins it. Small pure guard: Javadoc + test may suffice (earn a "nothing to add" verdict deliberately).
-3. **Commit**: stage explicit paths only. Single bash call: `T=$(./scripts/gen-commit-token) && WORKFLOW_MD_CHECKED="$T" git commit -m "…"` (token expires in 30 min; env prefix, never `echo`-wrapped). Confirm `git log --oneline -1` + `git status --short` before claiming it landed.
+3. **Commit**: stage explicit paths only. **Lint the message's claims first**: a commit message and the COMPLEX.md note carry data/flow claims ("the only work-only state-0 job", "farmer/till also failed to load") — verify each against the raw entry (open the actual JSON/line) the same standard as handoff receipt lint applies to citations. A false structural claim shipped in a commit message needed an amend on 2026-10-09 (farmer/till misread from a positional scan). Then, single bash call: `T=$(./scripts/gen-commit-token) && WORKFLOW_MD_CHECKED="$T" git commit -m "…"` (token expires in 30 min; env prefix, never `echo`-wrapped). Confirm `git log --oneline -1` + `git status --short` before claiming it landed.
 
 ## 6. What this session set (2026-10-02 work-board fixes)
 
