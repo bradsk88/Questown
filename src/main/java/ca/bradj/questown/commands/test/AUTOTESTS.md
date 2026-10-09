@@ -17,7 +17,7 @@ exercise behavior X." Per-scenario depth lives in each executor and in
 
 `-Dquestown.autotest.only=<name>` matches by **substring** against the `category/base` scenario names (verified against `AutoTestRunner.nameMatches`): `only=bop` selects both `flag/bop_boundary_63` and `flag/bop_full_64`; `only=village/growth` still works. Scenario names are registered in `TestBlueprintRegistry` (category helpers like `flagEntry("…")` → `"flag/" + name`), so list a category by grepping its helper, not a full name.
 
-The scenario-tuning knobs (`questown.village.selfsuff.days`, `-Dquestown.village.selfsuff.coal`) are read in the **forked** server JVM, and `build.gradle`'s `server` block forwards only its explicit whitelist of `-D` properties - a knob not on that whitelist is silently ignored (the selfsuff pair was added 2026-10-03 after a run that thought it was coal=0 seeded 16). Check the seed/run log line, not the command line, for what actually landed.
+The scenario-tuning knobs (`questown.village.selfsuff.days`, `questown.village.selfsuff.coal` — the store-chest coal, and `questown.village.selfsuff.mat_coal` — the mat supply chest's coal, a **second seed path** `coal` does not control; zero **both** for a truly coal-starved world) are read in the **forked** server JVM, and `build.gradle`'s `server` block forwards only its explicit whitelist of `-D` properties - a knob not on that whitelist is silently ignored (the selfsuff trio was added 2026-10-03/09 after a run that thought it was coal=0 seeded 16, and a run whose coal-starved world wasn't, because the mat chest seeded its own). Check the seed/run log line, not the command line, for what actually landed.
 
 ## Three things all called "warp"
 

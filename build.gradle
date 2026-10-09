@@ -103,6 +103,9 @@ runs {
             if (System.getProperty('questown.village.selfsuff.coal') != null) {
                 jvmArgument '-Dquestown.village.selfsuff.coal=' + System.getProperty('questown.village.selfsuff.coal')
             }
+            if (System.getProperty('questown.village.selfsuff.mat_coal') != null) {
+                jvmArgument '-Dquestown.village.selfsuff.mat_coal=' + System.getProperty('questown.village.selfsuff.mat_coal')
+            }
             // Optional: point the forked server JVM at a custom log4j2 config so a
             // held run can bump a single logger (e.g. Questown:Quests) to DEBUG while
             // everything else stays at the vanilla level.

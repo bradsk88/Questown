@@ -960,12 +960,16 @@ public final class VillageSelfSufficiencyExecutor {
             c.setItem(1, new ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, n));
             c.setItem(2, new ItemStack(net.minecraft.world.item.Items.COOKED_PORKCHOP, n));
             c.setItem(3, new ItemStack(net.minecraft.world.item.Items.WOODEN_SWORD, 1));
-            c.setItem(4, new ItemStack(net.minecraft.world.item.Items.COAL, 16));
+            int matCoal = matCoalSeed();
+            if (matCoal > 0) {
+                c.setItem(4, new ItemStack(net.minecraft.world.item.Items.COAL, matCoal));
+            }
             c.setChanged();
             flowTracker.track(level, matChestPos);
             matChestSeeded = true;
-            msg("[seed] seeded the mat supply chest (" + (3 * n) + " cooked food + sword + coal) at "
-                    + matChestPos.toShortString());
+            msg("[seed] seeded the mat supply chest (" + (3 * n) + " cooked food + sword"
+                    + (matCoal > 0 ? " + " + matCoal + " coal" : " + no coal")
+                    + ") at " + matChestPos.toShortString());
         }
     }
 
@@ -1656,6 +1660,27 @@ public final class VillageSelfSufficiencyExecutor {
             // fall through to default
         }
         return COAL_SEED_DEFAULT;
+    }
+
+    private static final int MAT_COAL_SEED_DEFAULT = 16;
+
+    /**
+     * Test-only player-input stand-in (run-14 re-drive cell): the mat supply chest's
+     * coal is a **second seed path** that {@code questown.village.selfsuff.coal}
+     * does not control — run 14's "coal-less" world still ran the cook because of it
+     * (seeded 16xminecraft:coal). Set to 0 for a truly coal-less world; logged at
+     * seed time.
+     */
+    private int matCoalSeed() {
+        try {
+            int coal = Integer.parseInt(System.getProperty("questown.village.selfsuff.mat_coal", ""));
+            if (coal >= 0 && coal <= 64) {
+                return coal;
+            }
+        } catch (NumberFormatException ignored) {
+            // fall through to default
+        }
+        return MAT_COAL_SEED_DEFAULT;
     }
 
     private void msg(String s) {
