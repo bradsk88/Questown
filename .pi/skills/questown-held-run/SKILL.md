@@ -34,12 +34,16 @@ re-seed a fresh one. Do not debug navigation, do not count it as a result
 (server8, 2026-10-03: 3/3 townies blocked 10+ min; the reseeded world
 worked fine). **The exception: a `CANT_REACH` storm with 4+ recent
 `[buildRoomForRecipe] built 5x5 room` lines is the suite's own placement,
-not the world.** The self-driving room builder's door spiral
-(`findClearDoorSpot`: distances 5/7/9/11/13 in the cardinals from the flag)
-builds a ring of rooms around the flag that the seed buildings close off, so
-townies can no longer reach the flag (2026-10-09 run-2: 123 `CANT_REACH` in
-5 days; run-1: 131 — pre-existing, re-seeding does NOT fix it). Read the
-`built 5x5 room` lines before classifying a CANT_REACH stall as worldgen.
+not the world.** (Fixed 2026-10-09, verified in run-3: the door spiral
+(`findClearDoorSpot`) used to start at distance 5, and the four cardinal 5×5
+rooms sealed the flag into a 5×5 pocket — the E/W rooms' south walls sit on
+the flag's own row, the S room's north wall at z+1, the N room's south wall
+at z−5; the seed buildings were not involved. run-2: 123 `CANT_REACH` in 5
+days; run-1: 131; re-seeding never fixed it. The spiral now starts at 7
+(7..15), which leaves a 9-cell gap on the flag's row — run-3: 0
+`CANT_REACH` over 5 days, all four rooms at the cardinals 7 out.) If the
+storm ever recurs, read the `built 5x5 room` lines and check the ring before
+classifying as worldgen.
 
 **The observation standard.** In this context the agent plays as a new player:
 it may use only what the game surfaces (the server log, the `inspect` tabs,

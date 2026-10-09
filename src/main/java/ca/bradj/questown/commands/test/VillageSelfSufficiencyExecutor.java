@@ -1588,10 +1588,18 @@ public final class VillageSelfSufficiencyExecutor {
     private BlockPos findClearDoorSpot() {
         BlockPos flagPos = flag.getBlockPos();
         int baseY = flagPos.getY();
-        // Probe in a spiral: 3, 5, 7 blocks out in 8 directions.
+        // Probe in a spiral: 7-15 blocks out in the cardinals (+SE/NW diagonals;
+        // the table's last two entries are the flag's own cell and never pass the
+        // air check). 5 is deliberately out: at 5 the four cardinal rooms seal the
+        // flag into a 5x5 pocket - the E/W rooms' south walls sit on the flag's own
+        // row (z=0 at x 3..7 / -7..-3), the S room's north wall at z=1 and the N
+        // room's south wall at z=-5, corners at (±3,-4) - so townies CANT_REACH the
+        // flag (run-1/run-2 storm: 131/123 lines). At 7 the flag's row keeps a
+        // 9-cell gap (x -4..4) and rows z=1..2 stay clear to the south; later
+        // rooms stack outward and can never re-close the gap.
         int[] dxs = {1, 0, -1, 0, 1, 0, -1, 0};
         int[] dzs = {0, 1, 0, -1, 1, 0, -1, 0};
-        for (int dist : new int[]{5, 7, 9, 11, 13}) {
+        for (int dist : new int[]{7, 9, 11, 13, 15}) {
             for (int d = 0; d < 8; d++) {
                 int x = flagPos.getX() + dxs[d] * dist;
                 int z = flagPos.getZ() + dzs[d] * dist;
