@@ -857,7 +857,7 @@ public class ResourceJobLoader {
                 int work1 = v.get("work").getAsInt();
                 work.put(i, () -> work1);
                 maxState = Math.max(maxState, i + 1);
-                valid = valid || i != 0; // ONLY work is not sufficient for state 0
+                valid = true;
             }
             if (v.has("time")) {
                 int time1 = v.get("time").getAsInt();
@@ -866,11 +866,10 @@ public class ResourceJobLoader {
                 valid = true;
             }
             if (!valid) {
-                String fmt = "Job %s is missing ingredients, tools, work, or time for state at index %d: %s";
-                if (i == 0) {
-                    fmt = "Job %s is missing ingredients, tools, or time for state at index %d: %s";
-                }
-                throw new IllegalJobDefinition(String.format(fmt, id.toNiceString(), i, v));
+                throw new IllegalJobDefinition(String.format(
+                        "Job %s is missing ingredients, tools, work, or time for state at index %d: %s",
+                        id.toNiceString(), i, v
+                ));
             }
         }
         return new WorkStates(

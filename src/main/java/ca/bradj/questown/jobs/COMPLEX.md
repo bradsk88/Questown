@@ -171,3 +171,44 @@ delegate to the moved generic one. A future dedupe should inline the generic bod
 MC specialization (callers are `MCRoom`/`BlockPos`/`WorkStatusHandle` typed) and drop the
 generic overload — the opposite preserves the least-used signature.
 `JobsCleanTest` / `JobsCleanShouldTakeItemTest` names historically refer to `SupplyItems` — the class is `declarative.SupplyItems`.
+
+## Work-only state 0 — the start-gate trio (2026-10-09, cook/stick stall)
+
+A job whose state 0 declares **only `work`** (cook/extract: `"work": 0.1`, no tools,
+no ingredients) used to be unloadable / unstartable; the stick in its JSON was a load
+workaround ("//TODO: Make jobs work without tools"). Three independent gates each
+rejected a work-only state-0 block; all three were fixed in one commit and the stick was
+removed from `data/questown/questown_jobs/cook_extract.json`:
+
+1. **Loader** (`ResourceJobLoader.workStates`): `valid = valid || i != 0` made work-only
+   state 0 throw `IllegalJobDefinition` — and with `CrashOnInvalidJobs = true` (the
+   default and the run-config value) that is a server crash at job load, so the de-stick
+   and this gate fix must ship together. cook/extract is the only work-only state-0 job
+   in the data (every other work state also declares a tool).
+2. **Room visibility** (`RoomsStatusLogic.compute` work bucket, `!requiresTools` only):
+   the per-state filter was `State::hasWorkLeft`; a fresh/finished block of a
+   work-declared state (workLeft 0 — cook's 0.1 floors to int 0) made the room
+   *invisible* (empty `rooms-needing-input` map → `NO_JOBSITE`). The bucket now admits
+   any state that declares work (`workDeclaredAt`, key presence even at floored 0)
+   while still requiring `canClaim` (lock-in: `matExcludedByCanClaim`, 2026-10-07).
+   Time-wait blocks can't match: a completed work state advances its processing state
+   before the timer starts, and time states declare no work.
+3. **Itemless-work admission** (`DeclarativeJobs.getStatesWithUnfinishedWork`, fed to
+   `TickTownProvider.getStatesWithUnfinishedItemlessWork` → the status circuit's root
+   "work without items" branch): the filter was `workLeft() > 0`; a fresh work-only
+   block never reported itself. It now also admits `workDeclaredAt(state)`.
+
+Why it matters end-to-end: with (2)+(3) the room is visible AND the state is reported,
+so `tryChoosingItemlessWork` returns `fromJobBlockState(0)` (a working status); the
+zero-work `tryWork` advances the block straight to `maxState`, and extraction fires at
+`action >= maxState` (the post-extract `getResetFunc` resets the block to fresh — so
+"block back at state 0" after a finished cycle is *correct*, not a stall). Supply-item
+status for work-only states is `NOT_REQUIRED` (`getSupplyItemStatuses`), so the
+"use items" branch can never fire for them — the itemless branch is the only entry.
+
+Pinned by: `RoomsStatusLogicTest.compute_workOnlyState0_freshBlock_yieldsWorkOnlyBucket`
+(the (2) contract, `dueToWorkOnly=true`), `CookEquivalenceTest.
+cook_extract_workOnly_state0_emptyInventory_shouldExtractProduct` (the end-to-end cycle,
+work-only JSON, empty inventory), `JobIntegrationTest.cook_extract_shouldLoadCorrectly`
+(the de-stick'd data shape). Timer-wait regression tripwires: the baker/fisher
+equivalence suites (`JobIntegrationTest`, `TickerAdvancerEquivalenceTest`).

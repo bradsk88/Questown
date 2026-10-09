@@ -341,6 +341,7 @@ public class TestTickerDependencies implements
                 this::item,
                 this::getQuantityForStep,
                 this::tools,
+                state -> definition.workRequiredAtStates().containsKey(state),
                 this::getContainedBlocks,
                 this::makeNVIRoom,
                 maxState

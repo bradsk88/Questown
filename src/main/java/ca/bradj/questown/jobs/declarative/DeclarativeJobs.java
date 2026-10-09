@@ -661,7 +661,8 @@ public class DeclarativeJobs {
     public static <POS> Collection<Integer> getStatesWithUnfinishedWork(
             Collection<? extends Supplier<Collection<POS>>> rooms,
             Function<POS, State> getJobBlockState,
-            Predicate<POS> canClaim
+            Predicate<POS> canClaim,
+            Function<Integer, Boolean> workDeclaredAt
     ) {
         HashSet<Integer> b = new HashSet<>();
         rooms.forEach(v -> {
@@ -670,7 +671,11 @@ public class DeclarativeJobs {
                     continue;
                 }
                 @Nullable State apply = getJobBlockState.apply(e);
-                if (apply != null && apply.workLeft() > 0) {
+                // A state that declares work counts as unfinished even on a fresh block
+                // (workLeft 0): a work-only state (cook_extract: 0.1 floors to int 0) would
+                // otherwise never report itself and the itemless-work branch would stall.
+                if (apply != null
+                        && (apply.workLeft() > 0 || workDeclaredAt.apply(apply.processingState()))) {
                     b.add(apply.processingState());
                     return;
                 }

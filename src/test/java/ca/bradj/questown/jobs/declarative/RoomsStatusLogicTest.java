@@ -354,4 +354,61 @@ class RoomsStatusLogicTest {
         assertFalse(fns.isEmpty(), "a fully-available receptive mat must yield a non-empty needed set (ACCEPT)");
     }
 
+    // ── Lock-in (work-only start-gate, cook/stick stall): a job whose state 0 declares ONLY
+    // work (cook_extract: work 0.1 → int 0, no tools, no ingredients) must see a FRESH block
+    // (workLeft 0) in the state-0 work bucket. Before the fix the per-state filter was
+    // State::hasWorkLeft, so a fresh zero-work block produced an empty map and the cook idled
+    // in NO_JOBSITE.
+    @Test
+    void compute_workOnlyState0_freshBlock_yieldsWorkOnlyBucket() {
+        Position furnacePos = new Position(0, 0);
+        Collection<IRoomRecipeMatch<String, String, Position, String>> jobRooms = ImmutableList.of(new IRoomRecipeMatch<String, String, Position, String>() {
+            public String getRecipeID() {
+                return "kitchen_small";
+            }
+
+            @Override
+            public ImmutableList<String> getRecipeIDs() {
+                return ImmutableList.of(getRecipeID());
+            }
+
+            @Override
+            public String getRoom() {
+                return "kitchen_small";
+            }
+
+            @Override
+            public ImmutableMap<Position, String> getContainedBlocks() {
+                return ImmutableMap.of(furnacePos, "furnace");
+            }
+        });
+
+        Map<Position, State> jobStates = ImmutableMap.of(
+                furnacePos, State.freshAtState(0) // fresh: workLeft 0
+        );
+
+        RoomsNeedingVillagerInput<String, String, Position> foundRooms = RoomsStatusLogic.compute(
+                jobRooms,
+                jobStates::get,
+                p -> true,
+                furnacePos::equals,
+                new DeclarativeJobChecks<Void, String, String, RoomRecipeMatch<String>, Position>(
+                        ImmutableMap.of(),      // no ingredients
+                        ImmutableMap.of(),       // no quantities
+                        ImmutableMap.of(),       // no tools
+                        ImmutableMap.of(0, 0),   // work-only state 0 (0, like cook_extract's floored 0.1)
+                        ImmutableMap.of(),       // no time
+                        room -> true,
+                        furnacePos::equals
+                ),
+                m -> m.getRoom().equals("kitchen_small") ? ImmutableList.of(furnacePos) : ImmutableList.of(),
+                1 // maxState: state 0 is the last state
+        );
+
+        java.util.Collection<RoomsNeedingVillagerInput.NVIRoom<String, String, Position>> rooms0 = foundRooms.get(0);
+        assertFalse(rooms0.isEmpty(),
+                "a work-only state-0 room with a fresh block must be visible in the work bucket");
+        assertTrue(rooms0.stream().allMatch(RoomsNeedingVillagerInput.NVIRoom::dueToWorkOnly),
+                "the state-0 admission must be flagged dueToWorkOnly");
+    }
 }

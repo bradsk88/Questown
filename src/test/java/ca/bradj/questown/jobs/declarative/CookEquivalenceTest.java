@@ -6,6 +6,8 @@ import ca.bradj.questown.integration.TakeFromSlotSpecialRule;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.JobDefinition;
 import ca.bradj.questown.world.TestWorldAccess;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -15,6 +17,10 @@ import net.minecraft.world.item.Items;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 class CookEquivalenceTest {
 
@@ -143,6 +149,52 @@ class CookEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+    }
+
+    /**
+     * Work-only start-gate regression (cook/stick stall): a state 0 that declares ONLY work
+     * (cook_extract's 0.1 floors to int 0, no ingredients, no tools) must still start on a
+     * fresh block and extract its product with an EMPTY inventory. Before the fix, the
+     * fresh block is invisible to the work bucket AND excluded from itemless work
+     * (workLeft()==0), so the cook idles in NO_JOBSITE.
+     */
+    @Test
+    void cook_extract_workOnly_state0_emptyInventory_shouldExtractProduct() {
+        JobDefinition definition = workOnlyCookExtract();
+        Assertions.assertTrue(definition.toolsRequiredAtStates().isEmpty(),
+                "precondition: no tools declared (work-only state 0)");
+        Assertions.assertTrue(definition.workRequiredAtStates().containsKey(0),
+                "precondition: work declared at state 0");
+
+        TestWorldAccess world = createFurnaceWorld();
+        world.withContainerSlot(WORKSPOT_BLOCKPOS, 2, new ItemStack(Items.COOKED_BEEF));
+
+        EquivalenceTestFramework.TickerSetup tickerSetup =
+                EquivalenceTestFramework.createTickerSetup(definition, world);
+        // inventory stays EMPTY - no tool, no ingredient
+
+        EquivalenceTestFramework.runTicker(tickerSetup, 100);
+        EquivalenceTestFramework.SimulationResult tickerResult =
+                EquivalenceTestFramework.captureResult(tickerSetup);
+
+        Assertions.assertTrue(tickerResult.productExtracted(),
+                "a work-only state-0 block must complete its work and extract; got " + tickerResult);
+        Assertions.assertEquals("minecraft:cooked_beef", tickerResult.inventoryItems().get(0),
+                "the extracted product must land in the empty inventory; got " + tickerResult);
+    }
+
+    /** cook_extract with the tools/note workaround stripped: pure work-only state 0. */
+    private static JobDefinition workOnlyCookExtract() {
+        try (InputStream is = CookEquivalenceTest.class.getClassLoader()
+                .getResourceAsStream(JOBS_PATH + "cook_extract.json")) {
+            JsonObject obj = new Gson().fromJson(new InputStreamReader(is, StandardCharsets.UTF_8), JsonObject.class);
+            JsonObject state0 = obj.getAsJsonArray("work_states").get(0).getAsJsonObject();
+            state0.remove("tools");
+            state0.remove("note");
+            return TestJobLoader.parseJobDefinition(obj);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to load cook_extract.json", e);
+        }
     }
 
     @Test

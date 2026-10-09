@@ -214,12 +214,14 @@ public class Jobs {
     public static Collection<Integer> getStatesWithUnfinishedWork(
             Supplier<Collection<? extends Supplier<Collection<BlockPos>>>> town,
             Function<BlockPos, State> ticksSource,
-            Predicate<BlockPos> canClaim
+            Predicate<BlockPos> canClaim,
+            Function<Integer, Boolean> workDeclaredAt
     ) {
         return DeclarativeJobs.getStatesWithUnfinishedWork(
                 town.get(),
                 ticksSource,
-                canClaim
+                canClaim,
+                workDeclaredAt
         );
     }
 

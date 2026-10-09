@@ -15,8 +15,6 @@
   "room": "questown:kitchen_small",
   "work_states": [
     {
-      "tools": "minecraft:stick",
-      "note": "//TODO: Make jobs work without tools",
       "work": 0.1
     }
   ],

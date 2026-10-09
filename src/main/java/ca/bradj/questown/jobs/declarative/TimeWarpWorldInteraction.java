@@ -636,7 +636,8 @@ public class TimeWarpWorldInteraction extends
             public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
                 Collection<Integer> statesWithUnfinishedWork = Jobs.getStatesWithUnfinishedWork(
                         () -> ImmutableList.of(() -> ImmutableList.of(
-                                roomBlock)), bp -> workStates, (bp) -> true
+                                roomBlock)), bp -> workStates, (bp) -> true,
+                        state -> checks.getWorkForStep(state) != null
                 );
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
                 statesWithUnfinishedWork.forEach(state -> {
