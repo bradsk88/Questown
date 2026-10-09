@@ -1405,13 +1405,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         // Place the recipe blocks inside the 3x3 interior footprint (dx/dz 1..3 from the
         // corner), on up to two stacked levels (floor and floor+1) — the room matcher
-        // (RecipeDetection) reads both y and y+1 of every room cell, so a 14-block recipe
-        // (e.g. inn = torch + 12 beds + sign) fits where a 9-cell single-layer floor cannot.
-        // The room matcher counts each cell, so each placed block contributes one entry to
-        // the room's block multiset.
+        // (RecipeDetection) reads both y and y+1 of every room cell. The room matcher
+        // counts each cell, so each placed block contributes one entry to the room's
+        // block multiset. Beds reserve two adjacent cells each (foot + head half), so a
+        // recipe heavy in beds (inn = light + 12 beds + sign needs 26 cells vs the 18
+        // interior cells) is only partially placeable; the surplus beds are skipped
+        // with a warning rather than placed as lone feet.
         int[][] interior = {{2, 2}, {1, 1}, {3, 3}, {1, 3}, {3, 1}, {2, 1}, {1, 2}, {3, 2}, {2, 3}};
         int levels = 2;
-        int capacity = interior.length * levels;
+        java.util.List<BlockPos> cells = new java.util.ArrayList<>();
+        for (int lvl = 0; lvl < levels; lvl++) {
+            for (int[] c : interior) {
+                cells.add(new BlockPos(cornerX + c[0], doorPos.getY() + lvl, cornerZ + c[1]));
+            }
+        }
+        java.util.Set<BlockPos> cellSet = new java.util.HashSet<>(cells);
+        int capacity = cells.size();
         if (recipeBlocks.size() > capacity) {
             QT.FLAG_LOGGER.warn(
                     "[buildRoomForRecipe] recipe needs {} blocks but the room holds {} "
@@ -1419,17 +1428,62 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                     recipeBlocks.size(), capacity, interior.length, levels
             );
         }
-        for (int i = 0; i < recipeBlocks.size() && i < capacity; i++) {
-            int[] cell = interior[i % interior.length];
-            BlockPos at = new BlockPos(
-                    cornerX + cell[0],
-                    doorPos.getY() + i / interior.length,
-                    cornerZ + cell[1]
-            );
-            level.setBlockAndUpdate(at, recipeBlocks.get(i).defaultBlockState());
+        java.util.Set<BlockPos> used = new java.util.HashSet<>();
+        int placed = 0;
+        for (net.minecraft.world.level.block.Block block : recipeBlocks) {
+            net.minecraft.world.level.block.state.BlockState st = block.defaultBlockState();
+            if (!st.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART)) {
+                for (BlockPos at : cells) {
+                    if (used.contains(at)) {
+                        continue;
+                    }
+                    level.setBlockAndUpdate(at, st);
+                    used.add(at);
+                    placed++;
+                    break;
+                }
+                continue;
+            }
+            // A bed is a two-block item: the default state is the FOOT half only, and vanilla
+            // places the HEAD at foot.relative(FACING) (BedBlock.setPlacedBy) — the same
+            // lone-half bug placeDoor's javadoc documents for doors. Find a free cell whose
+            // forward neighbour is free too and reserve both; a lone foot never passes the
+            // bed lookup (the isHead filter), so when no pair fits (e.g. an inn's 12 beds
+            // vs 18 cells) the bed is left unplaced rather than placed as a useless half.
+            int placedBefore = placed;
+            placedBed:
+            for (BlockPos at : cells) {
+                if (used.contains(at)) {
+                    continue;
+                }
+                for (net.minecraft.core.Direction facing : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                    BlockPos head = at.relative(facing);
+                    if (!cellSet.contains(head) || used.contains(head)) {
+                        continue;
+                    }
+                    net.minecraft.world.level.block.state.BlockState footState = st.setValue(
+                            net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART,
+                            net.minecraft.world.level.block.state.properties.BedPart.FOOT)
+                            .setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, facing);
+                    level.setBlockAndUpdate(at, footState);
+                    level.setBlockAndUpdate(head, footState.setValue(
+                            net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART,
+                            net.minecraft.world.level.block.state.properties.BedPart.HEAD));
+                    used.add(at);
+                    used.add(head);
+                    placed++;
+                    break placedBed;
+                }
+            }
+            if (placed == placedBefore) {
+                QT.FLAG_LOGGER.warn(
+                        "[buildRoomForRecipe] no free adjacent cell pair left for a bed of {} "
+                                + "({} of {} interior cells used); bed left unplaced",
+                        block, used.size(), cells.size()
+                );
+            }
         }
 
-        int placed = Math.min(recipeBlocks.size(), capacity);
         QT.FLAG_LOGGER.info(
                 "[buildRoomForRecipe] built 5x5 room at corner {} for door {}, placed {} of {} inside, door registered",
                 corner.toShortString(), doorPos.toShortString(), placed, recipeBlocks.size(), recipeBlocks

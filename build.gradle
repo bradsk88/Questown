@@ -109,9 +109,6 @@ runs {
             if (System.getProperty('questown.village.selfsuff.skipnight') != null) {
                 jvmArgument '-Dquestown.village.selfsuff.skipnight=' + System.getProperty('questown.village.selfsuff.skipnight')
             }
-            if (System.getProperty('questown.beddiag') != null) {
-                jvmArgument '-Dquestown.beddiag=' + System.getProperty('questown.beddiag')
-            }
             // Optional: point the forked server JVM at a custom log4j2 config so a
             // held run can bump a single logger (e.g. Questown:Quests) to DEBUG while
             // everything else stays at the vanilla level.

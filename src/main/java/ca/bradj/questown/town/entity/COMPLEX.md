@@ -474,19 +474,26 @@ flowchart TD
   `TownVillagerBedsHandle.getAllBedHeads`: the recipe-matched room blocks that
   are beds, filtered to the positions whose **live block state is the HEAD part**
   (`isHead`).
-- **Known upstream breakage (2026-10-09, held run, fix pending):**
-  `TownFlagBlockEntity.buildRoomForRecipe` places every recipe block with
-  `defaultBlockState()` — for a bed that is the FOOT part only, never the HEAD —
-  so rooms hold a lone foot block, `isHead` filters 100% of beds out,
-  `getAllBedHeads` is always empty, nobody is assigned, and **every** townie is
-  bedless (SLEEPLESS applied to all, nobody ever sleeps). Confirmed by the
-  temporary `[DEV-DIAG:beds]` probe in `getAllBedHeads` (gated on the
-  `questown.beddiag` sysprop, one line per 2000 handle-ticks): `bed blocks=2
-  beds after head filter=0`. The lookup is correct once the world holds whole
-  beds — the fix is on the placement side: place the HEAD at
-  `foot.relative(footState.getValue(FACING))` (vanilla semantics; the mirror is
-  `HospitalBedBlock.useWithoutItem`, which resolves a clicked FOOT to its HEAD
-  by exactly that offset). Plan + finding:
+- **Upstream bed-placement bug (2026-10-09, fixed & live-verified):**
+  `TownFlagBlockEntity.buildRoomForRecipe` used to place every recipe block
+  with `defaultBlockState()` — for a bed that is the FOOT part only, never the
+  HEAD — so rooms held a lone foot, `isHead` filtered 100% of beds out,
+  nobody was assigned, and **every** townie was bedless (SLEEPLESS applied to
+  all, nobody ever slept). The fix is on the placement side: any recipe block
+  whose state carries the `BED_PART` property (vanilla `BedBlock` and
+  `HospitalBedBlock` both extend `HorizontalDirectionalBlock`) now reserves
+  two adjacent interior cells — the foot placed with an explicit orientation
+  and the HEAD at `foot.relative(FACING)` in `PART=HEAD` state (vanilla
+  `BedBlock.setPlacedBy` semantics). When no free adjacent pair fits (an
+  inn's 12 beds vs 18 interior cells) the bed is skipped with a warning
+  rather than placed as a lone foot. Live-verified in a 5-day
+  `village/self_sufficiency` held run: the probe read `bed blocks=4 beds after
+  head filter=2` (was `2 … 0`), `Nightfall: 1 of 3 townies have no bed` (was
+  3 of 3), SLEEPLESS applied **only** to the bedless townie, the bedded
+  townies actually slept (SLEEPING overnight, awake and working by the next
+  morning), and the bedroom quest still closed — the recipe matcher tolerates
+  the 4 live bed blocks vs the recipe's 2 bed entries. Run log:
+  `.scratch/sleepless-debuff/runs/run2-beds-fixed.log`. Plan + finding:
   `docs/plans/2026-10-09-003-feat-sleepless-no-bed-debuff-plan.md`.
 - **The debuff does not clear on rest (v1).** It is a fixed-duration buff
   re-applied at every morning while the townie is still bedless; clearing on
