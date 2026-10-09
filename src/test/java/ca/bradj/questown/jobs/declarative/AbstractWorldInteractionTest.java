@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkPosition;
 import ca.bradj.questown.logic.IPredicateCollection;
@@ -10,13 +12,19 @@ import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.Bootstrap;
+import net.minecraft.SharedConstants;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -26,6 +34,14 @@ import static ca.bradj.questown.jobs.declarative.AbstractItemWITest.alwaysTrue;
 
 class AbstractWorldInteractionTest {
 
+    // The loot-guarantee tests build MCHeldItems from Items.AIR (registry-bound).
+    // Detect the version before any ItemStack/Items static init or the failed clinit
+    // poisons the whole JVM for the later bootstrap classes.
+    @BeforeAll
+    static void bootstrap() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+    }
 
     public static TestWorldInteraction noMemoryInventory(
             int i,
@@ -589,6 +605,80 @@ class AbstractWorldInteractionTest {
         wi.setJobBlockState(null, true, arbitrarySpot().jobBlock(), State.freshAtState(2));
         wi.tryWorking(null, arbitrarySpot());
         Assertions.assertTrue(inserted.get());
+    }
+
+    // =====================================================================
+    // Lane-shared helpers (deduped from RealtimeWorldInteraction /
+    // TimeWarpWorldInteraction into the abstract base, 2026-10-09):
+    // pin their behaviour here so the moved code stays pinned.
+    // =====================================================================
+
+    @Test
+    void withLootGuarantees_nullFlag_isIdentity() {
+        TestWorldInteraction wi = noMemoryInventory(
+                0, ImmutableMap.of(), ImmutableMap.of(), ImmutableMap.of(),
+                () -> ImmutableList.of(), () -> {}
+        );
+        // No town flag (null) means neither the chicken-arc nor the first-hunter guarantee
+        // fires, so the generator's results pass through untouched (same instance).
+        ImmutableList<MCHeldItem> base = ImmutableList.of(MCHeldItem.fromTown(MCTownItem.Air()));
+        Assertions.assertSame(base, wi.withLootGuarantees(null, base));
+    }
+
+    @Test
+    void flagBlockEntityAt_nullLevelOrPos_returnsNull() {
+        Assertions.assertNull(AbstractWorldInteraction.flagBlockEntityAt(null, new BlockPos(0, 64, 0)));
+        Assertions.assertNull(AbstractWorldInteraction.flagBlockEntityAt(null, null));
+        // The non-null-level path (level.getBlockEntity lookup) needs a live world; it is the
+        // same lookup the two lanes always used, and the guarantee outcome on a live flag is
+        // covered by the worldly-seeds / first-hunter held autotest scenarios.
+    }
+
+    @Test
+    void levelProficiencies_nullId_returnsCurrentMap() {
+        TestWorldInteraction wi = noMemoryInventory(
+                0, ImmutableMap.of(), ImmutableMap.of(), ImmutableMap.of(),
+                () -> ImmutableList.of(), () -> {}
+        );
+        Map<String, Float> cur = new LinkedHashMap<>();
+        cur.put("fishing", 0.5f);
+        Assertions.assertSame(cur, wi.levelProficiencies(cur, null, 0.001f, 0.0001f));
+    }
+
+    @Test
+    void levelProficiencies_createsWorkedId_atZeroIntervalLevelsUntouched() {
+        // interval = 0 (TestWorldInteraction) zeroes both gain and decay (durationTicks = 0),
+        // so the pin is the wiring: null-guard, id creation, and the untouched other levels.
+        // The 2-arg overload's config read (PROFICIENCY_GAIN/DECAY_PER_TICK) is registry-bound —
+        // the mod config is never loaded in JUnit — so the tests drive the 4-arg pure seam;
+        // the overload itself is a 3-line delegation to these values.
+        InventoryHandle<GathererJournalTest.TestItem> inventoryHandle = new InventoryHandle<>() {
+            @Override
+            public Collection<GathererJournalTest.TestItem> getItems() {
+                return ImmutableList.of(new GathererJournalTest.TestItem(""));
+            }
+
+            @Override
+            public void set(int ii, GathererJournalTest.TestItem shrink) {
+            }
+        };
+        TestWorldInteraction wi = new TestWorldInteraction(
+                0,
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ValidatedInventoryHandle.unvalidated(inventoryHandle),
+                testWorkStateContainer(),
+                () -> new Claim(UUID.randomUUID(), 100)
+        );
+        Map<String, Float> cur = new LinkedHashMap<>();
+        cur.put("fishing", 0.5f);
+        Map<String, Float> after = wi.levelProficiencies(cur, "farming", 0.001f, 0.0001f);
+        Assertions.assertEquals(2, after.size());
+        Assertions.assertEquals(0f, after.get("farming"));
+        Assertions.assertEquals(0.5f, after.get("fishing"));
     }
 
 }

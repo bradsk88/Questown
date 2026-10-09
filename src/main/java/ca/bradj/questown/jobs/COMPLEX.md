@@ -24,15 +24,19 @@ flowchart TD
     WP --> Apply
 
     Apply -->|"workLeft exhausted"| Done["onWorkActionCompleted"]
-    Done --> Math["Proficiency.levelUp\n+gain x D on P, -decay x D on every other held id"]
+    Done --> Math["AbstractWorldInteraction.levelProficiencies\n-> Proficiency.levelUp: +gain x D on P, -decay x D on every other held id"]
     Math --> RTW["realtime: villagerHandle.setProficiencies"]
     Math --> WPW["warp: town.withVillagerData + withProficiencies"]
 ```
 
-- Both overrides call the **same** two `RealtimeWorldInteraction` helpers —
+- Both `getWorkSpeedOf10` overrides call the **same** two base-class
+  (`AbstractWorldInteraction`) helpers —
   `proficiencyMultiplier` (`Proficiency.multiplierFor(level, MIN, MAX)`; `1×` for a null
   proficiency-id) and `applyProficiencyToWorkSpeed` (the 1–10 clamp, see below) — and that
-  sharing is what makes effective speed path-symmetric.
+  sharing is what makes effective speed path-symmetric. Both `onWorkActionCompleted`
+  lanes likewise funnel their leveling through the shared `levelProficiencies` seam: a
+  config-wiring 3-arg overload over a pure 4-arg overload that JUnit can drive
+  (the mod config is never loaded under the test LoaderApi).
 - `D` is the WI's `interval` = job JSON `cooldown_ticks` = `WorkWorldInteractions.actionDuration`.
   Leveling is therefore **per completed action, not per tick**, and warp credits **N actions**
   for free because it re-enters the same `applyWork`.

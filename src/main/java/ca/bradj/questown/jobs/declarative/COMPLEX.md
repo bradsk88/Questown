@@ -8,9 +8,12 @@ job, not a recipe. The pattern is:
    and reload.
 2. A **pure static prepend** (a class with `maybePrepend(flag, jobId, base)`) that
    prepends one item to the job's result set while the guard holds.
-3. Wiring at **both** result paths — `RealtimeWorldInteraction.resultsForVillager`
-   and `TimeWarpWorldInteraction.resultsForVillager` — so the drop arrives whether
-   or not the player is present in a warp window.
+3. A **shared guarantee chain** on the abstract base —
+   `AbstractWorldInteraction.withLootGuarantees` — wired at **both** result paths
+   (`RealtimeWorldInteraction.getResults`, which resolves the flag off the town,
+   and `TimeWarpWorldInteraction.getResults`, which looks it up at the flag pos via
+   `flagBlockEntityAt`) — so the drop arrives whether or not the player is present
+   in a warp window.
 4. A **flip** at the extraction settle point — `onLootExtracted` (realtime) /
    the warp's `processLootQuests` — when the item lands in a container.
 
@@ -29,8 +32,9 @@ documented below.
 
 ```mermaid
 flowchart TD
-    RT["RealtimeWorldInteraction.resultsForVillager"] --> Guard{"shouldPrepend(flag, jobId)?"}
-    WP["TimeWarpWorldInteraction.resultsForVillager"] --> Guard
+    RT["RealtimeWorldInteraction.getResults\n(resolveFlagFromTown)"] --> Shared
+    WP["TimeWarpWorldInteraction.getResults\n(flagBlockEntityAt at the flag pos)"] --> Shared
+    Shared["AbstractWorldInteraction.withLootGuarantees\n(both maybePrepend calls, lane-shared)"] --> Guard{"shouldPrepend(flag, jobId)?"}
     Guard -- yes --> Prepend["maybePrepend -> SetMultimap prepend\n(one item, the once-only guarantee)"]
     Guard -- no --> Base["job's normal result set"]
     Prepend --> Return["the townie extracts the item (loot / work path)"]

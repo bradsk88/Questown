@@ -32,7 +32,6 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -112,11 +111,11 @@ public class TimeWarpWorldInteraction extends
         TownState.VillagerData<MCHeldItem> villager = inputs.town().getVillager(villagerIndex);
         Collection<Effect> effects = villager.getEffectsAndClearExpired(Util.getTick(inputs.level()));
         int base = TownVillagerMoods.compute(effects) / 10;
-        float mult = RealtimeWorldInteraction.proficiencyMultiplier(
+        float mult = proficiencyMultiplier(
                 getProficiencyId(),
                 villager::getProficiencyLevel
         );
-        return RealtimeWorldInteraction.applyProficiencyToWorkSpeed(base, mult);
+        return applyProficiencyToWorkSpeed(base, mult);
     }
 
     @Override
@@ -142,14 +141,10 @@ public class TimeWarpWorldInteraction extends
             return town;
         }
         TownState.VillagerData<MCHeldItem> villager = town.getVillager(villagerIndex);
-        Map<String, Float> leveled = ca.bradj.questown.jobs.Proficiency.levelUp(
-                villager.getProficiencies(),
-                profId,
-                ca.bradj.questown.core.Config.PROFICIENCY_GAIN_PER_TICK.get().floatValue(),
-                ca.bradj.questown.core.Config.PROFICIENCY_DECAY_PER_TICK.get().floatValue(),
-                interval
+        return town.withVillagerData(
+                villagerIndex,
+                villager.withProficiencies(levelProficiencies(villager.getProficiencies(), profId))
         );
-        return town.withVillagerData(villagerIndex, villager.withProficiencies(leveled));
     }
 
     private float getTimeFactor(Inputs inputs) {
@@ -219,19 +214,16 @@ public class TimeWarpWorldInteraction extends
     }
 
     @Override
+    protected @Nullable ServerLevel getServerLevel(Inputs inputs) {
+        return inputs.level();
+    }
+
+    @Override
     protected WorkOutput<MCTownState, WorkPosition<BlockPos>> getWithSurfaceInteractionPos(
             Inputs inputs,
             WorkOutput<MCTownState, WorkPosition<BlockPos>> v
     ) {
-        return Util.workWithSurfaceInteractionPos(inputs.level(), v);
-    }
-
-    @Override
-    protected ArrayList<WorkPosition<BlockPos>> shuffle(
-            Inputs inputs,
-            Collection<WorkPosition<BlockPos>> workSpots
-    ) {
-        return new ArrayList<>(Compat.shuffle(ImmutableList.copyOf(workSpots), inputs.level));
+        return Util.workWithSurfaceInteractionPos(getServerLevel(inputs), v);
     }
 
     @Override
@@ -385,22 +377,10 @@ public class TimeWarpWorldInteraction extends
             Inputs inputs,
             Collection<MCHeldItem> mcHeldItems
     ) {
-        Iterable<MCHeldItem> base = resultGenerator.apply(inputs.level, mcHeldItems);
-        ca.bradj.questown.town.entity.TownFlagBlockEntity flag = resolveFlagAtTownPos(inputs);
-        base = ca.bradj.questown.mobs.helperchicken.ChickenArcLootGuarantee.maybePrepend(flag, base);
-        base = FirstHunterLootGuarantee.maybePrepend(flag, getJobId(), base);
-        return base;
-    }
-
-    private ca.bradj.questown.town.entity.TownFlagBlockEntity resolveFlagAtTownPos(Inputs inputs) {
-        if (inputs.level == null) {
-            return null;
-        }
-        if (inputs.level.getBlockEntity(this.townPos)
-                instanceof ca.bradj.questown.town.entity.TownFlagBlockEntity flag) {
-            return flag;
-        }
-        return null;
+        return withLootGuarantees(
+                flagBlockEntityAt(inputs.level(), townPos),
+                resultGenerator.apply(inputs.level(), mcHeldItems)
+        );
     }
 
     @Override
@@ -731,14 +711,6 @@ public class TimeWarpWorldInteraction extends
                 tool,
                 MCHeldItem::fromTown
         );
-    }
-
-    @Override
-    protected void iterate(
-            Iterable<MCHeldItem> newItemsSource,
-            Function<MCHeldItem, MCHeldItem> push
-    ) {
-        Util.iterate(newItemsSource, push::apply);
     }
 
     /**

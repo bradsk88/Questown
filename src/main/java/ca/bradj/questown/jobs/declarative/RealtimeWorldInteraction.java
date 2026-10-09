@@ -22,7 +22,6 @@ import ca.bradj.questown.world.MinecraftWorldAccess;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -31,12 +30,10 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
@@ -94,20 +91,6 @@ public class RealtimeWorldInteraction extends
         this.townFlagPos = townFlagPos;
     }
 
-    private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
-    ) {
-        ImmutableMap.Builder<Integer, Function<MCTownItem, Boolean>> b = ImmutableMap.builder();
-        toolsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.toQTItemStack())));
-        return b.build();
-    }
-
-    private static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> stripMC(ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates) {
-        ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
-        ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get().toQTItemStack())));
-        return b.build();
-    }
-
     @Override
     protected int getWorkSpeedOf10(MCExtra mcExtra) {
         java.util.UUID uuid = mcExtra.entity().getUUID();
@@ -119,42 +102,9 @@ public class RealtimeWorldInteraction extends
         return applyProficiencyToWorkSpeed(base, mult);
     }
 
-    /**
-     * Scale an of-10 work speed by a proficiency multiplier, keeping the result inside the 1–10
-     * band {@link ca.bradj.questown.town.workstatus.State#decrWork} accepts. Without the ceiling a
-     * townie who is both well-fed (base 10) and better than break-even at their job (multiplier
-     * above 1) computes a speed of 11+ and throws, taking down the whole work loop — the warp
-     * loop's exception handler turns that into a silently lost visit.
-     */
-    static int applyProficiencyToWorkSpeed(
-            int baseOf10,
-            float multiplier
-    ) {
-        return Math.max(1, Math.min(10, Math.round(baseOf10 * multiplier)));
-    }
-
     @Override
     protected @Nullable String getProficiencyId() {
         return ca.bradj.questown.jobs.ServerJobsRegistry.getProficiencyId(getJobId());
-    }
-
-    /**
-     * The work-speed multiplier for the current job's proficiency-id (1× if the job declares none).
-     * Both paths fold this into their {@code of-10} speed at {@code getWorkSpeedOf10} so effective
-     * production rate stays warp/realtime-symmetric (ADR-0010).
-     */
-    static float proficiencyMultiplier(
-            @Nullable String proficiencyId,
-            Function<String, Float> levelForId
-    ) {
-        if (proficiencyId == null) {
-            return 1f;
-        }
-        return ca.bradj.questown.jobs.Proficiency.multiplierFor(
-                levelForId.apply(proficiencyId),
-                ca.bradj.questown.core.Config.PROFICIENCY_MIN_MULTIPLIER.get().floatValue(),
-                ca.bradj.questown.core.Config.PROFICIENCY_MAX_MULTIPLIER.get().floatValue()
-        );
     }
 
     @Override
@@ -176,14 +126,7 @@ public class RealtimeWorldInteraction extends
         }
         java.util.UUID uuid = mcExtra.entity().getUUID();
         var handle = mcExtra.town().getVillagerHandle();
-        Map<String, Float> leveled = ca.bradj.questown.jobs.Proficiency.levelUp(
-                handle.getProficiencies(uuid),
-                profId,
-                ca.bradj.questown.core.Config.PROFICIENCY_GAIN_PER_TICK.get().floatValue(),
-                ca.bradj.questown.core.Config.PROFICIENCY_DECAY_PER_TICK.get().floatValue(),
-                interval
-        );
-        handle.setProficiencies(uuid, leveled);
+        handle.setProficiencies(uuid, levelProficiencies(handle.getProficiencies(uuid), profId));
         return town;
     }
 
@@ -229,11 +172,16 @@ public class RealtimeWorldInteraction extends
     }
 
     @Override
-    protected ArrayList<WorkPosition<BlockPos>> shuffle(
+    protected @Nullable ServerLevel getServerLevel(MCExtra extra) {
+        return extra.town().getServerLevel();
+    }
+
+    @Override
+    protected WorkOutput<Boolean, WorkPosition<BlockPos>> getWithSurfaceInteractionPos(
             MCExtra mcExtra,
-            Collection<WorkPosition<BlockPos>> workSpots
+            WorkOutput<Boolean, WorkPosition<BlockPos>> v
     ) {
-        return new ArrayList<>(Compat.shuffle(ImmutableList.copyOf(workSpots), mcExtra.town().getServerLevel()));
+        return Util.workWithSurfaceInteractionPos(getServerLevel(mcExtra), v);
     }
 
     @Override
@@ -270,26 +218,20 @@ public class RealtimeWorldInteraction extends
             MCExtra inputs,
             Collection<MCHeldItem> mcHeldItems
     ) {
-        Iterable<MCHeldItem> base = resultGenerator.apply(inputs.town().getServerLevel(), mcHeldItems);
-        ca.bradj.questown.town.entity.TownFlagBlockEntity flag = resolveFlagFromTown(inputs);
-        base = ca.bradj.questown.mobs.helperchicken.ChickenArcLootGuarantee.maybePrepend(flag, base);
-        base = FirstHunterLootGuarantee.maybePrepend(flag, getJobId(), base);
-        return base;
+        return withLootGuarantees(
+                resolveFlagFromTown(inputs),
+                resultGenerator.apply(inputs.town().getServerLevel(), mcHeldItems)
+        );
     }
 
     private static ca.bradj.questown.town.entity.TownFlagBlockEntity resolveFlagFromTown(MCExtra inputs) {
         if (inputs.town() instanceof ca.bradj.questown.town.entity.TownFlagBlockEntity flag) {
             return flag;
         }
-        net.minecraft.server.level.ServerLevel level = inputs.town().getServerLevel();
-        if (level == null) {
-            return null;
-        }
-        net.minecraft.core.BlockPos flagPos = inputs.town().getTownFlagBasePos();
-        if (level.getBlockEntity(flagPos) instanceof ca.bradj.questown.town.entity.TownFlagBlockEntity flag) {
-            return flag;
-        }
-        return null;
+        return flagBlockEntityAt(
+                inputs.town().getServerLevel(),
+                inputs.town().getTownFlagBasePos()
+        );
     }
 
     @Override
@@ -554,22 +496,6 @@ public class RealtimeWorldInteraction extends
             return position.workPos().jobBlock().above();
         }
         return position.workPos().entityFeetPos();
-    }
-
-    @Override
-    protected WorkOutput<Boolean, WorkPosition<BlockPos>> getWithSurfaceInteractionPos(
-            MCExtra mcExtra,
-            WorkOutput<Boolean, WorkPosition<BlockPos>> v
-    ) {
-        return Util.workWithSurfaceInteractionPos(mcExtra.town().getServerLevel(), v);
-    }
-
-    @Override
-    protected void iterate(
-            Iterable<MCHeldItem> newItemsSource,
-            Function<MCHeldItem, MCHeldItem> push
-    ) {
-        Util.iterate(newItemsSource, push::apply);
     }
 
     @Override
