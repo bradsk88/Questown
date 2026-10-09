@@ -249,10 +249,13 @@ public class TownPossibleWork {
               .map(v -> (VisitorMobEntity) v)
               .filter(v -> root.equals(v.getJobId().rootId()))
               .forEach(villager -> {
-                  String key = reason.itemKey();
                   // First enter of this (townie, key) only: one econ record and one bubble,
                   // not one per recompute pass (the run-2 swords=61 failure mode).
-                  if (unmetNeeds.enter(tick, root, villager.getUUID(), key, reason) && key != null) {
+                  // Only a supply-item need (Blocked on a missing input/tool) writes the
+                  // item store; a NoRoom's product is the tracker's producer handle, not a
+                  // supply — routing it here is the oak_wood leak the item store mis-sourced.
+                  if (unmetNeeds.enter(tick, root, villager.getUUID(), reason.itemKey(), reason) && reason.supplyItem()) {
+                      String key = reason.itemKey();
                       villager.setNeed(TownieNeed.UNMET_ITEM);
                       villager.setUnmetItem(key);
                       econ.registerUnmetNeed(tick, villager.getUUID(), key);

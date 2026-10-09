@@ -92,4 +92,44 @@ class GateReasonTest {
         assertFalse(r.actionable());
         assertNull(r.itemKey());
     }
+
+    // A supply-item need is one the town writes to its ITEM store (and shows as
+    // a UNMET_ITEM bubble). NoRoom is a job-site gap (room store / work-seeker status,
+    // not the item store) and NoRequest is a board problem; only a Blocked on a
+    // missing ingredient/tool names a supply item. itemKey() may still carry the
+    // job's product (the tracker's producer handle) without it being a supply need.
+    @Test
+    void noRoomIsNotASupplyItem_evenThoughItCarriesTheProductKey() {
+        GateReason r = GateReason.classify(false, "block.questown.mineshaft", -1, NONE, NONE, true, "coal");
+        assertTrue(r instanceof GateReason.NoRoom);
+        assertEquals("coal", r.itemKey());
+        assertFalse(r.supplyItem());
+    }
+
+    @Test
+    void blockedOnAMissingIngredientIsASupplyItem() {
+        GateReason r = GateReason.classify(true, "room", 2, List.of("#fuel", "#charcoal"), NONE, true, "coal");
+        assertTrue(r.supplyItem());
+        assertEquals("#fuel", r.itemKey());
+    }
+
+    @Test
+    void blockedOnAMissingToolIsASupplyItem() {
+        GateReason r = GateReason.classify(true, "room", 0, NONE, List.of("#questown:swords"), false, "meat");
+        assertTrue(r.supplyItem());
+        assertEquals("#questown:swords", r.itemKey());
+    }
+
+    @Test
+    void blockedWithNoNameableInputIsNotASupplyItem() {
+        GateReason r = GateReason.classify(true, "room", 1, NONE, NONE, true, "x");
+        assertTrue(r instanceof GateReason.Blocked);
+        assertFalse(r.supplyItem());
+    }
+
+    @Test
+    void noRequestAndOkAreNotSupplyItems() {
+        assertFalse(GateReason.classify(true, "room", -1, NONE, NONE, false, "bread").supplyItem());
+        assertFalse(GateReason.classify(true, "room", -1, NONE, NONE, true, "bread").supplyItem());
+    }
 }

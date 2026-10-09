@@ -365,6 +365,15 @@ When a root's best job cannot run, the town records *why* as a type
   so it is registered (diagnostic) but never actionable.
 - `Ok` — nothing missing.
 
+Whether a reason reaches the **econ item store** is a separate gate from
+registration: `GateReason.supplyItem()` is true only for a `Blocked` with a
+nameable missing ingredient/tool, and only those write the item store and the
+villager's `UNMET_ITEM` bubble. `NO_ROOM` still carries an `itemKey()` — the
+job's *product* (`initial_request`) — as the tracker's producer handle, but
+it must not arrive at the store as a supply (the run-14 `oak_wood` mislabel:
+the town's top need read "wood" because a gatherer's product leaked in by
+this path). `NO_REQUEST`/`Ok` name no item at all.
+
 The decision — which class wins, which key it names — is pure
 (`GateReason.classify`), and the bookkeeping behind it is a small state machine
 (`UnmetNeedTracker`): enter/exit is idempotent per **(townie, item key)**,
@@ -380,8 +389,9 @@ econ queue on every recompute pass, so a single idle hunter produced
 need is bound to the root's **best-scoring** job (deterministic given the world
 state), registered exactly once per (townie, key), and bounded by the roster —
 the run-2 failure mode cannot recur by construction. The townie bubble and the
-econ queue both receive the record on first-enter only; `clearUnmetItemNeeds`
-clears the tracker for the root the moment work exists again.
+econ queue both receive the record on first-enter only, **and only when it is a
+supply-item need** (`supplyItem()`); `clearUnmetItemNeeds` clears the tracker
+for the root the moment work exists again.
 
 The pure classifier only receives labels and booleans: the town side supplies
 them from the registry-bound job data and container scans (`evaluateJob` /

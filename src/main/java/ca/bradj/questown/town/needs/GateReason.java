@@ -36,6 +36,22 @@ public sealed interface GateReason permits
      */
     @Nullable String itemKey();
 
+    /**
+     * Whether this is a *supply-item* need — one the town writes to its ITEM store
+     * and surfaces as a {@code UNMET_ITEM} bubble. Only a {@link Blocked} on a
+     * missing ingredient or tool names a supply item. A {@link NoRoom} is a job-site
+     * gap (routed to the room store and the work-seeker status, not the item store);
+     * a {@link NoRequest} is a board problem. Note: {@link #itemKey()} may still
+     * carry the job's product (the tracker's producer handle) while {@code supplyItem()}
+     * is false — that is the NoRoom case the item store must not treat as a supply need.
+     */
+    default boolean supplyItem() {
+        if (this instanceof Blocked b) {
+            return b.itemKey() != null;
+        }
+        return false;
+    }
+
     /** Classify a job's gate state. A missing state has index {@code -1}. */
     static GateReason classify(
             boolean anyStateHasRoom,
