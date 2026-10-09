@@ -109,7 +109,12 @@ command group (since 1.20.3 / snapshot `23w43a`): `query`, **`rate <float>`**
   (a gradle-launched server does NOT inherit your shell's env for dev
   gates — `ENABLE_DEV_COMMANDS` was absent on this box's held servers,
   which killed a whole probe cycle, 2026-10-09). Gate new probes on a
-  forwarded sysprop, not an env var. **Before designing a new probe, grep
+  forwarded sysprop, not an env var. **An existing env-gated probe can be
+  opened the same way**: add `|| System.getProperty("questown.devdiag") != null`
+  to its gate check plus a TEMP-marked forward entry in `build.gradle`'s
+  server block (the shape used 2026-10-10 to open `DEV-DIAG:kitchen` /
+  `DEV-DIAG:backfill` for the kitchen_stocked wall); revert both when the
+  probe's work is done. **Before designing a new probe, grep
   the tree for existing ones (`grep -rn 'DEV-DIAG\|PROBE:' src/main/java`)**:
   the tree carries past probes, and one may already dump exactly the
   breakdown you need — e.g. `DEV-DIAG:kitchen` in
