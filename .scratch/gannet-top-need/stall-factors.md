@@ -39,9 +39,10 @@ top needs: #questown:swords=5  minecraft:stick=5  #questown:villager_food=5  #mi
 
 - 16d roster = hunter, cook, **7 gatherers** (roster=9). Two of them are
   *permanently* parked: `ae02705c` and `e186bbd9` in
-  `gatherer/gather:CANT_REACH` (every `watch day` line, 07:0x–08:1x);
-  `[WHY] job=gatherer:… → NO_SPACE` dumps show `job_blocks={}` /
-  "no spots found" across all WorkStates for those instances.
+  `gatherer/gather:CANT_REACH` (every `watch day` line, 07:0x–08:1x); other
+  gatherer instances in the log also show `[WHY] job=gatherer:… → NO_SPACE`
+  dumps with `job_blocks={}` / "no spots found" across all WorkStates (see
+  the disambiguation note below — those are *not* necessarily the parked two).
   The other 5 cycle `seeking_work → gather → bop_depositing` normally and
   **are** extracting (`[LOOTTRACE] extracted '1 minecraft:birch_sapling'`
   at 07:07:19 — note: that extract then had "no open LOOT quests to give it
@@ -50,12 +51,38 @@ top needs: #questown:swords=5  minecraft:stick=5  #questown:villager_food=5  #mi
   `none`. So: the world has wood; the gatherer class works; a *subset*
   (2/7) can't find workable blocks. "No wood in the world" (my earlier
   phrasing) was wrong and is retracted here.
-- Entry points: the `WHY` dump's
-  "town has workable blocks for ANY WorkState{…no spots found…}" gate
-  (`JobStatuses`/`RoomsWithWorkableStatefulBlocks`, per the
-  `questown-status-why` skill); what a *working* gatherer instance's spots
-  set looks like vs the parked ones' — the delta is the missing workable
-  site. Roster size (6 gatherers for one town?) is also a content question.
+- **`CANT_REACH` is a designed player-facing stall, not a defect.** It is a
+  `TownieNeed` (`TownieNeed` enum: `CANT_REACH` / `UNMET_ITEM` / `NONE`),
+  set by `MoveToTownTargetSink` only when a townie that should be moving
+  gives up — no viable path, or the unstick nudges (~200/500 stuck ticks)
+  failed; it then shows a **barrier bubble** (*"asking the player to open a
+  way through"*) and clears when movement succeeds again. Unlike
+  `UNMET_ITEM` (which feeds the `JOB_UNLOCK` posting in
+  `TownQuests.tickUnmetUnlockQuests`), `CANT_REACH` **does not feed the
+  quest/econ system at all** — no quest, no need registration, no
+  self-resolution through the chain. The parked two are *waiting on a human*
+  by design. So the factor's follow-up questions are:
+  1. **What were their walk targets when they gave up?** (The
+     `CANT_REACH_WALK_TARGET_SINCE` brain memory / `WALK_TARGET` at give-up
+     was erased on give-up — recover from a pre-give-up `WHY` dump or
+     re-run with the target logged.) Path? Terrain? The flag's own build
+     footprint (a room shell placed on their route)?
+  2. **Should a gatherer's target even be a tree?** The 5 working
+     gatherers do reach trees in this same cell, so distance/reach isn't the
+     universal blocker — the delta between the parked two and the working
+     five is the real question.
+- Entry points: the `WHY` dump's "town has workable blocks for ANY
+  WorkState{…no spots found…}" gate (`JobStatuses` /
+  `RoomsWithWorkableStatefulBlocks`, per the `questown-status-why` skill) —
+  what a *working* gatherer instance's `spots` set looks like vs the parked
+  ones'; the delta is the missing workable site. Roster size (7 gatherers
+  for one town?) is also a content question.
+
+  (Careful with the two dumps: the `gatherer:downtime → NO_SPACE`
+  `job_blocks={}` lines that appear in the 16d log are from *other*
+  instances in `downtime`/`seeking_work`; the parked two are `gather:CANT_REACH`
+  — a different status + a different mechanism. Keep the two distinct when
+  citing.)
 
 ## Factor 2 — Stick (cook's extraction input, no producer chain)
 
