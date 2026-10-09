@@ -255,19 +255,18 @@ public class QuestBatches<
             @Nullable ROOM room,
             KEY recipeId
     ) {
-        for (BATCH b : batches) {
-            if (room != null && b.getAll().stream()
-                 .filter(Quest::isComplete)
-                 .filter(v -> recipeId.equals(v.getWantedId()))
-                 .anyMatch(v -> room.equals(v.completedOn))
-            ) {
-                QT.QUESTS_LOGGER.debug(
-                        "Quest was already marked complete: {} for door {}",
-                        recipeId,
-                        room.doorPos
-                );
-                return;
-            }
+        // The startup double-fill guard (96a74471) used to return whenever ANY quest for this
+        // recipe was already completed on this room. Room objects keep their identity across
+        // rescans, so a re-issued quest for the same recipe (visitor-batch re-issue after the
+        // batch completion reward) was bounced by the original completion forever and the
+        // chain stalled (kitchen_stocked wall, 2026-10-10). Skip only when nothing open remains
+        // for this recipe - that is the state the guard was actually protecting; when an open
+        // quest exists, complete it.
+        boolean openForRecipe = batches.stream()
+                .anyMatch(b -> b.getAll().stream()
+                        .anyMatch(v -> !v.isComplete() && recipeId.equals(v.getWantedId())));
+        if (!openForRecipe) {
+            return;
         }
         for (BATCH b : batches) {
             if (b.markRecipeAsComplete(room, recipeId)) {

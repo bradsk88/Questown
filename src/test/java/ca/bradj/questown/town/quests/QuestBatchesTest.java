@@ -143,7 +143,13 @@ class QuestBatchesTest {
     }
 
     @Test
-    void markRecipeAsComplete_ShouldHaveNoEffect_IfRoomAndRecipeAreAlreadyPresent() {
+    void markRecipeAsComplete_completesOpenQuest_evenWhenSameRoomAndRecipeWereCompletedBefore() {
+        // Regression (2026-10-10, kitchen_stocked wall): the 96a74471 startup
+        // double-fill guard returned whenever ANY quest for this recipe had been
+        // completed on this room. Room objects keep their identity across rescans,
+        // so a re-issued quest for the same recipe (visitor-batch re-issue after the
+        // batch-completion reward) was bounced by the original completion forever
+        // and the chain stalled. The open quest must complete.
         QuestBatches<
                 Integer, Room, TestQuest, Reward,
                 QuestBatch<Integer, Room, TestQuest, Reward>
@@ -168,18 +174,46 @@ class QuestBatchesTest {
 
         ImmutableList<TestQuest> quests = qbs.getAll();
         Assertions.assertEquals(2, quests.size());
-        Assertions.assertEquals(1, quests.stream()
+        Assertions.assertEquals(2, quests.stream()
                 .filter(Quest::isComplete)
                 .filter(v -> v.getWantedId().equals(1))
                 .filter(v -> sameRoom.equals(v.completedOn))
                 .count()
         );
-        Assertions.assertEquals(1, quests.stream()
+        Assertions.assertEquals(0, quests.stream()
                 .filter(Predicates.not(Quest::isComplete))
                 .filter(v -> v.getWantedId().equals(1))
-                .filter(v -> v.completedOn == null)
                 .count()
         );
+    }
+
+    @Test
+    void markRecipeAsComplete_hasNoEffect_whenNoOpenQuestRemainsForRecipe() {
+        // The 96a74471 intent that survives: re-announcing a room recipe (e.g. on
+        // server start) must not re-mark or re-reward when every quest for that
+        // recipe is already complete.
+        QuestBatches<
+                Integer, Room, TestQuest, Reward,
+                QuestBatch<Integer, Room, TestQuest, Reward>
+                > qbs = new QuestBatches<>((batchUUID, i, r) -> new QuestBatch<>(factory, r, batchUUID));
+
+        Room sameRoom = new Room(
+                new Position(1, 2),
+                InclusiveSpace.from(3, 4).to(5, 6)
+        );
+
+        TestQuestBatch completeBatch = new TestQuestBatch();
+        completeBatch.addNewQuest(null, 1);
+        completeBatch.markRecipeAsComplete(sameRoom, 1);
+
+        qbs.add(completeBatch);
+
+        qbs.markRecipeAsComplete(sameRoom, 1);
+
+        ImmutableList<TestQuest> quests = qbs.getAll();
+        Assertions.assertEquals(1, quests.size());
+        Assertions.assertTrue(quests.get(0).isComplete());
+        Assertions.assertSame(sameRoom, quests.get(0).completedOn);
     }
 
     @Test

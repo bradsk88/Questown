@@ -33,6 +33,34 @@ flowchart TD
   quest in the batch done after the first one completes. The recipe id is the
   per-quest identity; the batch UUID is the grouping.
 
+## Startup double-fill guard (`QuestBatches.markRecipeAsComplete`)
+
+The aggregate's `markRecipeAsComplete(room, recipeId)` (used by backfill, the
+top-match completion, and the campfire/town-gate specials) returns early **only
+when no batch holds an open quest for this recipe**. That is the surviving
+intent of the 2023 startup double-fill guard (commit `96a74471`, "Make sure
+room recipes don't get double-filled on server start"): re-announcing a room
+recipe with nothing open must not re-mark or re-reward. The guard's old form
+returned when *any* quest for this recipe had been completed on this room —
+which, because room objects keep their identity across rescans, bounced
+re-issued quests against their own earlier completions and stalled the
+`kitchen_stocked` chain (2026-10-10).
+
+```mermaid
+flowchart TD
+    Call["markRecipeAsComplete(room, recipeId)\ncallers: backfill, top-match, specials"] --> Open{"any batch holds an\nopen quest with wantedId == recipeId?"}
+    Open -- no --> Noop["return (no re-mark, no re-reward)"]
+    Open -- yes --> Mark["complete first open match per batch + rewards"]
+```
+
+- `room` may be `null` (backfill/specials) — the open-quest check is room-agnostic.
+- Per-batch matching is still keyed on `getWantedId()` only; the guard adds
+  no room equality of any kind.
+- Regression tests: `QuestBatchesTest.markRecipeAsComplete_completesOpenQuest_evenWhenSameRoomAndRecipeWereCompletedBefore`
+  (open quest completes despite a prior completion on the same room) and
+  `markRecipeAsComplete_hasNoEffect_whenNoOpenQuestRemainsForRecipe`
+  (the 2023 intent: no re-mark when all complete).
+
 ## Onboarding flag: stored but not wired (as of 2026-09-07)
 
 Randomly generated quests keep exact matching ("the villagers want this
