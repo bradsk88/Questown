@@ -796,6 +796,37 @@ Do **not** report "done" when the arc ends.
 - Only stop (or check in as a true dead end) after the **town** shows no
   progress across several observe cycles, not after the **arc** ends.
 
+## Why didn't X happen? (events that never fired — diagnose the claim path, not the concept)
+
+The held-run "batch never posted / quest never opened / need never registered" class of
+finding. Before proposing *any* mechanism change (a harness nudge, a new gate, a
+"the design must re-request") or explaining a concept to fill the gap, run the
+claim-path checklist — in order, all cheap greps or ≤5-line reads:
+
+1. **What claims the event?** Find the exact code path that would fire it. For a
+   batch/quest: the tutorial chain is *self-chaining by design* — each batch's
+   close reward carries the next-batch link (`TownFlagTutorialAdapter.makeReward`;
+   instant via `MCInstantReward`, or the next afternoon via `MCDelayedReward →
+   addMorningReward → morningTick`). It does *not* need a player click.
+2. **Did the claim path fail, and is the failure logged?** Grep the run log for the
+   claim path's failure shapes: `Encountered an unexpected exception` + stack,
+   `not ready when requested`, `InMorning`/`morning`, `upgrade`, `Skipping`.
+   *The run-15 incident: the onboarding chain did not continue because the batch's
+   close reward (an `AddRandomUpgradeQuest` branch) NPE'd inside
+   `getUpgradeRecipe` — a null recipe-object `id` (the 1.20.2 holder-id migration put
+   the id on the `RecipeHolder`, not the `RoomRecipe`). Grep `morning`/`chain` for
+   "why no next batch" and you'll find nothing; grep `exception`/`upgrade` and it's
+   line 3725. A silent-absence grep is not a diagnosis.*
+3. **Then — and only then** — compare the design intent with the failure: fix the
+   broken link in the same layer that owns it (TDD the seam if it's pure — see the
+   `RoomRecipes.upgradeCandidates` extraction), and only after that reconsider the
+   design (the dev's call: e.g. whether a close during a tutorial prefers the
+   chain branch over the upgrade one).
+
+A negative log claim in any of these steps is governed by the AGENTS.md
+"negative claims need a verified source" rule (source + exact wording, before
+"absent").
+
 ## Check-ins (the only time to propose a code change)
 
 Periodically check in with the dev: report what happened and what you plan next
