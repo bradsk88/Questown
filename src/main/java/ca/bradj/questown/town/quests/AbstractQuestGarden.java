@@ -1,8 +1,7 @@
 package ca.bradj.questown.town.quests;
 
-import ca.bradj.questown.core.Config;
-
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -69,7 +68,16 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
     ) {
         if (hasEnoughBeds.get() || hasBedAlready(batch)) {
             Collection<RoomNeed<ROOM_ID>> nr = neededRooms.get();
-            if (nr.isEmpty()) {
+            // A batch carries unique requests: a needed recipe already in the
+            // batch waits for a later batch instead of filling this one (the
+            // run-16 kitchen x3 batch - the room-need queue re-picks the same
+            // recipe every grow tick, so without this filter one recipe could
+            // occupy the whole batch).
+            List<ROOM_ID> fresh = nr.stream()
+                                    .map(RoomNeed::id)
+                                    .filter(id -> !questAlreadyRequested(batch, id))
+                                    .toList();
+            if (fresh.isEmpty()) {
                 ROOM_ID randomRoom = getRandomRoom(allRecipes.get());
                 if (shouldSkip(randomRoom)) {
                     return true;
@@ -78,13 +86,11 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
                 return true;
             }
 
-            if (nr.size() == 1) {
-                ROOM_ID id = nr.iterator().next().id();
-                addAndRecord(id);
+            if (fresh.size() == 1) {
+                addAndRecord(fresh.get(0));
                 return true;
             }
-            ROOM_ID randomNeededRoom = getRandomRoom(nr.stream().map(RoomNeed::id).toList());
-            addAndRecord(randomNeededRoom);
+            addAndRecord(getRandomRoom(fresh));
             return true;
         }
         // TODO: Can we pre-compute the next villager's name?
@@ -114,7 +120,9 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
             return true;
         }
         if (questAlreadyRequested(batch, id)) {
-            newCost = (int) (newCost * Config.DUPLICATE_QUEST_COST_FACTOR.get());
+            // unique-per-batch: the repeat is priced out of existence - it
+            // waits for the next batch rather than diluting this one
+            return true;
         }
         if (ticksSoFar < idealTicks && (newCost < maxCost / 4f)) {
             // Skip basic rooms early on

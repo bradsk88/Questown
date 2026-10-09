@@ -162,15 +162,34 @@ unverified either way — that's the harness note below.)
 
 ## Harness note (known, unfixed — flag if a re-drive is ever planned)
 
-`VillageSelfSufficiencyExecutor.builtRoomsForRecipe` (`5420c202`) caps
-**lifetime** rooms per recipe id and never decrements when those quests
-close, so any *later* batch containing the same recipe (e.g. `ks` in batch 2
-and batch 4 both) is refused (`skipping … (3 built for 3 open)`). Same
-family as the recipe-id latch it replaced — **monotonic counters latch
-across generations**. If this is ever re-driven, build a room per *active
-quest instance*, not per recipe id, or let the counter retire with its
-quest. (16d's batch-2 rooms all built+closed fine; it's the batch-4
-refusal that froze the chain.)
+**Two defects, one symptom. The first is FIXED, the second is still open.**
+
+1. **DUPLICATES IN A BATCH — FIXED (2026-10-09, dev ruling: "I would expect 3
+   unique requests").** `AbstractQuestGarden` priced a repeat recipe
+   (`Config.DUPLICATE_QUEST_COST_FACTOR`) instead of banning it, and the
+   needed-room path never ran the cost gate at all — so one needed recipe
+   (kitchen, kept demanded by the cook's stock jobs) could fill the whole
+   batch: run 16d's `kitchen_stocked x3`. Now: needed rooms already in the
+   batch are filtered out (fall back to the random path when all are stale)
+   and `shouldSkip` returns true on any in-batch duplicate. The surcharge
+   (and the garden's last `Config` read) is gone. Pin-by
+   `QuestGardenTest.testShouldAddNeededRoomOnce_EvenWhenNeededMultipleTimes`
+   (the 16d shape), `testShouldFallBackToRandomRoom_WhenAllNeededRoomsAreAlreadyRequested`,
+   `testShouldNotRepeatRandomRoomInBatch` (that one's red was a live
+   `IllegalStateException: Cannot get config value before config is loaded`
+   from the surcharge's `Config.…get()` — a line no existing test ever hit,
+   because the shared stub's `questAlreadyRequested` returned false).
+   The config value `DUPLICATE_QUEST_COST_FACTOR` is now dead in the garden
+   (field left in `Config`).
+
+2. **LIFETIME COUNTER — STILL OPEN.** `VillageSelfSufficiencyExecutor.builtRoomsForRecipe`
+   caps **lifetime** rooms per recipe id and never decrements when those
+   quests close, so any *later* batch containing the same recipe (unique now,
+   so 1 instance) is still refused (`skipping … (1 built for 1 open)`),
+   which is still enough to freeze the chain the same way. Same family as the
+   recipe-id latch the count replaced — **monotonic counters latch across
+   generations**. If a re-drive is planned, build a room per *active quest
+   instance*, not per recipe id, or let the counter retire with its quest.
 
 ## What IS verified (don't re-prove)
 

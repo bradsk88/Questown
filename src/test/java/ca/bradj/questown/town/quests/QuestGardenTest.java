@@ -360,6 +360,84 @@ class QuestGardenTest {
         );
     }
 
-    // TODO: Test: Reject duplicates recipes until after reaching ideal threshold
+    // Duplicates were previously rejected by this TODO; the run-16 kitchen x3
+    // batch turned it into a live defect - the three tests below pin the rule.
 
+    /**
+     * Run-16 shape: the cook's stock jobs keep the kitchen in the room-need
+     * queue (one RoomNeed, timesNeeded > 1), so the needed-room path re-picks
+     * the same recipe every grow tick. A batch carries unique requests - the
+     * repeat waits for a later batch, it does not fill this one.
+     */
+    @Test
+    public void testShouldAddNeededRoomOnce_EvenWhenNeededMultipleTimes() {
+        AbstractQuestGarden<List<String>, String> qg = new TestQuestGarden(
+                0, Integer.MAX_VALUE, Integer.MAX_VALUE
+        ) {
+            @Override
+            protected boolean questAlreadyRequested(List<String> batch, String id) {
+                return batch.contains(id);
+            }
+        };
+        for (int i = 0; i < 3; i++) {
+            Assertions.assertTrue(qg.grow(
+                    () -> true,
+                    () -> ImmutableList.of(new RoomNeed<>("kitchen", 3, 3)),
+                    () -> ImmutableList.of("kitchen", "armory", "bedroom")
+            ));
+        }
+        Assertions.assertIterableEquals(ImmutableList.of("kitchen"), qg.get());
+    }
+
+    @Test
+    public void testShouldFallBackToRandomRoom_WhenAllNeededRoomsAreAlreadyRequested() {
+        AbstractQuestGarden<List<String>, String> qg = new TestQuestGarden(
+                0, Integer.MAX_VALUE, Integer.MAX_VALUE
+        ) {
+            @Override
+            protected String getRandomRoom(Collection<String> rooms) {
+                return ImmutableList.copyOf(rooms).get(1);
+            }
+
+            @Override
+            protected boolean questAlreadyRequested(List<String> batch, String id) {
+                return batch.contains(id);
+            }
+        };
+        Assertions.assertTrue(qg.grow(
+                () -> true,
+                () -> ImmutableList.of(new RoomNeed<>("kitchen", 3, 3)),
+                () -> ImmutableList.of("kitchen", "armory", "bedroom")
+        ));
+        // kitchen is already in the batch - the next grow must pick a fresh room
+        Assertions.assertTrue(qg.grow(
+                () -> true,
+                () -> ImmutableList.of(new RoomNeed<>("kitchen", 3, 3)),
+                () -> ImmutableList.of("kitchen", "armory", "bedroom")
+        ));
+        Assertions.assertIterableEquals(
+                ImmutableList.of("kitchen", "armory"), qg.get()
+        );
+    }
+
+    @Test
+    public void testShouldNotRepeatRandomRoomInBatch() {
+        AbstractQuestGarden<List<String>, String> qg = new TestQuestGarden(
+                0, Integer.MAX_VALUE, Integer.MAX_VALUE
+        ) {
+            @Override
+            protected boolean questAlreadyRequested(List<String> batch, String id) {
+                return batch.contains(id);
+            }
+        };
+        // random pick is deterministic (index 0) - every grow re-picks "kitchen"
+        for (int i = 0; i < 3; i++) {
+            Assertions.assertTrue(qg.grow(
+                    () -> true,
+                    ImmutableList::of, // No needed rooms
+                    () -> ImmutableList.of("kitchen", "armory")
+            ));
+        }
+        Assertions.assertIterableEquals(ImmutableList.of("kitchen"), qg.get());
+    }
 }
