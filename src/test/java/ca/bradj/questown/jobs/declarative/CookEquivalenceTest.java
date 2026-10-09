@@ -81,6 +81,11 @@ class CookEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+        // Equivalence alone is hollow: both sides stalling together still "equivalents".
+        // Assert the job actually completed on BOTH sides.
+        Assertions.assertTrue(
+                tickerResult.productExtracted() && advancerResult.productExtracted(),
+                "both sides must actually complete the extract, not just agree to idle");
 
         Assertions.assertTrue(
                 tickerResult.productExtracted() || advancerResult.productExtracted()
@@ -118,6 +123,11 @@ class CookEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+        // Equivalence alone is hollow: both sides stalling together still "equivalents".
+        // Assert the job actually completed on BOTH sides.
+        Assertions.assertTrue(
+                tickerResult.productExtracted() && advancerResult.productExtracted(),
+                "both sides must actually complete the extract, not just agree to idle");
     }
 
     @Test
@@ -149,6 +159,11 @@ class CookEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+        // Equivalence alone is hollow: both sides stalling together still "equivalents".
+        // Assert the job actually completed on BOTH sides.
+        Assertions.assertTrue(
+                tickerResult.productExtracted() && advancerResult.productExtracted(),
+                "both sides must actually complete the extract, not just agree to idle");
     }
 
     /**
@@ -227,5 +242,10 @@ class CookEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+        // Equivalence alone is hollow: both sides stalling together still "equivalents".
+        // Assert the job actually completed on BOTH sides.
+        Assertions.assertTrue(
+                tickerResult.productExtracted() && advancerResult.productExtracted(),
+                "both sides must actually complete the extract, not just agree to idle");
     }
 }

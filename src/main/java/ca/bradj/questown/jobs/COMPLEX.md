@@ -212,3 +212,48 @@ cook_extract_workOnly_state0_emptyInventory_shouldExtractProduct` (the end-to-en
 work-only JSON, empty inventory), `JobIntegrationTest.cook_extract_shouldLoadCorrectly`
 (the de-stick'd data shape). Timer-wait regression tripwires: the baker/fisher
 equivalence suites (`JobIntegrationTest`, `TickerAdvancerEquivalenceTest`).
+
+## Equivalence tests: equivalence is not completion (2026-10-09, hollow cook tests)
+
+The `…tickerAndAdvancer_shouldProduceEquivalentResults` suites compare two simulation
+sides field-by-field (`EquivalenceTestFramework.SimulationResult`: inventoryItems,
+productExtracted, jobBlockState, workRemaining) and assert only that the fields are
+*equal on both sides*. The "advancer" side is the same `DeclarativeJobTicker` sampled at
+`ImportantTicks`'s sparse warp ticks (framework line ~342), so shared-code regressions
+stall both sides identically and "equivalent" passes vacuously. Proven live: with the
+tags unresolvable (below), `cook_fish` and `cook_fuel` both ran 200/50 ticks to
+`productExtracted=false, jobBlockState=0, workRemaining=0` and the tests were green.
+
+Two contracts now hold:
+
+1. **Every equivalence test also asserts the terminal effect on BOTH sides** —
+   `assertTrue(tickerResult.productExtracted() && advancerResult.productExtracted())`
+   (added to all four cook tests; `cook_fish`/`cook_fuel` are the first tests in the
+   family ever to have carried a non-vacuous assertion).
+2. **Job tool/ingredient keys that are tags (`#ns:name`) resolve to real item sets in
+   the harness** — `TestTagResolver` (test-only), wired at both predicate-building sites:
+   `TestWorldInteraction.itemPred` (what `getChecks()` serves the ticker) and
+   `TestTickerDependencies.buildPredicateMap` (`asChecks()`). Resolution order: the
+   classpath resource `data/<ns>/tags/items/<name>.json` (vanilla: singular `item`)
+   — so `#questown:*` reads the mod's own tag files, and `#c:*`/`#forge:*` read the
+   copies inside the NeoForge universal jar (which *is* on the test classpath).
+   Nested `#` entries expand recursively; NeoForge's weighted-object entry form
+   (`{"id": …, "required": false}`) is read by its `id`, optional entries skipped.
+   Vanilla tag data that no jar on the classpath provides is **vendored** under
+   `src/test/resources/data/…` (as of 2026-10-09: `minecraft:{coals,logs,planks,
+   saplings}`, `forge:mushrooms` — the coals/mushrooms contents verified against
+   real data files; the 8-wood logs/planks/saplings sets are BELIEVED-from-knowledge
+   of the vanilla 1.20.6 composition, extend as needed). An unresolvable tag
+   throws instead of leaving the gate unsatisfiable.
+   Test inventories may carry **tag references as items** (`TestItem("#minecraft:coals")`
+   stands for "some member of that tag" — the pre-existing declarative tests seed
+   this way): a tag gate matches the same tag or an intersecting tag's item; a
+   literal gate matches a tag item iff the literal is a member; an empty slot
+   matches nothing. The literal-equality default (`item.value.equals("#…")`) was
+   the vacuous-stall bug: a tag tool could never match a literal item, both sides
+   idled identically, equivalence passed. Pinned by `TestTagResolverTest`
+   (8 cases: literal/tag gates, tag-as-item equality + intersection, nested
+   expansion, the empty-slot and throw contracts, dependency-jar namespaces).
+
+Scope note: `#c:*` (common-convention) tags and unvendored vanilla tags are
+unresolvable on purpose — a loud throw in the test beats a silent stall.

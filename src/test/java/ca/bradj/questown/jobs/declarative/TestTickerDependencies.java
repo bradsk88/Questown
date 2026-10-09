@@ -468,7 +468,7 @@ public class TestTickerDependencies implements
 
     private Map<Integer, Predicate<GathererJournalTest.TestItem>> buildPredicateMap(Map<Integer, String> tagMap) {
         Map<Integer, Predicate<GathererJournalTest.TestItem>> result = new HashMap<>();
-        tagMap.forEach((state, tag) -> result.put(state, item -> item.value.equals(tag)));
+        tagMap.forEach((state, tag) -> result.put(state, item -> TestTagResolver.matches(item, tag)));
         return result;
     }
 

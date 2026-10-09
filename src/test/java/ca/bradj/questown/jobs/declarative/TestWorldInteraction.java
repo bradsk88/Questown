@@ -212,7 +212,7 @@ public class TestWorldInteraction extends
                         new IPredicateCollection<GathererJournalTest.TestItem>() {
                             @Override
                             public boolean test(GathererJournalTest.TestItem item) {
-                                return v.equals(item.value);
+                                return TestTagResolver.matches(item, v);
                             }
 
                             @Override
