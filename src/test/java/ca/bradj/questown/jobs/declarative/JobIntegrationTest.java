@@ -235,6 +235,20 @@ class JobIntegrationTest {
     }
 
     @Test
+    void blacksmith_wood_sword_shouldLoadCorrectly() {
+        // the sword column of the crafter tool matrix (2026-10-09, gannet Factor 3
+        // ruling: the tool producer should make swords, not just axes/shovels/hoes/pickaxes)
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "blacksmith_wood_sword.json");
+
+        Assertions.assertEquals(new JobID("crafter", "wooden_sword"), definition.jobId());
+        Assertions.assertEquals(3, definition.maxState());
+        Assertions.assertEquals("minecraft:stick", definition.ingredientsRequiredAtStates().get(0));
+        Assertions.assertEquals("#minecraft:planks", definition.ingredientsRequiredAtStates().get(1));
+        Assertions.assertEquals(Integer.valueOf(40), definition.workRequiredAtStates().get(2));
+        Assertions.assertEquals("minecraft:wooden_sword", definition.result());
+    }
+
+    @Test
     void blacksmith_stone_pickaxe_shouldLoadCorrectly() {
         JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "blacksmith_stone_pickaxe.json");
 

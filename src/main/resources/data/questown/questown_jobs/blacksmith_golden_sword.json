@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "crafter/golden_sword",
+  "unlocks_title": "blacksmith",
+  "priority": "4000",
+  "parent": "crafter/golden_shovel",
+  "icon": "minecraft:golden_sword",
+  "initial_request": "minecraft:golden_sword",
+  "result": {
+    "type": "item",
+    "item": "minecraft:golden_sword",
+    "quantity": 1
+  },
+  "block": "questown:blacksmiths_table",
+  "room": "questown:smithy",
+  "work_states": [
+    {
+      "ingredients": "minecraft:stick",
+      "quantity": 1
+    },
+    {
+      "ingredients": "minecraft:gold_ingot",
+      "quantity": 2
+    },
+    {
+      "work": 40
+    }
+  ],
+  "cooldown_ticks": 25,
+  "sound": {
+    "id": "minecraft:item.sword.hit",
+    "chance": "100",
+    "duration": 5
+  }
+}

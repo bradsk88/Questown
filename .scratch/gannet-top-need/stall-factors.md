@@ -109,6 +109,26 @@ top needs: #questown:swords=5  minecraft:stick=5  #questown:villager_food=5  #mi
 
 ## Factor 3 — Sword (hunter's tool, no in-world producer)
 
+**RESOLVED (dev ruling, 2026-10-09):** classification (a) — a data gap, not a
+registration mislabel. "Whomever currently creates axes, shovels, etc. should
+also have jobs to create swords." The tool matrix was 5 materials × 4 tool
+types (axe/hoe/pickaxe/shovel); swords were the missing fifth column, so the
+`#questown:swords` need had no producer and sat top-queue permanently.
+Fix: five new jobs `crafter/{wooden,stone,golden,iron,diamond}_sword`
+(`blacksmith_{m}_sword.json`), mirroring each tier's axe exactly (same
+ingredients stick×1 + material×2, work 40, prio 4000, block
+`questown:blacksmiths_table`, room `questown:smithy`, parent = that tier's
+shovel); only deviation is the sound (`item.sword.hit` vs `item.axe.scrape`).
+Receipts: `job-producers.py minecraft:wooden_sword` now lists
+`crafter/wooden_sword` (was "no job PRODUCES 'minecraft:sword'"),
+`JobIntegrationTest.blacksmith_wood_sword_shouldLoadCorrectly` (family
+sampling convention: one sword, like one axe/shovel/pickaxe per family),
+jobs.* slice green. The `swords` need is now *actionable*: its producer root is
+the same crafter the `stick` need points at (Factor 2), so the 2.75 walk's
+first actionable beat is a crafter unlock either way.
+
+_Original analysis (kept for provenance):_
+
 - 16b: `#questown:swords=5` — top of the queue, tied. The hunter's
   `hunter_unmapped_sword_*` jobs carry the sword and loot
   mutton/porkchop/beef; `job-producers.py minecraft:sword` → **no job
