@@ -1,10 +1,10 @@
 # Plan: Loader-agnostic Questown + RoomRecipes (target NeoForge 1.20.6, Forge 1.19.2 kept as legacy)
 
 Date: 2026-09-28
-Status: **DONE — closed out 2026-10-09.** 1.20.6/NeoForge is the current track
-(branch `1.20.6-neoforge-wip`); the 1.19.2 Forge branch is the frozen legacy
-artifact. Phase 3 (re-derive the legacy build from the facade) stays
-intentionally deferred — see Open decisions.
+Status: **DONE — closed out 2026-10-09.** 1.20.6/NeoForge is the current working track
+(branch `1.20.6-neoforge-wip`, **kept as-wip by dev decision** — not release-ready yet).
+The 1.19.2 Forge branch is the frozen legacy artifact. Phase 3 (re-derive the legacy
+build from the facade) stays intentionally deferred — see Open decisions.
 
 ## Why
 
@@ -155,10 +155,14 @@ from **vanilla-version-specific** to **loader-agnostic (forge↔neo) + version-s
   book, its content, and the two now-de-coupled Patchouli hooks) lives in
   `.scratch/bring-back-journal/bring-back-journal.md` (status: needs-triage) and is a
   separate, later decision — it is not a close-out gap for this migration.
-- **Phase 3 (Forge-legacy re-derive) — INTENTIONALLY DEFERRED.** The existing 1.19.2
-  Forge branch remains the legacy artifact by recorded decision; it is frozen and still
-  builds. Re-derive from the facade only if that line is revived or needs to track the
+- **Phase 3 (Forge-legacy re-derive) — INTENTIONALLY DEFERRED (dev-confirmed 2026-10-09).** The
+  existing 1.19.2 Forge branch remains the legacy artifact by recorded decision; it is frozen and
+  still builds. Re-derive from the facade only if that line is revived or needs to track the
   facade; until then this phase is closed-as-deferred, not dropped from scope.
+- **Branch / release — DEV DECISION (2026-10-09):** the branch stays
+  `1.20.6-neoforge-wip` for now — the migration plan being DONE does **not** mean ready for a
+  release; more work is queued first. Do not rename/promote the branch from this plan's status;
+  release prep is a separate, later decision.
 
 ## Progress (session log)
 
