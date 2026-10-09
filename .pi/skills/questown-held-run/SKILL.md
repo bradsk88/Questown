@@ -109,7 +109,14 @@ command group (since 1.20.3 / snapshot `23w43a`): `query`, **`rate <float>`**
   (a gradle-launched server does NOT inherit your shell's env for dev
   gates — `ENABLE_DEV_COMMANDS` was absent on this box's held servers,
   which killed a whole probe cycle, 2026-10-09). Gate new probes on a
-  forwarded sysprop, not an env var.
+  forwarded sysprop, not an env var. **Before designing a new probe, grep
+  the tree for existing ones (`grep -rn 'DEV-DIAG\|PROBE:' src/main/java`)**:
+  the tree carries past probes, and one may already dump exactly the
+  breakdown you need — e.g. `DEV-DIAG:kitchen` in
+  `TownRoomsMap.getRoomsMatching` (added 2026-10-06 for the cook-soft-lock)
+  prints doors/doorsWithRoom/totalRooms/roomsMatchingRecipe for any
+  kitchen-recipe lookup (it is env-gated, so it is silent on this box's
+  held servers — open the gate to use it).
 - **Heavy flag work is throttled to `FlagTickIntervalV2` (default 10
   world-ticks, `Config.java:397`):** the villager-handle tick (beds
   assignment, hunger, the SLEEPLESS ledger edge) runs every Nth tick, not
@@ -231,7 +238,8 @@ files.
    # java pid is NOT the gradle wrapper pid, and the file goes stale the instant
    # a new server launches. A capture done later (after other work) has already
    # gone stale and the next teardown kills the wrong pid.
-   sleep 3   # let the java child spawn before pgrep sees it
+   sleep 3   # the java child is usually NOT up yet on the 1.20.6 branch (~30-60s later);
+   # the captures below are a GUESS to verify or re-capture, not a fact
    # THIS BOX RUNS TWO REPOS: Questown-119 carries its own `sleep 999999` fifo writer
    # and a similar process tree, so `pgrep -af 'sleep 999999'` / 'forgeserveruserdev'
    # can list foreign matches. Disambiguate by the fifo fd held (ls /proc/<pid>/fd must
