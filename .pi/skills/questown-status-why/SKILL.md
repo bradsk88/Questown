@@ -14,11 +14,7 @@ description: >-
   unit test or existing autotest already settles it (use questown-unit-tdd-fix),
   for perf/lag (use questown-lag-repro), or for an MC version migration. The
   load-bearing rule: a status is the *output*, not the cause — go to the branch
-  that sets it and dump its inputs. Worked example (2026-10-08): a leaver in
-  NO_JOBSITE was stuck because its room set was EMPTY (spots={} rooms={}
-  job_blocks={}), and the identical world advanced one beat later when it saw a
-  workable spot (BlockPos{-13,64,10}) — the 50/50 was "does the room set contain
-  a workable block", not the timeout the band-aid added.
+  that sets it and dump its inputs.
 ---
 
 # Questown "why is the townie stuck in this status"
@@ -70,7 +66,7 @@ A populated `spots={pos=state}` whose state isn't the leaver's ⇒ state mismatc
 `WHY_INTERVAL_MS` in `JobStatuses`, or widen the root gate in
 `JobStatuses.maybeLogWhy` (currently `label.startsWith("gatherer:|hunter:")`).
 
-## Two traps that cost real time here
+## Traps that cost real time here
 
 1. **The jobId is `"unknown"/"unknown"` in the resolver.** The 6-arg
    `usualRoutine` builds its context with `new JobID("unknown","unknown")`. A
@@ -83,6 +79,8 @@ A populated `spots={pos=state}` whose state isn't the leaver's ⇒ state mismatc
    each gate's boolean but not its `spots/rooms/job_blocks` maps — the decisive
    "no spots found" was the *detail*, not the gate's value. `Populated` carries the
    detail maps; descend into them.
+
+3. **A probe/log line that also appears in the passing world is churn, not the cause.** Before treating a logged condition — or a probe you added — as the root cause of a flake, confirm it *discriminates*: present/different when the world fails, absent/normal when it passes. (bittern: `PROBE-C isJobBlock FALSE`, `PROBE:jobSites … flagMats=0`, `PROBE:cleanRooms EMPTY`, and the early `PROBE-J rni-empty … NO-SITES` all appear in the passing 807 too — red herrings. The real discriminator was the first `[PROBE:supplies] TOOK`: 807 TOOK=12 (first grab `cooked_mutton` @02:38:29), 808=18, 809=11 — but 811 and 812 are TOOK=0 for the whole run.)
 
 ## Deterministic harness for the decision (no live world needed)
 
@@ -107,6 +105,14 @@ A single passing world in a flaky (N/N) stall is **luck**, not a fix, until you:
 the specific decision predicate your change moved. A band-aid that "lets the stuck
 state time out / give up / produce" is not the cause of a stall that is *never
 finding a job site*. Report open-vs-confirmed, never "probably fixed", from one pass.
+
+## A fix that never fires is not a fix (the case may already be handled upstream)
+
+A green test, `javap` showing a call, `BUILD SUCCESSFUL` — none of these prove the *failing input* reaches the line you patched. In a layered null/state pipeline an upstream layer may already handle the case, so a downstream fallback is a **silent no-op**: the world still stalls and you have reported the stall as fixed. (distinct from trap 1, where a *probe*'s gate never matches — here a *fix*'s case is already handled)
+
+> Trace the predicate/field the failure actually reads back to the input that supplies it, and confirm the failing case hits your patch — before reporting "fixed."
+
+Worked case (bittern, 2026-10-13): `State.freshIfNull` added to the `RoomsStatusLogic` null-skips, reported "applied + verified on 812." It **did not fix the flake** and was never on the live path: the stalling `cleanRooms()` (DeclarativeJob:391) reads a field set by `cacheRoomsNeedingIngredientsOrTools` (DeclarativeJobTickerDependencies:302), from the ticker compute whose `getJobBlockState` (DeclarativeJobTicker:272, `if (s == null) return State.fresh();` at 278) already maps null→fresh. So `freshIfNull(work, pos)` always took the `!= null` branch — dead. 812 still stalled (TOOK=0), identical to 811. The real cause is a deeper per-leaver, per-moment room-set race, not one gate: `PROBE-J` shows the `gather` job `inner=[0=0,1=0,2=0]` with **no sites at all** (its `getJobSites()`/`getRoomsMatching` empty), while the same leaver's `seeking_work` job sees the site but still gets `inner[0]=0`. Left open.
 
 ## Ordered loop
 

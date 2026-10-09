@@ -78,12 +78,6 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         }
         if (SpecialQuests.TOWN_GATE.equals(recipeId)) {
             java.util.Collection<RoomRecipeMatch<MCRoom>> gateOut = getWelcomeMatMetaRooms(t);
-            // PROBE (2026-10-06) - same BE shows mats=1 in getMatches but 0 rooms here;
-            // measure both sides at the same instant.
-            if (gateRoomsMatchesProbeN++ % 200 == 0) {
-                QT.JOB_LOGGER.warn("[PROBE:gateQuery] TOWN_GATE->rooms={} matsListRaw={} flag={}",
-                        gateOut.size(), t.getWelcomeMats().size(), t.getBlockPos());
-            }
             return gateOut;
         }
         if (SpecialQuests.TOWN_FLAG.equals(recipeId)) {
@@ -263,12 +257,6 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         boolean hasGate = result.stream().anyMatch(m -> m.anyMatch(SpecialQuests.TOWN_GATE));
         if (!hasGate) {
             java.util.List<RoomRecipeMatch<MCRoom>> matRooms = getWelcomeMatMetaRooms(town.getUnsafe());
-            int pn = gateMetaRoomProbes++;
-            if (pn % 200 == 0) {
-                QT.JOB_LOGGER.warn("[PROBE:matRooms] mats={} rooms={} flag@{}=ID{} includeIsConst={}",
-                        matRooms.size(), matRooms.size(),
-                        town.getUnsafe().getBlockPos(), System.identityHashCode(town.getUnsafe()), true);
-            }
             matRooms.stream()
                     .filter(include)
                     .forEach(result::add);
@@ -276,13 +264,9 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         return result;
     }
 
-    private volatile int gateMetaRoomProbes = 0;
-    private volatile int gateRoomsMatchesProbeN = 0; // TEMP DEBUG 2026-10-06
-
     public void registerDoor(BlockPos clickedPos) {
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         roomsMap.registerDoor(Positions.FromBlockPos(clickedPos), clickedPos.getY() - t.getY());
-        t.setChanged();
     }
 
     @Override

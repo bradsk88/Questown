@@ -72,6 +72,27 @@ command group (since 1.20.3 / snapshot `23w43a`): `query`, **`rate <float>`**
   ~20 min at 20; `run/pace-guard.sh <log> <claimed-rate>` enforces it (an
   unapplied `/tick rate` is silent — pace is what proves it landed). Full
   root-cause + the 7532 s case: `references/questown-dev-launch.md`.
+- **The console wiring itself is a LAUNCH argument (hit this 2026-10-21):** the runServer
+  task only feeds `run/server-cmd.fifo` to the server's stdin when it is launched with
+  `-Dquestown.tp.fifo` (the `standardInput` hook is gated on exactly that property).
+  Without it, every ffeed write is silently dropped and the rate never lands — the
+  symptom is ffeed "wrote" + **no `Set the target tick rate` line in the log**.
+  The Launch block's call 2 includes the flag; the per-logger-debug launch example
+  does not (console unused there) — if you want to feed commands, add it, then
+  smoke-test with ONE confirmed echo before observing (the log must show
+  `Set the target tick rate to 200.0 per second`).
+- **A pace-guard GREEN is NOT evidence of the tick rate on self_sufficiency runs**:
+  both 2026-10-21 GREENs scored a 0h00m00s **same-day** REPORT pair (pace-guard now
+  refuses same-day pairs and carries the caveat in its header). And the day gap
+  itself is not a TPS signal in this scenario: `day = nightsSlept + 1` (sleep-
+  cycles, `VillageSelfSufficiencyExecutor` L1102/L845), driven by the
+  `questown.autotest.warp` warper — day 1→2 took 62 s even at the 20 t/s default.
+  Do NOT cite `worldTimeAtSleep` Δticks/s as a TPS measurement here either: on
+  2026-10-21 that probe showed ~136 t/s in the pre-rate era, which is only
+  possible if the world clock rides the warper, not the server TPS.
+  **The tick-rate delivery truth for these runs is one log line: `Set the target
+  tick rate to N.0 per second`** — both of today's completed runs have it before
+  their RESULT; a missing line = dead console (previous bullet).
 - **Default to 200 t/s.** The 2026-10-15 sweep on this box held 20/30/60/120/200/
   240 at target with zero `Can't keep up`; 270 lost ~3% (261.8 eff); 255/300
   failed-then-held on retest. Vanilla enforces a ~20 minimum, there is no maximum —
@@ -169,6 +190,8 @@ Env for both: `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8`
    # server behind (caught only by a later `netstat 25565` check). (2026-10: first
    # capture wrote the bash wrapper's pid and a 119 writer pid.)
    pgrep -af 'forgeserveruserdev' | grep 'launchTarget' | awk '{print $1}' > run/hold-server.pid
+   # Cleaner match (verified 2026-10-21: it alone lists the java server, never the
+   # bash launch line or gradle wrapper): pgrep -af 'BootstrapLauncher'
    pgrep -af 'questown.autotest.hol[d]' | grep -v 'bash\|pgrep' | head -1 | awk '{print $1}' > run/hold-wrapper.pid
    pgrep -af 'sleep 999999' | grep -v pgrep | head -1 | awk '{print $1}' > run/hold-fifo.pid
    ```
@@ -390,6 +413,21 @@ line) while 2 stalled days in `COLLECTING_SUPPLIES` with **zero** extraction
 lines. `LOOTTRACE` count is the discriminator: 0 = extraction never happened
 (upstream: nav/state — go there), ≥1 = extraction rolled and matched/missed.
 A quiet-but-alive process is a stalled village, not a broken launch.
+- **Probe design for stall diagnosis (2026-10-07).** Key a probe to the
+**exact job+state** under study and read it **once, in steady state**.
+Don't use a shared `static` counter or a `%N` gate as the discriminator — it
+fires on transient / pre-seed ticks and samples across every job, so a sparse
+`jobRooms=0` alongside steady `rooms=1` is a sampling window, not a finding.
+(See `~/.pi/agent/references/session-debugging.md`, incident 2026-10-07: a
+throttled `state0` probe was read as "the leaver sees no gate" when the
+gate room was present in the same logs.)
+- **Stop trigger — don't multiply runs that stop yielding facts.** When the
+last two held runs (serial or parallel) produce **no new discriminating fact**
+— only re-samples of the same transient state — stop driving runs, report
+open-vs-confirmed, and hand back. This is separate from the per-command
+60s timeout: it caps *how many* legitimate-but-redundant runs you spend, on
+a box billed by the minute. A run is worth launching only when you can name
+the single fact it will settle that the logs don't already show.
 
 ## The observation cadence (~10s windows)
 
@@ -496,6 +534,14 @@ Also read each window:
 - quest/villager detail: `_qtdev inspect <pos>` / `_qtdev inspect quests <pos>` / `_qtdev inspect villagers <pos>` (the tab literal comes *before* the pos; `_qtdev inspect <pos> villagers` does not parse)
 
 ## Verdict (declaring the run a pass)
+
+**The report banner is not the verdict.** A self_sufficiency-only run ends with
+`[autotest] RESULT: 0/0 passed (FAILURES)` — that is the scenario's report-only
+shape in `AutoTestRunner.reportAndShutdown` ("self_sufficiency is a watchtower…
+contributes no assertions", `allPassed = total > 0 && passed == total` ⇒ 0/0
+prints FAILURES), not a behaviour failure. The verdict comes from the scenario's
+own watch/milestone lines (`[self_suff] milestones: …`, `[lock]` presence,
+journal/status mix), exactly as with any other watchtower.
 
 A held run verifies the **mechanism**, not a literal scenario detail. When the
 fix's signature moment (e.g. *a specific item* being deposited) is not forced by

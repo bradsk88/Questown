@@ -319,8 +319,13 @@ public class JobsClean {
                 for (Map.Entry<POS, ?> entry : match.room().getContainedBlocks().entrySet()) {
                     POS bp = entry.getKey();
                     State jobBlockState = jobBlockStates.apply(bp);
+                    // A block with no work-state record in this store is unstarted work, not
+                    // "no state": this read must agree with sibling sites (findJobSpot l.283,
+                    // DeclarativeJobTicker bsFn l.203 and the rni guard l.279). Skipping nulls
+                    // here deadlocked leavers whose per-owner store had not yet seeded the
+                    // gate mat (NO_JOBSITE soft-lock, 2026-10-08, WorkStatusStoreMatSeedTest).
                     if (jobBlockState == null) {
-                        continue;
+                        jobBlockState = State.freshAtState(0);
                     }
                     int v = jobBlockState.processingState();
                     spotStatuses.put(bp, v);

@@ -31,6 +31,25 @@ public class UtilClean {
         };
     }
 
+    /**
+     * Forge-free extraction of the "all special rules pass" decision that
+     * {@code ResourceJobLoader.trySpecialRuleIsJobBlock} makes, so the freshness gate of
+     * {@code isJobBlock} can be unit-tested without Forge. {@code ruleResults} is each global
+     * special rule's {@code postJobBlockCheckPassed(ctx)} result, in order.
+     *
+     * <p>Semantics: every declared rule must pass; an EMPTY rule set means "no rules declared" and
+     * must NOT block a fresh job block. Per CONTEXT.md, global special rules are job-wide behavior
+     * flags / warp effects, not job-block qualification gates - so a job declaring none has no gate.
+     */
+    public static boolean specialRulesAllPass(List<Boolean> ruleResults) {
+        for (Boolean rule : ruleResults) {
+            if (!Boolean.TRUE.equals(rule)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static <X, Y> Map<X, ImmutableList<Y>> deepCopy(Map<X, ? extends Collection<Y>> items) {
         ImmutableMap.Builder<X, ImmutableList<Y>> b = ImmutableMap.builder();
         items.forEach((k, v) -> {

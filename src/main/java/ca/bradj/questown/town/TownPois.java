@@ -140,7 +140,13 @@ public class TownPois {
             int index = level.random.nextInt(copy.size());
             BlockPos mat = copy.get(index);
             if (!level.getBlockState(mat).is(BlocksInit.WELCOME_MAT_BLOCK.get())) {
-                welcomeMats.remove(index);
+                // Skip, don't drop. welcomeMats is only (re)populated at placement
+                // (registerWelcomeMat) or flag load (NBT restore), so a single
+                // transient non-mat read used to remove the mat for good - and with it
+                // its TOWN_GATE job sites, soft-locking leavers in COLLECTING_SUPPLIES
+                // with no in-run recovery (2026-10-07 sweep: the list flapped 0<->1,
+                // jobRooms was 0 in stalls / 1 in passes). Leaving it in degrades a
+                // truly-gone mat to NO_JOBSITE (recoverable), not a permanent stall.
                 continue;
             }
             return mat;

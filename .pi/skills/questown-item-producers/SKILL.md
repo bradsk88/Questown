@@ -1,3 +1,14 @@
+---
+name: questown-item-producers
+description: >-
+  Answers "which jobs produce / need item X" and "which jobs live in room Y"
+  by reading the job data via scripts/job-producers.py. TRIGGER when asked for
+  a top-need → producer batch, who produces or *needs* an item (output vs
+  input/tool side), which jobs live in a room (the "build the base room" beat),
+  or whether a mislabeled unmet-need key has a real producer. SKIP guessing or
+  grepping item names in Java — the data files are the source of truth.
+---
+
 # questown-item-producers
 
 Answers "which jobs produce / need item X" and "which jobs live in room Y" by

@@ -75,6 +75,7 @@ the run produces.
   meat / the inventory delta, not watching it interact with an entity. A
   leaver with nothing to bring back is missing **known loot / biome
   knowledge**, not missing mobs.
+- **“Why is the board empty for this root / why can't this townie work?” → the `job_possibilities_compute` log.** Enable per flag: `_qtdev debug <x> <y> <z> toggle_log job_possibilities_compute` (needs `ENABLE_DEV_COMMANDS=1`; the flag pos is in the log's “Welcome mat … town flag at BlockPos…” line). It prints `Possible jobs for root X: […]`, each candidate with a per-job `GateReason`: `NoRoom` (job's room not built), `Blocked` (first failing state — missing **ingredient** or **tool**), `NoRequest` (inputs fine but the board doesn't ask for the product), or `Ok`. **An empty `Prepared for <root>: []` = no job for that root scored above the acceptance threshold, NOT “no requests on the board”:** the request (e.g. `minecraft:mutton`) may be there the whole time; what's missing is a *viable job*. The real “board fill” is that `GateReason` flipping `Blocked`/`NoRoom` → `Ok` — a *cause*, not the empty list.
 
 ## When a unit test is enough
 

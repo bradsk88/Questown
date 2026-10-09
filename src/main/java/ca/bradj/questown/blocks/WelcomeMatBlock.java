@@ -6,6 +6,7 @@ import ca.bradj.questown.mc.MapC;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlags;
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -125,6 +126,24 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
 
         private final List<Runnable> tickListeners = new ArrayList<>();
 
+        // c3 ("hard to use wrong"): a welcome mat must belong to a live flag (registered
+        // in that flag's POIs). Enforced post-load so the place->register ordering is fine
+        // (placeWelcomeMat registers synchronously before the first tick), and so a freshly
+        // reloaded world's flag POIs have settled before we judge ownership. Reported once.
+        private int c3Ticks = 0;
+        private boolean c3Reported = false;
+        private static final int C3_GRACE_TICKS = 120; // 6s
+
+        /** true when some live flag has registered this mat position in its POIs. */
+        private static boolean ownedByFlag(BlockPos pos) {
+            for (TownFlagBlockEntity f : TownFlags.all()) {
+                if (f.getWelcomeMats().contains(pos)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public Entity(
                 BlockPos p_155229_,
                 BlockState p_155230_
@@ -160,6 +179,22 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
                 BlockState blockState,
                 Entity entity
         ) {
+            if (level instanceof ServerLevel sl) {
+                if (entity.c3Ticks < C3_GRACE_TICKS) {
+                    entity.c3Ticks++;
+                } else if (!entity.c3Reported) {
+                    entity.c3Reported = true;
+                    if (ownedByFlag(pos)) {
+                        QT.BLOCK_LOGGER.info("[c3] welcome mat @{} is registered to a flag - OK", pos);
+                    } else {
+                        QT.BLOCK_LOGGER.warn("[c3] welcome mat @{} has NO owning flag (use-wrong placement) - reverting to air", pos);
+                        sl.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+                        TownFlagSubBlocks.dropDrops(sl, pos,
+                                ImmutableList.of(Items.OAK_PRESSURE_PLATE.getDefaultInstance()));
+                        return;
+                    }
+                }
+            }
             entity.tickListeners.forEach(Runnable::run);
         }
     }

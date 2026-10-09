@@ -427,3 +427,34 @@ flowchart TD
 - `beforeFindJobSite` no longer `logBug`s on a missing override: that is the
   normal "no spot assigned yet / no valid room" case, not a bug, and it fired
   every tick in a room-less town.
+
+# Welcome-mat work spot — seeded state-0 invariant
+
+A leaver's per-owner work-status ledger (this flag's `TownWorkStatusStore`) must be
+able to say, for every leaver, "for me, the welcome mat is **state 0** (needs my
+supplies)". Two sides, both pinned:
+
+- **Seed side** — `TownWorkStatusStore.defaultStateFactory` seeds
+  `State.welcomeMatSeedState()` (state 0) for the mat **unconditionally**. The old
+  path asked `ServerJobsRegistry.shouldInitializeWithState` — which carries a static
+  false-cache that outlives late job registration — and that left ~half the leavers'
+  ledgers without the mat's state-0. That was the NO_JOBSITE / COLLECTING_SUPPLIES
+  soft-lock (`.scratch/cook-soft-lock/STATE.md` Round 4, 2026-10-07;
+  `.scratch/village-self-sufficiency/unseededMat-test-defect-map.md`).
+- **Read side** — a block with *no* state in the ledger is **unstarted work, not
+  "no state"**: `State.freshIfNull` / `State.freshAtState(0)` map it to fresh,
+  matching the ticker's `getJobBlockState` upstream. Skipping nulls deadlocked the
+  supply path (`shouldTakeItem REJECT needed-empty`, empty `cleanRooms()`).
+
+Pinned by `WelcomeMatSeedStateTest`, `StateFreshIfNullTest`, and the
+`unseededMat` case in `TickerAdvancerEquivalenceTest` (the test stand must present
+the leaver's held items as a room container — `ContainersClean.get` skips the job
+block itself; a stand with no container at all was the 855 red spec).
+
+Companion guard: `WelcomeMatBlock` c3 — a mat in a slot no live flag has
+registered in its POIs is a misplacement (placement via the flag item is the only
+owner path); after a 6s post-load grace it reverts to air + drops, rather than
+persisting a flagless work spot. And `UtilClean.specialRulesAllPass`: "no global
+special rules" is *no restriction*, not "denied" — an empty rule set passes the
+fresh-block gate (`ResourceJobLoader.trySpecialRuleIsJobBlock` delegates to it;
+pinned by `JobBlockFreshGateTest`).

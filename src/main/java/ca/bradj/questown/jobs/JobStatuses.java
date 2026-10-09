@@ -21,6 +21,16 @@ import java.util.stream.Stream;
 
 public class JobStatuses {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JobStatuses.class);
+    private static final java.util.concurrent.ConcurrentHashMap<String, Long> whyLast = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long WHY_INTERVAL_MS = 4000;
+    // [WHY] Status-circuit decision dump — the diagnostic behind the questown-status-why
+    // skill (.pi/skills/questown-status-why/SKILL.md): when whyDebugJobId is set (done by
+    // ProductionJournal each recompute), it logs the root gates + nested detail maps of the
+    // leaver's status decision for that job. Inert (no label) otherwise; gated to
+    // gatherer:/hunter: leavers and throttled to one line per label per WHY_INTERVAL_MS.
+    public static volatile String whyDebugJobId = null; // set by ProductionJournal before each status recompute, so the WHY log can attribute to the real leaver
+
     public static boolean hasItems(EntityInvStateProvider<?> inventory) {
         if (inventory.hasNonSupplyItems()) {
             return true;
@@ -72,7 +82,60 @@ public class JobStatuses {
     ) {
         LZCD<STATUS> root = usualRoutineRoot(ctx);
         root.initializeAll();
-        return nullIfUnchanged(ctx.currentStatus, root.resolve());
+        STATUS resolved = root.resolve();
+        maybeLogWhy(ctx.currentStatus, resolved, root);
+        return nullIfUnchanged(ctx.currentStatus, resolved);
+    }
+
+    // [WHY] See the whyDebugJobId note — dumps every gate (condition) in the leaver's status
+    // decision circuit, each with its boolean value + reason, so we can see "why" a stuck
+    // leaver stays in a status, not just "what" status it is.
+    private static <STATUS extends IStatus<STATUS>, SUP_CAT> void maybeLogWhy(
+            STATUS current, STATUS resolved, LZCD<STATUS> root) {
+        String label = whyDebugJobId;
+        if (label == null) return;
+        if (!(label.startsWith("gatherer:") || label.startsWith("hunter:"))) return;
+        long now = System.currentTimeMillis();
+        Long last = whyLast.get(label);
+        if (last != null && now - last < WHY_INTERVAL_MS) return;
+        whyLast.put(label, now);
+        try {
+            StringBuilder gates = new StringBuilder();
+            collectWhy(root.populate(), gates, 0);
+            log.warn("[WHY] job={} current={} → {}\n{}", label, current, resolved, gates);
+        } catch (Throwable t) {
+            log.warn("[WHY] job={} current={} → {} (dump failed: {})", label, current, resolved, t.toString());
+        }
+    }
+
+    private static void collectWhy(Populated<?> pop, StringBuilder out, int depth) {
+        if (pop == null || depth > 60) return;
+        for (java.util.Map.Entry<String, Object> e : pop.conditions().entrySet()) {
+            Object val = e.getValue();
+            if (val instanceof Populated<?> cp) {
+                Object wrObj = cp.value();
+                if (wrObj instanceof WithReason<?> wr) {
+                    out.append("  gate[").append(e.getKey()).append("=").append(wr.value()).append("] (").append(wr.reason()).append(")\n");
+                } else {
+                    out.append("  gate[").append(e.getKey()).append("=").append(wrObj).append("]\n");
+                }
+                for (java.util.Map.Entry<String, Object> d : cp.conditions().entrySet()) {
+                    if (d.getValue() instanceof Populated<?> nested) {
+                        out.append("    ").append(d.getKey()).append(":\n");
+                        collectWhy(nested, out, depth + 1);
+                    } else {
+                        out.append("    ").append(d.getKey()).append(" = ").append(d.getValue()).append("\n");
+                    }
+                }
+            } else {
+                out.append("  gate[").append(e.getKey()).append("=").append(val).append("]\n");
+            }
+        }
+        Populated<?> fb = pop.ifCondFailOrNull();
+        if (fb != null) {
+            out.append("  else →\n");
+            collectWhy(fb, out, depth + 1);
+        }
     }
 
     public static <STATUS extends IStatus<STATUS>, SUP_CAT> @NotNull LZCD<STATUS> usualRoutineRoot(

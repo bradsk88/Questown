@@ -30,11 +30,22 @@ stripped (the `PROBE-J` + `TOOK item=` oracle kept, as this doc asks).
 
 The earlier "room-set race" theory below was wrong (it was the tick-freeze
 all along) but useful — it delivered the `TOOK` discriminator and `PROBE-J`.
-The Gate A/B keep-vs-revert call is still open and its changes remain
-uncommitted by design; this commit stages only `AutoTestRunner.java`,
-`commands/test/AUTOTESTS.md`, and this file. Note: the `created`/prose dates in
-this file (2026-10-13) are from a drifted session clock; the box date at
-closure is 2026-10-08.
+The Gate A/B keep-vs-revert call is **RESOLVED: KEEP** — landed in the closing
+commit after the GREEN held-run sweep (`sweep-2026-10-08-report.md`, 2 clean seeds)
+and `unseededMat-test-defect-map.md` (GREEN). Shipped: Gate A
+`UtilClean.specialRulesAllPass` (empty rule set = no restriction), Gate B
+`State.freshIfNull` / `freshAtState(0)` null-tolerance on the read side, the
+unconditional welcome-mat seed (`State.welcomeMatSeedState`), the c3
+`WelcomeMatBlock` ownership guard, and the `[WHY]` status-circuit dump
+(`JobStatuses.maybeLogWhy`/`collectWhy`) — the last one is the
+questown-status-why skill's diagnostic and stays (gated to gatherer:/hunter:
+labels, 4s throttle). Pinned by `JobBlockFreshGateTest`, `StateFreshIfNullTest`,
+`WelcomeMatSeedStateTest`, and the `unseededMat` equivalence case.
+
+(This commit stages only `AutoTestRunner.java`, `commands/test/AUTOTESTS.md`, and
+this file's original resolution; the gate hunks were kept out by design.) Note: the
+`created`/prose dates in this file (2026-10-13) are from a drifted session clock;
+the box date at closure is 2026-10-08.
 
 ---
 

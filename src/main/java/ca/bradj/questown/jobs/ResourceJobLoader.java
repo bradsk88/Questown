@@ -968,16 +968,19 @@ public class ResourceJobLoader {
     ) {
         // Gather all global and per-status rules
         ImmutableList<String> allRules = ImmutableList.<String>builder().addAll(special.specialGlobalRules()).build();
-        // Query all registered JobPhaseModifier appliers
-        boolean passed = false;
+        // Query all registered JobPhaseModifier appliers, evaluating each exactly once (short-circuited
+        // on a failing rule, same as before), delegating the pass/fail decision to the Forge-free
+        // UtilClean.specialRulesAllPass so it is unit-testable.
+        java.util.List<Boolean> ruleResults = new java.util.ArrayList<>();
         for (JobPhaseModifier rule : ca.bradj.questown.integration.SpecialRulesRegistry.getRuleAppliers(allRules)) {
-            if (rule.postJobBlockCheckPassed(ctx)) {
-                passed = true;
-                continue;
+            boolean passed = rule.postJobBlockCheckPassed(ctx);
+            ruleResults.add(passed);
+            if (!passed) {
+                break;
             }
-            return false;
         }
-        return passed;
+        boolean result = UtilClean.specialRulesAllPass(ruleResults);
+        return result;
     }
 
     private static Optional<BlockStateComparator> getStateComparator(JsonObject block) {
