@@ -198,6 +198,59 @@ public class ServerJobsRegistry {
         return false;
     }
 
+    /** One job's declared product: {@code initial_request} as the job data names it; {@code null} = names none. */
+    public record ProducerDeclaration(JobID job, @Nullable Ingredient product) {
+    }
+
+    /**
+     * The static producer capability for a missing item: which roots' job definitions
+     * <em>declare</em> it as their product ({@code initial_request}) — independent of
+     * what the town has discovered. Quest generation must be able to ask for a producer
+     * the town does not yet hold (that is the unlock quest's whole purpose; gannet
+     * handoff, decision 3), so the discovery gate ({@code allKnownGatherItemsFn} via
+     * the results function) stays on the job engine's execution path only.
+     * <p>
+     * Scope is the declared product — the {@code biome_loot} result tables would extend
+     * this (parked follow-up).
+     */
+    public static Set<String> staticProducerRootsForItem(
+            @Nullable ServerLevel sl,
+            Ingredient wanted
+    ) {
+        List<ProducerDeclaration> declared = new ArrayList<>(Works.regularJobs().size());
+        for (Map.Entry<JobID, Supplier<Work>> entry : Works.regularJobs()) {
+            Work work = entry.getValue().get();
+            if (work.initialRequest == null) {
+                continue;
+            }
+            try {
+                declared.add(new ProducerDeclaration(entry.getKey(), work.initialRequest.apply(sl)));
+            } catch (RuntimeException re) {
+                QT.JOB_LOGGER.error("Failed to resolve the declared product of {}", entry.getKey(), re);
+            }
+        }
+        return staticProducerRootsFor(declared, wanted);
+    }
+
+    /**
+     * Pure core of {@link #staticProducerRootsForItem}: the declared products are handed
+     * in, which keeps this unit-testable although building them from the live {@code Works}
+     * registry is Forge-registry-bound (compile + held-run covers that half; the
+     * {@code Work.isUnlockedInitially} precedent).
+     */
+    public static Set<String> staticProducerRootsFor(
+            Iterable<ProducerDeclaration> declaredProducts,
+            Ingredient wanted
+    ) {
+        Set<String> roots = new HashSet<>();
+        for (ProducerDeclaration declared : declaredProducts) {
+            if (matches(wanted, declared.product())) {
+                roots.add(declared.job().rootId());
+            }
+        }
+        return roots;
+    }
+
     /**
      * @throws NullPointerException if job does not exist
      */

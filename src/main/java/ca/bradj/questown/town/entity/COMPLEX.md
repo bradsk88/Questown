@@ -224,7 +224,7 @@ flowchart TD
     Gate -- yes --> Hold["no post, no re-check"]
     Gate -- no --> Grace{"now - since >=\nConfig.UNMET_UNLOCK_QUEST_GRACE_TICKS\n(default 12000 = 1 in-game day)?"}
     Grace -- no --> Hold
-    Grace -- yes --> Prod["producerRootsForItem:\njob-registry results inverted\n(roots whose work produces the missing item)"]
+    Grace -- yes --> Prod["staticProducerRootsForItem:\ndeclared product (initial_request) matching\nthe need — static, not discovery-gated"]
     Prod --> Pick["chooseProducerRoot:\nfirst sorted, excluding the stuck root itself\nand roots already unlocked by some townie"]
     Pick --> Dup{"open JOB_UNLOCK on that root?"}
     Dup -- yes --> Hold
@@ -257,8 +257,14 @@ types): the journal keeps a `ROOM`-typed ACTIVE placeholder, not a
 - **Exclusions keep the quest honest.** `chooseProducerRoot` skips the stuck
   root itself (its capacity already exists) and any root some townie already
   has unlocked (an unlocked producer means the stuck state has a different
-  cause and the quest would not help). Producer candidates come from the live
-  job registry (`ServerJobsRegistry.getResults`), not a static table.
+  cause and the quest would not help). Producer candidates come from the job
+  definitions' declared products (`ServerJobsRegistry.staticProducerRootsForItem`
+  — `initial_request` matching), not the discovery-gated registry results: an
+  unlock quest exists to ask for a producer the town does not yet hold, so the
+  producer knowledge must be omniscient (gannet decision 3); the discovery gate
+  stays on the job engine's execution path. The same predicate drives the loss
+  scan — a quest posted on declared capability must not be marked lost by the
+  discovery gate's view.
 - **The unlocked-jobs seam is `VillagerHolder.getUnlockedJobs`** — the one
   handle surface that exposes per-townie unlocked `JobID` sets, read
   server-side via `TownVillagerHandles`.
@@ -266,6 +272,19 @@ types): the journal keeps a `ROOM`-typed ACTIVE placeholder, not a
   detection, batch completion/lost plumbing). Post timing and live
   completion/loss are covered by the held `village/self_sufficiency` run;
   plan: `docs/plans/2026-09-27-001-feat-unmet-unlock-quest-plan.md`.
+
+**The tutorial's top-need batch is a second consumer of the same producer
+predicate.** Phase 2.75 (`tryPhase2_75_topNeedUnlock`) walks the ranked
+unmet-need item queue (`chooseTopNeed`, pure — `TownQuestsTopNeedWalkTest`)
+to the first need with a not-yet-unlocked producer, and posts JOB_UNLOCK plus
+that producer's base room. Needs with no producer at all, or with only
+already-unlocked producers, are **skipped, not dead-ends** (run-14's
+die-on-#1 `oak_wood` cell: zero candidates silenced a lower need that had
+one). A need whose producer's unlock is already in flight ends the phase
+(`SKIPPED`) — the walk does not reach past it to post for a lower-ranked
+need. The producer core itself (`staticProducerRootsFor`) is unit green in
+`StaticProducerRootsTest`; its `Works`-registry glue half is
+registry-bound (compile + the held run settle it).
 
 # LOOT quest close — extraction-satisfiable, decoupled from the job's post-extract rule
 

@@ -16,9 +16,6 @@ import ca.bradj.questown.gui.ItemEconomicsData;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
-import ca.bradj.questown.jobs.Work;
-import ca.bradj.questown.jobs.Works;
-import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.RecipeRef;
@@ -56,6 +53,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -480,7 +478,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 }
                 String producer = JobID.fromRL(q.getWantedId()).rootId();
                 boolean stillNeeded = stuckRootToMissingItem.entrySet().stream()
-                        .anyMatch(e -> producerRootsForItem(this.town.getUnsafe(), Ingredients.fromString(e.getValue())).contains(producer));
+                        .anyMatch(e -> ServerJobsRegistry.staticProducerRootsForItem(
+                                        town.getServerLevel(), Ingredients.fromString(e.getValue())).contains(producer));
                 if (!stillNeeded) {
                     batch.markRecipeAsLostByKey(q.getWantedId());
                 }
@@ -497,7 +496,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         TownFlagBlockEntity t = this.town.getUnsafe();
         Ingredient missing = Ingredients.fromString(missingItemKey);
         String producer = chooseProducerRoot(
-                producerRootsForItem(t, missing), root, unlockedRoots(town)
+                ServerJobsRegistry.staticProducerRootsForItem(t.getServerLevel(), missing), root, unlockedRoots(town)
         );
         if (producer == null) {
             return;
@@ -537,15 +536,18 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
      * order that is not the stuck root itself and not already unlocked by some townie
      * (an unlocked producer means the town already holds the capacity, so the stuck
      * state has a different cause and an unlock quest would not help).
+     *
+     * @param stuckRoot the root to exclude, or {@code null} for a town-wide need (the
+     *                  top-need batch — it has no stuck root to exclude).
      */
     @Nullable
     static String chooseProducerRoot(
             Set<String> producerRoots,
-            String stuckRoot,
+            @Nullable String stuckRoot,
             Set<String> unlockedRoots
     ) {
         return producerRoots.stream()
-                            .filter(r -> !r.equals(stuckRoot))
+                            .filter(r -> stuckRoot == null || !r.equals(stuckRoot))
                             .filter(r -> !unlockedRoots.contains(r))
                             .sorted()
                             .findFirst()
@@ -553,21 +555,46 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /**
-     * Roots that can produce the item, read off the job registry's result sets.
-     * Job definitions are static, so a miss (empty set) is not cached separately:
-     * the caller re-asks every flag tick and the cost is a handful of result lookups.
+     * The outcome of the top-need walk: the first need with an unlockable producer
+     * (plus the root to unlock). Null {@code need()} means no ranked item was
+     * actionable — the town already holds the capacity, or the supply is player input
+     * — and the batch falls through to the fixed phases.
      */
-    @NotNull
-    private static Set<String> producerRootsForItem(TownFlagBlockEntity t, Ingredient missing) {
-        Set<String> roots = new HashSet<>();
-        WorksBehaviour.TownData td = t.getTownData();
-        for (Map.Entry<JobID, Supplier<Work>> entry : Works.regularJobs()) {
-            if (ServerJobsRegistry.getResults(td, entry.getKey()).stream()
-                                  .anyMatch(res -> missing.test(res.toMCItemStack()))) {
-                roots.add(entry.getKey().rootId());
+    record TopNeedChoice(@Nullable ItemEconomicsData need, @Nullable String producer) {
+    }
+
+    /**
+     * Walk the ranked unmet-need queue (most-needed first) to the first need a
+     * not-yet-unlocked job can produce. Needs with no producer at all (e.g. player
+     * inputs) or with only already-unlocked producers are <em>skipped</em>, not
+     * dead-ends: run 14's #1 was exactly such a cell ({@code oak_wood}, zero
+     * candidates) and it silently skipped the whole batch (gannet handoff,
+     * decision 2).
+     * <p>
+     * The walk stops at the <em>first</em> actionable need; the caller checks whether
+     * an unlock quest for its producer is already open and ends the phase — the walk
+     * must not reach past an in-flight one to post for a lower-ranked need.
+     */
+    static TopNeedChoice chooseTopNeed(
+            List<ItemEconomicsData> needs,
+            Function<String, Set<String>> producerRootsFor,
+            Set<String> unlockedRoots
+    ) {
+        for (ItemEconomicsData need : needs) {
+            String key = need.ingredientKey();
+            if (key == null || key.isEmpty()) {
+                continue;
+            }
+            Set<String> roots = producerRootsFor.apply(key);
+            if (roots == null || roots.isEmpty()) {
+                continue;
+            }
+            String producer = chooseProducerRoot(roots, null, unlockedRoots);
+            if (producer != null) {
+                return new TopNeedChoice(need, producer);
             }
         }
-        return roots;
+        return new TopNeedChoice(null, null);
     }
 
     private static Set<String> unlockedRoots(TownInterface town) {
@@ -723,17 +750,27 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             QT.QUESTS_LOGGER.info("Top-need batch: no unmet item needs registered; falling through");
             return null;
         }
-        ItemEconomicsData top = needs.get(0);
-        Set<String> producerRoots = producerRootsForItem(t, Ingredients.fromString(top.ingredientKey()));
-        String producer = chooseProducerRoot(producerRoots, "cook", unlockedRoots(ti));
-        QT.QUESTS_LOGGER.info("Top-need batch: top need {} (x{}); producer candidates {} (unlocked {}); chosen {}",
-                top.ingredientKey(), top.timesNeeded(),
-                producerRoots, unlockedRoots(ti), producer);
-        if (producer == null) {
-            // No un-unlocked job can make it; the supply is a player input, not a job.
+        ServerLevel level = t.getServerLevel();
+        Set<String> unlocked = unlockedRoots(ti);
+        TopNeedChoice choice = chooseTopNeed(
+                needs,
+                key -> ServerJobsRegistry.staticProducerRootsForItem(level, Ingredients.fromString(key)),
+                unlocked
+        );
+        if (choice.need() == null) {
+            // Nothing in the ranking has a producer the town could unlock (player input
+            // or already-unlocked capacity); nothing to name. Continue the fixed phases.
+            QT.QUESTS_LOGGER.info("Top-need batch: walked {} need(s); none actionable (unlocked {})",
+                    needs.size(), unlocked);
             return null;
         }
+        ItemEconomicsData top = choice.need();
+        String producer = choice.producer();
+        QT.QUESTS_LOGGER.info("Top-need batch: chose need {} (x{}) -> producer {} (unlocked {})",
+                top.ingredientKey(), top.timesNeeded(), producer, unlocked);
         if (openJobUnlockQuestExists(producer)) {
+            // The top actionable need already has an unlock in flight: the phase's
+            // purpose is served — end it here rather than walking deeper.
             return Tutorial.SKIPPED;
         }
 
