@@ -444,7 +444,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                                     .flatMap(v -> deps.getRecipe(v).stream())
                                     .toList()
                 );
-                return JobsClean.hasNonSupplyItems((ItemsHolder) deps.getJournal(), (ImmutableList) allFillableRecipes);
+                return SupplyItems.hasNonSupplyItems((ItemsHolder) deps.getJournal(), (ImmutableList) allFillableRecipes);
             }
 
             @Override
@@ -520,7 +520,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
     ) {
         ImmutableList<MATCH> roomsWithCompletedProduct = computeRoomsWithCompletedProduct(deps, work);
 
-        return JobsClean.getEntityCurrentJobSite(
+        return DeclarativeJobs.getEntityCurrentJobSite(
                 deps.toPosition(deps.getEntity().getBlockPosition()),
                 roomsNeedingVillagerInput,
                 roomsWithCompletedProduct.stream().map(IRoomRecipeMatch::getRoom).toList(),

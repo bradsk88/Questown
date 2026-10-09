@@ -10,6 +10,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
+import ca.bradj.questown.jobs.declarative.SupplyItems;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -441,7 +442,7 @@ public abstract class ProductionJob<
             BlockPos pos,
             Long currentTick
     ) {
-        ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
+        ContainerTarget.CheckFn<MCTownItem> checkFn = item -> SupplyItems.shouldTakeItem(
                 journal.getCapacity(), cleanRooms(),
                 journal.getItems(), item
         );

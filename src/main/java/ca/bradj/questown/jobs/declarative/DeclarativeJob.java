@@ -566,7 +566,7 @@ public class DeclarativeJob extends
         if (suppliesTarget == null) {
             return;
         }
-        JobsClean.SuppliesTarget<BlockPos, MCTownItem> st = new JobsClean.SuppliesTarget<>() {
+        SupplyItems.SuppliesTarget<BlockPos, MCTownItem> st = new SupplyItems.SuppliesTarget<>() {
             @Override
             public boolean isCloseTo() {
                 return Jobs.isCloseTo(entityBlockPos, suppliesTarget.getBlockPos());
@@ -802,7 +802,7 @@ public class DeclarativeJob extends
                     return jbs != null && maxState.equals(jbs.processingState());
                 }
         );
-        return JobsClean.findJobSite(
+        return DeclarativeJobs.findJobSite(
                 maxState,
                 prioritizesExtraction(),
                 statusItems,

@@ -1,6 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.jobs.ContainersClean;
+
 import ca.bradj.questown.jobs.Item;
 import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.WorkPosition;

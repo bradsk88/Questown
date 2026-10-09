@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
-import ca.bradj.questown.jobs.JobsClean;
+import ca.bradj.questown.jobs.declarative.DeclarativeJobs;
+
 import ca.bradj.questown.jobs.declarative.TestRoomMatch;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.town.workstatus.State;
@@ -97,7 +98,7 @@ class WorkStatusStoreMatSeedTest {
         // the corrected invariant (matching findJobSpot and the sibling null->fresh sites) is
         // that an unseeded mat = unstarted work = state 0, i.e. workable. This test is red
         // without the JobsClean.rooms fix and green with it.
-        var workable = JobsClean.rooms(
+        var workable = DeclarativeJobs.rooms(
                 () -> com.google.common.collect.ImmutableList.copyOf(matNvi().get().get(0)),
                 store::getJobBlockState,
                 pos -> true,
@@ -115,7 +116,7 @@ class WorkStatusStoreMatSeedTest {
 
         // The null->fresh supplier (option A, cf. bsFn at DeclarativeJobTicker:203 and
         // the rni guard at :279): the identical store + mat room now yields a workable spot.
-        var workable = JobsClean.rooms(
+        var workable = DeclarativeJobs.rooms(
                 () -> com.google.common.collect.ImmutableList.copyOf(matNvi().get().get(0)),
                 pos -> {
                     State s = store.getJobBlockState(pos);

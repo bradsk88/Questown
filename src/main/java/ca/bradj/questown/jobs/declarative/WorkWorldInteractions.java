@@ -1,4 +1,6 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.declarative;
+
+import ca.bradj.questown.jobs.ResultGenerator;
 
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import com.google.common.collect.ImmutableList;

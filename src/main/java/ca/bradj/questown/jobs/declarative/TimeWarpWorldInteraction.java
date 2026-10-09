@@ -691,7 +691,7 @@ public class TimeWarpWorldInteraction extends
 
             @Override
             public boolean hasNonSupplyItems() {
-                return JobsClean.hasNonSupplyItems(
+                return SupplyItems.hasNonSupplyItems(
                         heldItems.get(),
                         state.get(),
                         checks.getAllRequiredIngredients(),

@@ -1,6 +1,10 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput.NVIRoom;
+import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.*;
@@ -27,7 +31,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.*;
@@ -147,7 +155,7 @@ public class DeclarativeJobs {
         //TODO: Validate that this is actually needed
         rooms = rooms.filter(v -> !v.dueToWorkOnly());
 
-        return JobsClean.<BlockPos, MCRoom, ResourceLocation>rooms(
+        return DeclarativeJobs.<BlockPos, MCRoom, ResourceLocation>rooms(
                 () ->
                         roomHandle.getMatches().stream()
                                   .filter(v -> !v.dueToWorkOnly()) //TODO: Validate that this is actually needed
@@ -482,4 +490,194 @@ public class DeclarativeJobs {
         return matched;
     }
 
+
+// ---- moved verbatim from ca.bradj.questown.jobs.JobsClean (consolidation plan C5, 2026-10-09) ----
+
+// TODO: Test "should not return null if entity is in room with finished product"
+    private static boolean isNearPosition(Position a, Position b, int maxDistance) {
+        int dx = Math.abs(a.x - b.x);
+        int dz = Math.abs(a.z - b.z);
+        return dx <= maxDistance && dz <= maxDistance;
+    }
+
+    public static <ROOM extends Room, RECIPE, POS> EntityCurrentJobSite<ROOM> getEntityCurrentJobSite(
+            // TODO: Consider y coordinate
+            Position entityBlockPos,
+            RoomsNeedingVillagerInput<ROOM, RECIPE, POS> roomsNeedingIngredientsOrTools,
+            Collection<ROOM> roomsWithCompletedProduct,
+            Predicate<ROOM> additionalPosCheck,
+            Predicate<RECIPE> isFarm
+    ) {
+        for (ROOM room : roomsWithCompletedProduct) {
+            boolean contains = InclusiveSpaces.contains(room.getSpaces(), entityBlockPos);
+            boolean atDoor = room.getDoorPos().equals(entityBlockPos);
+            boolean nearDoor = isNearPosition(entityBlockPos, room.getDoorPos(), 2);
+            if (contains || atDoor || nearDoor) {
+                return new EntityCurrentJobSite<>(room, false); // TODO: Add a check for farm
+            }
+        }
+
+        // TODO: Support multiple tiers of job site (i.e. more than one resource location)
+        Predicate<IRoomRecipeMatch<ROOM, RECIPE, POS, ?>> containsEntity = v ->
+        {
+            boolean contains = InclusiveSpaces.contains(v.getRoom().getSpaces(), entityBlockPos);
+            return contains || v.getRoom().getDoorPos().equals(entityBlockPos);
+        };
+        // FIXME: We should also check rooms needing WORK
+        return roomsNeedingIngredientsOrTools
+                .getMatches()
+                .stream()
+                .map(RoomsNeedingVillagerInput.NVIRoom::room)
+                .filter(v -> additionalPosCheck.test(v.getRoom()))
+                .filter(containsEntity)
+                .findFirst()
+                .map(v -> new EntityCurrentJobSite<>(v.getRoom(), v.getRecipeIDs().stream().anyMatch(isFarm)))
+                .orElse(null);
+    }
+
+    public static <ROOM extends Room, RECIPE, BLOCK> @NotNull WithReason<@Nullable BLOCK> findJobSite(
+            int maxState,
+            boolean prioritizeExtraction,
+            Map<Integer, SupplyItemStatus> statusItems,
+            Collection<ROOM> roomsWithFinishedProduct,
+            Function<ROOM, BLOCK> getPositionWithin,
+            RoomsNeedingVillagerInput<ROOM, RECIPE, BLOCK> blocksSrc,
+            Function<BLOCK, State> work,
+            Predicate<BLOCK> isJobBlock,
+            BiFunction<BLOCK, ROOM, BLOCK> findInteractionSpot
+    ) {
+        if (prioritizeExtraction && !roomsWithFinishedProduct.isEmpty()) {
+            return WithReason.always(
+                    getPositionWithin.apply(roomsWithFinishedProduct.iterator().next()),
+                    "prioritizing extraction and room has result"
+            );
+        }
+
+        ArrayList<NVIRoom<ROOM, RECIPE, BLOCK>> rooms = new ArrayList<>(blocksSrc.getMatches());
+        // TODO: Sort by distance and choose the closest (maybe also coordinate
+        //  with other workers who need the same type of job site)
+        // For now, we use randomization
+        Collections.shuffle(rooms);
+
+        boolean roomFoundButNotBlock = true;
+
+        for (NVIRoom<ROOM, RECIPE, BLOCK> match : rooms) {
+            for (Map.Entry<BLOCK, ?> blocks : match.room().getContainedBlocks().entrySet()
+            ) {
+                BLOCK blockPos = blocks.getKey();
+                State blockState = work.apply(blockPos);
+                if (blockState == null) {
+                    blockState = State.freshAtState(0);
+                }
+                if (isJobBlock.test(blockPos)) {
+                    roomFoundButNotBlock = false;
+                } else {
+                    continue;
+                }
+
+                Supplier<BLOCK> is = () -> findInteractionSpot.apply(
+                        blockPos,
+                        match.room().getRoom()
+                );
+
+                if (maxState == blockState.processingState()) {
+                    return new WithReason<>(is.get(), "Found extractable product");
+                }
+                SupplyItemStatus sis = statusItems.getOrDefault(blockState.processingState(), SupplyItemStatus.NOT_REQUIRED);
+                if (sis != SupplyItemStatus.NEEDS_ITEM) {
+                    return new WithReason<>(is.get(), "Found a spot where a held item can be used");
+                }
+            }
+        }
+
+        if (roomFoundButNotBlock) {
+            return new WithReason<>(null, "Job site found, but no usable job blocks");
+        }
+
+        return new WithReason<>(null, "No job sites");
+    }
+
+    public static <POS, ROOM extends Room, RECIPE> ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks<POS>> rooms(
+            Supplier<ImmutableList<NVIRoom<ROOM, RECIPE, POS>>> jobSites,
+            Function<POS, State> jobBlockStates,
+            Predicate<POS> isJobBlock,
+            Function<POS, String> stringify,
+            int maxState
+    ) {
+        ImmutableMap.Builder<Integer, RoomsWithWorkableStatefulBlocks<POS>> b = ImmutableMap.builder();
+        Supplier<Rooms<POS, ?>> e = () -> {
+            ImmutableMap.Builder<POS, Integer> spotStatuses = ImmutableMap.builder();
+            ImmutableMap.Builder<POS, Boolean> spotJBs = ImmutableMap.builder();
+            Map<ROOM, List<Integer>> roomStatuses = new HashMap<>();
+            Stream<NVIRoom<ROOM, RECIPE, POS>> rooms = jobSites.get().stream();
+
+            //TODO: Validate that this is actually needed
+            rooms = rooms.filter(v -> !v.dueToWorkOnly());
+
+            rooms.forEach(match -> {
+                for (Map.Entry<POS, ?> entry : match.room().getContainedBlocks().entrySet()) {
+                    POS bp = entry.getKey();
+                    State jobBlockState = jobBlockStates.apply(bp);
+                    // A block with no work-state record in this store is unstarted work, not
+                    // "no state": this read must agree with sibling sites (findJobSpot l.283,
+                    // DeclarativeJobTicker bsFn l.203 and the rni guard l.279). Skipping nulls
+                    // here deadlocked leavers whose per-owner store had not yet seeded the
+                    // gate mat (NO_JOBSITE soft-lock, 2026-10-08, WorkStatusStoreMatSeedTest).
+                    if (jobBlockState == null) {
+                        jobBlockState = State.freshAtState(0);
+                    }
+                    int v = jobBlockState.processingState();
+                    spotStatuses.put(bp, v);
+                    UtilClean.addOrInitializeList(roomStatuses, match.room().getRoom(), v);
+                    spotJBs.put(bp, isJobBlock.test(bp));
+                }
+            });
+            return new Rooms<>(spotStatuses.build(), roomStatuses, spotJBs.build());
+        };
+
+        for (int i = 0; i < maxState; i++) {
+            b.put(i, new RoomsWithWorkableStatefulBlocks<>(i, e, stringify));
+        }
+        return b.build();
+    }
+
+    public static <POS, MATCH extends IRoomRecipeMatch<?, ?, POS, ?>> boolean isUnfinishedTimeWorkPresent(
+            Supplier<ImmutableList<MATCH>> roomSource,
+            Function<POS, Integer> ticksSource
+    ) {
+        ImmutableList<MATCH> rooms = roomSource.get();
+        return rooms.stream()
+                    .anyMatch(v -> {
+                        for (Map.Entry<POS, ?> e : v.getContainedBlocks().entrySet()) {
+                            @Nullable Integer apply = ticksSource.apply(e.getKey());
+                            if (apply != null && apply > 0) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+    }
+
+    public static <POS> Collection<Integer> getStatesWithUnfinishedWork(
+            Collection<? extends Supplier<Collection<POS>>> rooms,
+            Function<POS, State> getJobBlockState,
+            Predicate<POS> canClaim
+    ) {
+        HashSet<Integer> b = new HashSet<>();
+        rooms.forEach(v -> {
+            for (POS e : v.get()) {
+                if (!canClaim.test(e)) {
+                    continue;
+                }
+                @Nullable State apply = getJobBlockState.apply(e);
+                if (apply != null && apply.workLeft() > 0) {
+                    b.add(apply.processingState());
+                    return;
+                }
+            }
+        });
+        ArrayList<Integer> b2 = new ArrayList<>(b);
+        Collections.sort(b2);
+        return ImmutableList.copyOf(b2);
+    }
 }

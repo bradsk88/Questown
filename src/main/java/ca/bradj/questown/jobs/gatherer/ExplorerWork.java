@@ -8,6 +8,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
+import ca.bradj.questown.jobs.declarative.WorkWorldInteractions;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;

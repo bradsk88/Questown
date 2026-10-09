@@ -6,7 +6,7 @@ import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.HeldItem;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.Item;
-import ca.bradj.questown.jobs.JobsClean;
+import ca.bradj.questown.jobs.declarative.SupplyItems;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.roomrecipes.core.Room;
 
@@ -23,7 +23,7 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
             STATUS status,
             int upToAmount,
             RoomsNeedingVillagerInput<?, ?, ?> roomsNeedingIngredientsOrTools,
-            JobsClean.SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
+            SupplyItems.SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<Integer, Collection<? extends IPredicateCollection<TOWN_ITEM>>> recipe,
             Collection<HELD_ITEM> currentHeldItems,
             Consumer<TOWN_ITEM> taker
@@ -38,7 +38,7 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
             STATUS status,
             int upToAmount,
             RoomsNeedingVillagerInput<?, ?, ?> roomsNeedingIngredientsOrTools,
-            JobsClean.SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
+            SupplyItems.SuppliesTarget<POS, TOWN_ITEM> suppliesTarget,
             Function<Integer, Collection<? extends IPredicateCollection<TOWN_ITEM>>> recipe,
             Collection<HELD_ITEM> currentHeldItems,
             Consumer<TOWN_ITEM> taker,
@@ -60,9 +60,9 @@ public class AbstractSupplyGetter<STATUS extends IStatus<?>, POS, TOWN_ITEM exte
             return false;
         }
 
-        return JobsClean.<POS, TOWN_ITEM>tryTakeContainerItems(
+        return SupplyItems.<POS, TOWN_ITEM>tryTakeContainerItems(
                 taker, suppliesTarget,
-                item -> JobsClean.<TOWN_ITEM, HELD_ITEM>shouldTakeItem(
+                item -> SupplyItems.<TOWN_ITEM, HELD_ITEM>shouldTakeItem(
                         upToAmount, recipe.apply(first.get()), currentHeldItems, item
                 ),
                 adjustOrder

@@ -37,7 +37,7 @@ public class State {
      * the job can't happen there. Treating an unseeded block as "missing" (skip it) leaves the room set
      * empty and stalls the collection loop: the leaver sits in COLLECTING_SUPPLIES and is rejected with
      * {@code shouldTakeItem} REJECT {@code needed-empty}. So an unseeded block is treated as
-     * FRESH in state 0, the same as the gate path already does ({@code JobsClean.rooms}).
+     * FRESH in state 0, the same as the gate path already does ({@code DeclarativeJobs.rooms}).
      *
      * @param getJobBlockState the per-owner lookup (may return null for an unseeded block)
      * @param pos              the job block position

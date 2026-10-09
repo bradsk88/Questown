@@ -152,3 +152,22 @@ chosen the supplies branch and never touched the workable branch).
 Rule: a dependency read for display is safe only via `populate()` first (read-only — it
 recomputes from town state, no side effects), or guard a null `value`.
 `RoomsWithWorkableStatefulBlocks.describe()` is now null-safe as defense-in-depth.
+
+# Where the job plumbing lives (2026-10-09 declarative consolidation)
+
+The legacy `*Clean` helpers are gone — the jobs logic now canonically lives in
+`jobs/declarative/` (plan: `docs/plans/2026-10-09-001-refactor-declarative-jobs-consolidation-plan.md`):
+
+| Was | Now |
+|-----|-----|
+| `jobs/JobsClean.shouldTakeItem` / `hasNonSupplyItems` / `tryTakeContainerItems` / `SuppliesTarget` | `declarative/SupplyItems` |
+| `jobs/JobsClean.rooms` / `isUnfinishedTimeWorkPresent` / `getStatesWithUnfinishedWork` / `getEntityCurrentJobSite` / `findJobSite` | `declarative/DeclarativeJobs` (static) |
+| `jobs/ContainersClean` (+ `Block`/`JobSite`) | `declarative/ContainersClean` |
+| `jobs/WorkWorldInteractions` (+ `ALWAYS_EMPTY_RESULT_GENERATOR`) | `declarative/WorkWorldInteractions` |
+
+Two `DeclarativeJobs.rooms` overloads now coexist in-class: the original MC-specialized
+(`Integer, RoomsNeedingVillagerInput<MCRoom,…>, WorkStatusHandle, Predicate`) is a thin
+delegate to the moved generic one. A future dedupe should inline the generic body into the
+MC specialization (callers are `MCRoom`/`BlockPos`/`WorkStatusHandle` typed) and drop the
+generic overload — the opposite preserves the least-used signature.
+`JobsCleanTest` / `JobsCleanShouldTakeItemTest` names historically refer to `SupplyItems` — the class is `declarative.SupplyItems`.

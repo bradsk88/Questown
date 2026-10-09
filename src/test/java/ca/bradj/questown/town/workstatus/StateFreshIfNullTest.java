@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
  * probes show exactly this ({@code cleanRooms EMPTY} while a different leaver sees {@code inner=[0=1]}).
  *
  * <p>The fix treats an unseeded block as FRESH in state 0 (matching the gate path at
- * {@code JobsClean.rooms}), so the mat is always a valid grab target for a first supply. This test pins
+ * {@code DeclarativeJobs.rooms}), so the mat is always a valid grab target for a first supply. This test pins
  * both the RED (the skip-null decision that emptied the 811 room set) and the GREEN (unseeded == fresh,
  * usable).
  */

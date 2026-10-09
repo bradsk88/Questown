@@ -1,4 +1,5 @@
 package ca.bradj.questown.jobs;
+import ca.bradj.questown.jobs.declarative.SupplyItems;
 
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -117,7 +118,7 @@ class JobsCleanShouldTakeItemTest {
     void neededEmpty_rejectsEvenMatchingFood() {
         // The stall branch (worlds 98/99): an empty needed-items set rejects
         // everything, including the item the job actually wants.
-        assertFalse(JobsClean.shouldTakeItem(5, Collections.emptyList(),
+        assertFalse(SupplyItems.shouldTakeItem(5, Collections.emptyList(),
                 List.of(AIR, AIR),
                 MEAT));
     }
@@ -125,7 +126,7 @@ class JobsCleanShouldTakeItemTest {
     @Test
     void heldFull_rejectsAnyFood() {
         // Leaver already holding a non-empty item cannot take more.
-        assertFalse(JobsClean.shouldTakeItem(2,
+        assertFalse(SupplyItems.shouldTakeItem(2,
                 List.of(FOOD),
                 List.of(MEAT),
                 MEAT));
@@ -135,7 +136,7 @@ class JobsCleanShouldTakeItemTest {
     void neededMatch_emptyHeld_acceptsFood() {
         // The pass branch: needed set has the food predicate, chest item matches,
         // held slots all empty.
-        assertTrue(JobsClean.shouldTakeItem(5,
+        assertTrue(SupplyItems.shouldTakeItem(5,
                 List.of(FOOD),
                 List.of(AIR, AIR),
                 MEAT));
@@ -146,7 +147,7 @@ class JobsCleanShouldTakeItemTest {
         // removeItemsAlreadyHeld: once the leaver holds the needed item, the
         // needed set empties and further taking is rejected (no double-carry).
         Collection<? extends Predicate<TestItem>> needed = List.of(FOOD);
-        assertFalse(JobsClean.shouldTakeItem(5, needed,
+        assertFalse(SupplyItems.shouldTakeItem(5, needed,
                 List.of(MEAT, AIR),
                 MEAT));
     }

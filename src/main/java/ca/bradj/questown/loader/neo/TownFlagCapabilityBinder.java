@@ -2,7 +2,6 @@ package ca.bradj.questown.loader.neo;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.TilesInit;
-import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.capabilities.Capabilities;

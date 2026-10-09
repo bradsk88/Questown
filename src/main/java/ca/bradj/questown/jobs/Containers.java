@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCContainerInterface;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.declarative.ContainersClean;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.interfaces.TownInterface;

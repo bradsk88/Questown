@@ -11,6 +11,7 @@ import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
+import ca.bradj.questown.jobs.declarative.WorkWorldInteractions;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.jobs.production.ProductionStatus;

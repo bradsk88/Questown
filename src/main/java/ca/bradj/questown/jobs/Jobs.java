@@ -7,7 +7,9 @@ import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.declarative.DeclarativeJobs;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.declarative.SupplyItems;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -164,7 +166,7 @@ public class Jobs {
             ItemsHolder<MCHeldItem> journal,
             ImmutableList<? extends Predicate<MCTownItem>> isItemNeeded
     ) {
-        return town.findMatchingContainer(item -> JobsClean.shouldTakeItem(
+        return town.findMatchingContainer(item -> SupplyItems.shouldTakeItem(
                 journal.getCapacity(), isItemNeeded, journal.getItems(), item
         )) != null;
     }
@@ -178,7 +180,7 @@ public class Jobs {
             RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
             Collection<MCRoom> roomsWithCompletedProduct
     ) {
-        EntityCurrentJobSite<MCRoom> in = JobsClean.getEntityCurrentJobSite(
+        EntityCurrentJobSite<MCRoom> in = DeclarativeJobs.getEntityCurrentJobSite(
                 Positions.FromBlockPos(entityBlockPos), roomsNeedingIngredientsOrTools,
                 roomsWithCompletedProduct,
                 (room) -> (room.yCoord > entityBlockPos.getY() - 5) && (room.yCoord < entityBlockPos.getY() + 5),
@@ -202,7 +204,7 @@ public class Jobs {
             ResourceLocation workRoomId,
             Function<BlockPos, @Nullable Integer> ticksSource
     ) {
-        return JobsClean.isUnfinishedTimeWorkPresent(
+        return DeclarativeJobs.isUnfinishedTimeWorkPresent(
                 () -> ImmutableList.copyOf(town.getRoomsMatching(workRoomId)),
                 ticksSource
         );
@@ -214,7 +216,7 @@ public class Jobs {
             Function<BlockPos, State> ticksSource,
             Predicate<BlockPos> canClaim
     ) {
-        return JobsClean.getStatesWithUnfinishedWork(
+        return DeclarativeJobs.getStatesWithUnfinishedWork(
                 town.get(),
                 ticksSource,
                 canClaim
