@@ -5,6 +5,7 @@ import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -67,6 +68,13 @@ public interface Delegator<ENTITY> {
     );
 
     float getMood(UUID uuid);
+
+    /** Apply a mood effect to the townie, expiring at the given game tick. */
+    void applyMoodEffect(
+            UUID uuid,
+            ResourceLocation effect,
+            long untilTick
+    );
 
     void unlockJob(
             ENTITY v,

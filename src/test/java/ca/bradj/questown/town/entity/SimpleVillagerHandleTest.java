@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Signals;
+import ca.bradj.questown.town.MoodEffects;
 import ca.bradj.questown.town.rooms.TownPosition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -47,6 +48,14 @@ class SimpleVillagerHandleTest {
         public boolean isSleeping(UUID e) {
             return false;
         }
+
+        /** Townies for which hasBed returns true (test seam for the SLEEPLESS capture). */
+        Set<UUID> bedded = new HashSet<>();
+
+        @Override
+        public boolean hasBed(UUID e) {
+            return bedded.contains(e);
+        }
     }
 
     class TestDelegator implements Delegator<UUID> {
@@ -56,6 +65,8 @@ class SimpleVillagerHandleTest {
         Map<UUID, Boolean> dining = new HashMap<>();
         JobID overnightOverride = null;
         private VillagerSleepModule<UUID> sleepModule = new TestSleepModule();
+        /** Mood effects applied via applyMoodEffect: uuid -> (effect -> untilTick). */
+        final Map<UUID, Map<net.minecraft.resources.ResourceLocation, Long>> moodEffects = new HashMap<>();
 
         @Override
         public JobID getJobId(UUID vEntity) {
@@ -169,6 +180,15 @@ class SimpleVillagerHandleTest {
         }
 
         @Override
+        public void applyMoodEffect(
+                UUID uuid,
+                net.minecraft.resources.ResourceLocation effect,
+                long untilTick
+        ) {
+            moodEffects.computeIfAbsent(uuid, u -> new HashMap<>()).put(effect, untilTick);
+        }
+
+        @Override
         public void unlockJob(
                 UUID v,
                 JobID newJob
@@ -202,7 +222,8 @@ class SimpleVillagerHandleTest {
                         100,
                         0.5f,
                         100,
-                        100
+                        100,
+                        23000
                 )
         );
         UUID villager = UUID.randomUUID();
@@ -240,7 +261,8 @@ class SimpleVillagerHandleTest {
                         100,
                         0.5f,
                         100,
-                        100
+                        100,
+                        23000
                 )
         );
         UUID villager = UUID.randomUUID();
@@ -284,7 +306,8 @@ class SimpleVillagerHandleTest {
                         100,   // damageTicks
                         0.5f,  // neutralMood
                         100,   // bufferTicksAfterFoodAttempt
-                        100    // maxTicksBeforeDowntime
+                        100,   // maxTicksBeforeDowntime
+                        23000  // sleeplessEffectDuration
                 )
         );
     }
@@ -590,6 +613,87 @@ class SimpleVillagerHandleTest {
         Assertions.assertTrue(
                 handle.isReadyForDowntimeIfIdle(v, maxTicks),
                 "rested long enough with truly no work -> rest instead of idling forever"
+        );
+    }
+
+    // ---- SLEEPLESS: the dawn debuff for townies who had no bed last night ----
+
+    @Test
+    public void handleMorning_appliesSleeplessToTowniesWithoutBedLastNight() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID bedless = UUID.randomUUID();
+        UUID bedded = UUID.randomUUID();
+        ((TestSleepModule) t.sleepModule).bedded.add(bedded);
+        handle.register(bedless);
+        handle.register(bedded);
+
+        // The day passes and the night falls: the EVENING edge captures the bedless set.
+        handle.tick(Signals.MORNING);
+        handle.tick(Signals.NOON);
+        handle.tick(Signals.EVENING);
+        handle.tick(Signals.NIGHT);
+
+        // Dawn of the next day.
+        handle.handleMorning(24000L);
+
+        Assertions.assertEquals(
+                24000L + 23000L,
+                t.moodEffects.get(bedless).get(MoodEffects.SLEEPLESS),
+                "the bedless townie gets SLEEPLESS expiring after its configured duration"
+        );
+        Assertions.assertFalse(
+                t.moodEffects.getOrDefault(bedded, Map.of()).containsKey(MoodEffects.SLEEPLESS),
+                "the townie with an assigned bed gets no SLEEPLESS"
+        );
+    }
+
+    @Test
+    public void sleeplessCapture_rearmsOnTheNextNight() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID bedless = UUID.randomUUID();
+        handle.register(bedless);
+
+        // Night one: capture at the evening edge, apply at the next morning.
+        handle.tick(Signals.MORNING);
+        handle.tick(Signals.NOON);
+        handle.tick(Signals.EVENING);
+        handle.tick(Signals.NIGHT);
+        handle.handleMorning(24000L);
+        Assertions.assertEquals(47000L, t.moodEffects.get(bedless).get(MoodEffects.SLEEPLESS));
+
+        // Night two: the townie is still bedless, so the capture re-arms and the
+        // second dawn overwrites the first application with a fresh expiry.
+        handle.tick(Signals.MORNING);
+        handle.tick(Signals.NOON);
+        handle.tick(Signals.EVENING);
+        handle.tick(Signals.NIGHT);
+        handle.handleMorning(48000L);
+        Assertions.assertEquals(
+                48000L + 23000L,
+                t.moodEffects.get(bedless).get(MoodEffects.SLEEPLESS),
+                "a second consecutive bedless night re-applies SLEEPLESS with a new expiry"
+        );
+    }
+
+    @Test
+    public void handleMorning_noBedlessTownies_appliesNothing() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID bedded = UUID.randomUUID();
+        ((TestSleepModule) t.sleepModule).bedded.add(bedded);
+        handle.register(bedded);
+
+        handle.tick(Signals.MORNING);
+        handle.tick(Signals.NOON);
+        handle.tick(Signals.EVENING);
+        handle.tick(Signals.NIGHT);
+        handle.handleMorning(24000L);
+
+        Assertions.assertTrue(
+                t.moodEffects.isEmpty(),
+                "no mood effect is applied when every townie had a bed"
         );
     }
 }

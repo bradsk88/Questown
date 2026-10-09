@@ -53,4 +53,9 @@ public class TownVillagerSleepModule implements VillagerSleepModule<VisitorMobEn
     public boolean isSleeping(VisitorMobEntity e) {
         return e.isSleeping();
     }
+
+    @Override
+    public boolean hasBed(VisitorMobEntity e) {
+        return beds.getBestBed(town.getUnsafe(), e).isPresent();
+    }
 }

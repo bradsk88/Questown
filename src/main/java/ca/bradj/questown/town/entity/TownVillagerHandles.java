@@ -363,6 +363,16 @@ public class TownVillagerHandles {
                 villagerHandle.delegate.toggleHunger();
             }
 
+            @Override
+            public boolean hasBed(VisitorMobEntity v) {
+                return villagerHandle.hasBed(v);
+            }
+
+            @Override
+            public boolean hasMoodEffect(UUID uuid, ResourceLocation effect) {
+                return villagerHandle.hasMoodEffect(uuid, effect);
+            }
+
             @SuppressWarnings("removal")
             private static UUID getUUID(VillagerUUID from) {
                 return VillagerUUID.get(from);

@@ -13,4 +13,7 @@ public interface VillagerSleepModule<ENTITY> {
     void stopSleeping(ENTITY entity);
 
     boolean isSleeping(ENTITY e);
+
+    /** True when the townie currently has an assigned bed (one the town's rooms provide). */
+    boolean hasBed(ENTITY e);
 }

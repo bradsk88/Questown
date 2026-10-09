@@ -25,6 +25,7 @@ public class TownVillagerMoods {
         b.put(MoodEffects.COMFORTABLE_EATING, 5);
         b.put(MoodEffects.UNCOMFORTABLE_EATING, -5);
         b.put(MoodEffects.ATE_RAW_FOOD, -10);
+        b.put(MoodEffects.SLEEPLESS, -15);
 
         buffs = b.build();
         staticInitialized = true;
@@ -71,6 +72,12 @@ public class TownVillagerMoods {
 
     public float getMood(UUID uuid) {
         return mood.getOrDefault(uuid, Config.NEUTRAL_MOOD.get()) / 100f;
+    }
+
+    /** True when the given effect is currently active on the given townie. */
+    public boolean hasEffect(UUID uuid, ResourceLocation effect) {
+        return moodEffects.getOrDefault(uuid, ImmutableList.of())
+                .stream().anyMatch(e -> e.effect().equals(effect));
     }
 
     public void tryApplyEffect(ResourceLocation effect, Long expireOnTick, UUID uuid) {

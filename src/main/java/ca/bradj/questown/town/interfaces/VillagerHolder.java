@@ -230,4 +230,16 @@ public interface VillagerHolder {
     boolean gaveUpDiningRecently(VillagerUUID uuid, long currentTick);
 
     void toggleHunger();
+
+    /**
+     * True when the townie currently has an assigned bed the town's rooms provide
+     * (a bed inside a matched room recipe). Drives the SLEEPLESS debuff report.
+     */
+    boolean hasBed(VisitorMobEntity v);
+
+    /**
+     * True when the given mood effect (e.g. SLEEPLESS after a bedless night) is
+     * currently active on the townie.
+     */
+    boolean hasMoodEffect(UUID uuid, ResourceLocation effect);
 }

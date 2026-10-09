@@ -438,3 +438,66 @@ flowchart TD
   work-site resolution `getRoomsMatching` traces — see
   `.scratch/cook-soft-lock/DIAGNOSIS.md` — is a separate, still-open issue that
   this unblocks.)
+
+# SLEEPLESS — the bedless-night debuff (capture at evening, apply at morning)
+
+A townie that had no bed for the night that just ended wakes with the
+`MoodEffects.SLEEPLESS` debuff (−15 mood, `Config.MOOD_EFFECT_DURATION_SLEEPLESS`,
+default 23000 ticks): neutral 75 → 60, work speed 7 → 6. The pipeline is
+deliberately asymmetric — captured on the **evening edge** of the flag tick,
+applied at the **morning transition** — so the two ends sit a full night apart.
+
+## Capture → carry → apply (happy path)
+
+```mermaid
+flowchart TD
+    Tick["SimpleVillagerHandle tick (every flag tick)"] --> Edge{"signals evening edge?\n(first EVENING tick after a non-EVENING/NIGHT tick)"}
+    Edge -- yes --> Cap["per entity: !sleepModule.hasBed(e)?\n→ BedlessLedger.recordBedless + log 'Nightfall: X of Y have no bed'"]
+    Cap --> Carry["ledger carries the set through the night\n(one capture per night, replacing any earlier)"]
+    Carry --> Dwn["morning transition: TownFlagBlockEntity → handleMorning(tick)"]
+    Dwn --> Drain["BedlessLedger.drain() (exactly once)"]
+    Drain --> Apply["per recorded townie: Delegator.applyMoodEffect(SLEEPLESS, tick + duration)\n→ TownVillagerMoods buff −15 + log 'SLEEPLESS applied until tick N'"]
+```
+
+- **The capture edge, not the time of day, is the trigger.** `BedlessLedger.captureEdge`
+  fires on the first tick whose `Signals` is `EVENING` after the signal was
+  anything else (world ~11500, before the villager schedule's REST phase at
+  12500). A restart mid-night therefore does **not** capture until the next real
+  evening; a restart mid-evening captures on the first observed tick (best
+  effort). `BedlessLedger` is pure and Forge-free — its edge/drain rule is what
+  `BedlessLedgerTest` pins without a flag or a level.
+- **`hasBed` is the *assignment*, not the block.**
+  `TownVillagerSleepModule.hasBed` asks
+  `VillagerBedsHandle.getBestBed` (the same source that becomes a townie's HOME
+  memory). A bed that exists in the world but is not assigned to the townie
+  counts as bedless. The bed supply behind the assignment is
+  `TownVillagerBedsHandle.getAllBedHeads`: the recipe-matched room blocks that
+  are beds, filtered to the positions whose **live block state is the HEAD part**
+  (`isHead`).
+- **Known upstream breakage (2026-10-09, held run, fix pending):**
+  `TownFlagBlockEntity.buildRoomForRecipe` places every recipe block with
+  `defaultBlockState()` — for a bed that is the FOOT part only, never the HEAD —
+  so rooms hold a lone foot block, `isHead` filters 100% of beds out,
+  `getAllBedHeads` is always empty, nobody is assigned, and **every** townie is
+  bedless (SLEEPLESS applied to all, nobody ever sleeps). Confirmed by the
+  temporary `[DEV-DIAG:beds]` probe in `getAllBedHeads` (gated on the
+  `questown.beddiag` sysprop, one line per 2000 handle-ticks): `bed blocks=2
+  beds after head filter=0`. The lookup is correct once the world holds whole
+  beds — the fix is on the placement side: place the HEAD at
+  `foot.relative(footState.getValue(FACING))` (vanilla semantics; the mirror is
+  `HospitalBedBlock.useWithoutItem`, which resolves a clicked FOOT to its HEAD
+  by exactly that offset). Plan + finding:
+  `docs/plans/2026-10-09-003-feat-sleepless-no-bed-debuff-plan.md`.
+- **The debuff does not clear on rest (v1).** It is a fixed-duration buff
+  re-applied at every morning while the townie is still bedless; clearing on
+  rest would race the dawn DowntimeWork bypass edge case.
+- **The autotest report line is out of phase on purpose.**
+  `VillageSelfSufficiencyExecutor`'s daily report fires at midnight
+  (`sleep bedless=N sleepless=M`) but the application happens at the flag
+  morning (~800 ticks later), so day-N's report reflects the state up to the
+  previous night — a day-N report showing `sleepless=0` after night N-1's dawn
+  line is correct, not missing.
+- **Secondary effects while everyone is bedless** (noted, not fixed): a bedless
+  townie never gets a HOME memory (HOME = the assigned bed) and
+  `registerUnmetRoom(BEDROOM)` fires for every bedless townie every handle tick
+  (demand-spam candidate).

@@ -92,6 +92,7 @@ public class Config {
     public static final ConfigValue<Integer> NEUTRAL_MOOD;
     public static final ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY;
     public static final ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_COMFORTABLY;
+    public static final ConfigValue<Long> MOOD_EFFECT_DURATION_SLEEPLESS;
     public static final ConfigValue<Integer> MAX_ROOM_DIMENSION;
     public static final ConfigValue<Integer> MAX_ROOM_SCAN_ITERATIONS;
     public static final ConfigValue<Double> MIN_ROOM_WALKABLE_FRACTION;
@@ -340,6 +341,9 @@ public class Config {
         MOOD_EFFECT_DURATION_ATE_COMFORTABLY = BUILDER.comment(
                 "When villagers eat comfortably"
         ).defineInRange("AteComfortably", 3000L, 0L, 24000L);
+        MOOD_EFFECT_DURATION_SLEEPLESS = BUILDER.comment(
+                "How long the sleepless debuff lasts after a villager had no bed for the night"
+        ).defineInRange("Sleepless", 23000L, 0L, 48000L);
 
         // End Mood Effect Durations
         BUILDER.pop();

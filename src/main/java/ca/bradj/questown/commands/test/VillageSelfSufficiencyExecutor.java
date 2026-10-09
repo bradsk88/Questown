@@ -50,6 +50,9 @@ import java.util.UUID;
  *   <li>deterministic daily report (six categories + day-over-day delta)</li>
  *   <li>lock detectors (known-lock tripwires + forward-progress net)</li>
  *   <li>self-driving room builder (open room quest -&gt; flag.buildRoom + recipe block)</li>
+ *   <li>real-night pass (default): townies walk to their beds and sleep; a townie
+ *       with no bed earns the SLEEPLESS mood debuff at dawn. The old `time set day`
+ *       skip is opt-in via questown.village.selfsuff.skipnight=true.</li>
  * </ul>
  */
 public final class VillageSelfSufficiencyExecutor {
@@ -154,6 +157,9 @@ public final class VillageSelfSufficiencyExecutor {
     /** Night-sleep counter; the daily report keys its day number on this (one
      *  report per completed night, plus a baseline at watch start). */
     private int nightsSlept = 0;
+    /** True while the watch is inside a real (unskipped) night, so the dawn is
+     *  counted exactly once per night. */
+    private boolean inRealNight = false;
     /** True once the first night has been slept through; reported as a milestone
      *  in the daily report. */
     private boolean firstNightPassed = false;
@@ -832,19 +838,29 @@ public final class VillageSelfSufficiencyExecutor {
             heartbeat();
             maybeEmitSeekingStallDiag(); // DEV-DIAG: stall score-dump, 2026-10-03 (wigeon)
         }
-        // Sleep through nights: the town's overnight phase (job changes taking
-        // effect, the chicken arc's overnight steps) requires night passage, but a
-        // realtime 5-day watch spends ~10 real minutes per game day waiting for
-        // the night to pass. Skip the night the way the growth executor does:
-        // `time set day` flips the day-time signal, which drives the flag's
-        // morning detection (AbstractTownFlagTicker.detectMorning -> onMorning ->
-        // morningTick); no fake-player vanilla sleep is required.
+        // By default the night passes for real: townies walk to their beds and
+        // sleep, and a townie with no bed earns the SLEEPLESS debuff at dawn - the
+        // bedroom loop this watch exists to observe. The old `time set day` skip
+        // is opt-in: its ~10-min-per-night rationale was 20 TPS; at 200 t/s a
+        // night is ~62 s.
         if (level.isNight()) {
-            server.getCommands().performPrefixedCommand(
-                    server.createCommandSourceStack().withPermission(4), "time set day");
+            if (skipNights()) {
+                // `time set day` flips the day-time signal, which drives the flag's
+                // morning detection (detectMorning -> onMorning -> morningTick);
+                // no fake-player vanilla sleep is required.
+                server.getCommands().performPrefixedCommand(
+                        server.createCommandSourceStack().withPermission(4), "time set day");
+                firstNightPassed = true;
+                nightsSlept++;
+                msg("Sleeped through night; watch-day " + (nightsSlept + 1));
+            } else {
+                inRealNight = true;
+            }
+        } else if (inRealNight) {
+            inRealNight = false;
             firstNightPassed = true;
             nightsSlept++;
-            msg("Sleeped through night; watch-day " + (nightsSlept + 1));
+            msg("Dawn after a real night; watch-day " + (nightsSlept + 1));
         }
         // Daily report: six categories + day-over-day delta, emitted once per
         // day-number change.
@@ -1169,6 +1185,17 @@ public final class VillageSelfSufficiencyExecutor {
         msg(topNeeds.toString());
         msg("  mood none=" + noneNeed + " unmet=" + unmetItem + " cant_reach=" + cantReach
                 + delta(unmetItem, prev.unmetItem));
+        // Bed/sleep loop: townies without an assigned bed right now, and townies
+        // carrying the SLEEPLESS debuff from a bedless night. Raw values, no delta
+        // (the counts are small; the dawn "SLEEPLESS applied" log line is the
+        // event this summarizes).
+        long bedless = 0, sleepless = 0;
+        for (LivingEntity v : flag.getVillagerHandle().entities()) {
+            VisitorMobEntity t = (VisitorMobEntity) v;
+            if (!flag.getVillagerHandle().hasBed(t)) bedless++;
+            if (flag.getVillagerHandle().hasMoodEffect(t.getUUID(), ca.bradj.questown.town.MoodEffects.SLEEPLESS)) sleepless++;
+        }
+        msg("  sleep bedless=" + bedless + " sleepless=" + sleepless);
         msg("  locks fired: " + activeLockSummary());
         msg("  milestones: firstNight=" + firstNightPassed
                 + " cookUnlocked=" + cookUnlocked
@@ -1283,9 +1310,11 @@ public final class VillageSelfSufficiencyExecutor {
         for (LivingEntity v : flag.getVillagerHandle().entities()) {
             VisitorMobEntity t = (VisitorMobEntity) v;
             String need = t.getNeed().name();
+            String needMark = t.isSleeping() ? ":SLEEPING"
+                    : (need == null || need.equals("NONE") ? "" : ":" + need);
             sb.append(" | ").append(t.getUUID().toString().substring(0, 8))
                     .append(':').append(t.getJobId().rootId()).append('/').append(t.getJobId().jobId())
-                    .append(need == null || need.equals("NONE") ? "" : ":" + need);
+                    .append(needMark);
         }
         msg("watch " + sb);
     }
@@ -1616,6 +1645,12 @@ public final class VillageSelfSufficiencyExecutor {
             }
         }
         return blocks.isEmpty() ? null : blocks;
+    }
+
+    /** Read the skip-night knob: questown.village.selfsuff.skipnight=true restores
+     *  the old `time set day` night-skip (default false = let the night pass). */
+    private boolean skipNights() {
+        return "true".equals(System.getProperty("questown.village.selfsuff.skipnight", "false"));
     }
 
     private void finish() {

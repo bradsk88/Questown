@@ -9,6 +9,7 @@ import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.town.MoodEffects;
 import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.TownVillagerUIs;
 import ca.bradj.questown.town.VillagerStatsData;
@@ -30,6 +31,10 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     private boolean hungerEnabled = false;
 
     private Configs configs;
+
+    /** Which townies had no bed for the night that just ended; drained at morning
+     *  when each recorded townie gets the SLEEPLESS mood effect. */
+    private final BedlessLedger bedlessLedger = new BedlessLedger();
 
     public Map<UUID, ? extends Set<JobID>> getUnlockedJobs() {
         return delegator.getUnlockedJobs();
@@ -93,7 +98,8 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
                 configs.damageTicks,
                 configs.neutralMood,
                 configs.bufferTicksAfterFoodAttempt,
-                configs.maxTicksBeforeDowntime
+                configs.maxTicksBeforeDowntime,
+                configs.sleeplessEffectDuration
         );
         String word = configs.hungerEnabled ? "enabled" : "disabled";
         delegator.broadcastMessage("Hunger has been " + word + ". To make this permanent, update server config.");
@@ -109,7 +115,8 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             long damageTicks,
             float neutralMood,
             long bufferTicksAfterFoodAttempt,
-            long maxTicksBeforeDowntime
+            long maxTicksBeforeDowntime,
+            long sleeplessEffectDuration
     ) {
     }
 
@@ -167,6 +174,19 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         }
         tickDamage();
         delegator.getSleepModule().tick(entities);
+        // Nightfall edge: capture which townies have no bed for the coming night,
+        // so the morning can apply the SLEEPLESS debuff to exactly those.
+        if (bedlessLedger.captureEdge(signals)) {
+            List<UUID> bedless = new ArrayList<>();
+            entities.forEach(e -> {
+                if (!delegator.getSleepModule().hasBed(e)) {
+                    bedless.add(delegator.getUUID(e));
+                }
+            });
+            bedlessLedger.recordBedless(bedless);
+            QT.FLAG_LOGGER.info("Nightfall: {} of {} townies have no bed for the night",
+                    bedless.size(), entities.size());
+        }
     }
 
     private void tickHunger() {
@@ -643,6 +663,14 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         makeAllTotallyHungry();
 //        long tick = Util.getTick(town.getServerLevelUnsafe());
         forEach(v -> registerMostRecentDowntime(delegator.getUUID(v), tick));
+        // Dawn: apply the SLEEPLESS debuff to every townie that had no bed last night.
+        Set<UUID> bedless = bedlessLedger.drain();
+        for (UUID uuid : bedless) {
+            long until = tick + configs.sleeplessEffectDuration;
+            delegator.applyMoodEffect(uuid, MoodEffects.SLEEPLESS, until);
+            QT.FLAG_LOGGER.info("Villager {} was bedless last night; SLEEPLESS applied until tick {}",
+                    UtilClean.truncateMiddle(uuid), until);
+        }
         forEach(v -> {
             if (!isJobChangePending(delegator.getUUID(v))) {
                 return;

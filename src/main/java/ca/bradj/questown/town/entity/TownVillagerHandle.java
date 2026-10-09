@@ -58,7 +58,8 @@ public final class TownVillagerHandle {
                 Compat.configGet(Config.DAMAGE_TICKS).get(),
                 Compat.configGet(Config.NEUTRAL_MOOD).get(),
                 Compat.configGet(Config.BUFFER_TICKS_AFTER_FOOD_ATTEMPT).get(),
-                Compat.configGet(Config.MAX_TICKS_BETWEEN_DOWNTIME).get()
+                Compat.configGet(Config.MAX_TICKS_BETWEEN_DOWNTIME).get(),
+                Compat.configGet(Config.MOOD_EFFECT_DURATION_SLEEPLESS).get()
         );
         this.delegate = new SimpleVillagerHandle<>(
                 new Delegator<>() {
@@ -188,6 +189,11 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public void applyMoodEffect(UUID uuid, ResourceLocation effect, long untilTick) {
+                moods.tryApplyEffect(effect, untilTick, uuid);
+            }
+
+            @Override
             public void unlockJob(
                     VisitorMobEntity v,
                     JobID newJob
@@ -280,6 +286,16 @@ public final class TownVillagerHandle {
 
     ImmutableMap<UUID, ImmutableList<Effect>> getMoodEffects() {
         return ImmutableMap.copyOf(moods.getEffects());
+    }
+
+    /** True when the townie currently has an assigned bed the town's rooms provide. */
+    public boolean hasBed(VisitorMobEntity v) {
+        return sleep.hasBed(v);
+    }
+
+    /** True when the given mood effect is currently active on the townie. */
+    public boolean hasMoodEffect(UUID uuid, ResourceLocation effect) {
+        return moods.hasEffect(uuid, effect);
     }
 
     float getProficiency(
