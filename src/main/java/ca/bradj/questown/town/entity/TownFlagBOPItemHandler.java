@@ -71,6 +71,14 @@ public class TownFlagBOPItemHandler implements ItemHandler {
             @NotNull ItemStack itemStack,
             boolean simulate
     ) {
+        if (itemStack.isEmpty()) {
+            // A consumed/empty stack is not a deposit. 1.20.6 copy() of an empty stack hands
+            // back the global ItemStack.EMPTY singleton, and setCount() on it does not reset
+            // the item reference, so storing it would poison the shared EMPTY and make the
+            // BE save throw "Cannot encode empty ItemStack" (1.19.2 never hit this; its
+            // save() tolerated empties).
+            return itemStack;
+        }
         if (!isItemValid(i, itemStack)) {
             return itemStack;
         }

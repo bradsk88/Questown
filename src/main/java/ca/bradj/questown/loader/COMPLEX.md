@@ -33,7 +33,8 @@ different `LoaderApi` impl, with zero changes to `loader/` or to Questown core.
 | `ConfigBuilder`             | `NeoConfigBuilder`            | `ForgeConfigSpec.Builder`       |
 | `MenuFactory<T>`            | (a functional interface)      | `IContainerFactory<T>`          |
 | `ItemHandler`               | `NeoItemHandler`              | `IItemHandler`                  |
-| `Channel`                   | (a stub; Neo Payload migration pending) | — |
+| `Channel`                   | `NeoChannel` (full: one `NeoEnvelope` payload over `StreamCodec`, `IPayloadHandler` dispatch) | `PayloadRegistrar`/`ICommonPacketListener` |
+| `TownFlagBOPHandlerBridge`  | —                                                       | reverse bridge: neutral `ItemHandler` → Neo `IItemHandler` |
 | `Loader` (static entry)     | `NeoLoader` (implements `LoaderApi`) | all of the above |
 
 `Loader` is the single static entry point; it holds the active `LoaderApi`
@@ -55,10 +56,14 @@ QuestownMod.clientSetup (client)          # Questown.onClientSetup() (menus, ren
 
 ## Status / pending slices
 
-This is a **WIP checkpoint**, now **compiling (main + test)** and the unit
-suite is green (965 tests, 43 skipped; the only red is the deliberate
-`ChickenArcHintsTest.todo_…` marker, which always fails by design: it lists
-beats that need a loader mod-bus harness a plain JVM cannot give).
+**Done.** Main + test compile, unit suite green (1055 tests, 43 skipped; the only reds
+are the deliberate `todo_…` markers that need a loader mod-bus harness a plain JVM
+cannot give). All six slices (advancement triggers, item-handler capability, network,
+events, journal drop, loot API) plus the runtime-boot segregation are DONE and
+verified — see the slice ledger below. Residual runtime verification ran as live
+autotests: `perf/town_large` (1/1 passed), `flag/bop_boundary_63` + `flag/bop_full_64`
+(BOP deposit path, 2/2 passed; 2026-10-09 close-out), and the 2026-10-13/10-21
+held-run sweeps.
 
 **Unit-test harness (verified).** Plain JUnit JVMs have no NeoForge mod-bus
 window, and the facade requires a `LoaderApi`: `Loader.api()` falls back to a
@@ -84,6 +89,17 @@ An explicit `Loader.init(...)` always wins, so production is untouched.
 - `Ingredient` round-tripping: `Ingredient.CODEC_NONEMPTY` rejects a tag
   ingredient with zero members ("Item array cannot be empty") — encode with
   `Ingredient.CODEC` instead.
+- **1.20.6 `ItemStack.EMPTY` is not immutable, and `save()` rejects empties.**
+  1.20.6 `isEmpty()` is true when `item == Items.AIR` (regardless of count),
+  `copy()` of an empty stack hands back the **shared `EMPTY` singleton**,
+  `setCount()` has no EMPTY guard, and `ItemStack.save()` now throws
+  `IllegalStateException("Cannot encode empty ItemStack")` (1.19.2's save()
+  tolerated empties and returned an empty tag). Consequence hit live: storing
+  the deposit handler's `shrunkStack.copy()` of a consumed 1-count stack added a
+  globally-poisoned EMPTY to the flag's BOP list and crashed the flag tick on the
+  next save. Rule: never `copy()`/`setCount()` a stack that may be empty; guard
+  deposits with `isEmpty()` (see `TownFlagBOPItemHandler.insertItem`) and skip
+  empties defensively in serializers (`TownFlagInitializationImpl.serializeBOP`).
 
 Done and
 compiling to the facade: registries (`*Init` + `RegistryDefinitions`), config
@@ -111,7 +127,20 @@ runtime verification — a held 1.20.6 hold-run autotest — not more ports):
   `EntityPredicate.ADVANCEMENT_CODEC.optionalFieldOf("player")`), a `codec()` override,
   and `CriteriaTriggers.register(id, trigger)` (2-arg). `Triggers.fromJSON`/`getID()` kept.
 - **item-handler capability** (~7 files) — **DONE for compile.** TownFlagBOPItemHandler implements the neutral ItemHandler; TownFlagState + MinecraftWorldAccess consume via Loader.handlerOf(BlockEntity) (was getCapability + LazyOptional): TownFlagBlockEntity dropped the LazyOptional<IItemHandler> field + getCapability override (removed in 1.20.6) and exposes a neutral bopItemHandler(). `AbstractVillagerMenu` no longer touches the Neo handler at all - it holds the original vanilla `Container`/`Inventory` and builds plain vanilla `Slot(container, index, x, y)` boxes (its custom quickMoveStack only uses `Slot.set/get/mayPlace`, never `insertItem`/`extractItem`); `LockableInventoryWrapper` (a zero-reference neoforged `InvWrapper` subclass) was deleted. So the GUI menus are off the strangler grandfather list without needing any Neo item-handler type (2026-10-13, gui/ leak-free).
-  **Follow-up (strangler end-state):** the runtime provider/consumer path is not wired — Neo 1.20.6 removed BlockEntity.getCapability, so a working BOP handler needs (a) a loader.neo binder registering the flag's bopItemHandler() via RegisterCapabilitiesEvent.registerBlockEntity(Capabilities.ItemHandler.BLOCK, FLAG type, ...) wrapped in a loader IItemHandler, and (b) the neutral facade gaining a handlerAt(Level, BlockPos) (level-based retrieval via level.getCapability(...)), since the BE-only handlerOf(BlockEntity) can't find a registered BLOCK capability. At this checkpoint the consumers return Optional.empty and degrade gracefully.
+  **Follow-up (strangler end-state) — DONE (2026-10-09).** The runtime
+  provider/consumer path is now wired: (a) `loader.neo.TownFlagCapabilityBinder`
+  (`@EventBusSubscriber` MOD bus, `RegisterCapabilitiesEvent.registerBlockEntity(
+  Capabilities.ItemHandler.BLOCK, TilesInit.TOWN_FLAG.get(), ...)`) registers
+  `flag.bopItemHandler()` wrapped in the reverse bridge `loader.neo.
+  TownFlagBOPHandlerBridge` (neutral `ItemHandler` → Neo `IItemHandler`; deposit
+  only, deliberately no `IItemHandlerModifiable`). (b) No facade change needed:
+  `NeoLoader.handler(BlockEntity)` already retrieves via
+  `Capabilities.ItemHandler.BLOCK.getCapability(...)`, so the binder alone makes
+  `Loader.handlerOf(be)` resolve the flag. Verified live: the `flag/bop_boundary_63`
+  + `flag/bop_full_64` autotests went from crashing (`Cannot encode empty
+  ItemStack` on flag tick) to 2/2 PASS with `bopCount 63→64`, `BOP_FULL=true`,
+  latch cleared, and zero "no item-handler capability" warnings (that warning was
+  in the 2026-10-03 live held-run log).
 - **tool-actions** (~2 files) — **DONE, cleared.** MinecraftWorldAccess + WarpWorldAccess both drove hoe/axe/shovel via `BlockState.getToolModifiedState(UseOnContext, ToolAction, boolean)` with `net.minecraftforge.common.ToolAction(s)`. That `getToolModifiedState` is a **NeoForge patch onto vanilla `BlockState`** in 1.20.6 (vanilla `HoeItem` calls it with `net.neoforged.neoforge.common.ToolActions`), so the fix was an import re-point — `forge` → `neoforged.neoforge.common.ToolAction(s)` — not a rework. WarpWorldAccess also: `getRecipeFor` now returns `RecipeHolder<T>` (resolver uses `r.recipe()`), and burn time moved from the removed `ForgeHooks.getBurnTime` to the vanilla `AbstractFurnaceBlockEntity.getFuel()` table (Map<Item,Integer>).
 - **network** — **DONE, verified.** All 32 message classes are neutral POJOs with
   wire `encode`/`decode` over `RegistryFriendlyByteBuf` + `Channel.Context` handlers;

@@ -88,7 +88,11 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         CompoundTag t = new CompoundTag();
         ListTag stacks = new ListTag();
         for (ItemStack bop : flag.bopStacks) {
-            stacks.add(bop.save(flag.getLevel().registryAccess(), new CompoundTag()));
+            // 1.20.6 save() throws on an empty stack (1.19.2 tolerated it); legacy saves or
+            // a pre-fix deposit could have left an AIR entry, so skip rather than corrupt.
+            if (!bop.isEmpty()) {
+                stacks.add(bop.save(flag.getLevel().registryAccess(), new CompoundTag()));
+            }
         }
         t.put("stacks", stacks);
         t.putBoolean("tutorial_bop_granted", flag.tutorialBopGranted);

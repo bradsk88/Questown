@@ -53,10 +53,10 @@ import org.slf4j.LoggerFactory;
  * {@code FMLEnvironment.dist}/{@code Dist}, open screen via vanilla {@code ServerPlayer.openMenu}, common
  * events via {@code NeoForge.EVENT_BUS}.
  *
- * <p>Still to complete (the remaining migration slice): the Neo Payload network stack
- * ({@link #channel}/{@link #sendToPlayer}/{@link #sendToServer}) and the redesigned item-handler capability
- * lookup ({@link #handlerOfEntity}/{@link #handlerOfBlockEntity}). Those throw a marked error rather than
- * silently misbehaving.
+ * <p>The Neo Payload network stack ({@link #channel}/{@link #sendToPlayer}/{@link #sendToServer},
+ * via {@link NeoChannel}) and the item-handler capability lookup
+ * ({@link #handlerOfEntity}/{@link #handlerOfBlockEntity}, via 1.20.4+
+ * {@code Capabilities}) are implemented.
  */
 public final class NeoLoader implements LoaderApi {
 
