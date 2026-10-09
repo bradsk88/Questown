@@ -1403,21 +1403,36 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         getRoomHandle().registerDoor(doorPos);
 
-        // Place the recipe blocks inside the 3x3 interior (dx/dz 1..3 from the
-        // corner). The first block goes in the center cell; each subsequent block
-        // takes the next distinct interior cell, spaced to the corners, so a
-        // multi-ingredient recipe places every block the room needs in its own
-        // cell. The room matcher counts each cell, so each placed block
-        // contributes one entry to the room's block multiset.
+        // Place the recipe blocks inside the 3x3 interior footprint (dx/dz 1..3 from the
+        // corner), on up to two stacked levels (floor and floor+1) — the room matcher
+        // (RecipeDetection) reads both y and y+1 of every room cell, so a 14-block recipe
+        // (e.g. inn = torch + 12 beds + sign) fits where a 9-cell single-layer floor cannot.
+        // The room matcher counts each cell, so each placed block contributes one entry to
+        // the room's block multiset.
         int[][] interior = {{2, 2}, {1, 1}, {3, 3}, {1, 3}, {3, 1}, {2, 1}, {1, 2}, {3, 2}, {2, 3}};
-        for (int i = 0; i < recipeBlocks.size() && i < interior.length; i++) {
-            BlockPos cell = new BlockPos(cornerX + interior[i][0], doorPos.getY(), cornerZ + interior[i][1]);
-            level.setBlockAndUpdate(cell, recipeBlocks.get(i).defaultBlockState());
+        int levels = 2;
+        int capacity = interior.length * levels;
+        if (recipeBlocks.size() > capacity) {
+            QT.FLAG_LOGGER.warn(
+                    "[buildRoomForRecipe] recipe needs {} blocks but the room holds {} "
+                            + "({} cells x {} levels); the room will NOT match the recipe",
+                    recipeBlocks.size(), capacity, interior.length, levels
+            );
+        }
+        for (int i = 0; i < recipeBlocks.size() && i < capacity; i++) {
+            int[] cell = interior[i % interior.length];
+            BlockPos at = new BlockPos(
+                    cornerX + cell[0],
+                    doorPos.getY() + i / interior.length,
+                    cornerZ + cell[1]
+            );
+            level.setBlockAndUpdate(at, recipeBlocks.get(i).defaultBlockState());
         }
 
+        int placed = Math.min(recipeBlocks.size(), capacity);
         QT.FLAG_LOGGER.info(
-                "[buildRoomForRecipe] built 5x5 room at corner {} for door {}, placed {} inside, door registered",
-                corner.toShortString(), doorPos.toShortString(), recipeBlocks
+                "[buildRoomForRecipe] built 5x5 room at corner {} for door {}, placed {} of {} inside, door registered",
+                corner.toShortString(), doorPos.toShortString(), placed, recipeBlocks.size(), recipeBlocks
         );
         return doorPos;
     }

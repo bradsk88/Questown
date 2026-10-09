@@ -125,17 +125,18 @@ public final class VillageSelfSufficiencyExecutor {
     private int waitTicks = 0;
     private long watchEndTick = -1;
 
-    /** Recipe IDs that have been completed by the builder. Do not re-build.
-     *  Keyed by recipe ID (not batch UUID) because a batch can contain multiple
-     *  room quests (job_board, store_room, town_gate all share one batch). */
-    private final java.util.Set<net.minecraft.resources.ResourceLocation> completedRoomRecipes = new java.util.HashSet<>();
-    /** Room recipes whose room has been built but whose quest is not yet COMPLETE.
-     *  The builder waits for the room to be re-detected and the quest to close,
-     *  then the sweep at the top of {@code driveRoomBuilder} latches the recipe
-     *  into {@code completedRoomRecipes}. Mirrors the town_gate welcome-mat path.
-     *  (Latching at build time would skip the quest before re-detection could
-     *  close it, and a multi-ingredient recipe needs every block placed anyway.) */
-    private final java.util.Set<net.minecraft.resources.ResourceLocation> builtRoomsAwaiting = new java.util.HashSet<>();
+    /** How many rooms the builder has built per recipe id, over the run. The build
+     *  gate is count-based ({@code built(rid) < open(rid)}), NOT recipe-id latched:
+     *  a recipe id can appear in more than one open quest at once (a random batch
+     *  with kitchen_stocked twice) or in a later batch after an earlier one closed
+     *  (the tutorial kitchen_stocked and a random-batch kitchen_stocked), and each
+     *  open instance needs its own room in its own place. (The earlier per-recipe
+     *  "already completed" latch refused every second instance of a recipe forever
+     *  - run 16's kitchen_stocked x2 / inn stall.) A quest that closed but was only
+     *  ever built once does not need rebuilding, so the counter only ever grows on
+     *  actual builds, and completed (non-ACTIVE) quests do not count toward open. */
+    private final java.util.Map<net.minecraft.resources.ResourceLocation, Integer> builtRoomsForRecipe =
+            new java.util.HashMap<>();
     /** Tick counter for the room-builder cadence (every 200 ticks = ~10s). The
      *  job-change driver rides the same cadence. */
     private int roomBuilderTicks = 0;
@@ -1343,18 +1344,21 @@ public final class VillageSelfSufficiencyExecutor {
         if (flag == null || level == null) return;
         var allQuests = flag.getAllQuestsWithRewards();
 
-        // A built room whose quest has closed: latch it as completed so the
-        // builder never rebuilds it. The latch happens here, not at build time,
-        // because the quest only closes once the room is re-detected and matched
-        // against the recipe.
+        // Count-based build gate: one room per OPEN (ACTIVE) instance of a recipe.
+        // The room's quest only closes once the room is re-detected and matched,
+        // but the room is already in the world, so it counts toward built at build
+        // time (no separate awaiting set): a closed quest no longer counts toward
+        // open, so a recipe whose only previous quest closed keeps exactly the
+        // room it was built for, and a second open instance still gets one.
+        java.util.Map<net.minecraft.resources.ResourceLocation, Integer> openRooms = new java.util.HashMap<>();
         for (var entry : allQuests) {
             var q = entry.getKey();
-            if (q.getType() != ca.bradj.questown.town.quests.Quest.QuestType.ROOM || !q.isComplete()) continue;
+            if (q.getType() != ca.bradj.questown.town.quests.Quest.QuestType.ROOM) continue;
+            if (q.getStatus() != ca.bradj.questown.town.quests.Quest.QuestStatus.ACTIVE) continue;
             @SuppressWarnings("unchecked")
             var rid = (net.minecraft.resources.ResourceLocation) q.getWantedId();
-            if (rid != null && builtRoomsAwaiting.remove(rid)) {
-                completedRoomRecipes.add(rid);
-                msg("[room-builder] " + rid + ": quest complete, room latched");
+            if (rid != null) {
+                openRooms.merge(rid, 1, Integer::sum);
             }
         }
 
@@ -1362,25 +1366,20 @@ public final class VillageSelfSufficiencyExecutor {
             var quest = entry.getKey();
             if (quest.getType() != ca.bradj.questown.town.quests.Quest.QuestType.ROOM) continue;
             if (quest.getStatus() != ca.bradj.questown.town.quests.Quest.QuestStatus.ACTIVE) continue;
-            // A ROOM quest with a null batchUUID is a single-recipe room (e.g.
-            // campfire) that stands on its own; the batchUUID guard was for the
-            // multi-recipe tutorial batch (job_board/store_room/town_gate share
-            // one) and over-filtered these. Build it on its recipe id alone.
             @SuppressWarnings("unchecked")
             var recipeId = (net.minecraft.resources.ResourceLocation) quest.getWantedId();
-            if (completedRoomRecipes.contains(recipeId)) {
+            int alreadyBuilt = builtRoomsForRecipe.getOrDefault(recipeId, 0);
+            int open = openRooms.getOrDefault(recipeId, 0);
+            if (alreadyBuilt >= open) {
                 if (roomBuilderTicks % 1000 == 0) {
-                    msg("[room-builder] skipping " + quest.getWantedId() + " (already completed)");
+                    msg("[room-builder] skipping " + quest.getWantedId()
+                            + " (" + alreadyBuilt + " built for " + open + " open)");
                 }
                 continue;
             }
-            // A room is already built for this recipe; wait for re-detection to
-            // close the quest (mirrors the town_gate welcome-mat path).
-            if (builtRoomsAwaiting.contains(recipeId)) {
-                if (roomBuilderTicks % 1000 == 0) {
-                    msg("[room-builder] " + recipeId + ": room built, waiting for re-detection");
-                }
-                continue;
+            if (roomBuilderTicks % 1000 == 0) {
+                msg("[room-builder] building " + quest.getWantedId()
+                        + " (" + alreadyBuilt + " built for " + open + " open)");
             }
 
             // The town_gate quest's recipe is the welcome mat, a standalone job
@@ -1408,7 +1407,7 @@ public final class VillageSelfSufficiencyExecutor {
                     return;
                 }
                 flag.placeWelcomeMat(matPos);
-                completedRoomRecipes.add(recipeId);
+                builtRoomsForRecipe.merge(recipeId, 1, Integer::sum);
                 msg("[room-builder] placed welcome mat for quest " + quest.getWantedId()
                         + " at " + matPos.toShortString() + " (registered, not a room)");
                 return;
@@ -1421,7 +1420,10 @@ public final class VillageSelfSufficiencyExecutor {
                     (net.minecraft.resources.ResourceLocation) quest.getWantedId());
             if (recipeBlocks == null) {
                 msg("[room-builder] could not resolve recipe blocks for " + quest.getWantedId());
-                completedRoomRecipes.add(recipeId);
+                // Count this instance as handled so a later cycle does not spin on it;
+                // a retry happens if the quest is still open next cycle (the counter
+                // is per-recipe over the run, and the quest remains open).
+                builtRoomsForRecipe.merge(recipeId, 1, Integer::sum);
                 continue;
             }
 
@@ -1440,10 +1442,10 @@ public final class VillageSelfSufficiencyExecutor {
                 continue;
             }
 
-            // Do not latch as completed yet: the quest only closes once the room
-            // is re-detected and matched. The sweep at the top of a later cycle
-            // moves it to completedRoomRecipes when that happens.
-            builtRoomsAwaiting.add(recipeId);
+            // The room is in the world now; count it immediately (the quest closes
+            // later, on re-detection and match - the count gate needs no awaiting
+            // set: a still-open quest keeps counting toward open until it closes).
+            builtRoomsForRecipe.merge(recipeId, 1, Integer::sum);
             msg("[room-builder] built room for quest " + quest.getWantedId()
                     + " at door " + doorPos.toShortString()
                     + ", placed " + recipeBlocks.size() + " block(s): " + recipeBlocks);
