@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.HospitalBedBlock;
 import ca.bradj.questown.town.econ.Economics;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
@@ -18,6 +19,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public class TownVillagerBedsHandle {
@@ -54,12 +56,25 @@ public class TownVillagerBedsHandle {
     public TownVillagerBedsHandle() {
     }
 
+    // DEV-DIAG (2026-10-09, sleepless): bed-visibility probe. The SLEEPLESS
+    // ledger marked every townie bedless although a recipe-completed bedroom
+    // with beds is registered; sample which link of the bed pipeline is empty
+    // (no active-recipe matches at all / no bed blocks in the contained sets /
+    // no head blocks). Remove once the bed-assignment pipeline works.
+    private static long bedDiagN = 0;
+
     private static Collection<BlockPos> getAllBedHeads(@NotNull TownInterface town) {
         RoomsHolder rooms = town.getRoomHandle();
         Collection<BlockPos> beds = rooms.findMatchedRecipeBlocks(
                 i -> i instanceof BedBlock || i instanceof HospitalBedBlock
         );
-        return beds.stream().filter(bp -> isHead(town, bp)).toList();
+        List<BlockPos> heads = beds.stream().filter(bp -> isHead(town, bp)).toList();
+        if ((System.getenv("ENABLE_DEV_COMMANDS") != null || System.getProperty("questown.beddiag") != null) && (bedDiagN++ % 2000) == 0) {
+            int all = rooms.findMatchedRecipeBlocks(b -> true).size();
+            QT.FLAG_LOGGER.info("[DEV-DIAG:beds] active-recipe contained blocks={} bed blocks={} beds after head filter={}",
+                    all, beds.size(), heads.size());
+        }
+        return heads;
     }
 
     private static boolean isHead(
