@@ -159,6 +159,38 @@ public class RoomRecipes {
         return found;
     }
 
+    /**
+     * Pure core of the room-upgrade candidate selection (extracted from
+     * {@code TownQuests.getUpgradeRecipe}; unit-testable, so it receives the
+     * recipe ids as data — the caller owns them, via the recipe holder keys
+     * (the 1.20.2 migration put the canonical id on the
+     * {@code RecipeHolder}, not the codec-constructed {@code RoomRecipe}
+     * object, whose {@code getId()} is null for every data-driven recipe)).
+     *
+     * <p>Selection semantics (the pre-fix glue's, unchanged): a candidate is a
+     * recipe whose ingredient groups cover every group of the from-recipe (each
+     * from-group must contain some candidate group — the upgrade refines or
+     * extends the recipe's inputs); a perfect overlap is the recipe itself,
+     * not an upgrade, and is skipped. Every non-overlapping candidate is
+     * returned; the caller picks one (the glue picks at random).
+     */
+    public static <K> List<K> upgradeCandidates(
+            Collection<List<String>> fromIng,
+            Map<K, ? extends Collection<List<String>>> allRecipes
+    ) {
+        ImmutableList.Builder<K> b = ImmutableList.builder();
+        for (Map.Entry<K, ? extends Collection<List<String>>> e : allRecipes.entrySet()) {
+            Collection<List<String>> toIng = e.getValue();
+            if (toIng.equals(fromIng)) {
+                continue; // Perfect overlap. So not an upgrade.
+            }
+            if (containsAllTags(fromIng, toIng)) {
+                b.add(e.getKey());
+            }
+        }
+        return b.build();
+    }
+
     public static RoomRecipe standard(
             @NotNull ResourceLocation roomId,
             NonNullList<Ingredient> of

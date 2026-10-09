@@ -48,6 +48,7 @@ import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -230,23 +231,16 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
         NonNullList<Ingredient> fromIngredients = fromRecipe.get().getIngredients();
 
-
-        List<RoomRecipe> all = RoomRecipes.getAllRecipes(level);
-
-        ImmutableList.Builder<ResourceLocation> possibleUpgrades = ImmutableList.builder();
-
-        for (RoomRecipe aRecipe : all) {
-            Collection<List<String>> toIng = getItemKeyStrings(aRecipe.getIngredients());
-            Collection<List<String>> fromIng = getItemKeyStrings(fromIngredients);
-            if (toIng.equals(fromIng)) {
-                continue; // Perfect overlap. So not an upgrade.
-            }
-            if (RoomRecipes.containsAllTags(fromIng, toIng)) {
-                possibleUpgrades.add(aRecipe.getId());
-            }
+        // The holder owns the id in 1.20.2+; iterate it directly. (The recipe
+        // object's getId() is null for every codec-constructed recipe — the old
+        // raw-list loop NPE'd inside ImmutableList.Builder.add on the first match.)
+        Map<ResourceLocation, Collection<List<String>>> all = new HashMap<>();
+        for (RecipeHolder<RoomRecipe> h : level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM)) {
+            all.put(h.id(), getItemKeyStrings(h.value().getIngredients()));
         }
 
-        ImmutableList<ResourceLocation> upgrades = possibleUpgrades.build();
+        List<ResourceLocation> upgrades = RoomRecipes.upgradeCandidates(
+                getItemKeyStrings(fromIngredients), all);
         if (upgrades.isEmpty()) {
             return null;
         }
