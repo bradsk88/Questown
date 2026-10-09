@@ -258,6 +258,31 @@ public class TestBlueprintRegistry {
         return jobs;
     }
 
+    /**
+     * The village-level scenario names (the two scenarios that
+     * {@link ca.bradj.questown.commands.test.AutoTestRunner} special-cases rather than
+     * registering as an entry).
+     */
+    public static final List<String> VILLAGE_SCENARIO_NAMES =
+            List.of("village/growth", "village/self_sufficiency");
+
+    /**
+     * All the scenario names available to
+     * {@code -Dquestown.autotest.only=<name>} (the substring match against this list), in
+     * a stable form (jobs track, then chicken track, then the special-cased village
+     * track). Used by the {@code _qtdev test list} command and the close-out tests.
+     * Chicken track names are the raw {@code ChickenArcBlueprint.name()} base names (no
+     * category prefix), matching what the runner filters on.
+     */
+    public static List<String> allScenarioNames() {
+        List<String> out = new ArrayList<>();
+        getTestableJobs().forEach(e -> out.add(e.name()));
+        ca.bradj.questown.commands.test.ChickenArcBlueprintRegistry.all()
+                .forEach(b -> out.add(b.name()));
+        out.addAll(VILLAGE_SCENARIO_NAMES);
+        return out;
+    }
+
     public static List<AnyTestEntry> getTestsByCategory(String category) {
         return getTestableJobs().stream()
                 .filter(e -> category.equals(e.category()))
