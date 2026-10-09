@@ -15,6 +15,8 @@ exercise behavior X." Per-scenario depth lives in each executor and in
 | `F1_*` … `F4_*` (chicken-arc) | helper-chicken beat state transitions | warp-simulate + settle after each warp | none scenario-wide | chicken-arc registry executor |
 | `perf/town_large` | flag-tick cost vs the 50 ms budget (`TickProfile`) | realtime | none | a tick-profile, not a gate |
 
+`-Dquestown.autotest.only=<name>` matches by **substring** against the `category/base` scenario names (verified against `AutoTestRunner.nameMatches`): `only=bop` selects both `flag/bop_boundary_63` and `flag/bop_full_64`; `only=village/growth` still works. Scenario names are registered in `TestBlueprintRegistry` (category helpers like `flagEntry("…")` → `"flag/" + name`), so list a category by grepping its helper, not a full name.
+
 The scenario-tuning knobs (`questown.village.selfsuff.days`, `-Dquestown.village.selfsuff.coal`) are read in the **forked** server JVM, and `build.gradle`'s `server` block forwards only its explicit whitelist of `-D` properties - a knob not on that whitelist is silently ignored (the selfsuff pair was added 2026-10-03 after a run that thought it was coal=0 seeded 16). Check the seed/run log line, not the command line, for what actually landed.
 
 ## Three things all called "warp"
