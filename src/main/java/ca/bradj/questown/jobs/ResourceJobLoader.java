@@ -539,25 +539,6 @@ public class ResourceJobLoader {
             return new SoundInfo(rl, chance, duration);
         }
 
-        private WorkWorldInteractions smeltingResultWorkInt(
-                int cooldownTicks,
-                Item rawItem
-        ) {
-            ResultGenerator<MCHeldItem> g = new ResultGenerator<>() {
-                @Override
-                public Iterable<MCHeldItem> generate(ServerLevel level, Collection<MCHeldItem> heldItems) {
-                    Item cookedItem = cooked(level.getRecipeManager(), level, rawItem);
-                    return ImmutableList.of(MCHeldItem.fromMCItemStack(cookedItem.getDefaultInstance()));
-                }
-
-                @Override
-                public boolean isResultAlwaysEmpty() {
-                    return false;
-                }
-            };
-            return new WorkWorldInteractions(cooldownTicks, g);
-        }
-
         private WorkWorldInteractions worldWorkInt(
                 JsonObject object,
                 int cooldownTicks

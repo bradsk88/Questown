@@ -294,22 +294,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                                                       .filter(Objects::nonNull).collect(Collectors.toSet()));
     }
 
-    private static boolean sameItem(
-            ItemEconomicsData v,
-            MCTownItem z
-    ) {
-        return Ingredients.fromString(v.ingredientKey()).test(z.toMCItemStack());
-    }
-
-    private static boolean producesFood(
-            TownFlagBlockEntity town,
-            JobID j
-    ) {
-        return ServerJobsRegistry.getResults(town.getTownData(), j).stream().anyMatch(
-                i -> Ingredient.of(TagsInit.Items.VILLAGER_FOOD).test(i.toMCItemStack())
-        );
-    }
-
     private static boolean isNotSpecial(ResourceLocation id) {
         if (SpecialQuests.FARM.equals(id)) {
             return true;

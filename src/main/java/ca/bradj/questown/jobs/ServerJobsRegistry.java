@@ -91,11 +91,6 @@ public class ServerJobsRegistry {
         return StatusArt.getTexture(job, status);
     }
 
-    private static boolean isSpecial(JobID job) {
-        Optional<SpecialJob> first = specialJobs.stream().filter(id -> id.idTest.test(job)).findFirst();
-        return first.isPresent();
-    }
-
     public static @NotNull ImmutableList<Component> getStatusText(
             JobID job,
             IStatus<?> status

@@ -18,13 +18,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements WorkStatusHandle<POS, ITEM> {
-    private boolean levelBlockIsMat(TICK_SOURCE ts, POS pp) {
-        if (ts instanceof net.minecraft.server.level.ServerLevel sl && pp instanceof net.minecraft.core.BlockPos bp) {
-            return sl.getBlockState(bp).getBlock().toString().contains("welcome_mat");
-        }
-        return false;
-    }
-
     @FunctionalInterface
     public interface DebugLogger {
         void log(String message, Object... params);
