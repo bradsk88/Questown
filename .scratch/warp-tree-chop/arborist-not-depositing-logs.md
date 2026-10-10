@@ -124,11 +124,15 @@ settles hypotheses 1 vs 2/3.
 ## Related same-run failures (pre-existing, out of scope for this issue)
 
 The 2026-10-10 suite (first full-suite completion on 1.20.6-neoforge-wip):
-182 PASS / 29 FAIL / 0 SOE, all 57 tests ran to completion. Non-arborist
-FAILs: 5 chicken-arc beats (stuck at WAITING_FOR_DOOR / WALL_BLOCK /
-FREE_FOOD beats + flag bits), organizer/fetch (emerald),
-eating/dine_at_time (Villager fullness −16%, min 25%),
-farmer/harvest_wheat [no_supplies] and [held_tool_warp],
+182 `[PASS]` lines / 29 `[FAIL]` lines = **14 failing scenarios**, 0 SOE, all 57
+tests ran to completion. Non-arborist FAILs (12): 6 chicken-arc scenarios
+(F1 ×2, F2, F3, skip_chicken_command, wand_on_unlit_campfire — stuck at
+WAITING_FOR_DOOR / WALL_BLOCK / FREE_FOOD beats + flag bits),
+organizer/fetch [warp] (emerald), eating/dine_at_time (Villager fullness
+−16%, min 25%), farmer/harvest_wheat [no_supplies] and [held_tool_warp],
 crafter/leather_boots, nav/roof_gatherer. None of these scenarios involve
 tree-chopping; no full-suite baseline exists on this branch to diff against
-(earlier runs crashed at tests 16-19).
+(earlier runs crashed at tests 16-19). Note the tally's two granularities:
+scenario-level `jobs:X [FAIL] scenario:` lines (14) vs check-level detail
+lines (`[FAIL] WARP:`, `[FAIL] CONTAINER:`, `flag bit …`) — count scenarios,
+not lines.
