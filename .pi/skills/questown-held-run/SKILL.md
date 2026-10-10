@@ -337,6 +337,16 @@ console capture.
 - **Hook (committed to `build.gradle`, `server {}` block):** an optional
   `-Dquestown.log4j.config=<file>` is forwarded to the forked server JVM as
   `-Dlog4j2.configurationFile=<file>`. No effect when the flag is absent.
+  **Path form: use `file://$PWD/<file>` (absolute), not `run/<file>` (relative)** —
+  the forked server's `workingDirectory` is `project.file('run')` (build.gradle,
+  runs configureEach), so a bare `run/log4j2.x.xml` resolves to `run/run/log4j2.x.xml`,
+  log4j logs `Reconfiguration failed: No configuration found` and silently falls
+  back to the vanilla MCL config (default patterns; the target logger stays at its
+  vanilla level). 2026-10-10: a held run launched with the relative form came up
+  looking "half-broken" (vanilla log patterns, target logger not bumped) — the
+  flag mechanism itself was fine; the path was the whole bug. (A held run with
+  slow world-gen can also look half-broken: give `Preparing spawn area` its full
+  2–3 min before concluding the autotest never booted.)
 - **Config recipe — two traps that `run/log4j2.debug.xml` fell into.** That file
   is a **never-loaded decoy** (its `AsyncLogger` + `File`+`filePattern` are both
   wrong on this classpath), so do **not** copy it as a template:
