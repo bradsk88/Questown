@@ -1,0 +1,41 @@
+{
+  "version": 2,
+  "id": "baker/extract",
+  "priority": 1000,
+  "parent": null,
+  "icon": "minecraft:bread",
+  "initial_request": "minecraft:bread",
+  "result": {
+    "type": "uses_special_rules"
+  },
+  "block": {
+    "id": "questown:bread_oven_block",
+    "has_item_in_slot_initially": "2/minecraft:bread"
+  },
+  "room": "questown:breadmaker",
+  "work_states": [
+    {
+      "work": 0.1
+    }
+  ],
+  "cooldown_ticks": 50,
+  "sound": {
+    "id": "minecraft:entity.item.pickup",
+    "chance": 100,
+    "duration": 100
+  },
+  "special": [
+    {
+      "type": "global",
+      "rules": [
+        "always_consider",
+        "furnace_smelt_warp"
+      ]
+    },
+    {
+      "type": "core_state",
+      "state": "EXTRACTING_PRODUCT",
+      "rules": ["questown:take_from_slot_2"]
+    }
+  ]
+}

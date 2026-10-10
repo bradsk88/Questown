@@ -22,6 +22,12 @@ public class TilesInit {
             ).build(null)
     );
 
+    public static final Holder<BlockEntityType<BreadOvenBlockEntity>> BREAD_OVEN = TILES.register(
+            BreadOvenBlockEntity.ID, () -> BlockEntityType.Builder.of(
+                    BreadOvenBlockEntity::new, BlocksInit.BREAD_OVEN_BLOCK.get()
+            ).build(null)
+    );
+
     public static final Holder<BlockEntityType<WelcomeMatBlock.Entity>> WELCOME_MAT = TILES.register(
             WelcomeMatBlock.ITEM_ID, () -> BlockEntityType.Builder.of(
                     WelcomeMatBlock.Entity::new, BlocksInit.WELCOME_MAT_BLOCK.get()

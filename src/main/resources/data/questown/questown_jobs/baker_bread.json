@@ -1,35 +1,43 @@
 {
-  "version": 1,
+  "version": 2,
   "id": "baker/bread",
-  "priority": "1000",
-  "parent": null,
+  "priority": 2000,
+  "parent": "baker/extract",
   "icon": "minecraft:bread",
-  "initial_request": "minecraft:bread",
+  "initial_request": "minecraft:wheat",
   "result": {
-    "type": "item",
-    "item": "minecraft:bread",
-    "quantity": 1
+    "type": "via_other_job",
+    "jobs": ["baker/extract"]
   },
-  "block": "questown:bread_oven_block",
+  "block": {
+    "id": "questown:bread_oven_block",
+    "has_item_in_slot_initially": "0/minecraft:air"
+  },
   "room": "questown:breadmaker",
   "work_states": [
     {
-      "ingredients": "minecraft:wheat",
-      "quantity": 2
+      "tools": "minecraft:wheat",
+      "work": 0.1
     },
     {
-      "ingredients": "#minecraft:coals",
-      "quantity": 1
-    },
-    {
-      "time": 1000
+      "ingredients": "minecraft:wheat"
     }
   ],
-  "cooldown_ticks": 100,
+  "cooldown_ticks": 50,
+  "sound": {
+    "id": "minecraft:block.slime_block.hit",
+    "chance": 100,
+    "duration": 100
+  },
   "special": [
     {
       "type": "global",
-      "rules": ["claim_workspot"]
+      "rules": ["furnace_smelt_warp"]
+    },
+    {
+      "type": "processing_state",
+      "state": 1,
+      "rules": ["insert_into_slot_0"]
     }
   ]
 }

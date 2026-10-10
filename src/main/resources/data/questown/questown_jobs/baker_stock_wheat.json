@@ -1,20 +1,20 @@
 {
-  "version": 1,
+  "version": 2,
   "id": "baker/stock_wheat",
-  "priority": "2000",
-  "parent": "baker/bread",
+  "priority": "15000",
+  "parent": "baker/extract",
   "icon": "minecraft:chest",
-  "initial_request": "minecraft:bread",
+  "initial_request": "minecraft:wheat",
+  "note_warp": "Excluded from warp: stock jobs just move items between containers, which the warper handles automatically via simulateCollectSupplies",
   "result": {
-    "type": "item",
-    "item": "minecraft:air"
+    "type": "uses_special_rules"
   },
   "block": "#c:chests",
   "room": "questown:breadmaker_stocked",
   "work_states": [
     {
       "tools": "minecraft:wheat",
-      "work": 1
+      "work": 0.1
     },
     {
       "ingredients": "minecraft:wheat"
@@ -24,7 +24,7 @@
   "special": [
     {
       "type": "global",
-      "rules": ["claim_workspot"]
+      "rules": ["claim_workspot", "always_consider", "exclude_from_warp"]
     },
     {
       "type": "processing_state",

@@ -1,45 +1,56 @@
 package ca.bradj.questown.blocks;
 
-import ca.bradj.questown.core.init.items.ItemsInit;
-import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.jobs.Jobs;
+import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.MapC;
-import ca.bradj.questown.town.workstatus.State;
-import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.InteractionHand;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class BreadOvenBlock extends HorizontalDirectionalBlock implements StatefulJobBlock {
+/**
+ * A furnace-shaped processing block for the baker job family: the oven bakes
+ * 1 wheat + 1 coal into 1 bread over {@link BreadOvenBake#BAKE_TICKS} ticks,
+ * with the items stored in the block entity's slots (0 wheat, 1 coal,
+ * 2 bread) so the cook-shaped job slot rules
+ * ({@code insert_into_slot_0/1}, {@code take_from_slot_2}) can drive it.
+ *
+ * <p>The {@code bake_state} property is the visual (unchanged art) and is kept
+ * in sync with the slot contents by {@link BreadOvenBlockEntity}, not by the
+ * townie's work-state index.
+ */
+public class BreadOvenBlock extends BaseEntityBlock {
+
     public static final MapCodec<BreadOvenBlock> CODEC = MapCodec.unit(BreadOvenBlock::new);
 
     @Override
-    public MapCodec<BreadOvenBlock> codec() { return CODEC; }
+    public MapCodec<BreadOvenBlock> codec() {
+        return CODEC;
+    }
 
     public static final String ITEM_ID = "bread_oven_block";
 
@@ -47,14 +58,13 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
             "bake_state", 0, 4
     );
 
-    private static final int BAKE_STATE_EMPTY = 0;
-    private static final int BAKE_STATE_HALF_FILLED = 1;
-    private static final int BAKE_STATE_FILLED = 2;
-    private static final int BAKE_STATE_BAKING = 3;
-    private static final int BAKE_STATE_BAKED = 4;
+    public static final int BAKE_STATE_EMPTY = 0;
+    public static final int BAKE_STATE_HALF_FILLED = 1;
+    public static final int BAKE_STATE_FILLED = 2;
+    public static final int BAKE_STATE_BAKING = 3;
+    public static final int BAKE_STATE_BAKED = 4;
 
-    public BreadOvenBlock(
-    ) {
+    public BreadOvenBlock() {
         super(
                 Compat.P
                         .of().mapColor(MapC.COLOR_BROWN)
@@ -62,59 +72,27 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
                         .strength(1.0F, 10.0F).impl()
         );
         this.registerDefaultState(this.stateDefinition.any()
-                                                      .setValue(BAKE_STATE, 0)
-                                                      .setValue(FACING, Direction.NORTH)
+                .setValue(BAKE_STATE, 0)
+                .setValue(HorizontalDirectionalBlock.FACING, Direction.NORTH)
         );
     }
 
-    public static boolean canAcceptWheat(BlockState oldState) {
-        if (!oldState.hasProperty(BAKE_STATE)) {
-            return false;
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
+        p_51385_.add(BAKE_STATE, HorizontalDirectionalBlock.FACING);
+    }
+
+    @Override
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
+    }
+
+    public BlockState getStateForPlacement(BlockPlaceContext ctx) {
+        BlockState blockState = this.defaultBlockState().setValue(BAKE_STATE, 0);
+        if (!(ctx.getLevel() instanceof net.minecraft.server.level.ServerLevel)) {
+            return blockState;
         }
-        return oldState.getValue(BAKE_STATE) < BAKE_STATE_FILLED;
-    }
-
-    public static boolean canAcceptCoal(BlockState oldState) {
-        if (!oldState.hasProperty(BAKE_STATE)) {
-            return false;
-        }
-        return oldState.getValue(BAKE_STATE) == BAKE_STATE_FILLED;
-    }
-
-    public static boolean isBaking(BlockState oldState) {
-        if (!oldState.hasProperty(BAKE_STATE)) {
-            return false;
-        }
-        return oldState.getValue(BAKE_STATE) == BAKE_STATE_BAKING;
-    }
-
-    public static boolean hasBread(BlockState oldState) {
-        if (!oldState.hasProperty(BAKE_STATE)) {
-            return false;
-        }
-        return oldState.getValue(BAKE_STATE) == BAKE_STATE_BAKED;
-    }
-
-    public static BlockState extractBread(
-            BlockState oldState,
-            ServerLevel sl,
-            BlockPos block,
-            @Nullable TakeFn takeFn
-    ) {
-        BlockState bs = oldState.setValue(BAKE_STATE, BAKE_STATE_EMPTY);
-        sl.setBlock(block, bs, 11);
-        moveBreadToWorld(sl, block, takeFn);
-        return bs;
-    }
-
-    private static void moveBreadToWorld(
-            ServerLevel level,
-            BlockPos b,
-            @Nullable TakeFn takeFn
-    ) {
-        MCHeldItem is = MCHeldItem.fromMCItemStack(new ItemStack(Items.BREAD, 1));
-        Jobs.getOrCreateItemFromBlock(level, b, takeFn, is, false);
-        level.setBlock(b, level.getBlockState(b).setValue(BAKE_STATE, BAKE_STATE_EMPTY), 11);
+        return blockState
+                .setValue(HorizontalDirectionalBlock.FACING, ctx.getHorizontalDirection().getOpposite());
     }
 
     @Override
@@ -122,23 +100,26 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
             BlockState p_60537_,
             LootParams.Builder p_60538_
     ) {
-        // TODO: Also drop stuff inside
-        //  Maybe something like onHurt() { town.dropInsertedItems(this.pos) }
-        //  So the first hit from a player will cause the items to pop out.
-        return ImmutableList.of(ItemsInit.BREAD_OVEN_BLOCK.get().getDefaultInstance());
+        return List.of(this.defaultBlockState().getBlock().asItem().getDefaultInstance());
     }
 
-    public BlockState getStateForPlacement(BlockPlaceContext ctx) {
-        BlockState blockState = this.defaultBlockState().setValue(BAKE_STATE, 0);
-        if (!(ctx.getLevel() instanceof ServerLevel sl)) {
-            return blockState;
+    @Override
+    public void onRemove(
+            BlockState state,
+            Level level,
+            BlockPos pos,
+            BlockState newState,
+            boolean isMoving
+    ) {
+        if (!newState.is(this)) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof BreadOvenBlockEntity oven) {
+                for (int i = 0; i < BreadOvenBake.SLOT_BREAD + 1; i++) {
+                    Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), oven.getItem(i));
+                }
+            }
         }
-        return blockState
-                .setValue(FACING, ctx.getHorizontalDirection().getOpposite());
-    }
-
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(BAKE_STATE, FACING);
+        super.onRemove(state, level, pos, newState, isMoving);
     }
 
     @Override
@@ -165,15 +146,15 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
                 );
             }
 
-            Direction direction = bs.getValue(FACING);
+            Direction direction = bs.getValue(HorizontalDirectionalBlock.FACING);
             Direction.Axis direction$axis = direction.getAxis();
             double d3 = 0.52D;
             double d4 = random.nextDouble() * 0.6D - 0.3D;
             double d5 = direction$axis == Direction.Axis.X ? (double) direction.getStepX() * 0.52D : d4;
-            double d6 = random.nextDouble() * 6.0D / 16.0D;
-            double d7 = direction$axis == Direction.Axis.Z ? (double) direction.getStepZ() * 0.52D : d4;
-            level.addParticle(ParticleTypes.SMOKE, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
-            level.addParticle(ParticleTypes.FLAME, d0 + d5, d1 + d6, d2 + d7, 0.0D, 0.0D, 0.0D);
+            double d6 = direction$axis == Direction.Axis.Z ? (double) direction.getStepZ() * 0.52D : d4;
+            double d7 = direction$axis == Direction.Axis.X ? d4 : d6;
+            level.addParticle(ParticleTypes.SMOKE, d0 + d5, d1 + 0.6D, d2 + d7, 0.0D, 0.0D, 0.0D);
+            level.addParticle(ParticleTypes.FLAME, d0 + d5, d1 + 0.5D, d2 + d7, 0.0D, 0.0D, 0.0D);
         }
     }
 
@@ -185,56 +166,32 @@ public class BreadOvenBlock extends HorizontalDirectionalBlock implements Statef
             Player player,
             BlockHitResult p_60508_
     ) {
-        if (!(level instanceof ServerLevel sl)) {
-            return InteractionResult.sidedSuccess(level.isClientSide);
+        if (level.isClientSide) {
+            return InteractionResult.sidedSuccess(true);
         }
-
-        if (hasBread(blockState)) {
-            moveBreadToWorld(sl, pos, is -> player.getInventory().add(is.toItem().toMCItemStack()));
-            // TODO: Set state to 0
-            return InteractionResult.sidedSuccess(level.isClientSide);
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof BreadOvenBlockEntity oven) {
+            ItemStack bread = oven.takeBread(1);
+            if (bread != null) {
+                player.getInventory().add(bread);
+            }
         }
-
-        if (canAcceptWheat(blockState)) {
-            Compat.sendMessage((ServerPlayer) player, Compat.translatable("message.baker.villagers_will_add_wheat"));
-            return InteractionResult.sidedSuccess(level.isClientSide);
-        }
-
-        if (canAcceptCoal(blockState)) {
-            Compat.sendMessage((ServerPlayer) player, Compat.translatable("message.baker.villagers_will_add_coal"));
-            return InteractionResult.sidedSuccess(level.isClientSide);
-        }
-
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return InteractionResult.sidedSuccess(false);
     }
 
     @Override
-    public void setProcessingState(
-            ServerLevel sl,
-            BlockPos pp,
-            State bs
+    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new BreadOvenBlockEntity(pos, state);
+    }
+
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(
+            Level level,
+            BlockState blockState,
+            BlockEntityType<T> entityType
     ) {
-        BlockState state = sl.getBlockState(pp);
-        switch (bs.processingState()) {
-            case (0) -> {
-                if (bs.ingredientCount() <= 0) {
-                    state = state.setValue(BAKE_STATE, BAKE_STATE_EMPTY);
-                } else if (bs.ingredientCount() < 2) {
-                    state = state.setValue(BAKE_STATE, BAKE_STATE_HALF_FILLED);
-                } else {
-                    state = state.setValue(BAKE_STATE, BAKE_STATE_FILLED);
-                }
-            }
-            case (1) -> {
-                if (bs.ingredientCount() < 1) {
-                    state = state.setValue(BAKE_STATE, BAKE_STATE_FILLED);
-                } else {
-                    state = state.setValue(BAKE_STATE, BAKE_STATE_BAKING);
-                }
-            }
-            case (2) -> state = state.setValue(BAKE_STATE, BAKE_STATE_BAKING);
-            case (3) -> state = state.setValue(BAKE_STATE, BAKE_STATE_BAKED);
-        }
-        sl.setBlockAndUpdate(pp, state);
+        return level.isClientSide ? null : createTickerHelper(
+                entityType, TilesInit.BREAD_OVEN.get(), BreadOvenBlockEntity::tick
+        );
     }
 }

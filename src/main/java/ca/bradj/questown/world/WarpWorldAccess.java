@@ -1,6 +1,7 @@
 package ca.bradj.questown.world;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.BreadOvenBake;
 import ca.bradj.questown._vanilla.SnapshotWorldGenLevel;
 import ca.bradj.questown._vanilla.TreeFeatureResolver;
 import ca.bradj.questown.mc.Compat;
@@ -55,6 +56,11 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
     private final Map<BlockPos, List<ItemStack>> containerSlots = new HashMap<>();
     // cookProgress[0] = cookTime, cookProgress[1] = litTime
     private final Map<BlockPos, int[]> cookProgress = new HashMap<>();
+    // Bread-oven bake state machines, per oven position. Bound to that position's
+    // in-memory slot list; bake progress persists across advanceProcessing calls
+    // within a warp, starting at 0 per warp (any mid-bake state is re-baked,
+    // matching the cookProgress reset).
+    private final Map<BlockPos, BreadOvenBake> ovenBakes = new HashMap<>();
 
     final Set<BlockPos> dirtyBlocks = new HashSet<>();
     final Set<BlockPos> dirtyContainers = new HashSet<>();
@@ -542,6 +548,14 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
             return;
         }
 
+        BlockState blockState = blockStates.get(pos);
+        if (blockState != null
+                && blockState.getBlock() instanceof ca.bradj.questown.blocks.BreadOvenBlock) {
+            advanceBreadOven(pos, slots, ticks);
+            return;
+        }
+
+
         int[] progress = cookProgress.computeIfAbsent(pos, p -> new int[]{0, 0});
         int cookTime = progress[0];
         int litTime = progress[1];
@@ -614,6 +628,20 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
                 "[WarpWorldAccess] advanceProcessing done. Slot0={}, Slot1={}, Slot2={}",
                 slots.get(0).getItem(), slots.get(1).getItem(), slots.get(2).getItem()
         );
+    }
+
+    /**
+     * Warp-lane bake for the bread oven. Drives the SAME {@link BreadOvenBake}
+     * state machine the realtime block entity runs (1 wheat + 1 coal -> 1
+     * bread over {@link BreadOvenBake#BAKE_TICKS} ticks, partial-progress
+     * reset on a slot change) against the in-memory slot snapshot, so the
+     * warp lane cannot drift from the real-time arithmetic.
+     */
+    private void advanceBreadOven(BlockPos pos, List<ItemStack> slots, int ticks) {
+        BreadOvenBake bake = ovenBakes.computeIfAbsent(pos, p -> new BreadOvenBake(slots));
+        if (bake.advance(ticks)) {
+            dirtyContainers.add(pos);
+        }
     }
 
     // -------------------------------------------------------------------------

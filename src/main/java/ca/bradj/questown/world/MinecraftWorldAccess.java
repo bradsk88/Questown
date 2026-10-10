@@ -336,6 +336,15 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     @Override
     public void advanceProcessing(BlockPos pos, int ticks) {
         BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof ca.bradj.questown.blocks.BreadOvenBlockEntity oven) {
+            QT.FLAG_LOGGER.debug(
+                    "advanceProcessing (bread oven) at {} for {} ticks. Slot0={}, Slot1={}, Slot2={}",
+                    pos.toShortString(), ticks,
+                    oven.getItem(0), oven.getItem(1), oven.getItem(2)
+            );
+            oven.advanceBake(ticks); // the shared BreadOvenBake caps its own loop
+            return;
+        }
         if (!(be instanceof AbstractFurnaceBlockEntity furnace)) {
             return;
         }

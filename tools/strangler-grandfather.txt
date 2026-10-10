@@ -5,6 +5,7 @@ jobs/declarative/TestWorldInteraction.java
 blocks/BlacksmithsTableBlock.java
 blocks/BowlRackBlock.java
 blocks/BreadOvenBlock.java
+blocks/BreadOvenBlockEntity.java
 blocks/JobBoardBlock.java
 blocks/OreProcessingBlock.java
 blocks/PlateBlock.java

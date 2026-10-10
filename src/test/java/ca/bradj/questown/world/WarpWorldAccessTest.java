@@ -171,6 +171,32 @@ class WarpWorldAccessTest {
     }
 
     // -------------------------------------------------------------------------
+    // advanceProcessing — bread oven (cook-shaped baker family)
+    //
+    // Testability gap: the oven warp branch is selected by
+    // {@code blockStates.get(pos).getBlock() instanceof BreadOvenBlock}.
+    // Constructing a BreadOvenBlock is registry-bound (Block.<init> writes
+    // BuiltInRegistries, frozen after bootstrap), so the branch cannot be
+    // reached from a unit test. The bake arithmetic itself IS unit-tested —
+    // it is shared semantics with
+    // BreadOvenBakeTest (1 wheat + 1 coal -> 1 bread, 1000 ticks,
+    // output stacks like a furnace, partial-progress reset). Autotest
+    // coverage of the full warp lane is tracked in
+    // .scratch/baker-cook-shape-migration/warp-oven-branch-autotest.md. This
+    // test pins the gap so a future QTWorldAccess seam
+    // (docs/special-rules-decoupling.md) can replace it with real branch
+    // tests.
+    // -------------------------------------------------------------------------
+
+    @Test
+    void oven_warpBranch_requiresRegistryBoundBlock_cannotReachInUnitTest() {
+        assertThrows(
+                IllegalStateException.class,
+                () -> new ca.bradj.questown.blocks.BreadOvenBlock(),
+                "expected registry-bound failure; if this passes, replace this test with a real BreadOvenBlock default state in advanceProcessing");
+    }
+
+    // -------------------------------------------------------------------------
     // advanceProcessing — position without container
     // -------------------------------------------------------------------------
 

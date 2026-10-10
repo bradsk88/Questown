@@ -92,11 +92,14 @@ class JobIntegrationTest {
     void testJobLoader_shouldParseAllWorkStates() {
         JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_bread.json");
 
-        Assertions.assertEquals("minecraft:wheat", definition.ingredientsRequiredAtStates().get(0));
-        Assertions.assertEquals(Integer.valueOf(2), definition.ingredientQtyRequiredAtStates().get(0));
-        Assertions.assertEquals("#minecraft:coals", definition.ingredientsRequiredAtStates().get(1));
+        // Cook-shaped baker family (2026-10-10 migration): baker/bread is a
+        // slot-insert job (tool wheat -> insert wheat into oven slot 0), no
+        // timer state. Coal moved to baker/fuel, extraction to baker/extract.
+        Assertions.assertEquals("minecraft:wheat", definition.toolsRequiredAtStates().get(0));
+        Assertions.assertEquals("minecraft:wheat", definition.ingredientsRequiredAtStates().get(1));
         Assertions.assertEquals(Integer.valueOf(1), definition.ingredientQtyRequiredAtStates().get(1));
-        Assertions.assertEquals(Integer.valueOf(1000), definition.timeRequiredAtStates().get(2));
+        Assertions.assertTrue(definition.timeRequiredAtStates().isEmpty(),
+                "cook-shaped baker jobs advance on work, not timed states");
     }
 
     @Test
@@ -104,13 +107,34 @@ class JobIntegrationTest {
         JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_bread.json");
 
         Assertions.assertEquals(new JobID("baker", "bread"), definition.jobId());
-        Assertions.assertEquals(3, definition.maxState()); // wheat, coal, time
-        Assertions.assertEquals("minecraft:wheat", definition.ingredientsRequiredAtStates().get(0));
-        Assertions.assertEquals(Integer.valueOf(2), definition.ingredientQtyRequiredAtStates().get(0));
+        Assertions.assertEquals(2, definition.maxState()); // tool state + insert state
+        Assertions.assertEquals("minecraft:wheat", definition.toolsRequiredAtStates().get(0));
+        Assertions.assertEquals("minecraft:wheat", definition.ingredientsRequiredAtStates().get(1));
+        Assertions.assertEquals("minecraft:air", definition.result()); // via_other_job -> baker/extract
+    }
+
+    @Test
+    void baker_extract_shouldLoadCorrectly() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_extract.json");
+
+        Assertions.assertEquals(new JobID("baker", "extract"), definition.jobId());
+        Assertions.assertEquals(1, definition.maxState());
+        // Mirror of cook_extract: work-only state 0, no tools.
+        Assertions.assertTrue(definition.toolsRequiredAtStates().isEmpty(),
+                "baker/extract must have no tools (work-only state 0)");
+        Assertions.assertEquals(Integer.valueOf(0), definition.workRequiredAtStates().get(0));
+        Assertions.assertEquals("minecraft:air", definition.result());
+    }
+
+    @Test
+    void baker_fuel_shouldLoadCorrectly() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_fuel.json");
+
+        Assertions.assertEquals(new JobID("baker", "fuel"), definition.jobId());
+        Assertions.assertEquals(2, definition.maxState());
+        Assertions.assertEquals("#minecraft:coals", definition.toolsRequiredAtStates().get(0));
         Assertions.assertEquals("#minecraft:coals", definition.ingredientsRequiredAtStates().get(1));
-        Assertions.assertEquals(Integer.valueOf(1), definition.ingredientQtyRequiredAtStates().get(1));
-        Assertions.assertEquals(Integer.valueOf(1000), definition.timeRequiredAtStates().get(2));
-        Assertions.assertEquals("minecraft:bread", definition.result());
+        Assertions.assertEquals("minecraft:air", definition.result());
     }
 
     @Test
@@ -120,7 +144,7 @@ class JobIntegrationTest {
         Assertions.assertEquals(new JobID("baker", "stock_wheat"), definition.jobId());
         Assertions.assertEquals(2, definition.maxState());
         Assertions.assertEquals("minecraft:wheat", definition.toolsRequiredAtStates().get(0));
-        Assertions.assertEquals(Integer.valueOf(1), definition.workRequiredAtStates().get(0));
+        Assertions.assertEquals(Integer.valueOf(0), definition.workRequiredAtStates().get(0)); // 0.1 in JSON floors to 0
         Assertions.assertEquals("minecraft:wheat", definition.ingredientsRequiredAtStates().get(1));
         Assertions.assertEquals("minecraft:air", definition.result()); // Stocking job, no product
     }
@@ -132,7 +156,7 @@ class JobIntegrationTest {
         Assertions.assertEquals(new JobID("baker", "stock_coal"), definition.jobId());
         Assertions.assertEquals(2, definition.maxState());
         Assertions.assertEquals("#minecraft:coals", definition.toolsRequiredAtStates().get(0));
-        Assertions.assertEquals(Integer.valueOf(1), definition.workRequiredAtStates().get(0));
+        Assertions.assertEquals(Integer.valueOf(0), definition.workRequiredAtStates().get(0)); // 0.1 in JSON floors to 0
         Assertions.assertEquals("#minecraft:coals", definition.ingredientsRequiredAtStates().get(1));
         Assertions.assertEquals("minecraft:air", definition.result()); // Stocking job, no product
     }
@@ -874,130 +898,14 @@ class JobIntegrationTest {
     }
 
     // ========== Baker Bread Ticker Tests ==========
-
-    /**
-     * Test baker_bread job - time-based baking job.
-     *
-     * Job flow:
-     * - State 0: Need ingredients (wheat, qty 2)
-     * - State 1: Need ingredients (coals, qty 1)
-     * - State 2: Time (1000 ticks) - baking in progress
-     * - maxState (3): Extract bread
-     */
-    @Test
-    void declarativeJobTicker_baker_bread_shouldConsumeIngredients() {
-        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_bread.json");
-        TickerSetup setup = createTicker(definition);
-
-        // Give the villager wheat and coal
-        setup.inventory.set(0, new GathererJournalTest.TestItem("minecraft:wheat"));
-        setup.inventory.set(1, new GathererJournalTest.TestItem("minecraft:wheat"));
-        setup.inventory.set(2, new GathererJournalTest.TestItem("#minecraft:coals"));
-
-        // Run ticks - should consume ingredients
-        runTicks(setup.deps, setup.ticker, 30);
-
-        // Verify wheat was consumed
-        long wheatCount = setup.inventory.getItems().stream()
-                .filter(item -> item.value.equals("minecraft:wheat"))
-                .count();
-        Assertions.assertTrue(wheatCount < 2, "Some wheat should be consumed. Got: " + setup.inventory.getItems());
-    }
-
-    /**
-     * Test baker_bread transitions to time state and sets timer when ingredients are inserted.
-     * The ticker should naturally progress: insert wheat → insert coal → start timer.
-     */
-    @Test
-    void declarativeJobTicker_baker_bread_shouldTransitionToTimeStateAndSetTimer() {
-        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_bread.json");
-
-        // Verify job has a time state
-        Assertions.assertFalse(definition.timeRequiredAtStates().isEmpty(),
-                "Baker bread job should have a time state");
-
-        // Find the time state (state 2 for baker_bread)
-        int timeState = -1;
-        for (int i = 0; i < definition.maxState(); i++) {
-            if (definition.timeRequiredAtStates().containsKey(i)) {
-                timeState = i;
-                break;
-            }
-        }
-        int expectedTime = definition.timeRequiredAtStates().get(timeState);
-
-        TickerSetup setup = createTicker(definition);
-        TestWorkStatusHandle workStatusHandle = (TestWorkStatusHandle) setup.deps.getWorkStatusHandle();
-
-        // Give the villager all ingredients needed (wheat x2, coal x1)
-        setup.inventory.set(0, new GathererJournalTest.TestItem("minecraft:wheat"));
-        setup.inventory.set(1, new GathererJournalTest.TestItem("minecraft:wheat"));
-        setup.inventory.set(2, new GathererJournalTest.TestItem("#minecraft:coals"));
-
-        // Run ticks - ticker should insert ingredients and transition to time state
-        runTicks(setup.deps, setup.ticker, 30);
-
-        // Verify the job reached time state and timer was set
-        State state = workStatusHandle.getJobBlockState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
-        Assertions.assertTrue(state.processingState() >= timeState,
-                "Job should have reached time state. Got: " + state.processingState());
-
-        // If still at time state, verify timer is set
-        if (state.processingState() == timeState) {
-            Integer timer = workStatusHandle.getTimeToNextState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
-            Assertions.assertNotNull(timer, "Timer should be set when at time state");
-            Assertions.assertTrue(timer > 0 && timer <= expectedTime,
-                    "Timer should be positive and <= " + expectedTime + ". Got: " + timer);
-        }
-    }
-
-    /**
-     * Test baker_bread extraction when baking timer expires.
-     * Sets timer to 1 tick, ticks the work status store, verifies state advances and extraction happens.
-     */
-    @Test
-    void declarativeJobTicker_baker_bread_shouldExtractWhenTimerExpires() {
-        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_bread.json");
-        TickerSetup setup = createTicker(definition);
-
-        // Find the time state
-        int timeState = -1;
-        for (int i = 0; i < definition.maxState(); i++) {
-            if (definition.timeRequiredAtStates().containsKey(i)) {
-                timeState = i;
-                break;
-            }
-        }
-
-        // Set job site to time state with timer about to expire (1 tick remaining)
-        TestWorkStatusHandle workStatusHandle = (TestWorkStatusHandle) setup.deps.getWorkStatusHandle();
-        workStatusHandle.setJobBlockStateWithTimer(
-                IntegrationTestWorld.DEFAULT_WORKSPOT_POS,
-                State.freshAtState(timeState),
-                1  // Timer about to expire
-        );
-
-        // Tick the work status store - timer expires, state advances to maxState
-        workStatusHandle.tick();
-
-        // Verify state advanced to maxState
-        State state = workStatusHandle.getJobBlockState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
-        Assertions.assertEquals(definition.maxState(), state.processingState(),
-                "State should advance to maxState when timer expires");
-
-        // Run ticker ticks - villager should extract the bread
-        runTicks(setup.deps, setup.ticker, 20);
-
-        // Check that the product was extracted
-        TestWorldInteraction twi = (TestWorldInteraction) setup.deps.getWorldInteraction();
-        Assertions.assertTrue(twi.wasExtracted(),
-                "Bread should be extracted when timer expires");
-
-        // Check inventory has the bread
-        boolean hasBread = setup.inventory.getItems().stream()
-                .anyMatch(item -> item.value.equals("minecraft:bread"));
-        Assertions.assertTrue(hasBread, "Should have bread. Got: " + setup.inventory.getItems());
-    }
+    //
+    // The 2026-10-10 cook-shape migration replaced the timer-shape ticker
+    // tests here (consume-ingredients / transition-to-time-state /
+    // timer-expiry extraction) with ticker-vs-advancer equivalence
+    // coverage: see BakerEquivalenceTest (baker_bread / baker_fuel /
+    // baker_extract, incl. the work-only state-0 empty-inventory extract).
+    // The parser shape of the new family is pinned above in
+    // testJobLoader_shouldParseAllWorkStates + baker_extract/fuel_shouldLoadCorrectly.
 
     /**
      * Reproduction test for bug: Villager gets NO_JOBSITE status instead of EXTRACTING_PRODUCT

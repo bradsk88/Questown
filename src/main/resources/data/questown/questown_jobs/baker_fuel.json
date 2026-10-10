@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "id": "baker/fuel",
+  "priority": 10000,
+  "parent": "baker/extract",
+  "unlocked_with_root_job": true,
+  "icon": "minecraft:coal",
+  "initial_request": "#questown:villager_food",
+  "result": {
+    "type": "uses_special_rules"
+  },
+  "block": {
+    "id": "questown:bread_oven_block",
+    "has_item_in_slot_initially": "1/minecraft:air"
+  },
+  "room": "questown:breadmaker",
+  "work_states": [
+    {
+      "tools": "#minecraft:coals",
+      "work": 0.1
+    },
+    {
+      "ingredients": "#minecraft:coals",
+      "quantity": 1
+    }
+  ],
+  "cooldown_ticks": 50,
+  "sound": {
+    "id": "minecraft:block.stone.hit",
+    "chance": 100,
+    "duration": 10
+  },
+  "special": [
+    {
+      "type": "global",
+      "rules": [
+        "always_consider",
+        "furnace_smelt_warp"
+      ]
+    },
+    {
+      "type": "processing_state",
+      "state": 1,
+      "rules": ["insert_into_slot_1"]
+    }
+  ]
+}
