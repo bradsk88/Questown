@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RoomRecipes {
 
@@ -99,9 +101,7 @@ public class RoomRecipes {
                     weight += itemWeight;
                     foundWeight = true;
                 } else {
-                    QT.QUESTS_LOGGER.error(
-                            "No weight specified for item. Default of 100 will be used. [{}]", id
-                    );
+                    reportUnweighted("item", id);
                 }
             }
             if (getAsJsonObject(in).has("tag")) {
@@ -112,9 +112,7 @@ public class RoomRecipes {
                     weight += tagWeight;
                     foundWeight = true;
                 } else {
-                    QT.QUESTS_LOGGER.error(
-                            "No weight specified for tag. Default of 100 will be used. [{}]", id
-                    );
+                    reportUnweighted("tag", id);
                 }
             }
             if (!foundWeight) {
@@ -122,6 +120,23 @@ public class RoomRecipes {
             }
         }
         return weight;
+    }
+
+    /**
+     * A missing weight entry is a config-tuning hint, not a fault: the default is applied
+     * deterministically, so warn once per id per JVM instead of erroring on every recipe that
+     * carries the id (`#c:chests` appears in most stocked rooms — a startup burst of ERRORs
+     * read as a broken server).
+     */
+    private static final Set<String> reportedUnweighted =
+            ConcurrentHashMap.newKeySet();
+
+    private static void reportUnweighted(String kind, String id) {
+        if (reportedUnweighted.add(kind + ":" + id)) {
+            QT.QUESTS_LOGGER.warn(
+                    "No weight specified for {}. Default of 100 will be used. [{}]", kind, id
+            );
+        }
     }
 
     private static JsonObject getAsJsonObject(Ingredient js) {
