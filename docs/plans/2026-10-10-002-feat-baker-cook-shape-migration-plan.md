@@ -1,7 +1,7 @@
 # Plan: Migrate the baker job family to the cook job shape
 
 Date: 2026-10-10
-Status: **DONE 2026-10-10** — branch `1.20.6-neoforge-wip` (branch stays on -wip; no release owed by this plan)
+Status: **DONE 2026-10-10** — branch `1.20.6-neoforge-wip` (branch stays on -wip; no release owed by this plan); two post-plan defects (warp work-block assignment predicate, v2 stock job files) found and fixed the same day, see "Post-plan follow-up"
 
 ## Why
 
@@ -181,3 +181,26 @@ oven branch calls `oven.advanceBake(ticks)`)
    skill-tree / quest path covers it; revive (a `ChangeJobReward` branch) only if
    onboarding is observed to stall on the universal set. No `.scratch` issue owed:
    the revival criterion is observational, and this line is the home.
+
+## Post-plan follow-up (2026-10-10, same day)
+
+Two defects surfaced by the first held `baker/bread` warp autotest (05:55 FAIL: `bread`
+expected >= 1 got 0; 8 wheat + 7 coal consumed; "No container at [0,0]" extract probes):
+
+- **Warp work-block assignment is by block identity, not the slot-gated `isJobBlock`
+  predicate.** `Work.isJobBlockAt` tests `shouldInitializeWorkState` (block id + properties);
+  the slot gate (`baker/extract` requires bread already in slot 2) tests the world the warp
+  still has to produce, so the extract job stayed at its virtual position and the warp's
+  baked bread was never extracted. `PostDowntimeWarper.findAssignedWorkBlock` collects all
+  identity matches and round-robins by villager index (old furnace behaviour). Verified:
+  06:19 held run PASS (`After {bread=4, wheat=26, coal=10}`), cook lane re-verified green on
+  the new assignment path; `WorkIsJobBlockAtTest` pins the seam. Docs: `town/COMPLEX.md`
+  "Post-downtime warp work-block assignment", `jobs/COMPLEX.md` "Warp-lane work-block seam".
+- **The two stock job files shipped at v2 with the v1 string `block` form** and silently
+  failed the production load (`workFromJsonV2` requires `block` as an object; the MC-free
+  `TestJobLoader` never inspects it). Fixed both files; `BakerStockJobLoaderTest` now loads
+  them through the production `ResourceJobLoader.ReloadListener.apply`.
+
+The `.scratch/baker-cook-shape-migration/warp-oven-branch-autotest.md` gap is closed by the
+existing `baker/bread` scenario's PASS (the warp lane end-to-end: insert → in-memory
+`BreadOvenBake` → applyTo → extract into the census) — no new scenario owed.

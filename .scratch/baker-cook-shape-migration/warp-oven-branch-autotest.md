@@ -1,8 +1,20 @@
 ---
 title: Autotest coverage for the warp-lane bread-oven branch
-status: needs-triage
+status: resolved
 created: 2026-10-10
+resolved: 2026-10-10
 ---
+
+**RESOLVED 2026-10-10 (same day).** No new scenario was owed: the existing
+`baker/bread` held autotest IS the end-to-end warp-lane oven test. It failed on its
+first held run (2026-10-10 05:55 — the warp work-block assignment tested the slot-gated
+`isJobBlock` predicate, so `baker/extract` could never be assigned on an empty oven and
+the warp's baked bread was never extracted) and PASSed on 06:19 after the assignment
+moved to the block-identity check (`Work.isJobBlockAt` → `shouldInitializeWorkState`;
+`PostDowntimeWarper.findAssignedWorkBlock` round-robins matches). PASS verdict:
+`After {bread=4, wheat=26, coal=10}`, `minecraft:bread expected >= 1, got 4`. See
+docs/plans/2026-10-10-002 "Post-plan follow-up", `town/COMPLEX.md` "Post-downtime warp
+work-block assignment", and `jobs/COMPLEX.md` "Warp-lane work-block seam".
 
 ## Context
 

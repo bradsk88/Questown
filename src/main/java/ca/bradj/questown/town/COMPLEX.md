@@ -468,3 +468,41 @@ persisting a flagless work spot. And `UtilClean.specialRulesAllPass`: "no global
 special rules" is *no restriction*, not "denied" — an empty rule set passes the
 fresh-block gate (`ResourceJobLoader.trySpecialRuleIsJobBlock` delegates to it;
 pinned by `JobBlockFreshGateTest`).
+
+# Post-downtime warp work-block assignment (`PostDowntimeWarper.findAssignedWorkBlock`, 2026-10-10)
+
+`PostDowntimeWarper` assigns each job a **real work block** in the room before handing the
+job to its warp-lane warper; a job with no assignment runs at a virtual position
+(`BlockPos(villagerNum, villagerNum, villagerNum)`) and its `insert_into_slot_*` /
+`take_from_slot_*` rules drop there ("No container at [0, 0]"). The value only matters for
+jobs whose special rules mention a slot (`TimeWarpWorldInteraction.shouldUseRealWorkBlock()`
+gates on `assignedWorkBlock != null`).
+
+## Assignment is by block IDENTITY, not by the full `isJobBlock` predicate
+
+The seam is `ServerJobsRegistry.jobBlockAt(job, level, pos)` →
+`Work.isJobBlockAt(blockInfo, pos)` → `Work.shouldInitializeWorkState` — the block-identity
+check (`ResourceJobLoader.shouldInitWS`: block id via `getBlockCheck` + `int_state` property
++ air-above when the job declares `require_air_above`). Deliberately **not**
+`Work.isJobBlock`, which for slot-gated jobs also tests `has_item_in_slot_initially`
+against the live container. The slot gate tests the world **as it is**, while the warp is
+**still to produce it**: `baker/extract`'s gate is `2/minecraft:bread` (bread must already
+sit in the output slot), so on the oven the warp is about to fill, the full predicate never
+matches, the extract job stays at its virtual position for the whole warp, and the bread the
+warp baked in memory is never extracted — the `baker/bread` warp autotest reported
+`[FAIL] minecraft:bread: expected >= 1, got 0` with 8 wheat + 7 coal consumed. The old
+furnace class-sniff (`AbstractFurnaceBlockEntity instanceof`) was content-agnostic, which is
+why the cook family never hit this; a class-sniff is also wrong for the baker (its oven is a
+plain `ContainerBlockEntity`), which is why the assignment now goes through the job's own
+block check. The miss is cached per job in `assignedWorkBlocks` (the value, including null),
+so the live slot contents can never re-test mid-warp.
+
+With several matching blocks the villager is round-robined onto
+`matches.get(villagerIndex % matches.size())`, matching the old furnace assignment.
+
+Evidence: `baker/bread` held autotest — failed 2026-10-10 05:55 on the full-predicate
+version, PASS 06:19 on the identity version (After `{bread=4, wheat=26, coal=10}` — the
+bread is in the warper's villager journal, counted by the town census; the oven BE itself is
+not in the census: it does not implement `MCContainerInterface`, mirroring how the vanilla
+furnace stays outside the cook family's town containers). Pinned at the seam by
+`WorkIsJobBlockAtTest` (content-agnostic match, no block-class sniff).

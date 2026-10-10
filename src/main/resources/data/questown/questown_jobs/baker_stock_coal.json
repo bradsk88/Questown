@@ -9,7 +9,9 @@
   "result": {
     "type": "uses_special_rules"
   },
-  "block": "#c:chests",
+  "block": {
+    "id": "#c:chests"
+  },
   "room": "questown:breadmaker_stocked",
   "work_states": [
     {

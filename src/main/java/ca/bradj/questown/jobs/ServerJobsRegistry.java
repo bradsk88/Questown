@@ -629,6 +629,66 @@ public class ServerJobsRegistry {
         );
     }
 
+    /**
+     * Whether the job's own block occupies {@code pos} — the warp-lane seam for assigning a job
+     * a real work block. Uses the job block identity check (block id + properties), not the
+     * full slot-gated predicate (which is how the baker's {@code baker/extract} would have
+     * stayed unassigned on an empty oven, dropping its slot-rule takes at a virtual position
+     * for the whole warp). Content-agnostic by design: the warp is what fills the slots.
+     */
+    public static boolean jobBlockAt(JobID jobID, WorkLocation.BlockInfo blockInfo, BlockPos pos) {
+        Supplier<Work> w = Works.get(jobID);
+        if (w == null) {
+            return false;
+        }
+        Work work = w.get();
+        if (work == null) {
+            return false;
+        }
+        return work.isJobBlockAt(blockInfo, pos);
+    }
+
+    public static boolean jobBlockAt(JobID jobID, ServerLevel level, BlockPos pos) {
+        return jobBlockAt(jobID, levelBlockInfo(level), pos);
+    }
+
+    /**
+     * A pos-aware {@link WorkLocation.BlockInfo} over a live level — reads the block state
+     * (and its above-cell, for the air-above check) at the queried position.
+     */
+    public static WorkLocation.BlockInfo levelBlockInfo(ServerLevel level) {
+        return new WorkLocation.BlockInfo() {
+            @Override
+            public BlockState state(BlockPos p) {
+                return level.getBlockState(p);
+            }
+
+            @Override
+            public @Nullable BlockEntity entity(BlockPos p) {
+                return level.getBlockEntity(p);
+            }
+        };
+    }
+
+    /**
+     * A {@link WorkLocation.BlockInfo} over a single captured position — the state is
+     * returned for ANY queried position (position-agnostic). For the pos-sensitive checks
+     * (air-above) use {@link #levelBlockInfo} instead.
+     */
+    public static WorkLocation.BlockInfo blockInfo(BlockState state, @Nullable BlockEntity entity) {
+        return new WorkLocation.BlockInfo() {
+            @Override
+            public BlockState state(BlockPos p) {
+                return state;
+            }
+
+            @Override
+            public @Nullable BlockEntity entity(BlockPos p) {
+                return entity;
+            }
+        };
+    }
+
     public static boolean canSatisfy(
             WorksBehaviour.TownData town,
             JobID p,

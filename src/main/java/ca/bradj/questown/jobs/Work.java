@@ -241,4 +241,19 @@ public class Work {
         return warper.apply(input.withSlotPrecondition(slotPrecondition));
     }
 
+    /**
+     * Whether this job's own block occupies the given position — the warp-lane work-block
+     * assignment seam ({@code PostDowntimeWarper} assigns the job's real container block this
+     * way instead of falling back to a virtual position). Tests the block-identity check
+     * ({@code shouldInitializeWorkState}: block id + block-state properties), NOT the full
+     * {@code isJobBlock} predicate, which for slot-gated jobs also demands a particular slot
+     * content. The content check is wrong for assignment: it tests the world AS IT IS, while
+     * the warp is still to produce it — a {@code baker/extract} that requires bread to already
+     * sit in slot 2 could never be assigned on an oven the warp has not baked yet, so its
+     * takes would drop at a virtual position and the warp's output would never be extracted.
+     */
+    public boolean isJobBlockAt(WorkLocation.BlockInfo blockInfo, BlockPos pos) {
+        return shouldInitializeWorkState.test(blockInfo, pos);
+    }
+
 }

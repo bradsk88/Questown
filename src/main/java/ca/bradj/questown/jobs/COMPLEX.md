@@ -294,3 +294,40 @@ Two contracts now hold:
 
 Scope note: `#c:*` (common-convention) tags and unvendored vanilla tags are
 unresolvable on purpose — a loud throw in the test beats a silent stall.
+
+# Warp-lane work-block seam: `Work.isJobBlockAt` / `ServerJobsRegistry.jobBlockAt` (2026-10-10)
+
+`PostDowntimeWarper` assigns a job its real room container block for the warp lane through
+`ServerJobsRegistry.jobBlockAt(job, level, pos)` → `Work.isJobBlockAt(blockInfo, pos)`,
+which tests `Work.shouldInitializeWorkState` — the block-identity predicate the v2 loader
+builds in `ResourceJobLoader.shouldInitWS` (block id + optional `int_state` + air-above),
+**without** the `has_item_in_slot_initially` slot comparator and without the special-rule
+`postJobBlockCheckPassed` tail that `isJobBlock` appends. Rationale (the slot gate tests the
+world as it is, the warp still has to produce it — `baker/extract`'s `2/bread` gate can never
+match the oven a warp is about to bake): `town/COMPLEX.md` "Post-downtime warp work-block
+assignment".
+
+BlockInfo variants:
+- `ServerJobsRegistry.levelBlockInfo(level)` — pos-aware, reads `level.getBlockState(p)` /
+  `getBlockEntity(p)` at the queried position (the air-above check works); production path.
+- `ServerJobsRegistry.blockInfo(state, entity)` — position-agnostic capture (same state for
+  every queried position); the plain-test helper. The air-above check is degraded there
+  (a non-air block always fails it); no job that needs air-above should be assigned through
+  the captured variant.
+
+v1 jobs pass the same block-ingredient `BiPredicate` into both `WorkLocation` slots
+(`ResourceJobLoader` v1 path), so the seam degrades to the old v1 identity check — no
+content gate exists there to begin with.
+
+## Job data v2 `block` is an object, and the production loader is the load gate
+
+`ResourceJobLoader.workFromJsonV2` requires `"block"` to be a JSON object (`{"id": …}`);
+the v1 string form throws `"block must be an object"` and the job is skipped at server
+start (logged; `crash_on_invalid_jobs` can escalate). The 2026-10-10 cook-shape migration
+shipped `baker_stock_wheat`/`baker_stock_coal` at `version: 2` with the v1 string form, so
+both stock jobs silently failed to load — the MC-free `TestJobLoader` never inspects the
+`block` field, so `JobIntegrationTest` coverage stayed green. Pinned by
+`BakerStockJobLoaderTest`: it feeds the two files through the PRODUCTION
+`ResourceJobLoader.ReloadListener.apply` (vanilla bootstrap in `@BeforeAll`) and asserts the
+v2 fields survive the real parse (parents, room, `ALWAYS_CONSIDER`/`EXCLUDE_FROM_WARP`).
+Any new v2 job file should be load-tested the same way, not only through `TestJobLoader`.
