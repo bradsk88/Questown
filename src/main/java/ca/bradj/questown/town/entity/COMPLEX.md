@@ -508,3 +508,27 @@ flowchart TD
   townie never gets a HOME memory (HOME = the assigned bed) and
   `registerUnmetRoom(BEDROOM)` fires for every bedless townie every handle tick
   (demand-spam candidate).
+
+# Room-upgrade recipe — the holder owns the id (1.20.2+)
+
+`TownQuests.getUpgradeRecipe` needs the **canonical recipe id** of every
+`ROOM` recipe to feed `RoomRecipes.upgradeCandidates` (the pure selection
+core). Since the 1.20.2 recipe-holder split, the codec-constructed
+`RoomRecipe.getId()` is null for every data-driven recipe — the id lives on
+the holder, so the leaf must not read it off the value (the pre-fix raw-list
+loop NPE'd in `ImmutableList.Builder.add` on the first match; run-15
+self_suff zero-coal cell, `af202d27`'s finding).
+
+The leaf therefore gets (id, value) pairs from the strangler seam
+`mc/RecipeRef` — `pairsOf` (added with this flow; `recipeById`/`findById`/
+`recipesOf`/`idsOf` are its siblings) — and never names the vanilla holder
+type: the strangler gate (`tools/strangler-check`) fails the build on a
+holder reference outside the seam family, and `1e8ef2cd`'s
+`RecipeRef` holder-seam de-grandfathered this leaf. (The NPE fix
+`af202d27` re-leaked the type directly here and went red; this commit
+re-routes through `pairsOf`.) The pure core and its id-as-data contract are
+pinned by `RoomRecipesUpgradeCandidatesTest`.
+
+Selection semantics (unchanged by either commit): a candidate covers every
+from-recipe ingredient group; a perfect overlap is the recipe itself and is
+excluded; the caller picks randomly among the survivors.

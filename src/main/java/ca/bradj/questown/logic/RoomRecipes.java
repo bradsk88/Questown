@@ -164,7 +164,7 @@ public class RoomRecipes {
      * {@code TownQuests.getUpgradeRecipe}; unit-testable, so it receives the
      * recipe ids as data — the caller owns them, via the recipe holder keys
      * (the 1.20.2 migration put the canonical id on the
-     * {@code RecipeHolder}, not the codec-constructed {@code RoomRecipe}
+     * recipe holder, not the codec-constructed {@code RoomRecipe}
      * object, whose {@code getId()} is null for every data-driven recipe)).
      *
      * <p>Selection semantics (the pre-fix glue's, unchanged): a candidate is a

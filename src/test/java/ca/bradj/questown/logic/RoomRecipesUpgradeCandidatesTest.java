@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>Why the extraction: the pre-fix glue iterated the raw recipe list and read
  * {@code RoomRecipe.getId()}, which is <em>null</em> for every codec-constructed
  * (data-driven) recipe — the 1.20.2 holder-id migration put the canonical id on
- * the {@code RecipeHolder}. Run 15 (self_suff zero-coal cell) crashed its flag
+ * the recipe holder. Run 15 (self_suff zero-coal cell) crashed its flag
  * tick with an NPE in {@code ImmutableList.Builder.add(null)} inside
  * {@code getUpgradeRecipe} (see {@code .scratch/gannet-top-need} run record);
  * the upgrade candidates are now matched by the id the caller owns (the holder

@@ -22,7 +22,9 @@ import net.minecraft.world.level.Level;
  *   <li>{@link #recipeById} - the value whose holder-id matches (the value's own id can be null
  *       when codec-constructed, hence the holder lookup);</li>
  *   <li>{@link #assembleMatching} - "look up the matching recipe and assemble its result",
- *       the one-call form of the 1.19.2 {@code getRecipeFor(...).assemble(...)}.</li>
+ *       the one-call form of the 1.19.2 {@code getRecipeFor(...).assemble(...)};</li>
+ *   <li>{@link #pairsOf} - every (id, value) pair of a type, for a leaf that needs both the
+ *       canonical holder-id and the recipe data.</li>
  * </ul>
  *
  * <p>The two-type-variable bounds ({@code IN extends Container, T extends Recipe<IN>}) mirror
@@ -95,6 +97,20 @@ public final class RecipeRef {
                  .findFirst()
                  .map(RecipePair::of)
                  .orElse(null);
+    }
+
+    /** Every (id, value) pair of the given type (the holder owns the id in 1.20.x). */
+    public static
+    <IN extends net.minecraft.world.Container,
+     T extends net.minecraft.world.item.crafting.Recipe<IN>>
+    List<RecipePair<T>> pairsOf(
+            RecipeManager rm,
+            RecipeType<T> type
+    ) {
+        return rm.getAllRecipesFor(type)
+                 .stream()
+                 .map(RecipePair::of)
+                 .collect(Collectors.toList());
     }
 
     /** Every recipe id of the given type (the holder owns the id in 1.20.x). */
