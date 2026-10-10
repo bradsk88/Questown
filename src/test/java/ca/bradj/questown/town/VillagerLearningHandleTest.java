@@ -134,8 +134,54 @@ class VillagerLearningHandleTest {
         assertEquals(ImmutableSet.of("aa", "ab", "ba", "bb"), all);
     }
 
-    // TODO: Test same root different sub-trees
-    //  E.g. fishing gatherer and shovel gatherer should generate 4 potential "awarenesses"
+    @Test
+    public void testShouldReturnAwarenessesForSameRootDifferentSubtrees() {
+        // A fishing-gatherer and a shovel-gatherer share the "gatherer" root but
+        // have different sub-trees: each of the villager's jobs reveals its own
+        // children - 4 awarenesses in total, none crossing between sub-trees.
+        ImmutableList<String> allJobs = ImmutableList.of(
+                "gatherer",
+                "gatherer:fishing", "gatherer:fishing:1", "gatherer:fishing:2",
+                "gatherer:shovel", "gatherer:shovel:1", "gatherer:shovel:2"
+        );
+        VillagerLearningHandle<String> h = new VillagerLearningHandle<>(
+                () -> ImmutableSet.copyOf(allJobs),
+                j -> allJobs,
+                // direct-parent relation, as in ServerJobsRegistry.isParentOf
+                (p, c) -> c.contains(":") && p.equals(c.substring(0, c.lastIndexOf(':'))),
+                (j) -> true,
+                2
+        );
+        h.init(ImmutableList.of());
+        h.tick(ImmutableList.of("gatherer:fishing", "gatherer:shovel"));
+        assertIterableEquals(
+                ImmutableList.of("gatherer:fishing:1", "gatherer:fishing:2"),
+                h.getNextJobAwareness("gatherer:fishing"));
+        assertIterableEquals(
+                ImmutableList.of("gatherer:shovel:1", "gatherer:shovel:2"),
+                h.getNextJobAwareness("gatherer:shovel"));
+        assertEquals(
+                4,
+                h.getNextJobAwarenesses().values().stream().mapToInt(ImmutableList::size).sum());
+    }
+
+    @Test
+    public void testShouldNotCountTheVillagersOwnJobAsAnAwareness() {
+        // Pins the equality-skip in tick(): a root job must not appear in its own
+        // awareness list, even when the parent predicate is broad enough to
+        // include the job itself.
+        ImmutableList<String> allJobs = ImmutableList.of("a", "aa", "ab");
+        VillagerLearningHandle<String> h = new VillagerLearningHandle<>(
+                () -> ImmutableSet.copyOf(allJobs),
+                j -> allJobs,
+                (p, c) -> c.startsWith(p), // deliberately includes c == p
+                (j) -> true,
+                2
+        );
+        h.init(ImmutableList.of("aa")); // "aa" already known
+        h.tick(ImmutableList.of("a"));
+        assertIterableEquals(ImmutableList.of("ab"), h.getNextJobAwareness("a"));
+    }
 
     @Test
     public void testShouldNotRecomputeOrReplaceIfAlreadyComputed() {

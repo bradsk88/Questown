@@ -114,7 +114,7 @@ class ProductionTimeWarperTest {
                         ),
                 heldItems -> {
                             townItems.addAll(heldItems);
-                            return ImmutableList.of(); // All items deposited - no leftovers TODO: Test leftovers
+                            return ImmutableList.of(); // All items deposited - no leftovers
                 },
                 () -> new TestItem("")
         );
@@ -136,7 +136,7 @@ class ProductionTimeWarperTest {
                         ),
                 heldItems -> {
                             townItems.addAll(heldItems);
-                            return ImmutableList.of(); // All items deposited - no leftovers TODO: Test leftovers
+                            return ImmutableList.of(); // All items deposited - no leftovers
                 },
                 () -> new TestItem("")
         );
@@ -159,10 +159,40 @@ class ProductionTimeWarperTest {
                         ),
                 heldItems -> {
                             townItems.addAll(heldItems);
-                            return ImmutableList.of(); // All items deposited - no leftovers TODO: Test leftovers
+                            return ImmutableList.of(); // All items deposited - no leftovers
                 },
                 () -> new TestItem("")
         );
+        Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, res.status());
+    }
+
+    @Test
+    void simulateDropLoot_shouldLeaveUndepositedItemsInInventory_IfTownCanOnlyTakeSome() {
+        // Leftovers: when the town can only accept some of the held items, the
+        // undeposited ones stay in the inventory (in the slots of the dropped
+        // items), and the town receives only what it took.
+        ArrayList<TestItem> townItems = new ArrayList<>();
+
+        ProductionTimeWarper.Result<TestItem> res = ProductionTimeWarper.<TestItem, TestItem>
+                simulateDropLoot(
+                        new ProductionTimeWarper.Result<>(
+                                ProductionStatus.DROPPING_LOOT,
+                                ImmutableList.of(
+                                        new TestItem("bread"),
+                                        new TestItem("stick") // 2-slot inventory
+                                )
+                        ),
+                        heldItems -> {
+                            townItems.addAll(heldItems.subList(0, 1)); // town takes the first item
+                            return heldItems.subList(1, heldItems.size()); // the rest come back
+                        },
+                        () -> new TestItem("")
+                );
+        Assertions.assertIterableEquals(ImmutableList.of(new TestItem("bread")), townItems);
+        Assertions.assertIterableEquals(ImmutableList.of(
+                new TestItem("stick"),
+                new TestItem("")
+        ), res.items());
         Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, res.status());
     }
 

@@ -103,7 +103,10 @@ class QuestGardenTest {
         );
     }
 
-    // TODO: Test 0, 1, 2
+    // The needed-rooms 0/1/2 paths are covered by the tests below:
+    // ...AndNeededRoomsAreSize0 (falls back to a random recipe),
+    // ...AndNeededRoomsAreSize1 (takes the single needed room),
+    // ...AndNeededRoomsAreSize2 (picks randomly among the needed rooms).
 
     @Test
     public void testShouldAcceptNeededRoom_IfDoNotNeedBed_AndNeededRoomsAreSize1() {

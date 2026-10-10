@@ -1002,4 +1002,29 @@ public class StatusesProductionRoutineTest {
         Assertions.assertEquals(PTestStatus.RELAXING, s);
     }
 
+    @Test
+    void InEvening_StatusShouldBe_DroppingLoot_IfInventoryHasNonSupplyItems() {
+        // The evening recall drops carried loot first (baker-era scenario:
+        // "InEvening StatusShouldBe_Dropping_IfInventory_HasNonSupplyItems").
+        @Nullable PTestStatus s = evening(PTestStatus.IDLE, true, false);
+        Assertions.assertEquals(PTestStatus.DROPPING_LOOT, s);
+    }
+
+    @Test
+    void InEvening_StatusShouldBe_DroppingLoot_IfInventoryHasSupplyItems() {
+        // Holding a work supply at evening also triggers the drop, not the
+        // relax (baker-era scenario:
+        // "InEvening StatusShouldBe_Dropping_IfInventory_HasSupplyItems").
+        @Nullable PTestStatus s = ca.bradj.questown.jobs.production.ProductionStatuses.getEveningStatus(
+                PTestStatus.IDLE,
+                new TestInventory(false, false, ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, true // holding a work supply
+                )),
+                new TestJobTownWithTime(false, true, ImmutableList.of(), noWork(), false),
+                PTestStatus.FACTORY,
+                PTestStatus.FACTORY
+        );
+        Assertions.assertEquals(PTestStatus.DROPPING_LOOT, s);
+    }
+
 }

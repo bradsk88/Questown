@@ -157,6 +157,21 @@ Rule: a dependency read for display is safe only via `populate()` first (read-on
 recomputes from town state, no side effects), or guard a null `value`.
 `RoomsWithWorkableStatefulBlocks.describe()` is now null-safe as defense-in-depth.
 
+## Usual-routine circuit: with prioritized extraction, extraction beats dropping-loot
+
+The root node of `JobStatuses.usualRoutineRoot` ("work without items",
+i.e. `tryChoosingItemlessWork`) is evaluated *before* any of the
+dropping-loot nodes, gated on `prioritizeExtraction` +
+"not already going to jobsite". So for jobs that set
+`SpecialRules.PRIORITIZE_EXTRACTION` (notably `BOPDepositorWork`), a
+villager holding its work item with an extractable product available
+resolves to `EXTRACTING_PRODUCT` — even with a full inventory — and never
+lands on `DROPPING_LOOT` first. This is the behaviour the old
+"THIS IS BLOCKING BOP Depositor" test TODO described as missing; the
+2026-10-10 close-out added the two pinning tests
+(`JobStatusesTest.usualRoutineRoot_resolve_shouldExtractProduct_NotDropLoot_*`)
+and found the circuit already correct, so the marker was removed.
+
 # Where the job plumbing lives (2026-10-09 declarative consolidation)
 
 The legacy `*Clean` helpers are gone — the jobs logic now canonically lives in

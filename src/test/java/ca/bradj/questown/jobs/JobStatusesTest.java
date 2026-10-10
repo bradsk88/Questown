@@ -759,7 +759,61 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.FACTORY.noJobSite(), val);
     }
 
-    // TODO: Should not be dropping loot if can extract product and still have room
-    //  THIS IS BLOCKING BOP Depositor
+    @Test
+    void usualRoutineRoot_resolve_shouldExtractProduct_NotDropLoot_IfProductIsExtractable_AndInventoryHasRoom() {
+        // BOP depositor shape (was: "THIS IS BLOCKING BOP Depositor"): the
+        // townie holds its work item (the BOP) and a finished product is
+        // available at the flag - the extract path must win over dropping loot.
+        @NotNull LZCD<TestStatus> root = JobStatuses.usualRoutineRoot(new JobStatuses.UsualRoutineContext<>(
+                new JobID("test", "bop_depositing"),
+                TestStatus.IDLE,
+                true, // BOPDepositorWork sets PRIORITIZE_EXTRACTION
+                new ConstInventory(false, false, ImmutableMap.of(
+                        TestStatus.ITEM_WORK, true // holding the work item
+                )),
+                new ConstTown(true, true, true),
+                new JobStatuses.Job<>() {
+                    @Override
+                    public TestStatus tryChoosingItemlessWork() {
+                        return TestStatus.COLLECTING_PRODUCT; // product is extractable
+                    }
+
+                    @Override
+                    public TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
+                        return null;
+                    }
+                },
+                TestStatus.FACTORY
+        ));
+        TestStatus val = root.resolve();
+        Assertions.assertEquals(TestStatus.COLLECTING_PRODUCT, val);
+    }
+
+    @Test
+    void usualRoutineRoot_resolve_shouldExtractProduct_NotDropLoot_IfProductIsExtractable_EvenWhenInventoryIsFull() {
+        // With prioritized extraction, a full inventory still extracts the
+        // product rather than dropping the held work item as loot.
+        @NotNull LZCD<TestStatus> root = JobStatuses.usualRoutineRoot(new JobStatuses.UsualRoutineContext<>(
+                new JobID("test", "bop_depositing"),
+                TestStatus.IDLE,
+                true, // BOPDepositorWork sets PRIORITIZE_EXTRACTION
+                new ConstInventory(true, false, HAS_ALL_SUPPLIES),
+                new ConstTown(true, true, true),
+                new JobStatuses.Job<>() {
+                    @Override
+                    public TestStatus tryChoosingItemlessWork() {
+                        return TestStatus.COLLECTING_PRODUCT; // product is extractable
+                    }
+
+                    @Override
+                    public TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
+                        return null;
+                    }
+                },
+                TestStatus.FACTORY
+        ));
+        TestStatus val = root.resolve();
+        Assertions.assertEquals(TestStatus.COLLECTING_PRODUCT, val);
+    }
 
 }
