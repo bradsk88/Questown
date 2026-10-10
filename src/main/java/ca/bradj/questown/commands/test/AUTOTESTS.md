@@ -98,6 +98,16 @@ chunk outside the boot 3×3 (idempotent) — a future layout that outgrows the
 naming the chunks). If the run still stalls despite `OK` / `EXTENDED`, it is
 not a tick-range issue — stop suspecting chunks.
 
+## Reading the tally
+
+The log carries two granularities of `[PASS]`/`[FAIL]` lines: **scenario-level**
+(`jobs:arborist:cut_trees [FAIL] scenario: some expectations failed` — one per
+scenario, the number to count) and **check-level details** (`… [FAIL] WARP: Some
+expectations failed`, `[FAIL] minecraft:oak_log: expected >= 4, got 0`,
+chicken-arc `flag bit …` / `final beat state` lines). Count scenarios, not
+lines: `grep -cE '\[FAIL\] scenario:'` (2026-10-10 run: 29 `[FAIL]` lines =
+14 scenarios).
+
 ## Related
 
 - Per-scenario depth + the realtime/warp reasoning: `COMPLEX.md` (same dir).

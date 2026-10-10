@@ -52,6 +52,7 @@ Three proven shapes, in decreasing preference:
   on the gates, not the stick).
 - Write the test file first. `LANG=C.UTF-8 timeout 600 ./gradlew :compileTestJava` must FAIL (the method/class does not exist — compile-red is the accepted red for seams).
 - Implement the seam at minimum; wire the production call site(s); rebuild `:compileJava :compileTestJava`.
+- **Red-verify a regression pin against the pre-fix code with a /tmp variant, not a `git show` overwrite.** Copy the live file to /tmp, patch ONLY the method under test back to its old form, swap the variant in, run the pin (expect red), restore. Never `git show HEAD:path > path` on a live file: the working tree may carry uncommitted seams the HEAD version lacks, and the overwrite then eats both the fix and those seams (2026-10-10 chop SOE: the 5-arg test constructor and the iterative chop were lost in one clobber — a /tmp backup made the loss recoverable). `git status` the target first; back it up regardless.
 
 ## 3. Verify (in this order)
 
