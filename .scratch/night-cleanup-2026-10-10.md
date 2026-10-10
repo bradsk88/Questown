@@ -42,3 +42,19 @@ Verification bar per item: targeted tests + full `:test` (known red = the 6
   is NOT mine to commit.
 - No gradle while a held server runs (pgrep '[r]unServer|[f]orgeserveruserdev' first).
 - Teardown pkill patterns must be bracket-safe (a bare pattern matches my own shell).
+
+## chopTreeInMemory SOE fix (2026-10-10 evening, same session)
+
+- **Fix implemented**: `WarpWorldAccess.chopTreeInMemory` + `MinecraftWorldAccess.chopTreeRecursive`
+  converted to iterative flood fill (ArrayDeque work stack). All `[chopdbg]` instrumentation removed.
+- **Regression test**: `WarpWorldAccessTest.chopTree_cutsLargeConnectedRegion_withoutStackOverflow`
+  (5000-log line via new 5-arg `fallbackStateProvider` test seam). Red-verified on recursive
+  variant (SOE), green on iterative.
+- **Full-suite gate running** at 18:41 → `/tmp/chop-suite-verify.log`. At 18:56: test 29/57,
+  61 PASS / 7 FAIL / 0 SOE — server alive, **crash gone**.
+- **New finding (pre-existing, NOT caused by the fix)**: `arborist/cut_trees` (+full_cycle) and
+  `organizer/fetch` now fail with verdicts instead of crashing: villager chops all logs
+  (LOOTTRACE x4/x5, logs in its inventory) but never deposits them in the chest within the
+  warp+settle window → `expected >= 4/5, got 0 (before=0, after=0)` — the checker counts
+  `state.containers` only. Proven pre-existing: the 18:00 standalone repro on the OLD recursive
+  code shows the identical FAIL (`/tmp/chop-repro-server.log`). Persist as a new issue.

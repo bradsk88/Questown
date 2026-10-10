@@ -73,11 +73,18 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
 
     private final Function<ItemStack, Optional<SmeltResult>> recipeResolver;
     private final Function<ItemStack, Integer> fuelTimeProvider;
+    /**
+     * Test-only miss source for {@link #resolveBlockState(BlockPos)}: when a position is
+     * absent from the snapshot map and {@code level} is null, this stands in for the real
+     * world (which a warp never mutates) so tests can exercise the fallback path.
+     */
+    private final Function<BlockPos, @Nullable BlockState> fallbackStateProvider;
 
     private static final int MAX_PROCESSING_TICKS = 13_000;
 
     public WarpWorldAccess(ServerLevel level, Collection<BlockPos> positions) {
         this.level = level;
+        this.fallbackStateProvider = null;
         this.recipeResolver = ingredient -> level.getRecipeManager()
                 .getRecipeFor(RecipeType.SMELTING, new net.minecraft.world.SimpleContainer(ingredient), level)
                 .map(r -> new SmeltResult(r.value().getResultItem(level.registryAccess()).copy(), r.value().getCookingTime()));
@@ -98,7 +105,23 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
             Function<ItemStack, Optional<SmeltResult>> recipeResolver,
             Function<ItemStack, Integer> fuelTimeProvider
     ) {
+        this(blockStates, containerSlots, recipeResolver, fuelTimeProvider, null);
+    }
+
+    /**
+     * Test constructor with a miss source: positions absent from the snapshot map resolve
+     * through {@code fallbackStateProvider} instead of {@code null} (see
+     * {@code fallbackStateProvider}).
+     */
+    WarpWorldAccess(
+            Map<BlockPos, BlockState> blockStates,
+            Map<BlockPos, List<ItemStack>> containerSlots,
+            Function<ItemStack, Optional<SmeltResult>> recipeResolver,
+            Function<ItemStack, Integer> fuelTimeProvider,
+            Function<BlockPos, @Nullable BlockState> fallbackStateProvider
+    ) {
         this.level = null;
+        this.fallbackStateProvider = fallbackStateProvider;
         this.recipeResolver = recipeResolver;
         this.fuelTimeProvider = fuelTimeProvider;
         this.blockStates.putAll(blockStates);
@@ -190,7 +213,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
     private BlockState resolveBlockState(BlockPos pos) {
         if (blockStates.containsKey(pos)) return blockStates.get(pos);
         if (level != null) return level.getBlockState(pos);
-        return null;
+        return fallbackStateProvider == null ? null : fallbackStateProvider.apply(pos);
     }
 
     @Nullable
@@ -241,26 +264,38 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         return drops;
     }
 
+    /**
+     * Flood-fills a connected log region and cuts it, in memory. Iterative (explicit work stack)
+     * rather than recursive: the region can be far larger than the JVM stack budget — when the
+     * trunk's log type also occurs in real terrain beyond the in-memory snapshot, the fill reads
+     * the live level (generating chunks) and can span tens of thousands of blocks. One stack
+     * frame per block would overflow; a heap work stack does not.
+     */
     private void chopTreeInMemory(
             BlockPos center, Block matchBlock,
             List<ItemStack> drops, Set<BlockPos> visited
     ) {
-        for (BlockPos adjacent : BlockPos.betweenClosed(
-                center.offset(-1, 0, -1), center.offset(1, 1, 1)
-        )) {
-            BlockPos immutable = adjacent.immutable();
-            if (visited.contains(immutable)) {
+        Deque<BlockPos> work = new ArrayDeque<>();
+        work.push(center);
+        while (!work.isEmpty()) {
+            BlockPos cur = work.pop();
+            if (!visited.add(cur)) {
                 continue;
             }
-            BlockState bs = resolveBlockState(immutable);
+            BlockState bs = resolveBlockState(cur);
             if (bs == null || !bs.is(matchBlock)) {
                 continue;
             }
-            visited.add(immutable);
-            blockStates.put(immutable, Blocks.AIR.defaultBlockState());
-            dirtyBlocks.add(immutable);
+            blockStates.put(cur, Blocks.AIR.defaultBlockState());
+            dirtyBlocks.add(cur);
             drops.add(matchBlock.asItem().getDefaultInstance());
-            chopTreeInMemory(immutable, matchBlock, drops, visited);
+            for (BlockPos adjacent : BlockPos.betweenClosed(
+                    cur.offset(-1, 0, -1), cur.offset(1, 1, 1)
+            )) {
+                if (!visited.contains(adjacent)) {
+                    work.push(adjacent.immutable());
+                }
+            }
         }
     }
 

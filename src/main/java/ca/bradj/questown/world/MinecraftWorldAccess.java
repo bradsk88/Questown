@@ -31,8 +31,10 @@ import ca.bradj.questown.loader.Loader;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.OptionalInt;
 
@@ -119,13 +121,25 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     }
 
     private void chopTreeRecursive(BlockPos center, Block matchBlock, List<ItemStack> drops) {
-        for (BlockPos adjacent : BlockPos.betweenClosed(center.offset(-1, 0, -1), center.offset(1, 1, 1))) {
-            if (!level.getBlockState(adjacent).is(matchBlock)) {
+        // Iterative flood fill: one stack frame per block (the recursive form) overflows the JVM
+        // stack on a large connected log region, so the work list lives on the heap instead.
+        // A block is only ever re-examined while it still matches: cutting it makes it AIR.
+        Deque<BlockPos> work = new ArrayDeque<>();
+        work.push(center);
+        while (!work.isEmpty()) {
+            BlockPos cur = work.pop();
+            if (!level.getBlockState(cur).is(matchBlock)) {
                 continue;
             }
-            level.removeBlock(adjacent, true);
+            level.removeBlock(cur, true);
             drops.add(matchBlock.asItem().getDefaultInstance());
-            chopTreeRecursive(adjacent.immutable(), matchBlock, drops);
+            for (BlockPos adjacent : BlockPos.betweenClosed(
+                    cur.offset(-1, 0, -1), cur.offset(1, 1, 1)
+            )) {
+                if (level.getBlockState(adjacent).is(matchBlock)) {
+                    work.push(adjacent.immutable());
+                }
+            }
         }
     }
 
