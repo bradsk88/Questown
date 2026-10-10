@@ -31,6 +31,12 @@ never told to ship.
   set of stale-status rows this close-out owes a verdict on.
 - Do not trust the ledger's own "verified" claims yet. Each is a *claim*;
   close-out re-earns them.
+- **A resumed WIP tree may hold tests that never went green.** If the
+  close-out is picking up a plan mid-flight from a previous session, the
+  working tree can contain tests that were *written but never run* (2026-10-10:
+  `BreadOvenBlockEntityTest` was red 6/6 — `Registry is already frozen` at
+  the BE constructor — when the resume session first ran `:test`). Step 1's
+  gate re-run is what catches it; a plan doc's "P4 landed" is not evidence.
 
 ## Step 1 — Re-run the gates fresh (evidence, not up-to-date)
 
