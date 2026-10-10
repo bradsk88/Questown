@@ -1290,34 +1290,6 @@ public class TestBlueprintRegistry {
         return bs.hasProperty(TownFlagBlock.PHASE) ? bs.getValue(TownFlagBlock.PHASE) : null;
     }
 
-    private static List<ItemEntity> findDeeds(ServerLevel level, BlockPos flagPos) {
-        return level.getEntitiesOfClass(ItemEntity.class, new AABB(flagPos).inflate(6.0))
-                    .stream()
-                    .filter(e -> RelocationDeedItem.isDeed(e.getItem()))
-                    .toList();
-    }
-
-    private static List<ItemEntity> deedsForFlag(
-            ServerLevel level,
-            BlockPos flagPos,
-            TownFlagBlockEntity town
-    ) {
-        return findDeeds(level, flagPos).stream()
-                .filter(e -> referencesFlag(e.getItem(), level, flagPos, town))
-                .toList();
-    }
-
-    private static boolean referencesFlag(
-            ItemStack deed,
-            ServerLevel level,
-            BlockPos flagPos,
-            TownFlagBlockEntity town
-    ) {
-        return town.getUUID().equals(RelocationDeedItem.getTownUuid(deed))
-                && flagPos.equals(RelocationDeedItem.getFlagPos(deed))
-                && level.dimension().location().equals(RelocationDeedItem.getDimension(deed));
-    }
-
     /**
      * The shared arena for relocation-ritual scenarios: a fenced 2-townie town, realtime-only
      * (skipWarp, since the ritual is driven by the realtime ticker, never warp), monitored long

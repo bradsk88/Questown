@@ -7,13 +7,10 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.Slot;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -86,20 +83,6 @@ public class JobUnlockConfirmMenu extends AbstractVillagerMenu {
     public void removed(Player p_38940_) {
         super.removed(p_38940_);
         super.clearContainer(p_38940_);
-    }
-
-    private void sendItemsBackToPlayerOrLevel(ServerPlayer sp) {
-        for (Slot villagerSlot : super.getVillagerSlots()) {
-            if (!villagerSlot.hasItem()) {
-                continue;
-            }
-            quickMoveStack(sp, villagerSlot.index);
-            if (!villagerSlot.hasItem()) {
-                continue;
-            }
-            ItemEntity ie = new ItemEntity(sp.level(), sp.getX(), sp.getY(), sp.getZ(), villagerSlot.getItem());
-            sp.level().addFreshEntity(ie);
-        }
     }
 
     public boolean hasBlockOfProgress() {

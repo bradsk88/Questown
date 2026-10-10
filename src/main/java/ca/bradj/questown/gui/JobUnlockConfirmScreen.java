@@ -11,7 +11,6 @@ import mezz.jei.api.gui.drawable.IDrawableStatic;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -26,7 +25,6 @@ public class JobUnlockConfirmScreen extends CompatContainerScreen<JobUnlockConfi
     private final JEI.NineNine background;
     private final IDrawableStatic slot;
     private int textX;
-    private FormattedText texts;
     private int gathererSlotY;
     private Button unlockButton;
 

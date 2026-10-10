@@ -304,12 +304,6 @@ public final class VillageGrowthExecutor {
         }
     }
 
-    private void advanceToNight() {
-        server.getCommands().performPrefixedCommand(
-                server.createCommandSourceStack().withPermission(4), "time set night");
-        msg("Advanced to night; campfire placed, wand-registered");
-    }
-
     private void placeCampfireAndRegister() {
         BlockPos pos = flagPos.south().south();
         level.setBlockAndUpdate(pos.below(), Blocks.DIRT.defaultBlockState());
@@ -369,15 +363,6 @@ public final class VillageGrowthExecutor {
         jobBoardPlaced = true;
         msg("Placed job board via player useItemOn at " + pos.toShortString());
         check("job-board-placed", true);
-    }
-
-    /** Skip the night to morning. `time set` flips the day-time signal, which
-     * drives the flag's morning detection (AbstractTownFlagTicker.detectMorning
-     * -> onMorning -> morningTick); no fake-player vanilla-sleep is required. */
-    private void advanceToMorning() {
-        server.getCommands().performPrefixedCommand(
-                server.createCommandSourceStack().withPermission(4), "time set day");
-        msg("Advanced to morning (" + (level.getDayTime() % 24000L) + ")");
     }
 
     /** Deposit the item each UNMET_ITEM townie is waiting on. Real player path: container deposit. */

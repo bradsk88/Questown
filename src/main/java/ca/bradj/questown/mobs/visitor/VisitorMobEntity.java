@@ -165,12 +165,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private static final float runSpeed = 0.4f;
     private final ArrayList<Integer> tickTimes = new ArrayList<>();
     private final ArrayList<Integer> targetTimes = new ArrayList<>();
-    private boolean jobChangePending;
     boolean sitting = true;
     TownInterface town;
     Supplier<Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> job = this::getInitialJob;
     private int ticksWithoutJobTarget;
-    private int ticksStuckWithTarget;
     private final List<Consumer<ImmutableList<Ingredient>>> ingrListeners = new ArrayList<>();
     private final List<Consumer<VillagerSleptEvent>> sleepListeners = new ArrayList<>();
     private Signals.DayTime lastBedTime = new Signals.DayTime(Signals.NIGHT_START_TICK);
@@ -471,17 +469,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
     // State management should be done via the town block. This entity should
     // only handle cosmetic stuff like position, pose, etc.
-
-    @NotNull
-    private CompoundTag buildInitialSlotStatusesTag() {
-        CompoundTag tag = new CompoundTag();
-        ListTag statuses = new ListTag();
-        for (int i = 0; i < inventoryCapacity; i++) {
-            statuses.add(IntTag.valueOf(0));
-        }
-        tag.put("slots", statuses);
-        return tag;
-    }
 
     @Override
     public boolean removeWhenFarAway(double p_21542_) {
