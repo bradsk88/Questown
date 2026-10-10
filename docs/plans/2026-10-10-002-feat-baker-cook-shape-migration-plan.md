@@ -204,3 +204,9 @@ expected >= 1 got 0; 8 wheat + 7 coal consumed; "No container at [0,0]" extract 
 The `.scratch/baker-cook-shape-migration/warp-oven-branch-autotest.md` gap is closed by the
 existing `baker/bread` scenario's PASS (the warp lane end-to-end: insert → in-memory
 `BreadOvenBake` → applyTo → extract into the census) — no new scenario owed.
+
+The ledger row "full autotest suite green on 10-08/10-09" predates a separate, unrelated
+blocker found by the 2026-10-10 full-suite re-run: `WarpWorldAccess.chopTreeInMemory`
+StackOverflowError (arborist + organizer/fetch warps; crashed the server at test 19/57).
+See `.scratch/warp-tree-chop/chop-treememory-infinite-recursion.md` (status:
+ready-for-agent). Until it is fixed, a full-suite "green" claim is not current.
