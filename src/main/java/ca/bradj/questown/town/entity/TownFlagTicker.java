@@ -216,7 +216,9 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
                 null
         );
         if (nearestPlayer == null) {
-            logStop(blockEntityPos, "No players are found on server");
+            if (playersNearbyOnPrevTick) {
+                logStop(blockEntityPos, "No players are found on server");
+            }
             return true;
         }
 

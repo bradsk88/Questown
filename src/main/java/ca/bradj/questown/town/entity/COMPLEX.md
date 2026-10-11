@@ -596,3 +596,17 @@ Two onboarding/content decisions from the evening playtest, both in `TownFlagBlo
   are consolidated to a single `MCQuest.item(STONE_SWORD, 4)`; the wooden-sword
   quest is removed. The hunter/sword job-change and bedroom quests in that batch
   are unchanged. Pinned by `TutorialPhaseGateTest`.
+
+# Flag tick-stop logging — the "no players" line is transition-gated
+
+`TownFlagTicker.allPlayersLeftArea` has two "stop" reasons. The "player went far"
+branch was already gated on `playersNearbyOnPrevTick` (= `!alreadyStopped`, i.e. the
+flag was ticking last tick, per `AbstractTownFlagTicker`), so it logs only on the
+ticking→stopped transition. The "no players on the server at all" branch was **not**
+gated — it logged `logStop(…"No players are found on server")` on **every tick**
+while `nearestPlayer == null`, which in a headless run (no client) produced ~67k
+identical lines in ~6 min and buried every other log line. The "no players" log is
+now gated on the same `playersNearbyOnPrevTick` flag: it fires once on the transition
+(or at boot if the flag starts stopped), never per-tick. No behaviour change — only
+log frequency. (Found 2026-10-12 during the econ-tab crash-probe repro; ticket
+`.scratch/day1-playtest-2026-10-11/flag-stopped-ticking-per-tick-log-spam.md`.)
