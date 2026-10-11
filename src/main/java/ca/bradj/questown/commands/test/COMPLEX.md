@@ -300,22 +300,27 @@ broken on this branch; two issues are filed in
   "Stuck townie -> JOB_UNLOCK quest". Not yet verified in a held run:
   the `village/growth` re-run to roster ≥ 5 is still pending.
 - **Day-1 quests re-appear as open after the hunter-gatherer batch closes**
-  (`day1-quests-reopen-after-batch.md`): at the roster-3 arrival the handle
-  held fresh OPEN instances of campfire/town_gate/store_room/job_board/
-  bedroom/wooden_sword/stone_sword/hunter_qt_sword *alongside* their
-  completed originals, plus the correct new phase-2.5 batch
-  (kitchen_small + cook_qt + villager_food). A 4-quest "New quests" burst
-  at 01:57:36 (right after the batch close) matches the basics batch size;
-  leading candidate is a batch-close reward re-claim re-running the
-  mat/campfire reward chain. Unconfirmed — the phase adds in
-  `addTutorialBatches` start at phase 2 and the hunter-gatherer re-add is
-  guarded by `questBatches.includes(JOB_CHANGE)`.
+  (`day1-quests-reopen-after-batch.md`): **CLOSED 2026-10-11 as a
+  misdiagnosis of the bug-1 spam — no separate defect.** A full-log scan of
+  every KNOWN `open=`/`done=` dump in `run/autotest-village.log` (62
+  distinct states, 01:47→02:08) shows each day-1/hunter-gatherer quest
+  open ×1 pre-completion and done ×1 afterwards; the 217-entry open wall
+  at 01:59:55 was 107×2 JOB_UNLOCK phantoms + the legitimate phase-2.5
+  kitchen trio, and `Basics batch posted` occurs exactly once (01:51:04),
+  so the reward-re-claim candidate never fired. See the issue's verdict.
 
-Bug 1 is fixed (above) but unverified live; bug 2 is open. Both block the
-roster ≥ 5 path (the next visitor batch cannot close while
-stale open instances sit in the handle), so the run times out at
-roster 3. Fix bug 2, then re-run the held village/growth to close
-the verification (which also verifies the bug-1 fix live).
+Bug 1 is fixed (above) but unverified live; bug 2 is closed as a
+misdiagnosis of bug 1. What actually blocked the run at roster 3: after
+the hunter-gatherer batch closed, the stuck gatherer (`UNMET_ITEM`:
+villager_food/fishing_rods/axes, no producer root unlocked) needed the
+**JOB_UNLOCK driver beat** — spend a Block of Progress on the change-job
+tab (agent-side `_qtdev change_job <villager>`) to unlock a producer
+root, or supply the missing items. The 214-phantom handle buried the one
+clean unlock quest, the agent never made the beat, the phase-2.5 kitchen
+batch (posted 01:58:06) never closed, SpawnVisitor never fired again, and
+the 240000-tick watch timed out at roster 3 (`FAIL
+reached-5-villagers`). Re-run: drive that beat; the bug-1 fix keeps the
+handle bounded so the quest stays visible.
 
 ## The `village/self_sufficiency` watchtower seed
 
