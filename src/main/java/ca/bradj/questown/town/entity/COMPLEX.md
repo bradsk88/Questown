@@ -209,51 +209,64 @@ flowchart LR
 A root whose townies have a job but no material for it sits in `UNMET_ITEM`
 and the town soft-locks. That state was invisible in play (only a cryptic
 need-bubble icon), so `TownQuests` posts a **JOB_UNLOCK** quest that names the
-missing item and the root that produces it. The quest completes the moment
-*any* townie unlocks that producer root (the normal BOP path) and is **lost**
-when the stuck state no longer maps to that producer (e.g. the player stocked
-the missing item directly).
+missing item and the root that produces it. **One open quest per stuck root**:
+when the root's missing item flips to a different producer's item the quest is
+*retargeted in place*, and it is *withdrawn* (removed outright, no placeholder)
+when the root stops mapping to any viable producer (e.g. the player stocked
+the missing item directly). The quest completes the moment *any* townie
+unlocks the targeted producer root (the normal BOP path). The stuck root is
+encoded on the quest (`MCQuest.setUnlockStuckRoot` → `fromRecipeID`, persisted
+via NBT `from_recipe_id`) so the dedupe survives a flag reload.
 
-## Post / complete / lose
+## Post / complete / reconcile
 
 ```mermaid
 flowchart TD
     Tick["TownQuests.tick (flag tick)"] --> Scan["tickUnmetUnlockQuests:\nscan townies with need = UNMET_ITEM\nand a non-empty unmet item"]
-    Scan --> Since["stuckRootSince: root -> first-stuck tick\nretainAll: pruned when the root unsticks"]
-    Since --> Gate{"onboarding driving?\n(open onboarding- or JOB_CHANGE-type quest)"}
-    Gate -- yes --> Hold["no post, no re-check"]
-    Gate -- no --> Grace{"now - since >=\nConfig.UNMET_UNLOCK_QUEST_GRACE_TICKS\n(default 12000 = 1 in-game day)?"}
-    Grace -- no --> Hold
-    Grace -- yes --> Prod["staticProducerRootsForItem:\ndeclared product (initial_request) matching\nthe need — static, not discovery-gated"]
-    Prod --> Pick["chooseProducerRoot:\nfirst sorted, excluding the stuck root itself\nand roots already unlocked by some townie"]
-    Pick --> Dup{"open JOB_UNLOCK on that root?"}
-    Dup -- yes --> Hold
-    Dup -- no --> Post["add batch: MCQuest.jobUnlock\nflavor names stuck root, missing item, producer\n'New quests are available!' broadcast"]
+    Scan --> Since["unmetRootSince: root -> first-stuck tick\nretainAll: pruned when the root unsticks"]
+    Since --> Map["rootToProducer: per stuck root,\nchooseProducerRoot over the current missing item\n(absent = no unlockable producer)"]
+    Map --> Recon["reconcileUnlockQuests (pure):\nrooted quests keep while their root maps to a\nviable producer; retarget in place when the\nproducer flips; withdraw when it does not.\nTown-wide quests keep while some root maps\nthem. Post only for due roots with no open quest."]
+    Recon --> ApplyW["withdraw: QuestBatch.withdrawQuest\n(quest removed, listener notified; empty\nJOB_UNLOCK batches declined from the handle)"]
+    Recon --> ApplyR["retarget: MCQuest.retargetUnlock\n(new producer wanted id + flavor, same\nbatch/owner/reward, setChanged)"]
+    Recon --> Gate{"posting due? (onboarding not driving\n+ grace elapsed for that root)")}
+    Gate -- no --> Hold["no post"]
+    Gate -- yes --> Post["postUnlockQuest: add batch MCQuest.jobUnlock\n+ setUnlockStuckRoot, flavor names stuck root,\nmissing item, producer; 'New quests are\navailable!' broadcast"]
 
     Unl["TownFlagTicker.handleNewStoredData\n-> processJobUnlocks (unlocked jobs)"] --> Match{"wanted root now unlocked\nby some townie?"}
     Match -- yes --> Done["markRecipeAsComplete(wantedId)"]
-
-    Tick --> Lose{"open JOB_UNLOCK quest whose producer\nno stuck root maps to anymore?"}
-    Lose -- yes --> Lost["markRecipeAsLostByKey(wantedId)"]
 ```
 
-- **The grace timer is per-root and restarts on unstick.** `stuckRootSince` is
+- **The grace timer is per-root and restarts on unstick.** `unmetRootSince` is
   pruned to the roots stuck *right now* before being re-seeded, so a town that
   flaps in and out of the stuck state is not posted a quest until it has been
   stuck for the full grace continuously.
 - **Nothing posts while onboarding drives jobs.** An open onboarding- or
   `JOB_CHANGE`-type quest means the town is mid-tutorial and the tutorial owns
   job assignment; a diagnostic quest on top is noise. The gate is on quest
-  existence, not townie state.
-- **Completion is event-driven, loss is scan-driven.** Unlocks land through
+  existence, not townie state. (Reconcile — retarget/withdraw — is not gated:
+  it only touches quests that already exist.)
+- **Completion is event-driven, reconcile is scan-driven.** Unlocks land through
   `processJobUnlocks` (stateless, run every flag tick, mirrors
-  `processJobChanges`). Loss is decided by the per-tick scan: when no stuck
-  root maps to the quest's producer anymore the quest is withdrawn.
-- **The lost placeholder follows pre-existing `lost()` semantics** (all quest
-types): the journal keeps a `ROOM`-typed ACTIVE placeholder, not a
-  LOST-status quest (see the TODO on `MCQuest.lost`). What loss guarantees for
-  this feature is that no open JOB_UNLOCK remains, so a re-stuck root can get
-  a fresh quest.
+  `processJobChanges`), and it runs *before* `tickQuests` in the same flag tick
+  (`AbstractTownFlagTicker`: `handleNewStoredData` then `tickQuests`), so an
+  unlock completes the quest before the reconcile can withdraw it.
+- **Withdraw leaves no placeholder** (2026-10-11 ping-pong fix,
+  `.scratch/mat-gated-arrival/job-unlock-quest-spam.md`): the old path ran
+  `markRecipeAsLostByKey`, whose `lost()` replacement re-typed the quest as an
+  ACTIVE *room* quest that no gate/UI/completion path ever cleared — every
+  oscillation of the stuck root's missing item left another phantom in the
+  handle (107× each of two quests in two minutes of a held run) and, being no
+  longer JOB_UNLOCK-typed, defeated the dedupe so the post/lose cycle ran
+  forever. Withdraw removes the quest outright, notifies the listener
+  (`quest_lost` broadcast), and declines the batch when it empties.
+- **The dedupe is per stuck root, not per producer**, so an oscillating
+  `getUnmetItem()` (work-state flips changing the best gate reason) retargets
+  the one quest instead of churning the handle; the stuck-root encoding in
+  `fromRecipeID` is otherwise-unused for this type and round-trips through the
+  quest NBT. Town-wide quests (the top-need phase: no stuck root, encoding
+  empty) keep the legacy rule — withdrawn when no stuck root maps to their
+  producer; their batches carry a second room quest, so only empty batches
+  are declined.
 - **Exclusions keep the quest honest.** `chooseProducerRoot` skips the stuck
   root itself (its capacity already exists) and any root some townie already
   has unlocked (an unlocked producer means the stuck state has a different
@@ -262,15 +275,17 @@ types): the journal keeps a `ROOM`-typed ACTIVE placeholder, not a
   — `initial_request` matching), not the discovery-gated registry results: an
   unlock quest exists to ask for a producer the town does not yet hold, so the
   producer knowledge must be omniscient (gannet decision 3); the discovery gate
-  stays on the job engine's execution path. The same predicate drives the loss
-  scan — a quest posted on declared capability must not be marked lost by the
-  discovery gate's view.
+  stays on the job engine's execution path. The same predicate drives the
+  reconcile — a quest posted on declared capability must not be withdrawn by
+  the discovery gate's view.
 - **The unlocked-jobs seam is `VillagerHolder.getUnlockedJobs`** — the one
   handle surface that exposes per-townie unlocked `JobID` sets, read
   server-side via `TownVillagerHandles`.
 - Verified by `TownQuestsJobUnlockTest` (producer selection, unlock
-  detection, batch completion/lost plumbing). Post timing and live
-  completion/loss are covered by the held `village/self_sufficiency` run;
+  detection, batch completion, the `reconcileUnlockQuests` decisions, the
+  stuck-root NBT round-trip, in-place retarget, and withdraw plumbing). Post
+  timing and live completion/withdrawal are covered by the held
+  `village/self_sufficiency` run;
   plan: `docs/plans/2026-09-27-001-feat-unmet-unlock-quest-plan.md`.
 
 **The tutorial's top-need batch is a second consumer of the same producer

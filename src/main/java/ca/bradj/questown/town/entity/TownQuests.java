@@ -462,9 +462,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     /**
      * Surfaces a stuck townie as the next quest. While a root has no viable job its townies
      * sit in UNMET_ITEM; past a grace period the town posts a JOB_UNLOCK quest naming the
-     * missing item and the root that produces it. The quest completes when any townie unlocks
-     * that root (see {@link #processJobUnlocks}) and is lost once no stuck root maps to it
-     * any more (e.g. the player stocked the missing item directly).
+     * missing item and the root that produces it. One open quest per stuck root: when the
+     * root's missing item flips to a different producer's item the quest is retargeted in
+     * place (the old lose-and-repost cycle ping-ponged the handle full of phantom quests),
+     * and the quest is withdrawn once its root stops mapping to any viable producer
+     * (e.g. the player stocked the missing item directly). The quest completes when any
+     * townie unlocks the targeted root (see {@link #processJobUnlocks}).
      */
     void tickUnmetUnlockQuests(TownInterface town) {
         long now = Util.getTick(town.getServerLevel());
@@ -486,52 +489,163 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         unmetRootSince.keySet().retainAll(stuckRoots);
         stuckRoots.forEach(r -> unmetRootSince.putIfAbsent(r, now));
 
-        // The tutorial drives jobs through JOB_CHANGE quests; an unlock quest on top of
-        // that is noise, so only post one once onboarding has stopped assigning jobs.
-        boolean onboardingDriving = questBatches.includes(q -> !q.isComplete()
-                && (q.isOnboarding() || q.getType() == Quest.QuestType.JOB_CHANGE));
-        if (!onboardingDriving) {
-            for (String root : stuckRoots) {
-                if (now - unmetRootSince.get(root) < Config.UNMET_UNLOCK_QUEST_GRACE_TICKS.get()) {
-                    continue;
-                }
-                createUnlockQuestIfAbsent(town, root, stuckRootToMissingItem.get(root), stuckRootToTownie.get(root));
+        // The current viable producer per stuck root; absent when no unlockable producer
+        // exists (the root is stuck for a reason an unlock quest cannot fix).
+        ServerLevel level = town.getServerLevel();
+        Set<String> unlocked = unlockedRoots(town);
+        Map<String, String> rootToProducer = new HashMap<>();
+        for (Map.Entry<String, String> e : stuckRootToMissingItem.entrySet()) {
+            String producer = chooseProducerRoot(
+                    ServerJobsRegistry.staticProducerRootsForItem(level, Ingredients.fromString(e.getValue())),
+                    e.getKey(),
+                    unlocked
+            );
+            if (producer != null) {
+                rootToProducer.put(e.getKey(), producer);
             }
         }
 
+        Map<String, String> rootedOpenQuests = new HashMap<>();
+        Set<String> townWideOpenQuests = new HashSet<>();
+        Map<String, String> questProducers = new HashMap<>();
+        Map<String, MCQuestBatch> batchByKey = new HashMap<>();
+        Map<String, MCQuest> questByKey = new HashMap<>();
         for (MCQuestBatch batch : questBatches.getAllBatches()) {
             for (MCQuest q : batch.getAll()) {
                 if (q.getType() != Quest.QuestType.JOB_UNLOCK || q.isComplete()) {
                     continue;
                 }
-                String producer = JobID.fromRL(q.getWantedId()).rootId();
-                boolean stillNeeded = stuckRootToMissingItem.entrySet().stream()
-                        .anyMatch(e -> ServerJobsRegistry.staticProducerRootsForItem(
-                                        town.getServerLevel(), Ingredients.fromString(e.getValue())).contains(producer));
-                if (!stillNeeded) {
-                    batch.markRecipeAsLostByKey(q.getWantedId());
-                }
+                String key = batch.getBatchUUID() + ":" + q.getWantedId();
+                q.unlockStuckRoot()
+                 .ifPresentOrElse(
+                         root -> rootedOpenQuests.put(key, root),
+                         () -> townWideOpenQuests.add(key)
+                 );
+                questProducers.put(key, JobID.fromRL(q.getWantedId()).rootId());
+                batchByKey.put(key, batch);
+                questByKey.put(key, q);
+            }
+        }
+
+        Set<String> dueRoots = new HashSet<>();
+        for (String root : stuckRoots) {
+            if (now - unmetRootSince.get(root) >= Config.UNMET_UNLOCK_QUEST_GRACE_TICKS.get()) {
+                dueRoots.add(root);
+            }
+        }
+
+        UnlockReconcile r = reconcileUnlockQuests(
+                rootedOpenQuests, townWideOpenQuests, questProducers, rootToProducer, dueRoots
+        );
+        TownFlagBlockEntity t = this.town.getUnsafe();
+
+        for (String key : r.withdraw()) {
+            MCQuestBatch batch = batchByKey.get(key);
+            if (batch.withdrawQuest(questByKey.get(key)) && batch.getAll().isEmpty()) {
+                questBatches.decline(batch);
+            }
+        }
+        for (Map.Entry<String, String> e : r.retarget().entrySet()) {
+            String root = rootedOpenQuests.get(e.getKey());
+            String producer = e.getValue();
+            MCQuest q = questByKey.get(e.getKey());
+            JobID rootJob = ServerJobsRegistry.getAllRootJobs().stream()
+                    .filter(j -> producer.equals(j.rootId()))
+                    .findFirst()
+                    .orElse(new JobID(producer, producer));
+            q.retargetUnlock(
+                    JobID.toRL(rootJob),
+                    "Your " + root + " townie cannot find work: "
+                            + Ingredients.getName(Ingredients.fromString(stuckRootToMissingItem.get(root))).getString()
+                            + " is missing from the town's supplies. "
+                            + "Unlock the " + producer + " job with a Block of Progress so the town can make it."
+            );
+            t.setChanged();
+        }
+
+        // The tutorial drives jobs through JOB_CHANGE quests; an unlock quest on top of
+        // that is noise, so only post one once onboarding has stopped assigning jobs.
+        boolean onboardingDriving = questBatches.includes(q -> !q.isComplete()
+                && (q.isOnboarding() || q.getType() == Quest.QuestType.JOB_CHANGE));
+        if (!onboardingDriving) {
+            for (Map.Entry<String, String> e : r.post().entrySet()) {
+                postUnlockQuest(town, e.getKey(), stuckRootToMissingItem.get(e.getKey()), e.getValue(),
+                        stuckRootToTownie.get(e.getKey()));
             }
         }
     }
 
-    private void createUnlockQuestIfAbsent(
+    /**
+     * The per-tick reconcile of open JOB_UNLOCK quests under the one-per-stuck-root
+     * dedupe. A rooted quest survives while its root still maps to a viable producer,
+     * retargeted in place when the producer changes; it is withdrawn when its root stops
+     * mapping to any viable producer. A town-wide quest (the top-need phase: no stuck
+     * root) survives while some stuck root maps to its producer. Posting happens only
+     * for a stuck root past grace that still has no surviving rooted quest.
+     *
+     * @param rootedOpenQuests   quest key -> the stuck root it was posted for
+     * @param townWideOpenQuests quest keys with no stuck root
+     * @param questProducers     quest key -> producer root the quest currently targets
+     * @param rootToProducer     currently-stuck root -> viable producer root (absent = no viable producer)
+     * @param rootsPastGrace     stuck roots past the posting grace period
+     */
+    record UnlockReconcile(
+            Set<String> withdraw,
+            Map<String, String> retarget,
+            Map<String, String> post
+    ) {
+    }
+
+    static UnlockReconcile reconcileUnlockQuests(
+            Map<String, String> rootedOpenQuests,
+            Set<String> townWideOpenQuests,
+            Map<String, String> questProducers,
+            Map<String, String> rootToProducer,
+            Set<String> rootsPastGrace
+    ) {
+        Set<String> withdraw = new HashSet<>();
+        Map<String, String> retarget = new HashMap<>();
+
+        for (Map.Entry<String, String> e : rootedOpenQuests.entrySet()) {
+            String key = e.getKey();
+            if (!rootToProducer.containsKey(e.getValue())) {
+                withdraw.add(key);
+                continue;
+            }
+            String producer = rootToProducer.get(e.getValue());
+            if (!producer.equals(questProducers.get(key))) {
+                retarget.put(key, producer);
+            }
+        }
+        for (String key : townWideOpenQuests) {
+            if (!rootToProducer.values().contains(questProducers.get(key))) {
+                withdraw.add(key);
+            }
+        }
+
+        Map<String, String> post = new HashMap<>();
+        for (String root : rootsPastGrace) {
+            String producer = rootToProducer.get(root);
+            if (producer == null) {
+                continue;
+            }
+            boolean covered = rootedOpenQuests.entrySet().stream()
+                    .anyMatch(e -> root.equals(e.getValue()) && !withdraw.contains(e.getKey()));
+            if (!covered) {
+                post.put(root, producer);
+            }
+        }
+        return new UnlockReconcile(Set.copyOf(withdraw), Map.copyOf(retarget), Map.copyOf(post));
+    }
+
+    private void postUnlockQuest(
             TownInterface town,
             String root,
             String missingItemKey,
+            String producer,
             VillagerUUID owner
     ) {
         TownFlagBlockEntity t = this.town.getUnsafe();
-        Ingredient missing = Ingredients.fromString(missingItemKey);
-        String producer = chooseProducerRoot(
-                ServerJobsRegistry.staticProducerRootsForItem(t.getServerLevel(), missing), root, unlockedRoots(town)
-        );
-        if (producer == null) {
-            return;
-        }
-        if (openJobUnlockQuestExists(producer)) {
-            return;
-        }
         JobID rootJob = ServerJobsRegistry.getAllRootJobs().stream()
                 .filter(j -> producer.equals(j.rootId()))
                 .findFirst()
@@ -539,8 +653,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
         UUID batchUUID = UUID.randomUUID();
         MCQuest q = MCQuest.jobUnlock(batchUUID, owner, JobID.toRL(rootJob));
+        q.setUnlockStuckRoot(root);
         q.setFlavorText("Your " + root + " townie cannot find work: "
-                + Ingredients.getName(missing).getString() + " is missing from the town's supplies. "
+                + Ingredients.getName(Ingredients.fromString(missingItemKey)).getString() + " is missing from the town's supplies. "
                 + "Unlock the " + producer + " job with a Block of Progress so the town can make it.");
         MCQuestBatch.Inputs inputs = new MCQuestBatch.Inputs(batchUUID, owner);
         inputs.addNewQuest(q);

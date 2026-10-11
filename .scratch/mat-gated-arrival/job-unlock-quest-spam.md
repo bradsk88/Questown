@@ -1,6 +1,8 @@
 ---
 title: JOB_UNLOCK quests post/lose in a per-tick ping-pong when a root's unmet item oscillates; lost quests stay in the handle
 status: needs-triage
+closed: 2026-10-11
+resolved: 2026-10-11
 created: 2026-10-11
 ---
 
@@ -65,3 +67,33 @@ Held agent-drive `village/growth` on the 1.20.6 branch with the new
 day-1 beat order; let a gatherer sit without a dining table past
 `UNMET_UNLOCK_QUEST_GRACE_TICKS`. Watch for the post/quest_lost pairs in
 the `Questown:Quests` log and the growing open list.
+
+## Resolved (2026-10-11)
+
+Fixed with the **per-root dedupe** direction (first candidate above), at
+the quest-handle seam, not the source: `getUnmetItem()` flipping between
+work states is left as-is (the oscillation is the town's honest statement
+of its best-scoring gate reason), and the handle now absorbs it.
+
+- `TownQuests.reconcileUnlockQuests` (pure, static): one open JOB_UNLOCK per
+  stuck root; retarget in place when the root's missing item flips producer;
+  withdraw when the root stops mapping to any viable producer. Town-wide
+  (top-need) quests keep the legacy keep/withdraw rule.
+- The stuck root is encoded on the quest via
+  `MCQuest.setUnlockStuckRoot` → `fromRecipeID` (NBT `from_recipe_id`), so
+  the dedupe survives a flag reload.
+- Withdraw replaces `markRecipeAsLostByKey` (removed): `QuestBatch
+  .withdrawQuest` removes the quest outright and notifies the listener; the
+  now-empty JOB_UNLOCK batch is declined from the handle. The old path's
+  `lost()` placeholder (an ACTIVE room-typed phantom) is gone for this type.
+- `MCQuest.retargetUnlock` swaps the producer wanted-id + flavor in place
+  (type-guarded).
+
+Pinned by `TownQuestsJobUnlockTest` (22 tests, green): the reconcile
+decisions, the stuck-root NBT round-trip, retarget, and withdraw plumbing.
+Machine-side only — the held `village/growth` re-run to roster ≥ 5 (which
+would verify it live and also exercise bug 2, still open in
+`day1-quests-reopen-after-batch.md`) has not run yet.
+
+The stuck-root situation itself (gatherer UNMET food with no dining table)
+remains a separate fixture/pacing question, noted above.

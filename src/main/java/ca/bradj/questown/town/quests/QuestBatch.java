@@ -254,25 +254,18 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
     }
 
     /**
-     * Lost for quests that carry no room (JOB_UNLOCK): match on the wanted id alone,
-     * first incomplete match wins, same as {@link #markRecipeAsComplete}.
+     * Withdraw a quest outright (no placeholder) and notify the listener. The JOB_UNLOCK
+     * path uses this when its stuck root stops mapping to a viable producer: the
+     * lost()-placeholder path re-typed the quest as an open room quest that no gate,
+     * UI or completion path ever cleared (the handle-accumulation half of the
+     * JOB_UNLOCK ping-pong, .scratch/mat-gated-arrival/job-unlock-quest-spam.md).
      */
-    public boolean markRecipeAsLostByKey(
-            @NotNull KEY recipeID
-    ) {
-        Optional<QUEST> found = this.quests.stream()
-                                           .filter(v -> recipeID.equals(v.getWantedId()) && !v.isComplete())
-                                           .findFirst();
-        if (found.isEmpty()) {
+    public boolean withdrawQuest(QUEST quest) {
+        if (!this.quests.remove(quest)) {
             return false;
         }
-        QUEST foundQuest = found.get();
-        if (this.quests.remove(foundQuest)) {
-            this.quests.add(questFactory.lost(foundQuest));
-            this.changeListener.questLost(foundQuest);
-            return true;
-        }
-        return false;
+        this.changeListener.questLost(quest);
+        return true;
     }
 
     public @Nullable VillagerUUID getUUID() {

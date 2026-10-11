@@ -12,6 +12,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -113,6 +114,36 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         // Flavor text is set by the creator (TownQuests): it names the missing item and
         // the stuck townie, which this type-specific factory does not know.
         return new MCQuest(batchUUID, ownerId, rootJobId, null, QuestType.JOB_UNLOCK, 1);
+    }
+
+    /**
+     * Encode the stuck root this JOB_UNLOCK quest was posted for, in fromRecipeID
+     * (persisted via NBT {@code from_recipe_id}, otherwise unused for this type), so
+     * the one-per-stuck-root dedupe survives a flag reload.
+     */
+    public void setUnlockStuckRoot(String stuckRoot) {
+        this.fromRecipeID = JobID.toRL(new JobID(stuckRoot, stuckRoot));
+    }
+
+    /** The stuck root this JOB_UNLOCK quest was posted for, or empty for town-wide ones. */
+    public Optional<String> unlockStuckRoot() {
+        return this.fromRecipeID()
+                .map(JobID::fromRL)
+                .map(JobID::rootId);
+    }
+
+    /**
+     * Retarget an open JOB_UNLOCK quest to a different producer root, in place (same
+     * batch, owner and reward): the stuck root's missing item flipped to an item the
+     * new producer makes, and re-posting a fresh quest is what used to ping-pong the
+     * handle full of phantoms.
+     */
+    public void retargetUnlock(ResourceLocation newRootJob, String newFlavorText) {
+        if (this.getType() != QuestType.JOB_UNLOCK) {
+            throw new IllegalStateException("retargetUnlock: not a JOB_UNLOCK quest: " + this.getType());
+        }
+        this.recipeId = newRootJob;
+        this.setFlavorText(newFlavorText);
     }
 
     public static MCQuest concurrentJobs(

@@ -281,11 +281,24 @@ broken on this branch; two issues are filed in
 - **JOB_UNLOCK post/lose ping-pong** (`job-unlock-quest-spam.md`): a townie
   whose root is stuck in `UNMET_ITEM` with an *oscillating*
   `getUnmetItem()` (gatherer flipping villager_food ↔ fishing_rods between
-  work states) makes `TownQuests.tickUnmetUnlockQuests` post a JOB_UNLOCK
+  work states) made `TownQuests.tickUnmetUnlockQuests` post a JOB_UNLOCK
   for one producer root, lose it next tick when the missing item flips, and
-  re-post the other — forever. Lost quests stay in the handle and are
-  counted as open (the run's open list reached ~107×2 of them in two
-  minutes), and each post fires a "New quests are available!" broadcast.
+  re-post the other — forever. The lost path
+  (`markRecipeAsLostByKey` → `MCQuest.lost()`) re-typed the quest as an
+  ACTIVE *room* quest, so the "lost" entry stayed in the handle and counted
+  as open (the run's open list reached ~107×2 of them in two minutes), and
+  being no longer JOB_UNLOCK-typed it defeated the producer dedupe. Each
+  post fired a "New quests are available!" broadcast.
+  **FIXED 2026-10-11** (per-root dedupe): one open JOB_UNLOCK per stuck
+  root, the root encoded on the quest (`setUnlockStuckRoot` →
+  `fromRecipeID`, NBT-persisted); when the root's missing item flips
+  producer the quest is retargeted in place (`MCQuest.retargetUnlock`), and
+  when its root stops mapping to a viable producer it is withdrawn outright
+  (`QuestBatch.withdrawQuest`, empty batch declined from the handle) — no
+  placeholder. The decision is the pure `TownQuests.reconcileUnlockQuests`
+  (pinned by `TownQuestsJobUnlockTest`); see `town/entity/COMPLEX.md`
+  "Stuck townie -> JOB_UNLOCK quest". Not yet verified in a held run:
+  the `village/growth` re-run to roster ≥ 5 is still pending.
 - **Day-1 quests re-appear as open after the hunter-gatherer batch closes**
   (`day1-quests-reopen-after-batch.md`): at the roster-3 arrival the handle
   held fresh OPEN instances of campfire/town_gate/store_room/job_board/
@@ -298,10 +311,11 @@ broken on this branch; two issues are filed in
   `addTutorialBatches` start at phase 2 and the hunter-gatherer re-add is
   guarded by `questBatches.includes(JOB_CHANGE)`.
 
-Both block the roster ≥ 5 path (the next visitor batch cannot close while
+Bug 1 is fixed (above) but unverified live; bug 2 is open. Both block the
+roster ≥ 5 path (the next visitor batch cannot close while
 stale open instances sit in the handle), so the run times out at
-roster 3. Fix the two issues, then re-run the held village/growth to close
-the verification.
+roster 3. Fix bug 2, then re-run the held village/growth to close
+the verification (which also verifies the bug-1 fix live).
 
 ## The `village/self_sufficiency` watchtower seed
 
