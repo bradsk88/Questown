@@ -243,6 +243,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("too_short_room_dead", tooShortRoomBlueprint()));
         jobs.add(flagEntry("floating_chest_room", floatingChestRoomBlueprint()));
         jobs.add(flagEntry("floating_furniture_over_half", floatingFurnitureOverHalfBlueprint()));
+        jobs.add(flagEntry("filled_storeroom_alive", filledStoreroomBlueprint()));
         // BOP cap (report): pre-fill the flag and drive one deposit across the 64-slot boundary.
         jobs.add(flagEntry("bop_boundary_63", bopBoundaryBlueprint()));
         jobs.add(flagEntry("bop_full_64", bopFullBlueprint()));
@@ -781,6 +782,85 @@ public class TestBlueprintRegistry {
                 "over-halved room rejected as no-room (NOT_ENCLOSED)",
                 dead.get(doorPos) == DoorTrouble.NOT_ENCLOSED
         );
+    }
+
+    // Where the 3x3 filled storeroom's north-west corner stands relative to the flag: clear of the
+    // too-short room (z -2..2), the floating-chest room (z 6..10), and the over-halved room
+    // (z 12..15).
+    private static final BlockPos FILLED_STOREROOM_OFFSET = new BlockPos(-9, 0, 18);
+
+    /**
+     * day-1 playtest 2026-10-11 (room-3x3-chest-instantly-destroyed): a 3x3 room whose single
+     * interior cell is the room's own work block — the chest of the small-storeroom recipe
+     * ("a room containing one chest"). The walkability filter's original form counted that
+     * chest cell against the standable fraction and rejected the room the moment it matched,
+     * so the player saw "storeroom destroyed" and never "created". The interior is filled at the
+     * feet level, not low-roofed: no open floor cell exists, and the door must stay live with a
+     * room detected.
+     */
+    private static TestBlueprint filledStoreroomBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::buildFilledStoreroomAndRegister)
+                .withCustomAssertion(TestBlueprintRegistry::assertFilledStoreroomAlive);
+    }
+
+    private static boolean buildFilledStoreroomAndRegister(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        // 3x3 footprint: floor at y-1, two-tall cobble walls (the 8 perimeter cells), and a chest
+        // in the single interior cell at feet level (on the floor). The head level above the chest
+        // is open.
+        BlockPos base = flagPos.offset(FILLED_STOREROOM_OFFSET);
+        for (int x = 0; x < 3; x++) {
+            for (int z = 0; z < 3; z++) {
+                boolean isEdge = x == 0 || x == 2 || z == 0 || z == 2;
+                BlockPos p = base.offset(x, 0, z);
+                level.setBlockAndUpdate(p.below(), Blocks.COBBLESTONE.defaultBlockState());
+                if (isEdge) {
+                    level.setBlockAndUpdate(p, Blocks.COBBLESTONE.defaultBlockState());
+                    level.setBlockAndUpdate(p.above(), Blocks.COBBLESTONE.defaultBlockState());
+                }
+            }
+        }
+        // The chest in the single interior cell, at feet level (on the floor).
+        BlockPos chestPos = base.offset(1, 0, 1);
+        level.setBlockAndUpdate(chestPos, Blocks.CHEST.defaultBlockState());
+
+        // Full (both-halves) door on the east edge, replacing the wall there.
+        BlockPos doorPos = base.offset(2, 0, 1);
+        BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+
+        // Register the door via the real wand path (same idiom as registerLoneDoorViaWand).
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
+        TownFlagBlock.StoreParentOnNBT(wand, flagPos);
+        player.setItemInHand(InteractionHand.MAIN_HAND, wand);
+        ((TownWand) wand.getItem()).onRightClicked(() -> player, level, doorPos, wand);
+
+        output.msg("Built 3x3 storeroom with a chest in its single interior cell and registered"
+                + " its door at " + doorPos.toShortString() + "; deadDoors=" + town.getDeadDoors());
+        return true;
+    }
+
+    private static boolean assertFilledStoreroomAlive(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos doorPos = flagPos.offset(FILLED_STOREROOM_OFFSET).offset(2, 0, 1);
+        Map<BlockPos, DoorTrouble> dead = town.getDeadDoors();
+        int rooms = town.getRoomHandle().getMatches(x -> true).size();
+        output.msg("deadDoors after monitor = " + dead + "; rooms=" + rooms);
+        boolean ok = report(output, "1 room-detected", rooms >= 1);
+        ok &= report(output, "2 door-not-dead", !dead.containsKey(doorPos));
+        return ok;
     }
 
     private static boolean campfireSleepOntoFlag(

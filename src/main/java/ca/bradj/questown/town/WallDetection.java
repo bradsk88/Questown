@@ -72,6 +72,18 @@ public class WallDetection {
         );
     }
 
+    /**
+     * True when the feet-level block at {@code dp} (at {@code y}) is passable (air or no
+     * collision shape) — i.e. the cell is an open floor a villager could stand in, as opposed
+     * to being filled at the feet level by a block such as a chest. This is the feet half of
+     * {@link #IsWalkable}. Room detection uses it to separate "floor" interior cells (air at the
+     * feet, which may be sunk by a low roof) from cells filled at the feet by the room's own
+     * contents (a chest in a 3x3 storeroom's single interior cell), which are not floors.
+     */
+    public static boolean IsFloorOpen(ServerLevel level, Position dp, int y) {
+        return isPassable(level, Positions.ToBlock(dp, y));
+    }
+
     private static boolean isPassable(ServerLevel level, BlockPos bp) {
         BlockState bs = level.getBlockState(bp);
         return bs.isAir() || bs.getCollisionShape(level, bp).isEmpty();

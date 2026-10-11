@@ -37,9 +37,11 @@ flowchart TD
 ```mermaid
 flowchart LR
     Foot["detected footprint"] --> Cells["InclusiveSpaces.getPositions<br/>(INTERIOR_ONLY)"]
-    Cells --> Check{"IsWalkable(dp, y)?<br/>passable at feet (y) AND head (y+1)"}
-    Check --> Count["walkable / total interior cells"]
-    Count --> Verdict{"walkable >= ceil(total ×<br/>MIN_ROOM_WALKABLE_FRACTION)?"}
+    Cells --> Floor{"IsFloorOpen(dp, y)?<br/>passable at the feet (y)?"}
+    Floor -- "no (a block on the floor)" --> Content["room contents —<br/>excluded from the count"]
+    Floor -- yes --> Check{"IsWalkable(dp, y)?<br/>passable at feet (y) AND head (y+1)?"}
+    Check --> Count["walkable / open-floor cells"]
+    Count --> Verdict{"walkable >= ceil(open-floor ×<br/>MIN_ROOM_WALKABLE_FRACTION)?<br/>(0 open-floor cells → accept)"}
     Verdict -- no --> Rej["reject → NOT_ENCLOSED"]
     Verdict -- yes --> Keep["keep → recipe match"]
 ```
@@ -53,6 +55,16 @@ flowchart LR
   (default 0.5) is the fraction of interior floor cells that must be standable,
   so a room with a low overhang over only part of its floor still counts while
   a fully low-roofed room (0 standable) is rejected. `0.0` disables the check.
+- **A block on the floor is contents, not a low roof.** Only cells open at the
+  feet level (`WallDetection.IsFloorOpen`) count toward the standable
+  denominator. A cell filled at the feet by a block — the chest in a 3x3
+  storeroom's single interior cell — is the room's own work block, so it is
+  excluded rather than counted against the room. The low-roof case is air at
+  the feet (solid at the head), so it still counts and still fails; a room
+  whose interior is entirely filled (0 open-floor cells) is accepted. This is
+  what stopped the 3x3 storeroom from being destroyed the moment its chest
+  matched the recipe (day-1 playtest 2026-10-11,
+  `room-3x3-chest-instantly-destroyed`).
 - The filter runs in `MultiLevelRoomDetector.handleNewRooms`, so a rejected
   room never reaches recipe matching. It surfaces as the existing
   `DoorTrouble.NOT_ENCLOSED` (no new trouble type), pointing the player at the
@@ -61,4 +73,6 @@ flowchart LR
   The 0.5 fraction is bracketed from both sides by two more tests: `flag/floating_chest_room`
   (a 5x5 room with one chest floating at head height is accepted) and
   `flag/floating_furniture_over_half` (a 4x4 room with three of four interior
-  cells floating is rejected).
+  cells floating is rejected). `flag/filled_storeroom_alive` pins the contents
+  rule: a 3x3 room whose single interior cell is the recipe's chest is accepted
+  (door stays live, a room is detected).
