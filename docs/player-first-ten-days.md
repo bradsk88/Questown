@@ -8,6 +8,13 @@
 > implemented 2026-10-10 in the campfire→mat order: the welcome mat is the first
 > ask *after* the campfire beat, and its completion hands over the first villager
 > (next morning) + the basics batch (job board + store room).
+>
+> **Verification status (2026-10-11, held `village/growth` run):** Day 1 through
+> the third villager's arrival (the Day 3 beat) is verified live end-to-end on
+> the new flow. The pipeline after the hunter-gatherer batch is currently broken
+> — two `needs-triage` bugs (`.scratch/mat-gated-arrival/job-unlock-quest-spam.md`
+> and `day1-quests-reopen-after-batch.md`) stop the next visitor batch from
+> closing — so Days 4–10 below are design intent, not verified behavior yet.
 
 **Day 1.** You place the town flag, and a helper chicken shows up to guide you. It pecks at a wall gap, points at a spot for a door, and waits for you to right-click that door with your new town wand. Then it takes over: it builds a little room around the door and drops its own chest inside (the store-room quest is already half-done). Next it wants your **campfire**: you light one, and a toast confirms that this campfire is now *your* camp (sleeping on it for the first time earns the advancement). Then it points at the spot for your **welcome mat** — the town's gate. When you place it, the quest board fills with the evening's work: a job-board sign and the store room — and the flag's menu opens to the villagers view, where it tells you *"a villager will arrive in the morning."* When dark falls, you sleep on the campfire — your first night.
 
