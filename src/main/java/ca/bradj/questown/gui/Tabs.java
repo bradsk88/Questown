@@ -76,4 +76,16 @@ public class Tabs {
         return false;
 
     }
+
+    // Open the tab whose title key matches, by firing its onClick. Returns false when no such
+    // (enabled) tab exists, so callers can fall back to a default action.
+    public boolean openTab(String titleKey) {
+        for (Tab t : tabs) {
+            if (t.titleKey().equals(titleKey)) {
+                t.onClick().run();
+                return true;
+            }
+        }
+        return false;
+    }
 }

@@ -295,7 +295,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         JobID job = JobID.fromRL(recipe.getWantedId());
         return ImmutableList.of(
                 Compat.translatable("menu.questown.quests.job_quest_1", job.jobId()),
-                Compat.translatable("menu.questown.quests.job_quest_2", job.rootId()),
+                Compat.translatable("menu.questown.quests.job_quest_2", Compat.translatable("jobs." + job.rootId())),
                 Compat.literal("Click for more info")
         );
     }
@@ -303,7 +303,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private static ImmutableList<Component> renderJobUnlockTooltip(UIQuest recipe) {
         JobID job = JobID.fromRL(recipe.getWantedId());
         return ImmutableList.of(
-                Compat.translatable("menu.questown.quests.job_unlock_1", job.rootId()),
+                Compat.translatable("menu.questown.quests.job_unlock_1", Compat.translatable("jobs." + job.rootId())),
                 Compat.literal("Click for more info")
         );
     }
@@ -475,6 +475,13 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             UIQuest quest = quests.get(card.index());
             if (quest == null) {
                 continue;
+            }
+            // Day-1 playtest: the welcome-mat quest is answered at the flag's crafting tab,
+            // not in the book - deep-link there. Hardcoded for now (the player's ask):
+            // "Clicking on the welcome mat quest should take me to the flag's crafting tab."
+            if (SpecialQuests.TOWN_GATE.equals(quest.getWantedId())
+                    && this.tabs instanceof Tabs tabs && tabs.openTab("tooltips.crafting")) {
+                return true;
             }
             ResourceLocation entry = lessonEntryForQuestType(quest.getType());
             if (entry == null) {

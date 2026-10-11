@@ -81,7 +81,13 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             int mouseY
     ) {
         if (MORNING_ARRIVAL_SENTINEL.equals(card.data())) {
-            ctx.text(Compat.translatable("gui.status.villager_arriving_morning"),
+            // With no townies yet the "...and one more" continuation has nothing to continue
+            // from - the day-1 playtest flagged it as copy that only works after the first
+            // arrival. Name the arrival directly instead.
+            String key = syncedData.villagerStatuses.isEmpty()
+                    ? "gui.status.villager_arriving_morning.first"
+                    : "gui.status.villager_arriving_morning";
+            ctx.text(Compat.translatable(key),
                     card.coords().leftXPadded(), card.coords().topYPadded(), 0xFF808080, false);
             return null;
         }

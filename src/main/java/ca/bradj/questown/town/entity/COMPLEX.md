@@ -547,3 +547,14 @@ pinned by `RoomRecipesUpgradeCandidatesTest`.
 Selection semantics (unchanged by either commit): a candidate covers every
 from-recipe ingredient group; a perfect overlap is the recipe itself and is
 excluded; the caller picks randomly among the survivors.
+
+## Flag menu tab gating (`TownFlagBlockEntity.getInfo`)
+
+Day-1 playtest: the villagers tab and the economics tab both show before they
+have anything to offer (the villager tab's own copy reads "one more in the
+morning" with zero townies). `getInfo()` now gates them:
+`showVillagers = !getVillagers().isEmpty()`, `showEcon =
+completedProceduralBatches >= 1` (the "your village is thriving" milestone —
+the first completed procedural batch). The quests/BOP/crafting tabs are
+ungated. The client's `FlagTabs` already honors the `FlagInfo` booleans (the
+wire format predates this); only the server-side values changed.

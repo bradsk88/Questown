@@ -1705,7 +1705,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public FlagTabsEmbedding.FlagInfo getInfo() {
         boolean hasIncomplete = quests.getAll().stream().anyMatch(q -> !q.isComplete());
-        return FlagTabsEmbedding.FlagInfo.withQuestNotification(getBlockPos(), getBopCount() > 0, hasIncomplete, isBopFull());
+        // Day-1 playtest: the villagers tab is a dead-end with zero townies (its copy
+        // even reads "one more in the morning" for the first arrival), and the economics
+        // tab spoils the open-play systems before onboarding has taught the loop. Gate
+        // them: villagers on first arrival, economics on the first completed procedural
+        // batch (the "your village is thriving" milestone).
+        boolean showVillagers = !getVillagers().isEmpty();
+        boolean showEcon = completedProceduralBatches >= 1;
+        return new FlagTabsEmbedding.FlagInfo(
+                getBlockPos(),
+                showVillagers,
+                true,
+                showEcon,
+                getBopCount() > 0,
+                hasIncomplete,
+                isBopFull()
+        );
     }
 
     /**

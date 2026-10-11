@@ -60,7 +60,14 @@ public class RoomRecipes {
     }
 
     public static Component getName(ResourceLocation id) {
-        return Compat.translatable(String.format("room.%s", id.getPath()));
+        String path = id.getPath();
+        // A block room is registered as "block_room/block.<ns>.<block>" (RoomBlock.getRoomId);
+        // there is no "room.*" lang key for it, so its display name is the block's own
+        // lang entry (e.g. "Job Board") - not a raw key.
+        if (path.startsWith("block_room/block.")) {
+            return Compat.translatable(path.substring("block_room/".length()));
+        }
+        return Compat.translatable(String.format("room.%s", path));
     }
 
     public static Component getName(Optional<ResourceLocation> recipe) {

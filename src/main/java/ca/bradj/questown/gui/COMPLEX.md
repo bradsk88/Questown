@@ -417,3 +417,29 @@ it the menu degrades to the wire's static stats data instead of crashing.
   slot locks — read order must match write; econ is wire-dead (`none()` both ends).
 - `VillagerMenusPayloadTest` pins the round-trip; the menu-construction half is
   not unit-testable (registry-bound menu types).
+
+## Day-1 playtest: quest deep-links, localized job names, arrival copy
+
+- **Welcome-mat quest → crafting tab.** `QuestsScreen.openLessonForClickedCard`
+  branches on `SpecialQuests.TOWN_GATE.equals(quest.getWantedId())` and fires
+  `Tabs.openTab("tooltips.crafting")` before falling back to the book lesson.
+  `Tabs.openTab(titleKey)` looks the tab up by its tooltip key and runs its
+  `onClick` (the same `OpenFlagMenuMessage` a tab click sends); returns false
+  when the tab is absent (e.g. the villager-scoped menu) so the book fallback
+  still runs. Hardcoded per the playtest ask; the follow-up "tell me more about
+  this quest" logic generalizes it.
+- **JOB_UNLOCK/JOB_CHANGE cards no longer print bare ids.** `UIQuest.getName`
+  (JOB_UNLOCK) and `QuestsScreen.renderJobUnlockTooltip`/`renderJobQuestTooltip`
+  now pass `translatable("jobs." + rootId)` instead of the raw `jobId`/`rootId`
+  strings — the root jobs carry lang keys (`jobs.baker` = "Baker"). The flavor
+  text on `TownQuests.postUnlockQuest` still inlines raw ids (it is a stored
+  String, not a Component).
+- **First-arrival copy.** `MultiStatusScreen`'s morning-arrival sentinel picks
+  `gui.status.villager_arriving_morning.first` ("A new villager arrives in the
+  morning") when `syncedData.villagerStatuses` is empty, else the existing
+  "...and one more in the morning".
+- **Flag-craft mat carries parent NBT.** `FlagCraftMessage.craftWelcomeMat`
+  stamps `TownFlagBlock.StoreParentOnNBT(mat, flagPos)` before handing the item
+  over: `WelcomeMatBlock` placement reads the parent from that NBT and drops an
+  unstamped mat as unregistered. `WelcomeMatParentNbtTest` pins the stamp
+  round-trip.

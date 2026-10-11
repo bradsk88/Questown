@@ -12,3 +12,15 @@ ERROR lines that read as a broken server. `QuestBatchSeed.computeQuestCost` cach
 result per recipe id anyway; the dedupe matters because many *different* recipes share
 the same unweighted ids. Callers: `QuestBatchSeed.computeQuestCost` (quest cost /
 `Matches.matches`).
+
+## `RoomRecipes.getName`: block rooms fall through to the block's own lang key
+
+A block room is registered as `block_room/block.<ns>.<block>`
+(`RoomBlock.getRoomId`), and there is no `room.*` lang key for such ids, so
+`getName` returned a raw key that rendered verbatim in the quest card and the
+"…created at location" broadcast (day-1 playtest: the job-board room). `getName`
+now special-cases the `block_room/block.` prefix and returns
+`translatable("<ns>.<block>")` (the block's own name, e.g. "Job Board").
+`RoomRecipesNameTest` pins both the block-room and shape-room keys.
+(`TownMessages.roomRecipeChanged` still inlines `"room." + path` for block-room
+ids — same disease, not yet patched.)

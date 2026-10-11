@@ -1,6 +1,7 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
@@ -48,7 +49,14 @@ public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
         if (!consumeItem(player, Items.OAK_PRESSURE_PLATE)) {
             return;
         }
-        giveAndNotify(player, new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()));
+        // A mat only works when placed against its parent flag: placement reads the
+        // questown.parent_pos_* NBT (TownFlagBlock.GetParentFromNBT) and drops the item
+        // (unregistered) when it is missing. The craft happens at a flag, so stamp the
+        // exact flag the player crafted at - the same parent-stamping the flag's own
+        // child-block drops carry (TownFlagBlock.StoreParentOnNBT).
+        ItemStack mat = new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get());
+        TownFlagBlock.StoreParentOnNBT(mat, flagPos);
+        giveAndNotify(player, mat);
     }
 
     // The "Created X" message is the only confirmation a craft gives, so it must not be able to lie:
