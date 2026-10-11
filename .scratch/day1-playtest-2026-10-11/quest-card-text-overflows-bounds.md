@@ -1,5 +1,5 @@
 ---
-title: "A new villager arrives in the morning" text overflows its card bounds
+title: '"A new villager arrives in the morning" text overflows its card bounds'
 status: resolved
 created: 2026-10-11
 ---
