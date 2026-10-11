@@ -1,6 +1,6 @@
 ---
 title: Job board menu needs an empty state explaining requests
-status: ready-for-agent
+status: resolved
 created: 2026-10-11
 ---
 
@@ -31,3 +31,11 @@ player to click the "+" even when there are no villagers to add — that reads
 like a bug. Change the empty state to a teaser, not an action prompt: e.g.
 "Maybe this will do something soon..." (keep it to a short one- or two-liner;
 no CTA when there's nothing to add).
+
+## Fix (2026-10-11 evening)
+
+Changed `job_board.empty.2` from the CTA ("Press the + button to request an
+item - a townie will make or find it.") to the soft teaser "Maybe this will do
+something soon...". Kept `job_board.empty.1` ("No work requests yet.") — it's
+accurate and not the part that read like a bug. Lang-only change, no code
+layout change. Build-verified; trivial to confirm visually.

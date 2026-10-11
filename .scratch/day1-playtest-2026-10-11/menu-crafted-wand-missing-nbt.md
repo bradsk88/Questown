@@ -1,6 +1,6 @@
 ---
 title: Menu-crafted town wand is missing the NBT it needs to work
-status: ready-for-agent
+status: resolved
 created: 2026-10-11
 ---
 
@@ -34,3 +34,11 @@ craft path should apply it. Grep for how the welcome mat got its NBT back and
 generalise it. Verify by crafting a wand in the flag menu and using it (or a
 unit test that asserts the crafted ItemStack's NBT matches the expected
 parent-POD).
+
+## Fix (2026-10-11 evening)
+
+`FlagCraftMessage.craftWand` now stamps `TownFlagBlock.StoreParentOnNBT(wand,
+flagPos)` on the crafted wand (same parent-stamping the welcome mat already
+carried), so a menu-crafted wand resolves its parent flag and its campfire-sleep
+/ door-register / mat actions work out of the hand. Build-verified (no dedicated
+unit test yet); needs a live client to confirm sleep-at-campfire.

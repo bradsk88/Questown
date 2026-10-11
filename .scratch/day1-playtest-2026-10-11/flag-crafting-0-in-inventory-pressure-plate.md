@@ -1,6 +1,6 @@
 ---
 title: Flag crafting menu shows "0 in inventory" for a pressure plate the player has
-status: needs-info
+status: resolved
 created: 2026-10-11
 ---
 
@@ -34,3 +34,16 @@ the recipe's pressure-plate ingredient actually is (a specific block vs a tag /
 any-plate). The likely fix is making the counter use the same matching as the
 recipe's ingredient. Grep the flag-craft screen for the "in inventory" count and
 the recipe ingredient definitions.
+
+## Fix (2026-10-11 evening)
+
+Root cause: both the server (`FlagCraftMessage.craftWelcomeMat`) and the client
+(`FlagCraftingScreen`) exact-matched `Items.OAK_PRESSURE_PLATE`, so a spruce (or
+any non-oak) plate counted as 0 and couldn't be consumed. Both now use
+`Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES)` (the same tag the codebase
+already uses in `TownFlagBlock`/`ChickenArcConditions`): server
+`consumeMatching(Ingredient)` consumes any wooden plate; client
+`countMatching(Ingredient)` drives the "N in inventory" badge and button
+gating. The recipe icon still shows an oak plate as the representative.
+Build-verified; needs a live client to confirm the count shows for a held
+spruce plate.

@@ -1,6 +1,6 @@
 ---
 title: Hide the flag menu's villager tab until a villager has joined
-status: needs-info
+status: resolved
 created: 2026-10-11
 ---
 
@@ -30,3 +30,15 @@ townfolk") is still visible pre-arrival even though the *tab* was gated in
 condition fires early, or (b) "recall your townfolk" is a *section* outside the
 gated tab (e.g. in the quests or main flag view). Locate the section's lang
 key + owner and gate it on the same first-villager condition.
+
+## Fix (2026-10-11 evening)
+
+It was (b): "recall your townfolk" is the **Begin moving / relocation** section
+in the flag crafting screen (its `begin_moving_desc` lang reads "Recall your
+townsfolk and pack the town away...") — a separate element from the gated
+villager *tab*. It was ungated, so it always showed. `FlagCraftingScreen` now
+hides the Begin-moving button + description (and collapses the panel layout) when
+`FlagInfo.showVillagersTab()` is false, i.e. until a villager has joined — the
+same gate as the villagers tab. Build-verified; needs a live client to confirm.
+(Companion: the economics tab's early reveal is tracked in
+`flag-menu-hide-economics-tab.md`.)

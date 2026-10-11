@@ -1,6 +1,6 @@
 ---
 title: Hide the flag menu's economics tab until onboarding is done
-status: needs-info
+status: resolved
 created: 2026-10-11
 ---
 
@@ -36,3 +36,14 @@ gate fire early (e.g. a procedural batch completes during onboarding before any
 villager), or is the economics **section** a different element from the gated
 **tab**? The user's bar is "not until we've met a villager" — reconcile the
 gate condition with that (first-villager, not procedural-batches).
+
+## Fix (2026-10-11 evening)
+
+The gate criterion was wrong: `completedProceduralBatches >= 1` is met by day 2
+(onboarding batches tick over) even though no villager has arrived yet. The
+player's raised bar is "not until we've met a villager", so `getInfo()` now sets
+`showEcon = showVillagers` (`!getVillagers().isEmpty()`) — economics and the
+villagers tab reveal together. `completedProceduralBatches` is still used for
+quest seeding + the batch milestones (unchanged); it just no longer drives the
+tab gate. Build-verified; needs a live client to confirm economics is hidden
+pre-villager.
