@@ -38,7 +38,7 @@ public class TownFlagBOPItemHandler implements ItemHandler {
         flag.messages.broadcastMessage(
                 "messages.player.took_bop",
                 recipient.getName(),
-                v,
+                Compat.getItemName(v),
                 Util.getTinyString(bp)
         );
         if (recipient.getInventory().add(v)) {

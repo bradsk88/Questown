@@ -128,6 +128,17 @@ flowchart LR
 - Collection is the **only** thing that moves the deposits down; it never touches the
   latch. Spending is the player's decision, so progression advances only if the
   player checks in — the counterweight to warp (ADR-0011).
+- **`took_bop` broadcast must pass the BOP as a `Component`, not a raw
+  `ItemStack` (1.20.6).** `eject()` runs `bopStacks.remove(0)` → broadcast →
+  `inventory.add`/drop, in that order. In 1.20.6 the broadcast's item argument
+  must be a `Component`/`Number`/`Boolean`/`String` — a raw `ItemStack` throws
+  `IllegalArgumentException` from `TranslatableContents`, which aborts the
+  network task *after* the remove and *before* the give, so the BOP is removed
+  from the flag and lost (the day-1 "all BOPs gone" bug). The fix wraps it:
+  `flag.messages.broadcastMessage("messages.player.took_bop", recipient.getName(),
+  Compat.getItemName(v), ...)` where `Compat.getItemName(ItemStack)` returns
+  `stack.getDisplayName()` (1.20.6 renamed `ItemStack.getName()` →
+  `getDisplayName()`).
 - A blessed ("gold") BOP guarantees its carried root on a root job change:
   `JobRootChangeMessage` reads the spent stack (`BopTransactionSyncer.syncConsumedBOP`
   returns it), and `SimpleVillagerHandle` stores it in `guaranteedRoots`, applied at

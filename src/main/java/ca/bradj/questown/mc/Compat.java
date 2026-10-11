@@ -261,6 +261,18 @@ public class Compat {
         return item.getName(item.getDefaultInstance());
     }
 
+    /**
+     * The display-name component of a specific stack (honours any custom name in
+     * its NBT). Use this when an item must be passed as a {@code Component}
+     * argument to a {@code Component.translatable} / {@link #translatable} call
+     * - a raw {@link ItemStack} is rejected by 1.20.6's
+     * {@code TranslatableContents} (Component/Number/Boolean/String only) and
+     * throws {@code IllegalArgumentException}.
+     */
+    public static Component getItemName(ItemStack stack) {
+        return stack.getDisplayName();
+    }
+
     public static ResourceLocation getItemId(Item item) {
         return ca.bradj.questown.loader.Loader.itemIdOf(item);
     }

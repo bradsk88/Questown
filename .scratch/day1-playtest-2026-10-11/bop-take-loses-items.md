@@ -1,6 +1,6 @@
 ---
 title: '"Take a Block of Progress" decrements the flag count but the item never arrives (all BOPs lost)'
-status: ready-for-agent
+status: implemented
 created: 2026-10-11
 ---
 
@@ -106,3 +106,18 @@ BOP reaches the inventory. Verify: a live `took_bop` with no
 **Note:** other `broadcastMessage(...)` call sites that pass an `ItemStack`
 argument have the same latent bug — grep for `broadcastMessage` callers that
 pass an `ItemStack` (not a `Component`) and wrap those too.
+
+## Implemented (2026-10-11 evening, session 3)
+
+- `TownFlagBOPItemHandler.eject()` now passes `Compat.getItemName(v)` (a
+  `Component`) instead of the raw `ItemStack v` to the `took_bop` broadcast.
+- Added `Compat.getItemName(ItemStack)` → `stack.getDisplayName()` (1.20.6
+  renamed `ItemStack.getName()` → `getDisplayName()`).
+- Audited the other `broadcastMessage` callers: they all already pass
+  `Component`/`String`/`Number` (e.g. `RoomRecipes.getName(...)`,
+  `UtilClean.truncateMiddle(...)`), so `took_bop` was the only raw-ItemStack site.
+- Build-verified in an isolated worktree (`compileJava` + `importCheck` +
+  `stranglerCheck` green). Documented in `town/entity/COMPLEX.md` "Collect +
+  spend". **Needs a live from-zero run to confirm** the BOP reaches the
+  inventory with no `TranslatableContents` exception — the running server is
+  pre-fix code, so the user will test this on a fresh server.
