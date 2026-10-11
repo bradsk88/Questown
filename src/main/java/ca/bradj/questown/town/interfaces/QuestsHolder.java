@@ -33,6 +33,13 @@ public interface QuestsHolder {
 
     void addBatchOfQuestsForVisitor(@Nullable VillagerUUID visitorUUID);
 
+    /**
+     * Posts the day-one "basics" batch (job board + store room). Called by
+     * {@link ca.bradj.questown.town.rewards.AddBasicsBatchReward} when the
+     * welcome-mat gate quest completes.
+     */
+    void addBasicsBatch();
+
     Collection<MCQuestBatch> getAllBatchesForVillager(UUID uuid);
 
     void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID);

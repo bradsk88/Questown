@@ -220,6 +220,7 @@ class ChickenArcBlueprintTest {
                 new ChickenArcScriptedAction.RightClickChickenWithHand(
                         net.minecraft.world.item.Items.STICK, 6),
                 new ChickenArcScriptedAction.RunCommand("/help", 2),
+                new ChickenArcScriptedAction.MovePlayer(1.5D, 64D, 1.5D, 2),
                 new ChickenArcScriptedAction.MarkSleepObserved(1)
         );
         for (ChickenArcScriptedAction a : all) {
@@ -229,7 +230,7 @@ class ChickenArcBlueprintTest {
             );
         }
         Assertions.assertEquals(
-                13,
+                14,
                 all.size(),
                 "update this test when adding a new ChickenArcScriptedAction subtype"
         );
@@ -239,7 +240,7 @@ class ChickenArcBlueprintTest {
     void scriptedAction_subtypeCountMatchesSealedHierarchy() {
         Class<?>[] permitted = ChickenArcScriptedAction.class.getPermittedSubclasses();
         Assertions.assertEquals(
-                13,
+                14,
                 permitted.length,
                 "the executor's dispatch switch must cover exactly this many subtypes"
         );

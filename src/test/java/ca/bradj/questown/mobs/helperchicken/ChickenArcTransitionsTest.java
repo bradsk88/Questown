@@ -52,13 +52,15 @@ class ChickenArcTransitionsTest {
     }
 
     @Test
-    void campfire_advancesToSunsetAndMap_whenLit() {
+    void campfire_advancesToPressurePlate_whenLit() {
+        // Mat-gated arrival: the welcome-mat beat now follows the campfire beat
+        // directly, so a lit campfire cascades to the mat beat, not the sleep.
         ChickenArcTransitions.Observed obs = new ChickenArcTransitions.Observed(
                 true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false);
         ChickenBeatState next = ChickenArcTransitions.advance(
                 ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE, obs
         );
-        Assertions.assertEquals(ChickenBeatState.SUNSET_AND_MAP, next);
+        Assertions.assertEquals(ChickenBeatState.WAITING_FOR_PRESSURE_PLATE, next);
     }
 
     @Test
@@ -85,13 +87,14 @@ class ChickenArcTransitionsTest {
     }
 
     @Test
-    void outOfOrder_chestPlacedBeforeSign_advancesBothOnceSignArrives() {
-        // F3: chest placed first (out of order), now sign converts to job board.
-        // Machine should cascade chest and advance to WAITING_FOR_PRESSURE_PLATE.
+    void outOfOrder_chestAndCampfireBeforeDoor_cascadesToPressurePlate() {
+        // F3-style out-of-order: the chest is placed and the campfire lit before
+        // the sign beat; once the room exists the machine cascades through
+        // chest + campfire to the (now) next pending beat, the mat.
         ChickenArcTransitions.Observed obs = new ChickenArcTransitions.Observed(
-                true, true, true, true, true, true, false, true, true, false, false, false, false, false, false, false);
+                true, true, false, true, true, true, true, false, true, false, false, false, false, false, false, false);
         ChickenBeatState next = ChickenArcTransitions.advance(
-                ChickenBeatState.WAITING_FOR_SIGN, obs
+                ChickenBeatState.WAITING_FOR_ROOM_BUILD, obs
         );
         Assertions.assertEquals(ChickenBeatState.WAITING_FOR_PRESSURE_PLATE, next);
     }
@@ -206,13 +209,15 @@ class ChickenArcTransitionsTest {
     @Test
     void freeFood_beat_skips_whenNextBeatMet() {
         // Player opened the villager UI but never gave the bonus: the optional
-        // free-food beat auto-advances, so the arc is not stalled at it.
+        // free-food beat auto-advances, so the arc is not stalled at it. The
+        // next beat after the villager-UI is now the seeds-delivery beat
+        // (the flag-UI beat moved ahead of the sleep).
         ChickenArcTransitions.Observed obs = new ChickenArcTransitions.Observed(
                 false, false, false, false, false, false, false, false, false, false, false, true, false, false, false, false);
         ChickenBeatState next = ChickenArcTransitions.advance(
                 ChickenBeatState.WAITING_FOR_FREE_FOOD, obs
         );
-        Assertions.assertEquals(ChickenBeatState.WAITING_FOR_FLAG_UI, next);
+        Assertions.assertEquals(ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY, next);
     }
 
     @Test

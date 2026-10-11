@@ -271,19 +271,24 @@ public final class VillageGrowthExecutor {
             placeCampfireAndRegister();
             return;
         }
-        // The gatherer job (the townie's initial job) requires a welcome_mat_block
-        // job block in its base room (special_quest.town_gate). Without it the
-        // job scores 0, so no food deposit can clear the UNMET_ITEM need and the
-        // townie stays stuck at roster=1. Place the welcome mat as the player
-        // would (via the item-use path) so the job can start.
+        // The welcome mat is the day-one arrival gate (.scratch/mat-gated-arrival,
+        // ruling B: campfire first, mat right after it): registerWelcomeMat
+        // completes the TOWN_GATE quest, which enqueues the first villager for
+        // the next morning tick and posts the basics batch (job board + store
+        // room). It is also the gatherer job's base-room fixture (the
+        // special_quest.town_gate room) — without it the leaver job scores 0 and
+        // no food deposit can clear an UNMET_ITEM need, so the townie stays
+        // stuck at roster=1. Placed via the item-use path so
+        // WelcomeMatBlock.getStateForPlacement registers it with the flag.
         if (!welcomeMatPlaced) {
             placeWelcomeMat();
             return;
         }
-        // The tutorial batch (PHASE_KICKOFF) requires the job_board quest, which
-        // needs a job board (wooden sign) in a registered room. Without it the
-        // batch can't complete, so the first villager never spawns. Place a
-        // job board block via the player item-use path so the quest completes.
+        // The basics batch (posted by the welcome-mat reward) requires the
+        // job_board quest, which needs a job board (wooden sign) in a
+        // registered room. Without it the batch can't complete, so the SECOND
+        // villager never spawns. Place a job board block via the player
+        // item-use path so the quest completes.
         if (!jobBoardPlaced) {
             placeJobBoard();
             return;
@@ -345,7 +350,14 @@ public final class VillageGrowthExecutor {
     /** Place a job board block in a registered room (player item-use path). */
     private void placeJobBoard() {
         // Place the job board inside the first registered room (the chest room).
-        BlockPos pos = chestOffsets.get(0).west();
+        // The pedestal must be an INTERIOR cell: recipe matching only sees blocks
+        // in the room's space (wall cells are excluded — Questown calls
+        // getBlocksInRoom with includeWallBlocks=false), so a board embedded in the
+        // west wall (the old .west() cell) is never a contained block, the room
+        // never matches the job_board recipe, and the quest stalls forever.
+        // The chest sits at corner+1+1 (interior west-north corner); .east() is the
+        // interior cell next to it.
+        BlockPos pos = chestOffsets.get(0).east();
         level.setBlockAndUpdate(pos.below(), Blocks.GRASS_BLOCK.defaultBlockState());
         level.setBlockAndUpdate(pos, Blocks.OAK_PLANKS.defaultBlockState());
         ItemStack board = new ItemStack(ca.bradj.questown.core.init.BlocksInit.JOB_BOARD_BLOCK.get());
@@ -361,7 +373,8 @@ public final class VillageGrowthExecutor {
                 player.getItemInHand(InteractionHand.MAIN_HAND),
                 InteractionHand.MAIN_HAND, hit);
         jobBoardPlaced = true;
-        msg("Placed job board via player useItemOn at " + pos.toShortString());
+        msg("Placed job board via player useItemOn at " + pos.above().toShortString()
+                + " (pedestal at " + pos.toShortString() + ")");
         check("job-board-placed", true);
     }
 
@@ -452,8 +465,11 @@ public final class VillageGrowthExecutor {
             if (level.getBlockEntity(target.getBlockPos()) instanceof Container c) {
                 for (int i = 0; i < c.getContainerSize() && !stack.isEmpty(); i++) {
                     if (c.getItem(i).isEmpty()) {
-                        c.setItem(i, stack.copy());
-                        stack.setCount(0);
+                        // Respect max stack size — a larger stack is clamped to 1
+                        // on persistence (a sword count of 4 would land as 1).
+                        int place = Math.min(stack.getCount(), stack.getMaxStackSize());
+                        c.setItem(i, stack.copyWithCount(place));
+                        stack.shrink(place);
                     }
                 }
                 c.setChanged();

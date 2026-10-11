@@ -4,6 +4,17 @@ Questown Player Onboarding — Experience Analysis
 This document describes the player's typical onboarding experience, walks
 through two illustrative scenarios, and offers critique and suggestions.
 
+> **Day-one flow changed 2026-10-10 (mat-gated-arrival).** Section 1's
+> step descriptions were updated in place to the current mechanic:
+> flag placement posts the campfire batch (toast reward) and the
+> town-gate batch; the welcome mat is placed *before* the flag-menu intro
+> and the sleep beat, and the mat's registration (not the campfire)
+> queues the first visitor and posts the basics batch (job board +
+> store room). The wooden-sword quest moved to the hunter-gatherer
+> batch. The Section 2 scenarios still narrate the pre-change flow where
+> they show the old quest sequence; read their critique as experience
+> analysis, not current mechanics.
+
 
 ========================================================================
 
@@ -35,33 +46,43 @@ It includes a multiblock diagram showing the flag with a campfire, and
 the instruction: "Just light a campfire by the flag and wait until
 morning."
 
-The flag menu also shows a campfire quest. Between the journal and the
-quest, the player has two channels telling them the same thing.
+The flag menu also shows two day-one quest batches: the campfire quest
+(reward: a "Your camp is ready" toast — the first campfire-sleep
+advancement fires separately) and the town-gate quest (build the
+welcome mat). Between the journal and the quests, the player has two
+channels pointing at the same two day-one beats: light the campfire,
+then place the mat.
 
 First impression: The journal gives the experience a narrative frame —
 this isn't just a mod mechanic, it's a story about inheriting a town.
 
-Visitor spawning: When the campfire quest completes, `MCDelayedReward`
-adds the `SpawnVisitorReward` to the flag's `morningRewards` queue. The
-reward only fires when `AbstractTownFlagTicker.handleIfNewMorning()`
-detects `Signals.MORNING` (dayTime < 6000 ticks). The visitor spawns on
-the next in-game morning — the journal's "wait until morning" is
-mechanically accurate.
+Visitor spawning: When the town-gate (welcome-mat) quest completes,
+`MCDelayedReward` adds the `SpawnVisitorReward` to the flag's
+`morningRewards` queue. The reward only fires when
+`AbstractTownFlagTicker.handleIfNewMorning()` detects `Signals.MORNING`
+(dayTime < 6000 ticks). The first visitor spawns on the next in-game
+morning after the mat registers — and the mat is placed before the
+sleep beat, so the flag menu can promise the morning arrival the moment
+the mat registers (the `gui.status.villager_arriving_morning` line in
+the status screen).
 
 
 Step 2: First Visitor and the Journal Walkthrough
 ---------------------------------------------------
-On the next in-game morning after the campfire quest completes, a
+On the next in-game morning after the welcome mat registers, a
 villager spawns. A toast notification appears: "A visitor has arrived."
 A chat message says new quests are available.
 
-The player sees four new quests in the flag menu:
-  - Build a town gate (welcome mat)
-  - Build a job board (sign in a room)
-  - Build a store room (chest in a room)
-  - Wooden sword (item quest)
+The day-one quest batches are staged: at flag placement the player gets
+the campfire batch (toast reward) and the town-gate batch; completing
+the gate (placing the mat) queues the first arrival AND posts the
+basics batch — the job board (sign in a room) and the store room (chest
+in a room) quests. Completing the basics batch queues the second
+visitor. The wooden-sword item quest was moved out of this batch into
+the hunter-gatherer batch (with raw food, the hunter job change, and
+the bedroom).
 
-These quests are presented simultaneously, but the journal is designed to
+These quests are presented in stages, and the journal is designed to
 walk the player through them in a specific order. Each journal entry
 unlocks when the player completes a step, guiding them to the next one:
 

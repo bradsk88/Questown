@@ -126,6 +126,28 @@ public sealed interface ChickenArcScriptedAction {
     ) implements ChickenArcScriptedAction {}
 
     /**
+     * Move the fake player by writing its position directly ({@code setPos}).
+     * Do NOT use {@code teleportTo} or a {@code /tp @s} RunCommand: same-level
+     * {@code ServerPlayer.teleportTo} delegates to {@code connection.teleport(...)}
+     * (verified in 1.20.6 bytecode: the connection-null branch is the only
+     * direct-setPos path), which records a pending teleport applied on the
+     * connection's next tick — and NeoForge's {@code FakePlayer.tick()} is an
+     * empty {@code return}, so its connection never ticks and the pending
+     * teleport is never applied. A {@code /tp @s} command logs a successful
+     * teleport for the same reason. Direct {@code setPos} writes x/y/z
+     * synchronously and is what the goals read ({@code blockPosition()}).
+     * Note {@code teleportPlayerNearFlag} has the same latent no-op: the fake
+     * player already sits at the AutoTestRunner setPos origin, so the no-op
+     * was never visible.
+     */
+    record MovePlayer(
+            double x,
+            double y,
+            double z,
+            int postActionWaitTicks
+    ) implements ChickenArcScriptedAction {}
+
+    /**
      * Directly flip {@code chicken-observed-sleep-since-sunset} on the flag BE.
      * The helper-chicken plan's F2 (sunset + sleep) relies on a real campfire
      * sleep cycle, which is out-of-reach for a fake player. The plan's risks

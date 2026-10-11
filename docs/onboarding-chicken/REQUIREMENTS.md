@@ -21,23 +21,59 @@ mechanic in plain prose unless they're stuck.
 
 `ChickenBeatState` (closed enum, ordered) drives everything. Each beat is
 satisfied by an observed condition; once satisfied the controller advances.
+Canonical order (mat-gated-arrival, 2026-10-10): the campfire beat is followed
+by the welcome-mat beat, then the flag-UI intro — the mat gates the first
+arrival, and the flag menu can say "a villager will arrive in the morning" the
+moment the mat registers.
 
 | Beat | Required action | Observed condition |
 |---|---|---|
 | `WAITING_FOR_STICK` | Right-click the flag with a stick | Player has a town wand in inventory |
-| `WAITING_FOR_WAND_ON_CAMPFIRE` | Right-click the unlit campfire with the wand | Campfire is lit at `CAMPFIRE_OFFSET` |
-| `SUNSET_AND_MAP` | Stay near the chicken at dusk; sleep via `wand on lit campfire` | `chickenObservedSleepSinceSunset` set on wake |
-| `WAITING_FOR_WALL_BLOCK` | Place a cobblestone block in the wall gap | Solid block at `WALL_BLOCK_OFFSET` |
+| `WAITING_FOR_WALL_BLOCK` | Place a cobblestone block in the wall gap | Solid block at `WALL_BLOCK_OFFSET` (auto-skip when the flag is hand-placed) |
 | `WAITING_FOR_DOOR` | Place an oak door in the doorway | Door block at `DOOR_OFFSET` |
 | `WAITING_FOR_WAND_ON_DOOR` | Right-click the door with the wand | Room registered (door has a wand-marked door, OR a recipe-matched room exists) |
-| `WAITING_FOR_SIGN` | Place a sign inside the room | Job-board block at `SIGN_OFFSET` (room recipe converts the sign automatically) |
-| `WAITING_FOR_CHEST` | Place a chest inside the room | Chest block at `CHEST_OFFSET` |
-| `WAITING_FOR_PRESSURE_PLATE` | Take a wooden pressure plate to the flag base (right-click to craft a welcome mat in hand), then place the mat between the gate fences | Welcome-mat block placed in flag-tracked welcome-mat list |
-| `WAITING_FOR_VILLAGER_UI` | Right-click the villager | `chickenObservedVillagerUiOpen` set |
+| `WAITING_FOR_ROOM_BUILD` | (the chicken builds the room) | A registered room exists around the door |
+| `WAITING_FOR_CHEST` | (the chicken drops the chest) | Chest block in a matched room |
+| `WAITING_FOR_WAND_ON_CAMPFIRE` | Light a campfire near the flag (the wand-on-campfire path lights it) | A lit campfire within the flag's campfire-search radius |
+| `WAITING_FOR_PRESSURE_PLATE` | Take a wooden pressure plate to the flag base (right-click to craft a welcome mat in hand), then place the mat at the gate | Welcome-mat block registered with the flag (`getWelcomeMats()` non-empty) |
 | `WAITING_FOR_FLAG_UI` | Right-click the flag | `chickenObservedFlagUiOpen` set |
+| `SUNSET_AND_MAP` | Stay near the chicken at dusk; sleep via `wand on lit campfire` | `chickenObservedSleepSinceSunset` set on wake |
+| `WAITING_FOR_SIGN` | Place a sign inside the room | Job-board block at `SIGN_OFFSET` (room recipe converts the sign automatically) |
+| `WAITING_FOR_FREE_FOOD` | Feed the flag free food | `givenBonusFood` set (optional: auto-skip when the next beat is met) |
+| `WAITING_FOR_VILLAGER_UI` | Right-click the villager | `chickenObservedVillagerUiOpen` set |
 | `AWAITING_WORLDLY_SEEDS_DELIVERY` | Hand Worldly Seeds to the chicken | Seed item consumed, statue transform fires |
 | `COMPLETE` | — | Terminal state, chicken becomes statue |
 | `FORFEIT` | — | Admin override / unrecoverable state |
+
+### Day-one flow source map
+
+The day-one flow (flag → campfire → mat → first arrival) is defined by seven
+surfaces; when narrating or diagnosing day one, read them in this order
+instead of re-deriving the flow:
+
+1. **Beat enum**: `mobs/helperchicken/ChickenBeatState.java` — the canonical
+   order (campfire → mat → flag-UI → sleep → sign), and
+   `ChickenArcTransitions.java` (per-beat satisfaction + out-of-order cascade).
+2. **Day-one quest batches**: `town/entity/TownQuests.java` —
+   `setUpQuestsForNewlyPlacedFlag` posts the campfire batch (reward:
+   `CampfireReadyReward` toast) and the gate batch (`TOWN_GATE` quest, reward:
+   `MCDelayedReward(SpawnVisitorReward)` + `AddBasicsBatchReward` →
+   `addBasicsBatch` posts the job-board + store-room quests, whose reward is
+   the old PHASE_KICKOFF reward: second villager + batch request).
+3. **Quest completion paths**: `town/entity/TownFlagBlockEntity.java` —
+   `registerWelcomeMat` is the canonical TOWN_GATE completion (fixture path);
+   `town/TownPois.java` tick completes the campfire quest (a lit campfire while
+   no villager has arrived) and sets the arrival spot (gate > mat > campfire
+   > flag fallback; a registered-mat-without-structure spot falls back to the
+   mat position, not the flag).
+4. **Executor comments**: `commands/test/VillageGrowthExecutor.java` `act()` —
+   campfire → welcome mat → job board, with the arrival-gating rationale.
+5. **F-scenario fixtures**: `commands/test/ChickenArcBlueprintRegistry.java` —
+   F1/F1-90/F2/F3/F4/wand-on-unlit pin the beat expectations under this order.
+6. **Docs**: `docs/player-first-ten-days.md` (Day 1 + Morning),
+   `docs/onboarding-v4.md`, `docs/onboarding-player-experience.md`.
+7. **Held-run skill**: `.pi/skills/questown-held-run/SKILL.md` — the day-one
+   drive sequence for an agent.
 
 `SIGN_OFFSET` and `CHEST_OFFSET` MUST be inside the room interior
 (`x∈[3..5], z∈[3..5]`) so the room recipe scan sees them. The

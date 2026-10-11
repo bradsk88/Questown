@@ -145,10 +145,15 @@ public class SupplySwordCommand {
                 TownContainers.getAllContainers(flag, source.getLevel())) {
             if (source.getLevel().getBlockEntity(target.getBlockPos()) instanceof Container c) {
                 sawContainer = true;
+                // Respect the item's max stack size: a stack larger than that
+                // (e.g. 4 swords, maxStackSize 1) is clamped to 1 on persistence,
+                // so "deposited 4x" would silently land as 1. One item per slot,
+                // the way a player dropping loose items fills the chest.
                 for (int i = 0; i < c.getContainerSize() && !stack.isEmpty(); i++) {
                     if (c.getItem(i).isEmpty()) {
-                        c.setItem(i, stack.copy());
-                        stack.setCount(0);
+                        int place = Math.min(stack.getCount(), stack.getMaxStackSize());
+                        c.setItem(i, new ItemStack(item, place));
+                        stack.shrink(place);
                     }
                 }
                 c.setChanged();

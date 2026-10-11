@@ -84,7 +84,11 @@ public class CampfireSleepHandler {
                     "[campfire-sleep] startSleepInBed returned LEFT for player={} problem={}",
                     player.getGameProfile().getName(), problem
             );
-            if (problem != null) {
+            // 1.20.6 BedSleepingProblem.getMessage() is null for OTHER_PROBLEM,
+            // NOT_POSSIBLE_NOW, TOO_FAR_AWAY and NOT_SAFE; displayClientMessage(null)
+            // sends a system_chat packet with a null component and NPEs the
+            // connection on encode (kicks every connected client).
+            if (problem != null && problem.getMessage() != null) {
                 player.displayClientMessage(problem.getMessage(), true);
             }
             campfireSleepers.remove(uuid);

@@ -669,6 +669,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return morningRewards.hasPendingSpawnVisitor();
     }
 
+    /**
+     * Sends a titled tutorial toast to every online player (the chicken-arc
+     * day-one reward's "your camp is ready" announcement). Public so the
+     * rewards package can reach it without package-private access to
+     * {@code TownMessages}.
+     */
+    public void broadcastTutorialToast(String titleKey, String descriptionKey) {
+        this.messages.broadcastTutorialToast(titleKey, descriptionKey);
+    }
+
     public boolean hasPendingMorningReward() {
         return morningRewards.hasPendingMorningReward();
     }
@@ -1151,6 +1161,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public void registerWelcomeMat(BlockPos welcomeMatBlock) {
         pois.registerWelcomeMat(welcomeMatBlock);
         roomsHandle.registerBlockAsRoom(SpecialQuests.TOWN_GATE, welcomeMatBlock);
+        // Fixture completion path for the day-one gate quest (.scratch/mat-gated-arrival,
+        // decision 1): a welcome mat registered with the flag completes TOWN_GATE. The
+        // structure path (townGateFound) and room-recipe path still complete it too; this
+        // one is the canonical one and fires the moment the mat registers, so the
+        // gate batch's reward (first villager in the morning + the basics batch) hands
+        // over without needing a flanked-gate structure or a recipe-matched room.
+        Position gatePos = Positions.FromBlockPos(welcomeMatBlock);
+        MCRoom gateRoom = new MCRoom(gatePos, ImmutableList.of(InclusiveSpace.from(gatePos).to(gatePos)), welcomeMatBlock.getY());
+        quests.markQuestAsComplete(gateRoom, SpecialQuests.TOWN_GATE);
         setChanged();
         AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
                 getServerLevel(),

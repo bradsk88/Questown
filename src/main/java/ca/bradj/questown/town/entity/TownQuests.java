@@ -28,8 +28,7 @@ import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.*;
-import ca.bradj.questown.town.special.SpecialQuests;
-import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.questown.town.special.SpecialQuests;import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
@@ -102,16 +101,68 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         questBatches.addChangeListener(this);
     }
 
+    /**
+     * The day-one quest batches, added when the flag is placed.
+     *
+     * <p>Two batches, in the order the chicken's arc asks for them
+     * (.scratch/mat-gated-arrival): the campfire batch first — its reward is
+     * the "your camp is ready" toast (the {@code first_campfire_sleep}
+     * advancement already fires on the actual campfire sleep that night; a
+     * spawn is deliberately NOT here — arrival is gated on the welcome mat);
+     * and the gate batch — the TOWN_GATE quest, which completes when a welcome
+     * mat is registered with the flag ({@code registerWelcomeMat}). Its reward
+     * is the first villager at the next morning tick PLUS the basics batch
+     * (job board + store room), which fills the evening until the arrival.
+     */
     public static void setUpQuestsForNewlyPlacedFlag(
             TownInterface town,
             TownQuests quests
     ) {
-        MCRewardList reward = defaultQuestCompletionRewards(town);
-
-        MCQuestBatch fireQuest = new MCQuestBatch(null, null, new MCDelayedReward(town, reward));
+        MCQuestBatch fireQuest = new MCQuestBatch(null, null, new MCInstantReward(town, new CampfireReadyReward(town)));
         fireQuest.addNewQuest(null, SpecialQuests.CAMPFIRE);
-
         quests.questBatches.add(fireQuest);
+
+        UUID gateUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs gate = new MCQuestBatch.Inputs(gateUUID, null);
+        MCQuest gateQuest = MCQuest.standalone(gateUUID, null, SpecialQuests.TOWN_GATE);
+        gateQuest.setFlavorText("Place a welcome mat at your town's gate - someone will arrive here in the morning.");
+        gate.addNewQuest(gateQuest);
+        MCRewardList gateReward = new MCRewardList(
+                town,
+                new MCDelayedReward(town, new SpawnVisitorReward(town, VillagerUUID.random())),
+                new MCInstantReward(town, new AddBasicsBatchReward(town))
+        );
+        MCQuestBatch gateBatch = gate.withRewardUponCompletion(gateReward);
+        markOnboarding(gateBatch);
+        quests.questBatches.add(gateBatch);
+    }
+
+    /**
+     * The "basics" batch the welcome-mat reward posts (job board + store room).
+     * Town-owned; completes on a superset room like the other onboarding
+     * quests. Its reward is the old PHASE_KICKOFF reward (second villager at
+     * the next morning + a batch request), which drives the tutorial phase
+     * machine into the hunter-gatherer batch.
+     */
+    void addBasicsBatch() {
+        TownFlagBlockEntity t = this.town.getUnsafe();
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+
+        MCQuest jobBoardQuest = roomQuest(batchUUID, SpecialQuests.JOB_BOARD);
+        jobBoardQuest.setFlavorText("Place a wooden sign in a registered room. It will become a Job Board — this is how villagers find work.");
+        q.addNewQuest(jobBoardQuest);
+
+        MCQuest storeRoomQuest = roomQuest(batchUUID, SpecialQuests.STORE_ROOM_SMALL);
+        storeRoomQuest.setFlavorText("Place a chest in a room and register the door. Villagers store their work here.");
+        q.addNewQuest(storeRoomQuest);
+
+        MCQuestBatch qb = q.withRewardUponCompletion(
+                TownFlagTutorialAdapter.from(t, questBatches).makeReward(TutorialTownView.PHASE_KICKOFF));
+        markOnboarding(qb);
+        questBatches.add(qb);
+        t.messages.broadcastMessage("New quests are available! Right-click the town flag to see them.");
+        QT.QUESTS_LOGGER.info("Basics batch posted (job board + store room) on welcome-mat completion");
     }
 
     @NotNull
@@ -619,7 +670,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     public boolean isWaitingForHunterGathererTutorial() {
-        if (questBatches.getAllBatches().size() > 3) {
+        // Calibrated to the day-one batch layout: the early tutorial has at most
+        // four batches (campfire + gate + basics + this hunter-gatherer batch;
+        // the old single-kickoff layout had three). Once the town moves past the
+        // tutorial and visitor batches start piling up, the overnight hunter
+        // override must stop dictating BOP-driven job changes.
+        if (questBatches.getAllBatches().size() > 4) {
             return false;
         }
         return questBatches.getAll().stream()
@@ -639,7 +695,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
 
         Tutorial r;
-        r = tryPhase1_campfireToKickoff(view);       if (r != null) return r;
         r = tryPhase2_hunterGatherer(view);           if (r != null) return r;
         r = tryPhase2_5_jobChangeAndFood(view);       if (r != null) return r;
         r = tryPhase2_75_topNeedUnlock(view);         if (r != null) return r;
@@ -649,22 +704,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         r = tryPhase6_storageUpgrade(view);           if (r != null) return r;
         r = tryPhase7_exoticWood(view);               if (r != null) return r;
         return Tutorial.DONE;
-    }
-
-    private @Nullable Tutorial tryPhase1_campfireToKickoff(TutorialTownView view) {
-        if (questBatches.hasOneQuestOnly(SpecialQuests.CAMPFIRE::equals)) {
-            addQuestsForVillagerKickoff(view);
-            view.broadcastTutorialToast(
-                    "tutorial.visitor_arrived.title",
-                    "tutorial.visitor_arrived.description"
-            );
-            notifyNewQuests(view);
-            return Tutorial.APPLIED;
-        }
-        if (!allVillagerKickoffQuestsDone()) {
-            return Tutorial.SKIPPED;
-        }
-        return null;
     }
 
     private @Nullable Tutorial tryPhase2_hunterGatherer(TutorialTownView view) {
@@ -991,16 +1030,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         QT.QUESTS_LOGGER.info("Tutorial phase 7 quest added (exotic wood: {})", exoticWood);
     }
 
-    private boolean allVillagerKickoffQuestsDone() {
-        return VILLAGER_KICKOFF_QUESTS.stream().allMatch(k -> questBatches.includes(q -> isDoneRoom(q, k)));
-    }
-
-    private static boolean isDoneRoom(
-            MCQuest v,
-            ResourceLocation bedroom
-    ) {
-        return v.isComplete() && v.getType() == Quest.QuestType.ROOM && bedroom.equals(v.getWantedId());
-    }
 
     private record JobHaver(VillagerUUID villager, JobID job) {
     }
@@ -1060,38 +1089,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return batch.getAll().stream().allMatch(v -> v.getWantedId().equals(room));
     }
 
-    static final ImmutableList<ResourceLocation> VILLAGER_KICKOFF_QUESTS = ImmutableList.of(
-            SpecialQuests.TOWN_GATE,
-            SpecialQuests.JOB_BOARD,
-            SpecialQuests.STORE_ROOM_SMALL
-    );
-
-    private void addQuestsForVillagerKickoff(TutorialTownView view) {
-        UUID batchUUID = UUID.randomUUID();
-        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
-
-        MCQuest jobBoardQuest = roomQuest(batchUUID, SpecialQuests.JOB_BOARD);
-        jobBoardQuest.setFlavorText("Place a wooden sign in a registered room. It will become a Job Board — this is how villagers find work.");
-        q.addNewQuest(jobBoardQuest);
-
-        MCQuest storeRoomQuest = roomQuest(batchUUID, SpecialQuests.STORE_ROOM_SMALL);
-        storeRoomQuest.setFlavorText("Place a chest in a room and register the door. Villagers store their work here.");
-        q.addNewQuest(storeRoomQuest);
-
-        MCQuest gateQuest = roomQuest(batchUUID, SpecialQuests.TOWN_GATE);
-        gateQuest.setFlavorText("Build a fence gate entrance for your town. Villagers need a way in.");
-        q.addNewQuest(gateQuest);
-
-        MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.WOODEN_SWORD), 4);
-        swordQuest.setFlavorText("Craft 4 wooden swords and place them in your store room chest. Your villagers will need them - each hunter carries one.");
-        q.addNewQuest(swordQuest);
-
-        MCQuestBatch qb = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_KICKOFF));
-        markOnboarding(qb);
-        questBatches.add(qb);
-        QT.QUESTS_LOGGER.debug("Tutorial quests added to town: {}", qb.toNiceString());
-    }
-
     private MCQuest roomQuest(
             UUID batchUUID,
             ResourceLocation roomId
@@ -1108,6 +1105,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         );
         rawFoodQuest.setFlavorText("Your villagers need food. A villager must bring back raw food.");
         q.addNewQuest(rawFoodQuest);
+
+        MCQuest woodenSwordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.WOODEN_SWORD), 4);
+        woodenSwordQuest.setFlavorText("Craft 4 wooden swords and place them in your store room chest. Your villagers will need them - each hunter carries one.");
+        q.addNewQuest(woodenSwordQuest);
 
         MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.STONE_SWORD), 1);
         swordQuest.setFlavorText("Upgrade your villager's weapon. Craft a stone sword and place it in a store room chest.");

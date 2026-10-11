@@ -14,9 +14,9 @@ import java.util.Set;
  * does not let the arc skip earlier beats. Instead, the advance function walks
  * states in enum-ordinal order and advances past every state whose condition
  * is satisfied. In practice this means "if the player already placed the chest
- * before placing the sign, the chest beat auto-completes the tick after the
- * sign beat does". The chicken's animation target always tracks the
- * lowest-numbered incomplete state, which is whatever this function returns.
+ * and lit the campfire before registering the door, those beats auto-complete
+ * the tick the door beat does". The chicken's animation target always tracks
+ * the lowest-numbered incomplete state, which is whatever this function returns.
  */
 public final class ChickenArcTransitions {
 

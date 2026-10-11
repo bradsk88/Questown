@@ -7,6 +7,7 @@ import ca.bradj.questown.commands.test.ChickenArcScriptedAction.GiveItem;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.MarkFlagUiOpened;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.MarkSleepObserved;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.MarkVillagerUiOpened;
+import ca.bradj.questown.commands.test.ChickenArcScriptedAction.MovePlayer;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.PlaceBlock;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.RegisterDoorViaWand;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.RightClickChickenWithHand;
@@ -154,7 +155,11 @@ public final class ChickenArcBlueprintRegistry {
                 .build();
     }
 
-    // Scenario 2 — AE4 — bound wand, wand-click on campfire, assert SUNSET_AND_MAP.
+    // Scenario 2 — AE4 — bound wand, wand-click on campfire. With the
+    // mat-gated arrival order (.scratch/mat-gated-arrival) the campfire beat
+    // now sits AFTER the door/room beats: lighting the campfire early is
+    // accepted out-of-order, and the machine stops at the first still-open
+    // structural beat, the door.
     private static ChickenArcBlueprint f1StickToCampfire() {
         return ChickenArcBlueprint.builder("F1_stick_to_campfire")
                 .actions(List.of(
@@ -163,31 +168,45 @@ public final class ChickenArcBlueprintRegistry {
                         new AdvanceTicks(10)
                 ))
                 .expectation(ChickenArcExpectation.builder()
-                        .finalBeat(ChickenBeatState.SUNSET_AND_MAP)
+                        .finalBeat(ChickenBeatState.WAITING_FOR_DOOR)
                         .chickenSpawned(true)
                         .build())
                 .build();
     }
 
-    // Scenario — F2 phase 1: after entering SUNSET_AND_MAP, the chicken's
-    // HelperChickenSunsetChestGoal must walk a few cells and spawn a chest with
-    // a map + axe. Recurring failure modes (snow on ground; tightly-walled
-    // start; pathing stuck) all manifest as "chest never spawns" — assert the
-    // persisted bit so a regression fails the autotest run rather than
-    // requiring a human to notice the chicken standing still in-game.
+    // Scenario — F2 phase 1: the sunset-chest goal runs while the arc is at
+    // WAITING_FOR_CHEST (the goal's own gate): the chicken walks into the
+    // registered store shell (through the open wall gap, or via its stuck
+    // teleport), holds until the PLAYER is inside the room, then pecks and
+    // spawns a chest with a map + axe. Under the mat-gated-arrival order the
+    // door and registered room must exist before the chest beat, so the
+    // fixture builds them, lights the campfire (out-of-order accepted), and
+    // teleports the fake player into the room interior so the drop is
+    // witnessed — the mat is never placed, so the arc advances chest →
+    // campfire and parks at the welcome-mat beat.
     private static ChickenArcBlueprint f2ChestSpawnAfterCampfire() {
         return ChickenArcBlueprint.builder("F2_chest_spawn_after_campfire")
                 .actions(List.of(
                         new GiveBoundWand(BlockPos.ZERO, 2),
+                        new PlaceBlock(HelperChickenBeatOffsets.DOOR_OFFSET,
+                                Blocks.OAK_DOOR.defaultBlockState(), 2),
+                        new RegisterDoorViaWand(HelperChickenBeatOffsets.DOOR_OFFSET, 2),
                         new WandRightClick(HelperChickenBeatOffsets.CAMPFIRE_OFFSET, 2),
-                        // Generous tick budget: walk 4 cells (~20-40 ticks),
-                        // peck (20 ticks), spawn block + persist (1 tick).
-                        // Rounding up to 200 ticks to allow stuck-teleport
-                        // recovery if the goal's first path attempt fails.
-                        new AdvanceTicks(200)
+                        // The goal holds at the shell until the nearest player is
+                        // inside a registered room; the fake player sits at the
+                        // flag, so move it into the room's interior (4.5, 64, 4.5
+                        // is inside the 5x5 shell x/z in [3..5]). A /tp @s
+                        // RunCommand logs a successful teleport but never moves
+                        // the executor's fake player (see MovePlayer's javadoc),
+                        // so this uses the direct teleport instead.
+                        new MovePlayer(4.5D, 64D, 4.5D, 5),
+                        // Generous tick budget: the chicken may need its stuck
+                        // teleport (600 ticks) if the gap path fails, then a 20-tick
+                        // peck + spawn. 800 covers the worst case with margin.
+                        new AdvanceTicks(800)
                 ))
                 .expectation(ChickenArcExpectation.builder()
-                        .finalBeat(ChickenBeatState.SUNSET_AND_MAP)
+                        .finalBeat(ChickenBeatState.WAITING_FOR_PRESSURE_PLATE)
                         .flagBits(java.util.Map.of("chicken-sunset-chest-spawned", true))
                         .chickenSpawned(true)
                         .build())
@@ -230,7 +249,7 @@ public final class ChickenArcBlueprintRegistry {
                         new AdvanceTicks(20)
                 ))
                 .expectation(ChickenArcExpectation.builder()
-                        .finalBeat(ChickenBeatState.WAITING_FOR_VILLAGER_UI)
+                        .finalBeat(ChickenBeatState.WAITING_FOR_FLAG_UI)
                         .chickenSpawned(true)
                         .build())
                 .build();
@@ -251,6 +270,9 @@ public final class ChickenArcBlueprintRegistry {
                         // Fill the authored WALL_BLOCK_OFFSET gap so the wall-block beat
                         // advances (SetUpRegisteredRoomWithChest builds a wider 9×5 room
                         // that doesn't overlap the authored 5×5 wall-block gap at (6,0,3)).
+                        // SetUpRegisteredRoomWithChest also places the welcome mat and
+                        // mirrors registerWelcomeMat, so the mat-gated-arrival order's
+                        // pressure-plate beat is covered without an extra step.
                         new PlaceBlock(HelperChickenBeatOffsets.WALL_BLOCK_OFFSET,
                                 Blocks.COBBLESTONE.defaultBlockState(), 2),
                         new SetUpRegisteredRoomWithChest(10),
@@ -268,7 +290,11 @@ public final class ChickenArcBlueprintRegistry {
                 .build();
     }
 
-    // Scenario 5 — F1 with rotation CLOCKWISE_90.
+    // Scenario 5 — F1 with rotation CLOCKWISE_90. A rotation-detected flag has
+    // handPlaced=false, so the wall gap must actually be filled; the fixture
+    // leaves it open, and with the mat-gated-arrival order the machine stops
+    // at the wall beat (the campfire lit out-of-order does not advance the arc
+    // past structural beats).
     private static ChickenArcBlueprint f1RotationClockwise90() {
         return ChickenArcBlueprint.builder("F1_rotation_clockwise_90")
                 .rotation(Rotation.CLOCKWISE_90)
@@ -278,7 +304,7 @@ public final class ChickenArcBlueprintRegistry {
                         new AdvanceTicks(10)
                 ))
                 .expectation(ChickenArcExpectation.builder()
-                        .finalBeat(ChickenBeatState.SUNSET_AND_MAP)
+                        .finalBeat(ChickenBeatState.WAITING_FOR_WALL_BLOCK)
                         .chickenSpawned(true)
                         .build())
                 .build();
@@ -428,11 +454,16 @@ public final class ChickenArcBlueprintRegistry {
 
     // Scenario 13 — wand click on a campfire far outside the flag's radius
     // must be rejected by the radius gate; no state change, no lit campfire.
+    // The fixture builds the door + registered room (with the welcome mat)
+    // so the arc reaches the campfire beat and parks there while the far
+    // campfire stays unlit — the beat machine proves the rejected click
+    // advanced nothing.
     private static ChickenArcBlueprint wandOnUnlitCampfireOutsideFlag() {
         BlockPos farOffset = new BlockPos(40, 0, 40);
         return ChickenArcBlueprint.builder("wand_on_unlit_campfire_outside_flag")
                 .actions(List.of(
                         new GiveBoundWand(BlockPos.ZERO, 1),
+                        new SetUpRegisteredRoomWithChest(10),
                         new PlaceBlock(farOffset,
                                 Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, false),
                                 2),

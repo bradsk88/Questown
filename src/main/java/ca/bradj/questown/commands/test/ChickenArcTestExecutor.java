@@ -1,5 +1,6 @@
 package ca.bradj.questown.commands.test;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
@@ -322,6 +323,10 @@ public final class ChickenArcTestExecutor {
             handleRunCommand(a);
             return;
         }
+        if (action instanceof ChickenArcScriptedAction.MovePlayer a) {
+            handleMovePlayer(a);
+            return;
+        }
         if (action instanceof ChickenArcScriptedAction.MarkSleepObserved) {
             handleMarkSleepObserved();
             return;
@@ -548,6 +553,22 @@ public final class ChickenArcTestExecutor {
         }
         fakePlayer.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(a.item()));
         chicken.interactAt(fakePlayer, Vec3.ZERO, InteractionHand.MAIN_HAND);
+    }
+
+    private void handleMovePlayer(ChickenArcScriptedAction.MovePlayer a) {
+        if (fakePlayer == null) {
+            failAction("MovePlayer", "fake player is null");
+            return;
+        }
+        // setPos, not teleportTo: same-level ServerPlayer.teleportTo delegates
+        // to connection.teleport(...) — a pending teleport applied on the
+        // connection's next tick, which never comes for a FakePlayer (see
+        // MovePlayer's javadoc).
+        fakePlayer.setPos(a.x(), a.y(), a.z());
+        QT.FLAG_LOGGER.info(
+                "[autotest] moved fake player to {} {} {} (now at {})",
+                (int) a.x(), (int) a.y(), (int) a.z(), fakePlayer.blockPosition()
+        );
     }
 
     private void handleRunCommand(ChickenArcScriptedAction.RunCommand a) {

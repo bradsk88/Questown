@@ -19,6 +19,14 @@ driver**; the dev is a **secondary observer** via `runClient`. The agent places
 blocks, registers rooms, supplies items, and flips the clock; the dev watches
 in survival. Do not ask the dev to place blocks or drive the run.
 
+**Day-one beat order (mat-gated-arrival, 2026-10-10):** campfire → welcome
+mat → flag menu → sleep → sign. The mat's registration gates the first
+arrival and posts the basics batch (job board + store room). The seven
+surfaces that define the flow (beat enum, quest batches, completion paths,
+executors, fixtures, docs) are listed under *Day-one flow source map* in
+`docs/onboarding-chicken/REQUIREMENTS.md` — read that before narrating or
+diagnosing day one on a held run.
+
 **Pick the scenario from the behavior, not the convenience.** If the behavior
 is cook / food / leaver timing (only ticks in realtime), the scenario is
 `village/self_sufficiency` (realtime, held), **not** `village/growth` (that one
@@ -558,9 +566,14 @@ not collecting entities in the world. A town with **zero animals in the
 world still hunts** and brings back meat. So: never `summon` pigs/rabbits
 near the flag to "give the hunter prey", never chase a hunting townie
 off-map, and never read "no animals in the world" as a reason the townie
-won't work. If a leaver comes back with nothing, suspect **missing known
-loot / biome knowledge** (a gatherer map / explorer), not missing mobs.
-CONTEXT.md "leaver job" is the source of truth.
+won't work. **First suspect for a leaver that never leaves: the gate.** Every leaver
+job's base room is the town-gate room (the registered room containing the
+**welcome-mat** block); with no gate room `getJobSites()=0` and the leaver never
+leaves at all — it just sits in town (`NO_JOBSITE`). A leaver that *isn't
+leaving* is a gate/registration problem, not a loot problem. If a leaver comes
+back with nothing *after leaving*, suspect **missing known loot / biome
+knowledge** (a gatherer map / explorer), not missing mobs. CONTEXT.md "leaver
+job" is the source of truth.
 
 **Confirm against the latest observe cycle, not the last line you grepped.**
 Observe lines and the need/job lines interleave, and a line you grepped a

@@ -158,7 +158,71 @@ broadcast). The `onboarding` flag on these quests is **dead** (set in
 wired; completion is exact-match on the top match, and only re-detection makes it
 fire. Verified run: `store_room`/`job_board`/`town_gate` all stayed open after
 initial detection, completed on re-detection/re-placement, and the roster then
-went 1→2 via `SpawnVisitorReward`.
+went 1→2 via `SpawnVisitorReward`. Note: `TownQuests.tick` also runs
+`backfillSatisfiedQuests` every tick — open ROOM quests are re-evaluated against
+`getRoomsMatching(wantedId)`, which consults *every* recipe in the room's match
+(`getRecipeIDs()`), not just the top one. So a quest posted after its room
+already matches (or whose top match is a *different* recipe in the same room)
+completes within one tick of the backfill, not only on re-detection.
+
+**A quest block must sit in an INTERIOR cell of the room space; wall cells are
+invisible to recipe matching.** Recipe matching only sees blocks in the room's
+space at `y ∈ [yCoord, yCoord+1]` (wall cells excluded — Questown calls
+`RecipeDetection.getBlocksInRoom` with `includeWallBlocks=false`, and the
+matcher's block scan is the space box itself). A block embedded in a wall
+therefore never becomes a contained block, the room never matches that recipe,
+and the quest stalls forever (the backfill's `getRoomsMatching` is empty for
+it). The fixture that bit this: `VillageGrowthExecutor.placeJobBoard` placed
+the pedestal at `chestOffsets.get(0).west()` — the chest sits at the room's
+interior west-north corner, so `.west()` is the building's west **wall** column
+(and `useItemOn` on its UP face embeds the board in the wall at `y+1`). The
+room then matched `store_room` (chest, interior) but not `job_board`, and the
+basics batch never closed. Fixed 2026-10-10 by placing the pedestal at
+`.east()` (the interior cell next to the chest); the board lands at the
+interior cell's `y+1`, still inside the match's `y` range. When a room quest
+sits open with the quest block visibly in the world, check the block's cell
+against the room's space first — a `setBlockAndUpdate` on a wall cell both
+breaks the room *and* hides the block from the matcher.
+
+**Job tools are taken out of the *registered containers* — a tool-hungry job
+eats deposited quest items.** A job whose `work_states[0].tools` names a tag
+(e.g. `hunter/sword`'s `#questown:swords`) makes its townie's supply logic
+(`tryGetSupplies`, logged as `[PROBE:supplies] ... TOOK item=... (totalTakes=N)`
+at WARN) pull an item from the town's registered chests on **every work cycle**
+— and the sword is held/consumed per cycle, not once. `processItemQuests`
+counts ITEM quests against *container stacks only* (items a townie already
+holds are invisible), so a hunter cycling a work state will repeatedly swallow
+the 4 `wooden_sword` an ITEM quest is waiting for, and the quest never closes
+(2026-10-10 held run: 12 deposited over the run, 0–2 in the chest at any
+moment, `totalTakes=222`). Two further traps compound it: (a) the village's
+looting townies fill the 27-slot chests with biome loot within hours of game
+time, so late deposits *silently fail* on a full container — the deposited
+items vanish without any log; (b) `processItemQuests` runs every flag tick
+while an ITEM quest is open (via `backfillSatisfiedQuests`), so a quest closes
+on the tick the 4th sword lands *if it lands* — the race is against the
+townie's supply walk, not against the flag tick. Agent-driven drives: empty
+the target chest first (`data modify block <x> <y> <z> Items set value []`),
+then deposit the quest count in one shot.
+
+**Room walls must be solid at *feet and head*; the bedroom recipe wants two
+beds.** `WallDetection.IsWall(level, pos, y)` is read at the door's own `y`
+*and* the cell above it — a one-block-tall wall row is not a wall, and the
+room detector reports `NOT_ENCLOSED` (the `look_room` probe prints `#` only
+for feet-and-head solid cells; a bare block in a wall position prints as its
+letter, not `#`). `build_room` lays two-tall shells, but hand-laid boxes must
+`setblock` both `y` and `y+1` around the perimeter. The `questown:bedroom`
+recipe is `#minecraft:beds` ×2 + `#questown:light_sources` ×1 — one bed does
+not match (`2026-10-10` held run: the `NO_RECIPE` on a one-bed room sent the
+drive looking for a detector bug that did not exist).
+
+**The scenario's tick budget is in *ticks*, not minutes.** `MAX_TICKS =
+24000 × 10` (10 in-game days). At `/tick rate 200` that is 1200 s ≈ 20 real
+minutes; at a default 20 TPS it is 10 h. A held agent-driven run that spends
+its days on chicken-arc debugging times out at roster 2 — the executor prints
+`FAIL timed out after 240000 ticks` and leaves the world alive (hold mode
+keeps the server up), so the world still works after the verdict but the run
+is already recorded FAIL. Verify the flow, then re-run clean rather than
+hand-driving a dead scenario past its target.
 
 **A sign in a registered room converts to a job board, but only when the
 `job_board` recipe enters the match.** The sign→job-board conversion
@@ -197,6 +261,40 @@ in a scenario must also handle tag needs (e.g. `#questown:villager_food`): use
 `ca.bradj.questown.gui.Ingredients.representativeItemStack` (the same resolver the
 need bubble uses), not a bare `ResourceLocation`/`ForgeRegistries.ITEMS` lookup,
 which returns null for a tag.
+
+### The post-batch quest pipeline (two bugs found 2026-10-11, held village/growth)
+
+Driving the new day-1 flow (campfire → mat → flag-UI → sleep → sign) through
+roster 3 in a held `village/growth` run verified the day-1 chain end-to-end
+(mat-gated arrival, basics batch, hunter-gatherer batch, two dawn spawns)
+but the pipeline that runs **after** the hunter-gatherer batch closes is
+broken on this branch; two issues are filed in
+`.scratch/mat-gated-arrival/`:
+
+- **JOB_UNLOCK post/lose ping-pong** (`job-unlock-quest-spam.md`): a townie
+  whose root is stuck in `UNMET_ITEM` with an *oscillating*
+  `getUnmetItem()` (gatherer flipping villager_food ↔ fishing_rods between
+  work states) makes `TownQuests.tickUnmetUnlockQuests` post a JOB_UNLOCK
+  for one producer root, lose it next tick when the missing item flips, and
+  re-post the other — forever. Lost quests stay in the handle and are
+  counted as open (the run's open list reached ~107×2 of them in two
+  minutes), and each post fires a "New quests are available!" broadcast.
+- **Day-1 quests re-appear as open after the hunter-gatherer batch closes**
+  (`day1-quests-reopen-after-batch.md`): at the roster-3 arrival the handle
+  held fresh OPEN instances of campfire/town_gate/store_room/job_board/
+  bedroom/wooden_sword/stone_sword/hunter_qt_sword *alongside* their
+  completed originals, plus the correct new phase-2.5 batch
+  (kitchen_small + cook_qt + villager_food). A 4-quest "New quests" burst
+  at 01:57:36 (right after the batch close) matches the basics batch size;
+  leading candidate is a batch-close reward re-claim re-running the
+  mat/campfire reward chain. Unconfirmed — the phase adds in
+  `addTutorialBatches` start at phase 2 and the hunter-gatherer re-add is
+  guarded by `questBatches.includes(JOB_CHANGE)`.
+
+Both block the roster ≥ 5 path (the next visitor batch cannot close while
+stale open instances sit in the handle), so the run times out at
+roster 3. Fix the two issues, then re-run the held village/growth to close
+the verification.
 
 ## The `village/self_sufficiency` watchtower seed
 

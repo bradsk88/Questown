@@ -56,6 +56,22 @@ public class RewardsInit {
                     .build(Questown.ResourceLocation(AddBatchOfQuestsForVisitorReward.ID))
     );
 
+    public static final Holder<RewardType<CampfireReadyReward>> CAMPFIRE_READY
+            = REWARD_TYPES.register(
+            CampfireReadyReward.ID,
+            () -> RewardType.Builder
+                    .of((rType, flag) -> new CampfireReadyReward(rType, flag))
+                    .build(Questown.ResourceLocation(CampfireReadyReward.ID))
+    );
+
+    public static final Holder<RewardType<AddBasicsBatchReward>> BASICS_BATCH
+            = REWARD_TYPES.register(
+            AddBasicsBatchReward.ID,
+            () -> RewardType.Builder
+                    .of((rType, flag) -> new AddBasicsBatchReward(rType, flag))
+                    .build(Questown.ResourceLocation(AddBasicsBatchReward.ID))
+    );
+
     public static final Holder<RewardType<AddRandomUpgradeQuest>> RANDOM_UPGRADE_FOR_VILLAGER
             = REWARD_TYPES.register(
             AddRandomUpgradeQuest.ID,

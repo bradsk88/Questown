@@ -29,13 +29,20 @@ Phase 0: Flag + Campfire
 ------------------------
   Learns:     The flag exists, campfire attracts visitors
   Doesn't:    What the flag menu does, what the wand is for
+  Day-1 order: flag placed -> campfire quest batch -> light campfire ->
+               welcome-mat (town gate) -> flag menu intro -> sleep -> sign.
+               The mat gates the first arrival, so it comes before the flag
+               menu (which can then say "a villager arrives in the morning")
+               and before sleep.
 
-Phase 1: Kickoff (town gate, job board, store room, iron sword)
+Phase 1: Kickoff (job board, store room)
 ---------------------------------------------------------------
   Learns:     Welcome mat, job board, storage, item quests
   Doesn't:    Room recipes, why storage matters at scale
+  Trigger:    the basics batch (job board + store room) posts when the
+               welcome mat registers; the wooden sword moved to Phase 1.5
 
-Phase 1.5: Hunter/Gatherer (mutton, job change, bedroom)
+Phase 1.5: Hunter/Gatherer (mutton, job change, bedroom, wooden sword)
 ---------------------------------------------------------
   Learns:     Job changes exist, villagers can leave town, bedrooms
   Doesn't:    What BOP is, how the skill tree works

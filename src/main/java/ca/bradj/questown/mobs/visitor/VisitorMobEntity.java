@@ -789,6 +789,15 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public void remove(RemovalReason p_146834_) {
         super.remove(p_146834_);
         if (p_146834_.equals(RemovalReason.KILLED)) {
+            QT.VILLAGER_LOGGER.info(
+                    "Townie {} died: damageSource={} directEntity={} pos=({}, {}, {})",
+                    this.getVUID(),
+                    getLastDamageSource(),
+                    getLastDamageSource() != null ? getLastDamageSource().getDirectEntity() : null,
+                    position().x,
+                    position().y,
+                    position().z
+            );
             for (int i = 0; i < getInventory().getContainerSize(); i++) {
                 level().addFreshEntity(new ItemEntity(
                         level(),

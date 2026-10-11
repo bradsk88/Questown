@@ -507,6 +507,8 @@
   "jobs.armorer": "Armorer",
   "tutorial.visitor_arrived.title": "A visitor has arrived!",
   "tutorial.visitor_arrived.description": "Right-click to say hi",
+  "tutorial.campfire_ready.title": "Your camp is ready",
+  "tutorial.campfire_ready.description": "Sleep on the campfire when dark falls - it is yours now.",
   "gui.status.villager_arriving_morning": "...and one more in the morning",
   "message.wand.campfire.sleep_hint": "Right-click to sleep (no spawn set, wake up groggy)",
   "message.wand.campfire.day_hint": "Sleep here at nightfall",

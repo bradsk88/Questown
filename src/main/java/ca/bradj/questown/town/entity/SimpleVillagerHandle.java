@@ -490,7 +490,11 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         if (exists(visitorMobEntity)) {
             return;
         }
-        QT.FLAG_LOGGER.error("Visitor mob's parent has no record of entity. Removing visitor");
+        QT.FLAG_LOGGER.error(
+                "Visitor mob's parent has no record of entity. Removing visitor. uuid={} handleSize={}",
+                delegator.getUUID(visitorMobEntity),
+                this.entities.size()
+        );
         delegator.discardEntity(visitorMobEntity);
     }
 
