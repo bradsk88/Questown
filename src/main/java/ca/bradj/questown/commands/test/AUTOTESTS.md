@@ -108,6 +108,20 @@ chicken-arc `flag bit …` / `final beat state` lines). Count scenarios, not
 lines: `grep -cE '\[FAIL\] scenario:'` (2026-10-10 run: 29 `[FAIL]` lines =
 14 scenarios).
 
+The same discipline applies to the `[village] KNOWN` dumps: in logs
+predating the xN collapse the `KNOWN quests open=` line is a raw wall
+(one entry per handle instance; 200+ entries ≈ a 100KB line), and reading
+membership in that wall by eye is how the 214-phantom JOB_UNLOCK spam got
+misread as "day-1 quests re-opened" (2026-10-11, closed as a
+misdiagnosis in `.scratch/mat-gated-arrival/`). Compress per id before
+claiming anything about list contents:
+`python3 scripts/known-dumps.py run/<log> [HH:MM] [HH:MM]` prints
+open/done counts per id only on state change. Townies are **one line
+each** (`KNOWN townie <uuid8> job=…`), so roster claims aggregate across
+lines, not within one. The log's timestamps are bracketed
+(`[01:55:00]`), which breaks naive awk/grep time filters on the field
+offset — the script handles it.
+
 ## Related
 
 - Per-scenario depth + the realtime/warp reasoning: `COMPLEX.md` (same dir).

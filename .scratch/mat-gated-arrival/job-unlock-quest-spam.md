@@ -1,6 +1,6 @@
 ---
 title: JOB_UNLOCK quests post/lose in a per-tick ping-pong when a root's unmet item oscillates; lost quests stay in the handle
-status: needs-triage
+status: wontfix
 closed: 2026-10-11
 resolved: 2026-10-11
 created: 2026-10-11
@@ -67,6 +67,13 @@ Held agent-drive `village/growth` on the 1.20.6 branch with the new
 day-1 beat order; let a gatherer sit without a dining table past
 `UNMET_UNLOCK_QUEST_GRACE_TICKS`. Watch for the post/quest_lost pairs in
 the `Questown:Quests` log and the growing open list.
+
+## Triage notes
+
+`wontfix` = terminal, no further action: the fix shipped in `8f670d10`. Kept as
+the investigation + design record. Live verification of the fix is owed
+by the next held `village/growth` run (the post-batch section of
+`commands/test/COMPLEX.md` tracks that).
 
 ## Resolved (2026-10-11)
 
