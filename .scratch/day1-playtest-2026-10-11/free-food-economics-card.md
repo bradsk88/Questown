@@ -1,6 +1,6 @@
 ---
 title: Replace the "dirt on flag" free-food trick with a one-time card on the economics page
-status: needs-triage
+status: ready-for-human
 created: 2026-10-11
 ---
 
@@ -18,3 +18,7 @@ Playtest chat, 2026-10-11 17:40:16 (`run/client2.log`):
 Replace the current free-food mechanic (placing dirt on the flag) with
 an explicit one-time UI card at the top of the economics tab. Same
 one-time boolean; different presentation.
+
+## Triage notes
+
+Design item: surface the free-food economy on a card. Needs a product decision.

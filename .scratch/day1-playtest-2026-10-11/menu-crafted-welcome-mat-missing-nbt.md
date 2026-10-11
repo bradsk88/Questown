@@ -1,6 +1,6 @@
 ---
 title: Menu-crafted welcome mat is missing the NBT it needs to work
-status: needs-triage
+status: resolved
 created: 2026-10-11
 ---
 
@@ -20,3 +20,7 @@ Air" chat line on the same action) — the craft likely resolves to Air
 before the NBT/registration step. The 17:14:01 "Town Gate created at
 location [-108, 31]" in the client log came after the player fell back to
 a differently-obtained mat — confirm which mat actually registered.
+
+## Triage notes
+
+Fixed in 530c8923 (FlagCraftMessage NBT stamp on the menu-crafted mat). Live-verified 2026-10-11 held run: 'welcome mat ... is registered to a flag - OK'. WelcomeMatParentNbtTest green.

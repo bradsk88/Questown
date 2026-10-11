@@ -1,6 +1,6 @@
 ---
 title: A quest displays its raw i18n key instead of a translated string
-status: needs-triage
+status: resolved
 created: 2026-10-11
 ---
 
@@ -22,3 +22,7 @@ The raw string on the JOB_UNLOCK quest card. Candidates: the title
 with the bare `rootId`, e.g. "baker"), or the flavor text (bare root ids
 inlined). Verify which the player saw, then name the jobs properly
 (i18n job names, not bare ids).
+
+## Triage notes
+
+Fixed in 530c8923: JOB_UNLOCK/JOB_CHANGE cards use jobs.<root> lang keys (UIQuest) and block-room recipes fall through to the block's own lang key (RoomRecipes.getName). RoomRecipesNameTest green.

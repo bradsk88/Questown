@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -149,6 +150,16 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
 
         x = x + PAGE_PADDING;
         y = y + PAGE_PADDING;
+
+        if (work.isEmpty()) {
+            // Day-1 playtest: an empty board gave no hint at what requests are or how to add
+            // one. Two short lines, wrapped.
+            Coordinate emptyTop = new Coordinate(x, y + PAGE_PADDING);
+            y += ctx.darkTextWrap(emptyTop, backgroundWidth - (PAGE_PADDING * 2),
+                    Compat.translatable("job_board.empty.1"));
+            ctx.darkTextWrap(emptyTop.withY(y + 8), backgroundWidth - (PAGE_PADDING * 2),
+                    Compat.translatable("job_board.empty.2"));
+        }
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
         for (int i = startIndex; i < endIndex; i++) {

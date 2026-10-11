@@ -300,6 +300,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return bopStacks.size();
     }
 
+    /**
+     * The root job ids the deposited BOPs were blessed with, in deposit (FIFO) order. A plain
+     * (unblessed) BOP contributes "". Feeds the flag's BOP menu "Earned by: ..." line, which is
+     * the player's answer to "why does the town have BOPs?" (day-1 playtest: the deposit notice
+     * announced the amount but not the cause).
+     */
+    public ImmutableList<String> depositedBopRootJobs() {
+        return bopStacks.stream()
+                .map(s -> BlockOfProgress.getBlessedJob(s)
+                        .map(j -> j.rootId())
+                        .orElse(""))
+                .collect(ImmutableList.toImmutableList());
+    }
+
     public enum JobChangeResult {
         REQUESTED, NO_BOP, NO_VILLAGER
     }

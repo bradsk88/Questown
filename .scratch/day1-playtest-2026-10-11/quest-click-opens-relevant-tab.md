@@ -1,6 +1,6 @@
 ---
 title: Clicking the welcome-mat quest should open the flag's crafting tab
-status: needs-triage
+status: implemented
 created: 2026-10-11
 ---
 
@@ -16,3 +16,7 @@ Playtest chat, 2026-10-11 17:12:25 (`run/client2.log`):
 
 Explicit scope note from the player: hardcode the mapping for now;
 general quest→"more about this" logic is a future concern.
+
+## Triage notes
+
+Implemented in 530c8923: Tabs.openTab + QuestsScreen TOWN_GATE check deep-links the quest click to the crafting tab.

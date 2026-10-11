@@ -1,6 +1,6 @@
 ---
 title: Job board menu needs an empty state explaining requests
-status: needs-triage
+status: implemented
 created: 2026-10-11
 ---
 
@@ -16,3 +16,7 @@ Playtest chat, 2026-10-11 17:34:02 (`run/client2.log`):
 Empty-state copy for the job-board screen: what a work request is + how
 the player adds one. Pair with the "!" bubble idea
 (`job-board-no-requests-bubble.md`) so the empty state is discoverable.
+
+## Triage notes
+
+Implemented (uncommitted batch 2): WorkScreen draws two wrapped lines when work.isEmpty(). Lang keys job_board.empty.1/2.

@@ -1,6 +1,6 @@
 ---
 title: Pace out the chat text blast on welcome-mat quest completion
-status: needs-triage
+status: ready-for-human
 created: 2026-10-11
 ---
 
@@ -17,3 +17,7 @@ On mat-quest completion the player receives a wall of chat messages
 (quest-completed toast, town-gate-created notice, batch posting,
 villager-arrival promise, …). Suggested direction: pace/stagger them
 rather than emitting them in one frame.
+
+## Triage notes
+
+Design item: pace / coalesce the quest-complete chat blasts. Needs a product decision on the cadence.

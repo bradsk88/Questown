@@ -1,6 +1,6 @@
 ---
 title: The "highest demand item" quest keeps getting replaced instead of staying added
-status: needs-triage
+status: ready-for-human
 created: 2026-10-11
 ---
 
@@ -28,3 +28,7 @@ in-place retarget) — the fix stops the 214-phantom accumulation but the
 "changes every time I open the menu". Direction: pick the demand target
 once and keep it until it completes (or the demand actually changes),
 not re-roll per menu open / per need cycle.
+
+## Triage notes
+
+Design item: the demand quest is constantly replaced, churning the UI. Needs a product decision on replacement stability.

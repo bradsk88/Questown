@@ -1,6 +1,6 @@
 ---
 title: Crafting a welcome mat posts "Created Air" to chat
-status: needs-info
+status: resolved
 created: 2026-10-11
 ---
 
@@ -46,3 +46,7 @@ around the craft.
 ## Related
 
 `menu-crafted-welcome-mat-missing-nbt.md` (same craft, real bug, fixed).
+
+## Triage notes
+
+Same root as menu-crafted-welcome-mat-missing-nbt. Live probe on current source resolves to 'Created Welcome Mat' (not reproducible as 'Created Air'); the NBT stamp (530c8923) makes the craft carry the registration NBT. Kept as the investigation record.

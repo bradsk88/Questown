@@ -1,6 +1,6 @@
 ---
 title: Hide the flag menu's economics tab until onboarding is done
-status: needs-triage
+status: resolved
 created: 2026-10-11
 ---
 
@@ -22,3 +22,7 @@ Follow-up, 17:16:50 (same message, refined):
 Open question at triage: reveal gate = first villager arrives, or all
 onboarding quests complete (the 17:16 message is the later bar). Same
 theme as `flag-menu-hide-villager-tab.md`.
+
+## Triage notes
+
+Fixed in 530c8923: TownFlagBlockEntity.getInfo() hides economics until completedProceduralBatches >= 1. Live-verified 2026-10-11: 'economics hidden' early.

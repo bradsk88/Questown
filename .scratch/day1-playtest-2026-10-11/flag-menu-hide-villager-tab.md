@@ -1,6 +1,6 @@
 ---
 title: Hide the flag menu's villager tab until a villager has joined
-status: needs-triage
+status: resolved
 created: 2026-10-11
 ---
 
@@ -15,3 +15,7 @@ Playtest chat, 2026-10-11 17:10:37 (`run/client2.log`):
 
 Pre-arrival day-1. The empty villager tab both confuses and spoils.
 Companion item: the economics tab (see `flag-menu-hide-economics-tab.md`).
+
+## Triage notes
+
+Fixed in 530c8923: TownFlagBlockEntity.getInfo() hides the villager tab until the first villager. Live-verified 2026-10-11: 'villagers shown' once a townie exists.

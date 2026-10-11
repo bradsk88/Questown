@@ -1,6 +1,6 @@
 ---
 title: Villager says "I need a fishing rod to work" for a job that is not yet unlocked
-status: needs-triage
+status: needs-info
 created: 2026-10-11
 ---
 
@@ -22,3 +22,7 @@ exists — the player sees a demand for an unattainable unlock. Related:
 the JOB_UNLOCK quest system should be the only place this need
 surfaces (or the status line should be gated on workability —
 `docs/design-principles.md`: unlock ≠ workability).
+
+## Triage notes
+
+Forensics done (candidate-job gate reasons vs player-visible jobs, gatherer_unmapped_rod gate = fishing rod). This is a design/UX question: should the 'why' name the gate item, or hide already-unlocked candidates? Needs a product call on the intended signal.

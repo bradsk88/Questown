@@ -1,6 +1,6 @@
 ---
 title: Flag should visibly indicate it has incomplete quests
-status: needs-triage
+status: ready-for-human
 created: 2026-10-11
 ---
 
@@ -19,3 +19,7 @@ Related (distinct) existing todos: `docs/todo/flag-speech-bubble.md`
 `docs/todo/bop-progress-indicator.md` (BOP tab progress + "v4 tab
 indicators / red dots" — this suggestion overlaps with 4E). Decide at
 triage whether this folds into one of those.
+
+## Triage notes
+
+Design item: an at-a-glance indicator that the flag has incomplete quests (beyond the tab red-dot). Needs a product decision.

@@ -52,7 +52,7 @@ public class TownVillagerUIs {
             FlagTabsEmbedding.FlagInfo townFlagBasePos,
             Collection<? extends LivingEntity> entities,
             Supplier<Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>>> questsSrc,
-            int bopCount,
+            com.google.common.collect.ImmutableList<String> bopRootJobs,
             Supplier<Boolean> morningSpawnPending
     ) {
         List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
@@ -98,7 +98,7 @@ public class TownVillagerUIs {
                             hasPendingMorningReward(player, townFlagBasePos)
                     );
                     FlagMenus.writeAndLink(
-                            data, quests, townFlagBasePos, player, es, bopCount, morningSpawnPending, summary
+                            data, quests, townFlagBasePos, player, es, bopRootJobs, morningSpawnPending, summary
                     );
                 }
         );

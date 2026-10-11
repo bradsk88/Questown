@@ -46,7 +46,6 @@ public class FlagMenus {
             BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
             QuestScreenSummary summary = new QuestScreenSummary(buf.readBoolean(), buf.readBoolean());
             TownBlockofProgressMenu.ReadResult bopResult = TownBlockofProgressMenu.readWithFlagInfo(buf);
-            int blocksOfProgress = bopResult.blocksOfProgress();
             FlagTabsEmbedding.FlagInfo flagInfo = bopResult.flagInfo();
 
             FlagMenus menus = new FlagMenus();
@@ -55,7 +54,7 @@ public class FlagMenus {
             menus.initQuestsMenuClientSide(windowId, quests, flagInfo, summary);
             menus.initMultiVillagerStatusMenuClientSide(windowId, flagInfo);
             menus.initEconClientSide(windowId, flagInfo);
-            menus.initBlocksOfProgress(windowId, flagInfo, blocksOfProgress);
+            menus.initBlocksOfProgress(windowId, flagInfo, bopResult.bopRootJobs());
             menus.initCrafting(windowId, flagInfo);
             return menus;
         } catch (Exception e) {
@@ -70,7 +69,7 @@ public class FlagMenus {
             FlagTabsEmbedding.FlagInfo flagInfo,
             ServerPlayer player,
             Iterable<? extends VisitorMobEntity> es,
-            int bopCount,
+            ImmutableList<String> bopRootJobs,
             Supplier<Boolean> morningSpawnPending,
             QuestScreenSummary summary
     ) {
@@ -93,7 +92,7 @@ public class FlagMenus {
                 }
             });
         }
-        TownBlockofProgressMenu.write(buf, flagInfo, bopCount);
+        TownBlockofProgressMenu.write(buf, flagInfo, bopRootJobs);
     }
 
     private static MultiStatusScreen.@NotNull SyncedData makeSyncData(
@@ -161,9 +160,9 @@ public class FlagMenus {
     private void initBlocksOfProgress(
             int windowId,
             FlagTabsEmbedding.FlagInfo flagPos,
-            int blocksOfProgress
+            ImmutableList<String> bopRootJobs
     ) {
-        bopMenu = new TownBlockofProgressMenu(windowId, flagPos, blocksOfProgress);
+        bopMenu = new TownBlockofProgressMenu(windowId, flagPos, bopRootJobs);
     }
 
     private void initCrafting(

@@ -73,7 +73,7 @@ public class TownFlagMenus {
                             sender, (windowId, inv, p) -> new TownQuestsContainer(
                                     windowId, uiQuests, realFlagInfo, summary,
                                     () -> triggerAdvancement(flagPos, sender.serverLevel())
-                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                            ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
                             () -> flagEntity.hasVillagerArrivingInMorning(), summary
                     );
                 },
@@ -81,7 +81,7 @@ public class TownFlagMenus {
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
                                 windowId, realFlagInfo, () -> triggerAdvancement(flagPos, sender.serverLevel())
-                        ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                        ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
                         () -> flagEntity.hasVillagerArrivingInMorning(), summary
                 ),
                 OpenFlagMenuMessage.ECONOMICS,
@@ -90,7 +90,7 @@ public class TownFlagMenus {
                     openMenu(
                             sender, (windowId, inv, p) -> new TownEconomicsMenu(
                                     windowId, realFlagInfo
-                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                            ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
                             () -> flagEntity.hasVillagerArrivingInMorning(), summary
                     );
                 },
@@ -98,8 +98,8 @@ public class TownFlagMenus {
                 () -> {
                     openMenu(
                             sender, (windowId, inv, p) -> new TownBlockofProgressMenu(
-                                    windowId, realFlagInfo, blocksOfProgress
-                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                                    windowId, realFlagInfo, flagEntity.depositedBopRootJobs()
+                            ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
                             () -> flagEntity.hasVillagerArrivingInMorning(), summary
                     );
                     AdvancementsInit.TUTORIAL_TRIGGER.trigger(sender, TutorialTrigger.Triggers.FirstBopView);
@@ -108,7 +108,7 @@ public class TownFlagMenus {
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new FlagCraftingMenu(
                                 windowId, realFlagInfo
-                        ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                        ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
                         () -> flagEntity.hasVillagerArrivingInMorning(), summary
                 )
         );
@@ -154,7 +154,7 @@ public class TownFlagMenus {
             List<UIQuest> quests,
             FlagTabsEmbedding.FlagInfo flagPos,
             Iterable<? extends VisitorMobEntity> entities,
-            int bopCount,
+            com.google.common.collect.ImmutableList<String> bopRootJobs,
             Supplier<Boolean> morningSpawnPending,
             QuestScreenSummary summary
     ) {
@@ -174,7 +174,7 @@ public class TownFlagMenus {
                         return shower.apply(windowId, inv, p);
                     }
                 }, data -> FlagMenus.writeAndLink(
-                        data, quests, flagPos, sender, entities, bopCount, morningSpawnPending, summary
+                        data, quests, flagPos, sender, entities, bopRootJobs, morningSpawnPending, summary
                 )
         );
     }

@@ -1,6 +1,6 @@
 ---
 title: Campfire-sleep notification is cut off and never says HOW to sleep
-status: needs-triage
+status: resolved
 created: 2026-10-11
 ---
 
@@ -23,3 +23,7 @@ whe"); (2) even complete, it states the *what*, not the *how* — the
 player did not know the mechanic for sleeping on a campfire. Related:
 `.scratch/chicken-arc-campfire-sleep/` (the chicken path that was absent
 here).
+
+## Triage notes
+
+Fixed in 530c8923: en_us.json campfire_ready toast shortened to one line.

@@ -443,3 +443,25 @@ it the menu degrades to the wire's static stats data instead of crashing.
   over: `WelcomeMatBlock` placement reads the parent from that NBT and drops an
   unstamped mat as unregistered. `WelcomeMatParentNbtTest` pins the stamp
   round-trip.
+
+## Day-1 playtest batch 2: dead tooltip override, BOP "earned by", empty job board
+
+- **Status-card tooltips never rendered (two playtest items, one root).** In
+  1.20.6 `AbstractContainerScreen.render` no longer calls the `renderTooltip`
+  override — the 1.19.2 hook is a dead path — so `AbstractPagedCardScreen`
+  overrode a method nothing calls and the per-card hover text (the status
+  cards in the villager menu, and the `?`-status cards) never drew. Fix: the
+  dead `renderTooltip` override is gone; `renderScreenContent` ends with
+  `this.renderTooltipContent(ctx, mouseX, mouseY)`, which feeds
+  `setTooltipForNextRenderPass` — still drawn by the final `Screen.renderWithTooltip`.
+  Items: `villager-menu-status-icons-no-tooltips`,
+  `hover-text-missing-question-mark-status`.
+- **The BOP screen says why the block is there.** The flag-menu payload's
+  `int bopCount` is now `ImmutableList<String> bopRootJobs` (the deposited BOP's
+  job roots, e.g. `[baker, baker]`), threaded `TownFlagBlockEntity.depositedBopRootJobs()`
+  → `FlagMenus`/`TownBlockofProgressMenu` → `TownBlockofProgressScreen`, which
+  renders an "Earned by: Baker x2" line under the block (`menu.block_of_progress.earned_by`,
+  roots as `jobs.<root>` keys, counts collapsed to `xN`).
+- **Empty job board is no longer a blank pane.** `WorkScreen` draws two wrapped
+  lines (`job_board.empty.1`/`job_board.empty.2`) when `work.isEmpty()`,
+  replacing the empty scroll area with an explanation of what requests do.

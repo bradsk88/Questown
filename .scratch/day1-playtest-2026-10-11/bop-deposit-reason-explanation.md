@@ -1,6 +1,6 @@
 ---
 title: Explain WHY the town earned BOPs ("The town has 3 BOPs!" leaves out the reason)
-status: needs-triage
+status: implemented
 created: 2026-10-11
 ---
 
@@ -19,3 +19,7 @@ The BOP deposit notice announces the *amount*, not the *cause*
 explanation (toast chip vs. in-menu text) — open question at triage.
 Related: `docs/todo/bop-progress-indicator.md` (the BOP economy's
 visibility gap generally).
+
+## Triage notes
+
+Implemented (uncommitted batch 2): TownFlagBlockEntity.depositedBopRootJobs() -> wire (replaces int bopCount in the flag payload) -> TownBlockofProgressScreen 'Earned by: Baker x2' line. New lang key menu.block_of_progress.earned_by.

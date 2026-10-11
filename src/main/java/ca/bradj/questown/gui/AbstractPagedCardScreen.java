@@ -2,7 +2,6 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -92,6 +91,13 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
     protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         renderPagedContent(ctx, mouseX, mouseY, partialTicks);
         this.renderScreenExtras(ctx, mouseX, mouseY, partialTicks);
+        // The per-frame tooltip hook: 1.20.6's AbstractContainerScreen.render no longer calls the
+        // vanilla renderTooltip override at all (slot tooltips moved to getTooltipFromContainerItem +
+        // Screen.renderWithTooltip), so the renderTooltip override was a dead path - the day-1
+        // playtest saw zero status-icon tooltips for exactly this reason. Drive it from the
+        // content pass instead; setTooltipForNextRenderPass output is still drawn by
+        // Screen.renderWithTooltip after this render returns.
+        this.renderTooltipContent(ctx, mouseX, mouseY);
     }
 
     /** The paged surface: page-number strip + arrow buttons + cards (and the hovered card's tooltip). */
@@ -117,14 +123,6 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
      * same relative position the leaves' former {@code render} overrides had.
      */
     protected void renderScreenExtras(RenderContext ctx, int mouseX, int mouseY, float partialTicks) { }
-
-    // The per-frame tooltip hook: 1.20.6's AbstractContainerScreen calls renderTooltip during its
-    // render chain, so leaves keep it as a version-neutral content hook (the render argument only
-    // crosses as the render context).
-    @Override
-    protected void renderTooltip(GuiGraphics gui, int mouseX, int mouseY) {
-        this.renderTooltipContent(this.renderContext(gui), mouseX, mouseY);
-    }
 
     protected void renderTooltipContent(RenderContext ctx, int mouseX, int mouseY) { }
 

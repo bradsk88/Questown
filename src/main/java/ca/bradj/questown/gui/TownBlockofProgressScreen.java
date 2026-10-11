@@ -18,6 +18,7 @@ import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
+import java.util.Map;
 
 public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockofProgressMenu> {
     private static final int backgroundWidth = 176;
@@ -112,6 +113,27 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
                 text
         );
         bgY += 8;
+        // Day-1 playtest: "The town has 3 BOPs!" with no way to see why. The deposited BOPs are
+        // blessed with the root job that earned them (BlockOfProgress.bless), so group and list
+        // them - the player's "why".
+        Map<String, Integer> byRoot = new java.util.LinkedHashMap<>();
+        for (String root : menu.bopRootJobs) {
+            if (!root.isEmpty()) {
+                byRoot.merge(root, 1, Integer::sum);
+            }
+        }
+        if (!byRoot.isEmpty()) {
+            String detail = byRoot.entrySet().stream()
+                    .map(e -> net.minecraft.client.resources.language.I18n.get("jobs." + e.getKey())
+                            + " \u00d7" + e.getValue())
+                    .collect(java.util.stream.Collectors.joining(", "));
+            bgY += ctx.darkTextWrap(
+                    topLeft.withY(bgY),
+                    tWidth,
+                    Compat.translatable("menu.block_of_progress.earned_by", detail)
+            );
+            bgY += 8;
+        }
         // A full flag silently loses further BOPs, so warn the player in red (captured by gui-lint).
         if (menu.getFlagInfo().bopFull()) {
             bgY += ctx.redTextWrap(

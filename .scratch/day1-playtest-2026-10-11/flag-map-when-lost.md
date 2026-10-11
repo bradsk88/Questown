@@ -1,6 +1,6 @@
 ---
 title: Give the player their flag map even when they skip chicken onboarding
-status: needs-triage
+status: ready-for-human
 created: 2026-10-11
 ---
 
@@ -17,3 +17,7 @@ Player played the no-chicken day-1 path; the flag's location became
 unknowable once they wandered off (coal search). The map (or some
 find-your-flag mechanic) should be granted without requiring the chicken
 onboarding.
+
+## Triage notes
+
+Design item: a minimap / flag locator for when the player is lost. No mechanical fix; needs a product decision on scope (vanilla map vs custom).

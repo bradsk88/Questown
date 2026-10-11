@@ -1,6 +1,6 @@
 ---
 title: Seed the empty town structure with trees or fallen logs
-status: needs-triage
+status: ready-for-human
 created: 2026-10-11
 ---
 
@@ -18,3 +18,7 @@ some wood (trees or placed logs) so a no-chicken player has material for
 the onboarding builds. Scope question at triage: deterministic seed in
 the structure vs. biome-dependent (biomes without trees would break the
 flow).
+
+## Triage notes
+
+Design item: give day-1 players starting trees or logs so gatherer onboarding does not gate on distant trees. Needs a product decision + spawn data.

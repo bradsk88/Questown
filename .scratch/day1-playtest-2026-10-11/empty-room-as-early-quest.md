@@ -1,6 +1,6 @@
 ---
 title: Make "empty room" one of the first quests
-status: needs-triage
+status: ready-for-human
 created: 2026-10-11
 ---
 
@@ -20,3 +20,7 @@ means. Teaching "an empty room" first would give the prerequisite
 knowledge. Interacts with the mat-gated-arrival design (`.scratch/
 mat-gated-arrival/`) — the chicken currently builds that room as part of
 its door beat.
+
+## Triage notes
+
+Design item: make 'build an empty room' an explicit early quest to teach room registration. Needs a product decision + quest data.

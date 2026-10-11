@@ -1,6 +1,6 @@
 ---
 title: Red dot on the economics tab while the free-food offer is available
-status: needs-triage
+status: ready-for-human
 created: 2026-10-11
 ---
 
@@ -18,3 +18,7 @@ one-time free-food offer has not been taken. Pairs with
 `free-food-economics-card.md`; same family as
 `flag-incomplete-quests-indicator.md` (the "v4 tab indicators / red
 dots" note in `docs/todo/bop-progress-indicator.md`).
+
+## Triage notes
+
+Design item: red-dot the free-food tab. Needs a product decision.

@@ -558,3 +558,13 @@ completedProceduralBatches >= 1` (the "your village is thriving" milestone —
 the first completed procedural batch). The quests/BOP/crafting tabs are
 ungated. The client's `FlagTabs` already honors the `FlagInfo` booleans (the
 wire format predates this); only the server-side values changed.
+
+## BOP "earned by" (`TownFlagBlockEntity.depositedBopRootJobs`)
+
+Day-1 playtest: the Block of Progress screen showed the block but not why it
+was there. `depositedBopRootJobs()` reads the deposited BOP's job roots off the
+flag's town-data (the same source the economics card counts) and returns them
+as a list (e.g. `[baker, baker]`). The flag-menu payload carries this list
+(instead of the old `int bopCount`), and `TownBlockofProgressScreen` renders an
+"Earned by: Baker x2" line from it — the count is the list size, so no separate
+count is wired. The roots render via the `jobs.<root>` lang keys.

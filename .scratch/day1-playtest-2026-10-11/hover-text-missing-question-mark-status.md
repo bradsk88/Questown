@@ -1,6 +1,6 @@
 ---
 title: Hover text missing for a villager with the question-mark status
-status: needs-triage
+status: resolved
 created: 2026-10-11
 ---
 
@@ -19,3 +19,7 @@ Predecessor/sibling of `villager-menu-status-icons-no-tooltips.md`
 specific to the "?" status icon. Check whether the "?" status has a
 tooltip key registered at all, and whether the shared no-tooltips bug
 covers it.
+
+## Triage notes
+
+Same root cause and fix as villager-menu-status-icons-no-tooltips (the 1.20.6 dead renderTooltip override). Batch 2.

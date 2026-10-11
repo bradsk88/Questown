@@ -1,6 +1,6 @@
 ---
 title: Re-phrase the villager menu's "and one more in the morning" for the first villager
-status: needs-triage
+status: resolved
 created: 2026-10-11
 ---
 
@@ -16,3 +16,7 @@ Playtest chat, 2026-10-11 17:15:18 (`run/client2.log`):
 
 Copy fix: the pending-arrival line assumes an existing townie. Needs a
 first-villager variant (e.g. "a villager will arrive in the morning").
+
+## Triage notes
+
+Fixed in 530c8923: MultiStatusScreen picks villager_arriving_morning.first when villagerStatuses is empty.
