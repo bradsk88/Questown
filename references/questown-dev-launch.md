@@ -196,6 +196,36 @@ a file to read `QT.FLAG_LOGGER` output:
 log name** each relaunch (`serverN.log`) so you do not overwrite prior crash/log
 evidence — do not delete the logs you are investigating from.
 
+## Reading the dev log while the user plays (the polling model)
+
+When the user is driving a play-test on a live `runServer` and asks you to "watch"
+it while you work on items between checks, three facts keep the work honest:
+
+- **You only check when you run a command in a turn. You do NOT poll between
+  turns.** Do not claim "watch mode" / "continuously monitoring" — the agent goes
+  idle between the user's messages. Say plainly: "I check on each turn; nothing's
+  lost because the log is a complete record."
+- **The reliable source is the full log, re-scanned each turn.** `/tmp/dev-server.log`
+  is a complete record; grepping it each turn catches everything since the last
+  check. A background watcher is a *bonus* for continuous capture, not the source
+  of truth.
+- **A background watcher is a `tail -F` filter, not a daemon you babysit.**
+  `nohup sh -c 'tail -n0 -F /tmp/dev-server.log | grep --line-buffered -E "<patterns>" >> /tmp/dev-watch.log 2>/dev/null' > /dev/null 2>&1 &`
+  appends matching new lines to `/tmp/dev-watch.log` as they happen (verified: it
+  caught live chat + a live exception the full-log scan would also have caught).
+  Start/stop it with **bracket patterns** (the `pkill -f` self-match trap above
+  applies to killing a stale watcher). It only captures from the start onward, so
+  always pair it with a full-log scan for anything earlier.
+
+**The dev log is ~90% gradle compile output, not just server events.** A
+`runServer` log interleaves the compile stream (warnings **and echoed Java source
+lines**) with the runtime stream. Verified on a live log: 32,149 lines total, only
+3,032 start with `[HH:MM:SS]` (the runtime lines); a generic `grep 'reward'` hit
+three echoed source lines (`new MCInstantReward(town, reward)`) and **zero** real
+events. **Anchor runtime greps on `^\[\d\d:\d\d:\d\d\]`** (or filter to
+`[Server thread`), or you will report compile/source-echo "hits" as if they were
+world events.
+
 ## Command injection (RCON is broken)
 
 RCON does not work in this build. Feed a command to the server through a FIFO:
