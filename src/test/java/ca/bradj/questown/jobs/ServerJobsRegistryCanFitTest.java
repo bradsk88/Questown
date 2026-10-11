@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.fail;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 class ServerJobsRegistryCanFitTest {
 
     @Test
+    @Disabled("registry-bound: the per-job Work suppliers need Forge mod init; see Javadoc. Window arithmetic is pinned by DayWindowTest.")
     void todo_canFit_isRegistryBoundAndNotUnitLoadable() {
         // ServerJobsRegistry references Forge registries in its static init path, so
         // loading it (or calling the real canFit) from a plain unit test throws

@@ -506,3 +506,23 @@ bread is in the warper's villager journal, counted by the town census; the oven 
 not in the census: it does not implement `MCContainerInterface`, mirroring how the vanilla
 furnace stays outside the cook family's town containers). Pinned at the seam by
 `WorkIsJobBlockAtTest` (content-agnostic match, no block-class sniff).
+
+# `TownVillagerMoods` — config-split test seam (2026-10-13)
+
+`TownVillagerMoods` was the last of the known-red `todo_…` unit tests because both of its
+seams read a NeoForge config value that is unloaded outside a mod run (`Config.NEUTRAL_MOOD`
+in `compute`, `Config.MOOD_TICK_INTERVAL` in the ctor). It now follows the standard
+config-split so the mood math is unit-testable in a plain JVM:
+
+- **`compute(int neutral, Collection<Effect>)`** is the pure seam — the neutral value is a
+  parameter, no config read. The public `compute(Collection<Effect>)` is a thin wrapper that
+  reads `Config.NEUTRAL_MOOD.get()` and delegates. Behaviour is unchanged (incl. the
+  `reduce(…).orElse(neutral)` fold — preserved verbatim, not "cleaned up").
+- **`TownVillagerMoods(long interval)`** (package-private) sets `moodTick` without a config
+  read; the no-arg `TownVillagerMoods()` (used by `TownVillagerHandle`) still reads
+  `Config.MOOD_TICK_INTERVAL`.
+- `MoodEffects`/`Effect` are registry-free (`ResourceLocation`), and
+  `staticInitialize()` (the `buffs` map, wired in `TownEvents`) is pure, so all of it runs
+  without `Bootstrap.bootStrap()`. Pinned by `TownVillagerMoodsTest` (compute math, clamps,
+  effect tracking). The remaining registry-bound moods gap (the live SLEEPLESS magnitude end
+  to end) is verified in the held self-sufficiency run, not a unit test.

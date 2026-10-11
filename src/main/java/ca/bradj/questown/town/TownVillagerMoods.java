@@ -36,10 +36,24 @@ public class TownVillagerMoods {
 
     // Computed at runtime
     private final Map<UUID, Integer> mood = new HashMap<>();
-    private long moodTick = Config.MOOD_TICK_INTERVAL.get();
+    private long moodTick;
+
+    /** Production wiring: the assessment interval comes from the NeoForge config. */
+    public TownVillagerMoods() {
+        this.moodTick = Config.MOOD_TICK_INTERVAL.get();
+    }
+
+    /** Test seam: a fixed interval, no config read (the config-split pattern). */
+    TownVillagerMoods(long moodTickInterval) {
+        this.moodTick = moodTickInterval;
+    }
 
     public static int compute(Collection<Effect> effects) {
-        Integer neutral = Config.NEUTRAL_MOOD.get();
+        return compute(Config.NEUTRAL_MOOD.get(), effects);
+    }
+
+    /** Pure mood math: the neutral value is a parameter, so no config read — unit-testable. */
+    static int compute(int neutral, Collection<Effect> effects) {
         Integer computed = effects.stream()
                 .map(Effect::effect)
                 .map(buffs::get)

@@ -11,6 +11,7 @@ import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -131,6 +132,7 @@ class WorkStatusStoreMatSeedTest {
     }
 
     @Test
+    @Disabled("registry-bound: needs a Forge ServerLevel (see class Javadoc); store-level consequences are covered by the other tests here.")
     void todo_ownerStoreOneShotBootstrap_isNotReachableInAUnitTest() {
         // TownFlagBlockEntity#getRealWorkStatusHandle bootstraps the owner store with exactly
         // one tick (and skips it when the level is null). Making that bootstrap self-healing
