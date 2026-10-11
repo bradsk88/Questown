@@ -1,6 +1,6 @@
 ---
 title: '"Take a Block of Progress" decrements the flag count but the item never arrives (all BOPs lost)'
-status: needs-info
+status: ready-for-agent
 created: 2026-10-11
 ---
 
@@ -65,3 +65,44 @@ while the player takes a BOP, and check whether the item landed in inventory or
 as an `ItemEntity` at the flag. Improvement regardless: drop at the **player's**
 position (or use `ItemEntity` at their feet) instead of the flag, so a full-inv
 drop is visible; and add a log line distinguishing add-vs-drop.
+
+## ROOT CAUSE (confirmed live, 2026-10-11 23:18:06)
+
+Caught live in `/tmp/dev-server.log` (the user reproduced it in the from-zero
+run). The `took_bop` broadcast **throws**, and because it sits **between the
+remove and the give**, the BOP is removed from the flag and then lost:
+
+```
+[23:18:06] Broadcasting message: messages.player.took_bop [literal{Dev}, 1 questown:block_of_progress, [-193, 40]]
+[23:18:06] [ERROR] java.lang.IllegalArgumentException:
+  TranslatableContents' arguments must be either a Component, Number, Boolean, or a String.
+  Was given 1 questown:block_of_progress for messages.player.took_bop
+```
+
+`TownFlagBOPItemHandler.eject()` runs, in order:
+1. `ItemStack v = flag.bopStacks.remove(0);` — BOP removed from the flag (count already decremented).
+2. `flag.messages.broadcastMessage("messages.player.took_bop", recipient.getName(), v, ...)` —
+   passes the raw `ItemStack v` as a translatable argument.
+3. `recipient.getInventory().add(v)` / drop fallback — **never reached**.
+
+`broadcastMessage` → `Compat.translatable(key, args)` → `Component.translatable(key, args)`.
+In 1.20.6 the `TranslatableContents` arguments must be a `Component`, `Number`,
+`Boolean`, or `String` — a raw `ItemStack` is rejected and throws
+`IllegalArgumentException`. (1.19.2 auto-converted item arguments to
+hoverable-text components; 1.20.6 does not.) The exception aborts the
+`GiveBOPMessage` network task at step 2, so the give (step 3) never runs → the
+BOP is gone from the flag and never reaches the player or the ground. **This is
+the loss** — not an inventory-full drop.
+
+## Fix
+
+Wrap the BOP in a `Component` before the broadcast: pass `v.getName()` (the item
+display-name component) instead of the raw `ItemStack v` in step 2 (or
+`ComponentUtils.getItemHoverEvent` if a hover tooltip is wanted). The give
+already has the drop-at-feet fallback, so once the broadcast stops throwing the
+BOP reaches the inventory. Verify: a live `took_bop` with no
+`IllegalArgumentException` and the BOP appearing in the player's inventory.
+
+**Note:** other `broadcastMessage(...)` call sites that pass an `ItemStack`
+argument have the same latent bug — grep for `broadcastMessage` callers that
+pass an `ItemStack` (not a `Component`) and wrap those too.
