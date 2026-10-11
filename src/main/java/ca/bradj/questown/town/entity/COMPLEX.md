@@ -568,3 +568,20 @@ as a list (e.g. `[baker, baker]`). The flag-menu payload carries this list
 (instead of the old `int bopCount`), and `TownBlockofProgressScreen` renders an
 "Earned by: Baker x2" line from it — the count is the list size, so no separate
 count is wired. The roots render via the `jobs.<root>` lang keys.
+
+# Day-2 playtest (2026-10-11 evening): onboarding gates + sword quest
+
+Two onboarding/content decisions from the evening playtest, both in `TownFlagBlockEntity` / `TownQuests`:
+
+- **Economics tab gate = villager presence.** `getInfo()` sets `showEcon =
+  showVillagers` (`!getVillagers().isEmpty()`), so the economics tab and the
+  villagers tab reveal together. The old gate (`completedProceduralBatches >= 1`)
+  was met by day 2 (onboarding batches tick over) even before a villager arrives;
+  the player's bar was "not until we've met a villager". `completedProceduralBatches`
+  is still the counter for quest seeding + the batch milestones — it just no
+  longer drives the tab gate.
+- **One sword quest only (4 stone swords).** `addHunterGatherer` (the day-2
+  batch #1.5) previously had two sword item quests — 4× wooden + 1× stone. They
+  are consolidated to a single `MCQuest.item(STONE_SWORD, 4)`; the wooden-sword
+  quest is removed. The hunter/sword job-change and bedroom quests in that batch
+  are unchanged. Pinned by `TutorialPhaseGateTest`.

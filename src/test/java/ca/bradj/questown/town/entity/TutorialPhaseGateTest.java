@@ -108,13 +108,16 @@ class TutorialPhaseGateTest {
 
         assertEquals(TownQuests.Tutorial.APPLIED, result);
         List<MCQuest> all = quests.questBatches.getAll();
-        assertTrue(all.stream().anyMatch(q ->
-                Compat.getItemId(Items.WOODEN_SWORD).equals(q.getWantedId())
-                        && q.getType() == Quest.QuestType.ITEM
-        ), "the wooden-sword quest now lives in the hunter-gatherer batch");
+        // Day-2 playtest: the two sword asks (4 wooden + 1 stone) are consolidated into a single
+        // "4 stone swords" item quest - one sword quest only.
         assertTrue(all.stream().anyMatch(q ->
                 Compat.getItemId(Items.STONE_SWORD).equals(q.getWantedId())
-        ));
+                        && q.getType() == Quest.QuestType.ITEM
+                        && q.getCountNeeded() == 4
+        ), "the consolidated sword quest asks for 4 stone swords");
+        assertTrue(all.stream().noneMatch(q ->
+                Compat.getItemId(Items.WOODEN_SWORD).equals(q.getWantedId())
+        ), "the wooden-sword quest is gone (one sword quest only)");
     }
 
     // ===== Phase 2: day-one done → hunter-gatherer =====

@@ -1221,12 +1221,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         rawFoodQuest.setFlavorText("Your villagers need food. A villager must bring back raw food.");
         q.addNewQuest(rawFoodQuest);
 
-        MCQuest woodenSwordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.WOODEN_SWORD), 4);
-        woodenSwordQuest.setFlavorText("Craft 4 wooden swords and place them in your store room chest. Your villagers will need them - each hunter carries one.");
-        q.addNewQuest(woodenSwordQuest);
-
-        MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.STONE_SWORD), 1);
-        swordQuest.setFlavorText("Upgrade your villager's weapon. Craft a stone sword and place it in a store room chest.");
+        // Day-2 playtest: consolidate the two sword asks (4 wooden + 1 stone) into a single
+        // "4 stone swords" item quest - one sword quest only.
+        MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.STONE_SWORD), 4);
+        swordQuest.setFlavorText("Craft 4 stone swords and place them in your store room chest. Your villagers will need them - each hunter carries one.");
         q.addNewQuest(swordQuest);
 
         MCQuest hunterQuest = MCQuest.jobChange(batchUUID, null, new JobID("hunter", "sword"));

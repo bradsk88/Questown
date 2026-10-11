@@ -67,6 +67,15 @@ flowchart TD
   background. The blur is semi-transparent, so the HUD drawn *before* the screen
   also stays visible through it - which is why the container family needs no
   `QuestownHudEvents` entry of its own.
+  - **The crosshair is suppressed in that re-render.** The re-render calls the
+    full `Gui` layer stack, and in 1.20.6 the crosshair is a layer gated only by
+    `!hideGui` (vanilla does *not* skip it for open screens), so re-rendering the
+    HUD would pop the crosshair back on top of the menu (the day-1 playtest's
+    "crosshair renders above menus"). `QuestownHudEvents` sets a `reRenderingHud`
+    flag around the pass and cancels just the `VanillaGuiLayers.CROSSHAIR` layer
+    via `RenderGuiLayerEvent.Pre` during it; the normal pre-screen pass is
+    untouched (flag false → the crosshair renders as vanilla would, then the
+    opaque/blur background covers it).
 - The two `*ConfirmScreen` keep their own flat gray `renderBackground`: their
   golden equivalents are opaque gray, so matching them is correct - do not
   "unify" them onto the blur.

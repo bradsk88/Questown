@@ -143,4 +143,8 @@ public record RenderContext(
     public int redTextWrap(Coordinate topLeft, int width, Component text) {
         return ca.bradj.questown.mc.Compat.drawRedTextWrap(font, gui, topLeft, width, text);
     }
+
+    public int textWrap(Coordinate topLeft, int width, Component text, int color) {
+        return ca.bradj.questown.mc.Compat.drawTextWrap(font, gui, topLeft, width, text, color, false);
+    }
 }

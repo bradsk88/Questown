@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui.town.status;
 
+import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.OpenJobMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
@@ -87,8 +88,11 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             String key = syncedData.villagerStatuses.isEmpty()
                     ? "gui.status.villager_arriving_morning.first"
                     : "gui.status.villager_arriving_morning";
-            ctx.text(Compat.translatable(key),
-                    card.coords().leftXPadded(), card.coords().topYPadded(), 0xFF808080, false);
+            CardCoordinates cc = card.coords();
+            // Wrap to the card's padded inner width - a single un-wrapped ctx.text ran
+            // "A new villager arrives in the morning" off the card's right edge.
+            ctx.textWrap(new Coordinate(cc.leftXPadded(), cc.topYPadded()),
+                    cc.rightXPadded() - cc.leftXPadded(), Compat.translatable(key), 0xFF808080);
             return null;
         }
         renderStatus(ctx, card.coords(), card.data());

@@ -18,9 +18,10 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     private final FlagTabs tabs;
     private final JEI.NineNine background;
     private final BlockPos flagPos;
+    private final boolean showMove;
     private Button craftWandButton;
     private Button craftMatButton;
 
@@ -63,6 +65,9 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         this.background = JEI.getRecipeBackground();
         this.tabs = FlagTabs.forMenu(menu);
         this.flagPos = menu.getFlagInfo().flagPos();
+        // "Begin moving" recalls the townsfolk and relocates the town - meaningless with
+        // zero villagers, so hide it until one has joined (same gate as the villagers tab).
+        this.showMove = menu.getFlagInfo().showVillagersTab();
     }
 
     private Component title() {
@@ -100,10 +105,14 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         row2Y = y;
         y += ICON_ROW_HEIGHT + BLOCK_PAD;
 
-        moveDescY = y;
-        y += wrappedHeight(moveDesc()) + BLOCK_PAD;
-        moveButtonY = y;
-        y += BTN_HEIGHT + 8;
+        // The "Begin moving" section (recall + relocate) only makes sense with villagers,
+        // so collapse it entirely when none have joined.
+        if (showMove) {
+            moveDescY = y;
+            y += wrappedHeight(moveDesc()) + BLOCK_PAD;
+            moveButtonY = y;
+            y += BTN_HEIGHT + 8;
+        }
 
         panelHeight = y;
     }
@@ -115,21 +124,23 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - panelHeight) / 2;
 
-        this.craftWandButton = craftButton(bgX + CRAFT_BTN_X, bgY + row1Y, 0, Items.STICK, wandDesc());
-        this.craftMatButton = craftButton(bgX + CRAFT_BTN_X, bgY + row2Y, 1, Items.OAK_PRESSURE_PLATE, matDesc());
+        this.craftWandButton = craftButton(bgX + CRAFT_BTN_X, bgY + row1Y, 0);
+        this.craftMatButton = craftButton(bgX + CRAFT_BTN_X, bgY + row2Y, 1);
         this.addRenderableWidget(this.craftWandButton);
         this.addRenderableWidget(this.craftMatButton);
-        this.addRenderableWidget(Compat.button(
-                Compat.translatable("menu.flag_crafting.begin_moving"),
-                btn -> {
-                    QuestownNetwork.sendToServer(new BeginTownRelocationMessage(flagPos));
-                    this.onClose();
-                },
-                bgX + MARGIN, bgY + moveButtonY, TEXT_WIDTH, BTN_HEIGHT
-        ));
+        if (showMove) {
+            this.addRenderableWidget(Compat.button(
+                    Compat.translatable("menu.flag_crafting.begin_moving"),
+                    btn -> {
+                        QuestownNetwork.sendToServer(new BeginTownRelocationMessage(flagPos));
+                        this.onClose();
+                    },
+                    bgX + MARGIN, bgY + moveButtonY, TEXT_WIDTH, BTN_HEIGHT
+            ));
+        }
     }
 
-    private Button craftButton(int x, int y, int recipeIndex, Item required, Component desc) {
+    private Button craftButton(int x, int y, int recipeIndex) {
         return Compat.button(
                 Compat.translatable("menu.flag_crafting.craft"),
                 btn -> {
@@ -140,8 +151,8 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         );
     }
 
-    private void renderCraftTooltip(Component desc, Item required, int mouseX, int mouseY) {
-        int count = countInInventory(required);
+    private void renderCraftTooltip(Component desc, Ingredient required, int mouseX, int mouseY) {
+        int count = countMatching(required);
         List<FormattedCharSequence> lines = new ArrayList<>(Compat.splitText(font, desc, TOOLTIP_WIDTH));
         Style style = Style.EMPTY.applyFormat(count == 0 ? ChatFormatting.RED : ChatFormatting.GRAY);
         lines.add(Compat.componentText(Compat.translatableStyled("menu.flag_crafting.in_inventory", style, count)));
@@ -152,14 +163,14 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     // grey the button out when the local player has none — clicking it would be a no-op.
     private void updateCraftButtonStates() {
         if (this.craftWandButton != null) {
-            this.craftWandButton.active = countInInventory(Items.STICK) > 0;
+            this.craftWandButton.active = countMatching(Ingredient.of(Items.STICK)) > 0;
         }
         if (this.craftMatButton != null) {
-            this.craftMatButton.active = countInInventory(Items.OAK_PRESSURE_PLATE) > 0;
+            this.craftMatButton.active = countMatching(Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES)) > 0;
         }
     }
 
-    private int countInInventory(Item item) {
+    private int countMatching(Ingredient ingredient) {
         Player player = Minecraft.getInstance().player;
         if (player == null) {
             return 0;
@@ -168,7 +179,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         int total = 0;
         for (int i = 0; i < inv.getContainerSize(); i++) {
             ItemStack stack = inv.getItem(i);
-            if (stack.is(item)) {
+            if (ingredient.test(stack)) {
                 total += stack.getCount();
             }
         }
@@ -190,13 +201,15 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         renderRecipeRow(ctx, bgX, bgY + row1Y, Items.STICK.getDefaultInstance(), new ItemStack(ItemsInit.TOWN_WAND.get()));
         renderRecipeRow(ctx, bgX, bgY + row2Y, Items.OAK_PRESSURE_PLATE.getDefaultInstance(), new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()));
 
-        ctx.darkTextWrap(new Coordinate(bgX + MARGIN, bgY + moveDescY), TEXT_WIDTH, moveDesc());
+        if (showMove) {
+            ctx.darkTextWrap(new Coordinate(bgX + MARGIN, bgY + moveDescY), TEXT_WIDTH, moveDesc());
+        }
 
         if (this.craftWandButton != null && this.craftWandButton.isHovered()) {
-            renderCraftTooltip(wandDesc(), Items.STICK, mouseX, mouseY);
+            renderCraftTooltip(wandDesc(), Ingredient.of(Items.STICK), mouseX, mouseY);
         }
         if (this.craftMatButton != null && this.craftMatButton.isHovered()) {
-            renderCraftTooltip(matDesc(), Items.OAK_PRESSURE_PLATE, mouseX, mouseY);
+            renderCraftTooltip(matDesc(), Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES), mouseX, mouseY);
         }
     }
 

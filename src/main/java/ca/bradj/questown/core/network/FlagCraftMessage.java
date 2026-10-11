@@ -8,9 +8,10 @@ import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.Item;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 
 
 public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
@@ -39,14 +40,22 @@ public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
     }
 
     private void craftWand(ServerPlayer player) {
-        if (!consumeItem(player, Items.STICK)) {
+        if (!consumeMatching(player, Ingredient.of(Items.STICK))) {
             return;
         }
-        giveAndNotify(player, new ItemStack(ItemsInit.TOWN_WAND.get()));
+        // A wand is only as good as its parent flag: every action resolves the
+        // parent through GetParentFromNBT, so an unstamped wand is inert (its
+        // tooltip reads "inactive"). Stamp the exact flag crafted at, the same
+        // parent-stamping the welcome mat carries.
+        ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
+        TownFlagBlock.StoreParentOnNBT(wand, flagPos);
+        giveAndNotify(player, wand);
     }
 
     private void craftWelcomeMat(ServerPlayer player) {
-        if (!consumeItem(player, Items.OAK_PRESSURE_PLATE)) {
+        // Any wooden pressure plate is a valid input (the player may hold spruce,
+        // birch, ...); matching only OAK rejected the plates they actually carry.
+        if (!consumeMatching(player, Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES))) {
             return;
         }
         // A mat only works when placed against its parent flag: placement reads the
@@ -69,10 +78,10 @@ public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
         player.sendSystemMessage(Compat.translatable("message.flag_crafting.created", crafted.getHoverName()));
     }
 
-    private boolean consumeItem(ServerPlayer player, Item required) {
+    private boolean consumeMatching(ServerPlayer player, Ingredient required) {
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             ItemStack stack = player.getInventory().getItem(i);
-            if (stack.is(required)) {
+            if (required.test(stack)) {
                 stack.shrink(1);
                 return true;
             }
