@@ -32,6 +32,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -503,7 +504,13 @@ public final class VillageGrowthExecutor {
         for (AbstractMap.SimpleEntry<MCQuest, ?> e : flag.getQuestHandle().getAllQuestsWithRewards()) {
             (e.getKey().isComplete() ? done : open).add(e.getKey().toShortString());
         }
-        msg("KNOWN quests open=" + open + " done=" + done);
+        // The lists come from the live quest handle, not a fresh snapshot: a
+        // post/lose loop (e.g. tickUnmetUnlockQuests) leaves lost-but-present
+        // entries and the same quest id accumulates (2026-10-11: 107x
+        // JOB_UNLOCK spam per id in two minutes). Collapse repeats to
+        // `entry xN` so the accumulation is a one-line log find, not a
+        // duplicate wall to eyeball.
+        msg("KNOWN quests open=" + collapse(open) + " done=" + collapse(done));
         msg("KNOWN registered-doors=" + flag.getRoomHandle().getAllRegisteredDoors().size()
                 + " rooms=" + flag.getRoomHandle().getMatches(x -> true).size()
                 + " containers=" + TownContainers.getAllContainers(flag, level).size()
@@ -570,6 +577,24 @@ public final class VillageGrowthExecutor {
 
     private static String shortId(VisitorMobEntity v) {
         return v.getUUID().toString().substring(0, 8);
+    }
+
+    /**
+     * Collapse repeated probe entries to {@code entry xN} (first-seen order
+     * kept), so a quest handle that accumulated duplicates (a post/lose loop
+     * leaving lost-but-present entries) reads as {@code Quest{id=...} x107},
+     * not a 107-line wall. Single occurrences print unchanged.
+     */
+    private static List<String> collapse(List<String> entries) {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (String e : entries) {
+            counts.merge(e, 1, Integer::sum);
+        }
+        List<String> out = new ArrayList<>(counts.size());
+        for (Map.Entry<String, Integer> e : counts.entrySet()) {
+            out.add(e.getValue() > 1 ? e.getKey() + " x" + e.getValue() : e.getKey());
+        }
+        return out;
     }
 
     private void check(String label, boolean pass) {

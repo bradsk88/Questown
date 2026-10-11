@@ -287,6 +287,11 @@ files.
 5. **Then** launch the client (it reconnects to the live server):
    `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8 nohup ./gradlew
    runClient -Pautojoin > /tmp/village-client.log 2>&1 &`.
+   **Fly kick (verified 2026-10-11):** if the client is kicked on join with
+   "Flying is not enabled on this server", the quickplay session carried
+   creative/fly state from an earlier play — wipe `run-client/saves`
+   (`rm -rf run-client/saves`) before the client launch. The client's
+   working directory is `run-client/` (build.gradle, runs configureEach).
    **Client focus-steal (reported 2026-10-01, unverified fix):** a client
    launched this way held the dev's keyboard focus hostage — they could not
    move the cursor back to the IDE and had to exit the game to reply. The
@@ -596,7 +601,17 @@ grep -aE 'Broadcasting message' /tmp/village-server.log | tail -5
 ```
 
 The observe cycle (`[village] KNOWN/UNCLEAR`) is the steady state; the
-broadcast is the event. A `room_destroyed` or `quest_lost` broadcast after
+broadcast is the event. **A quest ID at high multiplicity in the `open=`
+list is accumulation, not batch content:** the probe's open/done lists are
+the live quest handle, not a fresh snapshot, so a post/lose loop
+(`tickUnmetUnlockQuests` ping-ponging JOB_UNLOCK quests when a stuck root's
+unmet item flips tick-to-tick) leaves lost-but-present entries and the count
+GROWS with each oscillation (2026-10-11: `baker_qt_extract` ×107 +
+`crafter_qt_stick` ×107 within two minutes). When one ID shows up at high
+multiplicity, do not read it as a batch the town just received — grep the run
+log for that ID's posting lines (`posted to`, `quest_lost`, `New quests are
+available`) and find the loop producing it. Filed:
+`.scratch/mat-gated-arrival/job-unlock-quest-spam.md`. A `room_destroyed` or `quest_lost` broadcast after
 `place_mat` means the mat destroyed the room; the observe cycle showing
 `rooms=0` is the consequence, not the cause. Read the broadcast to find
 what just happened; read the observe cycle to see what is true now.
@@ -655,6 +670,17 @@ report the literal moment as observed (false pass), and do **not** re-run the
 watchtower expecting it to appear (it will not, in a scenario that can't produce
 it). The honest "mechanism verified, literal detail not forced" is the correct
 verdict.
+
+**When the verdict moves the verified boundary of documented behavior, record
+it before the run ends.** The result (pass or fail) redefines how far the
+documented flows are verified: when it moves that boundary, update the status
+note in `docs/player-first-ten-days.md` (its header separates verified beats
+from design intent), the scenario section of `commands/test/COMPLEX.md`, and
+file the blocking bugs as `.scratch/<feature>/` issues (`status:
+needs-triage`) — in the same session, not on request. 2026-10-11:
+village/growth ended roster 3/5 and the first-ten-days doc kept reading as the
+full arc verified until the dev asked "do we need to update the onboarding
+narrative doc?" — the status note should have landed with the verdict.
 
 ## The console command set (the agent's hands)
 
@@ -849,6 +875,11 @@ campfire. When the chicken's hint is "put X in the world" (a door, a campfire,
   target a player (`tp dev <x> <y> <z>`, or `tp @s`). This bit the chest beat:
   the chicken's "stand in the room" guidance was unmet the whole time because
   the teleport never happened, and it looked like an unbreakable dead end. For a **door**, use `_qtdev place_door`, not `setblock` (see above).
+- **Putting an item into a container from the console: `data merge block`,
+  not `data modify` (1.20.6, verified 2026-10-11).** `data modify block
+  <pos> Items[N] set value <item>` fails SILENTLY — no error line, the list
+  unchanged. `data merge block <pos> {Items:[...]}` works, but it REPLACES the
+  whole list: include every existing item in the merge or it vanishes.
 - **Arg types: use `ItemArgument`/`BlockPosArgument`, not `StringArgumentType
   .word()`.** From the FIFO/console, `StringArgumentType.word()` fails to parse
   with `Expected whitespace to end one argument, but found trailing data` (even

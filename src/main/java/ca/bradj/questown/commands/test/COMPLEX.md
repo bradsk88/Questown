@@ -37,6 +37,13 @@ flowchart TD
   viable work). Verify soon after HOLD, don't sit on the held world for hours.
 - Fake players (`[AutoTest]`) are excluded from both the login teleport and the
   per-tick re-aim via the bracketed-name check.
+- **A `FakePlayer` cannot be teleported on NeoForge.** `teleportTo` / `/tp @s`
+  route through the pending-teleport path (`connection.teleport(...)`), and
+  `FakePlayer.tick()` is empty, so the pending teleport never applies — the
+  command reports success and the fake player never moves. Scripted player
+  moves in the chicken-arc F-scenarios use `setPos` directly
+  (`ChickenArcScriptedAction.MovePlayer`, added 2026-10-11 after `/tp @s`
+  no-oped twice in a fixture).
 - **Aim preference order** — a scenario may post its own target via the System
   property `questown.autotest.aim.door` ("x,y,z" offset from the arena origin,
   set in a postSpawnAction). When present it wins over needy townies; without
