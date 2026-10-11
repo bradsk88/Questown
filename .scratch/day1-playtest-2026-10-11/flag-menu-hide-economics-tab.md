@@ -1,6 +1,6 @@
 ---
 title: Hide the flag menu's economics tab until onboarding is done
-status: resolved
+status: needs-info
 created: 2026-10-11
 ---
 
@@ -26,3 +26,13 @@ theme as `flag-menu-hide-villager-tab.md`.
 ## Triage notes
 
 Fixed in 530c8923: TownFlagBlockEntity.getInfo() hides economics until completedProceduralBatches >= 1. Live-verified 2026-10-11: 'economics hidden' early.
+
+## Update (2026-10-11 evening playtest — REOPENED)
+
+Chat 22:12:51: "Economics shouldn't be showing yet. We haven't met a villager
+yet." So economics is visible in a fresh world pre-villager even though it was
+gated on `completedProceduralBatches >= 1` in 530c8923. Investigate: does the
+gate fire early (e.g. a procedural batch completes during onboarding before any
+villager), or is the economics **section** a different element from the gated
+**tab**? The user's bar is "not until we've met a villager" — reconcile the
+gate condition with that (first-villager, not procedural-batches).
