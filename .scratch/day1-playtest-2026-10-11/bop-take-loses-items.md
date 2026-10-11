@@ -32,3 +32,36 @@ item give fails silently (inventory full? wrong item id? NBT? `add` returning
 false with no drop fallback — the same class of bug the flag-craft "Created X"
 full-inventory fallback addressed). Add a drop-at-feet fallback so a failed give
 never loses the item, and a log line when a give fails.
+
+## Code investigation (2026-10-11 evening, session 2)
+
+The take path is `TownBlockofProgressScreen` "take" button →
+`QuestownNetwork.sendToServer(new GiveBOPMessage(flagPos))` →
+`GiveBOPMessage.handle` → `flag.ejectBlockOfProgress(sender)` →
+`TownFlagBOPItemHandler.eject(flag, recipient)`:
+
+```java
+ItemStack v = flag.bopStacks.remove(0);      // decrement
+...
+if (recipient.getInventory().add(v)) {       // try inventory
+    ...broadcastChanges(); return;
+}
+// fallback: drop at flag ± 1 random horizontal block
+ItemEntity item = new ItemEntity(level, ...); level.addFreshEntity(item);
+```
+
+So there **is** a drop-at-feet fallback (added in the migration close-out
+`782a0ede`) — no clean consume-without-give path in the current source. Two
+leading causes for the observed loss:
+1. **Inventory full → BOP dropped at the flag** (`bp.relative(getRandomHorizontal)`),
+   one block off in a random horizontal direction, easy to miss behind/inside
+   the flag geometry. The count drops (correct), the item is on the ground, not
+   in the inventory. The player saw "count reduced, nothing in inv" and, repeating,
+   "all BOPs gone, I have none" — the drops just weren't collected.
+2. A client-side inventory-sync gap (the item was added but not shown).
+
+To settle: catch a live `took_bop` (`messages.player.took_bop`) in the server log
+while the player takes a BOP, and check whether the item landed in inventory or
+as an `ItemEntity` at the flag. Improvement regardless: drop at the **player's**
+position (or use `ItemEntity` at their feet) instead of the flag, so a full-inv
+drop is visible; and add a log line distinguishing add-vs-drop.

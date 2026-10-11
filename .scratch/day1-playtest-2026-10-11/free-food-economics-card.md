@@ -19,6 +19,14 @@ Replace the current free-food mechanic (placing dirt on the flag) with
 an explicit one-time UI card at the top of the economics tab. Same
 one-time boolean; different presentation.
 
+## Update (2026-10-11 evening, from-zero run)
+
+Re-asked in chat 23:13:01: "In my last batch I had requested an option in the
+menu to learn about and get the free food onboarding thing." So this is still
+open and the player is actively looking for it — a one-time card on the
+economics page ("click to get some free food to get started") is the requested
+shape. Pairs with `free-food-tab-red-dot.md` (the red-dot indicator).
+
 ## Triage notes
 
 Design item: surface the free-food economy on a card. Needs a product decision.
