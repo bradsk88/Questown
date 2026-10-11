@@ -1,6 +1,6 @@
 ---
 title: Make "empty room" one of the first quests
-status: ready-for-human
+status: ready-for-agent
 created: 2026-10-11
 ---
 
@@ -24,3 +24,25 @@ its door beat.
 ## Triage notes
 
 Design item: make 'build an empty room' an explicit early quest to teach room registration. Needs a product decision + quest data.
+
+## Decision (2026-10-11, design walkthrough)
+
+**Add an "empty room" quest as a standalone batch, after campfire + mat, that
+blocks the second onboarding batch (store room + job board).**
+
+- **Position:** after the campfire and welcome mat (not first). It is its own
+  standalone quest batch, and it **gates the basics batch** (store room + job
+  board) so the player learns room registration before the basics land — no quest
+  overload while learning the fundamentals.
+- **Both paths:** on the chicken-assisted path the chicken-built room + registered
+  door auto-completes it (the room is already up by the time the mat beat is
+done — that's fine, it just completes). On the no-chicken path the player builds
+  it themselves.
+- **Requirement: walls + a registered door only** (no contents). Either a new
+  minimal room recipe or reuse the existing TOWN_GATE door-room — implementation
+  detail; the gate is "a room exists whose door is registered."
+
+Onboarding batch order becomes:
+1. Campfire + welcome mat (existing first batch).
+2. **Empty room** (new standalone batch) — walls + registered door.
+3. Store room + job board (existing basics batch, now blocked until #2 completes).

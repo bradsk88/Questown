@@ -1,6 +1,6 @@
 ---
 title: Seed the empty town structure with trees or fallen logs
-status: ready-for-human
+status: ready-for-agent
 created: 2026-10-11
 ---
 
@@ -22,3 +22,21 @@ flow).
 ## Triage notes
 
 Design item: give day-1 players starting trees or logs so gatherer onboarding does not gate on distant trees. Needs a product decision + spawn data.
+
+## Decision (2026-10-11, design walkthrough)
+
+**Seed the fresh town's starting structure with trees + fallen logs, deterministically,
+biome-independent, placed relative to the flag.**
+
+- **Trees:** 2–3 fixed-shape trees (the existing `TreeFeatureResolver` seeds a
+  sapling's grown shape by `pos.asLong()`, so a tree at a given position is
+  reproducible) — gives the natural "chop a tree" first task.
+- **Fallen logs:** a line of horizontal vanilla log blocks oriented like a felled
+  trunk (the player's visual — not an item pile) — guaranteed wood with no chopping.
+- **Amount:** enough to build the onboarding needs (door + welcome mat + job board
+  + a small margin for no-chicken room walls), not an open-ended supply.
+- **Placement:** relative to the flag position, so it works in any biome (a treeless
+  biome must not gate the flow — the seed is biome-independent).
+
+Purpose: a day-1 player (especially no-chicken) always has starting wood; the
+"empty town" reads as having a little timber rather than bare ground.

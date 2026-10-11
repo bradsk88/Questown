@@ -1,8 +1,16 @@
 ---
 title: A "big bedroom" quest (capacity for several villagers) instead of one bedroom per villager
-status: ready-for-human
+status: wontfix
 created: 2026-10-11
 ---
+
+## Decision (2026-10-11, design walkthrough)
+
+**Superseded — dropped in favor of keeping one `bedroom.json` quest per
+villager.** The real issue was not the bedroom size but that the game was
+*under-posting* bedroom quests (2 villagers, only 1 bedroom quest). See
+`bedroom-quests-under-posted.md` for the live issue. `big_bedroom.json` stays as
+unused recipe data.
 
 ## Context
 
