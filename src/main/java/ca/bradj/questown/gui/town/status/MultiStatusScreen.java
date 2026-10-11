@@ -50,7 +50,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
                     }
                 }, Compat.literal("")
         );
-        this.tabs = FlagTabs.forMenu(menu);
+        this.tabs = FlagTabs.forMenu(menu, "tooltips.villagers");
     }
 
     @Override

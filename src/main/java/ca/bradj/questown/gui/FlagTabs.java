@@ -23,9 +23,16 @@ public class FlagTabs extends Tabs implements SubUI {
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             @Nullable Runnable craftingScreenFn,
-            FlagTabsEmbedding.FlagInfo showBOPTab
+            FlagTabsEmbedding.FlagInfo showBOPTab,
+            @Nullable String activeTabKey
     ) {
-        super(build(questsScreenFn, villagerScreenFn, econScreenFn, bopScreenFn, craftingScreenFn, showBOPTab));
+        super(build(questsScreenFn, villagerScreenFn, econScreenFn, bopScreenFn, craftingScreenFn, showBOPTab, activeTabKey));
+    }
+
+    private static boolean isSelected(String titleKey, @Nullable String activeTabKey) {
+        // The active (open) tab is the one whose title key matches; no tab is highlighted
+        // when activeTabKey is null (e.g. the multi-status overview).
+        return activeTabKey != null && activeTabKey.equals(titleKey);
     }
 
     private static @NotNull ImmutableList<Tab> build(
@@ -34,7 +41,8 @@ public class FlagTabs extends Tabs implements SubUI {
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             @Nullable Runnable craftingScreenFn,
-            FlagTabsEmbedding.FlagInfo fi
+            FlagTabsEmbedding.FlagInfo fi,
+            @Nullable String activeTabKey
     ) {
         ImmutableList.Builder<Tab> b = ImmutableList.builder();
         if (fi.showVillagersTab()) {
@@ -42,7 +50,7 @@ public class FlagTabs extends Tabs implements SubUI {
                     (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.PLAYER_HEAD.getDefaultInstance(), x + 10, y + 7),
                     setScreen(villagerScreenFn),
                     "tooltips.villagers",
-                    villagerScreenFn == null,
+                    isSelected("tooltips.villagers", activeTabKey),
                     false
             ));
         }
@@ -51,7 +59,7 @@ public class FlagTabs extends Tabs implements SubUI {
                     (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.BOOK.getDefaultInstance(), x + 10, y + 7),
                     setScreen(questsScreenFn),
                     "tooltips.quests",
-                    questsScreenFn == null,
+                    isSelected("tooltips.quests", activeTabKey),
                     fi.hasIncompleteQuests()
             ));
         }
@@ -64,7 +72,7 @@ public class FlagTabs extends Tabs implements SubUI {
                     },
                     setScreen(econScreenFn),
                     "tooltips.economics",
-                    econScreenFn == null,
+                    isSelected("tooltips.economics", activeTabKey),
                     false
             ));
         }
@@ -79,7 +87,7 @@ public class FlagTabs extends Tabs implements SubUI {
                     ),
                     setScreen(bopScreenFn),
                     "tooltips.blocks_of_progress",
-                    bopScreenFn == null,
+                    isSelected("tooltips.blocks_of_progress", activeTabKey),
                     true
             ));
         }
@@ -87,7 +95,7 @@ public class FlagTabs extends Tabs implements SubUI {
                 (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.CRAFTING_TABLE.getDefaultInstance(), x + 10, y + 7),
                 setScreen(craftingScreenFn),
                 "tooltips.crafting",
-                craftingScreenFn == null,
+                isSelected("tooltips.crafting", activeTabKey),
                 false
         ));
         return b.build();
@@ -113,6 +121,15 @@ public class FlagTabs extends Tabs implements SubUI {
     }
 
     public static FlagTabs forMenu(FlagTabsEmbedding menu) {
+        return forMenu(menu, null);
+    }
+
+    /**
+     * Same as {@link #forMenu(FlagTabsEmbedding)} but marks the tab whose tooltip key equals
+     * {@code activeTabKey} as selected (highlighted). Each flag screen passes its own tab key so
+     * the open tab is visually selected.
+     */
+    public static FlagTabs forMenu(FlagTabsEmbedding menu, @Nullable String activeTabKey) {
         Collection<String> enabledTabs = menu.getEnabledTabs();
 
         Function<String, Runnable> factory = typ -> {
@@ -127,7 +144,8 @@ public class FlagTabs extends Tabs implements SubUI {
                 factory.apply(OpenFlagMenuMessage.ECONOMICS),
                 factory.apply(OpenFlagMenuMessage.BOP),
                 factory.apply(OpenFlagMenuMessage.CRAFTING),
-                menu.getFlagInfo()
+                menu.getFlagInfo(),
+                activeTabKey
         );
     }
 

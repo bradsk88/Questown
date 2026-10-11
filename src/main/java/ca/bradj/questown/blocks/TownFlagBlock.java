@@ -510,7 +510,25 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (entity.isInitialized()) {
             // A full flag opens the BOP menu unconditionally (not gated on first_bop_view), so the
             // warning shows even once the player has seen the tab.
-            if (entity.isBopFull() || shouldPreSelectBopTab(entity, (ServerPlayer) player)) {
+            if (entity.isBopFull()) {
+                entity.menus.showUI(
+                        (ServerPlayer) player,
+                        OpenFlagMenuMessage.BOP,
+                        entity.getInfo(),
+                        entity.getBlocksOfProgress()
+                );
+            } else if (entity.getInfo().hasIncompleteQuests()) {
+                // Day-1 playtest: opening the flag on the multi-status overview shows no tab
+                // selected and nothing to see. When there are incomplete quests, open the quests
+                // tab (the one with "stuff to see") so the quests tab is selected and its content
+                // is visible on first open.
+                entity.menus.showUI(
+                        (ServerPlayer) player,
+                        OpenFlagMenuMessage.QUESTS,
+                        entity.getInfo(),
+                        entity.getBlocksOfProgress()
+                );
+            } else if (shouldPreSelectBopTab(entity, (ServerPlayer) player)) {
                 entity.menus.showUI(
                         (ServerPlayer) player,
                         OpenFlagMenuMessage.BOP,

@@ -63,7 +63,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         super.imageWidth = 256;
         super.imageHeight = 220;
         this.background = JEI.getRecipeBackground();
-        this.tabs = FlagTabs.forMenu(menu);
+        this.tabs = FlagTabs.forMenu(menu, "tooltips.crafting");
         this.flagPos = menu.getFlagInfo().flagPos();
         // "Begin moving" recalls the townsfolk and relocates the town - meaningless with
         // zero villagers, so hide it until one has joined (same gate as the villagers tab).

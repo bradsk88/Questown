@@ -471,6 +471,23 @@ it the menu degrades to the wire's static stats data instead of crashing.
   → `FlagMenus`/`TownBlockofProgressMenu` → `TownBlockofProgressScreen`, which
   renders an "Earned by: Baker x2" line under the block (`menu.block_of_progress.earned_by`,
   roots as `jobs.<root>` keys, counts collapsed to `xN`).
+
+# Flag tab selection: the open tab is now highlighted (2026-10-11 evening)
+
+The flag menu tabs were never highlighted: `FlagTabs.build` set the `Tab.selected`
+field to `(fn == null)` (i.e. "is this tab disabled"), which is `false` for every
+enabled tab, so `Tabs.draw` (which picks the highlight art from `selected()`) never
+highlighted anything. Now `FlagTabs` takes an `activeTabKey` and sets
+`selected = activeTabKey.equals(titleKey)`; each of the 5 flag screens passes its
+own key via a new `FlagTabs.forMenu(menu, activeTabKey)` overload
+(`tooltips.quests` / `.villagers` / `.economics` / `.blocks_of_progress` / `.crafting`),
+so the open tab is highlighted. `QuestsScreen.forTown` marks quests; `forVillager`
+uses `VillagerTabs` (untouched).
+
+First-open tab: `TownFlagBlock`'s right-click path now opens the **QUESTS** tab when
+`getInfo().hasIncompleteQuests()` (after the BOP-full branch, before the BOP
+pre-select), so a fresh flag opens on the quests the player can see instead of the
+empty multi-status overview.
 - **Empty job board is no longer a blank pane.** `WorkScreen` draws two wrapped
   lines (`job_board.empty.1`/`job_board.empty.2`) when `work.isEmpty()`,
   replacing the empty scroll area with an explanation of what requests do.

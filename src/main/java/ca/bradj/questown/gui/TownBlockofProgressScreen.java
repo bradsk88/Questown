@@ -43,7 +43,7 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
         super.imageHeight = 220;
 
         this.background = JEI.getRecipeBackground();
-        this.tabs = FlagTabs.forMenu(menu);
+        this.tabs = FlagTabs.forMenu(menu, "tooltips.blocks_of_progress");
     }
 
     @Override

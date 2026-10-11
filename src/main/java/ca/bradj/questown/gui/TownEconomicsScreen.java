@@ -32,7 +32,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         super.imageWidth = 256;
         super.imageHeight = 220;
 
-        this.tabs = FlagTabs.forMenu(menu);
+        this.tabs = FlagTabs.forMenu(menu, "tooltips.economics");
     }
 
     @Override

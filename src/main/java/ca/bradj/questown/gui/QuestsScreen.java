@@ -532,7 +532,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             Inventory playerInv,
             Component title
     ) {
-        return new QuestsScreen<>(container, playerInv, title, FlagTabs.forMenu(container));
+        return new QuestsScreen<>(container, playerInv, title, FlagTabs.forMenu(container, "tooltips.quests"));
     }
 
     public static QuestsScreen<VillagerQuestsContainer> forVillager(
