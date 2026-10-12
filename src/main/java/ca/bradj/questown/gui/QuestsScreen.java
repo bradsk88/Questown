@@ -2,6 +2,7 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
@@ -265,6 +266,19 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             case ROOM -> {
                 if (SpecialQuests.CAMPFIRE.equals(recipe.getWantedId())) {
                     yield ImmutableList.of(Compat.translatable("menu.quests.campfire_quest"));
+                }
+                // RoomBlock quests (roomblock-quests-custom-place-tooltip.md): the quest is
+                // about placing a functional block, not crafting/collecting an item to hold.
+                // The location clause differs per block - the welcome mat has a specific
+                // role ("at your town's entrance"); the others are free placement
+                // ("in your town", registers to the flag via the item's NBT).
+                if (SpecialQuests.TOWN_GATE.equals(recipe.getWantedId())) {
+                    yield ImmutableList.of(Compat.translatable("menu.quests.roomblock.welcome_mat"));
+                }
+                if (SpecialQuests.JOB_BOARD.equals(recipe.getWantedId())
+                        || RoomBlock.isBlockRoom(recipe.getWantedId())) {
+                    yield ImmutableList.of(Compat.translatable(
+                            "menu.quests.roomblock.town", RoomRecipes.getName(recipe.getWantedId())));
                 }
                 yield ImmutableList.of(Compat.translatable("menu.quests.room_quest"));
             }

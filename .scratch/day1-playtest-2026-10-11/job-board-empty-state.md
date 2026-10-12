@@ -1,6 +1,6 @@
 ---
 title: Job board menu needs an empty state explaining requests
-status: ready-for-agent
+status: ready-for-human
 created: 2026-10-11
 ---
 
@@ -54,3 +54,23 @@ offers the top unmet-need from the flag's unmet-need list; keep the generic
 two lines only when no need exists at all. The `#questown:villager_food`
 free-food claim card (free-food-economics-card.md) is the precedent for
 riding an unmet-need entry in the UI.
+
+## Implementation (2026-10-13)
+
+- `TownFlagBlockEntity.topUnmetNeedName()`: refreshes the economics aggregate,
+  takes the max-`timesNeeded` entry, resolves it to a player-readable display name
+  via `Ingredients.fromString` + `Ingredients.getName` (handles both item keys and
+  tag keys like `#minecraft:coals`).
+- `TownWorkHandle.openMenuRequested`: when `requestedResults` is empty, the top
+  need name is written as a trailing `writeUtf` slot in the container NBT (empty
+  string otherwise); `ForClientSide` reads it.
+- `WorkScreen` empty state: with a top need, line 2 becomes
+  `job_board.empty.top_need` ("A townie in town needs %s. Use the + button to
+  request it - a townie will make or find it."); without one, the generic
+  `job_board.empty.2` teaser remains.
+- `TownWorkContainerTopNeedTest`: Utf-slot round trip + constructor null/empty
+  contracts. The full ForClientSide round trip needs the work-results write, which
+  pushes Ingredients through Neo's item-registry ID codec — refused for a
+  registry Neo has not marked synced (vanilla's BuiltInRegistries.ITEM is never
+  marked synced outside a running mod-load), so the full path is covered by the
+  held playtest instead.

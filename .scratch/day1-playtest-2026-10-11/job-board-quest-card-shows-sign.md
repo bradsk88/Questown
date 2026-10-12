@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: ready-for-human
 origin: 2026-10-12 playtest — user chat 17:39:17 ("The job board quest shows a vanilla sign as the 'needed block' it should show the job board")
 ---
 
@@ -33,3 +33,11 @@ diff against: its card shows the room's real block.
 
 - Companion to `roomblock-quests-custom-place-tooltip.md` (placement
   tooltip) and the flavor-text fix that now points at the crafting tab.
+
+## Implementation (2026-10-13)
+
+`UIQuest.fromLevel` now overrides the `SpecialQuests.JOB_BOARD` recipe in the rMap with
+`RoomRecipes.standard(JOB_BOARD, NonNullList.withSize(1, Ingredient.of(JOB_BOARD_BLOCK)))`,
+so the card icon is the board item, not the blueprint's sign ingredient. The map builder was
+switched from `build()` to `buildKeepingLast()` to tolerate the deliberate override.
+Compile-verified; visual confirmation pending held run.

@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: ready-for-human
 origin: 2026-10-12 playtest — user chat 17:42:04
 ---
 
@@ -22,3 +22,22 @@ Options:
 
 Companion to `campfire-sleep-hint-unclear.md` (hint wording) — this one is
 the distance rule itself.
+
+## Implementation (2026-10-13)
+
+Root cause (verified in 1.20.6 bytecode): `ServerPlayer.startSleepInBed` →
+`bedInRange` → `isReachableBedBlock` rejects the bed when head/foot are >3 blocks
+(x/z) / >2 (y) from the player. `findSafeSleepPosition` picked the first safe
+direction in `Direction.Plane.HORIZONTAL` iteration order (always NORTH) — when the
+player stands on the opposite side of the campfire, the bed head is 4-6 blocks away
+and every sleep attempt fails with TOO_FAR_AWAY despite the player being right next
+to the fire.
+
+Fix: `findSafeSleepPosition(level, campfirePos, playerPos)` scores all safe
+candidates by distance to the player and picks the closest (bed lands on the
+player's side of the fire, reachable from any position within 4.5-block interact
+reach). The old 2-arg overload delegates with the campfire centre as the "player"
+point (equidistant → first-safe-side, preserving the test-seam behavior
+`placeTempBedForTest` uses). `beginCampfireSleep` now passes `player.position()`.
+New `CampfireSleepSideTest` (4 tests, mocked level). No bed version of this path
+exists (Questown sleep is campfire-only).

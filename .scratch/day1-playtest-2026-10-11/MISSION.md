@@ -427,3 +427,48 @@ Remaining queue: held-run verification of the seven new features
 this fuel surfacing) → instrumented seeking-work room investigation →
 (option a decision-layer rewrite of the fuel semantics, if (b) proves
 insufficient) → small UI batch → fresh playtest.
+
+## Session state (2026-10-13, night 3) — small UI batch: 5 tickets implemented
+
+All five small-UI tickets implemented and green (full suite
+**1203 tests / 0 failures / 52 skipped** — up from 1195). All tickets
+flipped to `ready-for-human` with implementation notes; visual
+confirmation pending the held run:
+
+1. **roomblock-quests-custom-place-tooltip** — `QuestsScreen.renderCardTooltip`
+   ROOM case: `TOWN_GATE` → `menu.quests.roomblock.welcome_mat`; `JOB_BOARD`/
+   `RoomBlock.isBlockRoom` → `menu.quests.roomblock.town` with
+   `RoomRecipes.getName(wantedId)`; campfire branch unchanged.
+2. **job-board-quest-card-shows-sign** — `UIQuest.fromLevel` overrides the
+   `JOB_BOARD` rMap entry with a single-ingredient recipe of
+   `JOB_BOARD_BLOCK` (`buildKeepingLast()` for the deliberate duplicate); card
+   now shows the board item, not the blueprint's sign ingredient.
+3. **flag-crafting-ui-tooltips-and-border** — border switched to
+   `JEI.getRecipeGuiBackground()` (shared flag-UI nine-nine); 1.20.6 gives free
+   tooltips only to container slots, so `renderRecipeRow` shows
+   `Compat.getItemName(stack)` when the cursor is over the 16x16 input/output
+   icon boxes.
+4. **campfire-sleep-feels-close-enough** — root cause in 1.20.6 bytecode:
+   `ServerPlayer.startSleepInBed` → `bedInRange` → `isReachableBedBlock`
+   rejects a bed >3 blocks (x/z) / >2 (y) from the player. The old
+   `findSafeSleepPosition` picked the first safe direction in iteration order
+   (always NORTH); the bed on the far side was 4-6 blocks away →
+   `TOO_FAR_AWAY` from an adjacent position. Now candidates are scored by
+   `playerPos.distanceToSqr(head)` and the closest safe side wins (bed on the
+   player's side of the fire); the 2-arg overload (test seam
+   `placeTempBedForTest`) keeps first-safe-side. `CampfireSleepSideTest` (4
+   tests, mocked open-air level).
+5. **job-board-empty-state** — `TownFlagBlockEntity.topUnmetNeedName()` (economics
+   aggregate, max timesNeeded, resolved through `Ingredients.fromString` /
+   `getName` so tag keys read as "Coal"); written as a trailing `writeUtf` slot
+   from `TownWorkHandle.openMenuRequested` when the board is empty;
+   `WorkScreen`'s empty state renders `job_board.empty.top_need` instead of the
+   generic teaser when the name is present. Testable portion only
+   (`TownWorkContainerTopNeedTest`: Utf slot + constructor contract) — the full
+   ForClientSide round trip pushes Ingredients through Neo's registry ID codec,
+   which refuses a registry Neo has not marked synced outside a running
+   mod-load; held playtest covers the rest.
+
+Next: prep the commit (COMPLEX.md entries written under
+`gui/COMPLEX.md` "Day-1 playtest batch 3") → held-run verification of the
+accumulated feature list → instrumented seeking-work room investigation.

@@ -120,9 +120,15 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
                             @NotNull Player p
                     ) {
                         AddWorkContainer r = new AddWorkContainer(windowId, allOutputs, flagPos);
+                        // Empty-state guidance (job-board-empty-state.md): when the board has no
+                        // pending requests, hand the client the top unmet need so the screen can
+                        // point at posting it instead of a vague teaser.
+                        String topNeed = requestedResults.isEmpty()
+                                ? (parent.topUnmetNeedName() == null ? "" : parent.topUnmetNeedName())
+                                : "";
                         return new TownWorkContainer(
                                 windowId, requestedResults.stream().map(UIWork::new).toList(), r,
-                                flagPos, skipToAdd, parent.isBoardAutoRequest()
+                                flagPos, skipToAdd, parent.isBoardAutoRequest(), topNeed
                         );
                     }
                 }, data -> {
@@ -132,6 +138,9 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
                     TownWorkContainer.writeFlagPosition(flagPos, data);
                     data.writeBoolean(skipToAdd);
                     data.writeBoolean(parent.isBoardAutoRequest());
+                    data.writeUtf(requestedResults.isEmpty()
+                            ? (parent.topUnmetNeedName() == null ? "" : parent.topUnmetNeedName())
+                            : "");
                 }
         );
     }

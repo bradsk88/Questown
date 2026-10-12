@@ -25,6 +25,9 @@ public class TownWorkContainer extends AbstractContainerMenu {
     // render it. Optimistically flipped on click; the server re-opens the menu afterwards
     // so any drift resyncs.
     private boolean boardAutoRequest;
+    // The flag's top unmet-need display name (or empty when there is none), so the board's
+    // empty state can point at posting it instead of a vague teaser (job-board-empty-state.md).
+    private final String topUnmetNeedName;
 
     public static TownWorkContainer ForClientSide(
             int windowId,
@@ -40,7 +43,8 @@ public class TownWorkContainer extends AbstractContainerMenu {
                 windowId, readWork(buf), qMenu,
                 readFlagPosition(buf),
                 buf.readBoolean(),
-                buf.readBoolean()
+                buf.readBoolean(),
+                buf.readUtf()
         );
     }
 
@@ -56,12 +60,25 @@ public class TownWorkContainer extends AbstractContainerMenu {
             boolean skipToAdd,
             boolean boardAutoRequest
     ) {
+        this(windowId, quests, awc, flag, skipToAdd, boardAutoRequest, "");
+    }
+
+    public TownWorkContainer(
+            int windowId,
+            Collection<UIWork> quests,
+            AddWorkContainer awc,
+            BlockPos flag,
+            boolean skipToAdd,
+            boolean boardAutoRequest,
+            String topUnmetNeedName
+    ) {
         super(MenuTypesInit.TOWN_WORK.get(), windowId);
         this.work = quests;
         this.addWorkContainer = awc;
         this.flag = flag;
         this.skipToAdd = skipToAdd;
         this.boardAutoRequest = boardAutoRequest;
+        this.topUnmetNeedName = topUnmetNeedName == null ? "" : topUnmetNeedName;
     }
 
     public static Collection<UIWork> readWork(FriendlyByteBuf data) {
@@ -116,6 +133,11 @@ public class TownWorkContainer extends AbstractContainerMenu {
 
     public boolean isBoardAutoRequest() {
         return boardAutoRequest;
+    }
+
+    /** The flag's top unmet-need display name; empty string when there is none. */
+    public String getTopUnmetNeedName() {
+        return topUnmetNeedName;
     }
 
     public void setBoardAutoRequest(boolean v) {

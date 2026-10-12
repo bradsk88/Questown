@@ -2025,6 +2025,40 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return boardAutoRequest;
     }
 
+    /**
+     * The flag's top unmet item need, as a player-readable display name, or null when the
+     * unmet-need record is empty (job-board-empty-state.md: the board's empty state should
+     * point at posting the top requestable need instead of a vague teaser). Ties on
+     * timesNeeded resolve to the first entry; the economics aggregate is refreshed first so
+     * it reflects needs registered up to this tick.
+     */
+    public @Nullable String topUnmetNeedName() {
+        economics.update();
+        var items = economics.getAggregatedItems(null);
+        if (items == null || items.isEmpty()) {
+            return null;
+        }
+        String topKey = null;
+        int topCount = -1;
+        for (ca.bradj.questown.gui.ItemEconomicsData d : items) {
+            if (d.timesNeeded() > topCount) {
+                topCount = d.timesNeeded();
+                topKey = d.ingredientKey();
+            }
+        }
+        if (topKey == null || topKey.isEmpty()) {
+            return null;
+        }
+        try {
+            return ca.bradj.questown.gui.Ingredients
+                    .getName(ca.bradj.questown.gui.Ingredients.fromString(topKey))
+                    .getString();
+        } catch (Exception e) {
+            QT.FLAG_LOGGER.debug("topUnmetNeedName: could not resolve need key {}", topKey, e);
+            return topKey;
+        }
+    }
+
     public void setBoardAutoRequest(boolean v) {
         this.boardAutoRequest = v;
     }

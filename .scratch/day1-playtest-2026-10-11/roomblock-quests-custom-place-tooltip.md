@@ -1,6 +1,6 @@
 ---
 title: 'RoomBlock quests should have a custom "Place a [X] ..." tooltip'
-status: ready-for-agent
+status: ready-for-human
 created: 2026-10-11
 ---
 
@@ -42,3 +42,16 @@ name feeds the "[X]". Ties into `job-board-should-be-roomblock.md` (the board
 becomes a craft-at-flag → place-a-block quest). Open flags to verify at
 implementation: does placement need a radius check, and is "in your town" purely
 cosmetic?
+
+## Implementation (2026-10-13)
+
+`QuestsScreen.renderCardTooltip` ROOM case now branches on the wanted ID before the
+generic room line:
+- `SpecialQuests.TOWN_GATE` → `menu.quests.roomblock.welcome_mat`: "Place the welcome mat at
+  your town's entrance - it marks where new villagers arrive."
+- `SpecialQuests.JOB_BOARD` or `RoomBlock.isBlockRoom(id)` (mineshaft, fishing station, any
+  `block_room/*`) → `menu.quests.roomblock.town` with `RoomRecipes.getName(wantedId)`:
+  "Place a %s in your town - this registers it with the town flag automatically."
+- campfire keeps its existing branch; everything else keeps `menu.quests.room_quest`.
+
+New lang keys added to en_us.json. Compile-verified; visual confirmation pending held run.

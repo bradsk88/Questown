@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: ready-for-human
 origin: 2026-10-12 playtest — user chat 17:32:07
 ---
 
@@ -18,3 +18,16 @@ Two observations on the flag's crafting tab (`FlagCraftingScreen`):
 Check `FlagCraftingScreen` vs `QuestsScreen` (and the shared frame helper in
 `RenderUtil`/`Tabs`) for the border draw; tooltips follow the existing
 `renderCraftTooltip` pattern already present for the button.
+
+## Implementation (2026-10-13)
+
+Two changes in `FlagCraftingScreen`:
+1. **Border**: `this.background` switched from `JEI.getRecipeBackground()` (dark variant,
+   only the crafting tab used it) to `JEI.getRecipeGuiBackground()` — the same nine-nine
+   the quests tab and every other flag screen use.
+2. **Item tooltips**: 1.20.6 only gives free tooltips to container slots; the rendered
+   recipe-row icons had none. `renderRecipeRow` now takes mouseX/mouseY and calls
+   `showTooltip(Compat.getItemName(stack))` when the cursor is over the 16x16 input box
+   (`x + MARGIN`) or output box (`x + 50`). The Craft buttons already had their own
+   tooltips.
+Compile-verified; visual confirmation pending held run.

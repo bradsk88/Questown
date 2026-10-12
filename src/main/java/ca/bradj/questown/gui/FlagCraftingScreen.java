@@ -64,7 +64,10 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         super(menu, playerInv, title);
         super.imageWidth = 256;
         super.imageHeight = 220;
-        this.background = JEI.getRecipeBackground();
+        // The crafting tab shares the flag UI's border treatment (the lighter recipe-GUI
+        // nine-nine the quests tab uses); the darker recipe-background variant read as a
+        // faded border mismatch (flag-crafting-ui-tooltips-and-border.md).
+        this.background = JEI.getRecipeGuiBackground();
         this.tabs = FlagTabs.forMenu(menu, "tooltips.crafting");
         this.flagPos = menu.getFlagInfo().flagPos();
         // "Begin moving" recalls the townsfolk and relocates the town - meaningless with
@@ -218,9 +221,9 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
 
         ctx.darkTextWrap(new Coordinate(bgX + MARGIN, bgY + titleY), TEXT_WIDTH, title());
 
-        renderRecipeRow(ctx, bgX, bgY + row1Y, Items.STICK.getDefaultInstance(), new ItemStack(ItemsInit.TOWN_WAND.get()));
-        renderRecipeRow(ctx, bgX, bgY + row2Y, Items.OAK_PRESSURE_PLATE.getDefaultInstance(), new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()));
-        renderRecipeRow(ctx, bgX, bgY + row3Y, Items.OAK_SIGN.getDefaultInstance(), new ItemStack(ItemsInit.JOB_BOARD_BLOCK.get()));
+        renderRecipeRow(ctx, bgX, bgY + row1Y, Items.STICK.getDefaultInstance(), new ItemStack(ItemsInit.TOWN_WAND.get()), mouseX, mouseY);
+        renderRecipeRow(ctx, bgX, bgY + row2Y, Items.OAK_PRESSURE_PLATE.getDefaultInstance(), new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()), mouseX, mouseY);
+        renderRecipeRow(ctx, bgX, bgY + row3Y, Items.OAK_SIGN.getDefaultInstance(), new ItemStack(ItemsInit.JOB_BOARD_BLOCK.get()), mouseX, mouseY);
 
         if (showMove) {
             ctx.darkTextWrap(new Coordinate(bgX + MARGIN, bgY + moveDescY), TEXT_WIDTH, moveDesc());
@@ -237,10 +240,31 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         }
     }
 
-    private void renderRecipeRow(RenderContext ctx, int x, int iconY, ItemStack input, ItemStack output) {
+    private void renderRecipeRow(
+            RenderContext ctx,
+            int x,
+            int iconY,
+            ItemStack input,
+            ItemStack output,
+            int mouseX,
+            int mouseY
+    ) {
         ctx.renderItemAndDecorations(input, x + MARGIN, iconY + 2);
         ctx.darkText("→", x + 36, iconY + 6);
         ctx.renderItemAndDecorations(output, x + 50, iconY + 2);
+        // 1.20.6: item tooltips come free only for container slots - the rendered icons
+        // need their own (flag-crafting-ui-tooltips-and-border.md): what the input is, what
+        // you get.
+        if (mouseInside(mouseX, mouseY, x + MARGIN, iconY + 2)) {
+            showTooltip(Compat.getItemName(input));
+        } else if (mouseInside(mouseX, mouseY, x + 50, iconY + 2)) {
+            showTooltip(Compat.getItemName(output));
+        }
+    }
+
+    /** The 16x16 icon box at (x, y). */
+    private static boolean mouseInside(int mouseX, int mouseY, int x, int y) {
+        return mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16;
     }
 
     @Override

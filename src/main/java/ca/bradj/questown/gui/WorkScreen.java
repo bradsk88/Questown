@@ -153,12 +153,17 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
 
         if (work.isEmpty()) {
             // Day-1 playtest: an empty board gave no hint at what requests are or how to add
-            // one. Two short lines, wrapped.
+            // one. Reopened 2026-10-12: when the town has a top unmet need, the empty state
+            // points at posting it instead of the vague teaser (job-board-empty-state.md).
             Coordinate emptyTop = new Coordinate(x, y + PAGE_PADDING);
+            String topNeed = menu.getTopUnmetNeedName();
             y += ctx.darkTextWrap(emptyTop, backgroundWidth - (PAGE_PADDING * 2),
                     Compat.translatable("job_board.empty.1"));
+            Component second = topNeed == null || topNeed.isEmpty()
+                    ? Compat.translatable("job_board.empty.2")
+                    : Compat.translatable("job_board.empty.top_need", topNeed);
             ctx.darkTextWrap(emptyTop.withY(y + 8), backgroundWidth - (PAGE_PADDING * 2),
-                    Compat.translatable("job_board.empty.2"));
+                    second);
         }
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();

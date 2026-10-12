@@ -17,6 +17,7 @@ import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.NonNullList;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -97,7 +98,17 @@ public class UIQuest implements Comparable<UIQuest> {
             rMapB.put(RoomBlock.getRoomId(vv), vv.asRecipe());
         });
         level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.id(), v.value()));
-        ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
+        // The basics-batch board quest carries the legacy blueprint room recipe id
+        // (questown:job_board = sign + log room); the card should show the block the
+        // player actually crafts and places - the job board block itself, not a sign
+        // (job-board-quest-card-shows-sign.md). Override after the level recipes and
+        // keep the last write for this one deliberate duplicate (no other id is
+        // duplicated across the three sources).
+        rMapB.put(SpecialQuests.JOB_BOARD, RoomRecipes.standard(
+                SpecialQuests.JOB_BOARD,
+                NonNullList.withSize(1, Ingredient.of(ItemsInit.JOB_BOARD_BLOCK.get()))
+        ));
+        ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.buildKeepingLast();
 
         return aQ.stream().map(z -> {
             Quest<ResourceLocation, MCRoom> v = z.getKey();

@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
@@ -53,7 +54,7 @@ public class CampfireSleepHandler {
         // breaks worlds that legitimately have more than one campfire within the
         // flag's search radius.
 
-        BlockPos headPos = findSafeSleepPosition(level, campfirePos);
+        BlockPos headPos = findSafeSleepPosition(level, campfirePos, player.position());
         if (headPos == null) {
             Util.onScreenText(() -> player, "message.wand.campfire.no_safe_position");
             return;
@@ -69,8 +70,7 @@ public class CampfireSleepHandler {
         campfireSleepers.add(uuid);
         tempBedPositions.put(uuid, headPos);
         tempBedFacings.put(uuid, facing);
-        campfirePositions.put(uuid, campfirePos);
-        sleepingFlagPositions.put(uuid, parent.getBlockPos());
+        campfirePositions.put(uuid, campfirePos);        sleepingFlagPositions.put(uuid, parent.getBlockPos());
 
         placeTempBed(level, headPos, facing);
 
@@ -104,15 +104,38 @@ public class CampfireSleepHandler {
     }
 
     static @Nullable BlockPos findSafeSleepPosition(Level level, BlockPos campfirePos) {
+        // No-player overload (test seams): the campfire centre is equidistant from every
+        // candidate head, so strict-< keeps the first safe direction in iteration order -
+        // the pre-player-aware behavior.
+        return findSafeSleepPosition(level, campfirePos, Vec3.atCenterOf(campfirePos));
+    }
+
+    /**
+     * Pick the safe bed spot CLOSEST to the player (campfire-sleep-feels-close-enough.md).
+     * Vanilla's startSleepInBed rejects the bed with TOO_FAR_AWAY when the head/foot blocks
+     * are more than 3 blocks (x/z) / 2 (y) from the player (ServerPlayer.isReachableBedBlock);
+     * with the bed on the far side of the campfire that distance grows to 4-6 and every
+     * sleep attempt fails even though the player is standing right next to the fire. Scoring
+     * candidates by distance to the player puts the bed on the player's side of the fire,
+     * which is reachable from any position the player could have right-clicked the
+     * campfire from (4.5-block interact reach).
+     */
+    static @Nullable BlockPos findSafeSleepPosition(Level level, BlockPos campfirePos, Vec3 playerPos) {
+        BlockPos best = null;
+        double bestDistSq = Double.MAX_VALUE;
         for (Direction dir : Direction.Plane.HORIZONTAL) {
             BlockPos footCandidate = campfirePos.relative(dir);
             BlockPos headCandidate = footCandidate.relative(dir);
             if (!isSafeToLieOn(level, footCandidate) || !isSafeToLieOn(level, headCandidate)) {
                 continue;
             }
-            return headCandidate;
+            double distSq = playerPos.distanceToSqr(Vec3.atCenterOf(headCandidate));
+            if (distSq < bestDistSq) {
+                bestDistSq = distSq;
+                best = headCandidate;
+            }
         }
-        return null;
+        return best;
     }
 
     private static boolean isSafeToLieOn(Level level, BlockPos pos) {

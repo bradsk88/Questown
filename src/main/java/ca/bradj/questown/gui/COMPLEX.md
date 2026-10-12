@@ -531,6 +531,49 @@ empty multi-status overview.
   `computeTabDecisions`). `FlagInfo` gained the `bonusFoodAvailable` boolean
   (wire position: after `bopFull`).
 
+## Day-1 playtest batch 3 (2026-10-13): room-block tooltips, board empty state, crafting tooltips
+
+- **Room-block quests get a place-verb tooltip.** `QuestsScreen.renderCardTooltip`
+  ROOM case branches on the wanted ID before the generic room line: `TOWN_GATE` →
+  `menu.quests.roomblock.welcome_mat` (specific role: "at your town's entrance");
+  `JOB_BOARD` or `RoomBlock.isBlockRoom(id)` → `menu.quests.roomblock.town` with
+  `RoomRecipes.getName(wantedId)` (free placement: "in your town"); campfire keeps
+  its own branch. The quest is about *placing a functional block*, not holding an
+  item.
+- **Job-board quest card shows the board, not a sign.** `UIQuest.fromLevel` overrides
+  the `SpecialQuests.JOB_BOARD` rMap entry with
+  `RoomRecipes.standard(JOB_BOARD, NonNullList.withSize(1, Ingredient.of(JOB_BOARD_BLOCK)))`
+  (the blueprint recipe `questown:job_board.json` is a sign-room recipe and leaked its
+  ingredient onto the card); the builder uses `buildKeepingLast()` for the deliberate
+  duplicate.
+- **The board's empty state points at the top unmet need.**
+  `TownFlagBlockEntity.topUnmetNeedName()` (economics aggregate, max timesNeeded,
+  resolved through `Ingredients.fromString`/`getName` so tag keys like
+  `#minecraft:coals` read as "Coal"); `TownWorkHandle.openMenuRequested` writes it as
+  a trailing `writeUtf` slot when `requestedResults` is empty; `WorkScreen`'s empty
+  state renders `job_board.empty.top_need` ("A townie in town needs %s...Use the +
+  button") instead of the generic teaser when non-empty. Testable without mod-load:
+  only the Utf slot + constructor contract (`TownWorkContainerTopNeedTest`) — the
+  full ForClientSide round trip pushes Ingredients through Neo's registry ID codec,
+  which refuses a registry Neo has not marked synced (vanilla `BuiltInRegistries.ITEM`
+  is never synced outside a running mod-load).
+- **Flag-crafting tab: shared border + item tooltips.** `FlagCraftingScreen.background`
+  switched to `JEI.getRecipeGuiBackground()` (the darker `getRecipeBackground()`
+  was crafting-tab-only and read as a faded border mismatch); 1.20.6 gives free
+  tooltips only to container slots, so `renderRecipeRow` now calls
+  `showTooltip(Compat.getItemName(stack))` when the cursor is inside the 16x16 input
+  (`x + MARGIN`) or output (`x + 50`) icon box.
+- **Campfire sleep: the bed lands on the player's side.** Vanilla's
+  `ServerPlayer.startSleepInBed` → `bedInRange` → `isReachableBedBlock` rejects a bed
+  >3 blocks (x/z) / >2 (y) from the player (`TOO_FAR_AWAY`); the old
+  `findSafeSleepPosition` picked the first safe direction in
+  `Direction.Plane.HORIZONTAL` order (always NORTH), so a player on the opposite
+  side of the fire saw the bed 4-6 blocks away and every attempt failed. Now it
+  scores all safe candidates by `playerPos.distanceToSqr(head)` and takes the closest;
+  the 2-arg overload (test seam `placeTempBedForTest`) delegates with the campfire
+  centre → first-safe-side, preserving the autotest scenario. `CampfireSleepSideTest`
+  pins the side choice on a mocked open-air level.
+
 ## Leaver-return progress bar (G3, 2026-10-12): the payload carries an absolute tick
 
 The villagers-menu leaver-return bar (`MultiStatusScreen.renderLeaverReturnBar`)
