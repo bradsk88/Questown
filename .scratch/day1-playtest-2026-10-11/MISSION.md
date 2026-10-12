@@ -408,3 +408,22 @@ Remaining queue: held-run verification of the six new features
 (E1/F2/D#2/messages-twice/jobs-tooltip/onboarding-guarantee + this gate) →
 instrumented seeking-work room investigation → fuel/coal decision layer →
 small UI batch → fresh playtest.
+
+## Session state (2026-10-13, night 2) — Q3 resolved as (b)
+
+**Smelter fuel surfacing shipped** (user ruling: "I'd try b first for sure" —
+surviving layer only, `RoomsWithWorkableStatefulBlocks` untouched): commit
+`f1b5967c`.
+- Unlit `AbstractFurnaceBlock` in the base room of a `furnace_smelt_warp`
+  job whose room check failed → `JobFacts.blockedOnLabel =
+  #minecraft:coals` → `GateReason.Blocked` → item store: UNMET_ITEM bubble
+  names coal + econ tab lists it. Lit smelter not misnamed.
+- `SmelterFuelGateReasonTest`; full suite 1195/0/52skipped.
+- In-game check owed with the rest: a cook blocked on coal shows the bubble
+  + econ entry; refueling clears it.
+
+Remaining queue: held-run verification of the seven new features
+(E1/F2/D#2/messages-twice/jobs-tooltip/onboarding-guarantee/skills-gate +
+this fuel surfacing) → instrumented seeking-work room investigation →
+(option a decision-layer rewrite of the fuel semantics, if (b) proves
+insufficient) → small UI batch → fresh playtest.
