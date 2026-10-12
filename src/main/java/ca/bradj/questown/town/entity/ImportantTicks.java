@@ -121,7 +121,6 @@ public class ImportantTicks {
 
         // Not on downtime - use existing job to compute tick spacing
         w.recomputeNow();
-        // Pass a large ticksElapsed to bypass the preferredBuffer check during warp.
         // Use a virtual morning time to ensure canFit() doesn't reject jobs during warp.
         // The actual game tick when warp happens is irrelevant for tick spacing calculation.
         JobID resolvedJob = w.getRandomFinishableWork(jobID, new Signals.DayTime(1000), ticksPassed);

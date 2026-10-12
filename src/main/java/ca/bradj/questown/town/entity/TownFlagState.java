@@ -282,7 +282,6 @@ public class TownFlagState {
      */
     private static Work createWork(TownFlagBlockEntity e, ServerLevel sl) {
         return new Work() {
-            private final TownVillagerData.FallbackSelector fallbackSelector = new TownVillagerData.FallbackSelector();
 
             @Override
             public void recomputeNow() {
@@ -313,18 +312,6 @@ public class TownFlagState {
                 );
                 if (work != null) {
                     return work;
-                }
-
-                JobID fallback = fallbackSelector.tryFallback(
-                        (int) ticksElapsed, currentJob, canFit, canAlwaysStart, requestedResults, td,
-                        e.getPossibleWork().getFor(currentJob),
-                        jobs -> Compat.shuffle(jobs.iterator(), sl)
-                );
-                if (fallback != null) {
-                    return fallback;
-                }
-                if (fallbackSelector.isBuffering()) {
-                    return currentJob;
                 }
                 return null;
             }

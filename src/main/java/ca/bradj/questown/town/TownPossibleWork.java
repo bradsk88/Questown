@@ -234,6 +234,11 @@ public class TownPossibleWork {
             long tick = Util.getTick(sl);
             JobPossibility best = unfilteredJobs.stream()
                     .filter(p -> p.facts() != null && p.board() != null)
+                    // Town-level needs must come from a variant the town can actually run:
+                    // at least one villager has unlocked it. Without this, locked tool
+                    // variants (e.g. gatherer:axe on day one) register needs the town can
+                    // never fill, because nobody may take that job (2026-10-13 econ-tab bug).
+                    .filter(p -> t.getVillagerHandle().isUnlocked(p.jobID()))
                     .max(
                             Comparator
                                     .comparingDouble((JobPossibility p) -> -p.score.value)

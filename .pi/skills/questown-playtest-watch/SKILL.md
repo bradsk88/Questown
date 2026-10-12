@@ -108,3 +108,9 @@ server would let them verify.
 - **`pgrep -f` phantom** — it can return your own bash pid; recheck.
 - **Fresh from-zero world: `rm -rf run/world run-client/saves`** before launch,
   and verify the new server's boot timestamp beats the wipe.
+- **`_qtdev` output: grep the output marker, not the command text** — the log
+  lines are prefixed `[_qtdev ...]` (e.g. `grep -a '\[_qtdev inspect\]'`); the
+  command you fed is never echoed. (2026-10-13: grepping `inspect economy`
+  found nothing; `[_qtdev inspect]` found the tab dump.)
+- **`Fullness changed from N to N` no-op spam** buries inspect output (many
+  lines per second). Filter it: `grep -av 'Fullness'`.

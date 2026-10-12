@@ -194,7 +194,7 @@ flowchart TD
     Board --> Deposit["deposit carried work output\n-> nearest chest (counts as produced)"]
     Deposit --> Starve{"starving and not just\ngave up dining?"}
     Starve -- yes --> Direct
-    Starve -- no --> Roll["normal work roll / fallback"]
+    Starve -- no --> Roll["cycler work roll"]
 ```
 
 - The opt-in is the `CAN_INSTANTLY_SWITCH_TO_EATING` global rule; only
@@ -636,3 +636,17 @@ posted. Concretely:
   around it needs a town/econ harness and is verified in a held run.
 
 Ticket: `.scratch/day1-playtest-2026-10-11/demand-quest-constantly-replaced.md`.
+
+# FillHunger log — no-op guard (2026-10-12)
+
+`SimpleVillagerHandle.fillHunger` logged "Fullness changed from X to Y" on
+**every** call, including no-ops ("from 2500 to 2500") — dozens of lines per
+second across the roster, burying inspect output in held-run logs. The log now
+fires only when the stored value actually changes (or is first set). Pure
+logging; no state change.
+
+Companion to the same session's fallback retirement: the
+`TownVillagerData.FallbackSelector` removal from `changeJobForVisitorFromBoard`
+and the warp `getRandomFinishableWork` is documented in `town/COMPLEX.md`
+(work-selection bullets + unmet-need registration section).
+

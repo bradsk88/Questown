@@ -351,6 +351,20 @@ flowchart TD
   newly-minted hunter lands on base `hunter/sword` and does not climb the
   `sword_half_day` / `sword_full_day` tiers. The town-wide `isUnlocked` remains
   for the board/knowledge gate; the per-villager overload gates work selection.
+- The old `FallbackSelector` (the 2024 "preferred work" stopgap — after 100
+  cycler misses, shuffle the root's **whole** preferred list and hand the
+  townie any variant that fits the day) is **retired** (2026-10-12). It predated
+  the per-villager unlock system and escaped its filter: when nothing was
+  preselected (fresh day-one town), the fallback could seat a townie on a locked
+  tool variant (`gatherer:axe`), which then churning `NO_SUPPLIES` and seeded
+  the econ tab with unfillable needs (the 2026-10-11 playtest "economics tab
+  shows axes/fishing rods" bug; the 2024 in-code TODO predicted exactly this).
+  Both call sites — the board path (`TownFlagBlockEntity.changeJobForVisitorFromBoard`)
+  and the warp path (`TownFlagState.createWork.getRandomFinishableWork`) — now
+  stop at the cycler/preselected set: if it finds nothing, the board's idle-
+  downtime escape hook (or the warper's dynamic resolution, in warp) handles the
+  townie. The cycler already carries the fairness role the fallback's shuffle
+  was a stopgap for.
 
 ### Unmet-need registration: typed reason, idempotent enter/exit
 
@@ -392,6 +406,13 @@ the run-2 failure mode cannot recur by construction. The townie bubble and the
 econ queue both receive the record on first-enter only, **and only when it is a
 supply-item need** (`supplyItem()`); `clearUnmetItemNeeds` clears the tracker
 for the root the moment work exists again.
+
+The best-scoring pick is also gated on the **town-wide** `isUnlocked(JobID)` —
+at least one villager must personally be able to run that variant (2026-10-12).
+Without it, a root whose only viable path is a locked tool variant registered
+the variant's tool need for *every* townie of the root, even though nobody may
+take that job — the day-one econ tab showing `#questown:axes` / `#questown:
+fishing_rods` for a town whose gatherers only know tool-less `gather`.
 
 The pure classifier only receives labels and booleans: the town side supplies
 them from the registry-bound job data and container scans (`evaluateJob` /

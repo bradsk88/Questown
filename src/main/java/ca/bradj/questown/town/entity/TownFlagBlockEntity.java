@@ -203,7 +203,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         // ever feeds client-side bubble rendering, so a plain field write is safe here.
         readDeadDoors(tag);
     }
-    private final TownVillagerData.FallbackSelector fallbackSelector = new TownVillagerData.FallbackSelector();
     private final NoMCEconomics economics = new NoMCEconomics();
     final TownFlagTicker ticker = new TownFlagTicker();
 
@@ -904,7 +903,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             // The townie is being adopted into a **real work job** (not a meta-job like
             // DowntimeWork — those were handled by the earlier cascade gates). This is
             // their "I've earned a rest by working" signal — see DowntimeState (ca.bradj.questown.town.entity)
-            // and STATE.md § Mission. markWorked records the last-work tick, so a rest becomes so a rest becomes
+            // and STATE.md § Mission. markWorked records the last-work tick, so a rest becomes
             // available next once another NOON/downtime/sleep event anchors a "last rest"
             // tick and it is `maxTicksBeforeDowntime` ticks old.
             villagerHandle.markWorked(VillagerUUID.from(ownerUUID), tick);
@@ -912,18 +911,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return true;
         }
 
-        JobID fallback = fallbackSelector.tryFallback(
-                1, villager.getJobId(), canFit, canAlwaysStart, requestedResults, td,
-                possibleWork.getFor(villager.getJobId()),
-                jobs -> Compat.shuffle(jobs.iterator(), getServerLevel())
-        );
-        if (fallback != null) {
-            changeJob.accept(fallback);
-            return true;
-        }
-
-        // Escape hook: the board has no work and no fallback for this townie (the cycler and the
-        // fallback selector both found nothing), so they would otherwise idle without a job. If they
+        // Escape hook: the board has no work for this townie (the cycler found nothing), so they
+        // would otherwise idle without a job. If they
         // have rested long enough, rest instead of waiting forever — rule (b)'s "worked since the
         // last rest" gate does not apply when there is truly nothing to do. Guarded on
         // !DowntimeWork so a townie already resting on DowntimeWork is not re-adopted onto it.

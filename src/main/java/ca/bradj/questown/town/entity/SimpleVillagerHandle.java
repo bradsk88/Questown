@@ -365,7 +365,10 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     ) {
         // TODO: Get max fullness from villager
         int newHunger = (int) (percent * configs.baseFullness);
-        QT.VILLAGER_LOGGER.info("Fullness changed from {} to {}", fullness.get(uuid), newHunger);
+        Integer oldHunger = fullness.get(uuid);
+        if (oldHunger == null || oldHunger != newHunger) {
+            QT.VILLAGER_LOGGER.info("Fullness changed from {} to {}", oldHunger, newHunger);
+        }
         fullness.put(uuid, newHunger);
         if (percent > 0) {
             starving.put(uuid, false);
