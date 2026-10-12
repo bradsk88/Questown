@@ -174,3 +174,13 @@ needs-info cluster (8) awaits user observations; ready-for-human leftovers
 `change-job-quest-completes-on-bop-consumption` settled by E1,
 `quest-complete-chat-blast-pacing` settled by E2) flip to implemented on
 ship.
+
+## Walkthrough letter → ticket map (persisted 2026-10-13)
+
+- **A** — job board (`job-board-should-be-roomblock`, `job-board-organic-introduction`, `job-board-empty-state`, `job-board-no-requests-bubble`)
+- **B** — bedroom/sleep (`bedroom-quests-under-posted`, `two-villagers-after-first-sleep`, `flag-nbt-no-town-state-reset`)
+- **C** — economics (`C#1` `econ-tab-shows-locked-job-items`, `C#2` `free-food-economics-card` + `free-food-tab-red-dot`, `econ-tab-satisfied-need-lingers`)
+- **D** — onboarding (`D#1` auto-request, `D#2` `empty-room-as-early-quest`, `D#3` `onboarding-starting-trees-or-logs`)
+- **E** — reward timing (`change-job-quest-completes-on-bop-consumption`, `quest-complete-chat-blast-pacing`)
+- **F** — onboarding completeness (`flag-map-when-lost`, `job-board-organic-introduction`)
+- **G** — notification/UX polish (`flag-incomplete-quests-indicator`, `job-board-no-requests-bubble`, `flag-villager-leaver-return-progress-bar`)

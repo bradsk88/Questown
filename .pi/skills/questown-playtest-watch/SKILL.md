@@ -106,6 +106,7 @@ server would let them verify.
 - **`pkill -f` / `pgrep -f` self-match** — bracket the pattern (`[r]unServer`);
   a bare token in your own `bash -c` line kills your shell (exit 143).
 - **`pgrep -f` phantom** — it can return your own bash pid; recheck.
+- **FIFO writer pid (2026-10-13)**: `pgrep -f 'sleep 999999 <> run/server-cmd.fifo'` self-matches your own `bash -c` launcher (its cmdline contains the literal string) and hands back the wrong pid. The real writer is the `sh -c` wrapper — confirm with `ps -o comm=` (it says `sh`, not `bash`), then verify with `ls -la /proc/<pid>/fd` for `0 -> .../server-cmd.fifo` (a **pipe** link, not a regular file — `grep -c regular` will read 0 and look like a failure). Full procedure: the `questown-held-run` skill's FIFO section; the server must be launched with `-Dquestown.tp.fifo=true` (build.gradle gate) or the console feeds are silently dropped.
 - **Fresh from-zero world: `rm -rf run/world run-client/saves`** before launch,
   and verify the new server's boot timestamp beats the wipe.
 - **`_qtdev` output: grep the output marker, not the command text** — the log
