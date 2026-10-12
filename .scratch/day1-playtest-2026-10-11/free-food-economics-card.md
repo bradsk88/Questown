@@ -62,3 +62,15 @@ dirt trigger — replacement is structurally safe. Its hint copy
 card.
 
 Legacy flags with `givenBonusFood=true`: no card, no dot.
+
+## 2026-10-12 follow-up: CTA lingers after the click (chat 17:55:32)
+
+> The "free food" CTA should hide the instant it is clicked. Easiest way to do
+> this would be by invoking the hide menu command.
+
+After clicking the claim, the card's "Free food →" line stays visible until
+the next flag-menu refresh (the `FlagInfo.bonusFoodAvailable` wire value only
+updates on the next open). Client-side fix: optimistically clear the local
+availability on the claim click (the server is the source of truth for the
+once-only bit; a failed claim re-shows it on the next refresh). Alternative
+per the user: close-and-reopen the menu after the claim.
