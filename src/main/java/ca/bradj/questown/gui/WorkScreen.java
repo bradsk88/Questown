@@ -156,12 +156,15 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
             // one. Reopened 2026-10-12: when the town has a top unmet need, the empty state
             // points at posting it instead of the vague teaser (job-board-empty-state.md).
             Coordinate emptyTop = new Coordinate(x, y + PAGE_PADDING);
-            String topNeed = menu.getTopUnmetNeedName();
             y += ctx.darkTextWrap(emptyTop, backgroundWidth - (PAGE_PADDING * 2),
                     Compat.translatable("job_board.empty.1"));
+            // The top_need line no longer names the item (user copy, 2026-10-14) - the
+            // name only picks WHICH second line: the production hint when the town has
+            // an unmet need, the vague teaser when it doesn't.
+            String topNeed = menu.getTopUnmetNeedName();
             Component second = topNeed == null || topNeed.isEmpty()
                     ? Compat.translatable("job_board.empty.2")
-                    : Compat.translatable("job_board.empty.top_need", topNeed);
+                    : Compat.translatable("job_board.empty.top_need");
             ctx.darkTextWrap(emptyTop.withY(y + 8), backgroundWidth - (PAGE_PADDING * 2),
                     second);
         }

@@ -434,7 +434,7 @@
   "job_board.default_name": "An item was requested",
   "job_board.empty.1": "No work requests yet.",
   "job_board.empty.2": "Maybe this will do something soon...",
-  "job_board.empty.top_need": "A townie in town needs %s. Use the + button to request it - a townie will make or find it.",
+  "job_board.empty.top_need": "Villagers can produce the items you ask for. Click the + in this window to add requests.",
   "job_board.remove_work": "Remove request",
   "job_board.add_work.title": "Request an item",
   "menu.common.yes": "Yes",
