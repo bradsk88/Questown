@@ -143,7 +143,9 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
             throw new IllegalStateException("No recipe found for ID " + qID);
         }
         int recipeWeight = RoomRecipes.getRecipeWeight(hydrated.get(qID), stopAt);
-        if (recipeWeight == 0) {
+        if (recipeWeight == 0 && !hydrated.get(qID).getIngredients().isEmpty()) {
+            // A zero-ingredient recipe (questown:empty_room - "any room") is intentionally
+            // weight 0; a NON-empty recipe that sums to 0 is the actual smell.
             QT.QUESTS_LOGGER.warn("Recipe weight is 0. This is probably a bug: {}", qID);
         }
         cachedCosts.put(qID, recipeWeight);
