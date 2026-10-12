@@ -3,6 +3,7 @@
   "id": "cook/simple_furnace_food",
   "priority": 2000,
   "parent": "cook/extract",
+  "starter_recipes": ["mutton"],
   "icon": "minecraft:beef",
   "initial_request": "minecraft:cooked_beef",
   "result": {

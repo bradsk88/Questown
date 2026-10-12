@@ -19,14 +19,9 @@ public class ChangeJobReward extends MCReward {
     public static final String ID = "change_job";
     private static final String NBT_VISITOR_UUID = "visitor_uuid";
     private static final String NBT_JOB_NAME = "job_name";
-    private static final String NBT_ONBOARDING = "onboarding";
     private final TownInterface town;
     private UUID visitorUUID;
     private String jobName;
-    // The onboarding-flow cook (tutorial job-change-and-food phase) gets one starter
-    // recipe on top of the root's universal starter set. Gated so a plain (non-onboarding)
-    // job change — the shared generic path — does NOT unlock recipe jobs.
-    private boolean onboarding = false;
 
     public ChangeJobReward(
             RewardType<? extends MCReward> rType,
@@ -49,20 +44,6 @@ public class ChangeJobReward extends MCReward {
         this(RewardsInit.CHANGE_JOB.get(), entity, visitorUUID, jobName);
     }
 
-    /**
-     * Marks this job change as the onboarding-flow one (the tutorial cook). The
-     * onboarding cook additionally unlocks a starter recipe job on top of the
-     * universal starter set; a non-onboarding job change must not.
-     */
-    public ChangeJobReward onboarding(boolean onboarding) {
-        this.onboarding = onboarding;
-        return this;
-    }
-
-    public boolean isOnboarding() {
-        return onboarding;
-    }
-
     @Override
     protected @NotNull RewardApplier getApplier() {
         return () -> {
@@ -78,19 +59,13 @@ public class ChangeJobReward extends MCReward {
             for (JobID workID : defaultWork) {
                 town.getVillagerHandle().unlockJob(visitorUUID, workID);
             }
-            // Onboarding cook only: the universal starter set (extract + fuel) opens a
-            // furnace but cannot cook anything — add the onboarding starter recipe so
-            // the town can turn raw food into a meal. A plain job change leaves recipe
-            // jobs locked on the level tree (the food-cooking progression stays gated).
-            if (onboarding && "cook".equals(jobName)) {
-                JobID starter = new JobID("cook", "mutton");
-                town.getVillagerHandle().unlockJob(visitorUUID, starter);
-                QT.JOB_LOGGER.info(
-                        "Onboarding cook {} granted starter recipe {} on top of the universal starter set",
-                        visitorUUID,
-                        starter
-                );
-            }
+            // Every cook gets the starter recipe (cook/mutton) through the
+            // default-work unlock loop above: it is listed in the
+            // simple-furnace template's `starter_recipes`, so it is part of the
+            // root's initial set for all cooks (onboarding or not). The
+            // 2026-10-12 day-1 playtest ruled a manually-created cook with only
+            // extract + fuel wrong ("had no cook jobs"); the remaining recipes
+            // stay progression-gated.
             defaultWork.forEach(v -> {
                 ItemStack output = ServerJobsRegistry.getDefaultWorkForNewWorker(town.getServerLevel(), v);
                 if (output.isEmpty()) {
@@ -112,7 +87,6 @@ public class ChangeJobReward extends MCReward {
         CompoundTag compoundTag = new CompoundTag();
         compoundTag.putUUID(NBT_VISITOR_UUID, this.visitorUUID);
         compoundTag.putString(NBT_JOB_NAME, this.jobName);
-        compoundTag.putBoolean(NBT_ONBOARDING, this.onboarding);
         return compoundTag;
     }
 
@@ -127,7 +101,6 @@ public class ChangeJobReward extends MCReward {
         if (tag.contains(NBT_JOB_NAME)) {
             this.jobName = tag.getString(NBT_JOB_NAME);
         }
-        this.onboarding = tag.getBoolean(NBT_ONBOARDING);
     }
 
     public String getJobName() {

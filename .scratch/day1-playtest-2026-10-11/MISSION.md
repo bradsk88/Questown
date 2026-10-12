@@ -237,6 +237,25 @@ fresh-from-zero launch ready.
   F2 → D#2, as far as gets done cleanly. On the user's return: `rm -rf
   run/world run-client/saves` + server-first launch (`dev-server-9.log` /
   `dev-client-8.log`).
+- **G3 SHIPPED `2bc27b85`** — leaver-return progress bar (LeaverReturn /
+  StatusPacket fields / MultiStatusScreen.renderLeaverReturnBar; gui-lint
+  check deferred to the user's first menu open).
+- **new-cook HAS NO COOK WORKS SHIPPED (this session)** — root cause:
+  the simple-furnace template's expanded jobs were not `unlocked_with_root_job`
+  (the 2026-10-15 ruling had mutton onboarding-only), so a manual/staffed cook
+  got extract + fuel only. Fix: `starter_recipes` JSON array on the template
+  (`["mutton"]`) → loader ORs it into the expanded jobs' flag → every
+  staffing path gets the starter recipe via `getDefaultWork`. The dead
+  `ChangeJobReward.onboarding` flag deleted. `CookStarterRecipeLoaderTest`
+  added (registry-bound half @Disabled with reason). Full suite 1166/0/51skipped,
+  importCheck + strangler green. Cook-skill-unlock ticket amended; CONTEXT.md
+  starter-job entry updated.
+- **Next in queue:** F1 vanilla filled map at flag placement → F2 day-2
+  "post first request" quest + board auto-request toggle → fuel/coal blind
+  spot (`econ-tab-top-blocker-missing-coal`) → E1 BOP-spend job-change roll →
+  D#2 empty-room early quest → gatherer-stall log investigation
+  (`seeking-work-leaver-sees-empty-board-room`, saved world at
+  `/tmp/playtest-world-2026-10-12-evening`).
 
 ## Session close (night of 2026-10-12) — queue state
 

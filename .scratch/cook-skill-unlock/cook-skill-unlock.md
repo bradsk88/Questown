@@ -87,6 +87,24 @@ Locked out for everyone at staffing (progression-gated): `cook/rabbit`,
   chain producing). Update the `AUTOTESTS.md` TPS caveat (prior band was
   measured with the staffing gap live).
 
+## Amendment (2026-10-12, day-1 playtest)
+
+The user playtest overrode the "second cook = extract + fuel only" ruling:
+when they manually staffed a cook on day 1 and saw no cooking work
+(`.scratch/day1-playtest-2026-10-11/new-cook-has-no-cook-works.md`), they ruled
+"had no cook jobs" — the *only* acceptable fix is **every cook starts with a
+starter recipe**. The grant moved from the onboarding-only Java path
+(`ChangeJobReward.onboarding` flag, deleted) to the template's new
+`starter_recipes` JSON array (`cook_simple_furnace_food.json` lists
+`["mutton"]`): the loader ORs it into the expanded jobs'
+`unlocked_with_root_job`, so all staffing paths get it through
+`ServerJobsRegistry.getDefaultWork`. Per-item, data-driven, no Java
+special-case. The bulk-grant rejection still holds — only the listed starters
+join the initial set; beef/rabbit/chicken/porkchop/potato remain
+progression-gated. The "stoker/collector grunt" option (user ruling 3 above)
+is superseded. `CONTEXT.md` "Starter job" updated; regression test
+`CookStarterRecipeLoaderTest`.
+
 ## Notes
 
 - Plan: `docs/plans/cook-skill-unlock.md`.

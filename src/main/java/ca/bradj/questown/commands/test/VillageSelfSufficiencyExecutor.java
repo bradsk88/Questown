@@ -1540,13 +1540,9 @@ public final class VillageSelfSufficiencyExecutor {
             }
             ca.bradj.questown.town.rewards.ChangeJobReward reward
                     = new ca.bradj.questown.town.rewards.ChangeJobReward(flag, target, wanted.rootId());
-            // The onboarding cook (tutorial job-change-and-food batch) is onboarding-flagged
-            // (markOnboarding in addQuestsForJobChangeAndFood); the applier grants it one
-            // starter recipe (cook/mutton) on top of the universal extract+fuel set. A plain
-            // (non-onboarding) job change leaves recipe jobs locked.
-            if (quest.isOnboarding()) {
-                reward.onboarding(true);
-            }
+            // Every cook gets the starter recipe (cook/mutton) via the root's
+            // default work (the simple-furnace template's `starter_recipes`);
+            // the remaining recipes stay progression-gated.
             flag.addImmediateReward(reward);
             jobChangeDriven.add(wantedKey);
             msg("[job-change] requested " + wanted

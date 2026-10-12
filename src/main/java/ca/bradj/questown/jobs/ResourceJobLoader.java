@@ -129,6 +129,11 @@ public class ResourceJobLoader {
 
         private ImmutableMap<JobID, Work> makeCookJobs(JsonObject obj) {
             ImmutableMap.Builder<JobID, Work> b = ImmutableMap.builder();
+            // Per-item starter selection: only the listed expanded jobs join the
+            // root's initial unlock set (a blanket `unlocked_with_root_job` on this
+            // template would bulk-grant every food recipe, which the skill-unlock
+            // ruling rejects).
+            ImmutableSet<String> starterRecipes = starterRecipes(obj);
             Ingredient ing = Ingredient.of(TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW);
             for (ItemStack item : ing.getItems()) {
                 Item iconItem = item.getItem();
@@ -157,6 +162,7 @@ public class ResourceJobLoader {
                             replaceWhen(ws.toolsRequired(), isBeef, () -> Ingredient.of(item.getItem()))
                     );
                     JobID od = new JobID("cook", Compat.getItemId(item.getItem()).getPath());
+                    boolean starter = starterRecipes.contains(od.jobId());
                     Optional<SlotPrecondition> slotPrecondition = getSlotComparator(block);
                     Work cookWork = WorksBehaviour.productionWork(
                             iconItem.getDefaultInstance(),
@@ -173,7 +179,9 @@ public class ResourceJobLoader {
                         cookWork = cookWork.withSlotPrecondition(slotPrecondition.get());
                     }
                     cookWork = cookWork.withProficiencyId(proficiencyId(obj));
-                    cookWork = cookWork.withUnlockedWithRootJob(unlockedWithRootJob(obj));
+                    cookWork = cookWork.withUnlockedWithRootJob(
+                            unlockedWithRootJob(obj) || starter
+                    );
                     b.put(od, cookWork);
                 } catch (Exception e) {
                     throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
@@ -1064,6 +1072,27 @@ public class ResourceJobLoader {
     private static boolean unlockedWithRootJob(JsonObject object) {
         Boolean flag = optional(object, "unlocked_with_root_job", JsonElement::getAsBoolean);
         return Boolean.TRUE.equals(flag);
+    }
+
+    /**
+     * The `starter_recipes` list (expanded-template jobs only): the item paths
+     * whose expanded jobs join their root's initial unlock set at staff, on top
+     * of the blanket `unlocked_with_root_job` flag. E.g. the cook
+     * simple-furnace template lists `mutton`, so every freshly staffed cook
+     * (spawn or job-change) can actually cook the first hunter's guaranteed
+     * simple-furnace food while the remaining recipes stay progression-gated.
+     * Absent/empty = no starter.
+     */
+    private static ImmutableSet<String> starterRecipes(JsonObject object) {
+        JsonElement el = object.get("starter_recipes");
+        if (el == null || !el.isJsonArray()) {
+            return ImmutableSet.of();
+        }
+        ImmutableSet.Builder<String> b = ImmutableSet.builder();
+        for (JsonElement v : el.getAsJsonArray()) {
+            b.add(v.getAsString());
+        }
+        return b.build();
     }
 
     private static <X> X required(

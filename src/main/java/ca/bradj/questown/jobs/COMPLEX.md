@@ -332,6 +332,26 @@ both stock jobs silently failed to load — the MC-free `TestJobLoader` never in
 v2 fields survive the real parse (parents, room, `ALWAYS_CONSIDER`/`EXCLUDE_FROM_WARP`).
 Any new v2 job file should be load-tested the same way, not only through `TestJobLoader`.
 
+## `starter_recipes` — per-item initial unlock on expanded templates (2026-10-12)
+
+The cook simple-furnace template (`cook_simple_furnace_food.json`) expands at
+load time into one job per raw item in the
+`questown:villager_simple_furnace_food_raw` tag (mutton, beef, rabbit, …). A
+blanket `unlocked_with_root_job` on the template would bulk-grant every food
+recipe — the skill-unlock ruling rejected that (recipes ARE the leveling
+progression). But a cook with only extract + fuel "has no cook jobs" (the
+2026-10-12 day-1 playtest; `.scratch/day1-playtest-2026-10-11/new-cook-has-no-cook-works.md`).
+The seam is the template's `starter_recipes` JSON array: `makeCookJobs` parses
+it and ORs membership into each expanded job's `unlocked_with_root_job`, so
+the listed items join the root's initial set (`ServerJobsRegistry.getDefaultWork`)
+for EVERY staffing path — spawn, register, job-change, BOP — without any
+Java special-case. Per-item and data-driven: adding a new starter is a one-line
+JSON change. The 2026-10-15 onboarding-only grant
+(`ChangeJobReward.onboarding` flag) is gone — it was the same grant narrowed
+by the wrong gate. Test: `CookStarterRecipeLoaderTest` pins the JSON load
+gate; the registry-bound expansion itself is `@Disabled` with the reason
+(the questown item tag does not load in vanilla bootstrap).
+
 ## Leaver-return read: `DeclarativeJob.getLeaverReturn` (G3, 2026-10-12)
 
 The timed leaver trip ("when will the leaver be back") is the gate-mat

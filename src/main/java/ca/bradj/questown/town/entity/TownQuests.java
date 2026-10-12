@@ -1298,13 +1298,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_JOB_CHANGE_FOOD));
         // Onboarding-flow quest: like the other tutorial-phase batches, it is
-        // onboarding-flagged (see `.scratch/cook-skill-unlock/cook-skill-unlock.md`). That
-        // flag is the discriminator the onboarding-cook starter grant keys on — when the
-        // executor drives this job change, it marks `ChangeJobReward.onboarding(true)`,
-        // and the applier then unlocks `cook/mutton` on top of the universal starter set
-        // (see ChangeJobReward.getApplier). A random/procedural cook quest stays
-        // unmarked and its cook gets only the universal set, leaving recipe jobs
-        // gated on the job tree. Its room quest completes on a superset room per the
+        // onboarding-flagged (see `.scratch/cook-skill-unlock/cook-skill-unlock.md`).
+        // The cook it staffs gets the starter recipe (cook/mutton) through the
+        // root's default work — the simple-furnace template's `starter_recipes`
+        // lists it, so every cook (onboarding or not) unlocks extract + fuel +
+        // mutton at staff (see ChangeJobReward.getApplier / ServerJobsRegistry).
+        // Its room quest completes on a superset room per the
         // storeroom design (.scratch/storeroom-quest-completion).
         markOnboarding(qq);
         questBatches.add(qq);
