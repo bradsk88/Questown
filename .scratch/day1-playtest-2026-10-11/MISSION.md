@@ -386,3 +386,25 @@ job-board-empty-state, flag-crafting-ui-tooltips-and-border,
 campfire-sleep-feels-close-enough, skills-tab pending the user's layer
 ruling) → fresh playtest: `rm -rf run/world run-client/saves` +
 server-first launch.
+
+## Session state (2026-10-13, night) — Q2 resolved
+
+**Skills-tab level gate shipped** (user ruling: per-job `available_at_level`
+in the job JSON; no separate layer system): commit `d942eed8`.
+- `Work.availableAtLevel` (default 2), `ResourceJobLoader` parse,
+  `ServerJobsRegistry.getAvailableAtLevel` (pre-startup guard).
+- 25 blacksmith tier files carry the values: wood 7, stone 12, iron 17,
+  golden 22, diamond 27. Nothing else does.
+- `TownVillagerUIsHandle.showUI` filters the unlockable set by the townie's
+  level; `showSkillsTab` rides `VillagerMenusPayload` + every tabbed
+  villager menu; `VillagerTabs.forMenu` gates the SKILLS screen fn (plus
+  the per-menu `getEnabledTabs` conditional - double gate is deliberate).
+- `UnlockJobMessage` re-checks server-side (stale client / direct packet).
+- Tests: `JobAvailableAtLevelDataTest` (data oracle, 25 files + exclusivity),
+  `WorkAvailableAtLevelTest` (default + chain). Full suite 1192/0/51skipped.
+
+The "skills-tab pending the user's layer ruling" line above is resolved.
+Remaining queue: held-run verification of the six new features
+(E1/F2/D#2/messages-twice/jobs-tooltip/onboarding-guarantee + this gate) →
+instrumented seeking-work room investigation → fuel/coal decision layer →
+small UI batch → fresh playtest.
