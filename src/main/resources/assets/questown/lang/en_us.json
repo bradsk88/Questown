@@ -464,6 +464,7 @@
   "menu.quests.room_quest": "Build a room containing the blocks shown here",
   "menu.quests.roomblock.town": "Place a %s in your town - this registers it with the town flag automatically.",
   "menu.quests.roomblock.welcome_mat": "Craft a welcome mat and place it where you'd like people to enter/exit your village.",
+  "menu.quests.roomblock.empty_room": "Build a room: four walls and a door. Use your town wand to register the door.",
   "menu.quests.roomblock.click_crafting": "Click to open crafting",
   "menu.quests.campfire_quest": "Place a campfire near the town flag",
   "message.flag_crafting.created": "Created %s",

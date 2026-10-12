@@ -864,11 +864,14 @@ The onboarding chain is now:
   completes on the first tick after the gate reward posts it — the basics batch
   lands without player input, as before.
 
-- **Flavor copy (2026-10-13, user call):** the empty-room quest's flavor text
-  was halved, dash-free — "Build a small room, then use your Town Wand on its
-  door to register it." (was 143 chars incl. an em dash and background the
-  player flagged as noise). Set at post time in `addEmptyRoomBatch`, so
-  already-posted quests in existing worlds keep the old copy.
+- **Flavor copy (2026-10-13/14, user calls):** the empty-room quest's flavor
+  text is "Build a room: four walls and a door. Use your town wand to register
+  the door." Set at post time in `addEmptyRoomBatch`, so already-posted quests
+  in existing worlds keep the older copy - and the live empty-room card showed
+  the *generic* room_quest line, not even the old flavor (user report
+  2026-10-14): whatever the flavor's save/load path does, the CARD tooltip for
+  this quest must not depend on what the specific posted quest carries. It
+  reads a lang key instead (see gui/COMPLEX.md, room-block tooltips).
 - **No-chicken path**: the player builds a small room, places a door, and wands
   it (`TownWand` → `registerDoor`). The quest's flavor text says exactly this.
   The zero-ingredient recipe is global (it matches every room in every town),

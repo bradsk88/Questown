@@ -165,7 +165,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
         MCQuest emptyRoomQuest = roomQuest(batchUUID, SpecialQuests.EMPTY_ROOM);
         emptyRoomQuest.setFlavorText(
-                "Build a small room, then use your Town Wand on its door to register it.");
+                "Build a room: four walls and a door. Use your town wand to register the door.");
         q.addNewQuest(emptyRoomQuest);
         MCQuestBatch qb = q.withRewardUponCompletion(
                 new MCInstantReward(t, new AddBasicsBatchReward(t)));

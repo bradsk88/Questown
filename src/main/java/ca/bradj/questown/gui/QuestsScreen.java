@@ -259,6 +259,24 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             return null;
         }
 
+        // RoomBlock cards (welcome mat, empty room) get a fixed two-line tooltip -
+        // the action copy plus a grey "Click to open crafting" line - REGARDLESS of
+        // flavor text: the flavor is set server-side at post time and shadows the
+        // switch below, which is why the empty-room card shipped showing the generic
+        // room_quest line instead of its own copy (user report, 2026-10-14).
+        if (recipe.getType() == Quest.QuestType.ROOM
+                && (SpecialQuests.TOWN_GATE.equals(recipe.getWantedId())
+                        || SpecialQuests.EMPTY_ROOM.equals(recipe.getWantedId()))) {
+            String key = SpecialQuests.TOWN_GATE.equals(recipe.getWantedId())
+                    ? "menu.quests.roomblock.welcome_mat"
+                    : "menu.quests.roomblock.empty_room";
+            return ImmutableList.of(
+                    Compat.translatable(key),
+                    Compat.translatableStyled(
+                            "menu.quests.roomblock.click_crafting",
+                            Style.EMPTY.applyFormat(ChatFormatting.GRAY)));
+        }
+
         if (recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()) {
             return ImmutableList.of(Compat.literal(recipe.getFlavorText()));
         }
@@ -272,18 +290,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 }
                 // RoomBlock quests (roomblock-quests-custom-place-tooltip.md): the quest is
                 // about placing a functional block, not crafting/collecting an item to hold.
-                // The location clause differs per block - the welcome mat has a specific
-                // role ("at your town's entrance"); the others are free placement
-                // ("in your town", registers to the flag via the item's NBT).
-                if (SpecialQuests.TOWN_GATE.equals(recipe.getWantedId())) {
-                    // The mat's card click deep-links to the crafting tab (onCardClick),
-                    // so the second line tells the player the card is actionable.
-                    yield ImmutableList.of(
-                            Compat.translatable("menu.quests.roomblock.welcome_mat"),
-                            Compat.translatableStyled(
-                                    "menu.quests.roomblock.click_crafting",
-                                    Style.EMPTY.applyFormat(ChatFormatting.GRAY)));
-                }
+                // TOWN_GATE and EMPTY_ROOM are handled above the flavor check; the
+                // remaining room blocks get the free-placement line.
                 if (SpecialQuests.JOB_BOARD.equals(recipe.getWantedId())
                         || RoomBlock.isBlockRoom(recipe.getWantedId())) {
                     yield ImmutableList.of(Compat.translatable(
@@ -509,7 +517,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             // Day-1 playtest: the welcome-mat quest is answered at the flag's crafting tab,
             // not in the book - deep-link there. Hardcoded for now (the player's ask):
             // "Clicking on the welcome mat quest should take me to the flag's crafting tab."
-            if (SpecialQuests.TOWN_GATE.equals(quest.getWantedId())
+            // The empty-room card deep-links there too: its grey line says "Click to open
+            // crafting" because the Town Wand - the one thing it needs - is crafted there.
+            if ((SpecialQuests.TOWN_GATE.equals(quest.getWantedId())
+                    || SpecialQuests.EMPTY_ROOM.equals(quest.getWantedId()))
                     && this.tabs instanceof Tabs tabs && tabs.openTab("tooltips.crafting")) {
                 return true;
             }

@@ -534,17 +534,20 @@ empty multi-status overview.
 ## Day-1 playtest batch 3 (2026-10-13): room-block tooltips, board empty state, crafting tooltips
 
 - **Room-block quests get a place-verb tooltip.** `QuestsScreen.renderCardTooltip`
-  ROOM case branches on the wanted ID before the generic room line: `TOWN_GATE` →
-  `menu.quests.roomblock.welcome_mat` (specific role: "at your town's entrance");
+  handles `TOWN_GATE` and `EMPTY_ROOM` in a fixed two-line branch placed
+  **BEFORE the flavor-text check** (the flavor is set server-side at post time
+  and shadows the switch below it - that shadowing is exactly why the
+  empty-room card first shipped showing the generic `room_quest` line, user
+  report 2026-10-14): line 1 = `menu.quests.roomblock.welcome_mat` / `menu.
+  quests.roomblock.empty_room`, line 2 = grey `menu.quests.roomblock.
+  click_crafting` via `Compat.translatableStyled`. Both cards deep-link to the
+  crafting tab on click (`openLessonForClickedCard`), which is what the grey
+  line promises - the empty-room card needs the Town Wand, which is crafted
+  there. Remaining room blocks fall through the ROOM switch:
   `JOB_BOARD` or `RoomBlock.isBlockRoom(id)` → `menu.quests.roomblock.town` with
   `RoomRecipes.getName(wantedId)` (free placement: "in your town"); campfire keeps
   its own branch. The quest is about *placing a functional block*, not holding an
   item.
-- **The empty-room card shows an oak door (2026-10-13 night, user call).**
-  `empty_room` has zero ingredients, so `renderRecipeCardIcons` drew an empty
-  strip. When the strip is empty and the wanted id is `SpecialQuests.EMPTY_ROOM`,
-  it now renders a single `Ingredient.of(Items.OAK_DOOR)` — the block you point
-  the Town Wand at.
 - **Job-board quest card shows the board, not a sign.** `UIQuest.fromLevel` overrides
   the `SpecialQuests.JOB_BOARD` rMap entry with
   `RoomRecipes.standard(JOB_BOARD, NonNullList.withSize(1, Ingredient.of(JOB_BOARD_BLOCK)))`
@@ -578,16 +581,18 @@ empty multi-status overview.
   the 2-arg overload (test seam `placeTempBedForTest`) delegates with the campfire
   centre → first-safe-side, preserving the autotest scenario. `CampfireSleepSideTest`
   pins the side choice on a mocked open-air level.
+- **The empty-room card shows an oak door (2026-10-13 night, user call).**
+  `empty_room` has zero ingredients, so `renderRecipeCardIcons` drew an empty
+  strip. When the strip is empty and the wanted id is `SpecialQuests.EMPTY_ROOM`,
+  it now renders a single `Ingredient.of(Items.OAK_DOOR)` — the block you point
+  the Town Wand at.
 - **The welcome-mat card tooltip names the click action (2026-10-13 night, user copy).**
-  The `TOWN_GATE` branch returns two lines: the re-worded
-  `menu.quests.roomblock.welcome_mat` ("Craft a welcome mat and place it where
-  you'd like people to enter/exit your village.") plus a grey
-  `menu.quests.roomblock.click_crafting` ("Click to open crafting") built via
-  `Compat.translatableStyled` with `Style.EMPTY.applyFormat(ChatFormatting.GRAY)`
-  (the FlagCraftingScreen grey-line pattern; 1.20.6's `Component` interface has no
-  `withStyle` — only `MutableComponent` does, and `Compat.literal` returns the
-  interface). The second line is honest copy: `onCardClick` already deep-links the
-  mat card to the crafting tab.
+  Re-worded `menu.quests.roomblock.welcome_mat` ("Craft a welcome mat and place
+  it where you'd like people to enter/exit your village.") with the grey
+  click-to-craft line; 1.20.6's `Component` interface has no `withStyle` —
+  only `MutableComponent` does, and `Compat.literal` returns the interface —
+  hence `translatableStyled` + `Style.EMPTY.applyFormat(ChatFormatting.GRAY)`
+  (the FlagCraftingScreen grey-line pattern).
 
 ## Leaver-return progress bar (G3, 2026-10-12): the payload carries an absolute tick
 
