@@ -60,6 +60,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.particles.ParticleTypes;
+import ca.bradj.questown.town.rooms.AttentionBubbles;
 import ca.bradj.questown.town.rooms.DeadDoorBubbles;
 import ca.bradj.questown.town.rooms.DoorTrouble;
 import ca.bradj.questown.world.MinecraftWorldAccess;
@@ -118,6 +119,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final TownFlagInitialization initializer;
 
     private static final String NBT_DEAD_DOORS = "deadDoors";
+    private static final String NBT_ATTENTION_INCOMPLETE_QUESTS = "attentionIncompleteQuests";
+    private static final String NBT_ATTENTION_NO_WORK_REQUESTS = "attentionNoWorkRequests";
+    private static final String NBT_ATTENTION_JOB_BOARDS = "attentionJobBoards";
 
     /**
      * Registered doors with no room, and why (ADR-0011). Written server-side by
@@ -126,6 +130,26 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
      * set the moment its scan attaches it to a room.
      */
     private Map<BlockPos, DoorTrouble> deadDoors = ImmutableMap.of();
+
+    /**
+     * Attention state for the "!" bubbles (day-1 playtest G1+G2), synced to clients via
+     * the update tag like {@code deadDoors}: whether this town still has incomplete
+     * quests (G1, bubble above the flag) and whether it has zero outstanding work
+     * requests (G2, bubble above each of its job boards), plus where those boards are.
+     * Transient, never persisted. Server: the last values {@link #syncAttentionState()}
+     * published, kept only for change detection. Client: the values received by
+     * {@code handleUpdateTag}. The tag itself is always computed live in
+     * {@code getUpdateTag}, so a client chunk-loading the flag sees current state
+     * regardless of the cached fields.
+     */
+    private boolean attentionIncompleteQuests = false;
+    private boolean attentionNoWorkRequests = false;
+    private ImmutableList<BlockPos> attentionJobBoards = ImmutableList.of();
+
+    /** Whether any of this town's quests is still incomplete (live server-side read). */
+    boolean hasIncompleteQuests() {
+        return quests.hasIncompleteQuests();
+    }
 
     public Map<BlockPos, DoorTrouble> getDeadDoors() {
         return deadDoors;
@@ -207,6 +231,74 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         // Unlike the town-data initializers (see the warning on load), this payload only
         // ever feeds client-side bubble rendering, so a plain field write is safe here.
         readDeadDoors(tag);
+        readAttention(tag);
+    }
+
+    private void writeAttention(CompoundTag tag) {
+        tag.putBoolean(NBT_ATTENTION_INCOMPLETE_QUESTS, hasIncompleteQuests());
+        tag.putBoolean(NBT_ATTENTION_NO_WORK_REQUESTS, workHandle.getRequestedResults().isEmpty());
+        ListTag boards = new ListTag();
+        for (BlockPos pos : workHandle.jobBoards) {
+            CompoundTag entry = new CompoundTag();
+            entry.putInt("x", pos.getX());
+            entry.putInt("y", pos.getY());
+            entry.putInt("z", pos.getZ());
+            boards.add(entry);
+        }
+        tag.put(NBT_ATTENTION_JOB_BOARDS, boards);
+    }
+
+    private void readAttention(CompoundTag tag) {
+        if (!tag.contains(NBT_ATTENTION_INCOMPLETE_QUESTS)) {
+            return;
+        }
+        this.attentionIncompleteQuests = tag.getBoolean(NBT_ATTENTION_INCOMPLETE_QUESTS);
+        this.attentionNoWorkRequests = tag.getBoolean(NBT_ATTENTION_NO_WORK_REQUESTS);
+        ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
+        for (Tag t : tag.getList(NBT_ATTENTION_JOB_BOARDS, Tag.TAG_COMPOUND)) {
+            CompoundTag entry = (CompoundTag) t;
+            b.add(new BlockPos(entry.getInt("x"), entry.getInt("y"), entry.getInt("z")));
+        }
+        this.attentionJobBoards = b.build();
+    }
+
+    /**
+     * Re-publishes the attention state to nearby clients when it changed (G1+G2 "!"
+     * bubbles). Polls every 20 ticks from the flag's block ticker rather than hooking
+     * every mutation site: quest completion, batch re-issue and work-request
+     * add/remove happen in many places, and a one-second lag is imperceptible for a
+     * diegetic indicator.
+     */
+    void syncAttentionState() {
+        if (!(level instanceof ServerLevel) || !isInitialized()) {
+            return;
+        }
+        boolean incomplete = hasIncompleteQuests();
+        boolean noRequests = workHandle.getRequestedResults().isEmpty();
+        ImmutableList<BlockPos> boards = ImmutableList.copyOf(workHandle.jobBoards);
+        if (incomplete == attentionIncompleteQuests
+                && noRequests == attentionNoWorkRequests
+                && boards.equals(attentionJobBoards)) {
+            return;
+        }
+        attentionIncompleteQuests = incomplete;
+        attentionNoWorkRequests = noRequests;
+        attentionJobBoards = boards;
+        setChanged();
+        level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+    }
+
+    /** Client-side reads of the synced attention state (see the field docs). */
+    public boolean isAttentionQuestsIncomplete() {
+        return attentionIncompleteQuests;
+    }
+
+    public boolean isAttentionNoWorkRequests() {
+        return attentionNoWorkRequests;
+    }
+
+    public ImmutableList<BlockPos> getAttentionBoardPositions() {
+        return attentionJobBoards;
     }
     private final NoMCEconomics economics = new NoMCEconomics();
     final TownFlagTicker ticker = new TownFlagTicker();
@@ -453,6 +545,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             TownFlagBlockEntity e
     ) {
         e.ticker.tick(level, blockEntityPos, state, e);
+        if (level instanceof ServerLevel sl && e.isInitialized() && sl.getGameTime() % 20L == 0) {
+            e.syncAttentionState();
+        }
         // Gate chicken-arc on isInitialized: until the load queue drains, the
         // arc fields (chickenEverSpawned, chickenRotationDetected, ...) still
         // hold their default values. Running detector/spawner here pre-init
@@ -570,6 +665,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             this.writeTownData(tag);
         }
         writeDeadDoors(tag);
+        writeAttention(tag);
         return tag;
     }
 
@@ -587,6 +683,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             // focus. Guarded so the client-only class is never touched on a server.
             if (level != null && level.isClientSide()) {
                 DeadDoorBubbles.register(this);
+                AttentionBubbles.register(this);
             }
             return;
         }
@@ -598,6 +695,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         super.setRemoved();
         if (level != null && level.isClientSide()) {
             DeadDoorBubbles.unregister(this);
+            AttentionBubbles.unregister(this);
         }
     }
 

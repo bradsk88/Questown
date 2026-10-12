@@ -139,3 +139,18 @@ flowchart TD
   only verifiable in-game.
 - Focus state is **static** — there is exactly one local player, and exactly one
   bubble is shown town-wide by design.
+
+# Third holder type: attention targets (G1+G2 "!" bubbles)
+
+The one-bubble contest now has three candidate classes: townies (UUID holders),
+dead doors (raw `BlockPos` holders) and **attention targets**
+(`AttentionBubbles.Target` record holders — a flag with incomplete quests, or a
+job board with zero work requests). The same cone/hysteresis/`keepsBubble`
+rules apply; the holder type is carried through `current` as `Object`, so
+`currentDoor()` still means "holder is a raw BlockPos" and
+`currentAttention()` is the new accessor. When an attention target wins,
+`NeedBubbleClientEvents` draws the "!" texture bubble
+(`BubbleRenderer.renderTextureBubbleAtBlock`, authored
+`textures/bubble/attention.png`) instead of the door's item bubble. The hint
+(action-bar text on close examination) comes from `Kind.hintKey` —
+`message.questown.attention.*` in en_us.json.

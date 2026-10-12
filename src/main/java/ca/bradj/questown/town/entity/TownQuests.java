@@ -89,6 +89,15 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     };
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
 
+    /**
+     * Whether any of the current quest batches still holds an incomplete quest (the G1
+     * "!" attention bubble above the flag). Completed quests stay in their batch marked
+     * complete until the batch is declined, so the check is per-quest, not per-batch.
+     */
+    public boolean hasIncompleteQuests() {
+        return questBatches.getAll().stream().anyMatch(q -> !q.isComplete());
+    }
+
     private final Stack<PendingReward> questRequests = new Stack<>();
     private final UnsafeTown town = new UnsafeTown(getClass());
     boolean playerDiscardedLastBatch;

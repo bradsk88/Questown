@@ -7,6 +7,8 @@
   "message.questown.townie_need.unmet_item.item": "They need %s to work.",
   "message.questown.door_need.not_enclosed": "This door has no room — finish the walls and roof.",
   "message.questown.door_need.no_recipe": "This room matches no recipe — try different furniture.",
+  "message.questown.attention.incomplete_quests": "This flag still has incomplete quests — open the flag menu to see them.",
+  "message.questown.attention.no_work_requests": "The job board has no open work requests — offer some work.",
   "message.questown.relocation_deed.cross_dimension": "This town can only be moved within its own world.",
   "message.questown.relocation_deed.malformed_reference": "This deed is damaged and no longer points to a town.",
   "message.questown.relocation_deed.original_unreachable": "The dormant flag could not be reached. Nothing was moved.",

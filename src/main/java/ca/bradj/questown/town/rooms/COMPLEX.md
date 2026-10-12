@@ -76,3 +76,16 @@ flowchart LR
   cells floating is rejected). `flag/filled_storeroom_alive` pins the contents
   rule: a 3x3 room whose single interior cell is the recipe's chest is accepted
   (door stays live, a room is detected).
+
+# AttentionBubbles — flag/board attention candidates for the need bubble
+
+Client-side registry mirroring `DeadDoorBubbles`: every client-loaded
+`TownFlagBlockEntity` registers in `onLoad` and unregisters in `setRemoved`.
+`near(player)` returns the bubble candidates within 16 blocks: each flag whose
+synced `attentionIncompleteQuests` is true (G1, above the flag) and each of its
+job boards when the synced `attentionNoWorkRequests` is true (G2, above the
+board). The state itself is server-decided and synced on the flag's update tag
+(see `town/entity/COMPLEX.md` "Attention ("!") bubble state"); this class only
+collects the client-loaded copies. `AttentionBubbles.Target` (a `BlockPos` +
+`Kind` record) is the third holder type in the `NeedBubbleFocus` contest —
+distinct from the door's raw `BlockPos` so the two never collide.

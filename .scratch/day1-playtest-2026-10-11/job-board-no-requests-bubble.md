@@ -28,3 +28,13 @@ Confirmed as scoped: "!" bubble above the job board while the town has zero
 outstanding work requests; `BubbleRenderer.renderIconBubbleAtBlock` via the
 `NeedBubbleClientEvents` pattern; block-state property or client-side BE
 scan. Second consumer of the G1 bubble system.
+
+## Implementation (2026-10-12)
+
+Shipped with G1 in the same bubble system: the flag's update tag carries the
+job-board positions and an `attentionNoWorkRequests` flag (live
+`workHandle.getRequestedResults().isEmpty()`); `AttentionBubbles.near` turns each
+board of a zero-request town into a "!" candidate; drawn by
+`BubbleRenderer.renderTextureBubbleAtBlock`. See
+`flag-incomplete-quests-indicator.md` "Implementation". Awaiting in-game
+verification.

@@ -701,3 +701,28 @@ the first line of a burst sends immediately, later lines hold in
 duplicate lines are dropped (value-equal `Component`). This paces the day-1
 quest/room chat blast; it deliberately does NOT root-cause the underlying
 double-firing (`.scratch/day1-playtest-2026-10-11/messages-print-twice.md`).
+
+# Attention ("!") bubble state — flag quest state and work-request state on the update tag
+
+G1+G2 (day-1 playtest): a "!" bubble above the flag while any quest is incomplete,
+and above the job board while the town has zero outstanding work requests. The
+state rides the flag's **block-entity update tag**, exactly like `deadDoors`:
+
+- `getUpdateTag` writes it **live** (`writeAttention`): `hasIncompleteQuests()`
+  (via `TownQuests.hasIncompleteQuests()` — per-quest `!isComplete()` over
+  `questBatches.getAll()`, because completed quests stay in their batch until the
+  batch is declined) + `workHandle.getRequestedResults().isEmpty()` + the
+  `workHandle.jobBoards` positions. So a client chunk-loading the flag always
+  sees current state.
+- `syncAttentionState()` pushes a `sendBlockUpdated` when the state changes. It is
+  **polled every 20 ticks** from the flag's static block ticker (not wired to the
+  many quest/request mutation sites): a one-second lag is imperceptible for a
+  diegetic indicator. The cached fields (`attention*`) exist only for change
+  detection; they are never persisted.
+- Client: `handleUpdateTag` → `readAttention`; the flag registers itself in
+  `AttentionBubbles` (town/rooms) in `onLoad`/`setRemoved` just like
+  `DeadDoorBubbles`. The candidates then join the one-bubble crosshair contest in
+  `NeedBubbleFocus` (mobs/visitor) and draw via
+  `BubbleRenderer.renderTextureBubbleAtBlock` (the authored
+  `textures/bubble/attention.png` "!" — same folder/pipeline as the chicken's
+  sunset bubble).

@@ -32,3 +32,15 @@ incomplete — one bubble system serving both the flag (G1) and the job board
 `docs/todo/flag-speech-bubble.md` (the bubble later grows to show the most
 relevant quest hint). Chosen over red BOP sparkles: visible AND informative,
 and the mechanism amortizes across the three.
+
+## Implementation (2026-10-12)
+
+Done via the flag's block-entity update tag (the dead-door sync channel,
+ADR-0011): `TownFlagBlockEntity` syncs `attentionIncompleteQuests` (live
+`TownQuests.hasIncompleteQuests()`), job-board positions and
+`attentionNoWorkRequests`; `AttentionBubbles` (town/rooms, mirrors
+`DeadDoorBubbles`) makes flag/board positions candidates in the one-bubble
+crosshair contest; the winner draws the "!" texture bubble
+(`BubbleRenderer.renderTextureBubbleAtBlock`, `textures/bubble/attention.png`).
+See `town/entity/COMPLEX.md` "Attention (\"!\") bubble state". Awaiting
+in-game verification on the user's day-1 playtest.

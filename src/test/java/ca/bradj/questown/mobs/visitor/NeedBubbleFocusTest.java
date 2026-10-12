@@ -1,5 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
+import ca.bradj.questown.town.rooms.AttentionBubbles;
+import net.minecraft.core.BlockPos;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -55,5 +57,39 @@ class NeedBubbleFocusTest {
     @Test
     void Test_UnmetNeedIngredientReturnsNullForNullTownie() {
         Assertions.assertNull(NeedBubbleFocus.unmetNeedIngredient(null));
+    }
+
+    // The attention holders (flag with incomplete quests / board with no work requests) ride the
+    // same flicker rule as the other holder types. A Target is a distinct type from the door's
+    // raw BlockPos holder, and its identity includes the Kind.
+    private static final AttentionBubbles.Target FLAG_TARGET =
+            new AttentionBubbles.Target(new BlockPos(0, 64, 0), AttentionBubbles.Kind.INCOMPLETE_QUESTS);
+    private static final AttentionBubbles.Target BOARD_TARGET =
+            new AttentionBubbles.Target(new BlockPos(5, 64, 5), AttentionBubbles.Kind.NO_WORK_REQUESTS);
+
+    @Test
+    void Test_AttentionTargetIdentityIncludesKind() {
+        // The flag's "!" and a board's "!" at the same position are different candidates.
+        AttentionBubbles.Target samePosDifferentKind =
+                new AttentionBubbles.Target(FLAG_TARGET.pos(), AttentionBubbles.Kind.NO_WORK_REQUESTS);
+        Assertions.assertNotEquals(FLAG_TARGET, samePosDifferentKind);
+    }
+
+    @Test
+    void Test_AttentionHolderTakesBubbleFromNobody() {
+        Assertions.assertFalse(NeedBubbleFocus.keepsBubble(null, 0, FLAG_TARGET, 0.91));
+    }
+
+    @Test
+    void Test_AttentionHolderKeepsBubbleAgainstMarginallyBetterChallenger() {
+        Assertions.assertTrue(NeedBubbleFocus.keepsBubble(FLAG_TARGET, 0.95, BOARD_TARGET, 0.96));
+    }
+
+    @Test
+    void Test_AttentionKindHintKeys() {
+        Assertions.assertEquals("message.questown.attention.incomplete_quests",
+                AttentionBubbles.Kind.INCOMPLETE_QUESTS.hintKey);
+        Assertions.assertEquals("message.questown.attention.no_work_requests",
+                AttentionBubbles.Kind.NO_WORK_REQUESTS.hintKey);
     }
 }

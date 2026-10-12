@@ -3,6 +3,7 @@ package ca.bradj.questown.mobs.visitor;
 import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.town.rooms.AttentionBubbles;
 import ca.bradj.questown.town.rooms.DeadDoorBubbles;
 import ca.bradj.questown.town.rooms.DoorTrouble;
 import net.minecraft.client.Minecraft;
@@ -23,7 +24,9 @@ import java.util.UUID;
  *
  * <p>Exactly one bubble is shown at a time, so a twenty-townie town does not become a wall of
  * icons and the one thing that needs help is the thing the eye lands on. Townies (keyed by
- * entity UUID) and dead doors (keyed by {@link BlockPos}) compete in the SAME contest: the
+ * entity UUID), dead doors (keyed by {@link BlockPos}) and attention targets (a flag with
+ * incomplete quests, or a job board with no work requests, keyed by an
+ * {@link AttentionBubbles.Target}) compete in the SAME contest: the
  * winner is whichever candidate is closest to the crosshair — proximity, not hover, so the
  * player can sweep the crosshair across the square rather than walking up to each problem.
  *
@@ -63,7 +66,7 @@ public final class NeedBubbleFocus {
      */
     private static final int HINT_REPEAT_TICKS = 40;
 
-    /** Townie holders are UUIDs; dead-door holders are BlockPos. No other types. */
+    /** Townie holders are UUIDs; dead-door holders are BlockPos; attention holders are Targets. */
     private static @Nullable Object current;
     private static double currentScore;
     private static int hintCooldown;
@@ -78,6 +81,11 @@ public final class NeedBubbleFocus {
     /** The dead door currently holding the bubble, if the holder is a door. */
     public static @Nullable BlockPos currentDoor() {
         return current instanceof BlockPos pos ? pos : null;
+    }
+
+    /** The attention target (flag / job board) currently holding the bubble, if any. */
+    public static @Nullable AttentionBubbles.Target currentAttention() {
+        return current instanceof AttentionBubbles.Target t ? t : null;
     }
 
     /**
@@ -121,6 +129,18 @@ public final class NeedBubbleFocus {
             bestTownie = null;
             bestHintKey = door.getValue().hintKey();
             bestPos = Vec3.atCenterOf(door.getKey());
+        }
+        for (AttentionBubbles.Target target : AttentionBubbles.near(mc.player)) {
+            Vec3 bubbleAnchor = Vec3.atBottomCenterOf(target.pos()).add(0, 2.0, 0);
+            double score = crosshairAlignment(mc.player, bubbleAnchor);
+            if (score < CONE_DOT || score <= bestScore) {
+                continue;
+            }
+            best = target;
+            bestScore = score;
+            bestTownie = null;
+            bestHintKey = target.kind().hintKey;
+            bestPos = Vec3.atCenterOf(target.pos());
         }
         adopt(best, bestScore);
         explainIfExamined(mc, bestTownie, best, bestPos, bestHintKey, bestScore);

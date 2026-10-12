@@ -231,6 +231,52 @@ import net.minecraft.world.item.ItemStack;
         poseStack.popPose();
     }
 
+    /**
+     * Draws the comic bubble over a block position with an authored texture icon instead of
+     * an item — the "!" attention bubbles (flag with incomplete quests, job board with no
+     * work requests). Same pose contract, 16-block gate and billboard as
+     * {@link #renderIconBubbleAtBlock}.
+     */
+    public static void renderTextureBubbleAtBlock(
+            net.minecraft.core.BlockPos pos,
+            net.minecraft.resources.ResourceLocation texture,
+            PoseStack poseStack,
+            MultiBufferSource bufferSource,
+            net.minecraft.world.phys.Vec3 cameraPos
+    ) {
+        if (texture == null
+                || cameraPos.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(pos)) > VISIBILITY_RANGE_SQR) {
+            return;
+        }
+        EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        poseStack.pushPose();
+        poseStack.translate(
+                pos.getX() + 0.5 - cameraPos.x,
+                pos.getY() + 2.0 + HEAD_LIFT_BLOCKS - cameraPos.y,
+                pos.getZ() + 0.5 - cameraPos.z
+        );
+        poseStack.scale(ASSEMBLY_SCALE, ASSEMBLY_SCALE, ASSEMBLY_SCALE);
+        poseStack.mulPose(dispatcher.cameraOrientation());
+
+        poseStack.pushPose();
+        poseStack.translate(0.0, ICON_CENTRE_Y_INNER, 0.0);
+        renderBubbleBackground(poseStack, bufferSource, false);
+        poseStack.popPose();
+
+        VertexConsumer consumer = bufferSource.getBuffer(
+                BubbleRenderType.texturedIcon(texture, false)
+        );
+        Matrix4f matrix = poseStack.last().pose();
+        // Slight forward offset so the quad sits in front of the bubble bg, same as the
+        // entity texture path.
+        float z = 0.001f;
+        float r = 0.5f;
+        float yc = ICON_CENTRE_Y_INNER;
+        textureQuad(consumer, matrix, -r, yc - r, +r, yc - r, +r, yc + r, -r, yc + r, z);
+
+        poseStack.popPose();
+    }
+
     private static void renderBubble(
             PoseStack poseStack,
             MultiBufferSource bufferSource,
