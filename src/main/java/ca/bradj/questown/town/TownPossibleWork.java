@@ -30,9 +30,12 @@ import com.google.common.collect.ImmutableList;
 import joptsimple.internal.Strings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.AbstractFurnaceBlock;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import org.jetbrains.annotations.Nullable;
 
 import java.text.NumberFormat;
@@ -50,6 +53,15 @@ import static ca.bradj.questown.mc.Util.info;
  * For job status computation during execution, see {@link JobStatuses}.
  */
 public class TownPossibleWork {
+
+    /**
+     * The smelter fuel tag - the same one the family's own fuel jobs declare
+     * (the cook/baker fuel jobs' state-1 ingredient). The surfacing key for a
+     * furnace that is present but unlit: an {@link GateReason#Blocked} naming it,
+     * so the item store, the UNMET_ITEM bubble and the economics tab say
+     * "coal" instead of hiding the need behind "no room".
+     */
+    public static final String SMELTER_FUEL_KEY = "#" + ItemTags.COALS.location().toString();
 
     private final UnsafeTown town = new UnsafeTown(getClass());
 
@@ -272,13 +284,19 @@ public class TownPossibleWork {
     }
 
     /**
-     * The best-scoring job's typed gate reason. Best-scoring (not random — the old
+     * The best-scoring job's typed gate reason. Best-scoring (not random - the old
      * path picked a random work's first ingredient and mislabelled non-sword
      * failures as "swords"): the town's own statement of what it waits for.
+     * A surfacing-labelled facts (a smelter present but unlit) classifies as a
+     * supply need on the fuel, not a room gap - the decision layer (what counts
+     * as a workable block) is unchanged; only the named blocker is corrected.
      */
     private static GateReason gateReason(TownFlagBlockEntity t, JobPossibility p) {
         JobFacts facts = p.facts();
         RequestCheck board = p.board();
+        if (facts.blockedOnLabel() != null) {
+            return new GateReason.Blocked(0, List.of(facts.blockedOnLabel()), List.of());
+        }
         return GateReason.classify(
                 facts.anyStateHasRoom(),
                 facts.roomKey(),
@@ -379,8 +397,20 @@ public class TownPossibleWork {
             @Nullable String roomKey,
             int firstBlockedState,
             @Nullable String missingIngredientLabel,
-            @Nullable String missingToolLabel
+            @Nullable String missingToolLabel,
+            @Nullable String blockedOnLabel
     ) {
+        JobFacts(
+                int highestState,
+                String description,
+                boolean anyStateHasRoom,
+                @Nullable String roomKey,
+                int firstBlockedState,
+                @Nullable String missingIngredientLabel,
+                @Nullable String missingToolLabel
+        ) {
+            this(highestState, description, anyStateHasRoom, roomKey, firstBlockedState, missingIngredientLabel, missingToolLabel, null);
+        }
     }
 
     private record RequestCheck(boolean boardEmpty, @Nullable WorkRequest satisfied) {
@@ -428,14 +458,19 @@ public class TownPossibleWork {
         }
         if (!townHasJobSite) {
             String roomReason = lastRoomCheck != null ? lastRoomCheck.reason() : "No states checked";
+            String fuelBlocker = smelterFuelBlocker(t, dj);
+            String fuelNote = fuelBlocker != null
+                    ? " - a smelter is present but unlit; the missing input is fuel (" + fuelBlocker + ")"
+                    : "";
             return new JobFacts(
                     0,
-                    "Town lacks required job site (or descendant) of: " + dj.location().baseRoom() + " (" + roomReason + ")",
+                    "Town lacks required job site (or descendant) of: " + dj.location().baseRoom() + " (" + roomReason + ")" + fuelNote,
                     false,
                     dj.location().baseRoom().toString(),
                     -1,
                     null,
-                    null
+                    null,
+                    fuelBlocker
             );
         }
         ServerLevel sl = Preconditions.checkNotNull(t.getServerLevel());
@@ -537,6 +572,39 @@ public class TownPossibleWork {
     ) {
         return dj.location().isJobBlock()
                  .test(new JobBlockTestContext(new MinecraftWorldAccess(sl), info(sl), bp, ImmutableList::of, unique(t), false, false));
+    }
+
+    /**
+     * Surfacing (2026-10-13, ruling b - status/econ name the fuel, the decision layer
+     * stays as-is): when a smelter job's room check fails, a smelter block that
+     * physically exists in the base room and is NOT lit is exactly the "blocked on
+     * fuel" state - the missing input is FUEL ({@link #SMELTER_FUEL_KEY}, the same
+     * tag the family's own fuel jobs declare), not the site. Naming it keeps the
+     * need visible in the item store / UNMET_ITEM bubble / economics tab. The room
+     * check already established no workable spot; this adds the LIT check so a lit
+     * smelter failing the room check for another reason is not misnamed "needs coal".
+     */
+    private static @Nullable String smelterFuelBlocker(
+            TownFlagBlockEntity t,
+            DeclarativeJob dj
+    ) {
+        if (!dj.specialGlobalRules.contains(SpecialRules.FURNACE_SMELT_WARP)) {
+            return null;
+        }
+        ServerLevel sl = t.getServerLevel();
+        if (sl == null) {
+            return null;
+        }
+        for (RoomRecipeMatch<ca.bradj.roomrecipes.serialization.MCRoom> room :
+                 t.getRoomHandle().getRoomsMatching(dj.location().baseRoom())) {
+            for (BlockPos bp : room.getContainedBlocks().keySet()) {
+                var state = sl.getBlockState(bp);
+                if (state.getBlock() instanceof AbstractFurnaceBlock && !state.getValue(AbstractFurnaceBlock.LIT)) {
+                    return SMELTER_FUEL_KEY;
+                }
+            }
+        }
+        return null;
     }
 
     private static Supplier<? extends Collection<Item>> unique(TownFlagBlockEntity t) {

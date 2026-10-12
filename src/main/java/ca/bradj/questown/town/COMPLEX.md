@@ -558,3 +558,28 @@ now the list is additionally filtered through the town-wide
 same gate the request board uses, same semantics as the day-1 econ-tab
 lock-filter). The clicked townie's current job is always unlocked by that
 townie, so the list can't be empty.
+
+# Smelter fuel surfacing: `Blocked` on `#minecraft:coals`, not `NoRoom` (2026-10-13)
+
+A cook whose furnace is unlit used to surface as "has nowhere to work"
+(`NoRoom` - the room check sees no workable block, and `NoRoom` never routes
+the item store, so the UNMET_ITEM bubble + economics tab showed nothing;
+the best-scoring job's gate also swallowed the fuel job's own "Lacking
+coal" because `registerUnmetNeeds` names only the best job's gate).
+Ruling b (surviving the 2026-10-13 Q3): the DECISION layer stays as-is
+(`RoomsWithWorkableStatefulBlocks` - what counts as a workable block -
+untouched); only the surfacing names the fuel.
+`TownPossibleWork.smelterFuelBlocker` (called from the `!townHasJobSite`
+branch of `gateFacts`): a smelter job (`furnace_smelt_warp` global rule)
+whose room check failed while an `AbstractFurnaceBlock` that is **not
+`LIT`** physically exists in the base room -> `JobFacts.blockedOnLabel =
+SMELTER_FUEL_KEY` (`#` + `ItemTags.COALS.location()`, the tag the family's
+own fuel jobs declare). `gateReason` maps a fuel-labelled facts to
+`GateReason.Blocked(0, [coals], [])` - so `registerUnmetNeeds` routes it
+through `supplyItem()` to the item store: the bubble names coal (client:
+`Ingredients.fromString`) and the economics tab lists it. A lit smelter
+failing the room check for another reason is NOT misnamed. The LIT half
+(`smelterFuelBlocker`: room scan + live blockstate read) is registry-bound -
+`@Disabled` with the reason in `SmelterFuelGateReasonTest`, held-run
+covered. In-game verification owed: bubble + econ name coal; refueling
+clears it (`clearUnmetItemNeeds` on viability).
