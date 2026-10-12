@@ -18,10 +18,12 @@ import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -273,7 +275,13 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 // role ("at your town's entrance"); the others are free placement
                 // ("in your town", registers to the flag via the item's NBT).
                 if (SpecialQuests.TOWN_GATE.equals(recipe.getWantedId())) {
-                    yield ImmutableList.of(Compat.translatable("menu.quests.roomblock.welcome_mat"));
+                    // The mat's card click deep-links to the crafting tab (onCardClick),
+                    // so the second line tells the player the card is actionable.
+                    yield ImmutableList.of(
+                            Compat.translatable("menu.quests.roomblock.welcome_mat"),
+                            Compat.translatableStyled(
+                                    "menu.quests.roomblock.click_crafting",
+                                    Style.EMPTY.applyFormat(ChatFormatting.GRAY)));
                 }
                 if (SpecialQuests.JOB_BOARD.equals(recipe.getWantedId())
                         || RoomBlock.isBlockRoom(recipe.getWantedId())) {

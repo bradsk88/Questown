@@ -573,6 +573,16 @@ empty multi-status overview.
   the 2-arg overload (test seam `placeTempBedForTest`) delegates with the campfire
   centre → first-safe-side, preserving the autotest scenario. `CampfireSleepSideTest`
   pins the side choice on a mocked open-air level.
+- **The welcome-mat card tooltip names the click action (2026-10-13 night, user copy).**
+  The `TOWN_GATE` branch returns two lines: the re-worded
+  `menu.quests.roomblock.welcome_mat` ("Craft a welcome mat and place it where
+  you'd like people to enter/exit your village.") plus a grey
+  `menu.quests.roomblock.click_crafting` ("Click to open crafting") built via
+  `Compat.translatableStyled` with `Style.EMPTY.applyFormat(ChatFormatting.GRAY)`
+  (the FlagCraftingScreen grey-line pattern; 1.20.6's `Component` interface has no
+  `withStyle` — only `MutableComponent` does, and `Compat.literal` returns the
+  interface). The second line is honest copy: `onCardClick` already deep-links the
+  mat card to the crafting tab.
 
 ## Leaver-return progress bar (G3, 2026-10-12): the payload carries an absolute tick
 
