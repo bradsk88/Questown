@@ -427,6 +427,23 @@ it the menu degrades to the wire's static stats data instead of crashing.
 - `VillagerMenusPayloadTest` pins the round-trip; the menu-construction half is
   not unit-testable (registry-bound menu types).
 
+## Skills-tab level gate: `showSkillsTab` rides the same wire (2026-10-13)
+
+The third boolean on `VillagerMenusPayload` is `showSkillsTab` - false when the
+townie's level has unlocked no job yet (`Work.getAvailableAtLevel` vs
+`SimpleVillagerHandle.getLevel`, the gate's job-side half is documented in
+`jobs/COMPLEX.md` "available_at_level"). Every tabbed villager menu
+(InventoryAndStatus / Stats / Economics / BOP / JobChangeConfirm / Quests)
+carries the flag; `getEnabledTabs()` returns `VillagerTabs.hideSkills(tabs)`
+when it is false, and `VillagerTabs.forMenu` **also** gates the SKILLS screen
+fn on `menu.showSkillsTab()` - the double gate is deliberate (a menu that
+forgets the `getEnabledTabs` conditional still loses the tab at `forMenu`).
+Flag menus (not per-townie) keep the default `VillagerTabsEmbedding.
+showSkillsTab() = true`. The SKILLS menuShow consumer in
+`TownVillagerUIs` never opens a tabbed menu (it sends
+`OpenVillagerAdvancementsMenuMessage` with the already-filtered unlockable set),
+so no flag change there.
+
 ## Day-1 playtest: quest deep-links, localized job names, arrival copy
 
 - **Welcome-mat quest → crafting tab.** `QuestsScreen.openLessonForClickedCard`

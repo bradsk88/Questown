@@ -1,6 +1,7 @@
 {
   "version": 1,
   "id": "crafter/stone_pickaxe",
+ "available_at_level": 12,
   "unlocks_title": "blacksmith",
   "priority": "3000",
   "parent": "crafter/stone_hoe",

@@ -384,7 +384,7 @@ public class ResourceJobLoader {
             if (overrides != null) {
                 wb = wb.withOverrides(overrides);
             }
-            wb = wb.withUnlockedWithRootJob(unlockedWithRootJob(object));
+            wb = wb.withUnlockedWithRootJob(unlockedWithRootJob(object)).withAvailableAtLevel(availableAtLevel(object));
             return wb.withProficiencyId(proficiencyId(object));
         }
 
@@ -485,7 +485,7 @@ public class ResourceJobLoader {
                 if (slotPrecondition.isPresent()) {
                     work = work.withSlotPrecondition(slotPrecondition.get());
                 }
-                work = work.withUnlockedWithRootJob(unlockedWithRootJob(obj));
+                work = work.withUnlockedWithRootJob(unlockedWithRootJob(obj)).withAvailableAtLevel(availableAtLevel(obj));
                 return work.withProficiencyId(proficiencyId(obj));
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
@@ -1072,6 +1072,15 @@ public class ResourceJobLoader {
     private static boolean unlockedWithRootJob(JsonObject object) {
         Boolean flag = optional(object, "unlocked_with_root_job", JsonElement::getAsBoolean);
         return Boolean.TRUE.equals(flag);
+    }
+
+    /**
+     * The `available_at_level` value: the townie level at which the job becomes available for
+     * skill-tab unlocking. Absent = {@link Work#DEFAULT_AVAILABLE_AT_LEVEL}.
+     */
+    private static int availableAtLevel(JsonObject object) {
+        Integer level = optional(object, "available_at_level", JsonElement::getAsInt);
+        return level != null ? level : Work.DEFAULT_AVAILABLE_AT_LEVEL;
     }
 
     /**

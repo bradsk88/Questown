@@ -1,6 +1,7 @@
 {
   "version": 1,
   "id": "crafter/iron_hoe",
+ "available_at_level": 17,
   "unlocks_title": "blacksmith",
   "priority": "2999",
   "parent": "crafter/stone_hoe",

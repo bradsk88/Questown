@@ -1,6 +1,6 @@
 ---
 title: Make "empty room" one of the first quests
-status: ready-for-agent
+status: ready-for-human
 created: 2026-10-11
 ---
 
@@ -57,3 +57,20 @@ room, ...) are posted, but the generic "build an empty room" quest the user
 expects is absent. Keep the design constraint from the original ticket: the
 empty-room quest must sit early enough to teach room-building before specific
 rooms are demanded.
+
+## Shipped (2026-10-13)
+
+Per the decision: a standalone "empty room" batch now sits between the
+welcome-mat gate and the basics batch, and gates the basics.
+
+- `data/questown/recipes/empty_room.json` — zero-ingredient room recipe
+  (`questown:empty_room`), matches any room; the quest's gate is "a room
+  exists whose door is registered" (walls + registered door, no contents).
+- Chain: gate reward now posts the empty-room batch
+  (`AddEmptyRoomBatchReward`); its completion posts the basics batch
+  (`AddBasicsBatchReward`). Chicken path auto-completes (the chicken builds
+  the gate room before the mat beat); no-chicken path: player builds a room
+  and wands the door (flavor text says so).
+- Quest id `SpecialQuests.EMPTY_ROOM`; lang `room.empty_room`.
+- Test: `EmptyRoomRecipeTest` (zero-ingredient semantics + id match).
+- In-game confirmation of the beat order: pending.

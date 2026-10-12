@@ -43,9 +43,9 @@ public class VillagerMenus {
     ) {
         VillagerMenusPayload p = VillagerMenusPayload.read(buf);
         VillagerMenus menus = new VillagerMenus();
-        menus.initQuestsMenu(windowId, p.villager, p.quests, p.flagPos, p.showBlockOfProgressTab);
+        menus.initQuestsMenu(windowId, p.villager, p.quests, p.flagPos, p.showBlockOfProgressTab, p.showSkillsTab);
         VillagerStatsMenu statsMenu =
-                new VillagerStatsMenu(windowId, p.villager, p.flagPos, p.stats, p.showBlockOfProgressTab);
+                new VillagerStatsMenu(windowId, p.villager, p.flagPos, p.stats, p.showBlockOfProgressTab, p.showSkillsTab);
         // Best-effort: the local entity may have despawned since the server
         // sent this. Without it the menu degrades to the wire's static data.
         if (player.level().getEntity(p.entityId) instanceof VisitorMobEntity local) {
@@ -60,10 +60,11 @@ public class VillagerMenus {
                 p.slotLocks,
                 p.invSize,
                 p.flagPos,
-                p.showBlockOfProgressTab
+                p.showBlockOfProgressTab,
+                p.showSkillsTab
         );
-        menus.initVillagerEconomicsMenu(windowId, p.villager, p.flagPos, p.econ, p.showBlockOfProgressTab);
-        menus.bopMenu = new VillagerBlockofProgressMenu(windowId, p.villager, p.flagPos);
+        menus.initVillagerEconomicsMenu(windowId, p.villager, p.flagPos, p.econ, p.showBlockOfProgressTab, p.showSkillsTab);
+        menus.bopMenu = new VillagerBlockofProgressMenu(windowId, p.villager, p.flagPos, p.showSkillsTab);
 
         SimpleContainer bopSlot = new SimpleContainer(1) {
             @Override
@@ -79,7 +80,8 @@ public class VillagerMenus {
                 p.villager,
                 p.jobId,
                 p.flagPos,
-                p.jobChangeAlreadyPending
+                p.jobChangeAlreadyPending,
+                p.showSkillsTab
         );
         return menus;
     }
@@ -93,6 +95,7 @@ public class VillagerMenus {
             VillagerStatsData stats,
             VillagerEconomicsData econ,
             boolean showBlockOfProgressTab,
+            boolean showSkillsTab,
             boolean jobChangeAlreadyPending
     ) {
         new VillagerMenusPayload(
@@ -105,6 +108,7 @@ public class VillagerMenus {
                 stats,
                 econ,
                 showBlockOfProgressTab,
+                showSkillsTab,
                 jobChangeAlreadyPending,
                 e.getSlotLocks()
         ).write(data);
@@ -118,7 +122,8 @@ public class VillagerMenus {
             Collection<Boolean> slotLocks,
             int invSize,
             BlockPos flagPos,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showSkillsTab
     ) {
         invMenu = new InventoryAndStatusMenu(
                 windowId,
@@ -128,7 +133,7 @@ public class VillagerMenus {
                     public int getMaxStackSize() {
                         return 1;
                     }
-                }, player.getInventory(), slotLocks, uuid, jobId, flagPos, showBlockOfProgressTab
+                }, player.getInventory(), slotLocks, uuid, jobId, flagPos, showBlockOfProgressTab, showSkillsTab
         );
         return invMenu;
     }
@@ -138,9 +143,10 @@ public class VillagerMenus {
             UUID uuid,
             Collection<UIQuest> quests,
             BlockPos flagPos,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showSkillsTab
     ) {
-        questsMenu = new VillagerQuestsContainer(windowId, uuid, quests, flagPos, showBlockOfProgressTab);
+        questsMenu = new VillagerQuestsContainer(windowId, uuid, quests, flagPos, showBlockOfProgressTab, showSkillsTab);
         return questsMenu;
     }
 
@@ -149,9 +155,10 @@ public class VillagerMenus {
             UUID villager,
             BlockPos flagPos,
             VillagerEconomicsData data,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showSkillsTab
     ) {
-        econMenu = new VillagerEconomicsMenu(windowId, villager, flagPos, data, showBlockOfProgressTab);
+        econMenu = new VillagerEconomicsMenu(windowId, villager, flagPos, data, showBlockOfProgressTab, showSkillsTab);
         return econMenu;
     }
 }

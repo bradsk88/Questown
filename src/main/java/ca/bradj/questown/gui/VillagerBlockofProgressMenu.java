@@ -14,6 +14,7 @@ import java.util.UUID;
 
 public class VillagerBlockofProgressMenu extends AbstractTabbedVillagerMenu implements VillagerTabsEmbedding {
     private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.BOP);
+    private final boolean showSkillsTab;
 
     public static VillagerBlockofProgressMenu ForClientSide(
             int windowId,
@@ -28,9 +29,11 @@ public class VillagerBlockofProgressMenu extends AbstractTabbedVillagerMenu impl
     public <S extends IStatus<S>> VillagerBlockofProgressMenu(
             int windowId,
             UUID entity,
-            BlockPos flagPos
+            BlockPos flagPos,
+            boolean showSkillsTab
     ) {
         super(MenuTypesInit.VILLAGER_BLOCKS_OF_PROGRESS.get(), null, null, windowId, flagPos, entity);
+        this.showSkillsTab = showSkillsTab;
     }
 
     @Override
@@ -53,7 +56,12 @@ public class VillagerBlockofProgressMenu extends AbstractTabbedVillagerMenu impl
 
     @Override
     public Collection<String> getEnabledTabs() {
-        return ENABLED_TABS;
+        return showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+    }
+
+    @Override
+    public boolean showSkillsTab() {
+        return showSkillsTab;
     }
 
     @Override

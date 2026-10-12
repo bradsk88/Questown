@@ -67,16 +67,31 @@ Full launch discipline (kill-order, env, port check) is in
    Also read `/tmp/dev-watch.log` (the background watcher's capture) as a
    cross-check.
 2. **Log new user chat feedback on the fly** → a ticket in
-   `.scratch/<feature>/<slug>.md` (see `docs/agents/issue-tracker.md`). YAML
-   frontmatter discipline: single-quote any `title:` that contains a colon or
-   starts with a quote. Mark status from the five canonical roles
-   (`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` /
-   `wontfix`) — `needs-info` when you need a live catch or more context,
-   `ready-for-agent` when it's scoped + fixable.
+   `.scratch/<feature>/<slug>.md` (see `docs/agents/issue-tracker.md`). The exact
+   capture (verified 2026-10-12 — this is how the day-1 playtest's 13 chat lines
+   were collected in one pass):
+   `grep -a '^\[' /tmp/dev-server-N.log | grep -a '\[Not Secure\] <Dev>' | sed 's/^\[\([0-9:]*\)\].*<Dev>/\1: /'`
+   **Run it at the end of EVERY turn, not only when it looks like one** —
+   batching to session end is the exact failure that makes the user have to ask
+   "capture my chat messages". YAML frontmatter discipline: single-quote any
+   `title:` that contains a colon or starts with a quote. Mark status from the five
+   canonical roles (`needs-triage` / `needs-info` / `ready-for-agent` /
+   `ready-for-human` / `wontfix`) — `needs-info` when you need a live catch or more
+   context, `ready-for-agent` when it's scoped + fixable.
 3. **Root-cause bugs that reproduce live** — the log is the oracle. When an
    exception fires (e.g. the 1.20.6 `took_bop` `TranslatableContents` throw),
    trace it to the exact line and record the root cause in the ticket (that is
    the finding; a plausible hypothesis without a second evidence line is not).
+   **A dev probe must read the SAME object at the SAME moment the production
+   code does.** A probe that constructs its own copy, or reads after the
+   consuming call, samples the probe, not the system: the Created-Air saga
+   (2026-10-12/13) — `ItemStack.getItem()` returns `Items.AIR` for an EMPTY
+   stack, so the post-`add()` `[craft-give]` probe logged "Air" and the
+   hand-reproduction probe reading a fresh stack logged "Welcome Mat"; both
+   were wrong moments, and both verdicts ("not reproducible", "registry
+   corruption") fell the moment the production read-time was sampled. State-
+   dependent getters are the trap class: empty/empty-consumed/initial/final all
+   read differently.
 4. **Work `ready-for-agent` items between polls in an isolated worktree** —
    NEVER run gradle in the main project dir while the user's session is live
    (it contends for `build/` + the daemon and can OOM-kill their server). Use
@@ -98,6 +113,23 @@ on a strong signal that a fresh from-zero run is the right move**, e.g.:
   is cleaner from zero.
 When you summon, the context phrase names the concrete reason + what the fresh
 server would let them verify.
+
+## Before the server goes down (restart / teardown / world wipe)
+
+The live log is about to become a static artifact, and any user report not yet
+ticketed loses its evidence chain. Before killing the server for a restart or
+tear-down:
+
+1. Re-run the chat capture above; any user line without a ticket gets one now.
+2. For each unresolved bug report ("X wasn't working"), read the decision /
+   evidence lines while the log is warm — the log is the oracle (the
+   `questown-status-why` loop: dump the decision, not the status).
+3. File or update the tickets with the log lines quoted, THEN tear down.
+
+(2026-10-12: the user's gate was "before you take the server down, check if
+there is any indication of why the gatherer was not working" — the sweep found
+a 15-minute `seeking_work` stall with full `[WHY]` dump evidence, and that
+ticket is what survived the restart.)
 
 ## Traps (verified this session)
 

@@ -35,6 +35,7 @@ class VillagerMenusPayloadTest {
                 new VillagerStatsData(0.75f, 3, 100, 0.8f, 0.1f),
                 VillagerEconomicsData.none(),
                 true,
+                true,
                 false,
                 List.of(true, false, true, false, false, false, false, false)
         );

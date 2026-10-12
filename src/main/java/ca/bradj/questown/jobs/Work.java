@@ -51,6 +51,21 @@ public class Work {
      */
     private boolean unlockedWithRootJob;
 
+    /**
+     * The townie level at which this job becomes available for skill-tab
+     * unlocking (the JSON `available_at_level`, default {@link #DEFAULT_AVAILABLE_AT_LEVEL}).
+     * Townies start at level 1, so the default keeps every ordinary job available the moment
+     * the skills tab first appears (level 2); the material-tier crafter jobs declare higher
+     * values (wooden 7, stone 12, iron 17, golden 22, diamond 27) so a profession's tool
+     * progression follows the townie's level. The gate applies to jobs NOT yet unlocked only —
+     * tutorial-granted jobs are already in the unlocked set and are never retroactively
+     * hidden (2026-10-13 skills-tab ruling, skills-tab-hidden-until-level-2.md).
+     */
+    private int availableAtLevel = DEFAULT_AVAILABLE_AT_LEVEL;
+
+    /** The `available_at_level` default: the first level at which the skills tab appears. */
+    public static final int DEFAULT_AVAILABLE_AT_LEVEL = 2;
+
     public Work(
             JobID id,
             @Nullable JobID parentID,
@@ -128,6 +143,16 @@ public class Work {
     /** Chains the `unlocked_with_root_job` JSON flag parsed by {@code ResourceJobLoader}. */
     public Work withUnlockedWithRootJob(boolean unlockedWithRootJob) {
         this.unlockedWithRootJob = unlockedWithRootJob;
+        return this;
+    }
+
+    public int getAvailableAtLevel() {
+        return availableAtLevel;
+    }
+
+    /** Chains the `available_at_level` JSON value parsed by {@code ResourceJobLoader}. */
+    public Work withAvailableAtLevel(int availableAtLevel) {
+        this.availableAtLevel = availableAtLevel;
         return this;
     }
 

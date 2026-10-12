@@ -57,6 +57,22 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
                 QT.GUI_LOGGER.error("No flag at position {}. Quest will not be removed.", flagPos);
                 return;
             }
+            // Level gate (skills-tab ruling): a job whose JSON available_at_level is above the
+            // townie's level is not yet unlockable. The skills tab hides it, but a stale client
+            // (or a direct packet) could still name it - reject server-side.
+            int level = flag.get().getVillagerHandle().getVillagerLevel(villagerUUID);
+            int availableAtLevel = ca.bradj.questown.jobs.ServerJobsRegistry.getAvailableAtLevel(id);
+            if (availableAtLevel > level) {
+                QT.GUI_LOGGER.info(
+                        "Refusing unlock of {} for {} at level {}: the job's available_at_level "
+                                + "({}) is not reached yet",
+                        id,
+                        villagerUUID,
+                        level,
+                        availableAtLevel
+                );
+                return;
+            }
             if (confirmFirst) {
                 Compat.openScreen(
                         sender, new MenuProvider() {

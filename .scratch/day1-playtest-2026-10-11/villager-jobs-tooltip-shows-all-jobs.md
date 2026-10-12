@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: ready-for-human
 origin: 2026-10-12 playtest — user chat 17:56:35
 ---
 
@@ -16,3 +16,12 @@ of jobs; the list should be filtered to the jobs the town has unlocked/knows
 (econ-tab-shows-locked-job-items.md)). Find the tooltip builder (status-icon
 tooltip path in the villager screen / `MultiStatusScreen` family) and filter
 against the flag's unlocked-job set.
+
+## Shipped (2026-10-13)
+
+`TownVillagerUIs.showJobsWithSameRootUI` now filters the same-root job list
+against the town-wide unlocked set (`VillagerHolder.isUnlocked(JobID)` - the
+same "can anyone in town do this" gate the request board uses, and the same
+semantics as the day-1 econ-tab fix). The clicked townie's own job is always
+in the list (it is unlocked by that townie), so the screen is never empty.
+In-game confirmation pending.

@@ -34,6 +34,7 @@ public final class VillagerMenusPayload {
     public final VillagerStatsData stats;
     public final VillagerEconomicsData econ;
     public final boolean showBlockOfProgressTab;
+    public final boolean showSkillsTab;
     public final boolean jobChangeAlreadyPending;
     public final List<Boolean> slotLocks;
 
@@ -47,6 +48,7 @@ public final class VillagerMenusPayload {
             VillagerStatsData stats,
             VillagerEconomicsData econ,
             boolean showBlockOfProgressTab,
+            boolean showSkillsTab,
             boolean jobChangeAlreadyPending,
             List<Boolean> slotLocks
     ) {
@@ -59,6 +61,7 @@ public final class VillagerMenusPayload {
         this.stats = stats;
         this.econ = econ;
         this.showBlockOfProgressTab = showBlockOfProgressTab;
+        this.showSkillsTab = showSkillsTab;
         this.jobChangeAlreadyPending = jobChangeAlreadyPending;
         this.slotLocks = slotLocks;
     }
@@ -91,6 +94,7 @@ public final class VillagerMenusPayload {
         buf.writeFloat(stats.damageLevelPercent());
         // econ is passed through, not serialized (see note on VillagerEconomicsMenu)
         buf.writeBoolean(showBlockOfProgressTab);
+        buf.writeBoolean(showSkillsTab);
         buf.writeBoolean(jobChangeAlreadyPending);
         buf.writeVarInt(slotLocks.size());
         for (Boolean locked : slotLocks) {
@@ -125,6 +129,7 @@ public final class VillagerMenusPayload {
         // separate `EconomicsUpdate` message, so decoded payloads always carry none().
         VillagerEconomicsData econ = VillagerEconomicsData.none();
         boolean showBlockOfProgressTab = buf.readBoolean();
+        boolean showSkillsTab = buf.readBoolean();
         boolean jobChangeAlreadyPending = buf.readBoolean();
         int lockCount = buf.readVarInt();
         List<Boolean> slotLocks = new ArrayList<>(lockCount);
@@ -141,6 +146,7 @@ public final class VillagerMenusPayload {
                 stats,
                 econ,
                 showBlockOfProgressTab,
+                showSkillsTab,
                 jobChangeAlreadyPending,
                 slotLocks
         );

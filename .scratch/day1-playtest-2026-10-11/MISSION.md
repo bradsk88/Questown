@@ -325,3 +325,64 @@ corruption; fixed in `ebf63af5`, user-confirmed in chat.
 `-Dquestown.tp.fifo`) + writer process may be alive. `/tmp/c2` worktree is
 stale — main-tree HEAD is the truth; copy changed files in, build there while
 the user's session is up.
+
+## Session state (2026-10-13, evening) — queue progress
+
+User was out for lunch; agent worked the "next up" queue headless.
+
+**Shipped this session (all unit-green, in-game confirmation pending):**
+- `e8178b5a` **E1** BOP-spend job-change quest: root pre-rolled at spend
+  (blessed > override > pre-roll > re-roll), quest completes at the spend
+  moment, morning applies the roll. `TownQuestsJobChangeSpendTest` (9 tests).
+- `9d0acd65` **F2** day-2 quest + board auto-request toggle:
+  `FIRST_WORK_REQUEST` quest posted from the basics-batch completion reward
+  (moment board + store land); completes on the flag's first `requestWork`;
+  1-BOP reward. `boardAutoRequest` flag (default ON, NBT-persisted,
+  `[x] Auto-post new requests` row in the board menu,
+  `ToggleBoardAutoRequestMessage`, `requestWork` now idempotent via
+  `contains` guard). `TownWorkHandleRequestWorkTest` (4 tests).
+- `e1c48fb0` **D#2** empty-room early quest: `empty_room.json`
+  zero-ingredient room recipe matches any room; onboarding chain re-gated
+  (gate → empty-room batch → basics batch); chicken path auto-completes.
+  `EmptyRoomRecipeTest` (3 tests).
+- `e7e8787d` **messages-print-twice**: the legacy double
+  `roomRecipeCreated` call in `registerBlockAsRoom` now broadcasts once
+  (`broadcast` flag; meta-room call silent, `broadcastBlockRoomCreated`
+  stays the line); craft buttons self-deactivate before sending
+  (`btn.active = false` — 1.20.6 has no `setActive`) so a fast double-click
+  can't double-send `FlagCraftMessage`.
+- `dd70d7e8` **villager-jobs-tooltip-shows-all-jobs**: the status-icon
+  same-root job list now filters through the town-wide `isUnlocked(JobID)`
+  gate (request-board semantics; same as the day-1 econ-tab fix).
+
+Full unit suite 1182/0/51skipped after each commit; importCheck +
+strangler-check clean at each commit.
+
+**Scanned and deliberately deferred (needs a live/held session):**
+- **seeking-work-leaver-sees-empty-board-room** (the "gatherer-stall" item):
+  static read done this session — the WHY dump's `spots={} rooms={} job_blocks={}`
+  means the seeker's *room set* was empty (upstream of the state check); the
+  board recipe (`questown:job_board_inputs` tag) + `getRoomsFor` path should
+  have populated it (the `gather` job saw the gate room minutes earlier and
+  re-claimed fine at 19:24). This is a live-state question — needs
+  instrumented room-population logging in a held run, per the ticket's own
+  "Notes". Same category as the fuel/coal decision-layer item.
+- **fuel/coal decision layer** (cook-status + econ-tab-top-blocker): a
+  decision-layer change in `RoomsWithWorkableStatefulBlocks` semantics
+  ("blocked on input" vs "no workable block"); high-risk without held-run
+  verification. Left as-is from the prior session's ruling.
+- **skills-tab-hidden-until-level-2**: needs the user's layer→jobs ruling
+  ("confirm the exact layer→jobs mapping with the data" — and which jobs).
+- **paged-menus-scroll-to-page**: wiring verified complete this session
+  (`NeoMouseScrollDispatch` registered on the Neo bus at FMLClientSetup;
+  `QuestsScreen` implements `ScrollableScreen`) — in-game verification only.
+
+**Next session, in order:** held-run verification of the five new features
+(E1/F2/D#2/messages-twice/jobs-tooltip) → instrumented seeking-work room
+investigation (the `spots={} rooms={}` live-state question) → fuel/coal
+decision layer (held-run verified) → the small UI batch
+(roomblock-quests-custom-place-tooltip, job-board-quest-card-shows-sign,
+job-board-empty-state, flag-crafting-ui-tooltips-and-border,
+campfire-sleep-feels-close-enough, skills-tab pending the user's layer
+ruling) → fresh playtest: `rm -rf run/world run-client/saves` +
+server-first launch.

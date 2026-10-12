@@ -1,6 +1,7 @@
 {
   "version": 1,
   "id": "crafter/diamond_shovel",
+ "available_at_level": 27,
   "unlocks_title": "blacksmith",
   "priority": "2999",
   "parent": "crafter/iron_shovel",

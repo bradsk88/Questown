@@ -16,13 +16,15 @@ public class VillagerQuestsContainer extends AbstractQuestsContainer implements 
     private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.QUESTS);
     private final UUID villagerUUID;
     private final boolean showBlockOfProgressTab;
+    private final boolean showSkillsTab;
 
     public VillagerQuestsContainer(
             int windowId,
             UUID villagerUUID,
             Collection<UIQuest> quests,
             BlockPos flagPos,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showSkillsTab
     ) {
         super(
                 MenuTypesInit.VILLAGER_QUESTS.get(),
@@ -32,6 +34,7 @@ public class VillagerQuestsContainer extends AbstractQuestsContainer implements 
         );
         this.villagerUUID = villagerUUID;
         this.showBlockOfProgressTab = showBlockOfProgressTab;
+        this.showSkillsTab = showSkillsTab;
     }
 
     public static VillagerQuestsContainer ForClient(
@@ -59,7 +62,12 @@ public class VillagerQuestsContainer extends AbstractQuestsContainer implements 
 
     @Override
     public Collection<String> getEnabledTabs() {
-        return ENABLED_TABS;
+        return showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+    }
+
+    @Override
+    public boolean showSkillsTab() {
+        return showSkillsTab;
     }
 
     @Override

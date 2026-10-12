@@ -316,6 +316,15 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         return (float) (baseExp * Math.pow(rampFactor, level - 1));
     }
 
+    /**
+     * The townie's villager level (default 1 - townies start un-leveled). The skills-tab
+     * gate's read seam: a job becomes unlockable at {@code Work.getAvailableAtLevel()}
+     * (JSON {@code available_at_level}).
+     */
+    public int getLevel(UUID uuid) {
+        return UtilClean.getOrDefault(levels, uuid, 1);
+    }
+
     public float getDamagePercent(UUID uuid) {
         return (float) Util.getOrDefault(damage, uuid, 0) / (16 * configs.damageTicks * TICK_FACTOR);
     }

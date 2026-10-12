@@ -1,6 +1,7 @@
 {
   "version": 1,
   "id": "crafter/diamond_axe",
+ "available_at_level": 27,
   "unlocks_title": "blacksmith",
   "priority": "4000",
   "parent": "crafter/diamond_shovel",

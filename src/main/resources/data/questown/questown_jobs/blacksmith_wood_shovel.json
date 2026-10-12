@@ -1,6 +1,7 @@
 {
   "version": 1,
   "id": "crafter/wooden_shovel",
+ "available_at_level": 7,
   "unlocks_title": "blacksmith",
   "priority": "2999",
   "parent": "crafter/stick",

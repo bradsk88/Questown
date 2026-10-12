@@ -22,6 +22,7 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
             OpenVillagerMenuMessage.BOP
     );
     private final boolean showBlockOfProgressTab;
+    private final boolean showSkillsTab;
 
     public static VillagerEconomicsMenu ForClientSide(
             int windowId,
@@ -38,10 +39,12 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
             UUID villager,
             BlockPos flagPos,
             VillagerEconomicsData initialData,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showSkillsTab
     ) {
         super(MenuTypesInit.VILLAGER_ECONOMICS.get(), null, null, windowId, flagPos, villager);
         this.showBlockOfProgressTab = showBlockOfProgressTab;
+        this.showSkillsTab = showSkillsTab;
     }
 
     // NOTE: economics data is NOT part of the villager-menu wire — it flows
@@ -69,7 +72,12 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
 
     @Override
     public Collection<String> getEnabledTabs() {
-        return ENABLED_TABS;
+        return showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+    }
+
+    @Override
+    public boolean showSkillsTab() {
+        return showSkillsTab;
     }
 
     @Override

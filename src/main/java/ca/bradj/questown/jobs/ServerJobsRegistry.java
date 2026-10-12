@@ -258,6 +258,20 @@ public class ServerJobsRegistry {
         return parentID.equals(parent);
     }
 
+    /**
+     * The level at which the job becomes available for skill-tab unlocking (JSON
+     * {@code available_at_level}, {@link Work#DEFAULT_AVAILABLE_AT_LEVEL} when absent).
+     * Pre-startup (job data not loaded) answers the default, so callers degrade to
+     * "available" rather than an NPE.
+     */
+    public static int getAvailableAtLevel(JobID job) {
+        if (!Works.isInitialized()) {
+            return Work.DEFAULT_AVAILABLE_AT_LEVEL;
+        }
+        Work work = getWork(job, false);
+        return work != null ? work.getAvailableAtLevel() : Work.DEFAULT_AVAILABLE_AT_LEVEL;
+    }
+
     public static ImmutableSet<JobID> getAllRootJobs() {
         if (!Works.isInitialized()) {
             // Job data not loaded (headless unit test, or pre-startup): no candidate roots,

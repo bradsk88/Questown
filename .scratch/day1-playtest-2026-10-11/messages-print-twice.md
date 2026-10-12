@@ -22,3 +22,19 @@ The E2 broadcast-debounce queue (5s spacing, dedupe consecutive identical
 lines) will mask symptom 2 for players; both still need a real root cause so
 the underlying double-firing doesn't also double-apply quest completion or
 room registration (verify idempotency, not just the chat).
+
+## Shipped (2026-10-13)
+
+- **Recipe_created double broadcast (root cause):** the legacy double
+  `roomRecipeCreated` call in `registerBlockAsRoom` (present in the 1.19.2
+  golden) both broadcast. Now the meta-room call is broadcast-free
+  (`broadcast` flag on `roomRecipeCreated`); `broadcastBlockRoomCreated`
+  remains the single "Created X" line. Scan-driven room notifications are
+  unchanged. Idempotent side effects (swapBlocks, quest completion,
+  advancements) keep running on both calls as before.
+- **Flag-craft chat doubling (guard):** server path verified clean (one
+  `sendSystemMessage` per `FlagCraftMessage`, single registration); the
+  doubling is a fast double-click racing the onClose. The craft button now
+  deactivates itself before sending (`btn.active = false` — 1.20.6 has no
+  `setActive`).
+- In-game confirmation of both pending. Docs: `town/entity/COMPLEX.md`.

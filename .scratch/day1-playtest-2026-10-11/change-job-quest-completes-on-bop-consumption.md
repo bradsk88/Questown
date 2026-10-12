@@ -71,6 +71,16 @@ Design:
   edge).
 - `JOB_CHANGE` quest marks complete at the spend moment.
 
+Shipped (2026-10-13, e8178b5a): implemented per the walkthrough E1 decision - the
+roll happens at spend (blessed guarantee, else pre-roll from the registry roots
+minus the current root, persisted in `pre_roll_roots` NBT) and the matching open
+JOB_CHANGE quest completes at the spend moment
+(`TownFlagBlockEntity.requestJobRootChange` ->
+`TownQuests.markJobChangeCompleteAtSpend`). Morning priority unchanged: blessed >
+tutorial override > pre-roll > dawn re-roll. Full unit suite 1175/0. Left
+ready-for-human: the "more satisfying" read is a player-feel check for the next
+playtest.
+
 Open for implementation: locate where the `JOB_CHANGE` quest is currently
 marked complete (not yet found — next step); persist the pending root in
 NBT if the morning can be skipped across a save/reload (check whether

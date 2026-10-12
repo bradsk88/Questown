@@ -320,11 +320,12 @@ public class TownVillagerUIs {
                                     e.getUUID(),
                                     e.getJobId(),
                                     e.getFlagPos(),
-                                    e.hasBlockOfProgress()
+                                    e.hasBlockOfProgress(),
+                                    !d.unlockableJobs().isEmpty()
                             );
                             x.connectToServer(e, d.sender());
                             return x;
-                        }, d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                        }, d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty()
                 )
         );
         b.put(
@@ -337,12 +338,14 @@ public class TownVillagerUIs {
                                     e.getUUID(),
                                     d.quests(),
                                     e.getFlagPos(),
-                                    e.hasBlockOfProgress()
+                                    e.hasBlockOfProgress(),
+                                    !d.unlockableJobs().isEmpty()
                             ),
                             d.quests(),
                             e,
                             d.stats(),
-                            d.jobChangePending()
+                            d.jobChangePending(),
+                            !d.unlockableJobs().isEmpty()
                     );
                 }
         );
@@ -357,7 +360,8 @@ public class TownVillagerUIs {
                                         e.getUUID(),
                                         e.getFlagPos(),
                                         d.stats(),
-                                        e.hasBlockOfProgress()
+                                        e.hasBlockOfProgress(),
+                                        !d.unlockableJobs().isEmpty()
                                 );
                                 m.attach(e);
                                 return m;
@@ -365,7 +369,8 @@ public class TownVillagerUIs {
                             d.quests(),
                             e,
                             d.stats(),
-                            d.jobChangePending()
+                            d.jobChangePending(),
+                            !d.unlockableJobs().isEmpty()
                     );
                 }
         );
@@ -402,8 +407,9 @@ public class TownVillagerUIs {
                                 d.entity.getUUID(),
                                 d.entity.getJobId(),
                                 d.entity().getFlagPos(),
-                                d.jobChangePending()
-                        ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                                d.jobChangePending(),
+                                !d.unlockableJobs().isEmpty()
+                        ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty()
                 )
         );
         b.put(
@@ -417,8 +423,9 @@ public class TownVillagerUIs {
                                     d.entity().getUUID(),
                                     d.entity().getFlagPos(),
                                     d.econ(),
-                                    d.entity().hasBlockOfProgress()
-                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                                    d.entity().hasBlockOfProgress(),
+                                    !d.unlockableJobs().isEmpty()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty()
                     );
                 }
         );
@@ -431,8 +438,9 @@ public class TownVillagerUIs {
                             d.sender(), (windowId, inv, p) -> new VillagerBlockofProgressMenu(
                                     windowId,
                                     d.entity().getUUID(),
-                                    d.entity().getFlagPos()
-                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                                    d.entity().getFlagPos(),
+                                    !d.unlockableJobs().isEmpty()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty()
                     );
                 }
         );
@@ -453,7 +461,8 @@ public class TownVillagerUIs {
             List<UIQuest> quests,
             VisitorMobEntity e,
             VillagerStatsData stats,
-            boolean isJobChangePending
+            boolean isJobChangePending,
+            boolean showSkillsTab
     ) {
         Compat.openScreen(
                 sender, new MenuProvider() {
@@ -479,6 +488,7 @@ public class TownVillagerUIs {
                         stats,
                         new VillagerEconomicsData(ImmutableList.of()),
                         e.hasBlockOfProgress(),
+                        showSkillsTab,
                         isJobChangePending
                 )
         );

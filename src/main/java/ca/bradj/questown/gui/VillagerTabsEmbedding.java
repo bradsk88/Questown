@@ -13,4 +13,14 @@ public interface VillagerTabsEmbedding {
     UUID getVillagerUUID();
 
     boolean showBlockOfProgressTab();
+
+    /**
+     * The skills-tab gate: when the townie's level has not yet unlocked any job
+     * ({@code Work.getAvailableAtLevel()} vs the level), the server hides the skills tab on
+     * every villager menu. Default on: the flag menus (not tabbed on a per-townie basis) keep
+     * the tab available.
+     */
+    default boolean showSkillsTab() {
+        return true;
+    }
 }

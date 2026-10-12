@@ -145,16 +145,25 @@ public class VillagerTabs extends Tabs implements SubUI {
             }
             return null;
         };
+        // The skills-tab gate rides on the menu, not the tab list: pre-level (no unlockable
+        // jobs yet) the server keeps SKILLS out of enabledTabs via hideSkills, and forMenu
+        // simply disables it for every tabbed villager menu.
+        Runnable skillFn = menu.showSkillsTab() ? factory.apply(OpenVillagerMenuMessage.SKILLS) : null;
         return new VillagerTabs(
                 factory.apply(OpenVillagerMenuMessage.INVENTORY),
                 factory.apply(OpenVillagerMenuMessage.QUESTS),
                 factory.apply(OpenVillagerMenuMessage.STATS),
-                factory.apply(OpenVillagerMenuMessage.SKILLS),
+                skillFn,
                 factory.apply(OpenVillagerMenuMessage.CHANGE_ROOT),
                 factory.apply(OpenVillagerMenuMessage.ECONOMICS),
                 factory.apply(OpenVillagerMenuMessage.BOP),
                 menu.showBlockOfProgressTab()
         );
+    }
+
+    /** The tab list minus the skills tab (the level gate: no unlockable jobs, no tab). */
+    public static Collection<String> hideSkills(Collection<String> tabs) {
+        return tabs.stream().filter(v -> !v.equals(OpenVillagerMenuMessage.SKILLS)).toList();
     }
 
     public static Collection<String> except(String except) {

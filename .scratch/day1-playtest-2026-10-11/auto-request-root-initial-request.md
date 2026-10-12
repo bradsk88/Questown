@@ -47,3 +47,13 @@ already live (unconditionally) on the BOP/job-change path. What remains is
 the re-scoped board toggle: flag NBT + board-menu checkbox + gate this
 existing post on it + idempotency check. See the implementation notes in
 `job-board-organic-introduction.md`.
+
+## Shipped (2026-10-13)
+
+The re-scoped remainder is in: the `ChangeJobReward` auto-post is gated on the
+new flag toggle `boardAutoRequest` (default ON, NBT-persisted, checkbox in the
+board menu via `ToggleBoardAutoRequestMessage`), and
+`TownWorkHandle.requestWork` is now idempotent (`contains` guard — `List.add`
+never dedupes). Original ask (auto-post on root acquire) was already live via
+`ChangeJobReward` and stays so by default. Tests:
+`TownWorkHandleRequestWorkTest`. Docs: `town/entity/COMPLEX.md` F2 section.

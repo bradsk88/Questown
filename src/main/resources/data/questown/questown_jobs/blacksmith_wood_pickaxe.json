@@ -1,6 +1,7 @@
 {
   "version": 1,
   "id": "crafter/wooden_pickaxe",
+ "available_at_level": 7,
   "unlocks_title": "blacksmith",
   "priority": "3000",
   "parent": "crafter/wooden_hoe",

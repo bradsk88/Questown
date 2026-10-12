@@ -354,6 +354,29 @@ gate; the registry-bound expansion itself is `@Disabled` with the reason
 
 ## Leaver-return read: `DeclarativeJob.getLeaverReturn` (G3, 2026-10-12)
 
+## `available_at_level` — the skills-tab level gate (2026-10-13)
+
+A job is only visible/unlockable in the skills tab once the townie's level
+reaches the job's `available_at_level` (JSON field, default
+`Work.DEFAULT_AVAILABLE_AT_LEVEL = 2` - the first level the tab appears; townies
+start at level 1, so a fresh town has no unlockable jobs and the tab is hidden).
+The 25 blacksmith material-tier files (`blacksmith_{wood,stone,iron,golden,diamond}_
+{axe,shovel,pickaxe,hoe,sword}.json` - crafter-family ids, not a blacksmith root)
+carry the values: wood 7, stone 12, iron 17, golden 22, diamond 27. The gate
+lives on the **job, not the layer**: `ResourceJobLoader` parses the optional int
+into `Work.availableAtLevel`; `ServerJobsRegistry.getAvailableAtLevel(JobID)` is
+the lookup (pre-startup NPE guard, like `getAllRootJobs`); `TownVillagerUIsHandle.showUI`
+filters `getChildJobsKnownToExist` by level and the empty set is what hides the
+tab (client-side via `VillagerMenusPayload.showSkillsTab` + `VillagerTabs.
+hideSkills`/`forMenu` gate); `UnlockJobMessage` re-checks server-side so a stale
+client or a direct packet can't unlock a not-yet-available job. Onboarding jobs
+are never retroactively gated: the gate only affects the skills tab's unlockable
+set, not existing grants.
+
+- Data oracle: `JobAvailableAtLevelDataTest` pins the 25 tier files to their
+  values AND asserts no other job JSON carries the field (default semantics).
+- `WorkAvailableAtLevelTest` pins the default + the `withAvailableAtLevel` chain.
+
 The timed leaver trip ("when will the leaver be back") is the gate-mat
 timer: while a leaver job's timed state (the `time` work state — the roam
 tail) is in flight, the per-owner work-status store holds a countdown at

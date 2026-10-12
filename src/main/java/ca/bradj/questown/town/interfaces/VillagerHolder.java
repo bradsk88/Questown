@@ -155,6 +155,14 @@ public interface VillagerHolder {
             JobID id
     );
 
+    /**
+     * The townie's villager level (default 1). The skills-tab gate: a job is only visible /
+     * unlockable once the townie's level reaches the job's JSON {@code available_at_level}.
+     */
+    int getVillagerLevel(
+            UUID villagerUUID
+    );
+
     void addExperience(
             UUID uuid,
             int exp

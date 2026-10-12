@@ -97,3 +97,27 @@ rather than guessing the tick.
 
 Both halves are design-locked; implementation is a full feature + GUI
 surface, not a quick fix. Left as ready-for-human for the next pass.
+
+## Shipped (2026-10-13)
+
+Both halves are in:
+
+- **Day-2 quest** — `FIRST_WORK_REQUEST` (`QuestType` + `MCQuest.firstWorkRequest`
+  + `SpecialQuests.FIRST_WORK_REQUEST`). Posted from the basics batch's
+  completion reward (`PostFirstWorkRequestQuestReward` inside the batch's new
+  `MCRewardList`, alongside the tutorial kickoff reward) — i.e. the moment the
+  board + store room land, not "the next morning": the quest is only doable
+  once the board exists, so posting at build-completion is the earliest honest
+  moment. Completes from the flag's work-handle listener on the first **add**
+  (`TownQuests.markFirstWorkRequestCompleteIfActive`). Reward: 1 Block of
+  Progress (`GrantBlockOfProgressReward`).
+- **Auto-request toggle** — `TownFlagBlockEntity.boardAutoRequest` (default ON,
+  NBT-persisted), gating the `ChangeJobReward` auto-post; the board screen
+  carries an `[x] Auto-post new requests` row (`WorkScreen` bottom band) that
+  flips the `TownWorkContainer` copy and sends `ToggleBoardAutoRequestMessage`;
+  the server applies + re-opens the board to resync. `requestWork` is now
+  idempotent (`TownWorkHandleRequestWorkTest`).
+
+Remaining: in-game confirmation (quest appears, completes on first post,
+toggle round-trips). Full docs: `town/entity/COMPLEX.md` "Day-2 first work
+request quest + the board's auto-request toggle (F2)".

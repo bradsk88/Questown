@@ -1,6 +1,7 @@
 {
   "version": 1,
   "id": "crafter/golden_sword",
+ "available_at_level": 22,
   "unlocks_title": "blacksmith",
   "priority": "4000",
   "parent": "crafter/golden_shovel",
