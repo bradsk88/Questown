@@ -120,8 +120,15 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
      * spawn is deliberately NOT here — arrival is gated on the welcome mat);
      * and the gate batch — the TOWN_GATE quest, which completes when a welcome
      * mat is registered with the flag ({@code registerWelcomeMat}). Its reward
-     * is the first villager at the next morning tick PLUS the basics batch
-     * (job board + store room), which fills the evening until the arrival.
+     * is the first villager at the next morning tick PLUS the empty-room batch
+     * (D#2): the player learns "a room with a registered door" before the
+     * basics batch (job board + store room) lands, which now posts when the
+     * empty-room quest completes — so specific rooms are never demanded before
+     * room-building is taught. On the chicken-assisted path the chicken builds
+     * the gate room (walls + registered door) before the mat, so the
+     * empty-room quest completes immediately on the tick after the mat posts
+     * the batch; on the no-chicken path the player builds a small room and
+     * wands the door.
      */
     public static void setUpQuestsForNewlyPlacedFlag(
             TownInterface town,
@@ -139,11 +146,34 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCRewardList gateReward = new MCRewardList(
                 town,
                 new MCDelayedReward(town, new SpawnVisitorReward(town, VillagerUUID.random())),
-                new MCInstantReward(town, new AddBasicsBatchReward(town))
+                new MCInstantReward(town, new AddEmptyRoomBatchReward(town))
         );
         MCQuestBatch gateBatch = gate.withRewardUponCompletion(gateReward);
         markOnboarding(gateBatch);
         quests.questBatches.add(gateBatch);
+    }
+
+    /**
+     * The D#2 "empty room" batch: a single ROOM quest that matches the
+     * zero-ingredient {@code empty_room} room recipe, so it completes on any
+     * room with a registered door. Posted by the welcome-mat gate reward;
+     * its reward is the basics batch (job board + store room).
+     */
+    void addEmptyRoomBatch() {
+        TownFlagBlockEntity t = this.town.getUnsafe();
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        MCQuest emptyRoomQuest = roomQuest(batchUUID, SpecialQuests.EMPTY_ROOM);
+        emptyRoomQuest.setFlavorText(
+                "Build a small room - walls and a door. Then use your Town Wand on the door "
+                + "to register the room with the town. Villagers need registered rooms to work in.");
+        q.addNewQuest(emptyRoomQuest);
+        MCQuestBatch qb = q.withRewardUponCompletion(
+                new MCInstantReward(t, new AddBasicsBatchReward(t)));
+        markOnboarding(qb);
+        questBatches.add(qb);
+        t.messages.broadcastMessage("New quest is available: build a small room and register its door.");
+        QT.QUESTS_LOGGER.info("Empty-room batch posted (onboarding beat between gate and basics)");
     }
 
     /**

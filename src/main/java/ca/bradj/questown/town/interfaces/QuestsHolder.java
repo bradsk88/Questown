@@ -34,9 +34,16 @@ public interface QuestsHolder {
     void addBatchOfQuestsForVisitor(@Nullable VillagerUUID visitorUUID);
 
     /**
+     * Posts the day-one "empty room" batch (D#2: teach room building before the
+     * specific rooms). Called by {@link ca.bradj.questown.town.rewards.AddEmptyRoomBatchReward}
+     * when the welcome-mat gate quest completes; its reward posts the basics batch.
+     */
+    void addEmptyRoomBatch();
+
+    /**
      * Posts the day-one "basics" batch (job board + store room). Called by
      * {@link ca.bradj.questown.town.rewards.AddBasicsBatchReward} when the
-     * welcome-mat gate quest completes.
+     * empty-room quest completes (D#2 re-gated it on the room-building beat).
      */
     void addBasicsBatch();
 

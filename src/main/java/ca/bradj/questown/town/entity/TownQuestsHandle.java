@@ -149,6 +149,13 @@ public class TownQuestsHandle implements QuestsHolder {
     }
 
     @Override
+    public void addEmptyRoomBatch() {
+        TownFlagBlockEntity t = unsafeGetTown();
+        t.quests.addEmptyRoomBatch();
+        t.setChanged();
+    }
+
+    @Override
     public void addBasicsBatch() {
         TownFlagBlockEntity t = unsafeGetTown();
         t.quests.addBasicsBatch();

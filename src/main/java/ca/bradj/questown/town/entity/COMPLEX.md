@@ -833,3 +833,43 @@ graph LR
   `RemoveWorkFromUIMessage` uses. The open state travels in the menu's container
   data (`TownWorkContainer` new `boardAutoRequest` ctor arg, `readBoolean` in
   `ForClientSide`, `writeBoolean` in `openMenuRequested`'s data lambda).
+
+# "Empty room" onboarding beat between the gate and the basics (D#2, 2026-10-13)
+
+The 2026-10-11 playtest: without the chicken, the opening quests (campfire,
+mat) assume the player knows what a (room around a) flag means. The 2026-10-11
+design-walkthrough ruling: insert a standalone "empty room" batch after
+campfire + mat that **gates the basics batch**, so room registration is taught
+before specific rooms are demanded.
+
+The onboarding chain is now:
+
+1. Campfire batch (flag placement) → campfire-ready toast.
+2. Gate batch (welcome mat) → first villager next morning +
+   **`AddEmptyRoomBatchReward`** (was `AddBasicsBatchReward`).
+3. **Empty-room batch (new)** — a single ROOM quest, `SpecialQuests.EMPTY_ROOM`
+   = the `questown:empty_room` room recipe (`data/questown/recipes/empty_room.json`,
+   **zero ingredients**). A zero-ingredient recipe matches every room (vacuous
+   superset in `RoomRecipe.matches`), so the quest completes on *any* room with
+   a registered door: `TownQuests`'s per-tick ROOM-quest check calls
+   `getRoomsMatching(EMPTY_ROOM)`, which only walks the flag's
+   `registeredDoors` — walls + registered door, no contents. Reward:
+   `AddBasicsBatchReward`.
+4. Basics batch (job board + store room) → PHASE_KICKOFF + the F2
+   first-work-request quest.
+
+- **Chicken path**: the chicken's beat order (wand → wall → door → wand-on-door
+  → room-build → chest → mat, `ChickenArcTransitions`) means the gate room with
+  its registered door exists *before* the mat registers, so the empty-room quest
+  completes on the first tick after the gate reward posts it — the basics batch
+  lands without player input, as before.
+- **No-chicken path**: the player builds a small room, places a door, and wands
+  it (`TownWand` → `registerDoor`). The quest's flavor text says exactly this.
+  The zero-ingredient recipe is global (it matches every room in every town),
+  but `getRoomsMatching` is per-flag, and every recipeID consumer filters on a
+  specific id, so the extra id in each `RoomRecipeMatch` is inert.
+- Plumbing: `QuestsHolder.addEmptyRoomBatch` / `TownQuestsHandle` delegate;
+  `AddEmptyRoomBatchReward` registered in `RewardsInit` (`EMPTY_ROOM_BATCH`).
+  The zero-ingredient-matches-any semantics are pinned by
+  `EmptyRoomRecipeTest` (pure `RoomRecipe.matches` on synthetic containers).
+  In-game confirmation of the new beat order is pending (held run / playtest).

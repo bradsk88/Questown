@@ -263,6 +263,7 @@
   "quests.job_change": "%s will become a %s",
   "quests.job_owner": "Quest belongs to %s",
   "room.no_recipe": "Room",
+  "room.empty_room": "Room",
   "room.crafting_room": "Crafting Room",
   "room.workshop": "Workshop",
   "room.deluxe_workshop": "Deluxe Workshop",

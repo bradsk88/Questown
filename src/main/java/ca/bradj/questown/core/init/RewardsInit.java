@@ -72,6 +72,14 @@ public class RewardsInit {
                     .build(Questown.ResourceLocation(AddBasicsBatchReward.ID))
     );
 
+    public static final Holder<RewardType<AddEmptyRoomBatchReward>> EMPTY_ROOM_BATCH
+            = REWARD_TYPES.register(
+            AddEmptyRoomBatchReward.ID,
+            () -> RewardType.Builder
+                    .of((rType, flag) -> new AddEmptyRoomBatchReward(rType, flag))
+                    .build(Questown.ResourceLocation(AddEmptyRoomBatchReward.ID))
+    );
+
     public static final Holder<RewardType<AddRandomUpgradeQuest>> RANDOM_UPGRADE_FOR_VILLAGER
             = REWARD_TYPES.register(
             AddRandomUpgradeQuest.ID,
