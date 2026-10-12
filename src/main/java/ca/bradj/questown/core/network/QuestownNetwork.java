@@ -13,7 +13,7 @@ import java.util.Objects;
 /**
  * Mod network.
  *
- * <p>The 32 message classes in this package (plus {@code MultiStatusScreenSyncMessage}) are
+ * <p>The 33 message classes in this package (plus {@code MultiStatusScreenSyncMessage}) are
  * loader-neutral: POJOs with a wire encoder/decoder over the vanilla {@code RegistryFriendlyByteBuf}
  * and a neutral {@code Channel.Context} handler. The channel setup and dispatch are the
  * loader-specific part, adapted by the active loader (NeoForge: one envelope payload + StreamCodec +
@@ -73,6 +73,7 @@ public final class QuestownNetwork {
         register(Channel.Direction.TO_SERVER, RelocationChoiceMessage.class, RelocationChoiceMessage::encode, RelocationChoiceMessage::decode, RelocationChoiceMessage::handle);
         register(Channel.Direction.TO_SERVER, RemoveQuestFromUIMessage.class, RemoveQuestFromUIMessage::encode, RemoveQuestFromUIMessage::decode, RemoveQuestFromUIMessage::handle);
         register(Channel.Direction.TO_SERVER, RemoveWorkFromUIMessage.class, RemoveWorkFromUIMessage::encode, RemoveWorkFromUIMessage::decode, RemoveWorkFromUIMessage::handle);
+        register(Channel.Direction.TO_SERVER, ToggleBoardAutoRequestMessage.class, ToggleBoardAutoRequestMessage::encode, ToggleBoardAutoRequestMessage::decode, ToggleBoardAutoRequestMessage::handle);
         register(Channel.Direction.TO_SERVER, UnlockJobMessage.class, UnlockJobMessage::encode, UnlockJobMessage::decode, UnlockJobMessage::handle);
         QT.LOGGER.info("[questown] network ready: 32 message types registered");
     }

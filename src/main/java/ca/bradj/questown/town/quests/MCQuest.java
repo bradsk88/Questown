@@ -3,6 +3,7 @@ package ca.bradj.questown.town.quests;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.gui.QuestTypes;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -103,6 +104,22 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.setFlavorText("A villager wants to work as a " + JobID.fromRL(jobId).toNiceString()
                 + ". Spend a Block of Progress on the change job tab to request a job change - "
                 + "it takes effect overnight.");
+        return q;
+    }
+
+    /**
+     * The day-2 onboarding quest (F2): post the town's first work request on the job board.
+     * Completes from the flag's work-handle listener on any posted request while active.
+     */
+    public static MCQuest firstWorkRequest(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId
+    ) {
+        MCQuest q = new MCQuest(
+                batchUUID, ownerId, SpecialQuests.FIRST_WORK_REQUEST, null,
+                QuestType.FIRST_WORK_REQUEST, 1
+        );
+        q.setFlavorText("Open the job board and post your first work request - the town needs to know what to make.");
         return q;
     }
 

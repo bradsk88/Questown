@@ -40,6 +40,13 @@ public interface QuestsHolder {
      */
     void addBasicsBatch();
 
+    /**
+     * Posts the day-2 "post your first work request" quest (F2). Posted when the
+     * basics batch completes (the board and store room exist by then); completes
+     * on the town's first posted work request while active.
+     */
+    void addFirstWorkRequestBatch();
+
     Collection<MCQuestBatch> getAllBatchesForVillager(UUID uuid);
 
     void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID);

@@ -214,6 +214,12 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         return t;
     }
 
+    public CompoundTag serializeBoardAutoRequest() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.isBoardAutoRequest());
+        return t;
+    }
+
     @Override
     public CompoundTag serializeChickenBeatState() {
         CompoundTag t = new CompoundTag();

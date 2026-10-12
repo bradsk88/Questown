@@ -3,6 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.RemoveWorkFromUIMessage;
+import ca.bradj.questown.core.network.ToggleBoardAutoRequestMessage;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -20,6 +21,10 @@ public class TownWorkContainer extends AbstractContainerMenu {
     public final ca.bradj.questown.gui.AddWorkContainer addWorkContainer;
     private final BlockPos flag;
     private boolean skipToAdd;
+    // F2: the flag's "auto-request" toggle, mirrored client-side so the board screen can
+    // render it. Optimistically flipped on click; the server re-opens the menu afterwards
+    // so any drift resyncs.
+    private boolean boardAutoRequest;
 
     public static TownWorkContainer ForClientSide(
             int windowId,
@@ -34,6 +39,7 @@ public class TownWorkContainer extends AbstractContainerMenu {
         return new TownWorkContainer(
                 windowId, readWork(buf), qMenu,
                 readFlagPosition(buf),
+                buf.readBoolean(),
                 buf.readBoolean()
         );
     }
@@ -47,13 +53,15 @@ public class TownWorkContainer extends AbstractContainerMenu {
             Collection<UIWork> quests,
             AddWorkContainer awc,
             BlockPos flag,
-            boolean skipToAdd
+            boolean skipToAdd,
+            boolean boardAutoRequest
     ) {
         super(MenuTypesInit.TOWN_WORK.get(), windowId);
         this.work = quests;
         this.addWorkContainer = awc;
         this.flag = flag;
         this.skipToAdd = skipToAdd;
+        this.boardAutoRequest = boardAutoRequest;
     }
 
     public static Collection<UIWork> readWork(FriendlyByteBuf data) {
@@ -104,5 +112,19 @@ public class TownWorkContainer extends AbstractContainerMenu {
 
     public boolean skipToAdd() {
         return this.skipToAdd;
+    }
+
+    public boolean isBoardAutoRequest() {
+        return boardAutoRequest;
+    }
+
+    public void setBoardAutoRequest(boolean v) {
+        this.boardAutoRequest = v;
+    }
+
+    public void sendToggleBoardAutoRequest() {
+        QuestownNetwork.sendToServer(
+                new ToggleBoardAutoRequestMessage(boardAutoRequest, flag.getX(), flag.getY(), flag.getZ())
+        );
     }
 }

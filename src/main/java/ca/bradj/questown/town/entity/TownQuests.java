@@ -167,11 +167,55 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         q.addNewQuest(storeRoomQuest);
 
         MCQuestBatch qb = q.withRewardUponCompletion(
-                TownFlagTutorialAdapter.from(t, questBatches).makeReward(TutorialTownView.PHASE_KICKOFF));
+                new MCRewardList(
+                        t,
+                        TownFlagTutorialAdapter.from(t, questBatches).makeReward(TutorialTownView.PHASE_KICKOFF),
+                        // F2 day-2 beat: once the basics land, the job board needs its first
+                        // request. The quest posts here (not on a morning tick) so the board
+                        // exists by the time it is posted.
+                        new MCInstantReward(t, new PostFirstWorkRequestQuestReward(t))
+                ));
         markOnboarding(qb);
         questBatches.add(qb);
         t.messages.broadcastMessage("New quests are available! Right-click the town flag to see them.");
         QT.QUESTS_LOGGER.info("Basics batch posted (job board + store room) on welcome-mat completion");
+    }
+
+    /**
+     * The day-2 "post your first work request" quest (F2). A single standalone quest in its
+     * own batch; completes from {@link #markFirstWorkRequestCompleteIfActive} when any request
+     * posts while it is active (the flag's work-handle listener drives it). Reward: one Block
+     * of Progress - small, and it is the currency the board's other beats run on.
+     */
+    void addFirstWorkRequestBatch() {
+        TownFlagBlockEntity t = this.town.getUnsafe();
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        q.addNewQuest(MCQuest.firstWorkRequest(batchUUID, null));
+        MCQuestBatch qb = q.withRewardUponCompletion(
+                new MCInstantReward(t, new GrantBlockOfProgressReward(t, 1)));
+        questBatches.add(qb);
+        t.messages.broadcastMessage("New quest is available: post your first work request on the job board.");
+        QT.QUESTS_LOGGER.info("First-work-request batch posted (day-2 board introduction)");
+    }
+
+    /**
+     * Completes the active day-2 "first work request" quest when a request lands on the board.
+     * Driven from the flag's work-handle change listener on any add (a removal carries the
+     * removed request, so only adds reach this). No-op when the quest is absent or already
+     * complete.
+     */
+    public void markFirstWorkRequestCompleteIfActive() {
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (q.getType() != Quest.QuestType.FIRST_WORK_REQUEST || q.isComplete()) {
+                    continue;
+                }
+                batch.markRecipeAsComplete(null, q.getWantedId());
+                QT.QUESTS_LOGGER.info("First-work-request quest completed on first posted request");
+                return;
+            }
+        }
     }
 
     @NotNull

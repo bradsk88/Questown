@@ -765,3 +765,71 @@ flowchart LR
   (instead of NPE-ing via `Works.ids()`) when `Works.isInitialized()` is false,
   so the spend-time roll degrades to "no candidates" rather than crashing the
   forked test JVM.
+
+# Day-2 "first work request" quest + the board's auto-request toggle (F2, 2026-10-13)
+
+The 2026-10-12 playtest: the board sat empty because a newly-created cook's
+`initial_request` was never posted, and the player wanted a say in whether the
+town auto-posts requests at all. F2 ships both: a day-2 onboarding quest that
+completes on the *first* posted request, and a per-flag toggle that gates the
+auto-posting.
+
+## Day-2 quest — post → complete
+
+```mermaid
+graph LR
+    A["basics batch completes\n(job board + store room built)"] --> B["MCRewardList:\nPHASE_KICKOFF reward, then\nPostFirstWorkRequestQuestReward"]
+    B --> C["TownQuests.addFirstWorkRequestBatch\nFIRST_WORK_REQUEST quest\n(SpecialQuests.FIRST_WORK_REQUEST)\nreward: GrantBlockOfProgressReward(1)"]
+    D["any request lands on the board\n(TownWorkHandle.requestWork →\nflag workHandle listener,\nc.removed() == null = an add)"] --> E["TownQuests.markFirstWorkRequestCompleteIfActive\ncompletes the active quest"]
+```
+
+- The quest posts from the **basics batch's completion reward** (wrapped in an
+  `MCRewardList` with the tutorial kickoff reward), not on a tick: by the time
+  the batch completes the board exists and a villager is present, so the ask is
+  doable. `QuestsHolder.addFirstWorkRequestBatch` / `TownQuestsHandle` delegate.
+- Completion rides the flag's existing `workHandle.addChangeListener`: any **add**
+  (`c.removed() == null`) calls `markFirstWorkRequestCompleteIfActive`, which walks
+  batches for an incomplete `FIRST_WORK_REQUEST` quest and marks it. Removals
+  carry the removed request, so they never complete it.
+- `Quest.QuestType.FIRST_WORK_REQUEST` is new; the exhaustive switches got cases:
+  `UIQuest.getIngredients` (empty — a do-this quest takes no item),
+  `UIQuest.getName` (`menu.quests.first_work_request`), the `QuestsScreen`
+  tooltip switch (empty tooltip; the flavor text carries the guidance), and
+  `QuestBatches`'s duplicate-check reconstruction (treated like CONCURRENT_JOBS).
+  `QuestTypes` NBT round-trips by `name()`, so no per-value mapping.
+- Rewards: `PostFirstWorkRequestQuestReward` (no NBT, `addsQuestsWhenApplied`)
+  and `GrantBlockOfProgressReward` (count in NBT, `emptyForDeserializing` entry
+  like `AddItemQuestReward`) are both registered in `RewardsInit`
+  (`FIRST_WORK_REQUEST`, `GRANT_BOP`). The BOP grant is a public flag method
+  (`TownFlagBlockEntity.grantBlockOfProgress`) mirroring
+  `TownFlagTutorialAdapter.grantBop` — the reward lives in `town.rewards` and
+  must not reach the package-private `bopStacks`.
+
+## Auto-request toggle — state, gate, UI
+
+- **State**: `TownFlagBlockEntity.boardAutoRequest` (default ON, "the board
+  reads alive on a fresh town"), persisted through the standard flag tile-data
+  path: `TownFlagTileData.NBT_BOARD_AUTO_REQUEST` InitPair (load + onFlagPlace)
+  + `TownFlagInitialization(Impl).serializeBoardAutoRequest` + the write line in
+  `TownFlagTileData.write`.
+- **Gate**: the ONLY auto-post site is `ChangeJobReward`'s applier (acquiring a
+  root job posts its `initial_request(s)`). It now checks
+  `((TownFlagBlockEntity) town).isBoardAutoRequest()` per request. Manual
+  posting (`AddWorkFromUIMessage` → `requestWork`) is never gated.
+- **Idempotency**: `TownWorkHandle.requestWork(WorkRequest)` now no-ops when the
+  request is already pending. The board is a set of *unfulfilled* requests — a
+  fulfilled one drops off (`removeWorkRequest`) and may be re-requested then.
+  Trap: `requestedResults` is a `List` — `List.add` never dedupes (only Sets
+  do), so the guard is a `contains` check, not a `!add` result. Unit tests:
+  `TownWorkHandleRequestWorkTest` (dedupe + re-request-after-removal + the
+  FIRST_WORK_REQUEST quest shape; vanilla-bootstrapped like
+  `PostDowntimeWarperNoOpGuardTest`).
+- **UI**: `WorkScreen` renders a `[x] Auto-post new requests` row pinned to the
+  screen's bottom band (clickable via the existing `removes` position→Runnable
+  map + `highlightAndTooltip`). Click flips the local `TownWorkContainer` copy
+  optimistically and sends `ToggleBoardAutoRequestMessage` (TO_SERVER, flag pos
+  + new state); the handler applies it and re-opens the board menu (`openJobsMenu`),
+  which resyncs the checkbox from the server — same resync pattern
+  `RemoveWorkFromUIMessage` uses. The open state travels in the menu's container
+  data (`TownWorkContainer` new `boardAutoRequest` ctor arg, `readBoolean` in
+  `ForClientSide`, `writeBoolean` in `openMenuRequested`'s data lambda).

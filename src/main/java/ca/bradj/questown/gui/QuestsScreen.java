@@ -271,6 +271,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             case JOB_CHANGE -> renderJobQuestTooltip(recipe);
             case JOB_UNLOCK -> renderJobUnlockTooltip(recipe);
             case CONCURRENT_JOBS -> ImmutableList.of(Compat.literal("Have all listed jobs active at the same time"));
+            case FIRST_WORK_REQUEST -> ImmutableList.of();
             case UNKNOWN -> null;
         };
     }

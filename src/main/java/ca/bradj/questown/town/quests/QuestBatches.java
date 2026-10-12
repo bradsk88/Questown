@@ -183,6 +183,7 @@ public class QuestBatches<
                     case JOB_CHANGE -> e.addJobChangeQuest(q.getWantedId());
                     case JOB_UNLOCK -> e.addJobUnlockQuest(q.getWantedId());
                     case CONCURRENT_JOBS -> e.addNewQuest(owner, q.getWantedId());
+                    case FIRST_WORK_REQUEST -> e.addNewQuest(owner, q.getWantedId());
                     case UNKNOWN -> QT.QUESTS_LOGGER.error("Unexpected type: {}. Skipping duplicate check.", q.getType());
                 }
                 IdIgnoring<QUEST> iq = new IdIgnoring<>(q);

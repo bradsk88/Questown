@@ -320,6 +320,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     // Helper-chicken onboarding arc state (U1). Storage only — logic lives in ChickenArcController (U3+).
     boolean chickenEverSpawned = false;
+    // The board's "auto-request" toggle (F2, default ON): when on, acquiring a root job
+    // auto-posts its initial_request(s) to the work board; the player can silence it from
+    // the board menu. Persists like the other flag tile data.
+    boolean boardAutoRequest = true;
     ca.bradj.questown.mobs.helperchicken.ChickenBeatState chickenBeatState =
             ca.bradj.questown.mobs.helperchicken.ChickenBeatState.WAITING_FOR_STICK;
     boolean chickenFirstGatherWorldlySeedsFired = false;
@@ -751,6 +755,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
             t.pois.setListener(t);
             t.workHandle.addChangeListener(c -> {
+                // F2 day-2 beat: any request landing on the board completes the active
+                // "first work request" quest. A removal carries the removed request, so only
+                // adds (c.removed() == null) count.
+                if (c.removed() == null) {
+                    t.quests.markFirstWorkRequestCompleteIfActive();
+                }
                 updateWorkersAfterRequestChange();
                 setChanged();
             });
@@ -1978,6 +1988,23 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public void setChickenEverSpawned(boolean v) {
         this.chickenEverSpawned = v;
+    }
+
+    /** Grants N Blocks of Progress to the flag's BOP store (onboarding rewards). */
+    public void grantBlockOfProgress(int amount) {
+        for (int i = 0; i < amount; i++) {
+            bopStacks.add(new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get()));
+        }
+        setChanged();
+        syncBopFull();
+    }
+
+    public boolean isBoardAutoRequest() {
+        return boardAutoRequest;
+    }
+
+    public void setBoardAutoRequest(boolean v) {
+        this.boardAutoRequest = v;
     }
 
     public ca.bradj.questown.mobs.helperchicken.ChickenBeatState getChickenBeatState() {

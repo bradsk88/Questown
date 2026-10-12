@@ -176,7 +176,7 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     }
 
     public enum QuestType {
-        ITEM, ROOM, JOB_CHANGE, JOB_UNLOCK, CONCURRENT_JOBS, LOOT, UNKNOWN;
+        ITEM, ROOM, JOB_CHANGE, JOB_UNLOCK, CONCURRENT_JOBS, LOOT, FIRST_WORK_REQUEST, UNKNOWN;
     }
 
     protected interface QuestFactory<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>> {

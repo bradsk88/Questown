@@ -5,6 +5,7 @@ import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
 import com.google.common.collect.ImmutableList;
@@ -71,8 +72,13 @@ public class ChangeJobReward extends MCReward {
                 if (output.isEmpty()) {
                     return;
                 }
-                town.getWorkHandle().requestWork(output.getItem());
-                QT.JOB_LOGGER.debug("Request was added to job board automatically");
+                // The board's "auto-request" toggle (F2, default ON): when the player has
+                // switched it off, a new root's initial requests are NOT auto-posted -
+                // posting is left to them. Manual requests are never gated.
+                if (((TownFlagBlockEntity) town).isBoardAutoRequest()) {
+                    town.getWorkHandle().requestWork(output.getItem());
+                    QT.JOB_LOGGER.debug("Request was added to job board automatically");
+                }
             });
         };
     }

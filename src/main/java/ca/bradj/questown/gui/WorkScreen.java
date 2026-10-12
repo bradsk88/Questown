@@ -202,6 +202,31 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
 
         // Render the page buttons
         ctx.renderWidget(this.addMoreBtn, mouseX, mouseY, partialTicks);
+
+        // F2: the board's auto-request toggle, pinned to the bottom band.
+        int tgX = x + PAGE_PADDING;
+        int tgY = y + backgroundHeight - PAGE_PADDING - 24;
+        boolean on = menu.isBoardAutoRequest();
+        ctx.fill(tgX, tgY, tgX + 9, tgY + 9, 0x60000000);
+        if (on) {
+            ctx.fill(tgX + 2, tgY + 2, tgX + 7, tgY + 7, 0xFFFFFF);
+        }
+        ctx.text(
+                Compat.translatable("job_board.auto_request"),
+                tgX + 14,
+                tgY + 1,
+                TEXT_COLOR,
+                false
+        );
+        highlightAndTooltip(
+                ctx,
+                mouseX,
+                mouseY,
+                tgX,
+                tgY,
+                Compat.translatable(on ? "job_board.auto_request.tooltip.on" : "job_board.auto_request.tooltip.off")
+        );
+        this.removes.put(new Position(tgX, tgY), this::toggleAutoRequest);
         ctx.renderWidget(this.previousPage, mouseX, mouseY, partialTicks);
         ctx.renderWidget(this.nextPage, mouseX, mouseY, partialTicks);
     }
@@ -309,6 +334,14 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
 
     private void addMoreWork() {
         this.minecraft.setScreen(addWorkScreen);
+    }
+
+    private void toggleAutoRequest() {
+        // Flip locally first so the checkbox is instant; the server applies it and re-opens
+        // the board, which resyncs the flag state (and this checkbox) from the server.
+        boolean next = !menu.isBoardAutoRequest();
+        menu.setBoardAutoRequest(next);
+        menu.sendToggleBoardAutoRequest();
     }
 
     @Override

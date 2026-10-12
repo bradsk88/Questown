@@ -141,6 +141,7 @@ public class UIQuest implements Comparable<UIQuest> {
             case JOB_CHANGE -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case JOB_UNLOCK -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case CONCURRENT_JOBS -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
+            case FIRST_WORK_REQUEST -> ImmutableList.of();
             case UNKNOWN -> ImmutableList.of();
         };
     }
@@ -204,6 +205,7 @@ public class UIQuest implements Comparable<UIQuest> {
             case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractJobName());
             case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", extractRootJobName());
             case CONCURRENT_JOBS -> Compat.literal("Multiple Jobs Active");
+            case FIRST_WORK_REQUEST -> Compat.translatable("menu.quests.first_work_request");
             case UNKNOWN -> Compat.literal("ERROR");
         };
     }

@@ -156,6 +156,13 @@ public class TownQuestsHandle implements QuestsHolder {
     }
 
     @Override
+    public void addFirstWorkRequestBatch() {
+        TownFlagBlockEntity t = unsafeGetTown();
+        t.quests.addFirstWorkRequestBatch();
+        t.setChanged();
+    }
+
+    @Override
     public void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID) {
         TownFlagBlockEntity t = unsafeGetTown();
         TownQuests.addUpgradeQuest(t, t.quests, visitorUUID);

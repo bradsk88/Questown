@@ -104,5 +104,21 @@ public class RewardsInit {
                     .build(Questown.ResourceLocation(AddItemQuestReward.ID))
     );
 
+    public static final Holder<RewardType<PostFirstWorkRequestQuestReward>> FIRST_WORK_REQUEST
+            = REWARD_TYPES.register(
+            PostFirstWorkRequestQuestReward.ID,
+            () -> RewardType.Builder
+                    .of((rType, flag) -> new PostFirstWorkRequestQuestReward(rType, flag))
+                    .build(Questown.ResourceLocation(PostFirstWorkRequestQuestReward.ID))
+    );
+
+    public static final Holder<RewardType<GrantBlockOfProgressReward>> GRANT_BOP
+            = REWARD_TYPES.register(
+            GrantBlockOfProgressReward.ID,
+            () -> RewardType.Builder
+                    .of(GrantBlockOfProgressReward::emptyForDeserializing)
+                    .build(Questown.ResourceLocation(GrantBlockOfProgressReward.ID))
+    );
+
     public static void boot() {}
 }

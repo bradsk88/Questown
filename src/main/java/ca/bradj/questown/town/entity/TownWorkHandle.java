@@ -122,7 +122,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
                         AddWorkContainer r = new AddWorkContainer(windowId, allOutputs, flagPos);
                         return new TownWorkContainer(
                                 windowId, requestedResults.stream().map(UIWork::new).toList(), r,
-                                flagPos, skipToAdd
+                                flagPos, skipToAdd, parent.isBoardAutoRequest()
                         );
                     }
                 }, data -> {
@@ -131,6 +131,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
                     TownWorkContainer.writeWork(requestedResults, data);
                     TownWorkContainer.writeFlagPosition(flagPos, data);
                     data.writeBoolean(skipToAdd);
+                    data.writeBoolean(parent.isBoardAutoRequest());
                 }
         );
     }
@@ -148,7 +149,14 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
     @Override
     public void requestWork(WorkRequest e) {
-        this.requestedResults.add(e);
+        // Idempotent (F2): re-requesting an item that already has a pending request does not
+        // stack a duplicate. The board is a set of unfulfilled requests - a fulfilled one
+        // drops off and can be re-requested then. (List.add would NOT dedupe - check first.)
+        if (requestedResults.contains(e)) {
+            QT.FLAG_LOGGER.debug("Request already on the board, not duplicated: {}", e);
+            return;
+        }
+        requestedResults.add(e);
         this.listeners.forEach(l -> l.accept(new Change(null)));
         QT.FLAG_LOGGER.debug("Request added to job board: {}", e);
     }
