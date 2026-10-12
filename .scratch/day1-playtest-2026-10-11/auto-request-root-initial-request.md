@@ -36,3 +36,14 @@ Not a town-wide behavior: this becomes a **toggle on the job board UI**
 (decision in `job-board-organic-introduction.md`). Implementation now spans
 two tickets: the board toggle (server flag NBT + board menu checkbox) plus
 the auto-post on root acquire when the toggle is on. Default: ON.
+
+## Correction (2026-10-12, lunch session)
+
+The job-change path **already** auto-posts the root's `initial_request`:
+`ChangeJobReward.getApplier` loops the root's `defaultWork` through
+`ServerJobsRegistry.getDefaultWorkForNewWorker` (which returns
+`work.initialRequest`) and `requestWork`s each. So the original ask is
+already live (unconditionally) on the BOP/job-change path. What remains is
+the re-scoped board toggle: flag NBT + board-menu checkbox + gate this
+existing post on it + idempotency check. See the implementation notes in
+`job-board-organic-introduction.md`.

@@ -46,3 +46,54 @@ NOT a town-wide default — it becomes an **OPTION on the job board**: a
 toggle checkbox in the board UI. When on, acquiring a root job whose
 `initial_request` is set auto-posts that request. Default state: ON (the
 board reads alive; the player can silence it) — confirm.
+
+## Implementation notes (2026-10-12, lunch session)
+
+**Correction to the assumption in `auto-request-root-initial-request`: the
+job-change path ALREADY auto-posts the root's `initial_request`.**
+`ChangeJobReward.getApplier` unlocks `defaultWork` and then loops
+`ServerJobsRegistry.getDefaultWorkForNewWorker(town, work)` →
+`work.get().initialRequest.apply(sl)` → `town.getWorkHandle().requestWork(item)`
+for each. So "acquire a root → post its initial_request" is already live on
+the BOP/job-change path; it is unconditional today.
+
+What the toggle actually adds, then, is bounded:
+1. **Persist a `boolean` on the flag NBT** (default `true`), say
+   `board-auto-request`.
+2. **A checkbox in the board menu** (`WorkRequestConfirmScreen` / the
+   board `AbstractContainerMenu`), a new network message to flip it. This
+   is the only GUI surface — needs `gui-lint` in a dev client before ship
+   (AGENTS GUI convention).
+3. **Gate the existing auto-post on the toggle** in `ChangeJobReward` (and
+   wire the register/spawn path if it should honor it too — today the
+   register path does NOT auto-post, only the job-change path does, so the
+   toggle's "default ON" behavior is already correct on the only path that
+   posts).
+4. **Idempotency**: `requestWork` should dedupe against
+   `getRequestedResults()` so re-acquiring a root doesn't stack duplicate
+   requests. Verify the existing call already avoids dupes; if not, add the
+   guard here, not at every call site.
+
+**The day-2 quest is the larger half** and is a new `QuestType`:
+- Add `FIRST_WORK_REQUEST` to `Quest.QuestType` + `MCQuest` factory +
+  `SpecialQuests` id.
+- Complete it from `TownWorkHandle.requestWork` (the single entry point for
+  all posted requests) — mark the active `FIRST_WORK_REQUEST` quest complete
+  the first time any request posts while it is ACTIVE. "Any posted request"
+  per the decision; note the auto-post from item 3 above would satisfy it,
+  so the quest only reads as player-driven when the toggle is OFF or the
+  player posts manually. That's acceptable (quest completes on first
+  request) but the player-facing "you discovered the board" moment is
+  weakest exactly when auto-post is ON — worth re-checking against P10.
+- Post the quest on day 2 (the morning after onboarding) — the onboarding
+  batch (`addBasicsBatch`) is the model; a small day-2 batch that adds this
+  single quest, reward = a small item grant.
+
+**Scheduling open question (needs the user / a live server to feel out):**
+when exactly does the day-2 batch fire? The quest only makes sense once the
+board exists and a villager is present. Simplest: post it the morning after
+the basics batch completes (board + store room done). Verify on a held run
+rather than guessing the tick.
+
+Both halves are design-locked; implementation is a full feature + GUI
+surface, not a quick fix. Left as ready-for-human for the next pass.
