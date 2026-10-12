@@ -7,6 +7,7 @@ import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
@@ -87,17 +88,16 @@ public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
     // a full inventory would otherwise swallow the item while the input was still consumed. Drop the
     // remainder at the player's feet instead, the same fallback the flag uses for a block of progress.
     private void giveAndNotify(ServerPlayer player, ItemStack crafted) {
+        // The display name must be captured BEFORE add(): on success the stack is
+        // consumed (count -> 0), and an empty stack's getItem() falls back to
+        // Items.AIR (vanilla behavior) - that fallback is what made the message read
+        // "Created Air" while the real item landed in the inventory (2026-10-11 report,
+        // welcome-mat-craft-chat-says-created-air.md).
+        Component itemName = crafted.getHoverName();
         if (!player.getInventory().add(crafted)) {
             player.drop(crafted, false);
         }
-        // 2026-10-12 probe (welcome-mat-craft-chat-says-created-air.md): the user sees
-        // "Created Air" for the mat. Log the actual resolution chain so the next
-        // craft identifies which link is wrong instead of re-deriving it statically.
-        QT.GUI_LOGGER.info("[craft-give] item={} descId={} hover='{}'",
-                crafted.getItem(),
-                crafted.getItem().getDescriptionId(crafted),
-                crafted.getHoverName().getString());
-        player.sendSystemMessage(Compat.translatable("message.flag_crafting.created", crafted.getHoverName()));
+        player.sendSystemMessage(Compat.translatable("message.flag_crafting.created", itemName));
     }
 
     private boolean consumeMatching(ServerPlayer player, Ingredient required) {

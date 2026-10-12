@@ -1,8 +1,61 @@
 ---
 title: Crafting a welcome mat posts "Created Air" to chat
-status: needs-triage
+closed: 2026-10-13
 created: 2026-10-11
 ---
+
+## Resolved
+
+Shipped in the fix commit of 2026-10-13: `giveAndNotify` captures
+`crafted.getHoverName()` before `player.getInventory().add(crafted)`
+consumes the stack. Live-verified by the user (chat reads
+"Created Welcome Mat"). No unit test: the mechanism is vanilla
+`ItemStack` empty-stack fallback + `ServerPlayer` inventory wiring, and
+the fix is a one-line ordering change pinned by the live observation
+(see ROOT CAUSE section below).
+
+## ROOT CAUSE (confirmed 2026-10-13 18:50, live probe round 3)
+
+**The item was always delivered correctly. "Created Air" is a display-name
+timing bug in `FlagCraftMessage.giveAndNotify`.**
+
+`giveAndNotify` read the message's display name from the stack *after*
+`player.getInventory().add(crafted)` had consumed it:
+
+1. `add(crafted)` succeeds (the mat lands in the inventory - the user's
+   observed fact, 10-11: "I DID get a welcome mat in my hand") and, on
+   success, shrinks the passed stack to count 0.
+2. An empty stack's `ItemStack.getItem()` is vanilla fallback behavior:
+   `if (isEmpty()) return Items.AIR;` (verified in the 1.20.6 bytecode -
+   `getItem()`, not just NBT round-trips, does the lookup).
+3. `crafted.getHoverName()` on the consumed stack therefore resolves
+   through `Items.AIR` -> "Air" -> the chat line reads "Created Air".
+
+All three recipes (mat, wand, board) went through this path, so any
+successful craft with room in the inventory could say "Created X -> Air".
+
+**The two earlier wrong verdicts are both explained by the same trap:**
+- 2026-10-13 "not reproducible": the `CreatedAirProbe` read the hover name
+  of a fresh, unconsumed stack -> "Welcome Mat".
+- 2026-10-12/13 `[craft-give]` probe printed `item=minecraft:air`:
+  it logged *after* the `add()` consumption -> the empty-stack fallback.
+  Every probe that read the item post-consumption showed AIR; the
+  registry/holder chain was healthy at every observation point (boot,
+  pre-craft, post-craft: key `questown:welcome_mat_block`, real
+  `BlockItem`, holder identity stable all session).
+
+**Fix (`FlagCraftMessage.giveAndNotify`):** capture
+`Component itemName = crafted.getHoverName()` *before* the `add()`; send
+the message with the captured name. One line; covers all three craft
+recipes. All DEV-DIAG probes removed (`MatDiagServerEvents` deleted).
+
+**Verify (live, one click):** craft the mat from the flag menu on the
+rebuilt server; chat must read "Created Welcome Mat".
+
+**Residue (cosmetic, separate):** the world carries 4-5 corrupt
+`ItemEntity`s from earlier broken builds (`Tried to load invalid item:
+'No key id in MapLike[{}]` on every join). Harmless; delete the dropped
+items in-game or leave them.
 
 ## Context
 
