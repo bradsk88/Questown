@@ -155,3 +155,24 @@ complete when some townie *unlocks the wanted root job*
 (`TownQuests.processJobUnlocks`) and are lost when the stuck state clears. The
 state machine (grace, onboarding gate, dedupe, loss) is mapped in
 `town/entity/COMPLEX.md`, "Stuck townie -> JOB_UNLOCK quest".
+
+# Quest garden bed-posting — shortfall-aware, not one-per-batch
+
+`AbstractQuestGarden.doGrow` posts the next quest each grow tick. Bed satisfaction was
+previously a boolean (`hasEnoughBeds`): when it was false the garden posted **one** bed
+quest and the `hasBedAlready(batch)` guard kept it from posting another in the same
+batch, so covering N missing beds took N separate batches. With 2 villagers the town
+sat under-bedded (day-1 playtest: "we have two villagers but only one bedroom quest").
+
+Fix: the garden is now **shortfall-aware**. `grow`/`doGrow` take `Supplier<Integer>
+missingBeds` instead of `Supplier<Boolean> hasEnoughBeds` (0 = enough, N = how many more
+complete beds are needed). `doGrow` posts a bed quest each tick while
+`bedQuestCount(batch) < missingBeds`, then switches to room quests once the batch covers
+the shortfall. `hasBedAlready` (boolean) was replaced by `bedQuestCount` (int). The
+shortfall comes from `TownRoomsHandle.missingBeds(numVillagers)` =
+`max(0, villagers - bedBlocks/2)`, surfaced via `TownFlagBlockEntity.missingBeds()` /
+`TownInterface.missingBeds()`. Bed satisfaction itself (`beds/2 >= villagers`) is
+unchanged. Pinned by `QuestGardenTest.testShouldAcceptMultipleBeds_UntilShortfallCovered`
+and `testShouldAcceptOneBedPerGrowTick_WhenOnlyOneMissing`.
+
+Ticket: `.scratch/day1-playtest-2026-10-11/bedroom-quests-under-posted.md`.

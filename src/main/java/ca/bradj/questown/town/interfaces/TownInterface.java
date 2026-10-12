@@ -58,6 +58,9 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     boolean hasEnoughBeds();
 
+    /** How many more complete beds the town needs to cover the villager count (0 = enough). */
+    int missingBeds();
+
     boolean isInitialized();
 
     UUID getUUID();

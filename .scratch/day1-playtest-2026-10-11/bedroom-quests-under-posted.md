@@ -1,6 +1,6 @@
 ---
 title: 'Bedroom quests: keep one bedroom.json per villager, but the garden under-posts them'
-status: needs-info
+status: implemented
 created: 2026-10-11
 ---
 
@@ -54,3 +54,22 @@ carry more than one bed quest when the shortfall is >1, or triggering a
 re-evaluation when a new villager arrives (the roster-change moment). Ties into
 the two-villagers finding (`two-villagers-after-first-sleep.md`) — if two villagers
 arrive at once, the shortfall jumps by 1-2 and the garden must catch up.
+
+## Implementation (2026-10-12)
+
+Shortfall-aware garden, not one-per-batch. The quest garden now posts a bed quest
+each grow tick until the batch covers the actual shortfall, then switches to room
+quests:
+- `AbstractQuestGarden.grow`/`doGrow` take `Supplier<Integer> missingBeds` (0 = enough)
+  instead of `Supplier<Boolean> hasEnoughBeds`; `doGrow` posts a bed quest while
+  `bedQuestCount(batch) < missingBeds`, else a room quest. `hasBedAlready` (boolean) is
+  replaced by `bedQuestCount` (int).
+- `TownRoomsHandle.missingBeds(numVillagers)` = `max(0, villagers - bedBlocks/2)` (shares
+  the bed count with `hasEnoughBeds`); surfaced via `TownFlagBlockEntity.missingBeds()` /
+  `TownInterface.missingBeds()`. `TownQuests` now passes `town::missingBeds`.
+- Bed satisfaction (`beds/2 >= villagers`) is unchanged.
+
+Verified: `QuestGardenTest` — `testShouldAcceptMultipleBeds_UntilShortfallCovered` (posts
+3 beds when 3 missing, then a room quest) + `testShouldAcceptOneBedPerGrowTick_WhenOnlyOneMissing`
+(replaces the old max-one-bed test). Full `:test` suite green. Documented in
+`town/quests/COMPLEX.md` "Quest garden bed-posting".

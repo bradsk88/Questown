@@ -61,8 +61,8 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
     }
 
     @Override
-    protected boolean hasBedAlready(MCQuestBatch mcQuestBatch) {
-        return mcQuestBatch.getAll().stream().anyMatch(v -> this.hasBeds(level, v));
+    protected int bedQuestCount(MCQuestBatch mcQuestBatch) {
+        return (int) mcQuestBatch.getAll().stream().filter(v -> this.hasBeds(level, v)).count();
     }
 
     private boolean hasBeds(

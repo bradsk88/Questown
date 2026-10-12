@@ -232,14 +232,29 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         return b.build();
     }
 
+    private long bedBlockCount() {
+        return roomsMap.getAllMatches(v -> true).stream().flatMap(v -> v.getContainedBlocks().values().stream())
+                       .filter(v -> Ingredient.of(ItemTags.BEDS).test(new ItemStack(v.asItem()))).count();
+    }
+
     boolean hasEnoughBeds(long numVillagers) {
         // TODO: This returns false positives if called before entities have been loaded from tile data
-        long beds = roomsMap.getAllMatches(v -> true).stream().flatMap(v -> v.getContainedBlocks().values().stream())
-                            .filter(v -> Ingredient.of(ItemTags.BEDS).test(new ItemStack(v.asItem()))).count();
+        long beds = bedBlockCount();
         if (beds == 0 && numVillagers == 0) {
             return false;
         }
         return (beds / 2) >= numVillagers;
+    }
+
+    /**
+     * The bed shortfall: how many more <em>complete</em> beds (2 blocks each) the town needs to
+     * reach {@code beds/2 >= numVillagers}. 0 when the town already has enough. The quest
+     * garden uses this to post enough bedroom quests to cover the shortfall (day-1 playtest:
+     * the town was under-bedded - it posted at most one bed quest per batch).
+     */
+    int missingBeds(long numVillagers) {
+        long completeBeds = bedBlockCount() / 2;
+        return (int) Math.max(0L, numVillagers - completeBeds);
     }
 
     @Override

@@ -407,7 +407,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         pendingQuests = null;
 
         boolean canGrowMore = pop.grow(
-                town::hasEnoughBeds,
+                town::missingBeds,
                 () -> getNeededRooms(town.getEconomicsHandle()).stream().filter(v -> TownQuests.isNotSpecial(v.id()))
                                                                .toList(),
                 () -> {

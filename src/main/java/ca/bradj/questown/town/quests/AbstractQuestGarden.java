@@ -39,7 +39,7 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
      * @return true if growth occurred
      */
     public boolean grow(
-            Supplier<Boolean> hasEnoughBeds,
+            Supplier<Integer> missingBeds,
             Supplier<Collection<RoomNeed<ROOM_ID>>> neededRooms,
             Supplier<Collection<ROOM_ID>> allRecipes
     ) {
@@ -52,7 +52,7 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
             return false;
         }
 
-        boolean added = doGrow(hasEnoughBeds, neededRooms, allRecipes);
+        boolean added = doGrow(missingBeds, neededRooms, allRecipes);
         if (this.ticksSoFar > maxTicks) {
             return false;
         }
@@ -62,11 +62,17 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
     protected abstract boolean isOvergrown();
 
     private boolean doGrow(
-            Supplier<Boolean> hasEnoughBeds,
+            Supplier<Integer> missingBeds,
             Supplier<Collection<RoomNeed<ROOM_ID>>> neededRooms,
             Supplier<Collection<ROOM_ID>> allRecipes
     ) {
-        if (hasEnoughBeds.get() || hasBedAlready(batch)) {
+        // The bed shortfall is covered one bedroom quest per grow tick: while the batch holds
+        // fewer bed quests than the shortfall, post a bed quest; once it covers the shortfall
+        // (or there is none), post room quests. This lets a batch carry more than one bed
+        // quest when several beds are missing (day-1 playtest: the town was under-bedded
+        // because it posted at most one bed quest per batch).
+        int need = missingBeds.get();
+        if (need <= 0 || bedQuestCount(batch) >= need) {
             Collection<RoomNeed<ROOM_ID>> nr = neededRooms.get();
             // A batch carries unique requests: a needed recipe already in the
             // batch waits for a later batch instead of filling this one (the
@@ -110,7 +116,8 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
         costSoFar += cost;
     }
 
-    protected abstract boolean hasBedAlready(BATCH batch);
+    /** Number of bedroom quests already in the batch (used to cover the bed shortfall). */
+    protected abstract int bedQuestCount(BATCH batch);
 
     private boolean shouldSkip(
             ROOM_ID id
