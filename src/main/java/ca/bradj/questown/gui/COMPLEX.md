@@ -513,3 +513,23 @@ empty multi-status overview.
   (`FlagTabs` passes `fi.bonusFoodAvailable()` to both the tab and
   `computeTabDecisions`). `FlagInfo` gained the `bonusFoodAvailable` boolean
   (wire position: after `bopFull`).
+
+## Leaver-return progress bar (G3, 2026-10-12): the payload carries an absolute tick
+
+The villagers-menu leaver-return bar (`MultiStatusScreen.renderLeaverReturnBar`)
+is driven **without a push channel**: `StatusPacket` gained
+`leaverReturnTick` (absolute server tick at which the leaver's timed trip
+ends; 0 = not away on a timed trip) + `leaverReturnTotal` (the trip's
+declared duration). The server stamps it in
+`FlagMenus.createStatusPacket` → `VisitorMobEntity.getLeaverReturn()` →
+`DeclarativeJob.getLeaverReturn` (gate-mat timer read, see jobs/COMPLEX.md).
+The client re-derives the fraction every frame from
+`Minecraft.getInstance().level.getGameTime()` (container screens re-render
+continuously, so the bar ticks down live; LAN clock skew of a few ticks is
+harmless — clamped). A status-change re-sync then drops the bar when the
+trip ends. `StatusPacket.equals/hashCode` deliberately exclude the two new
+fields so the smoothing queue's majority vote is unaffected. The 3-arg
+convenience constructor keeps the inventory-status call site
+(`InventoryAndStatusMenu`) leaver-free. The bar is a 30×3 fill under the
+32×32 status art (inside the art's footprint — no new card geometry, so no
+layout change; gui-lint check rides the user's first menu open).

@@ -5,6 +5,7 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.town.status.MultiStatusScreen;
 import ca.bradj.questown.gui.town.status.MultiStatusScreenSyncMessage;
 import ca.bradj.questown.jobs.IStatus;
+import ca.bradj.questown.jobs.LeaverReturn;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.StatusListener;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -124,7 +125,14 @@ public class FlagMenus {
     ) {
         ResourceLocation tex = ServerJobsRegistry.getTexture(v.getJobId(), vStatus);
         ImmutableList<Component> texts = ServerJobsRegistry.getStatusText(v.getJobId(), vStatus);
-        StatusPacket value = new StatusPacket(v.getJobId(), texts, tex);
+        LeaverReturn leaverReturn = v.getLeaverReturn();
+        StatusPacket value = new StatusPacket(
+                v.getJobId(),
+                texts,
+                tex,
+                leaverReturn == null ? 0L : leaverReturn.returnTick(),
+                leaverReturn == null ? 0 : leaverReturn.totalTicks()
+        );
         return value;
     }
 

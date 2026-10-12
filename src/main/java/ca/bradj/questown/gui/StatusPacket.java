@@ -13,8 +13,23 @@ import java.util.Objects;
 public record StatusPacket(
         JobID jobId,
         ImmutableList<Component> texts,
-        ResourceLocation image
+        ResourceLocation image,
+        /**
+         * G3 leaver-return bar: the absolute server tick at which this
+         * townie's timed trip ends. 0 = not away on a timed trip (no bar).
+         */
+        long leaverReturnTick,
+        /** Total declared ticks of that trip (the bar's denominator). */
+        int leaverReturnTotal
 ) {
+    /** Screens without leaver-return info (e.g. the inventory status row) use this. */
+    public StatusPacket(
+            JobID jobId,
+            ImmutableList<Component> texts,
+            ResourceLocation image
+    ) {
+        this(jobId, texts, image, 0L, 0);
+    }
     public static void toNetwork(
             FriendlyByteBuf b,
             StatusPacket statusPacket
@@ -22,13 +37,17 @@ public record StatusPacket(
         Jobs.writeIdToNetwork(b, statusPacket.jobId);
         b.writeCollection(statusPacket.texts, (buf, c) -> buf.writeUtf(c.getString()));
         b.writeResourceLocation(statusPacket.image);
+        b.writeVarLong(statusPacket.leaverReturnTick);
+        b.writeVarInt(statusPacket.leaverReturnTotal);
     }
 
     public static StatusPacket fromNetwork(FriendlyByteBuf b) {
         JobID j = Jobs.getIdFromNetwork(b);
         List<Component> textKeys = b.readList(buf -> net.minecraft.network.chat.Component.literal(buf.readUtf()));
         ResourceLocation img = b.readResourceLocation();
-        return new StatusPacket(j, ImmutableList.copyOf(textKeys), img);
+        long leaverReturnTick = b.readVarLong();
+        int leaverReturnTotal = b.readVarInt();
+        return new StatusPacket(j, ImmutableList.copyOf(textKeys), img, leaverReturnTick, leaverReturnTotal);
     }
 
     @Override

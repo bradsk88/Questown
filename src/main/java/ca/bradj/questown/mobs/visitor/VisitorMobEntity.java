@@ -1328,6 +1328,22 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return null;
     }
 
+    /**
+     * The timed leaver trip this townie is currently on (absolute server
+     * return tick + total ticks), or null when the townie is not away on a
+     * timed trip. Delegates to the declarative job that owns the timer.
+     */
+    public @Nullable LeaverReturn getLeaverReturn() {
+        if (town == null) {
+            return null;
+        }
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
+        if (j instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj) {
+            return dj.getLeaverReturn(town);
+        }
+        return null;
+    }
+
     public void addStatusListener(StatusListener l) {
         this.cleanupJobListeners.add(
                 job.get().addStatusListener(l)

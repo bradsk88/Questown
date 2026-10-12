@@ -331,6 +331,43 @@ public class DeclarativeJob extends
     }
 
     /**
+     * The timed leaver trip this job is currently on, when its gate-mat
+     * timer is still counting down: the absolute server tick at which the
+     * timer expires and the trip's declared total duration. Null when the
+     * job has no live timed trip (no work spot, no state, no timer, or the
+     * state declares no time). Feeds the villagers-menu leaver-return
+     * progress bar.
+     */
+    public @Nullable LeaverReturn getLeaverReturn(TownInterface town) {
+        WorkPosition<BlockPos> spot = ticker.workSpot();
+        if (spot == null || spot.jobBlock() == null) {
+            return null;
+        }
+        BlockPos bp = spot.jobBlock();
+        AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> work =
+                ((TownFlagBlockEntity) town).getRealWorkStatusHandle(
+                        specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS) ? null : ownerUUID
+                );
+        Integer remaining = work.getTimeToNextState(bp);
+        if (remaining == null || remaining <= 0) {
+            return null;
+        }
+        State state = work.getJobBlockState(bp);
+        if (state == null) {
+            return null;
+        }
+        int total = checks.getTimeForStep(null, state.processingState(), 0);
+        if (total <= 0) {
+            return null;
+        }
+        ServerLevel level = town.getServerLevel();
+        if (level == null) {
+            return null;
+        }
+        return new LeaverReturn(level.getGameTime() + remaining, Math.max(total, remaining));
+    }
+
+    /**
      * Eyes-level debug snapshot of the job's current work-site progress: the
      * processing state and how many work/time ticks remain before the next
      * stage. This backs the "progress / [work/time] left" indicator and is how

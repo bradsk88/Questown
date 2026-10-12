@@ -38,3 +38,15 @@ menu while the player watches**. Implementation: the payload carries the
 absolute **return tick** (server time), and the client derives
 `elapsed/total` every frame from its own clock — no push channel needed;
 the bar ticks down smoothly and stays in sync with the server on LAN.
+
+## Shipped (2026-10-12)
+
+Implemented per the G3 decision: `StatusPacket` carries
+`leaverReturnTick` (absolute server tick) + `leaverReturnTotal`;
+`DeclarativeJob.getLeaverReturn` reads the gate-mat timer (remaining + the
+timed state's declared duration); `MultiStatusScreen` draws a 30×3 bar
+under the 32×32 status art, re-derived every frame from the client clock.
+Full unit suite green (1164/0/50). **In-game verification rides the user's
+fresh playtest** (first villagers-tab open on a leaver mid-timed-trip,
+e.g. the gatherer's 2000-tick roam tail); gui-lint check is part of that
+first menu open.

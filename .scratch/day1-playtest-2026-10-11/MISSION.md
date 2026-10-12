@@ -211,6 +211,33 @@ optional one-line explanation), `welcome-mat-craft-chat-says-created-air`
 (user confirmed the Craft button prints it; `[craft-give]` probe armed in
 `FlagCraftMessage.giveAndNotify` — needs the rebuilt server + one more click).
 
+## Session state (2026-10-13 lunch) — autonomous work
+
+**User instruction (persisted):** "I'm stopping to have some lunch. Try to
+complete as many of my TODOs as you can do autonomously. When I get back,
+I'll want to play-test on a brand new server so I can feel out the
+improvements." → work the queue solo; leave the tree committed + a
+fresh-from-zero launch ready.
+
+- Old session torn down 2026-10-13 (client 150700, server, fifo writer).
+  No user chat on server-8 (`grep 'Not Secure' /tmp/dev-server-8.log` = 0
+  lines) — nothing left to ticket from that session.
+  **G1/G2 tickets NOT flipped**: user will re-verify the "!" bubbles in
+  the fresh playtest; flip on their confirmation.
+- Evening playtest world preserved at
+  `/tmp/playtest-world-2026-10-12-evening` (19M; the gatherer-stall world).
+  Stale-world artifact noted: on player join the deserializer spams
+  `Tried to load invalid item: 'No key id in MapLike[{}]'` (~6/visitor
+  entity) — pre-existing contaminated NBT, expected to be absent on a
+  fresh world.
+- Worktrees `/tmp/bubbles` + `/tmp/c2` removed; main tree at `9f1fb5c1`
+  is the only working tree. Gradle is FREE in the main tree (user away).
+- Plan: G3 leaver-return bar → the 8 new playtest tickets (cheap fixes
+  first, gatherer-stall investigation with the saved logs) → E1 → F1 →
+  F2 → D#2, as far as gets done cleanly. On the user's return: `rm -rf
+  run/world run-client/saves` + server-first launch (`dev-server-9.log` /
+  `dev-client-8.log`).
+
 ## Session close (night of 2026-10-12) — queue state
 
 **Shipped this evening:** `6865917a` C#2 free-food claim card + red dot (dirt
@@ -219,9 +246,7 @@ crafting-tab quest text; `30b0edb4` E2 broadcast pacing (5s queue + dedupe).
 All tickets from both playtest rounds filed/updated (`f542afa8`,
 `7fee604a`). Full unit suite green on each commit.
 
-**Outstanding, in order:** G1+G2 ("!" bubbles over flag while quests open /
-over board while zero requests — one bubble system; pattern:
-`render/BubbleRenderer` + `loader/neo/NeedBubbleClientEvents`), G3 leaver
+**Outstanding, in order:** G3 leaver
 return bar (return-tick in payload), E1 (roll at BOP-spend; find where
 JOB_CHANGE currently completes), F1 vanilla filled map at flag placement,
 F2 day-2 "post first request" quest + board auto-request toggle,
@@ -231,11 +256,32 @@ D#2 empty-room early quest, then the evening tickets
 `flag-crafting-ui-tooltips-and-border`, `job-board-quest-card-shows-sign`,
 `job-board-empty-state` reopen, `campfire-sleep-feels-close-enough`).
 
-**Open question for the user (Created Air):** the `[craft-give]` probe in
-`FlagCraftMessage.giveAndNotify` is live in the current build — the user
-never clicked the mat-craft button after the 17:52 server restart (no
-`[craft-give]` line in `/tmp/dev-server.log`). Next session: have the user
-craft the mat once, read the probe line, root-cause from there.
+**Shipped next round:** `ebf63af5` "Created Air" fix (capture the item name
+before `add()` consumes the stack — `ItemStack.getItem()` falls back to AIR on
+an empty stack; user confirmed fixed in-game); `9f1fb5c1` G1+G2 "!" bubbles
+(flag with incomplete quests / job board with zero work requests — state on
+the flag update tag, `AttentionBubbles` + `NeedBubbleFocus` third holder,
+`BubbleRenderer.renderTextureBubbleAtBlock` + `attention.png`; full suite
+green in an isolated worktree). **In-game verification DONE 2026-10-12
+19:31:** server+client restarted on the bubble build (server `/tmp/dev-server-8.log`
+booted 19:29:56, client `/tmp/dev-client-7.log`, Dev joined 19:31:27) — user is
+playing on it now.
+
+**Evening playtest captured (2026-10-12 19:04-19:25, 13 chat lines → 8
+new tickets in this folder):** `change-job-quest-targets-specific-villager`,
+`cook-kitchen-batch-should-include-storage-upgrade`,
+`expected-guaranteed-cook-got-arborist`,
+`cook-status-says-nowhere-to-work-when-blocked-on-fuel`,
+`board-requests-briefly-missing-cooked-foods`, `new-cook-has-no-cook-works`,
+`seeking-work-leaver-sees-empty-board-room` (the gatherer stall — full log
+evidence chain in the ticket: seeker's workable-block scan `spots={} rooms={}
+job_blocks={}` for ~15 min while the board was registered with requests; the
+gatherer worked fine on `gather` before 19:07 and again from 19:22:55),
+`econ-tab-top-blocker-missing-coal`.
+
+**Open question for the user (Created Air):** RESOLVED — root cause was the
+post-consumption `ItemStack.getItem()` → AIR fallback, not registry/holder
+corruption; fixed in `ebf63af5`, user-confirmed in chat.
 
 **Environment:** dev server + client killed for the night; world preserved in
 `run/world`; FIFO wiring still in `build.gradle` (gated on

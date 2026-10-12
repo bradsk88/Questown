@@ -331,3 +331,22 @@ both stock jobs silently failed to load — the MC-free `TestJobLoader` never in
 `ResourceJobLoader.ReloadListener.apply` (vanilla bootstrap in `@BeforeAll`) and asserts the
 v2 fields survive the real parse (parents, room, `ALWAYS_CONSIDER`/`EXCLUDE_FROM_WARP`).
 Any new v2 job file should be load-tested the same way, not only through `TestJobLoader`.
+
+## Leaver-return read: `DeclarativeJob.getLeaverReturn` (G3, 2026-10-12)
+
+The timed leaver trip ("when will the leaver be back") is the gate-mat
+timer: while a leaver job's timed state (the `time` work state — the roam
+tail) is in flight, the per-owner work-status store holds a countdown at
+the gate-mat pos, and its expiry is the point the townie is clear to
+re-enter town. `DeclarativeJob.getLeaverReturn(TownInterface)` reads it:
+`ticker.workSpot()` → job-block pos → the owner-scoped
+`TownFlagBlockEntity.getRealWorkStatusHandle` (`SHARED_WORK_STATUS` →
+global lane, same split as `getWorkProgressDebug`) →
+`getTimeToNextState` (remaining) and `getJobBlockState` (current
+processing state, whose declared time — `checks.getTimeForStep(state, 0)`
+— is the trip total; the timer was set to exactly that value when the
+block advanced into the state). Returns `jobs/LeaverReturn` (absolute
+server `getGameTime()` + remaining, total) or null when any link is
+absent. `VisitorMobEntity.getLeaverReturn()` is the thin owner-side
+delegate; the consumers are the villagers-menu payload (gui/COMPLEX.md
+"Leaver-return progress bar") and nothing else.

@@ -10,7 +10,9 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -144,6 +146,41 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         // 32x32 status art: pass the draw size as the sheet (the 8-arg Util.blit normalises
         // against the 256 sheet and would sample only the leftmost 4 px - the "flat grey box" bug).
         Util.blit(ctx.gui(), status.image(), destX, destY, 0, 0, drawWidth, drawHeight, drawWidth, drawHeight);
+        renderLeaverReturnBar(ctx, status, destX, destY);
+    }
+
+    /**
+     * G3: progress bar for a leaver away on a timed trip. The payload carries
+     * the absolute server return tick; the fraction is re-derived every frame
+     * from the client's own clock (container screens re-render continuously),
+     * so the bar ticks down live while the menu is open and fills as the
+     * leaver's timer expires - the re-sync on status change then drops it.
+     */
+    private void renderLeaverReturnBar(
+            RenderContext ctx,
+            StatusPacket status,
+            int x,
+            int y
+    ) {
+        if (status.leaverReturnTick() <= 0 || status.leaverReturnTotal() <= 0) {
+            return;
+        }
+        Level level = Minecraft.getInstance().level;
+        if (level == null) {
+            return;
+        }
+        long remaining = status.leaverReturnTick() - level.getGameTime();
+        double fraction = Math.min(1.0, Math.max(0.0,
+                1.0 - remaining / (double) status.leaverReturnTotal()));
+        int barWidth = 30;
+        int barHeight = 3;
+        int bx = x + 1;
+        int by = y + 32 - 1 - barHeight;
+        ctx.fill(bx, by, bx + barWidth, by + barHeight, 0x80202020);
+        int filled = (int) Math.round(fraction * barWidth);
+        if (filled > 0) {
+            ctx.fill(bx, by, bx + filled, by + barHeight, 0xFF40C040);
+        }
     }
 
     private static int getStatusY(CardCoordinates coords) {
