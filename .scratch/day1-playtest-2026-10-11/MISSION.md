@@ -210,3 +210,35 @@ something soon"), `onboarding-starting-trees-or-logs` (user accepted the seed;
 optional one-line explanation), `welcome-mat-craft-chat-says-created-air`
 (user confirmed the Craft button prints it; `[craft-give]` probe armed in
 `FlagCraftMessage.giveAndNotify` — needs the rebuilt server + one more click).
+
+## Session close (night of 2026-10-12) — queue state
+
+**Shipped this evening:** `6865917a` C#2 free-food claim card + red dot (dirt
+trigger retired); `9c5fb728` board placement completes JOB_BOARD quest +
+crafting-tab quest text; `30b0edb4` E2 broadcast pacing (5s queue + dedupe).
+All tickets from both playtest rounds filed/updated (`f542afa8`,
+`7fee604a`). Full unit suite green on each commit.
+
+**Outstanding, in order:** G1+G2 ("!" bubbles over flag while quests open /
+over board while zero requests — one bubble system; pattern:
+`render/BubbleRenderer` + `loader/neo/NeedBubbleClientEvents`), G3 leaver
+return bar (return-tick in payload), E1 (roll at BOP-spend; find where
+JOB_CHANGE currently completes), F1 vanilla filled map at flag placement,
+F2 day-2 "post first request" quest + board auto-request toggle,
+D#2 empty-room early quest, then the evening tickets
+(`free-food-economics-card` CTA-lingers follow-up,
+`villager-jobs-tooltip-shows-all-jobs`, `messages-print-twice`,
+`flag-crafting-ui-tooltips-and-border`, `job-board-quest-card-shows-sign`,
+`job-board-empty-state` reopen, `campfire-sleep-feels-close-enough`).
+
+**Open question for the user (Created Air):** the `[craft-give]` probe in
+`FlagCraftMessage.giveAndNotify` is live in the current build — the user
+never clicked the mat-craft button after the 17:52 server restart (no
+`[craft-give]` line in `/tmp/dev-server.log`). Next session: have the user
+craft the mat once, read the probe line, root-cause from there.
+
+**Environment:** dev server + client killed for the night; world preserved in
+`run/world`; FIFO wiring still in `build.gradle` (gated on
+`-Dquestown.tp.fifo`) + writer process may be alive. `/tmp/c2` worktree is
+stale — main-tree HEAD is the truth; copy changed files in, build there while
+the user's session is up.
