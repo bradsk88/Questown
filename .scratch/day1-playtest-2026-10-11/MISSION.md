@@ -91,3 +91,86 @@ the feedback itself.
 - Autotest suite (57 scenarios) still to run after the held run locks.
 - `:test` is now fully green (todo_… de-noised, 2e0e51f1) — the "Known-red
   unit tests" line above is stale.
+
+## Session state (2026-10-13) — backlog
+
+Committed today: `ec235d0c` (econ-tab fallback retirement + town-wide
+unlock filter + Fullness log guard), `75e8b081` (job-board craft at the
+flag + starting-timber seed). Verification: 58-scenario autotest suite
+green-with-knowns (no new failures vs the 2026-10-10 baseline;
+crafter/leather_boots + one harvest_wheat variant improved), unit suite
+1160/0/50.
+
+**User instruction (2026-10-13):** stamp C#2 decisions + design, build a
+strong backlog, launch a playtest environment; the user plays while the
+agent works the queue.
+
+**Work queue (ordered):**
+1. **C#2 free-food card + red dot** — design settled in
+   `free-food-economics-card.md` (modify the `villager_food` unmet-need
+   card, claim affordance + tab red dot, `ClaimFreeFoodMessage` →
+   `TownFlagBlockEntity.claimBonusFood`, 20 carrots to registered
+   container / inventory fallback, remove dirt-on-flag trigger, re-point
+   the chicken-arc hint copy).
+2. **D#2 empty room as early quest** (`empty-room-as-early-quest.md`) —
+   solo batch between campfire+mat and basics; walls + registered door;
+   chicken path auto-completes.
+3. **GUI quick wins** (batch or one commit each): `paged-menus-scroll-to-page`,
+   `stats-page-show-didnt-eat-didnt-sleep`, `stats-page-show-level-right-aligned`,
+   `skills-tab-hidden-until-level-2`, `flag-villager-leaver-return-progress-bar`,
+   `job-board-no-requests-bubble`.
+4. **"Created Air" welcome-mat message** (`welcome-mat-craft-chat-says-created-air`,
+   reopened) — probe off the econ branch; re-add a targeted probe, find, fix.
+5. **needs-info cluster** (8 tickets) — blocked on user observations;
+   summarize for the user at closeout.
+6. **ready-for-human cluster** (5 tickets) — user calls;
+   `flag-incomplete-quests-indicator` shares the tab red-dot machinery
+   with C#2 (build the mechanism in C#2, extend when the user rules).
+
+**Verify live during the user's playtest (current build):** job-board
+craft recipe (flag menu row 3), starting-timber seed (logs + 2 trees
+around a new flag), econ tab shows only the food need on day one.
+After the playtest: restart the server on the next build so C#2 is live
+(world preserved; tell the user when the restart is ready).
+
+## Walkthroughs settled (2026-10-13, all letters done: A B C D E F G)
+
+Decisions stamped in the tickets; ordered implementation queue:
+1. **C#2** free-food claim on the `villager_food` unmet-need card + econ
+   tab red dot; `ClaimFreeFoodMessage` → `claimBonusFood` (20 carrots to
+   registered container, inventory fallback, clear chat message); remove
+   dirt-on-flag trigger; re-point chicken-arc hint copy.
+2. **E2** tick-delayed broadcast queue on the flag for ALL broadcast
+   messages (~5s / 100 ticks spacing; a debounce — spread messages
+   unaffected, bunched ones spaced).
+3. **E1** job-change roll at BOP-spend (blessed or pre-rolled random
+   stored; morning keeps priority: blessed > tutorial
+   `overnightJobOverride` > pre-roll; dawn roll only as fallback), quest
+   completes at spend. Open: find where `JOB_CHANGE` currently completes;
+   persist pending root across save/reload.
+4. **G1+G2** one bubble system (`BubbleRenderer.renderIconBubbleAtBlock` /
+   `NeedBubbleClientEvents` pattern): "!" over the flag while quests
+   incomplete + "!" over the job board while zero work requests;
+   foundation for `docs/todo/flag-speech-bubble.md`.
+5. **G3** leaver return progress bar on the villagers-menu leaver row;
+   payload carries the absolute **return tick**, client derives the
+   fraction per frame (ticks down live, no push channel).
+6. **F1** vanilla filled map (no custom decoration; chunk-readable zoom)
+   at flag placement; check the chicken path's flag award to avoid
+   double-grant.
+7. **F2** day-2 quest "post your first work request" (any request
+   completes it; small reward) + job-board **auto-request toggle**
+   (re-scoped from `auto-request-root-initial-request`; checkbox in the
+   board UI, default ON, flag-NBT persisted).
+8. **D#2** empty room as early quest (solo batch between campfire+mat and
+   basics; walls + registered door; chicken path auto-completes).
+
+Then: GUI quick wins (`paged-menus-scroll-to-page`,
+`stats-page-show-didnt-eat-didnt-sleep`,
+`stats-page-show-level-right-aligned`, `skills-tab-hidden-until-level-2`,
+`job-board-no-requests-bubble` is G2 above), "Created Air" re-probe.
+needs-info cluster (8) awaits user observations; ready-for-human leftovers
+(`flag-map-when-lost` now settled by F1,
+`change-job-quest-completes-on-bop-consumption` settled by E1,
+`quest-complete-chat-blast-pacing` settled by E2) flip to implemented on
+ship.

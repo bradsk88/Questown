@@ -1,6 +1,6 @@
 ---
 title: The job board should be a RoomBlock, not a room you have to build
-status: ready-for-agent
+status: implemented
 created: 2026-10-11
 ---
 

@@ -22,3 +22,8 @@ dots" note in `docs/todo/bop-progress-indicator.md`).
 ## Triage notes
 
 Design item: red-dot the free-food tab. Needs a product decision.
+
+## Decision (2026-10-13)
+
+Settled with the card (see `free-food-economics-card.md`): red dot on the
+economics tab while `!givenBonusFood`, cleared on claim.

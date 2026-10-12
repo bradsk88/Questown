@@ -1,6 +1,6 @@
 ---
 title: Seed the empty town structure with trees or fallen logs
-status: ready-for-agent
+status: implemented
 created: 2026-10-11
 ---
 

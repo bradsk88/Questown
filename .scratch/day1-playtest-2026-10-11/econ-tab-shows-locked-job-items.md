@@ -1,6 +1,6 @@
 ---
 title: Economics tab lists demand for items no villager can make (locked jobs)
-status: ready-for-agent
+status: implemented
 created: 2026-10-11
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Town flag 'stopped ticking' log spams every tick when no player is on the server"
-status: ready-for-agent
+status: implemented
 source: agent observation 2026-10-12 (econ-tab crash-probe repro, headless runServer)
 ---
 

@@ -23,3 +23,12 @@ triage whether this folds into one of those.
 ## Triage notes
 
 Design item: an at-a-glance indicator that the flag has incomplete quests (beyond the tab red-dot). Needs a product decision.
+
+## Decision (2026-10-13, walkthrough G1)
+
+**(b) Diegetic bubble above the flag** ("!" icon) while any quest is
+incomplete — one bubble system serving both the flag (G1) and the job board
+(G2, `job-board-no-requests-bubble.md`), and the foundation for the older
+`docs/todo/flag-speech-bubble.md` (the bubble later grows to show the most
+relevant quest hint). Chosen over red BOP sparkles: visible AND informative,
+and the mechanism amortizes across the three.

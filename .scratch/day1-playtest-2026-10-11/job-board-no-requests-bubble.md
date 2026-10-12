@@ -21,3 +21,10 @@ Trigger: town has zero outstanding work requests. Related:
 ## Triage notes
 
 Mechanical: a diegetic '!' bubble when the job board has requests, via the BubbleRenderer.renderIconBubbleAtBlock pattern (NeedBubbleClientEvents). Needs a block-state property or client-side BE scan. Implementation path identified.
+
+## Decision (2026-10-13, walkthrough G2)
+
+Confirmed as scoped: "!" bubble above the job board while the town has zero
+outstanding work requests; `BubbleRenderer.renderIconBubbleAtBlock` via the
+`NeedBubbleClientEvents` pattern; block-state property or client-side BE
+scan. Second consumer of the G1 bubble system.

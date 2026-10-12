@@ -30,3 +30,35 @@ shape. Pairs with `free-food-tab-red-dot.md` (the red-dot indicator).
 ## Triage notes
 
 Design item: surface the free-food economy on a card. Needs a product decision.
+
+## Decision (2026-10-13, design walkthrough C#2)
+
+**Modify the existing `#questown:villager_food` unmet-need card instead of
+adding a new card** (the food need is almost certainly on the economics page
+day one). While `!givenBonusFood`:
+
+- The food card carries a short, eye-catching (red) claim affordance on the
+  card itself (must fit the card width — e.g. "Free food →"); the full
+  sentence lives in the tooltip.
+- The economics tab carries a red dot (pairs with
+  `free-food-tab-red-dot.md`).
+- Clicking sends a new `ClaimFreeFoodMessage(flagPos)`; the server's
+  `TownFlagBlockEntity.claimBonusFood(ServerPlayer)` (new, owner holds the
+  action) deposits **20 carrots** into the first registered container (the
+  `FreeFoodCommand` path), falls back to the player's inventory when no
+  registered container exists yet, flips `givenBonusFood` only after the
+  food actually landed, and sends a **clear chat message of what happened**
+  ("the town's storeroom received 20 free carrots" vs. "you received 20").
+- **The dirt-on-flag trigger is removed** (`TownFlagBlock` use-item branch).
+  `FreeFoodCommand` becomes a thin wrapper over the same owner method
+  (10 → 20 for consistency).
+- The one-time bit already rides NBT; the flag-menu payload gains a
+  `bonusFoodAvailable` boolean for the client.
+
+**Chicken arc note:** the arc's `WAITING_FOR_FREE_FOOD` beat transitions on
+the bit flip (`ChickenArcTransitions` → `o.bonusFoodGiven()`), not on the
+dirt trigger — replacement is structurally safe. Its hint copy
+(`message.questown.chicken.hint.free_food`) must be re-pointed at the new
+card.
+
+Legacy flags with `givenBonusFood=true`: no card, no dot.

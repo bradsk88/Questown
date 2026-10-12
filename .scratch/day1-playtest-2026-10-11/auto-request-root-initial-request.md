@@ -29,3 +29,10 @@ villager's root job is assigned (job change / onboarding job grant) and post the
 root's `initial_request` to the work board there. Check for an existing
 auto-request path (the onboarding may already post some) and extend rather than
 duplicate. Confirm idempotency against the existing unmet-need registration.
+
+## Re-scope (2026-10-13, walkthrough F2)
+
+Not a town-wide behavior: this becomes a **toggle on the job board UI**
+(decision in `job-board-organic-introduction.md`). Implementation now spans
+two tickets: the board toggle (server flag NBT + board menu checkbox) plus
+the auto-post on root acquire when the toggle is on. Default: ON.

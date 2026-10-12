@@ -1,6 +1,6 @@
 ---
 title: Crafting a welcome mat posts "Created Air" to chat
-status: resolved
+status: needs-triage
 created: 2026-10-11
 ---
 
@@ -35,6 +35,23 @@ The playtest server booted 16:42:50, i.e. pre-`8f670d10`; the craft path
 (`FlagCraftMessage.giveAndNotify`, unchanged since `ef9bb156`) is
 byte-identical, so a stale craft code is unlikely — but the client-side
 resolution at that moment is not verifiable after the fact.
+
+## Report 2026-10-13 (recurred on a fresh build)
+
+Playtest chat, 2026-10-13 02:41:00 (`/tmp/dev-server.log`, fresh-world
+repro run for the econ-tab axe bug):
+
+> "created air when I got a welcome mat again. We had that bug before. Thought we ffixed it?"
+
+So the bug **recurred on the current source** on a freshly-built fresh
+world — contradicting the 2026-10-13 "not reproducible" verdict above. The
+`CreatedAirProbe` was removed from the branch after that verdict, so the
+resolved message was not captured this time. Reopened to needs-triage.
+
+**Next (deferred until the econ-bug run finishes, to avoid losing the
+world):** re-add the `CreatedAirProbe` DEV-DIAG, rebuild, reproduce the
+welcome-mat craft, and capture the client log around the craft to see
+whether the resolved message is "Created Air" again.
 
 ## Ask (if it resurfaces)
 
