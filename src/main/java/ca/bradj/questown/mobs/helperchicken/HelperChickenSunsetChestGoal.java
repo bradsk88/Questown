@@ -254,30 +254,12 @@ public class HelperChickenSunsetChestGoal extends Goal {
         }
         sl.setBlockAndUpdate(chestPos, Blocks.CHEST.defaultBlockState());
         if (sl.getBlockEntity(chestPos) instanceof ChestBlockEntity chestBe) {
-            // Pre-fill the map for THIS area: the player may walk away before
-            // ever right-clicking it, in which case an empty map would be
-            // useless. A filled map already shows the village location.
-            ItemStack filledMap = net.minecraft.world.item.MapItem.create(
-                    sl,
-                    chestPos.getX(),
-                    chestPos.getZ(),
-                    (byte) 1,
-                    true,
-                    false
-            );
-            net.minecraft.world.item.MapItem.renderBiomePreviewMap(sl, filledMap);
-            {
-                var targetX = Compat.mapDecorationHolder(
-                        sl, new net.minecraft.resources.ResourceLocation("target_x"));
-                net.minecraft.world.level.saveddata.maps.MapItemSavedData.addTargetDecoration(
-                        filledMap,
-                        flag.getTownFlagBasePos(),
-                        "+",
-                        targetX
-                );
-            }
-            chestBe.setItem(0, filledMap);
-            chestBe.setItem(1, new ItemStack(Items.WOODEN_AXE));
+            // No map here: F1 (2026-10-13 walkthrough) moved the map grant to flag
+            // placement — the placer gets a flag-centered filled map into their
+            // inventory the moment they place the flag, on EVERY path. A map in
+            // this chest would be the chicken path's double-grant. The chest is
+            // the axe drop (chopping the arc's trees) now.
+            chestBe.setItem(0, new ItemStack(Items.WOODEN_AXE));
         }
         sl.sendParticles(
                 ParticleTypes.POOF,

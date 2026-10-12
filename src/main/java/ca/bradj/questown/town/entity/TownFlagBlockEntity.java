@@ -894,6 +894,36 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
     }
 
+    /**
+     * F1 (2026-10-13 walkthrough, `.scratch/day1-playtest-2026-10-11/flag-map-when-lost.md`):
+     * the flag-centered filled map, in the placer's inventory from the start.
+     * Vanilla only — a map is only good if the player can tell which chunk the
+     * flag is in, and the flag-centered zoom-1 map provides that without any
+     * custom decoration/renderer work. Zoom 1 (64×64) matches the chicken
+     * path's sunset-chest map, which no longer carries a map (this grant is
+     * the single one — the chest would double-grant).
+     * Called from {@code TownFlagBlock.setPlacedBy} for player placements only.
+     */
+    public void grantStarterMap(net.minecraft.server.level.ServerPlayer placer) {
+        ServerLevel sl = getServerLevel();
+        if (sl == null) {
+            return;
+        }
+        BlockPos flag = getTownFlagBasePos();
+        ItemStack filledMap = net.minecraft.world.item.MapItem.create(
+                sl, flag.getX(), flag.getZ(), (byte) 1, true, false
+        );
+        net.minecraft.world.item.MapItem.renderBiomePreviewMap(sl, filledMap);
+        if (!placer.addItem(filledMap)) {
+            placer.drop(filledMap, false);
+        }
+        QT.FLAG_LOGGER.info(
+                "Granted starter map (zoom 1, flag-centered at {}) to {}",
+                flag,
+                placer.getGameProfile().getName()
+        );
+    }
+
     @Override
     public void roomRecipeCreated(
             MCRoom room,

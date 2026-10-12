@@ -448,6 +448,29 @@ public class TownFlagBlock extends BaseEntityBlock {
     }
 
     @Override
+    public void setPlacedBy(
+            Level level,
+            BlockPos pos,
+            BlockState state,
+            net.minecraft.world.entity.LivingEntity placer,
+            ItemStack stack
+    ) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        // F1 (2026-10-13 walkthrough): a player-placed flag grants the placer a
+        // flag-centered filled map (the flag's area becomes unknowable within
+        // one coal-search of day 1 — `.scratch/day1-playtest-2026-10-11/flag-map-when-lost.md`).
+        // Only a player placement grants: the console `/flag` command and
+        // relocation go through setBlock* without a placer, so held runs and
+        // dev worlds never pick up starter maps.
+        if (!(level instanceof ServerLevel) || !(placer instanceof ServerPlayer player)) {
+            return;
+        }
+        if (level.getBlockEntity(pos) instanceof TownFlagBlockEntity flag) {
+            flag.grantStarterMap(player);
+        }
+    }
+
+    @Override
     public InteractionResult useWithoutItem(
             BlockState blockState,
             Level level,

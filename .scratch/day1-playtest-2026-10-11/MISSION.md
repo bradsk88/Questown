@@ -250,11 +250,16 @@ fresh-from-zero launch ready.
   added (registry-bound half @Disabled with reason). Full suite 1166/0/51skipped,
   importCheck + strangler green. Cook-skill-unlock ticket amended; CONTEXT.md
   starter-job entry updated.
-- **Next in queue:** F1 vanilla filled map at flag placement → F2 day-2
-  "post first request" quest + board auto-request toggle → fuel/coal blind
-  spot (`econ-tab-top-blocker-missing-coal`) → E1 BOP-spend job-change roll →
-  D#2 empty-room early quest → gatherer-stall log investigation
-  (`seeking-work-leaver-sees-empty-board-room`, saved world at
+- **F1 flag-map SHIPPED (this session)** — `TownFlagBlock.setPlacedBy`
+  (player placements only) → `TownFlagBlockEntity.grantStarterMap`: flag-centered
+  zoom-1 filled map, biome-preview pre-filled, no decoration, into inventory
+  at flag placement. Chicken sunset chest is now axe-only (the chest map was
+  the double-grant the F1 decision warned about). helperchicken COMPLEX.md
+  re-pointed. Full suite 1166/0/51skipped.
+- **Next in queue:** F2 day-2 "post first request" quest + board auto-request
+  toggle → fuel/coal blind spot (`econ-tab-top-blocker-missing-coal`) → E1
+  BOP-spend job-change roll → D#2 empty-room early quest → gatherer-stall log
+  investigation (`seeking-work-leaver-sees-empty-board-room`, saved world at
   `/tmp/playtest-world-2026-10-12-evening`).
 
 ## Session close (night of 2026-10-12) — queue state

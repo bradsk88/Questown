@@ -72,13 +72,16 @@ flowchart TD
   chest and the job board are no longer two conditions on one matched room.
 - `HelperChickenSunsetChestGoal` drives the chest beat. On `WAITING_FOR_CHEST`
   it walks into the player's registered store shell, waits for the player to
-  step inside that room, then drops the chest (map + wooden axe) in the room's
+  step inside that room, then drops the chest (wooden axe only) in the room's
   interior. It reads the registered room through `RoomsHolder.getRegisteredRooms()`
   and picks a passable interior cell across the room's `yCoord`, `yCoord + 1`,
   and the chicken's ground Y (a door in open ground registers as a door but
   yields no enclosed room, so the goal stands down until a real room exists).
   `SUNSET_AND_MAP` follows the chest beat, driven by the same `chickenSunsetChestSpawned`
-  flag the chest goal sets when it drops the chest.
+  flag the chest goal sets when it drops the chest. **No map in this chest since
+  F1 (2026-10-13):** the flag-centered filled map is granted to the placer at
+  flag placement (`TownFlagBlock.setPlacedBy` → `TownFlagBlockEntity.grantStarterMap`),
+  on every path; the chest map would have been the chicken path's double-grant.
 - The campfire beat (`WAITING_FOR_WAND_ON_CAMPFIRE`) advances on a lit campfire
   *anywhere in the flag's campfire radius* — the same `TownCycle.findCampfire`
   scan the campfire quest uses, not the fixed structure `CAMPFIRE_OFFSET`. The
