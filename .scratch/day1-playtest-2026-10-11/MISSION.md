@@ -256,10 +256,23 @@ fresh-from-zero launch ready.
   at flag placement. Chicken sunset chest is now axe-only (the chest map was
   the double-grant the F1 decision warned about). helperchicken COMPLEX.md
   re-pointed. Full suite 1166/0/51skipped.
-- **Next in queue:** F2 day-2 "post first request" quest + board auto-request
-  toggle → fuel/coal blind spot (`econ-tab-top-blocker-missing-coal`) → E1
-  BOP-spend job-change roll → D#2 empty-room early quest → gatherer-stall log
-  investigation (`seeking-work-leaver-sees-empty-board-room`, saved world at
+- **F2 DOCUMENTED, not implemented (this session)** — day-2 "post first
+  request" quest + board auto-request toggle is a full feature + GUI surface
+  (board-menu checkbox + flag NBT + network), and the day-2 batch timing
+  needs a live server to feel out. Key correction found while scoping:
+  `ChangeJobReward.getApplier` ALREADY auto-posts the root's
+  `initial_request` (unconditionally, job-change path) — so the toggle is
+  mostly flag-NBT + checkbox + gating that existing post + idempotency.
+  Notes landed in both F2 tickets (`job-board-organic-introduction`,
+  `auto-request-root-initial-request`).
+- **Session wrap decision:** the remaining queue items (F2, E1, D#2 = full
+  features; fuel/coal blind spot = high-risk decision-layer work that needs a
+  held run to verify; gatherer-stall = needs the saved-world log re-read) are
+  not economical to finish headless this session. Left the tree committed +
+  green and the fresh-from-zero launch ready.
+- **Next session, in order:** F2 (now scoped, notes above) → E1 BOP-spend
+  job-change roll → fuel/coal decision layer (held-run verified) → D#2
+  empty-room early quest → gatherer-stall log investigation (saved world at
   `/tmp/playtest-world-2026-10-12-evening`).
 
 ## Session close (night of 2026-10-12) — queue state
