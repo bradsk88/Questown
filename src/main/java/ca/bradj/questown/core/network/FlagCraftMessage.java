@@ -90,6 +90,13 @@ public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
         if (!player.getInventory().add(crafted)) {
             player.drop(crafted, false);
         }
+        // 2026-10-12 probe (welcome-mat-craft-chat-says-created-air.md): the user sees
+        // "Created Air" for the mat. Log the actual resolution chain so the next
+        // craft identifies which link is wrong instead of re-deriving it statically.
+        QT.GUI_LOGGER.info("[craft-give] item={} descId={} hover='{}'",
+                crafted.getItem(),
+                crafted.getItem().getDescriptionId(crafted),
+                crafted.getHoverName().getString());
         player.sendSystemMessage(Compat.translatable("message.flag_crafting.created", crafted.getHoverName()));
     }
 

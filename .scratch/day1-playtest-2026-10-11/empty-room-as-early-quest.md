@@ -46,3 +46,14 @@ Onboarding batch order becomes:
 1. Campfire + welcome mat (existing first batch).
 2. **Empty room** (new standalone batch) — walls + registered door.
 3. Store room + job board (existing basics batch, now blocked until #2 completes).
+
+## 2026-10-12 live confirmation (playtest chat 17:44:22)
+
+> I thought we added a "build an empty room" quest. I don't see it. But I do
+> see specific-room quests...
+
+Confirms the gap is visible in-game on day 1: specific-room quests (store
+room, ...) are posted, but the generic "build an empty room" quest the user
+expects is absent. Keep the design constraint from the original ticket: the
+empty-room quest must sit early enough to teach room-building before specific
+rooms are demanded.

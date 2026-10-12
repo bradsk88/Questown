@@ -81,3 +81,18 @@ surface) or the handler ran without logging (error swallowed).
 the mat appeared in the inventory, or when the quest card completed? Which
 crafting surface produced the mat item — the flag's crafting tab button, or a
 vanilla crafting grid / the sign room recipe?
+
+## 2026-10-12 user confirmation + probe armed
+
+User confirmed: "The Created Air message is output when the player presses
+'Craft' in the flag's crafting menu." So `FlagCraftMessage.craftWelcomeMat`
+runs, the mat item lands (gate quest completed 17:38:33), and
+`giveAndNotify`'s `message.flag_crafting.created` resolves `%s` to "Air".
+Static resolution chain (BlockItem.getDescriptionId -> block id -> lang
+"Welcome Mat") says otherwise; a `[craft-give]` log in `giveAndNotify`
+now dumps item/descId/hoverName — next craft after the rebuilt server
+identifies the broken link.
+
+Note: the mat's craft input is 1 wooden pressure plate (the user earlier saw
+"0" on that row - flag-crafting-0-in-inventory-pressure-plate.md); the board
+craft input is 1 sign.

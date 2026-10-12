@@ -1,6 +1,6 @@
 ---
 title: Job board menu needs an empty state explaining requests
-status: resolved
+status: ready-for-agent
 created: 2026-10-11
 ---
 
@@ -39,3 +39,18 @@ item - a townie will make or find it.") to the soft teaser "Maybe this will do
 something soon...". Kept `job_board.empty.1` ("No work requests yet.") — it's
 accurate and not the part that read like a bug. Lang-only change, no code
 layout change. Build-verified; trivial to confirm visually.
+
+## 2026-10-12 reopened: empty state should guide to the top requestable need
+
+> Job board says "maybe this will do something soon". But I have a villager,
+> and I can request wheat seeds. So it should be guiding me to do that instead.
+> (chat 17:48:24)
+
+The shipped two-line empty state (`job_board.empty.1/2`, "Maybe this will do
+something soon...") is generic. When the town has actual unmet needs a
+villager could fill (wheat seeds here), the board should point at posting the
+top request instead of the vague line. Design: empty-state text (or a button)
+offers the top unmet-need from the flag's unmet-need list; keep the generic
+two lines only when no need exists at all. The `#questown:villager_food`
+free-food claim card (free-food-economics-card.md) is the precedent for
+riding an unmet-need entry in the UI.

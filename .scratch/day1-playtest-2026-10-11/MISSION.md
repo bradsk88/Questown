@@ -184,3 +184,29 @@ ship.
 - **E** — reward timing (`change-job-quest-completes-on-bop-consumption`, `quest-complete-chat-blast-pacing`)
 - **F** — onboarding completeness (`flag-map-when-lost`, `job-board-organic-introduction`)
 - **G** — notification/UX polish (`flag-incomplete-quests-indicator`, `job-board-no-requests-bubble`, `flag-villager-leaver-return-progress-bar`)
+
+## 2026-10-12 afternoon live-playtest batch (chat 17:32-17:48, filed 2026-10-13)
+
+All chat observations captured. **Fixed same-day** (commits `6865917a`,
+`9c5fb728`): free-food claim card + red dot (C#2 shipped), board placement
+completes the JOB_BOARD quest, mat + board quest text points at the crafting
+tab, chicken hint re-pointed.
+
+**New tickets filed:**
+- `flag-crafting-ui-tooltips-and-border` (ready-for-agent) — input/output/button
+  tooltips; crafting-menu border matches the rest of the flag UI.
+- `messages-print-twice` (ready-for-agent) — "Created X" chat + recipe_created
+  broadcast each fire twice per event; root-cause the double-firing, not just
+  the E2 debounce dedupe.
+- `campfire-sleep-feels-close-enough` (ready-for-agent, low) — vanilla
+  bed-range rejection feels wrong next to the campfire.
+- `job-board-quest-card-shows-sign`, `job-board-placement-orientation`
+  (ready-for-agent / ready-for-human) — see the tickets.
+
+**Appended to existing tickets:** `empty-room-as-early-quest` (user looked for
+it on day 1 and didn't see it), `job-board-empty-state` (REOPENED — empty state
+should guide to the top requestable need, not the vague "maybe this will do
+something soon"), `onboarding-starting-trees-or-logs` (user accepted the seed;
+optional one-line explanation), `welcome-mat-craft-chat-says-created-air`
+(user confirmed the Craft button prints it; `[craft-give]` probe armed in
+`FlagCraftMessage.giveAndNotify` — needs the rebuilt server + one more click).

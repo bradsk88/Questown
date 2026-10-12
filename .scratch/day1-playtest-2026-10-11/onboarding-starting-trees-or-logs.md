@@ -53,3 +53,14 @@ Overwrites nothing (air + solid-below checks); biome-blind by construction
 (the tree feature is ground-checked only). Docs: `town/entity/COMPLEX.md`
 "Starting timber seed". Verification pending: compile + full autotest suite
 (no chicken-arc / village regression from the seeded blocks).
+
+## 2026-10-12 user reaction (playtest chat 17:32:59)
+
+> Interesting. I was not expecting trees and logs to spawn when I placed a
+> flag. I thought that would just be part of the empty_world structure. I
+> think I'm ok with it though.
+
+Accepted, but the player had no idea the seed was an intentional onboarding
+gift. Consider a one-line flag-placement chat ("A few oaks grew around your
+flag for easy first wood.") so the seed reads as a gift, not worldgen
+weirdness. Optional follow-up; no behavior change requested.
