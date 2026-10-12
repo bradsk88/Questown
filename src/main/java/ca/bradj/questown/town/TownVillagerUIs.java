@@ -200,9 +200,13 @@ public class TownVillagerUIs {
         sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.id(), v.value()));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
+        // Day-1 playtest (villager-jobs-tooltip-shows-all-jobs.md): this list advertised the
+        // whole same-root catalogue. Filter to the jobs the town actually knows - the same
+        // town-wide "can anyone in town do this" gate the request board uses.
         ImmutableList<JobID> jubz = ServerJobsRegistry.getAllJobs()
                                                       .stream()
                                                       .filter(v -> v.sameRoot(childJob))
+                                                      .filter(unsafe.getVillagerHandle()::isUnlocked)
                                                       .collect(ImmutableList.toImmutableList());
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
         for (JobID job : jubz) {

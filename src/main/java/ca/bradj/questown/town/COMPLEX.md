@@ -547,3 +547,14 @@ config-split so the mood math is unit-testable in a plain JVM:
   without `Bootstrap.bootStrap()`. Pinned by `TownVillagerMoodsTest` (compute math, clamps,
   effect tracking). The remaining registry-bound moods gap (the live SLEEPLESS magnitude end
   to end) is verified in the held self-sufficiency run, not a unit test.
+
+# Status-icon "learn about jobs" list: town-known jobs only (2026-10-13)
+
+Clicking a townie's status icon opens the same-root job list
+(`TownVillagerUIs.showJobsWithSameRootUI`, via `OpenJobMessage`). It used to
+advertise the whole same-root catalogue from `ServerJobsRegistry.getAllJobs()`;
+now the list is additionally filtered through the town-wide
+`VillagerHolder.isUnlocked(JobID)` gate ("can anyone in town do this" - the
+same gate the request board uses, same semantics as the day-1 econ-tab
+lock-filter). The clicked townie's current job is always unlocked by that
+townie, so the list can't be empty.
