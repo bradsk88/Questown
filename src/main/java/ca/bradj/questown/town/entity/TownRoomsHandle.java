@@ -7,6 +7,7 @@ import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.roomrecipes.Matches;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.UnsafeTown;
@@ -79,6 +80,21 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         if (SpecialQuests.TOWN_GATE.equals(recipeId)) {
             java.util.Collection<RoomRecipeMatch<MCRoom>> gateOut = getWelcomeMatMetaRooms(t);
             return gateOut;
+        }
+        if (SpecialQuests.JOB_BOARD.equals(recipeId)) {
+            // The board quest's wanted id is the room recipe questown:job_board, but a placed
+            // board registers as a synthetic block room under block_room/<board block id>
+            // (RoomBlock.getRoomId), which the fast path above can never equal. Without this
+            // branch, a board placed outside any door-registered room is invisible to the
+            // per-tick backfill (the fallback below only scans door-registered rooms) and the
+            // quest stalls ACTIVE forever - 2026-10-14 live playtest: the board was placed
+            // "near the flag", exactly as the quest text says. Maps the quest id to the
+            // board's registered block-room key, the way TOWN_GATE maps to the welcome mat.
+            // (The event path - roomRecipeCreated's top match - can also miss it: the board's
+            // meta room ties at equal cost between the real recipe and the synthetic
+            // block_room recipe, and the winner is stream order, not merit.)
+            return getBlockMetaRooms(t, RoomBlock.getRoomId(
+                    (RoomBlock) BlocksInit.JOB_BOARD_BLOCK.get()));
         }
         if (SpecialQuests.TOWN_FLAG.equals(recipeId)) {
             return ImmutableList.of(getFlagMetaRoom(t));

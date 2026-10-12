@@ -447,8 +447,12 @@ flowchart TD
   `handleNewStoredData` uses. A backfilled quest completes exactly as an
   event-driven one does.
 - **`getRoomsMatching(wantedId)` covers both room kinds**: a door room
-  (`store_room`, `job_board`) and a registered block-room (`town_gate`), since
-  `registerBlockAsRoom` feeds the same match store the look-up reads.
+  (`store_room`) and a registered block-room (`town_gate` via the welcome-mat
+  meta rooms, `job_board` via the board's synthetic block-room key - the
+  JOB_BOARD branch maps the quest id `questown:job_board` to
+  `RoomBlock.getRoomId(JOB_BOARD_BLOCK)`, see "Job-board placement completes
+  the JOB_BOARD quest"), since `registerBlockAsRoom` feeds the same match
+  store the look-up reads.
 - **The gate is on open-quest existence, not townie state.** The per-tick scan
   walks the journal **lazily** (it never copies it) and only materialises the few
   OPEN room matches; in steady state (nothing open) the cost is a plain iteration
@@ -685,12 +689,35 @@ client can show the claim affordance (see `gui/COMPLEX.md`).
 
 ## Job-board placement completes the JOB_BOARD quest
 
-`registerJobsBoard(pos)` (called by `JobBoardBlock.getStateForPlacement` and by
-the console `placeJobBoard`) now marks `SpecialQuests.JOB_BOARD` complete on
-the spot - a single-board room can never match the blueprint "Job Board"
-recipe (signs + log), so the generic room-recipe path will not. Same pattern as
-`registerWelcomeMat` completing TOWN_GATE. Live-reported 2026-10-12: board
-placed twice, quest stayed open.
+The quest's wanted id is the room recipe `questown:job_board` (single tag
+ingredient `#questown:job_board_inputs`, `data/questown/recipes/job_board.json`;
+data wiring pinned by `JobBoardRecipeDataTest`). A placed board registers two
+ways: the WORK handle (`registerJobsBoard` → `workHandle.registerJobBoard`,
+work-location/menu side - does NOT touch the quest) and the ROOMS handle
+(`RoomBlock.getStateForPlacement` → `registerBlockAsRoom` under the synthetic
+`block_room/block.questown.job_board_block` key).
+
+Completion therefore rides the **per-tick backfill**, not the placement
+moment: `getRoomsMatching(JOB_BOARD)` has a dedicated branch mapping the quest
+id to that block-room key (`getBlockMetaRooms`), because the generic fast path
+only matches `block_room/*` wanted ids and the fallback scans only
+door-registered rooms - a board placed outside any room is otherwise
+invisible and the quest stalls ACTIVE forever (2026-10-14 live playtest: board
+placed "near the flag", exactly as the quest text says).
+
+The event path (`roomRecipeCreated` → top match) can ALSO miss it: the board's
+meta room ties at equal cost between the real recipe and the synthetic
+`block_room/...` recipe (both fall back to `DEFAULT_ITEM_WEIGHT`), and
+`Stream.max` keeps the first on a tie - stream order, not merit. Boards placed
+INSIDE a door-registered room complete via that room's match instead (the
+`village/growth` executor deliberately places it inside the chest room for
+this reason - see `VillageGrowthExecutor.placeJobBoard`).
+
+NOTE: an earlier revision of this section claimed `registerJobsBoard` marked
+the quest complete "on the spot" against a sign+log pedestal recipe - neither
+survives in current code (the recipe is a single tag ingredient; no
+completion call exists on the register path). A board placed with the quest
+already open completes on the next flag tick.
 
 ## Broadcast pacing (E2)
 
