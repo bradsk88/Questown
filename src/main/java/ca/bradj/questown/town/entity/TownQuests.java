@@ -188,7 +188,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
 
         MCQuest jobBoardQuest = roomQuest(batchUUID, SpecialQuests.JOB_BOARD);
-        jobBoardQuest.setFlavorText("Craft a Job Board at the town flag (flag > crafting tab) and place it near the flag - this is how villagers find work.");
+        jobBoardQuest.setFlavorText("Craft a Job Board at the town flag (flag > crafting tab) and place it near the flag");
         q.addNewQuest(jobBoardQuest);
 
         MCQuest storeRoomQuest = roomQuest(batchUUID, SpecialQuests.STORE_ROOM_SMALL);
