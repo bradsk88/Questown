@@ -873,3 +873,27 @@ The onboarding chain is now:
   The zero-ingredient-matches-any semantics are pinned by
   `EmptyRoomRecipeTest` (pure `RoomRecipe.matches` on synthetic containers).
   In-game confirmation of the new beat order is pending (held run / playtest).
+
+# Block-room placement: one "Created X" broadcast, not two (messages-print-twice, 2026-10-13)
+
+`TownRoomsHandle.registerBlockAsRoom` has always called
+`TownFlagBlockEntity.roomRecipeCreated` **twice** (legacy in the 1.19.2 golden
+too): once with the META_ROOM_DIAMETER meta-room (the real surroundings, for
+the block swap / advancements / quest completion) and once via
+`broadcastBlockRoomCreated` with a diameter-1 room carrying just the placed
+block (so the broadcast's top match is the block itself, not whatever the
+meta-room happened to contain). Both calls broadcast, so every board/mat
+placement printed "A new room has been created…" twice.
+
+Fix: `roomRecipeCreated` takes a `broadcast` flag; the meta-room call in
+`registerBlockAsRoom` passes `false`, and `broadcastBlockRoomCreated` remains
+the single player-facing line. The scan-driven path (player-built rooms,
+`TownRoomsMap` → `flag.roomRecipeCreated`) still broadcasts. The double call's
+other side effects (swapBlocks, markQuestAsComplete, advancement triggers)
+were always running twice and are idempotent - unchanged.
+
+Client half of the ticket: `FlagCraftingScreen.craftButton` now sets
+`btn.active = false` before sending `FlagCraftMessage` (1.20.6 `AbstractButton`
+exposes the `active` field; `setActive` is gone), so a fast double-click cannot
+send two craft messages - the server consumes input and grants an item **per
+message**, so the guard has to be on the client.

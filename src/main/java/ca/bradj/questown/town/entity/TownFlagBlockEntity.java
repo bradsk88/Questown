@@ -959,9 +959,28 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             MCRoom room,
             RoomRecipeMatch<MCRoom> match
     ) {
+        roomRecipeCreated(room, match, true);
+    }
+
+    /**
+     * Block-room registration variant: the same side effects as
+     * {@link #roomRecipeCreated} (block swap, advancements, quest completion)
+     * but no broadcast - {@code registerBlockAsRoom} broadcasts separately via
+     * {@code broadcastBlockRoomCreated} (whose match carries the placed block
+     * itself, not the meta-room's surroundings), so one placement prints
+     * "Created X" exactly once. (The legacy double call double-broadcast, seen
+     * in .scratch/day1-playtest-2026-10-11/messages-print-twice.md.)
+     */
+    void roomRecipeCreated(
+            MCRoom room,
+            RoomRecipeMatch<MCRoom> match,
+            boolean broadcast
+    ) {
         ServerLevel l = getServerLevel();
         world.swapBlocks(l, match);
-        messages.roomRecipeCreated(room, getTopMatch(this::recipesFromLevel, match));
+        if (broadcast) {
+            messages.roomRecipeCreated(room, getTopMatch(this::recipesFromLevel, match));
+        }
         BlockPos pos = Positions.ToBlock(room.doorPos, room.yCoord);
         if (match.anyMatch(SpecialQuests.JOB_BOARD)) {
             AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(l, RoomTrigger.Triggers.FirstJobBoard, pos);

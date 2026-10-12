@@ -154,6 +154,13 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         return Compat.button(
                 Compat.translatable("menu.flag_crafting.craft"),
                 btn -> {
+                    // A fast double-click can fire the second send before the onClose from the
+                    // first click lands (2026-10-12 playtest: "Created X" printed twice for one
+                    // click - the server consumes input and grants the item per message, so the
+                    // guard has to be here). The screen closes immediately; deactivate so a
+                    // second press in the same frame is a no-op.
+                    // 1.20.6: AbstractWidget lost setActive(); the active flag is a public field.
+                    btn.active = false;
                     QuestownNetwork.sendToServer(new FlagCraftMessage(flagPos, recipeIndex));
                     this.onClose();
                 },

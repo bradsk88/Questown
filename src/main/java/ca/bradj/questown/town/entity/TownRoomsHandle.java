@@ -109,7 +109,10 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         t.subBlocks.register(pos);
         MCRoom room = Spaces.metaRoomAround(pos, Config.META_ROOM_DIAMETER.get());
         Map<BlockPos, Block> blocks = RecipeDetection.getBlocksInRoom(town.getServerLevelUnsafe(), room, false);
-        t.roomRecipeCreated(room, new RoomRecipeMatches<>(room, ImmutableList.of(blockId), blocks.entrySet()));
+        // No broadcast here: broadcastBlockRoomCreated below is the one player-facing
+        // "Created X" line (its match carries the placed block, not the meta-room's
+        // surroundings). The legacy double-broadcast is messages-print-twice.md.
+        t.roomRecipeCreated(room, new RoomRecipeMatches<>(room, ImmutableList.of(blockId), blocks.entrySet()), false);
         t.setChanged();
         broadcastBlockRoomCreated(blockId, pos, t);
     }
