@@ -56,3 +56,19 @@ discovery.
 - Verify during implementation: can the board be placed anywhere in-town (the
   flag-NBT-on-item should let it register to the right flag regardless of spot),
   and whether placement needs a radius check.
+
+## Implementation (2026-10-12)
+
+Per the decision: `FlagCraftMessage` recipe index 2 (`craftJobBoard`) consumes
+any `#minecraft:signs` item and hands a parent-stamped `job_board_block`
+(`TownFlagBlock.StoreParentOnNBT`, same contract as mat/wand);
+`FlagCraftingScreen` gains a third recipe row + Craft button
+(`row3Y` in the flow layout, button greyed when the player holds no sign) and
+`menu.flag_crafting.board_desc` lang. `JobBoardBlock.getStateForPlacement`
+already resolves the stamped NBT and self-registers the one-block room — no
+radius check needed (verified: the NBT binds it to the crafted-at flag; an
+unstamped board drops at its feet with a logged error, same as the mat).
+The sign→board room-detection path is untouched (optional alternative).
+
+Docs: `gui/COMPLEX.md` "Day-1 playtest" bullet. Verification pending: compile
++ gui-lint + a live craft-and-place check (held run, client window).

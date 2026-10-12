@@ -40,3 +40,16 @@ biome-independent, placed relative to the flag.**
 
 Purpose: a day-1 player (especially no-chicken) always has starting wood; the
 "empty town" reads as having a little timber rather than bare ground.
+
+## Implementation (2026-10-12)
+
+`TownFlagBlockEntity.seedStartingTimber()`, called from the first-tick
+initializer under the existing `!isInitializedQuests` gate (same gate as
+`setUpQuestsForNewlyPlacedFlag`; NBT-persisted, so loaded flags never
+reseed). Seeds relative to the flag: a line of 8 horizontal oak logs 6
+blocks clear (pickable wood, no axe) + 2 oaks via the existing
+`MinecraftWorldAccess.growTreeAt` (reproducible per-position shape).
+Overwrites nothing (air + solid-below checks); biome-blind by construction
+(the tree feature is ground-checked only). Docs: `town/entity/COMPLEX.md`
+"Starting timber seed". Verification pending: compile + full autotest suite
+(no chicken-arc / village regression from the seeded blocks).

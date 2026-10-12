@@ -72,3 +72,22 @@ keep `needs-triage` with a `## Deferred` note.
 Held `village/growth` re-run to roster ≥ 5 (JOB_UNLOCK beat via
 `_qtdev change_job`), then verdict-record close-out. Lower priority than
 the feedback itself.
+
+## Session state (2026-10-12)
+
+- Econ-tab fix (C#1) **implemented, option b** (retire `FallbackSelector` +
+  town-wide-unlock filter on `registerUnmetNeeds`), per user decision.
+  Unit suite green (1160 tests, 0 failures, run 2026-10-12 03:10).
+- Held `village/self_sufficiency` verification run live: `/tmp/fix-verify.log`,
+  flag `0 64 0`, 200 t/s, probe soft, client-free. Pids in `run/hold-*.pid`
+  (server=87312, re-captured). Day-2 evidence so far: 0 probe hits, gatherers
+  only on base `gather`, econ tab = `#questown:swords` only.
+- Retro applied this session: AGENTS.md `git log -S` bullet (local, do-not-
+  commit list), two new `questown-playtest-watch` traps (qtdev grep marker,
+  Fullness spam filter).
+- Fullness no-op log guard: `SimpleVillagerHandle.fillHunger` logs only on
+  actual change (was spamming `from 2500 to 2500` every handle tick).
+- Playtest world saved at `/tmp/playtest-world-2026-10-13` (the bug's world).
+- Autotest suite (57 scenarios) still to run after the held run locks.
+- `:test` is now fully green (todo_… de-noised, 2e0e51f1) — the "Known-red
+  unit tests" line above is stale.

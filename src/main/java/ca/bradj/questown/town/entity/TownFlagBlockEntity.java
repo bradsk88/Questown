@@ -56,10 +56,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.particles.ParticleTypes;
 import ca.bradj.questown.town.rooms.DeadDoorBubbles;
 import ca.bradj.questown.town.rooms.DoorTrouble;
+import ca.bradj.questown.world.MinecraftWorldAccess;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -79,7 +81,9 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.EntityEvent;
@@ -624,6 +628,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         initializers.add(t -> {
             if (!this.isInitializedQuests) {
                 t.setUpQuestsForNewlyPlacedFlag();
+                t.seedStartingTimber();
             }
             t.pois.setListener(t);
             t.workHandle.addChangeListener(c -> {
@@ -745,6 +750,49 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAllQuests() {
         return quests.getAll();
+    }
+
+    /**
+     * Onboarding gift, not a reward: a freshly-established town carries starting
+     * timber so a day-1 player (especially no-chicken) can build the onboarding
+     * pieces (door, mat, board, wall margin) without searching the biome for wood.
+     * Biome-independent by design - the tree features are ground-checked only, and
+     * the fallen-log line is guaranteed pickable wood - both placed relative to the
+     * flag (.scratch/day1-playtest-2026-10-11/onboarding-starting-trees-or-logs.md).
+     * Runs once, on the first tick of a brand-new flag (same gate as the onboarding
+     * quests); NBT-loaded flags never reseed.
+     */
+    void seedStartingTimber() {
+        ServerLevel l = getServerLevel();
+        if (l == null || l.isClientSide()) {
+            return;
+        }
+        BlockPos flag = getBlockPos();
+        int placed = 0;
+        // Fallen-log line: 8 horizontal oaks a few clear blocks off the flag (6-block
+        // radius keeps it clear of the POI join ring and the chicken's gate-room
+        // footprint). Pickable immediately - no axe, no chopping.
+        BlockState log = Blocks.OAK_LOG.defaultBlockState()
+                                       .setValue(BlockStateProperties.AXIS, Direction.Axis.X);
+        for (int i = 0; i < 8; i++) {
+            BlockPos p = flag.offset(-1 + i, 0, 6);
+            if (l.getBlockState(p).isAir() && !l.getBlockState(p.below()).isAir()) {
+                l.setBlock(p, log, 3);
+                placed++;
+            }
+        }
+        // Two trees at fixed offsets: TreeFeatureResolver seeds the grown shape by
+        // pos.asLong(), so a tree at a given position is reproducible.
+        MinecraftWorldAccess world = MinecraftWorldAccess.silent(l);
+        if (world.growTreeAt(flag.offset(8, 0, 6), new ItemStack(Items.OAK_SAPLING))) {
+            placed++;
+        }
+        if (world.growTreeAt(flag.offset(-8, 0, -6), new ItemStack(Items.OAK_SAPLING))) {
+            placed++;
+        }
+        if (placed > 0) {
+            QT.FLAG_LOGGER.info("Seeded starting timber at new flag {} ({} placements)", flag, placed);
+        }
     }
 
     @Override

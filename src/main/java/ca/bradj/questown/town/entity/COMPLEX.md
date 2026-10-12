@@ -650,3 +650,15 @@ Companion to the same session's fallback retirement: the
 and the warp `getRandomFinishableWork` is documented in `town/COMPLEX.md`
 (work-selection bullets + unmet-need registration section).
 
+## Starting timber seed (`TownFlagBlockEntity.seedStartingTimber`)
+
+A brand-new flag seeds its surroundings with onboarding timber — an
+onboarding gift, not a quest reward
+(`.scratch/day1-playtest-2026-10-11/onboarding-starting-trees-or-logs.md`):
+a line of 8 horizontal oak logs 6 blocks clear of the flag (pickable wood,
+no axe) plus two oaks grown via `MinecraftWorldAccess.growTreeAt`
+(`TreeFeatureResolver` seeds the shape by `pos.asLong()`, so it is
+reproducible). The call lives in the first-tick initializer under the same
+`!isInitializedQuests` gate as `setUpQuestsForNewlyPlacedFlag`, so NBT-loaded
+flags never reseed; placement is biome-blind (tree features are
+ground-checked only) and overwrites nothing (air + solid-below checks).

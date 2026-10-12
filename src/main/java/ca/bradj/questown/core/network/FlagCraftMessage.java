@@ -34,6 +34,7 @@ public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
             switch (recipeIndex) {
                 case 0 -> craftWand(sender);
                 case 1 -> craftWelcomeMat(sender);
+                case 2 -> craftJobBoard(sender);
                 default -> QT.GUI_LOGGER.error("Unknown flag craft recipe index: {}", recipeIndex);
             }
         });
@@ -66,6 +67,20 @@ public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
         ItemStack mat = new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get());
         TownFlagBlock.StoreParentOnNBT(mat, flagPos);
         giveAndNotify(player, mat);
+    }
+
+    private void craftJobBoard(ServerPlayer player) {
+        // Any sign is a valid input - the #questown:job_board_inputs recipe tag is exactly
+        // #minecraft:signs plus the board block itself, so the flag menu mirrors the recipe.
+        if (!consumeMatching(player, Ingredient.of(ItemTags.SIGNS))) {
+            return;
+        }
+        // The board is a RoomBlock: placement resolves its parent flag through the stamped
+        // NBT (JobBoardBlock.getStateForPlacement) and self-registers the one-block room -
+        // the same parent-stamping the mat and wand carry.
+        ItemStack board = new ItemStack(ItemsInit.JOB_BOARD_BLOCK.get());
+        TownFlagBlock.StoreParentOnNBT(board, flagPos);
+        giveAndNotify(player, board);
     }
 
     // The "Created X" message is the only confirmation a craft gives, so it must not be able to lie:

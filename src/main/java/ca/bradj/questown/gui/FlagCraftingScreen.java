@@ -43,6 +43,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     private final boolean showMove;
     private Button craftWandButton;
     private Button craftMatButton;
+    private Button craftBoardButton;
 
     // Flow layout, recomputed each init() from the actual wrapped-text heights so blocks can never
     // overlap regardless of string length / translation. All values are offsets from the panel's
@@ -51,6 +52,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     private int titleY;
     private int row1Y;
     private int row2Y;
+    private int row3Y;
     private int moveDescY;
     private int moveButtonY;
 
@@ -82,6 +84,10 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         return Compat.translatable("menu.flag_crafting.mat_desc");
     }
 
+    private Component boardDesc() {
+        return Compat.translatable("menu.flag_crafting.board_desc");
+    }
+
     private Component moveDesc() {
         return Compat.translatable("menu.flag_crafting.begin_moving_desc");
     }
@@ -103,6 +109,8 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         row1Y = y;
         y += ICON_ROW_HEIGHT + BLOCK_PAD;
         row2Y = y;
+        y += ICON_ROW_HEIGHT + BLOCK_PAD;
+        row3Y = y;
         y += ICON_ROW_HEIGHT + BLOCK_PAD;
 
         // The "Begin moving" section (recall + relocate) only makes sense with villagers,
@@ -126,8 +134,10 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
 
         this.craftWandButton = craftButton(bgX + CRAFT_BTN_X, bgY + row1Y, 0);
         this.craftMatButton = craftButton(bgX + CRAFT_BTN_X, bgY + row2Y, 1);
+        this.craftBoardButton = craftButton(bgX + CRAFT_BTN_X, bgY + row3Y, 2);
         this.addRenderableWidget(this.craftWandButton);
         this.addRenderableWidget(this.craftMatButton);
+        this.addRenderableWidget(this.craftBoardButton);
         if (showMove) {
             this.addRenderableWidget(Compat.button(
                     Compat.translatable("menu.flag_crafting.begin_moving"),
@@ -168,6 +178,9 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         if (this.craftMatButton != null) {
             this.craftMatButton.active = countMatching(Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES)) > 0;
         }
+        if (this.craftBoardButton != null) {
+            this.craftBoardButton.active = countMatching(Ingredient.of(ItemTags.SIGNS)) > 0;
+        }
     }
 
     private int countMatching(Ingredient ingredient) {
@@ -200,6 +213,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
 
         renderRecipeRow(ctx, bgX, bgY + row1Y, Items.STICK.getDefaultInstance(), new ItemStack(ItemsInit.TOWN_WAND.get()));
         renderRecipeRow(ctx, bgX, bgY + row2Y, Items.OAK_PRESSURE_PLATE.getDefaultInstance(), new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()));
+        renderRecipeRow(ctx, bgX, bgY + row3Y, Items.OAK_SIGN.getDefaultInstance(), new ItemStack(ItemsInit.JOB_BOARD_BLOCK.get()));
 
         if (showMove) {
             ctx.darkTextWrap(new Coordinate(bgX + MARGIN, bgY + moveDescY), TEXT_WIDTH, moveDesc());
@@ -210,6 +224,9 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         }
         if (this.craftMatButton != null && this.craftMatButton.isHovered()) {
             renderCraftTooltip(matDesc(), Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES), mouseX, mouseY);
+        }
+        if (this.craftBoardButton != null && this.craftBoardButton.isHovered()) {
+            renderCraftTooltip(boardDesc(), Ingredient.of(ItemTags.SIGNS), mouseX, mouseY);
         }
     }
 

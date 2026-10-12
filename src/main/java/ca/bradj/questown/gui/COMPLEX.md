@@ -452,6 +452,20 @@ it the menu degrades to the wire's static stats data instead of crashing.
   over: `WelcomeMatBlock` placement reads the parent from that NBT and drops an
   unstamped mat as unregistered. `WelcomeMatParentNbtTest` pins the stamp
   round-trip.
+- **Job board crafts in the same menu (2026-10-12, `job-board-should-be-roomblock`).**
+  The board was a `RoomBlock` all along; the friction was acquisition (the only
+  path was build a walled sign-room so room detection could convert it). The flag
+  crafting menu now has a third row: `FlagCraftMessage` recipe index 2
+  (`craftJobBoard`) consumes any `#minecraft:signs` item (mirroring the
+  `#questown:job_board_inputs` recipe tag) and hands a stamped
+  `ItemsInit.JOB_BOARD_BLOCK` — placement (`JobBoardBlock.getStateForPlacement`)
+  resolves the parent flag from the stamped NBT and self-registers the one-block
+  room, no radius check (the NBT binds it to the flag it was crafted at, same
+  contract as the mat). The sign→board room path stays as an optional
+  alternative. The screen change is one extra `ICON_ROW_HEIGHT` in
+  `FlagCraftingScreen.computeLayout()` (flow layout, overlap-proof by
+  construction); button-greying uses `countMatching(ItemTags.SIGNS)` like its
+  siblings.
 
 ## Day-1 playtest batch 2: dead tooltip override, BOP "earned by", empty job board
 
