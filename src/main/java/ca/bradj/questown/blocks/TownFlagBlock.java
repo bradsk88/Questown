@@ -206,13 +206,6 @@ public class TownFlagBlock extends BaseEntityBlock {
             }
         }
 
-        if (itemInHand.getItem().equals(Items.DIRT)) {
-            if (entity.giveBonusFood(player)) {
-                return InteractionResult.CONSUME;
-            }
-            return null; // already claimed — fall through to open the flag UI
-        }
-
         if (itemInHand.getItem().equals(Items.DIAMOND)) {
             for (VillagerUUID uuid : entity.getQuestHandle().getVillagersWithQuests()) {
                 entity.addImmediateReward(

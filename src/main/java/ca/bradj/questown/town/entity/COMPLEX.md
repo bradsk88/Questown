@@ -662,3 +662,23 @@ reproducible). The call lives in the first-tick initializer under the same
 `!isInitializedQuests` gate as `setUpQuestsForNewlyPlacedFlag`, so NBT-loaded
 flags never reseed; placement is biome-blind (tree features are
 ground-checked only) and overwrites nothing (air + solid-below checks).
+
+## Bonus food: container deposit + flag-UI claim (replaces the dirt trick)
+
+The one-time free-food beat no longer lives on "right-click the flag with a
+block of dirt" (that branch in `TownFlagBlock` is gone;
+`.scratch/day1-playtest-2026-10-11/free-food-economics-card.md`). The owner is
+`TownFlagBlockEntity`:
+
+- `depositBonusCarrots()` — deposits `BONUS_FOOD_COUNT` (20) carrots into the
+  first slot of the first registered container (the `TownContainers`
+  path, same as a player leaving food in the storeroom); returns the count.
+- `claimBonusFood(@Nullable ServerPlayer)` — the once-only claim: container
+  first, player-inventory fallback when no container is registered yet; the
+  `givenBonusFood` bit flips only after the food actually lands, and the chat
+  line names where the carrots went. The client reaches it through
+  `ClaimFreeFoodMessage` (the food card click); `FreeFoodCommand` is now a thin
+  wrapper calling the same `depositBonusCarrots()` + `markBonusFoodGiven()`.
+
+`getInfo()` carries `bonusFoodAvailable = !givenBonusFood` in `FlagInfo` so the
+client can show the claim affordance (see `gui/COMPLEX.md`).

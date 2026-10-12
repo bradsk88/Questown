@@ -38,6 +38,7 @@ import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.helperchicken.ChickenRoomShellPlan;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.econ.NoMCEconomics;
@@ -1777,7 +1778,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 showEcon,
                 getBopCount() > 0,
                 hasIncomplete,
-                isBopFull()
+                isBopFull(),
+                !givenBonusFood
         );
     }
 
@@ -1917,16 +1919,68 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         this.chickenObservedSeedsGiven = v;
     }
 
-    public boolean giveBonusFood(ServerPlayer sp) {
+    public static final int BONUS_FOOD_COUNT = 20;
+
+    /**
+     * Deposit the one-time bonus food into the first registered container with a
+     * free slot - the same path the player takes when they leave food in the
+     * storeroom, and the path the dev-only {@code _qtdev free_food} command uses.
+     * Returns the number of carrots deposited (0 when no registered container
+     * exists yet).
+     */
+    public int depositBonusCarrots() {
+        ServerLevel sl = getServerLevel();
+        for (ContainerTarget<MCContainer, MCTownItem> target : TownContainers.getAllContainers(this, sl)) {
+            if (sl.getBlockEntity(target.getBlockPos()) instanceof Container c) {
+                ItemStack stack = new ItemStack(Items.CARROT, BONUS_FOOD_COUNT);
+                for (int i = 0; i < c.getContainerSize() && !stack.isEmpty(); i++) {
+                    if (c.getItem(i).isEmpty()) {
+                        c.setItem(i, stack.copy());
+                        stack.setCount(0);
+                    }
+                }
+                c.setChanged();
+                return BONUS_FOOD_COUNT;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * The one-time free-food claim the economics tab offers (replaces the old
+     * "right-click the flag with dirt" trick, .scratch/day1-playtest-2026-10-11/
+     * free-food-economics-card.md). Prefers a registered container - the only
+     * place a villager can actually eat from - and falls back to handing the
+     * carrots to the player when the town has no container yet. The once-only
+     * bit flips only after the food actually lands.
+     */
+    public boolean claimBonusFood(@Nullable ServerPlayer sp) {
         if (givenBonusFood) {
-            Compat.sendMessage(sp, Component.translatable("message.questown.bonus_food_only_once"));
+            if (sp != null) {
+                Compat.sendMessage(sp, Component.translatable("message.questown.bonus_food_only_once"));
+            }
             return false;
         }
-        BlockPos pos = getBlockPos();
-        ItemStack stack = new ItemStack(Items.CARROT, 10);
-        level.addFreshEntity(new ItemEntity(level, pos.getX(), pos.getY(), pos.getZ(), stack));
-        givenBonusFood = true;
-        return true;
+        int deposited = depositBonusCarrots();
+        if (deposited > 0) {
+            givenBonusFood = true;
+            if (sp != null) {
+                Compat.sendMessage(sp, Component.translatable("message.questown.bonus_food.claimed_container"));
+            }
+            QT.FLAG_LOGGER.info("Bonus food claimed: {} carrots deposited into a registered container at flag {}",
+                    deposited, getBlockPos());
+            return true;
+        }
+        if (sp != null) {
+            sp.getInventory().add(new ItemStack(Items.CARROT, BONUS_FOOD_COUNT));
+            givenBonusFood = true;
+            Compat.sendMessage(sp, Component.translatable("message.questown.bonus_food.claimed_inventory"));
+            QT.FLAG_LOGGER.info("Bonus food claimed: {} carrots given to the player (no registered container yet) at flag {}",
+                    BONUS_FOOD_COUNT, getBlockPos());
+            return true;
+        }
+        QT.FLAG_LOGGER.warn("No registered container to deposit bonus food at flag {}", getBlockPos());
+        return false;
     }
 
     public boolean getGivenBonusFood() {

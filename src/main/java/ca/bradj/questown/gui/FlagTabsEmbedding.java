@@ -15,19 +15,21 @@ public interface FlagTabsEmbedding {
             boolean showEconTab,
             boolean showBlockOfProgressTab,
             boolean hasIncompleteQuests,
-            boolean bopFull
+            boolean bopFull,
+            boolean bonusFoodAvailable
     ) {
         public static FlagInfo dumb(BlockPos flagPos, boolean showBOP, boolean bopFull) {
-            return new FlagInfo(flagPos, true, true, true, showBOP, false, bopFull);
+            return new FlagInfo(flagPos, true, true, true, showBOP, false, bopFull, false);
         }
 
         public static FlagInfo withQuestNotification(BlockPos flagPos, boolean showBOP, boolean hasIncompleteQuests, boolean bopFull) {
-            return new FlagInfo(flagPos, true, true, true, showBOP, hasIncompleteQuests, bopFull);
+            return new FlagInfo(flagPos, true, true, true, showBOP, hasIncompleteQuests, bopFull, false);
         }
 
         public static FlagInfo read(FriendlyByteBuf buf) {
             return new FlagInfo(
                     buf.readBlockPos(),
+                    buf.readBoolean(),
                     buf.readBoolean(),
                     buf.readBoolean(),
                     buf.readBoolean(),
@@ -45,6 +47,7 @@ public interface FlagTabsEmbedding {
             data.writeBoolean(showBlockOfProgressTab);
             data.writeBoolean(hasIncompleteQuests);
             data.writeBoolean(bopFull);
+            data.writeBoolean(bonusFoodAvailable);
         }
     }
 

@@ -505,3 +505,11 @@ empty multi-status overview.
 - **Empty job board is no longer a blank pane.** `WorkScreen` draws two wrapped
   lines (`job_board.empty.1`/`job_board.empty.2`) when `work.isEmpty()`,
   replacing the empty scroll area with an explanation of what requests do.
+- **Free-food claim on the economics tab.** The `#questown:villager_food`
+  unmet-need card in `TownEconomicsScreen` shows a red "Free food →" line while
+  `FlagInfo.bonusFoodAvailable()` is set (the full sentence is a third tooltip
+  line); clicking anywhere on that card sends `ClaimFreeFoodMessage`. The
+  economics tab's red dot is driven by the same flag
+  (`FlagTabs` passes `fi.bonusFoodAvailable()` to both the tab and
+  `computeTabDecisions`). `FlagInfo` gained the `bonusFoodAvailable` boolean
+  (wire position: after `bopFull`).

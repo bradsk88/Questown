@@ -62,6 +62,7 @@ public final class QuestownNetwork {
         register(Channel.Direction.TO_SERVER, ChangeVillagerJobMessage.class, ChangeVillagerJobMessage::encode, ChangeVillagerJobMessage::decode, ChangeVillagerJobMessage::handle);
         register(Channel.Direction.TO_SERVER, CreateStockRequestFromUIMessage.class, CreateStockRequestFromUIMessage::encode, CreateStockRequestFromUIMessage::decode, CreateStockRequestFromUIMessage::handle);
         register(Channel.Direction.TO_SERVER, FlagCraftMessage.class, FlagCraftMessage::encode, FlagCraftMessage::decode, FlagCraftMessage::handle);
+        register(Channel.Direction.TO_SERVER, ClaimFreeFoodMessage.class, ClaimFreeFoodMessage::encode, ClaimFreeFoodMessage::decode, ClaimFreeFoodMessage::handle);
         register(Channel.Direction.TO_SERVER, GiveBOPMessage.class, GiveBOPMessage::encode, GiveBOPMessage::decode, GiveBOPMessage::handle);
         register(Channel.Direction.TO_SERVER, JobRootChangeMessage.class, JobRootChangeMessage::encode, JobRootChangeMessage::decode, JobRootChangeMessage::handle);
         register(Channel.Direction.TO_SERVER, OpenFlagMenuMessage.class, OpenFlagMenuMessage::encode, OpenFlagMenuMessage::decode, OpenFlagMenuMessage::handle);

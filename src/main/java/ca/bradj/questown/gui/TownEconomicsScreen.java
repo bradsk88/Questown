@@ -2,22 +2,31 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.AddWorkFromUIMessage;
+import ca.bradj.questown.core.network.ClaimFreeFoodMessage;
 import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static ca.bradj.questown.gui.PagedCardScreen.*;
 
 public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMenu, ItemEconomicsData> {
     private final FlagTabs tabs;
+
+    // The unmet-need card the one-time free-food claim rides on (the town's
+    // food need is the near-certain day-1 card - see .scratch/day1-playtest-
+    // 2026-10-11/free-food-economics-card.md).
+    private static final String FOOD_NEED_KEY = "#questown:villager_food";
 
     public static EconomicsUpdate lastUpdate = new EconomicsUpdate(ImmutableList.of());
 
@@ -51,6 +60,14 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private boolean bonusFoodAvailable() {
+        return menu.getFlagInfo().bonusFoodAvailable();
+    }
+
+    private boolean isFoodCard(Card<ItemEconomicsData> card) {
+        return FOOD_NEED_KEY.equals(card.data().ingredientKey());
     }
 
     @Override
@@ -89,10 +106,14 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
                 Ingredient ingr = Ingredients.fromString(card.data().ingredientKey());
                 Component itemName = Ingredients.getName(ingr);
                 int timesNeeded = card.data().timesNeeded();
-                this.showTooltip(List.of(
+                List<FormattedCharSequence> lines = new ArrayList<>(List.of(
                         Compat.componentText(Compat.translatable(key1, itemName, timesNeeded)),
                         Compat.componentText(Compat.translatable(key2, ItemEconomicsData.PERIOD_DAYS))
                 ));
+                if (bonusFoodAvailable() && isFoodCard(card)) {
+                    lines.add(Compat.componentText(Compat.translatable("questown.menu.free_food_card.tooltip")));
+                }
+                this.showTooltip(lines);
             }
         }
     }
@@ -104,7 +125,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
             int mouseX,
             int mouseY
     ) {
-        renderDataAndIcons(ctx, card.coords(), card.data(), mouseX, mouseY);
+        renderDataAndIcons(ctx, card.coords(), card.data(), mouseX, mouseY, card);
         return null;
     }
 
@@ -113,7 +134,8 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
             CardCoordinates c,
             ItemEconomicsData data,
             int mouseX,
-            int mouseY
+            int mouseY,
+            Card<ItemEconomicsData> card
     ) {
         int iconX = getIconX(c);
         int iconY = getIconY(c);
@@ -128,6 +150,13 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         String count = Integer.toString(data.timesNeeded());
         int countX = c.rightXPadded() - font.width(count);
         ctx.darkText(Compat.literal(count), countX, textY);
+        // The one-time free-food claim rides on the food card while available:
+        // a short red affordance on the card, the full sentence in the tooltip.
+        if (bonusFoodAvailable() && isFoodCard(card)) {
+            int claimY = textY + font.lineHeight + 2;
+            ctx.darkText(Compat.translatableStyled("questown.menu.free_food_card",
+                    Style.EMPTY.applyFormat(net.minecraft.ChatFormatting.RED)), textX, claimY);
+        }
     }
 
     private static int getIconY(CardCoordinates coords) {
@@ -178,6 +207,15 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
     ) {
         for (Card<ItemEconomicsData> card : cards()) {
             CardCoordinates c = card.coords();
+            // The whole food card is the claim affordance while the one-time
+            // bonus is available (the icon sub-hit still sends the old INQUIRED
+            // work-request ping, same as any card).
+            if (bonusFoodAvailable() && isFoodCard(card)
+                    && p_97750_ == 0
+                    && UtilClean.isCoordInBox(mouseX, mouseY, c.leftX(), c.topY(), CARD_WIDTH, cardHeight)) {
+                QuestownNetwork.sendToServer(new ClaimFreeFoodMessage(menu.getFlagInfo().flagPos()));
+                return true;
+            }
             if (UtilClean.isCoordInBox(mouseX, mouseY, getIconX(c), getIconY(c), 16, 16)) {
                 Ingredient ing = Ingredients.fromString(card.data().ingredientKey());
                 AddWorkFromUIMessage.Action inquired = AddWorkFromUIMessage.Action.INQUIRED;
