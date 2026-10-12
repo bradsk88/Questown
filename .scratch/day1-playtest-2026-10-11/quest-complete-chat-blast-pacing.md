@@ -1,6 +1,6 @@
 ---
 title: Pace out the chat text blast on welcome-mat quest completion
-status: ready-for-human
+status: implemented
 created: 2026-10-11
 ---
 

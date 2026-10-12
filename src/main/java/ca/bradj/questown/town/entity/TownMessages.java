@@ -21,6 +21,17 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class TownMessages {
+    // E2 (.scratch/day1-playtest-2026-10-11/quest-complete-chat-blast-pacing.md):
+    // day-1 events fire in bursts (mat completion posts the basics batch, board
+    // placement completes it, each broadcasts), and the player sees a wall of
+    // chat within a second. Every broadcast goes through this flag-wide queue:
+    // the first line sends immediately, the rest space out at this interval,
+    // consecutive duplicates are dropped (masks - does not fix - the
+    // double-firing in messages-print-twice.md).
+    private static final int BROADCAST_SPACING_TICKS = 100;
+    private final java.util.ArrayDeque<Component> pendingBroadcasts = new java.util.ArrayDeque<>();
+    private long lastBroadcastAt = Long.MIN_VALUE;
+
     private ServerLevel level;
 
     public void initialize(ServerLevel t) {
@@ -36,11 +47,44 @@ public class TownMessages {
             return;
         }
 
-        QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
+        Component line = Compat.translatable(key, args);
+        long now = level.getGameTime();
+        if (lastBroadcastAt == Long.MIN_VALUE || now - lastBroadcastAt >= BROADCAST_SPACING_TICKS) {
+            lastBroadcastAt = now;
+            sendNow(line);
+            QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
+        } else if (!pendingBroadcasts.contains(line)) {
+            pendingBroadcasts.addLast(line);
+            QT.FLAG_LOGGER.info("Queued broadcast ({} ticks until next slot): {} {}", now - lastBroadcastAt, key, args);
+        } else {
+            QT.FLAG_LOGGER.info("Dropped duplicate queued broadcast: {} {}", key, args);
+        }
+    }
+
+    /**
+     * Release one queued broadcast once the spacing interval is free. Ticked
+     * every flag tick by {@link TownFlagTicker}.
+     */
+    public void flushBroadcasts() {
+        if (pendingBroadcasts.isEmpty()) {
+            return;
+        }
+        if (level == null) {
+            pendingBroadcasts.clear();
+            return;
+        }
+        long now = level.getGameTime();
+        if (lastBroadcastAt == Long.MIN_VALUE || now - lastBroadcastAt >= BROADCAST_SPACING_TICKS) {
+            lastBroadcastAt = now;
+            sendNow(pendingBroadcasts.pollFirst());
+        }
+    }
+
+    private void sendNow(Component line) {
         for (ServerPlayer p : level.getServer()
                                    .getPlayerList()
                                    .getPlayers()) {
-            p.displayClientMessage(Compat.translatable(key, args), false);
+            p.displayClientMessage(line, false);
         }
     }
 

@@ -309,6 +309,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         if (phase == FlagPhase.DORMANT) {
             return;
         }
+        e.messages.flushBroadcasts();
         super.tick(new TickData(sl, blockEntityPos, state, e));
         spawnBopParticlesIfNeeded(sl, blockEntityPos, e);
     }
