@@ -863,6 +863,12 @@ The onboarding chain is now:
   its registered door exists *before* the mat registers, so the empty-room quest
   completes on the first tick after the gate reward posts it — the basics batch
   lands without player input, as before.
+
+- **Flavor copy (2026-10-13, user call):** the empty-room quest's flavor text
+  was halved, dash-free — "Build a small room, then use your Town Wand on its
+  door to register it." (was 143 chars incl. an em dash and background the
+  player flagged as noise). Set at post time in `addEmptyRoomBatch`, so
+  already-posted quests in existing worlds keep the old copy.
 - **No-chicken path**: the player builds a small room, places a door, and wands
   it (`TownWand` → `registerDoor`). The quest's flavor text says exactly this.
   The zero-ingredient recipe is global (it matches every room in every town),

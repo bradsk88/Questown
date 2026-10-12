@@ -26,6 +26,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -456,6 +457,12 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     ) {
         Collection<Ingredient> ingredients = recipe.getIngredients();
         ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
+        if (ingredients.isEmpty() && SpecialQuests.EMPTY_ROOM.equals(recipe.getWantedId())) {
+            // D#2: empty_room matches any room (zero required contents), so the card has
+            // no ingredient strip. Show the oak door - the block you actually point the
+            // Town Wand at - as the card's icon (user call, 2026-10-13 playtest).
+            ingredients = ImmutableList.of(Ingredient.of(Items.OAK_DOOR));
+        }
 
         return RenderUtil.stripOfRequestableItems(
                 (ing, coord) -> Ingredients.render(ctx, ing, coord.x(), coord.y()),

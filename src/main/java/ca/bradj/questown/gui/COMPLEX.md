@@ -540,6 +540,11 @@ empty multi-status overview.
   `RoomRecipes.getName(wantedId)` (free placement: "in your town"); campfire keeps
   its own branch. The quest is about *placing a functional block*, not holding an
   item.
+- **The empty-room card shows an oak door (2026-10-13 night, user call).**
+  `empty_room` has zero ingredients, so `renderRecipeCardIcons` drew an empty
+  strip. When the strip is empty and the wanted id is `SpecialQuests.EMPTY_ROOM`,
+  it now renders a single `Ingredient.of(Items.OAK_DOOR)` — the block you point
+  the Town Wand at.
 - **Job-board quest card shows the board, not a sign.** `UIQuest.fromLevel` overrides
   the `SpecialQuests.JOB_BOARD` rMap entry with
   `RoomRecipes.standard(JOB_BOARD, NonNullList.withSize(1, Ingredient.of(JOB_BOARD_BLOCK)))`
