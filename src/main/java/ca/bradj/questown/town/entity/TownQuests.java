@@ -1750,6 +1750,31 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /**
+     * The onboarding job-change guarantee (ruling D, 2026-10-13, expected-guaranteed-cook-got-arborist.md):
+     * while an onboarding JOB_CHANGE quest is open, its wanted root is what a BOP spend promises,
+     * so it fills the same guarantee slot a blessed BOP's NBT uses. The first hunter was
+     * guaranteed this way (the town's first BOP was hunter-blessed); without this, the onboarding
+     * cook quest could lose to a plain pre-roll or a differently-blessed BOP and hand the town
+     * an arborist instead. The oldest open onboarding JOB_CHANGE quest for this townie wins
+     * (owner null, or this townie); empty once the onboarding job-change quests are done.
+     */
+    public Optional<JobID> onboardingJobChangeGuarantee(VillagerUUID target) {
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (q.getType() != Quest.QuestType.JOB_CHANGE || !q.isOnboarding() || q.isComplete()) {
+                    continue;
+                }
+                VillagerUUID owner = q.getOwner();
+                if (owner != null && !owner.equals(target)) {
+                    continue;
+                }
+                return Optional.of(JobID.fromRL(q.getWantedId()));
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
      * Completes the active JOB_CHANGE quest for a townie the moment its BOP spend is
      * requested, not when the root change applies in the morning: the reward lands on the
      * player's act. Only a quest whose wanted root matches the decided pending root (blessed

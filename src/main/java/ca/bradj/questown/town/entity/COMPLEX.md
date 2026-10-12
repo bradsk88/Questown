@@ -897,3 +897,29 @@ Client half of the ticket: `FlagCraftingScreen.craftButton` now sets
 exposes the `active` field; `setActive` is gone), so a fast double-click cannot
 send two craft messages - the server consumes input and grants an item **per
 message**, so the guard has to be on the client.
+
+# Onboarding job-change guarantee: the quest's root fills the guarantee slot (ruling D, 2026-10-13)
+
+A BOP spend on the change-job tab decides the townie's new root in the
+**guarantee slot** (`SimpleVillagerHandle.scheduleJobRootChange` →
+`guaranteedRoots`, applied at morning): a blessed ("gold") BOP's NBT carries
+the root that earned it and forces it; a plain BOP pre-rolls one instead.
+The first hunter was guaranteed this way — the town's first BOP was
+hunter-blessed, so the onboarding `hunter/sword` JOB_CHANGE quest's root was
+what the spend decided. The cook quest had no such source (no cook exists to
+earn a cook-blessed BOP), so a plain/differently-blessed spend pre-rolled
+arbitrarily (the 2026-10-12 "expected a cook, got an arborist" incident).
+
+The user's ruling: guarantee the cook the same way while the player is in
+onboarding. `TownQuests.onboardingJobChangeGuarantee(target)` returns the
+oldest posted open onboarding JOB_CHANGE quest's root (owner null or this
+townie); `TownFlagBlockEntity.requestJobRootChange` resolves
+**onboarding quest root > BOP blessing > pre-roll** and passes the effective
+guarantee through `scheduleJobRootChange`, so the promised root stores and
+morning-applies exactly like a blessed BOP's, and
+`markJobChangeCompleteAtSpend` (E1) completes the matching quest at the spend
+moment. Once no onboarding job-change quest is open the guarantee is empty
+and the post-tutorial rules (blessing > pre-roll) are unchanged.
+
+Tests: `TownQuestsJobChangeSpendTest` (the six `onboarding_*` cases:
+unowned, owned, completed, non-onboarding, oldest-wins, spend-completes).

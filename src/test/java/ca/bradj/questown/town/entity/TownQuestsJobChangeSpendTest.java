@@ -33,6 +33,18 @@ class TownQuestsJobChangeSpendTest {
         return inputs.withRewardUponCompletion(new NoOpReward());
     }
 
+    private static MCQuestBatch onboardingJobChangeBatch(
+            JobID wantedJob,
+            VillagerUUID owner
+    ) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuest q = MCQuest.jobChange(batchUUID, owner, wantedJob);
+        q.setOnboarding(true);
+        MCQuestBatch.Inputs inputs = new MCQuestBatch.Inputs(batchUUID, owner);
+        inputs.addNewQuest(q);
+        return inputs.withRewardUponCompletion(new NoOpReward());
+    }
+
     private static TownQuests withBatch(MCQuestBatch batch) {
         TownQuests quests = new TownQuests();
         quests.questBatches.add(batch);
@@ -53,6 +65,27 @@ class TownQuestsJobChangeSpendTest {
             public void questLost(MCQuest quest) {
             }
         });
+        return quests;
+    }
+
+    private static TownQuests withBatches(MCQuestBatch... batches) {
+        TownQuests quests = new TownQuests();
+        for (MCQuestBatch batch : batches) {
+            quests.questBatches.add(batch);
+            batch.addChangeListener(new QuestBatch.ChangeListener<MCQuest>() {
+                @Override
+                public void questCompleted(MCQuest quest) {
+                }
+
+                @Override
+                public void questBatchCompleted(QuestBatch<?, ?, ?, ?> quest) {
+                }
+
+                @Override
+                public void questLost(MCQuest quest) {
+                }
+            });
+        }
         return quests;
     }
 
@@ -114,5 +147,78 @@ class TownQuestsJobChangeSpendTest {
         boolean second = quests.markJobChangeCompleteAtSpend(villager, new JobID("hunter", "hunter"));
 
         assertFalse(second, "an already-complete quest does not complete twice");
+    }
+
+    // The onboarding job-change guarantee (ruling D): an open onboarding JOB_CHANGE quest's
+    // root fills the BOP-spend's guarantee slot, the way a blessed BOP's NBT does.
+
+    @Test
+    void onboarding_openQuest_isTheGuaranteeForAnyTownie() {
+        TownQuests quests = withBatches(onboardingJobChangeBatch(new JobID("cook", "cook"), null));
+        VillagerUUID villager = VillagerUUID.random();
+
+        assertEquals(new JobID("cook", "cook"), quests.onboardingJobChangeGuarantee(villager)
+                                                       .orElseThrow(),
+                "an unowned open onboarding quest guarantees its root for any townie");
+    }
+
+    @Test
+    void onboarding_ownedQuest_guaranteesOnlyForTheOwner() {
+        VillagerUUID owner = VillagerUUID.random();
+        VillagerUUID other = VillagerUUID.random();
+        TownQuests quests = withBatches(onboardingJobChangeBatch(new JobID("cook", "cook"), owner));
+
+        assertEquals(new JobID("cook", "cook"), quests.onboardingJobChangeGuarantee(owner)
+                                                       .orElseThrow());
+        assertTrue(quests.onboardingJobChangeGuarantee(other).isEmpty(),
+                "a quest owned by another townie is not this townie's promise");
+    }
+
+    @Test
+    void onboarding_completedQuest_noLongerGuarantees() {
+        VillagerUUID villager = VillagerUUID.random();
+        MCQuestBatch batch = onboardingJobChangeBatch(new JobID("hunter", "hunter"), null);
+        TownQuests quests = withBatches(batch);
+
+        batch.markRecipeAsComplete(null, batch.getAll().get(0).getWantedId());
+
+        assertTrue(quests.onboardingJobChangeGuarantee(villager).isEmpty(),
+                "once the onboarding job change is done, spends fall back to blessing/pre-roll");
+    }
+
+    @Test
+    void onboarding_nonOnboardingQuest_doesNotGuarantee() {
+        VillagerUUID villager = VillagerUUID.random();
+        // A plain (non-onboarding) JOB_CHANGE quest - the post-tutorial world: the BOP's own
+        // blessing and the pre-roll decide, not an open quest.
+        TownQuests quests = withBatches(jobChangeBatch(new JobID("cook", "cook"), null));
+
+        assertTrue(quests.onboardingJobChangeGuarantee(villager).isEmpty());
+    }
+
+    @Test
+    void onboarding_oldestOpenQuestWins() {
+        VillagerUUID villager = VillagerUUID.random();
+        TownQuests quests = withBatches(
+                onboardingJobChangeBatch(new JobID("hunter", "hunter"), null),
+                onboardingJobChangeBatch(new JobID("cook", "cook"), null)
+        );
+
+        assertEquals(new JobID("hunter", "hunter"), quests.onboardingJobChangeGuarantee(villager)
+                                                           .orElseThrow(),
+                "posted order: the hunter batch precedes the cook phase, so hunter is promised first");
+    }
+
+    @Test
+    void onboarding_guaranteedRoot_completesTheQuestAtSpend() {
+        VillagerUUID villager = VillagerUUID.random();
+        TownQuests quests = withBatches(onboardingJobChangeBatch(new JobID("cook", "cook"), null));
+
+        // The spend's decided root comes from the guarantee; the same moment completes the quest.
+        boolean completed = quests.markJobChangeCompleteAtSpend(
+                villager, quests.onboardingJobChangeGuarantee(villager).orElseThrow());
+
+        assertTrue(completed, "the onboarding spend resolves the promised job, not a pre-roll");
+        assertEquals(villager, quests.questBatches.getAllBatches().get(0).getOwner());
     }
 }

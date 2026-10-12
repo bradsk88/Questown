@@ -421,18 +421,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     /**
      * The spend-and-request a player makes on a BOP: schedules the townie's root change
-     * (the root is decided here - a blessed BOP forces its guaranteed root, an ordinary BOP
-     * pre-rolls one now and the morning applies it) and, when a pending root was decided,
-     * completes the matching JOB_CHANGE quest at the spend moment - the reward lands on the
-     * player's act, not on the morning application.
+     * (the root is decided here - an onboarding quest's root beats the BOP's own blessing,
+     * a blessed BOP beats a pre-roll, and the morning applies the decided root) and, when a
+     * pending root was decided, completes the matching JOB_CHANGE quest at the spend moment
+     * - the reward lands on the player's act, not on the morning application.
      */
     public Optional<JobID> requestJobRootChange(
             UUID villagerUUID,
             boolean instant,
             Optional<JobID> guaranteedRoot
     ) {
+        Optional<JobID> effectiveGuarantee =
+                quests.onboardingJobChangeGuarantee(VillagerUUID.from(villagerUUID))
+                       .or(() -> guaranteedRoot);
         Optional<JobID> pending =
-                getVillagerHandle().scheduleJobRootChange(villagerUUID, instant, guaranteedRoot);
+                getVillagerHandle().scheduleJobRootChange(villagerUUID, instant, effectiveGuarantee);
         pending.ifPresent(root ->
                 quests.markJobChangeCompleteAtSpend(VillagerUUID.from(villagerUUID), root)
         );
