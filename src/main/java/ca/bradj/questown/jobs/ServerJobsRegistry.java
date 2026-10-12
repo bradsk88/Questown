@@ -259,6 +259,11 @@ public class ServerJobsRegistry {
     }
 
     public static ImmutableSet<JobID> getAllRootJobs() {
+        if (!Works.isInitialized()) {
+            // Job data not loaded (headless unit test, or pre-startup): no candidate roots,
+            // not an NPE - callers treat "no candidates" as "re-roll / nothing to pick".
+            return ImmutableSet.of();
+        }
         ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
         for (JobID j : getAllJobs()) {
             Work work = getWork(j, false);

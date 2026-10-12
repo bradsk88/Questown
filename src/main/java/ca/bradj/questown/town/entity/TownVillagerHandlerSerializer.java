@@ -32,6 +32,7 @@ public class TownVillagerHandlerSerializer {
     private static final String NBT_DAMAGE = "damage";
     private static final String NBT_PENDING_JOB_CHANGES = "pending_job_changes";
     private static final String NBT_GUARANTEED_ROOTS = "guaranteed_roots";
+    private static final String NBT_PRE_ROLL_ROOTS = "pre_roll_roots";
     private static final String NBT_PROFICIENCIES = "proficiencies";
 
     public void deserialize(
@@ -88,6 +89,11 @@ public class TownVillagerHandlerSerializer {
         ImmutableMap<UUID, JobID> guaranteedRoots = deserializeMap(
                 compound, NBT_GUARANTEED_ROOTS, t -> JobID.fromTag((CompoundTag) ((CompoundTag) t).getCompound(NBT_VALUE))
         );
+        // Pre-rolled at the BOP-spend moment for ordinary (non-blessed) changes; persisted so a
+        // spend overnight still applies the settled root after a save/quit in between.
+        ImmutableMap<UUID, JobID> preRolls = deserializeMap(
+                compound, NBT_PRE_ROLL_ROOTS, t -> JobID.fromTag((CompoundTag) ((CompoundTag) t).getCompound(NBT_VALUE))
+        );
         ImmutableMap<UUID, ImmutableMap<String, Float>> proficiencies = deserializeMap(
                 compound, NBT_PROFICIENCIES, t -> {
                     CompoundTag pt = ((CompoundTag) t).getCompound(NBT_PROFICIENCIES);
@@ -101,7 +107,7 @@ public class TownVillagerHandlerSerializer {
 
         villagerHandle.initialize(
                 fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending, proficiencies,
-                guaranteedRoots
+                guaranteedRoots, preRolls
         );
     }
 
@@ -201,6 +207,10 @@ public class TownVillagerHandlerSerializer {
         serializeVMap(compound, NBT_PENDING_JOB_CHANGES, villagerHandle.getJobChangesPending(), simpleBool);
         serializeMap(
                 compound, NBT_GUARANTEED_ROOTS, villagerHandle.getGuaranteedRoots(),
+                (CompoundTag t, JobID j) -> t.put(NBT_VALUE, JobID.toTag(j))
+        );
+        serializeMap(
+                compound, NBT_PRE_ROLL_ROOTS, villagerHandle.getPreRolls(),
                 (CompoundTag t, JobID j) -> t.put(NBT_VALUE, JobID.toTag(j))
         );
         serializeMap(

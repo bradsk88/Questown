@@ -45,7 +45,9 @@ public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean 
             // forces the specified root instead of the usual random choice.
             ItemStack consumed = BopTransactionSyncer.syncConsumedBOP(sender);
             Optional<JobID> guarantee = ca.bradj.questown.blocks.BlockOfProgress.getBlessedJob(consumed);
-            flag.getVillagerHandle().scheduleJobRootChange(villagerUUID, instant, guarantee);
+            // The flag owns the spend-and-request: it schedules the root change (deciding the
+            // root now) and completes any matching JOB_CHANGE quest at the spend moment.
+            flag.requestJobRootChange(villagerUUID, instant, guarantee);
         });
 
     }

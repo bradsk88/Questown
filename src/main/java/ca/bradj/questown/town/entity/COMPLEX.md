@@ -726,3 +726,42 @@ state rides the flag's **block-entity update tag**, exactly like `deadDoors`:
   `BubbleRenderer.renderTextureBubbleAtBlock` (the authored
   `textures/bubble/attention.png` "!" — same folder/pipeline as the chicken's
   sunset bubble).
+
+# Job-root change: the outcome settles at the BOP spend, not at morning (E1, 2026-10-13)
+
+The day-1 playtest ruling: the "change to <job>" quest completes **when the player
+consumes the BOP**, and the root roll happens at the same moment — "it's more
+satisfying for the player"; the morning only *applies* the settled outcome.
+
+```mermaid
+flowchart LR
+    Spend["player spends BOP\n(JobRootChangeMessage /\nspendBopToRequestJobChange)"] --> Decide["flag.requestJobRootChange\nscheduleJobRootChange decides the root NOW:\nblessed guarantee, else pre-roll\n(registry roots minus current root)"]
+    Decide --> PreRoll["preRolls (NBT pre_roll_roots)\njobChangesPending"]
+    Decide --> Quest["TownQuests.markJobChangeCompleteAtSpend\nopen JOB_CHANGE quest whose wanted root\nmatches the pending root (quest-level owner\ngate) completes + is owned by this townie"]
+    PreRoll --> Morning["handleMorning priority:\n1 blessed guaranteedRoots\n2 tutorial overnight override\n3 stored pre-roll\n4 dawn re-roll (no stored root)"]
+```
+
+- `SimpleVillagerHandle.scheduleJobRootChange` now **returns the decided pending root**
+  (`Optional<JobID>` — the `VillagerHolder` interface changed to match; the only
+  implementation is `TownVillagerHandles.asVillagerHolder`'s anonymous holder).
+  Instant (creative) spends return empty and apply immediately as before.
+- The pre-roll is persisted like `guaranteedRoots` (`pre_roll_roots` NBT, same
+  serializer pattern) so a spend overnight survives save/quit; a missing pre-roll
+  falls back to the existing dawn re-roll.
+- **The tutorial override still wins at dawn** (`overnightJobOverride`) — it only
+  needs to *win* at dawn, not be *known* at spend, so the spend-time decision is
+  blessed-or-preroll and the morning priority is unchanged:
+  blessed > override > pre-roll > re-roll.
+- Quest completion is the flag's call, not the message's: `JobRootChangeMessage`
+  and `spendBopToRequestJobChange` both route through
+  `TownFlagBlockEntity.requestJobRootChange`, which schedules and then calls
+  `TownQuests.markJobChangeCompleteAtSpend`. That method mirrors
+  `processJobChanges`'s matching (exact wanted, then `sameRoot` family fallback)
+  but adds the spend-time rules: one spend completes **one** quest, and a quest
+  whose **quest-level** owner (`Quest.getOwner()`, not the batch owner — a batch
+  can hold several JOB_CHANGE quests with different owners) is a different townie
+  never completes. `Quest.setOwner`/`getOwner` were added for this.
+- Headless unit tests: `ServerJobsRegistry.getAllRootJobs()` now returns empty
+  (instead of NPE-ing via `Works.ids()`) when `Works.isInitialized()` is false,
+  so the spend-time roll degrades to "no candidates" rather than crashing the
+  forked test JVM.

@@ -164,7 +164,12 @@ public interface VillagerHolder {
 
     void clearBlockOfProgress(UUID uuid);
 
-    void scheduleJobRootChange(
+    /**
+     * Schedules a root change (no blessed guarantee) and returns the pre-rolled root decided at
+     * the spend moment, or empty when instant or when no candidate root exists. The morning
+     * applies it unless a tutorial override wins.
+     */
+    Optional<JobID> scheduleJobRootChange(
             UUID villagerUUID,
             boolean instant
     );
@@ -174,7 +179,7 @@ public interface VillagerHolder {
      * (from a blessed "gold" BOP): when present, the pending change takes this root instead
      * of picking randomly at handleMorning.
      */
-    void scheduleJobRootChange(
+    Optional<JobID> scheduleJobRootChange(
             UUID villagerUUID,
             boolean instant,
             Optional<JobID> guaranteedRoot

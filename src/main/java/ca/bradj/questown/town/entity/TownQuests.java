@@ -1675,6 +1675,48 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
     }
 
+    /**
+     * Completes the active JOB_CHANGE quest for a townie the moment its BOP spend is
+     * requested, not when the root change applies in the morning: the reward lands on the
+     * player's act. Only a quest whose wanted root matches the decided pending root (blessed
+     * guarantee or pre-roll) completes, and never one already owned by a different townie
+     * (the quest-level owner: a batch can hold several JOB_CHANGE quests for the same town
+     * with different owners). Returns whether a quest completed so the caller can log the
+     * spend outcome.
+     */
+    public boolean markJobChangeCompleteAtSpend(
+            VillagerUUID villager,
+            JobID pendingRoot
+    ) {
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (q.getType() != Quest.QuestType.JOB_CHANGE || q.isComplete()) {
+                    continue;
+                }
+                JobID wantedJobId = JobID.fromRL(q.getWantedId());
+                boolean matches = wantedJobId.equals(pendingRoot) || wantedJobId.sameRoot(pendingRoot);
+                if (!matches) {
+                    continue;
+                }
+                VillagerUUID owner = q.getOwner();
+                if (owner != null && !owner.equals(villager)) {
+                    continue;
+                }
+                q.setOwner(villager);
+                batch.setOwner(villager);
+                batch.markRecipeAsComplete(null, q.getWantedId());
+                QT.QUESTS_LOGGER.info(
+                        "JOB_CHANGE quest {} completed at BOP spend for {} (pending root {})",
+                        q.getWantedId(),
+                        villager,
+                        pendingRoot
+                );
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void processConcurrentJobs(ImmutableMap<VillagerUUID, JobID> villagerJobs) {
         Set<ResourceLocation> activeJobRLs = villagerJobs.values().stream()
                                                           .map(JobID::toRL)

@@ -88,6 +88,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
+import java.util.Optional;
 import net.neoforged.neoforge.event.entity.EntityEvent;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
@@ -415,15 +416,34 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     /**
+     * The spend-and-request a player makes on a BOP: schedules the townie's root change
+     * (the root is decided here - a blessed BOP forces its guaranteed root, an ordinary BOP
+     * pre-rolls one now and the morning applies it) and, when a pending root was decided,
+     * completes the matching JOB_CHANGE quest at the spend moment - the reward lands on the
+     * player's act, not on the morning application.
+     */
+    public Optional<JobID> requestJobRootChange(
+            UUID villagerUUID,
+            boolean instant,
+            Optional<JobID> guaranteedRoot
+    ) {
+        Optional<JobID> pending =
+                getVillagerHandle().scheduleJobRootChange(villagerUUID, instant, guaranteedRoot);
+        pending.ifPresent(root ->
+                quests.markJobChangeCompleteAtSpend(VillagerUUID.from(villagerUUID), root)
+        );
+        return pending;
+    }
+
+    /**
      * Dev-only: the change-job-tab job change a player performs by spending a
      * Block of Progress on the villager's change job tab (JobRootChangeMessage),
      * driven from the console. Removes the oldest deposited BOP from the flag's
      * store (the order the player collects them in) - the spend the player makes
-     * in the tab - and schedules the root change through the same handle call
-     * the message handler uses, overnight (not instant). A blessed BOP's
-     * guaranteed root is carried the way the handler carries it. The new root is
-     * chosen by the usual rules (random unless the spent BOP was blessed); this
-     * does not pick a job, it only performs the player's spend-and-request.
+     * in the tab - and routes through {@link #requestJobRootChange(UUID, boolean, Optional)}
+     * overnight (not instant) so the spend completes any matching JOB_CHANGE quest the same
+     * way the player's in-game spend does. A blessed BOP's guaranteed root is carried the way
+     * the handler carries it.
      */
     public JobChangeResult spendBopToRequestJobChange(UUID villagerUUID) {
         boolean inTown = getVillagerHandle().entities().stream()
@@ -437,9 +457,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         net.minecraft.world.item.ItemStack consumed = bopStacks.remove(0);
         setChanged();
         syncBopFull();
-        getVillagerHandle().scheduleJobRootChange(
+        requestJobRootChange(
                 villagerUUID, false,
-                ca.bradj.questown.blocks.BlockOfProgress.getBlessedJob(consumed)
+                BlockOfProgress.getBlessedJob(consumed)
         );
         return JobChangeResult.REQUESTED;
     }

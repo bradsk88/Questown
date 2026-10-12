@@ -89,6 +89,14 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         return this.ownerUUID;
     }
 
+    public VillagerUUID getOwner() {
+        return this.ownerUUID;
+    }
+
+    public void setOwner(VillagerUUID uuid) {
+        this.ownerUUID = uuid;
+    }
+
     public void initialize(
             VillagerUUID uuid,
             QuestType type,

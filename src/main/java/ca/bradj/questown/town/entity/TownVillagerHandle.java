@@ -247,7 +247,8 @@ public final class TownVillagerHandle {
             ImmutableMap<UUID, Integer> level,
             ImmutableMap<VillagerUUID, Boolean> jobChangesPending,
             Map<UUID, ? extends Map<String, Float>> proficiencies,
-            ImmutableMap<UUID, JobID> guaranteedRoots
+            ImmutableMap<UUID, JobID> guaranteedRoots,
+            ImmutableMap<UUID, JobID> preRolls
     ) {
         this.learning.initialize(unlockedJobs, jobsKnownToExist);
         delegate.initialize(
@@ -257,7 +258,8 @@ public final class TownVillagerHandle {
                 level,
                 UtilClean.mapKeys(jobChangesPending, TownVillagerHandle::getUuid),
                 Config.HUNGER_ENABLED.get(),
-                guaranteedRoots
+                guaranteedRoots,
+                preRolls
         );
         moods.initialize(moodEffects);
         this.proficiencies.initialize(proficiencies);
@@ -422,6 +424,10 @@ public final class TownVillagerHandle {
 
     ImmutableMap<UUID, JobID> getGuaranteedRoots() {
         return delegate.getGuaranteedRoots();
+    }
+
+    ImmutableMap<UUID, JobID> getPreRolls() {
+        return delegate.getPreRolls();
     }
 
     void register(VisitorMobEntity visitorMobEntity) {

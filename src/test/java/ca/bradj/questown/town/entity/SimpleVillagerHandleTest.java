@@ -427,8 +427,9 @@ class SimpleVillagerHandleTest {
                 t.overnightOverride, t.jobChanges.get(0),
                 "with no guarantee, the overnight override still applies"
         );
-        // NB: the fully-random path (no guarantee, no override) needs ServerJobsRegistry.getAllRootJobs,
-        // which is uninitialized headless (Works.works null → NPE). Not reachable in unit tests.
+        // NB: the fully-random path (no guarantee, no override, no stored pre-roll) needs
+        // ServerJobsRegistry.getAllRootJobs, which is empty headless (job data not loaded).
+        // Not reachable in unit tests.
     }
 
     @Test
@@ -444,6 +445,98 @@ class SimpleVillagerHandleTest {
         Assertions.assertTrue(
                 handle.getGuaranteedRoots().isEmpty(),
                 "re-scheduling without a guarantee replaces the stale one"
+        );
+    }
+
+    // ---- Pre-rolled root at the BOP-spend moment (E1: the outcome settles when the quest
+    // ticks, not at the morning application; the morning still wins with a tutorial override) ----
+
+    @Test
+    public void scheduleJobRootChange_blessedSpend_returnsGuaranteeAsPendingRoot() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+        JobID guarantee = new JobID("hunter", "hunter");
+
+        Optional<JobID> pending = handle.scheduleJobRootChange(v, 0, false, Optional.of(guarantee));
+
+        Assertions.assertEquals(
+                Optional.of(guarantee), pending,
+                "a blessed spend decides its guaranteed root at the spend moment"
+        );
+    }
+
+    @Test
+    public void scheduleJobRootChange_ordinarySpend_noCandidateRoots_storesNothing() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        Optional<JobID> pending = handle.scheduleJobRootChange(v, 0, false, Optional.empty());
+
+        Assertions.assertTrue(
+                pending.isEmpty(),
+                "with no candidate root the spend decides nothing (morning re-roll remains)"
+        );
+        Assertions.assertTrue(handle.getPreRolls().isEmpty(), "no pre-roll is stored");
+        Assertions.assertTrue(
+                handle.isJobChangePending(v),
+                "the change is still pending for the morning"
+        );
+    }
+
+    @Test
+    public void handleMorning_appliesStoredPreRoll() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        JobID preRoll = new JobID("cook", "cook");
+
+        // Seed the way a saved spend would: pending change + stored pre-roll.
+        handle.initialize(
+                Map.of(v, 10), Map.of(),
+                ImmutableMap.of(), ImmutableMap.of(),
+                ImmutableMap.of(v, true), true,
+                ImmutableMap.of(),
+                ImmutableMap.of(v, preRoll)
+        );
+        handle.register(v);
+
+        handle.handleMorning(0);
+
+        Assertions.assertEquals(1, t.jobChanges.size(), "exactly one job change applied at morning");
+        Assertions.assertEquals(
+                preRoll, t.jobChanges.get(0),
+                "the root decided at the spend moment is applied at morning"
+        );
+        Assertions.assertTrue(handle.getPreRolls().isEmpty(), "the pre-roll is consumed once applied");
+    }
+
+    @Test
+    public void handleMorning_overnightOverrideBeatsStoredPreRoll() {
+        TestDelegator t = new TestDelegator();
+        t.overnightOverride = new JobID("gatherer", "gatherer");
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        JobID preRoll = new JobID("cook", "cook");
+
+        handle.initialize(
+                Map.of(v, 10), Map.of(),
+                ImmutableMap.of(), ImmutableMap.of(),
+                ImmutableMap.of(v, true), true,
+                ImmutableMap.of(),
+                ImmutableMap.of(v, preRoll)
+        );
+        handle.register(v);
+
+        handle.handleMorning(0);
+
+        Assertions.assertEquals(1, t.jobChanges.size());
+        Assertions.assertEquals(
+                t.overnightOverride, t.jobChanges.get(0),
+                "the tutorial override still beats the pre-roll at dawn (blessed > override > pre-roll)"
         );
     }
 

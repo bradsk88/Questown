@@ -61,6 +61,9 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     private final Map<UUID, Boolean> jobChangesPending = new HashMap<>();
     // roots guaranteed by blessed ("gold") BOPs; cleared once the pending change applies
     private final Map<UUID, JobID> guaranteedRoots = new HashMap<>();
+    // roots pre-rolled at the BOP-spend moment for ordinary (non-blessed) changes; applied at
+    // morning unless a tutorial override wins; persisted across save/quit like guaranteedRoots
+    private final Map<UUID, JobID> preRolls = new HashMap<>();
 
     public static void staticInit() {
         TownVillagerUIs.staticInit();
@@ -79,6 +82,10 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public ImmutableMap<UUID, JobID> getGuaranteedRoots() {
         return ImmutableMap.copyOf(guaranteedRoots);
+    }
+
+    public ImmutableMap<UUID, JobID> getPreRolls() {
+        return ImmutableMap.copyOf(preRolls);
     }
 
     private final List<ENTITY> entities = new ArrayList<>();
@@ -149,6 +156,20 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             boolean hungerEnabled,
             ImmutableMap<UUID, JobID> guaranteedRoots
     ) {
+        initialize(fullness, damage, experience, level, jobChangesPending, hungerEnabled, guaranteedRoots,
+                ImmutableMap.of());
+    }
+
+    public void initialize(
+            Map<UUID, Integer> fullness,
+            Map<UUID, Integer> damage,
+            ImmutableMap<UUID, Integer> experience,
+            ImmutableMap<UUID, Integer> level,
+            ImmutableMap<UUID, Boolean> jobChangesPending,
+            boolean hungerEnabled,
+            ImmutableMap<UUID, JobID> guaranteedRoots,
+            ImmutableMap<UUID, JobID> preRolls
+    ) {
         if (!this.fullness.isEmpty()) {
             throw new IllegalStateException("Attempting to initialize already initialized");
         }
@@ -158,6 +179,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         this.levels.putAll(level);
         this.jobChangesPending.putAll(jobChangesPending);
         this.guaranteedRoots.putAll(guaranteedRoots);
+        this.preRolls.putAll(preRolls);
         addHungryListener(e -> {
             if (UtilClean.getOrDefault(fullness, delegator.getUUID(e), configs.baseFullness) == 0) {
                 starving.put(delegator.getUUID(e), true);
@@ -619,15 +641,20 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         hasBlockOfProgress.put(uuid, false);
     }
 
-    public void scheduleJobRootChange(
+    public Optional<JobID> scheduleJobRootChange(
             UUID villagerUUID,
             long currentTick,
             boolean instant
     ) {
-        scheduleJobRootChange(villagerUUID, currentTick, instant, Optional.empty());
+        return scheduleJobRootChange(villagerUUID, currentTick, instant, Optional.empty());
     }
 
-    public void scheduleJobRootChange(
+    /**
+     * Schedules a root change and returns the root decided at the spend moment: the blessed
+     * guarantee when the BOP carried one, otherwise a pre-roll from the registry's roots. Empty
+     * when instant (applied now) or when no candidate root exists (the morning then re-rolls).
+     */
+    public Optional<JobID> scheduleJobRootChange(
             UUID villagerUUID,
             long currentTick,
             boolean instant,
@@ -636,12 +663,13 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         ENTITY e = getEntity(villagerUUID);
         if (e == null) {
             QT.FLAG_LOGGER.error("Villager not found for job root change: {}", villagerUUID);
-            return;
+            return Optional.empty();
         }
+        UUID vuid = delegator.getUUID(e);
         // A newer schedule replaces any older guarantee, even a plain (random) one.
         guaranteedRoot.ifPresentOrElse(
-                root -> guaranteedRoots.put(delegator.getUUID(e), root),
-                () -> guaranteedRoots.remove(delegator.getUUID(e))
+                root -> guaranteedRoots.put(vuid, root),
+                () -> guaranteedRoots.remove(vuid)
         );
         if (instant) {
             QT.FLAG_LOGGER.info(
@@ -649,14 +677,36 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
                     UtilClean.truncateMiddle(villagerUUID)
             );
             changeJobRootNow(e, currentTick);
-            return;
+            return Optional.empty();
         }
-
-        jobChangesPending.put(delegator.getUUID(e), true);
+        // Decide the outcome at spend time: an ordinary BOP pre-rolls its root now, so the
+        // player's act (and any quest it satisfies) resolves immediately. The morning only
+        // applies the stored root - a tutorial override may still win there.
+        JobID preRoll = rollPendingRoot(delegator.getJobId(e)).orElse(null);
+        if (preRoll != null) {
+            preRolls.put(vuid, preRoll);
+        } else {
+            preRolls.remove(vuid);
+        }
+        jobChangesPending.put(vuid, true);
         delegator.broadcastMessage(
                 "message.questown.villager.change_job_in_morning",
                 UtilClean.truncateMiddle(villagerUUID)
         );
+        return guaranteedRoot.isPresent() ? guaranteedRoot : Optional.ofNullable(preRoll);
+    }
+
+    /**
+     * The candidate roots a pending change may take: every registry root except the townie's
+     * current one, randomly picked. Empty when the registry offers no alternative.
+     */
+    Optional<JobID> rollPendingRoot(JobID currentJob) {
+        ImmutableSet<JobID> allRoots = ServerJobsRegistry.getAllRootJobs();
+        List<JobID> allOtherJobs = allRoots.stream().filter(z -> !currentJob.sameRoot(z)).toList();
+        if (allOtherJobs.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(delegator.shuffle(ImmutableSet.copyOf(allOtherJobs)).get(0));
     }
 
     public void handleMorning(long tick) {
@@ -703,6 +753,14 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         if (override.isPresent()) {
             QT.FLAG_LOGGER.info("Overriding random job root change in favor of: {}", override.get());
             unlockAndChange(v, override.get(), currentTick);
+            return;
+        }
+
+        // Pre-rolled at the BOP-spend moment; beats the dawn re-roll when stored.
+        JobID preRoll = preRolls.remove(delegator.getUUID(v));
+        if (preRoll != null) {
+            QT.FLAG_LOGGER.info("Applying pre-rolled job root change to: {}", preRoll);
+            unlockAndChange(v, preRoll, currentTick);
             return;
         }
 
