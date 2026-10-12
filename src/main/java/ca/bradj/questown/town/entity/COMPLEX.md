@@ -682,3 +682,12 @@ block of dirt" (that branch in `TownFlagBlock` is gone;
 
 `getInfo()` carries `bonusFoodAvailable = !givenBonusFood` in `FlagInfo` so the
 client can show the claim affordance (see `gui/COMPLEX.md`).
+
+## Job-board placement completes the JOB_BOARD quest
+
+`registerJobsBoard(pos)` (called by `JobBoardBlock.getStateForPlacement` and by
+the console `placeJobBoard`) now marks `SpecialQuests.JOB_BOARD` complete on
+the spot - a single-board room can never match the blueprint "Job Board"
+recipe (signs + log), so the generic room-recipe path will not. Same pattern as
+`registerWelcomeMat` completing TOWN_GATE. Live-reported 2026-10-12: board
+placed twice, quest stayed open.

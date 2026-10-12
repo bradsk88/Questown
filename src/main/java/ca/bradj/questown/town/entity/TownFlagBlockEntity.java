@@ -1236,6 +1236,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         );
     }
 
+
     /**
      * Place a welcome mat block at {@code pos} and register it with this flag, the
      * way a player placing the item does (the block's {@code onUse} registers it).

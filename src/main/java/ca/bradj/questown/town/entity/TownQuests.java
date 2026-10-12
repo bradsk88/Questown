@@ -125,7 +125,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         UUID gateUUID = UUID.randomUUID();
         MCQuestBatch.Inputs gate = new MCQuestBatch.Inputs(gateUUID, null);
         MCQuest gateQuest = MCQuest.standalone(gateUUID, null, SpecialQuests.TOWN_GATE);
-        gateQuest.setFlavorText("Place a welcome mat at your town's gate - someone will arrive here in the morning.");
+        gateQuest.setFlavorText("Craft a welcome mat at the town flag (flag > crafting tab) and place it at your town's gate - someone will arrive here in the morning.");
         gate.addNewQuest(gateQuest);
         MCRewardList gateReward = new MCRewardList(
                 town,
@@ -150,7 +150,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
 
         MCQuest jobBoardQuest = roomQuest(batchUUID, SpecialQuests.JOB_BOARD);
-        jobBoardQuest.setFlavorText("Craft a Job Board at the town flag and place it near the flag — this is how villagers find work.");
+        jobBoardQuest.setFlavorText("Craft a Job Board at the town flag (flag > crafting tab) and place it near the flag - this is how villagers find work.");
         q.addNewQuest(jobBoardQuest);
 
         MCQuest storeRoomQuest = roomQuest(batchUUID, SpecialQuests.STORE_ROOM_SMALL);

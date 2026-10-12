@@ -67,3 +67,17 @@ around the craft.
 ## Triage notes
 
 Same root as menu-crafted-welcome-mat-missing-nbt. Live probe on current source resolves to 'Created Welcome Mat' (not reproducible as 'Created Air'); the NBT stamp (530c8923) makes the craft carry the registration NBT. Kept as the investigation record.
+
+## 2026-10-12 probe run (still open — probe did NOT fire)
+
+User reported it again at 17:38 ("Still says 'Created Air' for welcome mat from
+flag crafting menu"). The `CreatedAirProbe` **produced zero log lines this run**,
+and the flag-menu craft handler's `Welcome mat crafted` log line never appeared —
+so either the user did not click the mat button (the mat item came from another
+surface) or the handler ran without logging (error swallowed).
+
+**Question for the user (observed facts, per AGENTS):** exactly where did
+"Created Air" appear — the server log, or chat in-game? And when: at the moment
+the mat appeared in the inventory, or when the quest card completed? Which
+crafting surface produced the mat item — the flag's crafting tab button, or a
+vanilla crafting grid / the sign room recipe?

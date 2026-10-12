@@ -72,3 +72,16 @@ The sign→board room-detection path is untouched (optional alternative).
 
 Docs: `gui/COMPLEX.md` "Day-1 playtest" bullet. Verification pending: compile
 + gui-lint + a live craft-and-place check (held run, client window).
+
+## 2026-10-12 live: placement did NOT complete the quest (fixed)
+
+Playtest user placed the crafted board twice (17:39:53, 17:41:03 — both logged
+`recipe_created` broadcasts) but the JOB_BOARD quest stayed open. Root cause:
+`registerJobsBoard` only did `workHandle.registerJobBoard(pos)`; the generic
+`registerBlockAsRoom` room-recipe match can never match a single-board room
+against the blueprint sign+log recipe. Fix: `registerJobsBoard` now also calls
+`quests.markQuestAsComplete(boardRoom, SpecialQuests.JOB_BOARD)` (mat-parity
+with `registerWelcomeMat`/TOWN_GATE). Same commit updated the board + mat quest
+flavor text to point at the flag's crafting tab (user chat 17:37:48, 17:39:35).
+Remaining: card icon shows a sign (`job-board-quest-card-shows-sign.md`),
+placement orientation (`job-board-placement-orientation.md`).
