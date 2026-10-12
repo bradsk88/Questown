@@ -610,3 +610,29 @@ now gated on the same `playersNearbyOnPrevTick` flag: it fires once on the trans
 (or at boot if the flag starts stopped), never per-tick. No behaviour change — only
 log frequency. (Found 2026-10-12 during the econ-tab crash-probe repro; ticket
 `.scratch/day1-playtest-2026-10-11/flag-stopped-ticking-per-tick-log-spam.md`.)
+
+# Top-need JOB_UNLOCK quest — lock-until-complete (no per-tick churn)
+
+Two sources post `JOB_UNLOCK` quests. **Rooted** ones (from
+`reconcileUnlockQuests`/`postUnlockQuest`) carry a stuck root (`MCQuest.unlockStuckRoot()`
+non-empty) and are retargeted/withdrawn every tick as the stuck root's viable producer
+flips. **Town-wide** ones (the top-need phase `tryPhase2_75_topNeedUnlock`: no stuck root)
+are the player-visible "highest demand item" quest. The day-1 playtest flagged that this
+quest visibly changed target every time the menu was opened — the ranked unmet-need queue
+shifts tick-to-tick, so the chosen top need moved and the in-flight quest was withdrawn
+and re-posted.
+
+Fix = lock-until-complete: the town-wide quest stays pinned to its target until
+`processJobUnlocks` completes it (the root gets unlocked), then the next top need is
+posted. Concretely:
+- `reconcileUnlockQuests` no longer withdraws town-wide quests on a producer flip (the
+  `townWideOpenQuests` arg is accepted but intentionally unused — only rooted quests are
+  reconciled). The `reconcileTownWideQuestPinnedEvenWhenNoRootMapsToProducer` test pins
+  this.
+- `tryPhase2_75_topNeedUnlock` returns `SKIPPED` early when
+  `openTownWideJobUnlockQuestExists()` (an open, incomplete JOB_UNLOCK with an empty stuck
+  root) — so it never re-rolls the top need or posts a second town-wide quest while one is
+  in flight. The predicate is unit-tested (`openTownWideJobUnlockQuest*`); the phase wiring
+  around it needs a town/econ harness and is verified in a held run.
+
+Ticket: `.scratch/day1-playtest-2026-10-11/demand-quest-constantly-replaced.md`.

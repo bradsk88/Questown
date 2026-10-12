@@ -1,6 +1,6 @@
 ---
 title: The "highest demand item" quest keeps getting replaced instead of staying added
-status: ready-for-agent
+status: implemented
 created: 2026-10-11
 ---
 
@@ -60,3 +60,19 @@ top need only after that quest completes (or is withdrawn). This removes the chu
 while keeping the "quest for the highest demand item" behaviour. Verify: a top-need
 quest stays on the same target across repeated menu opens and economy shifts until
 it's completed; only then does the next top need get posted.
+
+## Implementation (2026-10-12)
+
+Lock-until-complete, two parts in `TownQuests`:
+1. `reconcileUnlockQuests` no longer withdraws/retargets town-wide quests — they are
+   pinned until `processJobUnlocks` completes them (the `townWideOpenQuests` arg is now
+   intentionally unused; only rooted quests are reconciled).
+2. `tryPhase2_75_topNeedUnlock` returns `SKIPPED` early when
+   `openTownWideJobUnlockQuestExists()` (an open incomplete JOB_UNLOCK with an empty
+   stuck root), so it never re-rolls the top need or posts a second town-wide quest while
+   one is in flight.
+
+Verified: `TownQuestsJobUnlockTest` — `reconcileTownWideQuestPinnedEvenWhenNoRootMapsToProducer`
+(pinning) + 3 `openTownWideJobUnlockQuest*` tests (the guard predicate). The phase wiring
+around the guard needs a town/econ harness; verified by held run when available. Documented
+in `town/entity/COMPLEX.md` "Top-need JOB_UNLOCK quest — lock-until-complete".

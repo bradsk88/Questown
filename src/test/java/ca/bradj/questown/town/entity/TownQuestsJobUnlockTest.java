@@ -311,15 +311,53 @@ class TownQuestsJobUnlockTest {
     }
 
     @Test
-    void reconcileTownWideQuestWithdrawnWhenNoRootMapsToProducer() {
+    void reconcileTownWideQuestPinnedEvenWhenNoRootMapsToProducer() {
+        // Lock-until-complete (day-1 playtest): the town-wide top-need quest is pinned to
+        // its producer until processJobUnlocks completes it - it is NOT withdrawn or
+        // retargeted when the demand ranking flips. Here the only stuck root maps to
+        // crafter (not the quest's producer, baker), and no rooted quest is past grace,
+        // so nothing is posted; the town-wide quest (q2) must survive untouched.
         TownQuests.UnlockReconcile r = TownQuests.reconcileUnlockQuests(
                 Map.of(),
                 Set.of("q2"),
                 Map.of("q2", "baker"),
                 Map.of("gatherer", "crafter"),
-                Set.of("gatherer")
+                Set.of()
         );
-        assertEquals(Set.of("q2"), r.withdraw());
+        assertTrue(r.withdraw().isEmpty());
+        assertTrue(r.retarget().isEmpty());
+        assertTrue(r.post().isEmpty());
+    }
+
+    // --- openTownWideJobUnlockQuestExists (the top-need lock-until-complete guard) ---
+
+    @Test
+    void openTownWideJobUnlockQuestTrueWhenTownWideOpen() {
+        TownQuests quests = new TownQuests();
+        quests.questBatches.add(jobUnlockBatch(new JobID("baker", "baker")));
+        assertTrue(quests.openTownWideJobUnlockQuestExists());
+    }
+
+    @Test
+    void openTownWideJobUnlockQuestFalseWhenOnlyRootedOpen() {
+        // A rooted unlock quest (carries a stuck root) does NOT count as the
+        // town-wide top-need quest, so the guard stays false and a new top-need
+        // quest may still be posted.
+        TownQuests quests = new TownQuests();
+        MCQuestBatch b = jobUnlockBatch(new JobID("baker", "baker"));
+        b.getAll().get(0).setUnlockStuckRoot("gatherer");
+        quests.questBatches.add(b);
+        assertFalse(quests.openTownWideJobUnlockQuestExists());
+    }
+
+    @Test
+    void openTownWideJobUnlockQuestFalseWhenComplete() {
+        TownQuests quests = new TownQuests();
+        MCQuestBatch b = jobUnlockBatch(new JobID("baker", "baker"));
+        ResourceLocation wanted = JobID.toRL(new JobID("baker", "baker"));
+        b.markRecipeAsComplete(null, wanted);
+        quests.questBatches.add(b);
+        assertFalse(quests.openTownWideJobUnlockQuestExists());
     }
     /** A claim no-op so the completion path can run in a unit test without a town. */
     static class NoOpReward extends MCReward {

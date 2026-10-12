@@ -580,7 +580,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
      * dedupe. A rooted quest survives while its root still maps to a viable producer,
      * retargeted in place when the producer changes; it is withdrawn when its root stops
      * mapping to any viable producer. A town-wide quest (the top-need phase: no stuck
-     * root) survives while some stuck root maps to its producer. Posting happens only
+     * root) is <em>pinned</em> - it is neither retargeted nor withdrawn here. It stays on
+     * its target until {@link #processJobUnlocks} completes it (the root gets unlocked),
+     * so the player sees a stable "highest demand item" quest instead of one that
+     * re-targets on every tick (day-1 playtest: lock-until-complete). Posting happens only
      * for a stuck root past grace that still has no surviving rooted quest.
      *
      * @param rootedOpenQuests   quest key -> the stuck root it was posted for
@@ -617,11 +620,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 retarget.put(key, producer);
             }
         }
-        for (String key : townWideOpenQuests) {
-            if (!rootToProducer.values().contains(questProducers.get(key))) {
-                withdraw.add(key);
-            }
-        }
+        // Town-wide quests (top-need) are pinned: not retargeted or withdrawn here. They
+        // complete via processJobUnlocks when the root unlocks. (The townWideOpenQuests
+        // arg is accepted for the caller's convenience but intentionally unused.)
 
         Map<String, String> post = new HashMap<>();
         for (String root : rootsPastGrace) {
@@ -672,6 +673,18 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                            .anyMatch(q -> q.getType() == Quest.QuestType.JOB_UNLOCK
                                    && !q.isComplete()
                                    && producerRoot.equals(JobID.fromRL(q.getWantedId()).rootId()));
+    }
+
+    /**
+     * A town-wide JOB_UNLOCK quest (no stuck root) - the top-need batch's quest - is open
+     * and incomplete. Rooted unlock quests carry a stuck root; this one does not. Used to
+     * lock the top-need choice until its quest completes (see {@code tryPhase2_75_topNeedUnlock}).
+     */
+    boolean openTownWideJobUnlockQuestExists() {
+        return questBatches.getAll().stream()
+                           .anyMatch(q -> q.getType() == Quest.QuestType.JOB_UNLOCK
+                                   && !q.isComplete()
+                                   && q.unlockStuckRoot().isEmpty());
     }
 
     /**
@@ -880,6 +893,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             // No unmet supply registered yet; nothing to name. Continue the fixed phases.
             QT.QUESTS_LOGGER.info("Top-need batch: no unmet item needs registered; falling through");
             return null;
+        }
+        if (openTownWideJobUnlockQuestExists()) {
+            // Lock-until-complete: an in-flight top-need quest is open, so keep it pinned to
+            // its target. Don't re-roll the top need or post a fresh quest until that one
+            // completes (processJobUnlocks). This removes the per-menu / per-tick churn the
+            // playtest flagged.
+            return Tutorial.SKIPPED;
         }
         ServerLevel level = t.getServerLevel();
         Set<String> unlocked = unlockedRoots(ti);
