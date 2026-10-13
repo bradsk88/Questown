@@ -43,6 +43,21 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
         return "TODO"; // TODO?
     }
 
+    private void collectStateNeeds(
+            Integer state,
+            List<PredicateCollection<HELD, HELD>> neededIngredients,
+            List<PredicateCollection<ITEM, ITEM>> neededTools
+    ) {
+        PredicateCollection<HELD, HELD> ingt = ingredients.apply(state);
+        if (ingt != null) {
+            neededIngredients.add(ingt);
+        }
+        PredicateCollection<ITEM, ITEM> tool = tools.apply(state);
+        if (tool != null) {
+            neededTools.add(tool);
+        }
+    }
+
     @Override
     protected Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
         ImmutableMap.Builder<String, Object> b = ImmutableMap.builder();
@@ -56,15 +71,18 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
             if (!v.getValue().apply(() -> null).value) {
                 continue;
             }
-            PredicateCollection<HELD, HELD> ingt = ingredients.apply(state);
-            if (ingt != null) {
-                neededIngredients.add(ingt);
-            }
-            PredicateCollection<ITEM, ITEM> tool = tools.apply(state);
-            if (tool != null) {
-                neededTools.add(tool);
-            }
+            collectStateNeeds(state, neededIngredients, neededTools);
+        }
 
+        if (neededIngredients.isEmpty() && neededTools.isEmpty() && !needs.isEmpty()) {
+            // No state currently has a workable block (every job block sits at a timer or
+            // terminal state). The requirement set must still be the FULL set, otherwise
+            // the town can never acquire the tools needed to resume the cycle (2026-10-14:
+            // hunter's mat at its terminal state -> sword "not relevant" -> the hunter
+            // could not re-take it from the village chest -> NO_JOBSITE until reset).
+            for (Integer state : needs.keySet()) {
+                collectStateNeeds(state, neededIngredients, neededTools);
+            }
         }
 
         b.put("relevant ingredients", neededIngredients);

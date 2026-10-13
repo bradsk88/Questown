@@ -422,3 +422,38 @@ warning in `DeclarativeJobs.rooms`):
   assign"). Pinned by `DeclarativeJobsRoomsForeignStateTest` (red-verified;
   the in-range + null cases pin the existing behaviour against
   over-normalization).
+
+## `TownHasSupplies` requirement gate: no workable state ⇒ full requirement set (2026-10-14)
+
+`TownHasSupplies.doPopulate` builds its "relevant ingredients/tools" from the
+states that currently have a **workable** block (`roomsHaveWorkableBlocks`
+true). That is right while a cycle is mid-work (only the active state's
+supplies matter), but it is a **deadlock trap** at cycle boundaries: when the
+job block sits at a terminal/timer state, *no* state is workable, the
+requirement set collapses to empty, and `town has supplies` goes false even
+though the village chest holds exactly the tool the next cycle needs.
+
+Live instance (2026-10-14 playtest, `.scratch/playtest-2026-10-14/hunter-
+stuck-sword-need-10-14.md`): the hunter's short-variant mat
+(`hunter/sword`, states [tools, work, time 2000], maxState 3) sat at state 3
+(extractable). The hunter no longer held its sword (an earlier drop-loot
+deposited it — tools taken by the supply getter are not `locked()`), so the
+status circuit needed the "get work supplies" branch to re-acquire it. Its
+gate (`dTownHasSupplies`) read false because the sword requirement was
+filtered out before the container scan — the gate dumps showed
+`relevant tools = []` + `No matches found for … in any containers` while the
+village chest listed `stone_sword`. The hunter then oscillated
+NO_JOBSITE↔seeking_work indefinitely (job-change commands looked like a no-op
+because the status is block-state-driven; the econ tab's "needs swords" was
+the same root, not a separate room bug).
+
+The fix: after the workable-state pass, if both requirement lists are empty
+**and** at least one state exists, re-collect from **all** states (full
+requirement set). The hand-off side was verified clean, not part of the fix:
+`computeRoomsNeedingInput` already normalizes a terminal mat
+(`processingState == maxState && !hasWorkLeft() && timeToNextState == null`)
+to `State.fresh()` (see the section above), so the gate room still reports the
+tool as a need and `DeclarativeJob.setupForGetSupplies` (closest-chest scan
+via `cleanRooms()` predicates) can hand it over. Pinned by
+`TownHasSuppliesNoWorkableStateTest` (the no-workable-state case was red on
+pre-fix code with the live dump's exact failure signature).
