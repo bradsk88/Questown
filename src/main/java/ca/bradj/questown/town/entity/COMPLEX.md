@@ -974,3 +974,9 @@ logic, is the cause - the claim is valid, just early.
 Tests: `TownVillagerSleepModuleTest` (deferred claim does not throw). The
 drain path needs a live `TownFlagBlockEntity` (registry-bound) - held-run
 covered.
+
+Audited 2026-10-14: `claimBed` was the only unguarded `getUnsafe()`
+reachable from `VisitorMobEntity.load` - the rest of the
+`assumeStateFromTown -> register -> add -> initialize` path is listener
+registration, NBT load, and job lookup. Re-run this audit if a new module
+joins the `SimpleVillagerHandle.add`/`register` path.
