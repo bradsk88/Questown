@@ -959,3 +959,18 @@ and the post-tutorial rules (blessing > pre-roll) are unchanged.
 
 Tests: `TownQuestsJobChangeSpendTest` (the six `onboarding_*` cases:
 unowned, owned, completed, non-onboarding, oldest-wins, spend-completes).
+
+# Entity load out-runs flag init - deferred bed claims
+
+A townie deserialized before the flag's initializer runs hits
+`SimpleVillagerHandle.add` -> `TownVillagerSleepModule.claimBed` ->
+`UnsafeTown.getUnsafe()` and throws "Town has not been initialized". Vanilla
+drops the loading entity on that exception (one townie/visitor lost per
+restart, observed 2026-10-14). The module now gates `claimBed` on
+`isInitialized()`: early claims queue in `pendingClaims` and `associate(t)`
+drains them right after `town.initialize(t)`. Load order, not registration
+logic, is the cause - the claim is valid, just early.
+
+Tests: `TownVillagerSleepModuleTest` (deferred claim does not throw). The
+drain path needs a live `TownFlagBlockEntity` (registry-bound) - held-run
+covered.

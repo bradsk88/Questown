@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -17,8 +18,19 @@ public class TownVillagerSleepModule implements VillagerSleepModule<VisitorMobEn
     private final UnsafeTown town = new UnsafeTown(getClass());
     private final TownVillagerBedsHandle beds = new TownVillagerBedsHandle();
 
+    /**
+     * Claims that arrived before the town initialized. Entity load out-runs the flag's
+     * initializer: a townie deserialized before {@link #associate} must not be
+     * dropped (vanilla aborts the load when {@code claimBed} throws), so its bed
+     * claim is deferred to this point.
+     */
+    private final List<VisitorMobEntity> pendingClaims = new ArrayList<>();
+
     public void associate(TownFlagBlockEntity t) {
         town.initialize(t);
+        List<VisitorMobEntity> pending = new ArrayList<>(pendingClaims);
+        pendingClaims.clear();
+        pending.forEach(this::claimBed);
     }
 
     @Override
@@ -41,6 +53,13 @@ public class TownVillagerSleepModule implements VillagerSleepModule<VisitorMobEn
 
     @Override
     public void claimBed(VisitorMobEntity vEntity) {
+        if (!town.isInitialized()) {
+            // Load-time registration: the town's bed map is not resolvable yet.
+            // Deferring instead of throwing keeps the loading entity alive;
+            // associate() drains the queue once the flag initializes.
+            pendingClaims.add(vEntity);
+            return;
+        }
         beds.claim(vEntity, town.getUnsafe());
     }
 
