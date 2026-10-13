@@ -3,7 +3,6 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.jobs.IStatus;
-import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -14,13 +13,11 @@ import java.util.Collection;
 import java.util.UUID;
 
 public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements VillagerTabsEmbedding {
-    private static final Collection<String> ENABLED_TABS = ImmutableList.of(
-            OpenVillagerMenuMessage.INVENTORY,
-            OpenVillagerMenuMessage.STATS,
-            OpenVillagerMenuMessage.QUESTS,
-            OpenVillagerMenuMessage.SKILLS,
-            OpenVillagerMenuMessage.BOP
-    );
+    // Every tab except ECONOMICS itself (the pane that is open). The old hand-rolled
+    // list omitted CHANGE_ROOT, so with the economics pane open the "switch job" tab's
+    // open-fn was null and it rendered as selected alongside the economics tab
+    // (2026-10-14 playtest).
+    private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.ECONOMICS);
     private final boolean showBlockOfProgressTab;
     private final boolean showSkillsTab;
 

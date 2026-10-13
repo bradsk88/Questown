@@ -662,3 +662,21 @@ differ). Pinned by `JobTooltipsFallbackTest` (red-verified: pre-fix the
 components carry no fallback and the equals-assertion fails). New statuses
 or jobs still get specific copy by adding lang keys — the fallback is only
 the last resort.
+
+## Economics pane's enabled-tab list omitted change_root (2026-10-14)
+
+A tab renders selected when its open-fn is null (the `selected = fn == null`
+marker, section above), and a tab's fn is null exactly when the open pane's
+`getEnabledTabs()` omits that tab's type. Every villager pane builds its list
+as `VillagerTabs.except(ownTab)` EXCEPT `VillagerEconomicsMenu`, which used a
+hand-rolled `ImmutableList.of(INVENTORY, STATS, QUESTS, SKILLS, BOP)` — no
+`CHANGE_ROOT`. With the economics pane open, the "switch job" tab therefore
+rendered selected alongside the economics tab (2026-10-14 playtest: "the
+'switch job' tab also appears selected").
+
+Fix: `ENABLED_TABS = VillagerTabs.except(ECONOMICS)` like every sibling.
+Pinned by `VillagerEconomicsMenuEnabledTabsTest` — the list is a private
+static on a registry-bound menu (the constructor needs a Forge harness), so
+the test reads the field reflectively; the initializer is pure string math,
+safe in a unit JVM. Red-verified by stash: pre-fix code fails the
+change_root-presence and sibling-invariant cases.
