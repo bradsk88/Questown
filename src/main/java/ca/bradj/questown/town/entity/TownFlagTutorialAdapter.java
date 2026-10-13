@@ -103,7 +103,7 @@ class TownFlagTutorialAdapter implements TutorialTownView {
                         new AddBatchOfQuestsForVisitorReward(flag, VillagerUUID.get(nextVisitorUUID))
                 );
             }
-            case TutorialTownView.PHASE_NEW_JOB_ROOM, TutorialTownView.PHASE_7, TutorialTownView.PHASE_JOB_CHANGE_FOOD ->
+            case TutorialTownView.PHASE_NEW_JOB_ROOM, TutorialTownView.PHASE_7, TutorialTownView.PHASE_JOB_CHANGE_FOOD, TutorialTownView.PHASE_MINER ->
                     new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
             default -> new AddBatchOfQuestsForVisitorReward(flag, null);
         };

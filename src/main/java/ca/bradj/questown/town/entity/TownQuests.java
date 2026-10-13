@@ -908,6 +908,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         Tutorial r;
         r = tryPhase2_hunterGatherer(view);           if (r != null) return r;
         r = tryPhase2_5_jobChangeAndFood(view);       if (r != null) return r;
+        r = tryPhase2_7_miner(view);                  if (r != null) return r;
         r = tryPhase2_75_topNeedUnlock(view);         if (r != null) return r;
         r = tryPhase3_newJobRoom(view);               if (r != null) return r;
         r = tryPhase4_crafter(view);                  if (r != null) return r;
@@ -946,6 +947,64 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             return Tutorial.SKIPPED;
         }
         return null;
+    }
+
+    /**
+     * The fixed post-cook miner beat (2026-10-14 playtest ruling,
+     * `.scratch/playtest-2026-10-14/onboarding-miner-after-cook.md`): same pattern as
+     * the hunter and cook beats - the room the miner needs + the pickaxes it holds +
+     * N of its initial item (coal), and a JOB_CHANGE that the BOP-spend onboarding
+     * guarantee (markOnboarding) routes to miner/coal. Posted after the two
+     * onboarding job changes (hunter + cook) have landed, while no JOB_CHANGE is
+     * open. Coal becomes the town's top need the moment the kitchen starts feeding,
+     * so this fixed beat lands exactly where the coal pain starts; the need-driven
+     * top-need batch below it picks up whatever need is NOT coal.
+     */
+    private @Nullable Tutorial tryPhase2_7_miner(TutorialTownView view) {
+        if (jobChangesComplete() < 2) {
+            // Two completed job changes (hunter + cook) = "after cook".
+            return Tutorial.SKIPPED;
+        }
+        if (view.villagerCount() < 3) {
+            return Tutorial.SKIPPED;
+        }
+        if (questBatches.includes(q -> !q.isComplete() && q.getType() == Quest.QuestType.JOB_CHANGE)) {
+            // A job change is in flight; wait for it to land (or be dropped) before
+            // the miner beat's BOP spend has a clean guarantee slot.
+            return null;
+        }
+        addMiner(view);
+        notifyNewQuests(view);
+        return Tutorial.APPLIED;
+    }
+
+    void addMiner(TutorialTownView view) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+
+        MCQuest minerJobQuest = MCQuest.jobChange(batchUUID, null, new JobID("miner", "coal"));
+        minerJobQuest.setFlavorText("Your town needs a miner. Teach a villager the miner job so coal stops being hand-fed.");
+        q.addNewQuest(minerJobQuest);
+
+        MCQuest pickaxeQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.WOODEN_PICKAXE), 4);
+        pickaxeQuest.setFlavorText("Craft 4 wooden pickaxes and place them in your store room chest. Each miner carries one.");
+        q.addNewQuest(pickaxeQuest);
+
+        MCQuest coalQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.COAL), 8);
+        coalQuest.setFlavorText("Stock the town on coal: place 8 coal in your store room chest so the furnaces keep running.");
+        q.addNewQuest(coalQuest);
+
+        MCQuest mineshaftQuest = MCQuest.standalone(batchUUID, null, view.getRoomForJob(new JobID("miner", "coal")));
+        mineshaftQuest.setFlavorText("The miner needs a mineshaft to work in. Place a mineshaft block in a room and register the door.");
+        q.addNewQuest(mineshaftQuest);
+
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_MINER));
+        // Onboarding-flow quest: like the other tutorial-phase batches, it is
+        // onboarding-flagged so the open miner JOB_CHANGE quest fills the BOP-spend
+        // guarantee slot (onboardingJobChangeGuarantee) instead of a pre-roll.
+        markOnboarding(qq);
+        questBatches.add(qq);
+        QT.QUESTS_LOGGER.debug("Tutorial batch #2.5 (miner) was added to town: {}", qq.toNiceString());
     }
 
     /**

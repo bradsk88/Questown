@@ -89,8 +89,9 @@ rulings are ANSWERED and recorded in the tickets (see "Rulings" below).
 9. **Villager display names** — DONE: "Villager N" monotonic arrival number
    (no reuse), name tag + system chat + BOP screen; payload carries the name.
    Deferred: flag quest-card tooltip (`quests.job_owner`).
-10. **Onboarding miner after cook** (`onboarding-miner-after-cook.md`) — full
-    design ruling recorded in ticket.
+10. **Onboarding miner after cook** — DONE: fixed post-cook beat (phase 2.7),
+    JOB_CHANGE(miner/coal) + pickaxes + coal + mineshaft room; onboarding-flagged
+    guarantee; PHASE_MINER reward.
 11. **1.20 vanilla skins in the UUID pool** (`use-1.20-villager-skins.md`) —
     scope: add new 1.20.5+ vanilla skin variants to the existing UUID-hash pool
     (Steve/Alex/custom). No job mapping.

@@ -329,7 +329,22 @@ class TutorialPhaseGateTest {
         quests.questBatches.markRecipeAsComplete(null, JobID.toRL(new JobID("cook", "simple_furnace_food")));
         quests.questBatches.markRecipeAsComplete(null, TagsInit.Items.VILLAGER_FOOD.location());
 
+        // Two completed job changes open the post-cook miner beat (phase 2.7): post it,
+        // complete all four of its quests (JOB_CHANGE + farm room + pickaxes + coal), and
+        // run the walk once more so the fixed phases can continue past it.
+        quests.addTutorialBatches(view);   // applies phase 2.7: the miner beat
+        completeMinerBeat(quests);
+        quests.addTutorialBatches(view);   // walk continues past the done miner beat
+
         return quests;
+    }
+
+    /** Completes the post-cook miner beat's quests (room = the view's farm stand-in). */
+    private void completeMinerBeat(TownQuests quests) {
+        quests.questBatches.markRecipeAsComplete(null, JobID.toRL(new JobID("miner", "coal")));
+        quests.questBatches.markRecipeAsComplete(null, new ResourceLocation("questown", "farm"));
+        quests.questBatches.markRecipeAsComplete(null, Compat.getItemId(Items.WOODEN_PICKAXE));
+        quests.questBatches.markRecipeAsComplete(null, Compat.getItemId(Items.COAL));
     }
 
     @Test
@@ -389,7 +404,8 @@ class TutorialPhaseGateTest {
                 .build();
         quests.addTutorialBatches(view);
 
-        // Don't complete the second job change
+        // Don't complete the second job change: only one job change is done, so the
+        // post-cook miner beat (which needs two) is not even posted.
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
         assertEquals(TownQuests.Tutorial.SKIPPED, result);
     }
@@ -582,6 +598,7 @@ class TutorialPhaseGateTest {
                 TutorialTownView.PHASE_KICKOFF,
                 TutorialTownView.PHASE_HUNTER_GATHERER,
                 TutorialTownView.PHASE_JOB_CHANGE_FOOD,
+                TutorialTownView.PHASE_MINER,
                 TutorialTownView.PHASE_NEW_JOB_ROOM,
                 TutorialTownView.PHASE_4A,
                 TutorialTownView.PHASE_4B,

@@ -234,3 +234,20 @@ campfire quest only looked immune because its block room never re-types. Fix: th
 match adds `&& !q.isComplete()`. Pinned by
 `QuestBatchesTest.markRecipeAsLost_doesNotLoseAnAlreadyCompleteQuest` (red-verified
 against the pre-fix matcher via a stashed variant).
+
+## Post-cook miner beat (phase 2.7, 2026-10-14 playtest)
+
+The fixed onboarding step between the cook beat (2.5) and the need-driven
+top-need batch (2.75): when two job changes have completed (hunter + cook),
+3+ townies exist, and NO JOB_CHANGE is open, `TownQuests.tryPhase2_7_miner`
+posts the miner batch (`addMiner`): JOB_CHANGE(miner/coal) + 4 wooden
+pickaxes + 8 coal + the miner's room (mineshaft). It is markOnboarding-flagged
+so the open miner JOB_CHANGE fills the BOP-spend guarantee slot (the same
+mechanism as the hunter/cook beats; `TownQuestsMinerOnboardingTest` pins the
+flag + the guarantee). The reward rides `PHASE_MINER` ->
+`defaultQuestCompletionRewards` (BOP + next villager), same as the other
+post-kickoff phases. The coal pain the beat answers: the kitchen makes coal
+the town's top need the moment it starts feeding, so the need-driven
+top-need batch below it now picks up whichever need is NOT coal.
+`TutorialPhaseGateTest` walks the full ladder through the miner beat (the
+phase-ladder helpers post + complete it so later phases still advance).
