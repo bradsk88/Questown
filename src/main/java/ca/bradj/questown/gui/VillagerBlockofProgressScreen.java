@@ -64,12 +64,15 @@ public class VillagerBlockofProgressScreen extends CompatContainerScreen<Village
             int bgX,
             int bgY
     ) {
+        String villagerLabel = menu.villagerDisplayName.isEmpty()
+                ? UtilClean.truncateMiddle(menu.villagerUUID)
+                : menu.villagerDisplayName;
         Coordinate topLeft = new Coordinate(bgX + 12, bgY);
         int tWidth = backgroundWidth - 16;
         int iconWidth = 32;
         bgY += ctx.darkTextWrap(
                 topLeft.withY(bgY).shifted(iconWidth, 0), tWidth - iconWidth,
-                Compat.translatable("menu.block_of_progress.v_has_earned", UtilClean.truncateMiddle(menu.villagerUUID))
+                Compat.translatable("menu.block_of_progress.v_has_earned", villagerLabel)
         );
         bgY += 8;
         bgY += ctx.darkTextWrap(
@@ -79,7 +82,7 @@ public class VillagerBlockofProgressScreen extends CompatContainerScreen<Village
         bgY += 8;
         ctx.darkTextWrap(
                 topLeft.withY(bgY), tWidth,
-                Compat.translatable("menu.block_of_progress.will_deposit", UtilClean.truncateMiddle(menu.villagerUUID))
+                Compat.translatable("menu.block_of_progress.will_deposit", villagerLabel)
         );
     }
 

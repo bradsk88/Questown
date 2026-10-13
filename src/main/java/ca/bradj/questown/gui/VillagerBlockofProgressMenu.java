@@ -16,6 +16,8 @@ public class VillagerBlockofProgressMenu extends AbstractTabbedVillagerMenu impl
     private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.BOP);
     private final boolean showSkillsTab;
     private final boolean showInventoryTab;
+    /** "Villager N" display name for the screen text; empty = fall back to the UUID. */
+    public final String villagerDisplayName;
 
     public static VillagerBlockofProgressMenu ForClientSide(
             int windowId,
@@ -32,11 +34,13 @@ public class VillagerBlockofProgressMenu extends AbstractTabbedVillagerMenu impl
             UUID entity,
             BlockPos flagPos,
             boolean showSkillsTab,
-            boolean showInventoryTab
+            boolean showInventoryTab,
+            String villagerDisplayName
     ) {
         super(MenuTypesInit.VILLAGER_BLOCKS_OF_PROGRESS.get(), null, null, windowId, flagPos, entity);
         this.showSkillsTab = showSkillsTab;
         this.showInventoryTab = showInventoryTab;
+        this.villagerDisplayName = villagerDisplayName == null ? "" : villagerDisplayName;
     }
 
     @Override

@@ -994,3 +994,37 @@ registration, NBT load, and job lookup. Both fixes gate on
 persist). Neither is unit-testable (config/registry-bound construction);
 live-verify = zero "Exception loading entity" lines on a world with a
 townie, and re-audit the whole path after ANY change to it.
+
+## Townie display numbers ("Villager N", 2026-10-14 playtest)
+
+The user-facing name of a townie is "Villager N" where N is its monotonic
+arrival number. Ruling (`.scratch/playtest-2026-10-14/villager-display-names.md`):
+surfaces = name tags, menu headers, system chat; **no reuse** - a retired
+number is never handed to a new townie.
+
+- The pure core is `VillagerDisplayNumbers` (map + monotonic high-water mark;
+  `assign` is idempotent, `retire` removes without re-issuing, `restore`
+  catches the counter up past any stored value). Pinned in
+  `VillagerDisplayNumbersTest`. `TownVillagerHandle` owns one instance and
+  delegates; the handle itself is not unit-testable (config in `<clinit>`-path
+  construction), hence the split (same pattern as the config value-taking
+  seams).
+- Assignment happens in `TownVillagerHandle.register(entity)` - the single
+  funnel for new spawns AND reloads (`TownVillagerMobs`, `SpawnVisitorReward`,
+  `TownFlagState.recoverMobs`, `TownVillagerHandles`). Idempotency makes the
+  reload path safe. The same `register` sets the entity's custom name +
+  name-tag visibility (the "Villager N" name tag surface).
+- Persistence: `TownVillagerHandlerSerializer` writes `display_numbers`
+  (UUID->N pairs) and `display_numbers_highest` (the counter) into the
+  handle's NBT, restoring both in `deserialize` -> `TownVillagerHandle.
+  initialize`.
+- Surfaces: the name tag (above); the system chat broadcast
+  (`TownMessages.jobChanged(JobID, String label)` - the handle's setJob path
+  passes the display name, falling back to the truncated UUID when
+  unassigned); the BOP screen text (`menu.block_of_progress.v_has_earned` /
+  `will_deposit`) via `VillagerMenusPayload.villagerDisplayName` (wire
+  string, "" = fall back to the truncated UUID; round-trip pinned in
+  `VillagerMenusPayloadTest`), carried `TownVillagerUIs.showUI` ->
+  `ShowerData` -> `VillagerMenus.write`. The flag quest-card tooltip
+  (`quests.job_owner`) still shows the truncated UUID - the flag-menu sync
+  would need a UUID->name map; deferred.

@@ -73,6 +73,11 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public String displayNameFor(UUID villagerId) {
+                return villagerHandle.displayNameFor(villagerId);
+            }
+
+            @Override
             public void fillHunger(UUID uuid) {
                 villagerHandle.delegate.fillHunger(uuid);
             }

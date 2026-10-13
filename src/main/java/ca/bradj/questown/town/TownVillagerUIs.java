@@ -299,7 +299,8 @@ public class TownVillagerUIs {
                 unlockableJobs,
                 villagerId,
                 flag.getVillagerHandle().isJobChangePending(e.getVUID()),
-                showInventoryTab
+                showInventoryTab,
+                flag.getVillagerHandle().displayNameFor(villagerId)
         );
         runnable.accept(d);
     }
@@ -322,7 +323,9 @@ public class TownVillagerUIs {
             Set<JobID> unlockableJobs,
             UUID villagerId,
             boolean jobChangePending,
-            boolean showInventoryTab
+            boolean showInventoryTab,
+            /** "Villager N" display name (empty when unassigned - screens fall back to the UUID). */
+            String villagerDisplayName
     ) {
     }
 
@@ -349,7 +352,7 @@ public class TownVillagerUIs {
                             );
                             x.connectToServer(e, d.sender());
                             return x;
-                        }, d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab()
+                        }, d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                 )
         );
         b.put(
@@ -371,7 +374,8 @@ public class TownVillagerUIs {
                             d.stats(),
                             d.jobChangePending(),
                             !d.unlockableJobs().isEmpty(),
-                            d.showInventoryTab()
+                            d.showInventoryTab(),
+                            d.villagerDisplayName()
                     );
                 }
         );
@@ -398,7 +402,8 @@ public class TownVillagerUIs {
                             d.stats(),
                             d.jobChangePending(),
                             !d.unlockableJobs().isEmpty(),
-                            d.showInventoryTab()
+                            d.showInventoryTab(),
+                            d.villagerDisplayName()
                     );
                 }
         );
@@ -438,7 +443,7 @@ public class TownVillagerUIs {
                                 d.jobChangePending(),
                                 !d.unlockableJobs().isEmpty(),
                                 d.showInventoryTab()
-                        ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab()
+                        ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                 )
         );
         b.put(
@@ -455,7 +460,7 @@ public class TownVillagerUIs {
                                     d.entity().hasBlockOfProgress(),
                                     !d.unlockableJobs().isEmpty(),
                                     d.showInventoryTab()
-                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                     );
                 }
         );
@@ -470,8 +475,9 @@ public class TownVillagerUIs {
                                     d.entity().getUUID(),
                                     d.entity().getFlagPos(),
                                     !d.unlockableJobs().isEmpty(),
-                                    d.showInventoryTab()
-                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab()
+                                    d.showInventoryTab(),
+                                    d.villagerDisplayName()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                     );
                 }
         );
@@ -494,7 +500,8 @@ public class TownVillagerUIs {
             VillagerStatsData stats,
             boolean isJobChangePending,
             boolean showSkillsTab,
-            boolean showInventoryTab
+            boolean showInventoryTab,
+            String villagerDisplayName
     ) {
         Compat.openScreen(
                 sender, new MenuProvider() {
@@ -522,7 +529,8 @@ public class TownVillagerUIs {
                         e.hasBlockOfProgress(),
                         showSkillsTab,
                         showInventoryTab,
-                        isJobChangePending
+                        isJobChangePending,
+                        villagerDisplayName
                 )
         );
         if (e.getFlagPos() != null) {

@@ -53,6 +53,12 @@ public interface VillagerHolder {
             boolean showInventoryTab
     );
 
+    /**
+     * The townie's user-facing display name ("Villager N", the monotonic arrival number;
+     * 2026-10-14 playtest), or an empty string when none is assigned yet.
+     */
+    String displayNameFor(UUID villagerId);
+
     void fillHunger(UUID uuid);
 
     void fillHunger(

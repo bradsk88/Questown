@@ -34,6 +34,8 @@ public class TownVillagerHandlerSerializer {
     private static final String NBT_GUARANTEED_ROOTS = "guaranteed_roots";
     private static final String NBT_PRE_ROLL_ROOTS = "pre_roll_roots";
     private static final String NBT_PROFICIENCIES = "proficiencies";
+    private static final String NBT_DISPLAY_NUMBERS = "display_numbers";
+    private static final String NBT_DISPLAY_HIGHEST = "display_numbers_highest";
 
     public void deserialize(
             CompoundTag compound,
@@ -105,9 +107,12 @@ public class TownVillagerHandlerSerializer {
                 }
         );
 
+        ImmutableMap<UUID, Integer> displayNumbers = deserializeMap(compound, NBT_DISPLAY_NUMBERS, simpleInt);
+        int highestDisplayNumber = compound.getInt(NBT_DISPLAY_HIGHEST);
+
         villagerHandle.initialize(
                 fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending, proficiencies,
-                guaranteedRoots, preRolls
+                guaranteedRoots, preRolls, displayNumbers, highestDisplayNumber
         );
     }
 
@@ -220,6 +225,8 @@ public class TownVillagerHandlerSerializer {
                     t.put(NBT_PROFICIENCIES, pt);
                 }
         );
+        serializeMap(compound, NBT_DISPLAY_NUMBERS, villagerHandle.getDisplayNumbers(), simpleInt);
+        compound.putInt(NBT_DISPLAY_HIGHEST, villagerHandle.getHighestDisplayNumber());
         return compound;
     }
 

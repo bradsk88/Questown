@@ -481,6 +481,7 @@
   "menu.jobs": "Jobs",
   "menu.decline": "Decline",
   "menu.back": "Back",
+  "menu.villager.name": "Villager %1$s",
   "menu.villager_stats.hunger": "Hunger",
   "menu.villager_stats.mood": "Mood",
   "menu.villager_stats.experience": "Experience",

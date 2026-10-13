@@ -38,6 +38,11 @@ public final class VillagerMenusPayload {
     public final boolean showInventoryTab;
     public final boolean jobChangeAlreadyPending;
     public final List<Boolean> slotLocks;
+    /**
+     * "Villager N" display name (the townie's monotonic arrival number, 2026-10-14
+     * playtest). Empty string when unassigned - screens fall back to the truncated UUID.
+     */
+    public final String villagerDisplayName;
 
     public VillagerMenusPayload(
             int entityId,
@@ -52,7 +57,8 @@ public final class VillagerMenusPayload {
             boolean showSkillsTab,
             boolean showInventoryTab,
             boolean jobChangeAlreadyPending,
-            List<Boolean> slotLocks
+            List<Boolean> slotLocks,
+            String villagerDisplayName
     ) {
         this.entityId = entityId;
         this.villager = villager;
@@ -67,6 +73,7 @@ public final class VillagerMenusPayload {
         this.showInventoryTab = showInventoryTab;
         this.jobChangeAlreadyPending = jobChangeAlreadyPending;
         this.slotLocks = slotLocks;
+        this.villagerDisplayName = villagerDisplayName == null ? "" : villagerDisplayName;
     }
 
     public void write(FriendlyByteBuf buf) {
@@ -104,6 +111,7 @@ public final class VillagerMenusPayload {
         for (Boolean locked : slotLocks) {
             buf.writeBoolean(locked);
         }
+        buf.writeUtf(villagerDisplayName);
     }
 
     public static VillagerMenusPayload read(FriendlyByteBuf buf) {
@@ -141,6 +149,7 @@ public final class VillagerMenusPayload {
         for (int i = 0; i < lockCount; i++) {
             slotLocks.add(buf.readBoolean());
         }
+        String villagerDisplayName = buf.readUtf();
         return new VillagerMenusPayload(
                 entityId,
                 villager,
@@ -154,7 +163,8 @@ public final class VillagerMenusPayload {
                 showSkillsTab,
                 showInventoryTab,
                 jobChangeAlreadyPending,
-                slotLocks
+                slotLocks,
+                villagerDisplayName
         );
     }
 }

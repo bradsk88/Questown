@@ -176,7 +176,15 @@ public class TownMessages {
             JobID jobID,
             UUID visitorUUID
     ) {
-        broadcastMessage("messages.jobs.changed", jobID.toNiceString(), UtilClean.truncateMiddle(visitorUUID));
+        jobChanged(jobID, UtilClean.truncateMiddle(visitorUUID));
+    }
+
+    /** Same broadcast, with an explicit display label ("Villager N"). */
+    public void jobChanged(
+            JobID jobID,
+            String villagerLabel
+    ) {
+        broadcastMessage("messages.jobs.changed", jobID.toNiceString(), villagerLabel);
     }
 
     public void startDebugFailed() {

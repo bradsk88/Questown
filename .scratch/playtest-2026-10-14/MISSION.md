@@ -86,8 +86,9 @@ rulings are ANSWERED and recorded in the tickets (see "Rulings" below).
    redirect, six tabbed menus filter via `VillagerTabs.hideInventory`).
    `gui/COMPLEX.md` "MultiStatusScreen: full-card click ... management-only
    mode".
-9. **Villager display names** (`villager-display-names.md`) — ruling: name tags,
-   menu headers, system chat messages; NO number reuse.
+9. **Villager display names** — DONE: "Villager N" monotonic arrival number
+   (no reuse), name tag + system chat + BOP screen; payload carries the name.
+   Deferred: flag quest-card tooltip (`quests.job_owner`).
 10. **Onboarding miner after cook** (`onboarding-miner-after-cook.md`) — full
     design ruling recorded in ticket.
 11. **1.20 vanilla skins in the UUID pool** (`use-1.20-villager-skins.md`) —

@@ -38,7 +38,8 @@ class VillagerMenusPayloadTest {
                 true,
                 false,
                 false,
-                List.of(true, false, true, false, false, false, false, false)
+                List.of(true, false, true, false, false, false, false, false),
+                "Villager 2"
         );
     }
 
@@ -64,6 +65,7 @@ class VillagerMenusPayloadTest {
         assertEquals(p.showBlockOfProgressTab, r.showBlockOfProgressTab);
         assertEquals(p.showSkillsTab, r.showSkillsTab);
         assertEquals(false, r.showInventoryTab);
+        assertEquals("Villager 2", r.villagerDisplayName);
         assertEquals(p.jobChangeAlreadyPending, r.jobChangeAlreadyPending);
         assertEquals(List.of(true, false, true, false, false, false, false, false), r.slotLocks);
         assertEquals(0, buf.readableBytes(), "payload must consume exactly what it wrote");

@@ -46,6 +46,11 @@ public final class TownVillagerHandle {
     private final ca.bradj.questown.town.TownVillagerProficiencies proficiencies =
             new ca.bradj.questown.town.TownVillagerProficiencies();
     final TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
+    /**
+     * Display numbers per townie ("Villager N"): assigned on arrival, persisted with the
+     * handle, and never re-issued. 2026-10-14 playtest ruling: no reuse.
+     */
+    private final VillagerDisplayNumbers displayNumbers = new VillagerDisplayNumbers();
 
     TownVillagerHandle() {
         SimpleVillagerHandle.Configs config = new SimpleVillagerHandle.Configs(
@@ -89,7 +94,8 @@ public final class TownVillagerHandle {
                 @NotNull TownFlagBlockEntity t = town.getUnsafe();
                 t.setChanged();
                 if (announce) {
-                    t.messages.jobChanged(newJob, villagerUUID);
+                    String label = displayNameFor(villagerUUID);
+                    t.messages.jobChanged(newJob, label.isEmpty() ? ca.bradj.questown.core.UtilClean.truncateMiddle(villagerUUID) : label);
                 }
             }
 
@@ -256,7 +262,9 @@ public final class TownVillagerHandle {
             ImmutableMap<VillagerUUID, Boolean> jobChangesPending,
             Map<UUID, ? extends Map<String, Float>> proficiencies,
             ImmutableMap<UUID, JobID> guaranteedRoots,
-            ImmutableMap<UUID, JobID> preRolls
+            ImmutableMap<UUID, JobID> preRolls,
+            Map<UUID, Integer> displayNumbersIn,
+            int highestDisplayNumberIn
     ) {
         this.learning.initialize(unlockedJobs, jobsKnownToExist);
         delegate.initialize(
@@ -271,6 +279,37 @@ public final class TownVillagerHandle {
         );
         moods.initialize(moodEffects);
         this.proficiencies.initialize(proficiencies);
+        this.displayNumbers.restore(displayNumbersIn, highestDisplayNumberIn);
+    }
+
+    /** The townie's display number, or 0 if none assigned yet. */
+    public int displayNumberFor(UUID vuid) {
+        return displayNumbers.numberFor(vuid);
+    }
+
+    /**
+     * Assign the next display number (monotonic, never re-issued). Idempotent: a townie
+     * that already has a number (reload from NBT) keeps it.
+     */
+    public void assignDisplayNumber(UUID vuid) {
+        displayNumbers.assign(vuid);
+    }
+
+    /** "Villager N" (the user-facing display name); the raw root as a last resort. */
+    public String displayNameFor(UUID vuid) {
+        int n = displayNumberFor(vuid);
+        if (n <= 0) {
+            return "";
+        }
+        return ca.bradj.questown.mc.Compat.translatable("menu.villager.name", n).getString();
+    }
+
+    Map<UUID, Integer> getDisplayNumbers() {
+        return displayNumbers.byVuid();
+    }
+
+    int getHighestDisplayNumber() {
+        return displayNumbers.highest();
     }
 
     void recallVillagers() {
@@ -444,6 +483,13 @@ public final class TownVillagerHandle {
 
     void register(VisitorMobEntity visitorMobEntity) {
         delegate.register(visitorMobEntity);
+
+        assignDisplayNumber(visitorMobEntity.getUUID());
+        String displayName = displayNameFor(visitorMobEntity.getUUID());
+        if (!displayName.isEmpty()) {
+            visitorMobEntity.setCustomName(ca.bradj.questown.mc.Compat.literal(displayName));
+            visitorMobEntity.setCustomNameVisible(true);
+        }
 
         seedProficiencies(visitorMobEntity.getUUID());
 

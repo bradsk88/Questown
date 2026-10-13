@@ -65,7 +65,7 @@ public class VillagerMenus {
                 p.showInventoryTab
         );
         menus.initVillagerEconomicsMenu(windowId, p.villager, p.flagPos, p.econ, p.showBlockOfProgressTab, p.showSkillsTab, p.showInventoryTab);
-        menus.bopMenu = new VillagerBlockofProgressMenu(windowId, p.villager, p.flagPos, p.showSkillsTab, p.showInventoryTab);
+        menus.bopMenu = new VillagerBlockofProgressMenu(windowId, p.villager, p.flagPos, p.showSkillsTab, p.showInventoryTab, p.villagerDisplayName);
 
         SimpleContainer bopSlot = new SimpleContainer(1) {
             @Override
@@ -99,7 +99,8 @@ public class VillagerMenus {
             boolean showBlockOfProgressTab,
             boolean showSkillsTab,
             boolean showInventoryTab,
-            boolean jobChangeAlreadyPending
+            boolean jobChangeAlreadyPending,
+            String villagerDisplayName
     ) {
         new VillagerMenusPayload(
                 e.getId(),
@@ -114,7 +115,8 @@ public class VillagerMenus {
                 showSkillsTab,
                 showInventoryTab,
                 jobChangeAlreadyPending,
-                e.getSlotLocks()
+                e.getSlotLocks(),
+                villagerDisplayName == null ? "" : villagerDisplayName
         ).write(data);
     }
 
