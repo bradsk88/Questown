@@ -975,8 +975,15 @@ Tests: `TownVillagerSleepModuleTest` (deferred claim does not throw). The
 drain path needs a live `TownFlagBlockEntity` (registry-bound) - held-run
 covered.
 
-Audited 2026-10-14: `claimBed` was the only unguarded `getUnsafe()`
-reachable from `VisitorMobEntity.load` - the rest of the
+Audited 2026-10-14: the load path had TWO unguarded `getUnsafe()` calls -
+`claimBed` (fixed first) and `SimpleVillagerHandle.register`'s tail
+`delegator.setChanged()` (the `$1` delegator's `town.getUnsafe().setChanged()`,
+fixed second). The first throw masked the second: fixing `claimBed` let
+`register` run one line further, into the next landmine. The rest of the
 `assumeStateFromTown -> register -> add -> initialize` path is listener
-registration, NBT load, and job lookup. Re-run this audit if a new module
-joins the `SimpleVillagerHandle.add`/`register` path.
+registration, NBT load, and job lookup. Both fixes gate on
+`UnsafeTown.isInitialized()`; the `setChanged` guard is a deliberate no-op
+(the town state was just read from the block entity - nothing new to
+persist). Neither is unit-testable (config/registry-bound construction);
+live-verify = zero "Exception loading entity" lines on a world with a
+townie, and re-audit the whole path after ANY change to it.

@@ -76,3 +76,15 @@ normally and its claim lands when the flag initializes.
   throw (pre-fix this was the exact ISE above; the null entity stands in because
   the deferred path never touches entity state). The drain path needs a live
   `TownFlagBlockEntity` (registry-bound) → held-run covered.
+
+## Second landmine (2026-10-14 morning)
+
+The claimBed fix exposed a second unguarded `getUnsafe()` one line further
+down the same path: `SimpleVillagerHandle.register`'s tail
+`delegator.setChanged()` -> `TownVillagerHandle$1.setChanged()` ->
+`town.getUnsafe().setChanged()`. Same boot, same "Exception loading entity"
+drop (02:40:13, class TownVillagerHandle). Fixed with the same
+`isInitialized()` gate (deliberate no-op: the town state was just read from
+the block entity - nothing new to persist). The first throw masked the
+second. Live-verify: zero "Exception loading entity" on the next restart
+(world has a townie).

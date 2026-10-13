@@ -95,7 +95,15 @@ public final class TownVillagerHandle {
 
             @Override
             public void setChanged() {
-                town.getUnsafe().setChanged();
+                if (town.isInitialized()) {
+                    town.getUnsafe().setChanged();
+                }
+                // Load-time registration (SimpleVillagerHandle.register's tail
+                // call) arrives before associate(); the town state was just
+                // read from this very block entity, so nothing new needs
+                // persisting. Throwing here made vanilla drop the loading
+                // entity - the second landmine behind the claimBed one,
+                // masked until the first was fixed (2026-10-14).
             }
 
             @Override
