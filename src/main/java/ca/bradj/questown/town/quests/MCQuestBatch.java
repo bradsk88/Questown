@@ -15,6 +15,9 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
+import java.util.UUID;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -72,6 +75,16 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             @Override
             public MCQuest newJobUnlockQuest(ResourceLocation id) {
                 return MCQuest.jobUnlock(batchUUID, null, id);
+            }
+
+            @Override
+            public MCQuest newFirstWorkRequestQuest(@Nullable UUID ownerId) {
+                return MCQuest.firstWorkRequest(batchUUID, dep(ownerId));
+            }
+
+            @Override
+            public MCQuest newConcurrentJobsQuest(@Nullable UUID ownerId, Collection<ResourceLocation> jobIds) {
+                return MCQuest.concurrentJobs(batchUUID, jobIds);
             }
 
             @Override

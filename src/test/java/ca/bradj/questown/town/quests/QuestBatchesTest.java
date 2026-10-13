@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
 import java.util.UUID;
 
 class QuestBatchesTest {
@@ -55,6 +56,16 @@ class QuestBatchesTest {
 
         @Override
         public TestQuest newJobUnlockQuest(Integer id) {
+            throw new UnsupportedOperationException("Not implemented");
+        }
+
+        @Override
+        public TestQuest newFirstWorkRequestQuest(@Nullable UUID ownerId) {
+            throw new UnsupportedOperationException("Not implemented");
+        }
+
+        @Override
+        public TestQuest newConcurrentJobsQuest(@Nullable UUID ownerId, Collection<Integer> jobIds) {
             throw new UnsupportedOperationException("Not implemented");
         }
 

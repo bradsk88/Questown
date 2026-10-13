@@ -5,6 +5,8 @@ import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -128,6 +130,15 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         return type;
     }
 
+    /**
+     * Job ids for a CONCURRENT_JOBS quest; empty for every other type. The base returns
+     * nothing so generic rebuild paths can ask any quest without a cast; {@code MCQuest}
+     * overrides with the encoded job list.
+     */
+    public Collection<KEY> getConcurrentJobIds() {
+        return Collections.emptyList();
+    }
+
     public int getCountNeeded() {
         return count;
     }
@@ -204,6 +215,19 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         );
 
         QUEST newJobUnlockQuest(KEY id);
+
+        /**
+         * The day-2 "post your first work request" quest. Must not be built through
+         * {@link #newQuest}: that produces a ROOM-typed recipe quest, which displays the
+         * raw special-quest id and is invisible to the first-work completion check.
+         */
+        QUEST newFirstWorkRequestQuest(@Nullable UUID ownerId);
+
+        /**
+         * A CONCURRENT_JOBS quest holding the given job ids. Must not be built through
+         * {@link #newQuest}: the job list lives outside the wanted id and would be lost.
+         */
+        QUEST newConcurrentJobsQuest(@Nullable UUID ownerId, Collection<KEY> jobIds);
 
         QUEST completed(
                 ROOM room,

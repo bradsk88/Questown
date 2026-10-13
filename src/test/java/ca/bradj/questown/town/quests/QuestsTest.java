@@ -71,6 +71,16 @@ class QuestsTest {
             }
 
             @Override
+            public TestQuest newFirstWorkRequestQuest(@Nullable UUID ownerId) {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+
+            @Override
+            public TestQuest newConcurrentJobsQuest(@Nullable UUID ownerId, java.util.Collection<Integer> jobIds) {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+
+            @Override
             public TestQuest completed(Room room, TestQuest input) {
                 TestQuest testQuest;
                 if (input.fromRecipeID().isPresent()) {

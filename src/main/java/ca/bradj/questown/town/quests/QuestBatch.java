@@ -108,6 +108,19 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.quests.add(this.questFactory.newLootQuest(dep(ownerId), itemId, count));
     }
 
+    /**
+     * The day-2 "post your first work request" quest. Rebuild paths must use this -
+     * {@link #addNewQuest} would produce a ROOM-typed recipe quest with the raw id.
+     */
+    public void addFirstWorkRequestQuest(@Nullable VillagerUUID ownerId) {
+        this.quests.add(this.questFactory.newFirstWorkRequestQuest(dep(ownerId)));
+    }
+
+    /** A CONCURRENT_JOBS quest; the job list rides on the quest, not the wanted id. */
+    public void addConcurrentJobsQuest(@Nullable VillagerUUID ownerId, Collection<KEY> jobIds) {
+        this.quests.add(this.questFactory.newConcurrentJobsQuest(dep(ownerId), jobIds));
+    }
+
     public ImmutableList<QUEST> getAll() {
         return ImmutableList.copyOf(this.quests);
     }

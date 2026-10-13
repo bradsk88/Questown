@@ -444,6 +444,29 @@ showSkillsTab() = true`. The SKILLS menuShow consumer in
 `OpenVillagerAdvancementsMenuMessage` with the already-filtered unlockable set),
 so no flag change there.
 
+## Lit-dead tabs: `selected` is the current-pane marker, gated tabs are hidden (2026-10-14)
+
+`Tab.selected` (the lit highlight) is set to `fn == null` in `VillagerTabs.build`: a menu
+excludes its OWN pane from `getEnabledTabs()` (`VillagerTabs.except(ownTab)`), so the current
+pane's tab renders lit and no-op = "you are here" (the 1.19.2 golden's mechanism, unchanged).
+Two defects made three tabs lit-and-dead on a level-1 townie's inventory pane (user report,
+playtest 2026-10-14): (1) the skills gate made `skillFn` null for EVERY tab, so the skills
+tab rendered lit like the current pane instead of being absent - `build()` now omits the
+skills tab entirely when `showSkillsTab` is false (the BOP pattern: conditional `b.add`, the
+row reflows left); the skills pane's own menu keeps the tab lit via `showSkillsTab()==true`
+there. (2) Pre-existing since the 1.20.1 migration (also in the golden): the change_root tab
+borrowed `skillScreenFn == null` for its selected flag, so any null skills fn lit change_root
+too - now `changeRootScreenFn == null`, lit only when the change-root pane is open.
+
+## MultiStatusScreen: full-card click opens the villager UI (2026-10-14)
+
+The flag's villagers-tab card had no card-body click handler - only the 32x32 status icon
+sent `OpenJobMessage` (present since the 1.19.2 golden; the "click a card to open that
+villager" ask predates it). `mouseClicked` now falls through, after the status-icon check,
+to a whole-card hit-test (same pattern as `QuestsScreen.openLessonForClickedCard` on the
+quest tab - user's reference) that sends `OpenVillagerMenuMessage(INVENTORY)` for that
+townie. The status icon keeps its `OpenJobMessage` (smaller box wins the overlap).
+
 ## Day-1 playtest: quest deep-links, localized job names, arrival copy
 
 - **Welcome-mat quest → crafting tab.** `QuestsScreen.openLessonForClickedCard`

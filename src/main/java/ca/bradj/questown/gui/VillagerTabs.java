@@ -28,9 +28,10 @@ public class VillagerTabs extends Tabs implements SubUI {
             @Nullable Runnable changeRootScreenFn,
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
-            boolean showBopTab
+            boolean showBopTab,
+            boolean showSkillsTab
     ) {
-        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, changeRootScreenFn, econScreenFn, bopScreenFn, showBopTab));
+        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, changeRootScreenFn, econScreenFn, bopScreenFn, showBopTab, showSkillsTab));
     }
 
     private static @NotNull ImmutableList<Tab> build(
@@ -41,7 +42,8 @@ public class VillagerTabs extends Tabs implements SubUI {
             @Nullable Runnable changeRootScreenFn,
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
-            boolean showBopTab
+            boolean showBopTab,
+            boolean showSkillsTab
     ) {
         ImmutableList.Builder<Tab> b = ImmutableList.builder();
         b.add(new Tab(
@@ -67,22 +69,24 @@ public class VillagerTabs extends Tabs implements SubUI {
                     RenderSystem.setShaderTexture(0, txBefore);
                 }, setScreen(sScreenFn), "tooltips.stats", sScreenFn == null, false
         ));
-        b.add(new Tab(
-                (rc, x, y) -> {
-                    int txBefore = RenderSystem.getShaderTexture(0);
-                    RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
-                    PoseStack stack = rc.stack();
-                    stack.pushPose();
-                    stack.scale(15f / 30f, 15f / 30f, 1);
-                    int adjustedX = (int) ((x + 11) / (15f / 30f));
-                    int adjustedY = (int) ((y + 7) / (15f / 30f));
-                    // 1.19.2 golden: blit(stack, adjX, adjY, z=0, u=17, v=7, 30, 30, 256, 256).
-                    Util.blit(rc.gui(), Questown.ResourceLocation("textures/menu/gatherer/menu.png"), adjustedX, adjustedY, 17, 7, 30, 30);
-                    stack.popPose();
+        if (showSkillsTab) {
+            b.add(new Tab(
+                    (rc, x, y) -> {
+                        int txBefore = RenderSystem.getShaderTexture(0);
+                        RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
+                        PoseStack stack = rc.stack();
+                        stack.pushPose();
+                        stack.scale(15f / 30f, 15f / 30f, 1);
+                        int adjustedX = (int) ((x + 11) / (15f / 30f));
+                        int adjustedY = (int) ((y + 7) / (15f / 30f));
+                        // 1.19.2 golden: blit(stack, adjX, adjY, z=0, u=17, v=7, 30, 30, 256, 256).
+                        Util.blit(rc.gui(), Questown.ResourceLocation("textures/menu/gatherer/menu.png"), adjustedX, adjustedY, 17, 7, 30, 30);
+                        stack.popPose();
 
-                    RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(skillScreenFn), "tooltips.skills", skillScreenFn == null, false
-        ));
+                        RenderSystem.setShaderTexture(0, txBefore);
+                    }, setScreen(skillScreenFn), "tooltips.skills", skillScreenFn == null, false
+            ));
+        }
         b.add(new Tab(
                 (rc, x, y) -> {
                     int txBefore = RenderSystem.getShaderTexture(0);
@@ -90,7 +94,7 @@ public class VillagerTabs extends Tabs implements SubUI {
                     Util.blitTab(rc.gui(), x, y, 1);
                     RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
                     RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(changeRootScreenFn), "tooltips.change_root", skillScreenFn == null, false
+                }, setScreen(changeRootScreenFn), "tooltips.change_root", changeRootScreenFn == null, false
         ));
         b.add(new Tab(
                 (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.BOOK.getDefaultInstance(), x + 10, y + 7),
@@ -157,7 +161,8 @@ public class VillagerTabs extends Tabs implements SubUI {
                 factory.apply(OpenVillagerMenuMessage.CHANGE_ROOT),
                 factory.apply(OpenVillagerMenuMessage.ECONOMICS),
                 factory.apply(OpenVillagerMenuMessage.BOP),
-                menu.showBlockOfProgressTab()
+                menu.showBlockOfProgressTab(),
+                menu.showSkillsTab()
         );
     }
 

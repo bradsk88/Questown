@@ -3,6 +3,7 @@ package ca.bradj.questown.gui.town.status;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.OpenJobMessage;
+import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.jobs.JobID;
@@ -11,6 +12,7 @@ import ca.bradj.questown.mc.Util;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.player.Inventory;
@@ -265,6 +267,23 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
                 return true;
             }
         };
+
+        // Full-card click opens that villager's UI (same whole-card hit-test the quest tab
+        // uses in openLessonForClickedCard; user reference, 2026-10-14 playtest):
+        // clicking anywhere on a villager's card lands in their inventory pane.
+        for (Card<UUID> v : cards()) {
+            if (MORNING_ARRIVAL_SENTINEL.equals(v.data())) continue;
+            CardCoordinates c = v.coords();
+            if (p_97748_ < c.leftX() || p_97748_ > c.rightX() || p_97749_ < c.topY() || p_97749_ > c.bottomY()) {
+                continue;
+            }
+            BlockPos flagPos = menu.getFlagInfo().flagPos();
+            QuestownNetwork.sendToServer(new OpenVillagerMenuMessage(
+                    flagPos.getX(), flagPos.getY(), flagPos.getZ(),
+                    v.data(), OpenVillagerMenuMessage.INVENTORY
+            ));
+            return true;
+        }
 
         return super.mouseClicked(p_97748_, p_97749_, p_97750_);
     }

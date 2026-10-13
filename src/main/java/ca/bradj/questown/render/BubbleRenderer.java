@@ -250,9 +250,11 @@ import net.minecraft.world.item.ItemStack;
         }
         EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
         poseStack.pushPose();
+        // The "!" targets are one-block-tall (flag, job board): anchor 1.0 above the block,
+        // unlike the dead-door item path which floats over a two-block door.
         poseStack.translate(
                 pos.getX() + 0.5 - cameraPos.x,
-                pos.getY() + 2.0 + HEAD_LIFT_BLOCKS - cameraPos.y,
+                pos.getY() + 1.0 + HEAD_LIFT_BLOCKS - cameraPos.y,
                 pos.getZ() + 0.5 - cameraPos.z
         );
         poseStack.scale(ASSEMBLY_SCALE, ASSEMBLY_SCALE, ASSEMBLY_SCALE);

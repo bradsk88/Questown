@@ -189,3 +189,24 @@ unchanged. Pinned by `QuestGardenTest.testShouldAcceptMultipleBeds_UntilShortfal
 and `testShouldAcceptOneBedPerGrowTick_WhenOnlyOneMissing`.
 
 Ticket: `.scratch/day1-playtest-2026-10-11/bedroom-quests-under-posted.md`.
+
+## Quest type is load-bearing; world-load rebuild must preserve it (2026-10-14)
+
+A quest's `QuestType` (not just its `wantedId`) drives the card name, the icon strip, the
+completion trigger, and the day-2 completion check (`markFirstWorkRequestCompleteIfActive`
+skips any quest that is not `FIRST_WORK_REQUEST`). `QuestBatches.initialize ->
+filterOutDuplicateCompletion` rebuilds every quest on world load through a type switch; the
+`FIRST_WORK_REQUEST` and `CONCURRENT_JOBS` cases used to route through the generic
+`addNewQuest`, which mints a `ROOM`-typed recipe quest. Consequences (user playtest,
+2026-10-14): the day-2 card showed the raw id `questown:special_quest.first_work_request`
+(ROOM path = `RoomRecipes.getName(wantedId)`, no lang key), a "No recipe found for quest"
+WARN on every quests-tab open, and the quest could never complete. `CONCURRENT_JOBS` was
+silently worse: its job list lives in `MCQuest.concurrentJobIdsEncoded` (outside the wanted
+id), so the rebuild lost the job ids entirely.
+
+Fix: dedicated factory methods (`QuestFactory.newFirstWorkRequestQuest` /
+`newConcurrentJobsQuest` + `QuestBatch.addFirstWorkRequestQuest` /
+`addConcurrentJobsQuest`) that the rebuild switch now calls, plus a base
+`Quest.getConcurrentJobIds() = empty` (MCQuest overrides from the encoded field) so the
+generic path can ask any quest for its job list without a cast. Pinned by
+`QuestBatchesInitializeTypeTest` (red-verified: both asserts fail on the pre-fix switch).
