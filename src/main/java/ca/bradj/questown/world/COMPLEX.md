@@ -35,3 +35,20 @@ makes the flood fill unit-testable at scale (the 4-arg form resolves unknown
 positions to null, making large-region fills unreachable in plain unit
 tests). Tests must bootstrap `SharedConstants.tryDetectVersion()` +
 `Bootstrap.bootStrap()` first (registry-bound `Blocks`/`ItemStack` usage).
+
+## Warp chunk reads must be presence-gated (2026-10-13 full-suite hang)
+
+`WarpWorldAccess.resolveBlockState` fell back to `level.getBlockState(pos)`
+for positions outside the in-memory snapshot. For a chunk that is
+generated but EVICTED from the chunk cache, that goes through the chunk
+system's managed block on the main thread, which waits for the chunk
+system the main thread itself is blocking - a deadlock the watchdog kills
+after `max-tick-time` (600 s here). The full-suite run hit it at test
+16/58 (arborist/cut_trees: the tree-chop flood fill read terrain beyond
+the snapshot). The lookup is now `resolveLevelBlockState`:
+`ServerChunkCache.hasChunk(x, z)` (never blocks; the 1.20.6 equivalent of
+the old `getChunkIfPresent` - there is no `getChunkIfPresent` on
+`Level`/`ServerLevel` on this branch) and an unloaded chunk resolves to
+null = the region boundary, instead of generating the chunk from the
+warp tick. Pinned by `WarpWorldAccessChunkBoundaryTest` (red-verified
+against the pre-fix unconditional read).

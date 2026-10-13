@@ -212,8 +212,26 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
     @Nullable
     private BlockState resolveBlockState(BlockPos pos) {
         if (blockStates.containsKey(pos)) return blockStates.get(pos);
-        if (level != null) return level.getBlockState(pos);
+        if (level != null) return resolveLevelBlockState(level, pos);
         return fallbackStateProvider == null ? null : fallbackStateProvider.apply(pos);
+    }
+
+    /**
+     * The real-world state at {@code pos}, or {@code null} when the containing
+     * chunk is not loaded. The presence check ({@code hasChunk}) never blocks:
+     * an unconditional {@code getBlockState} on an evicted-but-generated chunk
+     * goes through the chunk system's managed block, which waits for the main
+     * thread that is itself running the warp - a 600 s watchdog-kill hang
+     * (the 2026-10-13 full-suite run, arborist/cut_trees). A warp that meets
+     * an unloaded chunk treats it as the region boundary instead of
+     * generating it.
+     */
+    static BlockState resolveLevelBlockState(ServerLevel level, BlockPos pos) {
+        net.minecraft.world.level.ChunkPos chunkPos = new net.minecraft.world.level.ChunkPos(pos);
+        if (!level.getChunkSource().hasChunk(chunkPos.x, chunkPos.z)) {
+            return null;
+        }
+        return level.getBlockState(pos);
     }
 
     @Nullable
@@ -268,8 +286,10 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
      * Flood-fills a connected log region and cuts it, in memory. Iterative (explicit work stack)
      * rather than recursive: the region can be far larger than the JVM stack budget — when the
      * trunk's log type also occurs in real terrain beyond the in-memory snapshot, the fill reads
-     * the live level (generating chunks) and can span tens of thousands of blocks. One stack
-     * frame per block would overflow; a heap work stack does not.
+     * the live level and can span tens of thousands of blocks. One stack frame per block would
+     * overflow; a heap work stack does not. Reads stop at the edge of an UNLOADED chunk
+     * ({@link #resolveLevelBlockState}): generating chunks from the warp tick would deadlock the
+     * main thread, so an unloaded chunk counts as the region boundary.
      */
     private void chopTreeInMemory(
             BlockPos center, Block matchBlock,
