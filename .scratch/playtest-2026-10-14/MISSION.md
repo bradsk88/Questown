@@ -65,8 +65,10 @@ rulings are ANSWERED and recorded in the tickets (see "Rulings" below).
    same ingredient matching as the completion path; wired via `QuestsHolder` into
    the flag QUESTS tab + `showQuestsUI`. Pinned by `UIQuestItemProgressTest`
    (3 tests; red by construction — the field did not exist pre-fix).
-5. **Raw-food quest naming** (`raw-food-quest-naming-mismatch.md`) — user's exact
-   copy in the ticket ("Food" / "cooked food"); data change.
+5. **Raw-food quest naming** (`raw-food-quest-naming-mismatch.md`) —
+   **DONE** (2026-10-14 night): per the user's lean, LOOT card name is now
+   "Food" — lang key `menu.quests.raw_food` → `menu.quests.food` (+3 call
+   sites); pinned by `UIQuestLootCardNameTest`.
 6. **"Food" quest type + re-deposit completion** (`food-quest-wrong-type-and-redeposit-completion.md`).
 7. **Raw-food repeat eating** (`raw-food-repeat-eating.md`) — code question:
    what does the eating loop gate on? Answer or fix.

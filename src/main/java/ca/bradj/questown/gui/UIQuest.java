@@ -243,7 +243,7 @@ public class UIQuest implements Comparable<UIQuest> {
                 }
                 yield name;
             }
-            case LOOT -> Compat.translatable("menu.quests.raw_food");
+            case LOOT -> Compat.translatable("menu.quests.food");
             case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractJobName());
             case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", extractRootJobName());
             case CONCURRENT_JOBS -> Compat.literal("Multiple Jobs Active");

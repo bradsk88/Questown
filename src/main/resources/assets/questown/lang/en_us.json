@@ -462,7 +462,7 @@
   "job_board.auto_request": "Auto-post new requests",
   "job_board.auto_request.tooltip.on": "Auto-post is ON: when a villager takes up a new job, its first request is posted here automatically. Click to turn off.",
   "job_board.auto_request.tooltip.off": "Auto-post is OFF: new jobs do not post their first request here - post requests yourself with the + button. Click to turn on.",
-  "menu.quests.raw_food": "Raw food",
+  "menu.quests.food": "Food",
   "menu.quests.room_quest": "Build a room containing the blocks shown here",
   "menu.quests.roomblock.town": "Place a %s in your town - this registers it with the town flag automatically.",
   "menu.quests.roomblock.welcome_mat": "Craft a welcome mat and place it where you'd like people to enter/exit your village.",

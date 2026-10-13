@@ -144,7 +144,7 @@ public class TownMessages {
             name = Compat.translatable("menu.common.quantity", Compat.getItemName(quest.getWantedId()), quest.getCountNeeded());
         }
         if (quest.getType() == Quest.QuestType.LOOT) {
-            name = Compat.translatable("menu.quests.raw_food");
+            name = Compat.translatable("menu.quests.food");
         }
         if (quest.getType() == Quest.QuestType.JOB_UNLOCK) {
             name = Compat.translatable("questown.menu.quests.job_unlock", JobID.fromRL(quest.getWantedId()).rootId());
@@ -161,7 +161,7 @@ public class TownMessages {
             name = Compat.translatable("menu.common.quantity", Compat.getItemName(quest.getWantedId()), quest.getCountNeeded());
         }
         if (quest.getType() == Quest.QuestType.LOOT) {
-            name = Compat.translatable("menu.quests.raw_food");
+            name = Compat.translatable("menu.quests.food");
         }
         if (quest.getType() == Quest.QuestType.JOB_UNLOCK) {
             name = Compat.translatable("questown.menu.quests.job_unlock", JobID.fromRL(quest.getWantedId()).rootId());
