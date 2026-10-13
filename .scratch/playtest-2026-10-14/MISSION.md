@@ -69,7 +69,13 @@ rulings are ANSWERED and recorded in the tickets (see "Rulings" below).
    **DONE** (2026-10-14 night): per the user's lean, LOOT card name is now
    "Food" — lang key `menu.quests.raw_food` → `menu.quests.food` (+3 call
    sites); pinned by `UIQuestLootCardNameTest`.
-6. **"Food" quest type + re-deposit completion** (`food-quest-wrong-type-and-redeposit-completion.md`).
+6. **"Food" quest type + re-deposit completion** (`food-quest-wrong-type-and-redeposit-completion.md`) —
+   **ROOT-CAUSED, no code defect** (2026-10-14 night): s19 log 04:26:47 proves the
+   completion was a gatherer's crop-carrot extraction (postExtractHook ->
+   processLootQuests), not the user's chest re-deposit (LOOT never scans
+   containers); it WAS a LOOT quest - the perception came from the "Raw food"
+   name (fixed by #5). Open ruling parked: card says "produce 8" but LOOT
+   completes on first extraction - copy fix vs accumulate.
 7. **Raw-food repeat eating** (`raw-food-repeat-eating.md`) — code question:
    what does the eating loop gate on? Answer or fix.
 8. **Inventory tab in flag click-through menus** (recurrence section in
