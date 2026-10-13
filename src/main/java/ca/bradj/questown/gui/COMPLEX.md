@@ -571,6 +571,13 @@ empty multi-status overview.
   `RoomRecipes.getName(wantedId)` (free placement: "in your town"); campfire keeps
   its own branch. The quest is about *placing a functional block*, not holding an
   item.
+- **Job-board quest card joined the mat format (2026-10-14 playtest).** User chat:
+  "Job board quest's tooltip should use the same format as the welcome mat's
+  (click to see crafting)." `JOB_BOARD` moved INTO the fixed two-line branch above
+  (key `menu.quests.roomblock.job_board` + grey click-crafting line) and into the
+  crafting deep-link in `openLessonForClickedCard`; the now-dead server-side flavor
+  text in `addBasicsBatch` was retired so the lang key is the single source of
+  copy. The `roomblock.town` fallback now serves only the remaining block rooms.
 - **Job-board quest card shows the board, not a sign.** `UIQuest.fromLevel` overrides
   the `SpecialQuests.JOB_BOARD` rMap entry with
   `RoomRecipes.standard(JOB_BOARD, NonNullList.withSize(1, Ingredient.of(JOB_BOARD_BLOCK)))`

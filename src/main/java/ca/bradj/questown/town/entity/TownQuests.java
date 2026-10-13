@@ -188,7 +188,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
 
         MCQuest jobBoardQuest = roomQuest(batchUUID, SpecialQuests.JOB_BOARD);
-        jobBoardQuest.setFlavorText("Craft a Job Board at the town flag (flag > crafting tab) and place it near the flag");
+        // No flavor text: the card tooltip is the two-line mat-format key
+        // menu.quests.roomblock.job_board (click-to-craft, 2026-10-14 playtest).
         q.addNewQuest(jobBoardQuest);
 
         MCQuest storeRoomQuest = roomQuest(batchUUID, SpecialQuests.STORE_ROOM_SMALL);

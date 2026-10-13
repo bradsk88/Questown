@@ -154,6 +154,39 @@ class QuestBatchesTest {
     }
 
     @Test
+    void markRecipeAsLost_doesNotLoseAnAlreadyCompleteQuest() {
+        // Regression (2026-10-14 playtest, server-18 03:47:37): the empty-room quest
+        // completed, then the user placed a chest in the same room and re-registered it
+        // (the room re-typed from empty_room to store_room). markRecipeAsLost found the
+        // COMPLETED quest via completedOn and lost it - the player saw "Quest lost: Empty
+        // Room" on a perma-done quest, and the lost placeholder re-completed in the same
+        // tick, double-firing the batch reward. Complete quests are perma-done
+        // (campfire semantics); room re-typing must not touch them.
+        QuestBatches<
+                Integer, Room, TestQuest, Reward,
+                QuestBatch<Integer, Room, TestQuest, Reward>
+                > qbs = new QuestBatches<>((batchUUID, owner, reward) -> new QuestBatch<>(factory, reward, batchUUID));
+
+        Room room = new Room(
+                new Position(1, 2),
+                InclusiveSpace.from(3, 4).to(5, 6)
+        );
+
+        TestQuestBatch batch = new TestQuestBatch();
+        batch.addNewQuest(null, 1);
+        batch.markRecipeAsComplete(room, 1);
+
+        qbs.add(batch);
+
+        boolean lost = batch.markRecipeAsLost(room, 1);
+
+        Assertions.assertFalse(lost);
+        ImmutableList<TestQuest> quests = batch.getAll();
+        Assertions.assertEquals(1, quests.size());
+        Assertions.assertTrue(quests.get(0).isComplete());
+    }
+
+    @Test
     void markRecipeAsComplete_completesOpenQuest_evenWhenSameRoomAndRecipeWereCompletedBefore() {
         // Regression (2026-10-10, kitchen_stocked wall): the 96a74471 startup
         // double-fill guard returned whenever ANY quest for this recipe had been

@@ -264,12 +264,20 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         // flavor text: the flavor is set server-side at post time and shadows the
         // switch below, which is why the empty-room card shipped showing the generic
         // room_quest line instead of its own copy (user report, 2026-10-14).
+        // JOB_BOARD joined the mat/room format on the same day (playtest chat):
+        // two-line tooltip + click-to-craft deep link, like the welcome mat.
         if (recipe.getType() == Quest.QuestType.ROOM
                 && (SpecialQuests.TOWN_GATE.equals(recipe.getWantedId())
-                        || SpecialQuests.EMPTY_ROOM.equals(recipe.getWantedId()))) {
-            String key = SpecialQuests.TOWN_GATE.equals(recipe.getWantedId())
-                    ? "menu.quests.roomblock.welcome_mat"
-                    : "menu.quests.roomblock.empty_room";
+                        || SpecialQuests.EMPTY_ROOM.equals(recipe.getWantedId())
+                        || SpecialQuests.JOB_BOARD.equals(recipe.getWantedId()))) {
+            String key;
+            if (SpecialQuests.TOWN_GATE.equals(recipe.getWantedId())) {
+                key = "menu.quests.roomblock.welcome_mat";
+            } else if (SpecialQuests.JOB_BOARD.equals(recipe.getWantedId())) {
+                key = "menu.quests.roomblock.job_board";
+            } else {
+                key = "menu.quests.roomblock.empty_room";
+            }
             return ImmutableList.of(
                     Compat.translatable(key),
                     Compat.translatableStyled(
@@ -520,7 +528,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             // The empty-room card deep-links there too: its grey line says "Click to open
             // crafting" because the Town Wand - the one thing it needs - is crafted there.
             if ((SpecialQuests.TOWN_GATE.equals(quest.getWantedId())
-                    || SpecialQuests.EMPTY_ROOM.equals(quest.getWantedId()))
+                    || SpecialQuests.EMPTY_ROOM.equals(quest.getWantedId())
+                    || SpecialQuests.JOB_BOARD.equals(quest.getWantedId()))
                     && this.tabs instanceof Tabs tabs && tabs.openTab("tooltips.crafting")) {
                 return true;
             }

@@ -210,3 +210,18 @@ Fix: dedicated factory methods (`QuestFactory.newFirstWorkRequestQuest` /
 `Quest.getConcurrentJobIds() = empty` (MCQuest overrides from the encoded field) so the
 generic path can ask any quest for its job list without a cast. Pinned by
 `QuestBatchesInitializeTypeTest` (red-verified: both asserts fail on the pre-fix switch).
+
+## A complete quest is perma-done: `markRecipeAsLost` skips it (2026-10-14)
+
+`QuestBatch.markRecipeAsLost(oldRoom, recipeID)` matched the quest by
+`oldRoom.equals(q.completedOn) && recipeID.equals(q.getWantedId())` with no status
+check. Playtest (server-18 03:47:37): the empty-room quest had just completed, then
+the player put a chest in that same room and re-wand-registered it - the room re-typed
+`empty_room` → `store_room`, and the room-change path called `markRecipeAsLost` on the
+old room. The COMPLETED quest was lost ("Quest lost: Empty Room" on a perma-done
+quest), the lost placeholder re-completed the same tick, and the batch reward fired
+again (rejected by the once-guard: "Refusing to apply reward more than once"). The
+campfire quest only looked immune because its block room never re-types. Fix: the
+match adds `&& !q.isComplete()`. Pinned by
+`QuestBatchesTest.markRecipeAsLost_doesNotLoseAnAlreadyCompleteQuest` (red-verified
+against the pre-fix matcher via a stashed variant).

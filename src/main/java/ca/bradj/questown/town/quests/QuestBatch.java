@@ -250,7 +250,13 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
     ) {
         QUEST foundQuest = null;
         for (QUEST q : quests) {
-            if (oldRoom.equals(q.completedOn) && recipeID.equals(q.getWantedId())) {
+            // A complete quest is perma-done (campfire semantics): re-typing its
+            // room (e.g. the empty room gains a chest and becomes a store room)
+            // must not lose it. 2026-10-14 playtest: the empty-room quest lost
+            // and re-completed in one tick, double-firing the batch reward.
+            if (oldRoom.equals(q.completedOn)
+                    && recipeID.equals(q.getWantedId())
+                    && !q.isComplete()) {
                 foundQuest = q;
                 break;
             }
