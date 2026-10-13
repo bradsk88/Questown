@@ -41,6 +41,18 @@ public interface VillagerHolder {
             UUID villagerId
     );
 
+    /**
+     * Same as {@link #showUI(ServerPlayer, String, UUID)} but carries the management-only flag:
+     * when {@code showInventoryTab} is false the opened villager menu hides its inventory tab
+     * (the flag's villager-card click-through, 2026-10-14 playtest).
+     */
+    void showUI(
+            ServerPlayer sender,
+            String type,
+            UUID villagerId,
+            boolean showInventoryTab
+    );
+
     void fillHunger(UUID uuid);
 
     void fillHunger(

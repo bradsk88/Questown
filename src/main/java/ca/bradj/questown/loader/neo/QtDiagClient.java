@@ -139,7 +139,8 @@ public class QtDiagClient {
                 menu.getFlagPos().getY(),
                 menu.getFlagPos().getZ(),
                 menu.getVillagerUUID(),
-                type
+                type,
+                menu.showInventoryTab()
         ));
         System.out.println("[qtdiag] tab " + type + " requested");
     }
@@ -239,7 +240,7 @@ public class QtDiagClient {
         }
         java.util.UUID villager = villagers.keySet().iterator().next();
         QuestownNetwork.sendToServer(new OpenVillagerMenuMessage(
-                pos.getX(), pos.getY(), pos.getZ(), villager, type
+                pos.getX(), pos.getY(), pos.getZ(), villager, type, true
         ));
         System.out.println("[qtdiag] vopen " + type + " for villager " + villager + " at " + pos.toShortString() + " sent");
     }

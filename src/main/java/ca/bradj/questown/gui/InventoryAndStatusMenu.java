@@ -36,6 +36,7 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
     private final Stack<Runnable> closers = new Stack<>();
     private final boolean showBlockOfProgressTab;
     private final boolean showSkillsTab;
+    private final boolean showInventoryTab;
 
     public static InventoryAndStatusMenu ForClientSide(
             int windowId,
@@ -56,7 +57,8 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
             JobID jobId,
             BlockPos flagPos,
             boolean showBlockOfProgressTab,
-            boolean showSkillsTab
+            boolean showSkillsTab,
+            boolean showInventoryTab
     ) {
         super(MenuTypesInit.GATHERER_INVENTORY.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
         this.jobId = jobId;
@@ -65,6 +67,7 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
         this.addDataSlot(this.statusSlot = DataSlot.standalone());
         this.showBlockOfProgressTab = showBlockOfProgressTab;
         this.showSkillsTab = showSkillsTab;
+        this.showInventoryTab = showInventoryTab;
     }
 
     public boolean stillValid(Player p_38874_) {
@@ -111,7 +114,13 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
 
     @Override
     public Collection<String> getEnabledTabs() {
-        return showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+        Collection<String> tabs = showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+        return showInventoryTab ? tabs : VillagerTabs.hideInventory(tabs);
+    }
+
+    @Override
+    public boolean showInventoryTab() {
+        return showInventoryTab;
     }
 
     @Override

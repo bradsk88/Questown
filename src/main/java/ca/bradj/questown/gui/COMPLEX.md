@@ -458,14 +458,32 @@ there. (2) Pre-existing since the 1.20.1 migration (also in the golden): the cha
 borrowed `skillScreenFn == null` for its selected flag, so any null skills fn lit change_root
 too - now `changeRootScreenFn == null`, lit only when the change-root pane is open.
 
-## MultiStatusScreen: full-card click opens the villager UI (2026-10-14)
+## MultiStatusScreen: full-card click opens the villager UI in management-only mode (2026-10-14)
 
 The flag's villagers-tab card had no card-body click handler - only the 32x32 status icon
 sent `OpenJobMessage` (present since the 1.19.2 golden; the "click a card to open that
 villager" ask predates it). `mouseClicked` now falls through, after the status-icon check,
 to a whole-card hit-test (same pattern as `QuestsScreen.openLessonForClickedCard` on the
-quest tab - user's reference) that sends `OpenVillagerMenuMessage(INVENTORY)` for that
-townie. The status icon keeps its `OpenJobMessage` (smaller box wins the overlap).
+quest tab - user's reference) that sends `OpenVillagerMenuMessage(STATS, showInventoryTab=false)`
+for that townie: the opened menu hides its inventory tab and lands on the stats pane
+(management view, not the inventory; user ruling, `villager-card-opens-management-only-screen`).
+Right-clicking the townie itself still opens the full menu (inventory included) via
+`Jobs.openInventoryAndStatusScreen` -> `showUI(., ., .)` (3-arg default, inventory on).
+
+The `showInventoryTab` flag rides the same wire as `showSkillsTab`: `OpenVillagerMenuMessage`
+carries it to `VillagerHolder.showUI(., ., ., showInventoryTab)` (the 4-arg overload; the
+3-arg form defaults true) -> `TownVillagerUIsHandle` -> `TownVillagerUIs.showUI` (INVENTORY
+type requests are redirected to STATS when the flag is false, so a management-only session
+never lands on a pane whose tab no longer exists) -> `ShowerData` -> the six tabbed menus'
+`getEnabledTabs()` return `VillagerTabs.hideInventory(tabs)` when it is false. The flag
+also crosses the server->client payload (`VillagerMenusPayload.showInventoryTab`, written
+in `VillagerMenus.write`) so re-opened panes keep the same tab set, and
+`VillagerTabs.makeOpenFn` threads it into every tab click so a management-only session
+stays management-only across pane navigation. Pinned in
+`VillagerTabsHideInventoryTest` (the hideInventory helper) and `VillagerMenusPayloadTest`
+(payload round-trip); the menu-ctor filtering is registry-bound, held-run-covered.
+
+The status icon keeps its `OpenJobMessage` (smaller box wins the overlap).
 
 ## Day-1 playtest: quest deep-links, localized job names, arrival copy
 

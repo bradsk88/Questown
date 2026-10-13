@@ -268,9 +268,10 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             }
         };
 
-        // Full-card click opens that villager's UI (same whole-card hit-test the quest tab
-        // uses in openLessonForClickedCard; user reference, 2026-10-14 playtest):
-        // clicking anywhere on a villager's card lands in their inventory pane.
+        // Full-card click opens that villager's UI in management-only mode (same whole-card
+        // hit-test the quest tab uses in openLessonForClickedCard; user reference, 2026-10-14
+        // playtest): the menu hides the inventory tab and lands on the stats pane, not the
+        // inventory pane.
         for (Card<UUID> v : cards()) {
             if (MORNING_ARRIVAL_SENTINEL.equals(v.data())) continue;
             CardCoordinates c = v.coords();
@@ -280,7 +281,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             BlockPos flagPos = menu.getFlagInfo().flagPos();
             QuestownNetwork.sendToServer(new OpenVillagerMenuMessage(
                     flagPos.getX(), flagPos.getY(), flagPos.getZ(),
-                    v.data(), OpenVillagerMenuMessage.INVENTORY
+                    v.data(), OpenVillagerMenuMessage.STATS, false
             ));
             return true;
         }

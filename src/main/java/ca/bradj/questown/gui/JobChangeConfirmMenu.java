@@ -21,6 +21,7 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
     final JobID jobId;
     final DataSlot alreadyPending;
     private final boolean showSkillsTab;
+    private final boolean showInventoryTab;
 
     final BopTransactionSyncer tx = new BopTransactionSyncer(this::getSlot);
 
@@ -41,12 +42,14 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
             JobID jobId,
             BlockPos flagPos,
             boolean alreadyPending,
-            boolean showSkillsTab
+            boolean showSkillsTab,
+            boolean showInventoryTab
     ) {
         super(MenuTypesInit.CONFIRM_JOB_CHANGE.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
         gathererInventoryYOffset = 8;
         this.jobId = jobId;
         this.showSkillsTab = showSkillsTab;
+        this.showInventoryTab = showInventoryTab;
         layoutSlots(gathererInv);
         this.addDataSlot(this.alreadyPending = DataSlot.standalone());
         this.alreadyPending.set(alreadyPending ? 1 : 0);
@@ -65,7 +68,13 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
 
     @Override
     public Collection<String> getEnabledTabs() {
-        return showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+        Collection<String> tabs = showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+        return showInventoryTab ? tabs : VillagerTabs.hideInventory(tabs);
+    }
+
+    @Override
+    public boolean showInventoryTab() {
+        return showInventoryTab;
     }
 
     @Override

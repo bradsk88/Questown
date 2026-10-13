@@ -242,6 +242,27 @@ public class TownVillagerUIs {
             Map<UUID, ? extends Set<JobID>> unlockedJobs,
             Set<JobID> unlockableJobs
     ) {
+        showUI(sender, entities, type, villagerId, unlockedJobs, unlockableJobs, true);
+    }
+
+    /**
+     * Management-only variant ({@code showInventoryTab=false}): the flag's villager-card
+     * click-through opens the menu without the inventory tab. A request for the inventory
+     * pane itself is redirected to the stats pane (the management view) so the player is
+     * not dropped into a pane whose tab no longer exists.
+     */
+    public static void showUI(
+            ServerPlayer sender,
+            Collection<? extends LivingEntity> entities,
+            String type,
+            UUID villagerId,
+            Map<UUID, ? extends Set<JobID>> unlockedJobs,
+            Set<JobID> unlockableJobs,
+            boolean showInventoryTab
+    ) {
+        if (!showInventoryTab && OpenVillagerMenuMessage.INVENTORY.equals(type)) {
+            type = OpenVillagerMenuMessage.STATS;
+        }
         Optional<VisitorMobEntity> f = entities.stream()
                                                .filter(VisitorMobEntity.class::isInstance)
                                                .map(v -> (VisitorMobEntity) v)
@@ -277,7 +298,8 @@ public class TownVillagerUIs {
                 unlockedJobs,
                 unlockableJobs,
                 villagerId,
-                flag.getVillagerHandle().isJobChangePending(e.getVUID())
+                flag.getVillagerHandle().isJobChangePending(e.getVUID()),
+                showInventoryTab
         );
         runnable.accept(d);
     }
@@ -299,7 +321,8 @@ public class TownVillagerUIs {
             Map<UUID, ? extends Set<JobID>> unlockedJobs,
             Set<JobID> unlockableJobs,
             UUID villagerId,
-            boolean jobChangePending
+            boolean jobChangePending,
+            boolean showInventoryTab
     ) {
     }
 
@@ -321,11 +344,12 @@ public class TownVillagerUIs {
                                     e.getJobId(),
                                     e.getFlagPos(),
                                     e.hasBlockOfProgress(),
-                                    !d.unlockableJobs().isEmpty()
+                                    !d.unlockableJobs().isEmpty(),
+                                    d.showInventoryTab()
                             );
                             x.connectToServer(e, d.sender());
                             return x;
-                        }, d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty()
+                        }, d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab()
                 )
         );
         b.put(
@@ -339,13 +363,15 @@ public class TownVillagerUIs {
                                     d.quests(),
                                     e.getFlagPos(),
                                     e.hasBlockOfProgress(),
-                                    !d.unlockableJobs().isEmpty()
+                                    !d.unlockableJobs().isEmpty(),
+                                    d.showInventoryTab()
                             ),
                             d.quests(),
                             e,
                             d.stats(),
                             d.jobChangePending(),
-                            !d.unlockableJobs().isEmpty()
+                            !d.unlockableJobs().isEmpty(),
+                            d.showInventoryTab()
                     );
                 }
         );
@@ -361,7 +387,8 @@ public class TownVillagerUIs {
                                         e.getFlagPos(),
                                         d.stats(),
                                         e.hasBlockOfProgress(),
-                                        !d.unlockableJobs().isEmpty()
+                                        !d.unlockableJobs().isEmpty(),
+                                        d.showInventoryTab()
                                 );
                                 m.attach(e);
                                 return m;
@@ -370,7 +397,8 @@ public class TownVillagerUIs {
                             e,
                             d.stats(),
                             d.jobChangePending(),
-                            !d.unlockableJobs().isEmpty()
+                            !d.unlockableJobs().isEmpty(),
+                            d.showInventoryTab()
                     );
                 }
         );
@@ -408,8 +436,9 @@ public class TownVillagerUIs {
                                 d.entity.getJobId(),
                                 d.entity().getFlagPos(),
                                 d.jobChangePending(),
-                                !d.unlockableJobs().isEmpty()
-                        ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty()
+                                !d.unlockableJobs().isEmpty(),
+                                d.showInventoryTab()
+                        ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab()
                 )
         );
         b.put(
@@ -424,8 +453,9 @@ public class TownVillagerUIs {
                                     d.entity().getFlagPos(),
                                     d.econ(),
                                     d.entity().hasBlockOfProgress(),
-                                    !d.unlockableJobs().isEmpty()
-                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty()
+                                    !d.unlockableJobs().isEmpty(),
+                                    d.showInventoryTab()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab()
                     );
                 }
         );
@@ -439,8 +469,9 @@ public class TownVillagerUIs {
                                     windowId,
                                     d.entity().getUUID(),
                                     d.entity().getFlagPos(),
-                                    !d.unlockableJobs().isEmpty()
-                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty()
+                                    !d.unlockableJobs().isEmpty(),
+                                    d.showInventoryTab()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab()
                     );
                 }
         );
@@ -462,7 +493,8 @@ public class TownVillagerUIs {
             VisitorMobEntity e,
             VillagerStatsData stats,
             boolean isJobChangePending,
-            boolean showSkillsTab
+            boolean showSkillsTab,
+            boolean showInventoryTab
     ) {
         Compat.openScreen(
                 sender, new MenuProvider() {
@@ -489,6 +521,7 @@ public class TownVillagerUIs {
                         new VillagerEconomicsData(ImmutableList.of()),
                         e.hasBlockOfProgress(),
                         showSkillsTab,
+                        showInventoryTab,
                         isJobChangePending
                 )
         );

@@ -82,3 +82,4 @@ public class UIQuestItemProgressTest {
         assertEquals("menu.common.quantity", itemQuest(null).getName().getString());
     }
 }
+

@@ -23,4 +23,13 @@ public interface VillagerTabsEmbedding {
     default boolean showSkillsTab() {
         return true;
     }
+
+    /**
+     * Management-only flag click-through: the villager menu reached from the flag's
+     * villager cards hides the inventory tab (the player manages jobs/status there, not
+     * the townie's item inventory). Default on: the right-click villager menu keeps it.
+     */
+    default boolean showInventoryTab() {
+        return true;
+    }
 }

@@ -38,3 +38,24 @@ management view (a "management only" flag/mode on the screen). Ties into the
 flag-menu tab work (`flag-menu-default-tab-quests.md`) and the villager status
 surfaces (`villager-menu-needs-job-board-during-evening-idle.md`,
 `stats-page-show-didnt-eat-didnt-sleep.md`).
+
+## 2026-10-14 recurrence (playtest, server-19, chat 04:14:38)
+
+> "When viewing the villager menu(s) via the flag click-thru, the
+> 'inventory' tab should be hidden."
+
+Same ask, re-observed on the 1.20.6 branch: the villager menu reached
+via the flag click-through still shows the inventory tab.
+
+## 2026-10-14 implemented
+
+Flag click-through now opens management-only: `OpenVillagerMenuMessage` carries
+`showInventoryTab` (false from the flag's card click, `MultiStatusScreen.mouseClicked`,
+which also now targets the STATS pane instead of INVENTORY); the flag rides
+`VillagerHolder.showUI(4-arg)` -> `TownVillagerUIs.showUI` (INVENTORY->STATS
+redirect when management-only) -> `ShowerData` -> the six tabbed menus
+(`getEnabledTabs()` = `VillagerTabs.hideInventory` when off) AND the
+server->client payload (`VillagerMenusPayload.showInventoryTab`), so pane
+navigation stays management-only. Right-click on the townie keeps the full
+menu. `gui/COMPLEX.md` "MultiStatusScreen: full-card click ... management-only
+mode".

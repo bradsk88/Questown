@@ -81,8 +81,11 @@ rulings are ANSWERED and recorded in the tickets (see "Rulings" below).
    vs cooked HUNGER_FILL (1f); the satiety timer drains to 0 and re-triggers
    the hungry listener, so raw-only townies cycle ~2x as often. s19 live
    evidence: "Fullness changed from -1200 to 5000". No code change.
-8. **Inventory tab in flag click-through menus** (recurrence section in
-   `.scratch/day1-playtest-2026-10-11/villager-card-opens-management-only-screen.md`).
+8. **Inventory tab in flag click-through menus** — DONE: management-only
+   flag on `OpenVillagerMenuMessage` + payload (STATS landing, INVENTORY->STATS
+   redirect, six tabbed menus filter via `VillagerTabs.hideInventory`).
+   `gui/COMPLEX.md` "MultiStatusScreen: full-card click ... management-only
+   mode".
 9. **Villager display names** (`villager-display-names.md`) — ruling: name tags,
    menu headers, system chat messages; NO number reuse.
 10. **Onboarding miner after cook** (`onboarding-miner-after-cook.md`) — full

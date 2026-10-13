@@ -63,6 +63,16 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public void showUI(
+                    ServerPlayer sender,
+                    String type,
+                    UUID villagerId,
+                    boolean showInventoryTab
+            ) {
+                villagerHandle.uis.showUI(sender, type, villagerId, showInventoryTab);
+            }
+
+            @Override
             public void fillHunger(UUID uuid) {
                 villagerHandle.delegate.fillHunger(uuid);
             }

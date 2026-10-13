@@ -128,14 +128,16 @@ public class VillagerTabs extends Tabs implements SubUI {
     public static Runnable makeOpenFn(
             BlockPos fp,
             UUID gathererId,
-            String type
+            String type,
+            boolean showInventoryTab
     ) {
         Runnable fn = () -> QuestownNetwork.sendToServer(new OpenVillagerMenuMessage(
                 fp.getX(),
                 fp.getY(),
                 fp.getZ(),
                 gathererId,
-                type
+                type,
+                showInventoryTab
         ));
         return fn;
     }
@@ -145,7 +147,7 @@ public class VillagerTabs extends Tabs implements SubUI {
 
         Function<String, Runnable> factory = typ -> {
             if (enabledTabs.contains(typ)) {
-                return makeOpenFn(menu.getFlagPos(), menu.getVillagerUUID(), typ);
+                return makeOpenFn(menu.getFlagPos(), menu.getVillagerUUID(), typ, menu.showInventoryTab());
             }
             return null;
         };
@@ -169,6 +171,11 @@ public class VillagerTabs extends Tabs implements SubUI {
     /** The tab list minus the skills tab (the level gate: no unlockable jobs, no tab). */
     public static Collection<String> hideSkills(Collection<String> tabs) {
         return tabs.stream().filter(v -> !v.equals(OpenVillagerMenuMessage.SKILLS)).toList();
+    }
+
+    /** The tab list minus the inventory tab (management-only flag click-through). */
+    public static Collection<String> hideInventory(Collection<String> tabs) {
+        return tabs.stream().filter(v -> !v.equals(OpenVillagerMenuMessage.INVENTORY)).toList();
     }
 
     public static Collection<String> except(String except) {

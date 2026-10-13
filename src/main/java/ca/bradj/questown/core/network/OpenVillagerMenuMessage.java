@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public record OpenVillagerMenuMessage(
-        int flagX, int flagY, int flagZ, UUID villagerUUID, String type
+        int flagX, int flagY, int flagZ, UUID villagerUUID, String type, boolean showInventoryTab
 ) {
 
     public static final String INVENTORY = "inventory";
@@ -29,6 +29,7 @@ public record OpenVillagerMenuMessage(
         buffer.writeInt(msg.flagZ());
         buffer.writeUUID(msg.villagerUUID());
         buffer.writeUtf(msg.type());
+        buffer.writeBoolean(msg.showInventoryTab());
     }
 
     public static OpenVillagerMenuMessage decode(RegistryFriendlyByteBuf buffer) {
@@ -37,7 +38,8 @@ public record OpenVillagerMenuMessage(
         int flagZ = buffer.readInt();
         UUID id = buffer.readUUID();
         String type = buffer.readUtf();
-        return new OpenVillagerMenuMessage(flagX, flagY, flagZ, id, type);
+        boolean showInventoryTab = buffer.readBoolean();
+        return new OpenVillagerMenuMessage(flagX, flagY, flagZ, id, type, showInventoryTab);
     }
 
 
@@ -52,7 +54,7 @@ public record OpenVillagerMenuMessage(
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Quest will not be removed.", flagX, flagY, flagZ);
                 return;
             }
-            flag.getVillagerHandle().showUI(sender, type(), villagerUUID());
+            flag.getVillagerHandle().showUI(sender, type(), villagerUUID(), showInventoryTab());
         }).exceptionally((ex) -> {
             QT.GUI_LOGGER.error("Failed to open villager menu", ex);
             return null;

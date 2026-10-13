@@ -28,6 +28,7 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
     private final Stack<Runnable> closers = new Stack<>();
     private final boolean showBlockOfProgressTab;
     private final boolean showSkillsTab;
+    private final boolean showInventoryTab;
 
     public static VillagerStatsMenu ForClientSide(
             int windowId,
@@ -45,11 +46,13 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
             BlockPos flagPos,
             VillagerStatsData initialData,
             boolean showBlockOfProgressTab,
-            boolean showSkillsTab
+            boolean showSkillsTab,
+            boolean showInventoryTab
     ) {
         super(MenuTypesInit.VILLAGER_STATS.get(), null, null, windowId, flagPos, villager);
         this.showBlockOfProgressTab = showBlockOfProgressTab;
         this.showSkillsTab = showSkillsTab;
+        this.showInventoryTab = showInventoryTab;
 
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
         this.fullnessSlot.set((int) (initialData.fullnessPercent() * 100));
@@ -132,7 +135,13 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
 
     @Override
     public Collection<String> getEnabledTabs() {
-        return showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+        Collection<String> tabs = showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+        return showInventoryTab ? tabs : VillagerTabs.hideInventory(tabs);
+    }
+
+    @Override
+    public boolean showInventoryTab() {
+        return showInventoryTab;
     }
 
     @Override

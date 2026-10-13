@@ -44,6 +44,29 @@ public class TownVillagerUIsHandle {
         );
     }
 
+    public void showUI(
+            ServerPlayer sender,
+            String type,
+            UUID villagerId,
+            boolean showInventoryTab
+    ) {
+        int level = villagers.getLevel(villagerId);
+        ImmutableSet<JobID> unlockable = villagers
+                .getChildJobsKnownToExist(villagers.getEntity(villagerId).getJobId())
+                .stream()
+                .filter(job -> ServerJobsRegistry.getAvailableAtLevel(job) <= level)
+                .collect(ImmutableSet.toImmutableSet());
+        TownVillagerUIs.showUI(
+                sender,
+                villagers.entities(),
+                type,
+                villagerId,
+                villagers.getUnlockedJobs(),
+                unlockable,
+                showInventoryTab
+        );
+    }
+
     public void showMultiStatusUI(ServerPlayer player, Collection<VisitorMobEntity> entities) {
         TownVillagerUIs.showMultiStatusUI(
                 player,
