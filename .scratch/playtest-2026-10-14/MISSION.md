@@ -95,9 +95,11 @@ rulings are ANSWERED and recorded in the tickets (see "Rulings" below).
 11. **1.20 vanilla skins in the UUID pool** (`use-1.20-villager-skins.md`) — DONE:
     9 vanilla slim skins (1.20.6 jar-verified) + 6 custom, floor-mod UUID pick,
     pure `TownieSkins` + `TownieSkinsTest`.
-12. **load-time reward noise — plain-language explanation** (`.scratch/day1-playtest-2026-10-11/load-time-reward-reclaim-error-noise.md`) —
-    user doesn't understand the problem; write a plain-language explanation
-    into the ticket (what fires, why, silence-vs-fix options). HOLDING on decision.
+12. **load-time reward noise — plain-language explanation** (`.scratch/day1-playtest-2026-10-11/load-time-reward-reclaim-error-noise.md`) — DONE:
+    explanation written (two different log lines: stale WARN comment +
+    deserializer replay re-claiming rewards; corrected the ticket's
+    initializer hypothesis). Decision HOLDING — recommendation B
+    (replay-without-claim) + WARN downgrade.
 
 ## Rulings (2026-10-14 night, user, all recorded in tickets)
 

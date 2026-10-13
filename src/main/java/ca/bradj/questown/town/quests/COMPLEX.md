@@ -251,3 +251,21 @@ the town's top need the moment it starts feeding, so the need-driven
 top-need batch below it now picks up whichever need is NOT coal.
 `TutorialPhaseGateTest` walks the full ladder through the miner beat (the
 phase-ladder helpers post + complete it so later phases still advance).
+
+## World-load replay re-claims finished batches' rewards (every load, by construction)
+
+`QuestBatches.initialize` (the quest-deserializer's rebuild, NOT the flag
+initializer chain) re-creates every batch and replays each on-disk
+completed quest through `markRecipeAsComplete` — so the *last* quest of a
+finished batch re-fires `reward.claim()` on the restored, already-applied
+reward, and `Reward.claim()`'s once-guard logs "Refusing to apply reward
+more than once" at ERROR on **every load** of a post-onboarding world
+(guard works: no double spawn/posting). Completion + claim are synchronous,
+so "quest complete on disk" ⇒ "reward applied on disk" always; the replay
+never needs to claim. Companion noise: the `MCInstantReward` deserializer
+ctor WARNs on any persisted applied instant reward ("unexpected" is stale
+— normal now). Options A (quiet guard) vs B (replay path that marks
+complete without claiming) + recommendation: ticket
+`.scratch/day1-playtest-2026-10-11/load-time-reward-reclaim-error-noise.md`
+(HOLDING on the decision; drive-by: `filterOutDuplicateCompletion`'s
+`eqb` builder is vestigial, never read).
