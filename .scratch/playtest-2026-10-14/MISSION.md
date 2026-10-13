@@ -92,9 +92,9 @@ rulings are ANSWERED and recorded in the tickets (see "Rulings" below).
 10. **Onboarding miner after cook** — DONE: fixed post-cook beat (phase 2.7),
     JOB_CHANGE(miner/coal) + pickaxes + coal + mineshaft room; onboarding-flagged
     guarantee; PHASE_MINER reward.
-11. **1.20 vanilla skins in the UUID pool** (`use-1.20-villager-skins.md`) —
-    scope: add new 1.20.5+ vanilla skin variants to the existing UUID-hash pool
-    (Steve/Alex/custom). No job mapping.
+11. **1.20 vanilla skins in the UUID pool** (`use-1.20-villager-skins.md`) — DONE:
+    9 vanilla slim skins (1.20.6 jar-verified) + 6 custom, floor-mod UUID pick,
+    pure `TownieSkins` + `TownieSkinsTest`.
 12. **load-time reward noise — plain-language explanation** (`.scratch/day1-playtest-2026-10-11/load-time-reward-reclaim-error-noise.md`) —
     user doesn't understand the problem; write a plain-language explanation
     into the ticket (what fires, why, silence-vs-fix options). HOLDING on decision.

@@ -154,3 +154,14 @@ rules apply; the holder type is carried through `current` as `Object`, so
 `textures/bubble/attention.png`) instead of the door's item bubble. The hint
 (action-bar text on close examination) comes from `Kind.hintKey` —
 `message.questown.attention.*` in en_us.json.
+
+## Townie skin pool (`TownieSkins`, 2026-10-14)
+
+Townie skins are a deterministic per-UUID pick from a pool: the 9 vanilla
+1.20.6 character skins (slim variants, `minecraft:textures/entity/player/
+slim/{alex,ari,efe,kai,makena,noor,steve,sunny,zuri}.png` — added alongside
+Steve/Alex in 1.20.5) plus the mod's 6 custom `textures/entity/1-6.png`.
+`VisitorMobRenderer` bakes `PLAYER_SLIM`, so the slim textures are the
+match. `TownieSkins` is pure (pool + floor-mod pick) so it is
+unit-testable without the client; the renderer delegates to it. Use
+floor-mod, not `Math.abs`, for the hash (MIN_VALUE edge).

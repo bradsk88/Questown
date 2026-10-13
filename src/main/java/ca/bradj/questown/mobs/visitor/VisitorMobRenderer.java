@@ -1,9 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.render.BubbleRenderer;
-import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -17,16 +15,6 @@ import net.minecraft.world.item.crafting.Ingredient;
 import java.util.UUID;
 
 public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, PlayerModel<VisitorMobEntity>> {
-
-    // TODO: Just scan the directory for files
-    static ImmutableList<ResourceLocation> customSkins = ImmutableList.of(
-            Questown.ResourceLocation("textures/entity/1.png"),
-            Questown.ResourceLocation("textures/entity/2.png"),
-            Questown.ResourceLocation("textures/entity/3.png"),
-            Questown.ResourceLocation("textures/entity/4.png"),
-            Questown.ResourceLocation("textures/entity/5.png"),
-            Questown.ResourceLocation("textures/entity/6.png")
-    );
 
     public VisitorMobRenderer(
             EntityRendererProvider.Context ctx
@@ -43,10 +31,8 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
     }
 
     public static ResourceLocation getTextureLocation(UUID uuid) {
-        // 1.20.6 has no DefaultPlayerSkin; fall back to the custom skin list,
-        // keeping the per-UUID deterministic pick.
-        int index = Math.abs(uuid.hashCode()) % customSkins.size();
-        return customSkins.get(index);
+        // Deterministic per-UUID pick from the vanilla-1.20 + custom skin pool.
+        return TownieSkins.pick(uuid);
     }
 
     @Override
