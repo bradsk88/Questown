@@ -1314,7 +1314,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return MCQuest.standalone(batchUUID, null, roomId);
     }
 
-    private void addHunterGatherer(TutorialTownView view) {
+    void addHunterGatherer(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
 
@@ -1339,6 +1339,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         q.addNewQuest(bedroomQuest);
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_HUNTER_GATHERER));
+        // Onboarding-flow quest: like the other tutorial-phase batches (see
+        // addQuestsForJobChangeAndFood), it is onboarding-flagged. Without the flag the
+        // open hunter JOB_CHANGE quest is invisible to onboardingJobChangeGuarantee, and
+        // a BOP spend with no BOP blessing pre-rolls arbitrarily instead of promising
+        // the hunter the quest names (2026-10-14 playtest: pre-roll fisher beat the
+        // intended first hunter).
+        markOnboarding(qq);
         questBatches.add(qq);
         QT.QUESTS_LOGGER.debug("Tutorial batch #1.5 was added to town: {}", qq.toNiceString());
     }
@@ -1752,10 +1759,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     /**
      * The onboarding job-change guarantee (ruling D, 2026-10-13, expected-guaranteed-cook-got-arborist.md):
      * while an onboarding JOB_CHANGE quest is open, its wanted root is what a BOP spend promises,
-     * so it fills the same guarantee slot a blessed BOP's NBT uses. The first hunter was
-     * guaranteed this way (the town's first BOP was hunter-blessed); without this, the onboarding
-     * cook quest could lose to a plain pre-roll or a differently-blessed BOP and hand the town
-     * an arborist instead. The oldest open onboarding JOB_CHANGE quest for this townie wins
+     * so it fills the same guarantee slot a blessed BOP's NBT uses. Without this, a spend with no
+     * BOP blessing pre-rolls arbitrarily - the onboarding cook quest lost to an arborist in the
+     * 2026-10-13 incident, and the first hunter lost to a fisher in the 2026-10-14 playtest
+     * (the hunter-gatherer batch was unflagged until addHunterGatherer gained markOnboarding).
+     * The oldest open onboarding JOB_CHANGE quest for this townie wins
      * (owner null, or this townie); empty once the onboarding job-change quests are done.
      */
     public Optional<JobID> onboardingJobChangeGuarantee(VillagerUUID target) {
