@@ -56,6 +56,13 @@ public interface QuestsHolder {
 
     Collection<MCQuestBatch> getAllBatchesForVillager(UUID uuid);
 
+    /**
+     * Deposit progress for open ITEM quests: wantedId -> matching items already in the
+     * town containers (the "(n/target)" numerator rendered on the quest card). Empty
+     * when no open ITEM quest.
+     */
+    Map<ResourceLocation, Integer> openItemQuestProgress();
+
     void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID);
 
     void addItemQuest(

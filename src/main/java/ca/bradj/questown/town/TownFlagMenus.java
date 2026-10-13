@@ -56,7 +56,11 @@ public class TownFlagMenus {
         @SuppressWarnings("DataFlowIssue")
         ImmutableList<AbstractMap.SimpleEntry<MCQuest, MCReward>> quests = flag.getQuestHandle()
                                                                                .getAllQuestsWithRewards();
-        List<UIQuest> uiQuests = UIQuest.fromLevel(sender.serverLevel(), quests);
+        List<UIQuest> uiQuests = UIQuest.fromLevel(
+                sender.serverLevel(),
+                quests,
+                flagEntity.getQuestHandle().openItemQuestProgress()
+        );
 
         QuestScreenSummary summary = new QuestScreenSummary(
                 QuestCompletion.allComplete(uiQuests.stream().map(q -> q.status).toList()),

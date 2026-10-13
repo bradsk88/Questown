@@ -59,7 +59,12 @@ rulings are ANSWERED and recorded in the tickets (see "Rulings" below).
    list omitted `CHANGE_ROOT`, so the switch-job tab's open-fn was null and it
    rendered selected; now `VillagerTabs.except(ECONOMICS)` like every sibling,
    pinned by `VillagerEconomicsMenuEnabledTabsTest` (red-verified by stash).
-4. **"Create N items" shows no (3/8) progress** (`item-quest-deposit-progress.md`).
+4. **"Create N items" shows no (3/8) progress** (`item-quest-deposit-progress.md`) —
+   **DONE** (2026-10-14 night): `UIQuest.deposited` (wire -1 == null) + "(n/target)"
+   card rendering capped at target; `TownQuests.openItemQuestProgress()` uses the
+   same ingredient matching as the completion path; wired via `QuestsHolder` into
+   the flag QUESTS tab + `showQuestsUI`. Pinned by `UIQuestItemProgressTest`
+   (3 tests; red by construction — the field did not exist pre-fix).
 5. **Raw-food quest naming** (`raw-food-quest-naming-mismatch.md`) — user's exact
    copy in the ticket ("Food" / "cooked food"); data change.
 6. **"Food" quest type + re-deposit completion** (`food-quest-wrong-type-and-redeposit-completion.md`).

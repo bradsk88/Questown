@@ -1637,6 +1637,32 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /**
+     * Deposit progress for open ITEM quests: wantedId -> how many matching
+     * items the town containers already hold (the "(n/target)" numerator on
+     * the quest card). Same container scan and ingredient matching as the
+     * completion path ({@code processItemQuests}), so the displayed count is
+     * the one that completes the quest. Empty when no open ITEM quest.
+     */
+    public Map<ResourceLocation, Integer> openItemQuestProgress() {
+        List<MCQuest> open = questBatches.getAll().stream()
+                .filter(q -> q.getType() == Quest.QuestType.ITEM && !q.isComplete())
+                .toList();
+        if (open.isEmpty()) {
+            return ImmutableMap.of();
+        }
+        TownFlagBlockEntity t = this.town.getUnsafe();
+        ImmutableList<MCTownItem> stacks = TownContainers.getAllStacks(t, t.getServerLevel());
+        Map<ResourceLocation, Integer> out = new HashMap<>();
+        for (MCQuest q : open) {
+            out.put(q.getWantedId(), stacks.stream()
+                    .filter(s -> questMatchesStack(q.getWantedId(), s))
+                    .mapToInt(s -> s.toQTItemStack().getCount())
+                    .sum());
+        }
+        return out;
+    }
+
+    /**
      * Completes open ROOM and ITEM quests that the current town state already satisfies (a
      * registered room for the recipe, or enough item copies in town containers).
      *

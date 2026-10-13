@@ -77,7 +77,11 @@ public class TownQuestsHandle implements QuestsHolder {
     public void showQuestsUI(ServerPlayer player) {
         @NotNull TownFlagBlockEntity t = unsafeGetTown();
         ImmutableList<HashMap.SimpleEntry<MCQuest, MCReward>> aQ = unsafeGetTown().getAllQuestsWithRewards();
-        @SuppressWarnings("DataFlowIssue") List<UIQuest> quests = UIQuest.fromLevel(t.getServerLevel(), aQ);
+        @SuppressWarnings("DataFlowIssue") List<UIQuest> quests = UIQuest.fromLevel(
+                t.getServerLevel(),
+                aQ,
+                t.quests.openItemQuestProgress()
+        );
 
         QuestScreenSummary summary = new QuestScreenSummary(
                 QuestCompletion.allComplete(quests.stream().map(q -> q.status).toList()),
@@ -197,6 +201,11 @@ public class TownQuestsHandle implements QuestsHolder {
     @Override
     public void processLootQuests(MCTownItem extracted) {
         unsafeGetTown().quests.processLootQuests(extracted);
+    }
+
+    @Override
+    public Map<ResourceLocation, Integer> openItemQuestProgress() {
+        return unsafeGetTown().quests.openItemQuestProgress();
     }
 
     @Override

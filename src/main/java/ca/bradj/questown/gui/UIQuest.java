@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
@@ -41,6 +42,7 @@ public class UIQuest implements Comparable<UIQuest> {
             null,
             null,
             null,
+            null,
             null
     );
     public final Quest.QuestStatus status;
@@ -53,6 +55,14 @@ public class UIQuest implements Comparable<UIQuest> {
     private final String jobName;
     @Nullable
     private final String flavorText;
+    /**
+     * ITEM-quest deposit progress: how many of the wanted item the town
+     * containers already hold (rendered as "(deposited/target)" on the card,
+     * capped at the target). Null for every other quest type and for ITEM
+     * quests whose progress was not computed.
+     */
+    @Nullable
+    private final Integer deposited;
     public final boolean isBroken;
 
     public UIQuest(
@@ -64,7 +74,8 @@ public class UIQuest implements Comparable<UIQuest> {
             @Nullable ResourceLocation fromRecipe,
             @Nullable VillagerUUID jobRecipientUUID,
             @Nullable String jobName,
-            @Nullable String flavorText
+            @Nullable String flavorText,
+            @Nullable Integer deposited
     ) {
         this.isBroken = SpecialQuests.BROKEN.equals(wantedId) || ingredients == null;
         this.wantedId = wantedId;
@@ -76,6 +87,7 @@ public class UIQuest implements Comparable<UIQuest> {
         this.jobName = jobName;
         this.flavorText = flavorText;
         this.batchUUID = batchUUID;
+        this.deposited = deposited;
     }
 
     public static List<UIQuest> fromLevel(
@@ -90,6 +102,18 @@ public class UIQuest implements Comparable<UIQuest> {
     public static List<UIQuest> fromLevel(
             Level level,
             Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ
+    ) {
+        return fromLevel(level, aQ, java.util.Map.of());
+    }
+
+    /**
+     * Same as the two-arg form, but each open ITEM quest whose wanted id appears in
+     * {@code itemProgress} carries its deposit count (the card renders "(n/target)").
+     */
+    public static List<UIQuest> fromLevel(
+            Level level,
+            Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ,
+            Map<ResourceLocation, Integer> itemProgress
     ) {
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
@@ -136,7 +160,8 @@ public class UIQuest implements Comparable<UIQuest> {
                     v.fromRecipeID().orElse(null),
                     jobRecipientUUID,
                     job,
-                    v.getFlavorText()
+                    v.getFlavorText(),
+                    v.getType() == Quest.QuestType.ITEM ? itemProgress.get(v.getWantedId()) : null
             );
         }).toList();
     }
@@ -211,7 +236,13 @@ public class UIQuest implements Comparable<UIQuest> {
     public Component getName() {
         return switch (type) {
             case ROOM -> RoomRecipes.getName(wantedId);
-            case ITEM -> Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size());
+            case ITEM -> {
+                MutableComponent name = Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size());
+                if (deposited != null) {
+                    name.append(Compat.literal("(" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
+                }
+                yield name;
+            }
             case LOOT -> Compat.translatable("menu.quests.raw_food");
             case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractJobName());
             case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", extractRootJobName());
@@ -252,6 +283,11 @@ public class UIQuest implements Comparable<UIQuest> {
         return type;
     }
 
+    @Nullable
+    public Integer getDeposited() {
+        return deposited;
+    }
+
     public static class Serializer {
 
         public void toNetwork(
@@ -275,6 +311,7 @@ public class UIQuest implements Comparable<UIQuest> {
             buf.writeUtf(jobName);
             buf.writeUtf(p_44102_.batchUUID == null ? "" : p_44102_.batchUUID.toString());
             buf.writeUtf(p_44102_.flavorText == null ? "" : p_44102_.flavorText);
+            buf.writeInt(p_44102_.deposited == null ? -1 : p_44102_.deposited);
         }
 
         @Nullable
@@ -302,7 +339,8 @@ public class UIQuest implements Comparable<UIQuest> {
             if (flavorText.isEmpty()) {
                 flavorText = null;
             }
-            return new UIQuest(batchUUID, wanteId, type, ingrs, status, from, villagerUUID, jobName, flavorText);
+            int deposited = buf.readInt();
+            return new UIQuest(batchUUID, wanteId, type, ingrs, status, from, villagerUUID, jobName, flavorText, deposited < 0 ? null : deposited);
         }
     }
 }
