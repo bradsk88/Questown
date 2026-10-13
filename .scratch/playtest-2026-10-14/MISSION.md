@@ -76,8 +76,11 @@ rulings are ANSWERED and recorded in the tickets (see "Rulings" below).
    containers); it WAS a LOOT quest - the perception came from the "Raw food"
    name (fixed by #5). Open ruling parked: card says "produce 8" but LOOT
    completes on first extraction - copy fix vs accumulate.
-7. **Raw-food repeat eating** (`raw-food-repeat-eating.md`) — code question:
-   what does the eating loop gate on? Answer or fix.
+7. **Raw-food repeat eating** (`raw-food-repeat-eating.md`) — **ANSWERED:
+   intended** (2026-10-14 night): raw meals apply HUNGER_FILL_HALF (0.5f)
+   vs cooked HUNGER_FILL (1f); the satiety timer drains to 0 and re-triggers
+   the hungry listener, so raw-only townies cycle ~2x as often. s19 live
+   evidence: "Fullness changed from -1200 to 5000". No code change.
 8. **Inventory tab in flag click-through menus** (recurrence section in
    `.scratch/day1-playtest-2026-10-11/villager-card-opens-management-only-screen.md`).
 9. **Villager display names** (`villager-display-names.md`) — ruling: name tags,
