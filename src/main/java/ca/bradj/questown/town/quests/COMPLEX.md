@@ -33,6 +33,19 @@ flowchart TD
   quest in the batch done after the first one completes. The recipe id is the
   per-quest identity; the batch UUID is the grouping.
 
+## The `empty_room` wildcard is weight 0 on purpose
+
+`questown:empty_room` (the D#2 "build any room" early quest) is a
+zero-ingredient recipe, so it matches any room and its cost sums to 0
+(`QuestBatchSeed.computeQuestCost`). The 0 is load-bearing: at the default
+item weight (100) it would tie every real room recipe's cost, and
+`Stream.max` keeps the first on a tie - stream order, not merit (the same
+tie that makes the board's synthetic `block_room/...` recipe win, see
+town/entity/COMPLEX.md "on the spot"). Weight 0 makes it the loser of every
+tie, so a real recipe always wins the top match. `computeQuestCost`
+therefore warns "Recipe weight is 0" only for NON-empty recipes (commit
+c4934342).
+
 ## Startup double-fill guard (`QuestBatches.markRecipeAsComplete`)
 
 The aggregate's `markRecipeAsComplete(room, recipeId)` (used by backfill, the
