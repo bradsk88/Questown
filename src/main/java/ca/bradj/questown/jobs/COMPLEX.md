@@ -393,3 +393,32 @@ server `getGameTime()` + remaining, total) or null when any link is
 absent. `VisitorMobEntity.getLeaverReturn()` is the thin owner-side
 delegate; the consumers are the villagers-menu payload (gui/COMPLEX.md
 "Leaver-return progress bar") and nothing else.
+
+## Foreign work-state records read as fresh: the shared block-state slot (2026-10-14)
+
+One job block position carries a SINGLE per-owner work-state record
+(`WorkStatusHandle.getJobBlockState(pos)`), but several works can share that
+block as their location with DIFFERENT state numbering: the flag block hosts
+`bop_depositing` (states 0–2) and `DowntimeWork` (states 0–9) at the same
+`SpecialQuests.TOWN_FLAG` location. A cycle interrupted mid-sequence (downtime
+→ seeking_work at state 3) leaves the record where it was; completed cycles
+reset to `State.fresh()` (`AbstractWorldInteraction` l.309/l.601), so only
+*interrupted* cycles leave foreign records.
+
+Read sites must normalize: **`processingState > maxState` ⇒ read as
+`State.freshAtState(0)`** — an out-of-range value can never advance itself in
+this job's state machine. The three sibling read sites (the "must agree"
+warning in `DeclarativeJobs.rooms`):
+
+- `DeclarativeJobTicker.computeRoomsNeedingInput` (supply loop) — had it first
+  ("a foreign job's bare write, or an expired timer that overflowed past this
+  job's maxState");
+- `DeclarativeJobs.rooms` (the status gate behind NO_JOBSITE/NO_SPACE) and
+  `DeclarativeJobs.findJobSite` (spot claim) — 2026-10-14 playtest: the gate
+  read the raw foreign 3, found no spot at 0/1, and the BOP depositor soft-
+  locked (ticket `.scratch/playtest-2026-10-14/bop-deposit-stall-and-
+  duplication.md`; each stalled re-entry also re-granted a BOP — the
+  hand-out is now idempotent, `town/entity/COMPLEX.md` "Earn → latch →
+  assign"). Pinned by `DeclarativeJobsRoomsForeignStateTest` (red-verified;
+  the in-range + null cases pin the existing behaviour against
+  over-normalization).

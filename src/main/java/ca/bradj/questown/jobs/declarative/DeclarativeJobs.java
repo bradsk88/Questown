@@ -568,6 +568,11 @@ public class DeclarativeJobs {
                 State blockState = work.apply(blockPos);
                 if (blockState == null) {
                     blockState = State.freshAtState(0);
+                } else if (blockState.processingState() > maxState) {
+                    // Foreign work's record (shared block state slot, different numbering):
+                    // out of this job's range it matches no bucket - read as fresh, the
+                    // same as the gate path (rooms above) and the supply-loop guard.
+                    blockState = State.freshAtState(0);
                 }
                 if (isJobBlock.test(blockPos)) {
                     roomFoundButNotBlock = false;
@@ -624,6 +629,13 @@ public class DeclarativeJobs {
                     // here deadlocked leavers whose per-owner store had not yet seeded the
                     // gate mat (NO_JOBSITE soft-lock, 2026-10-08, WorkStatusStoreMatSeedTest).
                     if (jobBlockState == null) {
+                        jobBlockState = State.freshAtState(0);
+                    } else if (jobBlockState.processingState() > maxState) {
+                        // A record written by another work's state machine at this block
+                        // (shared state slot, different numbering - e.g. downtime's 0-9 vs
+                        // bop_depositing's 0-2). Out of this job's range it can never
+                        // advance itself; read it as fresh, same as the supply-loop guard
+                        // (DeclarativeJobTicker.computeRoomsNeedingInput).
                         jobBlockState = State.freshAtState(0);
                     }
                     int v = jobBlockState.processingState();

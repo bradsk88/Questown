@@ -1073,12 +1073,27 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
 
         if (villagerHandle.hasBlockOfProgress(ownerVUID)) {
-            // Bless the BOP with the job that earned it: a "gold" BOP guarantees that root job
-            // when spent on a job change (see BlockOfProgress.bless / getBlessedJob).
-            ItemStack bopStack = new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get());
-            BlockOfProgress.bless(bopStack, currentJob);
-            MCHeldItem bop = MCHeldItem.fromTown(bopStack);
-            villager.tryGiveItem(bop, InventoryFullStrategy.REMOVE_FROM_WORLD);
+            // The latch outlives the first hand-out until the deposit clears it
+            // (ClearBOPSpecialRule), so a stalled deposit loop re-enters this
+            // branch on every flag visit. One townie carries at most one BOP
+            // (town/entity/COMPLEX.md "Earn → latch → assign"): hand out only
+            // when the townie is not already carrying one.
+            boolean carrying = false;
+            Container inv = villager.getInventory();
+            for (int i = 0; i < inv.getContainerSize(); i++) {
+                if (inv.getItem(i).is(ItemsInit.BLOCK_OF_PROGRESS.get())) {
+                    carrying = true;
+                    break;
+                }
+            }
+            if (!carrying) {
+                // Bless the BOP with the job that earned it: a "gold" BOP guarantees that root job
+                // when spent on a job change (see BlockOfProgress.bless / getBlessedJob).
+                ItemStack bopStack = new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get());
+                BlockOfProgress.bless(bopStack, currentJob);
+                MCHeldItem bop = MCHeldItem.fromTown(bopStack);
+                villager.tryGiveItem(bop, InventoryFullStrategy.REMOVE_FROM_WORLD);
+            }
             changeJob.accept(BOPDepositorWork.getIdForRoot(currentJob.rootId()));
             return true;
         }

@@ -90,6 +90,13 @@ flowchart TD
   collects (collection never touches the latch).
 - `changeJobForVisitorFromBoard` checks `hasBlockOfProgress` **before** the
   downtime/rest checks, so a latched townie always takes the deposit over idling.
+- **The hand-out is idempotent (2026-10-14).** The latch outlives the first
+  hand-out until the deposit clears it, so a stalled deposit loop re-enters
+  this branch on every flag visit — and the 2026-10-14 playtest showed that
+  re-entering unconditionally re-granted a BOP each pass (34 in ~4 min, user
+  chat: "dupicating their BOP"). The branch now scans the townie's job
+  inventory for an existing `BLOCK_OF_PROGRESS` and hands out only when none
+  is carried; the deposit routing is unchanged.
 
 ## Deposit — the 64-slot cap
 
