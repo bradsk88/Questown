@@ -578,3 +578,21 @@ needs-triage user calls (village-is-thriving, load-time reward noise).
   options, load-time reward noise); seeking-work instrumented held run
   (world now backed up - safe); playtest-sentinel green-light;
   ghost-empty-item-entities (6 empty-NBT shells every boot - pre-existing).
+
+## Suite post-mortem (2026-10-14 morning)
+
+The unattended full suite **died at 01:14:54 mid-scenario-19/57**
+(`gatherer:axe` had just PASSed; the next scenario's flag initializers were
+running). No JVM crash file, no OOM, no exception at the log tail - the last
+line is a normal DEBUG tick; the process was externally killed (the user's
+session died while they were out - logind cleanup - and the 02:15 login
+wiped /tmp, taking `/tmp/autosuite-1.log` with it). Results recovered from
+`run/logs/debug.log` (server's own log, survived):
+
+- **15 scenarios PASS, 3 FAIL - all 3 in the 2026-10-10 known-fail set:**
+  `arborist:cut_trees` (deposit gap), `farmer:harvest_wheat` (1 variant),
+  `organizer:fetch` (1 variant). **Zero regressions** in the portion that ran.
+- Improvement: `crafter:leather_boots` (a baseline known-fail) now PASSES.
+- Not run (38 scenarios): chicken-arc x6, eating/dine_at_time, nav/roof_gatherer,
+  village/growth, full_cycle, ... Re-run candidate: the 38 unrun, or the
+  full suite again, unattended or held.
