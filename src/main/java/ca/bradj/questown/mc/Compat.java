@@ -101,6 +101,21 @@ public class Compat {
         return Component.translatable(key, args);
     }
 
+    /**
+     * A translatable that renders {@code fallback} (a format pattern taking the same
+     * {@code args}) when {@code key} is missing from the client's lang file, instead of the
+     * raw key. Use for status tooltips, where any unauthored category × status pair would
+     * otherwise surface as the raw i18n key to the player (2026-10-14 playtest: the diner's
+     * tooltip).
+     */
+    public static MutableComponent translatableWithFallback(
+            String key,
+            String fallback,
+            Object... args
+    ) {
+        return Component.translatableWithFallback(key, fallback, args);
+    }
+
     public static Component translatableStyled(
             String s,
             Style style,

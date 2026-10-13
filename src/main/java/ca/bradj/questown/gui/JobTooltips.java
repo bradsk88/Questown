@@ -14,6 +14,14 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class JobTooltips {
+    /**
+     * Last-resort tooltip lines: any category × status key that has no authored entry in
+     * en_us.json would otherwise surface to the player as the raw i18n key
+     * (2026-10-14 playtest: the diner's tooltip). The specific key wins when present.
+     */
+    static final String FALLBACK_LINE_1 = "%s is busy with their work.";
+    static final String FALLBACK_LINE_2 = "";
+
     public static ImmutableList<Component> get(
             ProductionStatus status,
             JobID jobId
@@ -48,8 +56,8 @@ public class JobTooltips {
         String key1 = String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.nameV2());
         String key2 = String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.nameV2());
         components = ImmutableList.of(
-                Compat.translatable(key1, jobName),
-                Compat.translatable(key2, jobName)
+                Compat.translatableWithFallback(key1, FALLBACK_LINE_1, jobName),
+                Compat.translatableWithFallback(key2, FALLBACK_LINE_2, jobName)
         );
         return components;
     }

@@ -643,3 +643,22 @@ convenience constructor keeps the inventory-status call site
 (`InventoryAndStatusMenu`) leaver-free. The bar is a 30×3 fill under the
 32×32 status art (inside the art's footprint — no new card geometry, so no
 layout change; gui-lint check rides the user's first menu open).
+
+## Status tooltips: unauthored keys fall back, never render raw (2026-10-14)
+
+`JobTooltips.buildStandardTooltipKeys` builds
+`tooltips.villagers.job.<cat>.status_N.<STATUS>` keys, but en_us.json only
+authores some category × status pairs (the diner has just NO_SUPPLIES /
+NO_JOBSITE; the fisher has none at all). A missing pair surfaced the **raw
+i18n key** to the player (2026-10-14 playtest, user chat 04:02:30: "Diner
+tooltip is showing i18n key").
+
+The fix is the vanilla `Component.translatableWithFallback(key, fallback,
+args)` (seam: `Compat.translatableWithFallback`): when the specific key is
+absent the client renders the `JobTooltips.FALLBACK_LINE_1/2` last-resort
+lines instead of the key. The fallback is resolved client-side at render
+time, so no `I18n.has` probing is needed (server-side I18n state would
+differ). Pinned by `JobTooltipsFallbackTest` (red-verified: pre-fix the
+components carry no fallback and the equals-assertion fails). New statuses
+or jobs still get specific copy by adding lang keys — the fallback is only
+the last resort.
