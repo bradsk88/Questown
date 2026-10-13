@@ -472,3 +472,109 @@ confirmation pending the held run:
 Next: prep the commit (COMPLEX.md entries written under
 `gui/COMPLEX.md` "Day-1 playtest batch 3") → held-run verification of the
 accumulated feature list → instrumented seeking-work room investigation.
+
+## Session state (2026-10-13, night 4) — held-run verification done
+
+Agent drove two sequential `village/growth` agentDrive holds at 200 t/s
+(`/tmp/village-server.log`, `/tmp/village-server2.log`), every beat via FIFO
+dev commands (`setblock` / `_qtdev place_mat|place_door|registerroom|place_board|
+build_room|place_block|board_request|change_job|clickwand|clickheld|inspect`).
+Full results table: `.scratch/day1-playtest-2026-10-11/held-run-checklist.md`
+"Results" section.
+
+- **PASS live:** E1 BOP job-change (3/3 pre-rolls applied overnight), F2
+  first-work-request (server side), D#2 empty-room quest (both runs), 9d
+  campfire-sleep side selection (instrumented with a temporary DEV-DIAG on the
+  candidate loop — closest-safe-side confirmed, north cells blocked by flag /
+  chicken scaffolding; DIAG removed afterwards, tree clean).
+- **PARTIAL:** row 8 fuel/coal — UNMET surfacing live with real item names
+  (Food → #c:mushrooms); the exact "needs coal" branch needs a cook-ROOT
+  townie; three BOP rolls gave soup_cook/soup_cook/farmer, BOP pool exhausted.
+  Branch is unit-verified. Village left running — new arrivals roll fresh roots.
+- **PENDING visual (client-side, needs the user's eyes):** rows 2-UI, 5, 7,
+  9a/9b/9c/9e.
+- **NOT COVERED live:** row 6 onboarding-cook-guarantee (no onboarding
+  JOB_CHANGE quest was open in either run).
+- New notes: `WARN Recipe weight is 0: questown:empty_room` (cosmetic, consider
+  ticket); `facing=n` rejected by 1.20.6 `setblock` (use `facing=north`);
+  `place_block` arg parser rejects namespaced ids and `Loader.blockFromId`
+  missed `questown:soup_pot_small` (vanilla `setblock` worked); 6.6 s
+  "Can't keep up" spike around room detection at 200 t/s (note, not regression).
+
+## Session state (2026-10-14) — board-quest live bug found + fixed; user playtesting
+
+User back from lunch; drove a fresh playtest (server-11 → 12 → 13 across
+restarts + a machine reboot). Commits:
+- `f05e7c85` welcome-mat card tooltip copy (+ importCheck fix).
+- `af2c557f` empty-room card: oak-door icon + halved flavor.
+- `12a28a0d` **tooltip-precedence fix**: TOWN_GATE/EMPTY_ROOM two-line
+  tooltips moved ABOVE the flavor-text check in `renderCardTooltip` (the
+  posted quest's flavor shadowed the ROOM branch — dead-branch stumble,
+  retro'd).
+- `a60e959f` job-board quest flavor: dash + tail cut.
+- `74710677` user's generic `job_board.empty.top_need` copy (dropped %s);
+  dead arg removed from the WorkScreen call.
+- `91aa5ce4` **board-quest stall**: a board placed OUTSIDE any
+  door-registered room never completed the JOB_BOARD quest (wanted id
+  `questown:job_board` vs the synthetic `block_room/...` registration key;
+  event-path top match ties on cost and wins by stream order). Fixed via a
+  JOB_BOARD branch in `TownRoomsHandle.getRoomsMatching` (per-tick backfill
+  is the completion route now). `JobBoardRecipeDataTest` pins the data
+  wiring. town/entity/COMPLEX.md "on the spot" section rewritten (stale).
+  **Live-verified 00:36**: user re-joined, backfill completed the board
+  quest and posted the F2 day-2 quest.
+- `c4934342` silenced the false-positive "Recipe weight is 0" warning for
+  the zero-ingredient `empty_room` recipe.
+
+**Retro (2026-10-14):** dead-branch tooltip (covered by gui/COMPLEX.md),
+hard-reboot = no save-on-shutdown + no world-freshness check (new
+"Hard machine reboot" section in `references/questown-dev-launch.md` +
+pointer in the playtest-watch skill). Trivial copy-edit commits: no
+COMPLEX.md entry needed (deliberate).
+
+**New tickets (needs-triage):** `ghost-empty-item-entities.md` (6 item
+entities with empty NBT load every boot — pre-existing since server-12),
+`sleep-module-entity-load-before-town-init.md` (`claimBed` at entity load
+throws "Town has not been initialized" — pre-existing; the entity may be
+dropped silently).
+
+**World state (server-13, live):** onboarding complete through basics
+batch; F2 "post your first work request" quest open; board at 23,69,47
+(registered); the old 24,69,50 board was destroyed by the user; chicken arc
+forfeited (WAITING_FOR_STICK); 1 townie (gatherer). Pending-visual items
+unchanged: F2 checkbox row, jobs tooltip, skills-tab absence, 9a/9b/9c/9e.
+
+**Still open (unchanged):** seeking-work instrumented held run;
+playtest-sentinel (ready-for-agent, awaiting green-light); the two
+needs-triage user calls (village-is-thriving, load-time reward noise).
+
+## Day close (2026-10-14 late night) — comprehensive retro + autonomous sleep-module fix
+
+- `2b3c8e13` **townie-drop fix**: `TownVillagerSleepModule` deferred bed claims.
+  Entity load out-runs the flag's initializer; `claimBed` threw
+  "Town has not been initialized" and vanilla dropped the loading entity -
+  one townie/visitor lost per restart (the 00:46 gatherer vanished under
+  `bdaf231f`, reappeared as `2f33acf3` after the next restart). Test:
+  `TownVillagerSleepModuleTest`. Ticket:
+  `sleep-module-entity-load-before-town-init.md` (fixed-2026-10-14).
+- `0b7bb00f` hard-reboot docs; `d6a43a9f` load-path audit; `c7e821b8`
+  empty_room weight-0 doc (town/quests/COMPLEX.md).
+- **Comprehensive retro applied:** AGENTS.md API-drift += `Component` has no
+  `withStyle(Style)` (use `Compat.translatableStyled`); user-level AGENTS.md
+  += one-question-at-a-time preference. Both prior retro items (dead-branch
+  tooltip, hard reboot) already codified - not duplicated.
+- **Full autotest suite running unattended** (`/tmp/autosuite-1.log`, started
+  00:53 on a clean world). As of 01:11: 18/57 scenarios, 2 scenario-FAILs -
+  both in the 2026-10-10 known-fail set (`farmer:harvest_wheat [WARP]`,
+  `organizer:fetch`); `crafter:leather_boots` (a baseline known-fail) now PASSES.
+- **World backups:** `/tmp/playtest-world-2026-10-14` (16M, pre-suite) +
+  `~/playtest-world-2026-10-14` (persistent - /tmp dies on reboot).
+- **Tomorrow's first move:** restore the user's world before any user-facing
+  server launch: `rm -rf run/world && cp -r ~/playtest-world-2026-10-14
+  run/world` (the suite server will save its own world over run/world on
+  shutdown). Server will then run the townie-drop-fixed build.
+- **Still open:** pending-visual items (F2 checkbox row, jobs tooltip,
+  skills-tab absence, 9a/9b/9c/9e); two user calls (village-is-thriving 3
+  options, load-time reward noise); seeking-work instrumented held run
+  (world now backed up - safe); playtest-sentinel green-light;
+  ghost-empty-item-entities (6 empty-NBT shells every boot - pre-existing).
