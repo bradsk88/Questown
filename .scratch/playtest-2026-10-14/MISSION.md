@@ -10,30 +10,27 @@ User left for bed 2026-10-14 night. Instruction: "Continue autonomously... For
 as long as possible, you should NOT stop to ask for my input." All 5 pending
 rulings are ANSWERED and recorded in the tickets (see "Rulings" below).
 
+**QUEUE COMPLETE** (2026-10-14/15 morning): all 12 items done — #10 miner
+beat `11c7952f`, #11 skins `2bbedf3e`, #12 load-time-noise explanation
+`848fb72e`. Full unit suite 1238/0/52.
+
 ## State
 
-- **Server/client: DOWN** (cleanly torn down; world auto-saved). World = the
-  playtest world (onboarding done; townies: gatherer cd8d3125, hunter
-  62c1b324, cook 5de9ec1b). No wipe without user say-so; backup at
-  `~/playtest-world-2026-10-14`.
-- **Server-22 + Client-22: UP** (launched 2026-10-14 night ~05:44; server-22
-  with `-Dquestown.tp.fifo` console — feed commands via `run/ffeed.sh feed
-  '…'`; player "Dev" autojoined and was TP'd to the flag; `forceload` active
-  on the village area). Same playtest world (NOT wiped). Logs:
-  `/tmp/dev-server-22.log`, `/tmp/dev-client-22.log`. Tear down client→server
-  at closeout (world autosaves).
-  Key instruments learned: `_qtdev work_score <pos> <root>` dumps the
-  per-job gate-failure reasons + board requests (DEV-DIAG command,
-  `DevWorkScoreCommand`); the flag ticker stops when no player is near
-  ("stopped ticking because: No pl…") and room detection does not run while
-  stopped — a score dump with no player reads "No rooms match …" for
-  everything. `forceload add -20 260 20 300` loads the village.
-- **Warm logs**: `/tmp/dev-server-19.log` (04:01–04:34), `/tmp/dev-server-20.log`
-  (04:35–04:53), `/tmp/dev-client-*.log`. These are the evidence base for the
-  two soft-locks.
-- Full unit suite was 1214/0/52-skip before tonight's work. Latest commits:
-  `8c5d9e20` (tooltip fallback), `6d0c0166` (hunter guarantee), `23afa0c5`
-  (BOP fix), `582d26c1` (quest cards).
+- **Server-22 + Client-22: TORN DOWN** (clean shutdown 2026-10-15 06:47 BST;
+  world auto-saved on stop). Final playtest world backed up at
+  `~/playtest-world-2026-10-14` (29M, level.dat 06:47:21).
+- **Full autotest suite: RUNNING** (launched 2026-10-15 06:48, `nohup
+  ./gradlew runServer -Dquestown.autotest=true`, log
+  `/tmp/autotest-full-20261013.log`). The suite was only ever run 19/57 last
+  night; re-running unattended because the miner beat (#10) changed the
+  onboarding flow that `village/growth` walks. Wipes `run/world` (backed up;
+  user expected a fresh world on waking). Tally: `grep -cE '\[FAIL\]
+  scenario:'` — count scenarios, not lines. Baseline: the 14 known-failing
+  scenarios in AGENTS.md "1.20.6 full-suite autotest baseline" — a NEW
+  `[FAIL] scenario:` line is a regression.
+- **Warm logs**: `/tmp/dev-server-22.log` (05:46–06:47; the hunter/coin-flip
+  oscillation continued — parked Q3 item, not a regression),
+  `/tmp/dev-server-19.log`, `/tmp/dev-server-20.log`.
 
 ## Queue (in priority order)
 
