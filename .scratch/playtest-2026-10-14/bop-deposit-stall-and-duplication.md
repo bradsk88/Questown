@@ -3,6 +3,8 @@ title: 'BOP deposit stall + BOP duplication: foreign work-state record blocks th
 status: ready-for-agent
 ---
 
+2026-10-14: FIXED `23afa0c5` (foreign-state normalization in `rooms()` + `findJobSite`, idempotent BOP hand-out; `DeclarativeJobsRoomsForeignStateTest`).
+
 # BOP deposit stall + BOP duplication
 
 Captured 2026-10-14 (server-19, fresh-world playtest, in-game chat):

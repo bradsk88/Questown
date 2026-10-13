@@ -3,6 +3,8 @@ title: 'Job-board quest card: use the welcome-mat tooltip format (click to open 
 status: ready-for-agent
 ---
 
+2026-10-14: FIXED `582d26c1`.
+
 # Job-board quest card: mat-format tooltip
 
 Captured 2026-10-14 (fresh-world playtest, server-18, in-game chat 03:48:39):

@@ -3,6 +3,8 @@ title: 'First-hunter guarantee regression: pre-roll fisher beat the intended hun
 status: ready-for-agent
 ---
 
+2026-10-14: FIXED `6d0c0166` (`addHunterGatherer` now marks onboarding; `TownQuestsHunterGathererOnboardingTest`).
+
 # First-hunter guarantee regression
 
 Captured 2026-10-14 (server-19, in-game chat):

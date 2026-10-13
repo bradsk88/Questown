@@ -3,6 +3,8 @@ title: '"Quest lost" fires on the already-complete empty-room quest when the roo
 status: ready-for-agent
 ---
 
+2026-10-14: FIXED `582d26c1`.
+
 # "Quest lost" fires on the already-complete empty-room quest
 
 Captured 2026-10-14 (fresh-world playtest, server-18, in-game chat 03:48:02):

@@ -3,6 +3,8 @@ title: 'Diner tooltip shows raw i18n key'
 status: ready-for-agent
 ---
 
+2026-10-14: FIXED `8c5d9e20` (`Compat.translatableWithFallback` + `JobTooltips` fallback lines; `JobTooltipsFallbackTest`).
+
 # Diner tooltip shows raw i18n key
 
 Captured 2026-10-14 (server-19, in-game chat 04:02:30): "Diner tooltip is
