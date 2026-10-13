@@ -16,6 +16,18 @@ rulings are ANSWERED and recorded in the tickets (see "Rulings" below).
   playtest world (onboarding done; townies: gatherer cd8d3125, hunter
   62c1b324, cook 5de9ec1b). No wipe without user say-so; backup at
   `~/playtest-world-2026-10-14`.
+- **Server-22 + Client-22: UP** (launched 2026-10-14 night ~05:44; server-22
+  with `-Dquestown.tp.fifo` console — feed commands via `run/ffeed.sh feed
+  '…'`; player "Dev" autojoined and was TP'd to the flag; `forceload` active
+  on the village area). Same playtest world (NOT wiped). Logs:
+  `/tmp/dev-server-22.log`, `/tmp/dev-client-22.log`. Tear down client→server
+  at closeout (world autosaves).
+  Key instruments learned: `_qtdev work_score <pos> <root>` dumps the
+  per-job gate-failure reasons + board requests (DEV-DIAG command,
+  `DevWorkScoreCommand`); the flag ticker stops when no player is near
+  ("stopped ticking because: No pl…") and room detection does not run while
+  stopped — a score dump with no player reads "No rooms match …" for
+  everything. `forceload add -20 260 20 300` loads the village.
 - **Warm logs**: `/tmp/dev-server-19.log` (04:01–04:34), `/tmp/dev-server-20.log`
   (04:35–04:53), `/tmp/dev-client-*.log`. These are the evidence base for the
   two soft-locks.
@@ -35,10 +47,18 @@ rulings are ANSWERED and recorded in the tickets (see "Rulings" below).
    full suite 1217/0/52-skip. See the ticket's "Root cause" section; the
    econ-need and job-change sub-items were consequences of the same root.
 2. **Cook blocker surfacing** (`cook-status-blocker-surfacing-10-14.md`) —
-   Q3 ruling stands: SURFACING ONLY. Three concrete failure cases in
-   server-20 log 04:37–04:40 (coal blocker not named; "needs raw food" case;
-   cooked-meat-available-but-"nowhere to work" case).
-3. **Econ tab "switch job" also selected** (`econ-tab-switch-job-also-selected.md`) — gui-lint-verifiable.
+   **ROOT-CAUSED, parked for ruling** (2026-10-14 night, live instrumented run
+   on s22): the cook's selection is a near-uniform coin flip over ~7 tied
+   ~1.0 jobs (extract/fuel `always_consider` no-ops tie with the real
+   cook-food jobs); the named blocker flaps with the flip. All three facets
+   are the same coin flip seen from the surfacing side. The fix is
+   decision-layer (scoring/tracker), which Q3's "surfacing only" ruling
+   excluded — needs the user's call. Evidence in the ticket's "Findings".
+3. **Econ tab "switch job" also selected** (`econ-tab-switch-job-also-selected.md`) —
+   **DONE** (`7b6ac864`): `VillagerEconomicsMenu`'s hand-rolled enabled-tab
+   list omitted `CHANGE_ROOT`, so the switch-job tab's open-fn was null and it
+   rendered selected; now `VillagerTabs.except(ECONOMICS)` like every sibling,
+   pinned by `VillagerEconomicsMenuEnabledTabsTest` (red-verified by stash).
 4. **"Create N items" shows no (3/8) progress** (`item-quest-deposit-progress.md`).
 5. **Raw-food quest naming** (`raw-food-quest-naming-mismatch.md`) — user's exact
    copy in the ticket ("Food" / "cooked food"); data change.
