@@ -126,6 +126,28 @@ included (twice in the 2026-10-03 wigeon session). Bracket the pattern
 (`[r]unServer`, `[s]leep 999999`) or kill by explicit pid, then confirm the
 outcome in a fresh call — a dead call proves nothing.
 
+## Hard machine reboot / power loss: nothing is saved-on-shutdown, and everything is dead
+
+A clean `runServer` stop **saves the world on shutdown** (observed: `level.dat`
+mtime jumps to the second after the last player leaves). A **hard machine
+reboot does not** — the server JVM is force-killed with no shutdown hook, so
+the last *autosave* is the last safe state. Anything played since the last
+autosave can be gone. Two moves when the dev says "my machine rebooted / I had
+to power it off":
+
+1. **Bound the loss window before handing the client back.**
+   `python3 -c "import os,datetime;print(datetime.datetime.fromtimestamp(os.path.getmtime('run/world/level.dat')).strftime('%H:%M:%S'))"`
+   and compare against when the dev last played. Tell them how far back the
+   save is ("you may have lost the last few minutes") instead of silently
+   saying "world intact" — existence of `level.dat` proves nothing about its
+   freshness.
+2. **Everything is dead, not just the server.** The reboot kills the server
+   JVM, the client, the FIFO writer, and any gradle daemons. Do a clean
+   server-first relaunch (the section above): `pgrep` shows nothing, launch
+   `runServer` alone, let it boot + stabilize, then `runClient -Pautojoin`.
+   Don't assume a half-dead client is reconnecting — there is no half-dead
+   client after a power loss.
+
 ## Client + server + recompile together OOM-kill the server (exit 137)
 
 Symptom: `./gradlew runServer` dies with `non-zero exit value 137` and

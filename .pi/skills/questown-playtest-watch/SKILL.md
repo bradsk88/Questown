@@ -54,6 +54,11 @@ To hand the user a clean from-zero world:
 4. **On 1.20.6 the forked server's stdin is /dev/null** — FIFO command injection
    does not connect. Drive in-world state with in-game chat commands
    (`qt` / `_qtdev`), not the console.
+5. **If the user's machine rebooted / lost power**, it is NOT a clean kill: the
+   world was not saved-on-shutdown and *everything* is dead. Bound the loss
+   window (check `run/world/level.dat` mtime vs their last play) and do a
+   clean server-first relaunch — dev-launch ref, "Hard machine reboot / power
+   loss".
 
 Full launch discipline (kill-order, env, port check) is in
 `references/questown-dev-launch.md` and the `questown-held-run` skill.
