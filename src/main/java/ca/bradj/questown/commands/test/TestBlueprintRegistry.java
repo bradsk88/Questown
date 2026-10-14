@@ -1554,11 +1554,12 @@ public class TestBlueprintRegistry {
         // decay cannot hit one, which would flatten the delta and mask a parity break.
         static final float BASE_WORKED = 0.3f;
         static final float BASE_NEGLECTED = 0.5f;
-        // Warp compresses a window into a handful of simulated steps (~1 per 480 ticks), so the
+        // Warp compresses a window into simulated steps (~1 per ~571 ticks observed), so the
         // budget has to be generous to complete a meaningful number of actions — but small enough
         // that the gain cannot reach the level-1 clamp, which would flatten the delta and fake a
-        // mismatch. ~40 actions of headroom sits between those bounds.
-        static final int WARP_TICKS = 48000;
+        // mismatch. 48000 produced ~84 actions and hit the clamp from the 0.3 baseline; 28800
+        // keeps ~50 actions, leaving the worked level at ~0.8.
+        static final int WARP_TICKS = 28800;
 
         @Nullable UUID villager;
     }
