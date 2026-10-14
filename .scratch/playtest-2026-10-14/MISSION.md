@@ -127,7 +127,11 @@ beat `11c7952f`, #11 skins `2bbedf3e`, #12 load-time-noise explanation
 2. Miner: quest-requested (room quest + N-of-initial-item quest), BOP morning
    reward, guaranteed-miner during onboarding (like hunter and cook should be).
 3. Skins: no job mapping; extend the UUID-hash pool with the new vanilla skins.
-4. village-is-thriving: HOLDING, discuss another day.
+4. village-is-thriving: **RULED + DONE 2026-10-15 (option 3, drop the line)** —
+   `messages.tutorial.complete` no longer broadcasts at the first procedural
+   batch; the per-quest "Quest completed: …" lines already announce it. See
+   the ticket's "Ruling + fix" section and `town/quests/COMPLEX.md`
+   "Procedural-batch milestone ladder".
 5. load-time reward: HOLDING; needs the plain-language explanation (queue #12).
 
 ## Hunter evidence (collected so far)

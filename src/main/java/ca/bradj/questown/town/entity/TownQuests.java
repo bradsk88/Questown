@@ -1539,12 +1539,16 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
     }
 
+    /**
+     * Chapter triggers at 5/10/20 completed procedural batches. The first batch posts no
+     * broadcast of its own (2026-10-15 playtest ruling: the "village is thriving" line
+     * carried no information the per-quest "Quest completed: …" lines didn't already —
+     * see .scratch/day1-playtest-2026-10-11/village-is-thriving-message-confusing.md).
+     */
     private void fireChapterMilestonesIfNeeded() {
         TownFlagBlockEntity t = town.getUnsafe();
         t.completedProceduralBatches++;
-        if (t.completedProceduralBatches == 1) {
-            t.messages.broadcastMessage("messages.tutorial.complete");
-        } else if (t.completedProceduralBatches == 5) {
+        if (t.completedProceduralBatches == 5) {
             fireChapterTrigger(t, TutorialTrigger.Triggers.Chapter2);
         } else if (t.completedProceduralBatches == 10) {
             fireChapterTrigger(t, TutorialTrigger.Triggers.Chapter3);

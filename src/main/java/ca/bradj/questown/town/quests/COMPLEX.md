@@ -275,3 +275,19 @@ complete without claiming) + recommendation: ticket
 `.scratch/day1-playtest-2026-10-11/load-time-reward-reclaim-error-noise.md`
 (HOLDING on the decision; drive-by: `filterOutDuplicateCompletion`'s
 `eqb` builder is vestigial, never read).
+
+## Procedural-batch milestone ladder (1/5/10/20)
+
+`TownQuests.questBatchCompleted` counts completed **procedural** batches on the
+flag (`TownFlagBlockEntity.completedProceduralBatches`; a batch is procedural
+when any member quest's wanted id is not a special-quest id — `isProceduralBatch`
+in `TownQuests`; campfire/gate-type special batches never count, pinned by
+`TutorialPhaseGateTest.campfireBatch_isNotProceduralBatch`). At 5/10/20 it
+fires the chapter advancement triggers (`TutorialTrigger.Chapter2..4`). The
+**first** batch posts no broadcast: the "Your village is thriving!" line
+(`messages.tutorial.complete`) was dropped 2026-10-15 on the user's playtest
+ruling — it carried no information the per-quest "Quest completed: …"
+broadcasts (`TownMessages.questCompleted`) didn't already, and read as ambient
+flavor (ticket `.scratch/day1-playtest-2026-10-11/village-is-thriving-message-confusing.md`).
+Note the counter is also the input to `QuestBatchSeed` (quest gating below
+batch 3), so it keeps incrementing from 1 even though batch 1 now does nothing.
