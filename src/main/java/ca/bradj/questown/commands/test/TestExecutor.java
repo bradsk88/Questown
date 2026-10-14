@@ -268,6 +268,12 @@ public class TestExecutor {
 
     private void buildRoom() {
         msg("Building room...");
+        // Fixture crops wither on a random tick in the dark, so a night start would kill the
+        // planted field before the monitor/warp window sees it. Pin noon for unpinned scenarios;
+        // time-pinned variants (night_start, all_night, 3_day) set their own start time.
+        if (blueprint.startTimeTick() == null) {
+            level.setDayTime(6000);
+        }
         RoomBuilder.build(level, flagPos, blueprint);
         phase = Phase.REGISTER_ROOM;
     }
