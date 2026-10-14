@@ -22,6 +22,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -46,13 +47,14 @@ public class FlagMenus {
             Collection<UIQuest> quests = VillagerQuestsContainer.readQuests(buf);
             BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
             QuestScreenSummary summary = new QuestScreenSummary(buf.readBoolean(), buf.readBoolean());
+            Map<UUID, String> villagerDisplayNames = AbstractQuestsContainer.readVillagerNames(buf);
             TownBlockofProgressMenu.ReadResult bopResult = TownBlockofProgressMenu.readWithFlagInfo(buf);
             FlagTabsEmbedding.FlagInfo flagInfo = bopResult.flagInfo();
 
             FlagMenus menus = new FlagMenus();
             // Never provide these initializers with the entity, itself. Instead, pass the entity's UUID.
             // It tends to cause client-side-only bugs that don't show up in the dev environment.
-            menus.initQuestsMenuClientSide(windowId, quests, flagInfo, summary);
+            menus.initQuestsMenuClientSide(windowId, quests, flagInfo, summary, villagerDisplayNames);
             menus.initMultiVillagerStatusMenuClientSide(windowId, flagInfo);
             menus.initEconClientSide(windowId, flagInfo);
             menus.initBlocksOfProgress(windowId, flagInfo, bopResult.bopRootJobs());
@@ -72,9 +74,10 @@ public class FlagMenus {
             Iterable<? extends VisitorMobEntity> es,
             ImmutableList<String> bopRootJobs,
             Supplier<Boolean> morningSpawnPending,
-            QuestScreenSummary summary
+            QuestScreenSummary summary,
+            Map<UUID, String> villagerDisplayNames
     ) {
-        TownQuestsContainer.write(buf, quests, flagInfo.flagPos(), summary);
+        TownQuestsContainer.write(buf, quests, flagInfo.flagPos(), summary, villagerDisplayNames);
         MultiStatusScreenSyncMessage msg = new MultiStatusScreenSyncMessage(makeSyncData(es, morningSpawnPending.get()));
         QuestownNetwork.sendToPlayer(player, msg);
         for (VisitorMobEntity e : es) {
@@ -140,11 +143,11 @@ public class FlagMenus {
             int windowId,
             Collection<UIQuest> quests,
             FlagTabsEmbedding.FlagInfo flag,
-            QuestScreenSummary summary
+            QuestScreenSummary summary,
+            Map<UUID, String> villagerDisplayNames
     ) {
         questsMenu = new TownQuestsContainer(
-                windowId, quests, flag, summary, () -> {
-        }
+                windowId, quests, flag, summary, () -> {}, villagerDisplayNames
         );
     }
 

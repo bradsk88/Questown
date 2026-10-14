@@ -16,6 +16,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -58,6 +59,12 @@ public interface VillagerHolder {
      * 2026-10-14 playtest), or an empty string when none is assigned yet.
      */
     String displayNameFor(UUID villagerId);
+
+    /**
+     * Every assigned display name (villager UUID -&gt; "Villager N"); townies without a number
+     * are omitted, so callers fall back to the truncated UUID.
+     */
+    Map<UUID, String> displayNamesForAll();
 
     void fillHunger(UUID uuid);
 

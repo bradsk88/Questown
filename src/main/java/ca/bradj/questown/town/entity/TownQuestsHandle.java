@@ -126,7 +126,8 @@ public class TownQuestsHandle implements QuestsHolder {
                     }
                 }, data ->
                         FlagMenus.writeAndLink(data, quests, t.getInfo(), player, entities, t.depositedBopRootJobs(),
-                                () -> t.hasVillagerArrivingInMorning(), summary)
+                                () -> t.hasVillagerArrivingInMorning(), summary,
+                                t.getVillagerHandle().displayNamesForAll())
         );
     }
 
@@ -247,11 +248,15 @@ public class TownQuestsHandle implements QuestsHolder {
                                 windowId,
                                 quests,
                                 t.getTownFlagBasePos(),
-                                batch.getBatchUUID()
+                                batch.getBatchUUID(),
+                                ((TownFlagBlockEntity) t).getVillagerHandle().displayNamesForAll()
                         );
                     }
                 }, data ->
-                        TownRemoveQuestsContainer.write(data, quests, t.getTownFlagBasePos(), batch.getBatchUUID())
+                        TownRemoveQuestsContainer.write(
+                                data, quests, t.getTownFlagBasePos(), batch.getBatchUUID(),
+                                ((TownFlagBlockEntity) t).getVillagerHandle().displayNamesForAll()
+                        )
         );
     }
 

@@ -38,6 +38,8 @@ import org.jetbrains.annotations.NotNull;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class TownFlagMenus {
 
@@ -177,9 +179,17 @@ public class TownFlagMenus {
                     ) {
                         return shower.apply(windowId, inv, p);
                     }
-                }, data -> FlagMenus.writeAndLink(
-                        data, quests, flagPos, sender, entities, bopRootJobs, morningSpawnPending, summary
-                )
+                }, data -> {
+                    Map<UUID, String> displayNames = Map.of();
+                    if (sender.level().getBlockEntity(flagPos.flagPos())
+                            instanceof TownFlagBlockEntity flag) {
+                        displayNames = flag.getVillagerHandle().displayNamesForAll();
+                    }
+                    FlagMenus.writeAndLink(
+                            data, quests, flagPos, sender, entities, bopRootJobs, morningSpawnPending,
+                            summary, displayNames
+                    );
+                }
         );
     }
 

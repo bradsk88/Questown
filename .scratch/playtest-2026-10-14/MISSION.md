@@ -106,9 +106,10 @@ beat `11c7952f`, #11 skins `2bbedf3e`, #12 load-time-noise explanation
    redirect, six tabbed menus filter via `VillagerTabs.hideInventory`).
    `gui/COMPLEX.md` "MultiStatusScreen: full-card click ... management-only
    mode".
-9. **Villager display names** — DONE: "Villager N" monotonic arrival number
-   (no reuse), name tag + system chat + BOP screen; payload carries the name.
-   Deferred: flag quest-card tooltip (`quests.job_owner`).
+9. **Villager display names** — DONE (2026-10-14) + **flag quest-card
+   tooltip DONE 2026-10-15** (was the last deferred surface): the UUID->name
+   map rides the flag-menu wire; `FlagMenusVillagerNamesTest` pins codec
+   order + the truncated-UUID fallback.
 10. **Onboarding miner after cook** — DONE: fixed post-cook beat (phase 2.7),
     JOB_CHANGE(miner/coal) + pickaxes + coal + mineshaft room; onboarding-flagged
     guarantee; PHASE_MINER reward.

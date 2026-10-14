@@ -724,3 +724,24 @@ two-arg `fromLevel` and stay progress-less. Pinned by `UIQuestItemProgressTest`
 exist pre-fix, so the test cannot compile against it) and
 `UIQuestLootProgressTest` (the "(n/8)" shape on the LOOT card, capped at the
 target).
+
+## Flag quest-card tooltips carry "Villager N" (2026-10-15)
+
+The `quests.job_owner` tooltip on the flag quest cards (`QuestsScreen`,
+`QuestRemoveConfirmScreen`) shows "Villager N" instead of the truncated UUID.
+The UUID->name map rides the flag-menu wire: `TownVillagerHandle.
+displayNamesForAll()` (exposed on the `VillagerHolder` seam via
+`TownVillagerHandles`) is appended by `TownQuestsContainer.write` (after the
+two summary booleans) and `TownRemoveQuestsContainer.write` (after the batch
+UUID) via `AbstractQuestsContainer.writeVillagerNames` (varInt count, then
+UUID+Utf pairs), and read back in `FlagMenus.fromNetwork` /
+`TownRemoveQuestsContainer.read` via `AbstractQuestsContainer.
+readVillagerNames`. `VillagerMenusPayload` (the single-villager BOP payload)
+was NOT touched - it already carries the one name it needs. Resolution:
+`AbstractQuestsContainer.villagerLabelFor(names, uuidString)` - map hit ->
+the display name, miss or malformed owner string -> `UtilClean.truncateMiddle`
+(the historical form). The server-side `createMenu` containers also take the
+map (server menus never render the tooltip, but the shape stays symmetric).
+Codec order + resolution pinned in `FlagMenusVillagerNamesTest` (a drift in
+the append position would corrupt the whole menu-open payload, not just the
+tooltip). No gui-lint impact: tooltip text only, zero layout change.

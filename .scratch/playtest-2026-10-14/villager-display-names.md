@@ -31,6 +31,10 @@ the handle NBT (`display_numbers` + `display_numbers_highest`). Surfaces
 done: the name tag (custom name + visibility on register), system chat
 (`TownMessages.jobChanged` label overload), and the BOP screen text (via
 `VillagerMenusPayload.villagerDisplayName`). Lang: `menu.villager.name` =
-"Villager %1$s". Deferred: the flag quest-card tooltip (`quests.job_owner`
-still shows the truncated UUID - needs a UUID->name map on the flag-menu
-sync). `town/entity/COMPLEX.md` "Townie display numbers".
+"Villager %1$s". The former deferral - the flag quest-card tooltip
+(`quests.job_owner`) - is **DONE 2026-10-15**: the UUID->name map rides the
+flag-menu wire (`TownVillagerHandle.displayNamesForAll()` ->
+`TownQuestsContainer` / `TownRemoveQuestsContainer` payloads; resolution in
+`AbstractQuestsContainer.villagerLabelFor`, codec order + fallback pinned in
+`FlagMenusVillagerNamesTest`). `town/entity/COMPLEX.md` "Townie display
+numbers".

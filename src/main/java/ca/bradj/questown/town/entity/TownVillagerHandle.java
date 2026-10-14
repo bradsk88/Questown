@@ -304,6 +304,22 @@ public final class TownVillagerHandle {
         return ca.bradj.questown.mc.Compat.translatable("menu.villager.name", n).getString();
     }
 
+    /**
+     * Every assigned display name (villager UUID -&gt; "Villager N"); townies without a number
+     * are omitted, so callers fall back to the truncated UUID. Feeds the flag quest-card
+     * tooltips (the 2026-10-14 display-name work deferred this surface pending this map).
+     */
+    public ImmutableMap<UUID, String> displayNamesForAll() {
+        ImmutableMap.Builder<UUID, String> b = ImmutableMap.builder();
+        for (Map.Entry<UUID, Integer> e : displayNumbers.byVuid().entrySet()) {
+            String name = displayNameFor(e.getKey());
+            if (!name.isEmpty()) {
+                b.put(e.getKey(), name);
+            }
+        }
+        return b.build();
+    }
+
     Map<UUID, Integer> getDisplayNumbers() {
         return displayNumbers.byVuid();
     }

@@ -18,6 +18,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -75,6 +76,11 @@ public class TownVillagerHandles {
             @Override
             public String displayNameFor(UUID villagerId) {
                 return villagerHandle.displayNameFor(villagerId);
+            }
+
+            @Override
+            public Map<UUID, String> displayNamesForAll() {
+                return villagerHandle.displayNamesForAll();
             }
 
             @Override

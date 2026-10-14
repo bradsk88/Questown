@@ -1026,5 +1026,13 @@ number is never handed to a new townie.
   string, "" = fall back to the truncated UUID; round-trip pinned in
   `VillagerMenusPayloadTest`), carried `TownVillagerUIs.showUI` ->
   `ShowerData` -> `VillagerMenus.write`. The flag quest-card tooltip
-  (`quests.job_owner`) still shows the truncated UUID - the flag-menu sync
-  would need a UUID->name map; deferred.
+  (`quests.job_owner`) carries the UUID->name map on the flag-menu sync:
+  `TownVillagerHandle.displayNamesForAll()` (also on the `VillagerHolder`
+  seam) is written by `TownQuestsContainer.write` / `TownRemoveQuestsContainer.
+  write` (after the summary booleans / batch UUID respectively) and read back
+  in `FlagMenus.fromNetwork` / `TownRemoveQuestsContainer.read` via
+  `AbstractQuestsContainer.readVillagerNames`; both screens resolve through
+  `AbstractQuestsContainer.villagerLabelFor` (map hit -> "Villager N", miss /
+  malformed -> the truncated UUID). Codec order + resolution pinned in
+  `FlagMenusVillagerNamesTest` (2026-10-15; the earlier deferral - "would need
+  a UUID->name map" - is now closed).

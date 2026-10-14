@@ -210,7 +210,9 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         String vID = recipe.villagerUUID();
         String jobName = recipe.jobName();
 
-        Component tooltip = Compat.translatable("quests.job_owner", getVillagerName(vID));
+        // "Villager N" when the menu sync carries display names (flag quest cards),
+        // otherwise the historical truncated UUID.
+        Component tooltip = Compat.translatable("quests.job_owner", menu.villagerLabelFor(vID));
 
         CardCoordinates shiftedUp = card.coords().shiftedUp(5);
         @Nullable Component removalTooltip = null;
@@ -381,10 +383,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             }
         }
         return null;
-    }
-
-    private static @NotNull String getVillagerName(String vID) {
-        return UtilClean.truncateMiddle(vID);
     }
 
     private @Nullable Component renderRemovalButton(

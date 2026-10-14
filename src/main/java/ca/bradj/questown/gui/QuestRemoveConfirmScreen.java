@@ -190,7 +190,12 @@ public class QuestRemoveConfirmScreen extends CompatContainerScreen<TownRemoveQu
             String vID = recipe.villagerUUID();
             String jobName = recipe.jobName();
 
-            Component tooltip = Compat.translatable("quests.job_owner", vID);
+            // "Villager N" when the menu sync carries display names, otherwise the
+            // historical truncated UUID.
+            Component tooltip = Compat.translatable(
+                    "quests.job_owner",
+                    AbstractQuestsContainer.villagerLabelFor(menu.villagerDisplayNames(), vID)
+            );
 
             if (vID.isEmpty()) {
                 continue;

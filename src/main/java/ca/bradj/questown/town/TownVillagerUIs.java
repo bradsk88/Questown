@@ -97,8 +97,14 @@ public class TownVillagerUIs {
                             QuestCompletion.allComplete(quests.stream().map(q -> q.status).toList()),
                             hasPendingMorningReward(player, townFlagBasePos)
                     );
+                    Map<UUID, String> displayNames = Map.of();
+                    if (player.level().getBlockEntity(townFlagBasePos.flagPos())
+                            instanceof TownFlagBlockEntity flag) {
+                        displayNames = flag.getVillagerHandle().displayNamesForAll();
+                    }
                     FlagMenus.writeAndLink(
-                            data, quests, townFlagBasePos, player, es, bopRootJobs, morningSpawnPending, summary
+                            data, quests, townFlagBasePos, player, es, bopRootJobs, morningSpawnPending,
+                            summary, displayNames
                     );
                 }
         );

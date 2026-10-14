@@ -16,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class TownRemoveQuestsContainer extends AbstractContainerMenu {
@@ -23,6 +24,8 @@ public class TownRemoveQuestsContainer extends AbstractContainerMenu {
     private final Collection<UIQuest> quests;
     private final BlockPos flagPos;
     private final UUID batchUUID;
+    /** villager UUID -&gt; "Villager N" (quest-card tooltip; empty -&gt; truncated UUID). */
+    private final Map<UUID, String> villagerDisplayNames;
 
     public TownRemoveQuestsContainer(
             int windowId,
@@ -30,10 +33,25 @@ public class TownRemoveQuestsContainer extends AbstractContainerMenu {
             BlockPos flagPos,
             UUID batchUUID
     ) {
+        this(windowId, quests, flagPos, batchUUID, Map.of());
+    }
+
+    public TownRemoveQuestsContainer(
+            int windowId,
+            Collection<UIQuest> quests,
+            BlockPos flagPos,
+            UUID batchUUID,
+            Map<UUID, String> villagerDisplayNames
+    ) {
         super(MenuTypesInit.TOWN_QUESTS_REMOVE.get(), windowId);
         this.quests = quests;
         this.flagPos = flagPos;
         this.batchUUID = batchUUID;
+        this.villagerDisplayNames = villagerDisplayNames == null ? Map.of() : villagerDisplayNames;
+    }
+
+    public Map<UUID, String> villagerDisplayNames() {
+        return this.villagerDisplayNames;
     }
 
     public static TownRemoveQuestsContainer read(
@@ -41,18 +59,23 @@ public class TownRemoveQuestsContainer extends AbstractContainerMenu {
             Inventory inv,
             FriendlyByteBuf data
     ) {
-        return new TownRemoveQuestsContainer(windowId, readQuests(data), readFlagPos(data), data.readUUID());
+        return new TownRemoveQuestsContainer(
+                windowId, readQuests(data), readFlagPos(data), data.readUUID(),
+                AbstractQuestsContainer.readVillagerNames(data)
+        );
     }
 
     public static void write(
             FriendlyByteBuf data,
             List<UIQuest> quests,
             BlockPos flagPos,
-            UUID batchUUID
+            UUID batchUUID,
+            Map<UUID, String> villagerDisplayNames
     ) {
         writeQuests(data, quests);
         writeFlagPos(data, flagPos);
         data.writeUUID(batchUUID);
+        AbstractQuestsContainer.writeVillagerNames(data, villagerDisplayNames);
     }
 
     private static void writeQuests(
