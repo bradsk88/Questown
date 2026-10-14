@@ -1,10 +1,13 @@
 package ca.bradj.questown.town.needs;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -19,10 +22,22 @@ import java.util.UUID;
  * cross-day phantom growth (the run-2 {@code swords=61} failure mode that
  * the old random-label + re-add path produced).
  *
+ * <p><b>Union semantics (2026-10-15 ruling):</b> a townie's live needs for a
+ * root are a UNION, not the best-scoring job's single key. A root can be
+ * blocked on several supplies at once (the cook on coal AND raw food), and
+ * the player-facing hint must name all of them instead of flapping with the
+ * pass's argmax. A new key joins the townie's live set
+ * ({@link #enter}), a key exits when it drops out of the pass's live set
+ * ({@link #applyPass}/{@link #exitKey}), and the bubble's single item is the
+ * townie's oldest live key ({@link #primaryKey}) — stable across passes.
+ * This is job-set-agnostic on purpose (the job independence principle,
+ * CONTEXT.md): no ordering or priority between specific jobs.
+ *
  * <p>{@link #rank()} is the batch's input: actionable needs only
  * (NO_ROOM and key-carrying BLOCKED; NO_REQUEST is a board problem, not a
  * supply one), grouped by the supply key, then townies-desc, then
- * earliest-enter — determined by the world state alone.
+ * earliest-enter — determined by the world state alone. A townie blocked on
+ * two keys counts in both groups.
  */
 public final class UnmetNeedTracker {
 
@@ -50,6 +65,14 @@ public final class UnmetNeedTracker {
     ) {
     }
 
+    /** A (townie, key) first registered this pass — the caller's hook for the first-enter side effects. */
+    public record FirstEnter(
+            UUID townie,
+            String key,
+            GateReason reason
+    ) {
+    }
+
     /**
      * Register (or re-enter) one townie's need for a key.
      *
@@ -70,13 +93,75 @@ public final class UnmetNeedTracker {
             rows.put(k, new Row(existing.townie(), existing.root(), existing.key(), reason, existing.since(), existing.attempts() + 1));
             return false;
         }
-        // A new key for the same townie+root replaces the old one: the best-scoring
-        // job — hence the key it blocks on — is the town's current statement of
-        // what it waits for, and a stale key from an earlier pass would make the
-        // resulting rows depend on engine timing, not world state.
-        rows.values().removeIf(r -> r.townie().equals(townie) && r.root().equals(root));
+        // Union semantics (2026-10-15 ruling): a new key for the same
+        // townie+root JOINS the townie's live needs. The old replace-on-new-key
+        // made the tracker's statement depend on which job best-scored that
+        // pass (the cook's hint flapped between coal / raw food / nothing),
+        // not on the world state.
         rows.put(k, new Row(townie, root, key, reason, tick, 1));
         return true;
+    }
+
+    /**
+     * One recompute pass for a root: enter the root's live named keys for
+     * every townie and exit the registered keys that are no longer live. The
+     * caller evaluates the gate of each candidate job and hands over the
+     * distinct named keys (job-set-agnostic — no ordering between jobs).
+     *
+     * @return the (townie, key) pairs first entered this pass, so the caller
+     *         fires the first-enter side effects (econ record, bubble) once
+     */
+    public List<FirstEnter> applyPass(
+            long tick,
+            String root,
+            List<UUID> townies,
+            Map<String, GateReason> liveKeys
+    ) {
+        List<FirstEnter> first = new ArrayList<>();
+        for (UUID townie : townies) {
+            for (Map.Entry<String, GateReason> e : liveKeys.entrySet()) {
+                if (enter(tick, root, townie, e.getKey(), e.getValue())) {
+                    first.add(new FirstEnter(townie, e.getKey(), e.getValue()));
+                }
+            }
+        }
+        Set<String> live = liveKeys.keySet();
+        for (Row r : new ArrayList<>(rows.values())) {
+            if (r.root().equals(root) && !live.contains(r.key())) {
+                exitKey(root, r.key());
+            }
+        }
+        return first;
+    }
+
+    /**
+     * Clear every need for this root+key (all townies) — the town no longer
+     * blocks on this key. A null key exits the keyless diagnostic rows.
+     */
+    public void exitKey(String root, @Nullable String key) {
+        rows.values().removeIf(r -> r.root().equals(root) && (r.key() == null ? key == null : r.key().equals(key)));
+    }
+
+    /**
+     * The townie's player-facing hint: the oldest live NAMED key at the root
+     * (minimum {@code since}, ties broken key-ascending). Null when the
+     * townie holds no named live key — keyless diagnostic rows never surface.
+     * Deterministic given the world state: a new pass can only change it when
+     * a key's liveness or age does.
+     */
+    public @Nullable String primaryKey(String root, UUID townie) {
+        String best = null;
+        long bestSince = Long.MAX_VALUE;
+        for (Row r : rows.values()) {
+            if (!r.root().equals(root) || !r.townie().equals(townie) || r.key() == null) {
+                continue;
+            }
+            if (r.since() < bestSince || (r.since() == bestSince && best != null && r.key().compareTo(best) < 0)) {
+                best = r.key();
+                bestSince = r.since();
+            }
+        }
+        return best;
     }
 
     /** Clear every need under a root — the town found viable work there again. */

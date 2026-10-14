@@ -38,6 +38,30 @@ different lessons and must stay distinct:
 Do not collapse the two into one generic "resource request." The lesson —
 *who does the work* — is the point.
 
+### Job independence
+
+The behaviour of job selection and unmet-need surfacing must not depend on
+the *specific set* of jobs a root currently has: any individual job should be
+removable (or unworkable) without meaningfully affecting the other jobs'
+ability to be selected and to run. Consequences:
+
+- No cross-job priority ordering — no "fuel before extract", no hardcoded
+  fuel→cook tie-break, no per-job-set scoring bonus.
+- The unmet-need hint is derived from the **union of live named needs**
+  across the root's candidate jobs — a property of the world state — not from
+  whichever job best-scored this recompute pass.
+- A no-op today is not a no-op forever: an `always_consider` helper job (the
+  cook's fuel/extract) is not a defect when its furnace is idle; the fix for
+  a flapping hint is per-key liveness of the *hint*, not deleting or
+  re-ordering the job.
+
+Source: 2026-10-15 playtest discussion — the cook root's hint flapped between
+coal / raw food / nothing because it named the pass's best-scoring job's need
+and the near-tie cook jobs (including idle no-ops) rotated argmax.
+Implemented as the union of live needs in `TownPossibleWork.refreshUnmetNeeds`
++ `UnmetNeedTracker.applyPass`/`primaryKey` (glossary: **Job independence
+principle** in `CONTEXT.md`).
+
 ---
 
 ## The self-sufficiency test

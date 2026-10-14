@@ -1,6 +1,6 @@
 ---
 title: 'Cook status: still "no place to work" when the real blocker is missing raw food / cooked meat unextracted (2026-10-14 recurrence)'
-status: ready-for-agent (root-caused; code fix needs a ruling — see "Findings")
+status: ready-for-human (surfacing facet TDD'd per the 2026-10-15 ruling — union of live needs; the behaviour-side coin flip — idle no-op jobs tie with real work, facet 3's status text — remains a separate decision-layer item)
 ---
 
 # Cook status/blocker surfacing — 2026-10-14 playtest recurrence
@@ -91,3 +91,45 @@ with output) instead of `always_consider`-bypassing the gate, or the tracker
 keeps the union of a townie's live needs instead of replacing the key each
 pass. Both are decision-layer changes the Q3 ruling ("surfacing only")
 excluded. Parked for the user with this evidence.
+
+## Ruling (2026-10-15) + TDD outcome
+
+The user picked the **union of live needs** as the hint semantics (not a
+priority ordering): "the fuel is a real need until fuelled, and the raw food
+is a real need until cooked. The hint should show the UNION of those —
+whatever the current state is" — motivated by the **job independence
+principle** (any individual job should be removable without meaningfully
+impacting the other jobs' abilities to be selected and to run; now in
+`CONTEXT.md` + `docs/design-principles.md`), which rules out a
+fuel→extract→cook-food priority as a fix.
+
+Implemented (TDD, this session):
+
+- `UnmetNeedTracker`: `enter` no longer replaces the townie's key for the
+  root — it joins the live set; new `applyPass` enters the root's live named
+  keys each recompute pass and exits the keys that dropped out (per-key
+  liveness, not only the whole-root clear), returning the pass's first-enters;
+  new `exitKey`; new `primaryKey` = the townie's oldest live named key
+  (min `since`, ties key-ascending) — the bubble's single item. 14 tests
+  (4 red-verified against the pre-fix replace-on-new-key `enter` in a /tmp
+  variant); `:test` full suite green (1247 tests, 0 failures).
+- `TownPossibleWork`: `refreshUnmetNeeds(root, unfilteredJobs)` replaces
+  `registerUnmetNeeds`/`clearUnmetItemNeeds` — every recompute pass (not
+  only no-viable-job passes) computes the union of named keys across all
+  unlocked candidate jobs (a job above the acceptance threshold can still be
+  blocked on a supply, which is exactly the user's scenario), diffs it
+  against the tracker, writes one econ record per first-enter supply key,
+  and sets each townie's `UNMET_ITEM` bubble to its `primaryKey`. The
+  `smelterFuelBlocker` coal naming (f1b5967c) now flows through the same
+  union: an unlit furnace contributes `#minecraft:coals` from its smelter
+  job's gate alongside `#questown:raw_food` from the cook-food jobs.
+
+Facet status after the fix: facet 1 (coal un-named) and facet 2 (raw food
+un-named) are closed for the hint side — both keys stay live until each is
+satisfied, so the bubble/econ tab keep naming the oldest outstanding one
+instead of flapping with the pass's argmax. **Facet 3's status text**
+("has nowhere to work" while the flip lands on an idle no-op job) is the
+behaviour side of the same coin flip — out of scope for this change; a
+per-job workability-scoring fix for the `always_consider` no-ops remains a
+separate open item (it would also be job-set-agnostic: a no-op job simply
+scoring below real work when it has nothing to do).

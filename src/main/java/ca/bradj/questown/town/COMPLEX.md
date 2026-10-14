@@ -320,7 +320,7 @@ flowchart TD
     Begin --> Budget
 
     Budget --> One["scoreOneJob:<br/>pop root → RootScoring(root, jobsOfRoot)<br/>pop job → score it<br/>root drained → applyScores"]
-    One --> Apply["applyScores: PREFERRED then MIN filter<br/>→ preselectedJobs.put(root) / registerUnmetNeeds"]
+    One --> Apply["applyScores: PREFERRED then MIN filter<br/>→ preselectedJobs.put(root) / refreshUnmetNeeds (union diff)"]
 
     Warp["recomputeNow() (warp path)"] --> Drain["beginRecomputePass + drain whole pass in place"]
 ```
@@ -366,9 +366,9 @@ flowchart TD
   townie. The cycler already carries the fairness role the fallback's shuffle
   was a stopgap for.
 
-### Unmet-need registration: typed reason, idempotent enter/exit
+### Unmet-need registration: typed reason, idempotent enter/exit, union of live keys
 
-When a root's best job cannot run, the town records *why* as a type
+When a root's candidate jobs cannot run, the town records *why* as a type
 (`town/needs/GateReason`), not a label:
 
 - `NO_ROOM(room)` — no state of the job has its job site built; the fix is
@@ -388,26 +388,45 @@ it must not arrive at the store as a supply (the run-14 `oak_wood` mislabel:
 the town's top need read "wood" because a gatherer's product leaked in by
 this path). `NO_REQUEST`/`Ok` name no item at all.
 
-The decision — which class wins, which key it names — is pure
+The decision — which class a gate produces, which key it names — is pure
 (`GateReason.classify`), and the bookkeeping behind it is a small state machine
 (`UnmetNeedTracker`): enter/exit is idempotent per **(townie, item key)**,
-`since` is first-enter, attempts grow per recompute pass, an enter under a new
-key replaces the townie's earlier key for the same root, and `rank()` groups the
-actionable rows by key, ordered **townies-desc then since-asc**. All of that is
-unit-tested without a Forge world (`GateReasonTest`, `UnmetNeedTrackerTest`).
+`since` is first-enter, attempts grow per recompute pass, and `rank()` groups
+the actionable rows by key, ordered **townies-desc then since-asc**. A townie
+blocked on two keys counts in both groups.
+
+**Union semantics (2026-10-15 ruling)**: a townie's live needs for a root are
+the **union of the named keys across every unlocked candidate job**, not the
+best-scoring job's single key. `enter` joins the key to the townie's live set
+instead of replacing it; `applyPass` runs every recompute pass — it enters the
+root's live keys and **exits the keys that dropped out of the pass** (per-key
+liveness, not only the whole-root clear) — and returns the pass's first-enters
+so the caller fires the econ record / bubble exactly once; `exitKey` clears
+one root+key; `primaryKey` picks the bubble's single item as the townie's
+**oldest live key** (min `since`, ties key-ascending — deterministic given the
+world state, and why a coal and a raw-food block that enters the same pass
+surfaces as the alphabetically-earlier key). All of it is unit-tested without
+a Forge world (`GateReasonTest`, `UnmetNeedTrackerTest`, incl. four tests
+red-verified against the pre-fix replace-on-new-key `enter`).
 
 Why this shape (design lock: `.scratch/gannet-top-need/unmet-need-design.md`):
 the old `registerUnmetNed` re-added a **random** work's first ingredient to the
 econ queue on every recompute pass, so a single idle hunter produced
 `swords=61` and non-sword failures got labelled as swords. Now the townie's
-need is bound to the root's **best-scoring** job (deterministic given the world
-state), registered exactly once per (townie, key), and bounded by the roster —
-the run-2 failure mode cannot recur by construction. The townie bubble and the
-econ queue both receive the record on first-enter only, **and only when it is a
-supply-item need** (`supplyItem()`); `clearUnmetItemNeeds` clears the tracker
-for the root the moment work exists again.
+needs are the root's **live named keys** (deterministic given the world
+state), each registered exactly once per (townie, key), and bounded by the
+roster — the run-2 failure mode cannot recur by construction. The 2026-10-15
+union ruling replaced the "bound to the root's **best-scoring** job" binding:
+the cook root is blocked on coal AND raw food at once, and the hint flapped
+between the two with the pass's argmax (playtest ticket
+`.scratch/playtest-2026-10-14/cook-status-blocker-surfacing-10-14.md`). The
+townie bubble and the econ queue both receive the record on first-enter only,
+**and only when it is a supply-item need** (`supplyItem()`); `applyPass` exits
+a key the moment it drops out of the pass's live set (stale keys leave
+per-key — no more whole-root `clearUnmetItemNeeds`), so refuelling the
+furnace drops just the coal key while the raw-food need keeps showing.
 
-The best-scoring pick is also gated on the **town-wide** `isUnlocked(JobID)` —
+Every candidate key is also gated on the **town-wide** `isUnlocked(JobID)` —
 at least one villager must personally be able to run that variant (2026-10-12).
 Without it, a root whose only viable path is a locked tool variant registered
 the variant's tool need for *every* townie of the root, even though nobody may
@@ -581,5 +600,6 @@ through `supplyItem()` to the item store: the bubble names coal (client:
 failing the room check for another reason is NOT misnamed. The LIT half
 (`smelterFuelBlocker`: room scan + live blockstate read) is registry-bound -
 `@Disabled` with the reason in `SmelterFuelGateReasonTest`, held-run
-covered. In-game verification owed: bubble + econ name coal; refueling
-clears it (`clearUnmetItemNeeds` on viability).
+covered. In-game verification owed: bubble + econ name coal; refueling drops just the
+coal key (the union diff in `refreshUnmetNeeds`) while any other live need
+keeps showing.

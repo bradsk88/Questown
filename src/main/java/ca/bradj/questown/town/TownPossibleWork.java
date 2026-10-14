@@ -207,11 +207,11 @@ public class TownPossibleWork {
         }
         ImmutableList<JobID> preselected = jobs.stream().map(v -> v.jobID).collect(ImmutableList.toImmutableList());
         preselectedJobs.put(root, preselected);
-        if (jobs.isEmpty()) {
-            registerUnmetNeeds(root, unfilteredJobs);
-        } else {
-            clearUnmetItemNeeds(root);
-        }
+        // Needs are a property of the world state, not of the score band: a
+        // job above the acceptance thresholds can still be blocked on a supply
+        // (no workable spot until the chest has coal), and that block is what
+        // the player needs to see. Refreshed every pass, union diffed.
+        refreshUnmetNeeds(root, unfilteredJobs);
         t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
                 "Prepared for {}: [{}]",
                 root,
@@ -239,47 +239,80 @@ public class TownPossibleWork {
         );
     }
 
-    private void registerUnmetNeeds(String root, List<JobPossibility> unfilteredJobs) {
+    /**
+     * One recompute pass's view of the root's live unmet needs: the UNION of
+     * the named keys across every unlocked candidate job (a root can be
+     * blocked on coal AND raw food at once - 2026-10-15 ruling, playtest
+     * ticket cook-status-blocker-surfacing-10-14), diffed against the
+     * tracker: stale keys exit, live ones keep their first-enter age. The old
+     * best-job-only registration flapped the hint with the pass's argmax
+     * (coal / raw food / nothing) and only ran on no-viable-job passes, so
+     * the hint was invisible exactly when a job scored above the threshold
+     * yet still could not start. Job-set-agnostic by construction (the job
+     * independence principle - no ordering or priority between specific
+     * jobs; CONTEXT.md).
+     */
+    private void refreshUnmetNeeds(String root, List<JobPossibility> unfilteredJobs) {
         try {
             TownFlagBlockEntity t = town.getUnsafe();
             ServerLevel sl = t.getServerLevel();
             long tick = Util.getTick(sl);
-            JobPossibility best = unfilteredJobs.stream()
-                    .filter(p -> p.facts() != null && p.board() != null)
-                    // Town-level needs must come from a variant the town can actually run:
-                    // at least one villager has unlocked it. Without this, locked tool
-                    // variants (e.g. gatherer:axe on day one) register needs the town can
-                    // never fill, because nobody may take that job (2026-10-13 econ-tab bug).
-                    .filter(p -> t.getVillagerHandle().isUnlocked(p.jobID()))
-                    .max(
-                            Comparator
-                                    .comparingDouble((JobPossibility p) -> -p.score.value)
-                                    .thenComparing(p -> p.jobID().jobId())
-                    )
-                    .orElse(null);
-            if (best == null) {
-                return;
+            Map<String, GateReason> liveKeys = new HashMap<>();
+            for (JobPossibility p : unfilteredJobs) {
+                if (p.facts() == null || p.board() == null) {
+                    continue;
+                }
+                // Town-level needs must come from a variant the town can actually run:
+                // at least one villager has unlocked it. Without this, locked tool
+                // variants (e.g. gatherer:axe on day one) register needs the town can
+                // never fill, because nobody may take that job (2026-10-13 econ-tab bug).
+                if (!t.getVillagerHandle().isUnlocked(p.jobID())) {
+                    continue;
+                }
+                GateReason reason = gateReason(t, p);
+                String key = reason.itemKey();
+                if (key == null) {
+                    continue;
+                }
+                GateReason existing = liveKeys.get(key);
+                // A supply-item need beats a keyless product handle for the same key.
+                if (existing == null || (reason.supplyItem() && !existing.supplyItem())) {
+                    liveKeys.put(key, reason);
+                }
             }
-            GateReason reason = gateReason(t, best);
+            List<VisitorMobEntity> townies = t.getVillagerHandle().entities().stream()
+                .map(v -> (VisitorMobEntity) v)
+                .filter(v -> root.equals(v.getJobId().rootId()))
+                .toList();
+            List<UnmetNeedTracker.FirstEnter> firstEnters = unmetNeeds.applyPass(
+                    tick, root, townies.stream().map(VisitorMobEntity::getUUID).toList(), liveKeys);
             NoMCEconomics econ = t.getEconomicsHandle();
-            t.getVillagerHandle().entities().stream()
-              .map(v -> (VisitorMobEntity) v)
-              .filter(v -> root.equals(v.getJobId().rootId()))
-              .forEach(villager -> {
-                  // First enter of this (townie, key) only: one econ record and one bubble,
-                  // not one per recompute pass (the run-2 swords=61 failure mode).
-                  // Only a supply-item need (Blocked on a missing input/tool) writes the
-                  // item store; a NoRoom's product is the tracker's producer handle, not a
-                  // supply — routing it here is the oak_wood leak the item store mis-sourced.
-                  if (unmetNeeds.enter(tick, root, villager.getUUID(), reason.itemKey(), reason) && reason.supplyItem()) {
-                      String key = reason.itemKey();
-                      villager.setNeed(TownieNeed.UNMET_ITEM);
-                      villager.setUnmetItem(key);
-                      econ.registerUnmetNeed(tick, villager.getUUID(), key);
-                  }
-              });
+            for (UnmetNeedTracker.FirstEnter fe : firstEnters) {
+                if (!fe.reason().supplyItem()) {
+                    continue;
+                }
+                // First enter of this (townie, key) only: one econ record, not one
+                // per recompute pass (the run-2 swords=61 failure mode). Only a
+                // supply-item need writes the item store; a NoRoom's product is the
+                // tracker's producer handle, not a supply — routing it here is the
+                // oak_wood leak the item store mis-sourced.
+                econ.registerUnmetNeed(tick, fe.townie(), fe.key());
+            }
+            for (VisitorMobEntity villager : townies) {
+                String primary = unmetNeeds.primaryKey(root, villager.getUUID());
+                if (primary != null) {
+                    if (villager.getNeed() != TownieNeed.UNMET_ITEM) {
+                        villager.setNeed(TownieNeed.UNMET_ITEM);
+                    }
+                    if (!primary.equals(villager.getUnmetItem())) {
+                        villager.setUnmetItem(primary);
+                    }
+                } else if (villager.getNeed() == TownieNeed.UNMET_ITEM) {
+                    villager.setNeed(TownieNeed.NONE);
+                }
+            }
         } catch (Exception e) {
-            QT.FLAG_LOGGER.error("Failed to register unmet needs for root: {}", root, e);
+            QT.FLAG_LOGGER.error("Failed to refresh unmet needs for root: {}", root, e);
         }
     }
 
@@ -319,20 +352,6 @@ public class TownPossibleWork {
         } catch (RuntimeException e) {
             QT.FLAG_LOGGER.error("Failed to name supply item for job {}", work.id, e);
             return null;
-        }
-    }
-
-    /** A townie with viable work again is no longer waiting on supplies. */
-    private void clearUnmetItemNeeds(String root) {
-        try {
-            unmetNeeds.exitRoot(root);
-            town.getUnsafe().getVillagerHandle().entities().stream()
-                .map(v -> (VisitorMobEntity) v)
-                .filter(v -> root.equals(v.getJobId().rootId()))
-                .filter(v -> v.getNeed() == TownieNeed.UNMET_ITEM)
-                .forEach(v -> v.setNeed(TownieNeed.NONE));
-        } catch (Exception e) {
-            QT.FLAG_LOGGER.error("Failed to clear unmet-item needs for root: {}", root, e);
         }
     }
 

@@ -44,13 +44,15 @@ beat `11c7952f`, #11 skins `2bbedf3e`, #12 load-time-noise explanation
    full suite 1217/0/52-skip. See the ticket's "Root cause" section; the
    econ-need and job-change sub-items were consequences of the same root.
 2. **Cook blocker surfacing** (`cook-status-blocker-surfacing-10-14.md`) —
-   **ROOT-CAUSED, parked for ruling** (2026-10-14 night, live instrumented run
-   on s22): the cook's selection is a near-uniform coin flip over ~7 tied
-   ~1.0 jobs (extract/fuel `always_consider` no-ops tie with the real
-   cook-food jobs); the named blocker flaps with the flip. All three facets
-   are the same coin flip seen from the surfacing side. The fix is
-   decision-layer (scoring/tracker), which Q3's "surfacing only" ruling
-   excluded — needs the user's call. Evidence in the ticket's "Findings".
+   **TDD'd per the 2026-10-15 ruling** (union of live needs — no priority
+   ordering; the **job independence principle** is now in CONTEXT.md +
+   design-principles.md): `UnmetNeedTracker` enter/applyPass/exitKey/
+   primaryKey (14 tests, 4 red-verified on the pre-fix replace semantics),
+   `TownPossibleWork.refreshUnmetNeeds` runs every recompute pass and diffs
+   the union of named keys across all unlocked candidate jobs; bubble shows
+   the townie's oldest live key. Facets 1+2 (hint side) closed; the
+   behaviour-side coin flip (idle no-op jobs tie with real work, facet 3's
+   status text) remains a separate open decision-layer item.
 3. **Econ tab "switch job" also selected** (`econ-tab-switch-job-also-selected.md`) —
    **DONE** (`7b6ac864`): `VillagerEconomicsMenu`'s hand-rolled enabled-tab
    list omitted `CHANGE_ROOT`, so the switch-job tab's open-fn was null and it
