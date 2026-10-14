@@ -1696,27 +1696,38 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /**
-     * Deposit progress for open ITEM quests: wantedId -> how many matching
-     * items the town containers already hold (the "(n/target)" numerator on
-     * the quest card). Same container scan and ingredient matching as the
-     * completion path ({@code processItemQuests}), so the displayed count is
-     * the one that completes the quest. Empty when no open ITEM quest.
+     * Open-quest progress: wantedId -> how close the town is to the count. For
+     * ITEM quests that is how many matching items the town containers already
+     * hold (the "(n/target)" numerator on the quest card); for LOOT quests it is
+     * the quest's own extraction total (the 2026-10-15 accumulation counter —
+     * containers are irrelevant: extracted food may have been eaten or cooked
+     * in the meantime). Same container scan and ingredient matching as the ITEM
+     * completion path ({@code processItemQuests}), so the displayed ITEM count
+     * is the one that completes the quest. Empty when no open ITEM/LOOT quest.
      */
-    public Map<ResourceLocation, Integer> openItemQuestProgress() {
+    public Map<ResourceLocation, Integer> openQuestProgress() {
         List<MCQuest> open = questBatches.getAll().stream()
-                .filter(q -> q.getType() == Quest.QuestType.ITEM && !q.isComplete())
+                .filter(q -> (q.getType() == Quest.QuestType.ITEM || q.getType() == Quest.QuestType.LOOT)
+                        && !q.isComplete())
                 .toList();
         if (open.isEmpty()) {
             return ImmutableMap.of();
         }
+        boolean anyItems = open.stream().anyMatch(q -> q.getType() == Quest.QuestType.ITEM);
         TownFlagBlockEntity t = this.town.getUnsafe();
-        ImmutableList<MCTownItem> stacks = TownContainers.getAllStacks(t, t.getServerLevel());
+        ImmutableList<MCTownItem> stacks = anyItems
+                ? TownContainers.getAllStacks(t, t.getServerLevel())
+                : ImmutableList.of();
         Map<ResourceLocation, Integer> out = new HashMap<>();
         for (MCQuest q : open) {
-            out.put(q.getWantedId(), stacks.stream()
-                    .filter(s -> questMatchesStack(q.getWantedId(), s))
-                    .mapToInt(s -> s.toQTItemStack().getCount())
-                    .sum());
+            if (q.getType() == Quest.QuestType.LOOT) {
+                out.put(q.getWantedId(), q.getExtracted());
+            } else {
+                out.put(q.getWantedId(), stacks.stream()
+                        .filter(s -> questMatchesStack(q.getWantedId(), s))
+                        .mapToInt(s -> s.toQTItemStack().getCount())
+                        .sum());
+            }
         }
         return out;
     }
@@ -1940,8 +1951,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /**
-     * LOOT quests complete on production: when a townie extracts loot matching an open
-     * LOOT quest, the first match completes it (no accumulation). The extracted item is
+     * LOOT quests accumulate on production: when a townie extracts loot matching an open
+     * LOOT quest, the extracted count is credited to the quest and it completes once the
+     * extraction total reaches its count (2026-10-15 ruling, reversing the 2026-10-04
+     * close-on-first-extraction; count-1 quests keep that behaviour, 1 >= 1). Every
+     * matching open LOOT quest is credited by one extraction (a re-issued ask after a
+     * batch reward is not starved by the first match). The extracted item is
      * not consumed here; the normal deposit / eat path decides what happens to it.
      */
     public void processLootQuests(MCTownItem extracted) {
@@ -1959,12 +1974,16 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             lootQuestsSeen++;
             boolean match = quest.getWantedId() != null
                     && Ingredients.asIngredient(quest.getWantedId()).test(stack);
-            QT.QUESTS_LOGGER.info("[LOOTTRACE] extract '{}' vs LOOT quest {} -> {}",
+            QT.QUESTS_LOGGER.info("[LOOTTRACE] extract '{}' vs LOOT quest {} -> {} (extracted {}/{})",
                     stack.getItem() != null ? stack.getItem().getName(stack).getString() : "?",
-                    quest.getWantedId(), match);
+                    quest.getWantedId(), match, quest.getExtracted() + stack.getCount(), quest.getCountNeeded());
             if (match) {
-                questBatches.markRecipeAsComplete(null, quest.getWantedId());
-                return;
+                // No early return: this extraction also advances any sibling
+                // matching quest, and only completes a quest that reached its
+                // count.
+                if (quest.addExtracted(stack.getCount()) >= quest.getCountNeeded()) {
+                    questBatches.markRecipeAsComplete(null, quest.getWantedId());
+                }
             }
         }
         if (lootQuestsSeen == 0) {

@@ -223,7 +223,8 @@ not match (`2026-10-10` held run: the `NO_RECIPE` on a one-bed room sent the
 drive looking for a detector bug that did not exist).
 
 **The scenario's tick budget is in *ticks*, not minutes.** `MAX_TICKS =
-24000 × 10` (10 in-game days). At `/tick rate 200` that is 1200 s ≈ 20 real
+24000 × 10` (10 in-game days). At the autotest default 200 t/s (auto-applied
+on boot since 2026-10-15 - see AUTOTESTS.md "TPS") that is 1200 s ≈ 20 real
 minutes; at a default 20 TPS it is 10 h. A held agent-driven run that spends
 its days on chicken-arc debugging times out at roster 2 — the executor prints
 `FAIL timed out after 240000 ticks` and leaves the world alive (hold mode

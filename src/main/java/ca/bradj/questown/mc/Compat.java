@@ -20,6 +20,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -90,7 +91,7 @@ public class Compat {
         );
     }
 
-    public static Component translatable(String key) {
+    public static MutableComponent translatable(String key) {
         return Component.translatable(key);
     }
 
@@ -716,5 +717,15 @@ public class Compat {
                 )
         );
         return head;
+    }
+
+    /**
+     * The 1.20.3+ tick-rate lever - what {@code /tick rate <tps>} does on a live
+     * server. The autotest runner applies this on boot so tick-budgeted
+     * scenarios (the scenario clock is ticks, never wall clock) deliver in a
+     * fraction of the wall time; 1.19.2 has a fixed 20 t/s with no lever.
+     */
+    public static void setServerTickRate(MinecraftServer server, float tps) {
+        server.tickRateManager().setTickRate(tps);
     }
 }

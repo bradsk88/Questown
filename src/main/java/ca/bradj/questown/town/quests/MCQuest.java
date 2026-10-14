@@ -22,6 +22,26 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
 
     @Nullable String concurrentJobIdsEncoded;
 
+    /**
+     * LOOT-quest accumulation (2026-10-15 ruling, reversing the 2026-10-04
+     * close-on-first-extraction): how many of the wanted item the town has
+     * extracted while this quest was open. The quest completes at
+     * {@link #getCountNeeded()}; a count-1 quest keeps the old
+     * close-on-first-extraction behaviour. Persisted with the quest so the
+     * progress survives world saves; legacy saves default to 0.
+     */
+    private int lootExtracted;
+
+    /** Add to the extraction total; @return the running total. */
+    public int addExtracted(int n) {
+        lootExtracted += n;
+        return lootExtracted;
+    }
+
+    public int getExtracted() {
+        return lootExtracted;
+    }
+
     MCQuest() {
         super();
     }
@@ -235,6 +255,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         private static final String NBT_ONBOARDING = "onboarding";
         private static final String NBT_CONCURRENT_JOB_IDS = "concurrent_job_ids";
         private static final String NBT_STATUS = "status";
+        private static final String NBT_LOOT_EXTRACTED = "loot_extracted";
         private static final String NBT_COMPLETED_ON_DOORPOS_X = "doorpos_x";
         private static final String NBT_COMPLETED_ON_DOORPOS_Y = "doorpos_y";
         private static final String NBT_COMPLETED_ON_DOORPOS_Z = "doorpos_z";
@@ -272,6 +293,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             }
             if (quest instanceof MCQuest mcq && mcq.concurrentJobIdsEncoded != null) {
                 ct.putString(NBT_CONCURRENT_JOB_IDS, mcq.concurrentJobIdsEncoded);
+            }
+            if (quest instanceof MCQuest mcq && mcq.lootExtracted > 0) {
+                ct.putInt(NBT_LOOT_EXTRACTED, mcq.lootExtracted);
             }
             return ct;
         }
@@ -329,6 +353,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             }
             if (nbt.contains(NBT_CONCURRENT_JOB_IDS)) {
                 quest.concurrentJobIdsEncoded = nbt.getString(NBT_CONCURRENT_JOB_IDS);
+            }
+            if (nbt.contains(NBT_LOOT_EXTRACTED)) {
+                quest.lootExtracted = nbt.getInt(NBT_LOOT_EXTRACTED);
             }
             return quest;
         }

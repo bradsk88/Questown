@@ -134,13 +134,16 @@ room"** as a distinct status from active / completed / lost. Deferred to a
 later change; it needs a new `QuestStatus` and rendering in the flag's quest
 tab (`TownQuestsContainer`).
 
-## LOOT quests — completion on extraction, not chest deposit
+## LOOT quests — completion on extraction, accumulating to the count
 
 Item quests come in two contracts. An `ITEM` quest completes when the wanted
 item is **deposited in a store-room chest** (`processItemQuests`). A `LOOT`
-quest completes the moment a townie **extracts** matching loot from their job
-— no deposit, no accumulation, first match wins. The raw-food onboarding quest
-(`#questown:villager_simple_furnace_food_raw`) is a LOOT quest.
+quest accumulates on every **extraction** of matching loot: each extraction
+credits the quest's extracted total (persisted with the quest) and the quest
+completes once the total reaches its count (2026-10-15 ruling, reversing the
+2026-10-04 close-on-first-extraction; a count-1 quest keeps that behaviour,
+1 >= 1). No deposit required. The raw-food onboarding quest
+(`#questown:villager_simple_furnace_food_raw`, count 1) is a LOOT quest.
 
 ```mermaid
 flowchart TD
@@ -149,7 +152,10 @@ flowchart TD
     Has -- yes --> PLQ["TownQuests.processLootQuests(stack)"]
     PLQ --> Scan["scan incomplete LOOT quests"]
     Scan --> Match{"Ingredients.asIngredient(wantedId).test(stack)?"}
-    Match -- yes --> Done["markRecipeAsComplete(wantedId) + quest_completed broadcast"]
+    Match -- yes --> Acc["quest.addExtracted(stack.getCount())"]
+    Acc --> Thr{"total >= count?"}
+    Thr -- yes --> Done["markRecipeAsComplete(wantedId) + quest_completed broadcast"]
+    Thr -- no --> Stay["stays open; card shows (total/count)"]
     Match -- no --> Skip["no change; the item keeps its normal fate"]
 ```
 

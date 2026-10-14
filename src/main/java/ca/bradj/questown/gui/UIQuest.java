@@ -56,10 +56,12 @@ public class UIQuest implements Comparable<UIQuest> {
     @Nullable
     private final String flavorText;
     /**
-     * ITEM-quest deposit progress: how many of the wanted item the town
-     * containers already hold (rendered as "(deposited/target)" on the card,
-     * capped at the target). Null for every other quest type and for ITEM
-     * quests whose progress was not computed.
+     * Progress toward the quest's count: for ITEM quests, how many of the wanted
+     * item the town containers already hold; for LOOT quests, how much has been
+     * extracted so far (the 2026-10-15 accumulation counter). Rendered as
+     * "(progress/target)" on the card, capped at the target. Null for every
+     * other quest type and for ITEM/LOOT quests whose progress was not
+     * computed.
      */
     @Nullable
     private final Integer deposited;
@@ -107,13 +109,15 @@ public class UIQuest implements Comparable<UIQuest> {
     }
 
     /**
-     * Same as the two-arg form, but each open ITEM quest whose wanted id appears in
-     * {@code itemProgress} carries its deposit count (the card renders "(n/target)").
+     * Same as the two-arg form, but each open ITEM or LOOT quest whose wanted
+     * id appears in {@code questProgress} carries its progress count (ITEM:
+     * deposits so far; LOOT: extractions so far - the card renders
+     * "(n/target)").
      */
     public static List<UIQuest> fromLevel(
             Level level,
             Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ,
-            Map<ResourceLocation, Integer> itemProgress
+            Map<ResourceLocation, Integer> questProgress
     ) {
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
@@ -151,6 +155,7 @@ public class UIQuest implements Comparable<UIQuest> {
                 jobRecipientUUID = v.getUUID();
             }
             Collection<Ingredient> ingredientz = getIngredients(v, rMap);
+            boolean carriesProgress = v.getType() == Quest.QuestType.ITEM || v.getType() == Quest.QuestType.LOOT;
             return new UIQuest(
                     v.getBatchUUID(),
                     v.getWantedId(),
@@ -161,7 +166,7 @@ public class UIQuest implements Comparable<UIQuest> {
                     jobRecipientUUID,
                     job,
                     v.getFlavorText(),
-                    v.getType() == Quest.QuestType.ITEM ? itemProgress.get(v.getWantedId()) : null
+                    carriesProgress ? questProgress.get(v.getWantedId()) : null
             );
         }).toList();
     }
@@ -243,7 +248,15 @@ public class UIQuest implements Comparable<UIQuest> {
                 }
                 yield name;
             }
-            case LOOT -> Compat.translatable("menu.quests.food");
+            case LOOT -> {
+                // The card is "Food" + "(extracted/count)": the extraction
+                // progress the 2026-10-15 accumulation ruling made real.
+                MutableComponent name = Compat.translatable("menu.quests.food");
+                if (deposited != null) {
+                    name.append(Compat.literal("(" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
+                }
+                yield name;
+            }
             case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractJobName());
             case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", extractRootJobName());
             case CONCURRENT_JOBS -> Compat.literal("Multiple Jobs Active");

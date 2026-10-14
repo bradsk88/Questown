@@ -22,6 +22,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 import ca.bradj.questown.commands.test.TestBlueprintRegistry.AnyTestEntry;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -39,6 +40,7 @@ public class AutoTestRunner {
     // running so a dev client can join and inspect the final world state
     // (e.g. visual verification of need bubbles via screenshot).
     private static final String SYSPROP_HOLD = "questown.autotest.hold";
+    private static final String SYSPROP_TICKRATE = "questown.autotest.tickrate";
     private static final String CATEGORY_CHICKEN = ChickenArcBlueprintRegistry.CATEGORY;
     private static final int DEFAULT_WARP = 24000;
     private static final BlockPos ORIGIN = new BlockPos(0, 64, 0);
@@ -58,6 +60,15 @@ public class AutoTestRunner {
         }
 
         QT.FLAG_LOGGER.info("[autotest] BOOT_OK");
+
+        // Fast-forward tick-budgeted runs. The scenario clock is ticks (warp-simulated
+        // or a realtime tick budget), never wall clock, so a 200 t/s server delivers
+        // the same tick sequence in ~5% of the 20 t/s wall time (vanilla default).
+        // Applies to held runs too - it is what the 2026-10-09 guidance did by hand
+        // via `ffeed.sh '/tick rate 200'`. Override (e.g. back to vanilla): -Dquestown.autotest.tickrate=20
+        float tickRate = parseTickRate();
+        Compat.setServerTickRate(server, tickRate);
+        QT.FLAG_LOGGER.info("[autotest] tick rate set to {} t/s (override: -D{}=<tps>)", tickRate, SYSPROP_TICKRATE);
 
         // Force-load the test chunks so block entity tickers run without a player, AND mobs
         // keep ticking. Headless (no player) non-player entities only tick inside
@@ -151,6 +162,27 @@ public class AutoTestRunner {
                 server, jobsExecutor, chickenExecutor, villageExecutor, selfSuffExecutor
         );
         NeoForge.EVENT_BUS.register(listener);
+    }
+
+    /** Autotest default tick rate: 200 t/s (~10x the vanilla 20 t/s). */
+    private static final float DEFAULT_TICK_RATE = 200f;
+
+    private static float parseTickRate() {
+        String val = System.getProperty(SYSPROP_TICKRATE);
+        if (val == null) {
+            return DEFAULT_TICK_RATE;
+        }
+        try {
+            float tps = Float.parseFloat(val);
+            // The /tick rate command's own bounds: 1.0..10000.0 t/s.
+            if (tps >= 1.0f && tps <= 10000.0f) {
+                return tps;
+            }
+            QT.FLAG_LOGGER.warn("[autotest] tickrate {} out of 1..10000; using default {}", val, DEFAULT_TICK_RATE);
+        } catch (NumberFormatException e) {
+            QT.FLAG_LOGGER.warn("[autotest] tickrate '{}' not a number; using default {}", val, DEFAULT_TICK_RATE);
+        }
+        return DEFAULT_TICK_RATE;
     }
 
     private static boolean shouldRunChickenTrack(@Nullable String category) {

@@ -69,12 +69,17 @@ beat `11c7952f`, #11 skins `2bbedf3e`, #12 load-time-noise explanation
    "Food" — lang key `menu.quests.raw_food` → `menu.quests.food` (+3 call
    sites); pinned by `UIQuestLootCardNameTest`.
 6. **"Food" quest type + re-deposit completion** (`food-quest-wrong-type-and-redeposit-completion.md`) —
-   **ROOT-CAUSED, no code defect** (2026-10-14 night): s19 log 04:26:47 proves the
-   completion was a gatherer's crop-carrot extraction (postExtractHook ->
-   processLootQuests), not the user's chest re-deposit (LOOT never scans
-   containers); it WAS a LOOT quest - the perception came from the "Raw food"
-   name (fixed by #5). Open ruling parked: card says "produce 8" but LOOT
-   completes on first extraction - copy fix vs accumulate.
+   **DONE (2026-10-15)**: root-cause stood (it WAS a LOOT quest; the s19
+   completion was a gatherer's crop-carrot extraction), then the parked
+   ruling was settled on **option (b) accumulate**: LOOT quests credit every
+   matching extraction to a persisted extracted total and complete at the
+   count (count-1 keeps close-on-first-extraction, so the 2.75 gate is
+   untouched); the card shows "(n/8)" via the #4 progress mechanism
+   (`openQuestProgress` now covers ITEM + LOOT). Pinned by
+   `TownQuestsLootTest` (red-verified), `MCQuestLootProgressTest`,
+   `UIQuestLootProgressTest`, and the autotest oracle
+   `loot/loot_on_extract_accumulate` (3/3 loot scenarios PASS at the
+   auto-applied 200 t/s).
 7. **Raw-food repeat eating** (`raw-food-repeat-eating.md`) — **ANSWERED
    2026-10-14 night, REVERSED by user ruling 2026-10-15**: raw meals apply
    HUNGER_FILL_HALF (0.5f) vs cooked HUNGER_FILL (1f); the satiety timer

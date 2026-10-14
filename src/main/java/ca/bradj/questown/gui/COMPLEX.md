@@ -699,26 +699,28 @@ the test reads the field reflectively; the initializer is pure string math,
 safe in a unit JVM. Red-verified by stash: pre-fix code fails the
 change_root-presence and sibling-invariant cases.
 
-## Item-quest cards show deposit progress (n/target) (2026-10-14)
+## Item- and loot-quest cards show progress (n/target) (2026-10-14, LOOT 2026-10-15)
 
 2026-10-14 playtest (in-game chat 04:26:16): "The 'Create N items' Quests
 should probably show an indication like (3/8)".
 
-The card (`UIQuest.getName()`, ITEM case) appends "(deposited/target)"
+The card (`UIQuest.getName()`, ITEM and LOOT cases) appends "(deposited/target)"
 capped at the target when the snapshot carries `deposited` (new nullable
 field; wire: `writeInt` with -1 == null). `deposited` is only ever set for
-open ITEM quests.
+open ITEM or LOOT quests.
 
-Server side: `TownQuests.openItemQuestProgress()` returns
-wantedId -> matching-item count across `TownContainers.getAllStacks(...)`,
-using the same ingredient matching as the completion path
-(`questMatchesStack`) so the displayed count is the one that completes the
-quest. Wired into the two surfaces that render the main quest card list:
-`TownFlagMenus.showUI` (flag QUESTS tab) and `TownQuestsHandle.showQuestsUI`,
-via the new `QuestsHolder.openItemQuestProgress()`. LOOT quests deliberately
-carry no progress (they complete on first extraction, no accumulation). The
-secondary villager/visitor surfaces (`TownVillagerUIs` batch cards) use the
-two-arg `fromLevel` and stay progress-less. Pinned by
-`UIQuestItemProgressTest` (wire round-trip + capped name; red is
-by-construction - the field did not exist pre-fix, so the test cannot
-compile against it).
+Server side: `TownQuests.openQuestProgress()` returns wantedId -> progress
+for both types: ITEM = matching-item count across
+`TownContainers.getAllStacks(...)`, using the same ingredient matching as
+the completion path (`questMatchesStack`) so the displayed count is the one
+that completes the quest; LOOT = the quest's own extraction total (the
+2026-10-15 accumulation counter - containers are irrelevant, the extracted
+food may have been eaten or cooked since). Wired into the two surfaces that
+render the main quest card list: `TownFlagMenus.showUI` (flag QUESTS tab) and
+`TownQuestsHandle.showQuestsUI`, via the new `QuestsHolder.openQuestProgress()`.
+The secondary villager/visitor surfaces (`TownVillagerUIs` batch cards) use the
+two-arg `fromLevel` and stay progress-less. Pinned by `UIQuestItemProgressTest`
+(wire round-trip + capped name; red is by-construction - the field did not
+exist pre-fix, so the test cannot compile against it) and
+`UIQuestLootProgressTest` (the "(n/8)" shape on the LOOT card, capped at the
+target).

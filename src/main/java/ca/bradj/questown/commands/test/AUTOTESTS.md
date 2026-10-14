@@ -35,6 +35,16 @@ The scenario-tuning knobs (`questown.village.selfsuff.days`, `questown.village.s
 
 ## TPS
 
+**Autotest runs set the rate themselves (2026-10-15).** `AutoTestRunner.onServerStarted`
+calls `Compat.setServerTickRate(server, 200f)` right after `BOOT_OK` (log line
+`[autotest] tick rate set to 200.0 t/s`): every autotest scenario - warp or
+realtime - is tick-budgeted, never wall-clock-budgeted, so 200 t/s (≈10x the
+vanilla 20) delivers the same tick sequence in ~5% of the wall time (a
+4800-tick realtime hunter scenario: ~4 min at 20 t/s, ~27 s at 200). Held
+runs get it too - this is what the 2026-10-09 guidance did by hand via
+`ffeed.sh '/tick rate 200'`. Override: `-Dquestown.autotest.tickrate=<tps>`
+(1..10000, same bounds as the command; `=20` restores vanilla pace).
+
 **Branch-dependent.** The **1.20.6 branch (this one)** has a vanilla tick-rate
 lever: the `/tick` command group — `query`, **`rate <float>`** (set the TPS
 rate; `ServerTickRateManager.setTickRate`), `step`, `sprint`, `stop`, `time`,

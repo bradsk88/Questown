@@ -1,6 +1,6 @@
 ---
 title: 'Food quest should have been a LOOT quest; chest cleanup re-deposit completed it'
-status: needs-ruling (root-caused 2026-10-14 night; no code defect found in either part)
+status: resolved (2026-10-15: option (b) - LOOT quests accumulate to the count; card shows (n/8))
 ---
 
 # "Food" quest: wrong type, and re-depositing existing items completed it
@@ -64,3 +64,27 @@ not promise a count (e.g. "A villager must bring back food"), or
 (b) make LOOT quests accumulate to the count across extractions.
 Park for the user; both are one-line-ish, but (b) changes the
 downstream-pace the 2026-10-04 doc tuned for (the 2.75 gate).
+
+## Ruling + outcome (2026-10-15)
+
+The user chose **(b) accumulate**, with the "(n/target)" card display reused
+from the ITEM-quest progress mechanism (item 4 of this playtest's MISSION).
+
+Implementation (TDD'd, full `:test` green, strangler clean):
+
+- `MCQuest.lootExtracted` counter: `addExtracted(n)` returns the running
+  total; NBT-persisted (`loot_extracted`, legacy saves default to 0).
+- `TownQuests.processLootQuests`: no early return - every matching open
+  LOOT quest is credited; a quest completes only when its total reaches
+  its count. Count-1 quests keep the old close-on-first-extraction
+  behaviour (1 >= 1), so the 2.75 gate's raw-food quest is untouched.
+- Card: `UIQuest.getName()` LOOT case renders "(extracted/count)" capped at
+  the target, fed by `QuestsHolder.openQuestProgress()` (renamed from
+  `openItemQuestProgress`; now covers ITEM + LOOT).
+- Pins: `TownQuestsLootTest` (accumulate / stack-count / credit-every-
+  matching, red-verified 2-of-6 against the pre-fix close-on-first form),
+  `MCQuestLootProgressTest` (counter + NBT round-trip),
+  `UIQuestLootProgressTest` ("(3/8)", capped "(8/8)"), autotest oracle
+  `loot/loot_on_extract_accumulate` (count-4, natural cycle must leave it
+  open, top-up completes it - PASS; `loot_on_extract` + `_warp` count-1
+  regression PASS, same run).

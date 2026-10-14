@@ -185,6 +185,12 @@ public class TestBlueprintRegistry {
         // warper records the extraction on the state snapshot and the settle point in
         // TownFlagState.warp closes the quest through the live handle (warp == realtime outcome).
         jobs.add(new TestEntry("loot_on_extract_warp", new JobID("hunter", "sword"), lootOnExtractBlueprint(true), "loot"));
+        // loot_on_extract_accumulate: the 2026-10-15 accumulation ruling. Posts the raw-food
+        // LOOT quest at count 4, drives one hunter cycle (>=1 natural extraction), and
+        // asserts the quest did NOT complete on the first extraction (the old
+        // close-on-first-extraction semantics), then tops the counter up through the live
+        // quest handle and asserts it completes exactly at the count.
+        jobs.add(new TestEntry("loot_on_extract_accumulate", new JobID("hunter", "sword"), lootOnExtractAccumulateBlueprint(), "loot"));
         jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
         jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
         jobs.add(entry(new JobID("crafter", "leather_boots"), armorerBlueprint()));
@@ -2674,6 +2680,75 @@ public class TestBlueprintRegistry {
                         output.msg("loot_on_extract: state held=" + held + " containers=" + containers);
                     }
                     return typeOk && complete;
+                });
+    }
+
+    /**
+     * The accumulation oracle (2026-10-15 ruling): count-4 raw-food LOOT quest,
+     * one realtime hunter cycle, then a deterministic top-up through the live
+     * quest handle (the same entry point {@code RealtimeWorldInteraction}
+     * uses on extraction, and {@code _qtdev loot_fire} in a held run).
+     * Pre-fix, the first natural extraction completed the quest outright and
+     * the "incomplete with progress" assertion fails.
+     */
+    private static TestBlueprint lootOnExtractAccumulateBlueprint() {
+        TestBlueprint base = hunterBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, null, 1, true, 4800, false, true, null, null, null, null, null, false
+        )
+                .withSetupHook((level, flagPos, town, output) -> {
+                    ResourceLocation tag = rawFoodTag();
+                    town.getQuestHandle().addLootQuest(tag, 4);
+                    boolean posted = town.getQuestHandle().getAllQuestsWithRewards().stream()
+                            .anyMatch(e -> e.getKey().getType() == Quest.QuestType.LOOT
+                                    && tag.equals(e.getKey().getWantedId())
+                                    && !e.getKey().isComplete());
+                    output.msg("loot_on_extract_accumulate: raw-food LOOT quest count 4 posted=" + posted);
+                    return posted;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    ResourceLocation tag = rawFoodTag();
+                    MCQuest quest = null;
+                    for (AbstractMap.SimpleEntry<MCQuest, ?> e : town.getQuestHandle().getAllQuestsWithRewards()) {
+                        if (tag.equals(e.getKey().getWantedId())) {
+                            quest = e.getKey();
+                        }
+                    }
+                    if (quest == null || quest.getType() != Quest.QuestType.LOOT) {
+                        output.msg("loot_on_extract_accumulate: FAIL — posted quest not found in town state");
+                        return false;
+                    }
+                    int extracted = quest.getExtracted();
+                    if (extracted == 0) {
+                        output.msg("loot_on_extract_accumulate: FAIL — no natural extraction occurred; the oracle is broken");
+                        return false;
+                    }
+                    if (quest.isComplete()) {
+                        output.msg("loot_on_extract_accumulate: FAIL — quest completed on its first extraction "
+                                + "(count " + quest.getCountNeeded() + ", extracted " + extracted + "): close-on-first-extraction is back");
+                        return false;
+                    }
+                    output.msg("loot_on_extract_accumulate: after natural cycle extracted=" + extracted + " complete=false");
+                    // Top the counter up through the live handle: one mutton per extraction
+                    // (mutton is a member of the raw-food tag; data/questown/tags/items/
+                    // villager_simple_furnace_food_raw.json).
+                    for (int i = 0; i < quest.getCountNeeded() - extracted; i++) {
+                        town.getQuestHandle().processLootQuests(
+                                MCTownItem.fromMCItemStack(new ItemStack(Items.MUTTON, 1)));
+                    }
+                    MCQuest after = null;
+                    for (AbstractMap.SimpleEntry<MCQuest, ?> e : town.getQuestHandle().getAllQuestsWithRewards()) {
+                        if (tag.equals(e.getKey().getWantedId())) {
+                            after = e.getKey();
+                        }
+                    }
+                    boolean complete = after != null && after.isComplete();
+                    output.msg("loot_on_extract_accumulate: after top-up complete=" + complete);
+                    return complete;
                 });
     }
 

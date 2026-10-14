@@ -73,6 +73,15 @@ the sequence a session needs up front.
 
 ## Speeding a held realtime run (the tick-rate lever — 1.20.6 only)
 
+**Autotest boots apply 200 t/s themselves since 2026-10-15**
+(`AutoTestRunner` → `Compat.setServerTickRate`, log line
+`[autotest] tick rate set to 200.0 t/s`; override
+`-Dquestown.autotest.tickrate=<tps>`). For a held run you no longer need to
+feed the rate to start the observation — just confirm the line in the log and
+pace-guard as before. The manual feed below remains the tool for re-applying
+after a manual `/tick` change, for non-autotest servers, and as the
+verification fallback.
+
 When a realtime held run (self_sufficiency, a behavior proof, a perf sweep) is too
 slow, **raise the tick rate — do not assume 20 TPS is a cap.** 20 is only the
 vanilla *default*; on the 1.20.6 branch (this one) vanilla added the `/tick`

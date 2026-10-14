@@ -5,6 +5,13 @@ closed: 2026-10-04
 area: jobs/declarative, town/entity
 ---
 
+> **Reversed in part (2026-10-15).** "Close on first matching extraction, no
+> accumulation" now applies only to count-1 quests. Count>1 LOOT quests
+> accumulate their extracted total across extraction events and complete at
+> the count (ruling in
+> `.scratch/playtest-2026-10-14/food-quest-wrong-type-and-redeposit-completion.md`).
+> The 2.75 gate's raw-food quest is count 1 - its pacing is unchanged.
+
 ## Problem
 
 The raw-food LOOT quest (2.5 gate, `villager_simple_furnace_food_raw`) only closed

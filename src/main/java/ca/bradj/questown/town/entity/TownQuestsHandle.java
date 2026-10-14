@@ -80,7 +80,7 @@ public class TownQuestsHandle implements QuestsHolder {
         @SuppressWarnings("DataFlowIssue") List<UIQuest> quests = UIQuest.fromLevel(
                 t.getServerLevel(),
                 aQ,
-                t.quests.openItemQuestProgress()
+                t.quests.openQuestProgress()
         );
 
         QuestScreenSummary summary = new QuestScreenSummary(
@@ -204,8 +204,8 @@ public class TownQuestsHandle implements QuestsHolder {
     }
 
     @Override
-    public Map<ResourceLocation, Integer> openItemQuestProgress() {
-        return unsafeGetTown().quests.openItemQuestProgress();
+    public Map<ResourceLocation, Integer> openQuestProgress() {
+        return unsafeGetTown().quests.openQuestProgress();
     }
 
     @Override
