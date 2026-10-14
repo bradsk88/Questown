@@ -1,6 +1,5 @@
 package ca.bradj.questown.town.quests;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rewards.RewardType;
@@ -38,8 +37,11 @@ public class MCInstantReward extends MCReward implements MCRewardContainer {
     ) {
         super(rType);
         this.town = town;
-        QT.QUESTS_LOGGER.warn(
-                "An \"instant\"-type reward is being loaded from disk. This is probably harmless, but is also unexpected.");
+        // Note: no log here. A persisted instant reward (already applied on disk, e.g. a
+        // completed onboarding batch) is the NORMAL state on every load of a post-onboarding
+        // world; the "unexpected" WARN that used to live here alarmed on every load
+        // (2026-10-13 playtest load-time noise; ticket
+        // .scratch/day1-playtest-2026-10-11/load-time-reward-reclaim-error-noise.md).
     }
 
     @Override

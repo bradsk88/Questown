@@ -174,7 +174,6 @@ public class QuestBatches<
         bs.forEach(v -> {
             final VillagerUUID owner = coerceUUID(villagers, v.getUUID());
             BATCH e = this.emptyBatch(v.getBatchUUID(), owner, v.reward);
-            ImmutableList.Builder<QUEST> eqb = ImmutableList.builder();
             v.getAll().forEach(q -> {
                 switch (q.getType()) {
                     case ITEM -> e.addItemQuest(owner, q.getWantedId(), q.getCountNeeded());
@@ -188,10 +187,13 @@ public class QuestBatches<
                 }
                 IdIgnoring<QUEST> iq = new IdIgnoring<>(q);
                 if (completedQuests.contains(iq)) {
-                    e.markRecipeAsComplete(q.completedOn, q.getWantedId());
+                    // Replay, not completion: the persisted quest was already rewarded on disk
+                    // (its reward is restored applied), so re-claiming through
+                    // markRecipeAsComplete would trip the once-guard on every load
+                    // (see QuestBatch.markRecipeAsCompleteForReplay).
+                    e.markRecipeAsCompleteForReplay(q.completedOn, q.getWantedId());
                     completedQuests.remove(iq);
                 }
-                eqb.add(q);
             });
             bld.add(e);
         });

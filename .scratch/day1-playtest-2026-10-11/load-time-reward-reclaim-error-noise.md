@@ -1,6 +1,6 @@
 ---
 title: 'World-load logs reward re-claims at ERROR + instant-reward WARN noise'
-status: ready-for-human
+status: done
 ---
 
 # Load-time reward noise: 3x ERROR "Refusing to apply reward" + 3x WARN "instant-type reward loaded from disk"
@@ -111,4 +111,22 @@ silence/downgrade the WARN (stale comment, now-normal state).
 **Drive-by finding (out of scope, note for later):**
 `filterOutDuplicateCompletion` builds an `eqb` quest list it never reads —
 vestigial builder, delete with the B change.
+
+## Fix (2026-10-15, option B, implemented + committed)
+
+- `QuestBatch.markRecipeAsCompleteForReplay(room, recipe)` — re-marks a
+  persisted completed quest complete WITHOUT claiming the reward and WITHOUT
+  firing listener events (pure state re-establishment: no chat broadcast,
+  no `questBatchCompleted` side effects, no `completedProceduralBatches`
+  increment on load). `QuestBatches.filterOutDuplicateCompletion` now calls
+  the replay variant instead of `markRecipeAsComplete`; the vestigial `eqb`
+  builder is deleted.
+- `MCInstantReward`'s deserializer ctor no longer logs the "instant-type
+  reward loaded from disk" WARN (stale "unexpected" comment; now the normal
+  state on every post-onboarding load). The `applied` flag round-trips via
+  NBT, so the once-guard stays at ERROR for a genuine invariant trip.
+- Regression test `QuestBatchesLoadReplayTest` (RED-verified pre-fix:
+  second `claim()` attempt `expected <1> but was <2>` + the guard's own
+  ERROR line in the test log; GREEN post-fix; full suite green,
+  strangler clean). Doc: `town/quests/COMPLEX.md` "Load-time replay".
 

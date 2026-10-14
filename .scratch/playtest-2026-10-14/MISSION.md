@@ -132,7 +132,12 @@ beat `11c7952f`, #11 skins `2bbedf3e`, #12 load-time-noise explanation
    batch; the per-quest "Quest completed: …" lines already announce it. See
    the ticket's "Ruling + fix" section and `town/quests/COMPLEX.md`
    "Procedural-batch milestone ladder".
-5. load-time reward: HOLDING; needs the plain-language explanation (queue #12).
+5. load-time reward: **RULED + DONE 2026-10-15 (option B)** — load replay
+   uses `markRecipeAsCompleteForReplay` (no reward claim, no listener
+   events); the stale "instant reward loaded from disk" WARN removed; the
+   once-guard stays at ERROR for real trips. `QuestBatchesLoadReplayTest`
+   RED-verified; full suite green, strangler clean. See ticket "Fix" +
+   `town/quests/COMPLEX.md` "Load-time replay".
 
 ## Hunter evidence (collected so far)
 

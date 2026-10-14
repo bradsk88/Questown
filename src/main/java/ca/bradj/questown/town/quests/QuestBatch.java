@@ -161,6 +161,30 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         return true;
     }
 
+    /**
+     * Load-time replay only. Re-mark a persisted completed quest complete without claiming the
+     * batch's reward. Completion and reward application are synchronous, so a completed quest
+     * read back from disk implies the reward is already applied (it is restored with its
+     * applied flag) - re-claiming through {@link #markRecipeAsComplete(ROOM, KEY)} would trip
+     * the once-guard on every load of a post-onboarding world (the 2026-10-13 "Refusing to
+     * apply reward more than once" load noise; ticket
+     * .scratch/day1-playtest-2026-10-11/load-time-reward-reclaim-error-noise.md). No
+     * listener events fire either: the rebuild is pure state re-establishment, not a new
+     * completion (no chat broadcast, no batch-completion side effects on load).
+     */
+    public boolean markRecipeAsCompleteForReplay(@Nullable ROOM room, @Nullable KEY recipe) {
+        Stream<QUEST> matches = this.quests.stream().filter(v -> recipe.equals(v.getWantedId()));
+        Optional<QUEST> incomplete = matches.filter(v -> !v.isComplete()).findFirst();
+        if (incomplete.isEmpty()) {
+            return false;
+        }
+        QUEST quest = incomplete.get();
+        this.quests.remove(quest);
+        QUEST updated = this.questFactory.completed(room, quest);
+        this.quests.add(updated);
+        return true;
+    }
+
     public boolean canMarkRecipeAsConverted(
             KEY oldRecipeID,
             KEY newRecipeID

@@ -74,6 +74,30 @@ flowchart TD
   `markRecipeAsComplete_hasNoEffect_whenNoOpenQuestRemainsForRecipe`
   (the 2023 intent: no re-mark when all complete).
 
+## Load-time replay: `markRecipeAsCompleteForReplay` (no reward claim)
+
+On every flag load, `MCQuestBatches.SERIALIZER.deserializeNBT` rebuilds each
+persisted batch (`new MCQuestBatch()` + `initialize(batchUUID, allQuests,
+reward)`, reward restored WITH its `reward_applied` flag) and
+`QuestBatches.initialize` -> `filterOutDuplicateCompletion` re-marks every
+persisted completed quest. That re-mark must use
+`QuestBatch.markRecipeAsCompleteForReplay`, NOT `markRecipeAsComplete`:
+completion and reward application are synchronous, so "quest complete on
+disk" implies "reward already applied on disk" - the ordinary path's
+`reward.claim()` at batch-close would trip the once-guard on every load of a
+post-onboarding world (the 2026-10-13 playtest noise: 3x ERROR "Refusing to
+apply reward more than once" + 3x stale WARN "instant-type reward loaded
+from disk", the latter removed from `MCInstantReward`'s deserializer ctor as
+it was the normal state). The replay variant re-marks the quest and fires
+NO listener events (no `questCompleted`/`questBatchCompleted` - so no chat
+broadcast and no `completedProceduralBatches` increment on load; that
+counter is NBT-persisted separately). Also removed here: a vestigial
+`ImmutableList.Builder eqb` in `filterOutDuplicateCompletion` that was built
+but never read. Regression test:
+`QuestBatchesLoadReplayTest.loadReplay_completedBatch_remarksQuest_withoutReclaimingReward`
+(RED-verified pre-fix: the second `claim()` attempt, `expected: <1> but was:
+<2>`, plus the guard's own ERROR line in the test log).
+
 ## Onboarding flag: stored but not wired to completion (as of 2026-09-07)
 
 Randomly generated quests keep exact matching ("the villagers want this
