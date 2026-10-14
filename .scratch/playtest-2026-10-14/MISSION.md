@@ -19,15 +19,26 @@ beat `11c7952f`, #11 skins `2bbedf3e`, #12 load-time-noise explanation
 - **Server-22 + Client-22: TORN DOWN** (clean shutdown 2026-10-15 06:47 BST;
   world auto-saved on stop). Final playtest world backed up at
   `~/playtest-world-2026-10-14` (29M, level.dat 06:47:21).
-- **Full autotest suite: RUNNING** (launched 2026-10-15 06:48, `nohup
-  ./gradlew runServer -Dquestown.autotest=true`, log
-  `/tmp/autotest-full-20261013.log`). The suite was only ever run 19/57 last
-  night; re-running unattended because the miner beat (#10) changed the
-  onboarding flow that `village/growth` walks. Wipes `run/world` (backed up;
-  user expected a fresh world on waking). Tally: `grep -cE '\[FAIL\]
-  scenario:'` — count scenarios, not lines. Baseline: the 14 known-failing
-  scenarios in AGENTS.md "1.20.6 full-suite autotest baseline" — a NEW
-  `[FAIL] scenario:` line is a regression.
+- **Full autotest suite: COMPLETE** (ran 06:48–07:50, log
+  `/tmp/autotest-full-20261013-r2.log`; first attempt died at test 16 in the
+  arborist warp — a managed chunk-load deadlock in `WarpWorldAccess`'s
+  level fallback, fixed in `497b86da` + `WarpWorldAccessChunkBoundaryTest`).
+  58 scenarios: 50 PASS, 8 FAIL. 7 of the 8 are in the known-fail baseline
+  (arborist×2, eating/dine_at_time, farmer×2, nav/roof_gatherer,
+  chicken-arc:skip_chicken_command); **new**: `flag/floating_furniture_over_half`
+  (the over-halved room was NOT rejected; deadDoors empty; not in the 2026-
+  10-10 baseline). **RESOLVED 2026-10-15 afternoon** (ticket
+  `.scratch/floaty-room-2026-10-15/floating-furniture-over-half.md`): the room
+  was built in postSpawn, OUTSIDE the arena-flatten region derived from
+  `blueprint.blocks()`, so its interior foot level was un-flattened
+  random-seed terrain — solid terrain gave `floorCells=0` and the day-1
+  storeroom escape hatch accepted the room (seed-dependent flake; the morning's
+  "instrumented vs un-instrumented" split was two different world seeds).
+  Fixture fix: both rejection-asserting builders
+  (`floating_furniture_over_half`, `too_short_room_dead`) clear their
+  footprint to air before building. WALKPROBE instrumentation reverted;
+  `level-seed` restored to empty. Verified 3 random-seed runs (6/6, 2/2,
+  full-flag sweep).
 - **Warm logs**: `/tmp/dev-server-22.log` (05:46–06:47; the hunter/coin-flip
   oscillation continued — parked Q3 item, not a regression),
   `/tmp/dev-server-19.log`, `/tmp/dev-server-20.log`.

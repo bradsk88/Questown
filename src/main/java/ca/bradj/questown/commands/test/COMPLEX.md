@@ -116,6 +116,25 @@ this shape is structurally unsound. Keep the gate as the synchronous unit test
 and bites); the perf autotest's `plus_room` stays a measurement (always passes,
 reports the `TickProfile`), never a gate.
 
+## Post-spawn room fixtures live outside the arena flatten (seed hazard, 2026-10-15)
+
+The flag-category room scenarios (`too_short_room_dead`,
+`floating_chest_room`, `floating_furniture_over_half`,
+`filled_storeroom_alive`) build their rooms in `withPostSpawnAction`, not in
+`blueprint.blocks()`. The jobs-track arena flatten clears only
+`TestArenaPreparer.buildVolume` (the blueprint's block bounding box ∪ the 15×15
+base square), so those footprints keep their un-flattened random-seed terrain
+(`level-seed=` empty, world wiped every boot). The walkability filter then
+reads that terrain: a solid interior foot level gives `floorCells=0` and the
+day-1 storeroom escape hatch accepts the room — which flipped the REJECTION
+scenario `flag/floating_furniture_over_half` by seed (new [FAIL] in the
+2026-10-15 full suite; the morning's "instrumented vs un-instrumented" 2/2 vs
+2/2 split was two different world seeds, not a build effect). Both
+rejection-asserting builders now clear their footprint (feet + head levels)
+to air before building. Rule and the accept-vs-reject fragility asymmetry:
+`AUTOTESTS.md` "Post-spawn rooms live outside the arena flatten". Ticket:
+`.scratch/floaty-room-2026-10-15/floating-furniture-over-half.md`.
+
 ## Driving the daily cycle and roster growth in a scenario
 
 Two things a scenario often wants to force — the night-to-morning transition and

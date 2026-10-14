@@ -108,6 +108,25 @@ chunk outside the boot 3×3 (idempotent) — a future layout that outgrows the
 naming the chunks). If the run still stalls despite `OK` / `EXTENDED`, it is
 not a tick-range issue — stop suspecting chunks.
 
+## Post-spawn rooms live outside the arena flatten (seed hazard)
+
+The jobs-track arena flatten clears `TestArenaPreparer.buildVolume(...)` — the
+blueprint's `blocks()` bounding box ∪ the 15×15 base square (halfWidth=7), up to
+the tallest block + 10 headroom. A room built **in `withPostSpawnAction` is not
+in `blueprint.blocks()`**, so its footprint is never flattened — the interior
+foot level is un-flattened random-seed terrain. The walkability filter
+(`MultiLevelRoomDetector.hasWalkableInterior`) then reads whatever the terrain
+gave: a solid foot level yields `floorCells=0` and the day-1 storeroom escape
+hatch **accepts** the room — which flips any scenario that expects *rejection*
+(NOT_ENCLOSED) by seed. That was `flag/floating_furniture_over_half` (new
+[FAIL] in the 2026-10-15 morning full-suite run; `.scratch/floaty-room-2026-10-15/`).
+Both rejection-asserting flag builders (`floating_furniture_over_half`,
+`too_short_room_dead`) now clear their footprint (feet + head levels) to air
+before building. **Rule: a postSpawn-built room in a REJECTION test must clear
+its own footprint first.** Accept-expected rooms (`floating_chest_room`,
+`filled_storeroom_alive`) pass under either terrain — the same escape hatch
+accepts them — so they are not seed-fragile for pass/fail.
+
 ## Reading the tally
 
 The log carries two granularities of `[PASS]`/`[FAIL]` lines: **scenario-level**
