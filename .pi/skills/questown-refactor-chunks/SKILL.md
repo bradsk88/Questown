@@ -1,12 +1,12 @@
 ---
 name: questown-refactor-chunks
-description: Runs a Questown refactor (moving classes/methods between packages,
-  consolidating "clean" helpers into a canonical package) as verifiable chunks —
+description: "Runs a Questown refactor (moving classes/methods between packages,
+  consolidating clean helpers into a canonical package) as verifiable chunks —
   take the baseline red set first, then move one family to one destination per
   chunk, re-point call sites per method (never per class prefix), gate each chunk
   on the identical known-baseline red set (not the exit code), and let the
   compiler name the misses. TRIGGER when asked to move/consolidate/relocate code
-  between packages, de-legacy a helper class, or "finish the X migration" where X
+  between packages, de-legacy a helper class, or finish the X migration where X
   is a package consolidation. SKIP for adding a feature, a bug fix (load
   questown-unit-tdd-fix), an MC version migration (load
   questown-mc-version-migration), or deleting dead deprecated code (see
@@ -14,7 +14,7 @@ description: Runs a Questown refactor (moving classes/methods between packages,
   deletion-side standard — that one IS a repo principle and stays in the repo).
   Codifies the chunk standard the 2026-10-09 declarative consolidation learned
   (the C4 slip: a per-class-prefix replace that mis-pointed 10 call sites, 5
-  caught by the compiler and 5 by hand before the build).
+  caught by the compiler and 5 by hand before the build)."
 ---
 
 # Refactor chunk standard ("moves are moves")

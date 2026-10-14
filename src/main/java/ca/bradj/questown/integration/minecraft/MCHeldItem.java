@@ -39,7 +39,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     }
 
     public static MCHeldItem fromTag(CompoundTag tag) {
-        MCTownItem ti = MCTownItem.of(tag.getCompound("item"));
+        MCTownItem ti = MCTownItem.of(tag);
         boolean loqued = tag.getBoolean("locked");
         String prefix = QTNBT.getString(tag, "prefix");
         String biome = QTNBT.getString(tag, "biome");
@@ -158,7 +158,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     }
 
     public static MCHeldItem deserialize(CompoundTag v) {
-        MCTownItem ti = MCTownItem.of(v.getCompound("item"));
+        MCTownItem ti = MCTownItem.of(v);
         boolean locked = false;
         if (v.contains("locked")) {
             locked = v.getBoolean("locked");

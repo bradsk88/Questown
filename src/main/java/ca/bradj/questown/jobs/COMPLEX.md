@@ -457,3 +457,14 @@ tool as a need and `DeclarativeJob.setupForGetSupplies` (closest-chest scan
 via `cleanRooms()` predicates) can hand it over. Pinned by
 `TownHasSuppliesNoWorkableStateTest` (the no-workable-state case was red on
 pre-fix code with the live dump's exact failure signature).
+
+## `SpecialRules.CLAIM_SPOT` constant matched no job data (2026-10-14)
+
+All 12 job JSONs spell the work-claim rule `claim_workspot`; the constant was
+`claim_spot`, so the `specialRulesMap.get(CLAIM_SPOT)` gates never fired for it.
+Offline warp sims (which only work through the special-rule claim suppliers)
+therefore never claimed work blocks, and claim-gated jobs like
+`farmer/harvest_wheat` stayed at `NO_SUPPLIES` for the whole warp window even
+with the held tool present. Fixed by aligning the constant to the data. See also
+`integration/minecraft/COMPLEX.md` for the sibling journal-NBT bug that was
+masking this one.
