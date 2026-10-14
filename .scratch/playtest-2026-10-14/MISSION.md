@@ -63,7 +63,9 @@ beat `11c7952f`, #11 skins `2bbedf3e`, #12 load-time-noise explanation
    the union of named keys across all unlocked candidate jobs; bubble shows
    the townie's oldest live key. Facets 1+2 (hint side) closed; the
    behaviour-side coin flip (idle no-op jobs tie with real work, facet 3's
-   status text) remains a separate open decision-layer item.
+   status text) remains a separate open decision-layer item — mechanism
+   options + recommendation now scoped in `.scratch/cook-scoring-tie/
+   always-consider-noop-tie-mechanism.md` (needs a ruling).
 3. **Econ tab "switch job" also selected** (`econ-tab-switch-job-also-selected.md`) —
    **DONE** (`7b6ac864`): `VillagerEconomicsMenu`'s hand-rolled enabled-tab
    list omitted `CHANGE_ROOT`, so the switch-job tab's open-fn was null and it

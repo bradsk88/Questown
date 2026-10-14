@@ -1,6 +1,6 @@
 ---
 title: 'Cook status: still "no place to work" when the real blocker is missing raw food / cooked meat unextracted (2026-10-14 recurrence)'
-status: ready-for-human (surfacing facet TDD'd per the 2026-10-15 ruling — union of live needs; the behaviour-side coin flip — idle no-op jobs tie with real work, facet 3's status text — remains a separate decision-layer item)
+status: ready-for-human (surfacing facet TDD'd per the 2026-10-15 ruling — union of live needs; the behaviour-side coin flip — idle no-op jobs tie with real work, facet 3's status text — remains a separate decision-layer item, now scoped with three candidate mechanisms + recommendation in `.scratch/cook-scoring-tie/always-consider-noop-tie-mechanism.md`)
 ---
 
 # Cook status/blocker surfacing — 2026-10-14 playtest recurrence
@@ -133,3 +133,8 @@ behaviour side of the same coin flip — out of scope for this change; a
 per-job workability-scoring fix for the `always_consider` no-ops remains a
 separate open item (it would also be job-set-agnostic: a no-op job simply
 scoring below real work when it has nothing to do).
+
+Mechanism options (A: score-band ALWAYS_CONSIDER jobs; B: carry scores into
+selection; C: hysteresis) + recommendation: `.scratch/cook-scoring-tie/
+always-consider-noop-tie-mechanism.md` (written 2026-10-15 while the
+scoring-side decision awaits a ruling).
