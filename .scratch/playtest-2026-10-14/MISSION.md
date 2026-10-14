@@ -73,11 +73,16 @@ beat `11c7952f`, #11 skins `2bbedf3e`, #12 load-time-noise explanation
    containers); it WAS a LOOT quest - the perception came from the "Raw food"
    name (fixed by #5). Open ruling parked: card says "produce 8" but LOOT
    completes on first extraction - copy fix vs accumulate.
-7. **Raw-food repeat eating** (`raw-food-repeat-eating.md`) — **ANSWERED:
-   intended** (2026-10-14 night): raw meals apply HUNGER_FILL_HALF (0.5f)
-   vs cooked HUNGER_FILL (1f); the satiety timer drains to 0 and re-triggers
-   the hungry listener, so raw-only townies cycle ~2x as often. s19 live
-   evidence: "Fullness changed from -1200 to 5000". No code change.
+7. **Raw-food repeat eating** (`raw-food-repeat-eating.md`) — **ANSWERED
+   2026-10-14 night, REVERSED by user ruling 2026-10-15**: raw meals apply
+   HUNGER_FILL_HALF (0.5f) vs cooked HUNGER_FILL (1f); the satiety timer
+   drains to 0 and re-triggers the hungry listener, so raw-only townies
+   cycle ~2x as often. The "intended fullness-chasing, by design" framing
+   was NOT a user ruling and is reversed: intent is **one meal per hunger
+   cycle** — the townie goes back to work after eating once (at ~50%
+   fullness), and the smaller meal just means the next meal comes sooner.
+   No code change either way (the code already did this). See the ticket's
+   "Ruling reversal" section.
 8. **Inventory tab in flag click-through menus** — DONE: management-only
    flag on `OpenVillagerMenuMessage` + payload (STATS landing, INVENTORY->STATS
    redirect, six tabbed menus filter via `VillagerTabs.hideInventory`).

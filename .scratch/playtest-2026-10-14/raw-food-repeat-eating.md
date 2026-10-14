@@ -1,6 +1,6 @@
 ---
 title: 'Villagers eating raw food appear to eat repeatedly — is that fullness-chasing?'
-status: answered (intended - raw meals fill half, by design)
+status: answered (REVERSED 2026-10-15 user ruling - one meal per hunger cycle, NOT fullness-chasing)
 ---
 
 # Repeat raw-food eating
@@ -52,3 +52,22 @@ which is exactly when the repeat pattern becomes visible.
 No code change. If the ~2x cadence ever reads as too frantic, the lever is
 `HUNGER_FILL_HALF`'s 0.5f factor (or the raw meal's mood penalty), both
 deliberate design knobs.
+
+## Ruling reversal (2026-10-15, user)
+
+The user reverses the "intended fullness-chasing, by design" answer above:
+that framing was attributed to them without a ruling. The design intent they
+state is:
+
+> Villagers who eat raw food go back to work **after eating once**, even
+> though it didn't return them to 100% fullness. This just means they will
+> need to eat again sooner.
+
+- "Fullness-chasing" (keep dining until ~100% full) is **not** the intent
+  and is **not** the code's behaviour. No code change: the mechanism above
+  already does exactly this — one meal per hunger cycle (half fill, back to
+  work), the timer re-triggers sooner. The ~2x cadence is a *consequence* of
+  the smaller meal, not a goal.
+- Consequence for the record: `HUNGER_FILL_HALF`'s 0.5f is the meal-size
+  knob (the next meal comes sooner because the meal is smaller), not a
+  cadence target to defend. The raw meal's mood penalties stand unchanged.
