@@ -614,3 +614,25 @@ with the current watch day. The daily report's milestone line and the
 run-end `WATCH complete` block both surface the latched state, so the
 improvement target is visible in both the per-day diff and the final summary.
 
+
+## The fullness check scopes to the assigned townies (2026-10-15)
+
+`checkFullnessIfNeeded` no longer asserts on every townie in the flag's
+`getVillagerJobs()`. The scenario's `assignJob()` phase snapshots
+`assignmentTownies` (the handle contents at that moment), and the check
+asserts on `current ∩ assignmentTownies` — the pure part is
+`TestExecutor.scenarioTownieTargets(current, assignmentTownies)`, pinned
+by `TestExecutorFullnessScopeTest`. Intersection (not subtraction) is the
+load-bearing choice: the snapshot contains the scenario's *own* townies
+(a subtraction would have excluded them); strays register into the handle
+*after* the assignment phase (the handle is already at the expected count
+when the spawn wait passes — a spawn-time snapshot misses them), so they
+fall out of the intersection. A townie present at assignment got the
+scenario's job and was drained by it, so it is in scope. Respawn flows
+re-run `assignJob()` (REASSIGN_JOB), refreshing the snapshot. Null
+snapshot (no assignment snapshot taken for this flow) falls back to all
+townies. Why it matters: strays carry their old job, whose post-extract
+rules have no HUNGER_FILL, so they can never satisfy the assertion —
+ticket `.scratch/autotest-suite/eating-pair-deterministic-fullness-fail.md`
+(also carries the corrected forensics: the −12 %/−16 % lines are the
+scenario's *own* diner, the 88 %/84 % lines the stray).
