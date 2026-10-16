@@ -745,3 +745,21 @@ map (server menus never render the tooltip, but the shape stays symmetric).
 Codec order + resolution pinned in `FlagMenusVillagerNamesTest` (a drift in
 the append position would corrupt the whole menu-open payload, not just the
 tooltip). No gui-lint impact: tooltip text only, zero layout change.
+
+## Quest card titles: single-line, no fit guard (2026-10-15)
+
+`QuestsScreen.renderCardContent` draws the card title as ONE line —
+`ctx.text(recipeName.getString(), idX, card.coords().topYPadded(), …)` — with
+no width check; the card is fixed-height (`UNSCALED_CARD_HEIGHT = 42`), so the
+only overflow escape is to keep the title short. The budget:
+`PagedCardScreen.CARD_WIDTH = 156` px, `BIG_PADDING = 10` per side, and the
+top-right removal button claims the last 13 px of the top row → ~121 px usable
+for a title. The 2026-10-15 first-work-request card reported "text bleeding
+past the card boundaries" (`.scratch/playtest-2026-10-15/
+first-work-request-card-text-overflow.md`): its title lang key
+`menu.quests.first_work_request` was 45 chars (~215 px). Fix was the string,
+not the renderer: the card title is now "Post a work request"; the full
+sentence stays on the hover tooltip (the quest flavor, `MCQuest.firstWorkRequest`)
+and the post-time chat broadcast. Follow-up candidate (deferred): a small
+ellipsis-fit helper at the draw site for data-driven titles
+(`RoomRecipes.getName` room names, `quests.upgrade` "%s -> %s").
