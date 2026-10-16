@@ -244,7 +244,7 @@ public class UIQuest implements Comparable<UIQuest> {
             case ITEM -> {
                 MutableComponent name = Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size());
                 if (deposited != null) {
-                    name.append(Compat.literal("(" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
+                    name.append(Compat.literal(" (" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
                 }
                 yield name;
             }
@@ -253,7 +253,7 @@ public class UIQuest implements Comparable<UIQuest> {
                 // progress the 2026-10-15 accumulation ruling made real.
                 MutableComponent name = Compat.translatable("menu.quests.food");
                 if (deposited != null) {
-                    name.append(Compat.literal("(" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
+                    name.append(Compat.literal(" (" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
                 }
                 yield name;
             }

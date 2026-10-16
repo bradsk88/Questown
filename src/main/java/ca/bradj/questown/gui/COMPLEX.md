@@ -768,3 +768,10 @@ ellipsis-fit helper at the draw site for data-driven titles
 "Quest complete: Food"; the key drives the card title and the
 post/complete/lost broadcasts, `.scratch/playtest-2026-10-15/
 loot-quest-named-raw-food.md`.)
+
+## Card progress suffix spacing: " (" not "(" (2026-10-15)
+
+`UIQuest.getName` appended the ITEM/LOOT progress suffix with no leading
+space ("Carrots(0/4)", "Raw Food(0/4)" - user report 03:07:06: "needs a
+space before its (0/4) indicator"). The literal now starts with a space in
+both the ITEM and LOOT cases. Pure render text; no layout change.
