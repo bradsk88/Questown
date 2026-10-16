@@ -23,6 +23,10 @@ class WorkStatusStoreTest {
         s.tick(null, ImmutableList.of(arbitaryRoom), 1);
     }
 
+    private static void tick(TestWorkStatusStore s, int interval) {
+        s.tick(null, ImmutableList.of(arbitaryRoom), interval);
+    }
+
     private static class TestWorkStatusStore extends AbstractWorkStatusStore<Position, TestItem, Room, Void> {
 
         public TestWorkStatusStore() {
@@ -153,6 +157,53 @@ class WorkStatusStoreTest {
         Assertions.assertTrue(s.claimSpot(pos, new Claim(owner, 3)));
         tick(s); // would have reached 1; the refresh put it back to 3 -> 2
         Assertions.assertFalse(s.canClaim(pos, () -> new Claim(other, 100)));
+    }
+
+    @Test
+    void Test_StuckBlockWithNoTimerReseedsToFreshAfterThreshold() {
+        // Self-heal for the 2026-10-15 playtest stall: a job block that sits in a
+        // non-fresh state with no timer is dead; the store reseeds it to fresh so the
+        // next cycle can restart instead of every leaver idling behind it.
+        TestWorkStatusStore s = new TestWorkStatusStore();
+        Position pos = new Position(1, 2);
+        s.setJobBlockState(pos, State.freshAtState(1));
+        tick(s, (int) AbstractWorkStatusStore.STUCK_RESET_TICKS - 1);
+        Assertions.assertEquals(1, s.getJobBlockState(pos).processingState());
+        tick(s, 1);
+        Assertions.assertEquals(0, s.getJobBlockState(pos).processingState());
+    }
+
+    @Test
+    void Test_StuckBlockCounterResetsOnStateWrite() {
+        TestWorkStatusStore s = new TestWorkStatusStore();
+        Position pos = new Position(1, 2);
+        s.setJobBlockState(pos, State.freshAtState(1));
+        tick(s, 19_000);
+        // A state write (e.g. a p1 work-progress write) restarts the stuck window.
+        s.setJobBlockState(pos, State.freshAtState(1).setCount(2));
+        tick(s, 19_000);
+        Assertions.assertEquals(1, s.getJobBlockState(pos).processingState());
+    }
+
+    @Test
+    void Test_BlockWithActiveTimerIsNotReseeded() {
+        TestWorkStatusStore s = new TestWorkStatusStore();
+        Position pos = new Position(1, 2);
+        s.setJobBlockStateWithTimer(pos, State.freshAtState(1), 30_000);
+        tick(s, 20_000);
+        // The timer is still running; the block is in progress, not stuck.
+        Assertions.assertEquals(1, s.getJobBlockState(pos).processingState());
+        Assertions.assertNotNull(s.getTimeToNextState(pos));
+    }
+
+    @Test
+    void Test_FreshStateBlockIsNeverReseeded() {
+        TestWorkStatusStore s = new TestWorkStatusStore();
+        Position pos = new Position(1, 2);
+        s.setJobBlockState(pos, State.fresh());
+        tick(s, 100_000);
+        Assertions.assertEquals(0, s.getJobBlockState(pos).processingState());
+        Assertions.assertEquals(State.fresh(), s.getJobBlockState(pos));
     }
 
 }

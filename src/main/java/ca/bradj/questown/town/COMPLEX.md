@@ -616,3 +616,35 @@ long)` on `AbstractTownFlagTicker` sets `isMorning = true` then calls
 `onMorning`; both the detection path and the campfire path use it.
 Idempotent: the detection path already set the flag, so the wrapper is a
 no-op there.
+
+## Stuck-block self-heal (`reseedStuckBlocks`, 2026-10-15 playtest P0)
+
+A job block sitting in a non-fresh state with **no timer** can be dead:
+nothing advances it (no timer to expire, no villager writing). The 2026-10-15
+playtest: the welcome mat sat at state 3 (the 3-state variant's terminal
+state) with no timer - the leaver's extraction circuit
+(`tryChoosingItemlessWork` -> `roomsWithCompletedProduct`, built from a
+different room-source/handle view than the gate dump that kept showing
+mat=3) never routed it to extraction, and `isUnfinishedTimeWorkPresent()`
+was false (no timer), so every leaver parked in COLLECTING_SUPPLIES behind
+it for the rest of the run.
+
+`AbstractWorkStatusStore` now tracks, per position, ticks accumulated in a
+non-fresh, timer-less state (`stuckTicks`). The counter resets on **any**
+state write (`modifyJobBlockState`) and on `clearState`, so an actively
+progressing block (p1 work writes, timer-driven advances) never accumulates.
+`reseedStuckBlocks`, run once per `tick()` after the store-global timer
+decay, reseeds to `State.fresh()` with a WARN when the window reaches
+`STUCK_RESET_TICKS` (20000 - ~16.7 in-game minutes; above the longest
+declared time state of 6000 and any legitimate leaver round-trip).
+State-0 blocks never accumulate (fresh is the only valid state-0 value, so
+a reseed is a no-op anyway). Cost: one snapshot pass over the (small)
+job-status map per tick.
+
+Also in this change: `setJobBlockStateWithTimer` demotes the same-value
+timer re-add from ERROR to the debug logger (the work-progress path
+re-invokes the state-with-timer write; 11 "Clobbered time ... from N to N"
+ERRORs in the 2026-10-15 log). A *different*-value clobber still ERRORs.
+
+Pinned by `WorkStatusStoreTest` (Test_StuckBlock*, Test_BlockWithActive*,
+Test_FreshState*).

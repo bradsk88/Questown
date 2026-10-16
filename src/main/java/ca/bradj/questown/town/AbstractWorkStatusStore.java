@@ -39,10 +39,30 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     private final HashMap<POS, State> jobStatuses = new HashMap<>();
     private final HashMap<POS, Long> timeJobStatuses = new HashMap<>();
     private final HashMap<POS, Claim> claims = new HashMap<>();
+    private final HashMap<POS, Long> stuckTicks = new HashMap<>();
 
     private final DebugLogger debugLogger;
 
     int curIdx = 0;
+
+    /**
+     * A job block that sits in a non-fresh processing state with no active
+     * timer for this many ticks is dead: no timer will advance it and no
+     * villager has written to it in the window. Reseed it to fresh so the
+     * next cycle can restart instead of the whole town idling behind the
+     * frozen block.
+     *
+     * <p>20000 ticks (~16.7 in-game minutes) sits well above the longest
+     * declared time state (6000) and any legitimate leaver round-trip; the
+     * counter resets on every state write, so an actively progressing block
+     * never accumulates.
+     *
+     * <p>Self-heal for the 2026-10-15 playtest stall: a welcome mat stuck at
+     * its terminal state with no timer (the leaver's extraction circuit did
+     * not see it) froze every leaver behind it for the rest of the run.
+     * See .scratch/playtest-2026-10-15/collecting-supplies-stall.md.
+     */
+    public static final long STUCK_RESET_TICKS = 20_000L;
 
     public AbstractWorkStatusStore(
             BiFunction<ROOM, Position, Collection<POS>> posFactory,
@@ -86,6 +106,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             BiFunction<POS, State, State> mutator
     ) {
         State newV = jobStatuses.compute(pos, mutator);
+        if (newV != null) {
+            // Any write to a block's state restarts its stuck window (a live
+            // block is by definition not stuck).
+            this.stuckTicks.remove(pos);
+        }
         if (newV != null && newV.processingState() > 0) {
             // p2/p3 writes are the state-advance steps ! capture every one; throttle only the p1 work writes.
             boolean capAll = newV.processingState() >= 2;
@@ -105,8 +130,17 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             int ticksToNextState
     ) {
         setJobBlockState(bp, bs);
-        Long cur = this.timeJobStatuses.get(bp);        if (cur != null && cur > 0) {
-            QT.FLAG_LOGGER.error("Clobbered time on block at {} from {} to {}", bp, cur, ticksToNextState);
+        Long cur = this.timeJobStatuses.get(bp);
+        if (cur != null && cur > 0) {
+            if (cur == ticksToNextState) {
+                // Re-adding the in-progress timer with the same remaining value
+                // is a no-op re-add (the work-progress path re-invokes the
+                // state-with-timer write); demote from ERROR so it stops reading
+                // as a fault (the 2026-10-15 playtest logged 11 of these).
+                this.debugLogger.log("Timer re-added with same value at {} ({})", bp, ticksToNextState);
+            } else {
+                QT.FLAG_LOGGER.error("Clobbered time on block at {} from {} to {}", bp, cur, ticksToNextState);
+            }
         }
 
         debugLogger.log("Timer added to {} at {} ({} to next state)", bs.toShortString(), bp, ticksToNextState);
@@ -118,6 +152,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     public Boolean clearState(POS bp) {
         this.timeJobStatuses.remove(bp);
         this.jobStatuses.remove(bp);
+        this.stuckTicks.remove(bp);
         debugLogger.log("Removed state from {}", bp);
         return true;
     }
@@ -163,6 +198,8 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         // Store-global timers decay once per tick, no matter how many rooms were scanned.
         advanceBlocksWithExpiredTimers(decayTimersAndCollectExpired(ticksSinceLast));
 
+        reseedStuckBlocks(ticksSinceLast);
+
         newRooms.forEach(room -> scanRoom(tickSource, room));
 
         ROOM roomToScan = nextRoomInRotation();
@@ -170,6 +207,29 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             return;
         }
         scanRoom(tickSource, roomToScan);
+    }
+
+    private void reseedStuckBlocks(long ticksSinceLast) {
+        for (Map.Entry<POS, State> e : new ArrayList<>(this.jobStatuses.entrySet())) {
+            POS pos = e.getKey();
+            State state = e.getValue();
+            if (state.processingState() == 0 || this.timeJobStatuses.containsKey(pos)) {
+                this.stuckTicks.remove(pos);
+                continue;
+            }
+            long accumulated = this.stuckTicks.getOrDefault(pos, 0L) + ticksSinceLast;
+            if (accumulated >= STUCK_RESET_TICKS) {
+                QT.FLAG_LOGGER.warn(
+                        "Work block at {} stuck in state {} for {} ticks with no timer; reseeding to fresh",
+                        pos, state.toShortString(), accumulated
+                );
+                // setJobBlockState also clears the stuck counter via
+                // modifyJobBlockState.
+                this.setJobBlockState(pos, State.fresh());
+            } else {
+                this.stuckTicks.put(pos, accumulated);
+            }
+        }
     }
 
     private Collection<ROOM> registerNewRooms(Collection<ROOM> allRooms) {
