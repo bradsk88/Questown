@@ -38,7 +38,38 @@ The job board overrides it to drop an oak sign, because the board item is born
 from a sign (holding a sign near the flag converts it), so orphaning returns
 the player's original investment.
 
-## The bread oven: its own BE type (the shared-entity exception)
+## Job board facing: blockstates re-bases the model's X-axis front
+
+The board model (`models/block/job_board_block.json`) authors the slab
+**thin along X** (the two readable faces are the ±X faces; the slab leans via
+a z-axis rotation), while the FACING rendering convention is Z-fronted (the
+stock `south:0, west:90, north:180, east:270` variant table). Net effect:
+whatever the `FACING` state says, the readable face renders **90° off** —
+the 2026-10-11 and 2026-10-15 playtest reports ("rotated 90 west", "rotated
+90 left"; both consistent with a constant 90° offset). The state logic is
+canonical and was right all along: `JobBoardBlock.getStateForPlacement` sets
+`FACING = ctx.getHorizontalDirection().getOpposite()` (face the placer — the
+sign/bed convention; computed twice, both sites). The fix (2026-10-15) re-bases
+the blockstates variants instead of touching the state code or re-authoring the
+model: a client-side resource change.
+
+**The rotation sign was verified against the vanilla oracle, not derived:**
+villa 1.20.6 `blockstates/furnace.json` + the `block/orientable` template
+(front face on the model's **−Z**) reads `north:0, east:90, south:180,
+west:270` — so a `y:90` rotation carries the north face to the **east**
+(clockwise viewed from above), the opposite of the stock-math sign. With the
+board's readable face on **−X**, that gives `west:0, north:90, east:180,
+south:270`. The first re-base attempt used the wrong sign (`south:90,
+north:270`); the 2026-10-15 03:13 playtest report confirmed it: "Facing west,
+placement was correct. But when I was facing south it pointed the wrong way"
+— exactly one sign flip, south/north transposed. Swapped; all four facings
+now satisfy `readable face == FACING == the placer's side`.
+
+Check before assuming: other asymmetric FACING block-rooms (bread oven, food
+display, fishing station, axe rack) may share the model-axis mismatch —
+verify each model's authored front axis against its blockstates table.
+
+# The bread oven: its own BE type (the shared-entity exception)
 
 `BreadOvenBlock` is NOT a `RoomBlock` and does NOT join the
 `BlockAsRoomEntity` family — it is a processing block with its own block-entity
