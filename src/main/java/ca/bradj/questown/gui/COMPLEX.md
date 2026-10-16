@@ -792,3 +792,17 @@ ingredients still gate the quest's completeness (`quest.canComplete` /
 `quest.complete` consult `recipe.getIngredients()` directly), so hiding them
 on screen does not unblock the card.
 
+## Playtest 2026-10-15: skills pane respects showInventoryTab
+
+The management-only flag now rides the whole skills-pane chain. Every
+other tabbed villager menu filters `getEnabledTabs()` on it, but
+`VillagerAdvancementsScreen`'s embedding returned `VillagerTabs.all()` —
+a flag-menu session that navigated to the skills tab saw the inventory tab
+resurrect (2026-10-15: "the flag menu -> villager menu screen still shows
+the inventory tab"). `TownVillagerUIs` SKILLS router passes
+`d.showInventoryTab()` into `OpenVillagerAdvancementsMenuMessage` (new wire
+field, appended after `showBlockOfProgressTab`) ->
+`ClientAccess.openVillagerAdvancements` -> screen ctor -> embedding's
+`getEnabledTabs()` returns `VillagerTabs.hideInventory(VillagerTabs.all())`
+when false.
+

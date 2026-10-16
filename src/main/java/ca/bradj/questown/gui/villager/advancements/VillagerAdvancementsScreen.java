@@ -44,7 +44,8 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
             Collection<JobID> unlockedJobs,
             Collection<JobID> unlockableJobs,
             JobID currentJob,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showInventoryTab
     ) {
         super(Compat.literal(""));
         DisplayInfo displayInfo = new DisplayInfo(
@@ -71,7 +72,13 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
         this.tabs = VillagerTabs.forMenu(new VillagerTabsEmbedding() {
             @Override
             public Collection<String> getEnabledTabs() {
-                return VillagerTabs.all();
+                // Management-only sessions keep the inventory tab hidden here too
+                // (every other tabbed villager menu filters on showInventoryTab;
+                // this screen used to return VillagerTabs.all() and resurrected
+                // the tab - 2026-10-15 playtest).
+                return showInventoryTab
+                        ? VillagerTabs.all()
+                        : VillagerTabs.hideInventory(VillagerTabs.all());
             }
 
             @Override

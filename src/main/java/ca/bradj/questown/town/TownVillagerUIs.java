@@ -427,7 +427,14 @@ public class TownVillagerUIs {
                             vUnlocked,
                             d.unlockableJobs,
                             d.entity().getJobId(),
-                            d.entity().hasBlockOfProgress()
+                            d.entity().hasBlockOfProgress(),
+                            // Management-only sessions (opened from the flag menu)
+                            // keep the inventory tab hidden on the skills pane too -
+                            // the advancements screen's tab embedding used to return
+                            // VillagerTabs.all(), resurrecting the tab (2026-10-15
+                            // playtest: "the flag menu -> villager menu screen still
+                            // shows the inventory tab").
+                            d.showInventoryTab()
                     );
                     QuestownNetwork.sendToPlayer(d.sender(), msg);
                 }
