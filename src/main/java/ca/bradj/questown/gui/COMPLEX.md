@@ -781,6 +781,7 @@ both the ITEM and LOOT cases. Pure render text; no layout change.
 `UIQuestLootProgressTest` asserted the old no-space literal and went red.
 Fixed to pin the spaced form: "menu.common.quantity (3/8)",
 "menu.quests.food (3/8)", "(8/8)".)
+
 ## Playtest 2026-10-15: JOB_CHANGE cards hide the BOP icon
 
 User ruling ("we can just not render the BOP"): `QuestsScreen.renderRecipeCardIcons`
