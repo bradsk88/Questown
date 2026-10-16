@@ -698,9 +698,10 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             preRolls.remove(vuid);
         }
         jobChangesPending.put(vuid, true);
+        String label = delegator.displayNameFor(villagerUUID);
         delegator.broadcastMessage(
                 "message.questown.villager.change_job_in_morning",
-                UtilClean.truncateMiddle(villagerUUID)
+                label.isEmpty() ? UtilClean.truncateMiddle(villagerUUID) : label
         );
         return guaranteedRoot.isPresent() ? guaranteedRoot : Optional.ofNullable(preRoll);
     }

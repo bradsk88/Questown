@@ -79,6 +79,11 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public String displayNameFor(UUID vuid) {
+                return TownVillagerHandle.this.displayNameFor(vuid);
+            }
+
+            @Override
             public void setJob(
                     UUID villagerUUID,
                     JobID newJob,

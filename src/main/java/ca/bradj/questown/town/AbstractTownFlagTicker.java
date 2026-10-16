@@ -156,8 +156,25 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         detectMorning(data, signals);
 
         if (!mornings.empty()) {
-            onMorning(data, mornings.pop());
+            runMorning(data, mornings.pop());
         }
+    }
+
+    /**
+     * Run the morning pass and mark this morning as consumed. The ticker's
+     * own detection (handleIfNewMorning) uses this; the campfire-sleep wake
+     * path (TownFlags.onSleepFinished) must use it too - calling the
+     * abstract onMorning directly leaves isMorning unset, so the ticker's
+     * detection re-runs the whole morning pass in the same window
+     * (duplicate BOP apply / duplicate jobs.changed broadcast, 2026-10-15
+     * playtest).
+     */
+    public void runMorning(
+            TICK_DATA data,
+            long newTime
+    ) {
+        isMorning = true;
+        onMorning(data, newTime);
     }
 
     protected abstract void onMorning(

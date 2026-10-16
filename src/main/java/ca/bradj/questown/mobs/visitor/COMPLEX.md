@@ -165,3 +165,12 @@ Steve/Alex in 1.20.5) plus the mod's 6 custom `textures/entity/1-6.png`.
 match. `TownieSkins` is pure (pool + floor-mod pick) so it is
 unit-testable without the client; the renderer delegates to it. Use
 floor-mod, not `Math.abs`, for the hash (MIN_VALUE edge).
+
+## Held-item NBT load: empty-slot guard (2026-10-15 playtest)
+
+`readAdditionalSaveData` mapped every saved held-item tag through
+`ItemStack.parse(...)`. `addAdditionalSaveData` saves an **empty compound**
+for empty slots, and vanilla's parser logs `Tried to load invalid item: No
+key id in MapLike[{}]` for it - 12 lines per entity load (every save/reload
+of every townie). The guard: `tag.isEmpty() ? ItemStack.EMPTY : parse(...)`
+before the `orElse` fallback. No behaviour change for non-empty slots.

@@ -41,7 +41,7 @@ public class TownFlags {
                 newTime
         );
         for (TownFlagBlockEntity e : flags.values()) {
-            e.ticker.onMorning(TownFlagTicker.TickData.fromFlag(e), newTime);
+            e.ticker.runMorning(TownFlagTicker.TickData.fromFlag(e), newTime);
         }
     }
 

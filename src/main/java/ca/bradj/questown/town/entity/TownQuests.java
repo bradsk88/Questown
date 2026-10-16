@@ -1386,7 +1386,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         // Day-2 playtest: consolidate the two sword asks (4 wooden + 1 stone) into a single
         // "4 stone swords" item quest - one sword quest only.
         MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.STONE_SWORD), 4);
-        swordQuest.setFlavorText("Craft 4 stone swords and place them in your store room chest. Your villagers will need them - each hunter carries one.");
+        swordQuest.setFlavorText("Craft 4 stone swords and place them in your store room chest. Each hunter carries one.");
         q.addNewQuest(swordQuest);
 
         MCQuest hunterQuest = MCQuest.jobChange(batchUUID, null, new JobID("hunter", "sword"));

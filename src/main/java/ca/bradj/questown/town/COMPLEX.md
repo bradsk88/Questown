@@ -603,3 +603,16 @@ failing the room check for another reason is NOT misnamed. The LIT half
 covered. In-game verification owed: bubble + econ name coal; refueling drops just the
 coal key (the union diff in `refreshUnmetNeeds`) while any other live need
 keeps showing.
+
+## Morning pass: `runMorning` (double-morning fix, 2026-10-15 playtest)
+
+The campfire-sleep wake path (`TownFlags.onSleepFinished`) called
+`ticker.onMorning(...)` directly, bypassing the ticker's `isMorning`
+marker. The next tick, `handleIfNewMorning` saw an unmarked morning, ran
+the whole morning pass **again** in the same window: duplicate BOP apply
++ duplicate "changed job" broadcast + the "Clobbered time ... from 2600 to
+2600" spam (the second pass re-adding live timers). `runMorning(TICK_DATA,
+long)` on `AbstractTownFlagTicker` sets `isMorning = true` then calls
+`onMorning`; both the detection path and the campfire path use it.
+Idempotent: the detection path already set the flag, so the wrapper is a
+no-op there.

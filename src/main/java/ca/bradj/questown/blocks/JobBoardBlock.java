@@ -5,6 +5,7 @@ import ca.bradj.questown.mc.MapC;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlags;
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -92,6 +93,25 @@ public class JobBoardBlock extends RoomBlock {
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
         p_51385_.add(FACING);
+    }
+
+    @Override
+    public void onRemove(
+            BlockState state,
+            Level level,
+            BlockPos pos,
+            BlockState newState,
+            boolean isMoving
+    ) {
+        if (!state.is(newState.getBlock())) {
+            // Actually removed (not replaced by another block state): drop the
+            // flag's persisted board registration so a broken board does not
+            // leave a stale entry that errors on the next world load.
+            for (TownFlagBlockEntity flag : TownFlags.all()) {
+                flag.removeJobsBoard(pos);
+            }
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
     }
 
     public void addOpenMenuListener(OpenMenuListener l) {

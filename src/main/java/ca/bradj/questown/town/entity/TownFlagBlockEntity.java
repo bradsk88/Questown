@@ -1460,6 +1460,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         this.setChanged();
     }
 
+    public void removeJobsBoard(BlockPos matPos) {
+        this.workHandle.removeJobBoard(matPos);
+        this.setChanged();
+    }
+
     /**
      * Place a job-board block at {@code pos} and register it with this flag, the way
      * a player placing the item does, but driven from the console (no player hand to

@@ -1064,3 +1064,29 @@ before the waking/warp logic. Only a flag that HAS persisted a reference tick
 can reach the catch-up warp; the `logBug` in `advanceTime` remains the real
 signal for "reference tick present but town state missing". Ticket:
 `.scratch/playtest-2026-10-15/fresh-flag-nbt-town-state-false-positive.md`.
+
+## "changed job" broadcast: display name, not UUID (2026-10-15 playtest)
+
+`SimpleVillagerHandle` broadcast `UtilClean.truncateMiddle(villagerUUID)`
+(the raw UUID) because it only saw the `Delegator` interface, which had no
+name method. `Delegator.displayNameFor(UUID)` (default `""` - non-town
+delegators fall back to the truncated UUID at the call site) + a `Town`
+override delegating to `TownVillagerHandle.displayNameFor` (the "Villager
+N" assignment, see "Townie display numbers" above). The call site uses the
+label when non-empty.
+
+## Room double-announcement dedup (`roomAdded`, 2026-10-15 playtest)
+
+A matched-recipe room placement printed two lines in the same ms: the
+recipe-listener path (`roomRecipeCreated` -> "Built a X") and the generic
+`roomCreated` ("Room created at [pos]"). `TownRooms.roomAdded` now only
+fires `entity.messages.roomCreated(null, doorPos)` when `name.isEmpty()`
+(the unmatched case) - matched rooms keep the richer recipe line, unmatched
+rooms keep the position line.
+
+## Sword quest flavor (2026-10-15 playtest)
+
+`TownQuests` stone-sword flavor shortened to "Craft 4 stone swords and
+place them in your store room chest. Each hunter carries one." (dropped
+"Your villagers will need them -"). Quest flavor is baked into town NBT at
+batch creation, so only new towns see it.

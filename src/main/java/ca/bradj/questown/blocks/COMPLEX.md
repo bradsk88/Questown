@@ -115,3 +115,18 @@ The orphan path (`BlockAsRoomEntity.dropWhenOrphaned`) already stamps the
 flag NBT onto the dropped item via `TownFlagBlock.StoreParentOnNBT`, so the
 fix was just deleting the override (the base `asItem()` drop, NBT-stamped,
 re-attaches to the same flag on re-placement).
+
+## Broken board drops its registration (`onRemove`, 2026-10-15 playtest)
+
+Breaking a placed job board left the flag's persisted `jobBoards` entry
+pointing at air: every world load logged `Registered job board was not
+found in world at ...` (ERROR) and the board's room kept being treated as
+registered. `JobBoardBlock.onRemove` (5-arg, `Level` form - the sibling
+`AxeRackBlock`/`BreadOvenBlock` pattern; 1.20.6 has no 4-arg ServerLevel
+variant) fires only on a real removal (`!state.is(newState.getBlock())`,
+i.e. not a state replacement) and iterates `TownFlags.all()`, calling
+`TownFlagBlockEntity.removeJobsBoard(pos)` -> `TownWorkHandle.removeJobBoard`
++ `setChanged()`. Load-time fallout is downgraded to INFO ("dropping stale
+entry") in `TownWorkHandle`: entries that fail to re-register simply fall
+out of persistence on the next save, so the load log is a heal report, not
+an error.

@@ -69,7 +69,13 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         nextTick.add(sl -> {
             BlockState bs = sl.getBlockState(matPos);
             if (!(bs.getBlock() instanceof JobBoardBlock jbb)) {
-                QT.FLAG_LOGGER.error("Registered job board was not found in world at {}", matPos);
+                // Stale registration (the board was broken and the world was
+                // saved before this dropped out). Log and heal - the entry
+                // falls out of persistence once it fails to re-register.
+                QT.FLAG_LOGGER.info(
+                        "Job board registration at {} no longer matches a board in the world; dropping stale entry",
+                        matPos
+                );
                 return;
             }
 
@@ -85,6 +91,15 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
             jbb.addOpenMenuListener(self);
             subBlocks.register(matPos);
         });
+    }
+
+    /**
+     * Drop a board position when its block is broken. Without this the
+     * persisted registration outlives the block and every world load logs a
+     * (healing) stale-registration entry until the next save.
+     */
+    public void removeJobBoard(BlockPos matPos) {
+        jobBoards.remove(matPos);
     }
 
     @Override

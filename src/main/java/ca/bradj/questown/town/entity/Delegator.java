@@ -84,4 +84,13 @@ public interface Delegator<ENTITY> {
     ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs();
 
     ImmutableSet<JobID> getChildJobsKnownToExist(JobID jobId);
+
+    /**
+     * The user-facing display name ("Villager N") for this townie, empty when
+     * none is assigned - callers fall back to a truncated UUID. Towns override
+     * with the display-number assignment; non-town delegators get "".
+     */
+    default String displayNameFor(UUID vuid) {
+        return "";
+    }
 }

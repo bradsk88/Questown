@@ -914,7 +914,16 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         ListTag items = p_21450_.getList("items", Tag.TAG_COMPOUND);
         List<MCHeldItem> itemz = items
                 .stream()
-                .map(v -> MCHeldItem.fromMCItemStack(net.minecraft.world.item.ItemStack.parse(registryAccess(), (CompoundTag) v).orElse(net.minecraft.world.item.ItemStack.EMPTY)))
+                .map(v -> {
+                    CompoundTag tag = (CompoundTag) v;
+                    // Empty compound = a saved empty slot (see addAdditionalSaveData).
+                    // Parsing it would make vanilla log "Tried to load invalid item"
+                    // for every expected-empty slot on every entity load.
+                    ItemStack stack = tag.isEmpty()
+                            ? net.minecraft.world.item.ItemStack.EMPTY
+                            : net.minecraft.world.item.ItemStack.parse(registryAccess(), tag).orElse(net.minecraft.world.item.ItemStack.EMPTY);
+                    return MCHeldItem.fromMCItemStack(stack);
+                })
                 .toList();
         job.get().initializeItems(itemz);
         entityData.set(status, p_21450_.getString("status"));
