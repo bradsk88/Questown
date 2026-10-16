@@ -38,4 +38,4 @@ card, fed by the same predicate).
   morningTick gate and the visitor's door pathfinding preference are
   registry-bound; pinned via the pure predicate instead.
 
-Commit: <pending> (session 2026-10-15 round 2)
+Commit: 3ac14aea (session 2026-10-15 round 2)

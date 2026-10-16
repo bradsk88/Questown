@@ -30,4 +30,4 @@ passes and is called from the existing client tick
 dismiss and the flag-menu `dismissTutorialToast()` (InventoryAndStatusScreen)
 still work as before.
 
-Commit: <pending> (session 2026-10-15 round 2)
+Commit: 3ac14aea (session 2026-10-15 round 2)
