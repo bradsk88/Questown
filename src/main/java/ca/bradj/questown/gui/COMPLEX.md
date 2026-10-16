@@ -763,3 +763,8 @@ sentence stays on the hover tooltip (the quest flavor, `MCQuest.firstWorkRequest
 and the post-time chat broadcast. Follow-up candidate (deferred): a small
 ellipsis-fit helper at the draw site for data-driven titles
 (`RoomRecipes.getName` room names, `quests.upgrade` "%s -> %s").
+ (Same day, second user call: the LOOT quest name `menu.quests.food` is now
+"Raw Food" — user chat 03:23:24, after a LOOT completion broadcast read
+"Quest complete: Food"; the key drives the card title and the
+post/complete/lost broadcasts, `.scratch/playtest-2026-10-15/
+loot-quest-named-raw-food.md`.)
