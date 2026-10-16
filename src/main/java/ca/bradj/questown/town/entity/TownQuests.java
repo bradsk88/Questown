@@ -193,7 +193,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         q.addNewQuest(jobBoardQuest);
 
         MCQuest storeRoomQuest = roomQuest(batchUUID, SpecialQuests.STORE_ROOM_SMALL);
-        storeRoomQuest.setFlavorText("Place a chest in a room and register the door. Villagers store their work here.");
+        storeRoomQuest.setFlavorText("Place a chest in a room with a wand-registered door.");
         q.addNewQuest(storeRoomQuest);
 
         MCQuestBatch qb = q.withRewardUponCompletion(

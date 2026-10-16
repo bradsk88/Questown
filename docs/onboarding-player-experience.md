@@ -299,7 +299,7 @@ away. They place the flag near a cave entrance.
      four quests. Reads the flavor text:
        - "Build a fence gate entrance for your town."
        - "Place a lectern in a room and register the door."
-       - "Place a chest in a room and register the door."
+       - "Place a chest in a room with a wand-registered door."
        - "Craft a wooden sword and toss it near the town flag."
 
      Sam starts with the sword — seems easiest. Crafts one, drops it

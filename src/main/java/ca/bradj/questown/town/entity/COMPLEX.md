@@ -902,10 +902,18 @@ The onboarding chain is now:
   text is "Build a room: four walls and a door. Use your town wand to register
   the door." Set at post time in `addEmptyRoomBatch`, so already-posted quests
   in existing worlds keep the older copy - and the live empty-room card showed
+
   the *generic* room_quest line, not even the old flavor (user report
   2026-10-14): whatever the flavor's save/load path does, the CARD tooltip for
   this quest must not depend on what the specific posted quest carries. It
   reads a lang key instead (see gui/COMPLEX.md, room-block tooltips).
+- **Store-room flavor (2026-10-15, user call, day-2 playtest):** the
+  basics-batch store-room card (`addBasicsBatch` → `setFlavorText`) now reads
+  "Place a chest in a room with a wand-registered door." — the
+  "Villagers store their work here." payoff line was dropped on purpose:
+  onboarding should not reveal what villagers do with the room yet. Same
+  post-time-baked semantics as the empty-room copy above (already-posted
+  cards in existing worlds keep their old copy).
 - **No-chicken path**: the player builds a small room, places a door, and wands
   it (`TownWand` → `registerDoor`). The quest's flavor text says exactly this.
   The zero-ingredient recipe is global (it matches every room in every town),
