@@ -411,8 +411,19 @@ public class TownFlagState {
         }
 
         long start = System.currentTimeMillis();
-        long lastTick = flagTag.getLong(NBT_TIME_WARP_REFERENCE_TICK);
         long gt = level.getDayTime();
+        if (!flagTag.contains(NBT_TIME_WARP_REFERENCE_TICK)) {
+            // First tick of a freshly placed flag: seed the reference tick. Treating the whole
+            // world age as a "genuine absence" would fire a catch-up warp against the expected
+            // missing town state and log a false "NBT had no town state" bug
+            // (2026-10-15 playtest, ERROR on flag placement).
+            flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
+            this.initialized = true;
+            this.lastTickWallMs = System.currentTimeMillis();
+            profileTick(start);
+            return false;
+        }
+        long lastTick = flagTag.getLong(NBT_TIME_WARP_REFERENCE_TICK);
         long timeSinceWake = Math.max(
                 0,
                 gt - lastTick

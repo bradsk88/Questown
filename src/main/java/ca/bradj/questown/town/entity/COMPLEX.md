@@ -1044,3 +1044,23 @@ number is never handed to a new townie.
   malformed -> the truncated UUID). Codec order + resolution pinned in
   `FlagMenusVillagerNamesTest` (2026-10-15; the earlier deferral - "would need
   a UUID->name map" - is now closed).
+
+# Fresh-flag first tick: seed the warp reference tick, never warp (2026-10-15)
+
+`TownFlagState.tick()` used to read `NBT_TIME_WARP_REFERENCE_TICK` with a bare
+`getLong` — a just-placed flag has never persisted the key, so it read 0, the
+whole world age computed as `timeSinceWake`, and the "genuine absence" branch
+fired a catch-up natural warp against the (expected) missing
+`NBT_TOWN_STATE`, logging the ERROR "NBT had no town state. That's probably a
+bug. Town state will reset" on every fresh flag placement (2026-10-15
+playtest, server log 02:40:15, same second as `[findflag] … registered`).
+The warp itself was harmless (empty state, no villagers/containers) but the
+bug line was a false positive.
+
+Fix: `tick()` now checks `flagTag.contains(NBT_TIME_WARP_REFERENCE_TICK)`
+first; if absent (a fresh or corrupted flag) it seeds the key with the current
+game time, marks the state initialized, stamps `lastTickWallMs`, and returns
+before the waking/warp logic. Only a flag that HAS persisted a reference tick
+can reach the catch-up warp; the `logBug` in `advanceTime` remains the real
+signal for "reference tick present but town state missing". Ticket:
+`.scratch/playtest-2026-10-15/fresh-flag-nbt-town-state-false-positive.md`.
