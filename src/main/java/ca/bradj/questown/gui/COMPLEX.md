@@ -781,3 +781,14 @@ both the ITEM and LOOT cases. Pure render text; no layout change.
 `UIQuestLootProgressTest` asserted the old no-space literal and went red.
 Fixed to pin the spaced form: "menu.common.quantity (3/8)",
 "menu.quests.food (3/8)", "(8/8)".)
+## Playtest 2026-10-15: JOB_CHANGE cards hide the BOP icon
+
+User ruling ("we can just not render the BOP"): `QuestsScreen.renderRecipeCardIcons`
+and `QuestRemoveConfirmScreen.renderRecipeCardIcons` set `ingredients` to
+`ImmutableList.of()` before the empty-room check when
+`recipe.getType() == Quest.QuestType.JOB_CHANGE` — the card keeps its title
+and the 32x32 job art, and only the grey BOP square disappears. The
+ingredients still gate the quest's completeness (`quest.canComplete` /
+`quest.complete` consult `recipe.getIngredients()` directly), so hiding them
+on screen does not unblock the card.
+

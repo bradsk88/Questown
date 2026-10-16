@@ -245,6 +245,13 @@ public class QuestRemoveConfirmScreen extends CompatContainerScreen<TownRemoveQu
         Collection<Ingredient> ingredients = recipe.getIngredients();
         ingredients = RoomRecipes.filterSpecialBlocks
                                          (ingredients);
+        if (recipe.getType() == Quest.QuestType.JOB_CHANGE) {
+            // Job-change quests ALWAYS require the Block of Progress; the
+            // card's item row is left empty instead of repeating it
+            // (user call, 2026-10-15 playtest: "We can just not render the
+            // BOP") - kept in step with QuestsScreen.renderRecipeCardIcons.
+            ingredients = ImmutableList.of();
+        }
         int j = 0;
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();

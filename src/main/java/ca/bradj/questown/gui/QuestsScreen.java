@@ -471,6 +471,13 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     ) {
         Collection<Ingredient> ingredients = recipe.getIngredients();
         ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
+        if (recipe.getType() == Quest.QuestType.JOB_CHANGE) {
+            // Job-change quests ALWAYS require the Block of Progress, so its
+            // icon is pure repetition - the card's item row is left empty
+            // instead (user call, 2026-10-15 playtest: "We can just not render
+            // the BOP").
+            ingredients = ImmutableList.of();
+        }
         if (ingredients.isEmpty() && SpecialQuests.EMPTY_ROOM.equals(recipe.getWantedId())) {
             // D#2: empty_room matches any room (zero required contents), so the card has
             // no ingredient strip. Show the oak door - the block you actually point the
