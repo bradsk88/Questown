@@ -35,12 +35,13 @@ class UIQuestLootProgressTest {
     void lootCard_showsExtractedOverTarget() {
         // 8 ingredients stand for the count-8 quest (ingredients.size() is the
         // target the card caps at); only the progress shape is under test.
-        assertEquals("menu.quests.food(3/8)", uiQuest(3).getName().getString());
+        // The suffix carries a leading space (" (n/m)") - the 2026-10-15 playtest fix.
+        assertEquals("menu.quests.food (3/8)", uiQuest(3).getName().getString());
     }
 
     @Test
     void lootCard_capsAtTheTarget() {
-        assertEquals("menu.quests.food(8/8)", uiQuest(12).getName().getString());
+        assertEquals("menu.quests.food (8/8)", uiQuest(12).getName().getString());
     }
 
     @Test

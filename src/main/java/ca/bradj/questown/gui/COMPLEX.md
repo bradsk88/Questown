@@ -775,3 +775,9 @@ loot-quest-named-raw-food.md`.)
 space ("Carrots(0/4)", "Raw Food(0/4)" - user report 03:07:06: "needs a
 space before its (0/4) indicator"). The literal now starts with a space in
 both the ITEM and LOOT cases. Pure render text; no layout change.
+
+(The spacing commit itself missed the two card-shape test suites -
+`UIQuestItemProgressTest.card_name_appends_progress_capped_at_target` and
+`UIQuestLootProgressTest` asserted the old no-space literal and went red.
+Fixed to pin the spaced form: "menu.common.quantity (3/8)",
+"menu.quests.food (3/8)", "(8/8)".)

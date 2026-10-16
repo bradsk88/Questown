@@ -74,10 +74,12 @@ public class UIQuestItemProgressTest {
 
     @Test
     public void card_name_appends_progress_capped_at_target() {
-        assertEquals("menu.common.quantity(3/8)", itemQuest(3).getName().getString());
-        assertEquals("menu.common.quantity(8/8)", itemQuest(8).getName().getString());
+        // The progress suffix carries a leading space (" (n/m)") - the 2026-10-15
+        // playtest fix; the assertions here pin that shape.
+        assertEquals("menu.common.quantity (3/8)", itemQuest(3).getName().getString());
+        assertEquals("menu.common.quantity (8/8)", itemQuest(8).getName().getString());
         // 12 deposited but the quest wants 8 - never show "(12/8)".
-        assertEquals("menu.common.quantity(8/8)", itemQuest(12).getName().getString());
+        assertEquals("menu.common.quantity (8/8)", itemQuest(12).getName().getString());
         // No progress data (non-item quest or no scan) - plain name.
         assertEquals("menu.common.quantity", itemQuest(null).getName().getString());
     }
