@@ -74,10 +74,10 @@ public abstract class RoomBlock extends TownFlagSubBlock<BlockAsRoomEntity> impl
     }
 
     /**
-     * The item dropped when the flag orphans this block. Defaults to the
-     * block's own item; blocks born from a conversion (e.g. the job board,
-     * which starts life as a vanilla sign) override this to drop their
-     * pre-conversion form.
+     * The item dropped when the flag orphans this block. The block's own
+     * item, carrying the flag's NBT via {@code dropWhenOrphaned}
+     * (TownFlagBlock.StoreParentOnNBT) so a re-placement re-attaches to the
+     * same flag.
      */
     public Item getOrphanDropItem() {
         return asItem();

@@ -16,7 +16,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -114,13 +113,6 @@ public class JobBoardBlock extends RoomBlock {
             }
         }
         return InteractionResult.CONSUME;
-    }
-
-    @Override
-    public net.minecraft.world.item.Item getOrphanDropItem() {
-        // Born from a vanilla sign (sign -> job board conversion at the
-        // flag), so it orphans back into a sign.
-        return Items.OAK_SIGN;
     }
 
     @Override

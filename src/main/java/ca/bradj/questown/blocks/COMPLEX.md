@@ -101,3 +101,17 @@ type (`TilesInit.BREAD_OVEN`, `BreadOvenBlockEntity`):
   arithmetic is therefore tested registry-free through `BreadOvenBakeTest`;
   the warp-lane branch stays pinned by the `assertThrows` marker in
   `WarpWorldAccessTest`.
+
+## Job board orphan drop: the sign override was stale (2026-10-15)
+
+`JobBoardBlock` overrode `RoomBlock.getOrphanDropItem()` to return
+`Items.OAK_SIGN` — "born from a vanilla sign (sign -> job board conversion
+at the flag)". That conversion no longer exists (the override was the only
+OAK_SIGN reference left in the block/flag code; the board is placed directly
+from its own item since the 2026-10-15 "job-board placement completes the
+JOB_BOARD quest" work). Breaking a board therefore dropped a plain sign
+(user report 2026-10-15 03:12:02) instead of the `job_board_block` item.
+The orphan path (`BlockAsRoomEntity.dropWhenOrphaned`) already stamps the
+flag NBT onto the dropped item via `TownFlagBlock.StoreParentOnNBT`, so the
+fix was just deleting the override (the base `asItem()` drop, NBT-stamped,
+re-attaches to the same flag on re-placement).
