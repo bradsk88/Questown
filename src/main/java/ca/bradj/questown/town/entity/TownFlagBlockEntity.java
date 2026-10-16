@@ -1832,6 +1832,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     /**
+     * The raw town-villager handle (job learning, BOP spends, ...). Public for
+     * the work-request confirm hint (core.network), which filters producer
+     * jobs to the town-known subset via {@link TownVillagerHandle#getTownKnownJobs()}.
+     */
+    public TownVillagerHandle getTownVillagerHandle() {
+        return villagerHandle;
+    }
+
+    /**
      * Begin the town-shutdown ritual (ADR-0009): recall every townie to the flag, absorb them, and
      * flip the flag dormant once the roster is in and the minimum-duration floor has elapsed. Only
      * an {@link FlagPhase#ACTIVE} flag (realtime, player-present, not already shutting down) is

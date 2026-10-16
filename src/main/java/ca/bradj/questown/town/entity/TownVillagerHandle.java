@@ -422,6 +422,16 @@ public final class TownVillagerHandle {
         return ImmutableMap.copyOf(learning.jobsKnownToExist);
     }
 
+    /**
+     * The set of jobs the town KNOWS (knowledge-tree parents + children,
+     * unioned across villagers, plus unlocked jobs) - see
+     * {@link TownVillagerLearningHandle#getTownKnownJobs}. Public for the
+     * work-request confirm hint (core.network).
+     */
+    public ImmutableSet<JobID> getTownKnownJobs() {
+        return learning.getTownKnownJobs();
+    }
+
     long getTick() {
         return Util.getTick(town.getServerLevelUnsafe());
     }

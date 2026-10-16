@@ -1090,3 +1090,21 @@ rooms keep the position line.
 place them in your store room chest. Each hunter carries one." (dropped
 "Your villagers will need them -"). Quest flavor is baked into town NBT at
 batch creation, so only new towns see it.
+
+## Work-request producer hint counts only town-known jobs (playtest 2026-10-15)
+
+"X jobs can produce this" was counting the whole dataset
+(`ServerJobsRegistry.getAllJobsThatProduce`), so a fresh town was told "20
+jobs can produce stone bricks" before it knew any of them. Progressive
+discovery means the hint should count jobs the town KNOWS:
+`TownVillagerLearningHandle.getTownKnownJobs()` unions, across every
+villager, the knowledge-tree parents and children of each villager's root
+(`TownVillagerLearningHandle.knowledgeTree`/`knowledgeTreeParent` — the same
+relation `VillagerAdvancements` shows) plus the unlocked set
+(`TownVillagerLearning.getUnlockedJobs`). `TownVillagerHandle` re-exposes it
+and `TownFlagBlockEntity.getTownVillagerHandle()` is the accessor;
+`AddWorkFromUIMessage` (INQUIRED case) filters the producer map through it
+before sending `WorkRequestConfirmMessage`, so the client's hint, its
+progressive-discovery card, and its job-icon column all see only town-known
+jobs. Registry-bound end-to-end (the handle ctor reads
+`Config.JOB_TREE_GROWTH`) — held-run-covered.

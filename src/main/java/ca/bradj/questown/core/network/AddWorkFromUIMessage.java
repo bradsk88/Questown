@@ -4,10 +4,14 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -82,11 +86,23 @@ public final class AddWorkFromUIMessage {
                 case INQUIRED -> {
                     WorksBehaviour.TownData td = tfbe.getTownData();
                     Ingredient result = (Ingredient) requested;
+                    // Only jobs the town KNOWS count - progressive discovery means
+                    // "20 known jobs" should not count the whole dataset
+                    // (2026-10-15 playtest: the hint listed jobs the town has
+                    // never been revealed).
+                    ImmutableSet<JobID> townKnown = tfbe.getTownVillagerHandle().getTownKnownJobs();
+                    ImmutableMap.Builder<JobID, ResourceLocation> producers = ImmutableMap.builder();
+                    ServerJobsRegistry.getAllJobsThatProduce(td, result)
+                                      .forEach((jobId, icon) -> {
+                                          if (townKnown.contains(jobId)) {
+                                              producers.put(jobId, icon);
+                                          }
+                                      });
                     QuestownNetwork.sendToPlayer(
                             sender,
                             new WorkRequestConfirmMessage(
                                     (Ingredient) requested(),
-                                    ServerJobsRegistry.getAllJobsThatProduce(td, result),
+                                    producers.build(),
                                     tfbe.getTownFlagBasePos()
                             )
                     );

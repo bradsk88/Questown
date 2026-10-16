@@ -206,6 +206,29 @@ public class TownVillagerLearningHandle {
         return false;
     }
 
+    /**
+     * The town-wide set of jobs the town KNOWS EXIST: the union, across every
+     * villager, of the knowledge-tree parents and children
+     * ({@code jobsKnownToExist}) plus the unlocked sets. Progressive discovery
+     * means the town only "knows" jobs revealed to it - hints and counts
+     * aimed at the player should count against this, not the whole dataset
+     * (2026-10-15 playtest: "There are 20 known jobs" counted every job in
+     * the dataset).
+     */
+    public ImmutableSet<JobID> getTownKnownJobs() {
+        ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
+        for (Map<JobID, Set<JobID>> villagerKnown : jobsKnownToExist.values()) {
+            for (Map.Entry<JobID, Set<JobID>> pc : villagerKnown.entrySet()) {
+                b.add(pc.getKey());
+                b.addAll(pc.getValue());
+            }
+        }
+        for (HashSet<JobID> ids : unlockedJobs.values()) {
+            b.addAll(ids);
+        }
+        return b.build();
+    }
+
     public boolean isUnlocked(UUID villagerUUID, JobID jobID) {
         HashSet<JobID> set = unlockedJobs.get(villagerUUID);
         return set != null && set.contains(jobID);
