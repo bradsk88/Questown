@@ -30,6 +30,7 @@ package ca.bradj.questown.jobs.declarative;
  * in addition to unit tests of isolated utility methods.
  */
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.jobs.*;
@@ -157,6 +158,9 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
     private final ImmutableMap<?, Collection<String>> specialRules;
     private final LOCATION location;
     private boolean isFirstTick = true;
+    // Dev-only stall instrumentation (see logCompletedProductView); wall clock of
+    // the last dump, per ticker instance.
+    private long lastCompletedProductViewLogMs;
 
     public DeclarativeJobTicker(
             ImmutableList<String> specialGlobalRules,
@@ -254,7 +258,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             Dependencies<POS, RECIPE, ?, ?, ROOM, MATCH, EXTRA, ?> deps,
             WorkStatusHandle<POS, ?> work
     ) {
-        return DeclarativeJobs.roomsWithState(
+        ImmutableList<MATCH> matches = DeclarativeJobs.roomsWithState(
                 deps.getJobSites(),
                 deps::isJobBlock,
                 pos -> {
@@ -262,6 +266,50 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                     return s != null && maxState == s.processingState();
                 }
         );
+        if (matches.isEmpty()) {
+            logCompletedProductView(deps, work);
+        }
+        return matches;
+    }
+
+    // Dev-only stall instrumentation (2026-10-15 playtest COLLECTING_SUPPLIES root
+    // cause): the gate dump sees a terminal mat but this circuit's view comes up
+    // empty, so leavers park in COLLECTING_SUPPLIES. When the two DISAGREE - view
+    // empty while some job block IS in the terminal state - dump this view's two
+    // inputs (the room matches and each job block's per-owner state) so the
+    // desync between them is readable in one line. A view that is empty because
+    // no block is terminal yet is legitimate and stays quiet. Throttled: this
+    // path runs on every leaver status decision tick.
+    private <RECIPE> void logCompletedProductView(
+            Dependencies<POS, RECIPE, ?, ?, ROOM, MATCH, EXTRA, ?> deps,
+            WorkStatusHandle<POS, ?> work
+    ) {
+        long now = System.currentTimeMillis();
+        if (now - lastCompletedProductViewLogMs < 5000L) {
+            return;
+        }
+        StringBuilder sb = new StringBuilder()
+                .append("[completed-product-view] empty view: maxState=").append(maxState)
+                .append(" location=").append(location);
+        boolean anyTerminal = false;
+        for (MATCH room : deps.getJobSites()) {
+            sb.append(" room=").append(room);
+            for (POS pos : deps.getContainedBlocks(room)) {
+                if (!deps.isJobBlock(pos)) {
+                    continue;
+                }
+                State s = work.getJobBlockState(pos);
+                sb.append(' ').append(pos).append('=').append(s == null ? "null" : s.toShortString());
+                if (s != null && s.processingState() == maxState) {
+                    anyTerminal = true;
+                }
+            }
+        }
+        if (!anyTerminal) {
+            return;
+        }
+        lastCompletedProductViewLogMs = now;
+        QT.JOB_LOGGER.info(sb.toString());
     }
 
     private <RECIPE, TOWN_ITEM extends Item<TOWN_ITEM>> RoomsNeedingVillagerInput<ROOM, RECIPE, POS> computeRoomsNeedingInput(

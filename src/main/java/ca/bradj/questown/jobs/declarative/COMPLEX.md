@@ -74,3 +74,21 @@ The flip reads:
 start on a partial day (the `canAlwaysStart` predicate would then be true
 and the hunt would not depend on the day-boundary alignment). See
 `.scratch/cook-soft-lock/DIAGNOSIS.md` for the full diagnosis.
+
+## Dev-only stall instrumentation: [completed-product-view] log (playtest 2026-10-15)
+
+The COLLECTING_SUPPLIES stall's root cause is a desync between the gate
+dump (which sees a terminal mat, `mat=3`) and the leaver's extraction view
+(`computeRoomsWithCompletedProduct` -> empty -> "get work supplies"). To
+pin the exact disagreement on the next fresh playtest,
+`computeRoomsWithCompletedProduct` now logs **only on the disagreement
+signature**: the view is empty while at least one contained job block IS
+in the terminal state (`maxState`). The line
+(`QT.JOB_LOGGER`, tag `[completed-product-view]`) dumps `maxState`,
+`location`, and per room match each job block's `work.getJobBlockState`
+(read through the SAME per-owner handle the circuit uses, so a null or
+non-terminal read is itself the evidence). A view that is empty because no
+block is terminal yet is legitimate and stays quiet; on-dump it is
+throttled to one line per 5 s per ticker instance (`System.currentTimeMillis`,
+no in-game time - this is wall-clock diagnostics). The method otherwise
+returns exactly what `DeclarativeJobs.roomsWithState` returns.
