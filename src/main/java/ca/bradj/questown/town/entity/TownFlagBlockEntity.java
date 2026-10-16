@@ -44,6 +44,7 @@ import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.questown.town.quests.*;
+import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -590,8 +591,26 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
 
     void morningTick(Long newTime) {
-        for (MCReward r : this.morningRewards.popChildren()) {
+        ImmutableList<MCReward> morning = ImmutableList.copyOf(morningRewards.popChildren());
+        List<MCReward> held = new ArrayList<>();
+        for (MCReward r : morning) {
+            // 2026-10-15 playtest ruling: hold the second-villager arrival until the
+            // raw-food (LOOT) quest is complete. A queued spawn that misses the gate
+            // rolls into the next morning instead of spawning.
+            if (r instanceof SpawnVisitorReward && !quests.isRawFoodSatisfied()) {
+                held.add(r);
+                continue;
+            }
             this.asapRewards.push(r);
+        }
+        for (MCReward r : held) {
+            this.morningRewards.add(r);
+        }
+        if (!held.isEmpty()) {
+            QT.FLAG_LOGGER.info(
+                    "Holding {} queued villager arrival(s): raw-food (LOOT) quest not complete",
+                    held.size()
+            );
         }
         this.setChanged();
         villagerHandle.handleMorning(newTime);
@@ -816,7 +835,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public boolean hasVillagerArrivingInMorning() {
-        return morningRewards.hasPendingSpawnVisitor();
+        // The "one more in the morning" card must not promise an arrival morningTick
+        // will hold: show it only when the spawn is queued AND the raw-food gate is met.
+        return morningRewards.hasPendingSpawnVisitor() && quests.isRawFoodSatisfied();
     }
 
     /**

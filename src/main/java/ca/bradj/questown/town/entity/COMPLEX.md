@@ -1108,3 +1108,24 @@ before sending `WorkRequestConfirmMessage`, so the client's hint, its
 progressive-discovery card, and its job-icon column all see only town-known
 jobs. Registry-bound end-to-end (the handle ctor reads
 `Config.JOB_TREE_GROWTH`) — held-run-covered.
+
+## Second-villager hold: raw-food (LOOT) gate (2026-10-15 playtest)
+
+Pacing ruling (user chat 05:34:56): the 2nd villager is held until the
+raw-food quest completes. The deferred spawn is queued as a
+`SpawnVisitorReward` in the flag's `morningRewards` (tutorial
+PHASE_HUNTER_GATHERER reward and `TownQuests.defaultQuestCompletionRewards`
+both queue it there; dev/test `addImmediateReward` paths spawn directly and
+are NOT gated). Two paths read the gate:
+`TownFlagBlockEntity.morningTick` now rolls an unmet queued spawn back into
+the next morning instead of pushing it to `asapRewards` (INFO line when it
+holds one), and `hasVillagerArrivingInMorning()` — the
+`MultiStatusScreen` "...and one more in the morning" sentinel card, the
+flag-menu tab feed, and the dev inspect command — is true only when a
+spawn is pending AND the gate is met, so the card never promises an
+arrival the morning will hold. The shared predicate is
+`TownQuests.isRawFoodSatisfied()`: every posted LOOT ("Raw Food") quest
+complete; an empty quest list reads as satisfied so test harnesses and
+pre-onboarding flags are never held hostage. The block-entity gate is
+registry-bound; pinned by `TownQuestsRawFoodGateTest` (3 tests) through
+the pure predicate.

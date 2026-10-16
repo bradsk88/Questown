@@ -1564,6 +1564,17 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         AdvancementsInit.TUTORIAL_TRIGGER.triggerForNearestPlayer(sl, trigger, t.getBlockPos());
     }
 
+    /**
+     * Whether every posted LOOT ("Raw Food") quest is complete. An empty quest list
+     * (test harnesses, pre-onboarding flags) reads as satisfied: the gate must never
+     * hold villager arrivals hostage in a world that never posted the loot quest.
+     */
+    public boolean isRawFoodSatisfied() {
+        return getAll().stream()
+                .filter(q -> q.getType() == Quest.QuestType.LOOT)
+                .allMatch(q -> q.isComplete());
+    }
+
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAll() {
         return ImmutableList.copyOf(questBatches.getAll().stream().map(v -> (Quest<ResourceLocation, MCRoom>) v)
                                                 .toList());

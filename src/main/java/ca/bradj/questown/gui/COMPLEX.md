@@ -818,3 +818,19 @@ hovering the label did nothing. `WorkScreen` now measures the label
 map (same per-frame dedupe style as `removes`); the hover highlight +
 tooltip and `mouseClicked` both use the wide region (checked before the
 16x17 `removes` loop).
+
+## Tutorial toast lifetime cap (2026-10-15 playtest)
+
+Vanilla's `TutorialToast` is a *persistent* toast: it stays on screen
+until the player right-clicks a block. "Your camp is ready"
+(`tutorial.campfire_ready`, fired by `CampfireReadyReward`) therefore sat
+in the toast stack until the player happened to interact with something —
+the playtest flagged it still up after the first campfire sleep.
+`ClientAccess.showTutorialToast` now records a 20 s wall-clock deadline
+per toast in an `IdentityHashMap` (`TUTORIAL_TOAST_LIFETIME_MS`);
+`ClientAccess.tickTutorialToasts()` (called from
+`CampfireSleepClientEvents.onClientTick`, the client-tick seam) hides each
+toast at its deadline, and stale `activeTutorialToast` references drop out
+of the map so re-shows don't inherit a dead deadline. The existing
+dismiss paths (right-click-a-block, flag-menu `dismissTutorialToast()`)
+still work; `dismissTutorialToast` clears the whole deadline map.

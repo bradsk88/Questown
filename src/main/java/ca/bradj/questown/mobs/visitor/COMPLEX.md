@@ -174,3 +174,17 @@ for empty slots, and vanilla's parser logs `Tried to load invalid item: No
 key id in MapLike[{}]` for it - 12 lines per entity load (every save/reload
 of every townie). The guard: `tag.isEmpty() ? ItemStack.EMPTY : parse(...)`
 before the `orElse` fallback. No behaviour change for non-empty slots.
+
+## Doorway pathfinding preference (2026-10-15 playtest)
+
+User report: townies "prefer jumping over walls to get inside the room."
+Per-cell path cost is FLOOR_COST + `Mob.getPathfindingMalus(type)` and a
+door cell carries no extra cost, so when a 1-block wall top (a cheap
+step-up) is a step or two closer than the doorway, A* routes over the
+wall. `VisitorMobEntity.getPathfindingMalus` now returns a
+`DOOR_PREFERENCE_MALUS` (0.5f) discount for `DOOR_WOOD_CLOSED` /
+`DOOR_IRON_CLOSED` / `DOOR_OPEN` cells, making doorway routes the cheaper
+choice. The constant is the tuning knob: bump it if doorways still lose to
+walls in the next playtest. The existing `VillagerPathNavigation` seam
+re-classifies cells (campfire, water, fences); this prices them — the two
+are complementary, not overlapping.

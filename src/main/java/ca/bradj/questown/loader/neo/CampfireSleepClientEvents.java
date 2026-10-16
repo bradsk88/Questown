@@ -22,6 +22,7 @@ public final class CampfireSleepClientEvents {
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
+        ClientAccess.tickTutorialToasts();
         if (hintCooldown-- > 0) {
             return;
         }

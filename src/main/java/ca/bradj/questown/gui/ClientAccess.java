@@ -17,6 +17,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -84,16 +85,44 @@ public class ClientAccess {
         Minecraft.getInstance().gui.setOverlayMessage(c, false);
     }
 
+    /**
+     * Vanilla's TutorialToast stays on screen until the player right-clicks a block -
+     * "Your camp is ready" was still showing after the first campfire sleep
+     * (2026-10-15 playtest). Each toast gets a wall-clock deadline instead.
+     */
+    private static final long TUTORIAL_TOAST_LIFETIME_MS = 20_000L;
     @Nullable
     private static net.minecraft.client.gui.components.toasts.TutorialToast activeTutorialToast;
+    private static final Map<net.minecraft.client.gui.components.toasts.TutorialToast, Long> toastDeadlines =
+            new IdentityHashMap<>();
 
     public static void showTutorialToast(Component title, Component description) {
         Minecraft mc = Minecraft.getInstance();
-        activeTutorialToast = new net.minecraft.client.gui.components.toasts.TutorialToast(
-                net.minecraft.client.gui.components.toasts.TutorialToast.Icons.RIGHT_CLICK,
-                title, description, false
-        );
-        mc.getToasts().addToast(activeTutorialToast);
+        net.minecraft.client.gui.components.toasts.TutorialToast toast =
+                new net.minecraft.client.gui.components.toasts.TutorialToast(
+                        net.minecraft.client.gui.components.toasts.TutorialToast.Icons.RIGHT_CLICK,
+                        title, description, false
+                );
+        activeTutorialToast = toast;
+        toastDeadlines.put(toast, System.currentTimeMillis() + TUTORIAL_TOAST_LIFETIME_MS);
+        mc.getToasts().addToast(toast);
+    }
+
+    /**
+     * Hides each toast once its deadline passes. Called from the client tick so the
+     * cap holds even when no screen dismisses the toast.
+     */
+    public static void tickTutorialToasts() {
+        long now = System.currentTimeMillis();
+        toastDeadlines.forEach((toast, deadline) -> {
+            if (now >= deadline) {
+                toast.hide();
+            }
+        });
+        toastDeadlines.entrySet().removeIf(e -> e.getValue() <= now);
+        if (activeTutorialToast != null && !toastDeadlines.containsKey(activeTutorialToast)) {
+            activeTutorialToast = null;
+        }
     }
 
     public static void dismissTutorialToast() {
@@ -101,6 +130,7 @@ public class ClientAccess {
             activeTutorialToast.hide();
             activeTutorialToast = null;
         }
+        toastDeadlines.clear();
     }
 
     public static void closeScreens() {
