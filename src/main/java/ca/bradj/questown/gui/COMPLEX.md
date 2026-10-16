@@ -806,3 +806,14 @@ field, appended after `showBlockOfProgressTab`) ->
 `getEnabledTabs()` returns `VillagerTabs.hideInventory(VillagerTabs.all())`
 when false.
 
+## Playtest 2026-10-15: wide hit region for the board auto-request toggle
+
+The 03:04 playtest report ("no tooltip / checkbox doesn't toggle") turned
+out to be a hit-area problem, not a wiring one: the server log proves the
+round-trip works (03:55: "Board auto-request set to false/true by Dev"),
+and the toggle was reachable only inside a 16x17 box around the 9px glyph —
+hovering the label did nothing. `WorkScreen` now measures the label
+(`font.width`) and registers the whole glyph+label span in a `wideRegions`
+map (same per-frame dedupe style as `removes`); the hover highlight +
+tooltip and `mouseClicked` both use the wide region (checked before the
+16x17 `removes` loop).

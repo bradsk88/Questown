@@ -50,6 +50,14 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
     private int currentPage = 0;
     private Map<Position, Runnable> removes = new HashMap<>();
 
+    // Wide (position + pixel width) hover/click regions for bottom-band toggles:
+    // the auto-request glyph is 9px and the old 16x17 hit box made it nearly
+    // impossible to hit - "no tooltip / checkbox doesn't toggle" (2026-10-15
+    // playtest). The map key dedupes per frame, same as `removes`.
+    private record WideRegion(int width, Runnable fn) {}
+
+    private Map<Position, WideRegion> wideRegions = new HashMap<>();
+
     public WorkScreen(
             TownWorkContainer container,
             Inventory playerInv,
@@ -219,22 +227,25 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
         if (on) {
             ctx.fill(tgX + 2, tgY + 2, tgX + 7, tgY + 7, 0xFFFFFF);
         }
+        Component toggleLabel = Compat.translatable("job_board.auto_request");
         ctx.text(
-                Compat.translatable("job_board.auto_request"),
+                toggleLabel,
                 tgX + 14,
                 tgY + 1,
                 TEXT_COLOR,
                 false
         );
-        highlightAndTooltip(
-                ctx,
-                mouseX,
-                mouseY,
-                tgX,
-                tgY,
-                Compat.translatable(on ? "job_board.auto_request.tooltip.on" : "job_board.auto_request.tooltip.off")
-        );
-        this.removes.put(new Position(tgX, tgY), this::toggleAutoRequest);
+        // Hover + click span glyph AND label - the 16x17 icon box only covered
+        // the 9px glyph, so the tooltip was effectively unreachable
+        // (2026-10-15 playtest: "It also doesn't appear to have a tooltip").
+        int toggleWidth = 14 + this.font.width(toggleLabel);
+        if (mouseX >= tgX && mouseY >= tgY && mouseX < tgX + toggleWidth && mouseY < tgY + 17) {
+            ctx.fill(tgX, tgY + 1, tgX + 9, tgY + 10, 0x80FFFFFF);
+            this.showTooltip(
+                    Compat.translatable(on ? "job_board.auto_request.tooltip.on" : "job_board.auto_request.tooltip.off")
+            );
+        }
+        wideRegions.put(new Position(tgX, tgY), new WideRegion(toggleWidth, this::toggleAutoRequest));
         ctx.renderWidget(this.previousPage, mouseX, mouseY, partialTicks);
         ctx.renderWidget(this.nextPage, mouseX, mouseY, partialTicks);
     }
@@ -288,6 +299,15 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
             double y,
             int p_97750_
     ) {
+        for (Map.Entry<Position, WideRegion> w : wideRegions.entrySet()) {
+            int buttonX = w.getKey().x;
+            int buttonY = w.getKey().z;
+            int width = w.getValue().width();
+            if (x >= buttonX && y >= buttonY && x < buttonX + width && y < buttonY + 17) {
+                w.getValue().fn().run();
+                return true;
+            }
+        }
         for (Map.Entry<Position, Runnable> p : removes.entrySet()) {
             int buttonX = p.getKey().x;
             int buttonY = p.getKey().z;
