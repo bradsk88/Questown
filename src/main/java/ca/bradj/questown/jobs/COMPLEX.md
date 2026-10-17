@@ -490,3 +490,18 @@ Pinned by `JobLogicTest.tick_shouldNotHitMaxTicksFallback_WhileWaitingForTimedSt
 `tick_shouldHitMaxTicksFallback_WhenIdleWithNoWorkSpot`. End-to-end (the hunt product is
 extracted after a >3000-tick cycle) is not yet autotest-verified — ticket
 `.scratch/playtest-2026-10-17/hunter-collecting-supplies-after-hunt.md`.
+
+## Same-root fallback prefers a job unlocked with the root (2026-10-17 playtest)
+
+`ServerJobsRegistry.getWorkSupplier` falls back to "any job in the same root" when a
+JobID has no registered Work — e.g. the simple-furnace template's source id
+`cook/simple_furnace_food`, which `ResourceJobLoader` expands into per-item jobs and never
+registers (the onboarding cook beat and its blessed BOP name it). The fallback used to take
+the FIRST same-root entry, which landed a new cook on `cook/stock_ingredients` (needs a
+`kitchen_stocked` room = furnace + chest; the player had `kitchen_small`), so the cook sat
+in COLLECTING_SUPPLIES with need=NONE. User ruling: "stock kitchen should not be a job that
+gets unlocked initially". The pick is now `Work.preferInitiallyUnlocked`: the first
+candidate with `Work.isUnlockedInitially(parent, unlocked_with_root_job)` (cook: `extract`,
+`fuel`), else the first candidate. Pinned by `WorkSameRootFallbackTest`. The ERROR log line
+and the raw-id broadcast (`messages.jobs.changed [cook:simple_furnace_food, …]`) remain —
+ticket `.scratch/playtest-2026-10-17/cook-job-change-uses-unregistered-source-id.md`.

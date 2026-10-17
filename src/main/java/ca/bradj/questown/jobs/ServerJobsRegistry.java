@@ -765,15 +765,22 @@ public class ServerJobsRegistry {
         Supplier<Work> workSupplier = Works.get(p);
         if (workSupplier == null) {
             QT.JOB_LOGGER.error("No work found for job ID: {}. Falling back to any job in the same root ID.", p);
-            ImmutableSet<Map.Entry<JobID, Supplier<Work>>> sameRootFallback = Works.entrySet(p.rootId());
-            Iterator<Map.Entry<JobID, Supplier<Work>>> i = sameRootFallback.stream()
-                                                                           .filter(v -> v.getKey().sameRoot(p))
-                                                                           .iterator();
-            if (!i.hasNext()) {
+            // Prefer a job unlocked with the root: the first-listed one could be e.g.
+            // cook/stock_ingredients, which needs a stocked kitchen (2026-10-17 playtest).
+            List<Supplier<Work>> sameRoot = Works.entrySet(p.rootId()).stream()
+                                                 .filter(v -> v.getKey().sameRoot(p))
+                                                 .map(Map.Entry::getValue)
+                                                 .toList();
+            Optional<Supplier<Work>> pick = Work.preferInitiallyUnlocked(
+                    sameRoot,
+                    s -> s.get().parentID,
+                    s -> s.get().isUnlockedWithRootJob()
+            );
+            if (pick.isEmpty()) {
                 QT.JOB_LOGGER.error("No fallback work found for root ID: {}", p.rootId());
                 return null;
             }
-            return i.next().getValue();
+            return pick.get();
         }
         return workSupplier;
     }

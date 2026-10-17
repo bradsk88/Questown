@@ -17,6 +17,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -133,6 +134,25 @@ public class Work {
             boolean unlockedWithRootJob
     ) {
         return parentID == null || unlockedWithRootJob;
+    }
+
+    /**
+     * The same-root fallback's pick: the first candidate unlocked with the root (see
+     * {@link #isUnlockedInitially}), else the first candidate. Pure over accessors so it is
+     * unit-testable without the Forge registry.
+     */
+    public static <T> Optional<T> preferInitiallyUnlocked(
+            List<T> candidates,
+            Function<T, @Nullable JobID> parentOf,
+            Predicate<T> unlockedWithRootJobOf
+    ) {
+        Optional<T> initial = candidates.stream()
+                .filter(c -> isUnlockedInitially(parentOf.apply(c), unlockedWithRootJobOf.test(c)))
+                .findFirst();
+        if (initial.isPresent()) {
+            return initial;
+        }
+        return candidates.stream().findFirst();
     }
 
     public Work withProficiencyId(@Nullable String proficiencyId) {
