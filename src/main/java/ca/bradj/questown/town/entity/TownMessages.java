@@ -100,6 +100,11 @@ public class TownMessages {
         }
     }
 
+    void sendTutorialToast(ServerPlayer p, String titleKey, String descriptionKey) {
+        QT.FLAG_LOGGER.info("Sending tutorial toast to {}: {} {}", p.getName().getString(), titleKey, descriptionKey);
+        QuestownNetwork.sendToPlayer(p, new ShowTutorialToastMessage(titleKey, descriptionKey));
+    }
+
     public void roomRecipeCreated(
             MCRoom roomDoorPos,
             Optional<ResourceLocation> match

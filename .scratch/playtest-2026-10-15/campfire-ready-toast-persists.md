@@ -31,3 +31,7 @@ dismiss and the flag-menu `dismissTutorialToast()` (InventoryAndStatusScreen)
 still work as before.
 
 Commit: 3ac14aea (session 2026-10-15 round 2)
+
+## Reworked 2026-10-17
+
+The 20 s cap made the toast vanish unseen; now shown at evening, hidden on sleep: `.scratch/playtest-2026-10-17/camp-ready-toast-never-seen.md`.

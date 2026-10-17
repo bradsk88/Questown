@@ -919,7 +919,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     private @Nullable Tutorial tryPhase2_hunterGatherer(TutorialTownView view) {
-        if (view.villagerCount() < 2) {
+        // One villager: this batch posts the raw-food quest, and the second villager is
+        // held until that quest completes (isArrivalGateOpen) - waiting for two deadlocks.
+        if (view.villagerCount() < 1) {
             return Tutorial.SKIPPED;
         }
         if (questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE)) {
@@ -1565,14 +1567,61 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /**
-     * Whether every posted LOOT ("Raw Food") quest is complete. An empty quest list
-     * (test harnesses, pre-onboarding flags) reads as satisfied: the gate must never
-     * hold villager arrivals hostage in a world that never posted the loot quest.
+     * Whether a villager arrival may land in a town that already has
+     * {@code villagerCount} villagers. Playtest ruling (2026-10-15, restated 2026-10-17):
+     * in an onboarding town the second villager arrives ONLY after the raw-food quest
+     * has been completed. The first villager is never held, and a town that never ran
+     * onboarding (test harnesses, hand-grown towns) is never held. "No raw-food quest
+     * posted yet" is NOT satisfied - that reading let the gate's and the kickoff's
+     * arrivals land on the same morning.
      */
-    public boolean isRawFoodSatisfied() {
-        return getAll().stream()
-                .filter(q -> q.getType() == Quest.QuestType.LOOT)
-                .allMatch(q -> q.isComplete());
+    public boolean isArrivalGateOpen(long villagerCount) {
+        if (villagerCount == 0) {
+            return true;
+        }
+        if (getAll().stream().noneMatch(Quest::isOnboarding)) {
+            return true;
+        }
+        return hunterRawFoodLootComplete();
+    }
+
+    public record ArrivalRelease<R>(List<R> others, List<R> arrivals, List<R> held) {
+    }
+
+    /** The day-one campfire quest is posted and complete (a flag with its camp). */
+    public boolean isCampfireQuestComplete() {
+        return getAll().stream().anyMatch(
+                q -> SpecialQuests.CAMPFIRE.equals(q.getWantedId()) && q.isComplete()
+        );
+    }
+
+    /**
+     * Splits one morning's queued rewards: arrivals pass {@link #isArrivalGateOpen} one at
+     * a time, each released arrival counting toward the next check, so two queued spawns
+     * on an empty town release one and hold the other. Non-arrival rewards always pass.
+     */
+    public <R> ArrivalRelease<R> releaseArrivals(
+            List<R> queued,
+            Predicate<R> isArrival,
+            long villagerCount
+    ) {
+        List<R> others = new ArrayList<>();
+        List<R> arrivals = new ArrayList<>();
+        List<R> held = new ArrayList<>();
+        long count = villagerCount;
+        for (R r : queued) {
+            if (!isArrival.test(r)) {
+                others.add(r);
+                continue;
+            }
+            if (!isArrivalGateOpen(count)) {
+                held.add(r);
+                continue;
+            }
+            arrivals.add(r);
+            count++;
+        }
+        return new ArrivalRelease<>(others, arrivals, held);
     }
 
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAll() {

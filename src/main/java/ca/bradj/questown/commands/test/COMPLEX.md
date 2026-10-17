@@ -636,3 +636,22 @@ rules have no HUNGER_FILL, so they can never satisfy the assertion —
 ticket `.scratch/autotest-suite/eating-pair-deterministic-fullness-fail.md`
 (also carries the corrected forensics: the −12 %/−16 % lines are the
 scenario's *own* diner, the 88 %/84 % lines the stray).
+
+### village/growth drives the onboarding hunter job change (2026-10-17)
+
+Since the 2026-10-17 arrival-gate rework (`town/entity/COMPLEX.md` "Second-villager
+hold"), the second villager waits on the raw-food LOOT quest, which only a hunter
+completes. `VillageGrowthExecutor.act()` therefore gained `spendBopOnOpenJobChange()`:
+while a JOB_CHANGE quest is open and the flag holds a BOP, it calls the owner's
+`TownFlagBlockEntity.spendBopToRequestJobChange` (the change-job-tab spend; the
+onboarding guarantee routes it to `hunter/sword`). Verified 2026-10-17 (200 t/s):
+roster 1 → BOP spend → hunter next morning → stone sword taken → Raw Mutton
+completes the LOOT quest → roster 2 the following morning, with "Holding 1 queued
+villager arrival(s)" on the two mornings before.
+
+**Still short of 5:** the third villager is the hunter-gatherer batch reward, and
+that batch includes a BEDROOM quest the driver cannot build (no bed placement);
+the first-work-request quest is also never posted. A HEAD baseline (before the
+rework) stalled earlier — at roster 2 with raw food, the hunter change and the
+bedroom all open — so `village/growth` was not reaching 5 before this change either.
+Ticket: `.scratch/playtest-2026-10-17/growth-driver-needs-bedroom.md`.

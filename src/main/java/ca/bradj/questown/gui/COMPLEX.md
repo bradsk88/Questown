@@ -819,18 +819,26 @@ map (same per-frame dedupe style as `removes`); the hover highlight +
 tooltip and `mouseClicked` both use the wide region (checked before the
 16x17 `removes` loop).
 
-## Tutorial toast lifetime cap (2026-10-15 playtest)
+## Tutorial toast lifetime: shown at evening, hidden on sleep (2026-10-15 → 2026-10-17)
 
-Vanilla's `TutorialToast` is a *persistent* toast: it stays on screen
-until the player right-clicks a block. "Your camp is ready"
-(`tutorial.campfire_ready`, fired by `CampfireReadyReward`) therefore sat
-in the toast stack until the player happened to interact with something —
-the playtest flagged it still up after the first campfire sleep.
-`ClientAccess.showTutorialToast` now records a 20 s wall-clock deadline
-per toast in an `IdentityHashMap` (`TUTORIAL_TOAST_LIFETIME_MS`);
-`ClientAccess.tickTutorialToasts()` (called from
-`CampfireSleepClientEvents.onClientTick`, the client-tick seam) hides each
-toast at its deadline, and stale `activeTutorialToast` references drop out
-of the map so re-shows don't inherit a dead deadline. The existing
-dismiss paths (right-click-a-block, flag-menu `dismissTutorialToast()`)
-still work; `dismissTutorialToast` clears the whole deadline map.
+Vanilla's `TutorialToast` is a *persistent* toast: it stays on screen until
+something calls `hide()`. "Your camp is ready" (`tutorial.campfire_ready`,
+"Use wand on campfire") is an evening instruction, and two playtests broke it
+from opposite sides: 10-15 it was still up after the first campfire sleep;
+10-17 a 20 s wall-clock cap (the 10-15 fix) let it fire on the afternoon quest
+completion and vanish unseen. Now:
+
+- **When it shows (server):** `TownFlagBlockEntity.showCampReadyToastIfDue()`
+  runs on every evening/night flag tick (`AbstractTownFlagTicker` →
+  `tickEvening` → `TownFlagTicker`) and from `CampfireReadyReward` (a quest
+  completed after dusk). It sends the toast per player
+  (`TownMessages.sendTutorialToast`) when the campfire quest is complete
+  (`TownQuests.isCampfireQuestComplete`), the player is awake, has not yet
+  been shown it this session (`campReadyToastShown`, transient), and has not
+  completed `questown:first_campfire_sleep` (`Compat.hasCompletedAdvancement`
+  — the advancement is the persisted "already slept" bit, so a restart
+  re-shows it only to players who still need it).
+- **When it hides (client):** `ClientAccess.tickTutorialToasts()` (called from
+  `CampfireSleepClientEvents.onClientTick`) hides the active toast once
+  `mc.player.isSleeping()`; a new show replaces the old one; the flag-menu
+  `dismissTutorialToast()` path is unchanged. No wall-clock cap.

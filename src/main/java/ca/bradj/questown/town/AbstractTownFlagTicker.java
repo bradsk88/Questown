@@ -97,6 +97,10 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         TickProfile.INSTANCE.phase("asapRewards", () -> tickASAPRewards(data));
         TickProfile.INSTANCE.phase("pois", () -> tickPOIs(data));
 
+        if (signals == Signals.NIGHT || signals == Signals.EVENING) {
+            tickEvening(data);
+        }
+
         if ((signals == Signals.NIGHT || signals == Signals.EVENING) && !villagers.isEmpty()) {
             triggerFirstNightAdvancement(data);
         }
@@ -124,6 +128,8 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
     );
 
     protected abstract void triggerFirstNightAdvancement(TICK_DATA data);
+
+    protected abstract void tickEvening(TICK_DATA data);
 
     protected abstract void tickPOIs(TICK_DATA data);
 

@@ -35,7 +35,10 @@ import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.RoomRecipes;
+import ca.bradj.questown.core.advancements.TutorialTrigger;
+import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.town.rewards.CampfireReadyReward;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.helperchicken.ChickenRoomShellPlan;
 import ca.bradj.questown.town.TownContainers;
@@ -508,6 +511,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final TownPois pois = new TownPois(subBlocks);
     final MCMorningRewards morningRewards = new MCMorningRewards(this);
     final MCAsapRewards asapRewards = new MCAsapRewards();
+    /** Session-only: players already shown the camp-ready toast (see showCampReadyToastIfDue). */
+    private final Set<UUID> campReadyToastShown = new HashSet<>();
     private UUID uuid = UUID.randomUUID();
     final TownFlagState state = new TownFlagState(this);
     final TownShutdownController shutdownController = new TownShutdownController();
@@ -591,25 +596,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
 
     void morningTick(Long newTime) {
-        ImmutableList<MCReward> morning = ImmutableList.copyOf(morningRewards.popChildren());
-        List<MCReward> held = new ArrayList<>();
-        for (MCReward r : morning) {
-            // 2026-10-15 playtest ruling: hold the second-villager arrival until the
-            // raw-food (LOOT) quest is complete. A queued spawn that misses the gate
-            // rolls into the next morning instead of spawning.
-            if (r instanceof SpawnVisitorReward && !quests.isRawFoodSatisfied()) {
-                held.add(r);
-                continue;
-            }
-            this.asapRewards.push(r);
-        }
-        for (MCReward r : held) {
-            this.morningRewards.add(r);
-        }
-        if (!held.isEmpty()) {
+        // Playtest ruling: the second villager arrives only after the raw-food quest is
+        // complete. A queued spawn that misses the gate rolls into the next morning.
+        TownQuests.ArrivalRelease<MCReward> release = quests.releaseArrivals(
+                ImmutableList.copyOf(morningRewards.popChildren()),
+                r -> r instanceof SpawnVisitorReward,
+                villagerHandle.size()
+        );
+        // asapRewards is a LIFO stack: push arrivals last so they are claimed first and a
+        // reward that needs a villager (PostFirstWorkRequestQuestReward) sees the arrival.
+        release.others().forEach(this.asapRewards::push);
+        release.arrivals().forEach(this.asapRewards::push);
+        release.held().forEach(this.morningRewards::add);
+        if (!release.held().isEmpty()) {
             QT.FLAG_LOGGER.info(
                     "Holding {} queued villager arrival(s): raw-food (LOOT) quest not complete",
-                    held.size()
+                    release.held().size()
             );
         }
         this.setChanged();
@@ -834,10 +836,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return getBlockPos();
     }
 
+    public boolean hasVillagers() {
+        return villagerHandle.size() > 0;
+    }
+
     public boolean hasVillagerArrivingInMorning() {
         // The "one more in the morning" card must not promise an arrival morningTick
         // will hold: show it only when the spawn is queued AND the raw-food gate is met.
-        return morningRewards.hasPendingSpawnVisitor() && quests.isRawFoodSatisfied();
+        return morningRewards.hasPendingSpawnVisitor() && quests.isArrivalGateOpen(villagerHandle.size());
     }
 
     /**
@@ -848,6 +854,37 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
      */
     public void broadcastTutorialToast(String titleKey, String descriptionKey) {
         this.messages.broadcastTutorialToast(titleKey, descriptionKey);
+    }
+
+    /**
+     * "Your camp is ready" belongs to the first evening with a flag and campfire
+     * (2026-10-17 playtest: completed in the afternoon, the toast came and went
+     * unseen). Called each evening/night flag tick and from {@code CampfireReadyReward}:
+     * shows the toast once per player per session to anyone who has not yet
+     * campfire-slept (the {@code first_campfire_sleep} advancement is the persisted
+     * "slept" bit, so a restart re-shows it only to players who still need it).
+     */
+    public void showCampReadyToastIfDue() {
+        if (!(level instanceof ServerLevel sl)) {
+            return;
+        }
+        if (!quests.isCampfireQuestComplete()) {
+            return;
+        }
+        Signals signals = Signals.fromDayTime(new Signals.DayTime(sl.getDayTime()));
+        if (signals != Signals.EVENING && signals != Signals.NIGHT) {
+            return;
+        }
+        ResourceLocation slept = Questown.ResourceLocation(TutorialTrigger.Triggers.FirstCampfireSleep.getID());
+        for (ServerPlayer p : sl.players()) {
+            if (p.isSleeping() || !campReadyToastShown.add(p.getUUID())) {
+                continue;
+            }
+            if (Compat.hasCompletedAdvancement(p, slept)) {
+                continue;
+            }
+            messages.sendTutorialToast(p, CampfireReadyReward.TOAST_TITLE_KEY, CampfireReadyReward.TOAST_DESCRIPTION_KEY);
+        }
     }
 
     public boolean hasPendingMorningReward() {

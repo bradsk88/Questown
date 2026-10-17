@@ -88,7 +88,8 @@ class TutorialPhaseGateTest {
         // villager is the gate batch's reward, so with zero villagers the
         // machine must wait (SKIPPED) even when a batch request is pending.
         TownQuests quests = questsWithCampfireOnly();
-        TestTutorialTownView view = TestTutorialTownView.builder().build();
+        // Explicit: the builder defaults to one villager.
+        TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(0).build();
 
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
 
@@ -169,7 +170,10 @@ class TutorialPhaseGateTest {
     }
 
     @Test
-    void whenDayOneDoneButOneVillager_noAdvance() {
+    void whenDayOneDoneAndOneVillager_hunterGathererAdded() {
+        // 2026-10-17 playtest ruling: the second villager arrives only after the raw-food
+        // quest completes, so the batch that posts that quest must open with the first
+        // villager alone (it used to wait for two - a deadlock with the arrival gate).
         TownQuests quests = questsWithDayOneBatches();
         completeBasics(quests);
 
@@ -178,7 +182,11 @@ class TutorialPhaseGateTest {
                 .build();
 
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
-        assertEquals(TownQuests.Tutorial.SKIPPED, result);
+        assertEquals(TownQuests.Tutorial.APPLIED, result);
+        assertTrue(quests.questBatches.getAll().stream().anyMatch(q ->
+                TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location().equals(q.getWantedId())
+                        && q.getType() == Quest.QuestType.LOOT
+        ), "the raw-food quest is posted for the first villager");
     }
 
     @Test

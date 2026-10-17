@@ -39,3 +39,7 @@ card, fed by the same predicate).
   registry-bound; pinned via the pure predicate instead.
 
 Commit: 3ac14aea (session 2026-10-15 round 2)
+
+## Reopened 2026-10-17
+
+The 3ac14aea gate never held: see `.scratch/playtest-2026-10-17/two-villagers-first-morning.md`.

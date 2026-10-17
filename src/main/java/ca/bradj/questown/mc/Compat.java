@@ -728,4 +728,17 @@ public class Compat {
     public static void setServerTickRate(MinecraftServer server, float tps) {
         server.tickRateManager().setTickRate(tps);
     }
+
+    /**
+     * Whether the player has completed the advancement. 1.20.2+ looks advancements up as
+     * an {@code AdvancementHolder} (1.19.2: {@code getAdvancement} returns the
+     * {@code Advancement}). An unknown id reads as not completed.
+     */
+    public static boolean hasCompletedAdvancement(ServerPlayer player, ResourceLocation advancementId) {
+        net.minecraft.advancements.AdvancementHolder adv = player.getServer().getAdvancements().get(advancementId);
+        if (adv == null) {
+            return false;
+        }
+        return player.getAdvancements().getOrStartProgress(adv).isDone();
+    }
 }

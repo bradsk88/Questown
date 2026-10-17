@@ -13,6 +13,7 @@ import ca.bradj.questown.town.HelperChickenSpawnController;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.MCQuest;
+import ca.bradj.questown.town.quests.Quest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -303,6 +304,9 @@ public final class VillageGrowthExecutor {
         if (fulfilItemQuests()) {
             return;
         }
+        if (spendBopOnOpenJobChange()) {
+            return;
+        }
         // In a manual (FIFO-driven) run the agent owns the clock; the executor
         // never advances it here. Stop before any non-manual clock logic.
         if (System.getProperty("questown.village.agentDrive") != null) {
@@ -431,6 +435,28 @@ public final class VillageGrowthExecutor {
                 return true;
             }
             return false; // no container yet; door registration will fix that
+        }
+        return false;
+    }
+
+    /**
+     * Spend a Block of Progress on a villager while a JOB_CHANGE quest is open - the
+     * player's change-job-tab spend (owner path: spendBopToRequestJobChange). Since the
+     * 2026-10-17 ruling the second villager waits on the raw-food quest, which only a
+     * hunter completes, so the onboarding hunter job change is on the growth path.
+     */
+    private boolean spendBopOnOpenJobChange() {
+        boolean openJobChange = flag.getQuestHandle().getAllQuestsWithRewards().stream()
+                .map(AbstractMap.SimpleEntry::getKey)
+                .anyMatch(q -> q.getType() == Quest.QuestType.JOB_CHANGE && !q.isComplete());
+        if (!openJobChange || flag.getBlocksOfProgress() <= 0) {
+            return false;
+        }
+        for (LivingEntity v : flag.getVillagerHandle().entities()) {
+            TownFlagBlockEntity.JobChangeResult r = flag.spendBopToRequestJobChange(v.getUUID());
+            msg("Spent a BOP on townie " + shortId((VisitorMobEntity) v) + " for the open job-change quest: " + r);
+            check("bop-spent-for-job-change", r == TownFlagBlockEntity.JobChangeResult.REQUESTED);
+            return true;
         }
         return false;
     }

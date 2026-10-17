@@ -819,8 +819,8 @@ graph LR
 
 - The quest posts from the **basics batch's completion reward** (wrapped in an
   `MCRewardList` with the tutorial kickoff reward), not on a tick: by the time
-  the batch completes the board exists and a villager is present, so the ask is
-  doable. `QuestsHolder.addFirstWorkRequestBatch` / `TownQuestsHandle` delegate.
+  the batch completes the board exists. A villager may not be — the reward then
+  defers to the morning (see "First-work-request quest waits for a villager"). `QuestsHolder.addFirstWorkRequestBatch` / `TownQuestsHandle` delegate.
 - Completion rides the flag's existing `workHandle.addChangeListener`: any **add**
   (`c.removed() == null`) calls `markFirstWorkRequestCompleteIfActive`, which walks
   batches for an incomplete `FIRST_WORK_REQUEST` quest and marks it. Removals
@@ -1109,23 +1109,50 @@ progressive-discovery card, and its job-icon column all see only town-known
 jobs. Registry-bound end-to-end (the handle ctor reads
 `Config.JOB_TREE_GROWTH`) — held-run-covered.
 
-## Second-villager hold: raw-food (LOOT) gate (2026-10-15 playtest)
+## Second-villager hold: raw-food (LOOT) gate (2026-10-15, reworked 2026-10-17)
 
-Pacing ruling (user chat 05:34:56): the 2nd villager is held until the
-raw-food quest completes. The deferred spawn is queued as a
-`SpawnVisitorReward` in the flag's `morningRewards` (tutorial
-PHASE_HUNTER_GATHERER reward and `TownQuests.defaultQuestCompletionRewards`
-both queue it there; dev/test `addImmediateReward` paths spawn directly and
-are NOT gated). Two paths read the gate:
-`TownFlagBlockEntity.morningTick` now rolls an unmet queued spawn back into
-the next morning instead of pushing it to `asapRewards` (INFO line when it
-holds one), and `hasVillagerArrivingInMorning()` — the
-`MultiStatusScreen` "...and one more in the morning" sentinel card, the
-flag-menu tab feed, and the dev inspect command — is true only when a
-spawn is pending AND the gate is met, so the card never promises an
-arrival the morning will hold. The shared predicate is
-`TownQuests.isRawFoodSatisfied()`: every posted LOOT ("Raw Food") quest
-complete; an empty quest list reads as satisfied so test harnesses and
-pre-onboarding flags are never held hostage. The block-entity gate is
-registry-bound; pinned by `TownQuestsRawFoodGateTest` (3 tests) through
-the pure predicate.
+Pacing ruling (user chat 10-15 05:34:56, restated 10-17 04:31:52): "the second
+villager should ONLY arrive after the raw food quest has been COMPLETED."
+
+**Why the 10-15 gate never held.** Its predicate read "no LOOT quest posted" as
+satisfied, and the raw-food quest is posted by the hunter-gatherer phase, which
+waited for **two** villagers (`tryPhase2_hunterGatherer`). The gate reward's
+first-villager spawn and the basics batch's PHASE_KICKOFF spawn were both queued
+for the same morning; no LOOT quest existed yet, so both spawned (10-17 log:
+two `Registered entity with town` at 04:31:26). The rule and the phase threshold
+were a deadlock by construction.
+
+**Now:**
+- `tryPhase2_hunterGatherer` opens at **one** villager, so the raw-food quest is
+  posted for the first villager (later phases keep their headcounts: cook ≥ 3,
+  miner ≥ 3).
+- `TownQuests.isArrivalGateOpen(villagerCount)`: open when the town has no
+  villagers (the first is never held) or never ran onboarding (no
+  `isOnboarding()` quest — test harnesses, hand-grown towns); otherwise open
+  only once the raw-food LOOT quest is complete (`hunterRawFoodLootComplete`).
+- `TownQuests.releaseArrivals(queued, isArrival, villagerCount)` splits one
+  morning's rewards into others / released arrivals / held, **counting each
+  released arrival** toward the next check — two queued spawns on an empty town
+  release one and hold one.
+- `TownFlagBlockEntity.morningTick` applies the split: held spawns roll back
+  into `morningRewards` (INFO "Holding N queued villager arrival(s)"), and
+  because `asapRewards` is a LIFO `Stack`, others are pushed first and arrivals
+  last so **arrivals are claimed first** (the first-work-request reward below
+  needs to see the villager). `hasVillagerArrivingInMorning()` (the
+  "...and one more in the morning" card) uses the same gate.
+- Dev/test `addImmediateReward` spawn paths are not gated.
+- Pinned by `TownQuestsRawFoodGateTest` (7 tests: the predicate and the split)
+  and `TutorialPhaseGateTest.whenDayOneDoneAndOneVillager_hunterGathererAdded`;
+  the morningTick wiring is registry-bound.
+
+## First-work-request quest waits for a villager (2026-10-17)
+
+User (10-15 02:59:19, again 10-17 04:29:48): "'Post a request' quest should not get
+added until the villager has arrived." The basics batch completion reward still
+carries `PostFirstWorkRequestQuestReward`, but its applier now checks
+`TownFlagBlockEntity.hasVillagers()`: with none it queues a **fresh** instance as a
+morning reward (persisted, unlike the asap stack; a fresh one because
+`Reward.claim()` ignores an instance already marked applied) and logs
+"First-work-request quest deferred to the next morning: no villager yet". The
+morning release order above puts the arrival ahead of it, so the quest posts the
+morning the first villager arrives.

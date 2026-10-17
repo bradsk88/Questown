@@ -1,6 +1,8 @@
 package ca.bradj.questown.town.rewards;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.RewardsInit;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
 import net.minecraft.nbt.CompoundTag;
@@ -11,8 +13,10 @@ import java.util.Objects;
 /**
  * Posts the day-2 "post your first work request" quest (F2:
  * .scratch/day1-playtest-2026-10-11/job-board-organic-introduction). Applied when the
- * basics batch (job board + store room) completes - by then the board exists and a
- * villager is present, so the quest's ask is doable.
+ * basics batch (job board + store room) completes. The board exists by then, but the
+ * first villager may still be a morning away (playtests 2026-10-15 + 2026-10-17: "should
+ * not get added until the villager has arrived"), so with no villager the reward re-queues
+ * itself as a morning reward (persisted, unlike the asap stack) and posts once one is here.
  */
 public class PostFirstWorkRequestQuestReward extends MCReward {
 
@@ -36,7 +40,15 @@ public class PostFirstWorkRequestQuestReward extends MCReward {
 
     @Override
     protected @NotNull RewardApplier getApplier() {
-        return () -> town.getQuestHandle().addFirstWorkRequestBatch();
+        return () -> {
+            if (!((TownFlagBlockEntity) town).hasVillagers()) {
+                QT.QUESTS_LOGGER.info("First-work-request quest deferred to the next morning: no villager yet");
+                // A fresh instance: claim() ignores a reward already marked applied.
+                town.addMorningReward(new PostFirstWorkRequestQuestReward(town));
+                return;
+            }
+            town.getQuestHandle().addFirstWorkRequestBatch();
+        };
     }
 
     @Override
