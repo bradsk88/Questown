@@ -648,3 +648,17 @@ ERRORs in the 2026-10-15 log). A *different*-value clobber still ERRORs.
 
 Pinned by `WorkStatusStoreTest` (Test_StuckBlock*, Test_BlockWithActive*,
 Test_FreshState*).
+
+## Chest walk target: a standable neighbour, door side first (2026-10-17 playtest)
+
+`TownContainers.fromChestBlockMaybe` set a room chest's interact position to
+`p.relative(doorDirectionFromCenter(room))` unchecked. In the playtest store room (walls
+x 104..107, z -61..-59, door (106,-61) north, chest (105,-60)) that cell is the north
+WALL, so `ProductionJob.navTargetForContainer` sent villagers into the wall; the
+pathfinder parked them on top of the chest ("can't find my way there"), stalling
+hunting supplies and dining. It now uses `jobs/InteractionSpots.find` — the same rule
+job blocks already used (`DeclarativeJob.doFindInteractionSpot`, now delegating):
+door-side neighbour if standable, else any standable horizontal neighbour, else the door
+cell for a 1x1 room — with `jobs/WalkTargets.isStandable` (ground solid, foot + torso
+clear; `ProductionJob.isValidWalkTarget` delegates to it). If nothing qualifies, the old
+door-side step remains the fallback. Pinned by `InteractionSpotsTest` (the playtest room).

@@ -175,16 +175,20 @@ key id in MapLike[{}]` for it - 12 lines per entity load (every save/reload
 of every townie). The guard: `tag.isEmpty() ? ItemStack.EMPTY : parse(...)`
 before the `orElse` fallback. No behaviour change for non-empty slots.
 
-## Doorway pathfinding preference (2026-10-15 playtest)
+## Doorway pathfinding preference — reverted (2026-10-15 → 2026-10-17)
 
-User report: townies "prefer jumping over walls to get inside the room."
-Per-cell path cost is FLOOR_COST + `Mob.getPathfindingMalus(type)` and a
-door cell carries no extra cost, so when a 1-block wall top (a cheap
-step-up) is a step or two closer than the doorway, A* routes over the
-wall. `VisitorMobEntity.getPathfindingMalus` now returns a
-`DOOR_PREFERENCE_MALUS` (0.5f) discount for `DOOR_WOOD_CLOSED` /
-`DOOR_IRON_CLOSED` / `DOOR_OPEN` cells, making doorway routes the cheaper
-choice. The constant is the tuning knob: bump it if doorways still lose to
-walls in the next playtest. The existing `VillagerPathNavigation` seam
-re-classifies cells (campfire, water, fences); this prices them — the two
-are complementary, not overlapping.
+The 2026-10-15 fix ("townies prefer jumping over walls to get inside the room") gave
+`VisitorMobEntity.getPathfindingMalus` a 0.5 discount on `DOOR_WOOD_CLOSED` /
+`DOOR_IRON_CLOSED` / `DOOR_OPEN`. **That made open doors impassable**: vanilla's
+`WalkNodeEvaluator` treats any malus `< 0.0F` as unwalkable (its `>= 0.0F` gates), and
+`DOOR_OPEN`'s default is `0.0F` → `-0.5`. A closed wooden door was unaffected because a
+door-opening mob's evaluator re-types it to `WALKABLE_DOOR` (not discounted). Live
+symptoms 2026-10-17: villagers could not enter rooms through open doors ("if I close the
+door, they open it and walk through"), routed over walls / onto a bed, and stood on top
+of a supply chest unable to path off. The override is removed (vanilla costs).
+
+**Rule:** a malus is never negative — to make one route cheaper, raise the cost of the
+alternative instead. The original wall-climb complaint is open again
+(`.scratch/playtest-2026-10-17/villager-stuck-on-bed-pathing-over-wall.md`).
+The `VillagerPathNavigation` seam (re-classifying campfire, water, fence cells) is the
+place for a wall-top penalty if one is needed.

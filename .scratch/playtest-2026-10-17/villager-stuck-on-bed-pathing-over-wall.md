@@ -1,6 +1,6 @@
 ---
 title: 'Villager stands on a bed trying to path over the wall ("can''t get to other room"), never gives up'
-status: needs-triage
+status: fixed
 origin: 2026-10-17 playtest round 2 — user chat 05:47:36
 ---
 
@@ -41,3 +41,33 @@ the store room, door elsewhere.
 - Open question for the observer: does the villager flash red / play the hurt sound
   when hit? Yes → the hit lands and the knockback is absorbed (pinned bed↔wall, or
   the walk target re-pulls it each tick); No → something upstream drops the attack.
+
+## Follow-up (05:50:47)
+
+"I closed the door of the room they were in. Only then did they move."
+
+A block change in the room (door open → closed) un-stuck it. Two readings to test:
+(a) the villager was holding a stale PATH and only a nearby block update forced
+vanilla's path recompute (`PathNavigation.shouldRecomputePath` on block change), so
+the "never gives up" half is a missing re-path on CANT_REACH; (b) the OPEN door cell
+was costed worse than the wall climb — round-2's discount applies to `DOOR_OPEN`
+too, so check the open-door node type the evaluator actually assigns there.
+
+## Related (06:10:15)
+
+Same family: the villager climbs onto a waist-high block (bed here; the supply chest at
+(105,-60) in hunter-return-deposits-at-flag.md) and then cannot path off it to the
+target cell. Likely one root cause in walk-target selection / step-up costing.
+
+## Root cause (2026-10-17, user chat 06:12:10 "Open doors seems to make villagers struggle
+to navigate into rooms. if I close the door, they open it and walk through")
+
+`VisitorMobEntity.getPathfindingMalus` (3ac14aea) returned `base - 0.5` for door types;
+`DOOR_OPEN`'s vanilla default is 0.0 → -0.5, and `WalkNodeEvaluator` treats any malus
+< 0 as impassable (`>= 0.0F` gates at its lines 112/126/180). A closed wooden door is
+re-typed `WALKABLE_DOOR` for door-opening mobs and was never discounted — hence "close
+the door and they walk through", and the 05:50:47 unstick when the door was closed. With
+open doorways blocked, the only route was over the wall / onto the bed. Override removed
+(vanilla costs). The original "prefer jumping over walls" complaint (2026-10-15) needs a
+non-negative approach (penalise the wall-top route) if it recurs. Knockback (05:49:45)
+not separately investigated.

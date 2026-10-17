@@ -1013,26 +1013,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return new VillagerPathNavigation(this, p_21480_);
     }
 
-    /**
-     * 2026-10-15 playtest (user: "Villaers seem to prefer jumping over walls to get
-     * inside the room. Can we make doorways more attractive?"): the per-cell path cost
-     * is FLOOR_COST + {@link #getPathfindingMalus} and a closed door carries no extra
-     * cost, so A* routes over a 1-block wall whenever its geometry is a step or two
-     * shorter. A small negative malus on door cells makes doorway routes the cheaper
-     * choice. Tunable: bump the constant if doorways still lose to walls in playtest.
-     */
-    private static final float DOOR_PREFERENCE_MALUS = 0.5f;
-
-    @Override
-    public float getPathfindingMalus(PathType type) {
-        float base = super.getPathfindingMalus(type);
-        if (type == PathType.DOOR_WOOD_CLOSED
-                || type == PathType.DOOR_IRON_CLOSED
-                || type == PathType.DOOR_OPEN) {
-            return base - DOOR_PREFERENCE_MALUS;
-        }
-        return base;
-    }
+    // No door malus override: vanilla's walk evaluator treats any NEGATIVE malus as
+    // impassable (WalkNodeEvaluator `>= 0.0F` gates), so the 2026-10-15 "door preference"
+    // discount (DOOR_OPEN 0.0 - 0.5) made OPEN doors unwalkable and sent villagers over
+    // walls and onto beds/chests (2026-10-17 playtest; see mobs/visitor/COMPLEX.md).
 
     @Override
     protected void registerGoals() {

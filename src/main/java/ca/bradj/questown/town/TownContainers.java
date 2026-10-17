@@ -5,7 +5,8 @@ import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.StockRequestItem;
-import ca.bradj.questown.jobs.declarative.DeclarativeJob;
+import ca.bradj.questown.jobs.InteractionSpots;
+import ca.bradj.questown.jobs.WalkTargets;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
@@ -172,8 +173,14 @@ public class TownContainers {
 
         BlockState blockState = level.getBlockState(p);
         if (room != null) {
-            Direction doorDirection = DeclarativeJob.getDoorDirectionFromCenter(room);
-            interactPos = Positions.FromBlockPos(p.relative(doorDirection));
+            // A standable neighbour, door side first: the bare door-side step put a chest
+            // whose door side is a wall's walk target INSIDE the wall, and the villager stood
+            // on the chest unable to use it (2026-10-17 playtest).
+            BlockPos spot = InteractionSpots.find(p, room, b -> WalkTargets.isStandable(level, b));
+            if (spot == null) {
+                spot = p.relative(InteractionSpots.doorDirectionFromCenter(room));
+            }
+            interactPos = Positions.FromBlockPos(spot);
         } else {
             Optional<Direction> facing = blockState.getOptionalValue(BlockStateProperties.HORIZONTAL_FACING);
             if (facing.isPresent()) {

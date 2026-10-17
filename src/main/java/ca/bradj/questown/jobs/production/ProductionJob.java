@@ -138,12 +138,7 @@ public abstract class ProductionJob<
         if (sl == null) {
             return false;
         }
-        boolean footSpotBlocked = sl.getBlockState(bp).isSolid();
-        BlockState torsoMaterial = sl.getBlockState(bp.above());
-        boolean torsoSpotBlocked = torsoMaterial.isSolid();
-        BlockState groundMaterial = sl.getBlockState(bp.below());
-        boolean groundSpotSolid = groundMaterial.isSolid();
-        return groundSpotSolid && !(footSpotBlocked || torsoSpotBlocked);
+        return WalkTargets.isStandable(sl, bp);
     }
 
     private BlockPos jobSite;

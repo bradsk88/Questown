@@ -1,6 +1,6 @@
 ---
 title: 'Villagers climb walls instead of entering through doors'
-status: fixed
+status: needs-triage
 origin: 2026-10-15 playtest round 2 — user chat 05:37:47
 ---
 
@@ -30,3 +30,7 @@ the next playtest.
 
 Held-run verification pending: needs a live world with a room + a
 visually-observed approach (the user saw it; the next playtest confirms).
+
+## Reverted 2026-10-17
+
+The discount made open doors impassable (negative malus = blocked in vanilla). See `.scratch/playtest-2026-10-17/villager-stuck-on-bed-pathing-over-wall.md`.
