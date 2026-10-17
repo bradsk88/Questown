@@ -92,3 +92,20 @@ block is terminal yet is legitimate and stays quiet; on-dump it is
 throttled to one line per 5 s per ticker instance (`System.currentTimeMillis`,
 no in-game time - this is wall-clock diagnostics). The method otherwise
 returns exactly what `DeclarativeJobs.roomsWithState` returns.
+
+## Next-state timer starts on the completing work write (2026-10-17)
+
+`AbstractWorkWI.applyWork` computes the next state's time (`getTimeForStep(curState + 1)`) on
+every work write and used to pass it to `setJobBlockStateWithTimer` whether or not the write
+finished the step. A **partial** write (work left after the decrement, state unchanged) therefore
+started the next state's countdown while the block was still in the work state, and the
+completing write a few ticks later re-set it — the `Clobbered time on block at (1,64,0) from 1990
+to 2000` ERROR in village/day1 (hunter:sword: state 1 `work: 1`, state 2 `time:
+2000`). Captured stack: `VisitorMobEntity.villagerTick` → `JobLogic.doTryWorking` →
+`AbstractWorkWI.tryWork` → `applyWork`, prev `State{1, workLeft=0.3}` → new `State{2}`.
+
+Now only the write that advances the block (`actionCompleted`) starts the timer; partial writes
+use `setJobBlockState`, which leaves timers alone. Shared by the realtime and warp
+interactions. Pinned by `AbstractWorkWITest.tryWork_partialWork_doesNotStartTheNextStatesTimer` /
+`tryWork_completedWork_startsTheNextStatesTimerOnce` (red-verified: both failed on the old form
+with `[1@2000]` / `[1@2000, 2@2000]`).

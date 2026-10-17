@@ -91,6 +91,52 @@ class AbstractWorkWITest {
 
     }
 
+    /** Records timer writes instead of refusing them. */
+    private static class TimerRecordingWorkWI extends TestWorkWI {
+        final java.util.List<String> timerWrites = new ArrayList<>();
+
+        TimerRecordingWorkWI(
+                ImmutableMap<Integer, Integer> workRequiredAtStates,
+                ImmutableMap<Integer, Integer> timeRequiredAtStates
+        ) {
+            super(workRequiredAtStates, timeRequiredAtStates, ImmutableMap.of(), (a, b) -> {});
+        }
+
+        @Override
+        protected Void setJobBlockStateWithTimer(Void unused, Position bp, State bs, int nextStepTime) {
+            state.put(bp, bs);
+            timerWrites.add(bs.processingState() + "@" + nextStepTime);
+            return null;
+        }
+    }
+
+    // 2026-10-17 day1 "Clobbered time … from 1990 to 2000": the hunter's partial work write at
+    // state 1 started state 2's timer, and the completing write ten ticks later restarted it.
+    @Test
+    void tryWork_partialWork_doesNotStartTheNextStatesTimer() {
+        TimerRecordingWorkWI wi = new TimerRecordingWorkWI(
+                ImmutableMap.of(1, 2),
+                ImmutableMap.of(2, 2000)
+        );
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0), false);
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1), false);
+        Assertions.assertEquals(State.freshAtState(1).setWorkLeft(1), wi.state.get(new Position(0, 0)));
+        Assertions.assertEquals(ImmutableList.of(), wi.timerWrites);
+    }
+
+    @Test
+    void tryWork_completedWork_startsTheNextStatesTimerOnce() {
+        TimerRecordingWorkWI wi = new TimerRecordingWorkWI(
+                ImmutableMap.of(1, 2),
+                ImmutableMap.of(2, 2000)
+        );
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 0), false);
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1), false);
+        wi.tryWork(null, new WorkedSpot<>(new Position(0, 0), 1), false);
+        Assertions.assertEquals(State.freshAtState(2).setWorkLeft(0), wi.state.get(new Position(0, 0)));
+        Assertions.assertEquals(ImmutableList.of("2@2000"), wi.timerWrites);
+    }
+
     @Test
     void tryWork_shouldMoveToNextState_AfterWorkDone() {
         TestWorkWI wi = new TestWorkWI(
