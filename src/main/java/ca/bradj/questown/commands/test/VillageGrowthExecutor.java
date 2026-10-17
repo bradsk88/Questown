@@ -93,6 +93,8 @@ public final class VillageGrowthExecutor {
     private boolean jobBoardPlaced = false;
     /** village/day1: stop at the cook beat and assert the day-1 beats instead of 5 villagers. */
     private final @Nullable Day1BeatChecks day1;
+    /** village/day1: symptoms the game survives (self-healed stalls, ERROR lines) still fail. */
+    private final @Nullable LogTripwire tripwire;
     private final List<BlockPos> buildingCorners = new ArrayList<>();
     private final java.util.Set<ResourceLocation> furnishedRoomQuests = new java.util.HashSet<>();
     private int nextSpareBuilding = 2;
@@ -123,6 +125,7 @@ public final class VillageGrowthExecutor {
         this.player = player;
         this.origin = origin;
         this.day1 = day1 ? new Day1BeatChecks(player.getUUID(), this::check, this::msg) : null;
+        this.tripwire = day1 ? LogTripwire.attach() : null;
     }
 
     /** Advance one server tick. Returns true when the scenario has finished. */
@@ -388,6 +391,7 @@ public final class VillageGrowthExecutor {
     }
 
     private void checkResults() {
+        checkTripwire();
         long roster = flag != null ? flag.getVillagerHandle().size() : 0;
         passed = day1 != null ? passedChecks == totalChecks : roster >= TARGET_VILLAGERS;
         msg("========================================");
@@ -849,6 +853,19 @@ public final class VillageGrowthExecutor {
             out.add(e.getValue() > 1 ? e.getKey() + " x" + e.getValue() : e.getKey());
         }
         return out;
+    }
+
+    private void checkTripwire() {
+        if (tripwire == null) {
+            return;
+        }
+        tripwire.detach();
+        List<String> reseeds = tripwire.reseeds();
+        List<String> errors = tripwire.errors();
+        reseeds.stream().limit(5).forEach(r -> msg("  stuck work spot: " + r));
+        errors.stream().limit(5).forEach(e -> msg("  error: " + e));
+        check("no-stuck-work-spot-reseeds[" + reseeds.size() + "]", reseeds.isEmpty());
+        check("no-questown-errors[" + errors.size() + "]", errors.isEmpty());
     }
 
     private void check(String label, boolean pass) {

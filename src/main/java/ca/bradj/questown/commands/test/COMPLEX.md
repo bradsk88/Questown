@@ -690,3 +690,22 @@ counting meanwhile. **Trap:** `ServerPlayer.teleportTo` does nothing for a fake 
 `moveTo` + `ServerChunkCache.move(player)` or the chunks never unload. The flag BE survives
 this reload (only the villager entities reload), so it is a chunk-reload test, not a full
 server restart.
+
+#### village/day1 log tripwire (2026-10-17)
+
+day1-8 passed 31/31 while its log carried `Work block at (0,64,0) stuck in state 2 … reseeding to
+fresh` (the flag eating spot: the diner stall the player then hit as the "carrot take/put loop"),
+another reseed, and a `Clobbered time` ERROR. The beat checks only assert that each beat
+*eventually* happens inside a 10-day budget, so a stall the 20000-tick `reseedStuckBlocks`
+self-heal rescues is invisible to them.
+
+`LogTripwire` (day1 mode only) attaches a log4j appender to the root logger at WARN for the run
+and records, from Questown's own loggers only (`Questown*` / `ca.bradj.questown*`), every
+self-heal reseed (message contains "reseeding to fresh") and every ERROR. `checkResults` adds two
+checks — `no-stuck-work-spot-reseeds[n]` and `no-questown-errors[n]` — and prints the first 5 of
+each. Classifier pinned by `LogTripwireTest`.
+
+First run with it (day1-9, HEAD 8c26fe78): 31/33. The flag spot no longer reseeds (diner fix);
+the job board at (-19,65,-15) reseeds from state 1 five times (seeking_work), and two
+`Clobbered time on block at (1,64,0) from 1990 to 2000` ERRORs — both open, see
+`.scratch/autotest-suite/day1-coverage-gaps-2026-10-17.md`.
