@@ -27,3 +27,17 @@ they're not giving up on that nav path."
 
 Verify with a fixture before fixing: a bedroom whose bed abuts the wall shared with
 the store room, door elsewhere.
+
+## Follow-up (05:49:45)
+
+"I can't even knock them out of it. I can't smack them" — the stuck villager does not take player knockback either, so the player has no manual unstick. Check whether VisitorMobEntity ignores player attacks/knockback (hurt/knockback overrides) — a stuck-state escape the player expects.
+
+### Code read (2026-10-17, not yet a diagnosis)
+
+- `VisitorMobEntity.hurt` refuses damage only when `getJob().shouldBeNoClip(...)`, which
+  is `false` for `ProductionJob` (and the client throwing job) — so a hunter is hurtable.
+- No `AttackEntityEvent`/`LivingIncomingDamageEvent` cancel, `setInvulnerable`, or
+  knockback override for townies exists in `src/main/java`.
+- Open question for the observer: does the villager flash red / play the hurt sound
+  when hit? Yes → the hit lands and the knockback is absorbed (pinned bed↔wall, or
+  the walk target re-pulls it each tick); No → something upstream drops the attack.
