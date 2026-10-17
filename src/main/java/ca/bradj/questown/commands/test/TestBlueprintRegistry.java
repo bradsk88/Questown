@@ -36,7 +36,9 @@ import ca.bradj.questown.mobs.visitor.TownieNeed;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.items.StockRequestItem;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
@@ -191,6 +193,9 @@ public class TestBlueprintRegistry {
         // close-on-first-extraction semantics), then tops the counter up through the live
         // quest handle and asserts it completes exactly at the count.
         jobs.add(new TestEntry("loot_on_extract_accumulate", new JobID("hunter", "sword"), lootOnExtractAccumulateBlueprint(), "loot"));
+        // gatherer_becomes_hunter: the gatherer's leftover terminal mat state must not park the
+        // new hunter in COLLECTING_SUPPLIES (playtest 2026-10-17).
+        jobs.add(new TestEntry("loot/gatherer_becomes_hunter", new JobID("gatherer", "gather"), gathererBecomesHunterBlueprint(), "loot"));
         jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
         jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
         jobs.add(entry(new JobID("crafter", "leather_boots"), armorerBlueprint()));
@@ -2651,7 +2656,10 @@ public class TestBlueprintRegistry {
     }
 
     private static TestBlueprint lootOnExtractBlueprint(boolean warpPath) {
-        TestBlueprint base = hunterBlueprint();
+        return lootOnExtractBlueprint(hunterBlueprint(), warpPath);
+    }
+
+    private static TestBlueprint lootOnExtractBlueprint(TestBlueprint base, boolean warpPath) {
         return new TestBlueprint(
                 base.roomType(), base.blocks(), base.supplyItems(),
                 base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
@@ -2703,6 +2711,40 @@ public class TestBlueprintRegistry {
                     }
                     return typeOk && complete;
                 });
+    }
+
+    /**
+     * A gatherer becomes a hunter (playtest 2026-10-17: the BOP-blessed morning change). The
+     * gatherer leaves its welcome-mat spot at its terminal state 3, which hunter:sword also uses
+     * as "hunt finished"; the stale state, read from away from the mat (a walk to the spot the
+     * "not going to jobsite" gate rejects), parked the new hunter in COLLECTING_SUPPLIES until the
+     * 20000-tick self-heal. The root change must clear it, so the hunter completes the raw-food
+     * LOOT quest inside the 4800-tick window (the loot_on_extract oracle).
+     */
+    private static TestBlueprint gathererBecomesHunterBlueprint() {
+        // The supply chest well away from the mat, as in the playtest town (chest ~10 blocks from
+        // the gate): next to the mat, the trip to fetch the sword walks the hunter into the mat's
+        // room, where it extracts the stale state instead of stalling.
+        TestBlueprint farChest = welcomeMatBlueprint(hunterBlueprint().supplyItems().stream().toList(), -8, -2);
+        return lootOnExtractBlueprint(farChest, false).withPostSpawnAction((level, flagPos, town, output) -> {
+            BlockPos matPos = flagPos.offset(new BlockPos(3, 0, 0));
+            JobID hunter = new JobID("hunter", "sword");
+            // Away from the mat, as in the playtest (the change lands at the morning, by the bed):
+            // a villager standing on the mat just extracts the stale state, which hides the bug.
+            for (net.minecraft.world.entity.LivingEntity e : town.getVillagerHandle().entities()) {
+                e.teleportTo(flagPos.getX() - 5.5, flagPos.getY(), flagPos.getZ() + 4.5);
+                output.msg("gatherer_becomes_hunter: moved " + e.getUUID() + " to " + e.blockPosition().toShortString());
+            }
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                // VillagerUUID.get is deprecated for removal; the store and unlock still take a UUID.
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                town.getRealWorkStatusHandle(uuid).setJobBlockState(matPos, State.freshAtState(3));
+                output.msg("gatherer_becomes_hunter: gatherer left the mat at " + matPos.toShortString() + " in state 3");
+                town.getVillagerHandle().changeJobForVillager(vuid, hunter, false);
+                town.getVillagerHandle().unlockJob(uuid, hunter);
+            }
+            return true;
+        });
     }
 
     /**
@@ -2775,12 +2817,16 @@ public class TestBlueprintRegistry {
     }
 
     private static TestBlueprint welcomeMatBlueprint(List<ItemStack> supplies) {
+        return welcomeMatBlueprint(supplies, 4, -2);
+    }
+
+    private static TestBlueprint welcomeMatBlueprint(List<ItemStack> supplies, int supplyOx, int supplyOz) {
         List<BlockPlacement> blocks = new ArrayList<>();
 
         BlockPos matOffset = new BlockPos(3, 0, 0);
         blocks.add(new BlockPlacement(matOffset, BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState()));
 
-        SupplyRoom sr = buildSupplyRoom(4, -2);
+        SupplyRoom sr = buildSupplyRoom(supplyOx, supplyOz);
         blocks.addAll(sr.blocks);
 
         return new TestBlueprint(

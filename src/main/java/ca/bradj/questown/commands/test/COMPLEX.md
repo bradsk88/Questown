@@ -709,3 +709,29 @@ First run with it (day1-9, HEAD 8c26fe78): 31/33. The flag spot no longer reseed
 the job board at (-19,65,-15) reseeds from state 1 five times (seeking_work), and two
 `Clobbered time on block at (1,64,0) from 1990 to 2000` ERRORs — both open, see
 `.scratch/autotest-suite/day1-coverage-gaps-2026-10-17.md`.
+
+#### loot/gatherer_becomes_hunter (2026-10-17)
+
+Pins the playtest's stale-state stall: a gatherer that changes root to hunter:sword keeps its
+per-villager job-block store unless the root change clears it (`SimpleVillagerHandle.changeJobForVillager`
+→ `Delegator.resetWorkStatus`). The gatherer's terminal state 3 on the welcome mat reads, to the
+hunter, as a finished hunt with no spot needing a sword, so the hunter sits in COLLECTING_SUPPLIES
+taking the sword and dropping it ("Trying to drop too quickly", >2000 takes in 4800 ticks).
+
+Setup (`gathererBecomesHunterBlueprint`): the `loot_on_extract` oracle (raw-food LOOT quest must
+complete inside 4800 realtime ticks) on a welcome-mat town whose supply room sits at (-8,-2),
+~9 blocks from the mat. The post-spawn action moves the villager to the supply room's door,
+writes state 3 at the mat into its store (what gather leaves behind), then changes the job to
+hunter:sword through the real `changeJobForVillager`.
+
+Two preconditions are load-bearing — each one alone let the pre-fix code pass:
+- **The villager must not be in the mat's room.** `tryChoosingItemlessWork` extracts a
+  completed product immediately when `getEntityCurrentJobSite` is that room; the stale state
+  then becomes one free hunt instead of a stall.
+- **The supply chest must be away from the mat.** With the default supply room at (4,-2) the trip
+  to fetch the sword walks the hunter into the mat's room and it extracts. The playtest town's
+  chest was ~10 blocks from the gate. (A supply room at (-12,4) was never detected as a room — cause not
+  investigated — so the hunter sat at NO_JOBSITE: a different failure.)
+
+Red-verified: with the `resetWorkStatus` call removed, 0/1 (the take/drop loop); with it, 1/1
+(3 sword takes, quest complete).
