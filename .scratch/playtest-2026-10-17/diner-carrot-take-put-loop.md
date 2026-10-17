@@ -26,3 +26,17 @@ state can't start (no jobsite? flag-side eat spot), so it re-collects. Check whi
 state transition puts it back — the earlier 309-carrot gatherer:gather run (05:45) is
 the same signature. Possibly the same family as eating/eat_direct + dine_at_time known
 reds.
+
+## Code read (2026-10-17, continued) — not yet a diagnosis
+
+- The put-back is `Jobs.tryDropLoot` (DROPPING_LOOT): it drops every UNLOCKED item from
+  `getItemsForDrop()` (= the whole journal). Locks come only from the player's slot locks
+  (`ProductionJob` container listener), and `ProductionJournal.hasAnyLootToDrop` = any
+  unlocked non-empty item. So a job keeps its "tool" (the diner's carrot, food listed as
+  the NEED_EAT tool in `DinerNoTableWork`) only if the status logic never puts it into
+  DROPPING_LOOT while holding it. Next: capture the `[WHY]` sequence for one take→put
+  cycle to find which transition sends a freshly-supplied diner to DROPPING_LOOT.
+- Not reproduced by village/day1 (day1-3/day1-4 logs: ≤39 takes per job, cooked food
+  available). The playtest loop (898×, raw carrots) needs its conditions: the narrow
+  store room and/or carrot-only food. A day1 variant seeding only carrots would test the
+  second.

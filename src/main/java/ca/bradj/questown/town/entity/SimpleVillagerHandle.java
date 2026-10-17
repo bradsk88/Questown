@@ -607,6 +607,13 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public void register(ENTITY vEntity) {
         QT.FLAG_LOGGER.info("Registered entity with town {}: {}", delegator.getUUID(vEntity), vEntity);
+        // One entry per townie: a reloaded entity is a new object with the same UUID, and the
+        // stale copy (unloaded with its chunk) stayed listed - the town counted the villager
+        // twice and the raw-food arrival gate opened (2026-10-17 village/day1 reload step).
+        UUID id = delegator.getUUID(vEntity);
+        if (this.entities.removeIf(e -> e != vEntity && delegator.getUUID(e).equals(id))) {
+            QT.FLAG_LOGGER.info("Replaced a stale entity for townie {} on re-registration", id);
+        }
         this.add(vEntity);
         delegator.addChangeListener(
                 vEntity, () -> {

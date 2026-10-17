@@ -601,7 +601,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         TownQuests.ArrivalRelease<MCReward> release = quests.releaseArrivals(
                 ImmutableList.copyOf(morningRewards.popChildren()),
                 r -> r instanceof SpawnVisitorReward,
-                villagerHandle.size()
+                townVillagerCount()
         );
         // asapRewards is a LIFO stack: push arrivals last so they are claimed first and a
         // reward that needs a villager (PostFirstWorkRequestQuestReward) sees the arrival.
@@ -845,14 +845,25 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return quests.wantsJobChangeFrom(villagerJob);
     }
 
+    /** A townie died: remove it from the saved roster so {@link #townVillagerCount} drops. */
+    public void retireVillager(UUID villager) {
+        villagerHandle.retireDisplayNumber(villager);
+        setChanged();
+    }
+
     public boolean hasVillagers() {
-        return villagerHandle.size() > 0;
+        return townVillagerCount() > 0;
+    }
+
+    /** Arrived villagers: the live entities or the saved roster, whichever is larger. */
+    private long townVillagerCount() {
+        return Math.max(villagerHandle.size(), villagerHandle.knownVillagerCount());
     }
 
     public boolean hasVillagerArrivingInMorning() {
         // The "one more in the morning" card must not promise an arrival morningTick
         // will hold: show it only when the spawn is queued AND the raw-food gate is met.
-        return morningRewards.hasPendingSpawnVisitor() && quests.isArrivalGateOpen(villagerHandle.size());
+        return morningRewards.hasPendingSpawnVisitor() && quests.isArrivalGateOpen(townVillagerCount());
     }
 
     /**

@@ -676,3 +676,17 @@ First run 2026-10-17: 28/28 in ~8 min. Not covered yet: a save/reload mid-run (t
 arrival-gate restart bypass — needs a chunk unload/reload to replay the real load order),
 the playtest's narrow store room (chest walk target; unit-pinned by `InteractionSpotsTest`),
 and the GUI (red dot, fonts, click targets).
+
+#### village/day1 reload step (2026-10-17)
+
+Once, on the day after villager 1 arrives (raw food still open), the driver releases every
+forced chunk (`level.getForcedChunks()`), sets `spawnChunkRadius` to 0
+(`Compat.setSpawnChunkRadius` — the origin sits in the spawn chunks), moves the fake player
+4000 blocks away, waits until `!level.isLoaded(flagPos)`, then returns and re-forces the
+same chunks and waits for the flag and its villagers. Checks:
+`reload-flag-chunk-unloaded`, `reload-villagers-restored`; `Day1BeatChecks` pauses arrival
+counting meanwhile. **Trap:** `ServerPlayer.teleportTo` does nothing for a fake player
+(NeoForge's `FakePlayerNetHandler` overrides `teleport` as a no-op) — move it with
+`moveTo` + `ServerChunkCache.move(player)` or the chunks never unload. The flag BE survives
+this reload (only the villager entities reload), so it is a chunk-reload test, not a full
+server restart.

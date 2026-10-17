@@ -786,6 +786,25 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // State management should be done via the town block. This entity should
     // only handle cosmetic stuff like position, pose, etc.
 
+    /**
+     * A chunk unload stops tracking the entity without calling {@link #remove} (only KILLED
+     * unregistered), so the town kept the unloaded copy and the reloaded entity registered a
+     * second time - counted twice (2026-10-17, village/day1 reload step). Unregister on unload
+     * (the loader's tracking-end hook, Forge and NeoForge alike); the entity re-registers when
+     * it loads.
+     */
+    @Override
+    public void onRemovedFromWorld() {
+        super.onRemovedFromWorld();
+        if (town == null || level().isClientSide()) {
+            return;
+        }
+        RemovalReason reason = getRemovalReason();
+        if (reason == RemovalReason.UNLOADED_TO_CHUNK || reason == RemovalReason.UNLOADED_WITH_PLAYER) {
+            town.getVillagerHandle().remove(this);
+        }
+    }
+
     @Override
     public void remove(RemovalReason p_146834_) {
         super.remove(p_146834_);
@@ -810,6 +829,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             }
             if (town != null) {
                 town.getVillagerHandle().remove(this);
+            }
+            if (town instanceof TownFlagBlockEntity flag) {
+                flag.retireVillager(getUUID());
             }
         }
     }

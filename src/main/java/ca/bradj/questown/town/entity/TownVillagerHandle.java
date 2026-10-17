@@ -300,6 +300,11 @@ public final class TownVillagerHandle {
         displayNumbers.assign(vuid);
     }
 
+    /** The townie died: drop it from the saved roster (its number is never re-issued). */
+    void retireDisplayNumber(UUID vuid) {
+        displayNumbers.retire(vuid);
+    }
+
     /** "Villager N" (the user-facing display name); the raw root as a last resort. */
     public String displayNameFor(UUID vuid) {
         int n = displayNumberFor(vuid);
@@ -327,6 +332,16 @@ public final class TownVillagerHandle {
 
     Map<UUID, Integer> getDisplayNumbers() {
         return displayNumbers.byVuid();
+    }
+
+    /**
+     * Villagers in the town per the saved roster (one display number per townie, retired only
+     * when it leaves or dies) - unlike {@link #size()} it does not drop while their entities are
+     * unloaded or not yet re-registered after a load (2026-10-17: a reload let villager 2 past
+     * the raw-food gate).
+     */
+    long knownVillagerCount() {
+        return displayNumbers.byVuid().size();
     }
 
     int getHighestDisplayNumber() {

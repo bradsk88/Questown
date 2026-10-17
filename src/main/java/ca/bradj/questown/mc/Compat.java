@@ -730,6 +730,14 @@ public class Compat {
     }
 
     /**
+     * The 1.20.5+ {@code spawnChunkRadius} gamerule (spawn chunks always loaded otherwise; the
+     * autotest origin sits in them). village/day1 sets it to 0 so the flag's chunk can unload.
+     */
+    public static void setSpawnChunkRadius(MinecraftServer server, ServerLevel level, int radius) {
+        level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_SPAWN_CHUNK_RADIUS).set(radius, server);
+    }
+
+    /**
      * The room recipe registered under {@code id}, or null. 1.20.2+ wraps recipes in a
      * {@code RecipeHolder} (1.19.2: the recipe carries its own id).
      */

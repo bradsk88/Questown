@@ -59,6 +59,8 @@ public final class VillageGrowthExecutor {
         PLACE_FLAG,
         WAIT_FOR_FLAG,
         PLAY,
+        RELOAD_UNLOAD,
+        RELOAD_LOAD,
         CHECK_RESULTS,
         DONE
     }
@@ -95,6 +97,10 @@ public final class VillageGrowthExecutor {
     private final java.util.Set<ResourceLocation> furnishedRoomQuests = new java.util.HashSet<>();
     private int nextSpareBuilding = 2;
     private boolean firstWorkRequestPosted = false;
+    private boolean reloadDone = false;
+    private final List<Long> releasedChunks = new ArrayList<>();
+    private int reloadWait = 0;
+    private long rosterBeforeReload = 0;
 
     public VillageGrowthExecutor(
             ServerLevel level,
@@ -128,6 +134,8 @@ public final class VillageGrowthExecutor {
                 case PLACE_FLAG -> placeFlag();
                 case WAIT_FOR_FLAG -> waitForFlag();
                 case PLAY -> play();
+                case RELOAD_UNLOAD -> reloadUnload();
+                case RELOAD_LOAD -> reloadLoad();
                 case CHECK_RESULTS -> checkResults();
                 case DONE -> { return true; }
             }
@@ -282,6 +290,10 @@ public final class VillageGrowthExecutor {
     /** day1: run the beat checks; finished at the cook beat or on timeout (a FAIL). */
     private boolean day1Finished() {
         day1.tick(flag, level.getDayTime());
+        if (shouldReloadNow()) {
+            startReload();
+            return false;
+        }
         if (day1.cookBeatReached()) {
             check("day1-reached-cook-beat", true);
             return true;
@@ -292,6 +304,87 @@ public final class VillageGrowthExecutor {
             return true;
         }
         return false;
+    }
+
+    // ---- day1: reload the town mid-run (the server-restart load order) ----
+
+    /**
+     * Once, on the day after the first villager arrived while raw food is still open: the
+     * 2026-10-17 playtest's restart let villager 2 in on the next morning past the gate.
+     */
+    private boolean shouldReloadNow() {
+        if (reloadDone || flag.getVillagerHandle().size() != 1 || Day1BeatChecks.rawFoodComplete(flag)) {
+            return false;
+        }
+        long timeOfDay = level.getDayTime() % 24000L;
+        return timeOfDay > 2000 && timeOfDay < 6000;
+    }
+
+    /** Release every chunk keeping the flag loaded and walk the player away, as on a restart. */
+    private void startReload() {
+        reloadDone = true;
+        rosterBeforeReload = flag.getVillagerHandle().size();
+        releasedChunks.clear();
+        releasedChunks.addAll(level.getForcedChunks());
+        for (long packed : releasedChunks) {
+            net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(packed);
+            level.setChunkForced(cp.x, cp.z, false);
+        }
+        ca.bradj.questown.mc.Compat.setSpawnChunkRadius(server, level, 0);
+        movePlayer(origin.getX() + 4000, origin.getY() + 40, origin.getZ() + 4000);
+        day1.pauseArrivals();
+        msg("Reload: released " + releasedChunks.size() + " forced chunks, player moved away (roster=" + rosterBeforeReload + ")");
+        reloadWait = 0;
+        phase = Phase.RELOAD_UNLOAD;
+    }
+
+    /**
+     * NeoForge's FakePlayerNetHandler makes {@code teleportTo}'s connection teleport a no-op, so
+     * the fake player never moved and its chunks stayed loaded. Move the entity directly and
+     * update the chunk map's view of it.
+     */
+    private void movePlayer(double x, double y, double z) {
+        player.moveTo(x, y, z, player.getYRot(), player.getXRot());
+        level.getChunkSource().move(player);
+    }
+
+    private void reloadUnload() {
+        ticks++;
+        if (!level.isLoaded(flagPos)) {
+            msg("Reload: the flag's chunk unloaded after " + reloadWait + " ticks");
+            check("reload-flag-chunk-unloaded", true);
+            movePlayer(origin.getX(), origin.getY() + 1, origin.getZ());
+            for (long packed : releasedChunks) {
+                net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(packed);
+                level.setChunkForced(cp.x, cp.z, true);
+            }
+            reloadWait = 0;
+            phase = Phase.RELOAD_LOAD;
+            return;
+        }
+        if (++reloadWait > 3000) {
+            msg("FAIL reload: the flag's chunk never unloaded");
+            check("reload-flag-chunk-unloaded", false);
+            phase = Phase.CHECK_RESULTS;
+        }
+    }
+
+    private void reloadLoad() {
+        ticks++;
+        TownFlagBlockEntity reloaded = level.isLoaded(flagPos) ? TownFlagBlockEntity.getFromPos(level, flagPos) : null;
+        if (reloaded != null && reloaded.getVillagerHandle().size() >= rosterBeforeReload) {
+            flag = reloaded;
+            msg("Reload: flag and " + reloaded.getVillagerHandle().size() + " villager(s) back after " + reloadWait + " ticks");
+            check("reload-villagers-restored", true);
+            day1.resumeArrivals(reloaded.getVillagerHandle().size());
+            phase = Phase.PLAY;
+            return;
+        }
+        if (++reloadWait > 3000) {
+            msg("FAIL reload: flag/villagers not back (flag=" + (reloaded != null) + ")");
+            check("reload-villagers-restored", false);
+            phase = Phase.CHECK_RESULTS;
+        }
     }
 
     private void checkResults() {

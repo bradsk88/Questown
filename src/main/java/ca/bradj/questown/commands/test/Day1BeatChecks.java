@@ -42,8 +42,20 @@ final class Day1BeatChecks {
         this.msg = msg;
     }
 
+    private boolean arrivalsPaused;
+
     boolean cookBeatReached() {
         return cookSeen;
+    }
+
+    /** During a reload the roster drops and re-registers: not arrivals. */
+    void pauseArrivals() {
+        arrivalsPaused = true;
+    }
+
+    void resumeArrivals(long rosterNow) {
+        arrivalsPaused = false;
+        lastRoster = rosterNow;
     }
 
     void tick(TownFlagBlockEntity flag, long dayTime) {
@@ -72,6 +84,9 @@ final class Day1BeatChecks {
     }
 
     private void checkArrivals(TownFlagBlockEntity flag) {
+        if (arrivalsPaused) {
+            return;
+        }
         long roster = flag.getVillagerHandle().size();
         if (roster <= lastRoster) {
             lastRoster = roster;

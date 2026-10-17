@@ -1156,3 +1156,28 @@ morning reward (persisted, unlike the asap stack; a fresh one because
 "First-work-request quest deferred to the next morning: no villager yet". The
 morning release order above puts the arrival ahead of it, so the quest posts the
 morning the first villager arrives.
+
+## Villager counting: saved roster for the gate, one entry per UUID (2026-10-17)
+
+The arrival gate (`isArrivalGateOpen`) and the "one more in the morning" card read a
+villager count. They used `villagerHandle.size()` — the LIVE registered entities — which
+is wrong in both directions around a load:
+
+- **Too high:** `SimpleVillagerHandle.entities` is a List and `register` never deduped, so a
+  reloaded villager (a new entity object, same UUID) was listed next to its stale unloaded
+  copy. village/day1's reload step showed roster 1 → 2 with no spawn, and the gate opened.
+  `register` now replaces any listed entity with the same UUID ("Replaced a stale entity
+  for townie …"). `VisitorMobEntity.onRemovedFromWorld` also unregisters on
+  UNLOADED_TO_CHUNK / UNLOADED_WITH_PLAYER (a chunk unload stops tracking without calling
+  `remove`, which only unregistered KILLED).
+- **Too low:** while villagers are unloaded, or before they re-register after a restart,
+  the live count can read 0 — and 0 means "first villager, never held".
+  `TownFlagBlockEntity.townVillagerCount()` = max(live, `TownVillagerHandle.knownVillagerCount()`
+  — the saved display-number roster, one entry per townie). `morningTick`,
+  `hasVillagerArrivingInMorning`, and `hasVillagers` use it. A death now retires the
+  townie's roster entry (`retireVillager`, from the KILLED branch) — `retire` was never
+  called before, which would have held arrivals forever in a town whose only villager died.
+
+Verified by village/day1 with the reload step (31/31). The step reloads the villagers'
+chunk but the flag BE survives, so it exercises the duplicate path; the full-restart path
+(count reads 0 before re-registration) is covered by the roster count, not separately run.
