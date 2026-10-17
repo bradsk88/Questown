@@ -204,6 +204,81 @@ class JobLogicTest {
                     Integer.MAX_VALUE
             );
         }
+
+        /** No work spot, not in the job site - the leaver-away shape - under the given rules. */
+        public void tickAway(
+                ProductionStatus status,
+                ExpirationRules expiration
+        ) {
+            tick(
+                    null,
+                    () -> status,
+                    definition.jobId(),
+                    false,
+                    false,
+                    false,
+                    false,
+                    expiration,
+                    new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
+                    world,
+                    (a, b) -> 0,
+                    Integer.MAX_VALUE
+            );
+        }
+    }
+
+    private static ExpirationRules maxTicksOf(long maxTicks) {
+        return new ExpirationRules(
+                () -> Long.MAX_VALUE,
+                () -> Long.MAX_VALUE,
+                jobID -> jobID,
+                () -> maxTicks,
+                jobID -> jobID
+        );
+    }
+
+    /**
+     * 2026-10-17 playtest: a hunter's job was re-created by the max-ticks watchdog 34 s
+     * before its hunt timer ended ("Reached max ticks for hunter:sword. Falling back to
+     * hunter:sword."), and the fresh job went to COLLECTING_SUPPLIES instead of extracting
+     * the hunt's product. While the job waits on a timer its cycle is in progress (a leaver
+     * is away, so there is no work spot) - the watchdog must not fire.
+     */
+    @Test
+    void tick_shouldNotHitMaxTicksFallback_WhileWaitingForTimedState() {
+        AtomicBoolean changedJob = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedJob.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.WAITING_FOR_TIMED_STATE, maxTicksOf(5));
+        }
+
+        Assertions.assertFalse(changedJob.get(), "the watchdog re-created the job mid-timer");
+    }
+
+    @Test
+    void tick_shouldHitMaxTicksFallback_WhenIdleWithNoWorkSpot() {
+        // Control: the watchdog still exists for a job with no cycle in progress.
+        AtomicBoolean changedJob = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedJob.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5));
+        }
+
+        Assertions.assertTrue(changedJob.get());
     }
 
     @Test

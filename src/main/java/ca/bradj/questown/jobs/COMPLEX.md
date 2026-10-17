@@ -468,3 +468,25 @@ therefore never claimed work blocks, and claim-gated jobs like
 with the held tool present. Fixed by aligning the constant to the data. See also
 `integration/minecraft/COMPLEX.md` for the sibling journal-NBT bug that was
 masking this one.
+
+## Max-ticks watchdog skips timed states (2026-10-17 playtest)
+
+`JobLogic.tick` re-creates a job via `expiration.maxTicksFallbackFn()` when it has **no
+work spot** and `ticksSinceStart > expiration.maxTicks()`. For most jobs the rules are
+`ExpirationRules.never()`: `maxTicks = 3000` and the fallback is the **same job** — a
+periodic re-creation meant to be harmless ("effectively keep doing this job forever").
+
+It was not harmless for a leaver: while away on its timed state (e.g. hunter/sword's
+`time: 2000`) the townie has no work spot, so the watchdog fired mid-hunt (live log
+2026-10-17: `Reached max ticks for hunter:sword. Falling back to hunter:sword.` at
+05:51:39, the mat's timer expired 05:52:13 to state 3 = product ready, and the fresh job
+went to COLLECTING_SUPPLIES instead of extracting — no loot). The watchdog now also
+requires `!status.isWaitingForTimers()`. A timed state whose timer is lost is not
+stranded by this: `AbstractWorkStatusStore`'s stuck-state reseed (b4eb2045) resets a
+block sitting in a non-fresh state with no timer.
+
+Pinned by `JobLogicTest.tick_shouldNotHitMaxTicksFallback_WhileWaitingForTimedState`
+(red on the pre-fix condition) and the control
+`tick_shouldHitMaxTicksFallback_WhenIdleWithNoWorkSpot`. End-to-end (the hunt product is
+extracted after a >3000-tick cycle) is not yet autotest-verified — ticket
+`.scratch/playtest-2026-10-17/hunter-collecting-supplies-after-hunt.md`.

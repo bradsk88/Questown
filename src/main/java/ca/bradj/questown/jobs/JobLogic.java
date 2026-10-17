@@ -170,7 +170,9 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 
         WorkPosition<POS> workSpot = worldBeforeTick.getWorkSpot();
-        if (workSpot == null && this.ticksSinceStart > expiration.maxTicks()) {
+        // A job waiting on a timer has its cycle in progress (a leaver is away, so it has no
+        // work spot): re-creating it then lost the hunt's product (2026-10-17 playtest).
+        if (workSpot == null && !status.isWaitingForTimers() && this.ticksSinceStart > expiration.maxTicks()) {
             JobID fbJov = expiration.maxTicksFallbackFn()
                                     .apply(entityCurrentJob);
             QT.JOB_LOGGER.debug(
