@@ -451,6 +451,7 @@ public class TownFlagState {
                 } else {
                     flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
                 }
+                runMissedMorning(e, lastTick, gt);
             }
         } else {
             flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
@@ -484,6 +485,19 @@ public class TownFlagState {
      * by the next scan. The visible effect is that item quests and economics update up to
      * {@code ContainerScanInterval} ticks later.
      */
+    /**
+     * The morning pass (pending BOP job changes, morning rewards, arrivals) only runs from the
+     * ticker's MORNING detection, which a non-ticking flag never sees. After the catch-up warp
+     * (so it acts on the recovered villagers), run the one morning the absence skipped.
+     */
+    private void runMissedMorning(TownFlagBlockEntity e, long lastTick, long now) {
+        if (!ca.bradj.questown.town.MissedMorning.missedDuringAbsence(lastTick, now)) {
+            return;
+        }
+        QT.FLAG_LOGGER.info("Running the morning the town slept through while no player was near (from {} to {})", lastTick, now);
+        e.morningTick(now);
+    }
+
     private boolean isDueForContainerScan() {
         ticksSinceContainerScan++;
         if (ticksSinceContainerScan < Config.CONTAINER_SCAN_INTERVAL.get()) {
@@ -644,7 +658,7 @@ public class TownFlagState {
         }
 
         long daysAway = timeSinceWake / 24000;
-        String dayStr = daysAway == 1 ? "1 day" : daysAway + " days";
+        String dayStr = ca.bradj.questown.town.AwayDuration.describe(timeSinceWake);
 
         StringBuilder items = new StringBuilder();
         int count = 0;

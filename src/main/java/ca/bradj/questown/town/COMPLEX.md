@@ -662,3 +662,22 @@ door-side neighbour if standable, else any standable horizontal neighbour, else 
 cell for a 1x1 room — with `jobs/WalkTargets.isStandable` (ground solid, foot + torso
 clear; `ProductionJob.isValidWalkTarget` delegates to it). If nothing qualifies, the old
 door-side step remains the fallback. Pinned by `InteractionSpotsTest` (the playtest room).
+
+## Missed morning while no player was near (2026-10-17 playtest round 5)
+
+The morning pass (`TownFlagBlockEntity.morningTick`: pending BOP job-root changes, morning
+rewards, the arrival gate) is only triggered by `AbstractTownFlagTicker.detectMorning` seeing the
+MORNING window (`Signals.fromDayTime` < 6000) after a non-morning tick. A flag outside every
+player's tick radius does not tick, so an absence that spans dawn and resumes after 6000 skipped
+the morning entirely ("my BOP job change never applied").
+
+`TownFlagState`'s wake path for a genuine absence now calls `runMissedMorning` **after** the
+catch-up warp (so the morning acts on the recovered villagers, and its `putStateOnTile` does not
+race the warp's stored state). The decision is the pure `town/MissedMorning.missedDuringAbsence`:
+a dawn crossed AND (resumed past the morning window OR stopped inside one — the ticker's
+`isMorning` latch is still set, so it would not fire). One morning per absence. Test:
+`MissedMorningTest`.
+
+The same summary path's day count is now `town/AwayDuration.describe` ("half a day" below one
+day; the summary only fires from 12000 ticks, so integer division printed "0 days").
+Test: `AwayDurationTest`.
