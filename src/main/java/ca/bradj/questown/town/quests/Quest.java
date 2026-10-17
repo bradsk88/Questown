@@ -160,6 +160,15 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         this.onboarding = onboarding;
     }
 
+    /**
+     * Copy the saved state the load replay's typed rebuild (QuestBatches.filterOutDuplicateCompletion)
+     * does not reconstruct: the onboarding marker (it gates arrivals) and the flavor text.
+     */
+    protected void carrySavedStateFrom(Quest<?, ?> saved) {
+        this.onboarding = saved.onboarding;
+        this.flavorText = saved.flavorText;
+    }
+
     public enum QuestStatus {
         UNSET(""),
         ACTIVE("active"),

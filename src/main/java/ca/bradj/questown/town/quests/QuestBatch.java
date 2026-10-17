@@ -50,6 +50,11 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.batchUUID = batchUUID;
     }
 
+    /** The quest added most recently (the load replay's just-rebuilt quest). */
+    QUEST newestQuest() {
+        return this.quests.get(this.quests.size() - 1);
+    }
+
     public static <R extends Room, Q extends Quest<?, R>> Stream<Q> stream(QuestBatch<?, R, Q, ?> batch) {
         return batch.quests.stream();
     }

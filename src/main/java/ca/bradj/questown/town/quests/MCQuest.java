@@ -42,6 +42,14 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return lootExtracted;
     }
 
+    @Override
+    protected void carrySavedStateFrom(Quest<?, ?> saved) {
+        super.carrySavedStateFrom(saved);
+        if (saved instanceof MCQuest mcq) {
+            this.lootExtracted = mcq.lootExtracted;
+        }
+    }
+
     MCQuest() {
         super();
     }

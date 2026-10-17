@@ -185,6 +185,12 @@ public class QuestBatches<
                     case FIRST_WORK_REQUEST -> e.addFirstWorkRequestQuest(owner);
                     case UNKNOWN -> QT.QUESTS_LOGGER.error("Unexpected type: {}. Skipping duplicate check.", q.getType());
                 }
+                if (q.getType() != Quest.QuestType.UNKNOWN) {
+                    // The typed rebuild drops what the save carried beyond type/id/count: the
+                    // onboarding marker (village/day1 2026-10-17: the arrival gate opened after a
+                    // reload), flavor text, LOOT progress.
+                    e.newestQuest().carrySavedStateFrom(q);
+                }
                 IdIgnoring<QUEST> iq = new IdIgnoring<>(q);
                 if (completedQuests.contains(iq)) {
                     // Replay, not completion: the persisted quest was already rewarded on disk

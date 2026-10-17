@@ -60,6 +60,40 @@ class QuestBatchesLoadReplayTest {
         Assertions.assertTrue(reloaded.getAll().get(0).isComplete());
     }
 
+    /** Load the batch the way the flag does: deserialize, then the replay in initialize(). */
+    private static MCQuest reloadOne(MCQuest saved) {
+        RecordingReward reward = new RecordingReward();
+        MCQuestBatch restored = new MCQuestBatch();
+        restored.initialize(UUID.randomUUID(), List.of(saved), reward);
+        MCQuestBatches reloaded = new MCQuestBatches(MCQuestBatch::new);
+        reloaded.initialize(null, ImmutableList.of(restored));
+        Assertions.assertEquals(1, reloaded.getAll().size());
+        return reloaded.getAll().get(0);
+    }
+
+    // village/day1 2026-10-17: after a real flag reload every quest read onboarding=false, the
+    // arrival gate (TownQuests.isArrivalGateOpen) opened, and villager 2 arrived before Raw Food.
+    @Test
+    void loadReplay_keepsTheOnboardingMarker() {
+        MCQuest saved = MCQuest.standalone(UUID.randomUUID(), null, SpecialQuests.TOWN_GATE);
+        saved.setOnboarding(true);
+        Assertions.assertTrue(reloadOne(saved).isOnboarding());
+    }
+
+    @Test
+    void loadReplay_keepsTheFlavorText() {
+        MCQuest saved = MCQuest.standalone(UUID.randomUUID(), null, SpecialQuests.TOWN_GATE);
+        saved.setFlavorText("quests.flavor.test");
+        Assertions.assertEquals("quests.flavor.test", reloadOne(saved).getFlavorText());
+    }
+
+    @Test
+    void loadReplay_keepsLootProgress() {
+        MCQuest saved = MCQuest.loot(UUID.randomUUID(), null, new ResourceLocation("questown", "villager_food"), 8);
+        saved.addExtracted(5);
+        Assertions.assertEquals(5, reloadOne(saved).getExtracted());
+    }
+
     static class RecordingReward extends MCReward {
 
         static final RewardType<RecordingReward> TYPE = new RewardType<>(

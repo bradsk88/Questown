@@ -315,3 +315,21 @@ broadcasts (`TownMessages.questCompleted`) didn't already, and read as ambient
 flavor (ticket `.scratch/day1-playtest-2026-10-11/village-is-thriving-message-confusing.md`).
 Note the counter is also the input to `QuestBatchSeed` (quest gating below
 batch 3), so it keeps incrementing from 1 even though batch 1 now does nothing.
+
+## Load replay keeps onboarding, flavor text and LOOT progress (2026-10-17)
+
+`QuestBatches.filterOutDuplicateCompletion` (run from `initialize` on every flag load) rebuilds
+each saved batch quest-by-quest through the typed factories (`addNewQuest`, `addLootQuest`, …),
+which only take type/id/count. Everything else the save carried was dropped on every reload:
+
+- **the onboarding marker** — `TownQuests.isArrivalGateOpen` opens the arrival gate when no quest
+  is onboarding, so after a real flag reload villager 2 arrived with Raw Food still open
+  (village/day1, once its reload became a real unload: instrumented morning dumps showed
+  `town_gate[onb=true]` before the reload and every quest `onb=false` after);
+- the flavor text;
+- LOOT extraction progress (`MCQuest.lootExtracted` — a count-4 raw-food quest restarted at 0).
+
+The NBT layer was never the problem (`MCQuestOnboardingPersistenceTest` round-trips it). The
+replay now calls `newestQuest().carrySavedStateFrom(saved)` after each rebuild; `Quest` copies
+onboarding + flavor text, `MCQuest` adds `lootExtracted`. Pinned by `QuestBatchesLoadReplayTest`
+`loadReplay_keeps{TheOnboardingMarker,TheFlavorText,LootProgress}` (all three red before).
