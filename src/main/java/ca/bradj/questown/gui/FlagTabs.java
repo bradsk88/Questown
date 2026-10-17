@@ -88,7 +88,7 @@ public class FlagTabs extends Tabs implements SubUI {
                     setScreen(bopScreenFn),
                     "tooltips.blocks_of_progress",
                     isSelected("tooltips.blocks_of_progress", activeTabKey),
-                    true
+                    fi.bopTabAttention()
             ));
         }
         b.add(new Tab(
@@ -156,9 +156,29 @@ public class FlagTabs extends Tabs implements SubUI {
         b.add(new TabDecision("tooltips.villagers", fi.showVillagersTab(), fi.villagersTabAttention()));
         b.add(new TabDecision("tooltips.quests", fi.showQuestsTab(), fi.hasIncompleteQuests()));
         b.add(new TabDecision("tooltips.economics", fi.showEconTab(), fi.bonusFoodAvailable()));
-        b.add(new TabDecision("tooltips.blocks_of_progress", fi.showBlockOfProgressTab(), true));
+        b.add(new TabDecision("tooltips.blocks_of_progress", fi.showBlockOfProgressTab(), fi.bopTabAttention()));
         b.add(new TabDecision("tooltips.crafting", true, false));
         return b.build();
+    }
+
+    /**
+     * The tab a flag click opens on, or null for the multi-status overview. A full flag opens
+     * the BOP tab (its warning); an unseen BOP tab with its red dot outranks the quests tab's dot
+     * (playtest 2026-10-17 round 5: "if both have a red dot, the bops tab should get the initial
+     * focus").
+     */
+    public static @Nullable String initialFlagTab(
+            boolean bopFull,
+            boolean bopTabUnseen,
+            boolean questsTabAttention
+    ) {
+        if (bopFull || bopTabUnseen) {
+            return OpenFlagMenuMessage.BOP;
+        }
+        if (questsTabAttention) {
+            return OpenFlagMenuMessage.QUESTS;
+        }
+        return null;
     }
 
     public static Collection<String> allExcept(String except) {

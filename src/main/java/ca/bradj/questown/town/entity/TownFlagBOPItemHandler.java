@@ -32,6 +32,7 @@ public class TownFlagBOPItemHandler implements ItemHandler {
             return;
         }
         ItemStack v = flag.bopStacks.remove(0);
+        flag.markBopWithdrawn();
         flag.setChanged();
         flag.syncBopFull();
         BlockPos bp = flag.getTownFlagBasePos();

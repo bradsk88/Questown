@@ -25,7 +25,7 @@ class VillagersTabAttentionTest {
 
     private static FlagTabsEmbedding.FlagInfo info(boolean showVillagers, boolean attention) {
         return new FlagTabsEmbedding.FlagInfo(
-                BlockPos.ZERO, showVillagers, true, showVillagers, false, false, false, false, attention
+                BlockPos.ZERO, showVillagers, true, showVillagers, false, false, false, false, attention, true
         );
     }
 

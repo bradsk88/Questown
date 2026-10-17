@@ -914,3 +914,19 @@ The flag's villagers tab appears with the first arrival (`TownFlagBlockEntity.ge
 - Town-level, not per-player: any player opening the tab clears it for all.
 - Test: `VillagersTabAttentionTest`. Ticket:
   `.scratch/playtest-2026-10-17/villagers-tab-red-dot-until-first-open.md`.
+
+## BOP tab: initial focus and a dot that clears on first withdrawal (2026-10-17 round 5)
+
+- **Initial focus** is the pure `FlagTabs.initialFlagTab(bopFull, bopTabUnseen,
+  questsTabAttention)`, called by `TownFlagBlock.use`: a full flag or an unseen BOP tab opens
+  BOP, then incomplete quests open QUESTS, else the multi-status overview. "Unseen" is
+  `FlagInfo.bopTabAttention()` AND no `first_bop_view` advancement
+  (`TownFlagBlock.shouldPreSelectBopTab`). Before this, incomplete quests outranked the unseen
+  BOP tab.
+- **Dot**: `FlagInfo.bopTabAttention` (trailing wire boolean) = `!TownFlagBlockEntity.bopWithdrawn`;
+  replaces the hardcoded `true`. `bopWithdrawn` is set by `TownFlagBOPItemHandler.eject` (a
+  player's take; spending a BOP on a job change is not a withdrawal) and persisted via
+  `TownFlagTileData` (`bop_withdrawn`). Town-level: any player's take clears it for everyone.
+  `FlagInfo.dumb` / `withQuestNotification` keep `true` (the old behaviour) for their callers.
+- Test: `BopTabAttentionTest`. Ticket:
+  `.scratch/playtest-2026-10-17/bop-tab-focus-and-dot-clears-on-withdraw.md`.

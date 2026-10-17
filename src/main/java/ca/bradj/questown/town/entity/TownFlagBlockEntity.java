@@ -332,6 +332,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     // dot once the first villager arrives. Defaults true so a town saved before this field
     // existed shows no dot; a newly placed flag resets it to false.
     boolean villagersTabSeen = true;
+    // Whether a player has ever taken a BOP out of the flag. The BOP tab's red dot shows until
+    // then (playtest 2026-10-17 round 5).
+    boolean bopWithdrawn = false;
     ca.bradj.questown.mobs.helperchicken.ChickenBeatState chickenBeatState =
             ca.bradj.questown.mobs.helperchicken.ChickenBeatState.WAITING_FOR_STICK;
     boolean chickenFirstGatherWorldlySeedsFired = false;
@@ -2072,7 +2075,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 hasIncomplete,
                 isBopFull(),
                 !givenBonusFood,
-                FlagTabsEmbedding.FlagInfo.villagersTabAttention(showVillagers, villagersTabSeen)
+                FlagTabsEmbedding.FlagInfo.villagersTabAttention(showVillagers, villagersTabSeen),
+                !bopWithdrawn
         );
     }
 
@@ -2177,6 +2181,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public boolean isVillagersTabSeen() {
         return villagersTabSeen;
+    }
+
+    public boolean isBopWithdrawn() {
+        return bopWithdrawn;
+    }
+
+    void markBopWithdrawn() {
+        if (bopWithdrawn) {
+            return;
+        }
+        bopWithdrawn = true;
+        setChanged();
     }
 
     public void markVillagersTabSeen() {

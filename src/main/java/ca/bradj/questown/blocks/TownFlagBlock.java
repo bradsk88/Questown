@@ -12,6 +12,8 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
+import ca.bradj.questown.gui.FlagTabs;
+import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.MapC;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
@@ -525,34 +527,19 @@ public class TownFlagBlock extends BaseEntityBlock {
 
         if (entity.isInitialized()) {
             // A full flag opens the BOP menu unconditionally (not gated on first_bop_view), so the
-            // warning shows even once the player has seen the tab.
-            if (entity.isBopFull()) {
-                entity.menus.showUI(
-                        (ServerPlayer) player,
-                        OpenFlagMenuMessage.BOP,
-                        entity.getInfo(),
-                        entity.getBlocksOfProgress()
-                );
-            } else if (entity.getInfo().hasIncompleteQuests()) {
-                // Day-1 playtest: opening the flag on the multi-status overview shows no tab
-                // selected and nothing to see. When there are incomplete quests, open the quests
-                // tab (the one with "stuff to see") so the quests tab is selected and its content
-                // is visible on first open.
-                entity.menus.showUI(
-                        (ServerPlayer) player,
-                        OpenFlagMenuMessage.QUESTS,
-                        entity.getInfo(),
-                        entity.getBlocksOfProgress()
-                );
-            } else if (shouldPreSelectBopTab(entity, (ServerPlayer) player)) {
-                entity.menus.showUI(
-                        (ServerPlayer) player,
-                        OpenFlagMenuMessage.BOP,
-                        entity.getInfo(),
-                        entity.getBlocksOfProgress()
-                );
-            } else {
+            // warning shows even once the player has seen the tab. Otherwise an unseen BOP tab
+            // outranks the quests tab (day-1 playtest: opening on the multi-status overview shows
+            // nothing selected, so open the tab with "stuff to see").
+            FlagTabsEmbedding.FlagInfo info = entity.getInfo();
+            String tab = FlagTabs.initialFlagTab(
+                    entity.isBopFull(),
+                    info.bopTabAttention() && shouldPreSelectBopTab(entity, (ServerPlayer) player),
+                    info.hasIncompleteQuests()
+            );
+            if (tab == null) {
                 entity.getVillagerHandle().showMultiStatusUI((ServerPlayer) player);
+            } else {
+                entity.menus.showUI((ServerPlayer) player, tab, info, entity.getBlocksOfProgress());
             }
         } else {
             if (!entity.isInitializing()) {
