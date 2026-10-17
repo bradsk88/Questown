@@ -12,3 +12,8 @@ necessary. "New quests are avalable" is sufficent".
 alongside the arrival's quest batch (PostFirstWorkRequestQuestReward defers until a villager
 exists), so the generic line covers it; if it were ever posted on a morning with no other new
 quests, it would be silent.
+
+## Autotest (2026-10-17 evening)
+
+village/day1 tripwire check `no-back-to-back-quest-announcements` (two `New quest…` broadcasts
+within 100 game ticks).

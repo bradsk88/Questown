@@ -49,3 +49,14 @@ lookup (`ServerJobsRegistry` ~L756): `seeking_work` is a special job (`WorkSeeke
 registered `Works` entry, so the needs path falls back with an ERROR. `getStatusText` already
 special-cases `isSeekingWork`; the needs path does not. Would trip day1's `no-questown-errors`
 whenever a hunter seeks work. Not fixed yet.
+
+## Update (2026-10-17 evening)
+
+- `Clobbered time` — fixed (9a7d57da): a partial work write started the next state's timer.
+- seeking_work "No work found" — getWork no longer falls back for special jobs (be509a02); live
+  trigger still unreproduced, the fallback ERROR now logs the caller's stack.
+- New: the overnight absence made the reload real and exposed the quest-replay onboarding loss
+  (c816c7c9) — villager 2 had been arriving before Raw Food after any real flag reload.
+- Once in four runs: `Giving up on detecting sub block at (-19,65,-15) … wrong entity type: null`
+  + `Job board registration … dropping stale entry` right after re-initialization. Not chased.
+- day1 now 33/34; the only red is the job-board reseed (design question still open).

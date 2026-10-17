@@ -29,3 +29,10 @@ created on demand). Same-root changes (gather → downtime → dining) keep it. 
 Spend a BOP on a gatherer that has been gathering; next morning the hunter goes hunting instead
 of parking in COLLECTING_SUPPLIES; log shows `Cleared work spot states for … after a job root
 change`.
+
+## Autotest (2026-10-17 evening)
+
+`loot/gatherer_becomes_hunter` (c321107c) reproduces it: without the reset the hunter loops
+taking/dropping the sword in COLLECTING_SUPPLIES (0/1); with it 1/1. Needs the villager outside
+the mat's room and the supply chest away from the mat — otherwise the stale state is extracted
+as a free hunt and the bug hides.

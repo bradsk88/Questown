@@ -28,3 +28,10 @@ several days passed (pending changes/rewards are consumed once anyway).
 
 Spend a BOP, walk >100 blocks away before night, return after the next noon: the villager has
 the new job and the log shows `Running the morning the town slept through`.
+
+## Autotest (2026-10-17 evening)
+
+village/day1's reload is now an overnight absence (next noon, 6 s wall away) with check
+`missed-morning-applies-job-change`: red with `runMissedMorning` removed, green with it (hunter
+~20 ticks after the return). The real reload also surfaced the arrival-gate leak fixed in
+c816c7c9 (quest load replay dropped the onboarding marker).
