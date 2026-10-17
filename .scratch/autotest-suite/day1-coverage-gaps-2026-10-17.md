@@ -22,8 +22,16 @@ origin: user ask 2026-10-17 — "look at the autotest we built yesterday and see
 
 `LogTripwire` (+ `LogTripwireTest`), day1 only. First run: 31/33 — two real open items:
 
-1. **Job board stuck at state 1** — `(-19,65,-15)` (job_board_block) reseeded 5× from state 1.
-   Likely `seeking_work` interrupted mid-cycle (cf. `.scratch/day1-playtest-2026-10-11/seeking-work-leaver-sees-empty-board-room.md`).
+1. **Job board stuck at state 1** — `(-19,65,-15)` (job_board_block) reseeded 5× from state 1
+   (also present in day1-8, before today's changes). `seeking_work` (`WorkSeekerJob`) has
+   `MAX_STATE = 1` (JOBS_AVAILABLE) and no logged write of state 1 at that pos, so it is reached
+   through the job's own advance. Reading: the seeker reaches 1, then leaves seeking_work (board
+   gives it a job, or the 1000-tick max-ticks fallback to downtime) before extracting, and the
+   per-villager store keeps the 1 until the villager seeks work again; if that is >20000 ticks
+   away, the self-heal fires. Possibly benign (the leftover only matters when it seeks again, and
+   then "jobs available" is re-checked at extraction) — **design question for the dev**: should
+   leaving seeking_work reset its board state, or should the tripwire ignore reseeds of spots the
+   owner is not currently working? Until decided, day1 stays red on this check.
 2. **`Clobbered time on block at (1,64,0) from 1990 to 2000`** (×2) — a different-value timer
    re-add (the same-value case was demoted to debug on 10-15).
 
