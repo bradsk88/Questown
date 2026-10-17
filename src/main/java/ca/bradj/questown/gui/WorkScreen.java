@@ -164,7 +164,7 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
             // one. Reopened 2026-10-12: when the town has a top unmet need, the empty state
             // points at posting it instead of the vague teaser (job-board-empty-state.md).
             Coordinate emptyTop = new Coordinate(x, y + PAGE_PADDING);
-            y += ctx.darkTextWrap(emptyTop, backgroundWidth - (PAGE_PADDING * 2),
+            int headlineHeight = ctx.darkTextWrap(emptyTop, backgroundWidth - (PAGE_PADDING * 2),
                     Compat.translatable("job_board.empty.1"));
             // The top_need line no longer names the item (user copy, 2026-10-14) - the
             // name only picks WHICH second line: the production hint when the town has
@@ -173,7 +173,10 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
             Component second = topNeed == null || topNeed.isEmpty()
                     ? Compat.translatable("job_board.empty.2")
                     : Compat.translatable("job_board.empty.top_need");
-            ctx.darkTextWrap(emptyTop.withY(y + 8), backgroundWidth - (PAGE_PADDING * 2),
+            // A blank line between the headline and the hint (playtest 2026-10-17: the hint
+            // sat 2px under "No work requests yet."). The gap is one wrapped line's step.
+            int hintY = emptyTop.y() + headlineHeight + (int) (font.lineHeight * 1.5);
+            ctx.darkTextWrap(emptyTop.withY(hintY), backgroundWidth - (PAGE_PADDING * 2),
                     second);
         }
 

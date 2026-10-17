@@ -943,3 +943,11 @@ CHANGE_ROOT while the change-profession red dot would show (same predicate,
 tabs is unaffected. `INITIAL` is not in `VillagerTabs.all()`, so the `menuShow` coverage check in
 `TownVillagerUIs.staticInit` does not demand a shower for it.
 Test: `VillagerInitialTabTest`.
+
+## Job board empty state: blank line between headline and hint (2026-10-17 round 5)
+
+`WorkScreen`'s empty state draws "No work requests yet." at `emptyTop`, then the hint
+(`job_board.empty.2` or `.top_need`) at `emptyTop.y() + headlineHeight + lineStep`, where
+`lineStep = (int) (font.lineHeight * 1.5)` (the `Compat.drawTextWrap` step) — a blank line. Before,
+the hint used `y + 8` after advancing `y` from the un-padded origin, ~2px under the headline.
+Ticket: `.scratch/playtest-2026-10-17/job-board-empty-state-needs-blank-line.md`.
