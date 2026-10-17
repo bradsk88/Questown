@@ -1197,3 +1197,19 @@ work request on the job board." one tick after the arrival batch's generic "New 
 available! Right-click the town flag to see them." The user ruled the generic line sufficient, so
 the specific one is gone. It relies on the request quest being posted with the arrival's batch
 (`PostFirstWorkRequestQuestReward` re-queues itself until a villager exists).
+
+## Job root change clears the villager's job-block states (2026-10-17 round 6)
+
+Job-block states (which state each work spot is in) are per villager: `TownFlagBlockEntity.jobHandles`
+maps villager UUID → `TownWorkStatusStore`, created lazily by `getRealWorkStatusHandle`. They used to
+survive a job root change, so the new job read the old job's leftovers. Playtest: the gatherer's
+gather left the welcome mat at its terminal state 3; the new hunter:sword (also terminal 3) read it as
+its own finished hunt and parked in COLLECTING_SUPPLIES until `reseedStuckBlocks` (20000 ticks).
+
+`SimpleVillagerHandle.changeJobForVillager` now calls `Delegator.resetWorkStatus(uuid)` when the root
+changes (the same branch that clears `jobChangesPending`); the real delegator
+(`TownVillagerHandle`) forwards to `TownFlagBlockEntity.resetWorkStatusFor`, which removes the
+villager's store. Same-root changes keep it (dining/downtime/seeking_work return to the same spots).
+The store map is not persisted, so there is nothing to clean in NBT. Tests:
+`SimpleVillagerHandleTest.changeJob_*WorkStatus` (they load `DinerRawFoodWork`, registry-bound, so
+like the class's other `changeJobForVillager` tests they pass only in the full suite).

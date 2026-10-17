@@ -2410,6 +2410,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return "trace".equalsIgnoreCase(System.getenv("INVISIBLE_LOG_LEVEL"));
     }
 
+    /**
+     * Forget a villager's per-owner job-block states (see {@link Delegator#resetWorkStatus}).
+     * A fresh store is created on the next {@link #getRealWorkStatusHandle} call.
+     */
+    void resetWorkStatusFor(UUID villagerUUID) {
+        if (jobHandles.remove(villagerUUID) != null) {
+            QT.FLAG_LOGGER.info("Cleared work spot states for {} after a job root change", villagerUUID);
+            setChanged();
+        }
+    }
+
     public AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> getRealWorkStatusHandle(UUID ownerIDOrNullForGlobal) {
         if (ownerIDOrNullForGlobal == null) {
             return jobHandle;

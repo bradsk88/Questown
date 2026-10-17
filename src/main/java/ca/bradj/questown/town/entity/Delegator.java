@@ -40,6 +40,14 @@ public interface Delegator<ENTITY> {
 
     void invalidateCachedWorkPossibilities();
 
+    /**
+     * Drop the villager's per-owner job-block states. Called on a job ROOT change: the old
+     * job's leftover states would otherwise be read by the new job (2026-10-17 playtest: the
+     * gatherer left the gate mat at its terminal state 3, the new hunter - also maxState 3 -
+     * read it as its own finished hunt and parked in COLLECTING_SUPPLIES).
+     */
+    void resetWorkStatus(UUID villagerUUID);
+
     HealingModule<ENTITY> getHealingModule();
 
     void addChangeListener(

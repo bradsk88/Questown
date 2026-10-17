@@ -365,6 +365,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         delegator.invalidateCachedWorkPossibilities();
         if (!newJob.sameRoot(oldJob)) {
             jobChangesPending.put(delegator.getUUID(f), false);
+            delegator.resetWorkStatus(villagerUUID);
         }
     }
 

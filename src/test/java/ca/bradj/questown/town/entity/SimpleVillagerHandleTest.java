@@ -60,6 +60,7 @@ class SimpleVillagerHandleTest {
 
     class TestDelegator implements Delegator<UUID> {
         List<JobID> jobChanges = new ArrayList<>();
+        List<UUID> workStatusResets = new ArrayList<>();
         List<String> logs = new ArrayList<>();
         List<String> broadcast = new ArrayList<>();
         Map<UUID, Boolean> dining = new HashMap<>();
@@ -205,6 +206,53 @@ class SimpleVillagerHandleTest {
         public ImmutableSet<JobID> getChildJobsKnownToExist(JobID jobId) {
             return ImmutableSet.of();
         }
+
+        @Override
+        public void resetWorkStatus(UUID villagerUUID) {
+            workStatusResets.add(villagerUUID);
+        }
+    }
+
+    private SimpleVillagerHandle<String, UUID> handleFor(TestDelegator t, UUID villager) {
+        SimpleVillagerHandle<String, UUID> handle = new SimpleVillagerHandle<>(
+                t,
+                new SimpleVillagerHandle.Configs(100, true, 1, 1, 100, 10, 100, 0.5f, 100, 100, 23000)
+        );
+        handle.initialize(
+                ImmutableMap.of(villager, 100),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                true
+        );
+        handle.register(villager);
+        return handle;
+    }
+
+    // 2026-10-17 playtest: the gatherer left the gate mat at its terminal state; the new hunter
+    // read it as its own finished hunt. A root change must drop the villager's job-block states.
+    @Test
+    public void changeJob_toANewRoot_resetsTheVillagersWorkStatus() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = handleFor(t, villager);
+
+        handle.changeJobForVillager(villager, new JobID("hunter", "sword"), 0L, false);
+
+        Assertions.assertEquals(List.of(villager), t.workStatusResets);
+    }
+
+    @Test
+    public void changeJob_withinTheSameRoot_keepsTheVillagersWorkStatus() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = handleFor(t, villager);
+
+        // TestDelegator reports the current job as tester:tester.
+        handle.changeJobForVillager(villager, new JobID("tester", "other"), 0L, false);
+
+        Assertions.assertEquals(List.of(), t.workStatusResets);
     }
 
     @Test
