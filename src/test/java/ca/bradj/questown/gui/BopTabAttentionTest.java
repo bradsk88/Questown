@@ -61,21 +61,36 @@ class BopTabAttentionTest {
 
     @Test
     void bothTabsHaveDots_bopGetsInitialFocus() {
-        assertEquals(OpenFlagMenuMessage.BOP, FlagTabs.initialFlagTab(false, true, true));
+        assertEquals(OpenFlagMenuMessage.BOP, FlagTabs.initialFlagTab(false, false, true, true, false));
     }
 
     @Test
     void onlyQuestsDot_questsGetsInitialFocus() {
-        assertEquals(OpenFlagMenuMessage.QUESTS, FlagTabs.initialFlagTab(false, false, true));
+        assertEquals(OpenFlagMenuMessage.QUESTS, FlagTabs.initialFlagTab(false, false, false, true, false));
     }
 
     @Test
     void fullFlag_opensBop() {
-        assertEquals(OpenFlagMenuMessage.BOP, FlagTabs.initialFlagTab(true, false, true));
+        assertEquals(OpenFlagMenuMessage.BOP, FlagTabs.initialFlagTab(true, true, false, true, false));
+    }
+
+    @Test
+    void villagersDot_beatsBopAndQuests() {
+        assertEquals(OpenFlagMenuMessage.VILLAGERS, FlagTabs.initialFlagTab(false, true, true, true, true));
+    }
+
+    @Test
+    void onlyEconomicsDot_opensEconomics() {
+        assertEquals(OpenFlagMenuMessage.ECONOMICS, FlagTabs.initialFlagTab(false, false, false, false, true));
+    }
+
+    @Test
+    void questsDot_beatsEconomics() {
+        assertEquals(OpenFlagMenuMessage.QUESTS, FlagTabs.initialFlagTab(false, false, false, true, true));
     }
 
     @Test
     void nothingToSee_overview() {
-        assertNull(FlagTabs.initialFlagTab(false, false, false));
+        assertNull(FlagTabs.initialFlagTab(false, false, false, false, false));
     }
 }

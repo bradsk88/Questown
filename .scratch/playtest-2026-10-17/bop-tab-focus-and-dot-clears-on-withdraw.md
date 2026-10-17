@@ -23,3 +23,13 @@ withrdrawn a bop"
 
 With a BOP in the flag and incomplete quests, right-click the flag: opens on the BOP tab. Take a
 BOP out: the BOP tab's dot is gone, also after quit + rejoin.
+
+## Round 6 revision (user chat 19:38:12, dev-server-9)
+
+"BOP was the first tab to open when other tabs had red marks. IMO "Villagers" should have won in
+that scenario. Villagers > BOPs > QUests > Economics"
+
+`FlagTabs.initialFlagTab(bopFull, villagersDot, bopUnseen, questsDot, economicsDot)`: a full flag
+still opens BOP (warning); then Villagers > BOP > Quests > Economics. Economics' dot is
+`showEconTab && bonusFoodAvailable`. Opening VILLAGERS clears its dot, so the next click falls to
+the next dotted tab. `BopTabAttentionTest` now 10.

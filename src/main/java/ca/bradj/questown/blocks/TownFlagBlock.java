@@ -533,8 +533,10 @@ public class TownFlagBlock extends BaseEntityBlock {
             FlagTabsEmbedding.FlagInfo info = entity.getInfo();
             String tab = FlagTabs.initialFlagTab(
                     entity.isBopFull(),
+                    info.villagersTabAttention(),
                     info.bopTabAttention() && shouldPreSelectBopTab(entity, (ServerPlayer) player),
-                    info.hasIncompleteQuests()
+                    info.hasIncompleteQuests(),
+                    info.showEconTab() && info.bonusFoodAvailable()
             );
             if (tab == null) {
                 entity.getVillagerHandle().showMultiStatusUI((ServerPlayer) player);

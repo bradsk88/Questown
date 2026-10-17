@@ -917,9 +917,11 @@ The flag's villagers tab appears with the first arrival (`TownFlagBlockEntity.ge
 
 ## BOP tab: initial focus and a dot that clears on first withdrawal (2026-10-17 round 5)
 
-- **Initial focus** is the pure `FlagTabs.initialFlagTab(bopFull, bopTabUnseen,
-  questsTabAttention)`, called by `TownFlagBlock.use`: a full flag or an unseen BOP tab opens
-  BOP, then incomplete quests open QUESTS, else the multi-status overview. "Unseen" is
+- **Initial focus** is the pure `FlagTabs.initialFlagTab(bopFull, villagersDot, bopTabUnseen,
+  questsDot, economicsDot)`, called by `TownFlagBlock.use`: a full flag opens BOP (its warning);
+  otherwise the red-dotted tab wins in the user's order Villagers > BOP > Quests > Economics
+  (round 6 revision), else the multi-status overview. Economics' dot is
+  `showEconTab && bonusFoodAvailable`. "Unseen" is
   `FlagInfo.bopTabAttention()` AND no `first_bop_view` advancement
   (`TownFlagBlock.shouldPreSelectBopTab`). Before this, incomplete quests outranked the unseen
   BOP tab.

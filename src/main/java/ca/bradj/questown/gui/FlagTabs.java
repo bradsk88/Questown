@@ -163,20 +163,30 @@ public class FlagTabs extends Tabs implements SubUI {
 
     /**
      * The tab a flag click opens on, or null for the multi-status overview. A full flag opens
-     * the BOP tab (its warning); an unseen BOP tab with its red dot outranks the quests tab's dot
-     * (playtest 2026-10-17 round 5: "if both have a red dot, the bops tab should get the initial
-     * focus").
+     * the BOP tab (its warning). Otherwise the red-dotted tab wins in the user's order
+     * (playtest 2026-10-17 round 6): Villagers > BOPs > Quests > Economics.
      */
     public static @Nullable String initialFlagTab(
             boolean bopFull,
+            boolean villagersTabAttention,
             boolean bopTabUnseen,
-            boolean questsTabAttention
+            boolean questsTabAttention,
+            boolean economicsTabAttention
     ) {
-        if (bopFull || bopTabUnseen) {
+        if (bopFull) {
+            return OpenFlagMenuMessage.BOP;
+        }
+        if (villagersTabAttention) {
+            return OpenFlagMenuMessage.VILLAGERS;
+        }
+        if (bopTabUnseen) {
             return OpenFlagMenuMessage.BOP;
         }
         if (questsTabAttention) {
             return OpenFlagMenuMessage.QUESTS;
+        }
+        if (economicsTabAttention) {
+            return OpenFlagMenuMessage.ECONOMICS;
         }
         return null;
     }
