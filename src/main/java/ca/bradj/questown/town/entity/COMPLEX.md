@@ -1189,3 +1189,11 @@ or a truncated UUID when unassigned) into `message.questown.villager.change_job_
 lang string must not carry its own "Villager " prefix (it read "Villager Villager 1"). The string is
 now "%s will change to a new job in the morning." Ticket:
 `.scratch/playtest-2026-10-17/change-job-in-morning-message-stutters.md`.
+
+## First-work-request quest: no announcement of its own (2026-10-17 round 6)
+
+`TownQuests.addFirstWorkRequestBatch` used to broadcast "New quest is available: post your first
+work request on the job board." one tick after the arrival batch's generic "New quests are
+available! Right-click the town flag to see them." The user ruled the generic line sufficient, so
+the specific one is gone. It relies on the request quest being posted with the arrival's batch
+(`PostFirstWorkRequestQuestReward` re-queues itself until a villager exists).

@@ -225,7 +225,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCQuestBatch qb = q.withRewardUponCompletion(
                 new MCInstantReward(t, new GrantBlockOfProgressReward(t, 1)));
         questBatches.add(qb);
-        t.messages.broadcastMessage("New quest is available: post your first work request on the job board.");
+        // No broadcast of its own: the morning's "New quests are available!" covers it
+        // (playtest 2026-10-17 round 6 - two back-to-back quest announcements).
         QT.QUESTS_LOGGER.info("First-work-request batch posted (day-2 board introduction)");
     }
 
