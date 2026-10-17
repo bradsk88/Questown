@@ -189,7 +189,8 @@ public class TownMessages {
             JobID jobID,
             String villagerLabel
     ) {
-        broadcastMessage("messages.jobs.changed", jobID.toNiceString(), villagerLabel);
+        // The profession's name, not the raw id ("cook:simple_furnace_food", 2026-10-17 playtest).
+        broadcastMessage("messages.jobs.changed", ca.bradj.questown.jobs.Jobs.getRootNameComponent(jobID), villagerLabel);
     }
 
     public void startDebugFailed() {

@@ -1,6 +1,6 @@
 ---
 title: 'Onboarding cook job change targets the unregistered template source id cook/simple_furnace_food'
-status: ready-for-agent
+status: fixed
 origin: 2026-10-17 playtest round 4, server log 06:24:35 (no user report yet)
 ---
 
@@ -41,3 +41,7 @@ unlocked initially (unless it was randomly selected, which I guess would be fine
 Fixed: the fallback prefers a job unlocked with the root (`Work.preferInitiallyUnlocked`;
 cook → extract/fuel). **Still open:** the onboarding beat should name a registered job
 (stops the ERROR) and the broadcast should not carry the raw id.
+
+## Fixed 2026-10-17 (overnight)
+
+The onboarding cook quest names `TownQuests.ONBOARDING_COOK_JOB` (cook/extract, registered); the card and the "changed job" broadcast name the profession (`jobs.<root>`). village/day1 run: no "No work found" line, broadcasts `jobs.hunter` / `jobs.cook`, cook on cook/extract, 29/29.

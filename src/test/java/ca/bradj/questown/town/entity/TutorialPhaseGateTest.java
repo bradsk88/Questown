@@ -273,7 +273,7 @@ class TutorialPhaseGateTest {
         // Phase 2.5 teaches the cheap cook and then proves it cooks.
         assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.JOB_CHANGE
-                        && q.getWantedId().equals(JobID.toRL(new JobID("cook", "simple_furnace_food")))
+                        && q.getWantedId().equals(JobID.toRL(TownQuests.ONBOARDING_COOK_JOB))
         ));
         assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.LOOT
@@ -304,7 +304,7 @@ class TutorialPhaseGateTest {
         assertEquals(TownQuests.Tutorial.SKIPPED, result);
         boolean cookAdded = quests.questBatches.getAll().stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.JOB_CHANGE
-                        && q.getWantedId().equals(JobID.toRL(new JobID("cook", "simple_furnace_food")))
+                        && q.getWantedId().equals(JobID.toRL(TownQuests.ONBOARDING_COOK_JOB))
         );
         assertFalse(cookAdded, "cook job change should not be added before raw food is produced");
     }
@@ -334,7 +334,7 @@ class TutorialPhaseGateTest {
         // Complete the second job change (the cook) and the cooked-food LOOT quest.
         // (The kitchen ROOM quest is not needed for the phase gate, which tracks
         // JOB_CHANGE completions; the batch reward does need it.)
-        quests.questBatches.markRecipeAsComplete(null, JobID.toRL(new JobID("cook", "simple_furnace_food")));
+        quests.questBatches.markRecipeAsComplete(null, JobID.toRL(TownQuests.ONBOARDING_COOK_JOB));
         quests.questBatches.markRecipeAsComplete(null, TagsInit.Items.VILLAGER_FOOD.location());
 
         // Two completed job changes open the post-cook miner beat (phase 2.7): post it,

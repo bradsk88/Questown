@@ -268,7 +268,7 @@ public class UIQuest implements Comparable<UIQuest> {
                 }
                 yield name;
             }
-            case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractJobName());
+            case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractRootJobName());
             case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", extractRootJobName());
             case CONCURRENT_JOBS -> Compat.literal("Multiple Jobs Active");
             case FIRST_WORK_REQUEST -> Compat.translatable("menu.quests.first_work_request");
@@ -279,10 +279,6 @@ public class UIQuest implements Comparable<UIQuest> {
     @Nullable
     public String getFlavorText() {
         return flavorText;
-    }
-
-    private String extractJobName() {
-        return JobID.fromRL(wantedId).jobId();
     }
 
     // Root jobs carry a localized name (jobs.<root> in the lang files); the bare root id

@@ -886,3 +886,14 @@ ask is answered.
   1.19.2 golden — a design change, not a port regression); it now uses
   `RenderContext.centeredDark` (0x404040, no shadow), the body-text look of the rest
   of the screen.
+
+## Job names reach the player as the profession, not the id (2026-10-17)
+
+The JOB_CHANGE card read "Villager job: simple_furnace_food" / "Villager job: sword"
+(`UIQuest` passed the bare `jobId`) and the `messages.jobs.changed` broadcast carried
+`JobID.toNiceString()` ("cook:simple_furnace_food"). Both now use the profession's
+`jobs.<root>` key: the card via `extractRootJobName` (the JOB_UNLOCK card already did),
+the broadcast via `Jobs.getRootNameComponent`. Pinned by `UIQuestJobChangeCardNameTest`.
+The onboarding cook quest also names a registered job now
+(`TownQuests.ONBOARDING_COOK_JOB` = cook/extract), so the job change no longer hits
+`ServerJobsRegistry`'s "No work found" ERROR fallback.

@@ -1375,6 +1375,14 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return MCQuest.standalone(batchUUID, null, roomId);
     }
 
+    /**
+     * The onboarding cook beat's job: a REGISTERED cook job. It used to name the simple-furnace
+     * template's source id (cook/simple_furnace_food), which ResourceJobLoader expands and
+     * never registers - every job change through it hit ServerJobsRegistry's ERROR fallback
+     * (2026-10-17 playtest). cook/extract is the cook progression root.
+     */
+    public static final JobID ONBOARDING_COOK_JOB = new JobID("cook", "extract");
+
     void addHunterGatherer(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
@@ -1424,7 +1432,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
 
-        MCQuest cookJobQuest = MCQuest.jobChange(batchUUID, null, new JobID("cook", "simple_furnace_food"));
+        MCQuest cookJobQuest = MCQuest.jobChange(batchUUID, null, ONBOARDING_COOK_JOB);
         cookJobQuest.setFlavorText("Your town needs a cook. Teach a villager the cook job so raw food becomes a meal.");
         q.addNewQuest(cookJobQuest);
 
