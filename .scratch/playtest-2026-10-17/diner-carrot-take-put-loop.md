@@ -1,6 +1,6 @@
 ---
 title: 'Hungry gatherer stands at the chest taking and putting back a carrot in a loop'
-status: needs-triage
+status: ready-for-human
 origin: 2026-10-17 playtest round 4 — user chat 06:26:55 (dev-server-6, build 2c9f5880)
 ---
 
@@ -53,3 +53,24 @@ logic routes it to DROPPING_LOOT (the carrot is unlocked loot), it drops it, the
 Test: a day1 variant (or job blueprint) with two villagers hungry at once and only the
 flag as an eat spot; expect the take count to explode for the second diner. Fix direction
 if confirmed: a diner with no jobsite should wait (NO_JOBSITE) holding its food, not drop it.
+
+## Root cause (2026-10-17 round 5) — the two-diner hypothesis was wrong
+
+Reproduced with ONE villager (dev-server-8 18:07:54–18:09:44) and by `eating/eat_direct`: the
+diner takes food, works state 0, consumes it at state 1, the flag spot reaches state 2 (DONE) —
+then it goes back to the chest and takes more food instead of eating (extracting). Two causes,
+both needed:
+
+1. `dining_no_table` declares `DONE: 0` work at its terminal state; since the cook_extract fix,
+   declared work counts as unfinished even at 0, so `getStatesWithUnfinishedItemlessWork` returned
+   `[2]` and the itemless branch answered GOING_TO_JOB, which the root's "not going to jobsite"
+   gate rejects → fallback → collect supplies. Fix: `DeclarativeJobs.declaresUnfinishedWork`
+   (no unfinished work at maxState), wired in the realtime ticker and the warp.
+2. The three hand-coded diner jobs lacked `PRIORITIZE_EXTRACTION` (every JSON job gets it), so the
+   extraction branch was skipped whenever the town had food in storage. Added to all three.
+
+The take/put loop is the fallback at the max-ticks expiry: `dining_raw_food` drops the held
+carrot (DROPPING_LOOT), re-collects, and so on. With the meal now extracting, it never gets there.
+
+Verified: `eating/` 4/4 (eat_direct 98 %, dine_at_time 96 %); full suite 70/73 with only known
+failures (nav/roof_gatherer, chicken-arc/skip_chicken_command, farmer parity flake).

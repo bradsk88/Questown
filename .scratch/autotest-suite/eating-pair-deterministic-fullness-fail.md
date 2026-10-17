@@ -1,6 +1,6 @@
 ---
 title: eating/dine_at_time + eating/eat_direct fail deterministically (fullness −16% / −12% vs ≥25%)
-status: needs-triage
+status: ready-for-human
 created: 2026-10-15
 priority: p2
 ---
@@ -140,3 +140,11 @@ deterministic given the missing plate room.
 - Independent of the wall-walk fix (RoomRecipes `940aeb9`): the eating
   pair fails identically on the unfixed and fixed jars.
 - `eat_raw_food` and `eat_no_table` pass in all runs.
+
+## Resolved 2026-10-17
+
+Open item 1 (the stuck eater) was a real bug, not a flake: see
+`.scratch/playtest-2026-10-17/diner-carrot-take-put-loop.md` "Root cause". With
+`DeclarativeJobs.declaresUnfinishedWork` + diner `PRIORITIZE_EXTRACTION`, both `eat_direct` (98 %)
+and `dine_at_time` (96 %) pass; the earlier "dine_at_time fails by construction" reading was
+also wrong — it was the same stall. Full suite 70/73. Drop both from the known-failure set.

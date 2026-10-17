@@ -505,3 +505,29 @@ candidate with `Work.isUnlockedInitially(parent, unlocked_with_root_job)` (cook:
 `fuel`), else the first candidate. Pinned by `WorkSameRootFallbackTest`. The ERROR log line
 and the raw-id broadcast (`messages.jobs.changed [cook:simple_furnace_food, …]`) remain —
 ticket `.scratch/playtest-2026-10-17/cook-job-change-uses-unregistered-source-id.md`.
+
+## Diners eat the finished meal instead of fetching more food (2026-10-17 playtest round 5)
+
+Symptom: a hungry villager took food, ate it at the flag (state 1 consumes it), the flag spot
+reached DONE (state 2) — and the villager went back to the chest for more food, stood there in
+COLLECTING_SUPPLIES until the max-ticks expiry, then dropped/re-took food (the "carrot take/put
+loop"). `eating/eat_direct` and `eating/dine_at_time` had failed on every full-suite run for the
+same reason. Two causes in the usual-routine circuit, both fixed:
+
+- **Terminal state is not unfinished work.** `getStatesWithUnfinishedWork` treats any *declared*
+  work as unfinished (needed for cook_extract's 0.1 → 0 floor). The hand-coded diners declare
+  `DONE: 0` at maxState, so the itemless branch saw `[2]` as unfinished work and answered
+  GOING_TO_JOB — which the root's "not going to jobsite" input gate rejects, falling through to
+  collect supplies. `DeclarativeJobs.declaresUnfinishedWork(state, maxState, declared)` now
+  excludes maxState (a block there holds a finished product to extract). Both callers use it:
+  `DeclarativeJobTicker` (realtime) and `TimeWarpWorldInteraction` (warp). JSON jobs never
+  declare work at maxState, so they are unaffected. Test: `DeclarativeJobsTerminalStateWorkTest`
+  (red-verified against the pre-fix form, 2 of 3 fail).
+- **Diners prioritize extraction.** `DinerWork`, `DinerNoTableWork` and `DinerRawFoodWork` now
+  list `SpecialRules.PRIORITIZE_EXTRACTION` (JSON jobs get it from `loadRulesV1/V2`). Without it the
+  "work without items" root is skipped and a town with food in storage always wins the
+  collect-supplies branch. No unit seam (the diner classes' `<clinit>` touches tag registries);
+  verified by the `eating/` autotests.
+
+Verification: `eating/` 4/4; full suite 70/73 (only the known roof_gatherer, skip_chicken_command,
+farmer-parity failures).

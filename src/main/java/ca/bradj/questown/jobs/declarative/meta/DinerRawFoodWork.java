@@ -99,7 +99,12 @@ public class DinerRawFoodWork {
                                         SpecialRules.APPLY_ATE_RAW_FOOD
                                 )
                         ), // No stage rules
+                        // Finish the meal (extract at the done state) before fetching more
+                        // food: without this, a town with food in storage keeps the diner
+                        // collecting supplies after its food was consumed (playtest
+                        // 2026-10-17; eating/eat_direct). JSON jobs get this by default.
                         ImmutableList.of(
+                                SpecialRules.PRIORITIZE_EXTRACTION,
                                 SpecialRules.WORK_IN_EVENING,
                                 SpecialRules.NO_EXPERIENCE_GAINED
                         )

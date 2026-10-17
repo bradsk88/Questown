@@ -377,7 +377,9 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                         deps::canClaim,
                         deps::item,
                         deps::tools,
-                        state -> deps.getWorkForStep(state) != null,
+                        state -> DeclarativeJobs.declaresUnfinishedWork(
+                                state, maxState, deps.getWorkForStep(state) != null
+                        ),
                         deps::stringify,
                         maxState,
                         deps::convert,

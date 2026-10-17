@@ -670,6 +670,17 @@ public class DeclarativeJobs {
                     });
     }
 
+    /**
+     * Whether declared work at {@code state} is unfinished work. A block at {@code maxState}
+     * holds a finished product awaiting extraction, never work: the hand-coded diner jobs
+     * declare {@code DONE: 0} work at their terminal state, and counting it sent a diner whose
+     * meal was ready "to the job site" instead of eating it (playtest 2026-10-17;
+     * eating/eat_direct).
+     */
+    public static boolean declaresUnfinishedWork(int state, int maxState, boolean workDeclared) {
+        return workDeclared && state < maxState;
+    }
+
     public static <POS> Collection<Integer> getStatesWithUnfinishedWork(
             Collection<? extends Supplier<Collection<POS>>> rooms,
             Function<POS, State> getJobBlockState,
