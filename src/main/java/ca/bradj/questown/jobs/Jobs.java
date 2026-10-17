@@ -135,7 +135,7 @@ public class Jobs {
             ServerPlayer sp,
             VisitorMobEntity e
     ) {
-        e.getTown().getVillagerHandle().showUI(sp, OpenVillagerMenuMessage.INVENTORY, e.getUUID());
+        e.getTown().getVillagerHandle().showUI(sp, OpenVillagerMenuMessage.INITIAL, e.getUUID());
         return true; // Different jobs might have screens or not
     }
 

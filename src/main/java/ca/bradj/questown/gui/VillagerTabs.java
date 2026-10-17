@@ -208,6 +208,21 @@ public class VillagerTabs extends Tabs implements SubUI {
         return ImmutableList.copyOf(all.stream().filter(v -> !v.equals(except)).toList());
     }
 
+    /**
+     * The tab a villager menu opens on when the player opens it (not a tab click): the change
+     * profession tab while it carries its red dot (playtest 2026-10-17 round 5), else the
+     * inventory, or the stats pane for the management view that has no inventory tab.
+     */
+    public static String initialTab(boolean changeRootAttention, boolean showInventoryTab) {
+        if (changeRootAttention) {
+            return OpenVillagerMenuMessage.CHANGE_ROOT;
+        }
+        if (showInventoryTab) {
+            return OpenVillagerMenuMessage.INVENTORY;
+        }
+        return OpenVillagerMenuMessage.STATS;
+    }
+
     public static Collection<String> all() {
         return except("");
     }

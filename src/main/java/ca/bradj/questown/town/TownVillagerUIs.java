@@ -281,6 +281,9 @@ public class TownVillagerUIs {
         syncWorkToClient(sender);
 
         VisitorMobEntity e = f.get();
+        if (OpenVillagerMenuMessage.INITIAL.equals(type)) {
+            type = VillagerTabs.initialTab(wantsJobChange(sender, e), showInventoryTab);
+        }
 
         TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level(), e.getFlagPos());
 

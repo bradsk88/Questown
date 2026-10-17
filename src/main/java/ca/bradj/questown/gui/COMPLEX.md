@@ -930,3 +930,16 @@ The flag's villagers tab appears with the first arrival (`TownFlagBlockEntity.ge
   `FlagInfo.dumb` / `withQuestNotification` keep `true` (the old behaviour) for their callers.
 - Test: `BopTabAttentionTest`. Ticket:
   `.scratch/playtest-2026-10-17/bop-tab-focus-and-dot-clears-on-withdraw.md`.
+
+## Villager menu initial tab: change-job while dotted (2026-10-17 round 5)
+
+The two player entry points into a villager menu — right-click (`Jobs.openInventoryAndStatusScreen`)
+and the flag's villager card (`MultiStatusScreen.mouseClicked`) — send the pseudo-type
+`OpenVillagerMenuMessage.INITIAL` instead of a concrete tab. `TownVillagerUIs.showUI` resolves it
+after finding the entity with `VillagerTabs.initialTab(wantsJobChange(sender, e), showInventoryTab)`:
+CHANGE_ROOT while the change-profession red dot would show (same predicate,
+`TownFlagBlockEntity.wantsJobChangeFrom`), else INVENTORY (right-click) or STATS (management view)
+— the defaults the entry points used before. Tab clicks keep their explicit types, so switching
+tabs is unaffected. `INITIAL` is not in `VillagerTabs.all()`, so the `menuShow` coverage check in
+`TownVillagerUIs.staticInit` does not demand a shower for it.
+Test: `VillagerInitialTabTest`.

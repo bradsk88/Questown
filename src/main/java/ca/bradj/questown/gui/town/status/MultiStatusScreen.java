@@ -281,7 +281,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             BlockPos flagPos = menu.getFlagInfo().flagPos();
             QuestownNetwork.sendToServer(new OpenVillagerMenuMessage(
                     flagPos.getX(), flagPos.getY(), flagPos.getZ(),
-                    v.data(), OpenVillagerMenuMessage.STATS, false
+                    v.data(), OpenVillagerMenuMessage.INITIAL, false
             ));
             return true;
         }
