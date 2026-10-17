@@ -40,3 +40,12 @@ origin: user ask 2026-10-17 — "look at the autotest we built yesterday and see
 - Assert tab/attention decisions server-side at the arrival and BOP beats.
 - "Converted villager is working within N ticks" check after each BOP-spend beat.
 - An away-across-dawn step (missed morning + warp summary + yield bound).
+
+## Seen live after the tripwire landed (dev-server-9, 20:21:24, build fe1b7238)
+
+3× `[Questown:Jobs/ERROR] No work found for job ID: JobID{rootId='hunter', jobId='seeking_work'}.
+Falling back to any job in the same root ID.` — `ServerJobsRegistry.getWorkSupplier` via the needs
+lookup (`ServerJobsRegistry` ~L756): `seeking_work` is a special job (`WorkSeekerJob`), not a
+registered `Works` entry, so the needs path falls back with an ERROR. `getStatusText` already
+special-cases `isSeekingWork`; the needs path does not. Would trip day1's `no-questown-errors`
+whenever a hunter seeks work. Not fixed yet.
