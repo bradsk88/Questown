@@ -40,3 +40,16 @@ reds.
   available). The playtest loop (898×, raw carrots) needs its conditions: the narrow
   store room and/or carrot-only food. A day1 variant seeding only carrots would test the
   second.
+
+## Hypothesis from the playtest log (2026-10-17, later) — UNVERIFIED
+
+/tmp/dev-server-6.log 06:26:50–52: `[PROBE:supplies] gatherer:dining_no_table TOOK carrot`
+~10x/second (totalTakes 1345→1368) with no `[WHY]` transition between takes, so the take
+and the put-back (`Jobs.tryDropLoot`, DEBUG "is putting") alternate inside one tight cycle.
+The same session logged `[WHY] job=gatherer:dining_no_table … NO_JOBSITE` for this villager,
+while the hunter was ALSO on `hunter:dining_no_table`. Candidate: two diners, one flag-side
+eat spot (claim_workspot) — the diner without a spot holds a carrot it cannot use, the status
+logic routes it to DROPPING_LOOT (the carrot is unlocked loot), it drops it, then re-collects.
+Test: a day1 variant (or job blueprint) with two villagers hungry at once and only the
+flag as an eat spot; expect the take count to explode for the second diner. Fix direction
+if confirmed: a diner with no jobsite should wait (NO_JOBSITE) holding its food, not drop it.
