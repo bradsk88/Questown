@@ -33,4 +33,26 @@ public class UIQuestLootCardNameTest {
         );
         assertEquals("menu.quests.food", q.getName().getString());
     }
+
+    /**
+     * 2026-10-15/17 playtests: "The first loot quest should be entitled Raw Food ... but the
+     * second loot quest (which asks for 8x) should be titled 'Food'." The hunter's 1x quest
+     * wants the raw tag, the cook's 8x quest wants #questown:villager_food.
+     */
+    @Test
+    public void raw_food_loot_card_name_is_raw_food_key() {
+        UIQuest q = new UIQuest(
+                UUID.randomUUID(),
+                new ResourceLocation("questown:villager_simple_furnace_food_raw"),
+                Quest.QuestType.LOOT,
+                null,
+                Quest.QuestStatus.ACTIVE,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        assertEquals("menu.quests.raw_food", q.getName().getString());
+    }
 }

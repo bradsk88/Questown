@@ -47,6 +47,17 @@ public class UIQuest implements Comparable<UIQuest> {
     );
     public final Quest.QuestStatus status;
     private final ResourceLocation wantedId;
+
+    private static final ResourceLocation RAW_FOOD_TAG =
+            new ResourceLocation("questown", "villager_simple_furnace_food_raw");
+
+    /**
+     * The LOOT quest's name key by what it wants: the hunter's raw-food quest is "Raw Food",
+     * any other (the cook's #questown:villager_food) is "Food" (2026-10-15/17 playtest calls).
+     */
+    public static String lootNameKey(ResourceLocation wantedId) {
+        return RAW_FOOD_TAG.equals(wantedId) ? "menu.quests.raw_food" : "menu.quests.food";
+    }
     private final Quest.QuestType type;
     private final ImmutableList<Ingredient> ingredients;
     public final ResourceLocation fromRecipe;
@@ -249,9 +260,9 @@ public class UIQuest implements Comparable<UIQuest> {
                 yield name;
             }
             case LOOT -> {
-                // The card is "Food" + "(extracted/count)": the extraction
+                // The card is "Raw Food"/"Food" + "(extracted/count)": the extraction
                 // progress the 2026-10-15 accumulation ruling made real.
-                MutableComponent name = Compat.translatable("menu.quests.food");
+                MutableComponent name = Compat.translatable(lootNameKey(wantedId));
                 if (deposited != null) {
                     name.append(Compat.literal(" (" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
                 }

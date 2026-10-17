@@ -769,6 +769,14 @@ ellipsis-fit helper at the draw site for data-driven titles
 post/complete/lost broadcasts, `.scratch/playtest-2026-10-15/
 loot-quest-named-raw-food.md`.)
 
+**Superseded 2026-10-17:** one key could not name both LOOT quests (user: "The first
+loot quest should be entitled Raw Food ... but the second loot quest (which asks for 8x)
+should be titled 'Food'"). `UIQuest.lootNameKey(wantedId)` picks by the quest's wanted
+tag: `questown:villager_simple_furnace_food_raw` (the hunter's 1x quest) →
+`menu.quests.raw_food` "Raw Food"; anything else (the cook's 8x `#questown:villager_food`)
+→ `menu.quests.food` "Food". The card and `TownMessages.questCompleted/questLost` use it.
+Pinned by `UIQuestLootCardNameTest.raw_food_loot_card_name_is_raw_food_key`.
+
 ## Card progress suffix spacing: " (" not "(" (2026-10-15)
 
 `UIQuest.getName` appended the ITEM/LOOT progress suffix with no leading
