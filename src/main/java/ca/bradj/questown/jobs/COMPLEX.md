@@ -531,3 +531,20 @@ same reason. Two causes in the usual-routine circuit, both fixed:
 
 Verification: `eating/` 4/4; full suite 70/73 (only the known roof_gatherer, skip_chicken_command,
 farmer-parity failures).
+
+## Special jobs never fall back to a same-root Work (2026-10-17 playtest)
+
+`ServerJobsRegistry.getWork` asked a matching special job for its `Work` and, when the answer
+was null, fell through to `getWorkSupplier` — which logs `No work found for job ID: …` and
+answers with the root's first unlocked regular job. Seeking work is the one special job whose
+reference is `id -> null` (it has no `Work`), so every `getWork` lookup on a seeker
+(`getProficiencyId`, `getResults`, `getAvailableAtLevel`, `isParentOf`) logged that ERROR and
+returned some other hunter/gatherer job's data (playtest log, dev-server-9: 3× for
+`hunter:seeking_work`, 2× for `gatherer:seeking_work`). A matching special job now answers for
+itself, null included; `isParentOf` is null-safe (it NPE'd on a Work-less child).
+
+Not verified against the live trigger: no autotest reproduces the playtest's hits (village/day1's
+seekers never logged it, including with a temporary stack trace on the fallback), so which caller
+fired is unknown. The fallback ERROR now logs the caller's stack, so the next live hit names it —
+including from the direct `getWorkSupplier` callers this change leaves alone (`canAlwaysStart`,
+`getRoomForJobId`).

@@ -123,10 +123,10 @@ public class ServerJobsRegistry {
     ) {
         Optional<SpecialJob> sj = specialJobs.stream().filter(v -> v.idTest.test(job)).findFirst();
         if (sj.isPresent()) {
-            Work work = sj.get().reference().apply(job);
-            if (work != null) {
-                return work;
-            }
+            // A special job answers for itself. Seeking work has no Work (null): falling through
+            // to getWorkSupplier logged "No work found" and answered with some other job of the
+            // same root (2026-10-17 playtest: hunter:seeking_work).
+            return sj.get().reference().apply(job);
         }
         Supplier<Work> workSupplier = getWorkSupplier(job);
         if (workSupplier == null) {
@@ -247,14 +247,15 @@ public class ServerJobsRegistry {
     }
 
     /**
-     * @throws NullPointerException if job does not exist
+     * False when the child has no Work (seeking work) or no parent.
      */
     public static boolean isParentOf(
             JobID parent,
             JobID child
     ) {
-        @SuppressWarnings("DataFlowIssue") JobID parentID = getWork(child, false).parentID;
-        if (parentID == null) return false;
+        Work work = getWork(child, false);
+        if (work == null || work.parentID == null) return false;
+        JobID parentID = work.parentID;
         return parentID.equals(parent);
     }
 
@@ -764,7 +765,9 @@ public class ServerJobsRegistry {
     private static @Nullable Supplier<Work> getWorkSupplier(JobID p) {
         Supplier<Work> workSupplier = Works.get(p);
         if (workSupplier == null) {
-            QT.JOB_LOGGER.error("No work found for job ID: {}. Falling back to any job in the same root ID.", p);
+            // With the caller's stack: the 2026-10-17 hunter:seeking_work hits came from a path no
+            // autotest reproduces.
+            QT.JOB_LOGGER.error("No work found for job ID: {}. Falling back to any job in the same root ID.", p, new Throwable("caller"));
             // Prefer a job unlocked with the root: the first-listed one could be e.g.
             // cook/stock_ingredients, which needs a stocked kitchen (2026-10-17 playtest).
             List<Supplier<Work>> sameRoot = Works.entrySet(p.rootId()).stream()
