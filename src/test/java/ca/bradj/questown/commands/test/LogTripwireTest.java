@@ -4,6 +4,8 @@ import org.apache.logging.log4j.Level;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LogTripwireTest {
 
@@ -34,5 +36,60 @@ class LogTripwireTest {
         assertEquals(LogTripwire.Kind.NONE, LogTripwire.classify(
                 Level.ERROR, "net.minecraft.server.network.ServerConnectionListener", "Connection reset"
         ));
+    }
+
+    @Test
+    void sentQuestAnnouncement_isAQuestAnnouncement() {
+        assertEquals(LogTripwire.Kind.QUEST_ANNOUNCEMENT, LogTripwire.classify(
+                Level.INFO, "Questown:Flag",
+                "Broadcasting message: New quests are available! Right-click the town flag to see them. []"
+        ));
+    }
+
+    @Test
+    void queuedQuestAnnouncement_isAQuestAnnouncement() {
+        assertEquals(LogTripwire.Kind.QUEST_ANNOUNCEMENT, LogTripwire.classify(
+                Level.INFO, "Questown:Flag",
+                "Queued broadcast (9 ticks until next slot): New quest is available: post your first work request on the job board. []"
+        ));
+    }
+
+    @Test
+    void otherTownMessage_doesNotTrip() {
+        assertEquals(LogTripwire.Kind.NONE, LogTripwire.classify(
+                Level.INFO, "Questown:Flag",
+                "Queued broadcast (4 ticks until next slot): messages.town_flag.quest_completed [translation{key='room.bedroom', args=[]}]"
+        ));
+    }
+
+    @Test
+    void droppedDuplicate_isNotABroadcast() {
+        assertEquals(LogTripwire.Kind.NONE, LogTripwire.classify(
+                Level.INFO, "Questown:Flag",
+                "Dropped duplicate queued broadcast: New quests are available! Right-click the town flag to see them. []"
+        ));
+    }
+
+    @Test
+    void ordinaryQuestownInfo_doesNotTrip() {
+        assertEquals(LogTripwire.Kind.NONE, LogTripwire.classify(
+                Level.INFO, "Questown:Villagers", "Job changed to JobID{rootId='hunter', jobId='sword'}"
+        ));
+    }
+
+    @Test
+    void announcementsInOneSlot_areOneBurst() {
+        assertTrue(LogTripwire.sameBurst(1000, 1000));
+        assertTrue(LogTripwire.sameBurst(1000, 1000 + LogTripwire.ANNOUNCEMENT_BURST_TICKS - 1));
+    }
+
+    @Test
+    void announcementsASlotApart_areSeparate() {
+        assertFalse(LogTripwire.sameBurst(1000, 1000 + LogTripwire.ANNOUNCEMENT_BURST_TICKS));
+    }
+
+    @Test
+    void firstAnnouncement_isNoBurst() {
+        assertFalse(LogTripwire.sameBurst(Long.MIN_VALUE, 0));
     }
 }

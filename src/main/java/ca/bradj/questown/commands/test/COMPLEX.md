@@ -691,6 +691,25 @@ counting meanwhile. **Trap:** `ServerPlayer.teleportTo` does nothing for a fake 
 this reload (only the villager entities reload), so it is a chunk-reload test, not a full
 server restart.
 
+**Overnight absence (2026-10-17, missed-morning check).** Once the chunk is unloaded the driver
+jumps the clock to the next day's noon (`skipToNextNoon`, past the 6000-tick morning window) and
+stays away **6 s of wall time** (`ABSENCE_WALL_MS`) before returning. The wall wait is
+load-bearing twice over: `TownFlagState` tells an absence from a sleep or `/time` jump by the
+wall time since the flag's last tick (5 s), and at 200 t/s a 30-tick away phase is ~0.15 s — the
+first version returned that fast and both the fixed and the pre-fix code failed the check the same
+way ("still gatherer"). With the wait, the flag BE really unloads and re-initializes (the
+"survives this reload" note above held only for the instant return). New check
+`missed-morning-applies-job-change`: the villager the job-change BOP was spent on (day 2, "in the
+morning") has left the gatherer root within 400 ticks of the return. Red-verified with
+`runMissedMorning` removed (still gatherer after 401 ticks); green: hunter after ~20 ticks.
+
+The real reload immediately exposed a second bug: `villager-2-only-after-raw-food` failed on both
+the fixed and pre-fix runs — the quest load replay dropped the onboarding marker, opening the
+arrival gate (`town/quests/COMPLEX.md` "Load replay keeps onboarding…"). One run also logged
+`Giving up on detecting sub block at (-19,65,-15) … wrong entity type: null` plus `Job board
+registration … no longer matches a board in the world; dropping stale entry` right after the
+re-initialization (the board's chunk not loaded yet); seen once in four runs, not chased.
+
 #### village/day1 log tripwire (2026-10-17)
 
 day1-8 passed 31/31 while its log carried `Work block at (0,64,0) stuck in state 2 … reseeding to
@@ -704,6 +723,14 @@ and records, from Questown's own loggers only (`Questown*` / `ca.bradj.questown*
 self-heal reseed (message contains "reseeding to fresh") and every ERROR. `checkResults` adds two
 checks — `no-stuck-work-spot-reseeds[n]` and `no-questown-errors[n]` — and prints the first 5 of
 each. Classifier pinned by `LogTripwireTest`.
+
+A third check, `no-back-to-back-quest-announcements[n]` (2026-10-17 round 6: "New quests are
+available!" then, a second later, "New quest is available: post your first work request…"):
+the appender listens at INFO and treats a `TownMessages` broadcast/queue line whose payload starts
+`New quest` as a quest announcement; two inside `ANNOUNCEMENT_BURST_TICKS` (100 game ticks, the
+broadcast spacing) fail. The window is game time (`attach(level::getGameTime)`), not "no message
+in between": in the day1 driver an unrelated `quest_completed` line lands between the two in the
+same tick, so the first, adjacency-based version stayed green with the duplicate reintroduced.
 
 First run with it (day1-9, HEAD 8c26fe78): 31/33. The flag spot no longer reseeds (diner fix);
 the job board at (-19,65,-15) reseeds from state 1 five times (seeking_work), and two

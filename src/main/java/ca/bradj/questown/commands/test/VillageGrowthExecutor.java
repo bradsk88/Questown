@@ -103,6 +103,12 @@ public final class VillageGrowthExecutor {
     private final List<Long> releasedChunks = new ArrayList<>();
     private int reloadWait = 0;
     private long rosterBeforeReload = 0;
+    /** The villager the job-change BOP was spent on; its change is due "in the morning". */
+    private @Nullable java.util.UUID bopJobChangeVillager = null;
+    private boolean awaitingMissedMorning = false;
+    private long awaySinceMs = 0;
+    private static final long ABSENCE_WALL_MS = 6000;
+    private int missedMorningWait = 0;
 
     public VillageGrowthExecutor(
             ServerLevel level,
@@ -125,7 +131,7 @@ public final class VillageGrowthExecutor {
         this.player = player;
         this.origin = origin;
         this.day1 = day1 ? new Day1BeatChecks(player.getUUID(), this::check, this::msg) : null;
-        this.tripwire = day1 ? LogTripwire.attach() : null;
+        this.tripwire = day1 ? LogTripwire.attach(level::getGameTime) : null;
     }
 
     /** Advance one server tick. Returns true when the scenario has finished. */
@@ -293,6 +299,7 @@ public final class VillageGrowthExecutor {
     /** day1: run the beat checks; finished at the cook beat or on timeout (a FAIL). */
     private boolean day1Finished() {
         day1.tick(flag, level.getDayTime());
+        checkMissedMorning();
         if (shouldReloadNow()) {
             startReload();
             return false;
@@ -353,22 +360,83 @@ public final class VillageGrowthExecutor {
 
     private void reloadUnload() {
         ticks++;
+        if (awaySinceMs != 0) {
+            returnAfterAbsence();
+            return;
+        }
         if (!level.isLoaded(flagPos)) {
             msg("Reload: the flag's chunk unloaded after " + reloadWait + " ticks");
             check("reload-flag-chunk-unloaded", true);
-            movePlayer(origin.getX(), origin.getY() + 1, origin.getZ());
-            for (long packed : releasedChunks) {
-                net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(packed);
-                level.setChunkForced(cp.x, cp.z, true);
-            }
-            reloadWait = 0;
-            phase = Phase.RELOAD_LOAD;
+            skipToNextNoon();
+            awaySinceMs = System.currentTimeMillis();
             return;
         }
         if (++reloadWait > 3000) {
             msg("FAIL reload: the flag's chunk never unloaded");
             check("reload-flag-chunk-unloaded", false);
             phase = Phase.CHECK_RESULTS;
+        }
+    }
+
+    /**
+     * Stay away for real time too: the flag tells a player absence from a sleep or /time jump by
+     * the wall time since its last tick (TownFlagState, 5 s), and the flag BE survives this
+     * reload, so a return a few ticks later (at 200 t/s) reads as "the town was awake".
+     */
+    private void returnAfterAbsence() {
+        if (System.currentTimeMillis() - awaySinceMs < ABSENCE_WALL_MS) {
+            return;
+        }
+        awaySinceMs = 0;
+        movePlayer(origin.getX(), origin.getY() + 1, origin.getZ());
+        for (long packed : releasedChunks) {
+            net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(packed);
+            level.setChunkForced(cp.x, cp.z, true);
+        }
+        reloadWait = 0;
+        phase = Phase.RELOAD_LOAD;
+    }
+
+    /**
+     * The player stays away past the next dawn, as on the 2026-10-17 playtest's overnight trip:
+     * the flag was not ticking, so its own morning detection never sees that dawn.
+     */
+    private void skipToNextNoon() {
+        long now = level.getDayTime();
+        long noon = (now / 24000L + 1) * 24000L + 8000L;
+        level.setDayTime(noon);
+        msg("Reload: away overnight, world time " + now + " -> " + noon);
+    }
+
+    private void startMissedMorningCheck() {
+        if (bopJobChangeVillager == null) {
+            msg("FAIL missed morning: no job-change BOP was pending when the player left");
+            check("missed-morning-applies-job-change", false);
+            return;
+        }
+        awaitingMissedMorning = true;
+        missedMorningWait = 0;
+    }
+
+    /** The BOP's morning job change lands when the player returns, not on the following dawn. */
+    private void checkMissedMorning() {
+        if (!awaitingMissedMorning) {
+            return;
+        }
+        String root = flag.getVillagerHandle().entities().stream()
+                .filter(v -> v.getUUID().equals(bopJobChangeVillager))
+                .map(v -> ((VisitorMobEntity) v).getJobId().rootId())
+                .findFirst().orElse(null);
+        if (root != null && !"gatherer".equals(root)) {
+            awaitingMissedMorning = false;
+            msg("Missed morning: the BOP villager is now " + root + " after " + missedMorningWait + " ticks");
+            check("missed-morning-applies-job-change", true);
+            return;
+        }
+        if (++missedMorningWait > 400) {
+            awaitingMissedMorning = false;
+            msg("FAIL missed morning: the BOP villager is still " + root + " " + missedMorningWait + " ticks after the return");
+            check("missed-morning-applies-job-change", false);
         }
     }
 
@@ -380,6 +448,7 @@ public final class VillageGrowthExecutor {
             msg("Reload: flag and " + reloaded.getVillagerHandle().size() + " villager(s) back after " + reloadWait + " ticks");
             check("reload-villagers-restored", true);
             day1.resumeArrivals(reloaded.getVillagerHandle().size());
+            startMissedMorningCheck();
             phase = Phase.PLAY;
             return;
         }
@@ -603,6 +672,9 @@ public final class VillageGrowthExecutor {
             TownFlagBlockEntity.JobChangeResult r = flag.spendBopToRequestJobChange(v.getUUID());
             msg("Spent a BOP on townie " + shortId((VisitorMobEntity) v) + " for the open job-change quest: " + r);
             check("bop-spent-for-job-change", r == TownFlagBlockEntity.JobChangeResult.REQUESTED);
+            if (r == TownFlagBlockEntity.JobChangeResult.REQUESTED) {
+                bopJobChangeVillager = v.getUUID();
+            }
             return true;
         }
         return false;
@@ -866,6 +938,9 @@ public final class VillageGrowthExecutor {
         errors.stream().limit(5).forEach(e -> msg("  error: " + e));
         check("no-stuck-work-spot-reseeds[" + reseeds.size() + "]", reseeds.isEmpty());
         check("no-questown-errors[" + errors.size() + "]", errors.isEmpty());
+        List<String> doubles = tripwire.doubleAnnouncements();
+        doubles.stream().limit(5).forEach(d -> msg("  back-to-back quest announcements: " + d));
+        check("no-back-to-back-quest-announcements[" + doubles.size() + "]", doubles.isEmpty());
     }
 
     private void check(String label, boolean pass) {
