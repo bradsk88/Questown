@@ -10,7 +10,6 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.lwjgl.glfw.GLFW;
@@ -106,14 +105,16 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
                 Ingredient ingr = Ingredients.fromString(card.data().ingredientKey());
                 Component itemName = Ingredients.getName(ingr);
                 int timesNeeded = card.data().timesNeeded();
-                List<FormattedCharSequence> lines = new ArrayList<>(List.of(
-                        Compat.componentText(Compat.translatable(key1, itemName, timesNeeded)),
-                        Compat.componentText(Compat.translatable(key2, ItemEconomicsData.PERIOD_DAYS))
+                List<Component> lines = new ArrayList<>(List.of(
+                        Compat.translatable(key1, itemName, timesNeeded),
+                        Compat.translatable(key2, ItemEconomicsData.PERIOD_DAYS)
                 ));
                 if (bonusFoodAvailable() && isFoodCard(card)) {
-                    lines.add(Compat.componentText(Compat.translatable("questown.menu.free_food_card.tooltip")));
+                    lines.add(Compat.translatable("questown.menu.free_food_card.tooltip"));
                 }
-                this.showTooltip(lines);
+                // Wrapped like the other card screens' tooltips (playtest 2026-10-17: the
+                // free-food line ran the full screen width).
+                renderTooltipWithDynamicWrapping(ctx, mouseX, mouseY, lines);
             }
         }
     }

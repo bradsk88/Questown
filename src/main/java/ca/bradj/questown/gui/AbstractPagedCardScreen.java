@@ -127,7 +127,7 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
     protected void renderTooltipContent(RenderContext ctx, int mouseX, int mouseY) { }
 
     // TODO: Move to RenderUtils for reuse
-    private void renderTooltipWithDynamicWrapping(
+    protected void renderTooltipWithDynamicWrapping(
             RenderContext ctx,
             int mouseX,
             int mouseY,

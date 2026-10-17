@@ -958,3 +958,11 @@ Ticket: `.scratch/playtest-2026-10-17/job-board-empty-state-needs-blank-line.md`
 villagers yet and an arrival is queued. Its copy is "A reward will be granted in the morning": the
 player may not know about villagers yet, so the first arrival is not telegraphed. Once villagers
 exist, `gui.status.villager_arriving_morning` ("...and one more in the morning") still names them.
+
+## Economics card tooltip wraps like the other card screens (2026-10-17 round 6)
+
+The paged card screens wrap tooltips with `AbstractPagedCardScreen.renderTooltipWithDynamicWrapping`
+(width = the background's right edge minus the cursor x, min 80). `TownEconomicsScreen` draws its
+card tooltip from `renderScreenExtras`, outside that path, and used to hand `showTooltip`
+unwrapped `FormattedCharSequence`s (the free-food line ran wide). It now builds `Component`s and
+calls the (now protected) wrapping helper.
