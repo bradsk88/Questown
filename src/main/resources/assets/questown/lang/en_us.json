@@ -28,7 +28,7 @@
   "menu.flag_crafting.board_desc": "Turn a sign into a Job Board. Place it near the flag to use it.",
   "menu.flag_crafting.begin_moving": "Begin moving this town",
   "menu.flag_crafting.begin_moving_desc": "Recall your townsfolk and pack the town away. When everyone is home, a relocation deed appears.",
-  "message.questown.villager.change_job_in_morning": "Villager %s will change to a new job root in the morning.",
+  "message.questown.villager.change_job_in_morning": "%s will change to a new job in the morning.",
   "message.questown.soup_pot.need_bowl": "You need a bowl to take soup from the pot",
   "message.questown.soup_pot.empty": "Villagers can add mushrooms to the pot to make stew",
   "message.questown.bonus_food_only_once": "The \"free food\" bonus can only be claimed one time",

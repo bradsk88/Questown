@@ -1181,3 +1181,11 @@ is wrong in both directions around a load:
 Verified by village/day1 with the reload step (31/31). The step reloads the villagers'
 chunk but the flag BE survives, so it exercises the duplicate path; the full-restart path
 (count reads 0 before re-registration) is covered by the roster count, not separately run.
+
+## "Will change job in the morning" broadcast takes the display name (2026-10-17 round 5)
+
+`SimpleVillagerHandle`'s BOP-spend broadcast passes `displayNameFor(villagerUUID)` ("Villager 1",
+or a truncated UUID when unassigned) into `message.questown.villager.change_job_in_morning`, so the
+lang string must not carry its own "Villager " prefix (it read "Villager Villager 1"). The string is
+now "%s will change to a new job in the morning." Ticket:
+`.scratch/playtest-2026-10-17/change-job-in-morning-message-stutters.md`.
