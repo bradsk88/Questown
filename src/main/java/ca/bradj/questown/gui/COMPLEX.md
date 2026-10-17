@@ -842,3 +842,39 @@ completion and vanish unseen. Now:
   `CampfireSleepClientEvents.onClientTick`) hides the active toast once
   `mc.player.isSleeping()`; a new show replaces the old one; the flag-menu
   `dismissTutorialToast()` path is unchanged. No wall-clock cap.
+
+## Quest-card and villager-tab deep links (2026-10-17 playtest round 2)
+
+Four chat requests, one theme: a card or tab should take the player to where its
+ask is answered.
+
+- **JOB_CHANGE card → villagers tab.** `QuestsScreen.openLessonForClickedCard`
+  opens `tooltips.villagers` via `Tabs.openTab` (falls back to the BOP lesson when
+  the tab is absent — the flag menu hides it before the first villager). The tooltip
+  (`jobChangeTooltip`, static; `renderCardTooltip` takes `villagersTabShown` from
+  `Tabs.hasTab`) is the card's flavor/job line plus a grey
+  `menu.quests.job_change.click_villagers` hint only while the tab exists.
+- **ITEM/LOOT card icon → "jobs that make this item".** `renderRecipeCardIcons`
+  records each icon's top-left → `Ingredient` in `itemIconClicks` (cleared at the top
+  of `renderBgContent`, so a page change leaves no stale targets); `mouseClicked`
+  checks those boxes (same ±4 px hover box as the strip's highlight) and calls the
+  container's owner method `AbstractQuestsContainer.sendOpenItemJobs` →
+  `OpenItemJobsMessage` → `TownVillagerUIs.showItemJobsUI` (the work-request
+  screen's existing path). A tag icon (raw food) resolves producers for the tag.
+  Icon tooltip gains `menu.quests.item.click_item_jobs`. (Closes the
+  `RenderUtil.stripOfRequestableItems` "handle clicks" TODO for quest cards.)
+- **Change-profession tab red dot.** Rule: `TownQuests.wantsJobChangeFrom(job)` —
+  an incomplete JOB_CHANGE quest exists AND the villager is on the `gatherer` root
+  (pinned by `TownQuestsJobChangeAttentionTest`). Server: `TownVillagerUIs.openMenu`
+  computes it (`wantsJobChange`) into the new trailing
+  `VillagerMenusPayload.changeRootAttention` (round-trip in
+  `VillagerMenusPayloadTest`). Client: `VillagerMenus.doFromNetwork` records it in
+  `VillagerTabs.CHANGE_ROOT_ATTENTION` (per villager UUID; each tab click re-opens the
+  menu, so it refreshes on every open) and `VillagerTabs.forMenu` sets the
+  `change_root` tab's `hasNotification`. Only the client renders tabs, so the flag
+  rides the payload rather than all five tabbed menu constructors.
+- **Pending-change text font.** `JobChangeConfirmScreen`'s "This villager will change
+  profession in the morning" was a white shadowed `drawCenteredString` (same in the
+  1.19.2 golden — a design change, not a port regression); it now uses
+  `RenderContext.centeredDark` (0x404040, no shadow), the body-text look of the rest
+  of the screen.

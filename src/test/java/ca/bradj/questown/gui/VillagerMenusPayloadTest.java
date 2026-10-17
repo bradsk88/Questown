@@ -39,7 +39,8 @@ class VillagerMenusPayloadTest {
                 false,
                 false,
                 List.of(true, false, true, false, false, false, false, false),
-                "Villager 2"
+                "Villager 2",
+                true
         );
     }
 
@@ -68,6 +69,7 @@ class VillagerMenusPayloadTest {
         assertEquals("Villager 2", r.villagerDisplayName);
         assertEquals(p.jobChangeAlreadyPending, r.jobChangeAlreadyPending);
         assertEquals(List.of(true, false, true, false, false, false, false, false), r.slotLocks);
+        assertTrue(r.changeRootAttention, "the change-profession red-dot flag survives the wire");
         assertEquals(0, buf.readableBytes(), "payload must consume exactly what it wrote");
     }
 }

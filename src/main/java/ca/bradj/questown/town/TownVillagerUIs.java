@@ -505,6 +505,14 @@ public class TownVillagerUIs {
     }
 
 
+    private static boolean wantsJobChange(ServerPlayer sender, VisitorMobEntity e) {
+        if (e.getFlagPos() == null) {
+            return false;
+        }
+        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level(), e.getFlagPos());
+        return flag != null && flag.wantsJobChangeFrom(e.getJobId());
+    }
+
     private static void openMenu(
             ServerPlayer sender,
             TriFunction<Integer, Inventory, Player, AbstractContainerMenu> shower,
@@ -543,7 +551,8 @@ public class TownVillagerUIs {
                         showSkillsTab,
                         showInventoryTab,
                         isJobChangePending,
-                        villagerDisplayName
+                        villagerDisplayName,
+                        wantsJobChange(sender, e)
                 )
         );
         if (e.getFlagPos() != null) {

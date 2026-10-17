@@ -468,6 +468,8 @@
   "menu.quests.roomblock.empty_room": "Build a room: four walls and a door. Use your town wand to register the door.",
   "menu.quests.roomblock.job_board": "Craft a job board at the town flag and place it near the flag.",
   "menu.quests.roomblock.click_crafting": "Click to open crafting",
+  "menu.quests.job_change.click_villagers": "Click to open villagers",
+  "menu.quests.item.click_item_jobs": "Click to see jobs that make this",
   "menu.quests.campfire_quest": "Place a campfire near the town flag",
   "message.flag_crafting.created": "Created %s",
   "menu.flag_crafting.in_inventory": "%s in your inventory",

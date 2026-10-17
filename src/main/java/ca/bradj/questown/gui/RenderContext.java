@@ -79,6 +79,11 @@ public record RenderContext(
         gui.drawString(font, text, x, y, 0xFF404040, false);
     }
 
+    /** {@link #darkText} centred on {@code centerX}: the body-text look, not a shadowed title. */
+    public void centeredDark(FormattedCharSequence text, int centerX, int y) {
+        gui.drawString(font, text, centerX - font.width(text) / 2, y, 0xFF404040, false);
+    }
+
     public void lightText(String text, int x, int y) {
         gui.drawString(font, text, x, y, 0xFFFFFFFF, true);
     }

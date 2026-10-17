@@ -131,7 +131,9 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
                 textWidth
         );
         for (FormattedCharSequence part : parts) {
-            ctx.centered(part, x + (textWidth / 2), bgY, -1);
+            // Dark body text like the rest of this screen (2026-10-17 playtest: the white
+            // shadowed centred string read as a different font).
+            ctx.centeredDark(part, x + (textWidth / 2), bgY);
             bgY += 8;
         }
     }

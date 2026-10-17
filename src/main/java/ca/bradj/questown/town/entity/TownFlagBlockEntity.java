@@ -836,6 +836,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return getBlockPos();
     }
 
+    public boolean wantsJobChangeFrom(JobID villagerJob) {
+        return quests.wantsJobChangeFrom(villagerJob);
+    }
+
     public boolean hasVillagers() {
         return villagerHandle.size() > 0;
     }

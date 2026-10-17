@@ -39,6 +39,7 @@ import static ca.bradj.questown.gui.PagedCardScreen.buttonWidth;
 public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPagedCardScreen<C, UIQuest> {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
+    private static final String VILLAGERS_TAB = "tooltips.villagers";
 
     private static final int TEXT_COLOR = 0xFF404040;
     private static final int TEXT_MARGIN = 12;
@@ -49,6 +50,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private final List<UIQuest> quests;
     private final JEI.NineNine background;
     private final Map<Position, Runnable> removes = new HashMap<>();
+    /** Per frame: the clickable item/tag icons of ITEM and LOOT cards (top-left → ingredient). */
+    private final Map<Position, Ingredient> itemIconClicks = new HashMap<>();
     private final SubUI tabs;
 
     private final boolean allComplete;
@@ -234,7 +237,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 mouse
         );
 
-        return renderCardTooltip(card, removalTooltip, renderedHeadTooltip, renderedItemTooltip, mouse, recipe);
+        return renderCardTooltip(card, removalTooltip, renderedHeadTooltip, renderedItemTooltip, mouse, recipe,
+                this.tabs instanceof Tabs t && t.hasTab(VILLAGERS_TAB));
     }
 
     private static @Nullable List<Component> renderCardTooltip(
@@ -243,7 +247,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             @Nullable Component renderedHeadTooltip,
             @Nullable List<Component> renderedItemTooltip,
             Coordinate mouse,
-            UIQuest recipe
+            UIQuest recipe,
+            boolean villagersTabShown
     ) {
         if (removalTooltip != null) {
             return ImmutableList.of(removalTooltip);
@@ -285,6 +290,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                     Compat.translatableStyled(
                             "menu.quests.roomblock.click_crafting",
                             Style.EMPTY.applyFormat(ChatFormatting.GRAY)));
+        }
+
+        if (recipe.getType() == Quest.QuestType.JOB_CHANGE) {
+            return jobChangeTooltip(recipe, villagersTabShown);
         }
 
         if (recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()) {
@@ -331,6 +340,26 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 ? Compat.getItemName(recipe.getWantedId())
                 : Ingredients.getName(recipe.getIngredients().iterator().next());
         return ImmutableList.of(Compat.translatable("menu.quests.loot_quest", size, name));
+    }
+
+    /**
+     * The card's own copy (flavor text, else the job line) plus a grey click hint while the
+     * villagers tab exists - a click opens it (2026-10-17 playtest feature request). Before
+     * the first villager the tab is hidden, the click opens the BOP lesson, and no hint shows.
+     */
+    private static List<Component> jobChangeTooltip(UIQuest recipe, boolean villagersTabShown) {
+        List<Component> base = recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()
+                ? ImmutableList.of(Compat.literal(recipe.getFlavorText()))
+                : renderJobQuestTooltip(recipe);
+        if (!villagersTabShown) {
+            return base;
+        }
+        return ImmutableList.<Component>builder()
+                .addAll(base)
+                .add(Compat.translatableStyled(
+                        "menu.quests.job_change.click_villagers",
+                        Style.EMPTY.applyFormat(ChatFormatting.GRAY)))
+                .build();
     }
 
     private static ImmutableList<Component> renderJobQuestTooltip(UIQuest recipe) {
@@ -453,6 +482,14 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 return true;
             }
         }
+        for (Map.Entry<Position, Ingredient> icon : itemIconClicks.entrySet()) {
+            int iconX = icon.getKey().x;
+            int iconY = icon.getKey().z;
+            if (x >= iconX - 4 && y >= iconY && x < iconX + 20 && y < iconY + 16) {
+                menu.sendOpenItemJobs(icon.getValue());
+                return true;
+            }
+        }
         if (openLessonForClickedCard(x, y)) {
             return true;
         }
@@ -485,9 +522,23 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             ingredients = ImmutableList.of(Ingredient.of(Items.OAK_DOOR));
         }
 
+        // 2026-10-17 playtest: an ITEM/LOOT card's icon opens "jobs that make this item"
+        // (for a tag icon, the jobs that make any member - the raw-food quest's case).
+        boolean clickable = recipe.getType() == Quest.QuestType.ITEM || recipe.getType() == Quest.QuestType.LOOT;
         return RenderUtil.stripOfRequestableItems(
-                (ing, coord) -> Ingredients.render(ctx, ing, coord.x(), coord.y()),
-                (ing) -> ImmutableList.of(Ingredients.getName(ing)),
+                (ing, coord) -> {
+                    Ingredients.render(ctx, ing, coord.x(), coord.y());
+                    if (clickable) {
+                        itemIconClicks.put(new Position(coord.x(), coord.y()), ing);
+                    }
+                },
+                (ing) -> clickable
+                        ? ImmutableList.of(
+                                Ingredients.getName(ing),
+                                Compat.translatableStyled(
+                                        "menu.quests.item.click_item_jobs",
+                                        Style.EMPTY.applyFormat(ChatFormatting.GRAY)))
+                        : ImmutableList.of(Ingredients.getName(ing)),
                 (text, coord) -> ctx.darkText(text, coord.x(), coord.y()),
                 (topLeft, botRight) -> RenderUtil.highlight(ctx.gui(), topLeft, botRight),
                 ImmutableList.copyOf(ingredients),
@@ -504,6 +555,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             int mouseX,
             int mouseY
     ) {
+        itemIconClicks.clear();
         super.renderBgContent(ctx, partialTicks, mouseX, mouseY);
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
@@ -536,6 +588,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                     || SpecialQuests.EMPTY_ROOM.equals(quest.getWantedId())
                     || SpecialQuests.JOB_BOARD.equals(quest.getWantedId()))
                     && this.tabs instanceof Tabs tabs && tabs.openTab("tooltips.crafting")) {
+                return true;
+            }
+            if (quest.getType() == Quest.QuestType.JOB_CHANGE
+                    && this.tabs instanceof Tabs tabs && tabs.openTab(VILLAGERS_TAB)) {
                 return true;
             }
             ResourceLocation entry = lessonEntryForQuestType(quest.getType());

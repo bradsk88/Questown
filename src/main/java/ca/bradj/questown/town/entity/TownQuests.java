@@ -1588,6 +1588,22 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     public record ArrivalRelease<R>(List<R> others, List<R> arrivals, List<R> held) {
     }
 
+    /**
+     * The change-profession tab's red dot (2026-10-17 playtest): a JOB_CHANGE quest is open
+     * and this villager is still on the gatherer root every arriving townie starts on
+     * ({@code SpawnVisitorReward}), i.e. it is a candidate to spend the BOP on.
+     */
+    public boolean wantsJobChangeFrom(JobID villagerJob) {
+        if (!GATHERER_ROOT.equals(villagerJob.rootId())) {
+            return false;
+        }
+        return getAll().stream().anyMatch(
+                q -> q.getType() == Quest.QuestType.JOB_CHANGE && !q.isComplete()
+        );
+    }
+
+    private static final String GATHERER_ROOT = "gatherer";
+
     /** The day-one campfire quest is posted and complete (a flag with its camp). */
     public boolean isCampfireQuestComplete() {
         return getAll().stream().anyMatch(

@@ -43,6 +43,8 @@ public final class VillagerMenusPayload {
      * playtest). Empty string when unassigned - screens fall back to the truncated UUID.
      */
     public final String villagerDisplayName;
+    /** Red dot on the change-profession tab (TownQuests.wantsJobChangeFrom, server-computed). */
+    public final boolean changeRootAttention;
 
     public VillagerMenusPayload(
             int entityId,
@@ -58,7 +60,8 @@ public final class VillagerMenusPayload {
             boolean showInventoryTab,
             boolean jobChangeAlreadyPending,
             List<Boolean> slotLocks,
-            String villagerDisplayName
+            String villagerDisplayName,
+            boolean changeRootAttention
     ) {
         this.entityId = entityId;
         this.villager = villager;
@@ -74,6 +77,7 @@ public final class VillagerMenusPayload {
         this.jobChangeAlreadyPending = jobChangeAlreadyPending;
         this.slotLocks = slotLocks;
         this.villagerDisplayName = villagerDisplayName == null ? "" : villagerDisplayName;
+        this.changeRootAttention = changeRootAttention;
     }
 
     public void write(FriendlyByteBuf buf) {
@@ -112,6 +116,7 @@ public final class VillagerMenusPayload {
             buf.writeBoolean(locked);
         }
         buf.writeUtf(villagerDisplayName);
+        buf.writeBoolean(changeRootAttention);
     }
 
     public static VillagerMenusPayload read(FriendlyByteBuf buf) {
@@ -150,6 +155,7 @@ public final class VillagerMenusPayload {
             slotLocks.add(buf.readBoolean());
         }
         String villagerDisplayName = buf.readUtf();
+        boolean changeRootAttention = buf.readBoolean();
         return new VillagerMenusPayload(
                 entityId,
                 villager,
@@ -164,7 +170,8 @@ public final class VillagerMenusPayload {
                 showInventoryTab,
                 jobChangeAlreadyPending,
                 slotLocks,
-                villagerDisplayName
+                villagerDisplayName,
+                changeRootAttention
         );
     }
 }

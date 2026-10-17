@@ -15,6 +15,8 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -29,9 +31,10 @@ public class VillagerTabs extends Tabs implements SubUI {
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             boolean showBopTab,
-            boolean showSkillsTab
+            boolean showSkillsTab,
+            boolean changeRootAttention
     ) {
-        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, changeRootScreenFn, econScreenFn, bopScreenFn, showBopTab, showSkillsTab));
+        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, changeRootScreenFn, econScreenFn, bopScreenFn, showBopTab, showSkillsTab, changeRootAttention));
     }
 
     private static @NotNull ImmutableList<Tab> build(
@@ -43,7 +46,8 @@ public class VillagerTabs extends Tabs implements SubUI {
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             boolean showBopTab,
-            boolean showSkillsTab
+            boolean showSkillsTab,
+            boolean changeRootAttention
     ) {
         ImmutableList.Builder<Tab> b = ImmutableList.builder();
         b.add(new Tab(
@@ -94,7 +98,7 @@ public class VillagerTabs extends Tabs implements SubUI {
                     Util.blitTab(rc.gui(), x, y, 1);
                     RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
                     RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(changeRootScreenFn), "tooltips.change_root", changeRootScreenFn == null, false
+                }, setScreen(changeRootScreenFn), "tooltips.change_root", changeRootScreenFn == null, changeRootAttention
         ));
         b.add(new Tab(
                 (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.BOOK.getDefaultInstance(), x + 10, y + 7),
@@ -164,8 +168,21 @@ public class VillagerTabs extends Tabs implements SubUI {
                 factory.apply(OpenVillagerMenuMessage.ECONOMICS),
                 factory.apply(OpenVillagerMenuMessage.BOP),
                 menu.showBlockOfProgressTab(),
-                menu.showSkillsTab()
+                menu.showSkillsTab(),
+                CHANGE_ROOT_ATTENTION.getOrDefault(menu.getVillagerUUID(), false)
         );
+    }
+
+    /**
+     * Client-side: the change-profession red dot per villager, from the last villager-menu
+     * payload (server-computed, TownQuests.wantsJobChangeFrom). Every tab click re-opens the
+     * menu, so the entry refreshes on each open; only the client renders tabs, so the flag
+     * rides the payload instead of each of the five menu constructors.
+     */
+    private static final Map<UUID, Boolean> CHANGE_ROOT_ATTENTION = new HashMap<>();
+
+    static void recordChangeRootAttention(UUID villager, boolean attention) {
+        CHANGE_ROOT_ATTENTION.put(villager, attention);
     }
 
     /** The tab list minus the skills tab (the level gate: no unlockable jobs, no tab). */
