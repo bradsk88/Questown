@@ -655,3 +655,24 @@ the first-work-request quest is also never posted. A HEAD baseline (before the
 rework) stalled earlier — at roster 2 with raw food, the hunter change and the
 bedroom all open — so `village/growth` was not reaching 5 before this change either.
 Ticket: `.scratch/playtest-2026-10-17/growth-driver-needs-bedroom.md`.
+
+### village/day1 — the day-1 beats as checks (2026-10-17)
+
+The playtests were re-walking day 1 by hand to re-check the same beats. `village/day1`
+runs `VillageGrowthExecutor` in day1 mode (constructor flag; `AutoTestRunner` sets it when
+`only` matches `village/day1`): the same real-player driver, plus `furnishNextRoomQuest`
+(for an open ROOM quest not handled elsewhere, clear a spare building's chest and place
+each recipe ingredient's block via item-use — bedroom, kitchen_small),
+`postFirstWorkRequest` (the board's owner path `WorkHandle.requestWork`) and
+`spendBopOnOpenJobChange` (spends on a villager `TownFlagBlockEntity.wantsJobChangeFrom`
+marks — the change-profession red-dot rule — so the cook change goes to a gatherer, not
+the hunter). `Day1BeatChecks` observes each tick and records the named checks (toast via
+`TownFlagBlockEntity.hasShownCampReadyToast` for the fake player; arrivals against the
+raw-food LOOT quest's completion at that moment; the FIRST_WORK_REQUEST quest's first
+appearance against the roster; the first cook's job). It stops at the cook beat
+(`day1-reached-cook-beat`) or at `MAX_TICKS` (FAIL). PASS = every check passed.
+
+First run 2026-10-17: 28/28 in ~8 min. Not covered yet: a save/reload mid-run (the
+arrival-gate restart bypass — needs a chunk unload/reload to replay the real load order),
+the playtest's narrow store room (chest walk target; unit-pinned by `InteractionSpotsTest`),
+and the GUI (red dot, fonts, click targets).

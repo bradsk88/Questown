@@ -836,6 +836,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return getBlockPos();
     }
 
+    /** Whether this session already sent the camp-ready toast to the player (village/day1 check). */
+    public boolean hasShownCampReadyToast(UUID player) {
+        return campReadyToastShown.contains(player);
+    }
+
     public boolean wantsJobChangeFrom(JobID villagerJob) {
         return quests.wantsJobChangeFrom(villagerJob);
     }

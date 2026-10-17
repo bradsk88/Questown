@@ -730,6 +730,18 @@ public class Compat {
     }
 
     /**
+     * The room recipe registered under {@code id}, or null. 1.20.2+ wraps recipes in a
+     * {@code RecipeHolder} (1.19.2: the recipe carries its own id).
+     */
+    public static @Nullable ca.bradj.roomrecipes.recipes.RoomRecipe findRoomRecipe(ServerLevel level, ResourceLocation id) {
+        return level.getRecipeManager().getAllRecipesFor(ca.bradj.roomrecipes.recipes.RecipesInit.ROOM).stream()
+                .filter(h -> h.id().equals(id))
+                .map(net.minecraft.world.item.crafting.RecipeHolder::value)
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
      * Whether the player has completed the advancement. 1.20.2+ looks advancements up as
      * an {@code AdvancementHolder} (1.19.2: {@code getAdvancement} returns the
      * {@code Advancement}). An unknown id reads as not completed.

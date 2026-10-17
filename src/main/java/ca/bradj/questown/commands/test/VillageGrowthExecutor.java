@@ -89,6 +89,12 @@ public final class VillageGrowthExecutor {
     private int totalChecks = 0;
     private boolean welcomeMatPlaced = false;
     private boolean jobBoardPlaced = false;
+    /** village/day1: stop at the cook beat and assert the day-1 beats instead of 5 villagers. */
+    private final @Nullable Day1BeatChecks day1;
+    private final List<BlockPos> buildingCorners = new ArrayList<>();
+    private final java.util.Set<ResourceLocation> furnishedRoomQuests = new java.util.HashSet<>();
+    private int nextSpareBuilding = 2;
+    private boolean firstWorkRequestPosted = false;
 
     public VillageGrowthExecutor(
             ServerLevel level,
@@ -96,10 +102,21 @@ public final class VillageGrowthExecutor {
             ServerPlayer player,
             BlockPos origin
     ) {
+        this(level, server, player, origin, false);
+    }
+
+    public VillageGrowthExecutor(
+            ServerLevel level,
+            MinecraftServer server,
+            ServerPlayer player,
+            BlockPos origin,
+            boolean day1
+    ) {
         this.level = level;
         this.server = server;
         this.player = player;
         this.origin = origin;
+        this.day1 = day1 ? new Day1BeatChecks(player.getUUID(), this::check, this::msg) : null;
     }
 
     /** Advance one server tick. Returns true when the scenario has finished. */
@@ -138,6 +155,7 @@ public final class VillageGrowthExecutor {
     private void buildVillage() {
         doorOffsets.clear();
         chestOffsets.clear();
+        buildingCorners.clear();
         // Two rows of four simple rectangular buildings, single south door.
         int[] xs = {-21, -9, 3, 15};
         int[] zs = {-16, 10};
@@ -173,6 +191,7 @@ public final class VillageGrowthExecutor {
                 level.setBlockAndUpdate(at.above(3), Blocks.OAK_PLANKS.defaultBlockState());
             }
         }
+        buildingCorners.add(corner);
         doorOffsets.add(corner.offset(s / 2, 0, s));
         BlockPos chest = corner.offset(1, 0, 1);
         level.setBlockAndUpdate(chest, Blocks.CHEST.defaultBlockState());
@@ -231,13 +250,18 @@ public final class VillageGrowthExecutor {
             }
         }
         long roster = flag.getVillagerHandle().size();
-        if (roster >= TARGET_VILLAGERS) {
+        if (day1 != null) {
+            if (day1Finished()) {
+                phase = Phase.CHECK_RESULTS;
+                return;
+            }
+        } else if (roster >= TARGET_VILLAGERS) {
             msg("Roster reached " + roster + " >= " + TARGET_VILLAGERS);
             check("reached-5-villagers", true);
             phase = Phase.CHECK_RESULTS;
             return;
         }
-        if (ticks >= MAX_TICKS) {
+        if (day1 == null && ticks >= MAX_TICKS) {
             msg("FAIL timed out after " + MAX_TICKS + " ticks at roster=" + roster);
             check("reached-5-villagers", false);
             phase = Phase.CHECK_RESULTS;
@@ -255,9 +279,24 @@ public final class VillageGrowthExecutor {
         }
     }
 
+    /** day1: run the beat checks; finished at the cook beat or on timeout (a FAIL). */
+    private boolean day1Finished() {
+        day1.tick(flag, level.getDayTime());
+        if (day1.cookBeatReached()) {
+            check("day1-reached-cook-beat", true);
+            return true;
+        }
+        if (ticks >= MAX_TICKS) {
+            msg("FAIL day1 timed out after " + MAX_TICKS + " ticks at roster=" + flag.getVillagerHandle().size());
+            check("day1-reached-cook-beat", false);
+            return true;
+        }
+        return false;
+    }
+
     private void checkResults() {
         long roster = flag != null ? flag.getVillagerHandle().size() : 0;
-        passed = roster >= TARGET_VILLAGERS;
+        passed = day1 != null ? passedChecks == totalChecks : roster >= TARGET_VILLAGERS;
         msg("========================================");
         msg("RESULT: roster=" + roster + "/" + TARGET_VILLAGERS
                 + " checks=" + passedChecks + "/" + totalChecks
@@ -305,6 +344,12 @@ public final class VillageGrowthExecutor {
             return;
         }
         if (spendBopOnOpenJobChange()) {
+            return;
+        }
+        if (furnishNextRoomQuest()) {
+            return;
+        }
+        if (postFirstWorkRequest()) {
             return;
         }
         // In a manual (FIFO-driven) run the agent owns the clock; the executor
@@ -452,13 +497,103 @@ public final class VillageGrowthExecutor {
         if (!openJobChange || flag.getBlocksOfProgress() <= 0) {
             return false;
         }
+        // Spend on a villager the change-profession tab red-dots (TownQuests.wantsJobChangeFrom:
+        // still a gatherer) - what a player picks - not whoever is first, which re-roled the hunter.
         for (LivingEntity v : flag.getVillagerHandle().entities()) {
+            if (!flag.wantsJobChangeFrom(((VisitorMobEntity) v).getJobId())) {
+                continue;
+            }
             TownFlagBlockEntity.JobChangeResult r = flag.spendBopToRequestJobChange(v.getUUID());
             msg("Spent a BOP on townie " + shortId((VisitorMobEntity) v) + " for the open job-change quest: " + r);
             check("bop-spent-for-job-change", r == TownFlagBlockEntity.JobChangeResult.REQUESTED);
             return true;
         }
         return false;
+    }
+
+    /** Room quests the earlier steps already handle (door registration, mat, board, chests). */
+    private static final java.util.Set<ResourceLocation> ROOM_QUESTS_HANDLED_ELSEWHERE = java.util.Set.of(
+            ca.bradj.questown.town.special.SpecialQuests.CAMPFIRE,
+            ca.bradj.questown.town.special.SpecialQuests.TOWN_GATE,
+            ca.bradj.questown.town.special.SpecialQuests.EMPTY_ROOM,
+            ca.bradj.questown.town.special.SpecialQuests.JOB_BOARD,
+            ca.bradj.questown.town.special.SpecialQuests.STORE_ROOM_SMALL
+    );
+
+    /**
+     * Furnish one open room quest (bedroom, kitchen, ...) the way a player would: in a spare
+     * building (its chest removed, so the room matches the asked recipe), place each recipe
+     * ingredient's block via the item-use path. Door registration already covers the room.
+     */
+    private boolean furnishNextRoomQuest() {
+        for (AbstractMap.SimpleEntry<MCQuest, ?> e : flag.getQuestHandle().getAllQuestsWithRewards()) {
+            MCQuest q = e.getKey();
+            ResourceLocation id = q.getWantedId();
+            if (q.isComplete() || q.getType() != Quest.QuestType.ROOM
+                    || ROOM_QUESTS_HANDLED_ELSEWHERE.contains(id) || !furnishedRoomQuests.add(id)) {
+                continue;
+            }
+            ca.bradj.roomrecipes.recipes.RoomRecipe recipe = roomRecipe(id);
+            if (recipe == null || nextSpareBuilding >= buildingCorners.size()) {
+                msg("UNCLEAR room quest " + id + ": no recipe or no spare building to furnish");
+                return false;
+            }
+            BlockPos corner = buildingCorners.get(nextSpareBuilding++);
+            level.setBlockAndUpdate(corner.offset(1, 0, 1), Blocks.AIR.defaultBlockState());
+            int col = 0;
+            for (net.minecraft.world.item.crafting.Ingredient ing : recipe.getIngredients()) {
+                ItemStack[] options = ing.getItems();
+                if (options.length == 0) {
+                    continue;
+                }
+                placeViaItemUse(corner.offset(1 + col++, 0, 1), options[0].copyWithCount(1));
+            }
+            msg("Furnished room quest " + id + " in the building at " + corner.toShortString());
+            check("room-quest-furnished[" + id + "]", true);
+            return true;
+        }
+        return false;
+    }
+
+    private @Nullable ca.bradj.roomrecipes.recipes.RoomRecipe roomRecipe(ResourceLocation id) {
+        ca.bradj.roomrecipes.recipes.RoomRecipe special =
+                ca.bradj.questown.town.special.SpecialQuests.SPECIAL_QUESTS.get(id);
+        if (special != null) {
+            return special;
+        }
+        return ca.bradj.questown.mc.Compat.findRoomRecipe(level, id);
+    }
+
+    /** Place a block item at {@code pos} by using it on the floor below (player item-use path). */
+    private void placeViaItemUse(BlockPos pos, ItemStack stack) {
+        var hit = new net.minecraft.world.phys.BlockHitResult(
+                net.minecraft.world.phys.Vec3.atCenterOf(pos.below()),
+                net.minecraft.core.Direction.UP,
+                pos.below(),
+                false
+        );
+        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+        player.gameMode.useItemOn(player, level, player.getItemInHand(InteractionHand.MAIN_HAND),
+                InteractionHand.MAIN_HAND, hit);
+    }
+
+    /** Post one request while the first-work-request quest is open (the board's owner path). */
+    private boolean postFirstWorkRequest() {
+        if (firstWorkRequestPosted) {
+            return false;
+        }
+        boolean open = flag.getQuestHandle().getAllQuestsWithRewards().stream()
+                .map(AbstractMap.SimpleEntry::getKey)
+                .anyMatch(q -> q.getType() == Quest.QuestType.FIRST_WORK_REQUEST && !q.isComplete());
+        if (!open) {
+            return false;
+        }
+        flag.getWorkHandle().requestWork(
+                ca.bradj.questown.jobs.requests.WorkRequest.of(net.minecraft.world.item.Items.WHEAT_SEEDS));
+        firstWorkRequestPosted = true;
+        msg("Posted a work request (wheat seeds) for the first-work-request quest");
+        check("first-work-request-posted", true);
+        return true;
     }
 
     private boolean registerNextDoor() {
