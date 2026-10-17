@@ -951,3 +951,10 @@ Test: `VillagerInitialTabTest`.
 `lineStep = (int) (font.lineHeight * 1.5)` (the `Compat.drawTextWrap` step) — a blank line. Before,
 the hint used `y + 8` after advancing `y` from the un-padded origin, ~2px under the headline.
 Ticket: `.scratch/playtest-2026-10-17/job-board-empty-state-needs-blank-line.md`.
+
+## First-arrival line does not name villagers (2026-10-17 round 6)
+
+`MultiStatusScreen` shows `gui.status.villager_arriving_morning.first` when the town has no
+villagers yet and an arrival is queued. Its copy is "A reward will be granted in the morning": the
+player may not know about villagers yet, so the first arrival is not telegraphed. Once villagers
+exist, `gui.status.villager_arriving_morning` ("...and one more in the morning") still names them.

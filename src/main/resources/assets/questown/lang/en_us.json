@@ -536,7 +536,7 @@
   "tutorial.campfire_ready.title": "Your camp is ready",
   "tutorial.campfire_ready.description": "Use wand on campfire",
   "gui.status.villager_arriving_morning": "...and one more in the morning",
-  "gui.status.villager_arriving_morning.first": "A new villager arrives in the morning",
+  "gui.status.villager_arriving_morning.first": "A reward will be granted in the morning",
   "message.wand.campfire.sleep_hint": "Right-click to sleep (no spawn set, wake up groggy)",
   "message.wand.campfire.day_hint": "Your Town Wand enables you to sleep by the campfire",
   "message.wand.campfire.not_registered": "This campfire is not registered with a town",
