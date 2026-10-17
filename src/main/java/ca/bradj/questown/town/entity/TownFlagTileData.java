@@ -55,6 +55,7 @@ public class TownFlagTileData {
     // The board's "auto-request" toggle (F2). Default ON - the board reads alive on a fresh
     // town; the player can silence auto-posting from the board menu.
     private static final String NBT_BOARD_AUTO_REQUEST = QTNBT.keyify("board_auto_request");
+    private static final String NBT_VILLAGERS_TAB_SEEN = QTNBT.keyify("villagers_tab_seen");
 
     public static Map<String, InitPair> initialize() {
 
@@ -80,6 +81,7 @@ public class TownFlagTileData {
         b.put(NBT_CHICKEN_ROTATION_DETECTED, initChickenRotationDetected());
         b.put(NBT_CHICKEN_SUNSET_CHEST_SPAWNED, initChickenSunsetChestSpawned());
         b.put(NBT_BOARD_AUTO_REQUEST, initBoardAutoRequest());
+        b.put(NBT_VILLAGERS_TAB_SEEN, initVillagersTabSeen());
         return b.build();
     }
 
@@ -101,6 +103,16 @@ public class TownFlagTileData {
                     return true;
                 },
                 flag -> flag.boardAutoRequest = true
+        );
+    }
+
+    private static InitPair initVillagersTabSeen() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.villagersTabSeen = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.villagersTabSeen = false
         );
     }
 
@@ -389,6 +401,7 @@ public class TownFlagTileData {
         write(t, NBT_CHICKEN_ROTATION_DETECTED, flag.serializeChickenRotationDetected());
         write(t, NBT_CHICKEN_SUNSET_CHEST_SPAWNED, flag.serializeChickenSunsetChestSpawned());
         write(t, NBT_BOARD_AUTO_REQUEST, flag.serializeBoardAutoRequest());
+        write(t, NBT_VILLAGERS_TAB_SEEN, flag.serializeVillagersTabSeen());
     }
 
     private static void write(

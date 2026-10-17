@@ -51,6 +51,8 @@ public interface TownFlagInitialization {
 
     CompoundTag serializeBoardAutoRequest();
 
+    CompoundTag serializeVillagersTabSeen();
+
     CompoundTag serializeChickenBeatState();
 
     CompoundTag serializeChickenFirstGatherWorldlySeedsFired();

@@ -897,3 +897,20 @@ the broadcast via `Jobs.getRootNameComponent`. Pinned by `UIQuestJobChangeCardNa
 The onboarding cook quest also names a registered job now
 (`TownQuests.ONBOARDING_COOK_JOB` = cook/extract), so the job change no longer hits
 `ServerJobsRegistry`'s "No work found" ERROR fallback.
+
+## Villagers-tab red dot until first opened (2026-10-17 playtest round 5)
+
+The flag's villagers tab appears with the first arrival (`TownFlagBlockEntity.getInfo`,
+`showVillagers`), and from then until a player opens it, it carries a red dot.
+
+- State: `TownFlagBlockEntity.villagersTabSeen`, persisted via `TownFlagTileData`
+  (`villagers_tab_seen`). The field defaults **true** so a town saved before it existed shows
+  no dot; `onFlagPlace` sets it false for a new flag.
+- Decision: `FlagInfo.villagersTabAttention(showVillagersTab, villagersTabSeen)` (pure), sent
+  as the trailing `FlagInfo` wire boolean; `FlagTabs.build` / `computeTabDecisions` use it as
+  the villagers tab's `hasNotification`.
+- Clear: `TownFlagMenus.showUI` calls `markVillagersTabSeen()` for the VILLAGERS type *before*
+  `getInfo()`, so the screen that opens is already dot-free.
+- Town-level, not per-player: any player opening the tab clears it for all.
+- Test: `VillagersTabAttentionTest`. Ticket:
+  `.scratch/playtest-2026-10-17/villagers-tab-red-dot-until-first-open.md`.

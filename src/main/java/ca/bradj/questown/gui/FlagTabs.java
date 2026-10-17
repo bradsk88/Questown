@@ -51,7 +51,7 @@ public class FlagTabs extends Tabs implements SubUI {
                     setScreen(villagerScreenFn),
                     "tooltips.villagers",
                     isSelected("tooltips.villagers", activeTabKey),
-                    false
+                    fi.villagersTabAttention()
             ));
         }
         if (fi.showQuestsTab()) {
@@ -153,7 +153,7 @@ public class FlagTabs extends Tabs implements SubUI {
 
     public static ImmutableList<TabDecision> computeTabDecisions(FlagTabsEmbedding.FlagInfo fi) {
         ImmutableList.Builder<TabDecision> b = ImmutableList.builder();
-        b.add(new TabDecision("tooltips.villagers", fi.showVillagersTab(), false));
+        b.add(new TabDecision("tooltips.villagers", fi.showVillagersTab(), fi.villagersTabAttention()));
         b.add(new TabDecision("tooltips.quests", fi.showQuestsTab(), fi.hasIncompleteQuests()));
         b.add(new TabDecision("tooltips.economics", fi.showEconTab(), fi.bonusFoodAvailable()));
         b.add(new TabDecision("tooltips.blocks_of_progress", fi.showBlockOfProgressTab(), true));

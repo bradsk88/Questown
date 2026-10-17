@@ -328,6 +328,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     // auto-posts its initial_request(s) to the work board; the player can silence it from
     // the board menu. Persists like the other flag tile data.
     boolean boardAutoRequest = true;
+    // Whether a player has opened the flag's villagers tab. Until then the tab carries a red
+    // dot once the first villager arrives. Defaults true so a town saved before this field
+    // existed shows no dot; a newly placed flag resets it to false.
+    boolean villagersTabSeen = true;
     ca.bradj.questown.mobs.helperchicken.ChickenBeatState chickenBeatState =
             ca.bradj.questown.mobs.helperchicken.ChickenBeatState.WAITING_FOR_STICK;
     boolean chickenFirstGatherWorldlySeedsFired = false;
@@ -2067,7 +2071,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 getBopCount() > 0,
                 hasIncomplete,
                 isBopFull(),
-                !givenBonusFood
+                !givenBonusFood,
+                FlagTabsEmbedding.FlagInfo.villagersTabAttention(showVillagers, villagersTabSeen)
         );
     }
 
@@ -2168,6 +2173,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public void setBoardAutoRequest(boolean v) {
         this.boardAutoRequest = v;
+    }
+
+    public boolean isVillagersTabSeen() {
+        return villagersTabSeen;
+    }
+
+    public void markVillagersTabSeen() {
+        if (villagersTabSeen) {
+            return;
+        }
+        villagersTabSeen = true;
+        setChanged();
     }
 
     public ca.bradj.questown.mobs.helperchicken.ChickenBeatState getChickenBeatState() {

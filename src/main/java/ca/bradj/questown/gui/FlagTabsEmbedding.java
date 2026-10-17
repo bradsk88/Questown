@@ -16,19 +16,26 @@ public interface FlagTabsEmbedding {
             boolean showBlockOfProgressTab,
             boolean hasIncompleteQuests,
             boolean bopFull,
-            boolean bonusFoodAvailable
+            boolean bonusFoodAvailable,
+            boolean villagersTabAttention
     ) {
+        /** The villagers tab wants attention once it is shown and no player has opened it yet. */
+        public static boolean villagersTabAttention(boolean showVillagersTab, boolean villagersTabSeen) {
+            return showVillagersTab && !villagersTabSeen;
+        }
+
         public static FlagInfo dumb(BlockPos flagPos, boolean showBOP, boolean bopFull) {
-            return new FlagInfo(flagPos, true, true, true, showBOP, false, bopFull, false);
+            return new FlagInfo(flagPos, true, true, true, showBOP, false, bopFull, false, false);
         }
 
         public static FlagInfo withQuestNotification(BlockPos flagPos, boolean showBOP, boolean hasIncompleteQuests, boolean bopFull) {
-            return new FlagInfo(flagPos, true, true, true, showBOP, hasIncompleteQuests, bopFull, false);
+            return new FlagInfo(flagPos, true, true, true, showBOP, hasIncompleteQuests, bopFull, false, false);
         }
 
         public static FlagInfo read(FriendlyByteBuf buf) {
             return new FlagInfo(
                     buf.readBlockPos(),
+                    buf.readBoolean(),
                     buf.readBoolean(),
                     buf.readBoolean(),
                     buf.readBoolean(),
@@ -48,6 +55,7 @@ public interface FlagTabsEmbedding {
             data.writeBoolean(hasIncompleteQuests);
             data.writeBoolean(bopFull);
             data.writeBoolean(bonusFoodAvailable);
+            data.writeBoolean(villagersTabAttention);
         }
     }
 
