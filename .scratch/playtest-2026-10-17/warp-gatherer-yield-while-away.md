@@ -31,3 +31,11 @@ Same mechanism as `.scratch/playtest-2026-10-18/catch-up-warp-hunter-overproduce
 warp sub-step ran a whole cycle). Fixed there by the per-villager `WarpCycleBudget`; the
 gatherer path is the same `PostDowntimeWarper`, but no gatherer yield-cap autotest exists yet —
 re-check in the next playtest.
+
+## Attempted pin (2026-10-19) — not valid, dropped
+
+A `gatherer/gather [one_day_yield]` variant (welcome mat + 8 cooked beef, `*` delta 1..12 over a
+24000-tick warp) PASSED on the pre-fix warper (net `*` = 4): every notool tier eats one
+villager_food per trip, and the `*` delta nets eaten food out, so a high loot count still lands
+inside the cap. A real pin must count loot excluding the consumed food (a CustomAssertion over
+the warp snapshot, or an ExpectedProduct per loot item). Still unverified for the gatherer.
