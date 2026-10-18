@@ -1,9 +1,11 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.blocks.StatefulJobBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -67,5 +69,22 @@ public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHel
                 },
                 debugLogger
         );
+    }
+
+    /**
+     * A work seeker always sees the job board as ready to extract: nothing gates its 0 -> 1
+     * step, and the real "is there a job" check runs at extraction. A board left at state 1
+     * by a seeker who got a job (or fell back to downtime) is therefore at rest, not stuck.
+     */
+    @Override
+    protected boolean isRestingState(
+            ServerLevel level,
+            BlockPos pos,
+            State state
+    ) {
+        if (state.processingState() != WorkSeekerJob.MAX_STATE || !level.isLoaded(pos)) {
+            return false;
+        }
+        return level.getBlockState(pos).getBlock() instanceof JobBoardBlock;
     }
 }

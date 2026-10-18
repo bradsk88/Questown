@@ -29,13 +29,29 @@ class WorkStatusStoreTest {
 
     private static class TestWorkStatusStore extends AbstractWorkStatusStore<Position, TestItem, Room, Void> {
 
+        private final @Nullable Position restingPos;
+
         public TestWorkStatusStore() {
+            this(null);
+        }
+
+        public TestWorkStatusStore(@Nullable Position restingPos) {
             super(
                     (room, pos) -> ImmutableList.of(pos),
                     (lvl, pos) -> false,
                     (lvl, pos) -> null,
                     (lvl, pos) -> null
             );
+            this.restingPos = restingPos;
+        }
+
+        @Override
+        protected boolean isRestingState(
+                Void tickSource,
+                Position pos,
+                State state
+        ) {
+            return pos.equals(restingPos);
         }
 
     }
@@ -171,6 +187,29 @@ class WorkStatusStoreTest {
         Assertions.assertEquals(1, s.getJobBlockState(pos).processingState());
         tick(s, 1);
         Assertions.assertEquals(0, s.getJobBlockState(pos).processingState());
+    }
+
+    @Test
+    void Test_RestingStateBlockIsNotReseeded() {
+        // The job board: a work seeker always sees it as ready to extract (state 1), so a
+        // board left at 1 is at rest, not stuck (2026-10-17 day1: reseeded 5x from state 1).
+        Position board = new Position(1, 2);
+        TestWorkStatusStore s = new TestWorkStatusStore(board);
+        s.setJobBlockState(board, State.freshAtState(1));
+        tick(s, (int) AbstractWorkStatusStore.STUCK_RESET_TICKS * 3);
+        Assertions.assertEquals(1, s.getJobBlockState(board).processingState());
+    }
+
+    @Test
+    void Test_NonRestingBlockIsStillReseededBesideARestingOne() {
+        Position board = new Position(1, 2);
+        Position mat = new Position(3, 4);
+        TestWorkStatusStore s = new TestWorkStatusStore(board);
+        s.setJobBlockState(board, State.freshAtState(1));
+        s.setJobBlockState(mat, State.freshAtState(3));
+        tick(s, (int) AbstractWorkStatusStore.STUCK_RESET_TICKS);
+        Assertions.assertEquals(1, s.getJobBlockState(board).processingState());
+        Assertions.assertEquals(0, s.getJobBlockState(mat).processingState());
     }
 
     @Test

@@ -649,6 +649,20 @@ ERRORs in the 2026-10-15 log). A *different*-value clobber still ERRORs.
 Pinned by `WorkStatusStoreTest` (Test_StuckBlock*, Test_BlockWithActive*,
 Test_FreshState*).
 
+**Resting states are exempt (2026-10-18, dev decision).** A work seeker always sees the
+job board as ready to extract: its 0 -> 1 step needs no work, time, items or tools, and
+the real "is there a job" check runs at extraction (`changeJobForVisitorFromBoard`). A
+seeker that gets a job before extracting (the morning `getComputeStatusOverrideForSpecialJobs`
+path, or the 1000-tick downtime fallback) leaves the board at state 1 in its per-owner store,
+which is the board's resting state, not a stall. `AbstractWorkStatusStore.isRestingState`
+(default false) lets a subclass exempt such a block; `TownWorkStatusStore` returns true for a
+loaded `JobBoardBlock` at `WorkSeekerJob.MAX_STATE`. A block check rather than a special
+rule: the seeker has usually left the job by the time the board would be reseeded, and the
+stuck counters are not saved, so a write-time job mark would be lost on reload. day1's
+`no-stuck-reseeds` tripwire stays strict for every other spot. Pinned by
+`WorkStatusStoreTest.Test_RestingStateBlockIsNotReseeded` /
+`Test_NonRestingBlockIsStillReseededBesideARestingOne` (both red without the exemption).
+
 ## Chest walk target: a standable neighbour, door side first (2026-10-17 playtest)
 
 `TownContainers.fromChestBlockMaybe` set a room chest's interact position to

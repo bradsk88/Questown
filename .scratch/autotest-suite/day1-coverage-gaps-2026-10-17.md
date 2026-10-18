@@ -60,3 +60,13 @@ whenever a hunter seeks work. Not fixed yet.
 - Once in four runs: `Giving up on detecting sub block at (-19,65,-15) … wrong entity type: null`
   + `Job board registration … dropping stale entry` right after re-initialization. Not chased.
 - day1 now 33/34; the only red is the job-board reseed (design question still open).
+
+## Update (2026-10-18) — job board reseed decided
+
+Dev model: a work seeker always sees the job board as ready to extract (nothing gates
+0 -> 1; the job check runs at extraction), so state 1 is the board's resting state. Fix: the
+stuck-block self-heal exempts a loaded `JobBoardBlock` at `WorkSeekerJob.MAX_STATE`
+(`AbstractWorkStatusStore.isRestingState`, overridden in `TownWorkStatusStore`). A special
+rule was considered and rejected: the seeker has usually left the job when the reseed would
+fire, and stuck counters are not saved, so a write-time mark would not survive a reload.
+day1: 35/35, zero `stuck in state` lines, zero Questown ERRORs.

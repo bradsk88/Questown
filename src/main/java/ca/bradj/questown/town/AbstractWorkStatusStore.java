@@ -198,7 +198,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         // Store-global timers decay once per tick, no matter how many rooms were scanned.
         advanceBlocksWithExpiredTimers(decayTimersAndCollectExpired(ticksSinceLast));
 
-        reseedStuckBlocks(ticksSinceLast);
+        reseedStuckBlocks(tickSource, ticksSinceLast);
 
         newRooms.forEach(room -> scanRoom(tickSource, room));
 
@@ -209,11 +209,26 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         scanRoom(tickSource, roomToScan);
     }
 
-    private void reseedStuckBlocks(long ticksSinceLast) {
+    /**
+     * True when a block in this state is at rest, not stuck: nothing is meant to advance it,
+     * so the stuck-block self-heal must leave it alone. Default: no block rests outside state 0.
+     */
+    protected boolean isRestingState(
+            TICK_SOURCE tickSource,
+            POS pos,
+            State state
+    ) {
+        return false;
+    }
+
+    private void reseedStuckBlocks(
+            TICK_SOURCE tickSource,
+            long ticksSinceLast
+    ) {
         for (Map.Entry<POS, State> e : new ArrayList<>(this.jobStatuses.entrySet())) {
             POS pos = e.getKey();
             State state = e.getValue();
-            if (state.processingState() == 0 || this.timeJobStatuses.containsKey(pos)) {
+            if (state.processingState() == 0 || this.timeJobStatuses.containsKey(pos) || isRestingState(tickSource, pos, state)) {
                 this.stuckTicks.remove(pos);
                 continue;
             }
