@@ -44,6 +44,9 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
             TICK_DATA data
     ) {
         if (runAnyInitializers(data)) {
+            // A flag that is initializing (after a reload) is alive: its sub-blocks self-destruct
+            // when not ticked, so keep them fed while the initializers run.
+            notifySubBlocksOfTick(data);
             return;
         }
 

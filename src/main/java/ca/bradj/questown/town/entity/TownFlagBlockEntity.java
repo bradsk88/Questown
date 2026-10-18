@@ -746,6 +746,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
+    public void onChunkUnloaded() {
+        super.onChunkUnloaded();
+        // Unloaded, not destroyed: stale sub-block listeners must stop counting (see
+        // TownFlagSubBlocks.retire). A destroyed flag only gets setRemoved, so orphan removal
+        // still runs for it.
+        subBlocks.retire();
+    }
+
+    @Override
     public void setRemoved() {
         super.setRemoved();
         if (level != null && level.isClientSide()) {

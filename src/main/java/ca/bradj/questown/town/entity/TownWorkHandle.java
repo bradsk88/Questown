@@ -67,6 +67,13 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
     public void registerJobBoard(BlockPos matPos) {
         nextTick.add(sl -> {
+            if (!sl.isLoaded(matPos)) {
+                // Right after a town reload the flag can tick before the board's chunk is back;
+                // judging it then dropped a live board as "stale" (day1, 2026-10-18).
+                QT.FLAG_LOGGER.info("Job board at {} is in an unloaded chunk; retrying registration", matPos);
+                registerJobBoard(matPos);
+                return;
+            }
             BlockState bs = sl.getBlockState(matPos);
             if (!(bs.getBlock() instanceof JobBoardBlock jbb)) {
                 // Stale registration (the board was broken and the world was

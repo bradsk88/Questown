@@ -130,3 +130,28 @@ i.e. not a state replacement) and iterates `TownFlags.all()`, calling
 entry") in `TownWorkHandle`: entries that fail to re-register simply fall
 out of persistence on the next save, so the load log is a heal report, not
 an error.
+
+## Sub-blocks must not self-destruct while the flag is merely away (2026-10-18)
+
+`TownFlagSubBlocks.tick` (run by each sub-block's own BE tick listener) removes the block after
+`FlagSubBlockRetentionTicks` (20) ticks without a `parentTick` from a flag that is not INACTIVE —
+the "flag was destroyed" path. Symptom (day1 after the overnight absence, 3 of 4 runs on
+2026-10-18): the job board vanished the moment the town reloaded, the flag then logged "Job board
+registration ... no longer matches a board; dropping stale entry", and `TownFlagSubBlocks`
+ERRORed "Giving up on detecting sub block ... wrong entity type: null".
+
+**Root cause (found via the INFO removal line):** a reloaded flag is a NEW block entity with a NEW
+`TownFlagSubBlocks`. A sub-block whose chunk stayed loaded through the absence still had its tick
+listener on the OLD instance, whose counters the new flag never resets — so ~20 ticks after the
+flag came back, the old instance judged the (live, ticking) flag dead and removed the board.
+Fix: `TownFlagBlockEntity.onChunkUnloaded` retires its instance (`retire()`; a retired instance's
+`tick` is a no-op). A destroyed flag only gets `setRemoved`, so orphan removal still runs for it.
+The reloaded flag re-registers its boards on its own instance (`TownWorkHandle.registerJobBoard`).
+
+Hardening added on the way (each closed a window the first diagnosis suspected, none was the
+cause on its own): `tick` treats a flag whose chunk is not block-ticking
+(`Level.shouldTickBlocksAt`) like INACTIVE and no longer force-loads the flag's chunk via
+`getBlockState`; `AbstractTownFlagTicker` feeds sub-blocks while initializers run;
+`registerJobBoard` / `initialize` retry while the board's chunk is unloaded. The removal logs at
+INFO so a future self-destruct is visible. Not unit-pinned (the retention path reads `Config`,
+which throws in unit tests); verified by repeated day1 runs with zero removals.
