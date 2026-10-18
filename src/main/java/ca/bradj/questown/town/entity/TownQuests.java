@@ -914,7 +914,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         r = tryPhase3_newJobRoom(view);               if (r != null) return r;
         r = tryPhase4_crafter(view);                  if (r != null) return r;
         r = tryPhase5_supplyChain(view);              if (r != null) return r;
-        r = tryPhase6_storageUpgrade(view);           if (r != null) return r;
         r = tryPhase7_exoticWood(view);               if (r != null) return r;
         return Tutorial.DONE;
     }
@@ -935,7 +934,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     private @Nullable Tutorial tryPhase2_5_jobChangeAndFood(TutorialTownView view) {
-        if (view.villagerCount() < 3) {
+        // Two villagers: the hunter and the one who becomes the cook. Villager 2 is the
+        // hunter-gatherer batch's reward, villager 3 this batch's (2026-10-18).
+        if (view.villagerCount() < 2) {
             return Tutorial.SKIPPED;
         }
         if (questBatches.getAll().stream().filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE).count() < 2) {
@@ -943,6 +944,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 return Tutorial.SKIPPED;
             }
             addQuestsForJobChangeAndFood(view);
+            // The batch carries the first room upgrade (Small Storeroom -> Storeroom): open
+            // the upgrades lesson (entries/lesson_upgrades) with it.
+            view.fireTutorialTrigger(TutorialTrigger.Triggers.FirstRoomUpgrade);
             notifyNewQuests(view);
             return Tutorial.APPLIED;
         }
@@ -1136,22 +1140,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return null;
     }
 
-    private @Nullable Tutorial tryPhase6_storageUpgrade(TutorialTownView view) {
-        if (!phase6Started()) {
-            view.fireTutorialTrigger(TutorialTrigger.Triggers.SecondJobType);
-            addPhase6StorageUpgradeQuest(view);
-            notifyNewQuests(view);
-            return Tutorial.APPLIED;
-        }
-        if (!phase6Complete()) {
-            return Tutorial.SKIPPED;
-        }
-        return null;
-    }
 
     private @Nullable Tutorial tryPhase7_exoticWood(TutorialTownView view) {
         if (!phase7Started()) {
-            view.fireTutorialTrigger(TutorialTrigger.Triggers.FirstRoomUpgrade);
+            // The supply-chain journal entry (entries/014-supply-chains) opens once the supply
+            // chain (phase 5) is done; it used to fire from the storage-upgrade phase 6, which
+            // was folded into the cook batch (dev, 2026-10-18).
+            view.fireTutorialTrigger(TutorialTrigger.Triggers.SecondJobType);
             addPhase7ExoticWoodQuest(view);
             notifyNewQuests(view);
             return Tutorial.APPLIED;
@@ -1186,14 +1181,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     private boolean phase5Complete() {
         return questBatches.includes(q -> q.getType() == Quest.QuestType.CONCURRENT_JOBS && q.isComplete());
-    }
-
-    private boolean phase6Started() {
-        return questBatches.includes(q -> STORE_ROOM_MEDIUM.equals(q.getWantedId()) && q.getType() == Quest.QuestType.ROOM);
-    }
-
-    private boolean phase6Complete() {
-        return questBatches.includes(q -> STORE_ROOM_MEDIUM.equals(q.getWantedId()) && q.getType() == Quest.QuestType.ROOM && q.isComplete());
     }
 
     private boolean phase7Started() {
@@ -1278,20 +1265,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         markOnboarding(qq);
         questBatches.add(qq);
         QT.QUESTS_LOGGER.info("Tutorial phase 5 quests added (supply chain)");
-    }
-
-    private void addPhase6StorageUpgradeQuest(TutorialTownView view) {
-        UUID batchUUID = UUID.randomUUID();
-        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
-
-        MCQuest upgradeQuest = MCQuest.upgrade(batchUUID, null, SpecialQuests.STORE_ROOM_SMALL, STORE_ROOM_MEDIUM);
-        upgradeQuest.setFlavorText("Storage fills fast. Upgrade before production stops.");
-        q.addNewQuest(upgradeQuest);
-
-        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_6));
-        markOnboarding(qq);
-        questBatches.add(qq);
-        QT.QUESTS_LOGGER.info("Tutorial phase 6 quest added (storage upgrade)");
     }
 
     private void addPhase7ExoticWoodQuest(TutorialTownView view) {
@@ -1404,8 +1377,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         hunterQuest.setFlavorText("Right-click a villager and use Blocks of Progress");
         q.addNewQuest(hunterQuest);
 
+        // No flavor text: the card shows the standard room-recipe tooltip ("Build a room
+        // containing the blocks shown here"), dev preference 2026-10-18.
         MCQuest bedroomQuest = MCQuest.standalone(batchUUID, null, SpecialQuests.BEDROOM);
-        bedroomQuest.setFlavorText("Place a bed in a room and register the door. Villagers need rest.");
         q.addNewQuest(bedroomQuest);
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_HUNTER_GATHERER));
@@ -1446,6 +1420,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCQuest kitchenQuest = MCQuest.standalone(batchUUID, null, KITCHEN_SMALL);
         kitchenQuest.setFlavorText("The cook needs a kitchen. Place a furnace in a room and register the door.");
         q.addNewQuest(kitchenQuest);
+
+        // Storage starts to fill around the kitchen beat (playtests 2026-10-12, 2026-10-18), so
+        // the Small Storeroom (1 chest) -> Storeroom (2 chests) upgrade rides this batch. It
+        // replaces the old storage-upgrade phase 6 (dev, 2026-10-18).
+        MCQuest storageUpgradeQuest = MCQuest.upgrade(batchUUID, null, SpecialQuests.STORE_ROOM_SMALL, STORE_ROOM_MEDIUM);
+        storageUpgradeQuest.setFlavorText("Storage fills fast. Upgrade before production stops.");
+        q.addNewQuest(storageUpgradeQuest);
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_JOB_CHANGE_FOOD));
         // Onboarding-flow quest: like the other tutorial-phase batches, it is

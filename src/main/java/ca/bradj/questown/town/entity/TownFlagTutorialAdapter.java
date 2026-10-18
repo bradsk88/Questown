@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Items;
 
 import java.util.Map;
+import java.util.UUID;
 
 import static ca.bradj.questown.town.entity.TownQuests.defaultQuestCompletionRewards;
 
@@ -90,23 +91,28 @@ class TownFlagTutorialAdapter implements TutorialTownView {
     @Override
     public MCReward makeReward(String phaseName) {
         return switch (phaseName) {
-            case TutorialTownView.PHASE_KICKOFF -> new MCRewardList(
-                    flag,
-                    new MCDelayedReward(flag, new SpawnVisitorReward(flag, VillagerUUID.random())),
-                    new MCInstantReward(flag, new AddBatchOfQuestsForVisitorReward(flag, null))
-            );
-            case TutorialTownView.PHASE_HUNTER_GATHERER -> {
-                VillagerUUID nextVisitorUUID = VillagerUUID.random();
-                yield new MCRewardList(
-                        flag,
-                        new MCDelayedReward(flag, new SpawnVisitorReward(flag, VillagerUUID.random())),
-                        new AddBatchOfQuestsForVisitorReward(flag, VillagerUUID.get(nextVisitorUUID))
-                );
-            }
-            case TutorialTownView.PHASE_NEW_JOB_ROOM, TutorialTownView.PHASE_7, TutorialTownView.PHASE_JOB_CHANGE_FOOD, TutorialTownView.PHASE_MINER ->
+            // The basics batch brings no villager: villager 2 is the hunter-gatherer batch's
+            // reward (dev ruling 2026-10-18; both used to queue one and they landed the same
+            // morning once the second waited on raw food).
+            case TutorialTownView.PHASE_KICKOFF -> new MCInstantReward(flag, new AddBatchOfQuestsForVisitorReward(flag, null));
+            // Villager 2 (hunter-gatherer) and villager 3 (cook) are fixed onboarding arrivals;
+            // the cook's used to be defaultQuestCompletionRewards, a coin flip once villager 2
+            // had quests, which could leave the miner beat (3 villagers) waiting forever.
+            case TutorialTownView.PHASE_HUNTER_GATHERER, TutorialTownView.PHASE_JOB_CHANGE_FOOD -> arrivalWithQuestBatch();
+            case TutorialTownView.PHASE_NEW_JOB_ROOM, TutorialTownView.PHASE_7, TutorialTownView.PHASE_MINER ->
                     new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
             default -> new AddBatchOfQuestsForVisitorReward(flag, null);
         };
+    }
+
+    /** A morning arrival plus its quest batch, under one id so the batch belongs to the villager who arrives. */
+    private MCReward arrivalWithQuestBatch() {
+        VillagerUUID nextVisitorUUID = VillagerUUID.random();
+        return new MCRewardList(
+                flag,
+                new MCDelayedReward(flag, new SpawnVisitorReward(flag, nextVisitorUUID)),
+                new AddBatchOfQuestsForVisitorReward(flag, UUID.fromString(VillagerUUID.getStringUUID(nextVisitorUUID)))
+        );
     }
 
     static ResourceLocation chooseExoticWood(String biomePath) {

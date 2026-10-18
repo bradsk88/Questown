@@ -287,6 +287,15 @@ class TutorialPhaseGateTest {
                 q.getType() == Quest.QuestType.ROOM
                         && q.getWantedId().equals(kitchenSmall)
         ), "phase 2.5 batch must carry the kitchen_small room quest");
+        // ...and the first storage upgrade: storage fills around the kitchen beat.
+        ResourceLocation storeRoomMedium = new ResourceLocation("questown", "store_room_medium");
+        assertTrue(all.stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.ROOM
+                        && storeRoomMedium.equals(q.getWantedId())
+                        && q.fromRecipeID().map(new ResourceLocation("questown", "store_room")::equals).orElse(false)
+        ), "phase 2.5 batch must carry the Small Storeroom -> Storeroom upgrade quest");
+        assertTrue(view.getTriggersFired().contains(TutorialTrigger.Triggers.FirstRoomUpgrade),
+                "the upgrades lesson opens with the batch that carries the first upgrade");
     }
 
     @Test
@@ -310,11 +319,30 @@ class TutorialPhaseGateTest {
     }
 
     @Test
-    void whenHunterDoneButTwoVillagers_noAdvance() {
+    void whenHunterDoneAndTwoVillagers_jobChangeAndFoodAdded() {
+        // 2026-10-18: villager 2 is the hunter-gatherer batch's reward and villager 3 the cook
+        // batch's, so the cook batch opens with two villagers (the hunter + the future cook).
+        // Gated on three, it never opened once the basics batch stopped bringing a villager.
         TownQuests quests = questsAtPhase2_5();
 
         TestTutorialTownView view = TestTutorialTownView.builder()
                 .villagerCount(2)
+                .build();
+
+        TownQuests.Tutorial result = quests.addTutorialBatches(view);
+        assertEquals(TownQuests.Tutorial.APPLIED, result);
+        assertTrue(quests.questBatches.getAll().stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.JOB_CHANGE
+                        && q.getWantedId().equals(JobID.toRL(TownQuests.ONBOARDING_COOK_JOB))
+        ));
+    }
+
+    @Test
+    void whenHunterDoneButOneVillager_noAdvance() {
+        TownQuests quests = questsAtPhase2_5();
+
+        TestTutorialTownView view = TestTutorialTownView.builder()
+                .villagerCount(1)
                 .build();
 
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
@@ -477,9 +505,9 @@ class TutorialPhaseGateTest {
         assertEquals(TownQuests.Tutorial.SKIPPED, result);
     }
 
-    // ===== Phase 6: Supply Chain → Storage Upgrade =====
+    // ===== Phase 7: Supply Chain → Exotic Wood (phase 6 folded into the cook batch) =====
 
-    private TownQuests questsAtPhase6() {
+    private TownQuests questsAtPhase7() {
         TownQuests quests = questsWithCrafterDone();
 
         TestTutorialTownView view = TestTutorialTownView.builder()
@@ -497,43 +525,7 @@ class TutorialPhaseGateTest {
     }
 
     @Test
-    void whenConcurrentJobsDone_storageUpgradeAdded_secondJobTypeTriggerFired() {
-        TownQuests quests = questsAtPhase6();
-
-        TestTutorialTownView view = TestTutorialTownView.builder()
-                .villagerCount(3)
-                .build();
-
-        TownQuests.Tutorial result = quests.addTutorialBatches(view);
-
-        assertEquals(TownQuests.Tutorial.APPLIED, result);
-        List<MCQuest> all = quests.questBatches.getAll();
-        ResourceLocation storeRoomMedium = new ResourceLocation("questown", "store_room_medium");
-        assertTrue(all.stream().anyMatch(q ->
-                storeRoomMedium.equals(q.getWantedId()) && q.getType() == Quest.QuestType.ROOM
-        ));
-        assertTrue(view.getTriggersFired().contains(TutorialTrigger.Triggers.SecondJobType));
-    }
-
-    // ===== Phase 7: Storage → Exotic Wood =====
-
-    private TownQuests questsAtPhase7() {
-        TownQuests quests = questsAtPhase6();
-
-        TestTutorialTownView view = TestTutorialTownView.builder()
-                .villagerCount(3)
-                .build();
-        quests.addTutorialBatches(view);
-
-        // Complete storage upgrade
-        ResourceLocation storeRoomMedium = new ResourceLocation("questown", "store_room_medium");
-        quests.questBatches.markRecipeAsComplete(null, storeRoomMedium);
-
-        return quests;
-    }
-
-    @Test
-    void whenStorageUpgradeDone_exoticWoodAdded_firstRoomUpgradeTriggerFired() {
+    void whenSupplyChainDone_exoticWoodAdded_secondJobTypeTriggerFired() {
         TownQuests quests = questsAtPhase7();
 
         ResourceLocation exoticWood = new ResourceLocation("minecraft", "jungle_log");
@@ -552,7 +544,12 @@ class TutorialPhaseGateTest {
                 && q.getFlavorText() != null
                 && q.getFlavorText().contains("flagpole")
         ));
-        assertTrue(view.getTriggersFired().contains(TutorialTrigger.Triggers.FirstRoomUpgrade));
+        assertTrue(view.getTriggersFired().contains(TutorialTrigger.Triggers.SecondJobType));
+        // The storage upgrade lives only in the cook batch (dev, 2026-10-18): no second copy.
+        ResourceLocation storeRoomMedium = new ResourceLocation("questown", "store_room_medium");
+        assertEquals(1, all.stream().filter(q ->
+                storeRoomMedium.equals(q.getWantedId()) && q.getType() == Quest.QuestType.ROOM
+        ).count(), "exactly one Small Storeroom -> Storeroom upgrade quest");
     }
 
     // ===== Completion =====
@@ -611,7 +608,6 @@ class TutorialPhaseGateTest {
                 TutorialTownView.PHASE_4A,
                 TutorialTownView.PHASE_4B,
                 TutorialTownView.PHASE_5,
-                TutorialTownView.PHASE_6,
                 TutorialTownView.PHASE_7
         );
 

@@ -16,7 +16,6 @@ public interface TutorialTownView {
     String PHASE_4A = "phase4a";
     String PHASE_4B = "phase4b";
     String PHASE_5 = "phase5";
-    String PHASE_6 = "phase6";
     String PHASE_7 = "phase7";
 
     int villagerCount();

@@ -89,6 +89,12 @@ public interface Delegator<ENTITY> {
             JobID newJob
     );
 
+    /**
+     * The jobs a villager starts with when it takes this root (a cook: extract + fuel + the
+     * starter recipe). A root change must unlock all of them, not only the job it switches to.
+     */
+    ImmutableList<JobID> getDefaultWork(JobID root);
+
     ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs();
 
     ImmutableSet<JobID> getChildJobsKnownToExist(JobID jobId);

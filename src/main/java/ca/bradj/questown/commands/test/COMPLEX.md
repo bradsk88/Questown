@@ -771,3 +771,11 @@ out-producing realtime 2–4× passed every run. This variant reuses `hunterBlue
 generous hunter tier's realtime day (`sword_full_day`, 4 one-item rolls per 6000 ticks). The
 `*` delta nets out eaten food, so it bounds the loot from above. Red 21 / green 3 around the
 `WarpCycleBudget` fix (`town/COMPLEX.md` "Warp cycle budget").
+
+## day1: `one-arrival-per-day` and `cook-starter-job-unlocked` (2026-10-18)
+
+`Day1BeatChecks.checkOneArrivalPerDay` counts arrivals per in-game day (`dayTime / 24000`). The
+existing roster-step checks saw 1->2->3 as two single arrivals, since asap rewards apply one per
+tick. `checkCook` asserts every job in `ServerJobsRegistry.getDefaultWork(cook)` is unlocked
+for the first cook (the BOP root change used to unlock only `cook/extract`). See
+`town/entity/COMPLEX.md` for both fixes.

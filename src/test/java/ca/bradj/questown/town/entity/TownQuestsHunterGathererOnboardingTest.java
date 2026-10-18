@@ -7,6 +7,7 @@ import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.Quest;
+import ca.bradj.questown.town.special.SpecialQuests;
 import net.minecraft.SharedConstants;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.Bootstrap;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -49,6 +51,22 @@ class TownQuestsHunterGathererOnboardingTest {
         assertEquals(new JobID("hunter", "sword"),
                 quests.onboardingJobChangeGuarantee(VillagerUUID.random()).orElseThrow(),
                 "an open first-hunter quest must fill the BOP-spend guarantee slot");
+    }
+
+    @Test
+    void bedroomQuest_usesTheStandardRoomTooltip() {
+        // 2026-10-18 playtest: "The onboarding bed quest seems to have custom text. But the
+        // standard 'place these blocks in a room' tooltip would be better." QuestsScreen shows
+        // flavor text when present and the room-recipe tooltip otherwise.
+        TownQuests quests = new TownQuests();
+        quests.addHunterGatherer(view());
+
+        MCQuestBatch batch = quests.questBatches.getAllBatches().iterator().next();
+        MCQuest bedroomQuest = batch.getAll().stream()
+                .filter(q -> SpecialQuests.BEDROOM.equals(q.getWantedId()))
+                .findFirst()
+                .orElseThrow();
+        assertNull(bedroomQuest.getFlavorText(), "the bedroom quest must not override the room tooltip");
     }
 
     private static TutorialTownView view() {

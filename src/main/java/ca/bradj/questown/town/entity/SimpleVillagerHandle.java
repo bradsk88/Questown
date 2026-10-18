@@ -811,6 +811,12 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     ) {
         QT.FLAG_LOGGER.info("Changing villager from {} to {}", delegator.getJobId(v).rootId(), newJob);
         delegator.unlockJob(v, newJob);
+        // The new root's default work (a cook: extract + fuel + the starter recipe), the same
+        // set ChangeJobReward and registration unlock. Unlocking only newJob left a BOP-made
+        // cook without fuel or cook_mutton (2026-10-18 playtest).
+        for (JobID defaultWork : delegator.getDefaultWork(newJob)) {
+            delegator.unlockJob(v, defaultWork);
+        }
         changeJobForVillager(delegator.getUUID(v), newJob, currentTick, true);
     }
 

@@ -9,7 +9,10 @@ import ca.bradj.questown.town.rooms.TownPosition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.SharedConstants;
+import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +21,16 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 class SimpleVillagerHandleTest {
+
+    // The morning root change reaches changeJobForVillager -> DinerRawFoodWork, whose static
+    // init builds an Ingredient (registry-bound). Without this the class only loaded when an
+    // earlier test in the forked JVM had bootstrapped vanilla; run first, it poisoned the
+    // suite (2026-10-18: 259 downstream NoClassDefFoundErrors).
+    @BeforeAll
+    static void bootstrap() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+    }
 
     class TestSleepModule implements VillagerSleepModule<UUID> {
 
@@ -65,6 +78,8 @@ class SimpleVillagerHandleTest {
         List<String> broadcast = new ArrayList<>();
         Map<UUID, Boolean> dining = new HashMap<>();
         JobID overnightOverride = null;
+        List<JobID> unlocked = new ArrayList<>();
+        ImmutableList<JobID> defaultWork = ImmutableList.of();
         private VillagerSleepModule<UUID> sleepModule = new TestSleepModule();
         /** Mood effects applied via applyMoodEffect: uuid -> (effect -> untilTick). */
         final Map<UUID, Map<net.minecraft.resources.ResourceLocation, Long>> moodEffects = new HashMap<>();
@@ -194,7 +209,12 @@ class SimpleVillagerHandleTest {
                 UUID v,
                 JobID newJob
         ) {
+            unlocked.add(newJob);
+        }
 
+        @Override
+        public ImmutableList<JobID> getDefaultWork(JobID root) {
+            return defaultWork;
         }
 
         @Override
@@ -441,6 +461,27 @@ class SimpleVillagerHandleTest {
         Assertions.assertTrue(
                 handle.getGuaranteedRoots().isEmpty(),
                 "the guarantee is consumed once applied"
+        );
+    }
+
+    @Test
+    public void morningRootChange_unlocksTheNewRootsDefaultWork() {
+        // 2026-10-18 playtest: a BOP-made cook got cook/extract but not fuel or cook_mutton.
+        TestDelegator t = new TestDelegator();
+        JobID extract = new JobID("cook", "extract");
+        JobID fuel = new JobID("cook", "fuel");
+        JobID mutton = new JobID("cook", "mutton");
+        t.defaultWork = ImmutableList.of(extract, fuel, mutton);
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        handle.scheduleJobRootChange(v, 0, false, Optional.of(extract));
+        handle.handleMorning(0);
+
+        Assertions.assertTrue(
+                t.unlocked.containsAll(List.of(extract, fuel, mutton)),
+                "every default job of the new root is unlocked, got " + t.unlocked
         );
     }
 

@@ -77,10 +77,11 @@ The day-one quest batches are staged: at flag placement the player gets
 the campfire batch (toast reward) and the town-gate batch; completing
 the gate (placing the mat) queues the first arrival AND posts the
 basics batch — the job board (sign in a room) and the store room (chest
-in a room) quests. Completing the basics batch queues the second
-visitor. The wooden-sword item quest was moved out of this batch into
-the hunter-gatherer batch (with raw food, the hunter job change, and
-the bedroom).
+in a room) quests. Completing the basics batch posts the hunter-gatherer
+batch (raw food, 4 stone swords, the hunter job change, and the bedroom);
+completing THAT batch queues the second visitor (2026-10-18: the basics
+batch no longer brings a villager). The cook batch that follows also asks
+for the first store-room upgrade.
 
 These quests are presented in stages, and the journal is designed to
 walk the player through them in a specific order. Each journal entry

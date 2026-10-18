@@ -1,6 +1,8 @@
 package ca.bradj.questown.commands.test;
 
 import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -32,6 +34,12 @@ final class Day1BeatChecks {
     private boolean toastEvaluated;
     private boolean toastBeforeDusk;
     private long lastRoster;
+    // In-game day of the last arrival and how many arrived that day: onboarding brings at most
+    // one villager per morning (2026-10-18 playtest: the basics and hunter-gatherer batches
+    // both queued one, and they landed together; a roster step check sees 1->2->3 as two
+    // separate single arrivals).
+    private long lastArrivalDay = -1;
+    private int arrivalsThatDay;
     private boolean workRequestQuestSeen;
     private boolean rawFoodSeenComplete;
     private boolean cookSeen;
@@ -60,7 +68,7 @@ final class Day1BeatChecks {
 
     void tick(TownFlagBlockEntity flag, long dayTime) {
         checkToast(flag, dayTime % 24000L);
-        checkArrivals(flag);
+        checkArrivals(flag, dayTime / 24000L);
         checkWorkRequestQuest(flag);
         checkRawFood(flag);
         checkCook(flag);
@@ -83,7 +91,7 @@ final class Day1BeatChecks {
         check.accept("toast-at-first-dusk", shown);
     }
 
-    private void checkArrivals(TownFlagBlockEntity flag) {
+    private void checkArrivals(TownFlagBlockEntity flag, long day) {
         if (arrivalsPaused) {
             return;
         }
@@ -100,7 +108,17 @@ final class Day1BeatChecks {
         if (lastRoster <= 1 && roster >= 2) {
             check.accept("villager-2-only-after-raw-food", rawFoodDone);
         }
+        checkOneArrivalPerDay(day, roster - lastRoster);
         lastRoster = roster;
+    }
+
+    private void checkOneArrivalPerDay(long day, long arrived) {
+        if (day != lastArrivalDay) {
+            lastArrivalDay = day;
+            arrivalsThatDay = 0;
+        }
+        arrivalsThatDay += (int) arrived;
+        check.accept("one-arrival-per-day[day " + day + "]", arrivalsThatDay <= 1);
     }
 
     private void checkWorkRequestQuest(TownFlagBlockEntity flag) {
@@ -138,6 +156,13 @@ final class Day1BeatChecks {
             msg.accept("cook appeared on " + v.getJobId());
             check.accept("cook-starts-on-a-starting-job[" + v.getJobId().jobId() + "]",
                     !NOT_A_STARTING_COOK_JOB.contains(v.getJobId().jobId()));
+            // A new root's default work (cook: extract + fuel + the starter recipe) must be
+            // unlocked however the root change happened; the BOP path used to unlock only the
+            // job it switched to (2026-10-18 playtest: no fuel / cook_mutton).
+            for (JobID starter : ServerJobsRegistry.getDefaultWork(v.getJobId())) {
+                check.accept("cook-starter-job-unlocked[" + starter.jobId() + "]",
+                        flag.getVillagerHandle().isUnlocked(v.getUUID(), starter));
+            }
             return;
         }
     }

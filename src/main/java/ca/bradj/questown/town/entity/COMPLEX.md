@@ -1213,3 +1213,51 @@ villager's store. Same-root changes keep it (dining/downtime/seeking_work return
 The store map is not persisted, so there is nothing to clean in NBT. Tests:
 `SimpleVillagerHandleTest.changeJob_*WorkStatus` (they load `DinerRawFoodWork`, registry-bound, so
 like the class's other `changeJobForVillager` tests they pass only in the full suite).
+
+## Onboarding arrivals: one per batch that should bring one (2026-10-18 playtest)
+
+Two villagers arrived the morning after the hunter-gatherer batch completed. Two onboarding
+batches each queued a morning `SpawnVisitorReward`: the basics batch (`PHASE_KICKOFF`: job board +
+store room) and the hunter-gatherer batch (`PHASE_HUNTER_GATHERER`: raw food, 4 stone swords,
+hunter job change, bedroom). Once the second-villager hold (`isArrivalGateOpen`) made the basics
+arrival wait for raw food — a quest inside the hunter-gatherer batch — both landed together.
+Dev ruling: the basics batch brings no villager; villager 2 is the hunter-gatherer reward.
+`TownFlagTutorialAdapter.makeReward(PHASE_KICKOFF)` is now only the batch-advance reward. The
+hunter-gatherer reward also used two different random ids for the arrival and its quest batch
+(the batch belonged to a villager who never arrived); it now uses one.
+
+Dev observation, not yet a rule: "batch contains a bedroom" ≈ "batch rewards a villager" (the
+gate batch and `defaultQuestCompletionRewards` are the current exceptions).
+
+Follow-on, same session: with villager 2 now arriving only after the hunter-gatherer batch, the
+cook batch's `villagerCount() < 3` gate never opened (day1 timed out at roster 2). It opens at
+two (the hunter + the future cook), and its reward is a fixed arrival + quest batch
+(`arrivalWithQuestBatch`, shared with the hunter-gatherer reward) instead of
+`defaultQuestCompletionRewards`, which is a coin flip between a villager and an upgrade quest
+once a villager has quests — tails would have left the miner beat (3 villagers) waiting.
+Onboarding arrivals are now: gate -> villager 1, hunter-gatherer -> 2, cook -> 3.
+
+Pinned end to end by day1's `one-arrival-per-day[day N]` (red on the pre-fix code: villagers 2
+and 3 both on day 3) and `TutorialPhaseGateTest.whenHunterDoneAndTwoVillagers_jobChangeAndFoodAdded`.
+
+The hunter-gatherer bedroom quest also lost its flavor text, so its card shows the standard
+room-recipe tooltip (dev preference; `TownQuestsHunterGathererOnboardingTest`).
+
+## BOP root change unlocks the new root's default work (2026-10-18 playtest)
+
+A cook made by a blessed BOP had no fuel or `cook_mutton` jobs.
+`SimpleVillagerHandle.unlockAndChange` unlocked only the job it switched to (`cook/extract`);
+`ChangeJobReward` and `TownVillagerHandle.register` also unlock
+`ServerJobsRegistry.getDefaultWork(root)` (extract + fuel + the template's `starter_recipes`).
+The BOP path now does the same. Hunters never showed it: `hunter/sword` is that root's whole
+default set. Pinned by day1's `cook-starter-job-unlocked[<job>]`.
+
+## Cook batch carries the storage upgrade; phase 6 removed (2026-10-18)
+
+`addQuestsForJobChangeAndFood` adds `MCQuest.upgrade(store_room -> store_room_medium)` ("Small
+Storeroom", 1 chest -> "Storeroom", 2 chests): storage fills around the kitchen beat (playtests
+2026-10-12, 2026-10-18). Dev ruling: this replaces the old storage-upgrade phase 6, which is gone
+(`tryPhase6_storageUpgrade`, `PHASE_6`). Its two journal triggers moved:
+`FirstRoomUpgrade` (entries/lesson_upgrades) fires when the cook batch posts, and `SecondJobType`
+(entries/014-supply-chains) fires when phase 7 starts, i.e. right after the supply chain, as
+before. Pinned by `TutorialPhaseGateTest`.

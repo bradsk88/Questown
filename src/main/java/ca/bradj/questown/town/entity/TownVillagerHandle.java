@@ -226,6 +226,11 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public ImmutableList<JobID> getDefaultWork(JobID root) {
+                return ServerJobsRegistry.getDefaultWork(root);
+            }
+
+            @Override
             public ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs() {
                 return learning.getUnlockedJobs();
             }
