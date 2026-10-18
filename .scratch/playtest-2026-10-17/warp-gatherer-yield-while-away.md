@@ -24,3 +24,10 @@ chest while I was away overnight. They shoudln't have been producing overnight"
 several trips or several tiers. Check `PostDowntimeWarper` / `advanceTime` trip count for a
 `time`-gated leaver job vs realtime (a warp-parity scenario for `gatherer/gather_full_day`), and
 whether a fresh day-2 gatherer should be on the full-day tier at all (design: base level).
+
+## Update (2026-10-18)
+
+Same mechanism as `.scratch/playtest-2026-10-18/catch-up-warp-hunter-overproduces.md` (every
+warp sub-step ran a whole cycle). Fixed there by the per-villager `WarpCycleBudget`; the
+gatherer path is the same `PostDowntimeWarper`, but no gatherer yield-cap autotest exists yet —
+re-check in the next playtest.

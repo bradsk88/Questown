@@ -695,3 +695,31 @@ a dawn crossed AND (resumed past the morning window OR stopped inside one — th
 The same summary path's day count is now `town/AwayDuration.describe` ("half a day" below one
 day; the summary only fires from 12000 ticks, so integer division printed "0 days").
 Test: `AwayDurationTest`.
+
+## Warp cycle budget (`WarpCycleBudget`, 2026-10-18 playtest)
+
+A catch-up warp out-produced realtime by 2–4×: a fresh hunter banked 19 items in one missed day
+(realtime: at most 6 for `hunter/sword`, 8 for `sword_full_day`). Two layers multiplied:
+
+- `ImportantTicks.forVillager` gives each `totalDuration` window `getWarpTicksPerCycle()` (≥ 5)
+  sub-steps, meant as one status transition each.
+- `PostDowntimeWarper.runToCompletion` runs each sub-step up to 64 inner warps until a cycle
+  completes, and every inner warp reduces the job's timer by the same step delta
+  (`withTimerReducedBy(workPos, ticksPassed)`), so one 400-tick step burns a 2000-tick hunt.
+  Every villager goes through `PostDowntimeWarper` (`MCAdvanceTime.createWarperFactory`).
+
+Fix: each `PostDowntimeWarper` (one per villager) carries a `WarpCycleBudget`. Every warp step
+credits its delta; a job cycle may start only once the budget covers that job's
+`getTotalDuration` (the sum of its timed states, looked up with a null owner like
+`ServerJobsRegistry.canFit`), and a completed cycle spends it. A job resolved while
+unaffordable is held (`unaffordedJob`) so the tier rotation does not skip it. Untimed jobs
+(duration 0) are never gated.
+
+Known shortfall: the held job is not swapped for a cheaper tier, so a full-day hunter that
+finishes one 6000-tick hunt with 5500 productive ticks left banks nothing more (one warp day:
+~3–4 items vs realtime's ~6). Bounded under-production, chosen over the unbounded
+over-production.
+
+Pinned by `WarpCycleBudgetTest` (pure) and the autotest `hunter/sword [one_day_yield]`
+(`*` delta 1..8 over a 24000-tick warp): red on the pre-fix code (got 21), green after (3).
+Full suite 71/75, all known reds.

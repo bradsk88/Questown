@@ -762,3 +762,12 @@ Two preconditions are load-bearing — each one alone let the pre-fix code pass:
 
 Red-verified: with the `resetWorkStatus` call removed, 0/1 (the take/drop loop); with it, 1/1
 (3 sword takes, quest complete).
+
+## `hunter/sword [one_day_yield]` — a warp yield ceiling (2026-10-18)
+
+The job warp scenarios only asserted a floor (`wildcardExpectation`: `*` ≥ 1), so the warp
+out-producing realtime 2–4× passed every run. This variant reuses `hunterBlueprint()` with
+`*` delta 1..8 over the default 24000-tick warp (always 11500 productive ticks): 8 is the most
+generous hunter tier's realtime day (`sword_full_day`, 4 one-item rolls per 6000 ticks). The
+`*` delta nets out eaten food, so it bounds the loot from above. Red 21 / green 3 around the
+`WarpCycleBudget` fix (`town/COMPLEX.md` "Warp cycle budget").

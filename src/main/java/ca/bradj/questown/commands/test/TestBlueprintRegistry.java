@@ -177,6 +177,11 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("gatherer", "axe"), gathererBlueprint()));
         jobs.add(entry(new JobID("explorer", "explore"), explorerBlueprint()));
         jobs.add(entry(new JobID("hunter", "sword"), hunterBlueprint()));
+        // One warp day (24000 ticks, at most 12000 productive) must not out-produce realtime: the
+        // most generous hunter tier (sword_full_day, 4 attempts per 6000 ticks, 1 item each) caps
+        // a day at 8. Before the warp cycle budget a fresh hunter banked ~24 (2026-10-18 playtest).
+        jobs.add(edgeCaseEntry("hunter", "sword", "one_day_yield", hunterBlueprint().withExpectation(
+                new TestExpectation(List.of(new ExpectedProduct("*", 1, 8)), 1, 100))));
         // loot_on_extract: the 2.5 raw-food gate as a deterministic measurement. Posts the
         // raw-meat LOOT quest, drives one hunter cycle on the REALTIME path (the quest check
         // lives in RealtimeWorldInteraction.postExtractHook -> Quests.processLootQuests),

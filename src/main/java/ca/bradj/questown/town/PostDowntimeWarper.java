@@ -56,6 +56,10 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
     private int cycleIndex = 0;
     private JobID cachedJob = null;
     private int stickyTicks = 0;
+    private final WarpCycleBudget cycleBudget = new WarpCycleBudget();
+    // A job resolved while the budget could not yet afford it; kept so the tier rotation does
+    // not skip it while the villager "waits out" the time.
+    private @Nullable JobID unaffordedJob = null;
     private final Map<JobID, @Nullable BlockPos> assignedWorkBlocks = new HashMap<>();
 
     public JobID resolveJob(long ticksPassed, boolean villagerHasItems) {
@@ -131,9 +135,11 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
             long ticksPassed,
             int villagerNum
     ) {
+        cycleBudget.credit(ticksPassed);
         boolean villagerHasItems = liveState.villagers.get(villagerIndex).journal.items().stream()
                 .anyMatch(item -> !item.isEmpty());
-        JobID resolvedJob = resolveJob(ticksPassed, villagerHasItems);
+        JobID resolvedJob = unaffordedJob != null ? unaffordedJob : resolveJob(ticksPassed, villagerHasItems);
+        unaffordedJob = null;
 
         if (resolvedJob == null) {
             return liveState;
@@ -154,7 +160,18 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
             return liveState;
         }
 
+        // Duration is a property of the job, not its owner (ServerJobsRegistry.canFit also
+        // resolves it with a null villager).
+        long cycleDuration = work.getTotalDuration(resolvedJob, null);
+        if (!cycleBudget.canStart(cycleDuration)) {
+            unaffordedJob = resolvedJob;
+            return liveState;
+        }
+
         MCTownState result = runToCompletion(resolvedJob, jobWarper, level, liveState, currentTick, ticksPassed, villagerNum);
+        if (jobWarper.isCycleComplete()) {
+            cycleBudget.spend(cycleDuration);
+        }
         if (result == liveState) {
             stickyTicks = MAX_STICKY_TICKS;
         }
