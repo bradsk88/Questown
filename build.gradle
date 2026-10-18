@@ -92,6 +92,11 @@ runs {
             if (System.getProperty('questown.autotest.only') != null) {
                 jvmArgument '-Dquestown.autotest.only=' + System.getProperty('questown.autotest.only')
             }
+            // The tick-rate override AutoTestRunner advertises in its "tick rate set" line; without
+            // this forward it silently stayed at the default (2026-10-19).
+            if (System.getProperty('questown.autotest.tickrate') != null) {
+                jvmArgument '-Dquestown.autotest.tickrate=' + System.getProperty('questown.autotest.tickrate')
+            }
             if (System.getProperty('questown.village.agentDrive') != null) {
                 jvmArgument '-Dquestown.village.agentDrive=' + System.getProperty('questown.village.agentDrive')
             }
