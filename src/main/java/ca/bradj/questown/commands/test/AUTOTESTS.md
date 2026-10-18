@@ -36,6 +36,15 @@ The scenario-tuning knobs (`questown.village.selfsuff.days`, `questown.village.s
 
 ## TPS
 
+**Default raised to 1000 t/s (2026-10-19).** Scenarios are tick-budgeted, so the useful target
+is "as fast as the box can": measured on `village/day1` (90 000 ticks) — 200 → ~452 s scenario
+time; 400 → 318 t/s effective, 283 s; 1000 → **371 t/s effective (the ceiling), 242 s**; all
+checks green at each rate. Full suite at 1000: 72/75, only the known reds (arborist flake,
+roof_gatherer, skip_chicken_command), 334 s wall. `Can't keep up` lines appear at every rate
+(4 at 200, 9 at 1000) and only cost wall time. The 2026-10-15 notes below (the "200 for zero
+stalls" recommendation) predate this measurement. `-Dquestown.autotest.tickrate` is forwarded
+to the forked server only since `c756aefe` — before it, the override was silently ignored.
+
 **Autotest runs set the rate themselves (2026-10-15).** `AutoTestRunner.onServerStarted`
 calls `Compat.setServerTickRate(server, 200f)` right after `BOOT_OK` (log line
 `[autotest] tick rate set to 200.0 t/s`): every autotest scenario - warp or

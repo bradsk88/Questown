@@ -166,8 +166,13 @@ public class AutoTestRunner {
         NeoForge.EVENT_BUS.register(listener);
     }
 
-    /** Autotest default tick rate: 200 t/s (~10x the vanilla 20 t/s). */
-    private static final float DEFAULT_TICK_RATE = 200f;
+    /**
+     * Autotest default tick rate: 1000 t/s, i.e. "as fast as the server can" — the box tops out
+     * near 370 t/s on village/day1. Scenarios are tick-budgeted, so a "Can't keep up" stall only
+     * costs wall time (2026-10-19: day1 452 s at 200 -> 242 s at 1000, full suite 72/75 with the
+     * known reds only). Override: -Dquestown.autotest.tickrate=<tps>.
+     */
+    private static final float DEFAULT_TICK_RATE = 1000f;
 
     private static float parseTickRate() {
         String val = System.getProperty(SYSPROP_TICKRATE);
