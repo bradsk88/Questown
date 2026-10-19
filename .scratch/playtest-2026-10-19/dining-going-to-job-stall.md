@@ -1,6 +1,6 @@
 ---
 title: 'dining_no_table sits in GOING_TO_JOB for the full 2000-tick timeout'
-status: ready-for-agent
+status: needs-info
 origin: 2026-10-19 playtest (dev-server-13), found investigating eating-takes-too-long.md
 ---
 
@@ -20,3 +20,12 @@ spot visible, and the diner sat in GOING_TO_JOB until the 2000-tick timeout. 44f
 filtering work-only rooms. The realtime `eating/eat_no_table` scenario passes (it did before too),
 so this is not reproduced on a fixture; confirm in the next playtest that no diner sits in
 GOING_TO_JOB for ~100 s.
+
+## village/growth observation (2026-10-19, after 44fa5537 + d144e193)
+
+`build/autotest-logs/growth-wrapup.log` (5/5 villagers): 16 dining stints. Longest ~1200 ticks
+(±400, the driver's observe grid) — a hunter `dining_no_table` at 18:39:25 that logged
+`[WHY] ... GOING_TO_JOB → GOING_TO_JOB` — the rest ≤ 800. No stint reached the 2000-tick timeout
+the playtest showed. Not proven fixed: the fixture has one spot layout and runs at ~370 t/s.
+Next: in the next playtest, watch for a diner in GOING_TO_JOB for ~100 s; if seen, capture the
+`[WHY]` dump for that villager.
