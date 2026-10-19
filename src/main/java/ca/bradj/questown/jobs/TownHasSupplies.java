@@ -22,6 +22,7 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
     private final Supplier<ImmutableList<ContainersClean.JobSite<C>>> rooms;
     private final Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks;
     private final Function<ITEM, HELD> convert;
+    private final Supplier<Boolean> townHasAnyJobBlock;
 
     public TownHasSupplies(
             Function<Integer, PredicateCollection<HELD, HELD>> ingredients,
@@ -30,7 +31,25 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
             Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks,
             Function<ITEM, HELD> convert
     ) {
+        this(ingredients, tools, rooms, roomsHaveWorkableBlocks, convert, () -> true);
+    }
+
+    /**
+     * @param townHasAnyJobBlock whether the town has at least one block this job could work at,
+     *                           whatever its state. When none qualifies (cook/fuel with every furnace
+     *                           already fuelled: the empty-fuel-slot precondition fails), there is no
+     *                           cycle to resume, so the full-requirement fallback must not apply.
+     */
+    public TownHasSupplies(
+            Function<Integer, PredicateCollection<HELD, HELD>> ingredients,
+            Function<Integer, PredicateCollection<ITEM, ITEM>> tools,
+            Supplier<ImmutableList<ContainersClean.JobSite<C>>> rooms,
+            Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks,
+            Function<ITEM, HELD> convert,
+            Supplier<Boolean> townHasAnyJobBlock
+    ) {
         super("town has supplies");
+        this.townHasAnyJobBlock = townHasAnyJobBlock;
         this.ingredients = ingredients;
         this.tools = tools;
         this.rooms = () -> rooms.get().stream().collect(ImmutableList.toImmutableList());
@@ -74,7 +93,10 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
             collectStateNeeds(state, neededIngredients, neededTools);
         }
 
-        if (neededIngredients.isEmpty() && neededTools.isEmpty() && !needs.isEmpty()) {
+        // ...only while the town has a block to resume at. With no job block at all, collecting
+        // supplies is pointless: the cook sat in COLLECTING_SUPPLIES on cook/fuel with every furnace
+        // fuelled, never reaching NO_JOBSITE, so it never moved on to extract (2026-10-19 playtest).
+        if (neededIngredients.isEmpty() && neededTools.isEmpty() && !needs.isEmpty() && townHasAnyJobBlock.get()) {
             // No state currently has a workable block (every job block sits at a timer or
             // terminal state). The requirement set must still be the FULL set, otherwise
             // the town can never acquire the tools needed to resume the cycle (2026-10-14:

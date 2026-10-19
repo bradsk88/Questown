@@ -147,7 +147,9 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
     @Override
     public LZCD.Dependency<Void> hasSuppliesV2() {
         return new TownHasSupplies<HELD_ITEM, TOWN_ITEM, CONTAINER>(
-                items, tools, this::getSupplyRooms, roomsV2, convert
+                items, tools, this::getSupplyRooms, roomsV2, convert,
+                () -> roomsFinder.get().stream()
+                                 .anyMatch(m -> m.getContainedBlocks().keySet().stream().anyMatch(isJobBlock))
         );
     }
 

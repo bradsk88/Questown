@@ -788,3 +788,12 @@ steps) sleeps as soon as vanilla allows a player to (`level.isNight()`): the clo
 next morning with vanilla's own arithmetic and the town gets `TownFlags.onSleepFinished`, the
 morning step `SleepFinishedTimeEvent` drives on a real sleep. Only the campfire cosmetics (temp
 bed, extinguish) are skipped. Applies to village/growth as well as day1.
+
+## `cook/fuel [fuelled_output_ready]` (2026-10-19)
+
+Realtime (1500 ticks, skipWarp) reproduction of the playtest cook blocker: the kitchen furnace is
+seeded with 8 coal in its fuel slot and 5 cooked beef in its output (setup hook); the cook starts
+on `cook/fuel` with the cook root's default work unlocked (post-spawn); PASS = at least 3 cooked
+beef in the chest. A diagnostic custom assertion logs the end job/status/held items, the furnace
+slots, each cook job's slot-precondition result and the furnace's work state in the cook's store.
+See `jobs/COMPLEX.md` "The cook could not extract".

@@ -143,48 +143,6 @@ public class DeclarativeJobs {
         );
     }
 
-    // TODO: Unit test. This calculation is fairly sensitive and critical.
-    public static ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks<BlockPos>> rooms(
-            @NotNull Integer maxState,
-            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomHandle,
-            WorkStatusHandle<BlockPos, MCHeldItem> work,
-            Predicate<BlockPos> isJobBlock
-    ) {
-        Stream<RoomsNeedingVillagerInput.NVIRoom<MCRoom, ResourceLocation, BlockPos>> rooms = roomHandle.getMatches()
-                                                                                                        .stream();
-        //TODO: Validate that this is actually needed
-        rooms = rooms.filter(v -> !v.dueToWorkOnly());
-
-        return DeclarativeJobs.<BlockPos, MCRoom, ResourceLocation>rooms(
-                () ->
-                        roomHandle.getMatches().stream()
-                                  .filter(v -> !v.dueToWorkOnly()) //TODO: Validate that this is actually needed
-                                  .collect(ImmutableList.toImmutableList()),
-                work::getJobBlockState,
-                isJobBlock,
-                BlockPos::toShortString,
-                maxState
-        );
-
-//        ImmutableMap.Builder<Integer, RoomsWithWorkableStatefulBlocks> b = ImmutableMap.builder();
-//        Supplier<Rooms> e = () -> {
-//            ImmutableMap.Builder<BlockPos, Integer> spotStatuses = ImmutableMap.builder();
-//            ImmutableMap.Builder<BlockPos, Boolean> spotJBs = ImmutableMap.builder();
-//            Map<MCRoom, List<Integer>> roomStatuses = new HashMap<>();
-//            Stream<NVIRoom<MCRoom, ResourceLocation, BlockPos>> rooms = roomHandle.getMatches().stream();
-//
-//            //TODO: Validate that this is actually needed
-//            rooms = rooms.filter(v -> !v.dueToWorkOnly());
-//            return JobsClean.rooms(
-//
-//                    rooms.forEach(match -> {
-//                        for (Map.Entry<BlockPos, ?> entry : match.room().getContainedBlocks().entrySet()) {
-//                            BlockPos bp = entry.getKey();
-//                            State jobBlockState = work.getJobBlockState(bp);
-//                            if (jobBlockState == null) {
-//                                continue;
-//        );
-    }
 
     public static SupplyChecks<MCHeldItem> toSupplyChecks(DeclarativeJobChecks<MCExtra, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> checks) {
         return new SupplyChecks<>() {
@@ -614,10 +572,13 @@ public class DeclarativeJobs {
             ImmutableMap.Builder<POS, Integer> spotStatuses = ImmutableMap.builder();
             ImmutableMap.Builder<POS, Boolean> spotJBs = ImmutableMap.builder();
             Map<ROOM, List<Integer>> roomStatuses = new HashMap<>();
+            // Work-only rooms count: a job whose state has no tool or ingredient (cook/extract: work
+            // 0.1, nothing to hold) gets its rooms ONLY from the dueToWorkOnly bucket. Filtering them
+            // out made "town has workable blocks" false for such jobs, so the status flipped
+            // GOING_TO_JOB <-> NO_JOBSITE and the cook never walked to a furnace full of cooked food;
+            // a stick tool only worked because it moved the furnace into the tools bucket
+            // (2026-10-19 playtest blocker).
             Stream<NVIRoom<ROOM, RECIPE, POS>> rooms = jobSites.get().stream();
-
-            //TODO: Validate that this is actually needed
-            rooms = rooms.filter(v -> !v.dueToWorkOnly());
 
             rooms.forEach(match -> {
                 for (Map.Entry<POS, ?> entry : match.room().getContainedBlocks().entrySet()) {

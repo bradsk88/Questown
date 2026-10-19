@@ -143,10 +143,15 @@ public class TownVillagerUIs {
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
-        ImmutableMap<JobID, ResourceLocation> jubz = ServerJobsRegistry.getAllJobsThatProduce(
+        // Producers by what they produce (their results, knowledge-limited for loot jobs), not by
+        // their declared initial_request: cook/fuel, cook/stock_fuel, cook/stock_ingredients and
+        // baker/fuel declare #villager_food but only consume it (2026-10-19 playtest: the "8 food"
+        // quest's producers list showed only jobs that USE cooked food).
+        ImmutableMap<JobID, ResourceLocation> jubz = ServerJobsRegistry.getJobsKnownToProduce(
                 unsafeTown.getTownData(),
                 itemToShowJobsFor
         );
+        QT.GUI_LOGGER.info("[item-jobs] producers of {}: {}", Arrays.toString(itemToShowJobsFor.getItems()), jubz.keySet());
         for (JobID job : jubz.keySet()) {
             Job<?, ?, ?> j = ServerJobsRegistry.getUninitializedJob(job, VillagerUUID.random()).getJob();
             if (!(j instanceof DeclarativeJob dj)) {

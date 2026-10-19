@@ -558,3 +558,33 @@ where the item is in the town's knowledge store. `ServerJobsRegistry.getJobsKnow
 counts a job only through its `results` (for loot jobs that is the town's known loot for the
 table, `allKnownGatherItemsFn`); `getAllJobsThatProduce` keeps the declaration shortcut for its
 other callers. Not unit-pinned (registry-bound); check the hint in a client.
+The item-jobs screen ("jobs that produce this item", opened from a quest icon) uses the same query:
+by declaration, cook/fuel, cook/stock_fuel, cook/stock_ingredients and baker/fuel "produced"
+`#questown:villager_food`, so the "8 food" quest listed only jobs that consume food (2026-10-19).
+
+## The cook could not extract: two stacked gates (2026-10-19 playtest blocker)
+
+Playtest: the onboarding cook sat in `cook/fuel` / COLLECTING_SUPPLIES with every furnace fuelled
+and cooked food waiting; forcing `cook/extract` did nothing. Reproduced by the realtime autotest
+`cook/fuel [fuelled_output_ready]` (0 cooked beef moved before; 5/5 after). Both fixes are
+job-agnostic:
+1. **Supplies** (`TownHasSupplies`): with no workable state, the 2026-10-14 hunter fallback demanded
+   the full requirement set, so "town has supplies" stayed true and the cook collected coal for a
+   furnace that could not take it (no furnace passes cook/fuel's empty-fuel-slot precondition). The
+   fallback now applies only when the town has at least one job block for the job
+   (`TickTownProvider` passes `townHasAnyJobBlock`). Pinned by
+   `TownHasSuppliesNoWorkableStateTest.tool_does_not_count_when_the_town_has_no_job_block_at_all`.
+2. **Work-only rooms** (`DeclarativeJobs.rooms`): rooms in the `dueToWorkOnly` bucket were filtered
+   out ("TODO: Validate that this is actually needed"). A job whose state needs neither tool nor
+   ingredient (`cook/extract`: work 0.1) gets its rooms only from that bucket, so "town has workable
+   blocks" was false and its status flipped GOING_TO_JOB <-> NO_JOBSITE. This was the remaining
+   gate after c9e55434 de-sticked cook/extract (unit-pinned only); restoring the stick made the
+   scenario pass — the dev's hunch ("jobs require at least one tool or ingredient"). The filter is
+   gone, and the dead MC-typed `rooms(maxState, roomHandle, ...)` overload that duplicated it was
+   deleted (dev: "No duplicate code"). Realtime and warp share the one implementation.
+
+Tried and dropped: gating ALWAYS_CONSIDER jobs on their slot precondition in
+`TownPossibleWork.gateFacts`. It also fed the warp's once-per-warp preselected job list, which then
+lacked cook/extract and baker/extract (furnace/oven empty at warp start): cook/simple_furnace_food
+and baker/bread produced nothing. With fixes 1+2 the cook alternates fuel <-> extract quickly and
+extracts, so the gate was unnecessary.

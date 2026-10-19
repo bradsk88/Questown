@@ -239,6 +239,27 @@ class TownHasSuppliesNoWorkableStateTest {
     }
 
     @Test
+    void tool_does_not_count_when_the_town_has_no_job_block_at_all() {
+        // 2026-10-19 playtest: cook/fuel with every furnace already fuelled. No furnace passes the
+        // empty-fuel-slot precondition, so there is no cycle to resume and the coal in the chest must
+        // not make "town has supplies" true (the cook sat in COLLECTING_SUPPLIES instead of moving on).
+        ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks<?>> states =
+                ImmutableMap.of(0, notWorkable(0), 1, notWorkable(1));
+        @SuppressWarnings("unchecked")
+        TownHasSupplies<FakeItem, FakeItem, ContainerTarget<ContainerTarget.Container<FakeItem>, FakeItem>> h =
+                new TownHasSupplies<>(
+                        s -> null,
+                        s -> s == 0 ? matches("coal", "coals") : null,
+                        () -> ImmutableList.of(siteHolding(chest(new FakeItem("coal")))),
+                        () -> states,
+                        Function.identity(),
+                        () -> false
+                );
+        WithReason<Boolean> r = h.apply(() -> null);
+        assertFalse(r.value, "no job block anywhere: nothing to collect supplies for. Reason: " + r.reason);
+    }
+
+    @Test
     void nothing_needed_when_no_state_workable_and_no_tools_declared() {
         // No tools, no ingredients, no workable state: the town genuinely has nothing to supply.
         ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks<?>> states =

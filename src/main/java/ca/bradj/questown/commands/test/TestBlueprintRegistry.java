@@ -41,6 +41,7 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.SlotPrecondition;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.town.TownState;
@@ -63,6 +64,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.pathfinder.Path;
@@ -169,6 +171,10 @@ public class TestBlueprintRegistry {
                     return needs.stream().allMatch(n -> n == TownieNeed.NONE);
                 })));
         jobs.add(entry(new JobID("cook", "simple_furnace_food"), cookBlueprint()));
+        // 2026-10-19 playtest blocker: a cook whose furnace is already fuelled and holds cooked food
+        // must take the food out. The cook starts where the playtest's cook was stuck (cook/fuel,
+        // all starting jobs unlocked); realtime, so job selection is exercised.
+        jobs.add(edgeCaseEntry("cook", "fuel", "fuelled_output_ready", cookOutputReadyBlueprint()));
         jobs.add(entry(new JobID("baker", "bread"), bakerBlueprint()));
         jobs.add(entry(new JobID("crafter", "stick"), crafterBlueprint()));
         jobs.add(entry(new JobID("crafter", "wooden_axe"), blacksmithBlueprint()));
@@ -2387,6 +2393,81 @@ public class TestBlueprintRegistry {
                 new ResourceLocation(Questown.MODID, "kitchen_small"),
                 expectation
         );
+    }
+
+    /** Furnace offset in {@link #cookBlueprint()} (ox + 1, 0, oz + 1). */
+    private static final BlockPos COOK_FURNACE_OFFSET = new BlockPos(5, 0, -1);
+
+    /**
+     * The 2026-10-19 cook blocker as a fixture: the kitchen furnace already has coal in its fuel slot
+     * and five cooked beef in its output; the cook (all starting jobs unlocked, standing on cook/fuel
+     * as in the playtest) must move at least three to the chest within 1500 realtime ticks. Before
+     * the fix, cook/fuel's ALWAYS_CONSIDER skipped the empty-fuel-slot check, so the cook kept picking
+     * fuel (top priority) and sat in COLLECTING_SUPPLIES for ~2400 ticks per pick.
+     */
+    private static TestBlueprint cookOutputReadyBlueprint() {
+        TestBlueprint base = cookBlueprint();
+        TestExpectation realtime = new TestExpectation(List.of(), 0, 100).withContainerContents(List.of(
+                new TestExpectation.ExpectedContainerContent(base.chestOffset(), "minecraft:cooked_beef", 3, null)
+        ));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 100),
+                base.supplyDoorOffset(),
+                null,        // warpAmountOverride
+                1000L,       // startTimeTick — morning, so the window is productive
+                1,           // villagerCount
+                true,        // realtimePhase
+                1500,        // realtimeTicks — well under the ~2400-tick fuel stall
+                false,       // drainHungerBeforeTest
+                true,        // skipWarp — the blocker is realtime job selection
+                realtime, null, null, null, null, false
+        )
+                .withSetupHook((level, flagPos, town, output) -> {
+                    BlockPos furnacePos = flagPos.offset(COOK_FURNACE_OFFSET);
+                    if (!(level.getBlockEntity(furnacePos) instanceof AbstractFurnaceBlockEntity furnace)) {
+                        output.msg("cook fixture: no furnace at " + furnacePos.toShortString());
+                        return false;
+                    }
+                    furnace.setItem(1, new ItemStack(Items.COAL, 8));
+                    furnace.setItem(2, new ItemStack(Items.COOKED_BEEF, 5));
+                    output.msg("cook fixture: furnace at " + furnacePos.toShortString() + " fuelled, 5 cooked beef ready");
+                    return true;
+                })
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                        UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                        for (JobID job : ServerJobsRegistry.getDefaultWork(new JobID("cook", "extract"))) {
+                            town.getVillagerHandle().unlockJob(uuid, job);
+                        }
+                        output.msg("cook fixture: unlocked cook default work for " + uuid);
+                    }
+                    return true;
+                })
+                // Diagnostic only (the chest delta is the gate): what the cook was doing at the end.
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            BlockPos fp = flagPos.offset(COOK_FURNACE_OFFSET);
+                            output.msg("cook fixture: furnace work state (cook's store)="
+                                    + town.getRealWorkStatusHandle(v.getUUID()).getJobBlockState(fp)
+                                    + " (town store)=" + town.getRealWorkStatusHandle(null).getJobBlockState(fp));
+                            output.msg("cook fixture: end state job=" + v.getJobId()
+                                    + " status=" + v.getStatusForServer()
+                                    + " held=" + v.getJobJournalSnapshot().items());
+                        }
+                    }
+                    if (level.getBlockEntity(flagPos.offset(COOK_FURNACE_OFFSET)) instanceof AbstractFurnaceBlockEntity f) {
+                        output.msg("cook fixture: furnace slots in=" + f.getItem(0) + " fuel=" + f.getItem(1) + " out=" + f.getItem(2));
+                        for (String job : List.of("extract", "fuel", "mutton")) {
+                            SlotPrecondition sp = ServerJobsRegistry.slotPrecondition(new JobID("cook", job));
+                            output.msg("cook fixture: cook/" + job + " slot precondition on the furnace = "
+                                    + (sp == null ? "none" : sp.test(f)));
+                        }
+                    }
+                    return true;
+                });
     }
 
     private static TestBlueprint bakerBlueprint() {

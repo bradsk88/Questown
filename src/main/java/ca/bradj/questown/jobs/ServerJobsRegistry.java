@@ -62,6 +62,15 @@ public class ServerJobsRegistry {
         return w.get().getSpecialGlobalRules().contains(SpecialRules.EXCLUDE_FROM_WARP);
     }
 
+    /**
+     * The job's block slot precondition (job JSON {@code block.has_item_in_slot_initially}, e.g.
+     * cook/fuel: an empty fuel slot), or null.
+     */
+    public static @Nullable SlotPrecondition slotPrecondition(JobID jobID) {
+        Supplier<Work> w = Works.get(jobID);
+        return w == null ? null : w.get().getSlotPrecondition();
+    }
+
     public static boolean canAlwaysStart(
             UUID uuid,
             JobID p
