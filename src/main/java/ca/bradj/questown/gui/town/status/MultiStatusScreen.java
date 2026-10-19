@@ -31,15 +31,20 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     private final Map<UUID, Collection<StatusPacket>> statusSmoothingQueue = new HashMap<>();
     private final FlagTabs tabs;
 
+    /**
+     * @param pendingJobChange villagers whose job (root) changes next morning: their job title
+     *                         shows an asterisk and a hover tooltip (dev, 2026-10-19 playtest)
+     */
     public record SyncedData(Map<UUID, StatusPacket> villagerStatuses,
                              Map<UUID, ImmutableList<net.minecraft.world.item.Item>> items,
-                             boolean villagerArrivingInMorning) {
+                             boolean villagerArrivingInMorning,
+                             Set<UUID> pendingJobChange) {
         public JobID getJob(UUID uuid) {
             return Util.orNull(villagerStatuses.get(uuid), StatusPacket::jobId);
         }
     }
 
-    static public SyncedData syncedData = new SyncedData(new HashMap<>(), new HashMap<>(), false);
+    static public SyncedData syncedData = new SyncedData(new HashMap<>(), new HashMap<>(), false, Set.of());
 
     public MultiStatusScreen(
             MultiStatusMenu menu,
@@ -129,7 +134,15 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int destY = coords.topYPadded();
         Util.blitFace(ctx.gui(), uuid, x, destY);
         int nameX = x + Util.faceWidth + 4;
-        ctx.darkText(Compat.translatable(syncedData.villagerStatuses.get(uuid).jobId().rootId()), nameX, destY);
+        String job = Compat.translatable(syncedData.villagerStatuses.get(uuid).jobId().rootId()).getString();
+        ctx.darkText(Compat.literal(PendingJobChangeMark.title(job, syncedData.pendingJobChange().contains(uuid))), nameX, destY);
+    }
+
+    private boolean isOverJobTitle(CardCoordinates coords, UUID uuid, int mouseX, int mouseY) {
+        int nameX = coords.leftXPadded() + Util.faceWidth + 4;
+        String job = Compat.translatable(syncedData.villagerStatuses.get(uuid).jobId().rootId()).getString();
+        int w = font.width(PendingJobChangeMark.title(job, true));
+        return UtilClean.isCoordInBox(mouseX, mouseY, nameX, coords.topYPadded(), w, font.lineHeight);
     }
 
     private void renderStatus(
@@ -234,6 +247,10 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         for (Card<UUID> v : cards()) {
             if (MORNING_ARRIVAL_SENTINEL.equals(v.data())) continue;
             CardCoordinates coords = v.coords();
+            if (syncedData.pendingJobChange().contains(v.data()) && isOverJobTitle(coords, v.data(), mouseX, mouseY)) {
+                this.showTooltip(Compat.translatable("menu.unlock_root.already_pending"));
+                return;
+            }
             int x = getStatusX(coords);
             int y = getStatusY(v.coords());
             if (UtilClean.isCoordInBox(mouseX, mouseY, x, y, 32, 32)) {

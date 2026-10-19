@@ -1,5 +1,7 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.network.OpenFlagMenuMessage;
+
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
@@ -31,10 +33,11 @@ public class VillagerTabs extends Tabs implements SubUI {
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             boolean showBopTab,
+            boolean bopTabAttention,
             boolean showSkillsTab,
             boolean changeRootAttention
     ) {
-        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, changeRootScreenFn, econScreenFn, bopScreenFn, showBopTab, showSkillsTab, changeRootAttention));
+        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, changeRootScreenFn, econScreenFn, bopScreenFn, showBopTab, bopTabAttention, showSkillsTab, changeRootAttention));
     }
 
     private static @NotNull ImmutableList<Tab> build(
@@ -46,6 +49,7 @@ public class VillagerTabs extends Tabs implements SubUI {
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             boolean showBopTab,
+            boolean bopTabAttention,
             boolean showSkillsTab,
             boolean changeRootAttention
     ) {
@@ -115,7 +119,7 @@ public class VillagerTabs extends Tabs implements SubUI {
                             ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
                             x + 10,
                             y + 7
-                    ), setScreen(bopScreenFn), "tooltips.blocks_of_progress", bopScreenFn == null, true
+                    ), setScreen(bopScreenFn), "tooltips.blocks_of_progress", bopScreenFn == null, bopTabAttention
             ));
         }
         return b.build();
@@ -159,6 +163,11 @@ public class VillagerTabs extends Tabs implements SubUI {
         // jobs yet) the server keeps SKILLS out of enabledTabs via hideSkills, and forMenu
         // simply disables it for every tabbed villager menu.
         Runnable skillFn = menu.showSkillsTab() ? factory.apply(OpenVillagerMenuMessage.SKILLS) : null;
+        // The flag's villagers click-through is the management view without the inventory tab.
+        VillagerBopTab bop = VillagerBopTab.decide(!menu.showInventoryTab(), menu.showBlockOfProgressTab());
+        Runnable bopFn = bop.opensFlagUi()
+                ? FlagTabs.makeOpenFn(FlagTabsEmbedding.FlagInfo.dumb(menu.getFlagPos(), true, false), OpenFlagMenuMessage.BOP)
+                : factory.apply(OpenVillagerMenuMessage.BOP);
         return new VillagerTabs(
                 factory.apply(OpenVillagerMenuMessage.INVENTORY),
                 factory.apply(OpenVillagerMenuMessage.QUESTS),
@@ -166,8 +175,9 @@ public class VillagerTabs extends Tabs implements SubUI {
                 skillFn,
                 factory.apply(OpenVillagerMenuMessage.CHANGE_ROOT),
                 factory.apply(OpenVillagerMenuMessage.ECONOMICS),
-                factory.apply(OpenVillagerMenuMessage.BOP),
-                menu.showBlockOfProgressTab(),
+                bopFn,
+                bop.shown(),
+                bop.attention(),
                 menu.showSkillsTab(),
                 CHANGE_ROOT_ATTENTION.getOrDefault(menu.getVillagerUUID(), false)
         );

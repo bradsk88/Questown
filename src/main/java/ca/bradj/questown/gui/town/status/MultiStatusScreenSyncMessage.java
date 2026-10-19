@@ -6,6 +6,7 @@ import ca.bradj.questown.gui.StatusPacket;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import ca.bradj.questown.loader.Channel;
 import ca.bradj.questown.loader.Loader;
 import net.minecraft.network.FriendlyByteBuf;
@@ -15,6 +16,8 @@ import net.minecraft.world.item.Item;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,6 +37,7 @@ public record MultiStatusScreenSyncMessage(
                         b.writeCollection(v, (bb, item) -> bb.writeResourceLocation(Compat.getItemId(item)))
         );
         buffer.writeBoolean(msg.data.villagerArrivingInMorning());
+        buffer.writeCollection(msg.data.pendingJobChange(), (b, u) -> b.writeUUID(u));
     }
 
     public static MultiStatusScreenSyncMessage decode(RegistryFriendlyByteBuf buffer) {
@@ -48,8 +52,9 @@ public record MultiStatusScreenSyncMessage(
                 MultiStatusScreenSyncMessage::readItemsFromBuffer
         );
         boolean arrivingInMorning = buffer.readBoolean();
+        Set<UUID> pending = buffer.readCollection(HashSet::new, b -> b.readUUID());
         return new MultiStatusScreenSyncMessage(new MultiStatusScreen.SyncedData(
-                data, data2, arrivingInMorning
+                data, data2, arrivingInMorning, pending
         ));
     }
 
@@ -72,7 +77,8 @@ public record MultiStatusScreenSyncMessage(
         ctx.enqueueWork(() -> Loader.runClient(() -> MultiStatusScreen.syncedData = new MultiStatusScreen.SyncedData(
                 ImmutableMap.copyOf(data.villagerStatuses()),
                 UtilClean.deepCopy(data.items()),
-                data.villagerArrivingInMorning()
+                data.villagerArrivingInMorning(),
+                ImmutableSet.copyOf(data.pendingJobChange())
         ))).exceptionally(MultiStatusScreenSyncMessage::logError);
 
     }

@@ -316,7 +316,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                     yield ImmutableList.of(Compat.translatable(
                             "menu.quests.roomblock.town", RoomRecipes.getName(recipe.getWantedId())));
                 }
-                yield ImmutableList.of(Compat.translatable("menu.quests.room_quest"));
+                yield ImmutableList.of(Compat.translatable(RoomQuestTooltipKeys.forQuest(recipe.fromRecipe)));
             }
             case JOB_CHANGE -> renderJobQuestTooltip(recipe);
             case JOB_UNLOCK -> renderJobUnlockTooltip(recipe);

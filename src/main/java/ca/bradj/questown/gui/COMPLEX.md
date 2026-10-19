@@ -968,3 +968,22 @@ The paged card screens wrap tooltips with `AbstractPagedCardScreen.renderTooltip
 card tooltip from `renderScreenExtras`, outside that path, and used to hand `showTooltip`
 unwrapped `FormattedCharSequence`s (the free-food line ran wide). It now builds `Component`s and
 calls the (now protected) wrapping helper.
+
+## Playtest 2026-10-19 UI rulings
+
+- **Upgrade quest tooltip.** A ROOM quest that names a from-recipe (an upgrade) reads "Upgrade
+  an existing room by adding the blocks shown here" (`menu.quests.room_upgrade_quest`), not
+  "Build a room containing ..." (`RoomQuestTooltipKeys.forQuest`, `RoomQuestTooltipKeysTest`).
+- **Villager menu BOP tab from the flag.** Opened through the flag's villagers click-through
+  (the management view, no inventory tab), the villager menu always shows a BOP tab that
+  re-opens the flag UI on its BOP tab (`FlagTabs.makeOpenFn(..., OpenFlagMenuMessage.BOP)`).
+  Opened by interacting with the villager, the tab is the villager's own earned-BOP screen as
+  before (`VillagerBopTab.decide`, `VillagerBopTabTest`).
+- **Pending job change on the villagers page.** `MultiStatusScreen.SyncedData.pendingJobChange`
+  (server: `VillagerHolder.isJobChangePending`) puts an asterisk on the job title
+  (`PendingJobChangeMark`) and a hover tooltip "This villager will change profession in the
+  morning" (`menu.unlock_root.already_pending`). The wire field is not unit-pinned: a
+  `RegistryFriendlyByteBuf` test trips the strangler gate (1.20+ type outside the seam).
+- **Crafting tab: Mineshaft.** Fourth row, stone stairs -> flag-stamped mineshaft
+  (`FlagCraftMessage` index 3); flow layout grows the panel (`blocks/COMPLEX.md`).
+Not yet seen in a client: the gui-lint pass for these screens is pending a client run.

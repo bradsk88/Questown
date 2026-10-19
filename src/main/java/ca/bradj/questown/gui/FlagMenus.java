@@ -21,6 +21,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -105,7 +106,11 @@ public class FlagMenus {
     ) {
         HashMap<UUID, StatusPacket> b = new HashMap<>();
         HashMap<UUID, ImmutableList<Item>> b2 = new HashMap<>();
+        HashSet<UUID> pending = new HashSet<>();
         for (VisitorMobEntity v : es) {
+            if (v.getTown() != null && v.getTown().getVillagerHandle().isJobChangePending(v.getVUID())) {
+                pending.add(v.getUUID());
+            }
             if (b.containsKey(v.getUUID()) || b2.containsKey(v.getUUID())) {
                 QT.FLAG_LOGGER.error("Villager {} detected twice. This is probably a bug!", v.getUUID());
             }
@@ -119,7 +124,7 @@ public class FlagMenus {
                                .toList();
             b2.put(v.getUUID(), ImmutableList.copyOf(list));
         }
-        return new MultiStatusScreen.SyncedData(b, b2, morningSpawnPending);
+        return new MultiStatusScreen.SyncedData(b, b2, morningSpawnPending, pending);
     }
 
     private static @NotNull StatusPacket createStatusPacket(
