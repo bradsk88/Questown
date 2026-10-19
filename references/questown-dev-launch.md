@@ -161,6 +161,12 @@ boot, then launch the client. Keep the client down while the server compiles.
 
 ## Parallel confirmation sweep: N standalone servers from one captured command
 
+**Scripted (2026-10-19): `tools/autotest-parallel.sh <N> <scenario-filter> [-D...]`** does the
+whole recipe below — captures the gradle-launched command + `MOD_CLASSES`, starts N copies in
+`build/autotest-par/run-<i>` (ports 25701+), waits for each `[autotest] RESULT:`, stops each by
+pid, and prints the tallies and FAIL lines. Measured: 3× `village/day1` in 400 s wall at the
+1000 t/s default (vs ~13½ min serial). Refuses to start while any Minecraft JVM is up.
+
 For N parallel held runs (a confirmation sweep), do not re-derive the JVM
 command from build.gradle — capture the exact one gradle runs and replicate it:
 
