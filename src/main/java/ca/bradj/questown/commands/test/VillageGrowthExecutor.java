@@ -12,6 +12,7 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.HelperChickenSpawnController;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlags;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.Quest;
 import net.minecraft.core.BlockPos;
@@ -41,7 +42,7 @@ import java.util.Map;
  * Long-running observational scenario: the executor plays the game the way a
  * player would. It builds 8 simple rectangular buildings (single door, none
  * registered), plants the flag via the real item-use path, places a campfire,
- * sleeps through nights via the real campfire-sleep path, registers rooms via
+ * sleeps through nights the way the campfire sleep ends (sleepThroughTheNightIfDark), registers rooms via
  * the real wand click, and fulfils villager needs and quests by depositing
  * items into town containers. It stops when the roster reaches 5 villagers.
  *
@@ -278,6 +279,7 @@ public final class VillageGrowthExecutor {
             phase = Phase.CHECK_RESULTS;
             return;
         }
+        sleepThroughTheNightIfDark();
         if (day1 == null && ticks >= MAX_TICKS) {
             msg("FAIL timed out after " + MAX_TICKS + " ticks at roster=" + roster);
             check("reached-5-villagers", false);
@@ -294,6 +296,26 @@ public final class VillageGrowthExecutor {
                 act();
             }
         }
+    }
+
+    /**
+     * The player sleeps at the campfire as soon as vanilla allows it (night), the way the
+     * playtester does every night. The wake is the real one: the clock moves to the next
+     * morning exactly as vanilla's sleep end computes it, and the town gets the same
+     * {@link TownFlags#onSleepFinished} morning step the {@code SleepFinishedTimeEvent} drives.
+     * Only the cosmetic campfire bits (temp bed, extinguish) are skipped. Saves the ~11 000
+     * idle night ticks per day (2026-10-19: autotest runtime).
+     */
+    private void sleepThroughTheNightIfDark() {
+        if (!level.isNight()) {
+            return;
+        }
+        long now = level.getDayTime();
+        long next = now + 24000L;
+        long morning = next - next % 24000L;
+        level.setDayTime(morning);
+        TownFlags.onSleepFinished(morning);
+        msg("Slept through the night at the campfire: dayTime " + now + " -> " + morning);
     }
 
     /** day1: run the beat checks; finished at the cook beat or on timeout (a FAIL). */

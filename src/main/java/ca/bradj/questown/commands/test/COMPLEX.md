@@ -779,3 +779,12 @@ existing roster-step checks saw 1->2->3 as two single arrivals, since asap rewar
 tick. `checkCook` asserts every job in `ServerJobsRegistry.getDefaultWork(cook)` is unlocked
 for the first cook (the BOP root change used to unlock only `cook/extract`). See
 `town/entity/COMPLEX.md` for both fixes.
+
+## village executor sleeps through nights (2026-10-19)
+
+The class doc already claimed it; nothing did it, so every night ran tick by tick (~11 000 idle
+ticks per day). `sleepThroughTheNightIfDark` (PLAY phase only, so never during the reload
+steps) sleeps as soon as vanilla allows a player to (`level.isNight()`): the clock moves to the
+next morning with vanilla's own arithmetic and the town gets `TownFlags.onSleepFinished`, the
+morning step `SleepFinishedTimeEvent` drives on a real sleep. Only the campfire cosmetics (temp
+bed, extinguish) are skipped. Applies to village/growth as well as day1.
