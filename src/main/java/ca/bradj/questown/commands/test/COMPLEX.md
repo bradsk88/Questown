@@ -816,3 +816,11 @@ recipe room, so `furnishNextRoomQuest` hands it to `craftAndPlaceRoomBlock`: fin
 `recipe.craft(player, flagPos)`, then place the stamped block three west of the flag via
 `useItemOn` (`RoomBlock.getStateForPlacement` registers the room). With the cook fixes, this took
 village/growth from roster 2 to 5/5 (43/43 checks) for the first time.
+
+## gatherer/gather [one_day_loot] — the gatherer's warp-yield pin (2026-10-19)
+
+A fed base gatherer over one warp day: loot in the chest and on the gatherer, excluding the
+supplied cooked beef, must be 1..12 (the most generous tier yields ~1 item per 1000 ticks, 12000
+productive ticks a day). The `*` net delta could not pin this: every notool tier eats one
+villager_food per trip, which nets out against the loot. Red with the `WarpCycleBudget` gate
+bypassed: 32 items (the 2026-10-17 playtest saw 29); green: 4.

@@ -1,6 +1,6 @@
 ---
 title: 'Catch-up warp: base gatherer produced ~29 items in one morning away'
-status: needs-triage
+status: resolved
 origin: 2026-10-17 playtest round 5 — user chat 18:22:23 (dev-server-8, build 3ed88de2)
 ---
 
@@ -39,3 +39,9 @@ A `gatherer/gather [one_day_yield]` variant (welcome mat + 8 cooked beef, `*` de
 villager_food per trip, and the `*` delta nets eaten food out, so a high loot count still lands
 inside the cap. A real pin must count loot excluding the consumed food (a CustomAssertion over
 the warp snapshot, or an ExpectedProduct per loot item). Still unverified for the gatherer.
+
+## Pinned (2026-10-19)
+
+`gatherer/gather [one_day_loot]` counts gathered loot excluding food (chest + gatherer). With the
+`WarpCycleBudget` gate bypassed (pre-dd7a43f5 behaviour): 32 items, FAIL; current code: 4, PASS.
+The gatherer over-production was the same mechanism as the hunter's and dd7a43f5 fixed both.

@@ -208,6 +208,9 @@ public class TestBlueprintRegistry {
         jobs.add(new TestEntry("loot_on_extract_accumulate", new JobID("hunter", "sword"), lootOnExtractAccumulateBlueprint(), "loot"));
         // gatherer_becomes_hunter: the gatherer's leftover terminal mat state must not park the
         // new hunter in COLLECTING_SUPPLIES (playtest 2026-10-17).
+        // One warp day must not out-produce realtime for the base gatherer either (2026-10-17
+        // playtest: 29 items in one morning away). Counts loot, not the food it eats.
+        jobs.add(edgeCaseEntry("gatherer", "gather", "one_day_loot", gathererOneDayLootBlueprint()));
         jobs.add(new TestEntry("loot/gatherer_becomes_hunter", new JobID("gatherer", "gather"), gathererBecomesHunterBlueprint(), "loot"));
         jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
         jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
@@ -2748,6 +2751,43 @@ public class TestBlueprintRegistry {
                         new ItemStack(Items.COOKED_BEEF, 8)
                 )
         );
+    }
+
+    /** Most generous gatherer tier: 6 attempts per 6000 ticks, so ~12 items in 12000 productive ticks. */
+    private static final int GATHERER_ONE_DAY_LOOT_CAP = 12;
+
+    /**
+     * One warp day (24000 ticks, at most 12000 productive) for a fed base gatherer. The cap counts
+     * gathered loot in the chest and on the gatherer, excluding the cooked beef supplied as food:
+     * the "*" net delta nets eaten food out and hid an over-producing warp (the dropped
+     * 2026-10-19 one_day_yield attempt).
+     */
+    private static TestBlueprint gathererOneDayLootBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(new ItemStack(Items.COOKED_BEEF, 8)));
+        return base.withExpectation(noProducts()).withCustomAssertion((level, flagPos, town, output) -> {
+            Map<String, Integer> loot = new java.util.TreeMap<>();
+            java.util.function.Consumer<ItemStack> count = st -> {
+                if (st.isEmpty() || st.is(Items.COOKED_BEEF)) {
+                    return;
+                }
+                loot.merge(Compat.getItemName(st.getItem()).getString(), st.getCount(), Integer::sum);
+            };
+            if (level.getBlockEntity(flagPos.offset(base.chestOffset())) instanceof net.minecraft.world.Container c) {
+                for (int i = 0; i < c.getContainerSize(); i++) {
+                    count.accept(c.getItem(i));
+                }
+            }
+            for (LivingEntity e : town.getVillagerHandle().entities()) {
+                if (e instanceof VisitorMobEntity v) {
+                    for (int i = 0; i < v.getInventory().getContainerSize(); i++) {
+                        count.accept(v.getInventory().getItem(i));
+                    }
+                }
+            }
+            int total = loot.values().stream().mapToInt(Integer::intValue).sum();
+            output.msg("gatherer one_day_loot: " + total + " items (cap " + GATHERER_ONE_DAY_LOOT_CAP + ") " + loot);
+            return total >= 1 && total <= GATHERER_ONE_DAY_LOOT_CAP;
+        });
     }
 
     private static TestBlueprint explorerBlueprint() {
