@@ -24,3 +24,13 @@ registry/holder is broken — check whether the log runs after an
 Index 3 crafts a flag-stamped mineshaft from stone stairs (dev's recipe), replacing the removed
 item-on-flag stamping (`blocks/COMPLEX.md`). Crafting a wand now fires the `WandGet` advancement
 (journal entry 003), which only the removed conversion fired before.
+
+## Flag crafting recipes are one table (2026-10-19)
+
+`FlagCraftRecipes.ALL` (input, icon, output, description key, optional advancement) is the single
+definition both `FlagCraftMessage` (crafts `ALL.get(recipeIndex)`: consume one input, stamp the
+output with the flag, give, fire the advancement) and `gui/FlagCraftingScreen` (one row, button and
+tooltip per entry) read — dev: "No duplicate code. Common implementations." Entries: wand
+(fires WandGet), welcome mat, job board, mineshaft (stone stairs) and fishing station (fishing rod,
+dev's recipe 2026-10-19: the fishing station is a flag-stamped room block like the mineshaft).
+Adding a recipe is one table entry plus its `menu.flag_crafting.*_desc` string.

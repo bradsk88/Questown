@@ -2,20 +2,16 @@ package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.core.init.AdvancementsInit;
 
-import ca.bradj.questown.core.advancements.RoomTrigger;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.TownFlagBlock;
-import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
 
@@ -36,73 +32,27 @@ public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
             if (sender == null) {
                 return;
             }
-            switch (recipeIndex) {
-                case 0 -> craftWand(sender);
-                case 1 -> craftWelcomeMat(sender);
-                case 2 -> craftJobBoard(sender);
-                case 3 -> craftMineshaft(sender);
-                default -> QT.GUI_LOGGER.error("Unknown flag craft recipe index: {}", recipeIndex);
+            if (recipeIndex < 0 || recipeIndex >= FlagCraftRecipes.ALL.size()) {
+                QT.GUI_LOGGER.error("Unknown flag craft recipe index: {}", recipeIndex);
+                return;
             }
+            craft(sender, FlagCraftRecipes.ALL.get(recipeIndex));
         });
     }
 
-    private void craftWand(ServerPlayer player) {
-        if (!consumeMatching(player, Ingredient.of(Items.STICK))) {
+    private void craft(ServerPlayer player, FlagCraftRecipes recipe) {
+        if (!consumeMatching(player, recipe.input().get())) {
             return;
         }
-        // A wand is only as good as its parent flag: every action resolves the
-        // parent through GetParentFromNBT, so an unstamped wand is inert (its
-        // tooltip reads "inactive"). Stamp the exact flag crafted at, the same
-        // parent-stamping the welcome mat carries.
-        ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
-        TownFlagBlock.StoreParentOnNBT(wand, flagPos);
-        giveAndNotify(player, wand);
-        // The "how to register" journal entry (entries/003) opens on getting a wand; only the
-        // removed item-on-flag conversion fired it before (2026-10-19).
-        AdvancementsInit.ROOM_TRIGGER.trigger(player, RoomTrigger.Triggers.WandGet);
-    }
-
-    private void craftWelcomeMat(ServerPlayer player) {
-        // Any wooden pressure plate is a valid input (the player may hold spruce,
-        // birch, ...); matching only OAK rejected the plates they actually carry.
-        if (!consumeMatching(player, Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES))) {
-            return;
+        // Every output only works against its parent flag (wand actions, mat / board / room-block
+        // registration all resolve it through TownFlagBlock.GetParentFromNBT), so stamp the exact
+        // flag the player crafted at.
+        ItemStack crafted = new ItemStack(recipe.output().get());
+        TownFlagBlock.StoreParentOnNBT(crafted, flagPos);
+        giveAndNotify(player, crafted);
+        if (recipe.advancement() != null) {
+            AdvancementsInit.ROOM_TRIGGER.trigger(player, recipe.advancement());
         }
-        // A mat only works when placed against its parent flag: placement reads the
-        // questown.parent_pos_* NBT (TownFlagBlock.GetParentFromNBT) and drops the item
-        // (unregistered) when it is missing. The craft happens at a flag, so stamp the
-        // exact flag the player crafted at - the same parent-stamping the flag's own
-        // child-block drops carry (TownFlagBlock.StoreParentOnNBT).
-        ItemStack mat = new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get());
-        TownFlagBlock.StoreParentOnNBT(mat, flagPos);
-        giveAndNotify(player, mat);
-    }
-
-    private void craftJobBoard(ServerPlayer player) {
-        // Any sign is a valid input - the #questown:job_board_inputs recipe tag is exactly
-        // #minecraft:signs plus the board block itself, so the flag menu mirrors the recipe.
-        if (!consumeMatching(player, Ingredient.of(ItemTags.SIGNS))) {
-            return;
-        }
-        // The board is a RoomBlock: placement resolves its parent flag through the stamped
-        // NBT (JobBoardBlock.getStateForPlacement) and self-registers the one-block room -
-        // the same parent-stamping the mat and wand carry.
-        ItemStack board = new ItemStack(ItemsInit.JOB_BOARD_BLOCK.get());
-        TownFlagBlock.StoreParentOnNBT(board, flagPos);
-        giveAndNotify(player, board);
-    }
-
-    private void craftMineshaft(ServerPlayer player) {
-        // The mineshaft is a RoomBlock like the job board: it registers its one-block room only
-        // when its stamped parent flag resolves (RoomBlock.getStateForPlacement). It used to come
-        // from using any mineshaft on the flag (TownFlagBlock.convertItemInHand, removed
-        // 2026-10-19); the dev's recipe is stone stairs -> mineshaft.
-        if (!consumeMatching(player, Ingredient.of(Items.STONE_STAIRS))) {
-            return;
-        }
-        ItemStack shaft = new ItemStack(ItemsInit.MINESHAFT_BLOCK.get());
-        TownFlagBlock.StoreParentOnNBT(shaft, flagPos);
-        giveAndNotify(player, shaft);
     }
 
     // The "Created X" message is the only confirmation a craft gives, so it must not be able to lie:

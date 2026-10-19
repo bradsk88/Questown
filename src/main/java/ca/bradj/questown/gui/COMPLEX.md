@@ -984,6 +984,7 @@ calls the (now protected) wrapping helper.
   (`PendingJobChangeMark`) and a hover tooltip "This villager will change profession in the
   morning" (`menu.unlock_root.already_pending`). The wire field is not unit-pinned: a
   `RegistryFriendlyByteBuf` test trips the strangler gate (1.20+ type outside the seam).
-- **Crafting tab: Mineshaft.** Fourth row, stone stairs -> flag-stamped mineshaft
-  (`FlagCraftMessage` index 3); flow layout grows the panel (`blocks/COMPLEX.md`).
+- **Crafting tab.** Rows come from `core/network/FlagCraftRecipes.ALL` (wand, welcome mat, job
+  board, mineshaft, fishing station); flow layout grows the panel per row. Five rows not yet
+  checked in a client (gui-lint / pagination still open).
 Not yet seen in a client: the gui-lint pass for these screens is pending a client run.
