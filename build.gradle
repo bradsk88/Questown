@@ -70,8 +70,10 @@ runs {
             // connect straight to a local (hold-mode autotest) server.
             // (Vanilla 1.20.6 dropped the old --server/--port client args;
             // --quickPlayMultiplayer is the supported form.)
+            // -Pautoport=<port> picks another server (tools/porttest/capture.sh passes it; a
+            // second server, e.g. a worktree's, listens on its own port).
             if (project.hasProperty('autojoin')) {
-                arguments '--quickPlayMultiplayer', 'localhost:25565'
+                arguments '--quickPlayMultiplayer', 'localhost:' + (project.findProperty('autoport') ?: '25565')
             }
         }
 

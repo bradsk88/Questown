@@ -988,3 +988,13 @@ calls the (now protected) wrapping helper.
   board, mineshaft, fishing station); flow layout grows the panel per row. Five rows not yet
   checked in a client (gui-lint / pagination still open).
 Not yet seen in a client: the gui-lint pass for these screens is pending a client run.
+
+## Skills pane hover was drawn behind the pane (2026-10-19)
+
+Dev: "The hover tooltips on the skills UI do not show the job names". `VillagerAdvancementsScreen
+.renderTooltips` translated the tooltip pass by z 0 where the 1.19.2 golden uses +400;
+`VillagerAdvancementsContent.drawTooltips` shifts its content to -200, so the hover box, the job
+title and the pane dim sat at z -200, behind the pane background. Restored +400 on the gui pose
+(no modelview stack). Verified by capture (`tools/porttest` hook on a worktree server): before,
+hovering a node showed nothing; after, the pane dims and the title ("gather") shows. gui-lint OK
+for VillagerAdvancementsScreen and for the five-row FlagCraftingScreen (no pagination needed).

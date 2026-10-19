@@ -223,7 +223,11 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         if (this.content != null) {
             ctx.pose().pushPose();
-            ctx.pose().translate(paneX + 9, paneY + 18, 0.0F);
+            // z +400, as the 1.19.2 golden (translate(..., 400.0)): drawTooltips shifts its content
+            // to -200, so a 0 here put the hover box, the job name and the pane dim at z -200,
+            // behind the pane background (2026-10-19 playtest: "the hover tooltips on the skills
+            // UI do not show the job names").
+            ctx.pose().translate(paneX + 9, paneY + 18, 400.0F);
             this.content.drawTooltips(ctx, mouseX - paneX - 9, mouseY - paneY - 18, paneX, paneY);
             ctx.pose().popPose();
         }

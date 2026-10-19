@@ -165,6 +165,17 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
   Banks shot before sidecars existed have none; `rebank` creates them.
 - `cv` (see references/cv-tool.md) — the diff engine (PSNR/SSIM/% changed).
 
+## Capturing from a worktree while a playtest server is up (2026-10-19)
+
+A worktree under the repo (`build/wt`, its own `run/` on port 25585) can run the whole capture
+beside the dev's live server. Traps: `capture.sh prep` runs `sweep.sh "$PROJ"`, which also kills
+every process whose cwd is under `~/.gradle` (gradle daemons) - do prep by hand (wipe
+`run/world`, `run/logs`, `run-client/diags`, start the FIFO writer). A fresh worktree
+`run-client/` has no `options.txt`, so the client stops on the first-launch accessibility screen
+and never auto-joins - copy the main `run-client/options.txt`. `-Pautoport=<port>` is honoured by
+`build.gradle`'s autojoin since 2026-10-19 (it was hard-coded to 25565). `joined` can match a
+previous client's join line - compare its time to your relaunch.
+
 ## Branch pinning (do not trust names)
 
 - **Golden 1.19.2**: `Questown-119` worktree of
