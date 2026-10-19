@@ -98,6 +98,13 @@ public interface Delegator<ENTITY> {
      */
     ImmutableList<JobID> getDefaultWork(JobID root);
 
+    /**
+     * Post the root's starter requests on the job board (each default work's initial request), as
+     * a job-change quest reward does. Without them every work of the new root reads "Product not
+     * requested" and the villager idles.
+     */
+    void postStarterRequests(JobID root);
+
     ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs();
 
     ImmutableSet<JobID> getChildJobsKnownToExist(JobID jobId);

@@ -6,6 +6,8 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.TownWand;
+import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.TownieNeed;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -37,6 +39,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Long-running observational scenario: the executor plays the game the way a
@@ -86,6 +89,7 @@ public final class VillageGrowthExecutor {
     private int ticks = 0;
     private int waitTicks = 0;
     private final Map<String, Integer> unmetItemAttempts = new HashMap<>();
+    private final Map<UUID, String> lastStarterWork = new HashMap<>();
     private long lastObservedRoster = -1;
     private boolean passed = false;
     private int passedChecks = 0;
@@ -585,6 +589,63 @@ public final class VillageGrowthExecutor {
         check("welcome-mat-placed", true);
     }
 
+    /**
+     * A block-as-room quest (the mineshaft): the player crafts the block in the flag's crafting tab
+     * (FlagCraftRecipes, the same owner method the tab's message calls) from one of its input
+     * items, then places it outdoors. Placing a flag-stamped room block registers its room.
+     */
+    private boolean craftAndPlaceRoomBlock(ResourceLocation roomId) {
+        ca.bradj.questown.core.network.FlagCraftRecipes recipe = null;
+        for (ca.bradj.questown.core.network.FlagCraftRecipes r : ca.bradj.questown.core.network.FlagCraftRecipes.ALL) {
+            if (r.output().get() instanceof net.minecraft.world.item.BlockItem bi
+                    && bi.getBlock() instanceof ca.bradj.questown.blocks.RoomBlock rb
+                    && roomId.equals(ca.bradj.questown.blocks.RoomBlock.getRoomId(rb))) {
+                recipe = r;
+            }
+        }
+        if (recipe == null) {
+            msg("UNCLEAR room quest " + roomId + ": no flag crafting recipe makes that block");
+            return false;
+        }
+        ItemStack[] inputs = recipe.input().get().getItems();
+        if (inputs.length == 0) {
+            msg("UNCLEAR room quest " + roomId + ": its flag recipe has no input item");
+            return false;
+        }
+        player.getInventory().clearContent();
+        player.getInventory().add(inputs[0].copyWithCount(1));
+        recipe.craft(player, flagPos);
+        ItemStack crafted = ItemStack.EMPTY;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            if (player.getInventory().getItem(i).is(recipe.output().get())) {
+                crafted = player.getInventory().getItem(i);
+            }
+        }
+        if (crafted.isEmpty()) {
+            msg("FAIL crafting " + recipe.output().get() + " at the flag gave the player nothing");
+            check("room-block-crafted[" + roomId + "]", false);
+            return false;
+        }
+        BlockPos pedestal = flagPos.west(3);
+        level.setBlockAndUpdate(pedestal.below(), Blocks.DIRT.defaultBlockState());
+        level.setBlockAndUpdate(pedestal, Blocks.GRASS_BLOCK.defaultBlockState());
+        level.setBlockAndUpdate(pedestal.above(), Blocks.AIR.defaultBlockState());
+        var hit = new net.minecraft.world.phys.BlockHitResult(
+                net.minecraft.world.phys.Vec3.atCenterOf(pedestal),
+                net.minecraft.core.Direction.UP,
+                pedestal,
+                false
+        );
+        player.setItemInHand(InteractionHand.MAIN_HAND, crafted.copy());
+        player.gameMode.useItemOn(player, level,
+                player.getItemInHand(InteractionHand.MAIN_HAND),
+                InteractionHand.MAIN_HAND, hit);
+        msg("Crafted " + recipe.output().get() + " at the flag from " + inputs[0].getItem()
+                + " and placed it at " + pedestal.above().toShortString());
+        check("room-block-crafted[" + roomId + "]", true);
+        return true;
+    }
+
     /** Place a job board block in a registered room (player item-use path). */
     private void placeJobBoard() {
         // Place the job board inside the first registered room (the chest room).
@@ -614,6 +675,23 @@ public final class VillageGrowthExecutor {
         msg("Placed job board via player useItemOn at " + pos.above().toShortString()
                 + " (pedestal at " + pos.toShortString() + ")");
         check("job-board-placed", true);
+    }
+
+    /**
+     * A townie's root starter work and which of it they have unlocked, logged when it changes:
+     * what a player would read on the townie's jobs tab. Need surfacing only counts unlocked jobs.
+     */
+    private void logStarterWorkIfChanged(VisitorMobEntity t) {
+        List<String> starter = new ArrayList<>();
+        for (JobID j : ServerJobsRegistry.getDefaultWork(t.getJobId())) {
+            boolean unlocked = flag.getVillagerHandle().isUnlocked(t.getUUID(), j);
+            starter.add(j.jobId() + (unlocked ? "" : "(locked)"));
+        }
+        String line = t.getJobId().rootId() + " " + starter;
+        if (line.equals(lastStarterWork.put(t.getUUID(), line))) {
+            return;
+        }
+        msg("KNOWN townie " + shortId(t) + " starter work " + line);
     }
 
     /** Deposit the item each UNMET_ITEM townie is waiting on. Real player path: container deposit. */
@@ -723,6 +801,9 @@ public final class VillageGrowthExecutor {
             if (q.isComplete() || q.getType() != Quest.QuestType.ROOM
                     || ROOM_QUESTS_HANDLED_ELSEWHERE.contains(id) || !furnishedRoomQuests.add(id)) {
                 continue;
+            }
+            if (ca.bradj.questown.blocks.RoomBlock.isBlockRoom(id)) {
+                return craftAndPlaceRoomBlock(id);
             }
             ca.bradj.roomrecipes.recipes.RoomRecipe recipe = roomRecipe(id);
             if (recipe == null || nextSpareBuilding >= buildingCorners.size()) {
@@ -850,6 +931,7 @@ public final class VillageGrowthExecutor {
                     ? t.getNeed() + "(" + t.getUnmetItem() + ")" : t.getNeed().name();
             msg("KNOWN townie " + shortId(t) + " job=" + t.getJobId().rootId() + "/" + t.getJobId().jobId()
                     + " need=" + need + " pos=" + t.blockPosition().toShortString());
+            logStarterWorkIfChanged(t);
         }
         List<String> open = new ArrayList<>();
         List<String> done = new ArrayList<>();

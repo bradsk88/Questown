@@ -2144,6 +2144,26 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     /**
+     * A villager took up {@code root}: post its starter requests on the job board (each default
+     * work's initial request, e.g. a cook's #questown:villager_food). A root's works produce only
+     * what the board requests, so without these a new cook reads "Product not requested" on every
+     * job and idles. Both job-change paths (the quest reward and the BOP spend) come through here.
+     * The board's auto-request toggle (F2, default ON) turns it off; manual requests are never gated.
+     */
+    public void postStarterRequests(JobID root) {
+        if (!isBoardAutoRequest()) {
+            return;
+        }
+        for (JobID work : ServerJobsRegistry.getDefaultWork(root)) {
+            ItemStack output = ServerJobsRegistry.getDefaultWorkForNewWorker(getServerLevel(), work);
+            if (output.isEmpty()) {
+                continue;
+            }
+            workHandle.requestWork(output.getItem());
+        }
+    }
+
+    /**
      * The flag's top unmet item need, as a player-readable display name, or null when the
      * unmet-need record is empty (job-board-empty-state.md: the board's empty state should
      * point at posting the top requestable need instead of a vague teaser). Ties on

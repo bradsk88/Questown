@@ -236,6 +236,11 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public void postStarterRequests(JobID root) {
+                town.getUnsafe().postStarterRequests(root);
+            }
+
+            @Override
             public ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs() {
                 return learning.getUnlockedJobs();
             }

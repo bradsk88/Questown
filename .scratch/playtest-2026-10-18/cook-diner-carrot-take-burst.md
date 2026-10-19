@@ -16,3 +16,23 @@ related: commit fe1b7238 "Diners eat the finished meal instead of fetching more 
 - Not checked: whether the carrots were put back (no PUT probe line exists), i.e. a take/put loop
   vs real consumption; whether the cook root change (work-spot states cleared at 22:11:52) is
   related.
+
+## Reproduced in village/growth (2026-10-19, worktree build, autotest at ~370 t/s)
+
+`build/autotest-logs/growth-poss.log` (a 6-minute capped run, cook starter-request fix not yet in):
+
+| job / item | TOOK lines |
+|---|---|
+| hunter/sword stone_sword | 3538 |
+| cook/dining_raw_food mutton | 3183 |
+| cook/dining_raw_food beef | 2940 |
+| cook/dining_raw_food chicken | 1986 |
+| cook/dining_raw_food red_mushroom | 971 |
+
+One dining_raw_food pass logged ~275 "TOOK 1 mutton" in ~2 s, then "will not prioritize food after
+giving up". The hunter cannot have produced 3000+ mutton, so these are takes that get put back (or
+re-counted), not real consumption — still unverified: no PUT probe exists. Raw food is
+DinerRawFoodWork's state-0 *tool* and state-1 *ingredient* (`TOOLS_REQUIRED_AT_STATES` /
+`INGREDIENTS_REQUIRED_AT_STATES`), and the sword is hunter/sword's tool: both bursts are on
+tools, which suggests a take-tool / return-tool loop. Next: add a PUT probe beside the TOOK one
+and run `eating/eat_raw_food`.

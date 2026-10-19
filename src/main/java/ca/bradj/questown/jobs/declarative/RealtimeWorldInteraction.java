@@ -368,6 +368,11 @@ public class RealtimeWorldInteraction extends
                 new MinecraftWorldAccess(inputs.town().getServerLevel()),
                 (in, i, s) -> {
                     inputs.entity().tryGiveItem(i, s);
+                    // A rule-taken product (cook/extract's take_from_slot_2) is an extraction too:
+                    // it gets the LOOT-quest check like a result item (warp routes it through
+                    // tryGiveItems -> postExtractHook already). 2026-10-19: the cook's meals never
+                    // counted toward the "eight pieces of food" quest.
+                    onLootExtracted(inputs, i);
                     return in;
                 },
                 position,

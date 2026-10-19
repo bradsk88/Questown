@@ -830,6 +830,9 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             delegator.unlockJob(v, defaultWork);
         }
         changeJobForVillager(delegator.getUUID(v), newJob, currentTick, true);
+        // ...and the starter requests a quest-made villager gets (ChangeJobReward): without a
+        // matching board request the new root's works have nothing to produce (2026-10-19).
+        delegator.postStarterRequests(newJob);
     }
 
     public boolean isReadyForDowntime(

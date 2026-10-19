@@ -340,10 +340,18 @@ Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT)
 if (rules == null || rules.isEmpty()) return currentState;   // hook never runs
 ```
 
-The other post-extract behaviours (hunger fill, `take_from_slot_2`, …) correctly
+The other post-extract behaviours (hunger fill, …) correctly
 key off that rule. The sword-hunter job declares none — only `remove_from_world`
 — so its raw-meat grant fell into the early-return and the quest never closed,
-while a rule-bearing job (gatherer `hunger_fill*`, cook `take_from_slot_2`) did.
+while a rule-bearing job (gatherer `hunger_fill*`) did.
+
+**Pre-extract products (2026-10-19).** `take_from_slot_2` (cook/baker extract) is a
+*pre*-extract rule: `beforeExtract` pulls the furnace output and hands it to the townie, and
+the job's own result (`uses_special_rules`) is empty, so the bridge above only ever saw a null
+item. Warp counted it (its pre-extract give routes through `tryGiveItems` → `postExtractHook`);
+realtime gave it straight to the entity, so the cook batch's "eight pieces of food" quest never
+moved. `RealtimeWorldInteraction.preExtractHook`'s give now calls `onLootExtracted` too. Pinned
+by the `cook_extract_food` autotest (0/8 before, 5/8 after).
 
 ## The fix — the check is now unconditional on the extract path
 
@@ -846,10 +854,12 @@ graph LR
   path: `TownFlagTileData.NBT_BOARD_AUTO_REQUEST` InitPair (load + onFlagPlace)
   + `TownFlagInitialization(Impl).serializeBoardAutoRequest` + the write line in
   `TownFlagTileData.write`.
-- **Gate**: the ONLY auto-post site is `ChangeJobReward`'s applier (acquiring a
-  root job posts its `initial_request(s)`). It now checks
-  `((TownFlagBlockEntity) town).isBoardAutoRequest()` per request. Manual
-  posting (`AddWorkFromUIMessage` → `requestWork`) is never gated.
+- **Gate**: the ONLY auto-post site is `TownFlagBlockEntity.postStarterRequests(root)`
+  (acquiring a root job posts its default works' `initial_request(s)`), called by both
+  job-change paths: `ChangeJobReward`'s applier and the BOP root change
+  (`SimpleVillagerHandle.unlockAndChange` → `Delegator.postStarterRequests`). It checks
+  `isBoardAutoRequest()`. Manual posting (`AddWorkFromUIMessage` → `requestWork`) is never
+  gated. (Until 2026-10-19 only the quest reward posted; see "BOP root change ..." below.)
 - **Idempotency**: `TownWorkHandle.requestWork(WorkRequest)` now no-ops when the
   request is already pending. The board is a set of *unfulfilled* requests — a
   fulfilled one drops off (`removeWorkRequest`) and may be re-requested then.
@@ -1251,6 +1261,14 @@ A cook made by a blessed BOP had no fuel or `cook_mutton` jobs.
 `ServerJobsRegistry.getDefaultWork(root)` (extract + fuel + the template's `starter_recipes`).
 The BOP path now does the same. Hunters never showed it: `hunter/sword` is that root's whole
 default set. Pinned by day1's `cook-starter-job-unlocked[<job>]`.
+
+**It also posts the starter requests (2026-10-19, village/growth).** The BOP path unlocked the
+works but did not post their `initial_request`s, which only `ChangeJobReward` did. A work whose
+product nothing on the board asks for is "Product not requested", and `JobCycler.isValid` rejects
+every candidate when the board holds requests none of them satisfy (the hunter's sword request
+was there). So the BOP-made cook never left the seeking_work → downtime → dining loop. Both paths
+now call `TownFlagBlockEntity.postStarterRequests`. Pinned by
+`SimpleVillagerHandleTest.morningRootChange_postsTheNewRootsStarterRequests` (red before).
 
 ## Cook batch carries the storage upgrade; phase 6 removed (2026-10-18)
 

@@ -797,3 +797,22 @@ on `cook/fuel` with the cook root's default work unlocked (post-spawn); PASS = a
 beef in the chest. A diagnostic custom assertion logs the end job/status/held items, the furnace
 slots, each cook job's slot-precondition result and the furnace's work state in the cook's store.
 See `jobs/COMPLEX.md` "The cook could not extract".
+
+## Cook fixtures share one realtime frame (2026-10-19)
+
+`cookRealtimeBlueprint(supplies, realtime)` is the `cookBlueprint()` kitchen as a realtime
+fixture: one cook starting on cook/fuel with the root's default work unlocked, morning start, no
+warp, 1500 ticks. `cook/fuel [fuelled_output_ready]`, `cook/fuel [no_coal]` (a guard: a fuel-less
+kitchen names `#minecraft:coals` in the need bubble) and `loot:cook_extract_food` build on it;
+`seedFuelledFurnaceWithOutput` is the shared furnace seed. village/growth logs each townie's
+root starter work and which of it is locked (`KNOWN townie <id> starter work ...`) when it
+changes: need surfacing and the work picker only count unlocked works.
+
+## village/growth crafts block-as-room quests at the flag (2026-10-19)
+
+A `block_room/...` quest (the mineshaft, after item-on-flag conversion was removed) is not a
+recipe room, so `furnishNextRoomQuest` hands it to `craftAndPlaceRoomBlock`: find the
+`FlagCraftRecipes` entry whose output is that `RoomBlock`, give the player one input item, call
+`recipe.craft(player, flagPos)`, then place the stamped block three west of the flag via
+`useItemOn` (`RoomBlock.getStateForPlacement` registers the room). With the cook fixes, this took
+village/growth from roster 2 to 5/5 (43/43 checks) for the first time.

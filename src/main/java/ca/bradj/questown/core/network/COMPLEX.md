@@ -1,6 +1,6 @@
 # core/network COMPLEX.md
 
-## `FlagCraftMessage.giveAndNotify` — capture display names before `add()`
+## `FlagCraftRecipes.giveAndNotify` (was FlagCraftMessage) — capture display names before `add()`
 
 The "Created X" chat line must name the item **before**
 `player.getInventory().add(crafted)` runs. On success `add` shrinks the
@@ -34,3 +34,10 @@ tooltip per entry) read — dev: "No duplicate code. Common implementations." En
 (fires WandGet), welcome mat, job board, mineshaft (stone stairs) and fishing station (fishing rod,
 dev's recipe 2026-10-19: the fishing station is a flag-stamped room block like the mineshaft).
 Adding a recipe is one table entry plus its `menu.flag_crafting.*_desc` string.
+
+## The craft lives on the recipe (2026-10-19)
+
+`FlagCraftRecipes.craft(player, flagPos)` owns the craft (consume one input, stamp, give and
+notify, advancement); `FlagCraftMessage.handle` only validates the index and calls it. The
+village/growth driver calls the same method for a block-as-room quest (the mineshaft), so the
+player path and the agent path cannot drift (AGENTS.md "A dev command is a thin wrapper").

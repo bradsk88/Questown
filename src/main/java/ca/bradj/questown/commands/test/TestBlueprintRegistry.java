@@ -175,6 +175,7 @@ public class TestBlueprintRegistry {
         // must take the food out. The cook starts where the playtest's cook was stuck (cook/fuel,
         // all starting jobs unlocked); realtime, so job selection is exercised.
         jobs.add(edgeCaseEntry("cook", "fuel", "fuelled_output_ready", cookOutputReadyBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "fuel", "no_coal", cookNoCoalBlueprint()));
         jobs.add(entry(new JobID("baker", "bread"), bakerBlueprint()));
         jobs.add(entry(new JobID("crafter", "stick"), crafterBlueprint()));
         jobs.add(entry(new JobID("crafter", "wooden_axe"), blacksmithBlueprint()));
@@ -198,6 +199,7 @@ public class TestBlueprintRegistry {
         // warper records the extraction on the state snapshot and the settle point in
         // TownFlagState.warp closes the quest through the live handle (warp == realtime outcome).
         jobs.add(new TestEntry("loot_on_extract_warp", new JobID("hunter", "sword"), lootOnExtractBlueprint(true), "loot"));
+        jobs.add(new TestEntry("cook_extract_food", new JobID("cook", "fuel"), cookExtractCreditsFoodQuestBlueprint(), "loot"));
         // loot_on_extract_accumulate: the 2026-10-15 accumulation ruling. Posts the raw-food
         // LOOT quest at count 4, drives one hunter cycle (>=1 natural extraction), and
         // asserts the quest did NOT complete on the first extraction (the old
@@ -2410,41 +2412,8 @@ public class TestBlueprintRegistry {
         TestExpectation realtime = new TestExpectation(List.of(), 0, 100).withContainerContents(List.of(
                 new TestExpectation.ExpectedContainerContent(base.chestOffset(), "minecraft:cooked_beef", 3, null)
         ));
-        return new TestBlueprint(
-                base.roomType(), base.blocks(), base.supplyItems(),
-                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
-                new TestExpectation(List.of(), 0, 100),
-                base.supplyDoorOffset(),
-                null,        // warpAmountOverride
-                1000L,       // startTimeTick — morning, so the window is productive
-                1,           // villagerCount
-                true,        // realtimePhase
-                1500,        // realtimeTicks — well under the ~2400-tick fuel stall
-                false,       // drainHungerBeforeTest
-                true,        // skipWarp — the blocker is realtime job selection
-                realtime, null, null, null, null, false
-        )
-                .withSetupHook((level, flagPos, town, output) -> {
-                    BlockPos furnacePos = flagPos.offset(COOK_FURNACE_OFFSET);
-                    if (!(level.getBlockEntity(furnacePos) instanceof AbstractFurnaceBlockEntity furnace)) {
-                        output.msg("cook fixture: no furnace at " + furnacePos.toShortString());
-                        return false;
-                    }
-                    furnace.setItem(1, new ItemStack(Items.COAL, 8));
-                    furnace.setItem(2, new ItemStack(Items.COOKED_BEEF, 5));
-                    output.msg("cook fixture: furnace at " + furnacePos.toShortString() + " fuelled, 5 cooked beef ready");
-                    return true;
-                })
-                .withPostSpawnAction((level, flagPos, town, output) -> {
-                    for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
-                        UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
-                        for (JobID job : ServerJobsRegistry.getDefaultWork(new JobID("cook", "extract"))) {
-                            town.getVillagerHandle().unlockJob(uuid, job);
-                        }
-                        output.msg("cook fixture: unlocked cook default work for " + uuid);
-                    }
-                    return true;
-                })
+        return cookRealtimeBlueprint(base.supplyItems(), realtime)
+                .withSetupHook(TestBlueprintRegistry::seedFuelledFurnaceWithOutput)
                 // Diagnostic only (the chest delta is the gate): what the cook was doing at the end.
                 .withCustomAssertion((level, flagPos, town, output) -> {
                     for (LivingEntity e : town.getVillagerHandle().entities()) {
@@ -2467,6 +2436,104 @@ public class TestBlueprintRegistry {
                         }
                     }
                     return true;
+                });
+    }
+
+    /** The kitchen furnace with coal in its fuel slot and five cooked beef in its output. */
+    private static boolean seedFuelledFurnaceWithOutput(
+            ServerLevel level, BlockPos flagPos, TownFlagBlockEntity town, TestOutput output
+    ) {
+        BlockPos furnacePos = flagPos.offset(COOK_FURNACE_OFFSET);
+        if (!(level.getBlockEntity(furnacePos) instanceof AbstractFurnaceBlockEntity furnace)) {
+            output.msg("cook fixture: no furnace at " + furnacePos.toShortString());
+            return false;
+        }
+        furnace.setItem(1, new ItemStack(Items.COAL, 8));
+        furnace.setItem(2, new ItemStack(Items.COOKED_BEEF, 5));
+        output.msg("cook fixture: furnace at " + furnacePos.toShortString() + " fuelled, 5 cooked beef ready");
+        return true;
+    }
+
+    /**
+     * 2026-10-19 village/growth: the cook batch's "eight pieces of food" LOOT quest never counted
+     * the cook's meals. cook/extract takes the furnace output in a pre-extract rule
+     * (take_from_slot_2), which handed the item to the cook without the LOOT-quest check that every
+     * other extraction gets (warp already routed it through). The output-ready kitchen with an open
+     * count-8 #questown:villager_food quest: the cook's realtime extractions must credit it.
+     */
+    private static TestBlueprint cookExtractCreditsFoodQuestBlueprint() {
+        ResourceLocation food = TagsInit.Items.VILLAGER_FOOD.location();
+        return cookRealtimeBlueprint(cookBlueprint().supplyItems(), new TestExpectation(List.of(), 0, 100))
+                .withSetupHook((level, flagPos, town, output) -> {
+                    town.getQuestHandle().addLootQuest(food, 8);
+                    return seedFuelledFurnaceWithOutput(level, flagPos, town, output);
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    for (AbstractMap.SimpleEntry<MCQuest, ?> e : town.getQuestHandle().getAllQuestsWithRewards()) {
+                        MCQuest q = e.getKey();
+                        if (q.getType() == Quest.QuestType.LOOT && food.equals(q.getWantedId())) {
+                            output.msg("cook_extract_food: food quest extracted=" + q.getExtracted() + "/" + q.getCountNeeded());
+                            return q.getExtracted() >= 3;
+                        }
+                    }
+                    output.msg("cook_extract_food: FAIL - the food LOOT quest was not found");
+                    return false;
+                });
+    }
+
+    /**
+     * The {@link #cookBlueprint()} kitchen as a realtime fixture: one cook starting on cook/fuel
+     * with every cook starting job unlocked (as a staffed playtest cook has), morning start, no
+     * warp, 1500 realtime ticks.
+     */
+    private static TestBlueprint cookRealtimeBlueprint(Collection<ItemStack> supplies, TestExpectation realtime) {
+        TestBlueprint base = cookBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), supplies,
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 100),
+                base.supplyDoorOffset(),
+                null,        // warpAmountOverride
+                1000L,       // startTimeTick — morning, so the window is productive
+                1,           // villagerCount
+                true,        // realtimePhase
+                1500,        // realtimeTicks — well under the ~2400-tick fuel stall
+                false,       // drainHungerBeforeTest
+                true,        // skipWarp — the blocker is realtime job selection
+                realtime, null, null, null, null, false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                for (JobID job : ServerJobsRegistry.getDefaultWork(new JobID("cook", "extract"))) {
+                    town.getVillagerHandle().unlockJob(uuid, job);
+                }
+                output.msg("cook fixture: unlocked cook default work for " + uuid);
+            }
+            return true;
+        });
+    }
+
+    /**
+     * A kitchen with raw mutton (the cook's starter recipe) and no fuel anywhere. The cook can't
+     * fuel the furnace, so it must say so: the need bubble names coal (UNMET_ITEM on a coal key),
+     * which is what tells the player to bring fuel. A guard, not a fix pin: it passed when added
+     * (2026-10-19, ruling out "no coal need" as the village/growth cook stall).
+     */
+    private static TestBlueprint cookNoCoalBlueprint() {
+        TestExpectation realtime = new TestExpectation(List.of(), 0, 100);
+        return cookRealtimeBlueprint(List.of(new ItemStack(Items.MUTTON, 16)), realtime)
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    boolean anyCoalNeed = false;
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (!(e instanceof VisitorMobEntity v)) {
+                            continue;
+                        }
+                        output.msg("cook no-coal: job=" + v.getJobId() + " need=" + v.getNeed()
+                                + " unmetItem=" + v.getUnmetItem());
+                        String item = v.getUnmetItem();
+                        anyCoalNeed |= v.getNeed() == TownieNeed.UNMET_ITEM && item != null && item.contains("coal");
+                    }
+                    return anyCoalNeed;
                 });
     }
 

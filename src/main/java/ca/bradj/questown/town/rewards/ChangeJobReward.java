@@ -1,6 +1,5 @@
 package ca.bradj.questown.town.rewards;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
@@ -10,7 +9,6 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -67,19 +65,7 @@ public class ChangeJobReward extends MCReward {
             // 2026-10-12 day-1 playtest ruled a manually-created cook with only
             // extract + fuel wrong ("had no cook jobs"); the remaining recipes
             // stay progression-gated.
-            defaultWork.forEach(v -> {
-                ItemStack output = ServerJobsRegistry.getDefaultWorkForNewWorker(town.getServerLevel(), v);
-                if (output.isEmpty()) {
-                    return;
-                }
-                // The board's "auto-request" toggle (F2, default ON): when the player has
-                // switched it off, a new root's initial requests are NOT auto-posted -
-                // posting is left to them. Manual requests are never gated.
-                if (((TownFlagBlockEntity) town).isBoardAutoRequest()) {
-                    town.getWorkHandle().requestWork(output.getItem());
-                    QT.JOB_LOGGER.debug("Request was added to job board automatically");
-                }
-            });
+            ((TownFlagBlockEntity) town).postStarterRequests(jobID);
         };
     }
 

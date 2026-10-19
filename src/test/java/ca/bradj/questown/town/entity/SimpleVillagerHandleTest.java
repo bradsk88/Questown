@@ -83,6 +83,7 @@ class SimpleVillagerHandleTest {
         /** Entity objects (by identity) that have left the world. */
         List<UUID> removedEntities = new ArrayList<>();
         ImmutableList<JobID> defaultWork = ImmutableList.of();
+        List<JobID> starterRequestsPosted = new ArrayList<>();
         private VillagerSleepModule<UUID> sleepModule = new TestSleepModule();
         /** Mood effects applied via applyMoodEffect: uuid -> (effect -> untilTick). */
         final Map<UUID, Map<net.minecraft.resources.ResourceLocation, Long>> moodEffects = new HashMap<>();
@@ -223,6 +224,11 @@ class SimpleVillagerHandleTest {
         @Override
         public ImmutableList<JobID> getDefaultWork(JobID root) {
             return defaultWork;
+        }
+
+        @Override
+        public void postStarterRequests(JobID root) {
+            starterRequestsPosted.add(root);
         }
 
         @Override
@@ -528,6 +534,23 @@ class SimpleVillagerHandleTest {
                 t.unlocked.containsAll(List.of(extract, fuel, mutton)),
                 "every default job of the new root is unlocked, got " + t.unlocked
         );
+    }
+
+    @Test
+    public void morningRootChange_postsTheNewRootsStarterRequests() {
+        // 2026-10-19 village/growth: a BOP-made cook got its starter work but no #villager_food
+        // request on the board, so every cook job read "Product not requested" and the cook
+        // idled. A quest-made cook (ChangeJobReward) gets the requests; this path must too.
+        TestDelegator t = new TestDelegator();
+        JobID extract = new JobID("cook", "extract");
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        handle.scheduleJobRootChange(v, 0, false, Optional.of(extract));
+        handle.handleMorning(0);
+
+        Assertions.assertEquals(List.of(extract), t.starterRequestsPosted);
     }
 
     @Test
