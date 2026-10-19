@@ -612,6 +612,18 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         // stale copy (unloaded with its chunk) stayed listed - the town counted the villager
         // twice and the raw-food arrival gate opened (2026-10-17 village/day1 reload step).
         UUID id = delegator.getUUID(vEntity);
+        // A copy that is still in the world wins over a late arrival: after a catch-up warp,
+        // recoverMobs respawns the townie with the warped state, and the pre-absence copy can
+        // load with its chunk afterwards. Replacing the live copy with it dropped the warp's
+        // results, and the validator then discarded the warped copy as unknown (2026-10-19).
+        boolean liveCopyListed = this.entities.stream().anyMatch(
+                e -> e != vEntity && delegator.getUUID(e).equals(id) && !delegator.isRemoved(e)
+        );
+        if (liveCopyListed) {
+            QT.FLAG_LOGGER.info("Discarding a duplicate entity for townie {}: a live copy is already registered", id);
+            delegator.discardEntity(vEntity);
+            return;
+        }
         if (this.entities.removeIf(e -> e != vEntity && delegator.getUUID(e).equals(id))) {
             QT.FLAG_LOGGER.info("Replaced a stale entity for townie {} on re-registration", id);
         }

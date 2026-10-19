@@ -66,6 +66,9 @@ public interface Delegator<ENTITY> {
 
     void discardEntity(ENTITY visitorMobEntity);
 
+    /** True once the entity has left the world (unloaded with its chunk, or discarded). */
+    boolean isRemoved(ENTITY e);
+
     boolean isDining(ENTITY v);
 
     boolean canStopWorkingAtAnyTime(ENTITY v);

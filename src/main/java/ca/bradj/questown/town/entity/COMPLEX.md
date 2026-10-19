@@ -1261,3 +1261,18 @@ Storeroom", 1 chest -> "Storeroom", 2 chests): storage fills around the kitchen 
 `FirstRoomUpgrade` (entries/lesson_upgrades) fires when the cook batch posts, and `SecondJobType`
 (entries/014-supply-chains) fires when phase 7 starts, i.e. right after the supply chain, as
 before. Pinned by `TutorialPhaseGateTest`.
+
+## Re-registration keeps a live copy; the late duplicate is discarded (2026-10-19)
+
+After a catch-up warp, `TownFlagState.recoverMobs` discards the registered townies and respawns
+them from the warped state. A townie whose chunk had not loaded yet was not among them; its
+pre-absence copy loaded afterwards with the same UUID. `SimpleVillagerHandle.register` replaced
+"the stale entity" with that late copy — the warped one was dropped and then discarded by
+`validateEntity` as unknown ("Visitor mob's parent has no record of entity", ERROR; day1 4 of 22
+runs, 2 of 3 under parallel load). The warp's results (the townie's inventory) were lost.
+
+`register` now only replaces a same-UUID copy that has left the world (`Delegator.isRemoved`: the
+2026-10-17 unloaded-with-its-chunk case); if the listed copy is still live, the newcomer is the
+duplicate and is discarded (INFO). Pinned by `SimpleVillagerHandleTest.register_keepsALiveCopy
+AndDiscardsTheLateDuplicate` (red without the branch) and `register_replacesACopyThatLeftTheWorld`;
+day1 ×3 in parallel: zero ERRORs, the duplicate path taken in 2 of 3.

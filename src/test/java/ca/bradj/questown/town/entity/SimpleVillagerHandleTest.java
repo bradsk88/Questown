@@ -79,6 +79,9 @@ class SimpleVillagerHandleTest {
         Map<UUID, Boolean> dining = new HashMap<>();
         JobID overnightOverride = null;
         List<JobID> unlocked = new ArrayList<>();
+        List<UUID> discarded = new ArrayList<>();
+        /** Entity objects (by identity) that have left the world. */
+        List<UUID> removedEntities = new ArrayList<>();
         ImmutableList<JobID> defaultWork = ImmutableList.of();
         private VillagerSleepModule<UUID> sleepModule = new TestSleepModule();
         /** Mood effects applied via applyMoodEffect: uuid -> (effect -> untilTick). */
@@ -169,7 +172,12 @@ class SimpleVillagerHandleTest {
 
         @Override
         public void discardEntity(UUID visitorMobEntity) {
+            discarded.add(visitorMobEntity);
+        }
 
+        @Override
+        public boolean isRemoved(UUID e) {
+            return removedEntities.stream().anyMatch(r -> r == e);
         }
 
         @Override
@@ -462,6 +470,43 @@ class SimpleVillagerHandleTest {
                 handle.getGuaranteedRoots().isEmpty(),
                 "the guarantee is consumed once applied"
         );
+    }
+
+    @Test
+    public void register_replacesACopyThatLeftTheWorld() {
+        // 2026-10-17: a reloaded townie is a new object with the same UUID; the copy that
+        // unloaded with its chunk must not stay listed.
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID unloaded = UUID.randomUUID();
+        UUID reloaded = new UUID(unloaded.getMostSignificantBits(), unloaded.getLeastSignificantBits());
+        handle.register(unloaded);
+        t.removedEntities.add(unloaded);
+
+        handle.register(reloaded);
+
+        // (ENTITY is UUID here, so membership is checked by identity, not equals.)
+        Assertions.assertEquals(1, handle.size(), "one entry per townie");
+        Assertions.assertSame(reloaded, handle.entities().iterator().next(), "the reloaded copy is the one listed");
+        Assertions.assertTrue(t.discarded.isEmpty(), "nothing live is discarded");
+    }
+
+    @Test
+    public void register_keepsALiveCopyAndDiscardsTheLateDuplicate() {
+        // 2026-10-19: recoverMobs respawned the townie with its warped state; the pre-absence
+        // copy loaded with its chunk afterwards and used to replace it.
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID recovered = UUID.randomUUID();
+        UUID lateChunkCopy = new UUID(recovered.getMostSignificantBits(), recovered.getLeastSignificantBits());
+        handle.register(recovered);
+
+        handle.register(lateChunkCopy);
+
+        Assertions.assertEquals(1, handle.size(), "one entry per townie");
+        Assertions.assertSame(recovered, handle.entities().iterator().next(), "the live (warped) copy stays listed");
+        Assertions.assertEquals(1, t.discarded.size(), "the late duplicate is discarded");
+        Assertions.assertSame(lateChunkCopy, t.discarded.get(0));
     }
 
     @Test

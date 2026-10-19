@@ -190,6 +190,11 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public boolean isRemoved(VisitorMobEntity e) {
+                return e.isRemoved();
+            }
+
+            @Override
             public boolean isDining(VisitorMobEntity v) {
                 return ServerJobsRegistry.isDining(v.getJobId());
             }
