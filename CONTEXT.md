@@ -383,6 +383,10 @@ _Avoid_: paying BOPs; treating letters as **work requests** (those are player→
 The transient state where a town's quest list is **non-empty and every quest is `COMPLETED`** — the lull before the next batch appears. **Not** a terminal "tutorial graduated" milestone: quests regenerate continuously (tutorial phases + the procedural quest garden + reward-spawned batches), so this state recurs and un-sets itself. Surfaced on the **town** flag quests tab as an empty-state (roadmap #236). The empty quest list is **not** "all done" (the vacuous-true trap).
 _Avoid_: reading it as "tutorial complete" / a latching flag; treating zero quests as "all done".
 
+**Onboarding arrival**:
+A villager the scripted onboarding brings, as a **morning reward** of one specific quest batch — not a random reward. Fixed order (2026-10-18): the **town gate** batch → villager 1; the **hunter-gatherer** batch (raw food, 4 stone swords, hunter job change, bedroom) → villager 2; the **cook** batch (cook job change, cooked food, kitchen, storeroom upgrade, bedroom upgrade) → villager 3 (`TownFlagTutorialAdapter.makeReward`). **A batch that brings a villager carries the bed that villager will sleep in** (dev rule): the hunter-gatherer bedroom (2 beds) and the cook batch's Bedroom → Big Bedroom upgrade (4 beds); the gate batch is the exception (villager 1 arrives before the town has rooms). Other batches bring no one, so at most one villager arrives per morning.
+_Avoid_: giving a non-bedroom batch a villager reward; using `defaultQuestCompletionRewards` for an onboarding arrival (it can roll an upgrade quest instead of a villager).
+
 ### Testing
 
 **Autotest suite**:

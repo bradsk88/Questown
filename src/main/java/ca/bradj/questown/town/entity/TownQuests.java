@@ -1163,6 +1163,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private static final ResourceLocation FARMER_JOB = JobID.toRL(new JobID("farmer", "wheat"));
     private static final ResourceLocation CRAFTING_ROOM = new ResourceLocation("questown", "crafting_room");
     private static final ResourceLocation KITCHEN_SMALL = new ResourceLocation("questown", "kitchen_small");
+    private static final ResourceLocation BIG_BEDROOM = new ResourceLocation("questown", "big_bedroom");
     private static final ResourceLocation STORE_ROOM_MEDIUM = new ResourceLocation("questown", "store_room_medium");
 
     static final String PHASE_7_FLAVOR_KEYWORD = "flagpole";
@@ -1427,6 +1428,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCQuest storageUpgradeQuest = MCQuest.upgrade(batchUUID, null, SpecialQuests.STORE_ROOM_SMALL, STORE_ROOM_MEDIUM);
         storageUpgradeQuest.setFlavorText("Storage fills fast. Upgrade before production stops.");
         q.addNewQuest(storageUpgradeQuest);
+
+        // This batch brings villager 3, so it carries a bed for them: the hunter-gatherer
+        // bedroom (2 beds) becomes a big bedroom (4 beds). Onboarding rule (dev, 2026-10-18):
+        // a batch that brings a villager carries the bed that villager will sleep in.
+        // No flavor text: the standard room-upgrade tooltip.
+        q.addNewQuest(MCQuest.upgrade(batchUUID, null, SpecialQuests.BEDROOM, BIG_BEDROOM));
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_JOB_CHANGE_FOOD));
         // Onboarding-flow quest: like the other tutorial-phase batches, it is

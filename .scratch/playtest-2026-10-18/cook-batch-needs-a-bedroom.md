@@ -1,6 +1,6 @@
 ---
 title: 'Cook batch (job change, kitchen, cooked food) should include a bedroom quest'
-status: needs-info
+status: resolved
 origin: 2026-10-18 playtest (dev-server-12) — user chat 22:04:15
 ---
 
@@ -17,3 +17,9 @@ A plain `SpecialQuests.BEDROOM` ROOM quest completes on ANY registered bedroom
 town already has the hunter-gatherer bedroom by then — so a second copy would close the moment it
 is posted. Does the cook batch want a second bedroom (a count of 2 / a bed per villager), or a
 bedroom upgrade?
+
+## Resolved (2026-10-19, decided autonomously at the dev's request — reversible)
+
+The cook batch carries a Bedroom -> Big Bedroom upgrade (2 -> 4 beds): it brings villager 3, and
+an upgrade is the only bedroom ask an existing bedroom does not instantly satisfy. Also recorded
+the dev's observation as a rule (CONTEXT.md "Onboarding arrival").

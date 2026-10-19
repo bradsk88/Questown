@@ -69,6 +69,17 @@ class TownQuestsHunterGathererOnboardingTest {
         assertNull(bedroomQuest.getFlavorText(), "the bedroom quest must not override the room tooltip");
     }
 
+    @Test
+    void hunterGathererBatch_carriesTheBedForTheVillagerItBrings() {
+        // Onboarding rule (dev, 2026-10-18): a batch that brings a villager carries the bed that
+        // villager will sleep in. This batch's reward is villager 2.
+        TownQuests quests = new TownQuests();
+        quests.addHunterGatherer(view());
+
+        MCQuestBatch batch = quests.questBatches.getAllBatches().iterator().next();
+        assertTrue(batch.getAll().stream().anyMatch(q -> SpecialQuests.BEDROOM.equals(q.getWantedId())));
+    }
+
     private static TutorialTownView view() {
         return new TutorialTownView() {
             @Override

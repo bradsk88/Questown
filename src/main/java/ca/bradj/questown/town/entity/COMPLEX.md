@@ -1276,3 +1276,13 @@ runs, 2 of 3 under parallel load). The warp's results (the townie's inventory) w
 duplicate and is discarded (INFO). Pinned by `SimpleVillagerHandleTest.register_keepsALiveCopy
 AndDiscardsTheLateDuplicate` (red without the branch) and `register_replacesACopyThatLeftTheWorld`;
 day1 ×3 in parallel: zero ERRORs, the duplicate path taken in 2 of 3.
+
+## Cook batch carries the bed for villager 3 (2026-10-19)
+
+The cook batch brings villager 3, so it adds `MCQuest.upgrade(bedroom -> big_bedroom)` (2 -> 4
+beds; no flavor text, the standard upgrade tooltip). Dev rule, now in CONTEXT.md "Onboarding
+arrival": a batch that brings a villager carries the bed that villager sleeps in (the gate batch
+is the exception). A second plain BEDROOM quest would not work: `backfillSatisfiedQuests` closes an
+open ROOM quest that any existing room already satisfies. Pinned by `TutorialPhaseGateTest`
+(red without the quest) and `TownQuestsHunterGathererOnboardingTest.hunterGathererBatch_
+carriesTheBedForTheVillagerItBrings`.

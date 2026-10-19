@@ -296,6 +296,15 @@ class TutorialPhaseGateTest {
         ), "phase 2.5 batch must carry the Small Storeroom -> Storeroom upgrade quest");
         assertTrue(view.getTriggersFired().contains(TutorialTrigger.Triggers.FirstRoomUpgrade),
                 "the upgrades lesson opens with the batch that carries the first upgrade");
+        // Onboarding rule (dev, 2026-10-18): a batch that brings a villager carries the bed that
+        // villager will sleep in. This batch brings villager 3: Bedroom (2 beds) -> Big Bedroom.
+        ResourceLocation bedroom = new ResourceLocation("questown", "bedroom");
+        ResourceLocation bigBedroom = new ResourceLocation("questown", "big_bedroom");
+        assertTrue(all.stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.ROOM
+                        && bigBedroom.equals(q.getWantedId())
+                        && q.fromRecipeID().map(bedroom::equals).orElse(false)
+        ), "the cook batch (brings villager 3) must carry the Bedroom -> Big Bedroom upgrade");
     }
 
     @Test
