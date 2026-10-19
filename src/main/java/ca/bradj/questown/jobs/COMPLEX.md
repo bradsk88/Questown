@@ -548,3 +548,13 @@ seekers never logged it, including with a temporary stack trace on the fallback)
 fired is unknown. The fallback ERROR now logs the caller's stack, so the next live hit names it —
 including from the direct `getWorkSupplier` callers this change leaves alone (`canAlwaysStart`,
 `getRoomForJobId`).
+
+## "N known jobs which produce this item" counts results, not declarations (2026-10-19)
+
+The job board's confirm hint (`AddWorkFromUIMessage` INQUIRED) already filtered to town-known jobs
+(2026-10-15), but a job also counted when its declared `initial_request` matched — e.g. every
+gatherer tier declares wheat seeds — regardless of what the town had found. Dev: count only jobs
+where the item is in the town's knowledge store. `ServerJobsRegistry.getJobsKnownToProduce`
+counts a job only through its `results` (for loot jobs that is the town's known loot for the
+table, `allKnownGatherItemsFn`); `getAllJobsThatProduce` keeps the declaration shortcut for its
+other callers. Not unit-pinned (registry-bound); check the hint in a client.

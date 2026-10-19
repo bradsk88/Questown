@@ -92,7 +92,9 @@ public final class AddWorkFromUIMessage {
                     // never been revealed).
                     ImmutableSet<JobID> townKnown = tfbe.getTownVillagerHandle().getTownKnownJobs();
                     ImmutableMap.Builder<JobID, ResourceLocation> producers = ImmutableMap.builder();
-                    ServerJobsRegistry.getAllJobsThatProduce(td, result)
+                    // ...and only jobs whose (knowledge-limited) results include it: a job's
+                    // declared initial_request alone does not count (2026-10-19 playtest).
+                    ServerJobsRegistry.getJobsKnownToProduce(td, result)
                                       .forEach((jobId, icon) -> {
                                           if (townKnown.contains(jobId)) {
                                               producers.put(jobId, icon);

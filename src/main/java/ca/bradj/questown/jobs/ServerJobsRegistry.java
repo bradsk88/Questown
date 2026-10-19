@@ -151,6 +151,29 @@ public class ServerJobsRegistry {
             WorksBehaviour.TownData data,
             Ingredient wantedResult
     ) {
+        return jobsThatProduce(data, wantedResult, true);
+    }
+
+    /**
+     * Jobs whose results include the item, as far as the town knows: a loot job's results are
+     * the town's known loot for its table ({@code allKnownGatherItemsFn}), so a gatherer counts
+     * for wheat seeds only once the town has found seeds that way. Unlike
+     * {@link #getAllJobsThatProduce}, a job's declared {@code initial_request} alone does not
+     * count. For the player-facing "There are N known jobs which produce this item" (dev,
+     * 2026-10-19 playtest: count only jobs where the item is in the town's knowledge store).
+     */
+    public static ImmutableMap<JobID, ResourceLocation> getJobsKnownToProduce(
+            WorksBehaviour.TownData data,
+            Ingredient wantedResult
+    ) {
+        return jobsThatProduce(data, wantedResult, false);
+    }
+
+    private static ImmutableMap<JobID, ResourceLocation> jobsThatProduce(
+            WorksBehaviour.TownData data,
+            Ingredient wantedResult,
+            boolean countDeclaredInitialRequest
+    ) {
         ImmutableMap.Builder<JobID, ResourceLocation> b = ImmutableMap.builder();
         for (Supplier<Work> value : Works.values()) {
             Work w = value.get();
@@ -159,7 +182,7 @@ public class ServerJobsRegistry {
             }
             ResourceLocation name = Compat.getItemId(w.icon.getItem());
             name = Util.ifNull(name, Questown.ResourceLocationError);
-            if (matches(wantedResult, w.initialRequest.apply(data.serverLevel()))) {
+            if (countDeclaredInitialRequest && matches(wantedResult, w.initialRequest.apply(data.serverLevel()))) {
                 b.put(w.id, Util.ifNull(name, Questown.ResourceLocationError));
                 continue;
             }
