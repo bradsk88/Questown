@@ -10,13 +10,13 @@ public interface TutorialTownView {
 
     String PHASE_KICKOFF = "kickoff";
     String PHASE_HUNTER_GATHERER = "hunterGatherer";
+    String PHASE_EMPTY_ROOMS = "emptyRooms";
     String PHASE_JOB_CHANGE_FOOD = "jobChangeAndFood";
     String PHASE_MINER = "miner";
     String PHASE_NEW_JOB_ROOM = "newJobRoom";
     String PHASE_4A = "phase4a";
     String PHASE_4B = "phase4b";
     String PHASE_5 = "phase5";
-    String PHASE_7 = "phase7";
 
     int villagerCount();
 
@@ -32,7 +32,6 @@ public interface TutorialTownView {
 
     void fireTutorialTrigger(TutorialTrigger.Triggers trigger);
 
-    ResourceLocation getExoticWood();
 
     ResourceLocation getRoomForJob(JobID job);
 

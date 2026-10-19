@@ -78,10 +78,6 @@ class TownFlagTutorialAdapter implements TutorialTownView {
         AdvancementsInit.TUTORIAL_TRIGGER.triggerForNearestPlayer(sl, trigger, flag.getBlockPos());
     }
 
-    @Override
-    public ResourceLocation getExoticWood() {
-        return getExoticWoodForTown(flag);
-    }
 
     @Override
     public ResourceLocation getRoomForJob(JobID job) {
@@ -99,7 +95,7 @@ class TownFlagTutorialAdapter implements TutorialTownView {
             // the cook's used to be defaultQuestCompletionRewards, a coin flip once villager 2
             // had quests, which could leave the miner beat (3 villagers) waiting forever.
             case TutorialTownView.PHASE_HUNTER_GATHERER, TutorialTownView.PHASE_JOB_CHANGE_FOOD -> arrivalWithQuestBatch();
-            case TutorialTownView.PHASE_NEW_JOB_ROOM, TutorialTownView.PHASE_7, TutorialTownView.PHASE_MINER ->
+            case TutorialTownView.PHASE_NEW_JOB_ROOM, TutorialTownView.PHASE_MINER ->
                     new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
             default -> new AddBatchOfQuestsForVisitorReward(flag, null);
         };
@@ -115,50 +111,5 @@ class TownFlagTutorialAdapter implements TutorialTownView {
         );
     }
 
-    static ResourceLocation chooseExoticWood(String biomePath) {
-        Map<String, ResourceLocation> nativeWoods = Map.of(
-                "forest", Compat.getItemId(Items.OAK_LOG),
-                "birch", Compat.getItemId(Items.BIRCH_LOG),
-                "taiga", Compat.getItemId(Items.SPRUCE_LOG),
-                "jungle", Compat.getItemId(Items.JUNGLE_LOG),
-                "savanna", Compat.getItemId(Items.ACACIA_LOG),
-                "dark_forest", Compat.getItemId(Items.DARK_OAK_LOG),
-                "mangrove", Compat.getItemId(Items.MANGROVE_LOG)
-        );
 
-        ImmutableList<ResourceLocation> allWoods = ImmutableList.of(
-                Compat.getItemId(Items.OAK_LOG),
-                Compat.getItemId(Items.BIRCH_LOG),
-                Compat.getItemId(Items.SPRUCE_LOG),
-                Compat.getItemId(Items.JUNGLE_LOG),
-                Compat.getItemId(Items.ACACIA_LOG),
-                Compat.getItemId(Items.DARK_OAK_LOG)
-        );
-
-        ResourceLocation nativeWood = null;
-        for (Map.Entry<String, ResourceLocation> entry : nativeWoods.entrySet()) {
-            if (biomePath.contains(entry.getKey())) {
-                nativeWood = entry.getValue();
-                break;
-            }
-        }
-
-        for (ResourceLocation wood : allWoods) {
-            if (!wood.equals(nativeWood)) {
-                return wood;
-            }
-        }
-
-        return Compat.getItemId(Items.DARK_OAK_LOG);
-    }
-
-    private static ResourceLocation getExoticWoodForTown(TownFlagBlockEntity t) {
-        if (!(t.getLevel() instanceof ServerLevel sl)) {
-            return Compat.getItemId(Items.DARK_OAK_LOG);
-        }
-        String biome = sl.getBiome(t.getBlockPos()).unwrapKey()
-                          .map(k -> k.location().getPath())
-                          .orElse("plains");
-        return chooseExoticWood(biome);
-    }
 }

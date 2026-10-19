@@ -16,7 +16,6 @@ class TestTutorialTownView implements TutorialTownView {
     private final List<String> messagesSent = new ArrayList<>();
     private final List<TutorialTrigger.Triggers> triggersFired = new ArrayList<>();
     private final List<String> rewardPhaseNames = new ArrayList<>();
-    private ResourceLocation exoticWood;
     private ResourceLocation roomForJob;
 
     private TestTutorialTownView() {
@@ -61,10 +60,6 @@ class TestTutorialTownView implements TutorialTownView {
         triggersFired.add(trigger);
     }
 
-    @Override
-    public ResourceLocation getExoticWood() {
-        return exoticWood;
-    }
 
     @Override
     public ResourceLocation getRoomForJob(JobID job) {
@@ -96,7 +91,6 @@ class TestTutorialTownView implements TutorialTownView {
     static class Builder {
         private int villagerCount = 1;
         private boolean tutorialBopGranted = false;
-        private ResourceLocation exoticWood = new ResourceLocation("minecraft", "dark_oak_log");
         private ResourceLocation roomForJob = new ResourceLocation("questown", "farm");
 
         Builder villagerCount(int count) {
@@ -109,10 +103,6 @@ class TestTutorialTownView implements TutorialTownView {
             return this;
         }
 
-        Builder exoticWood(ResourceLocation wood) {
-            this.exoticWood = wood;
-            return this;
-        }
 
         Builder roomForJob(ResourceLocation room) {
             this.roomForJob = room;
@@ -123,7 +113,6 @@ class TestTutorialTownView implements TutorialTownView {
             TestTutorialTownView view = new TestTutorialTownView();
             view.villagerCount = villagerCount;
             view.tutorialBopGranted = tutorialBopGranted;
-            view.exoticWood = exoticWood;
             view.roomForJob = roomForJob;
             return view;
         }

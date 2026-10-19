@@ -112,10 +112,6 @@ class TownQuestsHunterGathererOnboardingTest {
             public void fireTutorialTrigger(TutorialTrigger.Triggers trigger) {
             }
 
-            @Override
-            public ResourceLocation getExoticWood() {
-                return new ResourceLocation("oak_wood");
-            }
 
             @Override
             public ResourceLocation getRoomForJob(JobID job) {

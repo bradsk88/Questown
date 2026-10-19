@@ -908,13 +908,19 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
         Tutorial r;
         r = tryPhase2_hunterGatherer(view);           if (r != null) return r;
+        r = tryPhase2_4_emptyRooms(view);             if (r != null) return r;
         r = tryPhase2_5_jobChangeAndFood(view);       if (r != null) return r;
         r = tryPhase2_7_miner(view);                  if (r != null) return r;
         r = tryPhase2_75_topNeedUnlock(view);         if (r != null) return r;
         r = tryPhase3_newJobRoom(view);               if (r != null) return r;
         r = tryPhase4_crafter(view);                  if (r != null) return r;
         r = tryPhase5_supplyChain(view);              if (r != null) return r;
-        r = tryPhase7_exoticWood(view);               if (r != null) return r;
+        // The supply chain was the last scripted beat once phase 7 (exotic wood) was cut (dev,
+        // 2026-10-19). Its journal entry (entries/014-supply-chains) opened when phase 7 started.
+        if (!supplyChainsTriggerFired) {
+            view.fireTutorialTrigger(TutorialTrigger.Triggers.SecondJobType);
+            supplyChainsTriggerFired = true;
+        }
         return Tutorial.DONE;
     }
 
@@ -931,6 +937,69 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         addHunterGatherer(view);
         notifyNewQuests(view);
         return Tutorial.APPLIED;
+    }
+
+    /**
+     * Two "empty room" quests between the hunter-gatherer batch and the cook batch (dev, 2026-10-19
+     * playtest). Posted once the hunter-gatherer batch is fully done; the cook batch waits for it.
+     * A town whose cook batch is already out (an existing world) skips it.
+     */
+    private @Nullable Tutorial tryPhase2_4_emptyRooms(TutorialTownView view) {
+        if (cookBatchPosted()) {
+            return null;
+        }
+        if (!hunterGathererBatchComplete()) {
+            return Tutorial.SKIPPED;
+        }
+        if (!emptyRoomsBatchPosted()) {
+            addEmptyRoomsBatch(view);
+            notifyNewQuests(view);
+            return Tutorial.APPLIED;
+        }
+        if (!emptyRoomsBatchComplete()) {
+            return Tutorial.SKIPPED;
+        }
+        return null;
+    }
+
+    private boolean cookBatchPosted() {
+        return questBatches.getAll().stream().filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE).count() >= 2;
+    }
+
+    private boolean hunterGathererBatchComplete() {
+        ResourceLocation rawFood = TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location();
+        return questBatches.getAllBatches().stream()
+                .filter(b -> b.getAll().stream().anyMatch(q -> q.getType() == Quest.QuestType.LOOT && rawFood.equals(q.getWantedId())))
+                .anyMatch(b -> b.getAll().stream().allMatch(Quest::isComplete));
+    }
+
+    private @Nullable MCQuestBatch emptyRoomsBatch() {
+        return questBatches.getAllBatches().stream()
+                .filter(b -> b.getAll().size() == 2
+                        && b.getAll().stream().allMatch(q -> SpecialQuests.EMPTY_ROOM.equals(q.getWantedId())))
+                .findFirst().orElse(null);
+    }
+
+    private boolean emptyRoomsBatchPosted() {
+        return emptyRoomsBatch() != null;
+    }
+
+    private boolean emptyRoomsBatchComplete() {
+        MCQuestBatch b = emptyRoomsBatch();
+        return b != null && b.getAll().stream().allMatch(Quest::isComplete);
+    }
+
+    void addEmptyRoomsBatch(TutorialTownView view) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        // Two NEW rooms: an empty-room quest only completes on a room no completed quest has
+        // claimed (isClaimedByACompletedQuest), so existing rooms do not satisfy these.
+        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.EMPTY_ROOM));
+        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.EMPTY_ROOM));
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_EMPTY_ROOMS));
+        markOnboarding(qq);
+        questBatches.add(qq);
+        QT.QUESTS_LOGGER.info("Tutorial empty-rooms batch added (two new rooms before the cook batch)");
     }
 
     private @Nullable Tutorial tryPhase2_5_jobChangeAndFood(TutorialTownView view) {
@@ -1141,21 +1210,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
 
-    private @Nullable Tutorial tryPhase7_exoticWood(TutorialTownView view) {
-        if (!phase7Started()) {
-            // The supply-chain journal entry (entries/014-supply-chains) opens once the supply
-            // chain (phase 5) is done; it used to fire from the storage-upgrade phase 6, which
-            // was folded into the cook batch (dev, 2026-10-18).
-            view.fireTutorialTrigger(TutorialTrigger.Triggers.SecondJobType);
-            addPhase7ExoticWoodQuest(view);
-            notifyNewQuests(view);
-            return Tutorial.APPLIED;
-        }
-        if (!phase7Complete()) {
-            return Tutorial.SKIPPED;
-        }
-        return null;
-    }
 
     private static final ResourceLocation CRAFTER_STICK_JOB = JobID.toRL(new JobID("crafter", "stick"));
     private static final ResourceLocation CRAFTER_BOWL_JOB = JobID.toRL(new JobID("crafter", "bowl"));
@@ -1164,9 +1218,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private static final ResourceLocation CRAFTING_ROOM = new ResourceLocation("questown", "crafting_room");
     private static final ResourceLocation KITCHEN_SMALL = new ResourceLocation("questown", "kitchen_small");
     private static final ResourceLocation BIG_BEDROOM = new ResourceLocation("questown", "big_bedroom");
+    // Per load; the advancement grant itself is idempotent.
+    private boolean supplyChainsTriggerFired = false;
     private static final ResourceLocation STORE_ROOM_MEDIUM = new ResourceLocation("questown", "store_room_medium");
 
-    static final String PHASE_7_FLAVOR_KEYWORD = "flagpole";
 
     private boolean phase4Started() {
         return questBatches.includes(q -> CRAFTER_STICK_JOB.equals(q.getWantedId()) && q.getType() == Quest.QuestType.JOB_CHANGE);
@@ -1184,13 +1239,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return questBatches.includes(q -> q.getType() == Quest.QuestType.CONCURRENT_JOBS && q.isComplete());
     }
 
-    private boolean phase7Started() {
-        return questBatches.includes(q -> q.getType() == Quest.QuestType.ITEM && q.getFlavorText() != null && q.getFlavorText().contains(PHASE_7_FLAVOR_KEYWORD));
-    }
 
-    private boolean phase7Complete() {
-        return questBatches.includes(q -> q.getType() == Quest.QuestType.ITEM && q.getFlavorText() != null && q.getFlavorText().contains(PHASE_7_FLAVOR_KEYWORD) && q.isComplete());
-    }
 
     private void grantTutorialBop(TutorialTownView view) {
         if (view.tutorialBopGranted()) {
@@ -1268,21 +1317,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         QT.QUESTS_LOGGER.info("Tutorial phase 5 quests added (supply chain)");
     }
 
-    private void addPhase7ExoticWoodQuest(TutorialTownView view) {
-        ResourceLocation exoticWood = view.getExoticWood();
-        UUID batchUUID = UUID.randomUUID();
-        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
-
-        MCQuest woodQuest = MCQuest.item(batchUUID, null, exoticWood, 1);
-        String woodName = exoticWood.getPath().replace("_", " ");
-        woodQuest.setFlavorText("Your village deserves a proper " + PHASE_7_FLAVOR_KEYWORD + ". Bring back " + woodName + " from the lands beyond.");
-        q.addNewQuest(woodQuest);
-
-        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_7));
-        markOnboarding(qq);
-        questBatches.add(qq);
-        QT.QUESTS_LOGGER.info("Tutorial phase 7 quest added (exotic wood: {})", exoticWood);
-    }
 
 
     private record JobHaver(VillagerUUID villager, JobID job) {
@@ -1475,7 +1509,21 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             MCRoom room,
             ResourceLocation q
     ) {
+        if (SpecialQuests.EMPTY_ROOM.equals(q) && isClaimedByACompletedQuest(room)) {
+            return;
+        }
         questBatches.markRecipeAsComplete(room, q);
+    }
+
+    /**
+     * An "empty room" quest asks for a NEW room: it matches any registered room, so without this
+     * every later empty-room quest would close at once on rooms the town already has (dev,
+     * 2026-10-19: the post-hunter-gatherer batch is "two empty rooms").
+     */
+    boolean isClaimedByACompletedQuest(MCRoom room) {
+        return questBatches.getAll().stream()
+                .map(Quest::completedOn)
+                .anyMatch(r -> r != null && r.yCoord == room.yCoord && r.doorPos.equals(room.doorPos));
     }
 
     public void markAsConverted(
@@ -1850,8 +1898,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
         for (MCQuest q : openRooms) {
             Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(q.getWantedId());
-            if (!rooms.isEmpty()) {
-                markQuestAsComplete(rooms.iterator().next().getRoom(), q.getWantedId());
+            Optional<MCRoom> eligible = rooms.stream()
+                    .map(RoomRecipeMatch::getRoom)
+                    .filter(r -> !SpecialQuests.EMPTY_ROOM.equals(q.getWantedId()) || !isClaimedByACompletedQuest(r))
+                    .findFirst();
+            if (eligible.isPresent()) {
+                markQuestAsComplete(eligible.get(), q.getWantedId());
             } else {
                 probeNoRoomMatch(q);
             }

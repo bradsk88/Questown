@@ -37,6 +37,11 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         this(null, null, null, null, null, 1);
     }
 
+    /** The room this quest was completed on, or null while open (or for non-room quests). */
+    public @Nullable ROOM completedOn() {
+        return completedOn;
+    }
+
     @Override
     public String toString() {
         return "Quest{" +

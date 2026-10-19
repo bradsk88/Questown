@@ -314,7 +314,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final NonNullList<ItemStack> bopStacks = NonNullList.create();
     boolean tutorialBopGranted = false;
     int completedProceduralBatches = 0;
-    private boolean flagpoleBuilt = false;
 
     public ItemHandler bopItemHandler() {
         return new TownFlagBOPItemHandler(this);
@@ -496,13 +495,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         syncBopFull();
     }
 
-    public boolean isFlagpoleBuilt() {
-        return flagpoleBuilt;
-    }
 
-    public void setFlagpoleBuilt(boolean built) {
-        this.flagpoleBuilt = built;
-    }
 
 
     private static Map<String, InitPair> initPairs;

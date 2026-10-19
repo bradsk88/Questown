@@ -1286,3 +1286,25 @@ is the exception). A second plain BEDROOM quest would not work: `backfillSatisfi
 open ROOM quest that any existing room already satisfies. Pinned by `TutorialPhaseGateTest`
 (red without the quest) and `TownQuestsHunterGathererOnboardingTest.hunterGathererBatch_
 carriesTheBedForTheVillagerItBrings`.
+
+## Two-empty-rooms batch before the cook; empty-room quests need a new room (2026-10-19)
+
+Dev ruling: a batch of two "empty room" quests comes after the hunter-gatherer batch (raw food)
+and before the cook batch. `tryPhase2_4_emptyRooms` posts it once the hunter-gatherer batch is
+fully complete; the cook batch (phase 2.5) waits for it; a town whose cook batch is already out
+skips it. Reward: `PHASE_EMPTY_ROOMS` (no villager — bed rule, CONTEXT.md "Onboarding arrival").
+An EMPTY_ROOM quest matches any registered room, so `backfillSatisfiedQuests` would have closed
+both at once on rooms the town already had. `TownQuests.isClaimedByACompletedQuest`: an
+empty-room quest only completes on a room no completed quest has claimed (`Quest.completedOn`),
+in both the room-created path (`markQuestAsComplete`) and the backfill (picks the first unclaimed
+match). Only EMPTY_ROOM is restricted — the store room still completes in the first empty room.
+Pinned by `TutorialPhaseGateTest` (red on the previous TownQuests); day1 43/43.
+
+## Phase 7 (exotic wood / flagpole) cut (2026-10-19)
+
+Dev: "I've never made it that far, and we already have a bunch of reasons for a person to leave
+their village". Removed `tryPhase7_exoticWood`, its quest, `PHASE_7`, the exotic-wood choice
+(`TutorialTownView.getExoticWood`, `TownFlagTutorialAdapter.chooseExoticWood`,
+`ExoticWoodSelectionTest`) and the flag's `flagpoleBuilt` state (the `flagpole_built` NBT is
+ignored on load). The supply-chains journal trigger (`SecondJobType`) now fires once when the
+supply chain (phase 5) completes, where phase 7 used to fire it.

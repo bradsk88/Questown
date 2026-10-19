@@ -96,7 +96,6 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         }
         t.put("stacks", stacks);
         t.putBoolean("tutorial_bop_granted", flag.tutorialBopGranted);
-        t.putBoolean("flagpole_built", flag.isFlagpoleBuilt());
         t.putInt("completed_procedural_batches", flag.completedProceduralBatches);
         return t;
     }
@@ -119,9 +118,6 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         }
         if (tag.contains("tutorial_bop_granted")) {
             flag.tutorialBopGranted = tag.getBoolean("tutorial_bop_granted");
-        }
-        if (tag.contains("flagpole_built")) {
-            flag.setFlagpoleBuilt(tag.getBoolean("flagpole_built"));
         }
         if (tag.contains("completed_procedural_batches")) {
             flag.completedProceduralBatches = tag.getInt("completed_procedural_batches");
