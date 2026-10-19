@@ -1,6 +1,6 @@
 ---
 title: 'Fresh cook in dining_no_table took ~378 carrots in ~20 s'
-status: needs-triage
+status: fixed
 origin: 2026-10-18 playtest (dev-server-12, build dd7a43f5) — observed in the log, not reported by the user
 related: commit fe1b7238 "Diners eat the finished meal instead of fetching more food" (the 2026-10-17 carrot take/put loop)
 ---
@@ -36,3 +36,12 @@ DinerRawFoodWork's state-0 *tool* and state-1 *ingredient* (`TOOLS_REQUIRED_AT_S
 `INGREDIENTS_REQUIRED_AT_STATES`), and the sword is hunter/sword's tool: both bursts are on
 tools, which suggests a take-tool / return-tool loop. Next: add a PUT probe beside the TOOK one
 and run `eating/eat_raw_food`.
+
+## Cause and fix (2026-10-19)
+
+A take/return loop, not consumption. A probe on the container slot after each take showed slot
+0 refilled between takes, and a probe in `TownFlagBlockEntity.depositCarriedWorkOutput` fired
+once per take: `JobLogic.tick` fetched supplies for a new cycle in the same tick a finished
+(wrapping-up) job handed off, and the board cascade deposited the fetched item straight back
+without changing job. Fix: the wrap-up branch hands off before `tryGetSupplies` (all jobs).
+eating/eat_raw_food: 313 takes -> 1, fullness unchanged (42%). See jobs/COMPLEX.md.

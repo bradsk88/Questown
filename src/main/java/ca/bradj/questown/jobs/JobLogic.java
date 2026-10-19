@@ -225,14 +225,18 @@ public class JobLogic<EXTRA, TOWN, POS> {
             this.workSpot = null;
             return;
         }
-        worldBeforeTick.tryGetSupplies();
 
         if (wrappingUp) {
             // TODO: Check if all special rules were leveraged.
             //  If not, spit an error into the console to help with debugging.
+            // A finished cycle hands off; it does not fetch supplies for another one. Fetching
+            // here fed the board cascade's carried-output deposit a fresh item every tick: a
+            // take/return loop of ~300 raw food per meal (2026-10-19, cook-diner-carrot-take-burst).
             worldBeforeTick.changeToNextJob();
             ticksWithoutNextJob++;
+            return;
         }
+        worldBeforeTick.tryGetSupplies();
     }
 
     protected boolean setup(

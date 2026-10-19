@@ -588,3 +588,18 @@ Tried and dropped: gating ALWAYS_CONSIDER jobs on their slot precondition in
 lacked cook/extract and baker/extract (furnace/oven empty at warp start): cook/simple_furnace_food
 and baker/bread produced nothing. With fixes 1+2 the cook alternates fuel <-> extract quickly and
 extracts, so the gate was unnecessary.
+
+## A wrapping-up job hands off before fetching (2026-10-19)
+
+`JobLogic.tick`'s tail used to run `tryGetSupplies()` and then, when `wrappingUp` (the job just
+finished a cycle: its spot went back to state 0), `changeToNextJob()`. The board cascade
+(`TownFlagBlockEntity.changeJobForVisitorFromBoard`) first deposits carried work output
+(`depositCarriedWorkOutput`) and returns without changing job, so the item just fetched for a
+new cycle went straight back into the chest, every tick. A raw-food diner took and returned its
+food ~300 times per meal (eating/eat_raw_food: 313 takes from a 16-beef chest, net -1), a cook
+diner ~3000 mutton in six minutes of village/growth, and the hunter its stone sword the same way.
+The wrap-up branch now changes job and returns before `tryGetSupplies`. Red/green:
+`JobLogicTest.tick_shouldNotGetSupplies_WhileWrappingUp` (`[supplies, next]` -> `[next]`);
+eat_raw_food takes 313 -> 1 at the same fullness. Probe recipe that found it: a temporary log
+beside `[PROBE:supplies]` printing the container slot after `removeItem`, and one in
+`depositCarriedWorkOutput` — the TOOK line alone cannot tell a loop from consumption.

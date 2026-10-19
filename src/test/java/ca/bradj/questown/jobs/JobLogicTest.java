@@ -17,6 +17,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -556,6 +558,46 @@ class JobLogicTest {
         // Then, change job
         ticker.accept(DEFINITION.maxState());
         Assertions.assertTrue(changedJob.get());
+    }
+
+    /**
+     * 2026-10-19 (cook-diner-carrot-take-burst): a job that finished its cycle (wrapping up)
+     * fetched supplies for another cycle in the same tick it handed off to the next job. The
+     * board cascade then deposited the fetched item straight back into the chest without
+     * changing job, so a diner took and returned raw food ~300 times per meal (and the hunter
+     * its sword). A finished job hands off; it does not fetch.
+     */
+    @Test
+    void tick_shouldNotGetSupplies_WhileWrappingUp() {
+        List<String> events = new ArrayList<>();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeToNextJob() {
+                events.add("next");
+            }
+
+            @Override
+            public void tryGetSupplies() {
+                events.add("supplies");
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+        Consumer<Integer> ticker = (state) -> {
+            world.allWorkSpots = ImmutableMap.of(state, ImmutableList.of(ARBITRARY_WORKSPOT));
+            logic.defaultTick(
+                    ProductionStatus.fromJobBlockStatus(state),
+                    true,
+                    (Position b) -> world.states.getJobBlockState(b).processingState()
+            );
+        };
+        ticker.accept(STATE_NEED_WIDGET);
+        ticker.accept(STATE_NEED_WORK);
+        ticker.accept(DEFINITION.maxState());
+
+        events.clear();
+        ticker.accept(DEFINITION.maxState());
+
+        Assertions.assertEquals(List.of("next"), events);
     }
 
     @Test
