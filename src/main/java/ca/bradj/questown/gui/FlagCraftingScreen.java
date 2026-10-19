@@ -44,6 +44,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     private Button craftWandButton;
     private Button craftMatButton;
     private Button craftBoardButton;
+    private Button craftMineshaftButton;
 
     // Flow layout, recomputed each init() from the actual wrapped-text heights so blocks can never
     // overlap regardless of string length / translation. All values are offsets from the panel's
@@ -53,6 +54,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     private int row1Y;
     private int row2Y;
     private int row3Y;
+    private int row4Y;
     private int moveDescY;
     private int moveButtonY;
 
@@ -91,6 +93,10 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         return Compat.translatable("menu.flag_crafting.board_desc");
     }
 
+    private Component mineshaftDesc() {
+        return Compat.translatable("menu.flag_crafting.mineshaft_desc");
+    }
+
     private Component moveDesc() {
         return Compat.translatable("menu.flag_crafting.begin_moving_desc");
     }
@@ -115,6 +121,8 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         y += ICON_ROW_HEIGHT + BLOCK_PAD;
         row3Y = y;
         y += ICON_ROW_HEIGHT + BLOCK_PAD;
+        row4Y = y;
+        y += ICON_ROW_HEIGHT + BLOCK_PAD;
 
         // The "Begin moving" section (recall + relocate) only makes sense with villagers,
         // so collapse it entirely when none have joined.
@@ -138,9 +146,11 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         this.craftWandButton = craftButton(bgX + CRAFT_BTN_X, bgY + row1Y, 0);
         this.craftMatButton = craftButton(bgX + CRAFT_BTN_X, bgY + row2Y, 1);
         this.craftBoardButton = craftButton(bgX + CRAFT_BTN_X, bgY + row3Y, 2);
+        this.craftMineshaftButton = craftButton(bgX + CRAFT_BTN_X, bgY + row4Y, 3);
         this.addRenderableWidget(this.craftWandButton);
         this.addRenderableWidget(this.craftMatButton);
         this.addRenderableWidget(this.craftBoardButton);
+        this.addRenderableWidget(this.craftMineshaftButton);
         if (showMove) {
             this.addRenderableWidget(Compat.button(
                     Compat.translatable("menu.flag_crafting.begin_moving"),
@@ -191,6 +201,9 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         if (this.craftBoardButton != null) {
             this.craftBoardButton.active = countMatching(Ingredient.of(ItemTags.SIGNS)) > 0;
         }
+        if (this.craftMineshaftButton != null) {
+            this.craftMineshaftButton.active = countMatching(Ingredient.of(Items.STONE_STAIRS)) > 0;
+        }
     }
 
     private int countMatching(Ingredient ingredient) {
@@ -224,6 +237,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         renderRecipeRow(ctx, bgX, bgY + row1Y, Items.STICK.getDefaultInstance(), new ItemStack(ItemsInit.TOWN_WAND.get()), mouseX, mouseY);
         renderRecipeRow(ctx, bgX, bgY + row2Y, Items.OAK_PRESSURE_PLATE.getDefaultInstance(), new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get()), mouseX, mouseY);
         renderRecipeRow(ctx, bgX, bgY + row3Y, Items.OAK_SIGN.getDefaultInstance(), new ItemStack(ItemsInit.JOB_BOARD_BLOCK.get()), mouseX, mouseY);
+        renderRecipeRow(ctx, bgX, bgY + row4Y, Items.STONE_STAIRS.getDefaultInstance(), new ItemStack(ItemsInit.MINESHAFT_BLOCK.get()), mouseX, mouseY);
 
         if (showMove) {
             ctx.darkTextWrap(new Coordinate(bgX + MARGIN, bgY + moveDescY), TEXT_WIDTH, moveDesc());
@@ -237,6 +251,9 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         }
         if (this.craftBoardButton != null && this.craftBoardButton.isHovered()) {
             renderCraftTooltip(boardDesc(), Ingredient.of(ItemTags.SIGNS), mouseX, mouseY);
+        }
+        if (this.craftMineshaftButton != null && this.craftMineshaftButton.isHovered()) {
+            renderCraftTooltip(mineshaftDesc(), Ingredient.of(Items.STONE_STAIRS), mouseX, mouseY);
         }
     }
 

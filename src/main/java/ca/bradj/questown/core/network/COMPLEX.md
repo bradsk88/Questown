@@ -18,3 +18,9 @@ Diagnostic corollary: a log line showing `item=minecraft:air` for a
 stack that was just built from a mod holder does **not** mean the
 registry/holder is broken — check whether the log runs after an
 `Inventory.add`/`drop`/`shrink` on that stack.
+
+## FlagCraftMessage: mineshaft recipe and WandGet (2026-10-19)
+
+Index 3 crafts a flag-stamped mineshaft from stone stairs (dev's recipe), replacing the removed
+item-on-flag stamping (`blocks/COMPLEX.md`). Crafting a wand now fires the `WandGet` advancement
+(journal entry 003), which only the removed conversion fired before.

@@ -155,3 +155,15 @@ cause on its own): `tick` treats a flag whose chunk is not block-ticking
 `registerJobBoard` / `initialize` retry while the board's chunk is unloaded. The removal logs at
 INFO so a future self-destruct is visible. Not unit-pinned (the retention path reads `Config`,
 which throws in unit tests); verified by repeated day1 runs with zero removals.
+
+## No item-on-flag conversions (2026-10-19)
+
+Dev: "Lets fully remove the 'use item on flag block' interaction. Everything important (and not
+experimental) can be crafted via the menu." `TownFlagBlock.convertItemInHand` is gone (stick <->
+wand, room-block stamping, town door / false wall / fence gate / plate / hospital bed /
+clipboard swaps, the exotic-wood flagpole, and the diamond / gold-block / potato debug actions).
+Using the flag with an item now just opens the flag UI. The two pieces the game depended on moved
+to the crafting tab (`FlagCraftMessage`): the **mineshaft** (stone stairs -> flag-stamped mineshaft;
+a RoomBlock only registers its room when its stamped parent resolves) and the `WandGet`
+advancement (journal entry 003), which only the conversion used to fire. Still unresolved: the
+**fishing station** is also a stamped RoomBlock with no crafting-tab recipe (asked the dev).
