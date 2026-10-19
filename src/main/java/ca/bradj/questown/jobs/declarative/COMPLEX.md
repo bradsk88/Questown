@@ -109,3 +109,10 @@ use `setJobBlockState`, which leaves timers alone. Shared by the realtime and wa
 interactions. Pinned by `AbstractWorkWITest.tryWork_partialWork_doesNotStartTheNextStatesTimer` /
 `tryWork_completedWork_startsTheNextStatesTimerOnce` (red-verified: both failed on the old form
 with `[1@2000]` / `[1@2000, 2@2000]`).
+
+## Eating takes a tenth of the old work (2026-10-19)
+
+Dev ruling ("Should take more like 1/10th the time"): the NEED_EAT work requirement is 5 at a
+table (`DinerWork`, was 50) and 3 without one (`DinerNoTableWork`, `DinerRawFoodWork`, were 25).
+Pinned by `DiningWorkDurationTest`; eating autotests 4/4. The 100 s "eating" waits also seen in
+that playtest were a separate GOING_TO_JOB stall (ticket dining-going-to-job-stall.md).

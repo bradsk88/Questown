@@ -40,7 +40,7 @@ public class DinerNoTableWork {
             BLOCK_STATE_NEED_EAT, Ingredient.of(TagsInit.Items.VILLAGER_FOOD)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_EAT, 25,
+            BLOCK_STATE_NEED_EAT, 3, // was 25: eating took far too long (dev, 2026-10-19: ~1/10)
             BLOCK_STATE_CONSUME_FOOD, 0,
             BLOCK_STATE_DONE, 0
     );

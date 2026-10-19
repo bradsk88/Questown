@@ -38,7 +38,7 @@ public class DinerWork {
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_FOOD, 0,
-            BLOCK_STATE_NEED_EAT, 50,
+            BLOCK_STATE_NEED_EAT, 5, // was 50: eating took far too long (dev, 2026-10-19: ~1/10)
             BLOCK_STATE_DONE, 0
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
