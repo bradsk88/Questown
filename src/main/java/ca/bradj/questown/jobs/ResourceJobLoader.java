@@ -561,7 +561,7 @@ public class ResourceJobLoader {
                 case "biome_loot" -> biomeLootResult(rizz);
                 case "loot" -> lootResult(rizz);
                 case "crafting_table" -> craftingTableResult(rizz);
-                case "uses_special_rules", "via_other_job" -> ResultGenerator.alwaysEmpty();
+                case "uses_special_rules", "via_other_job" -> ResultGenerator.forSpecialType(type);
                 default -> throw new IllegalArgumentException("Unexpected result type: " + type);
             };
             return new WorkWorldInteractions(cooldownTicks, g);

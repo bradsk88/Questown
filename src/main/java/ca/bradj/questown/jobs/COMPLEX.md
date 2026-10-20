@@ -640,3 +640,15 @@ farmer variants' extrapolated realtime wheat 70–110 -> 10); warp yields are un
 (JobLogic is realtime-only). Red: `JobLogicTest.tick_shouldNotHandOff_WhileHoldingWorkOutput`.
 Dev ruling (2026-10-20, confirmed in a client): carrying output by hand is how it should work,
 and the extra walking time is expected — not a production regression to tune away.
+
+## via_other_job jobs produce their declared product (2026-10-20 playtest)
+
+"Cooked mutton: 0 jobs produce it." The hint (`ServerJobsRegistry.jobsThatProduce`) skips
+`Work.hasNoOutput()`, which is the world result generator's `isResultAlwaysEmpty()`. The loader
+mapped both `uses_special_rules` (cook/fuel: a rule moves items, nothing produced) and
+`via_other_job` (every simple-furnace recipe: its cooked item comes out through cook/extract) to
+`ResultGenerator.alwaysEmpty()`, so every cook recipe was skipped. `ResultGenerator.forSpecialType`
+now gives `via_other_job` a generator that yields nothing from its own cycle but is not "always
+empty". `hasNoOutput` has no other reader. Measured in a running server: producers of cooked
+mutton = [cook/mutton]; of #questown:villager_food = the six cook recipes + two soup jobs, no
+fuel/stock/extract. Red: `ResultGeneratorSpecialTypeTest.viaOtherJob_producesItsDeclaredProduct`.
