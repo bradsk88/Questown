@@ -835,3 +835,14 @@ shards, and an empty shard reports `RESULT: 0/0`. Village scenarios are never sp
 79/79 scenarios accounted for; 360 s wall with plain round-robin (town_large's shard also took
 19 others), 299 s with the solo rule (town_large alone 259 s under 4x load; other shards
 2–3 min) against 335–500 s serial. Unit: `AutoTestShardTest`.
+
+## The arena is cleared up to the natural surface (2026-10-20)
+
+`TestArenaPreparer.flatten` cleared from the origin (y=64) up to a fixed height (tallest
+blueprint block + headroom). Where the world's natural surface stands higher (plains hills on some
+seeds), the leftover terrain roofed the arena: dark, no sky, so the farmer fixture's wheat failed
+`CropBlock.canSurvive` the moment it was placed and every warp farmer variant failed on that seed
+(2 of 7 suite runs on random seeds). Each column now clears up to max(fixed height,
+`Heightmap.Types.WORLD_SURFACE`). Repro seed: `level-seed=-598020885233501430` in
+`run/server.properties` — farmer/harvest_wheat 2/9 before, 9/9 after. Ticket:
+`.scratch/autotest-suite/farmer-warp-loses-container-on-some-seeds.md`.

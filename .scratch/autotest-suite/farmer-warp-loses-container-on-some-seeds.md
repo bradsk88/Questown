@@ -1,6 +1,6 @@
 ---
 title: 'Farmer warp variants all fail on some world seeds: the supply chest vanishes from the warp state'
-status: ready-for-agent
+status: resolved
 origin: 2026-10-20 suite runs (2 of 7 farmer sets, then 1 of 4 parallel servers)
 ---
 
@@ -32,3 +32,21 @@ cook-extract and hint changes).
 Next: with the bad seed, log the warp state's container list per warp step to find the step
 that drops it (TownState.withContainerItemRemoved / ContainerTarget.withItemAdded returning
 null are candidates).
+
+## Root cause and fix (2026-10-20)
+
+The container was never the problem (it is in the warp's state on both seeds; the post-warp
+snapshot was empty because the chest had been emptied). The crops were: on the bad seed the
+fixture's 23 mature wheat were already gone right after `RoomBuilder.build` — at a crop cell
+`raw light=0, canSeeSky=false` with air directly above. `TestArenaPreparer.flatten` clears from
+the origin (y=64) up to a fixed height (tallest blueprint block + tree headroom); on that seed
+the origin is plains with the natural surface higher than that, so the leftover terrain roofed
+the arena into a dark cave and every crop failed `CropBlock.canSurvive` on placement. With no
+wheat to harvest, the warp farmer planted all 32 seeds and nothing grew within the window.
+Ocean seeds have nothing above, so they passed.
+
+Fix: `flatten` clears each column up to max(fixed height, the WORLD_SURFACE heightmap). Bad seed:
+2/9 -> 9/9 (wheat 0 -> 23 after build, light 0 -> 15). Sharded full suite after: 75/79, reds
+arborist/cut_trees x2, floating_furniture_over_half, skip_chicken_command (known flakes).
+arborist/cut_trees [full_cycle] failed in both sharded runs today — trees also need light and
+sky, so it may be another seed/terrain case; not checked.

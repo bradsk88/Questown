@@ -9,6 +9,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
@@ -165,7 +166,13 @@ public final class TestArenaPreparer {
     ) {
         for (int x = region.minX(); x <= region.maxX(); x++) {
             for (int z = region.minZ(); z <= region.maxZ(); z++) {
-                for (int y = region.topY(); y >= 0; y--) {
+                // Clear up to the natural surface too: where the ground stands above the fixed
+                // clear height (a plains hill), the leftover terrain roofs the arena and the
+                // fixture sits in a dark cave - crops placed there pop off at once (raw light 0,
+                // no sky). 2026-10-20: every warp farmer variant failed on such seeds.
+                int surface = level.getHeight(Heightmap.Types.WORLD_SURFACE, origin.getX() + x, origin.getZ() + z) - origin.getY();
+                int top = Math.max(region.topY(), surface);
+                for (int y = top; y >= 0; y--) {
                     level.destroyBlock(origin.offset(x, y, z), false);
                 }
                 level.setBlockAndUpdate(origin.offset(x, -1, z), Blocks.COBBLESTONE.defaultBlockState());
