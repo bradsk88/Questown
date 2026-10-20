@@ -998,3 +998,11 @@ title and the pane dim sat at z -200, behind the pane background. Restored +400 
 (no modelview stack). Verified by capture (`tools/porttest` hook on a worktree server): before,
 hovering a node showed nothing; after, the pane dims and the title ("gather") shows. gui-lint OK
 for VillagerAdvancementsScreen and for the five-row FlagCraftingScreen (no pagination needed).
+
+## Plain screens close on the inventory key (2026-10-20 playtest)
+
+Container screens close on [E] through vanilla `AbstractContainerScreen.keyPressed`; questown's
+plain `CompatScreen` leaves (ItemJobsScreen, WorkRequestConfirmScreen, RelocationConfirmScreen,
+VillagerAdvancementsScreen) never did. `CompatScreen.keyPressed` now applies the same rule: the
+screen and its focused widget get the key first (a focused text box keeps typing), then the
+inventory key closes. Not autotestable (the client hook cannot press keys); confirmed by the dev.

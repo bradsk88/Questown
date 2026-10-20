@@ -723,3 +723,14 @@ over-production.
 Pinned by `WarpCycleBudgetTest` (pure) and the autotest `hunter/sword [one_day_yield]`
 (`*` delta 1..8 over a 24000-tick warp): red on the pre-fix code (got 21), green after (3).
 Full suite 71/75, all known reds.
+
+## Known loot lookup ignores its prefix, and leavers depend on that (2026-10-20)
+
+`KnowledgeStore.getAllKnownGatherResults(biomes, prefix)` ignores `prefix` and returns every
+leaver's finds in those biomes. That makes the "known jobs produce this" hint list a miner or
+hunter as producing a gatherer's apples. Scoping it to the prefix (as CONTEXT.md "Known loot"
+describes) was tried and reverted: village/growth stalled at 1 villager, the first hunter stuck
+at CANT_REACH and the raw-food quest never closed, because the lookup also gates what a fresh
+leaver can extract (its own table has no finds yet). Fix the hint on the hint side (known loot ∩
+the job's own table), not here. Ticket:
+`.scratch/playtest-2026-10-20/food-producers-list-includes-leavers.md`.

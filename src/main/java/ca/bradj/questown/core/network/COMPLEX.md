@@ -41,3 +41,12 @@ Adding a recipe is one table entry plus its `menu.flag_crafting.*_desc` string.
 notify, advancement); `FlagCraftMessage.handle` only validates the index and calls it. The
 village/growth driver calls the same method for a block-as-room quest (the mineshaft), so the
 player path and the agent path cannot drift (AGENTS.md "A dev command is a thin wrapper").
+
+## UnlockJobMessage names the villager, not its UUID (2026-10-20 playtest)
+
+The unlock broadcast passed the raw villager `UUID` to `Compat.translatable`; 1.20.6
+`TranslatableContents` accepts only Component/Number/Boolean/String and threw
+(`IllegalArgumentException ... Was given <uuid> for messages.jobs.unlocked_by_mod`), so the
+unlock happened but the message task died. It now passes `VillagerHolder.labelFor(uuid)` (display
+name, or a shortened UUID), pinned by `VillagerHolderLabelTest` (the static `VillagerHolder.label` rule); the crash itself is
+TranslatableContents-bound (the live stack trace was the red).

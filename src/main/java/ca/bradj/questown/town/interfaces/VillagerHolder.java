@@ -61,6 +61,19 @@ public interface VillagerHolder {
     String displayNameFor(UUID villagerId);
 
     /**
+     * How a chat message names a townie: its display name, or a shortened UUID when it has none.
+     * A raw UUID must never reach a translatable message (1.20.6 rejects non-primitive arguments).
+     */
+    default String labelFor(UUID villagerId) {
+        return label(displayNameFor(villagerId), villagerId);
+    }
+
+    /** {@link #labelFor}'s rule: the display name, or a shortened UUID when it is empty. */
+    static String label(String displayName, UUID villagerId) {
+        return displayName.isEmpty() ? ca.bradj.questown.core.UtilClean.truncateMiddle(villagerId) : displayName;
+    }
+
+    /**
      * Every assigned display name (villager UUID -&gt; "Villager N"); townies without a number
      * are omitted, so callers fall back to the truncated UUID.
      */

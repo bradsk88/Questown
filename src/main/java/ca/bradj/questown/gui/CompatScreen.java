@@ -37,6 +37,24 @@ public abstract class CompatScreen extends Screen {
         this.renderScreenSurface(this.renderContext(gui), mouseX, mouseY, partialTicks);
     }
 
+    /**
+     * The inventory key closes the screen, as it does every container screen (vanilla
+     * {@code AbstractContainerScreen.keyPressed}: the screen and its focused widget get the key
+     * first, so typing into a focused text box still works). 2026-10-20 playtest: the item jobs
+     * screen ignored [E] while every other questown screen closed on it.
+     */
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        if (this.minecraft == null || !this.minecraft.options.keyInventory.matches(keyCode, scanCode)) {
+            return false;
+        }
+        this.onClose();
+        return true;
+    }
+
     // -- version-neutral hooks (leaves override these, not the GuiGraphics-taking methods)
     protected void renderPrologue(RenderContext ctx, int mouseX, int mouseY, float partialTicks) { }
 
