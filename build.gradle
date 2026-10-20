@@ -96,6 +96,9 @@ runs {
             }
             // The tick-rate override AutoTestRunner advertises in its "tick rate set" line; without
             // this forward it silently stayed at the default (2026-10-19).
+            if (System.getProperty('questown.autotest.shard') != null) {
+                jvmArgument '-Dquestown.autotest.shard=' + System.getProperty('questown.autotest.shard')
+            }
             if (System.getProperty('questown.autotest.tickrate') != null) {
                 jvmArgument '-Dquestown.autotest.tickrate=' + System.getProperty('questown.autotest.tickrate')
             }

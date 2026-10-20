@@ -824,3 +824,14 @@ supplied cooked beef, must be 1..12 (the most generous tier yields ~1 item per 1
 productive ticks a day). The `*` net delta could not pin this: every notool tier eats one
 villager_food per trip, which nets out against the loot. Red with the `WarpCycleBudget` gate
 bypassed: 32 items (the 2026-10-17 playtest saw 29); green: 4.
+
+## Sharded full suite: AutoTestShard + autotest-parallel.sh --shard (2026-10-20)
+
+`-Dquestown.autotest.shard=<i>/<n>` makes a server run its share of the filtered suite
+(`AutoTestShard.selectNames`, applied after `only` in `AutoTestRunner`): `SOLO_SCENARIOS`
+(`perf/town_large`) each get a shard to themselves, the rest round-robin over the remaining
+shards, and an empty shard reports `RESULT: 0/0`. Village scenarios are never split.
+`tools/autotest-parallel.sh --shard 4` launches the shards and prints `TOTAL: p/t`. Measured:
+79/79 scenarios accounted for; 360 s wall with plain round-robin (town_large's shard also took
+19 others), 299 s with the solo rule (town_large alone 259 s under 4x load; other shards
+2–3 min) against 335–500 s serial. Unit: `AutoTestShardTest`.

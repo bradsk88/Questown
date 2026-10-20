@@ -40,6 +40,9 @@ public class AutoTestRunner {
     // running so a dev client can join and inspect the final world state
     // (e.g. visual verification of need bubbles via screenshot).
     private static final String SYSPROP_HOLD = "questown.autotest.hold";
+    private static final String SYSPROP_SHARD = "questown.autotest.shard";
+    /** Scenarios long enough to get a shard to themselves (see AutoTestShard.selectNames). */
+    private static final java.util.Set<String> SOLO_SCENARIOS = java.util.Set.of("perf/town_large");
     private static final String SYSPROP_TICKRATE = "questown.autotest.tickrate";
     private static final String CATEGORY_CHICKEN = ChickenArcBlueprintRegistry.CATEGORY;
     private static final int DEFAULT_WARP = 24000;
@@ -143,6 +146,26 @@ public class AutoTestRunner {
             runChicken = !chickenList.isEmpty();
             if (!runJobs && !runChicken && !runVillage && !runSelfSuff) {
                 reportNoMatchAndShutdown(server, only, category);
+                return;
+            }
+        }
+
+        // Parallel runs (tools/autotest-parallel.sh --shard): this server's share of the suite.
+        AutoTestShard shard = AutoTestShard.parse(System.getProperty(SYSPROP_SHARD));
+        if (!shard.isWholeSuite() && !runVillage && !runSelfSuff) {
+            List<String> names = new ArrayList<>();
+            jobsList.forEach(e -> names.add(e.name()));
+            chickenList.forEach(b -> names.add(b.name()));
+            java.util.Set<String> mine = shard.selectNames(names, SOLO_SCENARIOS);
+            jobsList = jobsList.stream().filter(e -> mine.contains(e.name())).toList();
+            chickenList = chickenList.stream().filter(b -> mine.contains(b.name())).toList();
+            runJobs = !jobsList.isEmpty();
+            runChicken = !chickenList.isEmpty();
+            QT.FLAG_LOGGER.info("[autotest] shard {}/{}: {} scenarios", shard.index(), shard.count(),
+                    jobsList.size() + chickenList.size());
+            if (!runJobs && !runChicken) {
+                QT.FLAG_LOGGER.info("[autotest] RESULT: 0/0 passed (ALL PASS)");
+                server.halt(false);
                 return;
             }
         }

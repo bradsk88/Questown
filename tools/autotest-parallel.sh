@@ -4,6 +4,13 @@
 #   tools/autotest-parallel.sh <N> <scenario-filter> [extra -D args...]
 #   tools/autotest-parallel.sh 3 village/day1
 #   tools/autotest-parallel.sh 4 'farmer/harvest_wheat [held_tool_warp]' -Dquestown.autotest.tickrate=400
+#   tools/autotest-parallel.sh --shard 4                 # the full suite split across 4 servers
+#   tools/autotest-parallel.sh --shard 4 farmer          # one filter, split across 4
+#
+# Default mode repeats the same filter N times (a confirmation sweep). --shard splits it instead:
+# run i gets -Dquestown.autotest.shard=i/N (AutoTestShard: every Nth scenario), and the per-run
+# tallies are summed into one TOTAL line. Village scenarios (growth/day1/self_sufficiency) are
+# single runs and are not split.
 #
 # Captures the exact server JVM command `./gradlew runServer` launches (the module-path /
 # classpath split and MOD_CLASSES must be replicated verbatim - references/questown-dev-launch.md
@@ -12,17 +19,33 @@
 # data, not a launcher failure.
 set -eu
 
-N=${1:?usage: autotest-parallel.sh <N> <scenario-filter> [extra -D args]}
-FILTER=${2:?usage: autotest-parallel.sh <N> <scenario-filter> [extra -D args]}
-shift 2
+SHARD=0
+if [ "${1:-}" = "--shard" ]; then
+    SHARD=1
+    shift
+fi
+N=${1:?usage: autotest-parallel.sh [--shard] <N> <scenario-filter> [extra -D args]}
+if [ "$SHARD" = 1 ]; then
+    FILTER=${2-}   # optional in shard mode: blank = the whole suite
+else
+    FILTER=${2:?usage: autotest-parallel.sh [--shard] <N> <scenario-filter> [extra -D args]}
+fi
+shift $(( $# < 2 ? $# : 2 ))
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 OUT=$REPO/build/autotest-par
 mkdir -p "$OUT"
 
-if pgrep -f '[B]ootstrapLauncher' >/dev/null; then
-    echo "A Minecraft server/client is already running; stop it first." >&2
-    exit 1
-fi
+# Only a Minecraft JVM in this checkout's own run dirs conflicts (same world/ports). Another
+# checkout's playtest server/client (e.g. the main repo beside this worktree) is left alone:
+# every stop below is by pid and scoped to this script's run dirs.
+for p in $(pgrep -f '[B]ootstrapLauncher'); do
+    case "$(readlink "/proc/$p/cwd")" in
+        "$REPO/run"|"$OUT"/*)
+            echo "A Minecraft JVM is already running in $(readlink "/proc/$p/cwd"); stop it first." >&2
+            exit 1
+            ;;
+    esac
+done
 
 # 1. Capture: launch once through gradle, read the JVM's argv + MOD_CLASSES, stop it.
 echo "Capturing the server command (gradle build + launch)..."
@@ -65,7 +88,9 @@ while [ "$i" -le "$N" ]; do
         -e "s/^enable-rcon=.*/enable-rcon=false/" \
         -e "s/^online-mode=.*/online-mode=false/" \
         "$REPO/run/server.properties" > "$D/server.properties"
-    python3 - "$OUT/cmd" "$D" "$FILTER" "$@" > "$D/argv" <<'EOF'
+    RUN_EXTRA=""
+    [ "$SHARD" = 1 ] && RUN_EXTRA="-Dquestown.autotest.shard=$i/$N"
+    python3 - "$OUT/cmd" "$D" "$FILTER" "$@" $RUN_EXTRA > "$D/argv" <<'EOF'
 import sys
 cmd, game_dir, flt, extra = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4:]
 args = [a.decode() for a in open(f"{cmd}/args", "rb").read().split(b"\0")]
@@ -99,3 +124,10 @@ for P in $PIDS; do
     i=$((i + 1))
 done
 wait 2>/dev/null || true
+
+if [ "$SHARD" = 1 ]; then
+    i=1
+    while [ "$i" -le "$N" ]; do grep -a '\[autotest\] RESULT:' "$OUT/run-$i.log" | tail -1; i=$((i + 1)); done | sed 's/.*RESULT: \([0-9]*\)\/\([0-9]*\).*/\1 \2/' \
+        | awk '{p+=$1; t+=$2} END {printf "TOTAL: %d/%d passed%s\n", p, t, (p==t ? " (ALL PASS)" : " (FAILURES)")}'
+fi
+

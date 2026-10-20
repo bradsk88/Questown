@@ -165,7 +165,17 @@ boot, then launch the client. Keep the client down while the server compiles.
 whole recipe below — captures the gradle-launched command + `MOD_CLASSES`, starts N copies in
 `build/autotest-par/run-<i>` (ports 25701+), waits for each `[autotest] RESULT:`, stops each by
 pid, and prints the tallies and FAIL lines. Measured: 3× `village/day1` in 400 s wall at the
-1000 t/s default (vs ~13½ min serial). Refuses to start while any Minecraft JVM is up.
+1000 t/s default (vs ~13½ min serial). Refuses to start only while a Minecraft JVM runs in this
+checkout's own `run/` or `build/autotest-par/` (2026-10-20): another checkout's playtest
+server/client — the main repo beside the `build/wt` worktree — is left alone, so run it from the
+worktree during a playtest.
+
+**Full suite in parallel (2026-10-20): `tools/autotest-parallel.sh --shard 4 [filter]`.** Run i
+gets `-Dquestown.autotest.shard=i/4` (`AutoTestShard`): every scenario runs in exactly one shard,
+`perf/town_large` (≈218 s, a third of the suite) gets a shard to itself
+(`AutoTestRunner.SOLO_SCENARIOS`), and the rest round-robin over the others; a `TOTAL: p/t`
+line sums the shards. Village scenarios are not split. The box has 16 cores at load ~2, and one
+server reaches only ~320 t/s (single tick thread), so parallel servers are the speed lever.
 
 For N parallel held runs (a confirmation sweep), do not re-derive the JVM
 command from build.gradle — capture the exact one gradle runs and replicate it:
