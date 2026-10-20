@@ -638,3 +638,5 @@ still set (counted toward the 500-tick give-up; farmer/harvest_wheat [held_tool_
 Cost: walked output reaches the chest later, so realtime-window measurements read lower (the
 farmer variants' extrapolated realtime wheat 70–110 -> 10); warp yields are unaffected
 (JobLogic is realtime-only). Red: `JobLogicTest.tick_shouldNotHandOff_WhileHoldingWorkOutput`.
+Dev ruling (2026-10-20, confirmed in a client): carrying output by hand is how it should work,
+and the extra walking time is expected — not a production regression to tune away.
