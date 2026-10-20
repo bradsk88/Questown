@@ -4,7 +4,7 @@
   "priority": 1000,
   "parent": null,
   "icon": "minecraft:cooked_beef",
-  "initial_request": "minecraft:cooked_cod",
+  "initial_request": "#questown:villager_food",
   "result": {
     "type": "uses_special_rules"
   },

@@ -2469,6 +2469,10 @@ public class TestBlueprintRegistry {
         return cookRealtimeBlueprint(cookBlueprint().supplyItems(), new TestExpectation(List.of(), 0, 100))
                 .withSetupHook((level, flagPos, town, output) -> {
                     town.getQuestHandle().addLootQuest(food, 8);
+                    // A board with a request, as in play (2026-10-20 playtest: the cook batch posts
+                    // cooked mutton). The work picker only takes a job that satisfies one, which
+                    // cook/extract's old cooked_cod initial_request never did.
+                    town.getWorkHandle().requestWork(Items.COOKED_MUTTON);
                     return seedFuelledFurnaceWithOutput(level, flagPos, town, output);
                 })
                 .withCustomAssertion((level, flagPos, town, output) -> {

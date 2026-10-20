@@ -603,3 +603,16 @@ The wrap-up branch now changes job and returns before `tryGetSupplies`. Red/gree
 eat_raw_food takes 313 -> 1 at the same fullness. Probe recipe that found it: a temporary log
 beside `[PROBE:supplies]` printing the container slot after `removeItem`, and one in
 `depositCarriedWorkOutput` — the TOOK line alone cannot tell a loop from consumption.
+
+## A slot-extract job requests what its slot holds (2026-10-20 playtest)
+
+The work picker (`JobCycler.isValid`) only takes a job that satisfies a board request whenever
+the board holds any, and a `uses_special_rules` job's only declared product is its
+`initial_request` (`ServerJobsRegistry.canSatisfy`). `cook/extract` requested
+`minecraft:cooked_cod` while its slot precondition (`has_item_in_slot_initially`) is
+`2/#questown:villager_food`, so with the cook batch's cooked-mutton request on the board it was
+"[Product not requested]" and never picked: the cook kept fuelling and inserting while cooked
+food piled up in the furnace. Now `#questown:villager_food`, like `cook/fuel`. The data rule is
+pinned for every `take_from_slot_N` job by `SlotExtractJobRequestTest` (red on cook_extract);
+the live behaviour by `loot:cook_extract_food`, which now posts a cooked-mutton request (0/8 with
+the old request, 5/8 after).
