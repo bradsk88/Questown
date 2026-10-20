@@ -30,6 +30,11 @@ package ca.bradj.questown.jobs.declarative;
  * in addition to unit tests of isolated utility methods.
  */
 
+import ca.bradj.questown.jobs.HeldItem;
+import ca.bradj.questown.jobs.ItemsHolder;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Predicate;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
@@ -425,7 +430,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                 new JobLogic.JobDetails(maxState, deps.getWorkForStep(0), deps.getWorkInterval()),
                 (JobLogic.JLWorld<EXTRA, TOWN, POS>) (Object) new DeclarativeLogicWorld<POS, HELD_ITEM, ROOM>(
                         deps.createWorldDependencies(rniot2, entityCurrentJobSite),
-                        () -> defaultEntityInvProvider(deps).hasNonSupplyItems()
+                        () -> holdsWorkOutput(deps)
                 ),
                 (unused, bpp) -> Util.withFallbackForNullInput(
                         work.getJobBlockState((POS) bpp),
@@ -480,6 +485,39 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         };
     }
 
+    /**
+     * Whether the villager holds an item that no state of this job uses as an ingredient or tool:
+     * the output of its work, which it carries to storage before starting a new cycle
+     * (JobStatuses "drop loot before starting a new cycle"; JobLogic's wrap-up carry-on).
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private boolean holdsWorkOutput(Dependencies<POS, ?, HELD_ITEM, ?, ROOM, MATCH, EXTRA, ?> deps) {
+        List<Predicate> ingredients = new ArrayList<>();
+        List<Predicate> tools = new ArrayList<>();
+        for (int s = 0; s <= maxState; s++) {
+            PredicateCollection<?, ?> i = deps.item(s);
+            if (i != null && !i.isEmpty()) {
+                ingredients.add(i);
+            }
+            PredicateCollection<?, ?> t = deps.tools(s);
+            if (t != null && !t.isEmpty()) {
+                tools.add(t);
+            }
+        }
+        for (Object o : ((ItemsHolder) deps.getJournal()).getItems()) {
+            HeldItem held = (HeldItem) o;
+            if (held.isEmpty()) {
+                continue;
+            }
+            boolean used = ingredients.stream().anyMatch(p -> p.test(held))
+                    || tools.stream().anyMatch(p -> p.test(held.get()));
+            if (!used) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected <RECIPE> EntityInvStateProvider<Integer> defaultEntityInvProvider(
             Dependencies<POS, RECIPE, HELD_ITEM, ?, ROOM, MATCH, EXTRA, ?> deps
@@ -505,6 +543,11 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             @Override
             public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
                 return DeclarativeJobTicker.getSupplyItemStatuses(deps);
+            }
+
+            @Override
+            public boolean holdsWorkOutput() {
+                return DeclarativeJobTicker.this.holdsWorkOutput(deps);
             }
         };
     }

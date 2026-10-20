@@ -1358,21 +1358,28 @@ class JobIntegrationTest {
         // Give the villager an axe (tool at state 0)
         setup.inventory.set(0, new GathererJournalTest.TestItem("#questown:axes"));
 
-        // Run ticks - ticker should verify tool, complete work, and transition to time state
-        runTicks(setup.deps, setup.ticker, 30);
-
-        // Verify the job reached time state and timer was set
-        State state = workStatusHandle.getJobBlockState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
-        Assertions.assertTrue(state.processingState() >= timeState,
-                "Job should have reached time state. Got: " + state.processingState());
-
-        // If still at time state, verify timer is set
-        if (state.processingState() == timeState) {
-            Integer timer = workStatusHandle.getTimeToNextState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
-            Assertions.assertNotNull(timer, "Timer should be set when at time state");
-            Assertions.assertTrue(timer > 0 && timer <= expectedTime,
-                    "Timer should be positive and <= " + expectedTime + ". Got: " + timer);
+        // Run ticks - ticker should verify tool, complete work, and transition to time state.
+        // Checked each tick, not only at the end: the cycle can finish within the window, and a
+        // villager holding the loot then waits to carry it to storage before a new cycle (2026-10-20),
+        // which this harness cannot do (its store accepts no items).
+        int maxState = 0;
+        Integer timerAtTimeState = null;
+        for (int i = 0; i < 30; i++) {
+            runTicks(setup.deps, setup.ticker, 1);
+            State state = workStatusHandle.getJobBlockState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
+            if (state == null) {
+                continue;
+            }
+            maxState = Math.max(maxState, state.processingState());
+            if (state.processingState() == timeState && timerAtTimeState == null) {
+                timerAtTimeState = workStatusHandle.getTimeToNextState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
+            }
         }
+
+        Assertions.assertTrue(maxState >= timeState, "Job should have reached time state. Max: " + maxState);
+        Assertions.assertNotNull(timerAtTimeState, "Timer should be set when at time state");
+        Assertions.assertTrue(timerAtTimeState > 0 && timerAtTimeState <= expectedTime,
+                "Timer should be positive and <= " + expectedTime + ". Got: " + timerAtTimeState);
     }
 
     /**

@@ -1,6 +1,6 @@
 ---
 title: 'Hunters/miners never return their loot since the carry-output change (e425b8e5)'
-status: ready-for-human
+status: resolved
 origin: 2026-10-20 playtest — user: "my miner and hunter were stuck working and not returning"
 ---
 
@@ -30,3 +30,7 @@ hands before starting more work", so it never drops. Before e425b8e5 the handoff
    status tree, so every job walks its output home before starting a new cycle. Matches the
    ruling ("carrying output by hand is how it should work") but touches every job's ordering —
    needs the full suite + growth.
+
+## Resolved (2026-10-20)
+
+Dev chose option 2. JobStatuses: "drop loot before starting a new cycle" now outranks "use items". Realtime hunter: 5 walked drops, 0 board deposits. See jobs/COMPLEX.md.

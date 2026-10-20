@@ -316,7 +316,7 @@ class JobStatusesTest {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
-                new ConstInventory(false, true, HAS_ALL_SUPPLIES),
+                new ConstInventory(false, false, HAS_ALL_SUPPLIES),
                 new ConstTown(false, true, true),
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY
@@ -330,7 +330,7 @@ class JobStatusesTest {
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(
-                        false, true, ImmutableMap.of(
+                        false, false, ImmutableMap.of(
                         TestStatus.ITEM_WORK, false,
                         TestStatus.ITEM_WORK_2, true
                 )
@@ -411,6 +411,26 @@ class JobStatusesTest {
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(true, true, ImmutableMap.of()),
+                new ConstTown(true, true, true),
+                jobWithItemWorkOnly,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
+    }
+
+    /**
+     * 2026-10-20 playtest: hunters and miners "stuck working and not returning". Holding the
+     * tool (a work item) plus loot (non-work items), "use items" sent them on the next trip with
+     * the loot in hand. A villager holding work output drops it before starting a new cycle.
+     */
+    @Test
+    void StatusShouldBe_DroppingLoot_WhenHoldingOutput_BeforeUsingItemsForANewCycle() {
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, true, ImmutableMap.of(
+                        TestStatus.ITEM_WORK, true // the tool / work items
+                )),
                 new ConstTown(true, true, true),
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY
@@ -611,8 +631,11 @@ class JobStatusesTest {
     }
 
     private LZCD<LZCD.Dependency<TestStatus>> getHasSupplies(@NotNull LZCD<TestStatus> root) {
-        if (!(root.ifCondFail instanceof LZCD<TestStatus> useItems)) {
+        if (!(root.ifCondFail instanceof LZCD<TestStatus> dropBeforeNewCycle)) {
             throw new ClassCastException("Expected root.ifCondFail to be LZCD");
+        }
+        if (!(dropBeforeNewCycle.ifCondFail instanceof LZCD<TestStatus> useItems)) {
+            throw new ClassCastException("Expected dropBeforeNewCycle.ifCondFail to be LZCD");
         }
         if (!(useItems.ifCondFail instanceof LZCD<TestStatus> dropLoot)) {
             throw new ClassCastException("Expected useItems.ifCondFail to be LZCD");

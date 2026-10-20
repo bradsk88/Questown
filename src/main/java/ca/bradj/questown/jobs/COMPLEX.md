@@ -652,3 +652,31 @@ now gives `via_other_job` a generator that yields nothing from its own cycle but
 empty". `hasNoOutput` has no other reader. Measured in a running server: producers of cooked
 mutton = [cook/mutton]; of #questown:villager_food = the six cook recipes + two soup jobs, no
 fuel/stock/extract. Red: `ResultGeneratorSpecialTypeTest.viaOtherJob_producesItsDeclaredProduct`.
+
+## Drop loot before starting a new cycle (2026-10-20 playtest, option 2)
+
+e425b8e5 (a finished cycle holding output carries on instead of handing off) broke leavers: in
+`JobStatuses.usualRoutineRoot` "use items" (holding the job's tool) came before every drop-loot
+branch, so a hunter or miner holding its loot started the next trip instead, forever ("stuck
+working and not returning"; the board's instant deposit used to empty its hands). New node right
+after the root ("work without items", i.e. prioritised extraction): **drop loot before starting a
+new cycle** when the villager holds work output and the town has space. The cook still finishes
+extracting first; every job walks its output home before a new cycle.
+
+"Work output" is `EntityInvStateProvider.holdsWorkOutput()`: an item no state of the job uses as
+ingredient or tool (`DeclarativeJobTicker.holdsWorkOutput`, from `deps.item(s)`/`deps.tools(s)`
+for every state). The first cut used `hasNonSupplyItems`, which only counts ingredients of the
+states that need input right now: a held tool or another state's ingredient counted as loot, so a
+baker dropped the coal it had just fetched (9 unit reds: Baker/CookEquivalence, baker stock jobs,
+crafter fishing rod). JobLogic's wrap-up carry-on uses the same query. Known: the drop step
+(`Jobs.tryDropLoot`) still empties every unlocked item, so a hunter leaves its sword in the chest
+and re-fetches it, as the old board deposit did.
+Red: `JobStatusesTest.StatusShouldBe_DroppingLoot_WhenHoldingOutput_BeforeUsingItemsForANewCycle`
+(item_work before). Two older tests set "holding non-supply items" incidentally (their names are
+about holding supplies) and now pass false; the tree-shape test walks the new node;
+`JobIntegrationTest` gatherer-axe now checks the time state per tick (the harness store accepts no
+items, so a villager holding loot waits there after the cycle). Realtime
+hunter (loot_on_extract_accumulate): meat walked to the chest, 0 board deposits (was 0/0);
+cook_extract_food: 5 cooked beef walked, 0 board deposits. Dev chose this
+over narrowing the carry-on to the cook (ticket
+`.scratch/playtest-2026-10-20/leavers-never-deposit-after-carry-change.md`).

@@ -152,6 +152,10 @@ public class JobStatuses {
                 new Pair<>(ctx.jobId, "hasNonWorkItems"),
                 inventory::hasNonSupplyItems
         );
+        LZCD<LZCD.Dependency<STATUS>> dHoldsWorkOutput = prePopAble(
+                new Pair<>(ctx.jobId, "holdsWorkOutput"),
+                inventory::holdsWorkOutput
+        );
         LZCD<LZCD.Dependency<STATUS>> dHasAnyItems = prePopAble(
                 new Pair<>(ctx.jobId, "hasAnyItems"),
                 () -> supplyItemStatus.containsValue(SupplyItemStatus.HAS_ITEM) || inventory.hasNonSupplyItems()
@@ -189,6 +193,19 @@ public class JobStatuses {
                         dStatusNotGoing
                 ),
                 new LZCD<>(
+                        // A villager holding work output (items no state uses) takes it to storage
+                        // before starting a new cycle. Without this, "use items" (a leaver holding
+                        // its tool) sent hunters and miners on the next trip with the loot still in
+                        // hand, forever (2026-10-20 playtest; the board's instant deposit used to
+                        // empty their hands). Itemless work above still comes first, so a cook
+                        // finishes extracting before the walk.
+                        new Pair<>(ctx.jobId, "drop loot before starting a new cycle"),
+                        leaf(factory::droppingLoot),
+                        ImmutableList.of(
+                                dHoldsWorkOutput,
+                                dTownHasSpace
+                        ),
+                        new LZCD<>(
                         new Pair<>(ctx.jobId, "use items"),
                         LZCDs.leaf(() -> job.tryUsingSupplies(supplyItemStatus), Objects::isNull),
                         ImmutableList.of(
@@ -292,6 +309,7 @@ public class JobStatuses {
                                         )
                                 )
                         )
+                )
                 )
         );
         return root;
