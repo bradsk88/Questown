@@ -152,6 +152,13 @@ class JobLogicTest {
             return false;
         }
 
+        boolean holdsWorkOutput = false;
+
+        @Override
+        public boolean holdsWorkOutput() {
+            return holdsWorkOutput;
+        }
+
         @Override
         public void tryGetSupplies() {
 
@@ -598,6 +605,38 @@ class JobLogicTest {
         ticker.accept(DEFINITION.maxState());
 
         Assertions.assertEquals(List.of("next"), events);
+    }
+
+    /**
+     * 2026-10-20 playtest: a cook's cooked food reached the storeroom without the cook ever carrying
+     * it. A finished cycle handed off to the board while the villager still held its output, and
+     * the board's carried-output deposit teleported it into the nearest chest. A villager holding
+     * work output must not hand off; its own status carries the output to storage first.
+     */
+    @Test
+    void tick_shouldNotHandOff_WhileHoldingWorkOutput() {
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+        Consumer<Integer> ticker = (state) -> {
+            world.allWorkSpots = ImmutableMap.of(state, ImmutableList.of(ARBITRARY_WORKSPOT));
+            logic.defaultTick(
+                    ProductionStatus.fromJobBlockStatus(state),
+                    true,
+                    (Position b) -> world.states.getJobBlockState(b).processingState()
+            );
+        };
+        world.holdsWorkOutput = true;
+        for (int state : List.of(STATE_NEED_WIDGET, STATE_NEED_WORK, DEFINITION.maxState(), DEFINITION.maxState(), DEFINITION.maxState())) {
+            ticker.accept(state);
+        }
+        Assertions.assertFalse(handedOff.get(), "handed off while holding work output");
+        Assertions.assertFalse(logic.isWrappingUp(), "a cycle that ends holding output carries on as a fresh one");
     }
 
     @Test

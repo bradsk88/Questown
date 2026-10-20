@@ -210,6 +210,13 @@ public class IntegrationTestWorld implements JobLogic.JLWorld<Void, Boolean, Pos
     }
 
     @Override
+    public boolean holdsWorkOutput() {
+        // Not modelled: tryDropLoot records loot without emptying the inventory, so a held-output
+        // hold would never release. These scenarios hand off as soon as the cycle finishes.
+        return false;
+    }
+
+    @Override
     public boolean tryDropLoot() {
         // Collect non-empty items as dropped loot
         for (GathererJournalTest.TestItem item : inventory.getItems()) {

@@ -616,3 +616,25 @@ food piled up in the furnace. Now `#questown:villager_food`, like `cook/fuel`. T
 pinned for every `take_from_slot_N` job by `SlotExtractJobRequestTest` (red on cook_extract);
 the live behaviour by `loot:cook_extract_food`, which now posts a cooked-mutton request (0/8 with
 the old request, 5/8 after).
+
+## A finished cycle holding output carries on, not hands off (2026-10-20 playtest)
+
+The dev saw cooked food land in the storeroom without the cook ever carrying it. A finished
+cycle (`wrappingUp`) called `changeToNextJob()` while the villager still held its output; the
+board cascade's first step, `TownFlagBlockEntity.depositCarriedWorkOutput`, then moved every
+carried item into the nearest chest with no walk (the 2026-09-24 plan said "walks to the nearest
+chest"). Now, when `JLWorld.holdsWorkOutput()` (the status tree's `hasNonSupplyItems`, so tools
+don't count) the cycle clears `wrappingUp` and carries on: the job's status keeps working while
+there is work, then drops loot by walking to a chest, and the empty-handed dropping-loot branch
+hands off. `depositCarriedWorkOutput` still exists for output that reaches the board another way
+(the hungry path it was written for). cook_extract_food: 5/5 meals via the walked
+`Jobs.tryDropLoot`, 0 teleported (was 0/5).
+
+Two shapes tried first and dropped: waiting one tick before the handoff (the fresh status is
+"keep extracting", not dropping loot, so it still teleported 5/5), and holding with `wrappingUp`
+still set (counted toward the 500-tick give-up; farmer/harvest_wheat [held_tool_warp] failed its
+"farmer holds the hoe" precondition 4/4).
+
+Cost: walked output reaches the chest later, so realtime-window measurements read lower (the
+farmer variants' extrapolated realtime wheat 70–110 -> 10); warp yields are unaffected
+(JobLogic is realtime-only). Red: `JobLogicTest.tick_shouldNotHandOff_WhileHoldingWorkOutput`.

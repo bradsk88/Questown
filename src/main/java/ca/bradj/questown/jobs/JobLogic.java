@@ -40,6 +40,13 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         boolean tryDropLoot();
 
+        /**
+         * The villager holds output of its work (items that are not this job's supplies), which
+         * its dropping-loot status carries to storage. A finished cycle waits for that before
+         * handing off.
+         */
+        boolean holdsWorkOutput();
+
         void tryGetSupplies();
 
         Map<Integer, Collection<WorkPosition<POS>>> listAllWorkSpots();
@@ -227,6 +234,15 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 
         if (wrappingUp) {
+            if (worldBeforeTick.holdsWorkOutput()) {
+                // Holding output: carry on as a fresh cycle instead of handing off. The job's own
+                // status keeps working while there is work, then drops loot by walking to a chest,
+                // and the empty-handed dropping-loot branch above hands off. Handing off here let
+                // the board's carried-output deposit teleport the output into the nearest chest
+                // (2026-10-20 playtest).
+                wrappingUp = false;
+                return;
+            }
             // TODO: Check if all special rules were leveraged.
             //  If not, spit an error into the console to help with debugging.
             // A finished cycle hands off; it does not fetch supplies for another one. Fetching
