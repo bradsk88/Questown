@@ -160,3 +160,21 @@ status: needs-triage
 38. **Villager deposits never stack** (one item per chest slot). Own ticket:
     `villager-deposits-never-stack.md`. Likely root cause of the dev's slow miner.
 - Miner at 40 TPS: trips at 20:32:43, 20:33:38, 20:34:32 (~55 s = ~2100 ticks), on spec.
+
+## Session 2, day 7: storage full, live (40 TPS)
+39. Storage-full stop works for a villager *holding* output: hunter stopped with the new no-space
+    bubble and hint "Every chest is full: they have nowhere to put what they made." (diags/ns2.png).
+    (judge) The bubble art sits on a grey framed square; the bread and sword bubbles are bare items on white.
+40. **Full storage is invisible on villagers not holding output.** Miner: its finished coal waited
+    at the mineshaft (spot state 3) but it never collected it; it wandered as GOING_TO_JOB for 2+ min
+    with status "Miner is going to work." Cook: "Cook has nowhere to work. Or they might be
+    looking for tools." Neither shows the storage bubble. `countStorageBlockedVillagers` counts
+    NO_SPACE only, so they don't count toward the flag bubble either. This matches the dev's
+    "slow miner" more closely than the NO_SPACE fixture did.
+41. Cook's bubble (raw mutton) and its villagers-tab status ("nowhere to work") disagree; the
+    bubble is the accurate one (no raw mutton; only cook/mutton is unlocked, #35).
+42. Could not see the flag's storage-full / incomplete-quests bubble: the cook loiters about a
+    block from the flag, and bubble focus (one bubble, nearest the crosshair, cone 0.9) kept
+    picking the cook's bubble from every angle tried. When the town is stuck, the stuck villagers
+    gather at the flag and hide its bubble. Server-side state is pinned by `cook/fuel
+    [storage_full]`; the render was not confirmed live.
