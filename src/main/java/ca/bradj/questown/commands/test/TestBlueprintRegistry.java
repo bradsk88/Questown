@@ -280,6 +280,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("too_short_room_dead", tooShortRoomBlueprint()));
         jobs.add(flagEntry("floating_chest_room", floatingChestRoomBlueprint()));
         jobs.add(flagEntry("floating_furniture_over_half", floatingFurnitureOverHalfBlueprint()));
+        jobs.add(flagEntry("bed_counts_once", bedCountsOnceBlueprint()));
         jobs.add(flagEntry("filled_storeroom_alive", filledStoreroomBlueprint()));
         // BOP cap (report): pre-fill the flag and drive one deposit across the 64-slot boundary.
         jobs.add(flagEntry("bop_boundary_63", bopBoundaryBlueprint()));
@@ -746,6 +747,105 @@ public class TestBlueprintRegistry {
         boolean ok = report(output, "1 room-detected", rooms >= 1);
         ok &= report(output, "2 door-not-dead", !dead.containsKey(doorPos));
         return ok;
+    }
+
+    // The bed-count rooms' north-west corners: south of the filled storeroom (z 18..22).
+    private static final BlockPos ONE_BED_ROOM_OFFSET = new BlockPos(-9, 0, 24);
+    private static final BlockPos TWO_BED_ROOM_OFFSET = new BlockPos(-9, 0, 30);
+
+    /**
+     * 2026-10-21 agent playtest: a bed is two blocks, and room matching counted both, so one bed
+     * plus a torch made a "Bedroom" (light + 2 beds) and two beds made a "Big Bedroom" (light + 4).
+     * A bed counts once: one bed makes no bedroom, two beds make a bedroom but not a big one.
+     * <p>
+     * The assertion runs RoomRecipes' detection on the built rooms directly. Registering their
+     * doors and waiting for the town's scan proved timing-dependent under parallel load (the scan
+     * had not reached the doors within the 300-tick window in 1 of 4 runs).
+     */
+    private static TestBlueprint bedCountsOnceBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    buildBedRoom(level, flagPos.offset(ONE_BED_ROOM_OFFSET), 1, output);
+                    buildBedRoom(level, flagPos.offset(TWO_BED_ROOM_OFFSET), 2, output);
+                    return true;
+                })
+                .withCustomAssertion(TestBlueprintRegistry::assertBedsCountOnce);
+    }
+
+    /** A 5x5 two-tall room with a torch and {@code beds} east-facing beds; door on the east wall. */
+    private static void buildBedRoom(
+            ServerLevel level,
+            BlockPos base,
+            int beds,
+            TestOutput output
+    ) {
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                BlockPos p = base.offset(x, 0, z);
+                level.setBlockAndUpdate(p.below(), Blocks.COBBLESTONE.defaultBlockState());
+                // The footprint lies outside the prepared arena: clear worldgen (grass, a slope).
+                for (int dy = 0; dy <= 2; dy++) {
+                    level.setBlockAndUpdate(p.above(dy), Blocks.AIR.defaultBlockState());
+                }
+                if (x == 0 || x == 4 || z == 0 || z == 4) {
+                    level.setBlockAndUpdate(p, Blocks.COBBLESTONE.defaultBlockState());
+                    level.setBlockAndUpdate(p.above(), Blocks.COBBLESTONE.defaultBlockState());
+                }
+            }
+        }
+        for (int i = 0; i < beds; i++) {
+            placeBed(level, base.offset(1, 0, 1 + 2 * i), Direction.EAST);
+        }
+        level.setBlockAndUpdate(base.offset(3, 0, 1), Blocks.TORCH.defaultBlockState());
+
+        BlockPos doorPos = base.offset(4, 0, 2);
+        BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+        output.msg("Built a room with " + beds + " bed(s) at " + base.toShortString());
+    }
+
+    /** Both halves, the way vanilla places a bed item: the head at foot.relative(facing). */
+    private static void placeBed(ServerLevel level, BlockPos foot, Direction facing) {
+        BlockState bed = Blocks.RED_BED.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.BedBlock.FACING, facing);
+        level.setBlockAndUpdate(foot, bed.setValue(
+                net.minecraft.world.level.block.BedBlock.PART,
+                net.minecraft.world.level.block.state.properties.BedPart.FOOT));
+        level.setBlockAndUpdate(foot.relative(facing), bed.setValue(
+                net.minecraft.world.level.block.BedBlock.PART,
+                net.minecraft.world.level.block.state.properties.BedPart.HEAD));
+    }
+
+    private static boolean assertBedsCountOnce(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        Collection<ResourceLocation> oneBed = detectRecipes(level, flagPos.offset(ONE_BED_ROOM_OFFSET));
+        Collection<ResourceLocation> twoBeds = detectRecipes(level, flagPos.offset(TWO_BED_ROOM_OFFSET));
+        output.msg("bed-counts: 1 bed -> " + oneBed + "; 2 beds -> " + twoBeds);
+        ResourceLocation bedroom = Questown.ResourceLocation("bedroom");
+        ResourceLocation bigBedroom = Questown.ResourceLocation("big_bedroom");
+        boolean ok = report(output, "1 one-bed-is-not-a-bedroom", !oneBed.contains(bedroom) && !oneBed.contains(bigBedroom));
+        ok &= report(output, "2 two-beds-make-a-bedroom", twoBeds.contains(bedroom));
+        ok &= report(output, "3 two-beds-are-not-a-big-bedroom", !twoBeds.contains(bigBedroom));
+        return ok;
+    }
+
+    /** The recipes RoomRecipes matches for the 5x5 room built at {@code base}. */
+    private static Collection<ResourceLocation> detectRecipes(ServerLevel level, BlockPos base) {
+        ca.bradj.roomrecipes.core.space.Position door =
+                new ca.bradj.roomrecipes.core.space.Position(base.getX() + 4, base.getZ() + 2);
+        ca.bradj.roomrecipes.core.space.InclusiveSpace space = ca.bradj.roomrecipes.core.space.InclusiveSpace
+                .from(new ca.bradj.roomrecipes.core.space.Position(base.getX(), base.getZ()))
+                .to(new ca.bradj.roomrecipes.core.space.Position(base.getX() + 4, base.getZ() + 4));
+        ca.bradj.roomrecipes.serialization.MCRoom room =
+                new ca.bradj.roomrecipes.serialization.MCRoom(door, List.of(space), base.getY());
+        return ca.bradj.roomrecipes.recipes.RecipeDetection.getActiveRecipes(level, room, false)
+                .map(m -> (Collection<ResourceLocation>) m.getRecipeIDs())
+                .orElse(List.of());
     }
 
     // Where the over-halved room's north-west corner stands relative to the flag: south of the

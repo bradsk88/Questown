@@ -28,17 +28,22 @@ as you go; do not end the turn to summarise.
 1. Ask before stopping the dev's own session; if they say they aren't playing, stop it (client
    JVM by pid, then `run/ffeed.sh feed stop`). Two clients + servers fit in RAM, but builds
    contend.
-2. Fresh world: `rm -rf run/world run/logs run-client/diags run-client/.qtdiag-cmd` in the
+2. **An autotest launch in this worktree wipes `run/world`.** `build.gradle` deletes it before any
+   `runServer -Dquestown.autotest=true`, and `tools/autotest-parallel.sh` captures its command
+   that way. Since 2026-10-22 the script sets the world aside during the capture. A hand-run
+   autotest in the worktree still wipes it, so tar the world first if you want to keep it
+   (2026-10-22: the saved day-7 world was lost to a suite run).
+3. Fresh world: `rm -rf run/world run/logs run-client/diags run-client/.qtdiag-cmd` in the
    worktree. `run/server.properties`: `difficulty=normal`, `gamemode=creative` (creative players
    aren't attacked, so no death-screen captures), `server-port=25585`.
-3. `run-client/options.txt` (edit only while the client is **down**; a running client rewrites it
+4. `run-client/options.txt` (edit only while the client is **down**; a running client rewrites it
    on exit and your edit is lost): `guiScale:3`, `pauseOnLostFocus:false` (otherwise the pause
    menu covers every screenshot).
-4. Console: copy `run/ffeed.sh` and `run/pace-guard.sh` from the main checkout if missing, then
+5. Console: copy `run/ffeed.sh` and `run/pace-guard.sh` from the main checkout if missing, then
    `run/ffeed.sh setup`. Server: `LANG=C.UTF-8 setsid nohup ./gradlew runServer
    -Dquestown.tp.fifo=true > <log> 2>&1 &`. Client after the server says `Done (`:
    `LANG=C.UTF-8 setsid nohup ./gradlew runClient -Pautojoin -Pautoport=25585 > <log> 2>&1 &`.
-5. Speed: `run/ffeed.sh feed "tick rate 40"` (dev: "I believe you can observe well at 40tps").
+6. Speed: `run/ffeed.sh feed "tick rate 40"` (dev: "I believe you can observe well at 40tps").
    A Minecraft day is then 10 real minutes.
 
 ## Observing

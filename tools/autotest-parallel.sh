@@ -48,6 +48,21 @@ for p in $(pgrep -f '[B]ootstrapLauncher'); do
 done
 
 # 1. Capture: launch once through gradle, read the JVM's argv + MOD_CLASSES, stop it.
+# The capture is an autotest runServer in $REPO/run, and build.gradle wipes run/world before
+# every autotest launch. Set a saved world (an agent playtest's) aside and restore it after.
+# 2026-10-22: a suite run deleted the saved day-7 playtest world this way.
+SAVED_WORLD=""
+if [ -d "$REPO/run/world" ]; then
+    SAVED_WORLD=$OUT/world-set-aside-$$
+    mv "$REPO/run/world" "$SAVED_WORLD"
+    echo "Set run/world aside during the capture ($SAVED_WORLD)"
+fi
+restore_world() {
+    [ -n "$SAVED_WORLD" ] || return 0
+    rm -rf "$REPO/run/world"
+    mv "$SAVED_WORLD" "$REPO/run/world"
+    SAVED_WORLD=""
+}
 echo "Capturing the server command (gradle build + launch)..."
 (cd "$REPO" && LANG=C.UTF-8 ./gradlew runServer -Dquestown.autotest=true \
     -Dquestown.autotest.only=__capture__ > "$OUT/capture.log" 2>&1) &
@@ -62,6 +77,7 @@ while [ $i -lt 300 ]; do
 done
 if [ -z "$CAP_PID" ]; then
     echo "Capture failed; see $OUT/capture.log" >&2
+    restore_world
     exit 1
 fi
 rm -rf "$OUT/cmd"; mkdir "$OUT/cmd"
@@ -76,6 +92,7 @@ open(f"{out}/mod_classes", "wb").write(mod[0].split(b"=", 1)[1] if mod else b"")
 EOF
 kill "$CAP_PID"
 wait 2>/dev/null || true
+restore_world
 
 # 2. Launch N copies.
 PIDS=""
