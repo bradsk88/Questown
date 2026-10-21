@@ -25,7 +25,8 @@ status: needs-triage
 ## Odd (continued)
 2. An open QuestsScreen does not refresh when a quest completes (Campfire stayed an open card
    after "Quest completed: Campfire"; correct after reopening). Same stale-screen family as the
-   flag villagers progress bar.
+   flag villagers progress bar. Also the economy tab: after clicking "Free food" (claimed, chat
+   confirmed) the open screen kept offering "Click to claim 20 free carrots" until reopened.
 3. Placing a welcome mat with no flag link fails silently: server ERROR "Welcome mat is not
    associated to an existing flag", no chat/sound for the player. Survival mats only come from
    flag crafting, so it bites with a mat whose flag was destroyed/moved.
@@ -79,3 +80,56 @@ status: needs-triage
   seeking_work (8 samples of `EXTRACTING_PRODUCT` while seeking work) -> dining -> raw food ->
   seeking_work. Needs a longer watch before calling it.
 - UUID churn: re-test after villagers exist across a reload (villager link, knowledge).
+
+## Session 2 (resumed 19:41)
+16. Raw-food meals LOWER fullness. `SimpleVillagerHandle.fillHunger` sets
+    `newHunger = percent * baseFullness`, so `hunger_fill_half` sets fullness to 2500 whatever it
+    was; `SpecialRules.HUNGER_FILL_HALF`'s comment says "filled up by 50% from its current value".
+    Live: 4370 -> 2500 three times overnight (19:32:51, 19:35:36, 19:38:22).
+17. Every meal is two meals: bread via `dining_no_table` (-> 5000), then ~30 s later
+    `dining_raw_food` takes a raw item (seeds, brown mushroom, red mushroom) while bread is
+    still stocked. `DinerNoTableWork`'s ExpirationRules fall back to `DinerRawFoodWork` on both
+    the no-supplies and max-ticks paths, so a diner that has already eaten times out into raw
+    food instead of returning to work. With #16 the second meal also halves fullness, so the
+    villager is hungry again ~2 min later: 7 food items in 6 min overnight (bread 13 -> 9).
+- Corrected: "hunter never hunts" was night. It became a hunter at 19:29 with ~90 s of
+  daylight left (trip = 100 s); nightfall 19:31:34; time 23733 at 19:41. Re-check at dawn.
+18. Chat shows a raw key: "Quest completed: room.hunter_qt_sword" (the Hunter job-change quest).
+19. "Quest completed: Post your first work request on the job board" fired when I used a BOP
+    to change jobs; no work request was posted ("First-work-request quest completed on first
+    posted request" in the log).
+20. **Beds are double-counted in room recipes.** A room with ONE bed + torch was announced as a
+    "Bedroom" (recipe: light + 2x `#minecraft:beds`); a room with TWO beds became a "Big
+    Bedroom" (light + 4x beds) and completed the "Bedroom" quest. RoomRecipes matches each bed
+    block (head and foot); Questown's `TownVillagerBedsHandle` counts heads only when assigning
+    sleep. So bed quests and bed counts disagree by 2x. Screens: diags/bed1.png, bed2.png.
+21. (dev tool) My new `click` threw an NPE when a click closed its screen; fixed by keeping the
+    screen reference (uncommitted at time of writing).
+- Refinement to #17: at dawn the diner went straight back to `hunter/sword` after one bread;
+  the bread-then-raw double meal happened only at night, when there was no work to return to.
+- Hunter works by day: took the sword at 19:42:26, back at 19:44:29 (+200 XP), deposited 1 beef.
+22. (judge) Villager arrivals are silent: villager 1 (day 1) and villager 2 (19:53:44) arrived
+    with no chat line; the only cue is the villagers tab's "...and one more in the morning".
+23. Level-up broadcast names the villager by truncated UUID: `message.villager.leveled_up
+    [3d51...810, 2]` (19:48:42), not "Villager 1". Same family as
+    `.scratch/playtest-2026-10-15/change-job-broadcast-uuid-instead-of-name.md`.
+24. (minor) Using the wand on the campfire after sleeping relights it silently (PASS, no message);
+    a second use sleeps. Fine once you know; nothing tells the player the first use relit it.
+25. Progress bar stuck at 100 reproduced (see the progress-bar ticket's "Reproduced live").
+- Resolved lead: the stray "Job changed ... for <random uuid> [from gatherer:gather]" line is a
+  freshly constructed entity logging under its temporary UUID before its saved UUID loads
+  (seen on every reload: 85346cfa, cbf45aca, 425e3e7b). Log noise only.
+- UUID-churn lead: after a client restart (chunk reload, new town UUID) the hunter re-registered,
+  kept its job and kept working. No breakage seen.
+26. Economy tab: the right-hand number is how many times an item was *needed* ("Food was needed 1
+    times in the past 1 days"), but beside "Swords 4" it reads as a stock count; the chest held
+    7 bread + 5 raw meat while it said "Food 1". The tooltip doesn't handle singulars ("1 times",
+    "1 days"), and its wrap width depends on the cursor (a lone "1" on its own line at x~300).
+27. (judge) "Free food" (red, 20 carrots) is offered while 7 bread are in storage; the one need
+    was the overnight raw-food meal (#17). If #17 is fixed this may go away on its own.
+28. Quest card title "Small Storeroom -> Storeroom" runs under the card's x button (overlap);
+    gui-lint reported QuestsScreen OK.
+29. Consequence of #20: building the cook batch's rooms auto-completed its "Big Bedroom" upgrade
+    the moment the batch posted (my 2-bed room already matched the 4-bed recipe).
+30. (judge) Cook-batch "Food (0/8)" counts food *produced* (extracted), not stocked; with 27 food
+    in storage a player may read 0/8 as broken. Tooltip only says "Click to see jobs that make this".

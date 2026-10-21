@@ -183,15 +183,17 @@ public class QtDiagClient {
     private static void click(Minecraft mc, double x, double y) {
         cursor(mc, x, y);
         mc.execute(() -> {
-            if (mc.screen == null) {
+            // Keep the clicked screen: a click that closes it (Unlock, Craft) nulls mc.screen.
+            var screen = mc.screen;
+            if (screen == null) {
                 System.out.println("[qtdiag] click: no screen open");
                 return;
             }
             double gx = x * mc.getWindow().getGuiScaledWidth() / mc.getWindow().getScreenWidth();
             double gy = y * mc.getWindow().getGuiScaledHeight() / mc.getWindow().getScreenHeight();
-            mc.screen.mouseClicked(gx, gy, 0);
-            mc.screen.mouseReleased(gx, gy, 0);
-            System.out.println("[qtdiag] clicked " + mc.screen.getClass().getSimpleName() + " at " + gx + "," + gy);
+            screen.mouseClicked(gx, gy, 0);
+            screen.mouseReleased(gx, gy, 0);
+            System.out.println("[qtdiag] clicked " + screen.getClass().getSimpleName() + " at " + gx + "," + gy);
         });
     }
 

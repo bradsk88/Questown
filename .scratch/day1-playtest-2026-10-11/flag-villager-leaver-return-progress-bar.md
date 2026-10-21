@@ -57,3 +57,13 @@ On the flag villagers page the bar can stay at 100. **The dev confirmed that swi
 back updates it**, so the screen keeps a stale value. The server-side listener is fine
 (`ui/hunter_status_resync`). Look at how `MultiStatusScreen` caches the per-villager status and
 leaver-return data between status pushes, not at what the server sends.
+
+### Reproduced live (2026-10-21 agent playtest, 19:46-19:49)
+Hunter on `hunter/sword`, flag villagers tab left open, bar pixels sampled under the status art:
+- During the trip the bar fills live (1 px -> 4 px of 30 in 10 s): the client clock drives it.
+- The hunter returned at 19:48:42 (`+200 XP`), dropped loot and left again (`GOING_TO_JOB`
+  19:48:50). Three shots over ~20 s after the return: bar stays at 30/30.
+- Toggle to another tab and back: bar shows 5/30, the new trip.
+So the screen keeps the old absolute `leaverReturnTick` and nothing pushes the next trip's tick
+to an open screen; reopening resyncs it. Fix direction: send the updated leaver-return data to
+an open `MultiStatusScreen` when a villager's timed state starts (or on status change).

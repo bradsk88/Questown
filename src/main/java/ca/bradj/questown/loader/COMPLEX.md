@@ -240,5 +240,6 @@ agent playing the game through the diag channel. `click` takes window pixels lik
 parks the pointer there, converts to gui-scaled coordinates
 (`x * guiScaledWidth / screenWidth`) and sends the open screen `mouseClicked` then
 `mouseReleased` with button 0. That presses buttons and, with two clicks, moves an item between
-slots. `close` calls the open screen's `onClose`, as Escape does. Used in the 2026-10-21 agent
+slots. `close` calls the open screen's `onClose`, as Escape does. `click` keeps its own reference to the screen it clicked, because a click
+that closes the screen (Unlock, Craft) nulls `mc.screen` before `mouseReleased`. Used in the 2026-10-21 agent
 playtest (`.scratch/agent-playtest-2026-10-21/findings.md`). Command list: `tools/porttest/PORTTEST.md`.
