@@ -1,6 +1,6 @@
 ---
 title: 'Miner stops finishing trips after a while; resets every 150 s instead'
-status: needs-info
+status: fixed
 origin: 2026-10-21 playtest — dev: "miner is very slow" (dev-server-25 and dev-server-26 logs)
 ---
 
@@ -65,3 +65,9 @@ In the agent's fresh world the miner ran at spec (~2100 ticks per trip) until st
 real problem is what full storage looks like on a miner that isn't holding output: it leaves its
 finished coal at the mineshaft and wanders as "Miner is going to work", with no storage bubble
 (agent findings #40).
+
+## Fix (2026-10-21)
+
+A villager whose finished product waits while storage is full now stops in NO_SPACE with the
+storage bubble, instead of wandering. See `src/main/java/ca/bradj/questown/jobs/COMPLEX.md` "Full storage stops a villager
+before it collects a finished product".

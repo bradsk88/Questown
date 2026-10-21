@@ -509,6 +509,79 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.GOING_TO_JOB, s);
     }
 
+    /**
+     * 2026-10-21 agent playtest: with every chest full, a miner holding nothing left its finished
+     * coal at the mineshaft and wandered as "going to work" (no storage signal); only villagers
+     * already holding output stopped visibly. Collecting a finished product with no storage only
+     * moves it into the villager's hands, so a waiting product with no space is the no-space stop.
+     */
+    @Test
+    void StatusShouldBe_NoSpace_WhenAFinishedProductWaits_AndTownHasNoSpace() {
+        JobStatuses.Job<TestStatus, TestStatus> finishedElsewhere = new JobStatuses.Job<>() {
+            @Override
+            public @Nullable TestStatus tryChoosingItemlessWork() {
+                return TestStatus.GOING_TO_JOB;
+            }
+
+            @Override
+            public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
+                return null;
+            }
+
+            @Override
+            public @Nullable TestStatus tryCollectingFinishedProduct() {
+                return TestStatus.GOING_TO_JOB;
+            }
+        };
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, false, ImmutableMap.of(TestStatus.ITEM_WORK, true)),
+                new ConstTown(true, false, false),
+                finishedElsewhere,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.NO_SPACE, s);
+    }
+
+    /**
+     * The no-space stop above must not catch a job whose finished product is consumed, not stored
+     * (a diner's meal): with full storage it would never eat.
+     */
+    @Test
+    void StatusShouldBe_GoingToJob_WhenAFinishedProductWaits_AndTownHasNoSpace_ButTheProductNeedsNoStorage() {
+        JobStatuses.Job<TestStatus, TestStatus> mealWaiting = new JobStatuses.Job<>() {
+            @Override
+            public @Nullable TestStatus tryChoosingItemlessWork() {
+                return TestStatus.GOING_TO_JOB;
+            }
+
+            @Override
+            public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
+                return null;
+            }
+
+            @Override
+            public @Nullable TestStatus tryCollectingFinishedProduct() {
+                return TestStatus.GOING_TO_JOB;
+            }
+
+            @Override
+            public boolean finishedProductNeedsStorage() {
+                return false;
+            }
+        };
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, false, ImmutableMap.of(TestStatus.ITEM_WORK, true)),
+                new ConstTown(true, false, false),
+                mealWaiting,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.GOING_TO_JOB, s);
+    }
+
     @Test
     void StatusShouldBe_DroppingLoot_WhenInvHasSomeSupplies_AndCannotDoWork() {
         TestStatus s = JobStatuses.usualRoutine(
@@ -703,12 +776,16 @@ class JobStatusesTest {
 
     private LZCD<LZCD.Dependency<TestStatus>> getHasSupplies(@NotNull LZCD<TestStatus> root) {
         // root = "drop loot before more work"; then "stop when holding output and no space";
-        // then "collect a finished product"; then itemless work; then use items.
+        // then "stop when a finished product waits and no space"; then "collect a finished
+        // product"; then itemless work; then use items.
         if (!(root.ifCondFail instanceof LZCD<TestStatus> noSpaceWhileHolding)) {
             throw new ClassCastException("Expected root.ifCondFail to be LZCD");
         }
-        if (!(noSpaceWhileHolding.ifCondFail instanceof LZCD<TestStatus> collectFinished)) {
+        if (!(noSpaceWhileHolding.ifCondFail instanceof LZCD<TestStatus> noSpaceWhileWaiting)) {
             throw new ClassCastException("Expected noSpaceWhileHolding.ifCondFail to be LZCD");
+        }
+        if (!(noSpaceWhileWaiting.ifCondFail instanceof LZCD<TestStatus> collectFinished)) {
+            throw new ClassCastException("Expected noSpaceWhileWaiting.ifCondFail to be LZCD");
         }
         if (!(collectFinished.ifCondFail instanceof LZCD<TestStatus> itemlessWork)) {
             throw new ClassCastException("Expected collectFinished.ifCondFail to be LZCD");

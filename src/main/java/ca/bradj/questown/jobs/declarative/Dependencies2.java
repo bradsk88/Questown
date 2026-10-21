@@ -40,6 +40,11 @@ public interface Dependencies2<ROOM extends Room, MATCH extends IRoomRecipeMatch
 
     boolean hasSpace();
 
+    /** See {@code JobStatuses.Job#finishedProductNeedsStorage()}. Default: true. */
+    default boolean finishedProductNeedsStorage() {
+        return true;
+    }
+
     WorkPosition<POS> getWorkSpot();
 
     Signals.DayTime getDayTime();

@@ -108,7 +108,8 @@ public class WorksBehaviour {
     public static WorkDescription noResultDescription() {
         return new WorkDescription(
                 (td) -> ImmutableSet.of(MCTownItem.Air()),
-                null
+                null,
+                true
         );
     }
 
@@ -197,7 +198,7 @@ public class WorksBehaviour {
                 jobId,
                 parentID,
                 icon,
-                getJobFunc(jobId, location, states, world, special, workSound, expiration),
+                getJobFunc(jobId, location, states, world, special, workSound, expiration, description.productConsumed()),
                 productionJobSnapshot(jobId),
                 location.isJobBlock(),
                 location.shouldInitializeWorkState(),
@@ -235,7 +236,8 @@ public class WorksBehaviour {
             WorkWorldInteractions world,
             WorkSpecialRules special,
             @Nullable SoundInfo workSound,
-            ExpirationRules expiration
+            ExpirationRules expiration,
+            boolean productConsumed
     ) {
 
         return new JobFunc() {
@@ -256,7 +258,7 @@ public class WorksBehaviour {
                         expiration,
                         world.resultGenerator()::generate,
                         workSound
-                );
+                ).withFinishedProductNeedsStorage(!productConsumed);
             }
 
             @Override
@@ -275,7 +277,7 @@ public class WorksBehaviour {
                         expiration,
                         world.resultGenerator()::generate,
                         workSound
-                );
+                ).withFinishedProductNeedsStorage(!productConsumed);
             }
         };
     }

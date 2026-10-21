@@ -738,3 +738,26 @@ cook_stock_fuel / cook_stock_ingredients (chest work) use the questown "collecti
 calls `Compat.insertInNextOpenSlot(handler, item, 1)` (target size 1). Villagers cannot stack: a
 deliberate storage cost, now in CONTEXT.md "Unstacked deposit" and commented at both sites. An agent
 playtest misread it as a bug because the rule was only in `docs/project-qa.md`; do not "fix" it.
+
+## Full storage stops a villager before it collects a finished product (2026-10-21)
+
+`JobStatuses.usualRoutineRoot` gained a node between "stop when holding output and the town has no
+space" and "collect a finished product": **a finished product waits and the town has no space →
+NO_SPACE**. Collecting it would only move it into the villager's hands with nowhere to go, and
+before this a villager holding nothing gave no storage signal at all: the agent playtest's miner
+left its coal at the mineshaft and wandered as "going to work", and the cook said "nowhere to work"
+(findings #40; the dev's "slow miner"). NO_SPACE feeds the NO_STORAGE bubble and the flag's
+`StorageBlockTally` (`countStorageBlockedVillagers`), so these villagers now count too.
+
+The node requires `Job.finishedProductNeedsStorage()`. Jobs whose product is **consumed** (diners,
+resters, the BOP depositor: `WorksBehaviour.noResultDescription()` → `WorkDescription.productConsumed`
+= true) answer false, so full storage never stops a villager from eating. Path:
+`WorkDescription.productConsumed` → `WorksBehaviour.getJobFunc` → `DeclarativeJob.withFinishedProductNeedsStorage`
+→ `DeclarativeJobTickerDependencies.finishedProductNeedsStorage` → `TickTownProvider` →
+`JobStatuses.productionRoutine`'s job adapter. `ResultGenerator.isResultAlwaysEmpty` is **not** this
+signal: cook/extract's generator is empty too (its meal arrives through the take-from-slot rule).
+
+Pins: `JobStatusesTest` (no-space when a product waits; going-to-job when the product needs no
+storage), `cook/fuel [storage_full]` (meal stays in the furnace: 5 of 5; red with the node disabled:
+4 of 5), `eating/eat_storage_full` (a drained diner eats with every chest full; red with diner
+meals treated as storable: NO_SPACE, fullness 0).

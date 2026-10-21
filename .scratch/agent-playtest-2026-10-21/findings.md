@@ -165,7 +165,7 @@ status: needs-triage
 39. Storage-full stop works for a villager *holding* output: hunter stopped with the new no-space
     bubble and hint "Every chest is full: they have nowhere to put what they made." (diags/ns2.png).
     (judge) The bubble art sits on a grey framed square; the bread and sword bubbles are bare items on white.
-40. **Full storage is invisible on villagers not holding output.** Miner: its finished coal waited
+40. **[FIXED 2026-10-21, see jobs/COMPLEX.md]** **Full storage is invisible on villagers not holding output.** Miner: its finished coal waited
     at the mineshaft (spot state 3) but it never collected it; it wandered as GOING_TO_JOB for 2+ min
     with status "Miner is going to work." Cook: "Cook has nowhere to work. Or they might be
     looking for tools." Neither shows the storage bubble. `countStorageBlockedVillagers` counts

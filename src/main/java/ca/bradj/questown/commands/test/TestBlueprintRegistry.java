@@ -257,6 +257,7 @@ public class TestBlueprintRegistry {
         jobs.add(eatingEntry("eat_no_table", eatNoTableBlueprint()));
         jobs.add(eatingEntry("dine_at_time", dineAtTimeBlueprint()));
         jobs.add(eatingEntry("eat_raw_food", eatRawFoodBlueprint()));
+        jobs.add(eatingEntryDirect("eat_storage_full", eatWithStorageFullBlueprint()));
         jobs.add(eatingEntryDirect("eat_direct", eatDirectBlueprint()));
 
         // Worldgen tests
@@ -2499,9 +2500,10 @@ public class TestBlueprintRegistry {
 
     /**
      * 2026-10-21 dev request: full storage should be visible. The output-ready kitchen with every
-     * town container slot filled: the cook takes the food out, has nowhere to put it, and must
-     * stop in NO_SPACE with the NO_STORAGE need (bubble) at once; after 1200 villager-ticks of
-     * that, the flag reports storage full (its bubble).
+     * town container slot filled: the cook must stop in NO_SPACE with the NO_STORAGE need (bubble)
+     * without taking the meal out of the furnace (agent playtest #40: a villager not yet holding
+     * output gave no storage signal); after 1200 villager-ticks of that, the flag reports storage
+     * full (its bubble).
      */
     private static TestBlueprint cookStorageFullBlueprint() {
         // 3000 ticks: time to extract and enter NO_SPACE, then 1200+ villager-ticks for the flag.
@@ -2535,7 +2537,12 @@ public class TestBlueprintRegistry {
                     }
                     boolean flagBubble = town.isAttentionStorageFull();
                     output.msg("storage-full: villager bubble=" + anyNoStorage + " flag bubble=" + flagBubble);
-                    return anyNoStorage && flagBubble;
+                    // With no storage the cook must stop before taking the meal out: collecting it only
+                    // moves it into the cook's hands (2026-10-21 agent playtest, finding #40).
+                    int left = level.getBlockEntity(flagPos.offset(COOK_FURNACE_OFFSET)) instanceof AbstractFurnaceBlockEntity f
+                            ? f.getItem(2).getCount() : -1;
+                    output.msg("storage-full: cooked beef still in the furnace=" + left + " (seeded 5)");
+                    return anyNoStorage && flagBubble && left == 5;
                 });
     }
 
@@ -4023,6 +4030,41 @@ public class TestBlueprintRegistry {
                 new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1),
                 false
         );
+    }
+
+    /**
+     * 2026-10-21 (agent playtest #40): with full storage a villager stops before collecting a
+     * finished product, since it would only have nowhere to put it. A diner's product is its meal,
+     * eaten not stored (WorkDescription.productConsumed), so a hungry villager must still eat when
+     * every chest is full. eat_direct's town (villager starts on dining_no_table), hunger drained,
+     * every empty slot filled at spawn.
+     */
+    private static TestBlueprint eatWithStorageFullBlueprint() {
+        TestBlueprint base = eatDirectBlueprint();
+        float[] maxFullness = {0f};
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                base.expectation(), base.supplyDoorOffset(), null, null, null, true, 600,
+                true, true,
+                new TestExpectation(List.of(), 0, 100),
+                null, null, null, null, false
+        )
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    output.msg("eat storage-full: filled " + fillEmptyTownSlots(level, town) + " empty slots");
+                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                            (net.neoforged.neoforge.event.tick.ServerTickEvent.Post ev) -> {
+                                for (VillagerUUID v : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                                    float f = town.getVillagerHandle().getStats(VillagerUUID.get(v)).fullnessPercent();
+                                    maxFullness[0] = Math.max(maxFullness[0], f);
+                                }
+                            });
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg("eat storage-full: max fullness seen=" + maxFullness[0]);
+                    return maxFullness[0] > 0.5f;
+                });
     }
 
     /**

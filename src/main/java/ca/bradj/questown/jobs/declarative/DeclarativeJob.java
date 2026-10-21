@@ -76,6 +76,7 @@ public class DeclarativeJob extends
     // take-driver count: feeds the [PROBE:supplies] TOOK line (psweep verdict oracle; keep)
     private static final java.util.concurrent.atomic.AtomicLong SUPPLY_TOOK_CNT = new java.util.concurrent.atomic.AtomicLong();
     private final ExpirationRules expiration;
+    private boolean finishedProductNeedsStorage = true;
     private final long totalDuration;
     private final int workInterval;
     private final RecipeProvider recipe;
@@ -957,6 +958,19 @@ public class DeclarativeJob extends
     }
 
     // Package-accessible delegates for DeclarativeJobTickerDependencies
+
+    /**
+     * False for a job whose finished product is consumed, not stored (a diner's meal); set by
+     * {@code WorksBehaviour} from {@code WorkDescription.productConsumed}. Full storage never stops such a job.
+     */
+    public DeclarativeJob withFinishedProductNeedsStorage(boolean needsStorage) {
+        this.finishedProductNeedsStorage = needsStorage;
+        return this;
+    }
+
+    boolean finishedProductNeedsStorage() {
+        return finishedProductNeedsStorage;
+    }
 
     ProductionJournal<MCTownItem, MCHeldItem> getJournal() {
         return journal;

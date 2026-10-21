@@ -52,6 +52,15 @@ public class JobStatuses {
         default @Nullable STATUS tryCollectingFinishedProduct() {
             return null;
         }
+
+        /**
+         * Whether collecting this job's finished product puts something in the villager's hands
+         * that needs storage. False for products that are consumed instead (a diner's meal), so full
+         * storage never stops them. Default: true.
+         */
+        default boolean finishedProductNeedsStorage() {
+            return true;
+        }
     }
 
     /**
@@ -164,6 +173,10 @@ public class JobStatuses {
                 new Pair<>(ctx.jobId, "holdsWorkOutput"),
                 inventory::holdsWorkOutput
         );
+        LZCD<LZCD.Dependency<STATUS>> dFinishedProductWaiting = prePopAble(
+                new Pair<>(ctx.jobId, "finished product waiting"),
+                () -> ctx.job.finishedProductNeedsStorage() && ctx.job.tryCollectingFinishedProduct() != null
+        );
         LZCD<LZCD.Dependency<STATUS>> dHasAnyItems = prePopAble(
                 new Pair<>(ctx.jobId, "hasAnyItems"),
                 () -> supplyItemStatus.containsValue(SupplyItemStatus.HAS_ITEM) || inventory.hasNonSupplyItems()
@@ -189,6 +202,7 @@ public class JobStatuses {
         ILZCD<LZCD.Dependency<STATUS>> dTimerActive = fromVoid(town.isTimerActive());
         ILZCD<LZCD.Dependency<STATUS>> dTownHasSupplies = fromVoid(town.hasSupplies());
         ILZCD<LZCD.Dependency<STATUS>> dTownHasNoSupplies = fromVoid(LZCDs.invert(town.hasSupplies()));
+        ILZCD<LZCD.Dependency<STATUS>> dTownHasNoSpace = fromVoid(LZCDs.invert(town.hasSpace()));
         ILZCD<LZCD.Dependency<STATUS>> dHasWorkableBlocks = fromVoid(town.containsWorkableBlocksAtAnyState());
         ILZCD<LZCD.Dependency<STATUS>> dHasNoWorkableBlocks = fromVoid(LZCDs.invert(town.containsWorkableBlocksAtAnyState()));
         Job<STATUS, SUP_CAT> job = ctx.job;
@@ -212,6 +226,17 @@ public class JobStatuses {
                         leaf(factory::noSpace),
                         dHoldsWorkOutput,
                         new LZCD<>(
+                                // A finished product waiting while the town has no space: collecting it
+                                // only moves it into the villager's hands, so stop visibly here too. Without
+                                // this a miner holding nothing left its coal at the mineshaft and wandered as
+                                // "going to work" with no storage signal (2026-10-21 agent playtest).
+                                new Pair<>(ctx.jobId, "stop when a finished product waits and the town has no space"),
+                                leaf(factory::noSpace),
+                                ImmutableList.of(
+                                        dFinishedProductWaiting,
+                                        dTownHasNoSpace
+                                ),
+                                new LZCD<>(
                                 // A finished product waiting at a job site is collected before anything
                                 // else, even if the villager must walk there. The itemless-work root
                                 // below only takes it when already on site; away from it (home after a
@@ -334,6 +359,7 @@ public class JobStatuses {
                         )
                 )
         )
+                                )
                         )
                 )
         );
@@ -419,6 +445,11 @@ public class JobStatuses {
                         }
 
                         return factory.goingToJobSite();
+                    }
+
+                    @Override
+                    public boolean finishedProductNeedsStorage() {
+                        return town.finishedProductNeedsStorage();
                     }
 
                     @Override

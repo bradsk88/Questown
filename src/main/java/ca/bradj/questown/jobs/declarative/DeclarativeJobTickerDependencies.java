@@ -280,6 +280,11 @@ public class DeclarativeJobTickerDependencies implements
     }
 
     @Override
+    public boolean finishedProductNeedsStorage() {
+        return job.finishedProductNeedsStorage();
+    }
+
+    @Override
     public WorkPosition<BlockPos> getWorkSpot() {
         return job.getWorld().getWorkSpot();
     }

@@ -36,6 +36,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
     private Function<TOWN_ITEM, HELD_ITEM> convert;
     private final Supplier<Signals.DayTime> dayTime;
     private final Supplier<Boolean> hasSpace;
+    private boolean finishedProductNeedsStorage = true;
     private final Supplier<ImmutableList<MATCH>> supplyRoomsFinder;
     private final Predicate<MATCH> isJobSitePredicate;
 
@@ -171,5 +172,16 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
     @Override
     public boolean hasSpace() {
         return hasSpace.get();
+    }
+
+    /** False for jobs whose product is consumed rather than stored (see JobStatuses.Job). */
+    public TickTownProvider<ROOM, POS, MATCH, HELD_ITEM, TOWN_ITEM, CONTAINER> withFinishedProductNeedsStorage(boolean needsStorage) {
+        this.finishedProductNeedsStorage = needsStorage;
+        return this;
+    }
+
+    @Override
+    public boolean finishedProductNeedsStorage() {
+        return finishedProductNeedsStorage;
     }
 }

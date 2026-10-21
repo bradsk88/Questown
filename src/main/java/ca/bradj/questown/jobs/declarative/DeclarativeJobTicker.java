@@ -390,7 +390,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                         deps::convert,
                         deps::hasSpace,
                         deps::getDayTime
-                );
+                ).withFinishedProductNeedsStorage(deps.finishedProductNeedsStorage());
 
         // Compute entityCurrentJobSite for uses that need a snapshot (e.g., logic.tick parameters)
         EntityCurrentJobSite<ROOM> entityCurrentJobSite = getEntityCurrentJobSite(deps, rniot2, work);
