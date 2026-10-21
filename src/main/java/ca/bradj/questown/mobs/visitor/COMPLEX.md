@@ -192,3 +192,15 @@ alternative instead. The original wall-climb complaint is open again
 (`.scratch/playtest-2026-10-17/villager-stuck-on-bed-pathing-over-wall.md`).
 The `VillagerPathNavigation` seam (re-classifying campfire, water, fence cells) is the
 place for a wall-top penalty if one is needed.
+
+## NO_STORAGE need: full storage bubbles at once (2026-10-21 dev request)
+
+Fourth need consumer. `VisitorMobEntity.syncStorageNeed` (each server tick, beside the status
+sync): a townie whose job status is NO_SPACE — holding work output with no free town storage slot
+(`JobStatuses` "stop when holding output and the town has no space") — gets `NO_STORAGE` (chest
+icon, hint "Every chest is full: they have nowhere to put what they made."). It replaces NONE
+or UNMET_ITEM: full storage is the blocker right now, and `TownPossibleWork.refreshUnmetNeeds`
+no longer overwrites NO_STORAGE with UNMET_ITEM (without both halves the bubble flapped between
+them every recompute pass). It clears only its own need; UNMET_ITEM comes back on the next pass
+if it still applies. The flag-level counterpart (after a tick build-up) is in
+`town/rooms/COMPLEX.md`. Live pin: `cook/fuel [storage_full]`.

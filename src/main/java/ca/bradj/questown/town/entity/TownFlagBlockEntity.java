@@ -127,6 +127,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private static final String NBT_ATTENTION_INCOMPLETE_QUESTS = "attentionIncompleteQuests";
     private static final String NBT_ATTENTION_NO_WORK_REQUESTS = "attentionNoWorkRequests";
     private static final String NBT_ATTENTION_JOB_BOARDS = "attentionJobBoards";
+    private static final String NBT_ATTENTION_STORAGE_FULL = "attentionStorageFull";
 
     /**
      * Registered doors with no room, and why (ADR-0011). Written server-side by
@@ -150,6 +151,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private boolean attentionIncompleteQuests = false;
     private boolean attentionNoWorkRequests = false;
     private ImmutableList<BlockPos> attentionJobBoards = ImmutableList.of();
+    /** Storage-full flag bubble (server: tally result last published; client: last received). */
+    private boolean attentionStorageFull = false;
+    private final ca.bradj.questown.town.StorageBlockTally storageTally = new ca.bradj.questown.town.StorageBlockTally();
 
     /** Whether any of this town's quests is still incomplete (live server-side read). */
     boolean hasIncompleteQuests() {
@@ -251,6 +255,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             boards.add(entry);
         }
         tag.put(NBT_ATTENTION_JOB_BOARDS, boards);
+        tag.putBoolean(NBT_ATTENTION_STORAGE_FULL, storageTally.isBlocker());
     }
 
     private void readAttention(CompoundTag tag) {
@@ -259,6 +264,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         this.attentionIncompleteQuests = tag.getBoolean(NBT_ATTENTION_INCOMPLETE_QUESTS);
         this.attentionNoWorkRequests = tag.getBoolean(NBT_ATTENTION_NO_WORK_REQUESTS);
+        this.attentionStorageFull = tag.getBoolean(NBT_ATTENTION_STORAGE_FULL);
         ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
         for (Tag t : tag.getList(NBT_ATTENTION_JOB_BOARDS, Tag.TAG_COMPOUND)) {
             CompoundTag entry = (CompoundTag) t;
@@ -281,16 +287,37 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         boolean incomplete = hasIncompleteQuests();
         boolean noRequests = workHandle.getRequestedResults().isEmpty();
         ImmutableList<BlockPos> boards = ImmutableList.copyOf(workHandle.jobBoards);
+        storageTally.observe(countStorageBlockedVillagers(), ca.bradj.questown.jobs.Jobs.townHasSpace(this), 20);
+        boolean storageFull = storageTally.isBlocker();
         if (incomplete == attentionIncompleteQuests
                 && noRequests == attentionNoWorkRequests
-                && boards.equals(attentionJobBoards)) {
+                && boards.equals(attentionJobBoards)
+                && storageFull == attentionStorageFull) {
             return;
         }
         attentionIncompleteQuests = incomplete;
         attentionNoWorkRequests = noRequests;
         attentionJobBoards = boards;
+        attentionStorageFull = storageFull;
         setChanged();
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+    }
+
+    /** Townies stopped in NO_SPACE: holding work output with no free storage slot in town. */
+    private int countStorageBlockedVillagers() {
+        int n = 0;
+        for (net.minecraft.world.entity.LivingEntity e : getVillagerHandle().entities()) {
+            if (e instanceof VisitorMobEntity v
+                    && ca.bradj.questown.jobs.production.ProductionStatus.NO_SPACE.equals(v.getStatusForServer())) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /** Client-side: full storage has become a town blocker (flag storage bubble). */
+    public boolean isAttentionStorageFull() {
+        return attentionStorageFull;
     }
 
     /** Client-side reads of the synced attention state (see the field docs). */

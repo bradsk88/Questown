@@ -164,11 +164,13 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("farmer", "harvest_wheat"), farmerBlueprint().withCustomAssertion(
                 (level, flagPos, town, output) -> {
                     // Counterpart to the no_supplies case: a supplied farmer never asks for items.
+                    // (NO_STORAGE is a different signal: the fixture's one chest can fill up with
+                    // wheat and seeds during the warp, and then the farmer rightly bubbles that.)
                     List<TownieNeed> needs = town.getVillagerHandle().entities().stream()
                             .map(v -> ((VisitorMobEntity) v).getNeed())
                             .toList();
                     output.msg("Townie needs at end of supplied farmer run: " + needs);
-                    return needs.stream().allMatch(n -> n == TownieNeed.NONE);
+                    return needs.stream().noneMatch(n -> n == TownieNeed.UNMET_ITEM);
                 })));
         jobs.add(entry(new JobID("cook", "simple_furnace_food"), cookBlueprint()));
         // 2026-10-19 playtest blocker: a cook whose furnace is already fuelled and holds cooked food
@@ -176,6 +178,7 @@ public class TestBlueprintRegistry {
         // all starting jobs unlocked); realtime, so job selection is exercised.
         jobs.add(edgeCaseEntry("cook", "fuel", "fuelled_output_ready", cookOutputReadyBlueprint()));
         jobs.add(edgeCaseEntry("cook", "fuel", "no_coal", cookNoCoalBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "fuel", "storage_full", cookStorageFullBlueprint()));
         jobs.add(entry(new JobID("baker", "bread"), bakerBlueprint()));
         jobs.add(entry(new JobID("crafter", "stick"), crafterBlueprint()));
         jobs.add(entry(new JobID("crafter", "wooden_axe"), blacksmithBlueprint()));
@@ -2492,11 +2495,57 @@ public class TestBlueprintRegistry {
     }
 
     /**
+     * 2026-10-21 dev request: full storage should be visible. The output-ready kitchen with every
+     * town container slot filled: the cook takes the food out, has nowhere to put it, and must
+     * stop in NO_SPACE with the NO_STORAGE need (bubble) at once; after 1200 villager-ticks of
+     * that, the flag reports storage full (its bubble).
+     */
+    private static TestBlueprint cookStorageFullBlueprint() {
+        // 3000 ticks: time to extract and enter NO_SPACE, then 1200+ villager-ticks for the flag.
+        return cookRealtimeBlueprint(cookBlueprint().supplyItems(), new TestExpectation(List.of(), 0, 100), 3000)
+                .withSetupHook((level, flagPos, town, output) -> {
+                    if (!seedFuelledFurnaceWithOutput(level, flagPos, town, output)) {
+                        return false;
+                    }
+                    int filled = 0;
+                    for (var target : ca.bradj.questown.town.TownContainers.getAllContainers(town, level)) {
+                        if (!(level.getBlockEntity(target.getBlockPos()) instanceof net.minecraft.world.Container c)) {
+                            continue;
+                        }
+                        for (int i = 0; i < c.getContainerSize(); i++) {
+                            if (c.getItem(i).isEmpty()) {
+                                c.setItem(i, new ItemStack(Items.DIRT, 64));
+                                filled++;
+                            }
+                        }
+                    }
+                    output.msg("storage-full: filled " + filled + " empty slots");
+                    return filled > 0;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    boolean anyNoStorage = false;
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            output.msg("storage-full: " + v.getUUID() + " status=" + v.getStatusForServer() + " need=" + v.getNeed());
+                            anyNoStorage |= v.getNeed() == TownieNeed.NO_STORAGE;
+                        }
+                    }
+                    boolean flagBubble = town.isAttentionStorageFull();
+                    output.msg("storage-full: villager bubble=" + anyNoStorage + " flag bubble=" + flagBubble);
+                    return anyNoStorage && flagBubble;
+                });
+    }
+
+    /**
      * The {@link #cookBlueprint()} kitchen as a realtime fixture: one cook starting on cook/fuel
      * with every cook starting job unlocked (as a staffed playtest cook has), morning start, no
      * warp, 1500 realtime ticks.
      */
     private static TestBlueprint cookRealtimeBlueprint(Collection<ItemStack> supplies, TestExpectation realtime) {
+        return cookRealtimeBlueprint(supplies, realtime, 1500);
+    }
+
+    private static TestBlueprint cookRealtimeBlueprint(Collection<ItemStack> supplies, TestExpectation realtime, int realtimeTicks) {
         TestBlueprint base = cookBlueprint();
         return new TestBlueprint(
                 base.roomType(), base.blocks(), supplies,
@@ -2507,7 +2556,7 @@ public class TestBlueprintRegistry {
                 1000L,       // startTimeTick — morning, so the window is productive
                 1,           // villagerCount
                 true,        // realtimePhase
-                1500,        // realtimeTicks — well under the ~2400-tick fuel stall
+                realtimeTicks, // default 1500: well under the ~2400-tick fuel stall
                 false,       // drainHungerBeforeTest
                 true,        // skipWarp — the blocker is realtime job selection
                 realtime, null, null, null, null, false

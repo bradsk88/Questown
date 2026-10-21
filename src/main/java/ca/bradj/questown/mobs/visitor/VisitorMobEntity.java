@@ -437,6 +437,20 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
      * Records that this townie needs the player's help with something, so a bubble can say so.
      * Silence means working (ADR-0011), so this is set only when the townie has actually given up.
      */
+    /**
+     * NO_STORAGE consumer (2026-10-21 dev request): a townie stopped for lack of storage space
+     * bubbles at once. It takes precedence over UNMET_ITEM (full storage is what blocks it right
+     * now; TownPossibleWork does not overwrite it) and clears only its own need.
+     */
+    private void syncStorageNeed(IStatus<?> jobStatus) {
+        boolean blocked = ca.bradj.questown.jobs.production.ProductionStatus.NO_SPACE.equals(jobStatus);
+        if (blocked && (getNeed() == TownieNeed.NONE || getNeed() == TownieNeed.UNMET_ITEM)) {
+            setNeed(TownieNeed.NO_STORAGE);
+        } else if (!blocked && getNeed() == TownieNeed.NO_STORAGE) {
+            setNeed(TownieNeed.NONE);
+        }
+    }
+
     public void setNeed(TownieNeed newNeed) {
         if (level().isClientSide()) {
             return;
@@ -617,6 +631,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.entityData.set(visible, vis);
         if (j.isInitialized()) {
             entityData.set(status, j.getStatusToSyncToClient());
+            syncStorageNeed(j.getStatus());
             entityData.set(
                     heldItem, j.getInventory()
                                .getItem(0)

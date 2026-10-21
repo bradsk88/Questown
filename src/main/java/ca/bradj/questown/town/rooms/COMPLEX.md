@@ -89,3 +89,15 @@ board). The state itself is server-decided and synced on the flag's update tag
 collects the client-loaded copies. `AttentionBubbles.Target` (a `BlockPos` +
 `Kind` record) is the third holder type in the `NeedBubbleFocus` contest —
 distinct from the door's raw `BlockPos` so the two never collide.
+
+## Storage-full flag bubble (2026-10-21 dev request)
+
+`AttentionBubbles.Kind.STORAGE_FULL` (chest bubble, `textures/bubble/chest.png`; each Kind now
+carries its texture, rendered by `NeedBubbleClientEvents`) over the flag when full storage has
+become a blocker: `TownFlagBlockEntity.syncAttentionState` (every 20 ticks) feeds
+`StorageBlockTally` the number of townies in NO_SPACE and `Jobs.townHasSpace`; it trips at 1200
+villager-ticks (one townie for a minute, three for 20 s — dev: "let's try it") and resets on any
+free slot or when nobody is blocked. Synced like the other attention booleans
+(`attentionStorageFull` in the update tag). The townies themselves bubble immediately
+(`TownieNeed.NO_STORAGE`, `mobs/visitor/COMPLEX.md`). Unit: `StorageBlockTallyTest`; live:
+`cook/fuel [storage_full]` (3000 realtime ticks, every container filled with dirt).

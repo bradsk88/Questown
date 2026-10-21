@@ -301,7 +301,9 @@ public class TownPossibleWork {
             for (VisitorMobEntity villager : townies) {
                 String primary = unmetNeeds.primaryKey(root, villager.getUUID());
                 if (primary != null) {
-                    if (villager.getNeed() != TownieNeed.UNMET_ITEM) {
+                    // NO_STORAGE (stopped for lack of storage) outranks it; that consumer clears
+                    // its own need when space frees, and this pass re-applies UNMET_ITEM then.
+                    if (villager.getNeed() != TownieNeed.UNMET_ITEM && villager.getNeed() != TownieNeed.NO_STORAGE) {
                         villager.setNeed(TownieNeed.UNMET_ITEM);
                     }
                     if (!primary.equals(villager.getUnmetItem())) {

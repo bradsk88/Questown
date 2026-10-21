@@ -1127,7 +1127,7 @@ public final class VillageSelfSufficiencyExecutor {
         // Roster + jobs
         long roster = flag.getVillagerHandle().size();
         java.util.Map<String, Long> jobCounts = new java.util.TreeMap<>();
-        long unmetItem = 0, cantReach = 0, noneNeed = 0;
+        long unmetItem = 0, cantReach = 0, noneNeed = 0, noStorage = 0;
         for (LivingEntity v : flag.getVillagerHandle().entities()) {
             VisitorMobEntity t = (VisitorMobEntity) v;
             jobCounts.merge(t.getJobId().rootId(), 1L, Long::sum);
@@ -1135,6 +1135,7 @@ public final class VillageSelfSufficiencyExecutor {
             switch (need) {
                 case UNMET_ITEM -> unmetItem++;
                 case CANT_REACH -> cantReach++;
+                case NO_STORAGE -> noStorage++;
                 case NONE -> noneNeed++;
             }
         }

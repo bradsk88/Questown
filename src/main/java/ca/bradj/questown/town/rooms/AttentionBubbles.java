@@ -32,14 +32,18 @@ public final class AttentionBubbles {
     /** What the "!" bubble is pointing at. */
     public enum Kind {
         /** G1: the flag's town still has at least one incomplete quest. */
-        INCOMPLETE_QUESTS("message.questown.attention.incomplete_quests"),
+        INCOMPLETE_QUESTS("message.questown.attention.incomplete_quests", "textures/bubble/attention.png"),
         /** G2: the town has zero outstanding work requests on its job board(s). */
-        NO_WORK_REQUESTS("message.questown.attention.no_work_requests");
+        NO_WORK_REQUESTS("message.questown.attention.no_work_requests", "textures/bubble/attention.png"),
+        /** Full storage has blocked the town's villagers long enough to matter (StorageBlockTally). */
+        STORAGE_FULL("message.questown.attention.storage_full", "textures/bubble/chest.png");
 
         public final String hintKey;
+        public final ResourceLocation texture;
 
-        Kind(String hintKey) {
+        Kind(String hintKey, String texturePath) {
             this.hintKey = hintKey;
+            this.texture = new ResourceLocation(Questown.MODID, texturePath);
         }
     }
 
@@ -79,6 +83,10 @@ public final class AttentionBubbles {
     public static List<Target> near(Player player) {
         ImmutableList.Builder<Target> b = ImmutableList.builder();
         for (TownFlagBlockEntity flag : LOADED_FLAGS) {
+            if (flag.isAttentionStorageFull()
+                    && flag.getBlockPos().distSqr(player.blockPosition()) <= 16.0 * 16.0) {
+                b.add(new Target(flag.getBlockPos(), Kind.STORAGE_FULL));
+            }
             if (flag.isAttentionQuestsIncomplete()
                     && flag.getBlockPos().distSqr(player.blockPosition()) <= 16.0 * 16.0) {
                 b.add(new Target(flag.getBlockPos(), Kind.INCOMPLETE_QUESTS));

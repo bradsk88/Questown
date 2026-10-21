@@ -17,7 +17,9 @@ public enum TownieNeed {
     /** Gave up walking somewhere: no viable path, or wedged despite one. */
     CANT_REACH,
     /** No viable job because the town lacks the item(s) the job needs as input. */
-    UNMET_ITEM;
+    UNMET_ITEM,
+    /** Holding work output with nowhere to put it: every town chest is full (NO_SPACE status). */
+    NO_STORAGE;
 
     public static TownieNeed fromName(String name) {
         for (TownieNeed v : values()) {
@@ -41,6 +43,7 @@ public enum TownieNeed {
         return switch (this) {
             case CANT_REACH -> Items.BARRIER.getDefaultInstance();
             case UNMET_ITEM -> Items.BUNDLE.getDefaultInstance();
+            case NO_STORAGE -> Items.CHEST.getDefaultInstance();
             case NONE -> ItemStack.EMPTY;
         };
     }

@@ -52,7 +52,7 @@ public final class NeedBubbleClientEvents {
         } else if (attention != null) {
             BubbleRenderer.renderTextureBubbleAtBlock(
                     attention.pos(),
-                    AttentionBubbles.ATTENTION_TEXTURE,
+                    attention.kind().texture,
                     event.getPoseStack(),
                     buffer,
                     event.getCamera().getPosition()
