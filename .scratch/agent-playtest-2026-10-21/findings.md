@@ -115,7 +115,8 @@ status: needs-triage
     `.scratch/playtest-2026-10-15/change-job-broadcast-uuid-instead-of-name.md`.
 24. (minor) Using the wand on the campfire after sleeping relights it silently (PASS, no message);
     a second use sleeps. Fine once you know; nothing tells the player the first use relit it.
-25. Progress bar stuck at 100 reproduced (see the progress-bar ticket's "Reproduced live").
+**[FIXED 2026-10-22]** 25. Progress bar stuck at 100 reproduced (see the progress-bar ticket's "Reproduced live").
+    Cause: the villagers page's status smoothing kept an unbounded history (`StatusSmoother`).
 - Resolved lead: the stray "Job changed ... for <random uuid> [from gatherer:gather]" line is a
   freshly constructed entity logging under its temporary UUID before its saved UUID loads
   (seen on every reload: 85346cfa, cbf45aca, 425e3e7b). Log noise only.

@@ -662,6 +662,20 @@ convenience constructor keeps the inventory-status call site
 32×32 status art (inside the art's footprint — no new card geometry, so no
 layout change; gui-lint check rides the user's first menu open).
 
+**Stale bar on an open page (fixed 2026-10-22, playtest finding #25).** The
+smoothing window lives in `StatusSmoother` (one per screen, 5 frames per
+villager). It used to be rebuilt every frame through
+`UtilClean.getOrDefaultCollection(..., mutable=true)`, which copies into an
+unbounded `ArrayList`. Only the first frame was bounded, so the "majority
+vote" became the most frequent status since the page opened. Because
+`equals` ignores the leaver fields, the next trip's packet also collapsed onto
+the oldest equal one, so the bar kept the expired trip's tick and stayed full
+until a tab toggle built a new screen. Now the window is a real
+`EvictingQueue`, and the winner is the **newest** packet equal to the mode, so
+it carries the current trip. Pinned by `StatusSmootherTest` (red on the old
+algorithm: the next-trip tick and the new status both failed to show; the
+one-frame flicker guard passes either way).
+
 ## Status tooltips: unauthored keys fall back, never render raw (2026-10-14)
 
 `JobTooltips.buildStandardTooltipKeys` builds

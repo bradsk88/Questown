@@ -2,6 +2,7 @@
 title: 'Flag villagers menu: show a progress bar for when leavers return'
 status: ready-for-agent
 created: 2026-10-11
+closed: 2026-10-22
 ---
 
 ## Context
@@ -67,3 +68,11 @@ Hunter on `hunter/sword`, flag villagers tab left open, bar pixels sampled under
 So the screen keeps the old absolute `leaverReturnTick` and nothing pushes the next trip's tick
 to an open screen; reopening resyncs it. Fix direction: send the updated leaver-return data to
 an open `MultiStatusScreen` when a villager's timed state starts (or on status change).
+
+## Resolved (2026-10-22)
+The server did push each new trip. The client dropped it: `MultiStatusScreen`'s status smoothing
+copied its 5-frame `EvictingQueue` into an unbounded `ArrayList` on every frame, so the card
+showed the most frequent status since the page opened. `StatusPacket.equals` ignores the leaver
+fields, so the next trip's packet also collapsed onto the old trip's expired tick. Fix:
+`StatusSmoother` (a bounded window; the winner is the newest equal packet). Test:
+`StatusSmootherTest`, red on the old algorithm. gui/COMPLEX.md "Leaver-return progress bar".

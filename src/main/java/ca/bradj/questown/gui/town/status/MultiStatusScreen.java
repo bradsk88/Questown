@@ -9,7 +9,6 @@ import ca.bradj.questown.gui.*;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
-import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -28,7 +27,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
 
     private static final UUID MORNING_ARRIVAL_SENTINEL = new UUID(0, 0);
 
-    private final Map<UUID, Collection<StatusPacket>> statusSmoothingQueue = new HashMap<>();
+    private final StatusSmoother statusSmoother = new StatusSmoother();
     private final FlagTabs tabs;
 
     /**
@@ -209,20 +208,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     }
 
     private @NotNull StatusPacket getSmoothedStatus(UUID villagerUUID) {
-        Collection<StatusPacket> q = UtilClean.getOrDefaultCollection(
-                statusSmoothingQueue,
-                villagerUUID,
-                EvictingQueue.create(5),
-                true
-        );
-        q.add(syncedData.villagerStatuses.get(villagerUUID));
-        statusSmoothingQueue.put(villagerUUID, q);
-        HashMap<StatusPacket, Integer> counter = new HashMap<>();
-        for (StatusPacket iStatus : q) {
-            counter.compute(iStatus, (ignored, oldCt) -> oldCt == null ? 1 : oldCt + 1);
-        }
-        return counter.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).map(Map.Entry::getKey)
-                      .orElseThrow();
+        return statusSmoother.smooth(villagerUUID, syncedData.villagerStatuses.get(villagerUUID));
     }
 
     @Override
