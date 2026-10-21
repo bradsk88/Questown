@@ -680,3 +680,11 @@ hunter (loot_on_extract_accumulate): meat walked to the chest, 0 board deposits 
 cook_extract_food: 5 cooked beef walked, 0 board deposits. Dev chose this
 over narrowing the carry-on to the cook (ticket
 `.scratch/playtest-2026-10-20/leavers-never-deposit-after-carry-change.md`).
+
+**Moved to the root (2026-10-21 playtest).** A miner woken holding coal walked back to the
+mineshaft: the root, "work without items" (prioritised extraction), still outranked the drop.
+The node ("drop loot before more work") now wraps the whole tree, so a villager holding work
+output drops it before any work, itemless or not. The status interface cannot tell "take out
+more output" from other itemless work (a cook's extract is ordinary state-0 work), so the cook
+now carries each meal out before taking the next. Red:
+`JobStatusesTest.StatusShouldBe_DroppingLoot_WhenHoldingOutput_EvenIfItemlessWorkIsAvailable`.

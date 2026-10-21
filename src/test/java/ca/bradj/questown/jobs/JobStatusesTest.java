@@ -438,6 +438,24 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
     }
 
+    /**
+     * 2026-10-21 playtest: a miner woke holding coal and walked straight back to the mineshaft.
+     * Itemless work (the root, prioritised extraction) outranked dropping loot. A villager holding
+     * work output drops it before any further work, itemless or not.
+     */
+    @Test
+    void StatusShouldBe_DroppingLoot_WhenHoldingOutput_EvenIfItemlessWorkIsAvailable() {
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, true, ImmutableMap.of()),
+                new ConstTown(true, true, true),
+                jobWithItemlessWork,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
+    }
+
     @Test
     void StatusShouldBe_DroppingLoot_WhenInvHasSomeSupplies_AndCannotDoWork() {
         TestStatus s = JobStatuses.usualRoutine(
@@ -631,11 +649,12 @@ class JobStatusesTest {
     }
 
     private LZCD<LZCD.Dependency<TestStatus>> getHasSupplies(@NotNull LZCD<TestStatus> root) {
-        if (!(root.ifCondFail instanceof LZCD<TestStatus> dropBeforeNewCycle)) {
+        // root = "drop loot before more work"; then itemless work; then use items.
+        if (!(root.ifCondFail instanceof LZCD<TestStatus> itemlessWork)) {
             throw new ClassCastException("Expected root.ifCondFail to be LZCD");
         }
-        if (!(dropBeforeNewCycle.ifCondFail instanceof LZCD<TestStatus> useItems)) {
-            throw new ClassCastException("Expected dropBeforeNewCycle.ifCondFail to be LZCD");
+        if (!(itemlessWork.ifCondFail instanceof LZCD<TestStatus> useItems)) {
+            throw new ClassCastException("Expected itemlessWork.ifCondFail to be LZCD");
         }
         if (!(useItems.ifCondFail instanceof LZCD<TestStatus> dropLoot)) {
             throw new ClassCastException("Expected useItems.ifCondFail to be LZCD");

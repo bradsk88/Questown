@@ -186,6 +186,18 @@ public class JobStatuses {
         Job<STATUS, SUP_CAT> job = ctx.job;
         IStatusFactory<STATUS> factory = ctx.factory;
         LZCD<STATUS> root = new LZCD<>(
+                // A villager holding work output (items no state uses) takes it to storage before
+                // any more work. Below this, "use items" (a leaver holding its tool) sent hunters
+                // and miners out with the loot in hand (2026-10-20), and itemless work (the root
+                // below) sent a miner woken with full hands back to the mineshaft (2026-10-21).
+                // A cook therefore carries each meal out before taking the next.
+                new Pair<>(ctx.jobId, "drop loot before more work"),
+                leaf(factory::droppingLoot),
+                ImmutableList.of(
+                        dHoldsWorkOutput,
+                        dTownHasSpace
+                ),
+                new LZCD<>(
                 new Pair<>(ctx.jobId, "work without items"),
                 LZCDs.leaf(job::tryChoosingItemlessWork, Objects::isNull),
                 ImmutableList.of(
@@ -193,19 +205,6 @@ public class JobStatuses {
                         dStatusNotGoing
                 ),
                 new LZCD<>(
-                        // A villager holding work output (items no state uses) takes it to storage
-                        // before starting a new cycle. Without this, "use items" (a leaver holding
-                        // its tool) sent hunters and miners on the next trip with the loot still in
-                        // hand, forever (2026-10-20 playtest; the board's instant deposit used to
-                        // empty their hands). Itemless work above still comes first, so a cook
-                        // finishes extracting before the walk.
-                        new Pair<>(ctx.jobId, "drop loot before starting a new cycle"),
-                        leaf(factory::droppingLoot),
-                        ImmutableList.of(
-                                dHoldsWorkOutput,
-                                dTownHasSpace
-                        ),
-                        new LZCD<>(
                         new Pair<>(ctx.jobId, "use items"),
                         LZCDs.leaf(() -> job.tryUsingSupplies(supplyItemStatus), Objects::isNull),
                         ImmutableList.of(
@@ -310,7 +309,7 @@ public class JobStatuses {
                                 )
                         )
                 )
-                )
+        )
         );
         return root;
     }

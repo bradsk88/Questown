@@ -220,7 +220,8 @@ class CookEquivalenceTest {
 
         EquivalenceTestFramework.TickerSetup tickerSetup =
                 EquivalenceTestFramework.createTickerSetup(definition, world);
-        tickerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:stick"));
+        // No held stick: cook/extract no longer uses one, and a villager holding an item no state
+        // uses drops it before more work (2026-10-21), which this harness's store cannot accept.
 
         EquivalenceTestFramework.runTicker(tickerSetup, 50);
         EquivalenceTestFramework.SimulationResult tickerResult =
@@ -231,7 +232,6 @@ class CookEquivalenceTest {
 
         EquivalenceTestFramework.AdvancerSetup advancerSetup =
                 EquivalenceTestFramework.createAdvancerSetup(definition, world2);
-        advancerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:stick"));
 
         EquivalenceTestFramework.runAdvancer(advancerSetup, 50);
         EquivalenceTestFramework.SimulationResult advancerResult =
