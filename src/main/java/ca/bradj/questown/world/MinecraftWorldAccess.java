@@ -339,6 +339,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         if (handler == null) {
             return false;
         }
+        // Target size 1: villagers cannot stack, by design (CONTEXT.md "Unstacked deposit").
         return Compat.insertInNextOpenSlot(handler, item, 1);
     }
 

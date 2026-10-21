@@ -731,3 +731,10 @@ so it must come before `withSlotPrecondition`. cook_extract / cook_fuel /
 cook_simple_furnace_food use `minecraft:textures/block/furnace_front.png` (no asset copied);
 cook_stock_fuel / cook_stock_ingredients (chest work) use the questown "collecting supplies" icon
 (`questown:textures/menu/gatherer/get_supplies.png`, dev's call). Unit: `OverridesTest`.
+
+## Deposits never stack, by design (pointer, 2026-10-21)
+
+`Jobs.tryDropLoot` puts each item in the first empty slot, and `MinecraftWorldAccess.insertIntoContainer`
+calls `Compat.insertInNextOpenSlot(handler, item, 1)` (target size 1). Villagers cannot stack: a
+deliberate storage cost, now in CONTEXT.md "Unstacked deposit" and commented at both sites. An agent
+playtest misread it as a bug because the rule was only in `docs/project-qa.md`; do not "fix" it.

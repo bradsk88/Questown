@@ -1,8 +1,15 @@
 ---
-title: 'Villager deposits never stack: one item per chest slot, so storage fills 16-64x early'
-status: needs-triage
+title: 'Villager deposits never stack (by design, not a bug)'
+status: wontfix
 origin: 2026-10-21 agent playtest (fresh world, day 6)
 ---
+
+**Resolution (2026-10-21, dev): by design.** Villagers cannot stack items; it is a deliberate
+storage cost (`docs/project-qa.md`). The agent missed it because the rule was only in
+`docs/project-qa.md`/`docs/onboarding-v4.md`/the organizer plan, not in CONTEXT.md or at the
+deposit code. Now in CONTEXT.md "Unstacked deposit", `docs/INDEX.md`, and comments at
+`Jobs.tryDropLoot` and `MinecraftWorldAccess.insertIntoContainer`. The "Next" section below
+is void.
 
 ## Facts
 

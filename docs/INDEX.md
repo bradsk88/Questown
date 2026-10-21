@@ -13,7 +13,7 @@
 - **[decision-qttoolaction-closed-enum.md](decision-qttoolaction-closed-enum.md)** — QTToolAction is a compile-time-safe closed enum limited to vanilla tool actions.
 - **[decision-silent-world-access.md](decision-silent-world-access.md)** — Warp uses a silent world access variant that suppresses sound effects while keeping other interactions real.
 - **[sequence-diagrams.md](sequence-diagrams.md)** — Mermaid sequence diagrams for complex systems.
-- **[project-qa.md](project-qa.md)** — AI-conducted interview documenting unspoken design decisions.
+- **[project-qa.md](project-qa.md)** — AI-conducted interview documenting unspoken design decisions. Includes: **villagers cannot stack items in containers** (one slot per deposited item, by design; see CONTEXT.md "Unstacked deposit"), and cooks really insert into furnace slots a player can take from.
 
 ## Resolved bugs (verify before beta cut)
 

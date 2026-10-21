@@ -375,6 +375,8 @@ public class Jobs {
                     target.getBlockPos(),
                     mct.toShortString()
             );
+            // By design villagers cannot stack: each item takes its own empty slot
+            // (CONTEXT.md "Unstacked deposit"). Do not merge into existing stacks.
             boolean added = false;
             for (int i = 0; i < target.size(); i++) {
                 if (added) {

@@ -58,9 +58,10 @@ after a restart.
 Side finding: at nightfall a NO_SPACE villager switches to DROPPING_LOOT with need NONE, so the
 storage-full bubble disappears overnight. That may be acceptable, since it's bedtime anyway.
 
-## Likely root cause (2026-10-21 agent playtest)
+## Storage fills by design (2026-10-21 agent playtest)
 
-Villager deposits never stack (`Jobs.tryDropLoot` uses the first empty slot only), so each mined
-coal or cobblestone takes a whole chest slot. See
-`.scratch/agent-playtest-2026-10-21/villager-deposits-never-stack.md`. In the agent's fresh world the
-miner itself ran at spec (~2100 ticks per trip) while storage was filling one slot per item.
+Villagers cannot stack (CONTEXT.md "Unstacked deposit"), so storage filling quickly is expected.
+In the agent's fresh world the miner ran at spec (~2100 ticks per trip) until storage filled. The
+real problem is what full storage looks like on a miner that isn't holding output: it leaves its
+finished coal at the mineshaft and wanders as "Miner is going to work", with no storage bubble
+(agent findings #40).

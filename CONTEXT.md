@@ -236,6 +236,19 @@ The placed block. Its inventory is an MC **container**.
 The vanilla inventory interface. QT's item-accepting variant is `ContainerTarget.Container<I>`.
 _Avoid_: using "container" for the job-facing handle — that's a **container target**.
 
+**Unstacked deposit** (by design):
+**Villagers cannot stack items.** Every item a townie puts into a container takes its own slot,
+even when a matching stack is already there, so storage fills one slot per item (a 27-slot chest
+holds 27 deposits). This is a deliberate cost: it pushes the player to build more storage rooms
+and take part in the town's item management. Storage filling fast is therefore expected, not a
+bug; the relief is more chests or the **organizer** job's sort pass. Code: realtime
+`Jobs.tryDropLoot` (first empty slot), warp/world `MinecraftWorldAccess.insertIntoContainer` →
+`Compat.insertInNextOpenSlot(handler, item, 1)` (target size 1 = never stack). Sources:
+`docs/project-qa.md` ("villagers CANNOT stack items in containers"), `docs/onboarding-v4.md`
+(storage lesson), `docs/plans/2026-09-07-001-feat-organizer-chest-sort-plan.md`.
+_Avoid_: calling it a stacking bug or "fixing" deposits to merge stacks (2026-10-21: an agent
+playtest ticketed it as a bug; the dev confirmed it is the design).
+
 **Container target** (`ContainerTarget`):
 The **job-facing handle** on a container a townie pulls from / inserts into — rankable and filterable. Carries a **rank boost** so a job-specific container outranks a plain chest in decision-making. `ContainerTarget.REMOVED` is the tombstone sentinel.
 _Avoid_: plain "container" (that's the MC interface), "chest" (a chest is one *kind* of backing block).

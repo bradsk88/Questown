@@ -157,8 +157,8 @@ status: needs-triage
 37. The mineshaft quest ("Place a mineshaft block in a room and register the door") completed the
     instant the block was placed, with no room around it yet (block-as-room). Registering the door
     afterwards produced a plain "Room". The quest text asks for more than the game checks.
-38. **Villager deposits never stack** (one item per chest slot). Own ticket:
-    `villager-deposits-never-stack.md`. Likely root cause of the dev's slow miner.
+38. ~~Villager deposits never stack~~: **by design** (dev, 2026-10-21; CONTEXT.md "Unstacked
+    deposit"). Ticket closed wontfix. The miner problem is #40 (no signal), not the stacking.
 - Miner at 40 TPS: trips at 20:32:43, 20:33:38, 20:34:32 (~55 s = ~2100 ticks), on spec.
 
 ## Session 2, day 7: storage full, live (40 TPS)
