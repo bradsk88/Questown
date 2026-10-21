@@ -76,6 +76,7 @@ class SimpleVillagerHandleTest {
         List<UUID> workStatusResets = new ArrayList<>();
         List<String> logs = new ArrayList<>();
         List<String> broadcast = new ArrayList<>();
+        Map<UUID, String> names = new HashMap<>();
         Map<UUID, Boolean> dining = new HashMap<>();
         JobID overnightOverride = null;
         List<JobID> unlocked = new ArrayList<>();
@@ -245,6 +246,11 @@ class SimpleVillagerHandleTest {
         public void resetWorkStatus(UUID villagerUUID) {
             workStatusResets.add(villagerUUID);
         }
+
+        @Override
+        public String displayNameFor(UUID vuid) {
+            return names.getOrDefault(vuid, "");
+        }
     }
 
     private SimpleVillagerHandle<String, UUID> handleFor(TestDelegator t, UUID villager) {
@@ -262,6 +268,19 @@ class SimpleVillagerHandleTest {
         );
         handle.register(villager);
         return handle;
+    }
+
+    // 2026-10-21 agent playtest: the level-up chat line read "3d51...810 reached level 3".
+    @Test
+    public void levelUp_chatNamesTheVillager() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        t.names.put(villager, "Villager 1");
+        SimpleVillagerHandle<String, UUID> handle = handleFor(t, villager);
+
+        handle.addExperience(villager, 1_000_000);
+
+        Assertions.assertTrue(t.broadcast.contains("message.villager.leveled_up [Villager 1, 2]"), t.broadcast.toString());
     }
 
     // 2026-10-21 agent playtest: a raw-food meal (hunger_fill_half) set fullness to 50% of max, so a

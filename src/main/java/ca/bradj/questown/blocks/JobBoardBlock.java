@@ -79,6 +79,7 @@ public class JobBoardBlock extends RoomBlock {
         BlockPos matPos = ctx.getClickedPos();
         if (parent == null) {
             QT.BLOCK_LOGGER.error("Job Board is not associated to an existing flag");
+            TownFlagBlock.tellPlacerNotLinked(ctx, "message.job_board.not_linked");
             sl.addFreshEntity(new ItemEntity(sl, matPos.getX(), matPos.getY(), matPos.getZ(), ctx.getItemInHand()));
             return Blocks.AIR.defaultBlockState();
         }

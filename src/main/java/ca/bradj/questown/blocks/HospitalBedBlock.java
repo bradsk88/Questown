@@ -223,6 +223,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
         BlockPos matPos = ctx.getClickedPos();
         if (parent == null) {
             QT.BLOCK_LOGGER.error("Hospital bed is not associated to an existing flag");
+            TownFlagBlock.tellPlacerNotLinked(ctx, "message.hospital_bed.not_linked");
             sl.addFreshEntity(new ItemEntity(sl, matPos.getX(), matPos.getY(), matPos.getZ(), ctx.getItemInHand()));
             return Blocks.AIR.defaultBlockState();
         }

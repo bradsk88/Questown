@@ -664,13 +664,15 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         if (newExp >= target) {
             Integer newLvl = levels.compute(uuid, (x, cur) -> cur == null ? 2 : cur + 1);
             experience.put(uuid, newExp % target);
-            delegator.broadcastMessage(
-                    "message.villager.leveled_up",
-                    UtilClean.truncateMiddle(uuid),
-                    newLvl
-            );
+            delegator.broadcastMessage("message.villager.leveled_up", chatName(uuid), newLvl);
             hasBlockOfProgress.put(uuid, true);
         }
+    }
+
+    /** The villager's name for a chat line: "Villager 1", or a truncated UUID while it has none. */
+    private String chatName(UUID villagerUUID) {
+        String label = delegator.displayNameFor(villagerUUID);
+        return label.isEmpty() ? UtilClean.truncateMiddle(villagerUUID) : label;
     }
 
     public boolean hasBlockOfProgress(UUID uuid) {
@@ -729,11 +731,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             preRolls.remove(vuid);
         }
         jobChangesPending.put(vuid, true);
-        String label = delegator.displayNameFor(villagerUUID);
-        delegator.broadcastMessage(
-                "message.questown.villager.change_job_in_morning",
-                label.isEmpty() ? UtilClean.truncateMiddle(villagerUUID) : label
-        );
+        delegator.broadcastMessage("message.questown.villager.change_job_in_morning", chatName(villagerUUID));
         return guaranteedRoot.isPresent() ? guaranteedRoot : Optional.ofNullable(preRoll);
     }
 

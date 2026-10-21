@@ -202,6 +202,19 @@ public class TownFlagBlock extends BaseEntityBlock {
     }
 
 
+    /**
+     * A flag-linked block placed from an item with no (or a dead) flag link drops back as an item.
+     * Tell the placer why instead of failing silently (2026-10-21 agent playtest).
+     */
+    public static void tellPlacerNotLinked(
+            net.minecraft.world.item.context.BlockPlaceContext ctx,
+            String msgKey
+    ) {
+        if (ctx.getPlayer() instanceof ServerPlayer sp) {
+            ca.bradj.questown.mc.Util.onScreenText(() -> sp, msgKey);
+        }
+    }
+
     public static void StoreParentOnNBT(
             ItemStack itemInHand,
             BlockPos p

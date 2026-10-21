@@ -27,7 +27,7 @@ status: needs-triage
    after "Quest completed: Campfire"; correct after reopening). Same stale-screen family as the
    flag villagers progress bar. Also the economy tab: after clicking "Free food" (claimed, chat
    confirmed) the open screen kept offering "Click to claim 20 free carrots" until reopened.
-3. Placing a welcome mat with no flag link fails silently: server ERROR "Welcome mat is not
+**[FIXED 2026-10-22]** 3. Placing a welcome mat with no flag link fails silently: server ERROR "Welcome mat is not
    associated to an existing flag", no chat/sound for the player. Survival mats only come from
    flag crafting, so it bites with a mat whose flag was destroyed/moved.
 **[FIXED 2026-10-21]** 4. Town Crafting: the mineshaft recipe's output tooltip shows the raw key
@@ -44,7 +44,7 @@ status: needs-triage
 
 ## Dev-tool notes
 - QtDiagClient chat hook parses every chat line as a command ("unknown command: Created").
-7. Quest icon tooltips for tag ingredients are inconsistent: the storeroom chest shows the raw
+**[FIXED 2026-10-22]** 7. Quest icon tooltips for tag ingredients are inconsistent: the storeroom chest shows the raw
    tag id `#c:chests`; the bedroom light shows a proper "Light Source".
 8. Villagers tab row label is the lowercase job root "gatherer" (no villager name), and the
    gatherer status tooltip hard-codes "Gatherer has left town" while the hunter's uses "%s".
@@ -71,7 +71,7 @@ status: needs-triage
     chest, switched to `dining_raw_food` and took wheat seeds (19:32:45). CONTEXT.md: raw food is
     the fallback "when no cooked food is available". Seeds are in `villager_raw_food`, so eating
     them is designed; the second meal and the choice of raw over bread are what look off.
-15. (dev tool) `flagtab bop` from the client makes the server throw
+**[FIXED 2026-10-22]** 15. (dev tool) `flagtab bop` from the client makes the server throw
     `IllegalArgumentException: Unexpected menu type: "bop"` (the tab is `blocks_of_progress`);
     PORTTEST.md still lists `bop`. A bad tab name from a client should be rejected, not thrown.
 
@@ -98,7 +98,14 @@ status: needs-triage
 19. "Quest completed: Post your first work request on the job board" fired when I used a BOP
     to change jobs; no work request was posted ("First-work-request quest completed on first
     posted request" in the log).
-20. **Beds are double-counted in room recipes.** A room with ONE bed + torch was announced as a
+    (judge, 2026-10-22) Cause: the BOP job change runs `postStarterRequests` (the board's
+    auto-request, default ON), and the board listener completes the quest on any add. That
+    matches the decided design ("completes on any posted request",
+    `.scratch/day1-playtest-2026-10-11/job-board-organic-introduction.md`), so I left it alone.
+    If only the player's own request should count, call `markFirstWorkRequestCompleteIfActive`
+    from the player paths (`AddWorkFromUIMessage` CONFIRMED, `_qtdev board_request`, the growth
+    executor) instead of from the listener in `TownFlagBlockEntity`.
+**[FIXED 2026-10-22, RoomRecipes deb6333]** 20. **Beds are double-counted in room recipes.** A room with ONE bed + torch was announced as a
     "Bedroom" (recipe: light + 2x `#minecraft:beds`); a room with TWO beds became a "Big
     Bedroom" (light + 4x beds) and completed the "Bedroom" quest. RoomRecipes matches each bed
     block (head and foot); Questown's `TownVillagerBedsHandle` counts heads only when assigning
@@ -110,7 +117,7 @@ status: needs-triage
 - Hunter works by day: took the sword at 19:42:26, back at 19:44:29 (+200 XP), deposited 1 beef.
 22. (judge) Villager arrivals are silent: villager 1 (day 1) and villager 2 (19:53:44) arrived
     with no chat line; the only cue is the villagers tab's "...and one more in the morning".
-23. Level-up chat names the villager by truncated UUID: the player sees "3d51...810 reached
+**[FIXED 2026-10-22]** 23. Level-up chat names the villager by truncated UUID: the player sees "3d51...810 reached
     level 3" (20:20), not "Villager 1". Same family as
     `.scratch/playtest-2026-10-15/change-job-broadcast-uuid-instead-of-name.md`.
 24. (minor) Using the wand on the campfire after sleeping relights it silently (PASS, no message);
@@ -130,7 +137,7 @@ status: needs-triage
     was the overnight raw-food meal (#17). If #17 is fixed this may go away on its own.
 28. Quest card title "Small Storeroom -> Storeroom" runs under the card's x button (overlap);
     gui-lint reported QuestsScreen OK.
-29. Consequence of #20: building the cook batch's rooms auto-completed its "Big Bedroom" upgrade
+**[FIXED with #20]** 29. Consequence of #20: building the cook batch's rooms auto-completed its "Big Bedroom" upgrade
     the moment the batch posted (my 2-bed room already matched the 4-bed recipe).
 30. (judge) Cook-batch "Food (0/8)" counts food *produced* (extracted), not stocked; with 27 food
     in storage a player may read 0/8 as broken. Tooltip only says "Click to see jobs that make this".
