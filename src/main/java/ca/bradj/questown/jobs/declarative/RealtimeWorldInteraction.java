@@ -416,7 +416,7 @@ public class RealtimeWorldInteraction extends
                     return town;
                 },
                 (in, up) -> {
-                    inputs.town().getVillagerHandle().fillHunger(inputs.entity().getUUID(), up);
+                    inputs.town().getVillagerHandle().eat(inputs.entity().getUUID(), up);
                     return in;
                 },
                 (in, effect, durationTicks) -> {

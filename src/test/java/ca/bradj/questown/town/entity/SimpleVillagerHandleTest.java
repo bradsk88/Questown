@@ -264,6 +264,32 @@ class SimpleVillagerHandleTest {
         return handle;
     }
 
+    // 2026-10-21 agent playtest: a raw-food meal (hunger_fill_half) set fullness to 50% of max, so a
+    // villager at 87% dropped to 50% by eating. A meal adds to fullness; it never lowers it.
+    @Test
+    public void eat_halfMeal_neverLowersFullness() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = handleFor(t, villager);
+        handle.fillHunger(villager, 0.87f);
+
+        handle.eat(villager, 0.5f);
+
+        Assertions.assertEquals(1.0f, handle.getStats(villager).fullnessPercent(), 0.001f);
+    }
+
+    @Test
+    public void eat_halfMeal_addsHalfOfMaxFullness() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = handleFor(t, villager);
+        handle.fillHunger(villager, 0.2f);
+
+        handle.eat(villager, 0.5f);
+
+        Assertions.assertEquals(0.7f, handle.getStats(villager).fullnessPercent(), 0.001f);
+    }
+
     // 2026-10-17 playtest: the gatherer left the gate mat at its terminal state; the new hunter
     // read it as its own finished hunt. A root change must drop the villager's job-block states.
     @Test

@@ -391,6 +391,17 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         fillHunger(uuid, 1.0f);
     }
 
+    /**
+     * A meal: raises fullness by {@code percent} of max, capped at max. Unlike {@link #fillHunger},
+     * which sets fullness, a meal never lowers it (2026-10-21: a raw-food meal set an 87% villager
+     * to 50%).
+     */
+    public void eat(UUID uuid, float percent) {
+        int current = Util.getOrDefault(fullness, uuid, configs.baseFullness);
+        float after = Math.min(1.0f, Math.max(0, current) / (float) configs.baseFullness + percent);
+        fillHunger(uuid, after);
+    }
+
     public void fillHunger(
             UUID uuid,
             float percent

@@ -75,7 +75,7 @@ public class SpecialRules {
     // pose on top of their workspot.
     public static final String CLEAR_POSE = "clear_pose";
     // If this rule is active during the extraction stage of a job, the
-    // villager's hunger will be filled up by 50% from its current value.
+    // villager's fullness rises by 50% of max, capped at max (never lowered).
     public static final String HUNGER_FILL_HALF = "hunger_fill_half";
     // If this rule is active during the extraction stage of a job, the
     // villager's hunger will be filled up to 100%.

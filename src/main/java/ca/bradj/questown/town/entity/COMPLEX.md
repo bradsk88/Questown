@@ -1326,3 +1326,13 @@ their village". Removed `tryPhase7_exoticWood`, its quest, `PHASE_7`, the exotic
 `ExoticWoodSelectionTest`) and the flag's `flagpoleBuilt` state (the `flagpole_built` NBT is
 ignored on load). The supply-chains journal trigger (`SecondJobType`) now fires once when the
 supply chain (phase 5) completes, where phase 7 used to fire it.
+
+## A meal adds fullness; it never lowers it (2026-10-21)
+
+`SimpleVillagerHandle.fillHunger(uuid, percent)` **sets** fullness to `percent × baseFullness` (the
+test harness drains hunger with it at 0). Meals used it too, so `hunger_fill_half` (raw food) set
+fullness to 50% whatever it was: the agent playtest saw 4370 → 2500 three times overnight. Meals
+now go through `eat(uuid, percent)` (`VillagerHolder`, realtime `RealtimeWorldInteraction`
+hunger updater): fullness rises by `percent` of max, capped at max. The warp path's hunger updater
+is a no-op and is unchanged. Pins: `SimpleVillagerHandleTest.eat_halfMeal_*` (red against the
+old set-semantics: 0.5 instead of 1.0 / 0.7).

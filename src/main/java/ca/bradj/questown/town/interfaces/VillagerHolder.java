@@ -86,6 +86,9 @@ public interface VillagerHolder {
             float amount
     );
 
+    /** A meal worth {@code percent} of max fullness: adds to fullness, never lowers it. */
+    void eat(UUID uuid, float percent);
+
     void makeAngry(UUID uuid);
 
     boolean isDining(UUID uuid);

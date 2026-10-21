@@ -82,7 +82,7 @@ status: needs-triage
 - UUID churn: re-test after villagers exist across a reload (villager link, knowledge).
 
 ## Session 2 (resumed 19:41)
-16. Raw-food meals LOWER fullness. `SimpleVillagerHandle.fillHunger` sets
+16. **[FIXED 2026-10-21, town/entity/COMPLEX.md]** Raw-food meals LOWER fullness. `SimpleVillagerHandle.fillHunger` sets
     `newHunger = percent * baseFullness`, so `hunger_fill_half` sets fullness to 2500 whatever it
     was; `SpecialRules.HUNGER_FILL_HALF`'s comment says "filled up by 50% from its current value".
     Live: 4370 -> 2500 three times overnight (19:32:51, 19:35:36, 19:38:22).

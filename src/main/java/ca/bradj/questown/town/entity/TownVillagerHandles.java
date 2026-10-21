@@ -97,6 +97,11 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public void eat(UUID uuid, float percent) {
+                villagerHandle.delegate.eat(uuid, percent);
+            }
+
+            @Override
             public void makeAngry(UUID uuid) {
                 // TODO: Implement happiness (happy = 100% work speed angry = 50% work speed)
             }
