@@ -187,6 +187,7 @@ public class TestBlueprintRegistry {
         // One warp day (24000 ticks, at most 12000 productive) must not out-produce realtime: the
         // most generous hunter tier (sword_full_day, 4 attempts per 6000 ticks, 1 item each) caps
         // a day at 8. Before the warp cycle budget a fresh hunter banked ~24 (2026-10-18 playtest).
+        jobs.add(edgeCaseEntry("hunter", "sword", "warp_then_realtime", hunterWarpThenRealtimeBlueprint()));
         jobs.add(edgeCaseEntry("hunter", "sword", "one_day_yield", hunterBlueprint().withExpectation(
                 new TestExpectation(List.of(new ExpectedProduct("*", 1, 8)), 1, 100))));
         // loot_on_extract: the 2.5 raw-food gate as a deterministic measurement. Posts the
@@ -199,6 +200,7 @@ public class TestBlueprintRegistry {
         // warper records the extraction on the state snapshot and the settle point in
         // TownFlagState.warp closes the quest through the live handle (warp == realtime outcome).
         jobs.add(new TestEntry("loot_on_extract_warp", new JobID("hunter", "sword"), lootOnExtractBlueprint(true), "loot"));
+        jobs.add(new TestEntry("ui/hunter_status_resync", new JobID("hunter", "sword"), hunterStatusResyncBlueprint(), "ui"));
         jobs.add(new TestEntry("cook_extract_food", new JobID("cook", "fuel"), cookExtractCreditsFoodQuestBlueprint(), "loot"));
         // loot_on_extract_accumulate: the 2026-10-15 accumulation ruling. Posts the raw-food
         // LOOT quest at count 4, drives one hunter cycle (>=1 natural extraction), and
@@ -2952,6 +2954,55 @@ public class TestBlueprintRegistry {
      * Pre-fix, the first natural extraction completed the quest outright and
      * the "incomplete with progress" assertion fails.
      */
+    /**
+     * 2026-10-21 playtest: with the flag's villagers page open, a returning hunter's card kept its
+     * trip bar full and never showed "dropping loot". The page re-syncs through a StatusListener it
+     * attaches to each villager on open (FlagMenus.writeAndLink); this fixture attaches one the same
+     * way and records what it hears over a realtime hunt.
+     */
+    private static TestBlueprint hunterStatusResyncBlueprint() {
+        TestBlueprint base = hunterBlueprint();
+        java.util.List<String> heard = java.util.Collections.synchronizedList(new ArrayList<>());
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, null, 1, true, 4800, false, true, null, null, null, null, null, false
+        )
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (!(e instanceof VisitorMobEntity v)) {
+                            continue;
+                        }
+                        v.addStatusListener(new ca.bradj.questown.jobs.StatusListener() {
+                            @Override
+                            public Runnable jobChanged(java.util.function.Function<ca.bradj.questown.jobs.StatusListener, Runnable> listenToNewJob) {
+                                heard.add("job:" + v.getJobId().jobId());
+                                return listenToNewJob.apply(this);
+                            }
+
+                            @Override
+                            public void statusChanged(ca.bradj.questown.jobs.IStatus<?> newStatus) {
+                                heard.add(newStatus + " return=" + v.getLeaverReturn() + " @" + level.getGameTime());
+                            }
+                        });
+                        output.msg("status-resync: listening to " + v.getUUID());
+                        // A finished hunt re-creates the job (hunter:sword -> sword); the page's
+                        // listener must survive that and keep hearing the new job's statuses.
+                        town.getVillagerHandle().changeJobForVillager(v.getUUID(), v.getJobId(), false);
+                        heard.add("forced-job-change");
+                    }
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg("status-resync: heard " + heard.size() + " events: " + heard);
+                    int changed = heard.indexOf("forced-job-change");
+                    return changed >= 0 && heard.subList(changed, heard.size()).stream()
+                            .anyMatch(h -> h.contains("DROPPING_LOOT"));
+                });
+    }
+
     private static TestBlueprint lootOnExtractAccumulateBlueprint() {
         TestBlueprint base = hunterBlueprint();
         return new TestBlueprint(
@@ -3572,6 +3623,33 @@ public class TestBlueprintRegistry {
                 base.supplyDoorOffset(), null, null, null, true, 4800,
                 false, false, null, null, null, null, null, false
         );
+    }
+
+    /**
+     * 2026-10-21 playtest: after the player slept (a night-skip catch-up warp), both hunters stood
+     * at the storeroom chests in COLLECTING_SUPPLIES forever: their swords were in a chest, and the
+     * shared town-gate work spot sat at the finished state with nobody extracting it. A warp, then
+     * a realtime window in which the hunter must bring loot back to storage.
+     */
+    private static TestBlueprint hunterWarpThenRealtimeBlueprint() {
+        TestBlueprint base = hunterBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                base.expectation(),
+                base.supplyDoorOffset(), null, null, 2, true, 4800,
+                false, false,
+                new TestExpectation(List.of(new ExpectedProduct("*", 1, null)), 0, 100),
+                null, null, null, null, false
+        ).withCustomAssertion((level, flagPos, town, output) -> {
+            for (LivingEntity e : town.getVillagerHandle().entities()) {
+                if (e instanceof VisitorMobEntity v) {
+                    output.msg("hunter warp_then_realtime: end job=" + v.getJobId() + " status=" + v.getStatusForServer()
+                            + " held=" + v.getJobJournalSnapshot().items().stream().filter(i -> !i.isEmpty()).map(i -> i.getShortName()).toList());
+                }
+            }
+            return true;
+        });
     }
 
     private static TestBlueprint gathererShortAbsenceBlueprint() {
