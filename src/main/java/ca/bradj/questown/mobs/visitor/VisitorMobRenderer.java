@@ -67,6 +67,11 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
         if (!NeedBubbleFocus.isShowingBubble(entity)) {
             return;
         }
+        var texture = entity.getNeed().iconTexture();
+        if (texture != null) {
+            BubbleRenderer.renderTextureBubbleFor(entity, texture, stack, buffer, this.entityRenderDispatcher);
+            return;
+        }
         BubbleRenderer.renderIconBubbleFor(
                 entity, needBubbleIcon(entity), stack, buffer, this.entityRenderDispatcher
         );

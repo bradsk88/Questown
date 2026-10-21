@@ -92,8 +92,8 @@ distinct from the door's raw `BlockPos` so the two never collide.
 
 ## Storage-full flag bubble (2026-10-21 dev request)
 
-`AttentionBubbles.Kind.STORAGE_FULL` (chest bubble, `textures/bubble/chest.png`; each Kind now
-carries its texture, rendered by `NeedBubbleClientEvents`) over the flag when full storage has
+`AttentionBubbles.Kind.STORAGE_FULL` (the questown "no space" status art,
+`textures/menu/gatherer/no_space.png` — dev's pick over a chest; each Kind now carries its texture, rendered by `NeedBubbleClientEvents`) over the flag when full storage has
 become a blocker: `TownFlagBlockEntity.syncAttentionState` (every 20 ticks) feeds
 `StorageBlockTally` the number of townies in NO_SPACE and `Jobs.townHasSpace`; it trips at 1200
 villager-ticks (one townie for a minute, three for 20 s — dev: "let's try it") and resets on any

@@ -36,7 +36,7 @@ public final class AttentionBubbles {
         /** G2: the town has zero outstanding work requests on its job board(s). */
         NO_WORK_REQUESTS("message.questown.attention.no_work_requests", "textures/bubble/attention.png"),
         /** Full storage has blocked the town's villagers long enough to matter (StorageBlockTally). */
-        STORAGE_FULL("message.questown.attention.storage_full", "textures/bubble/chest.png");
+        STORAGE_FULL("message.questown.attention.storage_full", "textures/menu/gatherer/no_space.png");
 
         public final String hintKey;
         public final ResourceLocation texture;

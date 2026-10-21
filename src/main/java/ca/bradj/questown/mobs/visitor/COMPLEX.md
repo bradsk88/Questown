@@ -197,8 +197,9 @@ place for a wall-top penalty if one is needed.
 
 Fourth need consumer. `VisitorMobEntity.syncStorageNeed` (each server tick, beside the status
 sync): a townie whose job status is NO_SPACE — holding work output with no free town storage slot
-(`JobStatuses` "stop when holding output and the town has no space") — gets `NO_STORAGE` (chest
-icon, hint "Every chest is full: they have nowhere to put what they made."). It replaces NONE
+(`JobStatuses` "stop when holding output and the town has no space") — gets `NO_STORAGE` (drawn
+from `TownieNeed.iconTexture()` — the questown "no space" status art, face-on via
+`BubbleRenderer.renderTextureBubbleFor`; an item-model chest rendered at an angle, front away, hint "Every chest is full: they have nowhere to put what they made."). It replaces NONE
 or UNMET_ITEM: full storage is the blocker right now, and `TownPossibleWork.refreshUnmetNeeds`
 no longer overwrites NO_STORAGE with UNMET_ITEM (without both halves the bubble flapped between
 them every recompute pass). It clears only its own need; UNMET_ITEM comes back on the next pass

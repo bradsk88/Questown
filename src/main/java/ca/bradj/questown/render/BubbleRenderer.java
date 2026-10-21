@@ -114,6 +114,23 @@ import net.minecraft.world.item.ItemStack;
      * <p>Same pose contract as {@link #renderBubbleFor}: call it after {@code super.render}, with
      * the pose still camera-relative and the origin at the entity's feet.
      */
+    /**
+     * Same as {@link #renderIconBubbleFor} with an authored texture instead of an item model - for
+     * needs whose icon is questown art (the NO_STORAGE "no space" status icon), drawn face-on.
+     */
+    public static void renderTextureBubbleFor(
+            Entity entity,
+            net.minecraft.resources.ResourceLocation texture,
+            PoseStack poseStack,
+            MultiBufferSource bufferSource,
+            EntityRenderDispatcher dispatcher
+    ) {
+        if (dispatcher.distanceToSqr(entity) > VISIBILITY_RANGE_SQR) {
+            return;
+        }
+        renderTextureBubble(poseStack, bufferSource, entity, texture, false, dispatcher);
+    }
+
     public static void renderIconBubbleFor(
             Entity entity,
             ItemStack icon,

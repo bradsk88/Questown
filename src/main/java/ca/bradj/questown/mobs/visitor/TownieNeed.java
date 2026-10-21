@@ -2,6 +2,8 @@ package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.QT;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Items;
 
 /**
@@ -43,10 +45,22 @@ public enum TownieNeed {
         return switch (this) {
             case CANT_REACH -> Items.BARRIER.getDefaultInstance();
             case UNMET_ITEM -> Items.BUNDLE.getDefaultInstance();
-            case NO_STORAGE -> Items.CHEST.getDefaultInstance();
+            case NO_STORAGE -> ItemStack.EMPTY; // drawn from iconTexture()
             case NONE -> ItemStack.EMPTY;
         };
     }
+
+    /**
+     * An authored questown texture to draw instead of {@link #icon()}, or null to use the item.
+     * NO_STORAGE shows the same "no space" art as the villager status card (dev, 2026-10-21: an
+     * item-model chest rendered at an angle, front facing away).
+     */
+    public @Nullable ResourceLocation iconTexture() {
+        return this == NO_STORAGE ? NO_SPACE_TEXTURE : null;
+    }
+
+    public static final ResourceLocation NO_SPACE_TEXTURE =
+            new ResourceLocation("questown", "textures/menu/gatherer/no_space.png");
 
     /**
      * Plain words for the same thing the icon says, shown when the player walks up and looks
