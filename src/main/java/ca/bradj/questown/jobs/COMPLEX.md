@@ -696,3 +696,21 @@ loot. A second node right under the drop ("stop when holding output and the town
 returns `noSpace` whenever the villager holds work output, so it stops visibly ("needs an empty
 chest in a room to deposit their items") until space frees up, then drops and carries on. Red:
 `JobStatusesTest.StatusShouldBe_NoSpace_WhenHoldingOutput_AndTownHasNoSpace`.
+
+## Collect a finished product before anything else (2026-10-21; the 2026-10-15 stall's root)
+
+The `[STALL:collecting]` tripwire caught it live: a hunter at the storeroom chests, holding its
+sword and loot, its own work record holding the welcome mat at 3 (finished hunt, no timer),
+`statesNeedingInput=[0]`. The itemless-work root ("work without items") collects a finished
+product only when already on site: away from it the leaf returns `goingToJobSite`, which the
+root's `dStatusNotGoing` dependency rejects, and the tree falls to "get work supplies" — which,
+with the villager already holding its tool, had nothing to take ("No match"), forever. (The
+rooms-needing-input view reads a terminal timer-less state as fresh, hence `[0]`.)
+`.scratch/playtest-2026-10-15/collecting-supplies-stall.md` hit the same wall and shipped only a
+20000-tick reseed watchdog. Fix: `Job.tryCollectingFinishedProduct()` (default null;
+`productionRoutine` implements it from `roomsWithCompletedProduct`: extract on site, else go
+there) as a node right under the two holding-output nodes, above the itemless root. Red:
+`JobStatusesTest.StatusShouldBe_GoingToJob_WhenAFinishedProductWaitsElsewhere_EvenWithSuppliesInTown`
+(collecting_supplies before). A realtime fixture (hunter teleported to the supply chest, mat at 3
+in its own store) was tried and dropped: that chest is inside the town-gate room, so it passed
+without the fix.

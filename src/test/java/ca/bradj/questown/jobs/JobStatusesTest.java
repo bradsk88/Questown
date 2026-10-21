@@ -474,6 +474,41 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.NO_SPACE, s);
     }
 
+    /**
+     * 2026-10-15 and 2026-10-21 playtests: a hunter at the storeroom chests, holding its sword,
+     * with its finished hunt waiting on the welcome mat, sat in COLLECTING_SUPPLIES forever - the
+     * itemless-work root only collects a finished product when already on site. A finished product
+     * elsewhere outranks collecting supplies: go to the job site.
+     */
+    @Test
+    void StatusShouldBe_GoingToJob_WhenAFinishedProductWaitsElsewhere_EvenWithSuppliesInTown() {
+        JobStatuses.Job<TestStatus, TestStatus> finishedElsewhere = new JobStatuses.Job<>() {
+            @Override
+            public @Nullable TestStatus tryChoosingItemlessWork() {
+                return TestStatus.GOING_TO_JOB; // the root rejects "going" when not on site
+            }
+
+            @Override
+            public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
+                return null;
+            }
+
+            @Override
+            public @Nullable TestStatus tryCollectingFinishedProduct() {
+                return TestStatus.GOING_TO_JOB;
+            }
+        };
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, false, ImmutableMap.of(TestStatus.ITEM_WORK, true)),
+                new ConstTown(true, true, false),
+                finishedElsewhere,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.GOING_TO_JOB, s);
+    }
+
     @Test
     void StatusShouldBe_DroppingLoot_WhenInvHasSomeSupplies_AndCannotDoWork() {
         TestStatus s = JobStatuses.usualRoutine(
@@ -668,12 +703,15 @@ class JobStatusesTest {
 
     private LZCD<LZCD.Dependency<TestStatus>> getHasSupplies(@NotNull LZCD<TestStatus> root) {
         // root = "drop loot before more work"; then "stop when holding output and no space";
-        // then itemless work; then use items.
+        // then "collect a finished product"; then itemless work; then use items.
         if (!(root.ifCondFail instanceof LZCD<TestStatus> noSpaceWhileHolding)) {
             throw new ClassCastException("Expected root.ifCondFail to be LZCD");
         }
-        if (!(noSpaceWhileHolding.ifCondFail instanceof LZCD<TestStatus> itemlessWork)) {
+        if (!(noSpaceWhileHolding.ifCondFail instanceof LZCD<TestStatus> collectFinished)) {
             throw new ClassCastException("Expected noSpaceWhileHolding.ifCondFail to be LZCD");
+        }
+        if (!(collectFinished.ifCondFail instanceof LZCD<TestStatus> itemlessWork)) {
+            throw new ClassCastException("Expected collectFinished.ifCondFail to be LZCD");
         }
         if (!(itemlessWork.ifCondFail instanceof LZCD<TestStatus> useItems)) {
             throw new ClassCastException("Expected itemlessWork.ifCondFail to be LZCD");

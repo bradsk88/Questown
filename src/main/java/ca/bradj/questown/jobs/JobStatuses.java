@@ -44,6 +44,14 @@ public class JobStatuses {
 
         @Nullable
         STATUS tryUsingSupplies(Map<SUP_CAT, SupplyItemStatus> supplyItemStatus);
+
+        /**
+         * A finished product waits at one of the job's sites: extract it if the villager is there,
+         * else go there. Null when nothing is finished. Default: jobs without products.
+         */
+        default @Nullable STATUS tryCollectingFinishedProduct() {
+            return null;
+        }
     }
 
     /**
@@ -204,6 +212,16 @@ public class JobStatuses {
                         leaf(factory::noSpace),
                         dHoldsWorkOutput,
                         new LZCD<>(
+                                // A finished product waiting at a job site is collected before anything
+                                // else, even if the villager must walk there. The itemless-work root
+                                // below only takes it when already on site; away from it (home after a
+                                // sleep, or back from the storeroom) "collect supplies" won, and a
+                                // villager already holding every supply stood at the chests forever
+                                // (2026-10-15 and 2026-10-21 playtests).
+                                new Pair<>(ctx.jobId, "collect a finished product"),
+                                LZCDs.leaf(job::tryCollectingFinishedProduct, Objects::isNull),
+                                ImmutableList.of(),
+                                new LZCD<>(
                 new Pair<>(ctx.jobId, "work without items"),
                 LZCDs.leaf(job::tryChoosingItemlessWork, Objects::isNull),
                 ImmutableList.of(
@@ -316,6 +334,7 @@ public class JobStatuses {
                         )
                 )
         )
+                        )
                 )
         );
         return root;
@@ -399,6 +418,19 @@ public class JobStatuses {
                             }
                         }
 
+                        return factory.goingToJobSite();
+                    }
+
+                    @Override
+                    public @Nullable STATUS tryCollectingFinishedProduct() {
+                        Collection<ROOM> rooms = town.roomsWithCompletedProduct();
+                        if (rooms.isEmpty()) {
+                            return null;
+                        }
+                        ROOM location = entity.getEntityCurrentJobSite();
+                        if (location != null && rooms.contains(location)) {
+                            return factory.extractingProduct();
+                        }
                         return factory.goingToJobSite();
                     }
 
