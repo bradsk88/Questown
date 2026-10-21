@@ -9,7 +9,8 @@ description: >-
   `questown-behavior-verify`). SKIP when a unit test or the existing autotest
   suite already settles the question. Consolidates the launch sequence, the
   30s observation cadence, the chat/observe channels, and the console command
-  set so a session does not re-derive the OOM / client-kill traps.
+  set so a session does not re-derive the OOM / client-kill traps. For a free-form
+  fresh-world playtest the agent plays and judges itself, use `questown-agent-playtest`.
 ---
 
 # Questown held run (agent drives, dev observes)
