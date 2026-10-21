@@ -94,7 +94,7 @@ status: needs-triage
     villager is hungry again ~2 min later: 7 food items in 6 min overnight (bread 13 -> 9).
 - Corrected: "hunter never hunts" was night. It became a hunter at 19:29 with ~90 s of
   daylight left (trip = 100 s); nightfall 19:31:34; time 23733 at 19:41. Re-check at dawn.
-18. Chat shows a raw key: "Quest completed: room.hunter_qt_sword" (the Hunter job-change quest).
+18. Chat shows a raw key for every job-change quest: "Quest completed: room.hunter_qt_sword", "Quest completed: room.cook_qt_extract".
 19. "Quest completed: Post your first work request on the job board" fired when I used a BOP
     to change jobs; no work request was posted ("First-work-request quest completed on first
     posted request" in the log).
@@ -110,8 +110,8 @@ status: needs-triage
 - Hunter works by day: took the sword at 19:42:26, back at 19:44:29 (+200 XP), deposited 1 beef.
 22. (judge) Villager arrivals are silent: villager 1 (day 1) and villager 2 (19:53:44) arrived
     with no chat line; the only cue is the villagers tab's "...and one more in the morning".
-23. Level-up broadcast names the villager by truncated UUID: `message.villager.leveled_up
-    [3d51...810, 2]` (19:48:42), not "Villager 1". Same family as
+23. Level-up chat names the villager by truncated UUID: the player sees "3d51...810 reached
+    level 3" (20:20), not "Villager 1". Same family as
     `.scratch/playtest-2026-10-15/change-job-broadcast-uuid-instead-of-name.md`.
 24. (minor) Using the wand on the campfire after sleeping relights it silently (PASS, no message);
     a second use sleeps. Fine once you know; nothing tells the player the first use relit it.
@@ -133,3 +133,30 @@ status: needs-triage
     the moment the batch posted (my 2-bed room already matched the 4-bed recipe).
 30. (judge) Cook-batch "Food (0/8)" counts food *produced* (extracted), not stocked; with 27 food
     in storage a player may read 0/8 as broken. Tooltip only says "Click to see jobs that make this".
+31. Known (`.scratch/playtest-2026-10-14/cook-status-blocker-surfacing-10-14.md`, ready-for-human)
+    and still live on the first cook: kitchen + raw mutton, no fuel in town -> cook put mutton in
+    the furnace, then flipped extract <-> fuel every 5 s; status tooltip "Cook has nowhere to work.
+    Or they might be looking for tools." No coal hint.
+32. (to check) Villager 2 was changed gatherer -> cook while away on a gather trip; does that trip's
+    loot get lost?
+33. (judge) A lit campfire in front of the storeroom door blocked every villager's path (vanilla
+    pathing avoids lit campfires). The hunter showed an accurate "They can't find a way there"
+    bubble but stalled in DROPPING_LOOT 2+ min; moving the fire fixed it in 1 s. The bubble
+    doesn't say what is in the way. Relevant because using the wand on the campfire to sleep
+    relights it (#24), so a campfire that was harmless when unlit becomes a wall.
+34. (log) `[LOOTTRACE] extract 'X' vs LOOT quest ... -> false (extracted N/8)` prints
+    `getExtracted() + count` even when the item doesn't match (`TownQuests.processLootQuests`),
+    so a non-matching extraction reads as progress ("Raw Chicken -> false (5/8)" while the real
+    count stayed 4/8). DEV-DIAG line; fix or drop with the rest of that diag.
+35. (judge) Only `cook/mutton` is unlocked on the first cook; raw beef x2, porkchop x2 and chicken x1
+    piled up in storage uncooked while the batch asks for 8 food. Progression-gated by design;
+    nothing tells the player why the cook ignores the beef.
+36. Escalates #4 (also chat: "Created block.questown.mineshaft"): the miner batch's room quest card is titled with the raw key
+    `block.questown.mineshaft` (QuestsScreen, day 6). Every player reaches this card.
+- Villager 3 arrived at dawn after the cook batch's food 8/8 (20:29:54); miner batch posted.
+37. The mineshaft quest ("Place a mineshaft block in a room and register the door") completed the
+    instant the block was placed, with no room around it yet (block-as-room). Registering the door
+    afterwards produced a plain "Room". The quest text asks for more than the game checks.
+38. **Villager deposits never stack** (one item per chest slot). Own ticket:
+    `villager-deposits-never-stack.md`. Likely root cause of the dev's slow miner.
+- Miner at 40 TPS: trips at 20:32:43, 20:33:38, 20:34:32 (~55 s = ~2100 ticks), on spec.
