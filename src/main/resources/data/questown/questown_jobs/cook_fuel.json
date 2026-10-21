@@ -43,5 +43,8 @@
       "state": 1,
       "rules": ["insert_into_slot_1"]
     }
+  ],
+  "status_texture_overrides": [
+    {"type": "working", "new_texture": "minecraft:textures/block/furnace_front.png"}
   ]
 }

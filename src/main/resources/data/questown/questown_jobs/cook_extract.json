@@ -34,5 +34,8 @@
       "state": "EXTRACTING_PRODUCT",
       "rules": ["questown:take_from_slot_2"]
     }
+  ],
+  "status_texture_overrides": [
+    {"type": "working", "new_texture": "minecraft:textures/block/furnace_front.png"}
   ]
 }

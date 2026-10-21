@@ -714,3 +714,20 @@ there) as a node right under the two holding-output nodes, above the itemless ro
 (collecting_supplies before). A realtime fixture (hunter teleported to the supply chest, mat at 3
 in its own store) was tried and dropped: that chest is inside the town-gate room, so it passed
 without the fix.
+
+## "working" status texture override (2026-10-21 playtest)
+
+The dev asked for the cook's working status image to be the vanilla furnace front. Work states
+(`state:N`, built by `ProductionStatus.fromJobBlockStatus`) and EXTRACTING_PRODUCT have no
+default art (`StatusArt` maps only idle/collecting/... — the rest fall back to `error.png`), and
+`status_texture_overrides` rows of type `core_state` cannot name them (`getCore` only finds
+registered core statuses). New row type `{"type": "working", "new_texture": "<ns:path>"}` →
+`Overrides.workingTexture`, served by `Overrides.textureFor` for every work state and extraction
+(a named override still wins). Two loader gaps fixed with it: the V2 loader never applied
+`status_texture_overrides`/`status_text_overrides` at all (only V1 did; every existing user was
+V1), and the cook template expansion (`makeCookJobs`) dropped them for every recipe. Both apply
+`withOverrides` right after `withPriority` — `withOverrides` does not copy the slot precondition,
+so it must come before `withSlotPrecondition`. cook_extract / cook_fuel /
+cook_simple_furnace_food use `minecraft:textures/block/furnace_front.png` (no asset copied);
+cook_stock_fuel / cook_stock_ingredients (chest work) use the questown "collecting supplies" icon
+(`questown:textures/menu/gatherer/get_supplies.png`, dev's call). Unit: `OverridesTest`.

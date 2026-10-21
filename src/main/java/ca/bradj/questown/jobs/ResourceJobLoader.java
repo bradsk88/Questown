@@ -174,7 +174,11 @@ public class ResourceJobLoader {
                             wwi,
                             special,
                             loadSoundV1(obj)
-                    ).withPriority(requiredInt(obj, "priority"));
+                    ).withPriority(requiredInt(obj, "priority"))
+                     // Every expanded recipe shares the template's status art (e.g. the furnace
+                     // front while working); the expansion used to drop the template's overrides.
+                     // Before withSlotPrecondition: withOverrides does not copy the precondition.
+                     .withOverrides(overridesFromJsonV2(obj));
                     if (slotPrecondition.isPresent()) {
                         cookWork = cookWork.withSlotPrecondition(slotPrecondition.get());
                     }
@@ -391,7 +395,29 @@ public class ResourceJobLoader {
         private @Nullable Overrides overridesFromJsonV2(JsonObject object) {
             ImmutableMap<IStatus<?>, ResourceLocation> textureOverrides = textureOverridesV2(object);
             ImmutableMap<IStatus<?>, Pair<String, String>> statusTextOverrides = statusTextOverridesV2(object);
-            return new Overrides(textureOverrides, statusTextOverrides);
+            return new Overrides(textureOverrides, statusTextOverrides, workingTextureV2(object));
+        }
+
+        /** {@code {"type": "working", "new_texture": ...}}: one image for every work state and extraction. */
+        private static @Nullable ResourceLocation workingTextureV2(JsonObject object) {
+            if (!object.has("status_texture_overrides")) {
+                return null;
+            }
+            for (JsonElement row : object.getAsJsonArray("status_texture_overrides")) {
+                JsonObject rowObj = row.getAsJsonObject();
+                if ("working".equals(rowObj.get("type").getAsString())) {
+                    return textureLocation(rowObj.get("new_texture").getAsString());
+                }
+            }
+            return null;
+        }
+
+        private static ResourceLocation textureLocation(String newTexture) {
+            @NotNull String[] parts = newTexture.split(":");
+            if (parts.length == 2) {
+                return new ResourceLocation(parts[0], parts[1]);
+            }
+            return Questown.ResourceLocation(newTexture);
         }
 
         private ImmutableMap<IStatus<?>, ResourceLocation> textureOverridesV2(JsonObject object) {
@@ -404,16 +430,11 @@ public class ResourceJobLoader {
                     switch (type) {
                         case "core_state": {
                             ProductionStatus productionStatus = getCore(rowObj);
-                            String newTexture = rowObj.get("new_texture").getAsString();
-                            @NotNull String[] newTextureParts = newTexture.split(":");
-                            if (newTextureParts.length == 2) {
-                                ResourceLocation rl = new ResourceLocation(newTextureParts[0], newTextureParts[1]);
-                                textureOverrides.put(productionStatus, rl);
-                            } else {
-                                textureOverrides.put(productionStatus, Questown.ResourceLocation(newTexture));
-                            }
+                            textureOverrides.put(productionStatus, textureLocation(rowObj.get("new_texture").getAsString()));
                             break;
                         }
+                        case "working":
+                            break; // workingTextureV2
                         default:
                             throw new IllegalArgumentException("Unexpected texture override type " + type);
                     }
@@ -481,7 +502,10 @@ public class ResourceJobLoader {
                         wwi,
                         special,
                         loadSoundV1(obj)
-                ).withPriority(requiredInt(obj, "priority"));
+                ).withPriority(requiredInt(obj, "priority"))
+                 // status_texture_overrides were only ever applied by the V1 loader. Before
+                 // withSlotPrecondition: withOverrides does not copy the precondition.
+                 .withOverrides(overridesFromJsonV2(obj));
                 if (slotPrecondition.isPresent()) {
                     work = work.withSlotPrecondition(slotPrecondition.get());
                 }
