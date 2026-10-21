@@ -116,3 +116,14 @@ Dev ruling ("Should take more like 1/10th the time"): the NEED_EAT work requirem
 table (`DinerWork`, was 50) and 3 without one (`DinerNoTableWork`, `DinerRawFoodWork`, were 25).
 Pinned by `DiningWorkDurationTest`; eating autotests 4/4. The 100 s "eating" waits also seen in
 that playtest were a separate GOING_TO_JOB stall (ticket dining-going-to-job-stall.md).
+
+## [STALL:collecting] tripwire (2026-10-21)
+
+`CollectingStallTrace` (called from `DeclarativeJob.tryGetSuppliesForDeps`): once a villager has
+been COLLECTING_SUPPLIES for 1200 ticks without a take (`lastSupplyTick` unchanged — a nullable
+Long, compare with `Objects.equals`), log one `[STALL:collecting] job=.. villager=..` line, then
+every 6000 ticks while stuck: status, held items, the supply target's contents, the states the
+town says need input, and every non-zero spot in the villager's own and the town work-status
+store with its timer and whether this villager can claim it. Added to catch the after-sleep
+hunter stall (`.scratch/playtest-2026-10-21/hunters-stuck-collecting-after-sleep.md`), which no
+autotest reproduces. Silent across the full suite (81/82, 0 reports).

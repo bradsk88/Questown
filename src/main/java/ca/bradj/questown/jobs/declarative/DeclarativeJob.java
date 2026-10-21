@@ -974,7 +974,51 @@ public class DeclarativeJob extends
             BlockPos entityBlockPos,
             long currentTick
     ) {
+        Long before = this.lastSupplyTick; // nullable until the first take
         this.tryGetSupplies(town, roomsNeedingInput, entityBlockPos, currentTick);
+        collectingStall.observe(
+                journal.getStatus().isCollectingSupplies(),
+                !java.util.Objects.equals(this.lastSupplyTick, before),
+                currentTick,
+                () -> describeCollectingStall(town, roomsNeedingInput),
+                msg -> QT.JOB_LOGGER.warn("[STALL:collecting] job={} villager={} {}", jobId, ownerUUID, msg)
+        );
+    }
+
+    private final CollectingStallTrace collectingStall = new CollectingStallTrace();
+
+    /** What the job sees while stuck collecting: its own and the town's non-zero spots, and the input it is told about. */
+    private String describeCollectingStall(
+            TownInterface town,
+            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingInput
+    ) {
+        StringBuilder b = new StringBuilder();
+        b.append("status=").append(journal.getStatus())
+         .append(" held=").append(journal.getItems().stream().filter(i -> !i.isEmpty()).map(MCHeldItem::getShortName).toList())
+         .append(" suppliesTarget=").append(suppliesTarget == null ? "none" : suppliesTarget.toShortString(false))
+         .append(" statesNeedingInput=").append(roomsNeedingInput.getNonEmptyStates());
+        appendSpots(b, "own", town.getWorkStatusHandle(ownerUUID));
+        appendSpots(b, "town", town.getWorkStatusHandle(null));
+        return b.toString();
+    }
+
+    private void appendSpots(StringBuilder b, String label, Object handle) {
+        if (!(handle instanceof ca.bradj.questown.town.AbstractWorkStatusStore<?, ?, ?, ?> store)) {
+            b.append(" ").append(label).append("=?");
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        ca.bradj.questown.town.AbstractWorkStatusStore<BlockPos, ?, ?, ?> s = (ca.bradj.questown.town.AbstractWorkStatusStore<BlockPos, ?, ?, ?>) store;
+        b.append(" ").append(label).append("=[");
+        s.getAll().forEach((pos, st) -> {
+            if (st == null || st.processingState() == 0) {
+                return;
+            }
+            b.append(pos.toShortString()).append(":").append(st.processingState())
+             .append(" timer=").append(s.getTimeToNextState(pos))
+             .append(" claimable=").append(s.canClaim(pos, () -> makeClaim(ownerUUID))).append("; ");
+        });
+        b.append("]");
     }
 
     boolean isValidWalkTargetForDeps(TownInterface town, BlockPos bp) {
