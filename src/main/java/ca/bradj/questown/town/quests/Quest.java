@@ -32,6 +32,9 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     // whereas random/procedural quests require an exact recipe match. See the storeroom quest
     // completion notes in .scratch/storeroom-quest-completion.
     private boolean onboarding;
+    // Only procedurally generated batches may be discarded by the player (a "Remove request" x on
+    // the quest card); designed and tutorial batches may not (2026-10-21 agent playtest).
+    private boolean discardable;
 
     Quest() {
         this(null, null, null, null, null, 1);
@@ -165,12 +168,21 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         this.onboarding = onboarding;
     }
 
+    public boolean isDiscardable() {
+        return discardable;
+    }
+
+    public void setDiscardable(boolean discardable) {
+        this.discardable = discardable;
+    }
+
     /**
      * Copy the saved state the load replay's typed rebuild (QuestBatches.filterOutDuplicateCompletion)
      * does not reconstruct: the onboarding marker (it gates arrivals) and the flavor text.
      */
     protected void carrySavedStateFrom(Quest<?, ?> saved) {
         this.onboarding = saved.onboarding;
+        this.discardable = saved.discardable;
         this.flavorText = saved.flavorText;
     }
 

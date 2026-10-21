@@ -1336,3 +1336,12 @@ now go through `eat(uuid, percent)` (`VillagerHolder`, realtime `RealtimeWorldIn
 hunger updater): fullness rises by `percent` of max, capped at max. The warp path's hunger updater
 is a no-op and is unchanged. Pins: `SimpleVillagerHandleTest.eat_halfMeal_*` (red against the
 old set-semantics: 0.5 instead of 1.0 / 0.7).
+
+## Quest names in chat match the quest card (2026-10-21)
+
+`TownMessages.questName(type, wantedId, countNeeded)` (static, unit-testable) names a quest for the
+completed/lost chat lines, worded like `UIQuest.getName`. Job-change quests previously fell through
+to the room lookup and read as raw keys ("Quest completed: room.hunter_qt_sword"); job-unlock quests
+printed the bare root id. Both now use `jobs.<root>`. Pins: `TownMessagesQuestNameTest` (red against
+the old fall-through: `room.hunter_qt_sword`). Also added missing names: `block.questown.mineshaft`
+(quest card, chat, crafting), `block.questown.sapling_tester`, `item.questown.town_door_tester`.

@@ -6,7 +6,7 @@ status: needs-triage
 # Agent playtest 2026-10-21 (worktree fresh world, creative, flag at -1023 65 768)
 
 ## Odd
-1. Quests screen, day 1: the "Town Gate" onboarding quest card carries an "x" whose tooltip is
+**[FIXED 2026-10-21]** 1. Quests screen, day 1: the "Town Gate" onboarding quest card carries an "x" whose tooltip is
    "Remove request" (borrowed `job_board.remove_work` key). Shown for any batched quest
    (`QuestsScreen` ~L222: `getBatchUUID() != null`). Campfire has none. A player can delete
    the onboarding gate quest; the label says "request" for something the player never requested.
@@ -30,11 +30,11 @@ status: needs-triage
 3. Placing a welcome mat with no flag link fails silently: server ERROR "Welcome mat is not
    associated to an existing flag", no chat/sound for the player. Survival mats only come from
    flag crafting, so it bites with a mat whose flag was destroyed/moved.
-4. Town Crafting: the mineshaft recipe's output tooltip shows the raw key
+**[FIXED 2026-10-21]** 4. Town Crafting: the mineshaft recipe's output tooltip shows the raw key
    `[block.questown.mineshaft]` (no `block.questown.mineshaft` in en_us.json; only the room name
    and the recipe description exist).
 5. (minor) "Town Gate created at location [-1022, 762]" but the mat is at x=-1023.
-6. The completed Town Gate card still offers "Remove request".
+**[FIXED 2026-10-21]** 6. The completed Town Gate card still offers "Remove request".
 
 ## Leads to test
 - Town UUID is `UUID.randomUUID()` per block-entity load and not saved: after my client
@@ -94,7 +94,7 @@ status: needs-triage
     villager is hungry again ~2 min later: 7 food items in 6 min overnight (bread 13 -> 9).
 - Corrected: "hunter never hunts" was night. It became a hunter at 19:29 with ~90 s of
   daylight left (trip = 100 s); nightfall 19:31:34; time 23733 at 19:41. Re-check at dawn.
-18. Chat shows a raw key for every job-change quest: "Quest completed: room.hunter_qt_sword", "Quest completed: room.cook_qt_extract".
+**[FIXED 2026-10-21]** 18. Chat shows a raw key for every job-change quest: "Quest completed: room.hunter_qt_sword", "Quest completed: room.cook_qt_extract".
 19. "Quest completed: Post your first work request on the job board" fired when I used a BOP
     to change jobs; no work request was posted ("First-work-request quest completed on first
     posted request" in the log).
@@ -151,7 +151,7 @@ status: needs-triage
 35. (judge) Only `cook/mutton` is unlocked on the first cook; raw beef x2, porkchop x2 and chicken x1
     piled up in storage uncooked while the batch asks for 8 food. Progression-gated by design;
     nothing tells the player why the cook ignores the beef.
-36. Escalates #4 (also chat: "Created block.questown.mineshaft"): the miner batch's room quest card is titled with the raw key
+**[FIXED 2026-10-21]** 36. Escalates #4 (also chat: "Created block.questown.mineshaft"): the miner batch's room quest card is titled with the raw key
     `block.questown.mineshaft` (QuestsScreen, day 6). Every player reaches this card.
 - Villager 3 arrived at dawn after the cook batch's food 8/8 (20:29:54); miner batch posted.
 37. The mineshaft quest ("Place a mineshaft block in a room and register the door") completed the

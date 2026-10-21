@@ -57,6 +57,15 @@ public class TownQuestsHandle implements QuestsHolder {
             ServerPlayer sender,
             boolean promptUser
     ) {
+        // Only procedurally generated batches are discardable (the quest card shows no x for the
+        // rest); refuse the others in case a stale client still sends the request.
+        boolean discardable = unsafeGetTown().quests.questBatches.getAllBatches().stream()
+                .filter(v -> batchID.equals(v.getBatchUUID()))
+                .anyMatch(v -> v.getAll().stream().anyMatch(MCQuest::isDiscardable));
+        if (!discardable) {
+            QT.QUESTS_LOGGER.warn("Refusing to remove quest batch {}: it is not discardable", batchID);
+            return;
+        }
         if (promptUser) {
             Optional<MCQuestBatch> first = unsafeGetTown().quests.questBatches.getAllBatches()
                                                                               .stream()

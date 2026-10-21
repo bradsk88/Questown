@@ -144,36 +144,39 @@ public class TownMessages {
     }
 
     public void questCompleted(MCQuest quest) {
-        Component name = RoomRecipes.getName(quest.getWantedId());
-        if (quest.getType() == Quest.QuestType.ITEM) {
-            name = Compat.translatable("menu.common.quantity", Compat.getItemName(quest.getWantedId()), quest.getCountNeeded());
-        }
-        if (quest.getType() == Quest.QuestType.LOOT) {
-            name = Compat.translatable(ca.bradj.questown.gui.UIQuest.lootNameKey(quest.getWantedId()));
-        }
-        if (quest.getType() == Quest.QuestType.JOB_UNLOCK) {
-            name = Compat.translatable("questown.menu.quests.job_unlock", JobID.fromRL(quest.getWantedId()).rootId());
-        }
         broadcastMessage(
                 "messages.town_flag.quest_completed",
-                name
+                questName(quest.getType(), quest.getWantedId(), quest.getCountNeeded())
         );
     }
 
+    /**
+     * The quest's name for chat, worded like its quest card ({@code UIQuest.getName}). Job quests
+     * name the job by its translated root ({@code jobs.<root>}); before this a job-change quest fell
+     * through to the room lookup and read as a raw key ("room.hunter_qt_sword").
+     */
+    static Component questName(
+            Quest.QuestType type,
+            ResourceLocation wantedId,
+            int countNeeded
+    ) {
+        return switch (type) {
+            case ITEM -> Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), countNeeded);
+            case LOOT -> Compat.translatable(ca.bradj.questown.gui.UIQuest.lootNameKey(wantedId));
+            case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", jobName(wantedId));
+            case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", jobName(wantedId));
+            default -> RoomRecipes.getName(wantedId);
+        };
+    }
+
+    private static Component jobName(ResourceLocation jobQuestId) {
+        return Compat.translatable("jobs." + JobID.fromRL(jobQuestId).rootId());
+    }
+
     public void questLost(MCQuest quest) {
-        Component name = RoomRecipes.getName(quest.getWantedId());
-        if (quest.getType() == Quest.QuestType.ITEM) {
-            name = Compat.translatable("menu.common.quantity", Compat.getItemName(quest.getWantedId()), quest.getCountNeeded());
-        }
-        if (quest.getType() == Quest.QuestType.LOOT) {
-            name = Compat.translatable(ca.bradj.questown.gui.UIQuest.lootNameKey(quest.getWantedId()));
-        }
-        if (quest.getType() == Quest.QuestType.JOB_UNLOCK) {
-            name = Compat.translatable("questown.menu.quests.job_unlock", JobID.fromRL(quest.getWantedId()).rootId());
-        }
         broadcastMessage(
                 "messages.town_flag.quest_lost",
-                name
+                questName(quest.getType(), quest.getWantedId(), quest.getCountNeeded())
         );
     }
 

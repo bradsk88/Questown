@@ -168,7 +168,7 @@ public class UIQuest implements Comparable<UIQuest> {
             Collection<Ingredient> ingredientz = getIngredients(v, rMap);
             boolean carriesProgress = v.getType() == Quest.QuestType.ITEM || v.getType() == Quest.QuestType.LOOT;
             return new UIQuest(
-                    v.getBatchUUID(),
+                    removableBatch(v),
                     v.getWantedId(),
                     v.getType(),
                     ingredientz,
@@ -293,6 +293,14 @@ public class UIQuest implements Comparable<UIQuest> {
 
     public String villagerUUID() {
         return VillagerUUID.getStringUUID(villagerUUID);
+    }
+
+    /**
+     * The batch the card's "Remove request" x would discard, or null for no x: only a discardable
+     * (procedurally generated) quest offers removal. The card's batch id is used for nothing else.
+     */
+    public static @Nullable UUID removableBatch(Quest<?, ?> quest) {
+        return quest.isDiscardable() ? quest.getBatchUUID() : null;
     }
 
     public UUID getBatchUUID() {

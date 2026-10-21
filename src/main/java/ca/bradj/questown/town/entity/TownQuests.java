@@ -534,6 +534,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             PendingReward pr = questRequests.pop();
             MCDelayedReward rw = new MCDelayedReward(town, pr.reward());
             MCQuestBatch q = pop.get(rw, pr.owner());
+            q.getAll().forEach(quest -> quest.setDiscardable(true));
             questBatches.add(q);
             QT.QUESTS_LOGGER.debug("Precompiled quest batch was given to {}: {}", pr.owner(), q.toNiceString());
             playerDiscardedLastBatch = false;

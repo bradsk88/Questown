@@ -333,3 +333,16 @@ The NBT layer was never the problem (`MCQuestOnboardingPersistenceTest` round-tr
 replay now calls `newestQuest().carrySavedStateFrom(saved)` after each rebuild; `Quest` copies
 onboarding + flavor text, `MCQuest` adds `lootExtracted`. Pinned by `QuestBatchesLoadReplayTest`
 `loadReplay_keeps{TheOnboardingMarker,TheFlavorText,LootProgress}` (all three red before).
+
+## Only procedurally generated quest batches are discardable (2026-10-21)
+
+The quest card's "Remove request" x discards a whole batch (`TownQuestsHandle.requestRemovalOfQuestAtIndex`
+→ confirm → `doRemove`, which sets `playerDiscardedLastBatch` so the next precompiled batch arrives).
+It was offered on every batched quest, including the onboarding Town Gate (even when completed).
+Now `Quest.discardable` (persisted as `discardable` beside `onboarding` in `MCQuest.Serializer`,
+copied by `completed()`/`lost()`/`carrySavedStateFrom`) is set only where `TownQuests.tick` hands
+out a precompiled procedural batch. `UIQuest.removableBatch` sends the card a batch id only for a
+discardable quest (the card uses that id for nothing else, so no x otherwise), and the server
+refuses removal of a non-discardable batch. Worlds saved before this load their procedural batches
+as non-discardable (no x) until replaced. Pins: `MCQuestDiscardableTest` (red against the old card:
+a tutorial quest offered its batch).
