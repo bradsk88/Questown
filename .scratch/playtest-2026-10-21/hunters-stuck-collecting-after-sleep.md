@@ -30,3 +30,15 @@ A scenario that runs realtime first (hunters out on a trip), then a natural warp
 state 3 and hunt again. Then find why `tryChoosingItemlessWork` returns null at state 3 after
 that warp on 5ef2b66b (the new "drop loot before a new cycle" node and the JobLogic carry-on are
 the changes in play).
+
+## Repro attempts (2026-10-21) — none reproduce it
+
+`hunter/sword [sleep_mid_trip]` (no respawn, unlike warp_then_realtime, whose KILL/RESPAWN
+before realtime clears in-memory state the way a reload does): two hunters, two swords, the
+growth driver's sleep step (clock to morning + TownFlags.onSleepFinished) during realtime.
+Variants: sleep at noon mid-trip; night (dayTime 16000) mid-trip; late night (21000) after the
+evening drop-off. All pass: both hunters extract and set off again after the sleep.
+
+Still unexplained: the playtest's mat left at state 3 with nobody extracting. Playtest-only
+factors not in the fixture: 4 villagers made hunters at once at 02:56 (two later changed), a
+cook/miner sharing the storeroom chests, board requests, the real campfire sleep path.

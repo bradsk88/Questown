@@ -188,6 +188,7 @@ public class TestBlueprintRegistry {
         // most generous hunter tier (sword_full_day, 4 attempts per 6000 ticks, 1 item each) caps
         // a day at 8. Before the warp cycle budget a fresh hunter banked ~24 (2026-10-18 playtest).
         jobs.add(edgeCaseEntry("hunter", "sword", "warp_then_realtime", hunterWarpThenRealtimeBlueprint()));
+        jobs.add(edgeCaseEntry("hunter", "sword", "sleep_mid_trip", hunterSleepMidTripBlueprint()));
         jobs.add(edgeCaseEntry("hunter", "sword", "one_day_yield", hunterBlueprint().withExpectation(
                 new TestExpectation(List.of(new ExpectedProduct("*", 1, 8)), 1, 100))));
         // loot_on_extract: the 2.5 raw-food gate as a deterministic measurement. Posts the
@@ -3650,6 +3651,105 @@ public class TestBlueprintRegistry {
             }
             return true;
         });
+    }
+
+    /** Realtime tick (after the monitor starts) at which hunterSleepMidTripBlueprint sleeps. */
+    private static final int HUNTER_SLEEP_AT = 10000;
+
+    /**
+     * 2026-10-21 playtest: after the player slept at the campfire while two hunters were out, both
+     * stood at the chests in COLLECTING_SUPPLIES forever (the shared mat left at its finished
+     * state, unextracted). Unlike warp_then_realtime, nothing is respawned: two hunters work from
+     * late afternoon into the night, the player "sleeps" mid-trip (the growth driver's sleep step:
+     * clock to morning + TownFlags.onSleepFinished), and each hunter must hunt again afterwards.
+     */
+    private static TestBlueprint hunterSleepMidTripBlueprint() {
+        TestBlueprint base = hunterBlueprint();
+        java.util.Map<java.util.UUID, java.util.List<String>> afterSleep = new java.util.concurrent.ConcurrentHashMap<>();
+        boolean[] slept = {false};
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, 11000L, 2, true, HUNTER_SLEEP_AT + 4000, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        )
+                .withSetupHook((level, flagPos, town, output) -> {
+                    // Two hunters, two swords (the playtest town had one each).
+                    if (level.getBlockEntity(flagPos.offset(base.chestOffset())) instanceof net.minecraft.world.Container c) {
+                        for (int i = 0; i < c.getContainerSize(); i++) {
+                            if (c.getItem(i).isEmpty()) {
+                                c.setItem(i, new ItemStack(Items.STONE_SWORD));
+                                break;
+                            }
+                        }
+                    }
+                    return true;
+                })
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    // Late afternoon: the first trip runs into the night, as in the playtest. Set on the
+                    // first tick after the monitor starts (startMonitor pins dayTime to 1000).
+                    long[] sleepTick = {-1};
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (!(e instanceof VisitorMobEntity v)) {
+                            continue;
+                        }
+                        afterSleep.put(v.getUUID(), java.util.Collections.synchronizedList(new ArrayList<>()));
+                        v.addStatusListener(new ca.bradj.questown.jobs.StatusListener() {
+                            @Override
+                            public Runnable jobChanged(java.util.function.Function<ca.bradj.questown.jobs.StatusListener, Runnable> listenToNewJob) {
+                                return listenToNewJob.apply(this);
+                            }
+
+                            @Override
+                            public void statusChanged(ca.bradj.questown.jobs.IStatus<?> newStatus) {
+                                if (slept[0]) {
+                                    afterSleep.get(v.getUUID()).add(String.valueOf(newStatus));
+                                }
+                            }
+                        });
+                    }
+                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                            (net.neoforged.neoforge.event.tick.ServerTickEvent.Post ev) -> {
+                                if (slept[0]) {
+                                    return;
+                                }
+                                if (sleepTick[0] < 0) {
+                                    if (level.getDayTime() % 24000L == 1000L) {
+                                        level.setDayTime(level.getDayTime() - 1000L + 11000L);
+                                        sleepTick[0] = level.getGameTime() + HUNTER_SLEEP_AT;
+                                        output.msg("hunter sleep: afternoon set, sleeping at gameTime " + sleepTick[0]);
+                                    }
+                                    return;
+                                }
+                                if (level.getGameTime() < sleepTick[0]) {
+                                    return;
+                                }
+                                slept[0] = true;
+                                long now = level.getDayTime();
+                                long morning = (now + 24000L) - (now + 24000L) % 24000L;
+                                level.setDayTime(morning);
+                                ca.bradj.questown.town.entity.TownFlags.onSleepFinished(morning);
+                                output.msg("hunter sleep: slept dayTime " + now + " -> " + morning);
+                            });
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    boolean allHuntedAgain = !afterSleep.isEmpty();
+                    for (var e : afterSleep.entrySet()) {
+                        boolean hunted = e.getValue().stream().anyMatch(st -> st.contains("EXTRACTING_PRODUCT") || st.contains("WAITING_FOR_TIMED_STATE"));
+                        output.msg("hunter sleep: " + e.getKey() + " hunted again=" + hunted + " after-sleep statuses=" + e.getValue());
+                        allHuntedAgain &= hunted;
+                    }
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            output.msg("hunter sleep: end " + v.getUUID() + " status=" + v.getStatusForServer()
+                                    + " held=" + v.getJobJournalSnapshot().items().stream().filter(i -> !i.isEmpty()).map(i -> i.getShortName()).toList());
+                        }
+                    }
+                    return slept[0] && allHuntedAgain;
+                });
     }
 
     private static TestBlueprint gathererShortAbsenceBlueprint() {
