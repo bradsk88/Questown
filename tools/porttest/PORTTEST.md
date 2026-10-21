@@ -66,7 +66,8 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
     type)` at a flag pos (default **0 64 0 — pass the real flag pos**, the
     server refuses a pos with no flag block): opens the FLAG-scoped menu tab —
     `quests`/`villagers` → QuestsScreen/MultiStatusScreen, `economics` →
-    TownEconomicsScreen, `bop` → the block-of-progress screen (added for
+    TownEconomicsScreen, `blocks_of_progress` → the block-of-progress screen (not `bop`: the
+    server throws `Unexpected menu type`), `crafting` → FlagCraftingScreen (added for
     the paged-screen migration; the console path may be a dead pipe on a
     fresh launch, the diag file is not)
   - `vopen <type>` → a villager's own tab menu from the open flag
@@ -78,6 +79,10 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
     <name>` (types: inventory|quests|stats|skills|economics|bop). Added this
     session because the server stdin bridge (fifo console) was a dead pipe
     and the `_qtdev openvillager` opener had no diag equivalent
+  - `click <x> <y>` → left-click the open screen at a window-pixel position (parks the
+    cursor, then `mouseClicked`/`mouseReleased` at the gui-scaled point); `close` → close the
+    open screen as Escape does. Added 2026-10-21 so an agent can press buttons (Craft, Unlock,
+    tabs) and move items between slots (click the source, then the target).
   - `cmd <line…>` → sends a `ServerboundChatCommandPacket` (a `/`-prefixed
     player chat command) so the server dispatches the line with the player
     as source — the bridge for ANY console command when the stdin fifo is a

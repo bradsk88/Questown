@@ -49,7 +49,9 @@ import java.util.List;
  * {@code vopen <type>} (open a villager's own tab menu the
  * {@code _qtdev openvillager <type>} console path uses, read as a fallback from
  * the open flag-menu screen context: the flag pos + first synced villager UUID,
- * via the same {@link OpenVillagerMenuMessage} a tab click sends).
+ * via the same {@link OpenVillagerMenuMessage} a tab click sends),
+ * {@code click <x> <y>} (left-click the open screen at a window-pixel position) and
+ * {@code close} (close the open screen as Escape does).
  */
 public class QtDiagClient {
 
@@ -110,6 +112,8 @@ public class QtDiagClient {
                 case "tab" -> tab(mc, parts[1]);
                 case "shot" -> shot(mc, parts.length > 1 ? parts[1] : "shot");
                 case "cursor" -> cursor(mc, Double.parseDouble(parts[1]), Double.parseDouble(parts[2]));
+                case "click" -> click(mc, Double.parseDouble(parts[1]), Double.parseDouble(parts[2]));
+                case "close" -> close(mc);
                 case "inquire" -> inquire(mc, parts[1], parts[2], parts[3], parts.length > 4 ? parts[4] : null);
                 case "vopen" -> vopen(mc, parts[1]);
                 case "cmd" -> chat(mc, parts);
@@ -169,6 +173,36 @@ public class QtDiagClient {
         } catch (Throwable t) {
             System.out.println("[qtdiag] cursor failed: " + t);
         }
+    }
+
+    /**
+     * Left-click the open screen at a window-pixel position (the same space as
+     * {@code cursor}): parks the pointer there, then sends the screen a press and
+     * release at the gui-scaled coordinates, as a real click would.
+     */
+    private static void click(Minecraft mc, double x, double y) {
+        cursor(mc, x, y);
+        mc.execute(() -> {
+            if (mc.screen == null) {
+                System.out.println("[qtdiag] click: no screen open");
+                return;
+            }
+            double gx = x * mc.getWindow().getGuiScaledWidth() / mc.getWindow().getScreenWidth();
+            double gy = y * mc.getWindow().getGuiScaledHeight() / mc.getWindow().getScreenHeight();
+            mc.screen.mouseClicked(gx, gy, 0);
+            mc.screen.mouseReleased(gx, gy, 0);
+            System.out.println("[qtdiag] clicked " + mc.screen.getClass().getSimpleName() + " at " + gx + "," + gy);
+        });
+    }
+
+    /** Close the open screen the way Escape does. */
+    private static void close(Minecraft mc) {
+        if (mc.screen == null) {
+            System.out.println("[qtdiag] close: no screen open");
+            return;
+        }
+        mc.screen.onClose();
+        System.out.println("[qtdiag] screen closed");
     }
 
     private static void inquire(

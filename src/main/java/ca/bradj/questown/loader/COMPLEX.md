@@ -232,3 +232,13 @@ runtime verification — a held 1.20.6 hold-run autotest — not more ports):
 
 The neutral contract (what `Loader` must offer) is enumerated in
 `LoaderApi`. The strangler goal: 1 codebase, any loader / MC.
+
+## QtDiagClient click / close (2026-10-21)
+
+`neo/QtDiagClient` (dev-only, `-Dquestown.diag=true`) gained `click <x> <y>` and `close` for an
+agent playing the game through the diag channel. `click` takes window pixels like `cursor`,
+parks the pointer there, converts to gui-scaled coordinates
+(`x * guiScaledWidth / screenWidth`) and sends the open screen `mouseClicked` then
+`mouseReleased` with button 0. That presses buttons and, with two clicks, moves an item between
+slots. `close` calls the open screen's `onClose`, as Escape does. Used in the 2026-10-21 agent
+playtest (`.scratch/agent-playtest-2026-10-21/findings.md`). Command list: `tools/porttest/PORTTEST.md`.
