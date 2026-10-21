@@ -167,3 +167,13 @@ to the crafting tab (`FlagCraftMessage`): the **mineshaft** (stone stairs -> fla
 a RoomBlock only registers its room when its stamped parent resolves) and the `WandGet`
 advancement (journal entry 003), which only the conversion used to fire. Still unresolved: the
 **fishing station** is also a stamped RoomBlock with no crafting-tab recipe (asked the dev).
+
+## Unlinked flag blocks: fail the placement, never drop a copy (2026-10-22)
+
+`WelcomeMatBlock`, `JobBoardBlock` and `HospitalBedBlock` need a flag link in the item's NBT.
+Without one, `getStateForPlacement` returns `null`, and vanilla `BlockItem.place` then fails
+without consuming the stack. It used to return AIR and spawn an `ItemEntity` copy. Placing AIR
+on air fails too, so the player kept the stack and also got the drop: a survival duplication.
+The placer gets an on-screen line saying why (`TownFlagBlock.tellPlacerNotLinked`). Pinned by
+`flag/unlinked_placement_no_dupe` (held + dropped = 1 for a mat and a board; it was 2 before the
+fix).

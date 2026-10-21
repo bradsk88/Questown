@@ -90,8 +90,9 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
         if (parent == null) {
             QT.BLOCK_LOGGER.error("Welcome mat is not associated to an existing flag");
             TownFlagBlock.tellPlacerNotLinked(ctx, "message.welcome_mat.not_linked");
-            sl.addFreshEntity(new ItemEntity(sl, matPos.getX(), matPos.getY(), matPos.getZ(), ctx.getItemInHand()));
-            return Blocks.AIR.defaultBlockState();
+            // Null makes the placement fail without consuming the stack. Returning AIR and dropping
+            // a copy duplicated it whenever the player kept the stack (2026-10-22 playtest).
+            return null;
         }
 
         parent.registerWelcomeMat(matPos);

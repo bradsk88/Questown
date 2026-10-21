@@ -224,8 +224,9 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
         if (parent == null) {
             QT.BLOCK_LOGGER.error("Hospital bed is not associated to an existing flag");
             TownFlagBlock.tellPlacerNotLinked(ctx, "message.hospital_bed.not_linked");
-            sl.addFreshEntity(new ItemEntity(sl, matPos.getX(), matPos.getY(), matPos.getZ(), ctx.getItemInHand()));
-            return Blocks.AIR.defaultBlockState();
+            // Null makes the placement fail without consuming the stack. Returning AIR and dropping
+            // a copy duplicated it whenever the player kept the stack (2026-10-22 playtest).
+            return null;
         }
 
         parent.getHealingHandle().registerHealingBed(blockpos, blockpos1, Config.HOSPITAL_BED_HEAL_MULTIPLIER.get());

@@ -281,6 +281,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("floating_chest_room", floatingChestRoomBlueprint()));
         jobs.add(flagEntry("floating_furniture_over_half", floatingFurnitureOverHalfBlueprint()));
         jobs.add(flagEntry("bed_counts_once", bedCountsOnceBlueprint()));
+        jobs.add(flagEntry("unlinked_placement_no_dupe", unlinkedPlacementNoDupeBlueprint()));
         jobs.add(flagEntry("filled_storeroom_alive", filledStoreroomBlueprint()));
         // BOP cap (report): pre-fill the flag and drive one deposit across the 64-slot boundary.
         jobs.add(flagEntry("bop_boundary_63", bopBoundaryBlueprint()));
@@ -747,6 +748,53 @@ public class TestBlueprintRegistry {
         boolean ok = report(output, "1 room-detected", rooms >= 1);
         ok &= report(output, "2 door-not-dead", !dead.containsKey(doorPos));
         return ok;
+    }
+
+    /**
+     * 2026-10-22 agent playtest: placing a welcome mat (or job board) with no flag link left the
+     * mat in a survival player's hand and also dropped a copy. A failed placement must cost and
+     * give nothing: held + dropped stays at exactly one.
+     */
+    private static TestBlueprint unlinkedPlacementNoDupeBlueprint() {
+        Map<String, Integer> totals = new java.util.LinkedHashMap<>();
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    totals.put("welcome_mat", placeUnlinked(level, flagPos.offset(-4, 0, -6),
+                            new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get())));
+                    totals.put("job_board", placeUnlinked(level, flagPos.offset(-6, 0, -6),
+                            new ItemStack(ItemsInit.JOB_BOARD_BLOCK.get())));
+                    output.msg("unlinked-placement: held+dropped " + totals);
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    boolean ok = true;
+                    for (Map.Entry<String, Integer> e : totals.entrySet()) {
+                        ok &= report(output, "no-dupe " + e.getKey(), e.getValue() == 1);
+                    }
+                    return ok && totals.size() == 2;
+                });
+    }
+
+    /** A survival player right-clicks the ground at {@code pos} with {@code stack}; returns held + dropped. */
+    private static int placeUnlinked(ServerLevel level, BlockPos pos, ItemStack stack) {
+        level.setBlockAndUpdate(pos.below(), Blocks.DIRT.defaultBlockState());
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        player.setGameMode(GameType.SURVIVAL);
+        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+        net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+                net.minecraft.world.phys.Vec3.atCenterOf(pos.below()), Direction.UP, pos.below(), false);
+        player.gameMode.useItemOn(player, level, player.getItemInHand(InteractionHand.MAIN_HAND),
+                InteractionHand.MAIN_HAND, hit);
+        int held = player.getItemInHand(InteractionHand.MAIN_HAND).is(stack.getItem())
+                ? player.getItemInHand(InteractionHand.MAIN_HAND).getCount() : 0;
+        int dropped = level.getEntitiesOfClass(ItemEntity.class, new AABB(pos).inflate(3)).stream()
+                .filter(e -> e.getItem().is(stack.getItem()))
+                .mapToInt(e -> e.getItem().getCount())
+                .sum();
+        player.getInventory().clearContent();
+        return held + dropped;
     }
 
     // The bed-count rooms' north-west corners: south of the filled storeroom (z 18..22).
