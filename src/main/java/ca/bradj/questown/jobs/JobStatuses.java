@@ -28,7 +28,7 @@ public class JobStatuses {
     // skill (.pi/skills/questown-status-why/SKILL.md): when whyDebugJobId is set (done by
     // ProductionJournal each recompute), it logs the root gates + nested detail maps of the
     // leaver's status decision for that job. Inert (no label) otherwise; gated to
-    // gatherer:/hunter: leavers and throttled to one line per label per WHY_INTERVAL_MS.
+    // gatherer:/hunter:/miner: leavers and throttled to one line per label per WHY_INTERVAL_MS.
     public static volatile String whyDebugJobId = null; // set by ProductionJournal before each status recompute, so the WHY log can attribute to the real leaver
 
     public static boolean hasItems(EntityInvStateProvider<?> inventory) {
@@ -102,7 +102,7 @@ public class JobStatuses {
             STATUS current, STATUS resolved, LZCD<STATUS> root) {
         String label = whyDebugJobId;
         if (label == null) return;
-        if (!(label.startsWith("gatherer:") || label.startsWith("hunter:"))) return;
+        if (!(label.startsWith("gatherer:") || label.startsWith("hunter:") || label.startsWith("miner:"))) return;
         long now = System.currentTimeMillis();
         Long last = whyLast.get(label);
         if (last != null && now - last < WHY_INTERVAL_MS) return;

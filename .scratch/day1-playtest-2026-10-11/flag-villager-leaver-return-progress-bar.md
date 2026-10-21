@@ -50,3 +50,10 @@ Full unit suite green (1164/0/50). **In-game verification rides the user's
 fresh playtest** (first villagers-tab open on a leaver mid-timed-trip,
 e.g. the gatherer's 2000-tick roam tail); gui-lint check is part of that
 first menu open.
+
+## Bug: bar stuck at 100 (2026-10-21 playtest)
+
+On the flag villagers page the bar can stay at 100. **The dev confirmed that switching tabs and
+back updates it**, so the screen keeps a stale value. The server-side listener is fine
+(`ui/hunter_status_resync`). Look at how `MultiStatusScreen` caches the per-villager status and
+leaver-return data between status pushes, not at what the server sends.

@@ -846,3 +846,17 @@ seeds), the leftover terrain roofed the arena: dark, no sky, so the farmer fixtu
 `Heightmap.Types.WORLD_SURFACE`). Repro seed: `level-seed=-598020885233501430` in
 `run/server.properties` — farmer/harvest_wheat 2/9 before, 9/9 after. Ticket:
 `.scratch/autotest-suite/farmer-warp-loses-container-on-some-seeds.md`.
+
+## Miner pace and storage-full fixtures (2026-10-21)
+
+Playtest report: "miner is very slow". `miner/coal [cycle_time]` and `hunter/sword [cycle_time]`
+(`cycleTimeBlueprint`) run one villager realtime for 12000 ticks with no warp. They record every
+status change with its game time and pass at 2 or more finished cycles. Both finish 6, about 2140
+ticks apiece, so the job data is not slow. `miner/coal [storage_full]` fills every empty town slot
+with dirt after spawn. The miner comes back from its first trip with loot and must end in
+NO_SPACE with the NO_STORAGE need. Its timeline matches the live log: a same-job
+max-ticks reset every 3000 ticks (`JobLogic`, workSpot null and not on a timer) while it stays
+NO_SPACE. The run ends at 8000 ticks, before dusk, because at nightfall the villager leaves
+NO_SPACE for its drop-loot-before-bed path and the bubble clears.
+To get status dumps for these runs, `JobStatuses.maybeLogWhy` now also allows `miner:` labels.
+Ticket: `.scratch/playtest-2026-10-21/miner-stops-cycling.md`.

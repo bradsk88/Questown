@@ -219,6 +219,9 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("gatherer", "gather", "one_day_loot", gathererOneDayLootBlueprint()));
         jobs.add(new TestEntry("loot/gatherer_becomes_hunter", new JobID("gatherer", "gather"), gathererBecomesHunterBlueprint(), "loot"));
         jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
+        jobs.add(edgeCaseEntry("miner", "coal", "cycle_time", cycleTimeBlueprint(minerBlueprint(), "miner")));
+        jobs.add(edgeCaseEntry("hunter", "sword", "cycle_time", cycleTimeBlueprint(hunterBlueprint(), "hunter")));
+        jobs.add(edgeCaseEntry("miner", "coal", "storage_full", minerStorageFullBlueprint()));
         jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
         jobs.add(entry(new JobID("crafter", "leather_boots"), armorerBlueprint()));
         jobs.add(entry(new JobID("arborist", "cut_trees"), arboristCutTreesBlueprint()));
@@ -3799,6 +3802,122 @@ public class TestBlueprintRegistry {
                     }
                     return slept[0] && allHuntedAgain;
                 });
+    }
+
+    /** Realtime ticks a cycle_time scenario watches: three 2000-tick timed trips plus travel. */
+    private static final int CYCLE_TIME_TICKS = 12000;
+
+    /**
+     * 2026-10-21 playtest: "miner is very slow" (one trip in 12 min while miner/coal and
+     * hunter/sword share a 2000-tick timer). Runs one villager realtime with no warp, logs every
+     * status change with its game time, and passes when it finishes at least two cycles
+     * (EXTRACTING_PRODUCT reached). The hunter variant is the baseline for the miner's.
+     */
+    private static TestBlueprint cycleTimeBlueprint(TestBlueprint base, String label) {
+        java.util.List<String> timeline = java.util.Collections.synchronizedList(new ArrayList<>());
+        int[] cycles = {0};
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, null, 1, true, CYCLE_TIME_TICKS, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        )
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            v.addStatusListener(cycleTimeListener(level, timeline, cycles));
+                        }
+                    }
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg(label + " cycle_time: cycles=" + cycles[0] + " in " + CYCLE_TIME_TICKS + " ticks");
+                    output.msg(label + " cycle_time: timeline=" + timeline);
+                    return cycles[0] >= 2;
+                });
+    }
+
+    /**
+     * The live miner stalled once town storage filled up (2026-10-21: no trips finished after
+     * 18:01, a 150 s max-ticks reset ever since). With every town container slot full, the miner
+     * comes back from its first trip with loot and nowhere to put it: it must stop in NO_SPACE
+     * with the NO_STORAGE need. The run ends before dusk (~10500 ticks after the 1000 dayTime start):
+     * at nightfall the villager leaves NO_SPACE for its drop-loot-before-bed path.
+     */
+    private static TestBlueprint minerStorageFullBlueprint() {
+        java.util.List<String> timeline = java.util.Collections.synchronizedList(new ArrayList<>());
+        int[] cycles = {0};
+        TestBlueprint base = minerBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, null, 1, true, 8000, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        )
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    int filled = fillEmptyTownSlots(level, town);
+                    output.msg("miner storage-full: filled " + filled + " empty slots");
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            v.addStatusListener(cycleTimeListener(level, timeline, cycles));
+                        }
+                    }
+                    return filled > 0;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg("miner storage-full: cycles=" + cycles[0] + " timeline=" + timeline);
+                    boolean noStorage = false;
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            output.msg("miner storage-full: end status=" + v.getStatusForServer() + " need=" + v.getNeed()
+                                    + " held=" + v.getJobJournalSnapshot().items().stream().filter(i -> !i.isEmpty()).map(i -> i.getShortName()).toList());
+                            noStorage |= v.getNeed() == TownieNeed.NO_STORAGE;
+                        }
+                    }
+                    return noStorage;
+                });
+    }
+
+    /** Fills every empty slot of every town container with dirt; returns the slots filled. */
+    private static int fillEmptyTownSlots(ServerLevel level, TownFlagBlockEntity town) {
+        int filled = 0;
+        for (var target : ca.bradj.questown.town.TownContainers.getAllContainers(town, level)) {
+            if (!(level.getBlockEntity(target.getBlockPos()) instanceof net.minecraft.world.Container c)) {
+                continue;
+            }
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                if (c.getItem(i).isEmpty()) {
+                    c.setItem(i, new ItemStack(Items.DIRT, 64));
+                    filled++;
+                }
+            }
+        }
+        return filled;
+    }
+
+    private static ca.bradj.questown.jobs.StatusListener cycleTimeListener(
+            ServerLevel level, java.util.List<String> timeline, int[] cycles
+    ) {
+        return new ca.bradj.questown.jobs.StatusListener() {
+            @Override
+            public Runnable jobChanged(java.util.function.Function<ca.bradj.questown.jobs.StatusListener, Runnable> listenToNewJob) {
+                timeline.add(level.getGameTime() + ":JOB_CHANGED");
+                return listenToNewJob.apply(this);
+            }
+
+            @Override
+            public void statusChanged(ca.bradj.questown.jobs.IStatus<?> newStatus) {
+                String s = String.valueOf(newStatus);
+                timeline.add(level.getGameTime() + ":" + s);
+                if (s.contains("EXTRACTING_PRODUCT")) {
+                    cycles[0]++;
+                }
+            }
+        };
     }
 
     private static TestBlueprint gathererShortAbsenceBlueprint() {
