@@ -456,6 +456,24 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
     }
 
+    /**
+     * 2026-10-21 playtest (dev ruling: "b"): with the storeroom full, a hunter and a miner holding
+     * loot went back out with it. A villager holding work output when the town has no storage
+     * space stops with the no-space status (visible) instead of working on.
+     */
+    @Test
+    void StatusShouldBe_NoSpace_WhenHoldingOutput_AndTownHasNoSpace() {
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, true, ImmutableMap.of()),
+                new ConstTown(true, false, true),
+                jobWithItemlessWork,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.NO_SPACE, s);
+    }
+
     @Test
     void StatusShouldBe_DroppingLoot_WhenInvHasSomeSupplies_AndCannotDoWork() {
         TestStatus s = JobStatuses.usualRoutine(
@@ -649,9 +667,13 @@ class JobStatusesTest {
     }
 
     private LZCD<LZCD.Dependency<TestStatus>> getHasSupplies(@NotNull LZCD<TestStatus> root) {
-        // root = "drop loot before more work"; then itemless work; then use items.
-        if (!(root.ifCondFail instanceof LZCD<TestStatus> itemlessWork)) {
+        // root = "drop loot before more work"; then "stop when holding output and no space";
+        // then itemless work; then use items.
+        if (!(root.ifCondFail instanceof LZCD<TestStatus> noSpaceWhileHolding)) {
             throw new ClassCastException("Expected root.ifCondFail to be LZCD");
+        }
+        if (!(noSpaceWhileHolding.ifCondFail instanceof LZCD<TestStatus> itemlessWork)) {
+            throw new ClassCastException("Expected noSpaceWhileHolding.ifCondFail to be LZCD");
         }
         if (!(itemlessWork.ifCondFail instanceof LZCD<TestStatus> useItems)) {
             throw new ClassCastException("Expected itemlessWork.ifCondFail to be LZCD");

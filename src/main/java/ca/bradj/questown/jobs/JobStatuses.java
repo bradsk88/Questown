@@ -197,7 +197,13 @@ public class JobStatuses {
                         dHoldsWorkOutput,
                         dTownHasSpace
                 ),
-                new LZCD<>(
+                LZCDs.oneDep(
+                        // Holding output with nowhere to put it: stop, visibly, rather than work on
+                        // with the loot in hand (dev ruling, 2026-10-21 playtest: storeroom full).
+                        new Pair<>(ctx.jobId, "stop when holding output and the town has no space"),
+                        leaf(factory::noSpace),
+                        dHoldsWorkOutput,
+                        new LZCD<>(
                 new Pair<>(ctx.jobId, "work without items"),
                 LZCDs.leaf(job::tryChoosingItemlessWork, Objects::isNull),
                 ImmutableList.of(
@@ -310,6 +316,7 @@ public class JobStatuses {
                         )
                 )
         )
+                )
         );
         return root;
     }

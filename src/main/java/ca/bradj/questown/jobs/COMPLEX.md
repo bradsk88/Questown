@@ -688,3 +688,11 @@ output drops it before any work, itemless or not. The status interface cannot te
 more output" from other itemless work (a cook's extract is ordinary state-0 work), so the cook
 now carries each meal out before taking the next. Red:
 `JobStatusesTest.StatusShouldBe_DroppingLoot_WhenHoldingOutput_EvenIfItemlessWorkIsAvailable`.
+
+**No storage space while holding output → NO_SPACE (2026-10-21, dev ruling "b").** With the
+storeroom full ("town has storage space" = `Jobs.townHasSpace`: some registered container has
+an empty slot), the drop node was skipped and a hunter and a miner went back out with their
+loot. A second node right under the drop ("stop when holding output and the town has no space")
+returns `noSpace` whenever the villager holds work output, so it stops visibly ("needs an empty
+chest in a room to deposit their items") until space frees up, then drops and carries on. Red:
+`JobStatusesTest.StatusShouldBe_NoSpace_WhenHoldingOutput_AndTownHasNoSpace`.
