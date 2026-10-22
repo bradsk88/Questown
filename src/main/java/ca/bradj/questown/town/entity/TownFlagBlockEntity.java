@@ -733,12 +733,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         // TODO: Serialization for ASAPs
     }
 
+    /**
+     * Only what the client reads ({@link #handleUpdateTag}: dead doors + attention). The town
+     * data used to ride along and grew with the town: at ~150 quest batches the flag's chunk
+     * packet passed the client's 2 MiB NBT limit and the world could not be joined
+     * (2026-10-22 playtest). Deed / full-BOP state are blockstates.
+     */
     @Override
     public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider provider) {
         CompoundTag tag = super.getUpdateTag(provider);
-        if (this.isInitialized()) {
-            this.writeTownData(tag);
-        }
         writeDeadDoors(tag);
         writeAttention(tag);
         return tag;

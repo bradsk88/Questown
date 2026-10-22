@@ -771,6 +771,10 @@ G1+G2 (day-1 playtest): a "!" bubble above the flag while any quest is incomplet
 and above the job board while the town has zero outstanding work requests. The
 state rides the flag's **block-entity update tag**, exactly like `deadDoors`:
 
+- The update tag carries **only** the client's bubble state (dead doors + attention).
+  It used to carry the whole town (`writeTownData`), which the client never reads;
+  at ~150 quest batches the flag's chunk packet passed the client's 2 MiB NBT cap
+  and login failed decoding `level_chunk_with_light` (2026-10-22 playtest).
 - `getUpdateTag` writes it **live** (`writeAttention`): `hasIncompleteQuests()`
   (via `TownQuests.hasIncompleteQuests()` — per-quest `!isComplete()` over
   `questBatches.getAll()`, because completed quests stay in their batch until the

@@ -41,6 +41,13 @@ calls are marked (judge) for the dev.
    The custom name is now translatable; broken names healed on the next load. Verified live
    ("Villager 2" over the townie by the campfire).
 
+10. **[FIXED 2026-10-22]** After the cascade the world could not be joined: the client dropped on
+   login with "Tried to read NBT tag that was too big ... max allowed: 2097152" decoding
+   `level_chunk_with_light`. The flag's update tag carried the whole town; it now carries only
+   the dead doors + attention state the client reads (dev ruling). Verified: the client joins.
+11. **[FIXED 2026-10-22]** A restart mid-evening marked every townie bedless (SLEEPLESS for all).
+   The capture now waits for the room scan (dev ruling). Live: "16 of 20", not "20 of 20".
+
 ## Noticed, not changed
 - **[FIXED 2026-10-22]** `self-satisfied-batch-villager-cascade.md` (phase 2.7 replayed the miner beat). One morning, 8
   villagers arrived in 3 s: each new visitor's batch was already satisfied, backfill closed it at
