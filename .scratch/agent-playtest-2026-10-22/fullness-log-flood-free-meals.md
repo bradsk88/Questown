@@ -71,6 +71,7 @@ With the free meals gone, "the grabbed branch only asks the board" became a loop
 townie with no villager food gave up after 201 ticks and the board put it straight back into
 `dining_no_table` (only a raw-food give-up counts as a food attempt), so a town out of food
 stopped working with raw meat in storage. The "70 diner give-ups in 5 minutes" in the live check
-above was that loop. Fixed in 14fab7cd: the hand-off goes to the job's declared no-supplies
-fallback when it names another job (no table -> raw food). See r5 findings #20 in
+above was that loop. Fixed in 9c059c46 (supersedes 14fab7cd, which made every meal end with a
+raw one): the board moves a townie that is still starving on its way out of a diner one stage
+down (`DiningStages.next`: table -> no table -> raw food). See r5 findings #20 in
 `.scratch/agent-playtest-2026-10-22-r3/findings.md`. The mutton question above is not re-checked.
