@@ -90,7 +90,7 @@ dusk (4ca11bbe), no-table diner give-up.
     each log one ERROR "No container at [1, 1]" (05:39:08), before the room scan. Not seen again.
 
 ## Round 4 (fresh jungle world, flag at 400 71 -299)
-12. **[FIXED 2026-10-22, unit-tested; live check pending]** Villagers tab, day 2: the gatherer's
+12. **[FIXED 2026-10-22, art verified live (hunter downtime state:0 showed the relaxing picture, 06:10:47); state text not captured]** Villagers tab, day 2: the gatherer's
     status picture was the purple/black error checkerboard and its tooltip read "Gatherer is busy
     with their work." It was on downtime (`gatherer:downtime state:0/state:2`), which overrode
     art and text only for NO_JOBSITE; `StatusArt` returns `error.png` for work states and the
@@ -106,3 +106,19 @@ dusk (4ca11bbe), no-table diner give-up.
 - r4 phase 2.75 picked "#questown:swords (x1) -> crafter" (crafter/stone_sword is a real
   producer), so the coal case of #7 did not come up live here. Swords were the top need
   while 3 stone swords sat in the storeroom chest; not traced.
+14. A townie on downtime alternates `downtime state:0` <-> `downtime NO_SUPPLIES` every ~4 s
+    (hunter, 06:10:43 NO_SUPPLIES, 06:10:47 state:0; gatherer the same on day 2). Downtime has
+    no ingredients or tools, yet its card then reads "Hunter is looking for supplies. They will
+    search in room chests." with the supplies art. WHY dump (06:11:22): the supplies gate
+    `gate[TODO=false] (No matches found for ...DeclarativeJobTicker$$Lambda in any containers)`
+    fires with `relevant ingredients = [... no requirements]`: a work-only state 0 (no
+    ingredients, no tools) is read as "supplies missing". Probably the same family as the
+    work-only state-0 gate (AGENTS.md cook/stick note); shared status logic, left for the dev.
+15. (judge) Random root change pool lists crafter twice: "Changing villager from gatherer to one
+    of [farmer, smelter, cook, fisher, soup_cook, crafter, baker, arborist, gatherer, crafter,
+    organizer, miner, hunter]". `SimpleVillagerHandle` shuffles `getAllRootJobs()` (JobIDs),
+    and two crafter jobs have `parent: null`: `crafter/stick` (11 children) and
+    `crafter/ladder` (no children; parent null since the 2025 data). A plain BOP is twice as
+    likely to give a crafter, and can start one on ladder. Either ladder's parent should be
+    `crafter/stick`, or the pool should be per root. Second #10 data point: the 2.75 "Unlock job:
+    Crafter" quest; the plain BOP spend rolled hunter.
