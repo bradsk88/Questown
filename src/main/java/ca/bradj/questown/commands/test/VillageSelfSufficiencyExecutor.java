@@ -1478,7 +1478,7 @@ public final class VillageSelfSufficiencyExecutor {
             builtRoomsForRecipe.merge(recipeId, 1, Integer::sum);
             msg("[room-builder] built room for quest " + quest.getWantedId()
                     + " at door " + doorPos.toShortString()
-                    + ", placed " + recipeBlocks.size() + " block(s): " + recipeBlocks);
+                    + " for recipe blocks " + recipeBlocks + " (a bed is two of them)");
             return; // One quest at a time; the room scan will detect it on a later tick.
         }
 

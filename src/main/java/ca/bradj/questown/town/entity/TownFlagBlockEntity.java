@@ -1748,9 +1748,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
      * sits at the south wall, two cells in from the west corner).
      *
      * @param doorPos      the clear ground-level cell for the door
-     * @param recipeBlocks the recipe's blocks to place inside the room, one per
-     *                     ingredient slot (a multi-ingredient recipe like
-     *                     bedroom = light + 2 beds lists every block it needs)
+     * @param recipeBlocks the recipe's blocks, one per ingredient slot (bedroom =
+     *                     light + 2 bed blocks). A bed is two of those slots, so the
+     *                     room gets one whole bed per two bed entries
+     *                     ({@link ca.bradj.questown.logic.BedHalves})
      * @return the door position if the room was built, or null if the spot was
      *         not clear
      */
@@ -1795,14 +1796,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         getRoomHandle().registerDoor(doorPos);
 
+        List<net.minecraft.world.level.block.Block> toPlace = ca.bradj.questown.logic.BedHalves.oneEntryPerBed(
+                recipeBlocks,
+                b -> b.defaultBlockState().hasProperty(
+                        net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART)
+        );
+
         // Place the recipe blocks inside the 3x3 interior footprint (dx/dz 1..3 from the
         // corner), on up to two stacked levels (floor and floor+1) — the room matcher
         // (RecipeDetection) reads both y and y+1 of every room cell. The room matcher
         // counts each cell, so each placed block contributes one entry to the room's
-        // block multiset. Beds reserve two adjacent cells each (foot + head half), so a
-        // recipe heavy in beds (inn = light + 12 beds + sign needs 26 cells vs the 18
-        // interior cells) is only partially placeable; the surplus beds are skipped
-        // with a warning rather than placed as lone feet.
+        // block multiset. Beds reserve two adjacent cells each (foot + head half), which
+        // is the two bed entries the recipe lists per bed (inn = light + 6 beds + sign
+        // fills 14 of the 18 cells). A bed with no free adjacent pair is skipped with a
+        // warning rather than placed as a lone foot.
         int[][] interior = {{2, 2}, {1, 1}, {3, 3}, {1, 3}, {3, 1}, {2, 1}, {1, 2}, {3, 2}, {2, 3}};
         int levels = 2;
         java.util.List<BlockPos> cells = new java.util.ArrayList<>();
@@ -1822,7 +1829,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         java.util.Set<BlockPos> used = new java.util.HashSet<>();
         int placed = 0;
-        for (net.minecraft.world.level.block.Block block : recipeBlocks) {
+        for (net.minecraft.world.level.block.Block block : toPlace) {
             net.minecraft.world.level.block.state.BlockState st = block.defaultBlockState();
             if (!st.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART)) {
                 for (BlockPos at : cells) {
@@ -1878,7 +1885,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         QT.FLAG_LOGGER.info(
                 "[buildRoomForRecipe] built 5x5 room at corner {} for door {}, placed {} of {} inside, door registered",
-                corner.toShortString(), doorPos.toShortString(), placed, recipeBlocks.size(), recipeBlocks
+                corner.toShortString(), doorPos.toShortString(), placed, toPlace.size(), toPlace
         );
         return doorPos;
     }

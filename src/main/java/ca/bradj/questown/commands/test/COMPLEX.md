@@ -536,7 +536,8 @@ contain the recipe's) and completion funnels through the room's top match (see
 `.scratch/storeroom-quest-completion/`). The builder therefore resolves *every*
 ingredient of the recipe to a placeable block (`resolveRecipeBlocks`, one entry
 per ingredient slot) and `buildRoomForRecipe` places each in its own interior
-cell (the center, then the spaced cells). A shell carrying only the first
+cell (the center, then the spaced cells), except that two bed entries make one
+whole bed (`BedHalves`, `town/entity/COMPLEX.md` "One whole bed per two bed entries"). A shell carrying only the first
 ingredient — the light, no beds — never contains the recipe, so the quest never
 closed; that was the bedroom bug. The builder also latches the recipe as
 completed on *quest completion*, not at build time: after building it adds the

@@ -540,6 +540,19 @@ flowchart TD
   the 4 live bed blocks vs the recipe's 2 bed entries. Run log:
   `.scratch/sleepless-debuff/runs/run2-beds-fixed.log`. Plan + finding:
   `docs/plans/2026-10-09-003-feat-sleepless-no-bed-debuff-plan.md`.
+- **One whole bed per two bed entries (2026-10-22).** That "tolerates" was
+  the builder over-placing: a recipe lists two `#minecraft:beds` per bed (a
+  bed is two blocks, CONTEXT.md "Bed room recipe"), and the builder placed a
+  whole bed for each, so a Bedroom got two beds. `buildRoomForRecipe` now
+  passes the list through `logic/BedHalves.oneEntryPerBed` first (pinned by
+  `BedHalvesTest`): Bedroom = light + 1 bed, and the inn (light + 6 beds +
+  sign = 14 cells) now fits the 18 interior cells. `VillageGrowthExecutor`'s
+  `furnishNextRoomQuest` (bed item use = a whole bed) does the same. Live: a
+  `village/self_sufficiency` run logged `placed 2 of 2` for the bedroom and the
+  quest closed; in `village/growth` the Bedroom quest now registers a
+  `bedroom` (it was a `big_bedroom`, which also closed the cook batch's Big
+  Bedroom upgrade for free) and the upgrade is furnished in its own building
+  (42/42 checks, was 38/38).
 - **The debuff does not clear on rest (v1).** It is a fixed-duration buff
   re-applied at every morning while the townie is still bedless; clearing on
   rest would race the dawn DowntimeWork bypass edge case.

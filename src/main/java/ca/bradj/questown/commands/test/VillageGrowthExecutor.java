@@ -813,7 +813,13 @@ public final class VillageGrowthExecutor {
             BlockPos corner = buildingCorners.get(nextSpareBuilding++);
             level.setBlockAndUpdate(corner.offset(1, 0, 1), Blocks.AIR.defaultBlockState());
             int col = 0;
-            for (net.minecraft.world.item.crafting.Ingredient ing : recipe.getIngredients()) {
+            // A bed item places a whole bed, which is two of the recipe's bed entries.
+            List<net.minecraft.world.item.crafting.Ingredient> toPlace = ca.bradj.questown.logic.BedHalves.oneEntryPerBed(
+                    recipe.getIngredients(),
+                    ing -> ing.getItems().length > 0
+                            && ing.getItems()[0].getItem() instanceof net.minecraft.world.item.BedItem
+            );
+            for (net.minecraft.world.item.crafting.Ingredient ing : toPlace) {
                 ItemStack[] options = ing.getItems();
                 if (options.length == 0) {
                     continue;
