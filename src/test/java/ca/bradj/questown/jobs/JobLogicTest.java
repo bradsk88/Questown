@@ -313,6 +313,35 @@ class JobLogicTest {
         Assertions.assertTrue(handedOff.get(), "the board should pick the next job");
     }
 
+    /**
+     * 2026-10-22 r6 playtest: a hunter stuck in NO_SPACE past its max ticks asked the board every
+     * tick ("Reached max ticks for hunter:sword. Fallback ... won't fit in the day; asking the
+     * board."): 28 226 debug lines in 7 minutes, and a board evaluation per tick. The board kept
+     * the job, so the max-ticks counter never reset. Ask once per max-ticks window.
+     */
+    @Test
+    void tick_maxTicksHandOff_asksTheBoardOncePerWindow_whenTheBoardKeepsTheJob() {
+        AtomicInteger handOffs = new AtomicInteger();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeToNextJob() {
+                handOffs.incrementAndGet();
+            }
+
+            @Override
+            public boolean fitsInDay(JobID id) {
+                return false;
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5));
+        }
+
+        Assertions.assertTrue(handOffs.get() <= 4, "asked the board " + handOffs.get() + " times in 20 ticks");
+    }
+
     @Test
     void tick_shouldHitMaxTicksFallback_WhenIdleWithNoWorkSpot() {
         // Control: the watchdog still exists for a job with no cycle in progress.

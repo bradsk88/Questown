@@ -512,6 +512,15 @@ Pinned by `JobLogicTest.tick_maxTicksFallback_handsOffToTheBoard_WhenTheFallback
 (red before the check). Live: no bounce and no "No work found" through an evening with 21
 townies; the late-day timeout itself did not recur in that window.
 
+**The hand-off restarts the max-ticks window (2026-10-22 r6).** When the board keeps the job
+(a hunter stuck in NO_SPACE with full storage), the counter stayed past `maxTicks`, so the
+branch asked the board, a full job evaluation, on every tick: 28 226 "won't fit in the day;
+asking the board" lines in 7 minutes. `ticksSinceStart` now resets after the hand-off, so it
+asks once per window, the cadence the old `changeJob` fallback had because a re-created job
+starts its counter at 0. Pinned by
+`tick_maxTicksHandOff_asksTheBoardOncePerWindow_whenTheBoardKeepsTheJob` (red: 15 asks in 20
+ticks). Live: 1 line where there had been 28 226.
+
 ## Giving up on ingredients runs the extract hooks at most once (2026-10-22 playtest)
 
 When a job gives up waiting for ingredients, `JobLogic` takes back what it inserted

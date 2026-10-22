@@ -203,6 +203,9 @@ public class JobLogic<EXTRA, TOWN, POS> {
                         entityCurrentJob, fbJov
                 );
                 worldBeforeTick.changeToNextJob();
+                // If the board keeps this job, wait another window before asking again: the
+                // counter never reset, so a stalled hunter asked every tick (2026-10-22 r6).
+                this.ticksSinceStart = 0;
                 return;
             }
             QT.JOB_LOGGER.debug(

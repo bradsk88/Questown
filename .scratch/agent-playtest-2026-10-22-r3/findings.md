@@ -220,3 +220,9 @@ dusk (4ca11bbe), no-table diner give-up.
     gate cannot scan with 1 villager by construction, and live a lit campfire placed 08:22:50
     did not complete it; after the fix it completed on the first tick (08:26:22). Unit:
     `TownQuestsCampfireOpenTest` 3/3; full :test 1426/0; sharded suite 88/89 (known red only).
+24. **[FIXED 2026-10-22, verified live]** Debug-log flood + a board evaluation every tick:
+    "Reached max ticks for hunter:sword. Fallback hunter:sword won't fit in the day; asking the
+    board." 28 226 times in 7 minutes (r6, 09:09-09:16), while the hunter was stuck (NO_SPACE,
+    the single storeroom chest full). Last session's day-fit hand-off (4ca11bbe) never reset the
+    max-ticks counter when the board kept the job. Now it restarts the window. JobLogicTest red
+    (15 asks in 20 ticks) -> green; live 1 line.
