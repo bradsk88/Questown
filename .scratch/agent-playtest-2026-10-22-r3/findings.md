@@ -181,3 +181,15 @@ dusk (4ca11bbe), no-table diner give-up.
   then drain; observed 20%). AGENTS.md lists `eating/dine_at_time` and `eating/eat_direct` as
   deterministic failures; both PASS on the parent and after the fix, so that list is stale (not
   edited here: AGENTS.md has uncommitted dev changes in the main checkout).
+
+## Round 6 (fresh plains world, flag at -49 84 -35; out of order: rooms before the gate, two mats, no campfire)
+- Rooms built and wanded before the Town Gate register silently, and every later quest that
+  matches them backfills at once (Room, Small Storeroom, Bedroom): fine. A second welcome mat
+  registers ("Town Gate created" for each). The first villager comes without a campfire; the
+  Campfire quest just stays open.
+21. **[FIXED 2026-10-22, verified live]** Removing a bedroom door printed "Bedroom destroyed at
+    location [-44, -35]" twice. The event fires three times in one tick; the broadcast queue
+    dropped duplicates only against queued lines, so copy 2 was queued behind copy 1. Now the
+    line just sent counts too (`BroadcastPacer`, `BroadcastPacerTest` red -> green; full :test
+    1423/0). Live: 1 broadcast + 2 "Dropped duplicate broadcast". The triple firing itself is
+    the open `messages-print-twice.md`.

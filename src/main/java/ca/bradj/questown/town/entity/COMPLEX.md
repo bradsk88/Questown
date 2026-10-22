@@ -778,11 +778,15 @@ already open completes on the next flag tick.
 
 ## Broadcast pacing (E2)
 
-All `TownMessages.broadcastMessage` traffic goes through a flag-wide queue:
-the first line of a burst sends immediately, later lines hold in
-`pendingBroadcasts` and `TownFlagTicker.tick` releases one per
+All `TownMessages.broadcastMessage` traffic goes through a flag-wide queue
+(`BroadcastPacer`): the first line of a burst sends immediately, later lines
+hold in the pacer and `TownFlagTicker.tick` releases one per
 `BROADCAST_SPACING_TICKS` (100 = ~5s) via `flushBroadcasts()`. Consecutive
-duplicate lines are dropped (value-equal `Component`). This paces the day-1
+duplicate lines are dropped (value-equal `Component`), counting the line just
+sent as well as the queue: comparing only the queue let the second copy of a
+same-tick triple through ("Bedroom destroyed at location [-44, -35]" twice,
+2026-10-22 r6). Pinned by `BroadcastPacerTest`. The log keeps the
+`Queued broadcast (` prefix that `LogTripwire` matches. This paces the day-1
 quest/room chat blast; it deliberately does NOT root-cause the underlying
 double-firing (`.scratch/day1-playtest-2026-10-11/messages-print-twice.md`).
 

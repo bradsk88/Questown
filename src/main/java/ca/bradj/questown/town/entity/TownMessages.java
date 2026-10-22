@@ -29,8 +29,7 @@ public class TownMessages {
     // consecutive duplicates are dropped (masks - does not fix - the
     // double-firing in messages-print-twice.md).
     private static final int BROADCAST_SPACING_TICKS = 100;
-    private final java.util.ArrayDeque<Component> pendingBroadcasts = new java.util.ArrayDeque<>();
-    private long lastBroadcastAt = Long.MIN_VALUE;
+    private final BroadcastPacer<Component> pacer = new BroadcastPacer<>(BROADCAST_SPACING_TICKS);
 
     private ServerLevel level;
 
@@ -48,16 +47,10 @@ public class TownMessages {
         }
 
         Component line = Compat.translatable(key, args);
-        long now = level.getGameTime();
-        if (lastBroadcastAt == Long.MIN_VALUE || now - lastBroadcastAt >= BROADCAST_SPACING_TICKS) {
-            lastBroadcastAt = now;
-            sendNow(line);
-            QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
-        } else if (!pendingBroadcasts.contains(line)) {
-            pendingBroadcasts.addLast(line);
-            QT.FLAG_LOGGER.info("Queued broadcast ({} ticks until next slot): {} {}", now - lastBroadcastAt, key, args);
-        } else {
-            QT.FLAG_LOGGER.info("Dropped duplicate queued broadcast: {} {}", key, args);
+        switch (pacer.offer(line, level.getGameTime(), this::sendNow)) {
+            case SENT -> QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
+            case QUEUED -> QT.FLAG_LOGGER.info("Queued broadcast (waiting for a free slot): {} {}", key, args);
+            case DROPPED -> QT.FLAG_LOGGER.info("Dropped duplicate broadcast: {} {}", key, args);
         }
     }
 
@@ -66,18 +59,14 @@ public class TownMessages {
      * every flag tick by {@link TownFlagTicker}.
      */
     public void flushBroadcasts() {
-        if (pendingBroadcasts.isEmpty()) {
+        if (pacer.isEmpty()) {
             return;
         }
         if (level == null) {
-            pendingBroadcasts.clear();
+            pacer.clear();
             return;
         }
-        long now = level.getGameTime();
-        if (lastBroadcastAt == Long.MIN_VALUE || now - lastBroadcastAt >= BROADCAST_SPACING_TICKS) {
-            lastBroadcastAt = now;
-            sendNow(pendingBroadcasts.pollFirst());
-        }
+        pacer.flush(level.getGameTime(), this::sendNow);
     }
 
     private void sendNow(Component line) {
