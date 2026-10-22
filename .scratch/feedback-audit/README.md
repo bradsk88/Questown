@@ -179,4 +179,6 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
 - Found live: every town shutdown removed the town's job boards and welcome mats (sub-block
   watchdog heartbeat skipped while parked). Fixed 49dc0a9a.
 - Found live: a restart mid-shutdown left the flag "needs a moment to start up" forever. Fixed 2ff42b88.
-- Second full suite after the evening's UI/copy commits: see the r9 findings / final report.
+- Second full suite at 3af9cadd (after the relocate confirm, checkbox, campfire copy): 91/94. Fails:
+  `chicken-arc:skip_chicken_command` (known red), `nav/roof_gatherer` and `organizer/fetch [warp]`
+  (both pass alone, known flakes). The new `flag/shutdown_keeps_job_board` passed in the suite.
