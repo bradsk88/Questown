@@ -134,3 +134,17 @@ dusk (4ca11bbe), no-table diner give-up.
     (`VillagerAdvancementsScreen` builds the root `DisplayInfo` with `Compat.literal("test")`,
     `("test2")`); creative also shows the whole tree (gatherer first) on a hunter, which matches
     the open `skills-tab-icons-stacked.md` ("only gather visible").
+
+## Round 5 (fresh desert world, flag at 1601 71 1480; mat 20 blocks east; no sleep, no free food)
+17. (judge) A player who doesn't sleep keeps "Your camp is ready / Use wand on campfire" on
+    screen the whole next day; a campfire sleep cannot start in daylight. The toast hides only
+    when the player sleeps (`ClientAccess.tickTutorialToasts`) or via the flag-menu dismiss, and
+    is shown once per session (`campReadyToastShown`), so a plain morning hide would also stop
+    it coming back the next evening. Recommendation: hide at dawn and clear the per-session bit.
+- A mat 20 blocks from the flag is accepted (Town Gate quest done; first villager spawned at
+  the mat, x=1621). Morning arrived without the player sleeping and the visitor came anyway.
+18. **[FIXED 2026-10-22]** Diner tooltip typo: "Gatherer is looking at for food / and a place to
+    sit down and eat." (`tooltips.villagers.job.diner.status_1.NO_SUPPLIES`, since 2024). Now
+    "is looking for food".
+- Seen live: the economics tooltip singular, "Food was needed once in the past day"
+  (handoff item 5 said singular had not been seen).
