@@ -305,6 +305,11 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
             return;
         }
         FlagPhase phase = phaseOf(state);
+        if (phase != FlagPhase.ACTIVE) {
+            // A parked town still owns its boards and mats (ADR-0009: physical blocks stay). Without
+            // this heartbeat the orphan watchdog removed them 20 ticks into the ritual (r8 2026-10-22).
+            notifySubBlocksOfTick(new TickData(sl, blockEntityPos, state, e));
+        }
         if (phase == FlagPhase.SHUTTING_DOWN) {
             if (!e.shutdownController.isRunning()) {
                 // Loaded mid-ritual after a restart: the progress is in memory only. Load the town

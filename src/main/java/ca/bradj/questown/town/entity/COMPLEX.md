@@ -101,6 +101,14 @@ flowchart LR
   `begin` (roster = the townies still standing; the absorbed ones are already in the tag), and the
   ritual completes. Same shape as the DORMANT branch above it. Live, r8 2026-10-22: shutdown,
   restart, "shutdown started … 1 townie(s)", dormant 10 s later, wake restored the townie.
+- **A parked flag keeps its boards and mats.** `TownFlagSubBlocks` removes a registered sub-block
+  (job board, welcome mat) once its flag has skipped `FlagSubBlockRetentionTicks` (20) heartbeats.
+  The heartbeat (`notifySubBlocksOfTick` -> `parentTick`) lived only on the ACTIVE path, so every
+  shutdown removed the town's boards and mats 20 ticks in; ADR-0009 says physical blocks stay.
+  `TownFlagTicker.tick` now sends it for SHUTTING_DOWN and DORMANT too. Autotest
+  `flag/shutdown_keeps_job_board` (red before: "Parent has stopped ticking. Entity removed"). The
+  board is placed in the setup hook: `register` only queues it, and the watchdog listener attaches
+  on a later `parentTick`, so a board placed in the same tick as the shutdown was never at risk.
 
 ---
 

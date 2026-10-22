@@ -278,6 +278,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("town_shutdown", townShutdownBlueprint()));
         jobs.add(flagEntry("deed_issue_and_recover", deedIssueAndRecoverBlueprint()));
         jobs.add(flagEntry("shutdown_wake_keeps_jobs", shutdownWakeKeepsJobsBlueprint()));
+        jobs.add(flagEntry("shutdown_keeps_job_board", shutdownKeepsJobBoardBlueprint()));
         jobs.add(flagEntry("producer_count_own_tables", producerCountOwnTablesBlueprint()));
         jobs.add(flagEntry("relocate_nearby", relocateNearbyBlueprint()));
         jobs.add(flagEntry("relocate_far", relocateFarBlueprint()));
@@ -427,6 +428,34 @@ public class TestBlueprintRegistry {
                     town.wakeInPlace();
                     town.claimImmediateRewardsForTest();
                     return assertJobsKept(output, town, expected);
+                });
+    }
+
+    // Inside the ritual fixture's fence, clear of the chest (ox+1, oz+5).
+    private static final BlockPos RITUAL_BOARD_OFFSET = new BlockPos(8, 0, -1);
+
+    /**
+     * ADR-0009: a shutdown leaves the town's physical blocks behind. The sub-block watchdog
+     * removed the job boards and welcome mats 20 ticks into the ritual, because the shutting-down
+     * and dormant flag skipped the heartbeat that tells them their flag is alive (r8, 2026-10-22).
+     */
+    private static TestBlueprint shutdownKeepsJobBoardBlueprint() {
+        return relocationRitualBase()
+                // Placed in the setup hook so the flag's parentTick finishes registering the board
+                // (its orphan watchdog) during the settle ticks, as in a lived-in town.
+                .withSetupHook((level, flagPos, town, output) -> {
+                    town.placeJobBoard(flagPos.offset(RITUAL_BOARD_OFFSET));
+                    return true;
+                })
+                .withPostSpawnAction((level, flagPos, town, output) -> town.beginTownShutdown())
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    if (phaseOf(level, flagPos) != FlagPhase.DORMANT) {
+                        output.msg("FAIL precondition: flag not DORMANT, got " + phaseOf(level, flagPos));
+                        return false;
+                    }
+                    BlockPos board = flagPos.offset(RITUAL_BOARD_OFFSET);
+                    boolean kept = level.getBlockState(board).is(BlocksInit.JOB_BOARD_BLOCK.get());
+                    return report(output, "job-board-left-behind-at-" + board.toShortString(), kept);
                 });
     }
 
