@@ -57,7 +57,10 @@ dusk (4ca11bbe), no-table diner give-up.
    `BakerStockJobLoaderTest.bakerStockJobs_doNotDeclareTheirInputsAsProducts`. Full :test 1415/0.
    (judge) `baker/bread` still declares wheat (its own input), as the plan specifies, so a
    wheat shortage would still pick the baker over a farmer if the farmer were locked.
-8. **[FIXED 2026-10-22, unit-tested; live check pending]** Earned BOPs vanished. The hunter
+   Player-facing copy of the old behaviour (quest tooltip, live): "Your town's stock of Coal has
+   run dry and no one can make it. Unlock the baker job with a Block of Progress so the town can
+   produce it." Both halves are false: the town had a miner, and bakers burn coal.
+8. **[FIXED 2026-10-22, verified live: after the fix the flag saved two blessed BOPs (gatherer, miner)]** Earned BOPs vanished. The hunter
    reached levels 2-4 and deposited three blessed BOPs (05:13, 05:23, 05:32); I took three
    tutorial BOPs; the flag should hold 4. Its save held 1 plain BOP and the BOP tab said 2.
    `TownFlagBOPItemHandler.insertItem` shrank the carried 1-count stack before copying it, so
@@ -75,3 +78,13 @@ dusk (4ca11bbe), no-table diner give-up.
    seeking_work about 10 times a second for ~20 s (05:29:0x-05:29:2x), then gave up until
    05:31:58. A BOP goes to the flag, not a chest, so the storage gate looks wrong for this job.
    Not traced further.
+10. (judge) The phase-2.75 "Unlock job: Baker" quest says "Unlock the baker job with a Block of
+    Progress". The only BOP spend that changes a root is the villager change-job tab, which is
+    random for a plain BOP. I spent the last plain (tutorial) BOP on the gatherer, as the copy
+    says, and got a farmer ("Changing villager from gatherer to one of [farmer, smelter, ...]").
+    The onboarding guarantee (`onboardingJobChangeGuarantee`, ticket
+    expected-guaranteed-cook-got-arborist) covers only JOB_CHANGE quests, but this unlock quest
+    is posted by the tutorial too (`tryPhase2_75_topNeedUnlock`). Should its root fill the same
+    guarantee slot? Recommendation: yes, while the unlock quest is open.
+11. Log-only: after a server restart, `InsertIntoSlotSpecialRule` / `TakeFromSlotSpecialRule`
+    each log one ERROR "No container at [1, 1]" (05:39:08), before the room scan. Not seen again.
