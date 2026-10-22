@@ -112,7 +112,7 @@ public final class AddWorkFromUIMessage {
                 case CONFIRMED -> {
                     VisitorTrigger.Triggers adv = VisitorTrigger.Triggers.FirstJobRequest;
                     AdvancementsInit.VISITOR_TRIGGER.trigger((net.minecraft.server.level.ServerPlayer) ctx.sender(), adv);
-                    tfbe.getWorkHandle().requestWork(Ingredients.asWorkRequest(requested));
+                    tfbe.requestWorkFromPlayer(Ingredients.asWorkRequest(requested));
                     tfbe.openJobsMenu(sender, false);
                 }
                 case REJECTED -> tfbe.openJobsMenu(sender, true);

@@ -95,7 +95,7 @@ status: needs-triage
 - Corrected: "hunter never hunts" was night. It became a hunter at 19:29 with ~90 s of
   daylight left (trip = 100 s); nightfall 19:31:34; time 23733 at 19:41. Re-check at dawn.
 **[FIXED 2026-10-21]** 18. Chat shows a raw key for every job-change quest: "Quest completed: room.hunter_qt_sword", "Quest completed: room.cook_qt_extract".
-19. "Quest completed: Post your first work request on the job board" fired when I used a BOP
+19. **[FIXED 2026-10-22, dev: player's own request only; village/day1 first-work-request-completed-by-the-player]** "Quest completed: Post your first work request on the job board" fired when I used a BOP
     to change jobs; no work request was posted ("First-work-request quest completed on first
     posted request" in the log).
     (judge, 2026-10-22) Cause: the BOP job change runs `postStarterRequests` (the board's

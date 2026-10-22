@@ -135,7 +135,7 @@ public final class VillageGrowthExecutor {
         this.server = server;
         this.player = player;
         this.origin = origin;
-        this.day1 = day1 ? new Day1BeatChecks(player.getUUID(), this::check, this::msg) : null;
+        this.day1 = day1 ? new Day1BeatChecks(player.getUUID(), this::check, this::msg, () -> firstWorkRequestPosted) : null;
         this.tripwire = day1 ? LogTripwire.attach(level::getGameTime) : null;
     }
 
@@ -866,7 +866,15 @@ public final class VillageGrowthExecutor {
         if (!open) {
             return false;
         }
-        flag.getWorkHandle().requestWork(
+        // Post only after the first job change lands (the morning after the BOP spend), the order
+        // the 2026-10-21 playtest hit: the change auto-posts the new job's starter request, which
+        // must not complete this quest.
+        boolean jobChanged = flag.getVillagerHandle().getVillagerJobs().values().stream()
+                .anyMatch(j -> !"gatherer".equals(j.rootId()));
+        if (!jobChanged) {
+            return false;
+        }
+        flag.requestWorkFromPlayer(
                 ca.bradj.questown.jobs.requests.WorkRequest.of(net.minecraft.world.item.Items.WHEAT_SEEDS));
         firstWorkRequestPosted = true;
         msg("Posted a work request (wheat seeds) for the first-work-request quest");

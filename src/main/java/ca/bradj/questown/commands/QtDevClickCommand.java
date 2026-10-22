@@ -238,7 +238,7 @@ public class QtDevClickCommand {
             return 1;
         }
         TownFlagBlockEntity flag = TownFlags.all().iterator().next();
-        flag.getWorkHandle().requestWork(item);
+        flag.requestWorkFromPlayer(ca.bradj.questown.jobs.requests.WorkRequest.of(item));
         QT.FLAG_LOGGER.info("[board_request] work request posted for {} (flag {})", item, flag.getBlockPos());
         return 0;
     }

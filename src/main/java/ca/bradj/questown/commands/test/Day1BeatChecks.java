@@ -13,6 +13,7 @@ import java.util.AbstractMap;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 /**
@@ -41,13 +42,23 @@ final class Day1BeatChecks {
     private long lastArrivalDay = -1;
     private int arrivalsThatDay;
     private boolean workRequestQuestSeen;
+    private boolean workRequestQuestCompletionSeen;
+    // The executor posted its own (the player's) first request. Dev 2026-10-22: only the
+    // player's request completes the quest, not a BOP job change's auto-posted starter request.
+    private final BooleanSupplier playerPostedFirstRequest;
     private boolean rawFoodSeenComplete;
     private boolean cookSeen;
 
-    Day1BeatChecks(UUID player, BiConsumer<String, Boolean> check, Consumer<String> msg) {
+    Day1BeatChecks(
+            UUID player,
+            BiConsumer<String, Boolean> check,
+            Consumer<String> msg,
+            BooleanSupplier playerPostedFirstRequest
+    ) {
         this.player = player;
         this.check = check;
         this.msg = msg;
+        this.playerPostedFirstRequest = playerPostedFirstRequest;
     }
 
     private boolean arrivalsPaused;
@@ -70,6 +81,7 @@ final class Day1BeatChecks {
         checkToast(flag, dayTime % 24000L);
         checkArrivals(flag, dayTime / 24000L);
         checkWorkRequestQuest(flag);
+        checkWorkRequestQuestCompletion(flag);
         checkRawFood(flag);
         checkCook(flag);
     }
@@ -133,6 +145,20 @@ final class Day1BeatChecks {
         }
         workRequestQuestSeen = true;
         check.accept("work-request-quest-only-with-a-villager", flag.getVillagerHandle().size() >= 1);
+    }
+
+    private void checkWorkRequestQuestCompletion(TownFlagBlockEntity flag) {
+        if (workRequestQuestCompletionSeen) {
+            return;
+        }
+        boolean complete = flag.getQuestHandle().getAllQuestsWithRewards().stream()
+                .map(AbstractMap.SimpleEntry::getKey)
+                .anyMatch(q -> q.getType() == Quest.QuestType.FIRST_WORK_REQUEST && q.isComplete());
+        if (!complete) {
+            return;
+        }
+        workRequestQuestCompletionSeen = true;
+        check.accept("first-work-request-completed-by-the-player", playerPostedFirstRequest.getAsBoolean());
     }
 
     private void checkRawFood(TownFlagBlockEntity flag) {

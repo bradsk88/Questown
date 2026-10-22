@@ -820,12 +820,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
             t.pois.setListener(t);
             t.workHandle.addChangeListener(c -> {
-                // F2 day-2 beat: any request landing on the board completes the active
-                // "first work request" quest. A removal carries the removed request, so only
-                // adds (c.removed() == null) count.
-                if (c.removed() == null) {
-                    t.quests.markFirstWorkRequestCompleteIfActive();
-                }
                 updateWorkersAfterRequestChange();
                 setChanged();
             });
@@ -2219,6 +2213,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
      * job and idles. Both job-change paths (the quest reward and the BOP spend) come through here.
      * The board's auto-request toggle (F2, default ON) turns it off; manual requests are never gated.
      */
+    /**
+     * A request the player posts (the board's + confirm, or a dev/agent stand-in for it). Unlike an
+     * auto-posted starter request ({@link #postStarterRequests}), it completes the F2 "post your
+     * first work request" quest (dev, 2026-10-22: only the player's own request counts).
+     */
+    public void requestWorkFromPlayer(WorkRequest request) {
+        workHandle.requestWork(request);
+        quests.markFirstWorkRequestCompleteIfActive();
+    }
+
     public void postStarterRequests(JobID root) {
         if (!isBoardAutoRequest()) {
             return;

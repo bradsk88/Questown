@@ -211,8 +211,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     /**
      * The day-2 "post your first work request" quest (F2). A single standalone quest in its
-     * own batch; completes from {@link #markFirstWorkRequestCompleteIfActive} when any request
-     * posts while it is active (the flag's work-handle listener drives it). Reward: one Block
+     * own batch; completes from {@link #markFirstWorkRequestCompleteIfActive} when the player
+     * posts a request while it is active ({@code TownFlagBlockEntity.requestWorkFromPlayer}).
+     * Auto-posted starter requests do not count (dev, 2026-10-22). Reward: one Block
      * of Progress - small, and it is the currency the board's other beats run on.
      */
     void addFirstWorkRequestBatch() {
@@ -229,10 +230,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /**
-     * Completes the active day-2 "first work request" quest when a request lands on the board.
-     * Driven from the flag's work-handle change listener on any add (a removal carries the
-     * removed request, so only adds reach this). No-op when the quest is absent or already
-     * complete.
+     * Completes the active day-2 "first work request" quest when the player posts a request
+     * ({@code TownFlagBlockEntity.requestWorkFromPlayer}). No-op when the quest is absent or
+     * already complete.
      */
     public void markFirstWorkRequestCompleteIfActive() {
         for (MCQuestBatch batch : questBatches.getAllBatches()) {

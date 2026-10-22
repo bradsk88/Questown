@@ -920,17 +920,22 @@ auto-posting.
 graph LR
     A["basics batch completes\n(job board + store room built)"] --> B["MCRewardList:\nPHASE_KICKOFF reward, then\nPostFirstWorkRequestQuestReward"]
     B --> C["TownQuests.addFirstWorkRequestBatch\nFIRST_WORK_REQUEST quest\n(SpecialQuests.FIRST_WORK_REQUEST)\nreward: GrantBlockOfProgressReward(1)"]
-    D["any request lands on the board\n(TownWorkHandle.requestWork →\nflag workHandle listener,\nc.removed() == null = an add)"] --> E["TownQuests.markFirstWorkRequestCompleteIfActive\ncompletes the active quest"]
+    D["the player posts a request\n(AddWorkFromUIMessage CONFIRMED,\n_qtdev board_request, growth executor)\n→ TownFlagBlockEntity.requestWorkFromPlayer"] --> E["TownQuests.markFirstWorkRequestCompleteIfActive\ncompletes the active quest"]
 ```
 
 - The quest posts from the **basics batch's completion reward** (wrapped in an
   `MCRewardList` with the tutorial kickoff reward), not on a tick: by the time
   the batch completes the board exists. A villager may not be — the reward then
   defers to the morning (see "First-work-request quest waits for a villager"). `QuestsHolder.addFirstWorkRequestBatch` / `TownQuestsHandle` delegate.
-- Completion rides the flag's existing `workHandle.addChangeListener`: any **add**
-  (`c.removed() == null`) calls `markFirstWorkRequestCompleteIfActive`, which walks
-  batches for an incomplete `FIRST_WORK_REQUEST` quest and marks it. Removals
-  carry the removed request, so they never complete it.
+- Completion is the player's own request only (dev, 2026-10-22): the owner method
+  `TownFlagBlockEntity.requestWorkFromPlayer` posts the request and calls
+  `markFirstWorkRequestCompleteIfActive`, which walks batches for an incomplete
+  `FIRST_WORK_REQUEST` quest and marks it. It used to ride the work-handle change
+  listener on any add, so a BOP job change's auto-posted starter request
+  (`postStarterRequests`, board toggle ON) completed the quest before the player
+  ever touched the board (2026-10-21 agent playtest #19). Pinned by village/day1's
+  `first-work-request-completed-by-the-player` (the executor posts only after the
+  first root change lands, the order that exposed it).
 - `Quest.QuestType.FIRST_WORK_REQUEST` is new; the exhaustive switches got cases:
   `UIQuest.getIngredients` (empty — a do-this quest takes no item),
   `UIQuest.getName` (`menu.quests.first_work_request`), the `QuestsScreen`
