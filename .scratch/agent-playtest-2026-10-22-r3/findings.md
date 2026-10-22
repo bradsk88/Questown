@@ -175,3 +175,9 @@ dusk (4ca11bbe), no-table diner give-up.
     change to the job's declared no-supplies fallback when it is another job
     (`JobLogic.isAnotherStage`). Also the handoff's open question ("a no-table diner gave up after
     201 ticks"): this is that path.
+- Autotests after #20 (2026-10-22 07:40): `only=eating` 5/5 PASS, `village/day1` 41/41 PASS.
+  `eating/eat_raw_food` had been failing on the parent commit (fullness -40%, min 30%): its 0.3
+  floor was only reachable with the free meals cf1b7072 removed; floor now 0.15 (one raw meal,
+  then drain; observed 20%). AGENTS.md lists `eating/dine_at_time` and `eating/eat_direct` as
+  deterministic failures; both PASS on the parent and after the fix, so that list is stale (not
+  edited here: AGENTS.md has uncommitted dev changes in the main checkout).

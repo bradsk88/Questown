@@ -4262,7 +4262,11 @@ public class TestBlueprintRegistry {
                         List.of(new ExpectedProduct("minecraft:beef", -16, null)),
                         1, 1
                 ),
-                0.3f, null, null,
+                // One raw meal is +50% and fullness drains ~1/tick, so after timing out of
+                // dining_no_table (~300 ticks) the window ends near 16-20%. The old 0.3 floor was
+                // only met while a diner that gave up got free meals every tick (fixed cf1b7072;
+                // 2026-10-22 r5: 20% after one meal, -40% before the give-up fallback fix).
+                0.15f, null, null,
                 new TestExpectation(List.of(new ExpectedProduct("minecraft:beef", 0, 1)), 0, 1),
                 false
         );
