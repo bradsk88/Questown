@@ -26,7 +26,7 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
 | 10-15/room-created-double-announcement | done | bbbdf88f TownRooms.roomAdded | — |
 | 10-15/stone-sword-quest-flavor | done | TownQuests.java:1423 | — |
 | 10-15/villager-arrival-batch-missing-bedroom | done | cook batch carries BEDROOM->BIG_BEDROOM upgrade (dev rule 10-18) | — |
-| agent-10-22/findings | partial | fixed items committed; judge items open | BOP icon size; 'No quests found' |
+| agent-10-22/findings | partial | fixed items committed; BOP icon size fixed (ab5acc10, 9fb76332; live r8 2026-10-22: flag BOP tab, villager BOP screen, flag tab icon) | 'No quests found' (queued #3) |
 | agent-10-22/known-gather-results-ignore-loot-prefix | open-dev | economy design | 3 options |
 | cook-soft-lock/DIAGNOSIS + STATE | done | STATE.md FIXED 2026-10-06 (3 commits) | — |
 | day1/auto-request-root-initial-request | done | boardAutoRequest toggle + idempotent requestWork | — |
@@ -81,13 +81,13 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
 | day1/job-board-quest-card-shows-sign | done | UIQuest.java:148 | — |
 | day1/new-cook-has-no-cook-works | done | starter_recipes mutton | — |
 | day1/roomblock-quests-custom-place-tooltip | done | QuestsScreen.java:335 | — |
-| day1/job-board-placement-orientation | open-agent | corrected table needs a south/east placement check | — |
-| day1/paged-menus-scroll-to-page | open-agent → fixing | dispatch listened to InputEvent (no-screen only); now ScreenEvent.MouseScrolled.Pre | — |
+| day1/job-board-placement-orientation | done | 5ecdc017 live in all four directions (r8) | — |
+| day1/paged-menus-scroll-to-page | done | 6204f39c ScreenEvent.MouseScrolled.Pre; live scroll paging (r8) | — |
 | day1/messages-print-twice | done | TFBE.roomRecipeCreated broadcast flag:1096; FlagCraftingScreen:148; BroadcastPacer | — |
 | day1/skills-tab-hidden-until-level-2 | done | d942eed8 available_at_level | — |
-| day1/skills-tab-icons-stacked | open-agent (UI batch) | verify in client | — |
-| day1/stats-page-show-didnt-eat-didnt-sleep | open-agent (UI batch) | renderMood commented out | — |
-| day1/stats-page-show-level-right-aligned | open-agent (UI batch) | no level drawn | — |
+| day1/skills-tab-icons-stacked | done | live r8 2026-10-22: root -> boots -> column of 5 jobs, each at its own position; sibling spacing matches the 1.19.2 golden (frames abut). Judge: a 5-job column runs past the pane top/bottom | — |
+| day1/stats-page-show-didnt-eat-didnt-sleep | done | 81adb774 mood effects line; live sleepless effect shown (r8) | — |
+| day1/stats-page-show-level-right-aligned | done | 81adb774 "Lvl N"; live (r8) | — |
 | day1/two-villagers-after-first-sleep | done | day1 one-arrival-per-day PASS | — |
 | day1/villager-card-opens-management-only-screen | done | showInventoryTab 10-14 | — |
 | day1/villager-dining-with-zero-food-stuck | done | 9c059c46 DiningStages.next | — |
@@ -108,7 +108,7 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
 | 10-15/loot-quest-food-vs-raw-food | done | UIQuest.lootNameKey | — |
 | 10-15/loot-quest-named-raw-food | done | superseded | — |
 | 10-15/quest-progress-missing-space | done | UIQuest.java:257,266 | — |
-| 10-15/villagers-climb-walls-over-doors | open-agent | fix reverted 10-17 | — |
+| 10-15/villagers-climb-walls-over-doors | needs-info | vanilla door costs since 10-17; no recurrence in .scratch/ since; a fix needs a positive wall-top penalty + fixture | — |
 | 10-17/away-summary-says-0-days | done | AwayDuration + test | — |
 | 10-17/bop-tab-focus-and-dot-clears-on-withdraw | done | FlagTabs + BopTabAttentionTest | — |
 | 10-17/change-job-in-morning-message-stutters | done | en_us.json:35 | — |
@@ -155,3 +155,12 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
    jobs the townie can hold (unlock != workability). Question: OK?
 5. **Restart mid-shutdown was broken; fixed (2ff42b88).** No question, just a heads-up: shutdown,
    then a restart before dormant, used to leave the flag "needs a moment to start up" forever.
+
+### Suite and live checks, 2026-10-22 evening
+
+- Full sharded autotest suite after the day's fixes: 90/93. Fails were `chicken-arc:skip_chicken_command`
+  (known red), `nav/roof_gatherer` and `flag/floating_furniture_over_half` (both pass alone, known
+  load flakes). Then `flag/shutdown_keeps_job_board` added (49dc0a9a).
+- Found live: every town shutdown removed the town's job boards and welcome mats (sub-block
+  watchdog heartbeat skipped while parked). Fixed 49dc0a9a.
+- Found live: a restart mid-shutdown left the flag "needs a moment to start up" forever. Fixed 2ff42b88.

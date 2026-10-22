@@ -1,6 +1,6 @@
 ---
 title: 'Villagers climb walls instead of entering through doors'
-status: ready-for-agent
+status: needs-info
 origin: 2026-10-15 playtest round 2 — user chat 05:37:47
 ---
 
@@ -38,3 +38,11 @@ The discount made open doors impassable (negative malus = blocked in vanilla). S
 ## Audit (2026-10-22)
 
 Still open: the 2026-10-15 door-discount fix was reverted 2026-10-17 (it made open doors impassable). Needs a new approach; see .scratch/playtest-2026-10-17/villager-stuck-on-bed-pathing-over-wall.md.
+
+## Audit 2 (2026-10-22, later)
+
+No wall-climb report in `.scratch/` after the 10-17 revert (grep "over the wall|climb.*wall|jump.*wall":
+only this ticket and its 10-17 sibling). The 10-15 report predates the door discount, so it is a
+real vanilla-cost behaviour, but it hasn't recurred in the playtests since. A fix needs a positive
+penalty on the wall-top route (a negative malus is impassable), and that needs a fixture to tune
+against. Parked as needs-info until it recurs.
