@@ -156,14 +156,6 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
 5. **Restart mid-shutdown was broken; fixed (2ff42b88).** No question, just a heads-up: shutdown,
    then a restart before dormant, used to leave the flag "needs a moment to start up" forever.
 
-### Suite and live checks, 2026-10-22 evening
-
-- Full sharded autotest suite after the day's fixes: 90/93. Fails were `chicken-arc:skip_chicken_command`
-  (known red), `nav/roof_gatherer` and `flag/floating_furniture_over_half` (both pass alone, known
-  load flakes). Then `flag/shutdown_keeps_job_board` added (49dc0a9a).
-- Found live: every town shutdown removed the town's job boards and welcome mats (sub-block
-  watchdog heartbeat skipped while parked). Fixed 49dc0a9a.
-- Found live: a restart mid-shutdown left the flag "needs a moment to start up" forever. Fixed 2ff42b88.
 6. **The helper chicken's storeroom chest blocks the room's doorway.** `ChickenRoomShellPlan` drops it
    at `door.relative(inward, 1)` in a 2x2 interior (4x4 shell incl. walls; the javadoc says 3x3), so
    villagers climb onto the chest to reach the room. r9 reproduced the mechanism with a furnace and
@@ -176,3 +168,15 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
    `textures/error.png` (same in 1.19.2). Detail: r9 findings #14. Recommendation: map them to the
    unused `gathering.png` / `returned_success.png` until per-job art exists. Question: OK, or do you
    want new art?
+8. **"Begin moving this town" now takes two clicks (3c1b3d1a).** Heads-up, no question: it packed the
+   town on one click with no in-game undo. Easy to revert (one method) if you disagree.
+
+### Suite and live checks, 2026-10-22 evening
+
+- Full sharded autotest suite after the day's fixes: 90/93. Fails were `chicken-arc:skip_chicken_command`
+  (known red), `nav/roof_gatherer` and `flag/floating_furniture_over_half` (both pass alone, known
+  load flakes). Then `flag/shutdown_keeps_job_board` added (49dc0a9a).
+- Found live: every town shutdown removed the town's job boards and welcome mats (sub-block
+  watchdog heartbeat skipped while parked). Fixed 49dc0a9a.
+- Found live: a restart mid-shutdown left the flag "needs a moment to start up" forever. Fixed 2ff42b88.
+- Second full suite after the evening's UI/copy commits: see the r9 findings / final report.
