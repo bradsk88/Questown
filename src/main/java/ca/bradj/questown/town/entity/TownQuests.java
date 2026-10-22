@@ -52,6 +52,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -102,9 +103,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private final UnsafeTown town = new UnsafeTown(getClass());
     boolean playerDiscardedLastBatch;
     private @Nullable QuestBatchSeed pendingQuests = null;
-
-    /** Root -> tick a townie of that root was first observed stuck in UNMET_ITEM. */
-    private final Map<String, Long> unmetRootSince = new HashMap<>();
 
     TownQuests() {
         questBatches.addChangeListener(this);
@@ -448,7 +446,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     public void tick(TownInterface town) {
-        tickUnmetUnlockQuests(town);
+        retireJobUnlockQuests();
         backfillSatisfiedQuests(town);
 
         ServerLevel level = town.getServerLevel();
@@ -545,231 +543,62 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /**
-     * Surfaces a stuck townie as the next quest. While a root has no viable job its townies
-     * sit in UNMET_ITEM; past a grace period the town posts a JOB_UNLOCK quest naming the
-     * missing item and the root that produces it. One open quest per stuck root: when the
-     * root's missing item flips to a different producer's item the quest is retargeted in
-     * place (the old lose-and-repost cycle ping-ponged the handle full of phantom quests),
-     * and the quest is withdrawn once its root stops mapping to any viable producer
-     * (e.g. the player stocked the missing item directly). The quest completes when any
-     * townie unlocks the targeted root (see {@link #processJobUnlocks}).
+     * Withdraw every open JOB_UNLOCK quest. They told the player to unlock a job with a Block of
+     * Progress, which rolls a random root, so the spend rarely delivered the job (dev, 2026-10-22:
+     * post-onboarding quests are room quests only). New ones are no longer posted; this drains the
+     * ones a saved town still carries. A top-need batch keeps its room quest, tagged with the
+     * producer so the top-need beat still sees it as in flight.
      */
-    void tickUnmetUnlockQuests(TownInterface town) {
-        long now = Util.getTick(town.getServerLevel());
-        Set<String> stuckRoots = new HashSet<>();
-        Map<String, String> stuckRootToMissingItem = new HashMap<>();
-        Map<String, VillagerUUID> stuckRootToTownie = new HashMap<>();
-        for (LivingEntity entity : town.getVillagerHandle().entities()) {
-            if (!(entity instanceof VisitorMobEntity v)) {
-                continue;
-            }
-            if (v.getNeed() != TownieNeed.UNMET_ITEM || v.getUnmetItem().isEmpty()) {
-                continue;
-            }
-            String root = v.getJobId().rootId();
-            stuckRoots.add(root);
-            stuckRootToMissingItem.putIfAbsent(root, v.getUnmetItem());
-            stuckRootToTownie.putIfAbsent(root, VillagerUUID.from(v.getUUID()));
-        }
-        unmetRootSince.keySet().retainAll(stuckRoots);
-        stuckRoots.forEach(r -> unmetRootSince.putIfAbsent(r, now));
+    void retireJobUnlockQuests() {
+        retireJobUnlockQuests(questBatches.getAllBatches(), questBatches::decline);
+    }
 
-        // The current viable producer per stuck root; absent when no unlockable producer
-        // exists (the root is stuck for a reason an unlock quest cannot fix).
-        ServerLevel level = town.getServerLevel();
-        Set<String> unlocked = unlockedRoots(town);
-        Map<String, String> rootToProducer = new HashMap<>();
-        for (Map.Entry<String, String> e : stuckRootToMissingItem.entrySet()) {
-            String producer = chooseProducerRoot(
-                    ServerJobsRegistry.staticProducerRootsForItem(level, Ingredients.fromString(e.getValue())),
-                    e.getKey(),
-                    unlocked
-            );
-            if (producer != null) {
-                rootToProducer.put(e.getKey(), producer);
-            }
-        }
-
-        Map<String, String> rootedOpenQuests = new HashMap<>();
-        Set<String> townWideOpenQuests = new HashSet<>();
-        Map<String, String> questProducers = new HashMap<>();
-        Map<String, MCQuestBatch> batchByKey = new HashMap<>();
-        Map<String, MCQuest> questByKey = new HashMap<>();
-        for (MCQuestBatch batch : questBatches.getAllBatches()) {
-            for (MCQuest q : batch.getAll()) {
+    static void retireJobUnlockQuests(
+            Collection<MCQuestBatch> batches,
+            Consumer<MCQuestBatch> decline
+    ) {
+        for (MCQuestBatch batch : ImmutableList.copyOf(batches)) {
+            for (MCQuest q : ImmutableList.copyOf(batch.getAll())) {
                 if (q.getType() != Quest.QuestType.JOB_UNLOCK || q.isComplete()) {
                     continue;
                 }
-                String key = batch.getBatchUUID() + ":" + q.getWantedId();
-                q.unlockStuckRoot()
-                 .ifPresentOrElse(
-                         root -> rootedOpenQuests.put(key, root),
-                         () -> townWideOpenQuests.add(key)
-                 );
-                questProducers.put(key, JobID.fromRL(q.getWantedId()).rootId());
-                batchByKey.put(key, batch);
-                questByKey.put(key, q);
+                String producer = JobID.fromRL(q.getWantedId()).rootId();
+                if (q.unlockStuckRoot().isEmpty()) {
+                    tagTopNeedRoomQuests(batch, producer);
+                }
+                QT.QUESTS_LOGGER.info("Withdrawing retired JOB_UNLOCK quest for root {}", producer);
+                if (batch.withdrawQuest(q) && batch.getAll().isEmpty()) {
+                    decline.accept(batch);
+                }
             }
         }
+    }
 
-        Set<String> dueRoots = new HashSet<>();
-        for (String root : stuckRoots) {
-            if (now - unmetRootSince.get(root) >= Config.UNMET_UNLOCK_QUEST_GRACE_TICKS.get()) {
-                dueRoots.add(root);
-            }
-        }
+    private static void tagTopNeedRoomQuests(
+            MCQuestBatch batch,
+            String producer
+    ) {
+        batch.getAll().stream()
+             .filter(q -> q.getType() == Quest.QuestType.ROOM)
+             .forEach(q -> q.setTopNeedProducer(producer));
+    }
 
-        UnlockReconcile r = reconcileUnlockQuests(
-                rootedOpenQuests, townWideOpenQuests, questProducers, rootToProducer, dueRoots
-        );
-        TownFlagBlockEntity t = this.town.getUnsafe();
-
-        for (String key : r.withdraw()) {
-            MCQuestBatch batch = batchByKey.get(key);
-            if (batch.withdrawQuest(questByKey.get(key)) && batch.getAll().isEmpty()) {
-                questBatches.decline(batch);
-            }
-        }
-        for (Map.Entry<String, String> e : r.retarget().entrySet()) {
-            String root = rootedOpenQuests.get(e.getKey());
-            String producer = e.getValue();
-            MCQuest q = questByKey.get(e.getKey());
-            JobID rootJob = ServerJobsRegistry.getAllRootJobs().stream()
-                    .filter(j -> producer.equals(j.rootId()))
-                    .findFirst()
-                    .orElse(new JobID(producer, producer));
-            q.retargetUnlock(
-                    JobID.toRL(rootJob),
-                    "Your " + root + " townie cannot find work: "
-                            + Ingredients.getName(Ingredients.fromString(stuckRootToMissingItem.get(root))).getString()
-                            + " is missing from the town's supplies. "
-                            + "Unlock the " + producer + " job with a Block of Progress so the town can make it."
-            );
-            t.setChanged();
-        }
-
-        // The tutorial drives jobs through JOB_CHANGE quests; an unlock quest on top of
-        // that is noise, so only post one once onboarding has stopped assigning jobs.
-        boolean onboardingDriving = questBatches.includes(q -> !q.isComplete()
-                && (q.isOnboarding() || q.getType() == Quest.QuestType.JOB_CHANGE));
-        if (!onboardingDriving) {
-            for (Map.Entry<String, String> e : r.post().entrySet()) {
-                postUnlockQuest(town, e.getKey(), stuckRootToMissingItem.get(e.getKey()), e.getValue(),
-                        stuckRootToTownie.get(e.getKey()));
-            }
-        }
+    /** The top-need beat is in flight: one of its room quests is still open. */
+    static boolean topNeedBeatOpen(Collection<? extends Quest<?, ?>> quests) {
+        return quests.stream().anyMatch(q -> !q.isComplete() && q.topNeedProducer().isPresent());
     }
 
     /**
-     * The per-tick reconcile of open JOB_UNLOCK quests under the one-per-stuck-root
-     * dedupe. A rooted quest survives while its root still maps to a viable producer,
-     * retargeted in place when the producer changes; it is withdrawn when its root stops
-     * mapping to any viable producer. A town-wide quest (the top-need phase: no stuck
-     * root) is <em>pinned</em> - it is neither retargeted nor withdrawn here. It stays on
-     * its target until {@link #processJobUnlocks} completes it (the root gets unlocked),
-     * so the player sees a stable "highest demand item" quest instead of one that
-     * re-targets on every tick (day-1 playtest: lock-until-complete). Posting happens only
-     * for a stuck root past grace that still has no surviving rooted quest.
-     *
-     * @param rootedOpenQuests   quest key -> the stuck root it was posted for
-     * @param townWideOpenQuests quest keys with no stuck root
-     * @param questProducers     quest key -> producer root the quest currently targets
-     * @param rootToProducer     currently-stuck root -> viable producer root (absent = no viable producer)
-     * @param rootsPastGrace     stuck roots past the posting grace period
+     * Producers whose top-need room the town already built. Building the room does not staff it
+     * (no unlock quest any more), so the need can stay on top; without this the beat would post
+     * the same room again.
      */
-    record UnlockReconcile(
-            Set<String> withdraw,
-            Map<String, String> retarget,
-            Map<String, String> post
-    ) {
-    }
-
-    static UnlockReconcile reconcileUnlockQuests(
-            Map<String, String> rootedOpenQuests,
-            Set<String> townWideOpenQuests,
-            Map<String, String> questProducers,
-            Map<String, String> rootToProducer,
-            Set<String> rootsPastGrace
-    ) {
-        Set<String> withdraw = new HashSet<>();
-        Map<String, String> retarget = new HashMap<>();
-
-        for (Map.Entry<String, String> e : rootedOpenQuests.entrySet()) {
-            String key = e.getKey();
-            if (!rootToProducer.containsKey(e.getValue())) {
-                withdraw.add(key);
-                continue;
-            }
-            String producer = rootToProducer.get(e.getValue());
-            if (!producer.equals(questProducers.get(key))) {
-                retarget.put(key, producer);
-            }
-        }
-        // Town-wide quests (top-need) are pinned: not retargeted or withdrawn here. They
-        // complete via processJobUnlocks when the root unlocks. (The townWideOpenQuests
-        // arg is accepted for the caller's convenience but intentionally unused.)
-
-        Map<String, String> post = new HashMap<>();
-        for (String root : rootsPastGrace) {
-            String producer = rootToProducer.get(root);
-            if (producer == null) {
-                continue;
-            }
-            boolean covered = rootedOpenQuests.entrySet().stream()
-                    .anyMatch(e -> root.equals(e.getValue()) && !withdraw.contains(e.getKey()));
-            if (!covered) {
-                post.put(root, producer);
-            }
-        }
-        return new UnlockReconcile(Set.copyOf(withdraw), Map.copyOf(retarget), Map.copyOf(post));
-    }
-
-    private void postUnlockQuest(
-            TownInterface town,
-            String root,
-            String missingItemKey,
-            String producer,
-            VillagerUUID owner
-    ) {
-        TownFlagBlockEntity t = this.town.getUnsafe();
-        JobID rootJob = ServerJobsRegistry.getAllRootJobs().stream()
-                .filter(j -> producer.equals(j.rootId()))
-                .findFirst()
-                .orElse(new JobID(producer, producer));
-
-        UUID batchUUID = UUID.randomUUID();
-        MCQuest q = MCQuest.jobUnlock(batchUUID, owner, JobID.toRL(rootJob));
-        q.setUnlockStuckRoot(root);
-        q.setFlavorText("Your " + root + " townie cannot find work: "
-                + Ingredients.getName(Ingredients.fromString(missingItemKey)).getString() + " is missing from the town's supplies. "
-                + "Unlock the " + producer + " job with a Block of Progress so the town can make it.");
-        MCQuestBatch.Inputs inputs = new MCQuestBatch.Inputs(batchUUID, owner);
-        inputs.addNewQuest(q);
-        MCReward reward = defaultQuestCompletionRewards(town);
-        MCQuestBatch batch = inputs.withRewardUponCompletion(new MCDelayedReward(t, reward));
-        questBatches.add(batch);
-        QT.QUESTS_LOGGER.info("Stuck root {} (missing {}) -> JOB_UNLOCK quest for root {} posted to {}",
-                root, missingItemKey, producer, owner);
-        t.messages.broadcastMessage("New quests are available! Right-click the town flag to see them.");
-    }
-
-    private boolean openJobUnlockQuestExists(String producerRoot) {
-        return questBatches.getAll().stream()
-                           .anyMatch(q -> q.getType() == Quest.QuestType.JOB_UNLOCK
-                                   && !q.isComplete()
-                                   && producerRoot.equals(JobID.fromRL(q.getWantedId()).rootId()));
-    }
-
-    /**
-     * A town-wide JOB_UNLOCK quest (no stuck root) - the top-need batch's quest - is open
-     * and incomplete. Rooted unlock quests carry a stuck root; this one does not. Used to
-     * lock the top-need choice until its quest completes (see {@code tryPhase2_75_topNeedUnlock}).
-     */
-    boolean openTownWideJobUnlockQuestExists() {
-        return questBatches.getAll().stream()
-                           .anyMatch(q -> q.getType() == Quest.QuestType.JOB_UNLOCK
-                                   && !q.isComplete()
-                                   && q.unlockStuckRoot().isEmpty());
+    static Set<String> builtTopNeedProducers(Collection<? extends Quest<?, ?>> quests) {
+        Set<String> built = new HashSet<>();
+        quests.stream()
+              .filter(Quest::isComplete)
+              .forEach(q -> q.topNeedProducer().ifPresent(built::add));
+        return built;
     }
 
     /**
@@ -844,42 +673,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             jobs.forEach(j -> roots.add(j.rootId()));
         }
         return roots;
-    }
-
-    /**
-     * Completes open JOB_UNLOCK quests once any townie has unlocked the wanted root.
-     * Stateless, mirroring {@link #processJobChanges}: safe to run every flag tick.
-     */
-    public void processJobUnlocks(ImmutableMap<VillagerUUID, ImmutableSet<JobID>> unlockedJobs) {
-        for (MCQuestBatch batch : questBatches.getAllBatches()) {
-            for (MCQuest q : batch.getAll()) {
-                if (q.getType() != Quest.QuestType.JOB_UNLOCK || q.isComplete()) {
-                    continue;
-                }
-                String wantedRoot = JobID.fromRL(q.getWantedId()).rootId();
-                boolean nowUnlocked = rootNowUnlocked(wantedRoot, unlockedJobs);
-                if (nowUnlocked) {
-                    QT.QUESTS_LOGGER.info("JOB_UNLOCK quest for root {} complete: the root is now unlocked", wantedRoot);
-                    batch.markRecipeAsComplete(null, q.getWantedId());
-                    return;
-                }
-            }
-        }
-    }
-
-    /** Any townie holding a work under the wanted root counts as the root being unlocked. */
-    static boolean rootNowUnlocked(
-            String wantedRoot,
-            ImmutableMap<VillagerUUID, ImmutableSet<JobID>> unlockedJobs
-    ) {
-        for (ImmutableSet<JobID> jobs : unlockedJobs.values()) {
-            for (JobID j : jobs) {
-                if (wantedRoot.equals(j.rootId())) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     public boolean isWaitingForHunterGathererTutorial() {
@@ -1097,13 +890,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     /**
      * The emergent batch after the cook lands: names the town's most-requested
-     * unmet supply (ranked from the economics need queue) and posts "unlock the
-     * job that produces it" + "build that job's base room". The content is
-     * need-driven, not scripted: whichever root produces the top need wins
-     * (coal -> miner today), and if nothing can produce the top supply the batch
-     * is skipped and the fixed phases continue. Posted once per top need: an
-     * already-open JOB_UNLOCK for the producer, or the producer being unlocked
-     * by some townie, ends this phase.
+     * unmet supply (ranked from the economics need queue) and posts "build the
+     * base room of the job that produces it". The content is need-driven, not
+     * scripted: whichever root produces the top need wins (coal -> miner today),
+     * and if nothing can produce the top supply the batch is skipped and the
+     * fixed phases continue. One beat at a time (an open top-need room quest
+     * locks it); a producer some townie already has, or whose room was already
+     * built for this beat, is skipped.
      */
     private @Nullable Tutorial tryPhase2_75_topNeedUnlock(TutorialTownView view) {
         if (jobChangesComplete() < 2) {
@@ -1124,37 +917,32 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             QT.QUESTS_LOGGER.info("Top-need batch: no unmet item needs registered; falling through");
             return null;
         }
-        if (openTownWideJobUnlockQuestExists()) {
-            // Lock-until-complete: an in-flight top-need quest is open, so keep it pinned to
-            // its target. Don't re-roll the top need or post a fresh quest until that one
-            // completes (processJobUnlocks). This removes the per-menu / per-tick churn the
-            // playtest flagged.
+        if (topNeedBeatOpen(questBatches.getAll())) {
+            // Lock-until-complete: the in-flight top-need room quest stays pinned to its target.
+            // Don't re-roll the top need or post a fresh quest until it completes. This removes
+            // the per-menu / per-tick churn the playtest flagged.
             return Tutorial.SKIPPED;
         }
         ServerLevel level = t.getServerLevel();
         Set<String> unlocked = unlockedRoots(ti);
+        Set<String> excluded = new HashSet<>(unlocked);
+        excluded.addAll(builtTopNeedProducers(questBatches.getAll()));
         TopNeedChoice choice = chooseTopNeed(
                 needs,
                 key -> ServerJobsRegistry.staticProducerRootsForItem(level, Ingredients.fromString(key)),
-                unlocked
+                excluded
         );
         if (choice.need() == null) {
             // Nothing in the ranking has a producer the town could unlock (player input
             // or already-unlocked capacity); nothing to name. Continue the fixed phases.
-            QT.QUESTS_LOGGER.info("Top-need batch: walked {} need(s); none actionable (unlocked {})",
-                    needs.size(), unlocked);
+            QT.QUESTS_LOGGER.info("Top-need batch: walked {} need(s); none actionable (unlocked or built {})",
+                    needs.size(), excluded);
             return null;
         }
         ItemEconomicsData top = choice.need();
         String producer = choice.producer();
         QT.QUESTS_LOGGER.info("Top-need batch: chose need {} (x{}) -> producer {} (unlocked {})",
                 top.ingredientKey(), top.timesNeeded(), producer, unlocked);
-        if (openJobUnlockQuestExists(producer)) {
-            // The top actionable need already has an unlock in flight: the phase's
-            // purpose is served — end it here rather than walking deeper.
-            return Tutorial.SKIPPED;
-        }
-
         JobID rootJob = ServerJobsRegistry.getAllRootJobs().stream()
                 .filter(j -> producer.equals(j.rootId()))
                 .findFirst()
@@ -1164,17 +952,16 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
-        MCQuest unlockQuest = MCQuest.jobUnlock(batchUUID, null, JobID.toRL(rootJob));
-        unlockQuest.setFlavorText("Your town's stock of " + itemName + " has run dry and no one can make it. "
-                + "Unlock the " + producer + " job with a Block of Progress so the town can produce it.");
-        q.addNewQuest(unlockQuest);
+        // Room only (dev, 2026-10-22): the old "Unlock job" quest asked for a BOP spend that rolls
+        // a random root, so it rarely delivered the producer.
         MCQuest roomQuest = MCQuest.standalone(batchUUID, null, room);
-        roomQuest.setFlavorText("The " + producer + " needs a room to work in. Build the "
-                + producer + " room (" + room.getPath().replaceFirst(".*block\\.", "") + ") and register its door.");
+        roomQuest.setTopNeedProducer(producer);
+        roomQuest.setFlavorText("Your town keeps running out of " + itemName + ". A " + producer
+                + " can make it. Build the " + producer + " room and register its door so one has a place to work.");
         q.addNewQuest(roomQuest);
         MCQuestBatch qb = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_NEW_JOB_ROOM));
         questBatches.add(qb);
-        QT.QUESTS_LOGGER.info("Top-need batch posted: unlock {} + room {} (top need {})",
+        QT.QUESTS_LOGGER.info("Top-need batch posted: {} room {} (top need {})",
                 producer, room, top.ingredientKey());
         notifyNewQuests(view);
         return Tutorial.APPLIED;

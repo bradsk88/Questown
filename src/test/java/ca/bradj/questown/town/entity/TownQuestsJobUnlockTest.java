@@ -1,6 +1,5 @@
 package ca.bradj.questown.town.entity;
 
-import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -10,15 +9,14 @@ import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.quests.Reward;
 import ca.bradj.questown.town.rewards.RewardType;
 import ca.bradj.questown.town.quests.QuestBatch;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import net.minecraft.SharedConstants;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -104,23 +102,6 @@ class TownQuestsJobUnlockTest {
     }
 
     @Test
-    void rootNowUnlockedFindsWorkUnderRoot() {
-        VillagerUUID uuid = VillagerUUID.from(UUID.randomUUID());
-        assertTrue(TownQuests.rootNowUnlocked(
-                "farmer",
-                ImmutableMap.of(uuid, ImmutableSet.of(new JobID("farmer", "grain")))
-        ));
-        assertFalse(TownQuests.rootNowUnlocked(
-                "farmer",
-                ImmutableMap.of(uuid, ImmutableSet.of(new JobID("hunter", "sword")))
-        ));
-        assertFalse(TownQuests.rootNowUnlocked(
-                "farmer",
-                ImmutableMap.of()
-        ));
-    }
-
-    @Test
     void withdrawQuestRemovesOutrightWithNoPlaceholder() {
         // The markRecipeAsLostByKey path replaced the quest with a lost() placeholder
         // re-typed as an ACTIVE room quest that no completion path ever cleared (the
@@ -197,168 +178,86 @@ class TownQuestsJobUnlockTest {
         );
     }
 
-    // --- reconcileUnlockQuests (pure) ---
+    // --- retireJobUnlockQuests (dev 2026-10-22: post-onboarding quests are room quests only) ---
 
-    @Test
-    void reconcileRetargetsInPlaceWhenProducerFlips() {
-        // The gatherer's missing item oscillates rods (crafter) -> food (baker):
-        // the open quest is retargeted, not lost-and-reposted.
-        TownQuests.UnlockReconcile r = TownQuests.reconcileUnlockQuests(
-                Map.of("q1", "gatherer"),
-                Set.of(),
-                Map.of("q1", "crafter"),
-                Map.of("gatherer", "baker"),
-                Set.of("gatherer")
-        );
-        assertEquals(Map.of("q1", "baker"), r.retarget());
-        assertTrue(r.withdraw().isEmpty());
-        assertTrue(r.post().isEmpty());
+    private static final ResourceLocation MINER_ROOM = new ResourceLocation("questown", "mine");
+
+    private static MCQuestBatch topNeedLegacyBatch() {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs inputs = new MCQuestBatch.Inputs(batchUUID, null);
+        inputs.addNewQuest(MCQuest.jobUnlock(batchUUID, null, JobID.toRL(new JobID("miner", "miner"))));
+        inputs.addNewQuest(MCQuest.standalone(batchUUID, null, MINER_ROOM));
+        return inputs.withRewardUponCompletion(new NoOpReward());
     }
 
     @Test
-    void reconcileKeepsQuestWhenRootStillMapsToItsProducer() {
-        TownQuests.UnlockReconcile r = TownQuests.reconcileUnlockQuests(
-                Map.of("q1", "gatherer"),
-                Set.of(),
-                Map.of("q1", "crafter"),
-                Map.of("gatherer", "crafter"),
-                Set.of("gatherer")
-        );
-        assertTrue(r.withdraw().isEmpty());
-        assertTrue(r.retarget().isEmpty());
-        assertTrue(r.post().isEmpty());
-    }
-
-    @Test
-    void reconcileWithdrawsQuestWhenRootResolves() {
-        // No stuck root left (the player stocked the item): the quest is withdrawn.
-        TownQuests.UnlockReconcile r = TownQuests.reconcileUnlockQuests(
-                Map.of("q1", "gatherer"),
-                Set.of(),
-                Map.of("q1", "crafter"),
-                Map.of(),
-                Set.of()
-        );
-        assertEquals(Set.of("q1"), r.withdraw());
-        assertTrue(r.retarget().isEmpty());
-        assertTrue(r.post().isEmpty());
-    }
-
-    @Test
-    void reconcileWithdrawsRootedQuestWhenNoViableProducer() {
-        // The root is still stuck, but its missing item has no unlockable producer:
-        // an unlock quest cannot help, so the quest is withdrawn.
-        TownQuests.UnlockReconcile r = TownQuests.reconcileUnlockQuests(
-                Map.of("q1", "gatherer"),
-                Set.of(),
-                Map.of("q1", "crafter"),
-                Map.of(),
-                Set.of("gatherer")
-        );
-        assertEquals(Set.of("q1"), r.withdraw());
-        assertTrue(r.post().isEmpty());
-    }
-
-    @Test
-    void reconcilePostsForNewRootPastGrace() {
-        TownQuests.UnlockReconcile r = TownQuests.reconcileUnlockQuests(
-                Map.of(),
-                Set.of(),
-                Map.of(),
-                Map.of("gatherer", "crafter"),
-                Set.of("gatherer")
-        );
-        assertEquals(Map.of("gatherer", "crafter"), r.post());
-        assertTrue(r.withdraw().isEmpty());
-    }
-
-    @Test
-    void reconcileDoesNotPostForRootWithOpenQuest() {
-        TownQuests.UnlockReconcile r = TownQuests.reconcileUnlockQuests(
-                Map.of("q1", "gatherer"),
-                Set.of(),
-                Map.of("q1", "crafter"),
-                Map.of("gatherer", "crafter"),
-                Set.of("gatherer")
-        );
-        assertTrue(r.post().isEmpty());
-        assertTrue(r.withdraw().isEmpty());
-    }
-
-    @Test
-    void reconcileDoesNotPostForRootInsideGrace() {
-        TownQuests.UnlockReconcile r = TownQuests.reconcileUnlockQuests(
-                Map.of(),
-                Set.of(),
-                Map.of(),
-                Map.of("gatherer", "crafter"),
-                Set.of()
-        );
-        assertTrue(r.post().isEmpty());
-    }
-
-    @Test
-    void reconcileTownWideQuestKeptWhileSomeRootMapsToProducer() {
-        TownQuests.UnlockReconcile r = TownQuests.reconcileUnlockQuests(
-                Map.of(),
-                Set.of("q2"),
-                Map.of("q2", "baker"),
-                Map.of("gatherer", "baker"),
-                Set.of()
-        );
-        assertTrue(r.withdraw().isEmpty());
-        assertTrue(r.post().isEmpty());
-    }
-
-    @Test
-    void reconcileTownWideQuestPinnedEvenWhenNoRootMapsToProducer() {
-        // Lock-until-complete (day-1 playtest): the town-wide top-need quest is pinned to
-        // its producer until processJobUnlocks completes it - it is NOT withdrawn or
-        // retargeted when the demand ranking flips. Here the only stuck root maps to
-        // crafter (not the quest's producer, baker), and no rooted quest is past grace,
-        // so nothing is posted; the town-wide quest (q2) must survive untouched.
-        TownQuests.UnlockReconcile r = TownQuests.reconcileUnlockQuests(
-                Map.of(),
-                Set.of("q2"),
-                Map.of("q2", "baker"),
-                Map.of("gatherer", "crafter"),
-                Set.of()
-        );
-        assertTrue(r.withdraw().isEmpty());
-        assertTrue(r.retarget().isEmpty());
-        assertTrue(r.post().isEmpty());
-    }
-
-    // --- openTownWideJobUnlockQuestExists (the top-need lock-until-complete guard) ---
-
-    @Test
-    void openTownWideJobUnlockQuestTrueWhenTownWideOpen() {
-        TownQuests quests = new TownQuests();
-        quests.questBatches.add(jobUnlockBatch(new JobID("baker", "baker")));
-        assertTrue(quests.openTownWideJobUnlockQuestExists());
-    }
-
-    @Test
-    void openTownWideJobUnlockQuestFalseWhenOnlyRootedOpen() {
-        // A rooted unlock quest (carries a stuck root) does NOT count as the
-        // town-wide top-need quest, so the guard stays false and a new top-need
-        // quest may still be posted.
-        TownQuests quests = new TownQuests();
+    void retireWithdrawsAStuckRootUnlockQuestAndDeclinesItsEmptyBatch() {
         MCQuestBatch b = jobUnlockBatch(new JobID("baker", "baker"));
         b.getAll().get(0).setUnlockStuckRoot("gatherer");
-        quests.questBatches.add(b);
-        assertFalse(quests.openTownWideJobUnlockQuestExists());
+        List<MCQuestBatch> declined = new ArrayList<>();
+
+        TownQuests.retireJobUnlockQuests(List.of(b), declined::add);
+
+        assertTrue(b.getAll().isEmpty());
+        assertEquals(List.of(b), declined);
     }
 
     @Test
-    void openTownWideJobUnlockQuestFalseWhenComplete() {
-        TownQuests quests = new TownQuests();
-        MCQuestBatch b = jobUnlockBatch(new JobID("baker", "baker"));
-        ResourceLocation wanted = JobID.toRL(new JobID("baker", "baker"));
-        b.markRecipeAsComplete(null, wanted);
-        quests.questBatches.add(b);
-        assertFalse(quests.openTownWideJobUnlockQuestExists());
+    void retireKeepsALegacyTopNeedRoomQuestTaggedWithItsProducer() {
+        MCQuestBatch b = topNeedLegacyBatch();
+        List<MCQuestBatch> declined = new ArrayList<>();
+
+        TownQuests.retireJobUnlockQuests(List.of(b), declined::add);
+
+        assertEquals(1, b.getAll().size());
+        MCQuest room = b.getAll().get(0);
+        assertEquals(MINER_ROOM, room.getWantedId());
+        assertEquals("miner", room.topNeedProducer().orElseThrow());
+        assertTrue(TownQuests.topNeedBeatOpen(b.getAll()));
+        assertTrue(declined.isEmpty());
     }
+
+    @Test
+    void retireLeavesCompletedUnlockQuestsAlone() {
+        MCQuestBatch b = jobUnlockBatch(new JobID("baker", "baker"));
+        b.markRecipeAsComplete(null, JobID.toRL(new JobID("baker", "baker")));
+
+        TownQuests.retireJobUnlockQuests(List.of(b), x -> {});
+
+        assertEquals(1, b.getAll().size());
+    }
+
+    // --- the top-need lock and the built-producer exclusion ---
+
+    @Test
+    void topNeedBeatOpenOnlyWhileItsRoomQuestIsOpen() {
+        MCQuest open = MCQuest.standalone(UUID.randomUUID(), null, MINER_ROOM);
+        open.setTopNeedProducer("miner");
+        MCQuest untagged = MCQuest.standalone(UUID.randomUUID(), null, MINER_ROOM);
+
+        assertTrue(TownQuests.topNeedBeatOpen(List.of(open)));
+        assertFalse(TownQuests.topNeedBeatOpen(List.of(untagged)));
+        assertFalse(TownQuests.topNeedBeatOpen(List.of(open.completed(null))));
+    }
+
+    @Test
+    void aBuiltTopNeedRoomRetiresItsProducer() {
+        MCQuest open = MCQuest.standalone(UUID.randomUUID(), null, MINER_ROOM);
+        open.setTopNeedProducer("miner");
+
+        assertEquals(Set.of(), TownQuests.builtTopNeedProducers(List.of(open)));
+        assertEquals(Set.of("miner"), TownQuests.builtTopNeedProducers(List.of(open.completed(null))));
+    }
+
+    @Test
+    void theTopNeedTagSurvivesNbtAndTheLostPlaceholder() {
+        MCQuest q = MCQuest.standalone(UUID.randomUUID(), null, MINER_ROOM);
+        q.setTopNeedProducer("miner");
+
+        assertEquals("miner", MCQuest.SERIALIZER.deserializeNBT(MCQuest.SERIALIZER.serializeNBT(q)).topNeedProducer().orElseThrow());
+        assertEquals("miner", q.lost().topNeedProducer().orElseThrow());
+    }
+
     /** A claim no-op so the completion path can run in a unit test without a town. */
     static class NoOpReward extends MCReward {
         NoOpReward() {

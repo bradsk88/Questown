@@ -233,6 +233,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.setFlavorText(this.getFlavorText());
         q.setOnboarding(this.isOnboarding());
         q.setDiscardable(this.isDiscardable());
+        q.setTopNeedProducer(this.topNeedProducer().orElse(null));
         q.concurrentJobIdsEncoded = this.concurrentJobIdsEncoded;
         return q;
     }
@@ -251,6 +252,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.completedOn = null;
         q.setOnboarding(this.isOnboarding());
         q.setDiscardable(this.isDiscardable());
+        q.setTopNeedProducer(this.topNeedProducer().orElse(null));
         return q;
     }
 
@@ -264,6 +266,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         private static final String NBT_FLAVOR_TEXT = "flavor_text";
         private static final String NBT_ONBOARDING = "onboarding";
         private static final String NBT_DISCARDABLE = "discardable";
+        private static final String NBT_TOP_NEED_PRODUCER = "top_need_producer";
         private static final String NBT_CONCURRENT_JOB_IDS = "concurrent_job_ids";
         private static final String NBT_STATUS = "status";
         private static final String NBT_LOOT_EXTRACTED = "loot_extracted";
@@ -305,6 +308,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             if (quest.isDiscardable()) {
                 ct.putBoolean(NBT_DISCARDABLE, true);
             }
+            quest.topNeedProducer().ifPresent(p -> ct.putString(NBT_TOP_NEED_PRODUCER, p));
             if (quest instanceof MCQuest mcq && mcq.concurrentJobIdsEncoded != null) {
                 ct.putString(NBT_CONCURRENT_JOB_IDS, mcq.concurrentJobIdsEncoded);
             }
@@ -367,6 +371,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             }
             if (nbt.getBoolean(NBT_DISCARDABLE)) {
                 quest.setDiscardable(true);
+            }
+            if (nbt.contains(NBT_TOP_NEED_PRODUCER)) {
+                quest.setTopNeedProducer(nbt.getString(NBT_TOP_NEED_PRODUCER));
             }
             if (nbt.contains(NBT_CONCURRENT_JOB_IDS)) {
                 quest.concurrentJobIdsEncoded = nbt.getString(NBT_CONCURRENT_JOB_IDS);

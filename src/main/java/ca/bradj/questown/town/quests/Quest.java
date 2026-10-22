@@ -35,6 +35,10 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     // Only procedurally generated batches may be discarded by the player (a "Remove request" x on
     // the quest card); designed and tutorial batches may not (2026-10-21 agent playtest).
     private boolean discardable;
+    // The producer root a top-need room quest was posted for ("build the miner's room" for a coal
+    // need), or null. Locks the top-need beat while open and retires that producer once built.
+    @Nullable
+    private String topNeedProducer;
 
     Quest() {
         this(null, null, null, null, null, 1);
@@ -176,6 +180,14 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         this.discardable = discardable;
     }
 
+    public Optional<String> topNeedProducer() {
+        return Optional.ofNullable(topNeedProducer);
+    }
+
+    public void setTopNeedProducer(@Nullable String producerRoot) {
+        this.topNeedProducer = producerRoot;
+    }
+
     /**
      * Copy the saved state the load replay's typed rebuild (QuestBatches.filterOutDuplicateCompletion)
      * does not reconstruct: the onboarding marker (it gates arrivals) and the flavor text.
@@ -184,6 +196,7 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         this.onboarding = saved.onboarding;
         this.discardable = saved.discardable;
         this.flavorText = saved.flavorText;
+        this.topNeedProducer = saved.topNeedProducer;
     }
 
     public enum QuestStatus {

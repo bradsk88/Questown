@@ -61,3 +61,12 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
 10. **Post-onboarding job-change quests** — answer: **drop them**; post-onboarding goes back to room quests
     only. Future: opt-in themed quest chains; golden BOPs (education) will make job-change asks reasonable.
 11. **BOP icon** — answer: **scale up in GUI** (full slot size), in-world unchanged.
+
+### How the answers were applied (for the dev to veto)
+
+- **#10 "drop job-change quests post-onboarding"** — read as "drop the quests that rely on the random
+  BOP roll". Those are the two JOB_UNLOCK sources: the top-need "Unlock job: X" quest and the stuck-townie
+  unlock quest. Both are gone (b/c commit "Quests: post-onboarding asks are room quests only"). Phases 2.7
+  (miner) and 4/5 (crafter, bowl, concurrent jobs) are **kept**: they are onboarding-flagged, so their
+  open JOB_CHANGE fills the BOP-spend guarantee slot and the spend is not random. Say so if those should
+  go too.

@@ -945,7 +945,7 @@ public final class VillageGrowthExecutor {
             (e.getKey().isComplete() ? done : open).add(e.getKey().toShortString());
         }
         // The lists come from the live quest handle, not a fresh snapshot: a
-        // post/lose loop (e.g. tickUnmetUnlockQuests) leaves lost-but-present
+        // post/lose loop (e.g. the retired JOB_UNLOCK reconcile) leaves lost-but-present
         // entries and the same quest id accumulates (2026-10-11: 107x
         // JOB_UNLOCK spam per id in two minutes). Collapse repeats to
         // `entry xN` so the accumulation is a one-line log find, not a

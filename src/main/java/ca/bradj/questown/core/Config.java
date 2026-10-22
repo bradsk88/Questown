@@ -37,7 +37,6 @@ public class Config {
     public static final ConfigValue<Integer> TICK_SAMPLING_RATE;
 
     public static final ConfigValue<Integer> MIN_WEIGHT_PER_QUEST_BATCH;
-    public static final ConfigValue<Long> UNMET_UNLOCK_QUEST_GRACE_TICKS;
 
     public static final ConfigValue<Integer> QUEST_BATCH_VILLAGER_BOOST_FACTOR;
 
@@ -180,9 +179,6 @@ public class Config {
         DUPLICATE_QUEST_COST_FACTOR = BUILDER.comment(
                 "When new batches of quests are calculated, a request for a room to be built AGAIN is more expensive. This is done to discourage lots of repeated quests. This factor determines how much more expensive it is."
         ).defineInRange("DuplicateQuestCostFactor", 1.5, 1.0, 100.0);
-        UNMET_UNLOCK_QUEST_GRACE_TICKS = BUILDER.comment(
-                "How long a townie may be stuck without viable work (unmet item) before the town posts a quest suggesting which job to unlock so the missing item can be produced."
-        ).defineInRange("UnmetUnlockQuestGraceTicks", 12000L, 100L, 240000L);
         BUILDER.pop();
 
         // Jobs Config

@@ -84,7 +84,7 @@ dusk (4ca11bbe), no-table diner give-up.
    seeking_work about 10 times a second for ~20 s (05:29:0x-05:29:2x), then gave up until
    05:31:58. A BOP goes to the flag, not a chest, so the storage gate looks wrong for this job.
    Not traced further.
-10. (judge) The phase-2.75 "Unlock job: Baker" quest says "Unlock the baker job with a Block of
+10. **[FIXED 2026-10-22, dev: remove the quest; room quest only]** The phase-2.75 "Unlock job: Baker" quest says "Unlock the baker job with a Block of
     Progress". The only BOP spend that changes a root is the villager change-job tab, which is
     random for a plain BOP. I spent the last plain (tutorial) BOP on the gatherer, as the copy
     says, and got a farmer ("Changing villager from gatherer to one of [farmer, smelter, ...]").
@@ -275,7 +275,7 @@ dusk (4ca11bbe), no-table diner give-up.
     moves from row 1 to row 2, so a player's muscle memory (or a click-script) hits Swords.
     Minor; noted because the free-food row is the day-1 lifeline (see r5).
 - r7 edge: a chest placed into a storeroom wall announced "Storeroom destroyed" and "Small Storeroom destroyed" in the same tick (room_destroyed for store_room_medium and store_room): the chest both upgraded and broke the room. Self-inflicted; low priority.
-29. (judge, copy) r7 phase 2.75 picked "#questown:villager_food (x4) -> baker" while a cook was
+29. **[FIXED 2026-10-22 with #10: the unlock quest and its "no one can make it" copy are gone]** (judge, copy) r7 phase 2.75 picked "#questown:villager_food (x4) -> baker" while a cook was
     already making villager food. `chooseTopNeed` needs one *not-yet-unlocked* producer, not zero
     producers, but the quest says "Your town's stock of Villager Food has run dry and no one can
     make it." Also hard-coded English in `TownQuests` (~L1168, not a lang key), and the room

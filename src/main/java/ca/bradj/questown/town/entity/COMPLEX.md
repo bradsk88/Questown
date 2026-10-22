@@ -272,7 +272,14 @@ flowchart LR
 
 ---
 
-# Stuck townie -> JOB_UNLOCK quest (the diagnostic quest)
+# Stuck townie -> JOB_UNLOCK quest (the diagnostic quest) — RETIRED 2026-10-22
+
+> **Retired.** The quest asked for a BOP spend, which rolls a random root, so it rarely
+> delivered the producer. Dev ruling 2026-10-22: post-onboarding quests are room quests only.
+> Nothing posts JOB_UNLOCK quests now; `TownQuests.retireJobUnlockQuests` (every quest tick)
+> withdraws any a saved town still carries. `reconcileUnlockQuests`, `postUnlockQuest`,
+> `processJobUnlocks` and the `UnmetUnlockQuestGraceTicks` config are gone. The section below is
+> history. See "Top-need room quest" for what replaced the top-need half.
 
 A root whose townies have a job but no material for it sits in `UNMET_ITEM`
 and the town soft-locks. That state was invisible in play (only a cryptic
@@ -712,31 +719,32 @@ now gated on the same `playersNearbyOnPrevTick` flag: it fires once on the trans
 log frequency. (Found 2026-10-12 during the econ-tab crash-probe repro; ticket
 `.scratch/day1-playtest-2026-10-11/flag-stopped-ticking-per-tick-log-spam.md`.)
 
-# Top-need JOB_UNLOCK quest — lock-until-complete (no per-tick churn)
+# Top-need room quest — lock-until-complete (no per-tick churn)
 
-Two sources post `JOB_UNLOCK` quests. **Rooted** ones (from
-`reconcileUnlockQuests`/`postUnlockQuest`) carry a stuck root (`MCQuest.unlockStuckRoot()`
-non-empty) and are retargeted/withdrawn every tick as the stuck root's viable producer
-flips. **Town-wide** ones (the top-need phase `tryPhase2_75_topNeedUnlock`: no stuck root)
-are the player-visible "highest demand item" quest. The day-1 playtest flagged that this
-quest visibly changed target every time the menu was opened — the ranked unmet-need queue
-shifts tick-to-tick, so the chosen top need moved and the in-flight quest was withdrawn
-and re-posted.
+Phase 2.75 (`tryPhase2_75_topNeedUnlock`) names the town's top unmet need and posts the base
+room of the job that produces it. Until 2026-10-22 the batch also carried a town-wide
+"Unlock job: X" JOB_UNLOCK quest; it asked for a BOP spend that rolls a random root, so the dev
+removed it (room quest only).
 
-Fix = lock-until-complete: the town-wide quest stays pinned to its target until
-`processJobUnlocks` completes it (the root gets unlocked), then the next top need is
-posted. Concretely:
-- `reconcileUnlockQuests` no longer withdraws town-wide quests on a producer flip (the
-  `townWideOpenQuests` arg is accepted but intentionally unused — only rooted quests are
-  reconciled). The `reconcileTownWideQuestPinnedEvenWhenNoRootMapsToProducer` test pins
-  this.
-- `tryPhase2_75_topNeedUnlock` returns `SKIPPED` early when
-  `openTownWideJobUnlockQuestExists()` (an open, incomplete JOB_UNLOCK with an empty stuck
-  root) — so it never re-rolls the top need or posts a second town-wide quest while one is
-  in flight. The predicate is unit-tested (`openTownWideJobUnlockQuest*`); the phase wiring
-  around it needs a town/econ harness and is verified in a held run.
+```mermaid
+flowchart LR
+    T["tryPhase2_75"] --> L{"topNeedBeatOpen?\n(open quest with topNeedProducer)"}
+    L -- yes --> S[SKIPPED]
+    L -- no --> C["chooseTopNeed(needs, producers,\nexcluded = unlocked ∪ builtTopNeedProducers)"]
+    C --> P["post standalone(room)\n+ setTopNeedProducer(producer)"]
+```
 
-Ticket: `.scratch/day1-playtest-2026-10-11/demand-quest-constantly-replaced.md`.
+- **The lock** is `topNeedBeatOpen`: any incomplete quest tagged with `topNeedProducer` (a
+  `Quest` field, NBT `top_need_producer`, carried by `completed()`/`lost()`/load replay). It keeps
+  the in-flight room pinned so the shifting need ranking can't re-target it every tick (the
+  day-1 playtest's churn: `.scratch/day1-playtest-2026-10-11/demand-quest-constantly-replaced.md`).
+- **Retiring a producer**: building the room does not staff it, so the same need can stay on
+  top. `builtTopNeedProducers` (completed tagged quests) joins the unlocked roots in the
+  exclusion set, or the beat would re-post the same room forever.
+- **Saved towns**: `retireJobUnlockQuests` tags a legacy top-need batch's room quest with the
+  withdrawn unlock quest's producer, so the lock and the exclusion see it.
+- Pins: `TownQuestsJobUnlockTest` (retire, lock, exclusion, tag NBT/lost round-trip),
+  `TownQuestsTopNeedWalkTest` (the walk). The phase wiring needs a town/econ harness.
 
 # FillHunger log — no-op guard (2026-10-12)
 
