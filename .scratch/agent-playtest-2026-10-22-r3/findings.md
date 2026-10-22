@@ -242,3 +242,17 @@ dusk (4ca11bbe), no-table diner give-up.
     relocation). A mat removed without a player break stays in the flag's sub-block list and
     errors once per load; after a relocation the carried mats point at the old site. Small;
     the dead mat is otherwise skipped (see the broken-mat note above).
+26. **Relocation turns every townie back into a gatherer** (r6, verified in the log). The hunter
+    (0bd10798, hunter since day 4) came back at the new flag as `gatherer:gather` (09:49:37
+    "Job changed to gatherer:seeking_work ... [from gatherer:gather]"), contradicting ADR-0009
+    ("What travels: ... jobs"). Cause (code read at HEAD): `TownRelocation.respawnRosterTask`
+    respawns each roster UUID via `SpawnVisitorReward`, and `spawnVisitorNearby` always seeds
+    `GathererUnmappedNoToolWorkQtrDay.ID`'s journal; the comment expects "per-villager
+    jobs/knowledge re-attach", but the current job lives in the entity's journal, which
+    `TownShutdownController.absorb` discards. Unlocked jobs / proficiencies are keyed by UUID and
+    probably survive; the current root does not. Wake-in-place and cancel also go through
+    `respawnAbsorbedAndActivate` -> `SpawnVisitorReward` (not run live). Not fixed: needs a
+    persistence decision (dev): e.g. absorb records each townie's `getJobJournalSnapshot()` (or
+    just its JobID) into the carried tile data, and the respawn initializes from it the way
+    `TownFlagState.recoverMobs` does. Recommendation: carry the journal snapshot (keeps held
+    items too).
