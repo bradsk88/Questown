@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu> {
@@ -134,7 +135,7 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
         int position = 0;
         this.expBar = renderExperience(rc, position);
         position++;
-//        renderMood(rc, position);
+        renderMoodEffects(rc, position);
         position++;
         if (Config.HUNGER_ENABLED.get()) {
             this.hngBar = renderHunger(rc, position);
@@ -149,12 +150,44 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
             int position
     ) {
         Component title = Compat.translatable("menu.villager_stats.experience");
-        return renderBar(
+        ImmutableRect2i bar = renderBar(
                 rc,
                 position,
                 title,
                 (int) (100f * menu.getExperienceValue() / (float) menu.getExperienceTarget())
         );
+        // "Lvl N" right-aligned on the title line (2026-10-11 playtest).
+        Component level = Compat.translatable("menu.villager_stats.level", menu.getLevel());
+        int bgX = (this.width - backgroundWidth) / 2;
+        int titleY = (this.height - backgroundHeight) / 2 + (25 * position) + 16;
+        rc.darkText(level, bgX + backgroundWidth - 8 - this.font.width(level), titleY);
+        return bar;
+    }
+
+    /**
+     * What is weighing on the villager, in words ("Didn't sleep"): the mood effects the townie
+     * carries. The stats page showed no sign of a sleepless or raw-food day (2026-10-11 playtest).
+     * Nothing is drawn when no effect is active.
+     */
+    private void renderMoodEffects(
+            RenderContext rc,
+            int position
+    ) {
+        if (menu.getMoodEffects().isEmpty()) {
+            return;
+        }
+        int bgX = (this.width - backgroundWidth) / 2;
+        int y = (this.height - backgroundHeight) / 2 + (25 * position) + 16;
+        // One line in the stats row (rows are 25 px apart); a long list ends in "...".
+        List<String> names = new ArrayList<>();
+        for (String effect : menu.getMoodEffects()) {
+            String path = effect.substring(effect.indexOf(':') + 1);
+            names.add(Compat.translatableWithFallback(
+                    "menu.villager_stats.effect." + path, ca.bradj.questown.jobs.JobNames.variant(path)
+            ).getString());
+        }
+        String line = Compat.translatable("menu.villager_stats.mood_effects", String.join(", ", names)).getString();
+        rc.darkText(Compat.literal(Compat.fitToWidth(this.font, line, backgroundWidth - 16)), bgX + 8, y);
     }
 
     private void renderMood(

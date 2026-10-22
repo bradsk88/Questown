@@ -50,8 +50,8 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
         super(Compat.literal(""));
         DisplayInfo displayInfo = new DisplayInfo(
                 Items.CREEPER_HEAD.getDefaultInstance(),
-                Compat.literal("test"),
-                Compat.literal("test2"),
+                Compat.translatable("menu.jobs.root.title"),
+                Compat.translatable("menu.jobs.root.description"),
                 Optional.of(new ResourceLocation("textures/gui/advancements/backgrounds/stone.png")),
                 AdvancementType.TASK,
                 false,

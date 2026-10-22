@@ -23,7 +23,8 @@ import java.util.stream.Stream;
 
 public class WorkScreen extends CompatContainerScreen<TownWorkContainer> implements ScrollableScreen {
     private static final int backgroundWidth = 176;
-    private static final int backgroundHeight = 166;
+    // 166 + a 16 px bottom band for the auto-request toggle, which sat on the border (r3 #4).
+    private static final int backgroundHeight = 182;
     private static final int borderPadding = 6;
 
     private static final int buttonWidth = 13;
@@ -36,7 +37,12 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
     private static final int CARD_WIDTH = (backgroundWidth) - (PAGE_PADDING * 2);
     private static final int CARD_HEIGHT = 42;
 
-    private static final int MAX_CARDS_PER_PAGE = (backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING);
+    // Cards start below the page header (two paddings + the first card's padding) and stop above
+    // the toggle band (glyph + padding + a gap).
+    private static final int CARDS_TOP = PAGE_PADDING * 3;
+    private static final int TOGGLE_BAND = 9 + PAGE_PADDING + 4;
+    private static final int MAX_CARDS_PER_PAGE =
+            (backgroundHeight - CARDS_TOP - TOGGLE_BAND) / (CARD_HEIGHT + CARD_PADDING);
 
     private final List<UIWork> work;
     private final JEI.NineNine background;
@@ -223,8 +229,9 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
         ctx.renderWidget(this.addMoreBtn, mouseX, mouseY, partialTicks);
 
         // F2: the board's auto-request toggle, pinned to the bottom band.
+        int panelTop = (this.height - backgroundHeight) / 2;
         int tgX = x + PAGE_PADDING;
-        int tgY = y + backgroundHeight - PAGE_PADDING - 24;
+        int tgY = panelTop + backgroundHeight - PAGE_PADDING - 9;
         boolean on = menu.isBoardAutoRequest();
         ctx.fill(tgX, tgY, tgX + 9, tgY + 9, 0x60000000);
         if (on) {

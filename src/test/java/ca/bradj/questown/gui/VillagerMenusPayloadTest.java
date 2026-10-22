@@ -32,7 +32,7 @@ class VillagerMenusPayloadTest {
                 9,
                 List.of(),
                 new BlockPos(1, 64, -2),
-                new VillagerStatsData(0.75f, 3, 100, 0.8f, 0.1f),
+                new VillagerStatsData(0.75f, 3, 100, 0.8f, 0.1f, 2, com.google.common.collect.ImmutableList.of("questown:sleepless")),
                 VillagerEconomicsData.none(),
                 true,
                 true,
@@ -63,6 +63,8 @@ class VillagerMenusPayloadTest {
         assertEquals(100, r.stats.experienceTarget());
         assertEquals(0.8f, r.stats.moodPercent());
         assertEquals(0.1f, r.stats.damageLevelPercent());
+        assertEquals(2, r.stats.level());
+        assertEquals(List.of("questown:sleepless"), r.stats.moodEffects());
         assertEquals(p.showBlockOfProgressTab, r.showBlockOfProgressTab);
         assertEquals(p.showSkillsTab, r.showSkillsTab);
         assertEquals(false, r.showInventoryTab);

@@ -218,6 +218,14 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public ImmutableList<String> getMoodEffectIds(UUID uuid) {
+                return moods.getEffects().getOrDefault(uuid, ImmutableList.of()).stream()
+                        .map(e -> e.effect().toString())
+                        .distinct()
+                        .collect(ImmutableList.toImmutableList());
+            }
+
+            @Override
             public void applyMoodEffect(UUID uuid, ResourceLocation effect, long untilTick) {
                 moods.tryApplyEffect(effect, untilTick, uuid);
             }

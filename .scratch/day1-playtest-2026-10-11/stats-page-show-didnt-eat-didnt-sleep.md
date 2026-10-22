@@ -1,6 +1,6 @@
 ---
 title: Stats page should show when a villager is suffering from "didn't eat" or "didn't sleep"
-status: ready-for-agent
+status: done
 created: 2026-10-11
 ---
 
@@ -39,3 +39,7 @@ icons had no tooltips — the same UI surface) and the "didn't sleep" detection
 ## Audit (2026-10-22)
 
 Still open: `VillagerStatsScreen` draws experience and damage only; `renderMood` is commented out (line 137) and no mood effect is shown. In the dev-approved UI batch (2026-10-22).
+
+## Resolved (audit 2026-10-22)
+
+The stats page's old mood row lists the townie's active mood effects in words ("Didn't sleep, works slower", "Ate raw food", "Ate without a table"). Verified live r8 2026-10-22 on a bedless villager. Hunger stays the hunger bar.

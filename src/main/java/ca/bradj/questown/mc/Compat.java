@@ -229,6 +229,19 @@ public class Compat {
         return false;
     }
 
+    /** {@code text} cut to fit {@code width} pixels, ending in "…" when it was cut. */
+    public static String fitToWidth(
+            Font font,
+            String text,
+            int width
+    ) {
+        if (font.width(text) <= width) {
+            return text;
+        }
+        String ellipsis = "…";
+        return font.plainSubstrByWidth(text, Math.max(0, width - font.width(ellipsis))) + ellipsis;
+    }
+
     public static void drawDarkText(
             Font font,
             GuiGraphics gui,

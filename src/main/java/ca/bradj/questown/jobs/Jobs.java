@@ -306,12 +306,19 @@ public class Jobs {
     public static ImmutableList<Component> getComponentsForTooltip(JobID job) {
         return ImmutableList.of(
                 getRootNameComponent(job),
-                Compat.literal(job.jobId())
+                getVariantNameComponent(job)
         );
     }
 
     public static @NotNull Component getRootNameComponent(JobID job) {
         return Compat.translatable("jobs." + job.rootId());
+    }
+
+    /** The variant's name: a {@code jobs.<root>.<job>} lang key, else {@link JobNames#variant}. */
+    public static @NotNull Component getVariantNameComponent(JobID job) {
+        return Compat.translatableWithFallback(
+                "jobs." + job.rootId() + "." + job.jobId(), JobNames.variant(job.jobId())
+        );
     }
 
     public static String getNiceString(ImmutableList<JobID> value) {

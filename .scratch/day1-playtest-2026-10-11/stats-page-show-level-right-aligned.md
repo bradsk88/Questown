@@ -1,6 +1,6 @@
 ---
 title: Stats page: show the villager's level ("Lvl N") right-aligned on the experience line
-status: ready-for-agent
+status: done
 created: 2026-10-11
 ---
 
@@ -33,3 +33,7 @@ Ties into `stats-page-show-didnt-eat-didnt-sleep.md` (same stats-page surface).
 ## Audit (2026-10-22)
 
 Still open: the experience line (`VillagerStatsScreen.renderExperience`) shows no level. In the dev-approved UI batch (2026-10-22).
+
+## Resolved (audit 2026-10-22)
+
+"Lvl N" right-aligned on the experience title line (VillagerStatsData.level over the wire). Verified live r8 2026-10-22.

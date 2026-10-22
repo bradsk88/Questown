@@ -306,7 +306,8 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         int experienceTarget = (int) getExpForCurrentLevel(uuid);
         return new VillagerStatsData(
                 // TODO[Traits]: Track max unique fullness level per villager
-                fullnessPercent, experienceNum, experienceTarget, delegator.getMood(uuid), damagePercent);
+                fullnessPercent, experienceNum, experienceTarget, delegator.getMood(uuid), damagePercent,
+                getLevel(uuid), delegator.getMoodEffectIds(uuid));
     }
 
     private float getExpForCurrentLevel(UUID uuid) {

@@ -312,7 +312,7 @@ public class ItemJobsScreen extends CompatScreen {
         Component jobName = Compat.translatable(
                 "menu.common.job_name",
                 Jobs.getRootNameComponent(d.jobId()),
-                Compat.literal(d.jobId().jobId())
+                Jobs.getVariantNameComponent(d.jobId())
         );
         ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, jobName);
         rc.darkText(jobName, textArea.getX(), textArea.getY());

@@ -10,6 +10,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.DataSlot;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Collection;
@@ -25,6 +26,8 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
     private final DataSlot moodSlot;
     private final DataSlot experienceSlot;
     private final DataSlot experienceTargetSlot;
+    private final DataSlot levelSlot;
+    private ImmutableList<String> moodEffects;
     private final Stack<Runnable> closers = new Stack<>();
     private final boolean showBlockOfProgressTab;
     private final boolean showSkillsTab;
@@ -67,6 +70,10 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
 
         this.addDataSlot(this.damageSlot = DataSlot.standalone());
         this.damageSlot.set((int) (initialData.damageLevelPercent() * 100));
+
+        this.addDataSlot(this.levelSlot = DataSlot.standalone());
+        this.levelSlot.set(initialData.level());
+        this.moodEffects = initialData.moodEffects();
     }
 
     /**
@@ -79,7 +86,10 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
     }
 
     public static VillagerStatsData read(FriendlyByteBuf buf) {
-        return new VillagerStatsData(buf.readFloat(), buf.readInt(), buf.readInt(), buf.readFloat(), buf.readFloat());
+        return new VillagerStatsData(
+                buf.readFloat(), buf.readInt(), buf.readInt(), buf.readFloat(), buf.readFloat(),
+                buf.readVarInt(), ImmutableList.copyOf(buf.readList(FriendlyByteBuf::readUtf))
+        );
     }
 
     public static void write(
@@ -91,6 +101,8 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
         buf.writeInt(data.experienceTarget());
         buf.writeFloat(data.moodPercent());
         buf.writeFloat(data.damageLevelPercent());
+        buf.writeVarInt(data.level());
+        buf.writeCollection(data.moodEffects(), FriendlyByteBuf::writeUtf);
     }
 
     @Override
@@ -119,6 +131,16 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
         this.damageSlot.set(damage);
         int mood = (int) (100 * villagerStatsData.moodPercent());
         this.moodSlot.set(mood);
+        this.levelSlot.set(villagerStatsData.level());
+        this.moodEffects = villagerStatsData.moodEffects();
+    }
+
+    public int getLevel() {
+        return levelSlot.get();
+    }
+
+    public ImmutableList<String> getMoodEffects() {
+        return moodEffects;
     }
 
     public int getFullnessPercent() {

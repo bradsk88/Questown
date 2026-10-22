@@ -80,6 +80,11 @@ public interface Delegator<ENTITY> {
 
     float getMood(UUID uuid);
 
+    /** The ids of the townie's active mood effects (for the stats page). */
+    default ImmutableList<String> getMoodEffectIds(UUID uuid) {
+        return ImmutableList.of();
+    }
+
     /** Apply a mood effect to the townie, expiring at the given game tick. */
     void applyMoodEffect(
             UUID uuid,

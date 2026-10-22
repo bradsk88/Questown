@@ -1101,3 +1101,25 @@ count while open and `countNeeded` once COMPLETED: these quests complete only on
 their count, and the card caps at the target, so the count at completion always reads n/n
 (no stored value needed). `UIQuest`'s server-side mapping calls it. Pinned by
 `QuestCardProgressTest`; live: with 4 coal in the storeroom, the completed card read "(8/8)".
+
+## UI batch, 2026-10-22 (dev: "fix them", see docs/ui-principles.md)
+
+- **Job board toggle band (`WorkScreen`).** The auto-request row was drawn at the moved card cursor
+  `y + backgroundHeight - 34`, i.e. on the panel's bottom border. The panel is now 182 px (was 166)
+  and the row sits at `panelTop + backgroundHeight - PAGE_PADDING - 9`, inside a bottom band;
+  `MAX_CARDS_PER_PAGE` is derived from the space above the band, so it stays 3. Live: r8.
+- **Quest titles fit their card (`QuestsScreen`).** One line through `Compat.fitToWidth` (ends in
+  "…" when cut), leaving room for the removal "x"; the full title shows on hover over the line.
+- **Readable job variant names.** `Jobs.getVariantNameComponent` = lang key `jobs.<root>.<job>`,
+  else `JobNames.variant` ("rod_half_day" -> "Rod (half day)"). Used by the "Learn More" page title
+  (`ItemJobsScreen`), the skill tree's node titles (`VillagerAdvancementsContent`) and the job
+  tooltip pair (`Jobs.getComponentsForTooltip`). The skill tree root's placeholder "test"/"test2"
+  is now `menu.jobs.root.title`/`.description`. `JobNamesTest`.
+- **Economics card order (`EconomicsCardOrder`).** While the free-food claim is open, the food card
+  is pinned to row 1; otherwise the server's ranking is kept. `EconomicsCardOrderTest`.
+- **Stats page level and mood effects (`VillagerStatsScreen`).** `VillagerStatsData` gained
+  `level` and `moodEffects` (effect ids, from `Delegator.getMoodEffectIds`, default empty), on the
+  wire via `VillagerStatsMenu.write/read` (the menus payload now uses those too instead of a
+  duplicate encoding). "Lvl N" is right-aligned on the experience title; the old mood row lists the
+  active effects in words on one fitted line (`menu.villager_stats.effect.<path>`, else
+  `JobNames.variant`). Live: r8 showed "Lvl 1" and a sleepless villager's effect.

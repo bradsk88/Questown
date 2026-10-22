@@ -100,12 +100,7 @@ public final class VillagerMenusPayload {
         buf.writeInt(flagPos.getX());
         buf.writeInt(flagPos.getY());
         buf.writeInt(flagPos.getZ());
-        // VillagerStatsData layout (VillagerStatsMenu.write)
-        buf.writeFloat(stats.fullnessPercent());
-        buf.writeInt(stats.experienceValue());
-        buf.writeInt(stats.experienceTarget());
-        buf.writeFloat(stats.moodPercent());
-        buf.writeFloat(stats.damageLevelPercent());
+        VillagerStatsMenu.write(stats, buf);
         // econ is passed through, not serialized (see note on VillagerEconomicsMenu)
         buf.writeBoolean(showBlockOfProgressTab);
         buf.writeBoolean(showSkillsTab);
@@ -139,9 +134,7 @@ public final class VillagerMenusPayload {
             ((List<UIQuest>) quests).sort(UIQuest::compareTo);
         }
         BlockPos flagPos = new BlockPos(buf.readInt(), buf.readInt(), buf.readInt());
-        VillagerStatsData stats = new VillagerStatsData(
-                buf.readFloat(), buf.readInt(), buf.readInt(), buf.readFloat(), buf.readFloat()
-        );
+        VillagerStatsData stats = VillagerStatsMenu.read(buf);
         // econ is passed through, not serialized: economics data flows via the
         // separate `EconomicsUpdate` message, so decoded payloads always carry none().
         VillagerEconomicsData econ = VillagerEconomicsData.none();

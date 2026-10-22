@@ -32,7 +32,7 @@ dusk (4ca11bbe), no-table diner give-up.
 3. **[FIXED 2026-10-22, verified live]** Job board "Auto-post new requests" toggle: tooltip
    says "Auto-post is ON" but the box shows no tick. `WorkScreen` filled the tick with
    `0xFFFFFF` (ARGB alpha 0, draws nothing); now `0xFFFFFFFF`. Since 9d0acd65.
-4. (judge) The same toggle row sits on the panel's bottom border, half outside it: dark-grey
+4. **[FIXED 2026-10-22, UI batch; gui/COMPLEX.md 'UI batch, 2026-10-22']** (judge) The same toggle row sits on the panel's bottom border, half outside it: dark-grey
    label on the world background, barely legible. `tgY` adds `backgroundHeight - 34` to a `y`
    that was already moved down 30 px for the title, so it lands at panel top + 162 of 166. A
    full page (3 cards x 43 px from top + 30) leaves no free band inside the panel, so the fix is
@@ -45,7 +45,7 @@ dusk (4ca11bbe), no-table diner give-up.
    ("4750 -> 5000") before switching to `hunter/sword`. Guess (not traced): dropping the held
    loot restarts the meal cycle at state 0. Costs one food per meal when the diner carries loot.
 - Day 4 morning: one meal (no loot in hand), consistent with #5's guess.
-6. (still present, = 10-21 #28, new symptom) "Small Storeroom -> Storeroom" quest title: the x
+6. **[FIXED 2026-10-22, UI batch; gui/COMPLEX.md 'UI batch, 2026-10-22']** (still present, = 10-21 #28, new symptom) "Small Storeroom -> Storeroom" quest title: the x
    button is gone now, and the last "m" runs over the card's right border. Title is one
    unwrapped `ctx.text` (`QuestsScreen` ~L230). Wrap vs ellipsis vs shorter copy is a copy call.
    Lead for #5 (BELIEVED, not traced): `JobLogic` changes job only on
@@ -102,7 +102,7 @@ dusk (4ca11bbe), no-table diner give-up.
     art and text only for NO_JOBSITE; `StatusArt` returns `error.png` for work states and the
     tooltip fell back to `JobTooltips.FALLBACK_LINE_1`. Now relaxing art + "is relaxing for a
     moment." `DowntimeWorkOverridesTest` red -> green; full :test 1418/0.
-13. (judge) Work-request "Learn More" (ItemJobsScreen) pages are titled with the raw job id:
+13. **[FIXED 2026-10-22, UI batch; gui/COMPLEX.md 'UI batch, 2026-10-22']** (judge) Work-request "Learn More" (ItemJobsScreen) pages are titled with the raw job id:
     "Gatherer - rod_half_day", "Gatherer - shovel_full_day", "Gatherer - axe"
     (`renderJobTitle` uses `Compat.literal(jobId)`). The "20 known jobs" for a seed or sapling
     on day 2 are all gatherer tool/length variants, so the player pages 20 near-identical
@@ -134,7 +134,7 @@ dusk (4ca11bbe), no-table diner give-up.
   earlier and spent the gap in gatherer trips + bop_depositing. After the meal, "gave up waiting
   for different work after 501 ticks (dining_no_table)" -> `dining_raw_food` -> gave up again:
   the 10-21 #17 pattern, still present.
-16. (judge, same family as #13) Villager "Jobs" (hammer) tab labels nodes with raw job ids:
+16. **[FIXED 2026-10-22, UI batch; gui/COMPLEX.md 'UI batch, 2026-10-22']** (judge, same family as #13) Villager "Jobs" (hammer) tab labels nodes with raw job ids:
     survival hunter shows "sword" -> "sword_half_day"; the creative all-jobs view shows "gather",
     "axe", ... In creative the tree root's tooltip is placeholder text "test" / "test2"
     (`VillagerAdvancementsScreen` builds the root `DisplayInfo` with `Compat.literal("test")`,
@@ -271,7 +271,7 @@ dusk (4ca11bbe), no-table diner give-up.
 - r7: a hunter assigned before swords are stocked registers a Swords need at once (economics tab "Swords 1"); explains the swords top-need in r4/r5.
 
 ## Round 7 (fresh snowy plains, flag at 1802 68 -543; request + job change before food)
-28. (judge) Economics tab rows reorder as needs appear: with a Swords need present, "Free food ->"
+28. **[FIXED 2026-10-22, UI batch; gui/COMPLEX.md 'UI batch, 2026-10-22']** (judge) Economics tab rows reorder as needs appear: with a Swords need present, "Free food ->"
     moves from row 1 to row 2, so a player's muscle memory (or a click-script) hits Swords.
     Minor; noted because the free-food row is the day-1 lifeline (see r5).
 - r7 edge: a chest placed into a storeroom wall announced "Storeroom destroyed" and "Small Storeroom destroyed" in the same tick (room_destroyed for store_room_medium and store_room): the chest both upgraded and broke the room. Self-inflicted; low priority.

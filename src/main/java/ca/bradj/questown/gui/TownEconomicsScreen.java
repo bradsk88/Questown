@@ -45,7 +45,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
 
     @Override
     protected ImmutableList<ItemEconomicsData> cardsData() {
-        return lastUpdate.data();
+        return EconomicsCardOrder.order(lastUpdate.data(), bonusFoodAvailable(), FOOD_NEED_KEY);
     }
 
     @Override

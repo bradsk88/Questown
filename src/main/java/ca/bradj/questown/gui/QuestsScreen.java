@@ -227,7 +227,13 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
         int idX = card.coords().leftXPadded();
         int idY = card.coords().topYPadded();
-        ctx.text(recipeName.getString(), idX, card.coords().topYPadded(), TEXT_COLOR, false);
+        // One line; a title that won't fit ends in "…" and shows whole on hover. It used to run
+        // past the card's right border ("Small Storeroom -> Storeroom", r3 #6). Leave room for
+        // the removal "x" when the card has one.
+        int titleRight = card.coords().rightXPadded() - (recipe.getBatchUUID() != null ? buttonWidth + 2 : 0);
+        String fullTitle = recipeName.getString();
+        String shownTitle = Compat.fitToWidth(this.font, fullTitle, titleRight - idX);
+        ctx.text(shownTitle, idX, card.coords().topYPadded(), TEXT_COLOR, false);
         String vID = recipe.villagerUUID();
         String jobName = recipe.jobName();
 
@@ -255,6 +261,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 mouse
         );
 
+        if (!shownTitle.equals(fullTitle) && UtilClean.isCoordInBox(
+                mouse, new Coordinate(idX, idY), new Coordinate(titleRight, idY + this.font.lineHeight))) {
+            return ImmutableList.of(Compat.literal(fullTitle));
+        }
         return renderCardTooltip(card, removalTooltip, renderedHeadTooltip, renderedItemTooltip, mouse, recipe,
                 this.tabs instanceof Tabs t && t.hasTab(VILLAGERS_TAB));
     }
