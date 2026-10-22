@@ -182,3 +182,7 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
 - Second full suite at 3af9cadd (after the relocate confirm, checkbox, campfire copy): 91/94. Fails:
   `chicken-arc:skip_chicken_command` (known red), `nav/roof_gatherer` and `organizer/fetch [warp]`
   (both pass alone, known flakes). The new `flag/shutdown_keeps_job_board` passed in the suite.
+- Third full suite at 964033e4 (after the stats-listener fix): 92/94. Fails: `chicken-arc:skip_chicken_command`
+  (known red) and `farmer/harvest_wheat` (warp half: "Town flag failed to initialize (timeout after
+  200 ticks)" under shard load). Alone, farmer ran 8/9 with `[proficiency_parity]` failing, the
+  scenario's known rotating flake (AGENTS.md known-failures list).
