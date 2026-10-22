@@ -512,6 +512,26 @@ Pinned by `JobLogicTest.tick_maxTicksFallback_handsOffToTheBoard_WhenTheFallback
 (red before the check). Live: no bounce and no "No work found" through an evening with 21
 townies; the late-day timeout itself did not recur in that window.
 
+## Giving up on ingredients runs the extract hooks at most once (2026-10-22 playtest)
+
+When a job gives up waiting for ingredients, `JobLogic` takes back what it inserted
+(`grabbingInsertedSupplies` -> `grabbedInsertedSupplies`) and asks the board for the next job.
+The grabbed branch used to call `tryExtractWithNoItem()` **every tick** until the job changed.
+That runs the job's EXTRACTING_PRODUCT special rules, which for the diners are the meal
+(`DinerNoTableWork` HUNGER_FILL, `DinerRawFoodWork` HUNGER_FILL_HALF + the raw-food effects).
+When the board had nothing else (`Prepared for gatherer: []`), a diner that gave up got a meal
+every tick for ~40 s: the "Fullness changed from 4990 to 5000" log flood, ~500 mood-effect
+re-applications, all from one cooked mutton that was never eaten.
+
+Now `tryExtractWithNoItem()` runs once, at the hand-off, and only when the cycle inserted
+something (`timesInserted()` read before `clearInsertedSupplies()` wipes the record). The
+grabbed branch only calls `changeToNextJob()`. Pinned by
+`JobLogicTest.tick_givingUpWithNothingInserted_neverRunsTheExtractHooks` and
+`tick_givingUpAfterInserting_runsTheExtractHooksOnce` (47 / 46 extracts in 50 ticks before).
+Live (21 townies): 70 diner give-ups in 5 minutes with no flood; with 6 food stocked, 4 food
+takes gave exactly 4 fullness rises. Ticket:
+`.scratch/agent-playtest-2026-10-22/fullness-log-flood-free-meals.md`.
+
 ## Same-root fallback prefers a job unlocked with the root (2026-10-17 playtest)
 
 `ServerJobsRegistry.getWorkSupplier` falls back to "any job in the same root" when a

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -69,7 +70,7 @@ class JobLogicTest {
 
         private TestWorldInteraction wi;
         private Map<Integer, Collection<WorkPosition<Position>>> allWorkSpots = ImmutableMap.of();
-        private boolean inserted;
+        boolean inserted;
 
         private TestLogicWorld(JobDefinition definition) {
             this.wi = TestWorldInteraction.forDefinition(
@@ -445,6 +446,62 @@ class JobLogicTest {
         Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
         tickFn.run();
         Assertions.assertTrue(logic.isGrabbingInsertedSupplies());
+    }
+
+    /**
+     * 2026-10-22 playtest ("Fullness changed from 4990 to 5000" flood): a diner that gave up
+     * waiting for ingredients re-ran its extract hooks - the meal - every tick until its job
+     * changed: ~500 free meals from one cooked mutton.
+     */
+    private static int extractsAfterGivingUp(boolean insertedBeforeGivingUp) {
+        AtomicInteger extracts = new AtomicInteger();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void tryExtractWithNoItem() {
+                extracts.incrementAndGet();
+            }
+
+            @Override
+            public boolean tryGrabbingInsertedSupplies() {
+                return true;
+            }
+
+            @Override
+            public void changeToNextJob() {
+                // The board has nothing else for this townie: the job stays.
+            }
+        };
+        world.inserted = insertedBeforeGivingUp;
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+        world.allWorkSpots = ImmutableMap.of(STATE_NEED_WIDGET, ImmutableList.of(ARBITRARY_WORKSPOT));
+
+        for (int i = 0; i < 50; i++) {
+            logic.tick(
+                    null,
+                    () -> ProductionStatus.NO_SUPPLIES,
+                    new JobID("test", "tester"),
+                    true,
+                    false,
+                    insertedBeforeGivingUp,
+                    false,
+                    getNever().withInitialNoSupplyTickLimit(1).withNoSupplyTickLimit(2),
+                    DEFAULT_DETAILS,
+                    world,
+                    (a, b) -> 0,
+                    Integer.MAX_VALUE
+            );
+        }
+        return extracts.get();
+    }
+
+    @Test
+    void tick_givingUpWithNothingInserted_neverRunsTheExtractHooks() {
+        Assertions.assertEquals(0, extractsAfterGivingUp(false), "a meal without food");
+    }
+
+    @Test
+    void tick_givingUpAfterInserting_runsTheExtractHooksOnce() {
+        Assertions.assertEquals(1, extractsAfterGivingUp(true), "the extract hooks ran every tick");
     }
 
     private static @NotNull ExpirationRules getNever() {

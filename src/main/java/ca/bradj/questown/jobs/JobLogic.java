@@ -167,16 +167,23 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
         worked = Math.max(0, worked - 1);
         if (this.grabbingInsertedSupplies) {
+            // Read before the clear below wipes the record.
+            boolean insertedAny = worldBeforeTick.timesInserted() > 0;
             if (worldBeforeTick.tryGrabbingInsertedSupplies()) {
                 this.grabbingInsertedSupplies = false;
                 this.grabbedInsertedSupplies = true;
                 worldBeforeTick.clearInsertedSupplies();
+                // The extract hooks are the job's finish (a diner's meal). Run them once, and only
+                // for a cycle that put something in: running them every tick until the job changed
+                // fed a diner that gave up ~500 free meals (2026-10-22 fullness log flood).
+                if (insertedAny) {
+                    worldBeforeTick.tryExtractWithNoItem();
+                }
             }
             return;
         }
 
         if (this.grabbedInsertedSupplies) {
-            worldBeforeTick.tryExtractWithNoItem();
             worldBeforeTick.changeToNextJob();
             ticksWithoutNextJob++;
             return;

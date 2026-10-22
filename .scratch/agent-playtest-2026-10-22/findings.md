@@ -53,7 +53,7 @@ calls are marked (judge) for the dev.
 - **[FIXED 2026-10-22]** `self-satisfied-batch-villager-cascade.md` (phase 2.7 replayed the miner beat). One morning, 8
   villagers arrived in 3 s: each new visitor's batch was already satisfied, backfill closed it at
   once, and its reward spawned the next visitor. 3 -> 11 villagers. World saved.
-- **Ticketed (judge the fix):** `fullness-log-flood-free-meals.md`. The "Fullness changed from 4990 to
+- **[FIXED 2026-10-22]** `fullness-log-flood-free-meals.md`. The "Fullness changed from 4990 to
   5000" flood is a diner that gave up waiting for ingredients: JobLogic re-runs the meal hooks
   (hunger fill + mood effects) every tick until the job changes. One mutton, ~40 s of free meals.
 - **[FIXED 2026-10-22]** `sleeping-leaver-shows-left-town.md` (cause: the max-ticks fallback skipped the day-fit rule). A gatherer whose trip spanned

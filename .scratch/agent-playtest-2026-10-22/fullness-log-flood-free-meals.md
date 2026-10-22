@@ -1,6 +1,7 @@
 ---
 title: 'A diner that gives up on its meal eats every tick for free (the "Fullness changed from 4990 to 5000" flood)'
-status: needs-triage
+status: closed
+closed: 2026-10-22
 origin: 2026-10-22 agent playtest (worktree build/wt, 21-villager cascade world)
 ---
 
@@ -54,3 +55,12 @@ Not settled: why the no-table diner waited 201 ticks for ingredients while holdi
 Fix shape, any of: run `tryExtractWithNoItem` once on giving up (not every tick); skip the
 extract hooks for a give-up that inserted nothing (no meal without food); and/or clear
 `grabbedInsertedSupplies` once the hand-off has been asked for.
+
+# Resolved (2026-10-22)
+
+Dev: "try it" (the recommended pair). `JobLogic` runs `tryExtractWithNoItem` once at the
+hand-off, and only if the cycle inserted something; the grabbed branch only asks the board.
+Two `JobLogicTest` tests red before (47 / 46 extracts in 50 ticks), green after; full :test
+1414/0. Live: 70 diner give-ups in 5 minutes, 0 flood lines, 0 effect re-applications; after
+stocking 3 cooked + 3 raw mutton, 4 food takes -> 4 fullness rises, still no flood.
+Still open: why the no-table diner never inserted the mutton it held.
