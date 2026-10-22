@@ -193,3 +193,13 @@ dusk (4ca11bbe), no-table diner give-up.
     line just sent counts too (`BroadcastPacer`, `BroadcastPacerTest` red -> green; full :test
     1423/0). Live: 1 broadcast + 2 "Dropped duplicate broadcast". The triple firing itself is
     the open `messages-print-twice.md`.
+22. r6 day 2 (08:05, daytime, raining, SLEEPLESS after I removed the bedroom door): the gatherer
+    as a no-table diner took a carrot every ~8 s and never ate: "gave up waiting for ingredients
+    after 201 ticks (job: dining_no_table)" -> dining_raw_food (no raw food in town) -> gave up ->
+    dining_no_table, 8 cycles, no "Fullness changed" all day. The flag (the no-table work spot)
+    had free standing blocks around it; no rain logic exists in the villager AI. Next morning it
+    ate at once (08:08:14, -309 -> 5000) and went back to gathering through the remaining mat.
+    Not traced: the villager's position during the loop was not sampled. Before #20 the same
+    failure would have looped no_table -> board -> no_table.
+- A broken welcome mat (one of two) is skipped, not dropped (`TownPois.getWelcomeMatPos`), and
+  the gatherer kept working through the other mat. Fine.
