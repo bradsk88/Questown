@@ -8,6 +8,8 @@ import net.minecraft.SharedConstants;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.util.profiling.InactiveProfiler;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -15,8 +17,11 @@ import org.junit.jupiter.api.Test;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Loads the two baker stock job files through the PRODUCTION loader
@@ -70,6 +75,35 @@ class BakerStockJobLoaderTest {
         Assertions.assertTrue(wheat.getSpecialGlobalRules().contains(SpecialRules.EXCLUDE_FROM_WARP));
         Assertions.assertTrue(coal.getSpecialGlobalRules().contains(SpecialRules.ALWAYS_CONSIDER));
         Assertions.assertTrue(coal.getSpecialGlobalRules().contains(SpecialRules.EXCLUDE_FROM_WARP));
+    }
+
+    /**
+     * A stock job moves an input into the breadmaker's chest; it makes nothing. Its
+     * {@code initial_request} is read as the job's declared product (top-need producer
+     * pick, board-request satisfaction), so it must name the chain's product (bread), as
+     * the cook's stock jobs name villager food. With coal declared, a coal shortage in a
+     * town that already had a miner posted "unlock baker + build a breadmaker" (agent
+     * playtest 2026-10-22 r3), and the bakery burns coal.
+     */
+    @Test
+    void bakerStockJobs_doNotDeclareTheirInputsAsProducts() {
+        ResourceJobLoader.ReloadListener listener = ResourceJobLoader.LISTENER;
+
+        Map<ResourceLocation, JsonElement> files = new LinkedHashMap<>();
+        files.put(new ResourceLocation("questown_jobs/baker_stock_wheat"),
+                readJson(JOBS_PATH + "baker_stock_wheat.json"));
+        files.put(new ResourceLocation("questown_jobs/baker_stock_coal"),
+                readJson(JOBS_PATH + "baker_stock_coal.json"));
+        listener.apply(files, null, InactiveProfiler.INSTANCE);
+
+        List<ServerJobsRegistry.ProducerDeclaration> declared = new ArrayList<>();
+        listener.getJobs().forEach((id, work) -> declared.add(
+                new ServerJobsRegistry.ProducerDeclaration(id, work.initialRequest.apply(null))
+        ));
+
+        Assertions.assertEquals(Set.of(), ServerJobsRegistry.staticProducerRootsFor(declared, Ingredient.of(Items.COAL)));
+        Assertions.assertEquals(Set.of(), ServerJobsRegistry.staticProducerRootsFor(declared, Ingredient.of(Items.WHEAT)));
+        Assertions.assertEquals(Set.of("baker"), ServerJobsRegistry.staticProducerRootsFor(declared, Ingredient.of(Items.BREAD)));
     }
 
     private static JsonElement readJson(String resourcePath) {

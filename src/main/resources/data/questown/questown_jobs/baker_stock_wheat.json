@@ -4,7 +4,7 @@
   "priority": "15000",
   "parent": "baker/extract",
   "icon": "minecraft:chest",
-  "initial_request": "minecraft:wheat",
+  "initial_request": "minecraft:bread",
   "note_warp": "Excluded from warp: stock jobs just move items between containers, which the warper handles automatically via simulateCollectSupplies",
   "result": {
     "type": "uses_special_rules"

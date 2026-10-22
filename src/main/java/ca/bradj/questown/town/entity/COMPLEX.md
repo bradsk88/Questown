@@ -319,6 +319,17 @@ need. The producer core itself (`staticProducerRootsFor`) is unit green in
 `StaticProducerRootsTest`; its `Works`-registry glue half is
 registry-bound (compile + the held run settle it).
 
+**`initial_request` is the declared product, so helper jobs must not name their
+input.** A stock/fuel job moves an input into its chain's block and makes
+nothing; it names the chain's product (the cook's stock jobs name villager food,
+the baker's name bread). The baker stock jobs named coal and wheat (the f2f049cc
+migration, against its own plan), so with a miner already unlocked a coal
+shortage posted "unlock baker + build a breadmaker" (agent playtest 2026-10-22
+r3), and the bakery burns coal. Pinned by
+`BakerStockJobLoaderTest.bakerStockJobs_doNotDeclareTheirInputsAsProducts`.
+`baker/bread` still names wheat (its input) as the plan specifies; that one is
+an open question, not fixed here.
+
 # LOOT quest close — extraction-satisfiable, decoupled from the job's post-extract rule
 
 A **LOOT** quest (the raw-food family, e.g. the 2.5-gate

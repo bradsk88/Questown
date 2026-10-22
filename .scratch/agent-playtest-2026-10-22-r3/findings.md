@@ -19,6 +19,8 @@ dusk (4ca11bbe), no-table diner give-up.
 
 ## Odd
 1. (still present, = 10-21 #5) "Town Gate created at location [201, 192]"; the mat is at x=200.
+   Same +1 on x for every single-block special room: job board at 200,203 -> "[201, 203]",
+   mineshaft at 214,205 -> "[215, 205]". Real rooms are exact ("[205, 196]" = the door).
 2. (still present, = 10-21 #2) Economics tab: after "Free food" is claimed (chat: "The town's
    storeroom received 20 free carrots.") the open screen still shows "Free food ->".
 3. **[FIXED 2026-10-22, verified live]** Job board "Auto-post new requests" toggle: tooltip
@@ -40,3 +42,18 @@ dusk (4ca11bbe), no-table diner give-up.
 6. (still present, = 10-21 #28, new symptom) "Small Storeroom -> Storeroom" quest title: the x
    button is gone now, and the last "m" runs over the card's right border. Title is one
    unwrapped `ctx.text` (`QuestsScreen` ~L230). Wrap vs ellipsis vs shorter copy is a copy call.
+   Lead for #5 (BELIEVED, not traced): `JobLogic` changes job only on
+   `!hasAnyItems && computeState.get().isDroppingLoot()` (~L121). With loot in hand, the drop
+   happens in DROPPING_LOOT, and on the next tick the status is already recomputed to
+   COLLECTING_SUPPLIES (TOOK carrot 50 ms after the DROPPING_LOOT dump), so the exit check never
+   sees "dropping + empty" and the meal cycle restarts. Settle with a held `eating/eat_direct`
+   variant whose diner starts with a raw item in hand.
+7. **[FIXED 2026-10-22, unit-tested]** Phase 2.75 top-need batch: "chose need #minecraft:coals
+   -> producer baker (unlocked [cook, gatherer, hunter, miner])" -> "unlock baker + room
+   breadmaker". The baker does not make coal; `baker/stock_coal` declared
+   `initial_request: minecraft:coal` (and `stock_wheat` wheat), and `initial_request` is the
+   declared product for the producer pick and board-request satisfaction. f2f049cc set them
+   against its plan's "initial_request minecraft:bread"; now bread. Red/green:
+   `BakerStockJobLoaderTest.bakerStockJobs_doNotDeclareTheirInputsAsProducts`. Full :test 1415/0.
+   (judge) `baker/bread` still declares wheat (its own input), as the plan specifies, so a
+   wheat shortage would still pick the baker over a farmer if the farmer were locked.
