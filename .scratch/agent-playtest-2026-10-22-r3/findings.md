@@ -226,3 +226,10 @@ dusk (4ca11bbe), no-table diner give-up.
     the single storeroom chest full). Last session's day-fit hand-off (4ca11bbe) never reset the
     max-ticks counter when the board kept the job. Now it restarts the window. JobLogicTest red
     (15 asks in 20 ticks) -> green; live 1 line.
+- 10-21 #17 (a diner that already ate times out into `dining_raw_food` and eats again) is still
+  open and is now the main source of double meals (live 09:16:46: no_table -360 -> 5000, then
+  raw 4300 -> 5000 ~880 ticks after the diner started). Tried and reverted: pointing the table /
+  no-table diners' no-supplies and max-ticks fallbacks at seeking work (so the board's
+  DiningStages decides by hunger). `only=eating` went 5/5 -> 1/5 (fullness -40%..-16%): in those
+  fixtures the townie never got back to a diner. Needs a design pass: maybe the max-ticks
+  fallback should check whether the diner already ate this sitting.
