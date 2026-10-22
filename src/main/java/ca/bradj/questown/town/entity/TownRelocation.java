@@ -309,7 +309,7 @@ public final class TownRelocation {
      * persisted-identity constructor — rather than the deprecated {@code VillagerUUID.from}. Fitting
      * here: relocation rehydrates a roster that was itself persisted as raw UUIDs.
      */
-    private static VillagerUUID persistedVillagerUuid(UUID uuid) {
+    static VillagerUUID persistedVillagerUuid(UUID uuid) {
         CompoundTag tag = new CompoundTag();
         tag.putUUID("uuid", uuid);
         return VillagerUUID.fromNBT(tag, "uuid");

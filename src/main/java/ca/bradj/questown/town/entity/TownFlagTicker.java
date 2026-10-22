@@ -311,6 +311,10 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
             return;
         }
         if (phase == FlagPhase.DORMANT) {
+            // A dormant flag loaded after a restart still deserializes its town (the deed re-issue,
+            // wake-in-place and relocation read it); it just doesn't run the town. Returning before
+            // the initializers left it "needs a moment to start up" forever (2026-10-22 r8).
+            runAnyInitializers(new TickData(sl, blockEntityPos, state, e));
             return;
         }
         e.messages.flushBroadcasts();

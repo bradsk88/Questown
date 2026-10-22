@@ -90,9 +90,10 @@ flowchart LR
   autotests `flag/shutdown_wake_keeps_jobs` (absorb → wake) and `flag/relocate_nearby`
   check 10 (root carried). Both were red with the lookup disabled (respawned
   `gatherer:gather`).
-- Not covered: `TownShutdownController.absorbedForRespawn` (the wake/cancel roster)
-  is in-memory, so a wake after a server restart respawns nobody (BELIEVED from the
-  code, not run).
+- **Who respawns** on wake and cancel is `AbsorbedJournals.absorbed` (the snapshot keys:
+  absorbed and not yet respawned), read from the flag tag. It used to be an in-memory list on
+  `TownShutdownController`, empty after a server restart, so waking a dormant town then
+  respawned nobody. `AbsorbedJournalsTest.theAbsorbedListIsTheTowniesStillWaitingToRespawn`.
 
 ---
 

@@ -42,8 +42,6 @@ class TownShutdownController {
     private static final long FORCE_ABSORB_TICKS = 600;
 
     private @Nullable ShutdownProgress progress;
-    // Absorbed townies' stable identities, remembered so a cancel can re-spawn exactly them.
-    private final List<VillagerUUID> absorbedForRespawn = new ArrayList<>();
 
     boolean isRunning() {
         return progress != null;
@@ -58,7 +56,6 @@ class TownShutdownController {
         if (progress != null) {
             return;
         }
-        absorbedForRespawn.clear();
         Set<UUID> roster = town.getVillagerHandle().entities().stream()
                                 .map(Entity::getUUID)
                                 .collect(Collectors.toSet());
@@ -124,10 +121,12 @@ class TownShutdownController {
             BlockPos flagPos,
             TownFlagBlockEntity town
     ) {
-        for (VillagerUUID vuid : absorbedForRespawn) {
-            town.addImmediateReward(new SpawnVisitorReward(town, vuid));
+        // The absorbed townies are the ones with a journal snapshot on the flag. That record is
+        // persistent: an in-memory list here was empty after a server restart, so waking a dormant
+        // town then respawned nobody.
+        for (UUID absorbed : town.absorbedVillagers()) {
+            town.addImmediateReward(new SpawnVisitorReward(town, TownRelocation.persistedVillagerUuid(absorbed)));
         }
-        absorbedForRespawn.clear();
         setPhase(level, flagPos, FlagPhase.ACTIVE);
     }
 
@@ -158,7 +157,6 @@ class TownShutdownController {
     ) {
         town.rememberAbsorbedJournal(vme);
         progress.markAbsorbed(vme.getUUID());
-        absorbedForRespawn.add(vme.getVUID());
         handle.remove(vme);
         vme.remove(Entity.RemovalReason.DISCARDED);
     }

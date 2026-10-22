@@ -116,4 +116,20 @@ class AbsorbedJournalsTest {
 
         assertEquals("baker/bread", AbsorbedJournals.take(relocated, baker).orElseThrow().getString("job"));
     }
+
+    @Test
+    void theAbsorbedListIsTheTowniesStillWaitingToRespawn() {
+        // Wake/cancel respawn exactly these; the list lives on the flag tag, so it survives a
+        // restart (an in-memory list was empty after one and a woken town respawned nobody).
+        CompoundTag flag = new CompoundTag();
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+        AbsorbedJournals.remember(flag, a, villagerTag(a, "cook"));
+        AbsorbedJournals.remember(flag, b, villagerTag(b, "baker/bread"));
+
+        assertEquals(java.util.Set.of(a, b), java.util.Set.copyOf(AbsorbedJournals.absorbed(flag)));
+
+        AbsorbedJournals.take(flag, a);
+        assertEquals(java.util.List.of(b), AbsorbedJournals.absorbed(flag));
+    }
 }

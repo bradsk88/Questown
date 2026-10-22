@@ -4,6 +4,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -56,6 +57,13 @@ final class AbsorbedJournals {
             }
         }
         flagTag.put(NBT_ABSORBED_JOURNALS, journals);
+    }
+
+    /** The townies with a snapshot waiting: the ones absorbed and not yet respawned. */
+    static List<UUID> absorbed(CompoundTag flagTag) {
+        return flagTag.getCompound(NBT_ABSORBED_JOURNALS).getAllKeys().stream()
+                .map(UUID::fromString)
+                .toList();
     }
 
     /** Remove and return {@code villager}'s snapshot; empty for a genuinely new visitor. */
