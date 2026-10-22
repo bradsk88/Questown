@@ -1045,6 +1045,16 @@ number is never handed to a new townie.
   `TownFlagState.recoverMobs`, `TownVillagerHandles`). Idempotency makes the
   reload path safe. The same `register` sets the entity's custom name +
   name-tag visibility (the "Villager N" name tag surface).
+- The name tag is stored **translatable** (`VillagerDisplayNumbers.nameplate(n)`,
+  `{"translate":"menu.villager.name","with":[n]}`), never a server-resolved
+  string. On a dedicated server, `register` runs again while the world loads
+  (entity-deserializer thread), and `getString()` there returned the raw key,
+  which was saved as the literal name: both townies read "menu.villager.name"
+  after a restart (2026-10-22 playtest), while a townie spawned at runtime read
+  "Villager 3". The client now resolves the key; existing broken names heal on
+  the next load because `register` re-sets them. Pinned in
+  `VillagerDisplayNumbersTest.theNameplateIsLeftForTheClientToTranslate`.
+  `displayNameFor` (the String for chat/menus) still resolves on the server.
 - Persistence: `TownVillagerHandlerSerializer` writes `display_numbers`
   (UUID->N pairs) and `display_numbers_highest` (the counter) into the
   handle's NBT, restoring both in `deserialize` -> `TownVillagerHandle.

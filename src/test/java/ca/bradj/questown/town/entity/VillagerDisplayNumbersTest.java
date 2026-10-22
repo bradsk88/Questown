@@ -1,11 +1,14 @@
 package ca.bradj.questown.town.entity;
 
+import net.minecraft.network.chat.contents.TranslatableContents;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // Pins the 2026-10-14 playtest ruling on townie display numbers ("Villager N"):
 // numbers are monotonic and never re-issued - when a townie dies/leaves its number
@@ -59,5 +62,16 @@ class VillagerDisplayNumbersTest {
         VillagerDisplayNumbers n2 = new VillagerDisplayNumbers();
         n2.restore(Map.of(A, 7), 3);
         assertEquals(8, n2.assign(B));
+    }
+
+    // Playtest 2026-10-22: a dedicated server resolved the name on load, before the mod
+    // lang was available, and saved "menu.villager.name" as both townies' nameplates.
+    @Test
+    void theNameplateIsLeftForTheClientToTranslate() {
+        var raw = VillagerDisplayNumbers.nameplate(3).getContents();
+        assertTrue(raw instanceof TranslatableContents, "resolved to a literal: " + raw);
+        var contents = (TranslatableContents) raw;
+        assertEquals("menu.villager.name", contents.getKey());
+        assertArrayEquals(new Object[]{3}, contents.getArgs());
     }
 }

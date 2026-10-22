@@ -331,7 +331,7 @@ public final class TownVillagerHandle {
         if (n <= 0) {
             return "";
         }
-        return ca.bradj.questown.mc.Compat.translatable("menu.villager.name", n).getString();
+        return VillagerDisplayNumbers.nameplate(n).getString();
     }
 
     /**
@@ -551,9 +551,9 @@ public final class TownVillagerHandle {
         delegate.register(visitorMobEntity);
 
         assignDisplayNumber(visitorMobEntity.getUUID());
-        String displayName = displayNameFor(visitorMobEntity.getUUID());
-        if (!displayName.isEmpty()) {
-            visitorMobEntity.setCustomName(ca.bradj.questown.mc.Compat.literal(displayName));
+        int displayNumber = displayNumberFor(visitorMobEntity.getUUID());
+        if (displayNumber > 0) {
+            visitorMobEntity.setCustomName(VillagerDisplayNumbers.nameplate(displayNumber));
             visitorMobEntity.setCustomNameVisible(true);
         }
 

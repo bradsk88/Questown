@@ -35,7 +35,18 @@ calls are marked (judge) for the dev.
    in the past day"), wrapped as a paragraph on both economics screens. Verified live, gui-lint OK.
    Left: "needed 1 times" when the count is 1 (judge: copy).
 
+9. **[FIXED 2026-10-22]** After a server restart, villager nameplates read "menu.villager.name"
+   (seen through the bedroom wall at night). `register` re-runs on load and saved a
+   server-resolved string, which was the raw key at that point; a runtime spawn got "Villager 3".
+   The custom name is now translatable; broken names healed on the next load. Verified live
+   ("Villager 2" over the townie by the campfire).
+
 ## Noticed, not changed
+- (judge) The need bubble ("!") draws over the end of the nameplate ("Villag[!]2").
+- (to check) A night-time wand use on the lit campfire from 13 blocks away did nothing and logged
+  nothing (02:52:42, `[click held] ... -> PASS`); the same use by day reached `beginCampfireSleep`
+  and failed TOO_FAR_AWAY (temp bed cleaned up). The first one probably hit a silent action-bar
+  return (`no_safe_position`); not captured.
 - **Ticketed (judge):** `restart-evening-false-sleepless.md`. A restart during the evening logged
   "Nightfall: 1 of 1 townies have no bed" for a townie with a bedroom, and SLEEPLESS was applied
   next morning. The first-tick capture runs before beds are re-assigned.

@@ -1,5 +1,8 @@
 package ca.bradj.questown.town.entity;
 
+import ca.bradj.questown.mc.Compat;
+import net.minecraft.network.chat.Component;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -29,6 +32,16 @@ public final class VillagerDisplayNumbers {
      */
     public int assign(UUID vuid) {
         return byVuid.computeIfAbsent(vuid, v -> ++highest);
+    }
+
+    /**
+     * The nameplate for display number {@code n} ("Villager N"), kept translatable so the
+     * client resolves it. Resolving it on the server stored the raw key as the custom name:
+     * a dedicated server re-registers townies while the world loads, and the lookup there
+     * returned the key (playtest 2026-10-22: both nameplates read "menu.villager.name").
+     */
+    public static Component nameplate(int n) {
+        return Compat.translatable("menu.villager.name", n);
     }
 
     /** Retire the townie's number (it leaves/dies). The number is never re-issued. */
