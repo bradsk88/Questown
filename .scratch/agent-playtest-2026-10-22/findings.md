@@ -42,6 +42,11 @@ calls are marked (judge) for the dev.
    ("Villager 2" over the townie by the campfire).
 
 ## Noticed, not changed
+- **Ticketed (bug, judge the fix):** `self-satisfied-batch-villager-cascade.md`. One morning, 8
+  villagers arrived in 3 s: each new visitor's batch was already satisfied, backfill closed it at
+  once, and its reward spawned the next visitor. 3 -> 11 villagers. World saved.
+- (to check) After that morning, "Fullness changed from 4990 to 5000" logged 4x every 10 ticks for
+  70 s (03:12:48-03:13:57, 500 lines), with no meals in between. Source not traced.
 - **Ticketed (judge):** `sleeping-leaver-shows-left-town.md`. A gatherer whose trip spanned
   nightfall slept in bed all night while its card said "Gatherer has left town to collect items";
   the trip resumed at sunrise.
