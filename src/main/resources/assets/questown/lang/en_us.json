@@ -106,7 +106,7 @@
   "message.baker.bread_still_baking": "Bread will be ready in %d ticks",
   "message.baker.villagers_will_add_wheat": "Baker villagers can add wheat and coal to bake bread",
   "message.baker.villagers_will_add_coal": "Baker villagers can add coal to bake bread",
-  "messages.jobs.changed": "Job changed to %s for villager %s",
+  "messages.jobs.changed": "Job changed to %s for %s",
   "messages.jobs.unlocked_by_mod": "%s unlocked job %s for villager %s",
   "message.debug_mode": "Debug Mode: %s",
   "message.welcome_mat.not_linked": "This welcome mat isn't linked to a town flag. Craft one from your flag's crafting tab.",
