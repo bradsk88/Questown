@@ -1,6 +1,7 @@
 ---
 title: 'A restart in the evening marks bedded townies bedless (false SLEEPLESS next morning)'
-status: needs-triage
+status: closed
+closed: 2026-10-22
 origin: 2026-10-22 agent playtest
 ---
 
@@ -48,3 +49,11 @@ still at night. First flag tick after join:
 
 So any restart between nightfall and morning hits it, not only an evening one. With the
 playtest loop restarting often, every town takes a SLEEPLESS day per restart.
+
+# Resolved (2026-10-22)
+
+Dev ruling: wait for the room scan. `BedlessLedger.captureEdge(signals, bedsKnown)` holds a due
+capture until `VillagerSleepModule.bedsKnown()` (`TownRoomsMap.hasScannedSinceLoad`); dropped if
+still due at dawn. `BedlessLedgerTest` 9/9 (3 new tests red against the old form). Live: a
+restart at day time 13096 logged "Nightfall: 16 of 20" 1.25 s after join, the same count a real
+nightfall logged before the restart.

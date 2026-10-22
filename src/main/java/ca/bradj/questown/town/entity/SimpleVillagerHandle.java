@@ -198,7 +198,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         delegator.getSleepModule().tick(entities);
         // Nightfall edge: capture which townies have no bed for the coming night,
         // so the morning can apply the SLEEPLESS debuff to exactly those.
-        if (bedlessLedger.captureEdge(signals)) {
+        if (bedlessLedger.captureEdge(signals, delegator.getSleepModule().bedsKnown())) {
             List<UUID> bedless = new ArrayList<>();
             entities.forEach(e -> {
                 if (!delegator.getSleepModule().hasBed(e)) {

@@ -45,6 +45,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> activeRecipes = new HashMap<>();
     private final ArrayList<Integer> times = new ArrayList<>();
     private @Nullable MultiLevelRoomDetector pendingRooms;
+    private boolean scannedSinceLoad = false;
     private final List<ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>> recipeListeners = new ArrayList<>();
     private @Nullable TownFlagBlockEntity town;
     private final Map<TownPosition, Integer> doorsToDrop = new HashMap<>();
@@ -212,6 +213,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             boolean finished = pendingRooms.proceed(activeRooms::get);
             if (finished) {
                 this.pendingRooms = null;
+                this.scannedSinceLoad = true;
             }
             profileTick("PTR.proceed", start);
             return;
@@ -444,6 +446,14 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
     public int numRecipes() {
         return this.activeRecipes.size();
+    }
+
+    /**
+     * True once a full room-detection pass has finished in this session. Room recipe
+     * matches (and so the beds the town provides) are rebuilt by that pass after a load.
+     */
+    public boolean hasScannedSinceLoad() {
+        return scannedSinceLoad;
     }
 
     public Collection<RoomRecipeMatch<MCRoom>> getAllMatches(Predicate<RoomRecipeMatch<MCRoom>> include) {

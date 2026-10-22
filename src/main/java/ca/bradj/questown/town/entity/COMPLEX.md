@@ -508,9 +508,17 @@ flowchart TD
   fires on the first tick whose `Signals` is `EVENING` after the signal was
   anything else (world ~11500, before the villager schedule's REST phase at
   12500). A restart mid-night therefore does **not** capture until the next real
-  evening; a restart mid-evening captures on the first observed tick (best
-  effort). `BedlessLedger` is pure and Forge-free — its edge/drain rule is what
+  evening. `BedlessLedger` is pure and Forge-free — its edge/drain rule is what
   `BedlessLedgerTest` pins without a flag or a level.
+- **The capture waits for the beds to be known** (`captureEdge(signals, bedsKnown)`,
+  dev ruling 2026-10-22). After a load the bed supply is empty until the room scan
+  re-matches the bedrooms, so a restart mid-evening used to capture every townie as
+  bedless and apply SLEEPLESS to all of them next morning (logged "Nightfall: 20 of
+  20"). The edge now marks the capture *due*; it runs on the first EVENING/NIGHT tick
+  where `VillagerSleepModule.bedsKnown()` holds (`TownRoomsMap.hasScannedSinceLoad`:
+  a full `MultiLevelRoomDetector` pass finished this session). A capture still due
+  at dawn is dropped. Live: a mid-evening restart logged "16 of 20", the real-
+  nightfall count, 1.25 s after the player joined.
 - **`hasBed` is the *assignment*, not the block.**
   `TownVillagerSleepModule.hasBed` asks
   `VillagerBedsHandle.getBestBed` (the same source that becomes a townie's HOME

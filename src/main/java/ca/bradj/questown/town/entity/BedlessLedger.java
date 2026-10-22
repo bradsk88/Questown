@@ -22,21 +22,34 @@ import java.util.UUID;
 public final class BedlessLedger {
 
     private @Nullable Signals lastSignals = null;
+    private boolean captureDue = false;
     private final Set<UUID> pending = new HashSet<>();
 
     /**
-     * Note the current tick's signal. Returns true only on the nightfall edge:
-     * the first {@code EVENING} tick after the signal was anything but
-     * {@code EVENING}/{@code NIGHT}. A restart mid-night therefore does not
-     * capture until the next real evening; a restart mid-evening captures on
-     * the first observed tick (best effort).
+     * Note the current tick's signal. Returns true when the capture should run now: on the
+     * nightfall edge (the first {@code EVENING} tick after the signal was anything but
+     * {@code EVENING}/{@code NIGHT}), or later that night once {@code bedsKnown}. A restart
+     * mid-night therefore does not capture until the next real evening; a restart
+     * mid-evening captures once the restarted town has matched its rooms. Before that
+     * every townie reads as bedless (2026-10-22 playtest). A capture still due at dawn is
+     * dropped: that night goes unrecorded.
      */
-    public boolean captureEdge(Signals signals) {
+    public boolean captureEdge(Signals signals, boolean bedsKnown) {
         boolean edge = signals == Signals.EVENING
                 && lastSignals != Signals.EVENING
                 && lastSignals != Signals.NIGHT;
         lastSignals = signals;
-        return edge;
+        if (edge) {
+            captureDue = true;
+        }
+        if (signals != Signals.EVENING && signals != Signals.NIGHT) {
+            captureDue = false;
+        }
+        if (!captureDue || !bedsKnown) {
+            return false;
+        }
+        captureDue = false;
+        return true;
     }
 
     /** Record the townies without a bed at the nightfall edge (replaces any earlier capture). */

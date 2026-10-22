@@ -16,4 +16,7 @@ public interface VillagerSleepModule<ENTITY> {
 
     /** True when the townie currently has an assigned bed (one the town's rooms provide). */
     boolean hasBed(ENTITY e);
+
+    /** False until {@link #hasBed} can be trusted: a just-loaded town has not matched its bedrooms yet. */
+    boolean bedsKnown();
 }

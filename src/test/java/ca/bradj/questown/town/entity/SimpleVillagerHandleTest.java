@@ -69,6 +69,11 @@ class SimpleVillagerHandleTest {
         public boolean hasBed(UUID e) {
             return bedded.contains(e);
         }
+
+        @Override
+        public boolean bedsKnown() {
+            return true;
+        }
     }
 
     class TestDelegator implements Delegator<UUID> {

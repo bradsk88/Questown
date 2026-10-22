@@ -77,4 +77,10 @@ public class TownVillagerSleepModule implements VillagerSleepModule<VisitorMobEn
     public boolean hasBed(VisitorMobEntity e) {
         return beds.getBestBed(town.getUnsafe(), e).isPresent();
     }
+
+    @Override
+    public boolean bedsKnown() {
+        // Beds come from recipe-matched rooms, which the room scan rebuilds after a load.
+        return town.isInitialized() && town.getUnsafe().getRoomHandle().getRegisteredRooms().hasScannedSinceLoad();
+    }
 }
