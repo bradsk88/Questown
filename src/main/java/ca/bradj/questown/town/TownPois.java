@@ -199,14 +199,16 @@ public class TownPois {
     public void tick(
             ServerLevel level,
             BlockPos flagPos,
-            int villagerCount
+            boolean campfireQuestOpen
     ) {
         // TODO: Consider adding non-room town "features" as quests
         // TODO: Don't check this so often - maybe add fireside seating that can be paired to flag block
         Optional<BlockPos> fire = Optional.empty();
-        if (villagerCount <= 0) {
-            // Quest completion fires only when a *lit* campfire exists nearby and
-            // no villager has arrived yet (day one) — an unlit worldgen campfire
+        if (campfireQuestOpen) {
+            // Look while the Campfire quest is open (2026-10-22 r6: gating on "no villager
+            // yet" left a campfire skipped on day one uncompletable, and the flag's
+            // incomplete-quests bubble up for good). Quest completion fires only when a
+            // *lit* campfire exists nearby — an unlit worldgen campfire
             // (e.g. inside the empty_town structure) should not auto-complete the
             // quest on player arrival. The chicken-arc UX expects the player to use
             // the wand on the campfire first, lighting it, which is what advances
@@ -215,8 +217,8 @@ public class TownPois {
             // mat-gated arrival (.scratch/mat-gated-arrival) the mat sets
             // visitorSpot before the first arrival, and a player who places the mat
             // before lighting the campfire would otherwise lose the campfire quest
-            // (markQuestAsComplete is idempotent, so the no-villager gate is the
-            // one-shot guard).
+            // (markQuestAsComplete is idempotent; the open-quest gate stops the scan once
+            // it completes).
             fire = TownCycle.findCampfire(flagPos, level, TownPois::isCampfireLit);
             fire.ifPresent((bp) -> listener.campfireFound(bp));
         }

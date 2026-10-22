@@ -1664,6 +1664,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     private static final String GATHERER_ROOT = "gatherer";
 
+    /** The campfire quest is posted and not yet complete: the flag keeps looking for a lit campfire. */
+    public boolean isCampfireQuestOpen() {
+        return getAll().stream().anyMatch(
+                q -> SpecialQuests.CAMPFIRE.equals(q.getWantedId()) && !q.isComplete()
+        );
+    }
+
     /** The day-one campfire quest is posted and complete (a flag with its camp). */
     public boolean isCampfireQuestComplete() {
         return getAll().stream().anyMatch(

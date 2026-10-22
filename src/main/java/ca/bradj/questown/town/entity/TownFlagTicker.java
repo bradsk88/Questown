@@ -83,7 +83,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         TownFlagBlockEntity e = tickData.entity();
         ServerLevel sl = tickData.level();
         BlockPos blockEntityPos = tickData.blockEntityPos();
-        e.pois.tick(sl, blockEntityPos, (int) e.villagerHandle.stream().count());
+        e.pois.tick(sl, blockEntityPos, e.quests.isCampfireQuestOpen());
     }
 
     @Override

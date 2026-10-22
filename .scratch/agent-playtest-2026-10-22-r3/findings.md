@@ -206,3 +206,11 @@ dusk (4ca11bbe), no-table diner give-up.
 - Full autotest suite after tonight's fixes (tools/autotest-parallel.sh --shard 4, 08:13):
   TOTAL 88/89; the one failure is `chicken-arc:skip_chicken_command`, on AGENTS.md's
   deterministic-failure list. No new reds.
+23. **[FIXED 2026-10-22, verified live]** r6: a Campfire quest skipped on day one could never
+    complete. `TownPois.tick` only looked for a lit campfire while the town had no villagers
+    (a 2025 gate), and arrival no longer needs a campfire, so a lit campfire placed on day 3
+    completed nothing and the flag's incomplete-quests bubble would stay up for good. Gate is
+    now "Campfire quest open" (`TownQuests.isCampfireQuestOpen`). Why red was certain: the old
+    gate cannot scan with 1 villager by construction, and live a lit campfire placed 08:22:50
+    did not complete it; after the fix it completed on the first tick (08:26:22). Unit:
+    `TownQuestsCampfireOpenTest` 3/3; full :test 1426/0; sharded suite 88/89 (known red only).

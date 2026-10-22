@@ -61,6 +61,14 @@ detected by `tickPOIs` and the campfire quest self-complete without a client
 (see the watchtower seed in `commands/test/COMPLEX.md`). The branch is gated on
 the test property, so real game behavior is untouched.
 
+**The campfire scan runs while the Campfire quest is open (2026-10-22 r6).** `TownPois.tick`
+used to look for a lit campfire only while the town had no villagers. With mat-gated arrival
+the first villager does not need a campfire, so a player who skipped it on day one could never
+complete the quest, and the flag's incomplete-quests bubble stayed up for good. The gate is now
+`TownQuests.isCampfireQuestOpen()` (posted and incomplete), which keeps the one-shot intent
+(no scan once it completes); the *lit* check still keeps an unlit worldgen campfire from
+counting. Unit: `TownQuestsCampfireOpenTest`; the wiring was verified live.
+
 ## Container-scan throttle (inside `updateStoredData`)
 
 ```mermaid
