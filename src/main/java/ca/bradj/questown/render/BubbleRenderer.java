@@ -50,6 +50,12 @@ import net.minecraft.world.item.ItemStack;
     /** Additional lift in world-Y above the chicken's head. */
     private static final float HEAD_LIFT_BLOCKS = 0.5f;
 
+    /**
+     * Extra lift when the entity shows a nameplate: the bubble otherwise sits on the name
+     * ("Villag[!]2", 2026-10-22 playtest). Roughly one nameplate line (9 px at 0.025).
+     */
+    private static final float NAMEPLATE_CLEARANCE_BLOCKS = 0.3f;
+
     /** Outer scale applied before drawing bubble + icon. */
     private static final float ASSEMBLY_SCALE = 0.5f;
 
@@ -63,6 +69,14 @@ import net.minecraft.world.item.ItemStack;
     private static final float ICON_CENTRE_Y_INNER = 13.0f / 16.0f;
 
     private BubbleRenderer() {
+    }
+
+    private static double bubbleLift(Entity entity) {
+        double lift = entity.getBbHeight() + HEAD_LIFT_BLOCKS;
+        if (entity.shouldShowName()) {
+            return lift + NAMEPLATE_CLEARANCE_BLOCKS;
+        }
+        return lift;
     }
 
     /**
@@ -159,7 +173,7 @@ import net.minecraft.world.item.ItemStack;
             EntityRenderDispatcher dispatcher
     ) {
         poseStack.pushPose();
-        poseStack.translate(0.0, entity.getBbHeight() + HEAD_LIFT_BLOCKS, 0.0);
+        poseStack.translate(0.0, bubbleLift(entity), 0.0);
         poseStack.scale(ASSEMBLY_SCALE, ASSEMBLY_SCALE, ASSEMBLY_SCALE);
         poseStack.mulPose(dispatcher.cameraOrientation());
 
@@ -306,7 +320,7 @@ import net.minecraft.world.item.ItemStack;
     ) {
         // Outer pose: +Y is world-up. Translate up to chicken's head + lift.
         poseStack.pushPose();
-        poseStack.translate(0.0, entity.getBbHeight() + HEAD_LIFT_BLOCKS, 0.0);
+        poseStack.translate(0.0, bubbleLift(entity), 0.0);
         renderBubbleAssembly(poseStack, bufferSource, shown, throughWalls, dispatcher);
         poseStack.popPose();
     }

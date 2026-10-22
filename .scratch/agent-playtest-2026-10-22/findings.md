@@ -61,7 +61,7 @@ calls are marked (judge) for the dev.
   stone stairs given while it was open, Craft did nothing ("0 in your inventory") until reopened.
 - (judge) Quests tab grows with completed (green) cards: 4 open quests sat on "Page 1 / 7", the
   other 6 pages all completed ones. The separate completed view only applies when all are done.
-- (judge) The need bubble ("!") draws over the end of the nameplate ("Villag[!]2").
+- **[FIXED 2026-10-22]** The need bubble drew over the end of the nameplate ("Villag[!]2"); it now sits above a shown name (dev ruling).
 - (to check) A night-time wand use on the lit campfire from 13 blocks away did nothing and logged
   nothing (02:52:42, `[click held] ... -> PASS`); the same use by day reached `beginCampfireSleep`
   and failed TOO_FAR_AWAY (temp bed cleaned up). The first one probably hit a silent action-bar
