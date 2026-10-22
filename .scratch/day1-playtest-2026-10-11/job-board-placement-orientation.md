@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 origin: 2026-10-12 playtest — user chat 17:40:26 ("Choosing the job boards orientation is something we'll need to solve. I just placed one and its rotated 90 west from where it should be pointing.")
 re-reported: 2026-10-15 playtest — user chat 02:58:27 ("Job board still not working right. It should look at the direction during placement and set its rotation correctly. It's currently rotated 90 degrees left of where itshould be for the irection I was facing.")
 ---
@@ -86,3 +86,7 @@ client; re-test after the next client restart.
 ## Audit (2026-10-22)
 
 Blockstate table re-based twice; the corrected one (73ddb582, 2026-10-16: west 0, north 90, east 180, south 270) still needs the south/east placement check the ticket asks for. To do in this audit's client session.
+
+## Resolved (audit 2026-10-22)
+
+Verified live 2026-10-22 (r8, fresh world) on the committed table: a board placed by a player looking south got facing=north and its request face pointed at a camera north of it; boards set with facing=south/east/west each showed the request face to a camera on that side (board-facing-{north,south,east,west}-2026-10-22.png beside this ticket).
