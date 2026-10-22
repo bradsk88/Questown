@@ -166,7 +166,6 @@ public class UIQuest implements Comparable<UIQuest> {
                 jobRecipientUUID = v.getUUID();
             }
             Collection<Ingredient> ingredientz = getIngredients(v, rMap);
-            boolean carriesProgress = v.getType() == Quest.QuestType.ITEM || v.getType() == Quest.QuestType.LOOT;
             return new UIQuest(
                     removableBatch(v),
                     v.getWantedId(),
@@ -177,7 +176,7 @@ public class UIQuest implements Comparable<UIQuest> {
                     jobRecipientUUID,
                     job,
                     v.getFlavorText(),
-                    carriesProgress ? questProgress.get(v.getWantedId()) : null
+                    QuestCardProgress.shown(v.getType(), v.getStatus(), v.getCountNeeded(), questProgress.get(v.getWantedId()))
             );
         }).toList();
     }

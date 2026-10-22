@@ -1077,3 +1077,13 @@ Card indices point into `cardsData()`, not `quests`: `renderCardContent` and
 "Page 1 / 1" with the two open quests, the link below the panel, gui-lint OK on
 QuestsScreen (606x647); clicking it shows "Page 1 / 48". Applies to the per-villager
 quests screen too (same class).
+
+## Completed quest cards freeze their progress (2026-10-22)
+
+ITEM/LOOT cards show "(n/m)" from `questProgress`, the town-wide live tally keyed by the
+wanted item, so a ticked card drifted with the storeroom ("Coal x8 (7/8)" after the cook
+burned one). Dev ruling: freeze at completion. `QuestCardProgress.shown` returns the live
+count while open and `countNeeded` once COMPLETED: these quests complete only on reaching
+their count, and the card caps at the target, so the count at completion always reads n/n
+(no stored value needed). `UIQuest`'s server-side mapping calls it. Pinned by
+`QuestCardProgressTest`; live: with 4 coal in the storeroom, the completed card read "(8/8)".

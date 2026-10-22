@@ -104,7 +104,7 @@ calls are marked (judge) for the dev.
   (03:07:42, 03:09:50, 03:10:45), each re-closing Mineshaft + Miner job + pickaxes at once; chat
   showed "Quest completed: Mineshaft" 4 times and "Villager job: Miner" 4 times. It stopped once
   everything was done ("You will be rewarded in the morning").
-- (judge) A completed Coal x8 card (green, ticked) reads "(7/8)": the count is the live storeroom
+- **[FIXED 2026-10-22]** (dev: freeze at completion) A completed Coal x8 card (green, ticked) read "(7/8)": the count is the live storeroom
   tally, and the cook burned one coal after the quest closed.
 
 ## Fine (checked)
