@@ -43,6 +43,12 @@ public class CampfireSleepHandler {
             BlockPos campfirePos,
             TownFlagBlockEntity parent
     ) {
+        // A second use while asleep (a double-click lands before the sleep screen opens) would
+        // overwrite this sleeper's records, then its failed sleep clears them: the first temp
+        // bed stays in the world and the wake no longer counts as a campfire sleep.
+        if (player.isSleeping()) {
+            return;
+        }
         BlockState campfireState = level.getBlockState(campfirePos);
         if (!campfireState.hasProperty(CampfireBlock.LIT) || !campfireState.getValue(CampfireBlock.LIT)) {
             Util.onScreenText(() -> player, "message.wand.campfire.not_lit");

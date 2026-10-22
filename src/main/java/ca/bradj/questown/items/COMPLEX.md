@@ -131,3 +131,14 @@ flowchart TD
   *before* `setBlock`, so a null parent aborts the whole placement (returns
   FAIL, the item is not consumed). `TownDoor` places via the block's own `useOn`
   first, so the door block is set regardless and only registration is skipped.
+
+## A use while asleep does nothing (2026-10-22 agent playtest)
+
+`beginCampfireSleep` returns at once when the player is already sleeping. A second wand use
+that lands before the sleep screen opens (a double-click; the agent's two `clickheld` calls)
+used to run the whole path again: it overwrote the sleeper's records with a second temp bed,
+`startSleepInBed` failed with `OTHER_PROBLEM`, and the failure path cleared the records. The
+first temp bed then stayed in the world, the campfire stayed lit, and `onWake` no longer saw a
+campfire sleeper, so `first_campfire_sleep` was never granted and the "Your camp is ready" toast
+came back every evening (`TownFlagBlockEntity.showCampReadyToastIfDue`). Pinned by
+`CampfireSleepReentryTest`.

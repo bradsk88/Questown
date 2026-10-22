@@ -81,9 +81,15 @@ as you go; do not end the turn to summarise.
   wand twice). Put tools in other hotbar slots (`hotbar.N`) and swap with `item replace ...
   from entity Dev hotbar.N`.
 - Rooms: build with `fill ... hollow`, then wand the door. Probe ground height first (`execute if
-  block x y z minecraft:air run say ...`). Don't put the campfire in front of a door: sleeping via
+  block x y z minecraft:air run say ...`). `hollow` also closes the bottom face, so start the fill
+  one block *below* the door's bottom half (the bottom face becomes the floor). With the floor
+  level with the door's bottom, villagers stand stuck in the doorway: they can't jump the step
+  under the wall above the door (2026-10-22: a hunter sat in COLLECTING_SUPPLIES for 2 minutes). Don't put the campfire in front of a door: sleeping via
   the wand relights it, and villagers path around lit campfires, so the door becomes a wall.
-- Sleep: wand on the campfire (the first use after a night relights it; the second sleeps).
+- Sleep: wand on the campfire. If the fire is out (after a night), the first use relights it and
+  the second sleeps. Use once, then check the log for `startSleepInBed RIGHT` before using again:
+  a use while asleep used to strand the temp bed and skip the campfire-sleep advancement
+  (fixed 2026-10-22, but don't rely on it).
 - Moving far: `spreadplayers <x> <z> 0 1 false Dev` lands on the surface; a plain `tp` can land
   inside blocks.
 
