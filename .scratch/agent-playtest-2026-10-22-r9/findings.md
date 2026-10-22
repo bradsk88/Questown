@@ -130,3 +130,13 @@ heartbeat fix 49dc0a9a and the vanilla checkbox d559ded6).
   Mineshaft, Villager job: Miner, Coal x8 (Coal backfilled at once from the storeroom's coal).
   Mineshaft crafted from stone stairs -> "Mineshaft created at location [-34, -22]"; four pickaxes
   in the storeroom -> "Quest completed: Wooden Pickaxe x4".
+- Villager 3 -> Miner by BOP ("Job changed to Miner for Villager 3"); the miner batch completes ->
+  "New visitors will arrive in the morning".
+- Post-onboarding (caca8fbd, dev ruling): "Top-need batch posted: crafter room ... (top need
+  #questown:swords)" = one "Crafting Room" quest; a crafting table -> "Room became Crafting Room" ->
+  the next is "baker room questown:breadmaker (top need #questown:villager_food)". Rooms only, no
+  unlock-job quest; no "No quests found" re-ask seen through this point.
+- BOP tab gains "Earned by: Hunter x2" once the hunter has deposited BOPs.
+
+## Stopped here
+Day 8 morning pending (villager 4). World saved: `~/questown-worlds/r9-taiga-day8-2026-10-22.tgz`.
