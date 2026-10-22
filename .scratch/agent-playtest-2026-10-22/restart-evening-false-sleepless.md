@@ -33,3 +33,18 @@ The best-effort capture was a stated v1 trade-off for timing, but it now produce
 a townie that had a bed. Options: skip the capture when `lastSignals` is null (a restart
 mid-evening then records nobody), or defer the capture until the room scan has run once.
 Not changed autonomously because `BedlessLedgerTest` pins the current rule.
+
+# Second repro (2026-10-22 02:44): not only evening
+
+Server stopped at night with both townies in the big bedroom (2 beds, completed quest), restarted
+still at night. First flag tick after join:
+
+```
+02:44:12.539 Dev joined the game
+02:44:12.794 Nightfall: 2 of 2 townies have no bed for the night
+02:45:03.341 Villager d543...708 was bedless last night; SLEEPLESS applied until tick 156752
+02:45:03.341 Villager 23c4...be1 was bedless last night; SLEEPLESS applied until tick 156752
+```
+
+So any restart between nightfall and morning hits it, not only an evening one. With the
+playtest loop restarting often, every town takes a SLEEPLESS day per restart.

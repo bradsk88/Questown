@@ -29,6 +29,12 @@ calls are marked (judge) for the dev.
    lost the `first_campfire_sleep` advancement, so "Your camp is ready" returned every evening.
    Reached by the agent's two `clickheld` calls; a player can reach it with a double-click.
 
+8. **[FIXED 2026-10-22]** Economics card tooltip read "Food was needed / 2 / times in the past /
+   1 days": two hand-broken lang keys, each re-wrapped by the dynamic wrap (the count alone on a
+   line), and "1 days" since `PERIOD_DAYS` is 1. Now one sentence ("Raw Mutton was needed 6 times
+   in the past day"), wrapped as a paragraph on both economics screens. Verified live, gui-lint OK.
+   Left: "needed 1 times" when the count is 1 (judge: copy).
+
 ## Noticed, not changed
 - **Ticketed (judge):** `restart-evening-false-sleepless.md`. A restart during the evening logged
   "Nightfall: 1 of 1 townies have no bed" for a townie with a bedroom, and SLEEPLESS was applied
@@ -48,7 +54,20 @@ calls are marked (judge) for the dev.
 - `TownQuests` logs "Basics batch posted ... on welcome-mat completion", but the batch now
   posts when the empty-room quest completes. Log wording only.
 
+- `[LOOTTRACE] extract 'Raw Porkchop' vs LOOT quest questown:villager_food -> false (extracted
+  7/8)` (TownQuests.processLootQuests, DEV-DIAG): the count prints `extracted + count` even on a
+  non-match, so it reads as a credit. The quest stayed at 6/8. Log only.
+
+- Known (`.scratch/cook-scoring-tie/always-consider-noop-tie-mechanism.md`): after the raw mutton
+  ran out, the cook flipped `fuel`<->`extract` every 2.6 s for 30 s (12 changes, no work), then
+  went to downtime. Same coin flip as the 10-14 report.
+- (judge) Food quest done in the daytime: the quests tab says "You will be rewarded in the
+  morning" while chat says "New visitors will arrive after all players sleep". Same event, two
+  framings.
+
 ## Fine (checked)
+- Villagers page status tooltip (04635315) wraps live: "Cook is resting / until morning." on two
+  lines, inside the window (night status, 2026-10-22 02:45 session).
 - Day-1 quest cards (Campfire, Town Gate) carry no discard x (last session's fix holds live).
 - Campfire next to the flag completes the Campfire quest at once.
 - An unlinked welcome mat now explains itself on screen ("This welcome mat isn't linked to a

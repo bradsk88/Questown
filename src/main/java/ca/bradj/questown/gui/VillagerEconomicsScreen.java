@@ -84,14 +84,11 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
             int x = card.coords().leftX();
             int y = card.coords().topY();
             if (UtilClean.isCoordInBox(mouseX, mouseY, x, y, CARD_WIDTH, cardHeight)) {
-                String key1 = "questown.menu.needs_in_period_1";
-                String key2 = "questown.menu.needs_in_period_2";
                 Ingredient ingr = Ingredients.fromString(card.data().ingredientKey());
                 Component itemName = Ingredients.getName(ingr);
                 int timesNeeded = card.data().timesNeeded();
-                this.showTooltip(List.of(
-                        Compat.componentText(Compat.translatable(key1, itemName, timesNeeded)),
-                        Compat.componentText(Compat.translatable(key2, ItemEconomicsData.PERIOD_DAYS))
+                renderTooltipWithDynamicWrapping(ctx, mouseX, mouseY, List.of(
+                        ItemEconomicsData.neededTooltip(itemName, timesNeeded)
                 ));
             }
         }

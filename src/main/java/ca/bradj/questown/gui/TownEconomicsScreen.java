@@ -100,14 +100,11 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
             int x = card.coords().leftX();
             int y = card.coords().topY();
             if (UtilClean.isCoordInBox(mouseX, mouseY, x, y, CARD_WIDTH, cardHeight)) {
-                String key1 = "questown.menu.needs_in_period_1";
-                String key2 = "questown.menu.needs_in_period_2";
                 Ingredient ingr = Ingredients.fromString(card.data().ingredientKey());
                 Component itemName = Ingredients.getName(ingr);
                 int timesNeeded = card.data().timesNeeded();
                 List<Component> lines = new ArrayList<>(List.of(
-                        Compat.translatable(key1, itemName, timesNeeded),
-                        Compat.translatable(key2, ItemEconomicsData.PERIOD_DAYS)
+                        ItemEconomicsData.neededTooltip(itemName, timesNeeded)
                 ));
                 if (bonusFoodAvailable() && isFoodCard(card)) {
                     lines.add(Compat.translatable("questown.menu.free_food_card.tooltip"));
