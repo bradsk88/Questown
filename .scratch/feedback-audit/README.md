@@ -116,7 +116,7 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
 | 10-17/double-new-quest-announcement | done | day1 tripwire PASS | — |
 | 10-17/economics-tooltip-too-wide | done | TownEconomicsScreen.java:114; live 10-22 | — |
 | 10-17/first-arrival-text-telegraphs-villagers | done | en_us.json:556 | — |
-| 10-17/hunter-collecting-supplies-after-hunt | open-agent | e2e check owed | — |
+| 10-17/hunter-collecting-supplies-after-hunt | done | e2e: sleep_mid_trip extracts at ~9.8k and ~11.5k ticks from job start, 0 max-ticks fallbacks (2026-10-22) | — |
 | 10-17/hunter-stuck-after-root-change-stale-mat-state | done | loot/gatherer_becomes_hunter | — |
 | 10-17/job-board-empty-state-needs-blank-line | done | WorkScreen.java:178 | — |
 | 10-17/missed-morning-while-away | done | day1 check PASS 10-22 | — |

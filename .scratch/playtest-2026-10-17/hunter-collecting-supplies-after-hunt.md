@@ -1,6 +1,6 @@
 ---
 title: 'Hunter back in COLLECTING_SUPPLIES after the hunt timer expires - no loot extracted'
-status: ready-for-agent
+status: done
 origin: 2026-10-17 playtest round 2 — user chat 05:53:32
 ---
 
@@ -56,3 +56,12 @@ above (what DROPPING_LOOT dropped; "Production spot was null") stay open until t
 ## Audit (2026-10-22)
 
 Watchdog fix shipped 2026-10-17; the end-to-end check it asks for (hunt product extracted past 3000 ticks) is still owed. Related open: .scratch/playtest-2026-10-21/hunters-stuck-collecting-after-sleep.md (mat at state 3, unreproduced).
+
+## End-to-end check (2026-10-22 evening)
+
+`hunter/sword [sleep_mid_trip]` alone, after 49dc0a9a: two hunters get the job at monitor start
+(dayTime 11000), their first hunt cycle spans the night, and both extract well past 3000 ticks from
+job start: chicken + string at ~9800 ticks (the sleep step), feather + beef at ~11 500 ticks
+(realtime, after the morning reassignment). `Reached max ticks for hunter`: 0 lines. PASS.
+That is the check the 10-17 fix owed. The two open questions above (what DROPPING_LOOT dropped;
+"Production spot was null") predate the fix and were not re-observed; closing on the e2e pass.
