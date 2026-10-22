@@ -228,7 +228,8 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
         boolean on = menu.isBoardAutoRequest();
         ctx.fill(tgX, tgY, tgX + 9, tgY + 9, 0x60000000);
         if (on) {
-            ctx.fill(tgX + 2, tgY + 2, tgX + 7, tgY + 7, 0xFFFFFF);
+            // ARGB: 0xFFFFFF has alpha 0 and drew nothing, so ON looked unticked.
+            ctx.fill(tgX + 2, tgY + 2, tgX + 7, tgY + 7, 0xFFFFFFFF);
         }
         Component toggleLabel = Compat.translatable("job_board.auto_request");
         ctx.text(

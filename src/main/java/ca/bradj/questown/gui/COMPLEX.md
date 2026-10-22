@@ -841,6 +841,12 @@ map (same per-frame dedupe style as `removes`); the hover highlight +
 tooltip and `mouseClicked` both use the wide region (checked before the
 16x17 `removes` loop).
 
+**Tick colour (agent playtest 2026-10-22 r3):** the ON tick was filled with
+`0xFFFFFF`. `RenderContext.fill` hands the int straight to `GuiGraphics.fill`,
+which reads it as ARGB, so alpha 0 drew nothing: the tooltip said "Auto-post is
+ON" over an empty box. Now `0xFFFFFFFF`. Any `ctx.fill` colour needs the alpha
+byte. Still open: the row sits on the panel's bottom border (r3 findings #4).
+
 ## Tutorial toast lifetime: shown at evening, hidden on sleep (2026-10-15 → 2026-10-17)
 
 Vanilla's `TutorialToast` is a *persistent* toast: it stays on screen until
