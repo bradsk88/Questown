@@ -1,6 +1,6 @@
 ---
 title: Cook status says "no place to work / no tools" when the real blocker is fuel
-status: ready-for-agent
+status: ready-for-human
 created: 2026-10-12
 ---
 
@@ -66,3 +66,7 @@ held-run covered). Full suite 1195/0/52skipped.
 In-game check still owed: a cook blocked on coal shows the UNMET_ITEM
 bubble naming coal, and the economics tab lists coal; refueling ends the
 need (clearUnmetItemNeeds on viability).
+
+## Audit (2026-10-22)
+
+Surfacing shipped (f1b5967c, 8f5a2138). 2147a1e7 root-caused the remaining 'nowhere to work' as a selection coin flip: always_consider no-ops (cook/fuel, cook/extract) tie real cook jobs at 1.0 and `chooseFromList` shuffles. Still seen 2026-10-22 (older agent findings: cook flipped fuel<->extract every 2.6 s). The fix is the mechanism choice in .scratch/cook-scoring-tie/always-consider-noop-tie-mechanism.md (A+B recommended), queued for the dev.

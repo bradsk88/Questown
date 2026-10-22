@@ -1,6 +1,6 @@
 ---
 title: "Change to <job>" quest should complete the moment the BOP is consumed, not when the job change lands
-status: ready-for-human
+status: done
 created: 2026-10-11
 ---
 
@@ -85,3 +85,7 @@ Open for implementation: locate where the `JOB_CHANGE` quest is currently
 marked complete (not yet found — next step); persist the pending root in
 NBT if the morning can be skipped across a save/reload (check whether
 `jobChangesPending` already persists).
+
+## Resolved (audit 2026-10-22)
+
+Decision E1 shipped: `TownQuests.markJobChangeCompleteAtSpend` completes the JOB_CHANGE quest at the BOP-spend moment (the roll happens at spend, applies at morning); covered by `TownQuestsJobChangeSpendTest` (spend-completes).

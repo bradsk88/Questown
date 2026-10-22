@@ -1,6 +1,6 @@
 ---
 title: 'Agent playtest 2026-10-22: findings from a fresh-world session'
-status: needs-triage
+status: ready-for-human
 ---
 
 # Agent playtest 2026-10-22 (worktree fresh world, birch forest, flag at 15 71 161)
@@ -136,3 +136,7 @@ calls are marked (judge) for the dev.
   override).
 - Storeroom stock: hunter took a stone sword from the chest and left for the gate. (My first
   storeroom had its floor level with the door bottom; villagers can't enter that. Skill note.)
+
+## Audit (2026-10-22)
+
+Fixed items are committed (21830c45 dupe; f6097a58 plain names + page count, whose bedroom part 23fa7427 reverted; 17070289 campfire double-use). Left open: the (judge) items. 'for villager Villager 1' (messages.jobs.changed) is being fixed as a copy bug in this audit; the 8-px BOP icon and the 'No quests found' miner batch are queued for the dev.

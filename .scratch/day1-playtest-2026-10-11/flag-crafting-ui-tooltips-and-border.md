@@ -1,5 +1,5 @@
 ---
-status: ready-for-human
+status: done
 origin: 2026-10-12 playtest — user chat 17:32:07
 ---
 
@@ -31,3 +31,7 @@ Two changes in `FlagCraftingScreen`:
    (`x + MARGIN`) or output box (`x + 50`). The Craft buttons already had their own
    tooltips.
 Compile-verified; visual confirmation pending held run.
+
+## Resolved (audit 2026-10-22)
+
+`FlagCraftingScreen.java:65` uses `JEI.getRecipeGuiBackground()` (the shared frame); recipe-row icons call `showTooltip(Compat.getHoverName(input))` (line 233). Live: the 2026-10-22 agent playtest saw the tooltips (finding #2, bracketed names, since fixed in f6097a58).

@@ -1,6 +1,6 @@
 ---
 title: Auto-request a root job's initial_request when a new villager gets that root
-status: ready-for-agent
+status: done
 created: 2026-10-11
 ---
 
@@ -57,3 +57,7 @@ board menu via `ToggleBoardAutoRequestMessage`), and
 never dedupes). Original ask (auto-post on root acquire) was already live via
 `ChangeJobReward` and stays so by default. Tests:
 `TownWorkHandleRequestWorkTest`. Docs: `town/entity/COMPLEX.md` F2 section.
+
+## Resolved (audit 2026-10-22)
+
+Shipped 2026-10-13 as re-scoped: `ChangeJobReward` auto-post gated on the board toggle `boardAutoRequest` (default ON; `ToggleBoardAutoRequestMessage` exists in core/network), `TownWorkHandle.requestWork` idempotent; `TownWorkHandleRequestWorkTest`.

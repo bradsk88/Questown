@@ -1,3 +1,7 @@
+---
+status: done
+---
+
 # Why the cook/food chain sometimes never staffs (self_sufficiency soft-lock)
 
 2026-10-04 (battery v3 + canFit clock-window resolution + **live-gate pin**) + a
@@ -770,3 +774,6 @@ quests against current town state; see `town/entity/COMPLEX.md`).
   gate. The `getRoomsMatching` flaky factor below is the live suspect; the
   Phase-1 fix unblocked, did not fix, this one.
 
+## Resolved (audit 2026-10-22)
+
+History archive; the investigation closed as FIXED in STATE.md (2026-10-06, effb43d6 + 060a457c + d9fcad5c).

@@ -1,5 +1,5 @@
 ---
-status: ready-for-human
+status: done
 origin: 2026-10-12 playtest — user chat 17:42:04
 ---
 
@@ -41,3 +41,7 @@ point (equidistant → first-safe-side, preserving the test-seam behavior
 `placeTempBedForTest` uses). `beginCampfireSleep` now passes `player.position()`.
 New `CampfireSleepSideTest` (4 tests, mocked level). No bed version of this path
 exists (Questown sleep is campfire-only).
+
+## Resolved (audit 2026-10-22)
+
+In code: `CampfireSleepHandler.java:63` passes `player.position()` to `findSafeSleepPosition`, which picks the safe bed side closest to the player; `CampfireSleepSideTest` (items) pins it. The one later TOO_FAR_AWAY (2026-10-22 agent findings line 69) was a wand use from 13 blocks away, so correct; no adjacent-player recurrence found (grep of all .scratch tickets for too far / TOO_FAR).

@@ -1,3 +1,7 @@
+---
+status: done
+---
+
 # Cook soft-lock — investigation STATE
 
 > **STATUS: FIXED 2026-10-06.** Three-part fix committed on `1.20.6-neoforge-wip`:
@@ -576,3 +580,7 @@ Plus the earlier `JobsCleanShouldTakeItemTest` (4 tests, GREEN).
 suppliesNull, giveback, matRooms, cleanRooms, state0, jobSites, ownerStore, matInit,
 scanRoom/scanPos, DEV-DIAG:*) in the closing commit; final clean sweep; commit fix + lock-in
 tests.
+
+## Resolved (audit 2026-10-22)
+
+STATE.md header: FIXED 2026-10-06 (effb43d6, 060a457c, d9fcad5c), run-25 verified the chain completes. DIAGNOSIS.md is the history archive for it.

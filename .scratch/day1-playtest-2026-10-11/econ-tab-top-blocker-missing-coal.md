@@ -1,6 +1,6 @@
 ---
 title: Economics tab top-blocker list omits coal even though coal is the current top blocker
-status: ready-for-agent
+status: done
 created: 2026-10-12
 ---
 
@@ -36,3 +36,7 @@ blocker now classifies as `GateReason.Blocked` on `#minecraft:coals`
 instead of `NoRoom`, so `registerUnmetNeeds` -> `econ.registerUnmetNeed`
 keys the BLOCKING INPUT (the tracker never keys the product). Decision
 layer untouched per the user's ruling.
+
+## Resolved (audit 2026-10-22)
+
+f1b5967c: an unlit smelter's failing room check classifies as `GateReason.Blocked` on `#minecraft:coals` (`TownPossibleWork.smelterFuelBlocker`, line 608; `SMELTER_FUEL_KEY` line 64), so `econ.registerUnmetNeed` keys coal. The remaining flapping is the coin flip in .scratch/cook-scoring-tie/always-consider-noop-tie-mechanism.md (decision layer, queued for the dev).

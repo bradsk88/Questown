@@ -1,6 +1,6 @@
 ---
 title: Make "empty room" one of the first quests
-status: ready-for-human
+status: done
 created: 2026-10-11
 ---
 
@@ -74,3 +74,7 @@ welcome-mat gate and the basics batch, and gates the basics.
 - Quest id `SpecialQuests.EMPTY_ROOM`; lang `room.empty_room`.
 - Test: `EmptyRoomRecipeTest` (zero-ingredient semantics + id match).
 - In-game confirmation of the beat order: pending.
+
+## Resolved (audit 2026-10-22)
+
+Decision implemented: `TownQuests.addEmptyRoomBatch` (line 162) posts the standalone empty-room batch between gate and basics (log line 'Empty-room batch posted (onboarding beat between gate and basics)'); the icon/tooltip follow-up is also done.

@@ -1,6 +1,6 @@
 ---
 title: 'Known gather results ignore the loot-table prefix: hunters and miners "produce" wheat seeds'
-status: needs-triage
+status: ready-for-human
 origin: 2026-10-22 agent playtest (fresh world, 1 gatherer, first work request)
 ---
 
@@ -39,3 +39,7 @@ gatherers bring back on a fresh town, which is economy design. Questions for the
 
 The work seeker may also pick a hunter for a seeds request, since it reads the same
 results. Not observed live yet.
+
+## Audit (2026-10-22)
+
+Economy design: the ticket's three questions are queued in .scratch/feedback-audit/README.md (recommendation there: option 3, narrow only the player-facing count, since the engine path gates leaver loot).
