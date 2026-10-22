@@ -83,10 +83,16 @@ heartbeat fix 49dc0a9a and the vanilla checkbox d559ded6).
   promised job (Cook); BOP -> "Job changed to Cook for Villager 2" + quest completed.
 - Second chest -> "Small Storeroom became Storeroom"; furnace -> "Room became Small Kitchen";
   second bed + torch -> "Bedroom became Big Bedroom". Night status: "Cook is resting until morning."
-10. (intermittent, dev-command path) Wand on the lit campfire via `_qtdev clickheld` at night
+10. **[EXPLAINED + copy fixed 4a31e7f1]** (was: intermittent) Wand on the lit campfire via `_qtdev clickheld` at night
     returned PASS with no `[campfire-sleep] beginCampfireSleep` line on 2 of 6 nights (20:42:05,
     20:58:57), same command sequence that works on the others; on-demand retries (time set 14000)
     worked. Not reproduced; may be the command path, not the player's click.
+    Explained: `onWake` puts the campfire out, so each night's first wand click only re-lights it
+    (`handleCampfireClick`, flint sound, no sleep); the failed clicks were each night's first. A
+    player sees the crosshair hint, which said "The campfire must be lit" (reads as flint and
+    steel); now "Right-click to light the campfire" (live-checked on the morning's unlit fire).
+    Also: LOOTTRACE prints "extracted 8/8" on a non-match while the card shows 7/8 (the known
+    would-be count on non-matches), not a stuck quest.
 11. (balance note, not a bug) Hunger drains ~1/tick from a 5000 meal, so every villager is
     "starving" (negative) within a quarter day: the hunter read -12630 at night on day 4 with
     13 carrots in the storeroom (it was asleep in bed, SleepingX -35, so not stuck).
@@ -108,3 +114,5 @@ heartbeat fix 49dc0a9a and the vanilla checkbox d559ded6).
     Options: (a) the chest goes in the far interior corner (`inward 2, along +1`), 2 lines;
     (b) ROOM_SIZE 5 for the documented 3x3 interior; (c) when the door-side neighbour of a job
     block is the door, stand in the doorway. Recommendation: (a) now, (c) for player-built rooms.
+- Cook batch complete on day 7 ("Quest completed: Food" 8/8 -> "New visitors will arrive in the
+  morning"); the cook cooked steadily once the furnace was off the door cell. Hunter at level 4.
