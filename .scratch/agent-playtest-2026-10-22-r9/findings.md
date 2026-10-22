@@ -140,3 +140,12 @@ heartbeat fix 49dc0a9a and the vanilla checkbox d559ded6).
 
 ## Stopped here
 Day 8 morning pending (villager 4). World saved: `~/questown-worlds/r9-taiga-day8-2026-10-22.tgz`.
+
+## Log sweep (all r9 sessions)
+- `TakeFromSlotSpecialRule: No container or empty slot at [1, 1]` (ERROR x4): when the flag
+  stopped ticking (player absent, 21:28:05) and in the reload catch-up; the warp path, with a
+  position that is not the furnace's. Not chased.
+- `entity-deserializer` "In slot N, expected X but state had Y" on a restart: added as the third
+  data point to `.scratch/playtest-2026-10-17/chest-state-mismatch-error-on-chunk-reload.md`.
+- `No upgrade paths could be determined because no quests have been completed yet` logged at ERROR
+  for the cook once; reads like an expected state logged at the wrong level.

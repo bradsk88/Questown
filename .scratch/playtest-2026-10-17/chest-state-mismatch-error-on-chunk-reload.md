@@ -38,3 +38,12 @@ The gatherer took a carrot on the very tick the flag stopped ticking, so the sto
 taken before the villager's same-tick container change, rather than at anything lost — the
 "expected" (live chest) side is correct both times. Question stays: does a later warp/settle
 write the stale 17 back (item duplication) or the stale air back (item loss)?
+
+## Third data point (agent playtest r9, 2026-10-22 21:28:04, after a server restart)
+
+Storeroom chest at -29 64 -22 on the restart's load: `In slot 7, expected porkchop but state had
+air` and `In slot 9, expected air but state had stone_sword` (each logged twice, 30 ms apart). Both
+slots are ones the villagers touch (the hunter deposits meat and returns its sword), so the stored
+state looks like a snapshot taken before the last deposit/return. `TownStateSerializer.checkItems`
+only logs (container vs state, per slot); the next question is whether anything then trusts the
+stale state.
