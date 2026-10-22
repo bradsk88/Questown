@@ -68,7 +68,9 @@ as you go; do not end the turn to summarise.
 
 - `flagtab <type> <flag x y z>` opens a flag tab. Types: `quests`, `villagers`, `economics`,
   `crafting`, `blocks_of_progress` (not `bop`: the server throws `Unexpected menu type`).
-- `click <x> <y>` (window pixels, same space as `cursor`) presses buttons and, as two clicks,
+- `click <x> <y>` (window pixels = the screenshot's own pixels on this box, 1x: read the target
+  straight off the PNG and do not scale it; 2026-10-22 a 2x guess hovered nothing and produced a
+  false "hover isn't capturable" note; same space as `cursor`) presses buttons and, as two clicks,
   moves an item between slots. `close` = Escape. `cursor 1 1` before a clean shot.
   **Screenshot before clicking**: screens resize as the town grows (the crafting tab gained a
   "Begin moving this town" section on day 3 and every Craft button moved up).
