@@ -261,3 +261,9 @@ dusk (4ca11bbe), no-table diner give-up.
     (`bop_depositing` gates on chest space): a BOP depositor may drop its BOP as ordinary loot
     into a chest. A player would find it there (no harm), but the flag's BOP count misses it.
     Settle with a held run: fill the flag-adjacent chests and watch a level-up.
+    BELIEVED chain: the r3 WHY dump for `bop_depositing` NO_SPACE (05:29:21) shows
+    `holdsWorkOutput=true` with a BOP in hand, so the BOP is sometimes counted as work output; that
+    is what makes the depositor need chest space (#9), and with space free a status flip to
+    DROPPING_LOOT would put the BOP into a chest. `BOPDepositorWork` lists the BOP as the state-1
+    ingredient and state-0 tool, so `DeclarativeJobTicker.holdsWorkOutput` should not count it;
+    check the journal's item identity (blessed NBT vs `Ingredient.of(BOP)`).
