@@ -97,6 +97,16 @@ flowchart TD
   chat: "dupicating their BOP"). The branch now scans the townie's job
   inventory for an existing `BLOCK_OF_PROGRESS` and hands out only when none
   is carried; the deposit routing is unchanged.
+- **The deposit stores a snapshot taken before the carried stack shrinks
+  (2026-10-22 r3).** `TownFlagBOPItemHandler.insertItem` used to `shrink(1)`
+  then `copy()`; a townie carries a 1-count BOP, so the copy was
+  `ItemStack.EMPTY` and the flag stored an empty entry (counted, never saved,
+  never collectable). `Compat.insertInNextOpenSlot` then aimed later deposits at
+  that empty entry, `isItemValid` refused it, the helper still reported success,
+  and those BOPs were lost too. The step is now `depositOne` (snapshot with
+  `copyWithCount(1)` first; simulate returns a copy and leaves the caller's
+  stack alone), pinned by `TownFlagBOPDepositTest`. Worlds that already hold
+  empty entries drop them on the next load (`serializeBOP` skips empties).
 
 ## Deposit — the 64-slot cap
 

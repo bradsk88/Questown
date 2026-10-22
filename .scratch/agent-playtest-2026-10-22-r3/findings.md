@@ -57,3 +57,21 @@ dusk (4ca11bbe), no-table diner give-up.
    `BakerStockJobLoaderTest.bakerStockJobs_doNotDeclareTheirInputsAsProducts`. Full :test 1415/0.
    (judge) `baker/bread` still declares wheat (its own input), as the plan specifies, so a
    wheat shortage would still pick the baker over a farmer if the farmer were locked.
+8. **[FIXED 2026-10-22, unit-tested; live check pending]** Earned BOPs vanished. The hunter
+   reached levels 2-4 and deposited three blessed BOPs (05:13, 05:23, 05:32); I took three
+   tutorial BOPs; the flag should hold 4. Its save held 1 plain BOP and the BOP tab said 2.
+   `TownFlagBOPItemHandler.insertItem` shrank the carried 1-count stack before copying it, so
+   `copy()` returned `ItemStack.EMPTY` and the flag stored EMPTY: counted by `getBopCount`,
+   skipped by `serializeBOP`, never collectable. Then `Compat.insertInNextOpenSlot` aimed every
+   later blessed deposit at that EMPTY entry ("first empty slot"), `isItemValid` refused it
+   (slot < count), and the helper returned true anyway: the BOP and the latch were gone. The
+   782a0ede guard (2026-10-09) blocked empty inputs, not this order. Also: simulate=true
+   consumed the caller's stack. Fix: snapshot before shrink, simulate returns a copy.
+   `TownFlagBOPDepositTest` (red 2/3 -> green 2/2). Old worlds heal on reload (empties are not
+   saved). Not changed: `insertInNextOpenSlot` ignores `insertItem`'s refusal.
+   Possibly related, not checked: `.scratch/day1-playtest-2026-10-11/ghost-empty-item-entities.md`.
+9. With both storeroom chests full (54 unstacked slots on day 7), the hunter's `bop_depositing`
+   reported NO_SPACE ("town has storage space=false") and flipped bop_depositing <->
+   seeking_work about 10 times a second for ~20 s (05:29:0x-05:29:2x), then gave up until
+   05:31:58. A BOP goes to the flag, not a chest, so the storage gate looks wrong for this job.
+   Not traced further.

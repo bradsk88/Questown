@@ -12,6 +12,8 @@ import net.minecraft.world.item.ItemStack;
 import ca.bradj.questown.loader.ItemHandler;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.function.Consumer;
+
 public class TownFlagBOPItemHandler implements ItemHandler {
 
     /** The flag holds at most this many Blocks of Progress; a full flag silently drops further ones. */
@@ -83,17 +85,33 @@ public class TownFlagBOPItemHandler implements ItemHandler {
         if (!isItemValid(i, itemStack)) {
             return itemStack;
         }
-        itemStack.shrink(1);
-        if (!simulate) {
-            // Snapshot so the stored stack keeps its bless NBT even if the caller's copy mutates.
-            ItemStack stored = itemStack.copy();
-            stored.setCount(1);
+        return depositOne(itemStack, simulate, stored -> {
             town.bopStacks.add(stored);
             town.syncBopFull();
             QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", town.getBopCount());
             town.messages.broadcastMessage("messages.bop.earned");
+        });
+    }
+
+    /**
+     * Takes one item off {@code from} and hands {@code store} a 1-count snapshot of it (bless
+     * NBT included). Returns what is left of {@code from}.
+     */
+    static ItemStack depositOne(
+            ItemStack from,
+            boolean simulate,
+            Consumer<ItemStack> store
+    ) {
+        // Snapshot BEFORE shrinking: a villager carries one BOP, so shrink(1) empties the
+        // stack and copy() would hand back ItemStack.EMPTY (agent playtest 2026-10-22 r3:
+        // earned BOPs were stored as EMPTY, counted but never saved or collectable).
+        ItemStack stored = from.copyWithCount(1);
+        if (simulate) {
+            return from.copyWithCount(from.getCount() - 1);
         }
-        return itemStack;
+        from.shrink(1);
+        store.accept(stored);
+        return from;
     }
 
     @Override
