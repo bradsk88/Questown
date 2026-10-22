@@ -96,3 +96,13 @@ dusk (4ca11bbe), no-table diner give-up.
     art and text only for NO_JOBSITE; `StatusArt` returns `error.png` for work states and the
     tooltip fell back to `JobTooltips.FALLBACK_LINE_1`. Now relaxing art + "is relaxing for a
     moment." `DowntimeWorkOverridesTest` red -> green; full :test 1418/0.
+13. (judge) Work-request "Learn More" (ItemJobsScreen) pages are titled with the raw job id:
+    "Gatherer - rod_half_day", "Gatherer - shovel_full_day", "Gatherer - axe"
+    (`renderJobTitle` uses `Compat.literal(jobId)`). The "20 known jobs" for a seed or sapling
+    on day 2 are all gatherer tool/length variants, so the player pages 20 near-identical
+    "Gatherer" cards. Display names per variant, or grouping by root, would read better.
+- r4 BOP accounting held across two deposits: the BOP tab read 4 ("Earned by: Hunter x1"), then 4
+  again after a spend and a deposit ("Hunter x2"). The 8 fix holds in a fresh world.
+- r4 phase 2.75 picked "#questown:swords (x1) -> crafter" (crafter/stone_sword is a real
+  producer), so the coal case of #7 did not come up live here. Swords were the top need
+  while 3 stone swords sat in the storeroom chest; not traced.
