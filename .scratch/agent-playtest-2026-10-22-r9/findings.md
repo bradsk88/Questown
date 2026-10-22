@@ -149,3 +149,9 @@ Day 8 morning pending (villager 4). World saved: `~/questown-worlds/r9-taiga-day
   data point to `.scratch/playtest-2026-10-17/chest-state-mismatch-error-on-chunk-reload.md`.
 - `No upgrade paths could be determined because no quests have been completed yet` logged at ERROR
   for the cook once; reads like an expected state logged at the wrong level.
+
+15. **[FIXED c0bd21a2]** The hunter's stats page read "Lvl 1" (r9-46 at level 2, r9-59 at level 4)
+    while the flag NBT held `level: [{value: 4, ...}]`. Every stats listener heard every townie's
+    hunger tick, so an open page showed whichever townie ticked last (level, hunger, mood).
+    Listeners are keyed by townie now. Live: "Lvl 4", the hunter's own XP/hunger and "Ate without
+    a table". (The 81adb774 "Lvl N" line had only been checked on a level-1 villager.)
