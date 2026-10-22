@@ -203,3 +203,6 @@ dusk (4ca11bbe), no-table diner give-up.
     failure would have looped no_table -> board -> no_table.
 - A broken welcome mat (one of two) is skipped, not dropped (`TownPois.getWelcomeMatPos`), and
   the gatherer kept working through the other mat. Fine.
+- Full autotest suite after tonight's fixes (tools/autotest-parallel.sh --shard 4, 08:13):
+  TOTAL 88/89; the one failure is `chicken-arc:skip_chicken_command`, on AGENTS.md's
+  deterministic-failure list. No new reds.
