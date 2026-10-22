@@ -1,6 +1,6 @@
 ---
 title: 'BOP tab: initial focus over quests when unseen; red dot clears after the first withdrawal'
-status: ready-for-human
+status: done
 origin: 2026-10-17 playtest round 5 — user chat 17:58:52 (dev-server-8, build 3ed88de2)
 ---
 
@@ -33,3 +33,7 @@ that scenario. Villagers > BOPs > QUests > Economics"
 still opens BOP (warning); then Villagers > BOP > Quests > Economics. Economics' dot is
 `showEconTab && bonusFoodAvailable`. Opening VILLAGERS clears its dot, so the next click falls to
 the next dotted tab. `BopTabAttentionTest` now 10.
+
+## Resolved (audit 2026-10-22)
+
+`FlagTabs.initialFlagTab` ordering + dots, `BopTabAttentionTest` (10).

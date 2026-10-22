@@ -1,6 +1,6 @@
 ---
 title: 'Utilize the new 1.20 villager skins (plus our custom ones)'
-status: ready-for-agent
+status: done
 ---
 
 # Use the new 1.20 skins
@@ -37,3 +37,7 @@ picked by floor-mod UUID hash (deterministic; `Math.abs` mis-picks on a
 renderer stays a thin wrapper; pinned by `TownieSkinsTest` (pool
 composition matches the jar, slim-only, determinism). `VisitorMobRenderer`
 now delegates to it.
+
+## Resolved (audit 2026-10-22)
+
+`mobs/visitor/TownieSkins` (pool + deterministic pick), `TownieSkinsTest`; `VisitorMobRenderer` delegates.

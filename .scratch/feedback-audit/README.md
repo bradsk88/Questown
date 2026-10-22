@@ -70,3 +70,58 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
   (miner) and 4/5 (crafter, bowl, concurrent jobs) are **kept**: they are onboarding-flagged, so their
   open JOB_CHANGE fills the BOP-spend guarantee slot and the spend is not random. Say so if those should
   go too.
+
+| day1/flag-incomplete-quests-indicator | done | AttentionBubbles + attention.png | — |
+| day1/job-board-no-requests-bubble | done | attentionNoWorkRequests | — |
+| day1/flag-map-when-lost | done | grantStarterMap:1059 | — |
+| day1/free-food-economics-card | done (+1 open-agent) | claim card shipped; CTA-lingers follow-up open (TownEconomicsScreen.java:214) | — |
+| day1/free-food-tab-red-dot | done | FlagTabs.java:158 | — |
+| day1/job-board-empty-state | done | WorkScreen.java:175 top_need | — |
+| day1/job-board-organic-introduction | done | FIRST_WORK_REQUEST quest + toggle | — |
+| day1/job-board-quest-card-shows-sign | done | UIQuest.java:148 | — |
+| day1/new-cook-has-no-cook-works | done | starter_recipes mutton | — |
+| day1/roomblock-quests-custom-place-tooltip | done | QuestsScreen.java:335 | — |
+| day1/job-board-placement-orientation | open-agent | corrected table needs a south/east placement check | — |
+| day1/paged-menus-scroll-to-page | open-agent → fixing | dispatch listened to InputEvent (no-screen only); now ScreenEvent.MouseScrolled.Pre | — |
+| day1/messages-print-twice | done | TFBE.roomRecipeCreated broadcast flag:1096; FlagCraftingScreen:148; BroadcastPacer | — |
+| day1/skills-tab-hidden-until-level-2 | done | d942eed8 available_at_level | — |
+| day1/skills-tab-icons-stacked | open-agent (UI batch) | verify in client | — |
+| day1/stats-page-show-didnt-eat-didnt-sleep | open-agent (UI batch) | renderMood commented out | — |
+| day1/stats-page-show-level-right-aligned | open-agent (UI batch) | no level drawn | — |
+| day1/two-villagers-after-first-sleep | done | day1 one-arrival-per-day PASS | — |
+| day1/villager-card-opens-management-only-screen | done | showInventoryTab 10-14 | — |
+| day1/villager-dining-with-zero-food-stuck | done | 9c059c46 DiningStages.next | — |
+| day1/villager-asks-for-unlocked-job-tool | open-dev | 'why' names unattainable tool | queue |
+| day1/villager-jobs-tooltip-shows-all-jobs | done | TownVillagerUIs.java:220 isUnlocked | — |
+| day1/villager-menu-needs-job-board-during-evening-idle | open (needs-info) | no repro | — |
+| gannet/retro-2026-10-09-redrive | done (archive) | retro doc | — |
+| 10-14/cook-status-blocker-surfacing-10-14 | → task A+B | coin flip | answered (A+B) |
+| 10-14/diner-tooltip-i18n-key | done | JobTooltips fallback | — |
+| 10-14/empty-room-quest-loses-after-completion | done | QuestBatch.markRecipeAsLost:276 | — |
+| 10-14/job-board-empty-copy-name-the-blocker | done | en_us.json:447 | — |
+| 10-14/job-board-quest-mat-format-tooltip | done | QuestsScreen.java:292-301 | — |
+| 10-14/onboarding-miner-after-cook | done | tryPhase2_7_miner + test | — |
+| 10-14/use-1.20-villager-skins | done | TownieSkins + test | — |
+| 10-14/villager-display-names | done | displayNamesForAll + test | — |
+| 10-15/first-work-request-card-text-overflow | done | fixed 10-15; ellipsis helper -> UI batch | — |
+| 10-15/job-board-break-drops-sign | done | RoomBlock.getOrphanDropItem:82 only | — |
+| 10-15/loot-quest-food-vs-raw-food | done | UIQuest.lootNameKey | — |
+| 10-15/loot-quest-named-raw-food | done | superseded | — |
+| 10-15/quest-progress-missing-space | done | UIQuest.java:257,266 | — |
+| 10-15/villagers-climb-walls-over-doors | open-agent | fix reverted 10-17 | — |
+| 10-17/away-summary-says-0-days | done | AwayDuration + test | — |
+| 10-17/bop-tab-focus-and-dot-clears-on-withdraw | done | FlagTabs + BopTabAttentionTest | — |
+| 10-17/change-job-in-morning-message-stutters | done | en_us.json:35 | — |
+| 10-17/diner-carrot-take-put-loop | done | 10-17 r5 fix; eating 5/5 | — |
+| 10-17/double-new-quest-announcement | done | day1 tripwire PASS | — |
+| 10-17/economics-tooltip-too-wide | done | TownEconomicsScreen.java:114; live 10-22 | — |
+| 10-17/first-arrival-text-telegraphs-villagers | done | en_us.json:556 | — |
+| 10-17/hunter-collecting-supplies-after-hunt | open-agent | e2e check owed | — |
+| 10-17/hunter-stuck-after-root-change-stale-mat-state | done | loot/gatherer_becomes_hunter | — |
+| 10-17/job-board-empty-state-needs-blank-line | done | WorkScreen.java:178 | — |
+| 10-17/missed-morning-while-away | done | day1 check PASS 10-22 | — |
+| 10-17/villager-ui-opens-on-change-job-when-dotted | done | VillagerInitialTabTest | — |
+| 10-17/villagers-tab-red-dot-until-first-open | done | TownFlagMenus.java:57 + test | — |
+| 10-20/food-producers-list-includes-leavers | → task (narrow count) | dev answer Q5 | answered |
+| 10-21/hunters-stuck-collecting-after-sleep | open-agent | unreproduced | — |
+| village-self-sufficiency/SUMMARY | done (archive) | July summary | — |

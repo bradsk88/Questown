@@ -1,6 +1,6 @@
 ---
 title: Need an organic way to introduce the player to the job board
-status: ready-for-human
+status: done
 created: 2026-10-11
 ---
 
@@ -121,3 +121,7 @@ Both halves are in:
 Remaining: in-game confirmation (quest appears, completes on first post,
 toggle round-trips). Full docs: `town/entity/COMPLEX.md` "Day-2 first work
 request quest + the board's auto-request toggle (F2)".
+
+## Resolved (audit 2026-10-22)
+
+F2 shipped: the FIRST_WORK_REQUEST quest (`MCQuest.firstWorkRequest`, `SpecialQuests.FIRST_WORK_REQUEST`) and the board auto-request toggle. Dev 2026-10-22: only the player's own request completes it (fixed in this audit's first-work-request commit).

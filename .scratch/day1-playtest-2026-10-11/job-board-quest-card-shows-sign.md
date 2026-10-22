@@ -1,5 +1,5 @@
 ---
-status: ready-for-human
+status: done
 origin: 2026-10-12 playtest — user chat 17:39:17 ("The job board quest shows a vanilla sign as the 'needed block' it should show the job board")
 ---
 
@@ -41,3 +41,7 @@ diff against: its card shows the room's real block.
 so the card icon is the board item, not the blueprint's sign ingredient. The map builder was
 switched from `build()` to `buildKeepingLast()` to tolerate the deliberate override.
 Compile-verified; visual confirmation pending held run.
+
+## Resolved (audit 2026-10-22)
+
+`UIQuest.java:148` overrides the JOB_BOARD recipe with `Ingredient.of(ItemsInit.JOB_BOARD_BLOCK.get())`, so the card shows the board item.

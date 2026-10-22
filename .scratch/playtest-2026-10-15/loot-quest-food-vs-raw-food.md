@@ -1,6 +1,6 @@
 # Food quest naming: "Raw Food" (gatherer) vs "Food" (cook)
 
-> status: fixed
+> status: done
 > origin: 2026-10-15 playtest — user chat 03:53:27 (reversal of the 03:23 call)
 
 ## The two calls
@@ -38,3 +38,7 @@ posted by the job-change-and-food phase) needs its own "Food" name.
 ## Fixed 2026-10-17
 
 `UIQuest.lootNameKey`: raw tag -> "Raw Food" (`menu.quests.raw_food`), else "Food" (`menu.quests.food`); card + completion/lost broadcasts.
+
+## Resolved (audit 2026-10-22)
+
+Status already 'fixed' in the body: `UIQuest.lootNameKey` raw tag -> 'Raw Food', else 'Food' (2026-10-17).

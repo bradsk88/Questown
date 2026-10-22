@@ -1,3 +1,7 @@
+---
+status: done
+---
+
 # village/self_sufficiency — overnight batch (5-day runs)
 
 **Date:** 2026-07-25 (night), 05:35 → 16:17 UTC
@@ -69,3 +73,7 @@ cd .scratch/village-self-sufficiency
 tail -3 BATCH.log; ls run-*.md
 # per-run: grep -n 'roster=\|Unlocked\|NO_FORWARD\|soft-lock\|NO_WORK_POSSIBLE' run-N.md
 ```
+
+## Resolved (audit 2026-10-22)
+
+July 2026 run summary (6 self-sufficiency cycles), superseded by the cook-soft-lock fix (STATE.md, 2026-10-06). Archived.

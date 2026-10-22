@@ -1,6 +1,6 @@
 ---
 title: Show a bubble ("!") above the job board when the town has no work requests
-status: ready-for-agent
+status: done
 created: 2026-10-11
 ---
 
@@ -38,3 +38,7 @@ board of a zero-request town into a "!" candidate; drawn by
 `BubbleRenderer.renderTextureBubbleAtBlock`. See
 `flag-incomplete-quests-indicator.md` "Implementation". Awaiting in-game
 verification.
+
+## Resolved (audit 2026-10-22)
+
+Shipped with G1: `attentionNoWorkRequests` on the flag update tag; `AttentionBubbles.near` makes each board of a zero-request town a '!' candidate.

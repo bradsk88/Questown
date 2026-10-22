@@ -1,6 +1,6 @@
 ---
 title: 'Flag villagers tab: red dot from the first arrival until the tab is first opened'
-status: ready-for-human
+status: done
 origin: 2026-10-17 playtest round 5 — user chat 17:54:36 (dev-server-8, build 3ed88de2)
 ---
 
@@ -21,3 +21,7 @@ the villagers tab on the tag menu shou dhave a red dot."
 
 Fresh world: no villagers tab before the first arrival; after it, the tab shows a red dot on
 every flag screen; open it once and the dot is gone, also after quit + rejoin.
+
+## Resolved (audit 2026-10-22)
+
+`villagersTabSeen` on the flag; `TownFlagMenus.java:57` clears it when the villagers menu opens; `VillagersTabAttentionTest` (5).

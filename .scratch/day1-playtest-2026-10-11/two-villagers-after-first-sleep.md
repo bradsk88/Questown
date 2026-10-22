@@ -1,6 +1,6 @@
 ---
 title: Two villagers present after the first sleep (expected one)
-status: needs-info
+status: done
 created: 2026-10-11
 ---
 
@@ -66,3 +66,7 @@ onboarding grant, or a double-fire of the arrival trigger). Check
 `TownFlagTicker` / the arrival executor and the roster count after the first
 sleep. Determine whether it's a real double-spawn or an off-by-one in the
 roster count the player is reading.
+
+## Resolved (audit 2026-10-22)
+
+The arrival model is one onboarding arrival per batch morning (CONTEXT.md 'Onboarding arrival': gate batch -> villager 1, at most one per morning), and `village/day1` asserts it every day (`one-arrival-per-day[day N]`, PASS in this audit's 2026-10-22 day1 runs, 42/42).

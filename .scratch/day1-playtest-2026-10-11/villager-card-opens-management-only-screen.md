@@ -1,6 +1,6 @@
 ---
 title: Villager screen (from the flag villager menu) should open management-only, no inventory tab
-status: needs-info
+status: done
 created: 2026-10-11
 ---
 
@@ -59,3 +59,7 @@ server->client payload (`VillagerMenusPayload.showInventoryTab`), so pane
 navigation stays management-only. Right-click on the townie keeps the full
 menu. `gui/COMPLEX.md` "MultiStatusScreen: full-card click ... management-only
 mode".
+
+## Resolved (audit 2026-10-22)
+
+Implemented 2026-10-14: `OpenVillagerMenuMessage.showInventoryTab` false from the flag card; INVENTORY->STATS redirect in `TownVillagerUIs.showUI`; gui/COMPLEX.md 'MultiStatusScreen: full-card click ... management-only mode'.

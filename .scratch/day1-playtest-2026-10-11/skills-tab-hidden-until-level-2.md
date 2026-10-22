@@ -1,6 +1,6 @@
 ---
 title: 'Skills tab: hidden until level 2, then a new job layer unlocks every 5 levels'
-status: ready-for-agent
+status: done
 created: 2026-10-11
 ---
 
@@ -38,3 +38,7 @@ villager level is tracked and where the skills tab's visibility + the set of
 level). Related: `skills-tab-icons-stacked.md` (the rendering bug this would
 render moot pre-L2, but still fix). Confirm the exact layer→jobs mapping with
 the data (which jobs are in which layer) before implementing.
+
+## Resolved (audit 2026-10-22)
+
+Shipped as ruled (2026-10-13 Q2: per-job available_at_level, no layer system): d942eed8. Townies start at level 1, the tab shows at level 2; tests JobAvailableAtLevelDataTest + WorkAvailableAtLevelTest.

@@ -1,6 +1,6 @@
 ---
 title: '"Quest lost" fires on the already-complete empty-room quest when the room is re-registered'
-status: ready-for-agent
+status: done
 ---
 
 2026-10-14: FIXED `582d26c1`.
@@ -41,3 +41,7 @@ Skip completed quests in `markRecipeAsLost` (guard `!q.isComplete()`).
 Campfire is "perma-done" only because its block room never re-types; the
 guard generalizes that to wand-registered rooms. One guard removes both the
 user-facing "Quest lost" on a done quest and the duplicate-reward attempt.
+
+## Resolved (audit 2026-10-22)
+
+`QuestBatch.markRecipeAsLost` (line 276) skips completed quests (`!q.isComplete()`), with the 2026-10-14 comment.

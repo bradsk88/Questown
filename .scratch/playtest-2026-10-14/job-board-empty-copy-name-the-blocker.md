@@ -1,6 +1,6 @@
 ---
 title: 'Job board empty-state copy: name the blocker (no villagers yet)'
-status: ready-for-agent
+status: done
 ---
 
 # Job board empty-state copy: "come back once you have at least one villager"
@@ -17,3 +17,7 @@ has no top unmet need): "Maybe this will do something soon..." → "Come back
 once you have at least one villager in your town."
 
 Done: lang value updated (no logic change — the top-need branch is untouched).
+
+## Resolved (audit 2026-10-22)
+
+en_us.json:447 `job_board.empty.2` = "Come back once you have at least one villager in your town."

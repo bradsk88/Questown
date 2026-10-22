@@ -1,6 +1,6 @@
 ---
 title: Red dot on the economics tab while the free-food offer is available
-status: ready-for-human
+status: done
 created: 2026-10-11
 ---
 
@@ -27,3 +27,7 @@ Design item: red-dot the free-food tab. Needs a product decision.
 
 Settled with the card (see `free-food-economics-card.md`): red dot on the
 economics tab while `!givenBonusFood`, cleared on claim.
+
+## Resolved (audit 2026-10-22)
+
+`FlagTabs.java:158` passes `fi.bonusFoodAvailable()` as the economics tab's dot flag.

@@ -1,6 +1,6 @@
 ---
 title: A newly-created cook has no 'cook' works — only extract and fuel
-status: ready-for-human
+status: done
 created: 2026-10-12
 ---
 
@@ -47,3 +47,7 @@ rejection from `cook-skill-unlock` still holds — amended there). The
 onboarding-only `ChangeJobReward.onboarding` flag and its grant were deleted.
 Test: `CookStarterRecipeLoaderTest` (JSON load gate; the registry-bound
 expansion is `@Disabled` with the reason). Full suite green (1166/0/51skipped).
+
+## Resolved (audit 2026-10-22)
+
+`cook_simple_furnace_food.json:6` `"starter_recipes": ["mutton"]` ORs mutton into every cook's default work; later playtests' cooks run cook/mutton (e.g. 10-22 r3 findings cook steady state).

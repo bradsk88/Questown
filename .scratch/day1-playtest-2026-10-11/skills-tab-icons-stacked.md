@@ -1,6 +1,6 @@
 ---
 title: Skills tab renders broken — icons stacked at the center, only "gather" visible
-status: needs-info
+status: ready-for-agent
 created: 2026-10-11
 ---
 
@@ -31,3 +31,7 @@ computation — icons collapsing to center usually means a coordinate that
 defaults to 0 / a missing per-node offset. "Only gather visible" may be the same
 root cause (all nodes at the same pos, one drawn last) or a separate data
 issue. Companion design item: `skills-tab-hidden-until-level-2.md`.
+
+## Audit (2026-10-22)
+
+d15ad88d fixed the skills-pane border bleed and tab icons; the stacked-icons layout itself is unverified since. Check in this audit's client session (UI batch), together with the placeholder 'test'/'test2' text in VillagerAdvancementsScreen (r3 finding #16).

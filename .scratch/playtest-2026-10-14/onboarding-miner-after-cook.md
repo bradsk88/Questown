@@ -1,6 +1,6 @@
 ---
 title: 'Onboarding should include a miner step after the cook (coal is crucial for self-sustaining)'
-status: ready-for-agent
+status: done
 ---
 
 # Onboarding: add a miner after the cook
@@ -44,3 +44,7 @@ batch (2.75) now picks up whichever need is NOT coal. Pinned:
 `TownQuestsMinerOnboardingTest` (flag + guarantee + beat content),
 `TutorialPhaseGateTest` (the ladder walks through the beat).
 `town/quests/COMPLEX.md` "Post-cook miner beat".
+
+## Resolved (audit 2026-10-22)
+
+Phase 2.7 miner beat (`TownQuests.tryPhase2_7_miner`), onboarding-flagged; `TownQuestsMinerOnboardingTest`; live: the miner beat posted once in r3/r4/r5/r7 (2026-10-22 whisk handoff).

@@ -1,3 +1,7 @@
+---
+status: done
+---
+
 # Retro — 2026-10-09, gannet top-need mission, re-drive session
 Session: `2026-10-09T04-29-31-890Z` (Questown). Scope: the run-15 re-drive and
 the diagnosis chain that followed (this is the **second** retro of the mission
@@ -74,3 +78,7 @@ out-forecast my narrative three consecutive times.
 Work in progress (NPE seam fix in tree, unverified) → **apply recommendations,
 commit, then continue the mission loop** (verify TDD, re-drive, iterate to the
 coal→miner beat). User asleep and explicitly asked for the loop to keep going.
+
+## Resolved (audit 2026-10-22)
+
+A session retro, not a ticket. Archived; this audit did not check each recommendation landed.

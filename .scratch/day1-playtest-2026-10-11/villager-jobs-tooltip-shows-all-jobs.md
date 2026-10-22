@@ -1,5 +1,5 @@
 ---
-status: ready-for-human
+status: done
 origin: 2026-10-12 playtest — user chat 17:56:35
 ---
 
@@ -25,3 +25,7 @@ same "can anyone in town do this" gate the request board uses, and the same
 semantics as the day-1 econ-tab fix). The clicked townie's own job is always
 in the list (it is unlocked by that townie), so the screen is never empty.
 In-game confirmation pending.
+
+## Resolved (audit 2026-10-22)
+
+`TownVillagerUIs.java:220` filters the jobs list by `getVillagerHandle()::isUnlocked` (town-wide unlocked set), as shipped 2026-10-13.

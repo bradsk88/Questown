@@ -69,3 +69,7 @@ predicted by the oracle. Corrected table pending one more placement check
 (south/east) after the next client restart. Other asymmetric FACING
 block-rooms (bread oven, food display, fishing station, axe rack) get the same
 model-axis-vs-blockstates-table check before being assumed correct.
+
+## Audit (2026-10-22)
+
+Blockstate table re-based twice; the corrected one (73ddb582, 2026-10-16: west 0, north 90, east 180, south 270) still needs the south/east placement check the ticket asks for. To do in this audit's client session.

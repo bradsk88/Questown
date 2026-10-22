@@ -1,6 +1,6 @@
 ---
 title: 'Hunter back in COLLECTING_SUPPLIES after the hunt timer expires - no loot extracted'
-status: needs-triage
+status: ready-for-agent
 origin: 2026-10-17 playtest round 2 — user chat 05:53:32
 ---
 
@@ -52,3 +52,7 @@ while the time state is still running.
 IDLE with no work spot. **Still to verify end-to-end** (hunter autotest or next playtest):
 the hunt product is extracted when the cycle runs past 3000 ticks. The open questions
 above (what DROPPING_LOOT dropped; "Production spot was null") stay open until then.
+
+## Audit (2026-10-22)
+
+Watchdog fix shipped 2026-10-17; the end-to-end check it asks for (hunt product extracted past 3000 ticks) is still owed. Related open: .scratch/playtest-2026-10-21/hunters-stuck-collecting-after-sleep.md (mat at state 3, unreproduced).

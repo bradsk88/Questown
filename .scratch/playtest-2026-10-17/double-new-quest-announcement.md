@@ -1,6 +1,6 @@
 ---
 title: 'Two back-to-back quest announcements on the first arrival morning'
-status: ready-for-human
+status: done
 origin: 2026-10-17 playtest round 6 — user chat 19:36:04 (dev-server-9, build fe1b7238)
 ---
 
@@ -17,3 +17,7 @@ quests, it would be silent.
 
 village/day1 tripwire check `no-back-to-back-quest-announcements` (two `New quest…` broadcasts
 within 100 game ticks).
+
+## Resolved (audit 2026-10-22)
+
+village/day1 asserts `no-back-to-back-quest-announcements` (`VillageGrowthExecutor.java:1061`); day1 passed 42/42 in two runs this audit (2026-10-22, 17:53 and 17:58).

@@ -1,6 +1,6 @@
 ---
 title: 'Job-board quest card: use the welcome-mat tooltip format (click to open crafting)'
-status: ready-for-agent
+status: done
 ---
 
 2026-10-14: FIXED `582d26c1`.
@@ -29,3 +29,7 @@ near the flag") and the card click does NOT deep-link to the crafting tab.
   crafting tab.
 - Retire the now-dead `jobBoardQuest.setFlavorText(...)` in
   `TownQuests.addBasicsBatch` (single source of copy: the lang key).
+
+## Resolved (audit 2026-10-22)
+
+`QuestsScreen.java:292-301`: JOB_BOARD joined the mat/room tooltip format and the deep-link condition.

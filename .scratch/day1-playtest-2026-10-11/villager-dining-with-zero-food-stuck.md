@@ -1,6 +1,6 @@
 ---
 title: A villager "dines" at the flag with zero food in the town, and stays "working" forever
-status: needs-info
+status: done
 created: 2026-10-11
 ---
 
@@ -31,3 +31,7 @@ the dining/working status (the LZCD circuit inputs), not the status name. Check
 the dining job's workability gate — it should require food in reach before
 entering the "dining" state. The "working infinitely" is the same soft-lock
 stuck at a state with no completion path.
+
+## Resolved (audit 2026-10-22)
+
+Fixed 2026-10-22 (9c059c46, r5 finding #20): a starving townie whose diner finds no food moves one diner stage down at the board (`DiningStages.next`), ending at dining_raw_food / giving up instead of looping; verified live after a restart (cook/miner/hunter ate and returned to work).

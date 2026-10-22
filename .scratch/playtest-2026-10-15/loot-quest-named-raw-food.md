@@ -1,6 +1,6 @@
 ---
 title: 'LOOT quest should be called "Raw Food", not "Food"'
-status: ready-for-agent
+status: done
 origin: 2026-10-15 playtest — user chat 03:23:24, after the LOOT quest completed at 03:22:32 ("Quest complete: Food")
 ---
 
@@ -22,3 +22,7 @@ broadcast and the quest-lost broadcast (`TownMessages.questCompleted` /
 `questLost`). No other lang file ships. Changed to "Raw Food".
 
 Client-side only; needs the next client restart to show.
+
+## Resolved (audit 2026-10-22)
+
+Superseded by the 2026-10-17 `UIQuest.lootNameKey` split (see loot-quest-food-vs-raw-food.md).

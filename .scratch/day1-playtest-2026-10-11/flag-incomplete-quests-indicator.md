@@ -1,6 +1,6 @@
 ---
 title: Flag should visibly indicate it has incomplete quests
-status: ready-for-human
+status: done
 created: 2026-10-11
 ---
 
@@ -44,3 +44,7 @@ crosshair contest; the winner draws the "!" texture bubble
 (`BubbleRenderer.renderTextureBubbleAtBlock`, `textures/bubble/attention.png`).
 See `town/entity/COMPLEX.md` "Attention (\"!\") bubble state". Awaiting
 in-game verification on the user's day-1 playtest.
+
+## Resolved (audit 2026-10-22)
+
+G1 shipped: `AttentionBubbles` (town/rooms) + `textures/bubble/attention.png`; the flag's update tag syncs `attentionIncompleteQuests`. Live: the 2026-10-22 agent playtest fixed a join crash in exactly this sync path (findings #10, 'the dead doors + attention state the client reads'), so the channel is exercised in play.

@@ -1,6 +1,6 @@
 ---
 title: Villager says "I need a fishing rod to work" for a job that is not yet unlocked
-status: needs-info
+status: ready-for-human
 created: 2026-10-11
 ---
 
@@ -26,3 +26,7 @@ surfaces (or the status line should be gated on workability —
 ## Triage notes
 
 Forensics done (candidate-job gate reasons vs player-visible jobs, gatherer_unmapped_rod gate = fishing rod). This is a design/UX question: should the 'why' name the gate item, or hide already-unlocked candidates? Needs a product call on the intended signal.
+
+## Audit (2026-10-22)
+
+Design question (the 'why' line names a tool for a job the townie cannot hold yet). Partly moot since JOB_UNLOCK quests were retired 2026-10-22. Queued for the dev.

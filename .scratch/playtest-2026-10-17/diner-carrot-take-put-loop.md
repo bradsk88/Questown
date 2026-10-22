@@ -1,6 +1,6 @@
 ---
 title: 'Hungry gatherer stands at the chest taking and putting back a carrot in a loop'
-status: ready-for-human
+status: done
 origin: 2026-10-17 playtest round 4 — user chat 06:26:55 (dev-server-6, build 2c9f5880)
 ---
 
@@ -74,3 +74,7 @@ carrot (DROPPING_LOOT), re-collects, and so on. With the meal now extracting, it
 
 Verified: `eating/` 4/4 (eat_direct 98 %, dine_at_time 96 %); full suite 70/73 with only known
 failures (nav/roof_gatherer, chicken-arc/skip_chicken_command, farmer parity flake).
+
+## Resolved (audit 2026-10-22)
+
+Root-caused and fixed 2026-10-17 round 5 (the meal now extracts); verified eating/ 4/4 and full suite with only knowns at the time; this audit's 2026-10-22 runs: only=eating 5/5 (whisk handoff).

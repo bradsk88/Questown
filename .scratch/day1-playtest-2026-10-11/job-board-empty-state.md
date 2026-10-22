@@ -1,6 +1,6 @@
 ---
 title: Job board menu needs an empty state explaining requests
-status: ready-for-human
+status: done
 created: 2026-10-11
 ---
 
@@ -74,3 +74,7 @@ riding an unmet-need entry in the UI.
   registry Neo has not marked synced (vanilla's BuiltInRegistries.ITEM is never
   marked synced outside a running mod-load), so the full path is covered by the
   held playtest instead.
+
+## Resolved (audit 2026-10-22)
+
+Top-need empty state shipped: `WorkScreen.java:175` uses `job_board.empty.top_need` when the flag sends a top need (`TownFlagBlockEntity.topUnmetNeedName`); the generic teaser only when no need exists.

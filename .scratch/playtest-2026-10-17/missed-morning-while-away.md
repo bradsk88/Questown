@@ -1,6 +1,6 @@
 ---
 title: 'Away overnight: the morning pass never runs (BOP job change to hunter not applied)'
-status: ready-for-human
+status: done
 origin: 2026-10-17 playtest round 5 — user chat 18:21:46 (dev-server-8, build 3ed88de2)
 ---
 
@@ -35,3 +35,7 @@ village/day1's reload is now an overnight absence (next noon, 6 s wall away) wit
 `missed-morning-applies-job-change`: red with `runMissedMorning` removed, green with it (hunter
 ~20 ticks after the return). The real reload also surfaced the arrival-gate leak fixed in
 c816c7c9 (quest load replay dropped the onboarding marker).
+
+## Resolved (audit 2026-10-22)
+
+village/day1 check `missed-morning-applies-job-change` PASS in this audit's day1 run (2026-10-22 17:59:54).

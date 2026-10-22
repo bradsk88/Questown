@@ -1,6 +1,6 @@
 ---
 title: Replace the "dirt on flag" free-food trick with a one-time card on the economics page
-status: ready-for-human
+status: done
 created: 2026-10-11
 ---
 
@@ -74,3 +74,7 @@ updates on the next open). Client-side fix: optimistically clear the local
 availability on the claim click (the server is the source of truth for the
 once-only bit; a failed claim re-shows it on the next refresh). Alternative
 per the user: close-and-reopen the menu after the claim.
+
+## Resolved (audit 2026-10-22)
+
+C#2 shipped: the food card is the claim affordance while `bonusFoodAvailable` (`TownEconomicsScreen` lines 109/153/211) and sends `ClaimFreeFoodMessage`. The 17:55 follow-up (CTA lingers after the click) is not addressed in code: the click sends the message and returns with no local clear (`TownEconomicsScreen.java:214`). Re-opened as a small agent item.

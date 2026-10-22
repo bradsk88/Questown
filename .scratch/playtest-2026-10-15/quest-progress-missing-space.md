@@ -1,6 +1,6 @@
 ---
 title: 'Item/LOOT quest progress indicator missing a space before "(0/4)"'
-status: ready-for-agent
+status: done
 origin: 2026-10-15 playtest — user chat 03:07:06
 ---
 
@@ -12,3 +12,7 @@ User report: "The item quest needs a space before its '(0/4)' indicator."
 `name.append(Compat.literal("(" + ...))` in both the ITEM and LOOT cases.
 Fix (applied 2026-10-15, same session): the literal now starts with a space
 — " (n/m)" — in both cases. Client-side render code; next client restart.
+
+## Resolved (audit 2026-10-22)
+
+`UIQuest.java:257,266` append " (n/m)" with the leading space.

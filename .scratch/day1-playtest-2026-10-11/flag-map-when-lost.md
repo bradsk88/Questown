@@ -1,6 +1,6 @@
 ---
 title: Give the player their flag map even when they skip chicken onboarding
-status: ready-for-human
+status: done
 created: 2026-10-11
 ---
 ## Context
@@ -47,3 +47,7 @@ double-grant.
   per the "no X on the flag" reading of the decision.)
 - Verify in the fresh playtest: place the flag, a filled map is in the
   inventory; on the chicken path the sunset chest holds only the axe.
+
+## Resolved (audit 2026-10-22)
+
+F1 shipped: `TownFlagBlockEntity.grantStarterMap` (line 1059) from `TownFlagBlock.setPlacedBy` for player placements; the chicken chest no longer carries a second map.

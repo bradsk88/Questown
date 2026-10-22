@@ -1,6 +1,6 @@
 ---
 title: 'Villagers climb walls instead of entering through doors'
-status: needs-triage
+status: ready-for-agent
 origin: 2026-10-15 playtest round 2 — user chat 05:37:47
 ---
 
@@ -34,3 +34,7 @@ visually-observed approach (the user saw it; the next playtest confirms).
 ## Reverted 2026-10-17
 
 The discount made open doors impassable (negative malus = blocked in vanilla). See `.scratch/playtest-2026-10-17/villager-stuck-on-bed-pathing-over-wall.md`.
+
+## Audit (2026-10-22)
+
+Still open: the 2026-10-15 door-discount fix was reverted 2026-10-17 (it made open doors impassable). Needs a new approach; see .scratch/playtest-2026-10-17/villager-stuck-on-bed-pathing-over-wall.md.

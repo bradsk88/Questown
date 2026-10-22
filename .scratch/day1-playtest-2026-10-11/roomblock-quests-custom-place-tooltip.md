@@ -1,6 +1,6 @@
 ---
 title: 'RoomBlock quests should have a custom "Place a [X] ..." tooltip'
-status: ready-for-human
+status: done
 created: 2026-10-11
 ---
 
@@ -55,3 +55,7 @@ generic room line:
 - campfire keeps its existing branch; everything else keeps `menu.quests.room_quest`.
 
 New lang keys added to en_us.json. Compile-verified; visual confirmation pending held run.
+
+## Resolved (audit 2026-10-22)
+
+`QuestsScreen.java:335` uses `menu.quests.roomblock.town` ("Place a %s in your town - this registers it with the town flag automatically.", en_us.json:478); the welcome-mat branch uses `menu.quests.roomblock.welcome_mat`.

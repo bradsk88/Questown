@@ -35,3 +35,7 @@ what the villager-stats screen receives and add an indicator for each active
 negative mood. Ties into `villager-menu-status-icons-no-tooltips.md` (status
 icons had no tooltips — the same UI surface) and the "didn't sleep" detection
 (`villager-dining-with-zero-food-stuck.md` is the related soft-lock).
+
+## Audit (2026-10-22)
+
+Still open: `VillagerStatsScreen` draws experience and damage only; `renderMood` is commented out (line 137) and no mood effect is shown. In the dev-approved UI batch (2026-10-22).

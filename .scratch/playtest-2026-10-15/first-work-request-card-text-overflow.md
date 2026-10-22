@@ -1,6 +1,6 @@
 ---
 title: '"Post your first work request" quest text bleeds past the card boundaries'
-status: ready-for-agent
+status: done
 origin: 2026-10-15 playtest — user chat 02:58:51
 ---
 
@@ -58,3 +58,6 @@ site — data-driven titles (`RoomRecipes.getName` room names, `quests.upgrade`
 `renderCardContent` would close the class; deferred (unverifiable headless,
 playtest scope discipline).
 
+## Resolved (audit 2026-10-22)
+
+The card's own overflow was fixed 2026-10-15 (Finding + fix section). The general ellipsis-fit helper for other card lines is deferred; it rides the 2026-10-22 UI batch.

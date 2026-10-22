@@ -1,6 +1,6 @@
 ---
 title: 'Job board empty state: blank line after "No work requests yet."'
-status: ready-for-human
+status: done
 origin: 2026-10-17 playtest round 5 — user chat 18:03:24 / 18:03:37 (dev-server-8, build 3ed88de2)
 ---
 
@@ -10,3 +10,7 @@ origin: 2026-10-17 playtest round 5 — user chat 18:03:24 / 18:03:37 (dev-serve
 the pre-padding `y`, leaving ~2px between the two. The hint now starts one wrapped line step
 (`font.lineHeight * 1.5`) below the headline's bottom. Compile-verified only; check visually after
 the next restart (and `[gui-lint] WorkScreen — OK`).
+
+## Resolved (audit 2026-10-22)
+
+`WorkScreen.java:178`: hint starts `font.lineHeight * 1.5` below the headline. Visual check rides the 2026-10-22 UI batch session.

@@ -1,5 +1,5 @@
 ---
-status: ready-for-agent
+status: done
 origin: 2026-10-12 playtest — user chat 17:41:25 ("it outputs the 'Created' message twice for some reason")
 ---
 
@@ -38,3 +38,7 @@ room registration (verify idempotency, not just the chat).
   deactivates itself before sending (`btn.active = false` — 1.20.6 has no
   `setActive`).
 - In-game confirmation of both pending. Docs: `town/entity/COMPLEX.md`.
+
+## Resolved (audit 2026-10-22)
+
+Both halves in code: `TownFlagBlockEntity.roomRecipeCreated(room, match, broadcast)` (line 1096) keeps the meta-room call silent; `FlagCraftingScreen.java:148` deactivates the Craft button before sending. Since a73a1401, `BroadcastPacer` also drops an identical line just sent.

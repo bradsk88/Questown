@@ -29,3 +29,7 @@ line is drawn on the stats screen and add a right-aligned "Lvl N" using the
 existing flow layout (`docs/solutions/conventions/gui-layout-flow-and-linter.md`
 — flow layout, not hardcoded positions; verify with the `gui-lint` oracle).
 Ties into `stats-page-show-didnt-eat-didnt-sleep.md` (same stats-page surface).
+
+## Audit (2026-10-22)
+
+Still open: the experience line (`VillagerStatsScreen.renderExperience`) shows no level. In the dev-approved UI batch (2026-10-22).

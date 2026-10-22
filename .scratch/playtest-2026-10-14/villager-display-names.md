@@ -1,6 +1,6 @@
 ---
 title: 'Villagers named "Villager 1", "Villager 2" instead of showing UUIDs'
-status: ready-for-agent
+status: done
 ---
 
 # Villager names: "Villager 1", "Villager 2", not UUIDs
@@ -38,3 +38,7 @@ flag-menu wire (`TownVillagerHandle.displayNamesForAll()` ->
 `AbstractQuestsContainer.villagerLabelFor`, codec order + fallback pinned in
 `FlagMenusVillagerNamesTest`). `town/entity/COMPLEX.md` "Townie display
 numbers".
+
+## Resolved (audit 2026-10-22)
+
+`TownVillagerHandle.displayNamesForAll` on the flag-menu wire, `FlagMenusVillagerNamesTest`; nameplates show 'Villager N' live (2026-10-22 agent findings #9).

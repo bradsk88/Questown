@@ -1,6 +1,6 @@
 ---
 title: 'Diner tooltip shows raw i18n key'
-status: ready-for-agent
+status: done
 ---
 
 2026-10-14: FIXED `8c5d9e20` (`Compat.translatableWithFallback` + `JobTooltips` fallback lines; `JobTooltipsFallbackTest`).
@@ -37,3 +37,7 @@ New jobs/statuses get proper copy by adding lang keys; the fallback is only
 the last resort. The pre-existing `questown.`-prefixed `job_common`
 DOWNTIME keys in en_us.json are a separate (working) convention and were
 left alone.
+
+## Resolved (audit 2026-10-22)
+
+`JobTooltips.java:59-60` renders `Compat.translatableWithFallback(key, FALLBACK_LINE_1 "%s is busy with their work.", jobName)`, so a missing category x status key no longer shows raw. (2026-10-22 r3 finding cites the diner key only as copy, not as a raw-key render.)

@@ -42,3 +42,7 @@ evening drop-off. All pass: both hunters extract and set off again after the sle
 Still unexplained: the playtest's mat left at state 3 with nobody extracting. Playtest-only
 factors not in the fixture: 4 villagers made hunters at once at 02:56 (two later changed), a
 cook/miner sharing the storeroom chests, board requests, the real campfire sleep path.
+
+## Audit (2026-10-22)
+
+Still unreproduced (repro attempts 2026-10-21 all green). Keep watching in playtests; the stuck-block watchdog reseeds a mat stuck at state 3 after 20000 ticks.

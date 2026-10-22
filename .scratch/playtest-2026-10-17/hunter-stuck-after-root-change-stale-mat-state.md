@@ -1,6 +1,6 @@
 ---
 title: 'New hunter stuck in COLLECTING_SUPPLIES: the old gatherer job left the gate mat at state 3'
-status: ready-for-human
+status: done
 origin: 2026-10-17 playtest round 6 — user chat ~19:56 (dev-server-9, build fe1b7238); user hypothesis: "Maybe their old job (pre change) tainted the work spot state?"
 ---
 
@@ -36,3 +36,7 @@ change`.
 taking/dropping the sword in COLLECTING_SUPPLIES (0/1); with it 1/1. Needs the villager outside
 the mat's room and the supply chest away from the mat — otherwise the stale state is extracted
 as a free hunt and the bug hides.
+
+## Resolved (audit 2026-10-22)
+
+Autotest `loot/gatherer_becomes_hunter` (c321107c, TestBlueprintRegistry.java:216) reproduces and pins the mat reset.

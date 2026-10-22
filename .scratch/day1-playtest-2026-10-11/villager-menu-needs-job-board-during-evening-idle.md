@@ -33,3 +33,7 @@ gate). During the evening, a townie should be in an idle/sleep status, not a
 work-blocked one. Check whether the idle/evening state is falling through to the
 work-gate reason text instead of its own idle text. Load the
 `questown-status-why` skill if a live dump is needed to see the decision inputs.
+
+## Audit (2026-10-22)
+
+No fix commit found; needs a live catch (status-why dump of an evening-idle townie showing the job-board reason). Watch for it in the next playtest.

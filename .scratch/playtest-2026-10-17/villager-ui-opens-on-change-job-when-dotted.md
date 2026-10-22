@@ -1,6 +1,6 @@
 ---
 title: 'Villager menu opens on the change-job tab while that tab has its red dot'
-status: ready-for-human
+status: done
 origin: 2026-10-17 playtest round 5 — user chat 18:00:22 (dev-server-8, build 3ed88de2)
 ---
 
@@ -15,3 +15,7 @@ origin: 2026-10-17 playtest round 5 — user chat 18:00:22 (dev-server-8, build 
   showInventoryTab)`: CHANGE_ROOT while `wantsJobChange` (the same predicate as the dot), else
   INVENTORY, or STATS for the management view (the old defaults of the two entry points).
 - Pinned by `VillagerInitialTabTest` (5).
+
+## Resolved (audit 2026-10-22)
+
+`VillagerTabs.initialTab` + `VillagerInitialTabTest` (5).
