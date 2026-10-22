@@ -70,6 +70,19 @@ predicted by the oracle. Corrected table pending one more placement check
 block-rooms (bread oven, food display, fishing station, axe rack) get the same
 model-axis-vs-blockstates-table check before being assumed correct.
 
+## 2026-10-15 late round: both test rounds ran against v1; the committed table is consistent with all four data points
+
+The client restarts at 03:09:18 and 03:24:05 both loaded the **v1** table
+(south:90, west:0, north:270, east:180 — never committed; proved by the
+`build/resources/main` copy mtime: it was only re-copied at 03:35:39, my
+server relaunch — after my 03:29:04 src edit). So the 03:13 AND the
+03:28:42/03:29:29 tests ("north and south are both 180 reversed. East and
+west are good") both ran against v1. Reconciling every data point against
+v1 gives the full empirical mapping y:0→W, y:90→N, y:180→E, y:270→S, which
+is exactly satisfied by the committed table {west:0, north:90, east:180,
+south:270}. The committed table has never been loaded by the user's
+client; re-test after the next client restart.
+
 ## Audit (2026-10-22)
 
 Blockstate table re-based twice; the corrected one (73ddb582, 2026-10-16: west 0, north 90, east 180, south 270) still needs the south/east placement check the ticket asks for. To do in this audit's client session.
