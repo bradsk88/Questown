@@ -156,3 +156,22 @@ dusk (4ca11bbe), no-table diner give-up.
   (handoff item 5 said singular had not been seen).
 - r5 without free food: the first gatherer can never start (gather needs villager food; it cycles dining_no_table/dining_raw_food/downtime NO_SUPPLIES all night). The red "Free food ->" on the economics tab is the only rescue; designed, noted for the record.
 - (still present, = 10-21 #19) "Quest completed: Post your first work request on the job board" fired at the BOP job change (the hunter's auto-posted raw mutton request), before the player posted anything.
+19. Storage full in r5 (both storeroom chests 27/27, ~07:07 onward): miner and hunter sat in
+    NO_SPACE for minutes (`[WHY] ... NO_SPACE` x10 per 2 min), the miner thrashed
+    bop_depositing <-> seeking_work (#9 again, 51 changes in 2 min), but the flag showed no
+    storage bubble (screenshot r5-013 at 07:13, looking straight at the flag from 4 blocks).
+    BELIEVED, not instrumented: `StorageBlockTally` resets on any free slot
+    (`Jobs.townHasSpace`), and the hunter takes its sword out of the chest each trip, which frees
+    a slot until the next deposit; the thrashing miner is also only NO_SPACE half the time. So
+    the 1200 villager-tick tally may never accumulate. Settle by logging the tally per flag tick.
+20. **[FIXED 2026-10-22, verified live: after the restart cook/miner/hunter moved to dining_raw_food, ate beef/porkchop ("Fullness -6820 -> 2500"), hunter back to sword]** Town-wide halt once villager food runs
+    out. r5, 07:17: cook, hunter and miner each looped `dining_no_table` -> "gave up waiting for
+    ingredients after 201 ticks" -> board -> `dining_no_table` every ~2.5 s (35 changes per
+    2 min each), no work, with raw porkchop/beef/chicken in storage. The board re-dines a
+    starving townie unless it gave up on *raw* food recently, and the declared fallback
+    (no table -> raw food) was only read after 500 ticks without a next job, which the loop
+    never reached. Before cf1b7072 (last session) the give-up ran the meal hooks every tick,
+    so starving townies were "fed" without food, which hid this. Fix: at the give-up hand-off,
+    change to the job's declared no-supplies fallback when it is another job
+    (`JobLogic.isAnotherStage`). Also the handoff's open question ("a no-table diner gave up after
+    201 ticks"): this is that path.

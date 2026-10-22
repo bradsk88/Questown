@@ -4,6 +4,7 @@ import ca.bradj.questown.jobs.blacksmith.MapBackedWSC;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.TestWorldInteraction;
 import ca.bradj.questown.jobs.declarative.ValidatedInventoryHandle;
+import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -502,6 +503,72 @@ class JobLogicTest {
     @Test
     void tick_givingUpAfterInserting_runsTheExtractHooksOnce() {
         Assertions.assertEquals(1, extractsAfterGivingUp(true), "the extract hooks ran every tick");
+    }
+
+    /**
+     * 2026-10-22 r5 playtest: once the town ran out of villager food, every townie looped
+     * dining_no_table -> "gave up waiting for ingredients after 201 ticks" -> the board ->
+     * dining_no_table (still starving, and only a raw-food give-up counts as a food attempt),
+     * every ~2.5 s, with raw meat in storage. The job declares where a give-up goes next
+     * (no table -> raw food); the hand-off went to the board instead.
+     */
+    private static List<String> handOffAfterGivingUp(Function<JobID, JobID> noSuppliesFallback) {
+        List<String> handOffs = new ArrayList<>();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public boolean tryGrabbingInsertedSupplies() {
+                return true;
+            }
+
+            @Override
+            public void changeToNextJob() {
+                handOffs.add("board");
+            }
+
+            @Override
+            public void changeJob(JobID id) {
+                handOffs.add(id.toNiceString());
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+        world.allWorkSpots = ImmutableMap.of(STATE_NEED_WIDGET, ImmutableList.of(ARBITRARY_WORKSPOT));
+        ExpirationRules giveUpQuickly = new ExpirationRules(
+                () -> 1L,
+                () -> 2L,
+                noSuppliesFallback,
+                () -> Long.MAX_VALUE,
+                jobID -> jobID
+        );
+        for (int i = 0; i < 6; i++) {
+            logic.tick(
+                    null,
+                    () -> ProductionStatus.NO_SUPPLIES,
+                    new JobID("test", "tester"),
+                    true,
+                    false,
+                    false,
+                    false,
+                    giveUpQuickly,
+                    DEFAULT_DETAILS,
+                    world,
+                    (a, b) -> 0,
+                    Integer.MAX_VALUE
+            );
+        }
+        return handOffs;
+    }
+
+    @Test
+    void tick_givingUp_movesToTheDeclaredNoSuppliesFallback_whenItIsAnotherJob() {
+        List<String> handOffs = handOffAfterGivingUp(j -> new JobID(j.rootId(), "fallback"));
+        Assertions.assertFalse(handOffs.isEmpty(), "never handed off");
+        Assertions.assertEquals("test:fallback", handOffs.get(0));
+    }
+
+    @Test
+    void tick_givingUp_asksTheBoard_whenTheFallbackIsTheSameJobOrSeekingWork() {
+        Assertions.assertEquals("board", handOffAfterGivingUp(j -> j).get(0));
+        Assertions.assertEquals("board", handOffAfterGivingUp(j -> WorkSeekerJob.newIDForRoot(j.rootId())).get(0));
     }
 
     private static @NotNull ExpirationRules getNever() {

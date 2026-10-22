@@ -532,6 +532,20 @@ Live (21 townies): 70 diner give-ups in 5 minutes with no flood; with 6 food sto
 takes gave exactly 4 fullness rises. Ticket:
 `.scratch/agent-playtest-2026-10-22/fullness-log-flood-free-meals.md`.
 
+**The give-up goes to the job's declared next stage, not always the board (2026-10-22 r5).**
+The free meals had been hiding a loop. Once a town ran out of villager food, a starving
+townie in `dining_no_table` gave up after 201 ticks, the grabbed branch asked the board, and
+the board put it straight back into `dining_no_table`: it was still starving, and only leaving
+`dining_raw_food` records a food attempt (`registerMostRecentFoodAttempt`). Every townie
+looped every ~2.5 s with raw meat in storage and the town stopped working. The diners already
+declare their next stage as the no-supplies fallback (table -> no table -> raw food), but that
+was only read after 500 ticks without a next job, which the loop never reached. The grabbed
+branch now changes to `expiration.noSuppliesFallbackFn()` when it names another job
+(`JobLogic.isAnotherStage`: not the job itself, not seeking work); production, downtime,
+rester and BOP jobs declare themselves or seeking work, so they still ask the board. Pinned by
+`JobLogicTest.tick_givingUp_movesToTheDeclaredNoSuppliesFallback_whenItIsAnotherJob` (red:
+"board") and `tick_givingUp_asksTheBoard_whenTheFallbackIsTheSameJobOrSeekingWork`.
+
 ## Same-root fallback prefers a job unlocked with the root (2026-10-17 playtest)
 
 `ServerJobsRegistry.getWorkSupplier` falls back to "any job in the same root" when a
