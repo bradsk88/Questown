@@ -134,3 +134,24 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
    holds now (fuel: furnace lacks fuel; extract: furnace has output) and banded otherwise, with the
    warp list keeping all of them. Detail: `.scratch/cook-scoring-tie/always-consider-noop-tie-mechanism.md`.
    Question: try that, or leave the flip?
+2. **Wake, cancel and deed re-issue have no player UI.** Shutdown starts from the flag's relocate
+   button (`BeginTownRelocationMessage` -> `beginTownShutdown`). `wakeInPlace`, `reissueDeed` and
+   `cancelTownShutdown` are called only from `FlagShutdownCommand` (`/qt flag <pos> shutdown
+   [wake|reissue|cancel]`) and the autotests. Right-clicking a dormant flag only collects a waiting
+   deed (`collectDeed`). ADR-0009 calls wake and re-issue the loss-protection paths. So a player who
+   loses the deed, or who clicks relocate by mistake, has no way back without commands.
+   Recommendation: right-clicking a dormant flag with no deed waiting opens a two-button confirm
+   ("Wake the town" / "Get the deed back"), and the flag menu shows "Cancel" during the ritual.
+   Question: build that now, or park it with relocation?
+3. **Miner "No quests found" batch re-asks satisfied quests.** agent-10-22 findings:100. With every
+   quest done, `TownFlagTicker.addQuests` posted a miner batch (Mineshaft, Miner job, pickaxes,
+   swords, coal); all but coal were already satisfied, so backfill closed them in the same second
+   and chat repeated "Quest completed: Mineshaft" three times in 3 minutes. Recommendation: build
+   the fallback batch only from quests not already satisfied (no backfill chat for those).
+   Question: OK, or should the fallback batch stop entirely now that post-onboarding is rooms only?
+4. **"I need a fishing rod to work" for a job the townie hasn't unlocked**
+   (`day1-playtest-2026-10-11/villager-asks-for-unlocked-job-tool.md`). The status line names the
+   gate item of a candidate job the townie can't hold yet. Recommendation: name only items for
+   jobs the townie can hold (unlock != workability). Question: OK?
+5. **Restart mid-shutdown was broken; fixed (2ff42b88).** No question, just a heads-up: shutdown,
+   then a restart before dormant, used to leave the flag "needs a moment to start up" forever.
