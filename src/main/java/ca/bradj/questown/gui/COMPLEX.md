@@ -1112,8 +1112,10 @@ their count, and the card caps at the target, so the count at completion always 
   `GuiGraphics.blitSprite` of `widget/checkbox[_selected][_highlighted]`), 13 px at
   `panelTop + backgroundHeight - borderPadding - 13`; the band is `13 + borderPadding + 4` = 23,
   the same as before, so 3 cards per page still. The click box is 13 high to match the box.
-  Live r8: ticked when on, empty when off, the click toggles, gui-lint OK. The highlighted sprite
-  was not observable: no hover state (not even an item tooltip) showed in that session's captures.
+  Live r8: ticked when on, empty when off, the click toggles, gui-lint OK. Live r9: hovering shows
+  the highlighted sprite and the on/off tooltip. (An r8 note said hover was unobservable; that was
+  the agent parking the cursor at 2x coordinates. QtDiagClient `click`/`cursor` take the
+  screenshot's own pixel coordinates.)
 - **Quest titles fit their card (`QuestsScreen`).** One line through `Compat.fitToWidth` (ends in
   "…" when cut), leaving room for the removal "x"; the full title shows on hover over the line.
 - **Readable job variant names.** `Jobs.getVariantNameComponent` = lang key `jobs.<root>.<job>`,
