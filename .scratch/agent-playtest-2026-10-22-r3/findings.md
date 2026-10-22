@@ -122,3 +122,15 @@ dusk (4ca11bbe), no-table diner give-up.
     likely to give a crafter, and can start one on ladder. Either ladder's parent should be
     `crafter/stick`, or the pool should be per root. Second #10 data point: the 2.75 "Unlock job:
     Crafter" quest; the plain BOP spend rolled hunter.
+- Observation (not a bug claim): the r4 miner ate at 06:13:37 "Fullness -10739 -> 5000", about
+  10k ticks hungry with carrots in storage. Below-zero ticking is by design
+  (`tickHunger`: "keeps ticking below zero to trigger dining"); it had become a miner 3.5 min
+  earlier and spent the gap in gatherer trips + bop_depositing. After the meal, "gave up waiting
+  for different work after 501 ticks (dining_no_table)" -> `dining_raw_food` -> gave up again:
+  the 10-21 #17 pattern, still present.
+16. (judge, same family as #13) Villager "Jobs" (hammer) tab labels nodes with raw job ids:
+    survival hunter shows "sword" -> "sword_half_day"; the creative all-jobs view shows "gather",
+    "axe", ... In creative the tree root's tooltip is placeholder text "test" / "test2"
+    (`VillagerAdvancementsScreen` builds the root `DisplayInfo` with `Compat.literal("test")`,
+    `("test2")`); creative also shows the whole tree (gatherer first) on a hunter, which matches
+    the open `skills-tab-icons-stacked.md` ("only gather visible").
