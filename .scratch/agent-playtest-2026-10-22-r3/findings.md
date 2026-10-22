@@ -120,7 +120,7 @@ dusk (4ca11bbe), no-table diner give-up.
     fires with `relevant ingredients = [... no requirements]`: a work-only state 0 (no
     ingredients, no tools) is read as "supplies missing". Probably the same family as the
     work-only state-0 gate (AGENTS.md cook/stick note); shared status logic, left for the dev.
-15. (judge) Random root change pool lists crafter twice: "Changing villager from gatherer to one
+15. **[FIXED 2026-10-22, dev: "ladder should have a crafter parent"; JobDataRootsTest]** Random root change pool lists crafter twice: "Changing villager from gatherer to one
     of [farmer, smelter, cook, fisher, soup_cook, crafter, baker, arborist, gatherer, crafter,
     organizer, miner, hunter]". `SimpleVillagerHandle` shuffles `getAllRootJobs()` (JobIDs),
     and two crafter jobs have `parent: null`: `crafter/stick` (11 children) and
