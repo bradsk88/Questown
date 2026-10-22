@@ -142,3 +142,13 @@ first temp bed then stayed in the world, the campfire stayed lit, and `onWake` n
 campfire sleeper, so `first_campfire_sleep` was never granted and the "Your camp is ready" toast
 came back every evening (`TownFlagBlockEntity.showCampReadyToastIfDue`). Pinned by
 `CampfireSleepReentryTest`.
+
+## Each night's first wand click only lights the fire (2026-10-22, r9)
+
+`onWake` extinguishes the campfire, so the next night `TownWand.handleCampfireClick` sees it unlit,
+lights it (flint sound) and returns: the first click lights, the second sleeps. The crosshair hint
+(`CampfireSleepClientEvents`) is what tells the player: unlit -> `message.wand.campfire.not_lit`,
+lit at night -> `sleep_hint`. The unlit copy said "The campfire must be lit", which reads as "go
+find flint and steel" while the wand itself lights it; it now says "Right-click to light the
+campfire". (An agent driving `_qtdev clickheld` without aiming sees only a silent PASS on that
+first click: it is the lighting, not a failure.)

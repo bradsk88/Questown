@@ -571,7 +571,7 @@
   "message.wand.campfire.sleep_hint": "Right-click to sleep (no spawn set, wake up groggy)",
   "message.wand.campfire.day_hint": "Your Town Wand enables you to sleep by the campfire",
   "message.wand.campfire.not_registered": "This campfire is not registered with a town",
-  "message.wand.campfire.not_lit": "The campfire must be lit",
+  "message.wand.campfire.not_lit": "Right-click to light the campfire",
   "message.wand.campfire.no_safe_position": "No safe place to sleep near this campfire",
   "entity.questown.helper_chicken": "Helper Chicken",
   "block.questown.stone_chicken_statue": "Stone Chicken Statue",
