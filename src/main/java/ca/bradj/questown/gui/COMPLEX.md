@@ -1123,3 +1123,25 @@ their count, and the card caps at the target, so the count at completion always 
   duplicate encoding). "Lvl N" is right-aligned on the experience title; the old mood row lists the
   active effects in words on one fitted line (`menu.villager_stats.effect.<path>`, else
   `JobNames.variant`). Live: r8 showed "Lvl 1" and a sleepless villager's effect.
+
+## Request categories on the job board (2026-10-22)
+
+Dev: "figure out some way for players to request 'food' ... (same for swords)". A cook starts with
+a subset of recipes; the player just wants food. A category is an item tag offered in the board's
+"+" list; requesting it posts a tag `WorkRequest`, which the engine already handled end to end
+(`Ingredients.asWorkRequest` -> `WorkRequest.of(TagKey)`; producers match by `Ingredient.test`).
+
+- **Which categories**: `jobs/requests/RequestCategories.CATEGORIES` (food, raw food, raw fish,
+  swords, axes, pickaxes, shovels, hoes, fishing rods), offered when some unlocked job can make an
+  item in the tag (`RequestCategories.offered` over `getAllOutputs`' stacks; `TownWorkHandle`).
+- **Wire**: categories travel as tag ids (`AddWorkContainer.write/readCategories`). An `Ingredient`
+  crosses the network as its item list, so a tag ingredient arrived as an anonymous list the client
+  could neither name nor encode (`Ingredients.toString` threw: a client crash, caught live in r8).
+  The client rebuilds `Ingredient.of(tag)` (`AddWorkContainer.getCategories`).
+- **Screen**: a category is one framed slot (cycling its members), tooltip "Raw Food / Any kind will
+  do", never expanded into its members (most are not producible); each slot remembers the request it
+  stands for, so a click sends the category, not the member on show. Board cards now name the
+  request ("Raw Food") instead of "An item was requested".
+- Pins: `RequestCategoriesTest` (3); autotest `loot:cook_extract_food_category` (a Food category
+  request drives the cook exactly like the cooked-mutton one, 5/8). Live r8: hover, confirm
+  ("Requesting Raw Food", 3 producers), posted card "Raw Food".

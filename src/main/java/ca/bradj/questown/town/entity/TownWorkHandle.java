@@ -9,6 +9,7 @@ import ca.bradj.questown.gui.TownWorkContainer;
 import ca.bradj.questown.gui.UIWork;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.requests.RequestCategories;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.WorkHandle;
@@ -16,6 +17,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
@@ -23,6 +25,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -30,6 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Stack;
@@ -128,6 +132,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         BlockPos flagPos = parent.getTownFlagBasePos();
         WorksBehaviour.TownData td = parent.getTownData();
         ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td, parent.getVillagerHandle()::isUnlocked);
+        List<ResourceLocation> categories = offeredCategories(allOutputs);
         Compat.openScreen(
                 sp, new MenuProvider() {
                     @Override
@@ -141,7 +146,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
                             @NotNull Inventory inv,
                             @NotNull Player p
                     ) {
-                        AddWorkContainer r = new AddWorkContainer(windowId, allOutputs, flagPos);
+                        AddWorkContainer r = new AddWorkContainer(windowId, allOutputs, categories, flagPos);
                         // Empty-state guidance (job-board-empty-state.md): when the board has no
                         // pending requests, hand the client the top unmet need so the screen can
                         // point at posting it instead of a vague teaser.
@@ -155,6 +160,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
                     }
                 }, data -> {
                     AddWorkContainer.writeWorkResults(allOutputs, data);
+                    AddWorkContainer.writeCategories(categories, data);
                     AddWorkContainer.writeFlagPosition(flagPos, data);
                     TownWorkContainer.writeWork(requestedResults, data);
                     TownWorkContainer.writeFlagPosition(flagPos, data);
@@ -165,6 +171,17 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
                             : "");
                 }
         );
+    }
+
+    /**
+     * The request categories ("Food", "Swords") to offer: those some unlocked job makes an item in
+     * (RequestCategories). Requesting one posts a tag request.
+     */
+    private static List<ResourceLocation> offeredCategories(ImmutableSet<Ingredient> outputs) {
+        List<ItemStack> producible = outputs.stream()
+                .flatMap(i -> Arrays.stream(i.getItems()))
+                .toList();
+        return RequestCategories.offered(producible, (stack, tag) -> stack.is(Compat.itemTag(tag)));
     }
 
     public ImmutableList<WorkRequest> getRequestedResults() {

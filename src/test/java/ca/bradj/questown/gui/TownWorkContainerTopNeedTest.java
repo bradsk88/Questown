@@ -60,7 +60,7 @@ class TownWorkContainerTopNeedTest {
         TownWorkContainer c = new TownWorkContainer(
                 0,
                 java.util.List.of(),
-                new AddWorkContainer(0, com.google.common.collect.ImmutableList.of(),
+                new AddWorkContainer(0, com.google.common.collect.ImmutableList.of(), java.util.List.of(),
                         new net.minecraft.core.BlockPos(0, 0, 0)),
                 new net.minecraft.core.BlockPos(0, 0, 0),
                 false,
@@ -75,7 +75,7 @@ class TownWorkContainerTopNeedTest {
         TownWorkContainer c = new TownWorkContainer(
                 0,
                 java.util.List.of(),
-                new AddWorkContainer(0, com.google.common.collect.ImmutableList.of(),
+                new AddWorkContainer(0, com.google.common.collect.ImmutableList.of(), java.util.List.of(),
                         new net.minecraft.core.BlockPos(0, 0, 0)),
                 new net.minecraft.core.BlockPos(0, 0, 0),
                 false,

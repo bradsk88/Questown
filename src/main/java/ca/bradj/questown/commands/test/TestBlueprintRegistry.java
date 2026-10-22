@@ -207,6 +207,10 @@ public class TestBlueprintRegistry {
         jobs.add(new TestEntry("loot_on_extract_warp", new JobID("hunter", "sword"), lootOnExtractBlueprint(true), "loot"));
         jobs.add(new TestEntry("ui/hunter_status_resync", new JobID("hunter", "sword"), hunterStatusResyncBlueprint(), "ui"));
         jobs.add(new TestEntry("cook_extract_food", new JobID("cook", "fuel"), cookExtractCreditsFoodQuestBlueprint(), "loot"));
+        // The same with a "Food" category request (a tag), as a player posts it from the board's
+        // categories (dev 2026-10-22: "let players request food").
+        jobs.add(new TestEntry("cook_extract_food_category", new JobID("cook", "fuel"),
+                cookExtractCreditsFoodQuestBlueprint(WorkRequest.of(TagsInit.Items.VILLAGER_FOOD)), "loot"));
         // loot_on_extract_accumulate: the 2026-10-15 accumulation ruling. Posts the raw-food
         // LOOT quest at count 4, drives one hunter cycle (>=1 natural extraction), and
         // asserts the quest did NOT complete on the first extraction (the old
@@ -2715,6 +2719,10 @@ public class TestBlueprintRegistry {
      * count-8 #questown:villager_food quest: the cook's realtime extractions must credit it.
      */
     private static TestBlueprint cookExtractCreditsFoodQuestBlueprint() {
+        return cookExtractCreditsFoodQuestBlueprint(WorkRequest.of(Items.COOKED_MUTTON));
+    }
+
+    private static TestBlueprint cookExtractCreditsFoodQuestBlueprint(WorkRequest boardRequest) {
         ResourceLocation food = TagsInit.Items.VILLAGER_FOOD.location();
         return cookRealtimeBlueprint(cookBlueprint().supplyItems(), new TestExpectation(List.of(), 0, 100))
                 .withSetupHook((level, flagPos, town, output) -> {
@@ -2722,7 +2730,7 @@ public class TestBlueprintRegistry {
                     // A board with a request, as in play (2026-10-20 playtest: the cook batch posts
                     // cooked mutton). The work picker only takes a job that satisfies one, which
                     // cook/extract's old cooked_cod initial_request never did.
-                    town.getWorkHandle().requestWork(Items.COOKED_MUTTON);
+                    town.getWorkHandle().requestWork(boardRequest);
                     return seedFuelledFurnaceWithOutput(level, flagPos, town, output);
                 })
                 .withCustomAssertion((level, flagPos, town, output) -> {

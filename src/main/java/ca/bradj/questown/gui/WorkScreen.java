@@ -204,7 +204,8 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
 
             int idX = x + PAGE_PADDING;
             int idY = iconY - 10;
-            ctx.text(Compat.translatable("job_board.default_name"), idX, idY, TEXT_COLOR, false);
+            // Name the request ("Raw Food", "Wheat Seeds") instead of "An item was requested".
+            ctx.text(Ingredients.getName(jobPosting.getResultWanted().asIngredient()), idX, idY, TEXT_COLOR, false);
 
             int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
             ctx.lightText(

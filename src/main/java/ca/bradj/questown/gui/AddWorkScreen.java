@@ -16,10 +16,13 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -42,6 +45,7 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
     private static final int MAX_CARDS_PER_PAGE = (backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING);
 
     private final List<Ingredient> work;
+    private final List<Ingredient> categories;
     private final JEI.NineNine background;
     private final JEI.NineNine cardBackground;
     private final GuiIconButtonSmall nextPage;
@@ -58,7 +62,11 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
         super.imageWidth = 256;
         super.imageHeight = 220;
 
-        this.work = ImmutableList.copyOf(container.getAddableWork());
+        this.categories = container.getCategories();
+        this.work = ImmutableList.<Ingredient>builder()
+                .addAll(this.categories)
+                .addAll(container.getAddableWork())
+                .build();
         this.background = JEI.getRecipeGuiBackground();
         this.cardBackground = JEI.getRecipeBackground();
 
@@ -131,6 +139,11 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
     }
 
     private List<Slot> slots = new ArrayList<>();
+    private final Map<Slot, Ingredient> slotRequests = new IdentityHashMap<>();
+
+    private boolean isCategory(Ingredient ing) {
+        return categories.contains(ing);
+    }
 
     private ImmutableList<Slot> renderRequestItemIcons(
             RenderContext ctx,
@@ -145,6 +158,7 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
 
         int slotIndex = 0;
         int slotX = 0;
+        slotRequests.clear();
         for (Ingredient ing : possibleRequests) {
             if (slotX >= 8) {
                 y = y + 16;
@@ -153,14 +167,20 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
             int iconX = x + 8 + slotX * 18;
 
             ItemStack[] allPossible = ing.getItems();
-            if (allPossible.length > 0) {
-                int curSeconds = (int) (System.currentTimeMillis() / 1000);
-                ItemStack itemStack = allPossible[curSeconds % allPossible.length];
-                renderRequest(ctx, y, mouseX, mouseY, itemStack, iconX, dummyInv, slotIndex, b);
-                slotIndex++;
-                slotX++;
+            if (allPossible.length == 0) {
+                continue;
             }
-            if (allPossible.length == 1) {
+            int curSeconds = (int) (System.currentTimeMillis() / 1000);
+            ItemStack itemStack = allPossible[curSeconds % allPossible.length];
+            // A category (a tag: "Food") is one slot that requests the whole category; its members
+            // are not listed after it (most of a tag is not something the town can make - the
+            // producible ones already have their own slots).
+            boolean category = isCategory(ing);
+            renderRequest(ctx, y, mouseX, mouseY, itemStack, iconX, dummyInv, slotIndex, b,
+                    ing, category ? Ingredients.getName(ing) : null);
+            slotIndex++;
+            slotX++;
+            if (category || allPossible.length == 1) {
                 continue;
             }
             for (ItemStack specificItem : allPossible) {
@@ -169,7 +189,8 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
                     slotX = 0;
                 }
                 iconX = x + 8 + slotX * 18;
-                renderRequest(ctx, y, mouseX, mouseY, specificItem, iconX, dummyInv, slotIndex, b);
+                renderRequest(ctx, y, mouseX, mouseY, specificItem, iconX, dummyInv, slotIndex, b,
+                        Ingredient.of(specificItem), null);
                 slotIndex++;
                 slotX++;
             }
@@ -186,8 +207,14 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
             int iconX,
             Container dummyInv,
             int slotIndex,
-            ImmutableList.Builder<Slot> b
+            ImmutableList.Builder<Slot> b,
+            Ingredient request,
+            @Nullable Component categoryName
     ) {
+        if (categoryName != null) {
+            // A faint frame marks a category slot apart from single items.
+            ctx.fill(iconX - 1, y, iconX + 17, y + 18, 0x30000000);
+        }
         ctx.renderItemAndDecorations(itemStack, iconX, y + 1);
         if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
             ctx.fill(
@@ -197,11 +224,22 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
                     y + 17,
                     0x80FFFFFF
             ); // transparent white square behind hovered item slot
-            this.showTooltip(itemStack.getItem().getName(itemStack)); // hovered item's name as tooltip
+            if (categoryName != null) {
+                this.showTooltip(List.of(
+                        categoryName.getVisualOrderText(),
+                        Compat.translatableStyled(
+                                "job_board.add_work.category_hint",
+                                net.minecraft.network.chat.Style.EMPTY.withColor(net.minecraft.ChatFormatting.GRAY)
+                        ).getVisualOrderText()
+                ));
+            } else {
+                this.showTooltip(itemStack.getItem().getName(itemStack)); // hovered item's name as tooltip
+            }
         }
         Slot element = new Slot(dummyInv, slotIndex, iconX, y + 1);
         element.set(itemStack);
         b.add(element);
+        slotRequests.put(element, request);
     }
 
     private void renderPageNum(
@@ -295,7 +333,9 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
     ) {
         for (Slot s : slots) {
             if (s.x < x && s.x + 16 > x && s.y < y && s.y + 16 > y) {
-                Ingredient item = Ingredient.of(s.getItem());
+                // The request the slot stands for: a category slot requests the category, not the
+                // member it happens to be showing.
+                Ingredient item = slotRequests.getOrDefault(s, Ingredient.of(s.getItem()));
                 if (!menu.canRequest(item)) {
                     QT.logBug("AddWorkScreen: ingredient slot not acceptable: {}", s.getItem());
                     return false;

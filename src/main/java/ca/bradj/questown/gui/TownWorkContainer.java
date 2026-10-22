@@ -37,6 +37,7 @@ public class TownWorkContainer extends AbstractContainerMenu {
         AddWorkContainer qMenu = new AddWorkContainer(
                 windowId,
                 AddWorkContainer.readWorkResults(buf),
+                AddWorkContainer.readCategories(buf),
                 AddWorkContainer.readFlagPosition(buf)
         );
         return new TownWorkContainer(
