@@ -532,19 +532,18 @@ Live (21 townies): 70 diner give-ups in 5 minutes with no flood; with 6 food sto
 takes gave exactly 4 fullness rises. Ticket:
 `.scratch/agent-playtest-2026-10-22/fullness-log-flood-free-meals.md`.
 
-**The give-up goes to the job's declared next stage, not always the board (2026-10-22 r5).**
+**A starving townie leaving a diner goes to the next diner stage (2026-10-22 r5/r6).**
 The free meals had been hiding a loop. Once a town ran out of villager food, a starving
 townie in `dining_no_table` gave up after 201 ticks, the grabbed branch asked the board, and
-the board put it straight back into `dining_no_table`: it was still starving, and only leaving
-`dining_raw_food` records a food attempt (`registerMostRecentFoodAttempt`). Every townie
-looped every ~2.5 s with raw meat in storage and the town stopped working. The diners already
-declare their next stage as the no-supplies fallback (table -> no table -> raw food), but that
-was only read after 500 ticks without a next job, which the loop never reached. The grabbed
-branch now changes to `expiration.noSuppliesFallbackFn()` when it names another job
-(`JobLogic.isAnotherStage`: not the job itself, not seeking work); production, downtime,
-rester and BOP jobs declare themselves or seeking work, so they still ask the board. Pinned by
-`JobLogicTest.tick_givingUp_movesToTheDeclaredNoSuppliesFallback_whenItIsAnotherJob` (red:
-"board") and `tick_givingUp_asksTheBoard_whenTheFallbackIsTheSameJobOrSeekingWork`.
+the board's starving branch started `dining_no_table` again (only leaving `dining_raw_food`
+records a food attempt), every ~2.5 s, with raw meat in storage; nobody worked. The fix is in
+the board, not here: `TownFlagBlockEntity.changeJobForVisitorFromBoard` picks the diner with
+`DiningStages.next(currentJob, hasDiningRoom)`, which moves a townie that is still starving on
+the way out of a diner one stage down (table -> no table -> raw food -> none). A townie that
+ate is no longer starving, so it goes to work. A first attempt (14fab7cd) changed this branch
+to jump to the job's declared no-supplies fallback; a diner that had already eaten sits in a
+fresh cycle until that same 201-tick give-up, so every meal was followed by a raw one. Reverted.
+Pinned by `DiningStagesTest` (3 of 5 red with the old "same diner" rule).
 
 ## Same-root fallback prefers a job unlocked with the root (2026-10-17 playtest)
 

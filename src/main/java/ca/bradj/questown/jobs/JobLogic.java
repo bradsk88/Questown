@@ -4,7 +4,6 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.jobs.declarative.Preferred;
 import ca.bradj.questown.jobs.declarative.WithReason;
-import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
@@ -185,14 +184,6 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 
         if (this.grabbedInsertedSupplies) {
-            // A job that declares a next stage for a give-up (a diner: table -> no table -> raw
-            // food) goes there. The board put a starving townie straight back into the same
-            // diner, so a town out of villager food looped with raw meat in storage (2026-10-22).
-            JobID giveUpStage = expiration.noSuppliesFallbackFn().apply(entityCurrentJob);
-            if (isAnotherStage(giveUpStage, entityCurrentJob)) {
-                worldBeforeTick.changeJob(giveUpStage);
-                return;
-            }
             worldBeforeTick.changeToNextJob();
             ticksWithoutNextJob++;
             return;
@@ -353,10 +344,5 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
         QT.JOB_LOGGER.debug("Villager is targeting workspot {}", spot);
         this.workSpot = spot;
-    }
-
-    /** A give-up fallback that is neither this job nor plain work-seeking (which the board covers). */
-    static boolean isAnotherStage(JobID fallback, JobID current) {
-        return !fallback.equals(current) && !WorkSeekerJob.isSeekingWork(fallback);
     }
 }

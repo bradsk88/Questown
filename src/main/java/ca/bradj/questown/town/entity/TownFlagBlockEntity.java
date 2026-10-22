@@ -23,11 +23,11 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.IStatus;
+import ca.bradj.questown.jobs.DiningStages;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
-import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.jobs.declarative.ResterWork;
@@ -1234,10 +1234,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             String rid = currentJob.rootId();
             ResourceLocation diningRoom = DinerWork.asWork(rid).baseRoom;
             boolean hasDiningRoom = !roomsHandle.getRoomsMatching(diningRoom).isEmpty();
-            changeJob.accept(hasDiningRoom
-                    ? DinerWork.getIdForRoot(rid)
-                    : DinerNoTableWork.getIdForRoot(rid));
-            return true;
+            // Still starving on the way out of a diner = gave up there without eating: next stage.
+            JobID diner = DiningStages.next(currentJob, hasDiningRoom);
+            if (diner != null) {
+                changeJob.accept(diner);
+                return true;
+            }
         }
 
         ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();

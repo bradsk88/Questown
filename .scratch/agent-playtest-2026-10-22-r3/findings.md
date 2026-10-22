@@ -175,6 +175,12 @@ dusk (4ca11bbe), no-table diner give-up.
     change to the job's declared no-supplies fallback when it is another job
     (`JobLogic.isAnotherStage`). Also the handoff's open question ("a no-table diner gave up after
     201 ticks"): this is that path.
+    **Superseded 2026-10-22 r6:** the JobLogic version above made every normal meal end with a
+    raw one (a diner that ate sits in a fresh cycle until the same give-up, which then went to
+    raw food: "dining_no_table -> Fullness -360 -> 5000 -> dining_raw_food -> 4300 -> 5000").
+    Moved to the board: `DiningStages.next` sends a townie that is still starving on the way out
+    of a diner one stage down; a fed townie goes to work. Live: a starving hunter went
+    no_table -> raw food -> "Fullness -6409 -> 2500" -> downtime. Eating autotests 5/5.
 - Autotests after #20 (2026-10-22 07:40): `only=eating` 5/5 PASS, `village/day1` 41/41 PASS.
   `eating/eat_raw_food` had been failing on the parent commit (fullness -40%, min 30%): its 0.3
   floor was only reachable with the free meals cf1b7072 removed; floor now 0.15 (one raw meal,
