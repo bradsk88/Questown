@@ -54,6 +54,46 @@ flowchart LR
   never expires — losing track of a dormant town is exactly what it protects
   against.
 
+## Absorbed journals — a respawned townie keeps its job (#26)
+
+A townie's journal (job, status, the 6 carried items) lives only on its entity; the
+town keeps a copy in `NBT_TOWN_STATE`, republished from the *live* entities on each
+change. The shutdown ritual discards each entity as it absorbs it, so that copy cannot
+be the respawn's source. Before the fix every respawn (wake, cancel, relocation)
+seeded a fresh gatherer journal (`SpawnVisitorReward.newVisitorJournal`), which
+breaks ADR-0009's "jobs travel".
+
+```mermaid
+flowchart LR
+    A["absorb(vme)"] --> S["rememberAbsorbedJournal\n→ AbsorbedJournals.remember\n(flag tag absorbed_journals[uuid])"]
+    H["TownRelocation.hydrateFrom"] --> AD["AbsorbedJournals.adoptTownState\n(entries with no snapshot)"]
+    R["SpawnVisitorReward(uuid).claim"] --> T["town.takeRespawnJournal(uuid)\n→ AbsorbedJournals.take"]
+    T -- present --> J[that journal]
+    T -- empty --> G[new gatherer journal]
+```
+
+- **Snapshot at absorb time** (dev ruling 2026-10-22: full journal, not the job id):
+  `TownFlagState.captureVillager` → `TownStateSerializer.storeVillager`, the same
+  per-villager tag `NBT_TOWN_STATE` holds. It is on the flag's persistent tag, so it
+  rides relocation's whole-blob copy and survives a restart.
+- **Consumed on take**: one snapshot, one respawn.
+- **`adoptTownState` runs synchronously inside `hydrateFrom`**, before any reward
+  claims. The respawn rewards are claimed one per tick, and between claims the
+  ticker republishes `NBT_TOWN_STATE` from the townies spawned so far, which drops
+  the entries of the ones still queued. A lazy fallback read at claim time saw that
+  rewritten state and respawned gatherers (`flag/relocate_nearby` check 10 failed that
+  way). The adoption covers flags that went dormant without absorbing their townies
+  (the autotest's direct DORMANT flip, or a town shut down before this fix).
+- Proficiencies and learned jobs are keyed by UUID in the villager handle and were
+  never lost; only the journal needed carrying.
+- Pins: `AbsorbedJournalsTest` (tag store, adoption, mid-respawn republish);
+  autotests `flag/shutdown_wake_keeps_jobs` (absorb → wake) and `flag/relocate_nearby`
+  check 10 (root carried). Both were red with the lookup disabled (respawned
+  `gatherer:gather`).
+- Not covered: `TownShutdownController.absorbedForRespawn` (the wake/cancel roster)
+  is in-memory, so a wake after a server restart respawns nobody (BELIEVED from the
+  code, not run).
+
 ---
 
 # Block of Progress — the earn → deposit → collect state machine

@@ -144,7 +144,7 @@ class TownShutdownController {
                 continue;
             }
             if (force || vme.blockPosition().distSqr(flagPos) <= ABSORB_DISTANCE_SQR) {
-                absorb(handle, vme);
+                absorb(town, handle, vme);
                 continue;
             }
             vme.setWalkTarget(flagPos);
@@ -152,9 +152,11 @@ class TownShutdownController {
     }
 
     private void absorb(
+            TownFlagBlockEntity town,
             VillagerHolder handle,
             VisitorMobEntity vme
     ) {
+        town.rememberAbsorbedJournal(vme);
         progress.markAbsorbed(vme.getUUID());
         absorbedForRespawn.add(vme.getVUID());
         handle.remove(vme);

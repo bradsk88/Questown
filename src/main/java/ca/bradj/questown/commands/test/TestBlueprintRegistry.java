@@ -86,6 +86,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -271,6 +272,7 @@ public class TestBlueprintRegistry {
         // Flag relocation (#199): non-job ritual scenarios
         jobs.add(flagEntry("town_shutdown", townShutdownBlueprint()));
         jobs.add(flagEntry("deed_issue_and_recover", deedIssueAndRecoverBlueprint()));
+        jobs.add(flagEntry("shutdown_wake_keeps_jobs", shutdownWakeKeepsJobsBlueprint()));
         jobs.add(flagEntry("relocate_nearby", relocateNearbyBlueprint()));
         jobs.add(flagEntry("relocate_far", relocateFarBlueprint()));
         jobs.add(flagEntry("deed_consumed_on_place", deedConsumedOnPlaceBlueprint()));
@@ -390,6 +392,54 @@ public class TestBlueprintRegistry {
         return relocationRitualBase()
                 .withPostSpawnAction(beginShutdownAction())
                 .withCustomAssertion(TestBlueprintRegistry::assertDeedIssueAndRecover);
+    }
+
+    // A non-leaver job with no workplace in the ritual fixture: it idles, so nothing re-assigns it
+    // before the assertion reads it back.
+    private static final JobID KEPT_JOB = new JobID("baker", "bread");
+
+    /**
+     * #26 (ADR-0009 "jobs travel"): a townie absorbed by the shutdown ritual comes back with its job
+     * when the town wakes in place. Before the fix every respawn seeded a fresh gatherer journal.
+     */
+    private static TestBlueprint shutdownWakeKeepsJobsBlueprint() {
+        Set<String> expected = new HashSet<>();
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                        town.getVillagerHandle().changeJobForVillager(vuid, KEPT_JOB, false);
+                        expected.add(VillagerUUID.getStringUUID(vuid));
+                    }
+                    output.msg("set " + expected.size() + " townie(s) to " + KEPT_JOB);
+                    return !expected.isEmpty() && town.beginTownShutdown();
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    if (phaseOf(level, flagPos) != FlagPhase.DORMANT) {
+                        output.msg("FAIL precondition: flag not DORMANT, got " + phaseOf(level, flagPos));
+                        return false;
+                    }
+                    town.wakeInPlace();
+                    town.claimImmediateRewardsForTest();
+                    return assertJobsKept(output, town, expected);
+                });
+    }
+
+    private static boolean assertJobsKept(
+            TestOutput output,
+            TownFlagBlockEntity town,
+            Set<String> expectedVillagers
+    ) {
+        Map<String, JobID> jobs = new HashMap<>();
+        town.getVillagerHandle().getVillagerJobs()
+            .forEach((vuid, job) -> jobs.put(VillagerUUID.getStringUUID(vuid), job));
+        output.msg("respawned jobs=" + jobs + " expected root of " + KEPT_JOB + " for " + expectedVillagers);
+        boolean ok = jobs.keySet().containsAll(expectedVillagers);
+        // The root is the townie's job; the sub-job is its current work pick, which a respawned
+        // baker may already have moved on from (bread -> fuel) by the time this runs.
+        for (String v : expectedVillagers) {
+            ok &= jobs.get(v) != null && KEPT_JOB.sameRoot(jobs.get(v));
+        }
+        return ok;
     }
 
     /**
@@ -1236,6 +1286,13 @@ public class TestBlueprintRegistry {
             cap.profVillager = ents.iterator().next().getUUID();
             cap.expectedProf = 0.42f;
             town.getVillagerHandle().setProficiency(cap.profVillager, RelocateCapture.PROF_ID, cap.expectedProf);
+            // #26: the same townie takes a non-gatherer job, published to the tile's town state the
+            // way the ticker does, so the assertion proves the respawn keeps it.
+            UUID stamped = cap.profVillager;
+            town.getVillagerHandle().getVillagerJobs().keySet().stream()
+                .filter(v -> v.matches(stamped))
+                .forEach(v -> town.getVillagerHandle().changeJobForVillager(v, KEPT_JOB, false));
+            town.publishStateToTileForTest();
         }
         town.writeTownData(cap.preData);
         output.msg("pre-relocation: uuid=" + cap.originalUuid + " oldFlagY=" + cap.oldFlagY
@@ -1326,6 +1383,12 @@ public class TestBlueprintRegistry {
             ok &= report(output, "9 proficiency-carried", Math.abs(got - cap.expectedProf) < 1e-4f);
         } else {
             ok &= report(output, "9 proficiency-carried (NO ROSTER — cannot verify)", false);
+        }
+
+        // (10) job carried: the respawned townie keeps the job it had before the move (#26)
+        if (cap.profVillager != null) {
+            ok &= report(output, "10 job-carried",
+                    assertJobsKept(output, newBe, Set.of(cap.profVillager.toString())));
         }
 
         return ok;

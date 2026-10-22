@@ -287,6 +287,7 @@ public final class TownRelocation {
         for (String key : carried.getAllKeys()) {
             target.put(key, carried.get(key));
         }
+        AbsorbedJournals.adoptTownState(target, TownFlagState.NBT_TOWN_STATE);
         relocated.adoptRelocatedIdentity(townUuid);
         relocated.initializeFreshFlag(true);
         relocated.initializers.add(respawnRosterTask());

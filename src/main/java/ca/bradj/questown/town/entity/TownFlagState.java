@@ -103,13 +103,7 @@ public class TownFlagState {
                 if (!((VisitorMobEntity) entity).isInitialized()) {
                     return null;
                 }
-                Vec3 pos = entity.position();
-                ImmutableSnapshot<MCHeldItem, ?> snapshot = ((VisitorMobEntity) entity).getJobJournalSnapshot();
-                TownState.VillagerData<MCHeldItem> data = new TownState.VillagerData<MCHeldItem>(
-                        pos.x, pos.y, pos.z, snapshot, entity.getUUID(),
-                        parent.getVillagerHandle().getProficiencies(entity.getUUID())
-                );
-                vB.add(data);
+                vB.add(captureVillager(parent, (VisitorMobEntity) entity));
             }
         }
 
@@ -124,6 +118,18 @@ public class TownFlagState {
                 ImmutableList.of(), // TODO: Should we pass in current knowledge?
                 UtilClean.mapKeys(parent.villagerHandle.blockOfProgressMap(), VillagerUUID::get),
                 dayTime
+        );
+    }
+
+    static TownState.VillagerData<MCHeldItem> captureVillager(
+            TownFlagBlockEntity town,
+            VisitorMobEntity entity
+    ) {
+        Vec3 pos = entity.position();
+        ImmutableSnapshot<MCHeldItem, ?> snapshot = entity.getJobJournalSnapshot();
+        return new TownState.VillagerData<>(
+                pos.x, pos.y, pos.z, snapshot, entity.getUUID(),
+                town.getVillagerHandle().getProficiencies(entity.getUUID())
         );
     }
 

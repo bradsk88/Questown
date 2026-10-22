@@ -20,6 +20,8 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.jobs.ImmutableSnapshot;
+import ca.bradj.questown.integration.minecraft.TownStateSerializer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.IStatus;
@@ -2075,6 +2077,34 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         setDeedAvailable(false);
         shutdownController.wake(level, getBlockPos(), this);
         return true;
+    }
+
+    /**
+     * Snapshot a townie's journal as the shutdown ritual absorbs it, so the respawn after wake,
+     * cancel or relocation restores its job and carried items (#26; ADR-0009 "jobs travel").
+     */
+    void rememberAbsorbedJournal(VisitorMobEntity absorbed) {
+        CompoundTag villagerTag = TownStateSerializer.storeVillager(TownFlagState.captureVillager(this, absorbed));
+        AbsorbedJournals.remember(Compat.getBlockStoredTagData(this), absorbed.getUUID(), villagerTag);
+        setChanged();
+    }
+
+    @Override
+    public Optional<ImmutableSnapshot<MCHeldItem, ?>> takeRespawnJournal(VillagerUUID villager) {
+        UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(villager));
+        Optional<CompoundTag> tag = AbsorbedJournals.take(Compat.getBlockStoredTagData(this), uuid);
+        setChanged();
+        return tag.map(t -> TownStateSerializer.loadVillager(t).journal);
+    }
+
+    /**
+     * Test seam: claim every queued immediate reward now (e.g. the roster respawn a wake queues),
+     * instead of one per tick, so an end-of-run assertion can observe its outcome.
+     */
+    public void claimImmediateRewardsForTest() {
+        while (asapRewards.tick()) {
+            // claim until empty
+        }
     }
 
     public int getY() {
