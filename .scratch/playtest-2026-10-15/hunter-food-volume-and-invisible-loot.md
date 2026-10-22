@@ -1,6 +1,6 @@
 ---
 title: 'Hunter produced WAY too much food in one day; "Dropping loot" animals not visible in town'
-status: ready-for-human
+status: ready-for-agent
 origin: 2026-10-15 playtest — user chat 03:26:56 + 03:27:27 + 03:27:44
 ---
 
@@ -31,3 +31,19 @@ Open questions:
 ## Audit (2026-10-22)
 
 Part 3 self-answered (they were in bed). Parts 1-2 are taste/design (is one multi-animal haul per hunt the intended yield? should 'Dropping loot' show where the loot goes?). Queued in .scratch/feedback-audit/README.md.
+
+## Warp yield check (2026-10-22, dev: "I think that was a warp bug. The JSON definitions determine how many items come back")
+
+- The JSON: `hunter/sword` rolls its table once per trip (`attempts: 1`; every hunter table has one
+  pool with `rolls: 1`), so one item per trip.
+- Current warp: `hunter/sword [one_day_yield]` warps 24000 ticks for one hunter and yields 5 items
+  (mutton 2, porkchop 2, beef 1); the plain `hunter/sword` warp 2, `[warp_then_realtime]` 9.
+  All 5 hunter scenarios PASS. So today's warp stays in the JSON's range for one day.
+- The 10-15 burst (`run/logs/2026-10-16-2.log.gz` 03:22:32.529): 26 extractions settled in one tick,
+  38 s after the town's entities re-loaded (03:21:54, "Registered entity with town"), with one hunter
+  and one gatherer. 26 is about five days of one hunter's trips. The log has no warp lines (the
+  TIME_WARP debug channel was off), so the warped duration is unknown: a long unloaded absence would
+  explain it without a bug.
+- Not reproduced. Next step if it recurs: enable `/qt debug time_warp` before leaving the town, and
+  compare the logged warp length with the extraction count.
+
