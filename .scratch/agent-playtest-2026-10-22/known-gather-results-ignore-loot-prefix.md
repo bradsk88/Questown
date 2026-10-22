@@ -1,6 +1,6 @@
 ---
 title: 'Known gather results ignore the loot-table prefix: hunters and miners "produce" wheat seeds'
-status: ready-for-human
+status: done
 origin: 2026-10-22 agent playtest (fresh world, 1 gatherer, first work request)
 ---
 
@@ -43,3 +43,7 @@ results. Not observed live yet.
 ## Audit (2026-10-22)
 
 Economy design: the ticket's three questions are queued in .scratch/feedback-audit/README.md (recommendation there: option 3, narrow only the player-facing count, since the engine path gates leaver loot).
+
+## Resolved (audit 2026-10-22)
+
+Dev answer 2026-10-22: option 3 (narrow only the player-facing count). Shipped as `getTownDataForDisplay` (see jobs/COMPLEX.md 'Player-facing producer lists'); the engine lookup still leaks across prefixes by design.

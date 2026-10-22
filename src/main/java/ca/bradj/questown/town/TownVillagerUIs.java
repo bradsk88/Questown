@@ -148,7 +148,7 @@ public class TownVillagerUIs {
         // baker/fuel declare #villager_food but only consume it (2026-10-19 playtest: the "8 food"
         // quest's producers list showed only jobs that USE cooked food).
         ImmutableMap<JobID, ResourceLocation> jubz = ServerJobsRegistry.getJobsKnownToProduce(
-                unsafeTown.getTownData(),
+                unsafeTown.getTownDataForDisplay(),
                 itemToShowJobsFor
         );
         QT.GUI_LOGGER.info("[item-jobs] producers of {}: {}", Arrays.toString(itemToShowJobsFor.getItems()), jubz.keySet());
@@ -158,7 +158,7 @@ public class TownVillagerUIs {
                 continue;
             }
 
-            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafeTown.getTownData(), job);
+            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafeTown.getTownDataForDisplay(), job);
             ImmutableList<Ingredient> roomRecipe = getRoomIngredients(dj, rMap);
 
             b.add(new UIJob(
@@ -226,7 +226,7 @@ public class TownVillagerUIs {
                 continue;
             }
 
-            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafe.getTownData(), job);
+            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafe.getTownDataForDisplay(), job);
             RoomRecipe r = rMap.get(dj.location().baseRoom());
             b.add(new UIJob(
                     j.getId(),

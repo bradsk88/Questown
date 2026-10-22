@@ -273,6 +273,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("town_shutdown", townShutdownBlueprint()));
         jobs.add(flagEntry("deed_issue_and_recover", deedIssueAndRecoverBlueprint()));
         jobs.add(flagEntry("shutdown_wake_keeps_jobs", shutdownWakeKeepsJobsBlueprint()));
+        jobs.add(flagEntry("producer_count_own_tables", producerCountOwnTablesBlueprint()));
         jobs.add(flagEntry("relocate_nearby", relocateNearbyBlueprint()));
         jobs.add(flagEntry("relocate_far", relocateFarBlueprint()));
         jobs.add(flagEntry("deed_consumed_on_place", deedConsumedOnPlaceBlueprint()));
@@ -422,6 +423,32 @@ public class TestBlueprintRegistry {
                     town.claimImmediateRewardsForTest();
                     return assertJobsKept(output, town, expected);
                 });
+    }
+
+    /**
+     * Requesting wheat seeds said "20 known jobs produce this" (2026-10-22 agent playtest): every
+     * biome-loot job claimed the seed floor. The player-facing lookup now counts a loot job only
+     * when its own tables can drop the item; the engine lookup (it gates a leaver's extraction)
+     * is unchanged, which the hunter in the engine list proves.
+     */
+    private static TestBlueprint producerCountOwnTablesBlueprint() {
+        return relocationRitualBase()
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    Ingredient seeds = Ingredient.of(Items.WHEAT_SEEDS);
+                    Set<String> engine = rootsOf(ServerJobsRegistry.getJobsKnownToProduce(town.getTownData(), seeds).keySet());
+                    Set<String> display = rootsOf(ServerJobsRegistry.getJobsKnownToProduce(town.getTownDataForDisplay(), seeds).keySet());
+                    output.msg("wheat seed producers: engine roots=" + engine + " display roots=" + display);
+                    boolean ok = report(output, "display-has-a-gatherer", display.contains("gatherer"));
+                    ok &= report(output, "display-has-no-hunter-or-miner", !display.contains("hunter") && !display.contains("miner"));
+                    ok &= report(output, "engine-unchanged-still-claims-hunter", engine.contains("hunter"));
+                    return ok;
+                });
+    }
+
+    private static Set<String> rootsOf(Collection<JobID> jobs) {
+        Set<String> roots = new HashSet<>();
+        jobs.forEach(j -> roots.add(j.rootId()));
+        return roots;
     }
 
     private static boolean assertJobsKept(

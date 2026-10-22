@@ -84,7 +84,7 @@ public final class AddWorkFromUIMessage {
             }
             switch (action) {
                 case INQUIRED -> {
-                    WorksBehaviour.TownData td = tfbe.getTownData();
+                    WorksBehaviour.TownData td = tfbe.getTownDataForDisplay();
                     Ingredient result = (Ingredient) requested;
                     // Only jobs the town KNOWS count - progressive discovery means
                     // "20 known jobs" should not count the whole dataset

@@ -831,3 +831,23 @@ Pins: `JobStatusesTest` (no-space when a product waits; going-to-job when the pr
 storage), `cook/fuel [storage_full]` (meal stays in the furnace: 5 of 5; red with the node disabled:
 4 of 5), `eating/eat_storage_full` (a drained diner eats with every chest full; red with diner
 meals treated as storable: NO_SPACE, fullness 0).
+
+## Player-facing producer lists: own loot tables only (2026-10-22)
+
+`WorksBehaviour.TownData.allKnownGatherItemsFn` is a loot job's results. The engine's
+(`TownFlagBlockEntity.getTownData`) reads `KnowledgeStore.getAllKnownGatherResults(biomes, prefix)`,
+which ignores `prefix`: every biome-loot job "produces" the seed floor plus every other job's
+finds. That same lookup gates a leaver's extraction, and scoping it stalled village/growth at one
+villager on 2026-10-20 (a fresh hunter never brought meat back), so the dev ruled: narrow the
+count only.
+
+- `TownFlagBlockEntity.getTownDataForDisplay` filters the engine's set to the items the job's own
+  tables can drop: `mc/LootTableDropsIndex.forPrefix` (per-prefix cache over
+  `data/questown/loot_tables/<prefix>/**`, rebuilt when the server's resource manager changes)
+  over the pure `jobs/gatherer/LootTableDrops.itemIds` (every `minecraft:item` entry, nested pools
+  and alternatives included; `minecraft:tag` entries are not expanded).
+- Used by the board's request confirm (`AddWorkFromUIMessage` INQUIRED) and the item-jobs screen
+  (`TownVillagerUIs`). Everything else keeps `getTownData`.
+- Pins: `LootTableDropsTest` (walk + the real tables: seeds only in the no-tool gatherer tables),
+  autotest `flag/producer_count_own_tables` (display roots `[gatherer]` vs engine
+  `[gatherer, hunter, miner]`; red with the display lookup pointed at the engine one).

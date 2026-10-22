@@ -40,6 +40,7 @@ import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.LootTableDropsIndex;
 import ca.bradj.questown.town.rewards.CampfireReadyReward;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.helperchicken.ChickenRoomShellPlan;
@@ -1337,6 +1338,25 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                         biomes.getAllInTown(),
                         prefix
                 )
+        );
+    }
+
+    /**
+     * {@link #getTownData} for player-facing producer lists: a loot job's results are the known
+     * gather results its own loot tables can drop. The engine's lookup is not scoped per table
+     * (every biome-loot job claims every job's finds), and it also gates a leaver's extraction,
+     * so only the display narrows (dev, 2026-10-22).
+     */
+    public WorksBehaviour.TownData getTownDataForDisplay() {
+        ServerLevel level = getServerLevel();
+        return new WorksBehaviour.TownData(
+                level,
+                prefix -> {
+                    ImmutableSet<String> drops = LootTableDropsIndex.forPrefix(level.getServer().getResourceManager(), prefix);
+                    return knowledgeHandle.getAllKnownGatherResults(biomes.getAllInTown(), prefix).stream()
+                            .filter(item -> drops.contains(Compat.getItemId(item.get()).toString()))
+                            .collect(ImmutableSet.toImmutableSet());
+                }
         );
     }
 
