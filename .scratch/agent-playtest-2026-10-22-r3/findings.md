@@ -274,3 +274,4 @@ dusk (4ca11bbe), no-table diner give-up.
 28. (judge) Economics tab rows reorder as needs appear: with a Swords need present, "Free food ->"
     moves from row 1 to row 2, so a player's muscle memory (or a click-script) hits Swords.
     Minor; noted because the free-food row is the day-1 lifeline (see r5).
+- r7 edge: a chest placed into a storeroom wall announced "Storeroom destroyed" and "Small Storeroom destroyed" in the same tick (room_destroyed for store_room_medium and store_room): the chest both upgraded and broke the room. Self-inflicted; low priority.
