@@ -106,16 +106,33 @@ public class DowntimeWork {
                         Compat.configGet(Config.MAX_DOWNTIME_TICKS),
                         WorkSeekerJob::getIDForRoot
                 )
-        ).withOverrides(new Overrides(
+        ).withOverrides(overrides());
+    }
+
+    /**
+     * Downtime is spent in the work states and extraction, which have no default art or text
+     * (the villagers tab showed the error checkerboard and "busy with their work"): they all
+     * read as relaxing.
+     */
+    static Overrides overrides() {
+        Pair<String, String> relaxingText = new Pair<>(
+                "questown.tooltips.villagers.job_common.status_1.DOWNTIME",
+                "questown.tooltips.villagers.job_common.click_to_learn"
+        );
+        ImmutableMap.Builder<IStatus<?>, Pair<String, String>> text = ImmutableMap.builder();
+        text.put(ProductionStatus.NO_JOBSITE, relaxingText);
+        text.put(ProductionStatus.EXTRACTING_PRODUCT, relaxingText);
+        for (int i = 0; i < MAX_STATE; i++) {
+            text.put(ProductionStatus.fromJobBlockStatus(i), relaxingText);
+        }
+        return new Overrides(
                 ImmutableMap.of(
                         ProductionStatus.NO_JOBSITE,
                         StatusArt.getTexture(getIdForRoot("___"), ProductionStatus.IDLE)
                 ),
-                ImmutableMap.of(ProductionStatus.NO_JOBSITE, new Pair<>(
-                        "questown.tooltips.villagers.job_common.status_1.DOWNTIME",
-                        "questown.tooltips.villagers.job_common.click_to_learn"
-                ))
-        ));
+                text.build(),
+                StatusArt.getTexture(getIdForRoot("___"), ProductionStatus.RELAXING)
+        );
     }
 
     public static JobID getIdFor(JobID rootId) {

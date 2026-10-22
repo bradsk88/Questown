@@ -88,3 +88,11 @@ dusk (4ca11bbe), no-table diner give-up.
     guarantee slot? Recommendation: yes, while the unlock quest is open.
 11. Log-only: after a server restart, `InsertIntoSlotSpecialRule` / `TakeFromSlotSpecialRule`
     each log one ERROR "No container at [1, 1]" (05:39:08), before the room scan. Not seen again.
+
+## Round 4 (fresh jungle world, flag at 400 71 -299)
+12. **[FIXED 2026-10-22, unit-tested; live check pending]** Villagers tab, day 2: the gatherer's
+    status picture was the purple/black error checkerboard and its tooltip read "Gatherer is busy
+    with their work." It was on downtime (`gatherer:downtime state:0/state:2`), which overrode
+    art and text only for NO_JOBSITE; `StatusArt` returns `error.png` for work states and the
+    tooltip fell back to `JobTooltips.FALLBACK_LINE_1`. Now relaxing art + "is relaxing for a
+    moment." `DowntimeWorkOverridesTest` red -> green; full :test 1418/0.

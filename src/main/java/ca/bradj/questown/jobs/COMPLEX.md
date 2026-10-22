@@ -773,6 +773,13 @@ cook_simple_furnace_food use `minecraft:textures/block/furnace_front.png` (no as
 cook_stock_fuel / cook_stock_ingredients (chest work) use the questown "collecting supplies" icon
 (`questown:textures/menu/gatherer/get_supplies.png`, dev's call). Unit: `OverridesTest`.
 
+**Downtime uses it too (2026-10-22 r4).** `DowntimeWork` is a Java job and overrode only
+NO_JOBSITE, but downtime is spent in its nine work states and extraction, so the villagers tab
+showed the `error.png` checkerboard with "Gatherer is busy with their work." Its
+`overrides()` now sets the relaxing art as the working texture and the existing
+`job_common.status_1.DOWNTIME` text ("is relaxing for a moment.") on every work state and
+extraction. Unit: `DowntimeWorkOverridesTest`.
+
 ## Deposits never stack, by design (pointer, 2026-10-21)
 
 `Jobs.tryDropLoot` puts each item in the first empty slot, and `MinecraftWorldAccess.insertIntoContainer`
