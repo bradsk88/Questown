@@ -91,7 +91,7 @@ calls are marked (judge) for the dev.
 - Known (`.scratch/cook-scoring-tie/always-consider-noop-tie-mechanism.md`): after the raw mutton
   ran out, the cook flipped `fuel`<->`extract` every 2.6 s for 30 s (12 changes, no work), then
   went to downtime. Same coin flip as the 10-14 report.
-- (judge) Food quest done in the daytime: the quests tab says "You will be rewarded in the
+- **[FIXED 2026-10-22]** (dev: mention morning; chat now "New visitors will arrive in the morning") Food quest done in the daytime: the quests tab says "You will be rewarded in the
   morning" while chat says "New visitors will arrive after all players sleep". Same event, two
   framings.
 
