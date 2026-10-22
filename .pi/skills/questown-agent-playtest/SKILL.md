@@ -92,6 +92,26 @@ as you go; do not end the turn to summarise.
   (fixed 2026-10-22, but don't rely on it).
 - Moving far: `spreadplayers <x> <z> 0 1 false Dev` lands on the surface; a plain `tp` can land
   inside blocks.
+- Looking at a villager (nameplate, bubble): villagers move between the tp and the shot, and a
+  console `tp ... facing <x y z>` pointed the camera at the sky. Freeze the world, read the
+  villager's `Pos`, stand ~3 blocks away on open ground and give the rotation explicitly:
+  `tick freeze`, `tp Dev <x> <y> <z> <yaw> <pitch>` (yaw 90 faces -x), shot, `tick unfreeze`.
+  Bubbles are focus-based, so only the villager under the crosshair shows one.
+
+## Process hygiene (2026-10-22)
+
+- Restart the client by killing the `java` whose cwd is `run-client` (`readlink /proc/$p/cwd`),
+  then the `GradleWrapperMain` java whose cmdline has `runClient`. Never `pkill -f`/`pgrep -f` a
+  pattern like `runClient -Pautojoin`: it matches your own bash command and kills the tool
+  call (exit 144, twice this session).
+- Stop the server with `run/ffeed.sh feed stop` after the client is gone, and wait for its pid.
+- Write launch logs under `build/agent-playtest/`: the session scratchpad disappeared mid-session
+  and took the client log with it.
+- `run/logs/debug.log` has the DEBUG lines `latest.log` lacks (`hunger_updates`, "gave up waiting
+  for ingredients", "Reached max ticks ... Falling back to"): trace job loops there.
+- A world with a huge flag (the 2026-10-22 cascade) once broke joining: "Tried to read NBT tag
+  that was too big" in the client log is a server-side payload bug, not a client problem (fixed
+  5422b91f).
 
 ## Judging and filing
 
