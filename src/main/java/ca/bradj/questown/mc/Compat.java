@@ -229,6 +229,11 @@ public class Compat {
         return false;
     }
 
+    /** A component as one tooltip line (for multi-line {@code showTooltip}). */
+    public static FormattedCharSequence visualOrder(Component c) {
+        return c.getVisualOrderText();
+    }
+
     /** {@code text} cut to fit {@code width} pixels, ending in "…" when it was cut. */
     public static String fitToWidth(
             Font font,

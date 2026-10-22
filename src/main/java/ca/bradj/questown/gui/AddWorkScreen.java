@@ -226,11 +226,11 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
             ); // transparent white square behind hovered item slot
             if (categoryName != null) {
                 this.showTooltip(List.of(
-                        categoryName.getVisualOrderText(),
-                        Compat.translatableStyled(
+                        Compat.visualOrder(categoryName),
+                        Compat.visualOrder(Compat.translatableStyled(
                                 "job_board.add_work.category_hint",
                                 net.minecraft.network.chat.Style.EMPTY.withColor(net.minecraft.ChatFormatting.GRAY)
-                        ).getVisualOrderText()
+                        ))
                 ));
             } else {
                 this.showTooltip(itemStack.getItem().getName(itemStack)); // hovered item's name as tooltip
