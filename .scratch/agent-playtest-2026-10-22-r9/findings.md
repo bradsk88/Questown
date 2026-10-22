@@ -31,8 +31,9 @@ heartbeat fix 49dc0a9a and the vanilla checkbox d559ded6).
    still says "Insert a Block of Progress" with the BOP already in the slot. Recommendation: say
    "starting now" when the player is in creative; after insertion, "Click Unlock to make this
    villager a Hunter".
-3. (judge) The "Villager job: Hunter" quest card has a title and an empty body (no icon), unlike
-   its neighbours (sword icons, bedroom blocks).
+3. (by design, 2026-10-15 dev call) The "Villager job: Hunter" quest card has a title and an empty
+   body: `QuestsScreen.renderRecipeCardIcons` drops the always-BOP icon ("We can just not render the
+   BOP"). Only idea left: the job's own icon (`gui/villager/advancements/VillagerAdvancements.getIcon`) could fill it.
 
 ## Fine (continued)
 - Quests after the storeroom: Stone Sword x4 (0/4), Bedroom, Villager job: Hunter (page 1/2).
