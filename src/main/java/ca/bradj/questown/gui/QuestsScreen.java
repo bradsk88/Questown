@@ -507,7 +507,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             Coordinate mouse
     ) {
         Collection<Ingredient> ingredients = recipe.getIngredients();
-        ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
         if (recipe.getType() == Quest.QuestType.JOB_CHANGE) {
             // Job-change quests ALWAYS require the Block of Progress, so its
             // icon is pure repetition - the card's item row is left empty

@@ -289,6 +289,15 @@ public class Compat {
         return stack.getDisplayName();
     }
 
+    /**
+     * The plain name of a stack, as an item tooltip shows it. {@link #getItemName(ItemStack)} is
+     * the chat form, wrapped in square brackets; a tooltip built from it read "[Oak Pressure
+     * Plate]" (2026-10-22 playtest).
+     */
+    public static Component getHoverName(ItemStack stack) {
+        return stack.getHoverName();
+    }
+
     public static ResourceLocation getItemId(Item item) {
         return ca.bradj.questown.loader.Loader.itemIdOf(item);
     }

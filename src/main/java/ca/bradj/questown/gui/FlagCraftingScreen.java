@@ -230,9 +230,9 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         // need their own (flag-crafting-ui-tooltips-and-border.md): what the input is, what
         // you get.
         if (mouseInside(mouseX, mouseY, x + MARGIN, iconY + 2)) {
-            showTooltip(Compat.getItemName(input));
+            showTooltip(Compat.getHoverName(input));
         } else if (mouseInside(mouseX, mouseY, x + 50, iconY + 2)) {
-            showTooltip(Compat.getItemName(output));
+            showTooltip(Compat.getHoverName(output));
         }
     }
 

@@ -264,7 +264,7 @@ public final class PagedCardScreen<D> {
                 new Pair<>(xx, y),
                 new Pair<>(width, height)
         );
-        int totalPages = (int) Math.ceil((double) cardsData.size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(cardsData.size(), MAX_CARDS_PER_PAGE);
         String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
@@ -273,7 +273,7 @@ public final class PagedCardScreen<D> {
     }
 
     private void nextPage() {
-        int totalPages = (int) Math.ceil((double) cardsData.get().size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(cardsData.get().size(), MAX_CARDS_PER_PAGE);
         if (currentPage < totalPages - 1) {
             currentPage++;
         }

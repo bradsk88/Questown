@@ -133,13 +133,18 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int destY = coords.topYPadded();
         Util.blitFace(ctx.gui(), uuid, x, destY);
         int nameX = x + Util.faceWidth + 4;
-        String job = Compat.translatable(syncedData.villagerStatuses.get(uuid).jobId().rootId()).getString();
+        String job = jobTitle(uuid);
         ctx.darkText(Compat.literal(PendingJobChangeMark.title(job, syncedData.pendingJobChange().contains(uuid))), nameX, destY);
+    }
+
+    /** The root job's name ("Gatherer"). The bare root id is no lang key, so it showed "gatherer". */
+    private static String jobTitle(UUID uuid) {
+        return Compat.translatable("jobs." + syncedData.villagerStatuses.get(uuid).jobId().rootId()).getString();
     }
 
     private boolean isOverJobTitle(CardCoordinates coords, UUID uuid, int mouseX, int mouseY) {
         int nameX = coords.leftXPadded() + Util.faceWidth + 4;
-        String job = Compat.translatable(syncedData.villagerStatuses.get(uuid).jobId().rootId()).getString();
+        String job = jobTitle(uuid);
         int w = font.width(PendingJobChangeMark.title(job, true));
         return UtilClean.isCoordInBox(mouseX, mouseY, nameX, coords.topYPadded(), w, font.lineHeight);
     }

@@ -1020,3 +1020,37 @@ plain `CompatScreen` leaves (ItemJobsScreen, WorkRequestConfirmScreen, Relocatio
 VillagerAdvancementsScreen) never did. `CompatScreen.keyPressed` now applies the same rule: the
 screen and its focused widget get the key first (a focused text box keeps typing), then the
 inventory key closes. Not autotestable (the client hook cannot press keys); confirmed by the dev.
+
+## Room quest cards show every bed (2026-10-22 playtest)
+
+`RoomRecipes.filterSpecialBlocks` dropped the ingredient after each bed on the quest card and
+the remove-confirm card. A bed used to match two `#minecraft:beds` ingredients (head and foot),
+so the recipes listed two per bed and the card hid the copy. Since RoomRecipes `deb6333` a bed's
+foot no longer counts (`commands/test/COMPLEX.md` "A bed counts once"), each ingredient is one
+physical bed, and the Bedroom card showed one bed for a room that needs two. The filter is gone;
+`QuestsScreen` and `QuestRemoveConfirmScreen` show the recipe's ingredients as written.
+
+## Crafting-tab icon tooltips use the plain item name (2026-10-22 playtest)
+
+The input/output icon tooltips used `Compat.getItemName`, the chat form, which vanilla wraps in
+square brackets ("[Oak Pressure Plate]"). They now use `Compat.getHoverName`, the name an item
+tooltip shows.
+
+## Paged screens count at least one page (2026-10-22 playtest)
+
+The empty job board read "Page 1 / 0". The five paged screens (`PagedCardScreen`, `WorkScreen`,
+`AddWorkScreen`, `CreateStockRequestScreen`, `QuestRemoveConfirmScreen`) each computed
+`ceil(size / perPage)`; they now share `Pages.count`, which floors the total at 1 (`PagesTest`).
+The next-page checks use the same count, and stay closed on a single page either way.
+
+## Request confirm title names the item (2026-10-22 playtest)
+
+`WorkRequestConfirmScreen` titled itself `Compat.translatable(Ingredients.toString(requested))`.
+For an item that is the raw id ("Requesting minecraft:wheat_seeds", which also ran past the
+panel edge), since an item id is no lang key. It now uses `Ingredients.getName`, as the cards do.
+
+## Villagers page job title uses the jobs.* key (2026-10-22 playtest)
+
+`MultiStatusScreen` translated the bare root id, which has no lang key, so the card read
+"gatherer". It now uses `"jobs." + rootId` like every other screen (`jobTitle`). The 1.19.2
+golden had the same bug.

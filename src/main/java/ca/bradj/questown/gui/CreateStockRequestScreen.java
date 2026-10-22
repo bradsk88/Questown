@@ -215,7 +215,7 @@ public class CreateStockRequestScreen extends CompatContainerScreen<CreateStockR
                 nextPage.getY() + buttonHeight,
                 0x30000000
         );
-        int totalPages = (int) Math.ceil((double) work.size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(work.size(), MAX_CARDS_PER_PAGE);
         String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
@@ -231,7 +231,7 @@ public class CreateStockRequestScreen extends CompatContainerScreen<CreateStockR
     }
 
     private void nextPage() {
-        int totalPages = (int) Math.ceil((double) work.size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(work.size(), MAX_CARDS_PER_PAGE);
         if (currentPage < totalPages - 1) {
             currentPage++;
         }

@@ -243,8 +243,6 @@ public class QuestRemoveConfirmScreen extends CompatContainerScreen<TownRemoveQu
     ) {
         Inventory dummyInv = new Inventory(null);
         Collection<Ingredient> ingredients = recipe.getIngredients();
-        ingredients = RoomRecipes.filterSpecialBlocks
-                                         (ingredients);
         if (recipe.getType() == Quest.QuestType.JOB_CHANGE) {
             // Job-change quests ALWAYS require the Block of Progress; the
             // card's item row is left empty instead of repeating it
@@ -300,7 +298,7 @@ public class QuestRemoveConfirmScreen extends CompatContainerScreen<TownRemoveQu
                 nextPage.getY() + buttonHeight,
                 0x30000000
         );
-        int totalPages = (int) Math.ceil((double) quests.size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(quests.size(), MAX_CARDS_PER_PAGE);
         String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
@@ -321,7 +319,7 @@ public class QuestRemoveConfirmScreen extends CompatContainerScreen<TownRemoveQu
     }
 
     private void nextPage() {
-        int totalPages = (int) Math.ceil((double) quests.size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(quests.size(), MAX_CARDS_PER_PAGE);
         if (currentPage < totalPages - 1) {
             currentPage++;
         }

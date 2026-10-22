@@ -51,7 +51,7 @@ public class WorkRequestConfirmScreen extends CompatScreen {
             Map<JobID, ResourceLocation> iconsForJobsWhichProduceResult,
             BlockPos flagPos
     ) {
-        super(Compat.translatable("menu.work_add_confirm.title", Compat.translatable(Ingredients.toString(requested))));
+        super(Compat.translatable("menu.work_add_confirm.title", Ingredients.getName(requested)));
 
         this.background = JEI.getRecipeGuiBackground();
         this.itemRequested = requested;
