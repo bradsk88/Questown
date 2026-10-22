@@ -99,6 +99,11 @@ class JobLogicTest {
         }
 
         @Override
+        public boolean fitsInDay(JobID id) {
+            return true;
+        }
+
+        @Override
         public boolean setWorkLeftAtFreshState(int work) {
             State cur = states.getJobBlockState(ARBITRARY_WORKSPOT_POS);
             if (cur == null) {
@@ -269,6 +274,42 @@ class JobLogicTest {
         }
 
         Assertions.assertFalse(changedJob.get(), "the watchdog re-created the job mid-timer");
+    }
+
+    /**
+     * 2026-10-22 playtest: a gatherer back from a long trip hit the max-ticks watchdog just
+     * before evening and was re-created as the same job, which skipped the board's day-fit rule;
+     * it left on a 2000-tick trip at nightfall and slept through it. A fallback that won't fit
+     * in the day hands off to the board instead.
+     */
+    @Test
+    void tick_maxTicksFallback_handsOffToTheBoard_WhenTheFallbackWontFitInTheDay() {
+        AtomicBoolean changedJob = new AtomicBoolean();
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedJob.set(true);
+            }
+
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+
+            @Override
+            public boolean fitsInDay(JobID id) {
+                return false;
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5));
+        }
+
+        Assertions.assertFalse(changedJob.get(), "the watchdog restarted a job that won't fit in the day");
+        Assertions.assertTrue(handedOff.get(), "the board should pick the next job");
     }
 
     @Test

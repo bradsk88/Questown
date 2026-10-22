@@ -34,6 +34,12 @@ public class JobLogic<EXTRA, TOWN, POS> {
     public interface JLWorld<EXTRA, TOWN, POS> {
         void changeJob(JobID id);
 
+        /**
+         * Whether {@code id} may start now under the job board's day rule (it can always start,
+         * or it finishes before evening).
+         */
+        boolean fitsInDay(JobID id);
+
         WorkPosition<POS> getWorkSpot();
 
         boolean tryGrabbingInsertedSupplies();
@@ -182,6 +188,16 @@ public class JobLogic<EXTRA, TOWN, POS> {
         if (workSpot == null && !status.isWaitingForTimers() && this.ticksSinceStart > expiration.maxTicks()) {
             JobID fbJov = expiration.maxTicksFallbackFn()
                                     .apply(entityCurrentJob);
+            if (!worldBeforeTick.fitsInDay(fbJov)) {
+                // The fallback skips the board, and with it the day-fit rule: a gatherer was
+                // restarted just before evening and left on a trip it slept through (2026-10-22).
+                QT.JOB_LOGGER.debug(
+                        "Reached max ticks for {}. Fallback {} won't fit in the day; asking the board.",
+                        entityCurrentJob, fbJov
+                );
+                worldBeforeTick.changeToNextJob();
+                return;
+            }
             QT.JOB_LOGGER.debug(
                     "Reached max ticks for {}. Falling back to {}.",
                     entityCurrentJob, fbJov

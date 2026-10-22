@@ -54,7 +54,7 @@ calls are marked (judge) for the dev.
   once, and its reward spawned the next visitor. 3 -> 11 villagers. World saved.
 - (to check) After that morning, "Fullness changed from 4990 to 5000" logged 4x every 10 ticks for
   70 s (03:12:48-03:13:57, 500 lines), with no meals in between. Source not traced.
-- **Ticketed (judge):** `sleeping-leaver-shows-left-town.md`. A gatherer whose trip spanned
+- **[FIXED 2026-10-22]** `sleeping-leaver-shows-left-town.md` (cause: the max-ticks fallback skipped the day-fit rule). A gatherer whose trip spanned
   nightfall slept in bed all night while its card said "Gatherer has left town to collect items";
   the trip resumed at sunrise.
 - (judge) Crafting tab: the "N in your inventory" count is taken when the screen opens; with

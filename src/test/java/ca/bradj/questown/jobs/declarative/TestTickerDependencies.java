@@ -575,6 +575,11 @@ public class TestTickerDependencies implements
             }
 
             @Override
+            public Signals.DayTime getDayTime() {
+                return TestTickerDependencies.this.getDayTime();
+            }
+
+            @Override
             public Position getRandomHorizontalFrom(Position bp) {
                 return new Position(bp.x + 1, bp.z);
             }

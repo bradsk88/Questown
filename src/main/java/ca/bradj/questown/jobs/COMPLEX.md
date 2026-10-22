@@ -491,6 +491,27 @@ Pinned by `JobLogicTest.tick_shouldNotHitMaxTicksFallback_WhileWaitingForTimedSt
 extracted after a >3000-tick cycle) is not yet autotest-verified — ticket
 `.scratch/playtest-2026-10-17/hunter-collecting-supplies-after-hunt.md`.
 
+## Max-ticks fallback respects the day-fit rule (2026-10-22 playtest)
+
+The fallback goes straight to `changeJob`, so it skipped the job board's day rule
+(`ServerJobsRegistry.canFit`: a job may start only if it ends by NOON). A gatherer back
+from a >3000-tick cycle hit the watchdog at day ~11180 (`Reached max ticks for
+gatherer:gather. Falling back to gatherer:gather.`), re-took trip food and left at
+nightfall on a 2000-tick trip it slept through (its card read "left town" all night).
+Dev: "Villagers should not be starting work that won't fit in a day."
+
+`JobLogic` now asks `JLWorld.fitsInDay(fallback)` first and hands off to the board
+(`changeToNextJob`) when it is false. The real world answers with
+`ServerJobsRegistry.fitsInDay`: unregistered meta-jobs (`seeking_work`, `downtime`) always
+fit; otherwise `canAlwaysStart || canFit`. The meta-job case matters: `canFit` on a meta-job
+hits `getWorkSupplier`'s "No work found ... Falling back to any job in the same root ID",
+times an unrelated job, and the first build of this fix bounced idle townies between board
+and fallback (28k log lines in 2 minutes) until meta-jobs were exempted.
+
+Pinned by `JobLogicTest.tick_maxTicksFallback_handsOffToTheBoard_WhenTheFallbackWontFitInTheDay`
+(red before the check). Live: no bounce and no "No work found" through an evening with 21
+townies; the late-day timeout itself did not recur in that window.
+
 ## Same-root fallback prefers a job unlocked with the root (2026-10-17 playtest)
 
 `ServerJobsRegistry.getWorkSupplier` falls back to "any job in the same root" when a

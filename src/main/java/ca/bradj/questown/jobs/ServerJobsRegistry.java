@@ -883,6 +883,23 @@ public class ServerJobsRegistry {
         return DinerWork.isDining(jobID) || DinerNoTableWork.isDining(jobID) || DinerRawFoodWork.isDining(jobID);
     }
 
+    /**
+     * The job board's day rule for a job started outside the board (the max-ticks fallback): it
+     * can always start, or it finishes before evening. A meta-job (seeking work, downtime) is not
+     * registered work and has no duration, so it always fits; asking {@link #canFit} about one
+     * timed an unrelated same-root job instead and bounced the townie between board and fallback.
+     */
+    public static boolean fitsInDay(
+            UUID villagerID,
+            JobID p,
+            Signals.DayTime currentTick
+    ) {
+        if (Works.get(p) == null) {
+            return true;
+        }
+        return canAlwaysStart(villagerID, p) || canFit(villagerID, p, currentTick);
+    }
+
     public static boolean canFit(
             UUID villagerID,
             JobID p,

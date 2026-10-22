@@ -166,6 +166,11 @@ public class IntegrationTestWorld implements JobLogic.JLWorld<Void, Boolean, Pos
     }
 
     @Override
+    public boolean fitsInDay(JobID id) {
+        return true;
+    }
+
+    @Override
     public void changeToNextJob() {
         hasChangedJob = true;
     }
