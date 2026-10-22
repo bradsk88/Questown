@@ -1061,3 +1061,19 @@ The status-icon tooltip ("Gatherer can't find work. Check the Economics Tab and 
 off the right screen edge: `MultiStatusScreen` handed the lines to `showTooltip` unwrapped. It now
 goes through `renderTooltipWithDynamicWrapping` like the other card tooltips. Compiled and gated;
 not yet seen live.
+
+## Quests tab: open quests only, completed behind the link (2026-10-22)
+
+`QuestsScreen.cardsData()` shows only non-COMPLETED quests until the player presses
+"View completed quests →" (`menu.quests.view_completed`), which then shows the whole list.
+Completed cards used to share the main list and padded it to dozens of pages (agent
+playtest: 4 open quests on "Page 1 / 7"; 48 pages after the quest cascade). Dev ruling:
+open only + the link. The link was previously only the all-done empty state's; it now also
+appears whenever any quest is completed, as a button just below the panel
+(`footerButtonY`, 2 px gap). All-done keeps its centred placement.
+
+Card indices point into `cardsData()`, not `quests`: `renderCardContent` and
+`openLessonForClickedCard` look up `cardsData().get(card.index())`. Verified live:
+"Page 1 / 1" with the two open quests, the link below the panel, gui-lint OK on
+QuestsScreen (606x647); clicking it shows "Page 1 / 48". Applies to the per-villager
+quests screen too (same class).

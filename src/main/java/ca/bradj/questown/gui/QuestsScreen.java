@@ -46,6 +46,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private static final int BLOCK_GAP = 6;
     private static final int BUTTON_HEIGHT = 20;
     private static final int BUTTON_H_PADDING = 16;
+    private static final int FOOTER_GAP = 2;
 
     private final List<UIQuest> quests;
     private final JEI.NineNine background;
@@ -76,23 +77,36 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         this.tabs = tabs;
     }
 
+    /**
+     * The cards on show: open quests only, until the player asks for the completed ones. Completed
+     * cards used to share the list and padded it to dozens of pages (2026-10-22 playtest: 4 open
+     * quests on "Page 1 / 7"). Card indices point into this list.
+     */
     @Override
     protected ImmutableList<UIQuest> cardsData() {
-        if (allComplete && !showingCompleted) {
-            return ImmutableList.of();
+        if (showingCompleted) {
+            return ImmutableList.copyOf(quests);
         }
-        return ImmutableList.copyOf(quests);
+        return quests.stream()
+                     .filter(q -> !Quest.QuestStatus.COMPLETED.equals(q.status))
+                     .collect(ImmutableList.toImmutableList());
+    }
+
+    private boolean anyCompleted() {
+        return quests.stream().anyMatch(q -> Quest.QuestStatus.COMPLETED.equals(q.status));
     }
 
     @Override
     protected void init() {
         super.init();
         this.viewCompletedButton = null;
-        if (!allComplete || showingCompleted) {
+        if (showingCompleted || !anyCompleted()) {
             return;
         }
         Component link = Compat.translatable("menu.quests.view_completed");
         int btnW = this.font.width(link) + BUTTON_H_PADDING;
+        // All done: centred in the empty panel. Otherwise: just below the panel, under the open cards.
+        int btnY = allComplete ? emptyStateButtonY() : footerButtonY();
         this.viewCompletedButton = Compat.button(
                 link,
                 btn -> {
@@ -100,9 +114,13 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                     btn.visible = false;
                     btn.active = false;
                 },
-                (this.width - btnW) / 2, emptyStateButtonY(), btnW, BUTTON_HEIGHT
+                (this.width - btnW) / 2, btnY, btnW, BUTTON_HEIGHT
         );
         this.addRenderableWidget(this.viewCompletedButton);
+    }
+
+    private int footerButtonY() {
+        return (this.height + backgroundHeight()) / 2 + FOOTER_GAP;
     }
 
     private Component subtitleComponent() {
@@ -191,7 +209,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             int mouseX,
             int mouseY
     ) {
-        UIQuest recipe = quests.get(card.index());
+        UIQuest recipe = cardsData().get(card.index());
         if (recipe == null) {
             return null;
         }
@@ -575,7 +593,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             if (mouseX < c.leftX() || mouseX > c.rightX() || mouseY < c.topY() || mouseY > c.bottomY()) {
                 continue;
             }
-            UIQuest quest = quests.get(card.index());
+            UIQuest quest = cardsData().get(card.index());
             if (quest == null) {
                 continue;
             }
