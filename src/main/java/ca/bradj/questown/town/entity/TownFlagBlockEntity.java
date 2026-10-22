@@ -1114,6 +1114,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         runForTopMatch(this::recipesFromLevel, match, r -> quests.markQuestAsComplete(room, r));
     }
 
+    /**
+     * A block room (job board, welcome mat, mineshaft) registered at {@code block}: the usual room
+     * side effects, announced at the block itself. Its meta-room's door is one block east of the
+     * block ({@code Spaces.metaRoomAround}), which the chat used to print ("Job Board created at
+     * [17, -7]" for a board at x=16; 2026-10-22 playtests).
+     */
+    void blockRoomCreated(
+            MCRoom room,
+            RoomRecipeMatch<MCRoom> match,
+            BlockPos block
+    ) {
+        roomRecipeCreated(room, match, false);
+        messages.roomRecipeCreated(Positions.FromBlockPos(block), getTopMatch(this::recipesFromLevel, match));
+    }
+
 
     private Map<ResourceLocation, RoomRecipe> recipesFromLevel() {
         return RoomRecipes.hydrate(getServerLevel().getRecipeManager(), true);

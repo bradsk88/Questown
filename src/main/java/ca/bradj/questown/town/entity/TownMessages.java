@@ -98,11 +98,18 @@ public class TownMessages {
             MCRoom roomDoorPos,
             Optional<ResourceLocation> match
     ) {
+        roomRecipeCreated(roomDoorPos.getDoorPos(), match);
+    }
+
+    /** "Created X at location [x, z]" naming {@code where} (a block room names its own block). */
+    public void roomRecipeCreated(
+            Position where,
+            Optional<ResourceLocation> match
+    ) {
         broadcastMessage(
                 "messages.building.recipe_created",
                 RoomRecipes.getName(match),
-                roomDoorPos.getDoorPos()
-                           .getUIString()
+                where.getUIString()
         );
     }
 

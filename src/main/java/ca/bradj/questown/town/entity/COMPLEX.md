@@ -1458,3 +1458,14 @@ to the room lookup and read as raw keys ("Quest completed: room.hunter_qt_sword"
 printed the bare root id. Both now use `jobs.<root>`. Pins: `TownMessagesQuestNameTest` (red against
 the old fall-through: `room.hunter_qt_sword`). Also added missing names: `block.questown.mineshaft`
 (quest card, chat, crafting), `block.questown.sapling_tester`, `item.questown.town_door_tester`.
+
+## Block rooms announce their own block (2026-10-22)
+
+A block room's meta-room puts its "door" one block east of the block
+(`Spaces.metaRoomAround`: `p.offset(1, 0, 0)`), and the door is the room's identity (quest
+completion, the rooms map keys), so it stays. The chat line printed that door, so every
+single-block room was announced at x+1 ("Job Board created at [17, -7]" for a board at x=16).
+`TownRoomsHandle.broadcastBlockRoomCreated` now calls `TownFlagBlockEntity.blockRoomCreated`:
+the usual side effects (`roomRecipeCreated(room, match, false)`) plus the line from
+`TownMessages.roomRecipeCreated(Position, match)` at the block itself. Verified live (r8): a
+board at (12, -9) is announced at [12, -9], once.

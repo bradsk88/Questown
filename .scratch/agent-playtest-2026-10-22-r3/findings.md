@@ -18,7 +18,7 @@ dusk (4ca11bbe), no-table diner give-up.
 - Flag crafting: each Craft closes the screen ("Created Town Wand"); one craft per open.
 
 ## Odd
-1. (still present, = 10-21 #5) "Town Gate created at location [201, 192]"; the mat is at x=200.
+1. **[FIXED 2026-10-22: block rooms announce the block pos; door unchanged; verified live r8 ("Job Board created at location [12, -9]" for a board at 12,-9)]** (still present, = 10-21 #5) "Town Gate created at location [201, 192]"; the mat is at x=200.
    Same +1 on x for every single-block special room: job board at 200,203 -> "[201, 203]",
    mineshaft at 214,205 -> "[215, 205]". Real rooms are exact ("[205, 196]" = the door).
    Cause: `Spaces.metaRoomAround` gives a block-room the door `p.offset(1, 0, 0)` and the

@@ -143,7 +143,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
                 pos, getBlockRoomBlock(pos, t)
         );
         RoomRecipeMatch<MCRoom> m = new RoomRecipeMatches<>(room, ImmutableList.of(blockId), blocks.entrySet());
-        t.roomRecipeCreated(room, m);
+        t.blockRoomCreated(room, m, pos);
     }
 
     private static @NotNull Block getBlockRoomBlock(
