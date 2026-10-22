@@ -246,7 +246,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             int y = getStatusY(v.coords());
             if (UtilClean.isCoordInBox(mouseX, mouseY, x, y, 32, 32)) {
                 @NotNull StatusPacket status = getSmoothedStatus(v.data());
-                this.showTooltip(status.texts().stream().map(Compat::componentText).toList());
+                renderTooltipWithDynamicWrapping(ctx, mouseX, mouseY, status.texts());
                 return;
             }
         }

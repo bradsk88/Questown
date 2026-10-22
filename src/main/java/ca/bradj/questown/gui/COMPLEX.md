@@ -1054,3 +1054,10 @@ panel edge), since an item id is no lang key. It now uses `Ingredients.getName`,
 `MultiStatusScreen` translated the bare root id, which has no lang key, so the card read
 "gatherer". It now uses `"jobs." + rootId` like every other screen (`jobTitle`). The 1.19.2
 golden had the same bug.
+
+## Villagers page status tooltip wraps (2026-10-22 playtest)
+
+The status-icon tooltip ("Gatherer can't find work. Check the Economics Tab and the Job...") ran
+off the right screen edge: `MultiStatusScreen` handed the lines to `showTooltip` unwrapped. It now
+goes through `renderTooltipWithDynamicWrapping` like the other card tooltips. Compiled and gated;
+not yet seen live.

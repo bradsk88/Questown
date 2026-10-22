@@ -29,6 +29,9 @@ calls are marked (judge) for the dev.
    Reached by the agent's two `clickheld` calls; a player can reach it with a double-click.
 
 ## Noticed, not changed
+- **Ticketed (judge):** `restart-evening-false-sleepless.md`. A restart during the evening logged
+  "Nightfall: 1 of 1 townies have no bed" for a townie with a bedroom, and SLEEPLESS was applied
+  next morning. The first-tick capture runs before beds are re-assigned.
 - **Ticketed:** `known-gather-results-ignore-loot-prefix.md`. Requesting wheat seeds says "20
   known jobs" produce them; 5 do. Every biome-loot job (hunter, miner, tool gatherers) claims
   the seed floor and every other prefix's finds. Not fixed: the same function gates leaver loot.
@@ -36,6 +39,10 @@ calls are marked (judge) for the dev.
   reads as a tiny sliver next to full-size items.
 - (judge) "Job changed to Hunter for villager Villager 1": the copy doubles "villager" when the
   townie has the fallback name.
+- Villagers page trip bar advances live during the hunter's trip (62% then 85% over 8 s), and
+  the card shows the carried sword (the 2026-10-21 StatusSmoother fix holds).
+- The hunter re-takes a stone sword from the storeroom each trip and returns it with the loot
+  (3 in the chest + 1 carried); `[PROBE:supplies] totalTakes` counts takes, not swords.
 - The bedroom card's bed icons rotate colours (cyan, red); fine.
 - `TownQuests` logs "Basics batch posted ... on welcome-mat completion", but the batch now
   posts when the empty-room quest completes. Log wording only.
