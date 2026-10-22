@@ -280,7 +280,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("too_short_room_dead", tooShortRoomBlueprint()));
         jobs.add(flagEntry("floating_chest_room", floatingChestRoomBlueprint()));
         jobs.add(flagEntry("floating_furniture_over_half", floatingFurnitureOverHalfBlueprint()));
-        jobs.add(flagEntry("bed_counts_once", bedCountsOnceBlueprint()));
+        jobs.add(flagEntry("bed_is_two_blocks", bedIsTwoBlocksBlueprint()));
         jobs.add(flagEntry("unlinked_placement_no_dupe", unlinkedPlacementNoDupeBlueprint()));
         jobs.add(flagEntry("filled_storeroom_alive", filledStoreroomBlueprint()));
         // BOP cap (report): pre-fill the flag and drive one deposit across the 64-slot boundary.
@@ -802,22 +802,23 @@ public class TestBlueprintRegistry {
     private static final BlockPos TWO_BED_ROOM_OFFSET = new BlockPos(-9, 0, 30);
 
     /**
-     * 2026-10-21 agent playtest: a bed is two blocks, and room matching counted both, so one bed
-     * plus a torch made a "Bedroom" (light + 2 beds) and two beds made a "Big Bedroom" (light + 4).
-     * A bed counts once: one bed makes no bedroom, two beds make a bedroom but not a big one.
+     * A bed is two blocks, and room matching counts both: the recipes list two
+     * {@code #minecraft:beds} per bed. One bed plus a torch is a Bedroom (light + 2 bed blocks),
+     * two beds are a Big Bedroom (light + 4). Pinned after RoomRecipes deb6333 counted only the
+     * head and doubled every bed room's cost (reverted 2026-10-22).
      * <p>
      * The assertion runs RoomRecipes' detection on the built rooms directly. Registering their
      * doors and waiting for the town's scan proved timing-dependent under parallel load (the scan
      * had not reached the doors within the 300-tick window in 1 of 4 runs).
      */
-    private static TestBlueprint bedCountsOnceBlueprint() {
+    private static TestBlueprint bedIsTwoBlocksBlueprint() {
         return relocationRitualBase()
                 .withPostSpawnAction((level, flagPos, town, output) -> {
                     buildBedRoom(level, flagPos.offset(ONE_BED_ROOM_OFFSET), 1, output);
                     buildBedRoom(level, flagPos.offset(TWO_BED_ROOM_OFFSET), 2, output);
                     return true;
                 })
-                .withCustomAssertion(TestBlueprintRegistry::assertBedsCountOnce);
+                .withCustomAssertion(TestBlueprintRegistry::assertBedIsTwoBlocks);
     }
 
     /** A 5x5 two-tall room with a torch and {@code beds} east-facing beds; door on the east wall. */
@@ -865,7 +866,7 @@ public class TestBlueprintRegistry {
                 net.minecraft.world.level.block.state.properties.BedPart.HEAD));
     }
 
-    private static boolean assertBedsCountOnce(
+    private static boolean assertBedIsTwoBlocks(
             ServerLevel level,
             BlockPos flagPos,
             TownFlagBlockEntity town,
@@ -876,9 +877,9 @@ public class TestBlueprintRegistry {
         output.msg("bed-counts: 1 bed -> " + oneBed + "; 2 beds -> " + twoBeds);
         ResourceLocation bedroom = Questown.ResourceLocation("bedroom");
         ResourceLocation bigBedroom = Questown.ResourceLocation("big_bedroom");
-        boolean ok = report(output, "1 one-bed-is-not-a-bedroom", !oneBed.contains(bedroom) && !oneBed.contains(bigBedroom));
-        ok &= report(output, "2 two-beds-make-a-bedroom", twoBeds.contains(bedroom));
-        ok &= report(output, "3 two-beds-are-not-a-big-bedroom", !twoBeds.contains(bigBedroom));
+        boolean ok = report(output, "1 one-bed-is-a-bedroom", oneBed.contains(bedroom));
+        ok &= report(output, "2 one-bed-is-not-a-big-bedroom", !oneBed.contains(bigBedroom));
+        ok &= report(output, "3 two-beds-are-a-big-bedroom", twoBeds.contains(bigBedroom));
         return ok;
     }
 

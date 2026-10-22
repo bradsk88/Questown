@@ -14,9 +14,10 @@ calls are marked (judge) for the dev.
    `flag/unlinked_placement_no_dupe` pins it.
 2. **[FIXED 2026-10-22, pending commit]** The crafting tab's icon tooltips read "[Oak Pressure
    Plate]" (chat-form name, with brackets). Now the plain name.
-3. **[FIXED 2026-10-22, pending commit]** The Bedroom quest card showed one bed, but the room
-   needs two since the bed-counts-once fix (21830c45 era, RoomRecipes deb6333). The card hid
-   every second bed ingredient, a leftover from when a bed counted as head + foot.
+3. **[WONTFIX, dev 2026-10-22; f6097a58 change reverted]** The Bedroom quest card showed one
+   bed. That is correct: a Bedroom is one bed. The recipe lists two `#minecraft:beds` because a
+   bed is two blocks, and the card hides the second on purpose. This was reported because of the
+   bed-counts-once change (RoomRecipes deb6333), which was itself a misreading and is reverted.
 4. **[FIXED 2026-10-22, pending commit]** The empty job board read "Page 1 / 0" (all five
    paged screens). Now "Page 1 / 1".
 5. **[FIXED 2026-10-22, pending commit]** The request confirm screen read "Requesting

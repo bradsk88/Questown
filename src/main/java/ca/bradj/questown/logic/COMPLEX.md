@@ -25,8 +25,9 @@ now special-cases the `block_room/block.` prefix and returns
 (`TownMessages.roomRecipeChanged` still inlines `"room." + path` for block-room
 ids — same disease, not yet patched.)
 
-## filterSpecialBlocks removed (2026-10-22)
+## filterSpecialBlocks: one card icon per bed (2026-10-22)
 
-`RoomRecipes.filterSpecialBlocks` hid the ingredient after each bed, for when one bed matched two
-`#minecraft:beds` ingredients. A bed counts once since RoomRecipes `deb6333`, so the filter made
-the Bedroom card show one bed for two. See `gui/COMPLEX.md` "Room quest cards show every bed".
+`RoomRecipes.filterSpecialBlocks` hides the ingredient after each bed, because a recipe lists two
+`#minecraft:beds` per bed (a bed is two blocks and matching counts both). It was removed in
+`f6097a58` on the belief that a bed counts once (RoomRecipes `deb6333`); both are reverted. See
+`gui/COMPLEX.md` "Room quest cards show one icon per bed".

@@ -861,22 +861,21 @@ NO_SPACE for its drop-loot-before-bed path and the bubble clears.
 To get status dumps for these runs, `JobStatuses.maybeLogWhy` now also allows `miner:` labels.
 Ticket: `.scratch/playtest-2026-10-21/miner-stops-cycling.md`.
 
-## A bed counts once: flag/bed_counts_once (2026-10-22)
+## A bed is two blocks: flag/bed_is_two_blocks (2026-10-22)
 
-Room recipes count ingredient *blocks*, and a bed is two (head and foot). One bed plus a torch
-matched "Bedroom" (light + 2 `#minecraft:beds`), and two beds matched "Big Bedroom" (playtest
-findings #20 and #29). The fix lives in RoomRecipes (`deb6333`, republished to `~/.m2`):
-`RecipeDetectionClean.getActiveRecipes` takes a `countsTowardRecipe` filter, and
-`RecipeDetection` passes "not a bed's foot". The filter applies only to the ingredient list, so
-a match's contained blocks still hold both halves (job-block lookups read them). The recipe JSONs
-already meant physical beds (CONTEXT.md: the hunter-gatherer bedroom is 2 beds, the Big Bedroom
-4), so they stay as written. The inn's 12 beds now mean 12 beds.
+Room recipes count ingredient *blocks*, and a bed is two (head and foot). That is the design: the
+recipes list two `#minecraft:beds` per bed, so Bedroom (light + 2) is one bed, Big Bedroom
+(light + 4) is two, and the inn (12) is six. The 2026-10-21 playtest (findings #20, #29) read the
+ingredient count as a bed count and reported the match as a double count. RoomRecipes `deb6333`
+then dropped bed feet from matching, which doubled the beds every bed room needed. It was reverted
+in RoomRecipes `511c76e` (republished to `~/.m2`), and this scenario pins the design: one bed is a
+Bedroom and not a Big Bedroom, and two beds are a Big Bedroom.
 
 The scenario builds a 1-bed and a 2-bed room south of the filled storeroom and runs
 `RecipeDetection.getActiveRecipes` on each directly. Registering the doors and waiting for the
 town's scan was timing-dependent under parallel load: in 1 of 4 runs the scan had not reached
 them within the 300-tick window. Also, the footprint is outside the prepared arena, so the
 builder clears worldgen first; without that, the detected room varied by seed (10 cells instead
-of 42). The red is RoomRecipes' `RecipeDetectionCleanTest.blocksThatDontCount_*`, which fails
-with the filter disabled.
-
+of 42). Red: with the `deb6333` jar, the 1-bed room matched no bedroom (that commit's own run
+passed "one-bed-is-not-a-bedroom"). The quest cards show one icon per bed through
+`RoomRecipes.filterSpecialBlocks` (`gui/COMPLEX.md` "Room quest cards show one icon per bed").

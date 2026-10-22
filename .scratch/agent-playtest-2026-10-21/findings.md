@@ -105,11 +105,14 @@ status: needs-triage
     If only the player's own request should count, call `markFirstWorkRequestCompleteIfActive`
     from the player paths (`AddWorkFromUIMessage` CONFIRMED, `_qtdev board_request`, the growth
     executor) instead of from the listener in `TownFlagBlockEntity`.
-**[FIXED 2026-10-22, RoomRecipes deb6333]** 20. **Beds are double-counted in room recipes.** A room with ONE bed + torch was announced as a
+**[WONTFIX, dev 2026-10-22: by design; RoomRecipes deb6333 reverted in 511c76e]** 20. **Beds are double-counted in room recipes.** A room with ONE bed + torch was announced as a
     "Bedroom" (recipe: light + 2x `#minecraft:beds`); a room with TWO beds became a "Big
     Bedroom" (light + 4x beds) and completed the "Bedroom" quest. RoomRecipes matches each bed
     block (head and foot); Questown's `TownVillagerBedsHandle` counts heads only when assigning
     sleep. So bed quests and bed counts disagree by 2x. Screens: diags/bed1.png, bed2.png.
+    (dev) Not a bug. A bed is two blocks, so the recipes list two bed blocks per bed: Bedroom =
+    1 bed, Big Bedroom = 2, inn = 6. One bed + torch IS a Bedroom. Pinned by
+    flag/bed_is_two_blocks.
 21. (dev tool) My new `click` threw an NPE when a click closed its screen; fixed by keeping the
     screen reference (uncommitted at time of writing).
 - Refinement to #17: at dawn the diner went straight back to `hunter/sword` after one bread;
@@ -137,8 +140,9 @@ status: needs-triage
     was the overnight raw-food meal (#17). If #17 is fixed this may go away on its own.
 28. Quest card title "Small Storeroom -> Storeroom" runs under the card's x button (overlap);
     gui-lint reported QuestsScreen OK.
-**[FIXED with #20]** 29. Consequence of #20: building the cook batch's rooms auto-completed its "Big Bedroom" upgrade
+**[WONTFIX with #20: by design]** 29. Consequence of #20: building the cook batch's rooms auto-completed its "Big Bedroom" upgrade
     the moment the batch posted (my 2-bed room already matched the 4-bed recipe).
+    (dev) The Big Bedroom is two beds, so a 2-bed room correctly matches it.
 30. (judge) Cook-batch "Food (0/8)" counts food *produced* (extracted), not stocked; with 27 food
     in storage a player may read 0/8 as broken. Tooltip only says "Click to see jobs that make this".
 31. Known (`.scratch/playtest-2026-10-14/cook-status-blocker-surfacing-10-14.md`, ready-for-human)

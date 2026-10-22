@@ -1021,14 +1021,14 @@ VillagerAdvancementsScreen) never did. `CompatScreen.keyPressed` now applies the
 screen and its focused widget get the key first (a focused text box keeps typing), then the
 inventory key closes. Not autotestable (the client hook cannot press keys); confirmed by the dev.
 
-## Room quest cards show every bed (2026-10-22 playtest)
+## Room quest cards show one icon per bed (2026-10-22)
 
-`RoomRecipes.filterSpecialBlocks` dropped the ingredient after each bed on the quest card and
-the remove-confirm card. A bed used to match two `#minecraft:beds` ingredients (head and foot),
-so the recipes listed two per bed and the card hid the copy. Since RoomRecipes `deb6333` a bed's
-foot no longer counts (`commands/test/COMPLEX.md` "A bed counts once"), each ingredient is one
-physical bed, and the Bedroom card showed one bed for a room that needs two. The filter is gone;
-`QuestsScreen` and `QuestRemoveConfirmScreen` show the recipe's ingredients as written.
+A bed is two blocks and room recipes count both, so a recipe lists two `#minecraft:beds` per bed
+(`commands/test/COMPLEX.md` "A bed is two blocks"). `RoomRecipes.filterSpecialBlocks` drops the
+ingredient after each bed, so `QuestsScreen` and `QuestRemoveConfirmScreen` show one bed icon per
+bed: the Bedroom card shows one bed, the Big Bedroom two. Commit `f6097a58` removed the filter on
+the mistaken reading that each ingredient is a physical bed (RoomRecipes `deb6333`, since
+reverted), and the Bedroom card showed two beds for a one-bed room. The filter is restored.
 
 ## Crafting-tab icon tooltips use the plain item name (2026-10-22 playtest)
 

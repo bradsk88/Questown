@@ -13,6 +13,7 @@ import com.google.gson.JsonObject;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.BedItem;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.level.Level;
@@ -26,6 +27,28 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class RoomRecipes {
+
+    /**
+     * A bed is two blocks and room recipes count both, so a recipe lists two {@code #minecraft:beds}
+     * per bed. The cards show one icon per bed by dropping the ingredient after each bed.
+     */
+    public static Collection<Ingredient> filterSpecialBlocks(
+            Iterable<Ingredient> ingredients
+    ) {
+        ImmutableList.Builder<Ingredient> b = ImmutableList.builder();
+        boolean foundBed = false;
+        for (Ingredient i : ingredients) {
+            if (foundBed) {
+                foundBed = false;
+                continue;
+            }
+            if (i.getItems()[0].getItem() instanceof BedItem) {
+                foundBed = true;
+            }
+            b.add(i);
+        }
+        return b.build();
+    }
 
     public static Optional<RoomRecipe> getById(
             Level level,

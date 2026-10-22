@@ -243,6 +243,7 @@ public class QuestRemoveConfirmScreen extends CompatContainerScreen<TownRemoveQu
     ) {
         Inventory dummyInv = new Inventory(null);
         Collection<Ingredient> ingredients = recipe.getIngredients();
+        ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
         if (recipe.getType() == Quest.QuestType.JOB_CHANGE) {
             // Job-change quests ALWAYS require the Block of Progress; the
             // card's item row is left empty instead of repeating it
