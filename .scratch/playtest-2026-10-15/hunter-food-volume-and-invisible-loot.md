@@ -44,6 +44,6 @@ Part 3 self-answered (they were in bed). Parts 1-2 are taste/design (is one mult
   and one gatherer. 26 is about five days of one hunter's trips. The log has no warp lines (the
   TIME_WARP debug channel was off), so the warped duration is unknown: a long unloaded absence would
   explain it without a bug.
-- Not reproduced. Next step if it recurs: enable `/qt debug time_warp` before leaving the town, and
+- Not reproduced. Next step if it recurs: enable the warp log before leaving the town (`/_qtdev debug toggle_log <flag pos> time_warp`, `DevFlagDebugToggleCommand`), and
   compare the logged warp length with the extraction count.
 
