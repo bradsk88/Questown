@@ -11,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
@@ -92,10 +93,14 @@ public class ClientAccess {
      */
     @Nullable
     private static net.minecraft.client.gui.components.toasts.TutorialToast activeTutorialToast;
+    // The active toast is the camp-ready one, which also hides at dawn (CampReadyToast).
+    private static boolean activeToastIsCampReady;
 
     public static void showTutorialToast(Component title, Component description) {
         Minecraft mc = Minecraft.getInstance();
         dismissTutorialToast();
+        activeToastIsCampReady = title.getContents() instanceof TranslatableContents tc
+                && CampReadyToast.TITLE_KEY.equals(tc.getKey());
         net.minecraft.client.gui.components.toasts.TutorialToast toast =
                 new net.minecraft.client.gui.components.toasts.TutorialToast(
                         net.minecraft.client.gui.components.toasts.TutorialToast.Icons.RIGHT_CLICK,
@@ -110,6 +115,10 @@ public class ClientAccess {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && mc.player.isSleeping()) {
             dismissTutorialToast();
+            return;
+        }
+        if (mc.level != null && CampReadyToast.hideNow(activeToastIsCampReady, mc.level.getDayTime())) {
+            dismissTutorialToast();
         }
     }
 
@@ -118,6 +127,7 @@ public class ClientAccess {
             activeTutorialToast.hide();
             activeTutorialToast = null;
         }
+        activeToastIsCampReady = false;
     }
 
     public static void closeScreens() {

@@ -868,8 +868,16 @@ completion and vanish unseen. Now:
   re-shows it only to players who still need it).
 - **When it hides (client):** `ClientAccess.tickTutorialToasts()` (called from
   `CampfireSleepClientEvents.onClientTick`) hides the active toast once
-  `mc.player.isSleeping()`; a new show replaces the old one; the flag-menu
-  `dismissTutorialToast()` path is unchanged. No wall-clock cap.
+  `mc.player.isSleeping()`, and hides the camp-ready one once daylight comes
+  (`CampReadyToast.hideNow`: MORNING or NOON by `Signals`; a campfire sleep can't
+  start then, so the ask is void; 2026-10-22 r3 #17, it stayed up all the next
+  day). A new show replaces the old one; the flag-menu `dismissTutorialToast()`
+  path is unchanged. No wall-clock cap.
+- **Re-armed each morning (server):** the morning pass clears `campReadyToastShown`,
+  so a player who still hasn't campfire-slept gets it again the next evening.
+  Verified live 2026-10-22 (r8): evening shows it, skipping the sleep, the next
+  morning hides it, the evening after shows it again. A `/time add` jump can race
+  the client's clock sync and hide the toast on arrival; natural time can't.
 
 ## Quest-card and villager-tab deep links (2026-10-17 playtest round 2)
 

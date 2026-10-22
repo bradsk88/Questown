@@ -21,7 +21,7 @@ public class CampfireReadyReward extends MCReward {
 
     public static final String ID = "campfire_ready";
 
-    public static final String TOAST_TITLE_KEY = "tutorial.campfire_ready.title";
+    public static final String TOAST_TITLE_KEY = ca.bradj.questown.gui.CampReadyToast.TITLE_KEY;
     public static final String TOAST_DESCRIPTION_KEY = "tutorial.campfire_ready.description";
 
     private final TownInterface town;

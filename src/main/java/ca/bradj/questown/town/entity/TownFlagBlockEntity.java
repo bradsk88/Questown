@@ -646,6 +646,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         this.setChanged();
         villagerHandle.handleMorning(newTime);
+        // Re-arm "Your camp is ready" for tonight: a player who didn't sleep gets it again (the
+        // client hides it at dawn, 2026-10-22 r3 #17).
+        campReadyToastShown.clear();
         roomsHandle.handleMorning();
         CompoundTag tag = Compat.getBlockStoredTagData(this);
         tag.putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);

@@ -142,7 +142,7 @@ dusk (4ca11bbe), no-table diner give-up.
     the open `skills-tab-icons-stacked.md` ("only gather visible").
 
 ## Round 5 (fresh desert world, flag at 1601 71 1480; mat 20 blocks east; no sleep, no free food)
-17. (judge) A player who doesn't sleep keeps "Your camp is ready / Use wand on campfire" on
+17. **[FIXED 2026-10-22: hides at dawn, re-armed each morning; verified live r8]** (judge) A player who doesn't sleep keeps "Your camp is ready / Use wand on campfire" on
     screen the whole next day; a campfire sleep cannot start in daylight. The toast hides only
     when the player sleeps (`ClientAccess.tickTutorialToasts`) or via the flag-menu dismiss, and
     is shown once per session (`campReadyToastShown`), so a plain morning hide would also stop
