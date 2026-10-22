@@ -103,3 +103,27 @@ Acceptance sketch:
 - The band must stay strictly inside (MIN, PREFERRED); a value at/under
   MIN would make the no-ops disappear from the MIN fallback band and the
   cook would stop attempting the furnace entirely when idle.
+
+## Tried 2026-10-22 (dev chose A+B): A breaks the cook; reverted
+
+Implemented exactly as written (A: ALWAYS_CONSIDER capped at (preferred+min)/2 = 0.45 in
+`evaluateJob`; B: preselected sorted best-first and `JobCycler` walking that order instead of
+shuffling). Unit tests green. `-Dquestown.autotest.only=cook`: **2/6** (baseline shard run the same
+day: all 6 pass):
+
+- `cook/simple_furnace_food` (WARP): cooked_beef 0 (expected 3..8), beef -1, coal 0. The warp picks
+  from the once-per-warp preselected list; with real cook jobs at 1.0 the band drops cook/fuel and
+  cook/extract out of it, so nothing is fuelled or extracted. (The same trap as the "Tried and
+  dropped" note in `jobs/COMPLEX.md`: gating ALWAYS_CONSIDER also fed the warp list.)
+- `cook/fuel [fuelled_output_ready]`, `[storage_full]`, `cook_extract_food` (REALTIME): cooked food
+  never left the furnace (container expectation 0 of >=3).
+
+So cook/fuel and cook/extract are not no-ops in general: they are the furnace's fuel and output
+stages, and they only look like no-ops while the furnace is idle. A score band that ignores the
+furnace state starves them. Reverted (no commit).
+
+Candidate for the dev (not implemented): score an ALWAYS_CONSIDER job by whether its slot
+precondition holds *now* in realtime (fuel: a furnace lacks fuel; extract: a furnace holds output),
+1.0 when it does and banded when it doesn't, while the warp's preselected list keeps every
+ALWAYS_CONSIDER job unconditionally (the warp checks the furnace per step). B (score order) only
+matters once A gives the scores meaning.

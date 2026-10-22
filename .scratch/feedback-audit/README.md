@@ -125,3 +125,12 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
 | 10-20/food-producers-list-includes-leavers | → task (narrow count) | dev answer Q5 | answered |
 | 10-21/hunters-stuck-collecting-after-sleep | open-agent | unreproduced | — |
 | village-self-sufficiency/SUMMARY | done (archive) | July summary | — |
+
+### Queued for the dev's return (asked while away = blocks the session, so held here)
+
+1. **Cook coin flip, A+B failed.** Implemented as chosen; the cook autotests went 6/6 -> 2/6 (warp
+   cooked nothing; realtime never extracted). cook/fuel and cook/extract are the furnace's real stages,
+   not no-ops. Reverted. Proposed instead: score an always-consider job 1.0 when its slot precondition
+   holds now (fuel: furnace lacks fuel; extract: furnace has output) and banded otherwise, with the
+   warp list keeping all of them. Detail: `.scratch/cook-scoring-tie/always-consider-noop-tie-mechanism.md`.
+   Question: try that, or leave the flip?
