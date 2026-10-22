@@ -256,3 +256,8 @@ dusk (4ca11bbe), no-table diner give-up.
     just its JobID) into the carried tile data, and the respawn initializes from it the way
     `TownFlagState.recoverMobs` does. Recommendation: carry the journal snapshot (keeps held
     items too).
+27. Lead: two Blocks of Progress sat in r6's storeroom chest (-41,84,-42), first seen in the 08:55
+    container snapshot; earlier logs rotated away, origin not traced. Same family as #9
+    (`bop_depositing` gates on chest space): a BOP depositor may drop its BOP as ordinary loot
+    into a chest. A player would find it there (no harm), but the flag's BOP count misses it.
+    Settle with a held run: fill the flag-adjacent chests and watch a level-up.
