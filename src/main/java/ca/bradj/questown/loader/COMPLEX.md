@@ -243,3 +243,15 @@ parks the pointer there, converts to gui-scaled coordinates
 slots. `close` calls the open screen's `onClose`, as Escape does. `click` keeps its own reference to the screen it clicked, because a click
 that closes the screen (Unlock, Craft) nulls `mc.screen` before `mouseReleased`. Used in the 2026-10-21 agent
 playtest (`.scratch/agent-playtest-2026-10-21/findings.md`). Command list: `tools/porttest/PORTTEST.md`.
+
+## Mouse wheel on Questown screens (`NeoMouseScrollDispatch`, 2026-10-22)
+
+1.20.6 dropped the 1.19-style `Screen#mouseScrolled(x, y, delta)`, so Questown screens implement
+`gui.ScrollableScreen` and the client binder forwards wheel input to them. It listened to
+`InputEvent.MouseScrollingEvent`, which NeoForge posts only on `MouseHandler.onScroll`'s
+no-screen branch (with a screen open, onScroll goes `ClientHooks.onScreenMouseScrollPre` ->
+`Screen.mouseScrolled(DDDD)` -> return; read from the 1.20.6 bytecode), so no paged menu ever
+scrolled ("Paged menus no longer scroll between pages", 2026-10-11 playtest). It now listens to
+`ScreenEvent.MouseScrolled.Pre` and cancels when the screen handled it. Verified live (r8):
+the quests tab's "Page 1 / 2" went to "Page 2 / 2" on one wheel step, injected through the real
+`onScroll` by the diag client's `scroll <x> <y> <delta>` command.

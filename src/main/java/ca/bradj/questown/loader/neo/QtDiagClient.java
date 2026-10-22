@@ -113,6 +113,7 @@ public class QtDiagClient {
                 case "shot" -> shot(mc, parts.length > 1 ? parts[1] : "shot");
                 case "cursor" -> cursor(mc, Double.parseDouble(parts[1]), Double.parseDouble(parts[2]));
                 case "click" -> click(mc, Double.parseDouble(parts[1]), Double.parseDouble(parts[2]));
+                case "scroll" -> scroll(mc, Double.parseDouble(parts[1]), Double.parseDouble(parts[2]), Double.parseDouble(parts[3]));
                 case "close" -> close(mc);
                 case "inquire" -> inquire(mc, parts[1], parts[2], parts[3], parts.length > 4 ? parts[4] : null);
                 case "vopen" -> vopen(mc, parts[1]);
@@ -180,6 +181,27 @@ public class QtDiagClient {
      * {@code cursor}): parks the pointer there, then sends the screen a press and
      * release at the gui-scaled coordinates, as a real click would.
      */
+    /**
+     * Wheel input through vanilla's own {@code MouseHandler.onScroll} (private, so reflection), not
+     * a direct {@code Screen.mouseScrolled} call: the point is to exercise the event path the game
+     * uses, which a direct call would bypass (the 2026-10-22 dispatch bug lived in that path).
+     */
+    private static void scroll(Minecraft mc, double x, double y, double delta) {
+        cursor(mc, x, y);
+        mc.execute(() -> {
+            try {
+                java.lang.reflect.Method onScroll = mc.mouseHandler.getClass()
+                        .getDeclaredMethod("onScroll", long.class, double.class, double.class);
+                onScroll.setAccessible(true);
+                onScroll.invoke(mc.mouseHandler, mc.getWindow().getWindow(), 0.0, delta);
+                String name = mc.screen == null ? "none" : mc.screen.getClass().getSimpleName();
+                System.out.println("[qtdiag] scrolled " + delta + " on " + name);
+            } catch (Throwable t) {
+                System.out.println("[qtdiag] scroll failed: " + t);
+            }
+        });
+    }
+
     private static void click(Minecraft mc, double x, double y) {
         cursor(mc, x, y);
         mc.execute(() -> {

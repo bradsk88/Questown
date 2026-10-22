@@ -1,6 +1,6 @@
 ---
 title: Paged menus no longer scroll between pages (worked in 1.19.2)
-status: ready-for-agent
+status: done
 created: 2026-10-11
 ---
 
@@ -29,3 +29,7 @@ in the port. Check `AbstractPagedCardScreen` / `PagedCardScreen` for a
 `mouseScrolled` override). `WorkScreen` already has a `mouseScrolled` override
 (next/previousPage on scroll delta) — the quests/paged family may be missing the
 equivalent. Wire scroll to the page increment/decrement on the paged base.
+
+## Resolved (audit 2026-10-22)
+
+Root cause: the 1.20.6 dispatch listened to `InputEvent.MouseScrollingEvent`, which NeoForge never posts while a screen is open. Now `ScreenEvent.MouseScrolled.Pre` (loader/COMPLEX.md 'Mouse wheel on Questown screens'). Verified live 2026-10-22 r8: quests tab Page 1/2 -> 2/2 on one wheel step.
