@@ -1485,3 +1485,17 @@ single-block room was announced at x+1 ("Job Board created at [17, -7]" for a bo
 the usual side effects (`roomRecipeCreated(room, match, false)`) plus the line from
 `TownMessages.roomRecipeCreated(Position, match)` at the block itself. Verified live (r8): a
 board at (12, -9) is announced at [12, -9], once.
+
+---
+
+# Villager stats listeners are per townie
+
+`SimpleVillagerHandle` notifies stats listeners from `tickThing` (hunger and damage ticks) for the
+townie whose value changed. Until 2026-10-22 every listener sat in one list and heard every
+townie, so an open stats page (`VillagerStatsMenu.accept`, which can't tell whose stats arrived)
+showed whichever townie ticked last: the hunter's page read "Lvl 1" while the flag NBT held
+`level: 4` (agent playtest r9), and the hunger and mood bars were mixed the same way. Listeners
+are now keyed by townie UUID (`addStatsListener(uuid, l)`, wired by `VisitorMobEntity` with its own
+UUID); the flag's save-on-change hook, which does want every townie, uses `addAnyStatsListener`.
+Pins: `SimpleVillagerHandleTest.statsListener_hearsOnlyItsOwnVillager` (red before: heard
+`[4, 1]`), `anyStatsListener_hearsEveryVillager`.

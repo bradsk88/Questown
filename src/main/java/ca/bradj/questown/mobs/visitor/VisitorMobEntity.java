@@ -1573,7 +1573,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
         town.getVillagerHandle()
-            .addStatsListener(villagerStatsMenu);
+            .addStatsListener(getUUID(), villagerStatsMenu);
     }
 
 
@@ -1582,7 +1582,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
         town.getVillagerHandle()
-            .removeStatsListener(villagerStatsMenu);
+            .removeStatsListener(getUUID(), villagerStatsMenu);
     }
 
     public boolean shouldStandStill() {

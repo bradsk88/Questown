@@ -361,7 +361,7 @@ public class TownFlagTileData {
                     t.villagerHandle.changeJobForVillager(e.getVUID(), DinerWork.getIdForRoot(rid), false);
                 }
             });
-            villagerHandle.addStatsListener(s -> t.setChanged());
+            villagerHandle.addAnyStatsListener(t::setChanged);
             logInit("Villager handle associated on new flag");
         };
         return new InitPair(fromTag, onPlace);

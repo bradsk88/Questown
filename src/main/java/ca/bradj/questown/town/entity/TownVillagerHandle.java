@@ -595,8 +595,12 @@ public final class TownVillagerHandle {
         delegate.addHungryListener(o);
     }
 
-    void addStatsListener(Consumer<VillagerStatsData> o) {
-        delegate.addStatsListener(o);
+    void addStatsListener(UUID villager, Consumer<VillagerStatsData> o) {
+        delegate.addStatsListener(villager, o);
+    }
+
+    void addAnyStatsListener(Runnable o) {
+        delegate.addAnyStatsListener(o);
     }
 
     ImmutableMap<VillagerUUID, ImmutableSet<JobID>> getUnlockedJobs() {

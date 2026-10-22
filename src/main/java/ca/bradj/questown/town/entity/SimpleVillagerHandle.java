@@ -89,7 +89,11 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     }
 
     private final List<ENTITY> entities = new ArrayList<>();
-    private final List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
+    // Keyed by townie: an open stats page hears only its own townie (r9: a shared list showed
+    // whichever townie's hunger ticked last).
+    private final Map<UUID, List<Consumer<VillagerStatsData>>> listeners = new HashMap<>();
+    // Town-wide: any townie's stats changed (the flag marks itself dirty for saving).
+    private final List<Runnable> anyStatsListeners = new ArrayList<>();
     private final List<Consumer<ENTITY>> hungryListeners = new ArrayList<>();
 
     private static final int TICK_FACTOR = 10;
@@ -292,7 +296,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             int newVal = Math.max(min, oldVal - amount.apply(e));
             map.put(u, newVal);
             if (newVal != oldVal) {
-                listeners.forEach(l -> l.accept(getStats(u)));
+                notifyStatsListeners(u);
             }
             then.accept(newVal, e);
         });
@@ -473,16 +477,33 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         return entities.contains(visitorMobEntity);
     }
 
-    public void addStatsListener(Consumer<VillagerStatsData> l) {
-        this.listeners.add(l);
+    public void addStatsListener(UUID villager, Consumer<VillagerStatsData> l) {
+        this.listeners.computeIfAbsent(villager, k -> new ArrayList<>()).add(l);
+    }
+
+    public void addAnyStatsListener(Runnable l) {
+        this.anyStatsListeners.add(l);
+    }
+
+    private void notifyStatsListeners(UUID villager) {
+        anyStatsListeners.forEach(Runnable::run);
+        List<Consumer<VillagerStatsData>> ls = listeners.get(villager);
+        if (ls == null || ls.isEmpty()) {
+            return;
+        }
+        VillagerStatsData stats = getStats(villager);
+        List.copyOf(ls).forEach(l -> l.accept(stats));
     }
 
     public void addHungryListener(Consumer<ENTITY> l) {
         this.hungryListeners.add(l);
     }
 
-    public void removeStatsListener(Consumer<VillagerStatsData> l) {
-        this.listeners.remove(l);
+    public void removeStatsListener(UUID villager, Consumer<VillagerStatsData> l) {
+        List<Consumer<VillagerStatsData>> ls = this.listeners.get(villager);
+        if (ls != null) {
+            ls.remove(l);
+        }
     }
 
     public Collection<ENTITY> entities() {

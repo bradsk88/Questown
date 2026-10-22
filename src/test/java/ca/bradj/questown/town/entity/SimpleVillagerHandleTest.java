@@ -288,6 +288,65 @@ class SimpleVillagerHandleTest {
         Assertions.assertTrue(t.broadcast.contains("message.villager.leveled_up [Villager 1, 2]"), t.broadcast.toString());
     }
 
+    // 2026-10-22 agent playtest r9: the hunter's stats page read "Lvl 1" while the flag held level 4.
+    // A stats listener heard every townie's hunger tick, so an open page showed whichever townie
+    // changed last (level, hunger, mood). A listener hears only the townie it was added for.
+    @Test
+    public void statsListener_hearsOnlyItsOwnVillager() {
+        TestDelegator t = new TestDelegator();
+        UUID hunter = UUID.randomUUID();
+        UUID cook = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = new SimpleVillagerHandle<>(
+                t,
+                new SimpleVillagerHandle.Configs(100, true, 1, 1, 100, 10, 100, 0.5f, 100, 100, 23000)
+        );
+        handle.initialize(
+                ImmutableMap.of(hunter, 100, cook, 100),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(hunter, 4),
+                ImmutableMap.of(),
+                true
+        );
+        handle.register(hunter);
+        handle.register(cook);
+        List<Integer> heardLevels = new ArrayList<>();
+        handle.addStatsListener(hunter, stats -> heardLevels.add(stats.level()));
+
+        handle.tick(Signals.NOON);
+
+        Assertions.assertFalse(heardLevels.isEmpty(), "the hunter's own hunger tick should notify");
+        Assertions.assertEquals(List.of(4), heardLevels);
+    }
+
+    // The flag saves on any townie's stats change, so the town-wide listener still hears them all.
+    @Test
+    public void anyStatsListener_hearsEveryVillager() {
+        TestDelegator t = new TestDelegator();
+        UUID hunter = UUID.randomUUID();
+        UUID cook = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = new SimpleVillagerHandle<>(
+                t,
+                new SimpleVillagerHandle.Configs(100, true, 1, 1, 100, 10, 100, 0.5f, 100, 100, 23000)
+        );
+        handle.initialize(
+                ImmutableMap.of(hunter, 100, cook, 100),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                true
+        );
+        handle.register(hunter);
+        handle.register(cook);
+        int[] heard = {0};
+        handle.addAnyStatsListener(() -> heard[0]++);
+
+        handle.tick(Signals.NOON);
+
+        Assertions.assertEquals(2, heard[0]);
+    }
+
     // 2026-10-21 agent playtest: a raw-food meal (hunger_fill_half) set fullness to 50% of max, so a
     // villager at 87% dropped to 50% by eating. A meal adds to fullness; it never lowers it.
     @Test

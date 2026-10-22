@@ -32,13 +32,13 @@ public class TownVillagerHandles {
             }
 
             @Override
-            public void addStatsListener(Consumer<VillagerStatsData> l) {
-                villagerHandle.addStatsListener(l);
+            public void addStatsListener(UUID villager, Consumer<VillagerStatsData> l) {
+                villagerHandle.addStatsListener(villager, l);
             }
 
             @Override
-            public void removeStatsListener(Consumer<VillagerStatsData> villagerStatsMenu) {
-                villagerHandle.delegate.removeStatsListener(villagerStatsMenu);
+            public void removeStatsListener(UUID villager, Consumer<VillagerStatsData> villagerStatsMenu) {
+                villagerHandle.delegate.removeStatsListener(villager, villagerStatsMenu);
             }
 
             @Override
