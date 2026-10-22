@@ -86,7 +86,7 @@ status: needs-triage
     `newHunger = percent * baseFullness`, so `hunger_fill_half` sets fullness to 2500 whatever it
     was; `SpecialRules.HUNGER_FILL_HALF`'s comment says "filled up by 50% from its current value".
     Live: 4370 -> 2500 three times overnight (19:32:51, 19:35:36, 19:38:22).
-17. Every meal is two meals: bread via `dining_no_table` (-> 5000), then ~30 s later
+17. **[FIXED 2026-10-22, dev: hunger acceptable -> work, or relax at night; eating/no_raw_meal_after_eating]** Every meal is two meals: bread via `dining_no_table` (-> 5000), then ~30 s later
     `dining_raw_food` takes a raw item (seeds, brown mushroom, red mushroom) while bread is
     still stocked. `DinerNoTableWork`'s ExpirationRules fall back to `DinerRawFoodWork` on both
     the no-supplies and max-ticks paths, so a diner that has already eaten times out into raw

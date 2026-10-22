@@ -37,4 +37,13 @@ class DiningStagesTest {
     void stillStarvingAfterRawFood_stopsTryingToEat() {
         Assertions.assertNull(DiningStages.next(new JobID(ROOT, "dining_raw_food"), false));
     }
+
+    @Test
+    void theThreeDinersAreDiners_workIsNot() {
+        Assertions.assertTrue(DiningStages.isDiner(new JobID(ROOT, "dining")));
+        Assertions.assertTrue(DiningStages.isDiner(new JobID(ROOT, "dining_no_table")));
+        Assertions.assertTrue(DiningStages.isDiner(new JobID(ROOT, "dining_raw_food")));
+        Assertions.assertFalse(DiningStages.isDiner(new JobID(ROOT, "sword")));
+        Assertions.assertFalse(DiningStages.isDiner(new JobID(ROOT, "downtime")));
+    }
 }

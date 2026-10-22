@@ -554,6 +554,17 @@ to jump to the job's declared no-supplies fallback; a diner that had already eat
 fresh cycle until that same 201-tick give-up, so every meal was followed by a raw one. Reverted.
 Pinned by `DiningStagesTest` (3 of 5 red with the old "same diner" rule).
 
+**A diner that ate and has no work relaxes (10-21 #17, 2026-10-22).** "It goes to work" held
+by day only. At night the board found no work and returned no change, so the fed townie stayed
+a diner; 500 ticks later `JobLogic`'s "gave up waiting for different work" fell back to
+`dining_raw_food` and it ate a raw second meal. Dev ruling: hunger acceptable -> back to work,
+or relax at night. The board's last step (`changeJobForVisitorFromBoard`, after the work pick and
+the idle-rest escape) now sends a diner that is no longer starving (`DiningStages.isDiner` +
+`!isStarving`) to downtime. A still-starving diner keeps the stage-down path, so the eating
+fixtures' fallbacks are untouched. Pinned by autotest `eating/no_raw_meal_after_eating` (night
+via a one-shot clock move after the monitor pins 1000; red: mutton -1 via dining_raw_food,
+green: mutton 0, `eating/` 6/6) and `DiningStagesTest.theThreeDinersAreDiners_workIsNot`.
+
 ## Same-root fallback prefers a job unlocked with the root (2026-10-17 playtest)
 
 `ServerJobsRegistry.getWorkSupplier` falls back to "any job in the same root" when a

@@ -260,6 +260,7 @@ public class TestBlueprintRegistry {
         jobs.add(eatingEntry("eat_raw_food", eatRawFoodBlueprint()));
         jobs.add(eatingEntryDirect("eat_storage_full", eatWithStorageFullBlueprint()));
         jobs.add(eatingEntryDirect("eat_direct", eatDirectBlueprint()));
+        jobs.add(eatingEntryDirect("no_raw_meal_after_eating", noRawMealAfterEatingBlueprint()));
 
         // Worldgen tests
         jobs.add(emptyTownStructureCheck());
@@ -4384,6 +4385,48 @@ public class TestBlueprintRegistry {
                 new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1),
                 false
         );
+    }
+
+    /**
+     * 10-21 #17: at night a no-table diner ate bread, had no work to go back to, stayed a diner, and
+     * ~880 ticks later its give-up fallback fed it raw food as a second meal. Dev 2026-10-22: a
+     * diner whose hunger is acceptable goes back to work, or relaxes at night. Starts at night on
+     * dining_no_table with bread and raw mutton in storage: the bread is eaten, the mutton is not.
+     */
+    private static TestBlueprint noRawMealAfterEatingBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(
+                new ItemStack(Items.BREAD, 16),
+                new ItemStack(Items.MUTTON, 8)
+        ));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 0),
+                base.supplyDoorOffset(), null, null, null, true, 2400,
+                true, true,
+                new TestExpectation(
+                        List.of(
+                                new ExpectedProduct("minecraft:bread", -16, -1),
+                                new ExpectedProduct("minecraft:mutton", 0, 0)
+                        ),
+                        0, 0
+                ),
+                null, null, null, null,
+                false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            // The realtime monitor pins the clock to 1000 (TestExecutor.startMonitor); move it to
+            // night once that has happened, so the fed diner has no work to go back to.
+            boolean[] moved = {false};
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                    (net.neoforged.neoforge.event.tick.ServerTickEvent.Post ev) -> {
+                        if (!moved[0] && level.getDayTime() % 24000 == 1000) {
+                            moved[0] = true;
+                            level.setDayTime(level.getDayTime() - 1000 + 14000);
+                            output.msg("no-raw-meal: clock moved to night (14000)");
+                        }
+                    });
+            return true;
+        });
     }
 
     // --- Worldgen checks ---

@@ -1280,6 +1280,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             changeJob.accept(DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
         }
+        // A diner that has eaten (no longer starving) and has no work to go back to relaxes. Left
+        // a diner, its give-up fallback sent it to raw food for a second meal ~880 ticks later
+        // (10-21 #17; dev 2026-10-22: hunger acceptable -> back to work, or relax at night).
+        if (DiningStages.isDiner(currentJob) && !villagerHandle.isStarving(ownerVUID)) {
+            changeJob.accept(DowntimeWork.getIdForRoot(currentJob.rootId()));
+            return true;
+        }
         return false;
     }
 

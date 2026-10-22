@@ -33,4 +33,12 @@ public final class DiningStages {
             default -> new JobID(root, hasDiningRoom ? DinerWork.ID : DinerNoTableWork.ID);
         };
     }
+
+    /** One of the three diners (table, no table, raw food). */
+    public static boolean isDiner(JobID job) {
+        return switch (job.jobId()) {
+            case DinerWork.ID, DinerNoTableWork.ID, DinerRawFoodWork.ID -> true;
+            default -> false;
+        };
+    }
 }
