@@ -233,3 +233,12 @@ dusk (4ca11bbe), no-table diner give-up.
   DiningStages decides by hunger). `only=eating` went 5/5 -> 1/5 (fullness -40%..-16%): in those
   fixtures the townie never got back to a diner. Needs a design pass: maybe the max-ticks
   fallback should check whether the diner already ate this sitting.
+- r6 relocation (crafting tab "Begin moving this town"): shutdown 5 s with 2 townies ("Town
+  shutdown complete; flag ... is now dormant"), deed collected from the flag (chat explains
+  each step), placed ~60 blocks east: same town UUID registered at the new flag, both villagers
+  re-spawned there, the open Room quest carried over, the old flag block is gone. Fine.
+25. ERROR "Giving up on detecting sub block at (-49, 84, -44): ... wrong entity type: null", on
+    every r6 load since I set that welcome mat to air (and again for both old mats after the
+    relocation). A mat removed without a player break stays in the flag's sub-block list and
+    errors once per load; after a relocation the carried mats point at the old site. Small;
+    the dead mat is otherwise skipped (see the broken-mat note above).
