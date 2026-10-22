@@ -267,3 +267,10 @@ dusk (4ca11bbe), no-table diner give-up.
     DROPPING_LOOT would put the BOP into a chest. `BOPDepositorWork` lists the BOP as the state-1
     ingredient and state-0 tool, so `DeclarativeJobTicker.holdsWorkOutput` should not count it;
     check the journal's item identity (blessed NBT vs `Ingredient.of(BOP)`).
+
+- r7: a hunter assigned before swords are stocked registers a Swords need at once (economics tab "Swords 1"); explains the swords top-need in r4/r5.
+
+## Round 7 (fresh snowy plains, flag at 1802 68 -543; request + job change before food)
+28. (judge) Economics tab rows reorder as needs appear: with a Swords need present, "Free food ->"
+    moves from row 1 to row 2, so a player's muscle memory (or a click-script) hits Swords.
+    Minor; noted because the free-food row is the day-1 lifeline (see r5).
