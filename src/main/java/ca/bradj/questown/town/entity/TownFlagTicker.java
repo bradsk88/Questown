@@ -306,6 +306,14 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         }
         FlagPhase phase = phaseOf(state);
         if (phase == FlagPhase.SHUTTING_DOWN) {
+            if (!e.shutdownController.isRunning()) {
+                // Loaded mid-ritual after a restart: the progress is in memory only. Load the town
+                // first, then resume the recall from the townies still standing (2026-10-22 r8n).
+                if (runAnyInitializers(new TickData(sl, blockEntityPos, state, e))) {
+                    return;
+                }
+                e.shutdownController.begin(sl, blockEntityPos, state, e);
+            }
             e.shutdownController.tick(sl, blockEntityPos, state, e);
             spawnShutdownParticles(sl, blockEntityPos);
             return;

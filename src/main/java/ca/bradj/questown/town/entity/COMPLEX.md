@@ -94,6 +94,13 @@ flowchart LR
   absorbed and not yet respawned), read from the flag tag. It used to be an in-memory list on
   `TownShutdownController`, empty after a server restart, so waking a dormant town then
   respawned nobody. `AbsorbedJournalsTest.theAbsorbedListIsTheTowniesStillWaitingToRespawn`.
+- **A restart mid-ritual resumes the recall.** `ShutdownProgress` lives in memory only, so a flag
+  loaded in `SHUTTING_DOWN` has no progress and its ticker used to call only
+  `shutdownController.tick` (a no-op) and never ran the initializers: the flag said "needs a
+  moment to start up" forever. `TownFlagTicker.tick` now runs the initializers first, then
+  `begin` (roster = the townies still standing; the absorbed ones are already in the tag), and the
+  ritual completes. Same shape as the DORMANT branch above it. Live, r8 2026-10-22: shutdown,
+  restart, "shutdown started … 1 townie(s)", dormant 10 s later, wake restored the townie.
 
 ---
 
