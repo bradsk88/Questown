@@ -101,6 +101,9 @@ calls are marked (judge) for the dev.
   tally, and the cook burned one coal after the quest closed.
 
 ## Fine (checked)
+- Storeroom full (one chest, unstacked deposits): the miner's card reads "Miner needs an empty
+  chest in a room to deposit their items" with a crossed-chest icon. Clear and correct.
+- 11 villagers: 3 "Can't keep up" warnings (60-66 ticks behind, 03:14-03:15) at 40 t/s.
 - Mineshaft: crafted from stone stairs on the flag's crafting tab, placed in the empty room
   (quest done, "recipe_created" at 22,179); BOP on the gatherer: blessed BOP -> Miner at once
   (creative), quest done, miner took a wooden pickaxe from the storeroom and left.
