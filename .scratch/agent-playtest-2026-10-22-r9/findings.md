@@ -116,3 +116,17 @@ heartbeat fix 49dc0a9a and the vanilla checkbox d559ded6).
     block is the door, stand in the doorway. Recommendation: (a) now, (c) for player-built rooms.
 - Cook batch complete on day 7 ("Quest completed: Food" 8/8 -> "New visitors will arrive in the
   morning"); the cook cooked steadily once the furnace was off the door cell. Hunter at level 4.
+14. **(bug, pre-existing, queued for the dev's art call)** The villagers tab shows the purple/black
+    missing-texture checkerboard (`textures/error.png`) as the status icon while a villager works:
+    `StatusArt.getTexture` maps only IDLE, NO_SPACE, RELAXING, NO_JOBSITE, GOING_TO_JOB,
+    NO_SUPPLIES, COLLECTING_SUPPLIES, NO_WORK_POSSIBLE, DROPPING_LOOT; work states (`state:N`),
+    WAITING_FOR_TIMED_STATE (a hunter out hunting) and EXTRACTING_PRODUCT fall to ERROR_TEX
+    ("TODO: Smelter statuses"). Seen live: the new gatherer at `state:0` (r9-51.png). Identical
+    in the 1.19.2 golden, so not a port regression. Unused art exists in `menu/gatherer/`:
+    gathering.png, returned_success.png, no_food.png, locked.png, no_gate.png.
+    Recommendation: work states + WAITING_FOR_TIMED_STATE -> gathering.png (rename-free), and
+    EXTRACTING_PRODUCT -> returned_success.png, until per-job art exists; never ERROR_TEX.
+- Villager 3 arrived the morning after the cook batch; the miner beat posted Wooden Pickaxe x4,
+  Mineshaft, Villager job: Miner, Coal x8 (Coal backfilled at once from the storeroom's coal).
+  Mineshaft crafted from stone stairs -> "Mineshaft created at location [-34, -22]"; four pickaxes
+  in the storeroom -> "Quest completed: Wooden Pickaxe x4".

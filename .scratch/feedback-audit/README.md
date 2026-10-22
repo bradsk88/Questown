@@ -171,3 +171,8 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
    Detail: `.scratch/agent-playtest-2026-10-22-r9/findings.md` #13. Recommendation: put the chest in
    the far interior corner (2-line change; the chicken-arc autotests would need a re-run). Question:
    OK, or would you rather the shell grow to the documented 3x3 interior?
+7. **Working villagers show the missing-texture checkerboard as their status icon.** `StatusArt` has no
+   art for work states (`state:N`), WAITING_FOR_TIMED_STATE or EXTRACTING_PRODUCT, so it returns
+   `textures/error.png` (same in 1.19.2). Detail: r9 findings #14. Recommendation: map them to the
+   unused `gathering.png` / `returned_success.png` until per-job art exists. Question: OK, or do you
+   want new art?
