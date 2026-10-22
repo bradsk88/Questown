@@ -164,3 +164,10 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
 - Found live: every town shutdown removed the town's job boards and welcome mats (sub-block
   watchdog heartbeat skipped while parked). Fixed 49dc0a9a.
 - Found live: a restart mid-shutdown left the flag "needs a moment to start up" forever. Fixed 2ff42b88.
+6. **The helper chicken's storeroom chest blocks the room's doorway.** `ChickenRoomShellPlan` drops it
+   at `door.relative(inward, 1)` in a 2x2 interior (4x4 shell incl. walls; the javadoc says 3x3), so
+   villagers climb onto the chest to reach the room. r9 reproduced the mechanism with a furnace and
+   a chest inside doors (cook stalled 13 min on top of the furnace; moved -> six extracts in 50 s).
+   Detail: `.scratch/agent-playtest-2026-10-22-r9/findings.md` #13. Recommendation: put the chest in
+   the far interior corner (2-line change; the chicken-arc autotests would need a re-run). Question:
+   OK, or would you rather the shell grow to the documented 3x3 interior?

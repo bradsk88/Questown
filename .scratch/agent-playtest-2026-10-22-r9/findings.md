@@ -83,3 +83,28 @@ heartbeat fix 49dc0a9a and the vanilla checkbox d559ded6).
   promised job (Cook); BOP -> "Job changed to Cook for Villager 2" + quest completed.
 - Second chest -> "Small Storeroom became Storeroom"; furnace -> "Room became Small Kitchen";
   second bed + torch -> "Bedroom became Big Bedroom". Night status: "Cook is resting until morning."
+10. (intermittent, dev-command path) Wand on the lit campfire via `_qtdev clickheld` at night
+    returned PASS with no `[campfire-sleep] beginCampfireSleep` line on 2 of 6 nights (20:42:05,
+    20:58:57), same command sequence that works on the others; on-demand retries (time set 14000)
+    worked. Not reproduced; may be the command path, not the player's click.
+11. (balance note, not a bug) Hunger drains ~1/tick from a 5000 meal, so every villager is
+    "starving" (negative) within a quarter day: the hunter read -12630 at night on day 4 with
+    13 carrots in the storeroom (it was asleep in bed, SleepingX -35, so not stuck).
+12. (agent error) `time set 14000` reset the absolute day clock to day 0 mid-run (should have been
+    `time add`); restored with `time set 123161` (day 5 morning) a minute later. Tick-keyed state set
+    in that minute (SLEEPLESS expiry ticks etc.) may be off; judge later oddities with that in mind.
+13. **(design, queued for the dev) A block in the cell right inside a door makes villagers climb onto
+    it, and the room shell puts one there.** Day 4-5: the furnace I put in the cell inside the
+    kitchen door (2x2 interior) left the cooked mutton in the output from ~20:56 to 21:09:59. The
+    cook's spot was the floor cell beside the furnace (`entityFeetPos=-23,63,-13`), reachable from
+    the doorway only over the furnace (no diagonal step past the wall corner), so it stood ON the
+    furnace (y=64.0 at block -24,-13) in cook:extract, re-created by the max-ticks watchdog every
+    3000 ticks. Moving the furnace to the back corner -> six extracts in 50 s, Food 2/8 -> 6/8.
+    The same with the second storeroom chest I placed inside that door (cook sampled at y=64.875
+    on it). `ChickenRoomShellPlan` drops the onboarding chest at `door.relative(inward, 1)`, the
+    cell right inside the door, and its shell is 4x4 with walls = a 2x2 interior (its javadoc
+    says "a 3x3 interior (9 cells)"). So every chicken-built storeroom blocks its own doorway;
+    the dev's 10-17 reports (hunter on the supply chest, villager stuck on a bed) fit this.
+    Options: (a) the chest goes in the far interior corner (`inward 2, along +1`), 2 lines;
+    (b) ROOM_SIZE 5 for the documented 3x3 interior; (c) when the door-side neighbour of a job
+    block is the door, stand in the doorway. Recommendation: (a) now, (c) for player-built rooms.
