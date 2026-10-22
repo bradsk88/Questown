@@ -84,7 +84,7 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
         int iconsX = (width / 2) - (8 * ct);
         for (int i = 0; i < ct; i++) {
             ItemStack defaultInstance = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance();
-            RenderUtil.renderItemScaled(Compat.itemRenderer(), 3, defaultInstance, iconsX + (16 * i), bgY + 2);
+            RenderUtil.renderItemScaled(Compat.itemRenderer(), 1.2f, defaultInstance, iconsX + (16 * i), bgY + 2);
         }
         bgY += 24;
         renderText(ctx, bgX, bgY);

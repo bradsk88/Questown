@@ -115,7 +115,7 @@ public class VillagerTabs extends Tabs implements SubUI {
             b.add(new Tab(
                     (rc, x, y) -> RenderUtil.renderItemScaled(
                             rc.itemRenderer(),
-                            2,
+                            0.8f,
                             ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
                             x + 10,
                             y + 7

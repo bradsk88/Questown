@@ -102,9 +102,14 @@ public class RenderUtil {
         gui.fill(topLeft.x(), topLeft.y(), botRight.x(), botRight.y(), HIGHLIGHT);
     }
 
+    /**
+     * The BOP's model shrinks in its gui display (scale 1.25 on an 8 px cube, so a slot shows it at
+     * vanilla block size); these big-icon spots scale from that. Factors were x2/x3/x4 against the
+     * old 0.5 gui scale and are 0.4 of that now (2026-10-22, the BOP-icon change).
+     */
     public static void renderItemScaled(
             ItemRenderer itemRenderer,
-            int scale,
+            float scale,
             ItemStack defaultInstance,
             int x,
             int y

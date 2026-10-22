@@ -55,7 +55,7 @@ public class VillagerBlockofProgressScreen extends CompatContainerScreen<Village
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         bgY += 16;
-        RenderUtil.renderItemScaled(Compat.itemRenderer(), 4, ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(), bgX + 16, bgY + 2);
+        RenderUtil.renderItemScaled(Compat.itemRenderer(), 1.6f, ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(), bgX + 16, bgY + 2);
         renderText(ctx, bgX, bgY);
     }
 
