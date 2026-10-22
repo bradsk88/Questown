@@ -64,3 +64,13 @@ Two `JobLogicTest` tests red before (47 / 46 extracts in 50 ticks), green after;
 1414/0. Live: 70 diner give-ups in 5 minutes, 0 flood lines, 0 effect re-applications; after
 stocking 3 cooked + 3 raw mutton, 4 food takes -> 4 fullness rises, still no flood.
 Still open: why the no-table diner never inserted the mutton it held.
+
+# Follow-up (2026-10-22, r5 agent playtest)
+
+With the free meals gone, "the grabbed branch only asks the board" became a loop: a starving
+townie with no villager food gave up after 201 ticks and the board put it straight back into
+`dining_no_table` (only a raw-food give-up counts as a food attempt), so a town out of food
+stopped working with raw meat in storage. The "70 diner give-ups in 5 minutes" in the live check
+above was that loop. Fixed in 14fab7cd: the hand-off goes to the job's declared no-supplies
+fallback when it names another job (no table -> raw food). See r5 findings #20 in
+`.scratch/agent-playtest-2026-10-22-r3/findings.md`. The mutton question above is not re-checked.
