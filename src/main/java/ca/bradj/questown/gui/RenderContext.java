@@ -11,6 +11,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 
@@ -129,6 +130,24 @@ public record RenderContext(
 
     public void drawJeiStatic(IDrawableStatic drawable, int x, int y, int width, int height, int maxU, int maxV) {
         drawable.draw(gui, x, y, width, height, maxU, maxV);
+    }
+
+    // Vanilla's own checkbox art (1.20.6 sprite atlas), so a toggle looks like a vanilla control
+    // (docs/ui-principles.md 1). Vanilla itself draws the 20x20 sprite scaled to its box size.
+    private static final ResourceLocation CHECKBOX = new ResourceLocation("widget/checkbox");
+    private static final ResourceLocation CHECKBOX_SELECTED = new ResourceLocation("widget/checkbox_selected");
+    private static final ResourceLocation CHECKBOX_HIGHLIGHTED = new ResourceLocation("widget/checkbox_highlighted");
+    private static final ResourceLocation CHECKBOX_SELECTED_HIGHLIGHTED =
+            new ResourceLocation("widget/checkbox_selected_highlighted");
+
+    public void checkbox(int x, int y, int size, boolean checked, boolean hovered) {
+        ResourceLocation sprite;
+        if (checked) {
+            sprite = hovered ? CHECKBOX_SELECTED_HIGHLIGHTED : CHECKBOX_SELECTED;
+        } else {
+            sprite = hovered ? CHECKBOX_HIGHLIGHTED : CHECKBOX;
+        }
+        gui.blitSprite(sprite, x, y, size, size);
     }
 
     public void renderWidget(Button widget, int mouseX, int mouseY, float partialTicks) {

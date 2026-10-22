@@ -23,8 +23,9 @@ fluency instead of inventing a new look (consistency and standards; recognition 
 - Item tooltips follow vanilla: the item's name first (white), secondary lines grey, no brackets
   around names (`Compat.getHoverName`, not the chat form).
 
-- Controls look like vanilla controls: a toggle is a vanilla checkbox with a tick, not a grey square
-  with a white fill (the job board's auto-request toggle, 2026-10-22, reads as a blank square).
+- Controls look like vanilla controls: a toggle is vanilla's checkbox sprite
+  (`RenderContext.checkbox`), not a grey square with a white fill (the job board's auto-request
+  toggle read as a blank square until 2026-10-22).
 
 **Check:** put the screen next to a vanilla chest and crafting table at GUI scale 2 and 3. Does
 anything look foreign?

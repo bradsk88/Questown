@@ -38,9 +38,10 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
     private static final int CARD_HEIGHT = 42;
 
     // Cards start below the page header (two paddings + the first card's padding) and stop above
-    // the toggle band (glyph + padding + a gap).
+    // the toggle band (checkbox + border padding + a gap). 13 px keeps 3 cards per page.
     private static final int CARDS_TOP = PAGE_PADDING * 3;
-    private static final int TOGGLE_BAND = 9 + PAGE_PADDING + 4;
+    private static final int CHECKBOX_SIZE = 13;
+    private static final int TOGGLE_BAND = CHECKBOX_SIZE + borderPadding + 4;
     private static final int MAX_CARDS_PER_PAGE =
             (backgroundHeight - CARDS_TOP - TOGGLE_BAND) / (CARD_HEIGHT + CARD_PADDING);
 
@@ -232,27 +233,17 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
         // F2: the board's auto-request toggle, pinned to the bottom band.
         int panelTop = (this.height - backgroundHeight) / 2;
         int tgX = x + PAGE_PADDING;
-        int tgY = panelTop + backgroundHeight - PAGE_PADDING - 9;
+        int tgY = panelTop + backgroundHeight - borderPadding - CHECKBOX_SIZE;
         boolean on = menu.isBoardAutoRequest();
-        ctx.fill(tgX, tgY, tgX + 9, tgY + 9, 0x60000000);
-        if (on) {
-            // ARGB: 0xFFFFFF has alpha 0 and drew nothing, so ON looked unticked.
-            ctx.fill(tgX + 2, tgY + 2, tgX + 7, tgY + 7, 0xFFFFFFFF);
-        }
         Component toggleLabel = Compat.translatable("job_board.auto_request");
-        ctx.text(
-                toggleLabel,
-                tgX + 14,
-                tgY + 1,
-                TEXT_COLOR,
-                false
-        );
-        // Hover + click span glyph AND label - the 16x17 icon box only covered
-        // the 9px glyph, so the tooltip was effectively unreachable
-        // (2026-10-15 playtest: "It also doesn't appear to have a tooltip").
-        int toggleWidth = 14 + this.font.width(toggleLabel);
-        if (mouseX >= tgX && mouseY >= tgY && mouseX < tgX + toggleWidth && mouseY < tgY + 17) {
-            ctx.fill(tgX, tgY + 1, tgX + 9, tgY + 10, 0x80FFFFFF);
+        // Hover + click span box AND label - a glyph-only hit box made the tooltip effectively
+        // unreachable (2026-10-15 playtest: "It also doesn't appear to have a tooltip").
+        int toggleWidth = CHECKBOX_SIZE + 4 + this.font.width(toggleLabel);
+        boolean hovered = mouseX >= tgX && mouseY >= tgY && mouseX < tgX + toggleWidth
+                && mouseY < tgY + CHECKBOX_SIZE;
+        ctx.checkbox(tgX, tgY, CHECKBOX_SIZE, on, hovered);
+        ctx.text(toggleLabel, tgX + CHECKBOX_SIZE + 4, tgY + (CHECKBOX_SIZE - 8) / 2, TEXT_COLOR, false);
+        if (hovered) {
             this.showTooltip(
                     Compat.translatable(on ? "job_board.auto_request.tooltip.on" : "job_board.auto_request.tooltip.off")
             );
@@ -315,7 +306,7 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
             int buttonX = w.getKey().x;
             int buttonY = w.getKey().z;
             int width = w.getValue().width();
-            if (x >= buttonX && y >= buttonY && x < buttonX + width && y < buttonY + 17) {
+            if (x >= buttonX && y >= buttonY && x < buttonX + width && y < buttonY + CHECKBOX_SIZE) {
                 w.getValue().fn().run();
                 return true;
             }
