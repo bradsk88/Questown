@@ -50,6 +50,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     private int[] rowY = new int[0];
     private int moveDescY;
     private int moveButtonY;
+    private boolean moveArmed;
 
     public FlagCraftingScreen(
             FlagCraftingMenu menu,
@@ -124,15 +125,25 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
             this.addRenderableWidget(b);
         }
         if (showMove) {
+            moveArmed = false;
             this.addRenderableWidget(Compat.button(
                     Compat.translatable("menu.flag_crafting.begin_moving"),
-                    btn -> {
-                        QuestownNetwork.sendToServer(new BeginTownRelocationMessage(flagPos));
-                        this.onClose();
-                    },
+                    this::onBeginMoving,
                     bgX + MARGIN, bgY + moveButtonY, TEXT_WIDTH, BTN_HEIGHT
             ));
         }
+    }
+
+    // Packing the town recalls every townsfolk and has no in-game undo yet, and the button sits just
+    // under the Craft column: the first click only arms it (docs/ui-principles.md 10).
+    private void onBeginMoving(Button btn) {
+        if (!moveArmed) {
+            moveArmed = true;
+            btn.setMessage(Compat.translatable("menu.flag_crafting.begin_moving.confirm"));
+            return;
+        }
+        QuestownNetwork.sendToServer(new BeginTownRelocationMessage(flagPos));
+        this.onClose();
     }
 
     private Button craftButton(int x, int y, int recipeIndex) {

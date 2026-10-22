@@ -1162,3 +1162,12 @@ profession". The root rides `VillagerMenusPayload.promisedRoot` (and the server-
 `menu.unlock_root.insert_bop_promised` ("Insert a Block of Progress to make this villager a
 Hunter"). Precedence matches the spend: promised beats a blessed BOP's text.
 `VillagerMenusPayloadTest` round-trips the field.
+
+## Flag crafting: "Begin moving this town" takes two clicks (2026-10-22, r9)
+
+The relocate button (`FlagCraftingScreen.onBeginMoving`) starts the shutdown ritual, which recalls
+every townsfolk and has no in-game cancel or wake yet (commands only; queued for the dev). It sits
+8 px under the last Craft row, so the first click only arms it and relabels it "Click again to pack
+the town" (`menu.flag_crafting.begin_moving.confirm`); the second sends `BeginTownRelocationMessage`.
+`moveArmed` resets in `init()`, so reopening the tab (or a resize) disarms it. docs/ui-principles.md
+rule 10. Live r9: one click armed it with no shutdown; the second logged "Town shutdown started".

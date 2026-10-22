@@ -31,6 +31,7 @@
   "menu.flag_crafting.mineshaft_desc": "Turn stone stairs into a Mineshaft. Place it in a room so a miner can work there.",
   "menu.flag_crafting.fishing_station_desc": "Turn a fishing rod into a Fishing Station. Place it so a fisher can work there.",
   "menu.flag_crafting.begin_moving": "Begin moving this town",
+  "menu.flag_crafting.begin_moving.confirm": "Click again to pack the town",
   "menu.flag_crafting.begin_moving_desc": "Recall your townsfolk and pack the town away. When everyone is home, a relocation deed appears.",
   "message.questown.villager.change_job_in_morning": "%s will change to a new job in the morning.",
   "message.questown.soup_pot.need_bowl": "You need a bowl to take soup from the pot",
