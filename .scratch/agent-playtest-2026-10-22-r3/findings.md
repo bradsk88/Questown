@@ -21,6 +21,12 @@ dusk (4ca11bbe), no-table diner give-up.
 1. (still present, = 10-21 #5) "Town Gate created at location [201, 192]"; the mat is at x=200.
    Same +1 on x for every single-block special room: job board at 200,203 -> "[201, 203]",
    mineshaft at 214,205 -> "[215, 205]". Real rooms are exact ("[205, 196]" = the door).
+   Cause: `Spaces.metaRoomAround` gives a block-room the door `p.offset(1, 0, 0)` and the
+   message prints the door (`TownMessages.roomRecipeCreated` -> `getDoorPos()`). The door is
+   the block-room's identity (quest completion, the `rooms={[201, 192]=...}` keys), so the fix
+   belongs in the message (print the block pos from `broadcastBlockRoomCreated`), not the door.
+   Not changed: `broadcastBlockRoomCreated` re-runs all of `roomRecipeCreated` (swap,
+   advancements, quest completion) just to print, so threading a display pos touches 3 layers.
 2. (still present, = 10-21 #2) Economics tab: after "Free food" is claimed (chat: "The town's
    storeroom received 20 free carrots.") the open screen still shows "Free food ->".
 3. **[FIXED 2026-10-22, verified live]** Job board "Auto-post new requests" toggle: tooltip
@@ -105,7 +111,7 @@ dusk (4ca11bbe), no-table diner give-up.
   again after a spend and a deposit ("Hunter x2"). The 8 fix holds in a fresh world.
 - r4 phase 2.75 picked "#questown:swords (x1) -> crafter" (crafter/stone_sword is a real
   producer), so the coal case of #7 did not come up live here. Swords were the top need
-  while 3 stone swords sat in the storeroom chest; not traced.
+  while 3 stone swords sat in the storeroom chest; not traced. r5 repeated it (07:02:49, "#questown:swords (x1) -> crafter") with 4 swords in the chest. Unmet needs are not logged, so the registering job is unknown.
 14. A townie on downtime alternates `downtime state:0` <-> `downtime NO_SUPPLIES` every ~4 s
     (hunter, 06:10:43 NO_SUPPLIES, 06:10:47 state:0; gatherer the same on day 2). Downtime has
     no ingredients or tools, yet its card then reads "Hunter is looking for supplies. They will
@@ -148,3 +154,5 @@ dusk (4ca11bbe), no-table diner give-up.
     "is looking for food".
 - Seen live: the economics tooltip singular, "Food was needed once in the past day"
   (handoff item 5 said singular had not been seen).
+- r5 without free food: the first gatherer can never start (gather needs villager food; it cycles dining_no_table/dining_raw_food/downtime NO_SUPPLIES all night). The red "Free food ->" on the economics tab is the only rescue; designed, noted for the record.
+- (still present, = 10-21 #19) "Quest completed: Post your first work request on the job board" fired at the BOP job change (the hunter's auto-posted raw mutton request), before the player posted anything.
