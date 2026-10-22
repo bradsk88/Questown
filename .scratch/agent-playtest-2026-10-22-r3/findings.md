@@ -275,3 +275,10 @@ dusk (4ca11bbe), no-table diner give-up.
     moves from row 1 to row 2, so a player's muscle memory (or a click-script) hits Swords.
     Minor; noted because the free-food row is the day-1 lifeline (see r5).
 - r7 edge: a chest placed into a storeroom wall announced "Storeroom destroyed" and "Small Storeroom destroyed" in the same tick (room_destroyed for store_room_medium and store_room): the chest both upgraded and broke the room. Self-inflicted; low priority.
+29. (judge, copy) r7 phase 2.75 picked "#questown:villager_food (x4) -> baker" while a cook was
+    already making villager food. `chooseTopNeed` needs one *not-yet-unlocked* producer, not zero
+    producers, but the quest says "Your town's stock of Villager Food has run dry and no one can
+    make it." Also hard-coded English in `TownQuests` (~L1168, not a lang key), and the room
+    quest prints the raw room path ("Build the baker room (breadmaker)"). Suggested: "Your town
+    keeps running short of Villager Food. Unlock the baker job with a Block of Progress to make
+    more." as a lang key with the job's display name.
