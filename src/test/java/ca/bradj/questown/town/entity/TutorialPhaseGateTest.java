@@ -459,12 +459,11 @@ class TutorialPhaseGateTest {
         quests.questBatches.markRecipeAsComplete(null, JobID.toRL(TownQuests.ONBOARDING_COOK_JOB));
         quests.questBatches.markRecipeAsComplete(null, TagsInit.Items.VILLAGER_FOOD.location());
 
-        // Two completed job changes open the post-cook miner beat (phase 2.7): post it,
-        // complete all four of its quests (JOB_CHANGE + farm room + pickaxes + coal), and
-        // run the walk once more so the fixed phases can continue past it.
+        // Two completed job changes open the post-cook miner beat (phase 2.7): post it and
+        // complete all four of its quests (JOB_CHANGE + farm room + pickaxes + coal). The
+        // next walk continues past the done miner beat.
         quests.addTutorialBatches(view);   // applies phase 2.7: the miner beat
         completeMinerBeat(quests);
-        quests.addTutorialBatches(view);   // walk continues past the done miner beat
 
         return quests;
     }
@@ -475,6 +474,26 @@ class TutorialPhaseGateTest {
         quests.questBatches.markRecipeAsComplete(null, new ResourceLocation("questown", "farm"));
         quests.questBatches.markRecipeAsComplete(null, Compat.getItemId(Items.WOODEN_PICKAXE));
         quests.questBatches.markRecipeAsComplete(null, Compat.getItemId(Items.COAL));
+    }
+
+    @Test
+    void whenMinerBeatDone_itIsNotPostedAgain() {
+        // 2026-10-22 agent playtest: phase 2.7 had no "already posted" check, so each batch
+        // request re-posted the miner beat; backfill closed it at once (the town already had
+        // the mineshaft, pickaxes, coal and a miner) and its reward brought another villager
+        // - 8 arrivals in 3 seconds.
+        TownQuests quests = questsWithTwoJobChangesDone();
+        TestTutorialTownView view = TestTutorialTownView.builder()
+                .villagerCount(3)
+                .build();
+
+        quests.addTutorialBatches(view);
+        quests.addTutorialBatches(view);
+
+        ResourceLocation minerJob = JobID.toRL(new JobID("miner", "coal"));
+        assertEquals(1, quests.questBatches.getAll().stream()
+                .filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE && minerJob.equals(q.getWantedId()))
+                .count(), "the miner beat is posted once");
     }
 
     @Test

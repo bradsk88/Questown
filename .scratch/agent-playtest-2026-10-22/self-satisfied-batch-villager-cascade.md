@@ -1,6 +1,7 @@
 ---
 title: 'Self-satisfied quest batches cascade: 8 villagers arrived in 3 seconds one morning'
-status: needs-triage
+status: closed
+closed: 2026-10-22
 origin: 2026-10-22 agent playtest (worktree build/wt, flag 15 71 161)
 world: ~/questown-worlds/villager-cascade-2026-10-22.tgz (saved right after, 11 villagers)
 ---
@@ -49,3 +50,14 @@ rewards immediately instead of queueing them for the next morning.
 Candidate fixes, each a design call: don't post a quest that is already satisfied; a batch
 complete when posted earns no reward (or no visitor); or cap arrivals per morning. CONTEXT.md
 says onboarding brings at most one villager per morning, and this is past onboarding.
+
+# Resolved (2026-10-22)
+
+The dev spotted it: "Seems like its replaying the last batch of onboarding quests." Confirmed:
+`TownQuests.tryPhase2_7_miner` had no posted check, so every batch request re-posted the miner
+beat. It now hands off once a miner JOB_CHANGE quest exists (`minerBeatPosted`). Red/green:
+`TutorialPhaseGateTest.whenMinerBeatDone_itIsNotPostedAgain` (2 miner quests before, 1 after);
+full `:test` 1402 tests, 0 failures. Live on the cascade world: the next request posted the
+phase 2.75 top-need batch (baker + breadmaker) and no miner batch. A second cascade had already
+run the following morning before the fix (03:22:52-55, 11 -> 18); 2 more arrived just after the
+restart, from rewards queued earlier. The world now has 20 villagers.

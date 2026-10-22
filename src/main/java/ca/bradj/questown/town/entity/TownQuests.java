@@ -1045,6 +1045,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         if (view.villagerCount() < 3) {
             return Tutorial.SKIPPED;
         }
+        if (minerBeatPosted()) {
+            // Posted once. Re-posting it on every batch request let backfill close each copy at
+            // once and its reward bring another villager (2026-10-22: 8 arrivals in 3 s).
+            return null;
+        }
         if (questBatches.includes(q -> !q.isComplete() && q.getType() == Quest.QuestType.JOB_CHANGE)) {
             // A job change is in flight; wait for it to land (or be dropped) before
             // the miner beat's BOP spend has a clean guarantee slot.
@@ -1055,11 +1060,17 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return Tutorial.APPLIED;
     }
 
+    private boolean minerBeatPosted() {
+        ResourceLocation minerJob = JobID.toRL(ONBOARDING_MINER_JOB);
+        return questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE
+                && minerJob.equals(q.getWantedId()));
+    }
+
     void addMiner(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
 
-        MCQuest minerJobQuest = MCQuest.jobChange(batchUUID, null, new JobID("miner", "coal"));
+        MCQuest minerJobQuest = MCQuest.jobChange(batchUUID, null, ONBOARDING_MINER_JOB);
         minerJobQuest.setFlavorText("Your town needs a miner. Teach a villager the miner job so coal stops being hand-fed.");
         q.addNewQuest(minerJobQuest);
 
@@ -1392,6 +1403,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
      * (2026-10-17 playtest). cook/extract is the cook progression root.
      */
     public static final JobID ONBOARDING_COOK_JOB = new JobID("cook", "extract");
+
+    /** The post-cook miner beat's job (phase 2.7). */
+    static final JobID ONBOARDING_MINER_JOB = new JobID("miner", "coal");
 
     void addHunterGatherer(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();

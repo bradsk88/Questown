@@ -282,6 +282,18 @@ top-need batch below it now picks up whichever need is NOT coal.
 `TutorialPhaseGateTest` walks the full ladder through the miner beat (the
 phase-ladder helpers post + complete it so later phases still advance).
 
+**Posted once (2026-10-22 agent playtest).** The phase had no "already posted"
+check: after the beat completed, every batch request (`questRequests`, which
+`tick` hands to `addTutorialBatches` first) re-posted it. The town already had
+the mineshaft, pickaxes, coal and a miner, so per-tick backfill closed each copy
+at once and its `PHASE_MINER` reward brought another villager with another
+request: 3 -> 11 -> 18 villagers over two mornings, and the later phases (2.75
+on) never ran. `minerBeatPosted()` (any JOB_CHANGE for `ONBOARDING_MINER_JOB`)
+now returns `null`, the same hand-off as the in-flight case. Pinned by
+`TutorialPhaseGateTest.whenMinerBeatDone_itIsNotPostedAgain`; the
+`questsWithTwoJobChangesDone` helper lost its extra walk, which the replay used
+to absorb and which now posts the crafter phase.
+
 ## World-load replay re-claims finished batches' rewards (every load, by construction)
 
 `QuestBatches.initialize` (the quest-deserializer's rebuild, NOT the flag

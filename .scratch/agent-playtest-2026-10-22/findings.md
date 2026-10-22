@@ -42,7 +42,7 @@ calls are marked (judge) for the dev.
    ("Villager 2" over the townie by the campfire).
 
 ## Noticed, not changed
-- **Ticketed (bug, judge the fix):** `self-satisfied-batch-villager-cascade.md`. One morning, 8
+- **[FIXED 2026-10-22]** `self-satisfied-batch-villager-cascade.md` (phase 2.7 replayed the miner beat). One morning, 8
   villagers arrived in 3 s: each new visitor's batch was already satisfied, backfill closed it at
   once, and its reward spawned the next visitor. 3 -> 11 villagers. World saved.
 - (to check) After that morning, "Fullness changed from 4990 to 5000" logged 4x every 10 ticks for
