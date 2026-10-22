@@ -12,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.DataSlot;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 
 public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements VillagerTabsEmbedding {
@@ -34,6 +35,8 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
         return menus.changeMenu;
     }
 
+    private final String promisedRoot;
+
     public <S extends IStatus<S>> JobChangeConfirmMenu(
             int windowId,
             Container gathererInv,
@@ -43,9 +46,11 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
             BlockPos flagPos,
             boolean alreadyPending,
             boolean showSkillsTab,
-            boolean showInventoryTab
+            boolean showInventoryTab,
+            String promisedRoot
     ) {
         super(MenuTypesInit.CONFIRM_JOB_CHANGE.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
+        this.promisedRoot = promisedRoot;
         gathererInventoryYOffset = 8;
         this.jobId = jobId;
         this.showSkillsTab = showSkillsTab;
@@ -86,6 +91,11 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
     public boolean showBlockOfProgressTab() {
         // TODO: Show BOP tab conditionally
         return false;
+    }
+
+    /** The root a spend is promised to give (an open onboarding job-change quest), or empty. */
+    public Optional<String> getPromisedRoot() {
+        return promisedRoot.isEmpty() ? Optional.empty() : Optional.of(promisedRoot);
     }
 
     public boolean isBlessed() {

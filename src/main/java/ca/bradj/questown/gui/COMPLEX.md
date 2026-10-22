@@ -1145,3 +1145,14 @@ a subset of recipes; the player just wants food. A category is an item tag offer
 - Pins: `RequestCategoriesTest` (3); autotest `loot:cook_extract_food_category` (a Food category
   request drives the cook exactly like the cooked-mutton one, 5/8). Live r8: hover, confirm
   ("Requesting Raw Food", 3 producers), posted card "Raw Food".
+
+## Change-job panel names the promised job (2026-10-22)
+
+While an onboarding job-change quest is open, a BOP spend on that townie gives the quest's job
+whatever the BOP (`TownQuests.onboardingJobChangeGuarantee`, now exposed as
+`TownFlagBlockEntity.promisedJobChange`), but the panel said "change to a different, random
+profession". The root rides `VillagerMenusPayload.promisedRoot` (and the server-side
+`JobChangeConfirmMenu`) and `JobChangeConfirmScreen` shows
+`menu.unlock_root.insert_bop_promised` ("Insert a Block of Progress to make this villager a
+Hunter"). Precedence matches the spend: promised beats a blessed BOP's text.
+`VillagerMenusPayloadTest` round-trips the field.

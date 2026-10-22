@@ -460,6 +460,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     /**
+     * The root a BOP spend on this townie is promised to give, whatever the BOP: an open onboarding
+     * job-change quest's job. Empty when the spend would roll (or follow the BOP's own blessing).
+     */
+    public Optional<JobID> promisedJobChange(UUID villagerUUID) {
+        return quests.onboardingJobChangeGuarantee(VillagerUUID.from(villagerUUID));
+    }
+
+    /**
      * The spend-and-request a player makes on a BOP: schedules the townie's root change
      * (the root is decided here - an onboarding quest's root beats the BOP's own blessing,
      * a blessed BOP beats a pre-roll, and the morning applies the decided root) and, when a
@@ -471,9 +479,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             boolean instant,
             Optional<JobID> guaranteedRoot
     ) {
-        Optional<JobID> effectiveGuarantee =
-                quests.onboardingJobChangeGuarantee(VillagerUUID.from(villagerUUID))
-                       .or(() -> guaranteedRoot);
+        Optional<JobID> effectiveGuarantee = promisedJobChange(villagerUUID).or(() -> guaranteedRoot);
         Optional<JobID> pending =
                 getVillagerHandle().scheduleJobRootChange(villagerUUID, instant, effectiveGuarantee);
         pending.ifPresent(root ->
@@ -2126,6 +2132,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         CompoundTag villagerTag = TownStateSerializer.storeVillager(TownFlagState.captureVillager(this, absorbed));
         AbsorbedJournals.remember(Compat.getBlockStoredTagData(this), absorbed.getUUID(), villagerTag);
         setChanged();
+    }
+
+    /** Townies absorbed by a shutdown and not yet respawned (persistent; survives a restart). */
+    List<UUID> absorbedVillagers() {
+        return AbsorbedJournals.absorbed(Compat.getBlockStoredTagData(this));
     }
 
     @Override

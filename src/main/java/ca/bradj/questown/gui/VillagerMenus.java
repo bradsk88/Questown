@@ -84,7 +84,8 @@ public class VillagerMenus {
                 p.flagPos,
                 p.jobChangeAlreadyPending,
                 p.showSkillsTab,
-                p.showInventoryTab
+                p.showInventoryTab,
+                p.promisedRoot
         );
         return menus;
     }
@@ -102,7 +103,8 @@ public class VillagerMenus {
             boolean showInventoryTab,
             boolean jobChangeAlreadyPending,
             String villagerDisplayName,
-            boolean changeRootAttention
+            boolean changeRootAttention,
+            String promisedRoot
     ) {
         new VillagerMenusPayload(
                 e.getId(),
@@ -119,7 +121,8 @@ public class VillagerMenus {
                 jobChangeAlreadyPending,
                 e.getSlotLocks(),
                 villagerDisplayName == null ? "" : villagerDisplayName,
-                changeRootAttention
+                changeRootAttention,
+                promisedRoot
         ).write(data);
     }
 

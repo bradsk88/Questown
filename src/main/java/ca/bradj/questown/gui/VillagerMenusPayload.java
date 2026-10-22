@@ -45,6 +45,8 @@ public final class VillagerMenusPayload {
     public final String villagerDisplayName;
     /** Red dot on the change-profession tab (TownQuests.wantsJobChangeFrom, server-computed). */
     public final boolean changeRootAttention;
+    // The root a BOP spend is promised to give (an open onboarding job-change quest), or "".
+    public final String promisedRoot;
 
     public VillagerMenusPayload(
             int entityId,
@@ -61,7 +63,8 @@ public final class VillagerMenusPayload {
             boolean jobChangeAlreadyPending,
             List<Boolean> slotLocks,
             String villagerDisplayName,
-            boolean changeRootAttention
+            boolean changeRootAttention,
+            String promisedRoot
     ) {
         this.entityId = entityId;
         this.villager = villager;
@@ -78,6 +81,7 @@ public final class VillagerMenusPayload {
         this.slotLocks = slotLocks;
         this.villagerDisplayName = villagerDisplayName == null ? "" : villagerDisplayName;
         this.changeRootAttention = changeRootAttention;
+        this.promisedRoot = promisedRoot;
     }
 
     public void write(FriendlyByteBuf buf) {
@@ -112,6 +116,7 @@ public final class VillagerMenusPayload {
         }
         buf.writeUtf(villagerDisplayName);
         buf.writeBoolean(changeRootAttention);
+        buf.writeUtf(promisedRoot);
     }
 
     public static VillagerMenusPayload read(FriendlyByteBuf buf) {
@@ -149,6 +154,7 @@ public final class VillagerMenusPayload {
         }
         String villagerDisplayName = buf.readUtf();
         boolean changeRootAttention = buf.readBoolean();
+        String promisedRoot = buf.readUtf();
         return new VillagerMenusPayload(
                 entityId,
                 villager,
@@ -164,7 +170,8 @@ public final class VillagerMenusPayload {
                 jobChangeAlreadyPending,
                 slotLocks,
                 villagerDisplayName,
-                changeRootAttention
+                changeRootAttention,
+                promisedRoot
         );
     }
 }

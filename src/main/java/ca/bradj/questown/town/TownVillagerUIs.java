@@ -466,7 +466,8 @@ public class TownVillagerUIs {
                                 d.entity().getFlagPos(),
                                 d.jobChangePending(),
                                 !d.unlockableJobs().isEmpty(),
-                                d.showInventoryTab()
+                                d.showInventoryTab(),
+                                promisedRoot(d.sender(), d.entity())
                         ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                 )
         );
@@ -524,6 +525,17 @@ public class TownVillagerUIs {
         return flag != null && flag.wantsJobChangeFrom(e.getJobId());
     }
 
+    private static String promisedRoot(ServerPlayer sender, VisitorMobEntity e) {
+        if (e.getFlagPos() == null) {
+            return "";
+        }
+        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level(), e.getFlagPos());
+        if (flag == null) {
+            return "";
+        }
+        return flag.promisedJobChange(e.getUUID()).map(JobID::rootId).orElse("");
+    }
+
     private static void openMenu(
             ServerPlayer sender,
             TriFunction<Integer, Inventory, Player, AbstractContainerMenu> shower,
@@ -563,7 +575,8 @@ public class TownVillagerUIs {
                         showInventoryTab,
                         isJobChangePending,
                         villagerDisplayName,
-                        wantsJobChange(sender, e)
+                        wantsJobChange(sender, e),
+                        promisedRoot(sender, e)
                 )
         );
         if (e.getFlagPos() != null) {

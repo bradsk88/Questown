@@ -517,6 +517,7 @@
   "menu.unlock_job.insert_bop": "Insert a Block of Progress to unlock job",
   "menu.unlock_root.insert_bop": "Insert a Block of Progress to change to a different, random profession (starting tomorrow morning)",
   "menu.unlock_root.insert_bop_blessed": "This \"special\" Block of Progress will change profession to \"%s\" (starting tomorrow morning)",
+  "menu.unlock_root.insert_bop_promised": "Insert a Block of Progress to make this villager a %s (starting tomorrow morning)",
   "menu.unlock_root.unguaranteed_job": "a random profession",
   "menu.unlock_root.already_pending": "This villager will change profession in the morning",
   "menu.block_of_progress.town_has_1": "The village now has 1 Block of Progress!",

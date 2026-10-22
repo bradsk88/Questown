@@ -13,6 +13,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 
 import java.util.List;
+import java.util.Optional;
 
 public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfirmMenu> {
 
@@ -104,7 +105,13 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
 
         String key = "menu.unlock_root.insert_bop";
         Object[] args = new Object[0];
-        if (menu.isBlessed()) {
+        // An open onboarding job-change quest decides the root whatever the BOP, so say which
+        // job instead of "a random profession" (2026-10-22 r8).
+        Optional<String> promised = menu.getPromisedRoot();
+        if (promised.isPresent()) {
+            key = "menu.unlock_root.insert_bop_promised";
+            args = new Object[]{Compat.translatable("jobs." + promised.get())};
+        } else if (menu.isBlessed()) {
             key = "menu.unlock_root.insert_bop_blessed";
             // A plain-blessed stack without a guaranteed root keeps the legacy generic text;
             // a "gold" BOP names the root it will change to.
