@@ -33,7 +33,8 @@ calls are marked (judge) for the dev.
    1 days": two hand-broken lang keys, each re-wrapped by the dynamic wrap (the count alone on a
    line), and "1 days" since `PERIOD_DAYS` is 1. Now one sentence ("Raw Mutton was needed 6 times
    in the past day"), wrapped as a paragraph on both economics screens. Verified live, gui-lint OK.
-   Left: "needed 1 times" when the count is 1 (judge: copy).
+   A count of 1 now reads "was needed once in the past day" (dev ruling; unit-tested, not seen live:
+   no count-1 card existed at the time).
 
 9. **[FIXED 2026-10-22]** After a server restart, villager nameplates read "menu.villager.name"
    (seen through the bedroom wall at night). `register` re-runs on load and saved a

@@ -15,6 +15,11 @@ public record ItemEconomicsData(
      * the count alone on its own line once wrapped; playtest 2026-10-22).
      */
     public static Component neededTooltip(Component itemName, int timesNeeded) {
+        if (timesNeeded == 1) {
+            return PERIOD_DAYS == 1
+                    ? Compat.translatable("questown.menu.needs_once_in_past_day", itemName)
+                    : Compat.translatable("questown.menu.needs_once_in_period", itemName, PERIOD_DAYS);
+        }
         if (PERIOD_DAYS == 1) {
             return Compat.translatable("questown.menu.needs_in_past_day", itemName, timesNeeded);
         }

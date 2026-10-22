@@ -520,6 +520,8 @@
   "menu.block_of_progress.take": "Take Block of Progress",
   "questown.menu.needs_in_past_day": "%s was needed %d times in the past day",
   "questown.menu.needs_in_period": "%s was needed %d times in the past %d days",
+  "questown.menu.needs_once_in_past_day": "%s was needed once in the past day",
+  "questown.menu.needs_once_in_period": "%s was needed once in the past %d days",
   "questown.menu.free_food_card": "Free food →",
   "questown.menu.free_food_card.tooltip": "Click to claim 20 free carrots for the town's storeroom.",
   "questown.menu.quests.job_change": "Villager job: %s",
