@@ -42,6 +42,13 @@ calls are marked (judge) for the dev.
    ("Villager 2" over the townie by the campfire).
 
 ## Noticed, not changed
+- **Ticketed (judge):** `sleeping-leaver-shows-left-town.md`. A gatherer whose trip spanned
+  nightfall slept in bed all night while its card said "Gatherer has left town to collect items";
+  the trip resumed at sunrise.
+- (judge) Crafting tab: the "N in your inventory" count is taken when the screen opens; with
+  stone stairs given while it was open, Craft did nothing ("0 in your inventory") until reopened.
+- (judge) Quests tab grows with completed (green) cards: 4 open quests sat on "Page 1 / 7", the
+  other 6 pages all completed ones. The separate completed view only applies when all are done.
 - (judge) The need bubble ("!") draws over the end of the nameplate ("Villag[!]2").
 - (to check) A night-time wand use on the lit campfire from 13 blocks away did nothing and logged
   nothing (02:52:42, `[click held] ... -> PASS`); the same use by day reached `beginCampfireSleep`
@@ -76,7 +83,22 @@ calls are marked (judge) for the dev.
   morning" while chat says "New visitors will arrive after all players sleep". Same event, two
   framings.
 
+- (judge) When every quest was done, the ticker's "No quests found" batch for the new miner
+  (03:07:42, `TownFlagTicker.addQuests`) re-asked Mineshaft, Miner job, Wooden Pickaxe x4, Stone
+  Sword x4 and Coal x8. All but coal were already satisfied, so backfill closed them in the same
+  second, and chat repeated "Quest completed: Mineshaft" (first at 03:02:52) and "Villager job:
+  Miner" (twice in 15 s). Backfill announcing is documented (`town/entity/COMPLEX.md` "Quest
+  backfill"); the duplicate asks are the question. It repeated: three such batches in 3 minutes
+  (03:07:42, 03:09:50, 03:10:45), each re-closing Mineshaft + Miner job + pickaxes at once; chat
+  showed "Quest completed: Mineshaft" 4 times and "Villager job: Miner" 4 times. It stopped once
+  everything was done ("You will be rewarded in the morning").
+- (judge) A completed Coal x8 card (green, ticked) reads "(7/8)": the count is the live storeroom
+  tally, and the cook burned one coal after the quest closed.
+
 ## Fine (checked)
+- Mineshaft: crafted from stone stairs on the flag's crafting tab, placed in the empty room
+  (quest done, "recipe_created" at 22,179); BOP on the gatherer: blessed BOP -> Miner at once
+  (creative), quest done, miner took a wooden pickaxe from the storeroom and left.
 - Villagers page status tooltip (04635315) wraps live: "Cook is resting / until morning." on two
   lines, inside the window (night status, 2026-10-22 02:45 session).
 - Day-1 quest cards (Campfire, Town Gate) carry no discard x (last session's fix holds live).
