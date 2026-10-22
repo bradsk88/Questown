@@ -74,7 +74,7 @@ calls are marked (judge) for the dev.
 - **Ticketed:** `known-gather-results-ignore-loot-prefix.md`. Requesting wheat seeds says "20
   known jobs" produce them; 5 do. Every biome-loot job (hunter, miner, tool gatherers) claims
   the seed floor and every other prefix's finds. Not fixed: the same function gates leaver loot.
-- (judge) The Block of Progress item is a small 8-px cube at GUI scale 0.5, so in the hotbar it
+- **[FIXED 2026-10-22, dev: scale up in GUI; gui display scale 0.5 -> 1.25, matches a vanilla block in the slot]** The Block of Progress item is a small 8-px cube at GUI scale 0.5, so in the hotbar it
   reads as a tiny sliver next to full-size items.
 - (judge) "Job changed to Hunter for villager Villager 1": the copy doubles "villager" when the
   townie has the fallback name.
