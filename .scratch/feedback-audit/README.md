@@ -134,6 +134,11 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
    holds now (fuel: furnace lacks fuel; extract: furnace has output) and banded otherwise, with the
    warp list keeping all of them. Detail: `.scratch/cook-scoring-tie/always-consider-noop-tie-mechanism.md`.
    Question: try that, or leave the flip?
+   **Dev answer (2026-10-23):** neither. `always_consider` is a gate bypass (introduced 9e533826, "ignore
+   the supply gate"). Make `TownPossibleWork.gateFacts` read the job's `block.has_item_in_slot_initially`
+   (`SlotPrecondition`) against the room's job blocks; remove `always_consider` from cook/baker fuel+extract;
+   the warp list must keep slot jobs whose precondition can become true mid-warp. Commit only when the cook autotests are 6/6 again. Stock/fetcher jobs keep it for now.
+   **Done 18a43a23** (cook 7/7, baker 1/1, suite 92/94; the two stock jobs still tie a ready food job).
 2. **Wake, cancel and deed re-issue have no player UI.** Shutdown starts from the flag's relocate
    button (`BeginTownRelocationMessage` -> `beginTownShutdown`). `wakeInPlace`, `reissueDeed` and
    `cancelTownShutdown` are called only from `FlagShutdownCommand` (`/qt flag <pos> shutdown
@@ -143,16 +148,22 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
    Recommendation: right-clicking a dormant flag with no deed waiting opens a two-button confirm
    ("Wake the town" / "Get the deed back"), and the flag menu shows "Cancel" during the ritual.
    Question: build that now, or park it with relocation?
+   **Dev answer (2026-10-23):** build it now, as recommended (dormant-flag confirm with Wake / Get the deed back; Cancel in the flag menu during the ritual).
+   **Done 87dfc36d** (verified live through the real right-click; gui-lint OK).
 3. **Miner "No quests found" batch re-asks satisfied quests.** agent-10-22 findings:100. With every
    quest done, `TownFlagTicker.addQuests` posted a miner batch (Mineshaft, Miner job, pickaxes,
    swords, coal); all but coal were already satisfied, so backfill closed them in the same second
    and chat repeated "Quest completed: Mineshaft" three times in 3 minutes. Recommendation: build
    the fallback batch only from quests not already satisfied (no backfill chat for those).
    Question: OK, or should the fallback batch stop entirely now that post-onboarding is rooms only?
+   **Dev answer (2026-10-23):** stop the fallback batch entirely (post-onboarding is rooms only).
+   **Done cb51a173.**
 4. **"I need a fishing rod to work" for a job the townie hasn't unlocked**
    (`day1-playtest-2026-10-11/villager-asks-for-unlocked-job-tool.md`). The status line names the
    gate item of a candidate job the townie can't hold yet. Recommendation: name only items for
    jobs the townie can hold (unlock != workability). Question: OK?
+   **Dev answer (2026-10-23):** OK, only name items for jobs the townie can hold.
+   **Done ff65cd00.**
 5. **Restart mid-shutdown was broken; fixed (2ff42b88).** No question, just a heads-up: shutdown,
    then a restart before dormant, used to leave the flag "needs a moment to start up" forever.
 
@@ -163,11 +174,15 @@ dev's chat; 71 carry a done-like status, 78 do not (`open-tickets-2026-10-22.txt
    Detail: `.scratch/agent-playtest-2026-10-22-r9/findings.md` #13. Recommendation: put the chest in
    the far interior corner (2-line change; the chicken-arc autotests would need a re-run). Question:
    OK, or would you rather the shell grow to the documented 3x3 interior?
+   **Dev answer (2026-10-23):** chest in the far interior corner; fix the javadoc; re-run chicken-arc.
+   **Done 24d3968b** (chicken F1-F4 pass in the full suite).
 7. **Working villagers show the missing-texture checkerboard as their status icon.** `StatusArt` has no
    art for work states (`state:N`), WAITING_FOR_TIMED_STATE or EXTRACTING_PRODUCT, so it returns
    `textures/error.png` (same in 1.19.2). Detail: r9 findings #14. Recommendation: map them to the
    unused `gathering.png` / `returned_success.png` until per-job art exists. Question: OK, or do you
    want new art?
+   **Dev answer (2026-10-23):** new art (dedicated icons for work / waiting / extracting). The dev draws them; the agent wires StatusArt to three new texture paths with placeholders until the PNGs land.
+   **Done 28619e09** (placeholders: menu/gatherer/working.png, waiting.png, extracting.png; replace the files).
 8. **"Begin moving this town" now takes two clicks (3c1b3d1a).** Heads-up, no question: it packed the
    town on one click with no in-game undo. Easy to revert (one method) if you disagree.
 
