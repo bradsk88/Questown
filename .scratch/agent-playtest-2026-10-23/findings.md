@@ -60,3 +60,29 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
    `self_sufficiency` cook unlocked 2/3 vs 3/3 unnarrowed. Reverted; the real fix is the doc's
    "deeper fix" (why `hunter/sword` doesn't start). `ChickenArcLootGuarantee` has the same
    any-job shape, also documented as deliberate.
+8. (judge, minor copy) A hungry cook reads "Cook is looking for food. / They need Coal to work.":
+   line 1 is the diner status, line 2 the job's blocker (need line replaces any non-working
+   line 2, diners included). Both true; the pairing reads like one thought.
+9. (minor, churn) A hungry-but-not-starving cook with no cooked food in town bounced
+   `dining_no_table -> downtime -> dining_no_table` every ~200 ticks (07:24:44-07:25:10, 5 cycles)
+   until the board picked work (`dining_no_table -> fuel`). Same mechanism as #6 (board sends a
+   diner to downtime; downtime's instant-eat restarts the diner) but the #6 guard only covers a
+   starving diner, and the raw-food fallback is starving-only. Self-resolved; once cooked mutton
+   existed the cook ate (07:26:56). Status flaps between dining/relaxing during it.
+10. **[FIXED, pending live verify]** (bug, copy) An eating villager's status read "Cook is busy
+    with their work." The `diner` tooltip category had keys only for NO_SUPPLIES and NO_JOBSITE;
+    every other diner status (work states 0-2, GOING_TO_JOB, COLLECTING_SUPPLIES,
+    WAITING_FOR_TIMED_STATE, EXTRACTING_PRODUCT, IDLE) fell to `JobTooltips.FALLBACK_LINE_1`. Added
+    diner copy ("%s is going to eat.", "%s is eating.", ...).
+11. (judge, P1 for onboarding flow) Day 5: the new cook idles with raw beef, porkchop and chicken
+    in storage, coal 12, and the cook-batch "Food (4/8)" quest open (any `#villager_food`).
+    `_qtdev work_score`: beef/porkchop/chicken 1.0 but "[Product not requested]"; the board's
+    cook request is the auto-posted `cooked_mutton` (the cook's starter request), and the hunter
+    brings beef/porkchop/chicken/leather, not mutton, so mutton scores 0. The picker only takes a
+    job that satisfies a board request whenever the board holds any (`JobCycler.isValid`,
+    `jobs/COMPLEX.md` "A slot-extract job requests what its slot holds"). The player has to work
+    out that the board's mutton ask is what's blocking. Options for the dev: the cook's starter
+    request names the category (`#questown:villager_food`, like the quest) instead of mutton; or
+    the picker falls back to unrequested work when no requested product is producible. Not
+    changed (design). Live day 6: the cook's status reads "Cook is looking for supplies. / They
+    need Raw Mutton to work." while beef/porkchop/chicken sit in storage.

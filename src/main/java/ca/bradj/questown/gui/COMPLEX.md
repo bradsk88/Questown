@@ -1262,3 +1262,8 @@ returns the hovered icon's tooltip lines (root + variant name, `Jobs.getComponen
 and `WorkRequestConfirmScreen.renderJobIcons` dropped that return, so hovering only highlighted
 the icon. It now passes the lines to `showTooltip`. Live: hovering the first boot reads
 "Gatherer / Gather (half day)".
+
+Diner statuses (all three diners share the `diner` tooltip category in `JobTooltips`) had keys
+only for NO_SUPPLIES and NO_JOBSITE, so an eating villager read the generic "%s is busy with their
+work." (r10 #10). The diner category now covers its work states (0-2), GOING_TO_JOB,
+COLLECTING_SUPPLIES, WAITING_FOR_TIMED_STATE, EXTRACTING_PRODUCT and IDLE.
