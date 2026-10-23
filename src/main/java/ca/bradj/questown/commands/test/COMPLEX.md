@@ -883,3 +883,24 @@ builder clears worldgen first; without that, the detected room varied by seed (1
 of 42). Red: with the `deb6333` jar, the 1-bed room matched no bedroom (that commit's own run
 passed "one-bed-is-not-a-bedroom"). The quest cards show one icon per bed through
 `RoomRecipes.filterSpecialBlocks` (`gui/COMPLEX.md` "Room quest cards show one icon per bed").
+
+## Town sleep: flag/awake_near_a_far_townie, flag/asleep_far_from_its_townies (2026-10-23)
+
+The town's tick radius is measured from its townies, not its flag (`CONTEXT.md` "Town sleep",
+`TownSleepRadius`). Both scenarios take the flag ritual base (2 townies, farm room, 300 realtime
+ticks), then in the post-spawn action force-load the chunk 160 blocks east of the flag (past the
+default 100-block radius) and teleport every townie there, so their bodies keep ticking:
+
+- `awake_near_a_far_townie` also moves the player beside them (`moveTo` plus
+  `ChunkSource.move`, since a FakePlayer's `teleportTo` is a no-op). Pass: the flag is not
+  `INACTIVE`, and some townie decided (`TownieRuntime.lastDecidedAt`) more than 50 ticks after
+  the move. The margin allows for a townie in bed.
+- `asleep_far_from_its_townies` leaves the player at the flag. Pass: the flag is `INACTIVE` and no
+  townie decided after the tick of the move. The log reads "stopped ticking because: Closest
+  player is 160 blocks from the town's nearest townie".
+
+The assertion puts the world back: townies beside the flag, players at their start, the far
+chunk released. The fake player is shared by every later scenario, and the sleep rule reads its
+position. Red: with `allPlayersLeftArea` measuring from the flag only, both fail every check
+(awake: inactive=true and no decisions after the move; asleep: inactive=false and decisions to
+the end).

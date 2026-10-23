@@ -174,6 +174,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
     private Signals.DayTime lastBedTime = new Signals.DayTime(Signals.NIGHT_START_TICK);
     private @Nullable Vec3 lastPos = null;
     private BlockPos wanderTarget;
+    /** See {@link TownieBody#lastTickedAt()}. */
+    private long lastTickedAt = -1;
 
     public VisitorMobEntity(
             EntityType<? extends PathfinderMob> ownType,
@@ -390,14 +392,16 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
             return;
         }
 
+        // The flag makes the townie's decisions in this game tick, after every entity has ticked.
+        lastTickedAt = sl.getGameTime();
         entityData.set(hasBOP, town.getVillagerHandle().hasBlockOfProgress(getUUID()));
 
-        if (runtime.spendFrozenTick()) {
+        if (runtime.isTickFrozen()) {
             return;
         }
 
         long start = System.currentTimeMillis();
-        villagerTick(sl, runtime);
+        villagerTick(sl);
         long end = System.currentTimeMillis();
 
         spawnIdleParticlesIfNeeded(sl);
@@ -443,10 +447,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
     // only handle cosmetic stuff like position, pose, etc.
 
     /**
-     * The body's part of a tick around the townie's decisions ({@link TownieRuntime}): sense who is
-     * looking, show hunger, get unstuck from walls, take the requested pose, open gates.
+     * The body's own tick: sense who is looking, show hunger, get unstuck from walls, stay known to
+     * the town, open gates. The townie's decisions (its job, where to walk, the pose it asks for,
+     * what the body shows) are the flag's, made right after: {@code TownieRuntime.tick}.
      */
-    private void villagerTick(ServerLevel sl, TownieRuntime townie) {
+    private void villagerTick(ServerLevel sl) {
         detectNearbyDistractions(sl);
         town.getVillagerHandle().getLookTarget(getVUID()).ifPresentOrElse(
                 lookControl::setLookAt,
@@ -459,8 +464,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
             addParticlesAroundSelf(sl, ParticleTypes.EFFECT);
         }
 
-        townie.switchToWorkSeekerIfStuck();
-
         if (isInWall()) {
             Vec3 nudged = position().add(-1.0 + (random.nextDouble() * 2.0), 0, -1.0 + (random.nextDouble() * 2.0));
             town.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.VILLAGER_NAVIGATION).log(
@@ -469,16 +472,24 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
             moveTo(nudged);
         }
 
-        var ticked = townie.tickJob(getStatusForClient());
-
-        town.getVillagerHandle().getRequestedPose(uuid).ifPresent(this::applyRequestedPose);
-
-        townie.steer(this, ticked);
-
         town.getVillagerHandle().validateEntity(this);
 
-        townie.showOn(this, sl, ticked);
         this.useNearbyGates();
+    }
+
+    @Override
+    public long lastTickedAt() {
+        return lastTickedAt;
+    }
+
+    @Override
+    public @Nullable String getShownStatus() {
+        return getStatusForClient();
+    }
+
+    @Override
+    public void takePose(PoseInPlace pose) {
+        applyRequestedPose(pose);
     }
 
     private void setLookFromBrain() {

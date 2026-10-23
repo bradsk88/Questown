@@ -120,7 +120,7 @@ public class Config {
                 "The radius (around the town flag) where this mod will search for doors for room detection"
         ).define("DoorSearchRadius", 100);
         TOWN_TICK_RADIUS = BUILDER.comment(
-                "The radius (around the town flag) where this mod will search for players. If no players are found, the flag will stop ticking."
+                "The squared radius (default 10000 = 100 blocks) around the town's townies (around the town flag, before any townie arrives) where this mod will search for players. If no players are found, the town sleeps: the flag and its townies stop ticking until a player returns."
         ).define("TownTickRadius", 10000);
         TOWN_SHUTDOWN_TICKS = BUILDER.comment(
                 "The minimum duration (in ticks) a town shutdown ritual must run before the flag can go dormant for relocation. " +

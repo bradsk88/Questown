@@ -78,8 +78,9 @@ public final class TownRelocation {
     /**
      * Place a relocation deed with an explicit {@link FarFixturePolicy} for fixtures that fall outside
      * the new flag's tick radius (ADR-0009, #199 Phase 4). Uses the configured {@link
-     * Config#TOWN_TICK_RADIUS} as the cutoff — the same squared distance the ticker uses to decide
-     * whether a flag is close enough to a player to keep ticking.
+     * Config#TOWN_TICK_RADIUS} as the cutoff, measured from the new flag — the radius the ticker
+     * keeps a town awake within (it measures a player's distance to the town's townies, or to the
+     * flag before any townie arrives).
      */
     public static RelocationResult place(
             ServerLevel level,
@@ -248,9 +249,9 @@ public final class TownRelocation {
     }
 
     /**
-     * Whether {@code fixturePos} is farther from {@code targetPos} than the tick radius — using the
-     * same squared-distance comparison the ticker uses against {@link Config#TOWN_TICK_RADIUS}, so
-     * "can't tick it from here" and "too far to bring" stay one definition.
+     * Whether {@code fixturePos} is farther from {@code targetPos} than the tick radius — the same
+     * squared-distance comparison against {@link Config#TOWN_TICK_RADIUS} the ticker makes
+     * ({@code TownSleepRadius.isAsleep}), measured from the new flag.
      */
     public static boolean isBeyondRadius(
             BlockPos targetPos,

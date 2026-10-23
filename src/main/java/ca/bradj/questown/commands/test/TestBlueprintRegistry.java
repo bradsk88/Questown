@@ -289,6 +289,9 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("too_short_room_dead", tooShortRoomBlueprint()));
         jobs.add(flagEntry("floating_chest_room", floatingChestRoomBlueprint()));
         jobs.add(flagEntry("floating_furniture_over_half", floatingFurnitureOverHalfBlueprint()));
+        // Town sleep (2026-10-23): the tick radius is measured from the town's townies, not the flag.
+        jobs.add(flagEntry("awake_near_a_far_townie", townSleepBlueprint(true)));
+        jobs.add(flagEntry("asleep_far_from_its_townies", townSleepBlueprint(false)));
         jobs.add(flagEntry("bed_is_two_blocks", bedIsTwoBlocksBlueprint()));
         jobs.add(flagEntry("unlinked_placement_no_dupe", unlinkedPlacementNoDupeBlueprint()));
         jobs.add(flagEntry("filled_storeroom_alive", filledStoreroomBlueprint()));
@@ -1687,6 +1690,104 @@ public class TestBlueprintRegistry {
     private static boolean report(TestOutput output, String label, boolean pass) {
         output.msg((pass ? "PASS " : "FAIL ") + label);
         return pass;
+    }
+
+    // Past the default TownTickRadius (10000, squared: 100 blocks).
+    private static final int TOWN_SLEEP_DX = 160;
+
+    /**
+     * Town sleep ({@code CONTEXT.md} "Town sleep"): a town stays awake while a player is near one of
+     * its townies, wherever its flag is. Both cases move every townie {@link #TOWN_SLEEP_DX} blocks
+     * east of the flag, into a force-loaded chunk so their bodies keep ticking. With
+     * {@code playerWithTownies} the player stands beside them: the town stays awake and the townies
+     * keep deciding. Otherwise the player stays at the flag: the town sleeps and the townies stop
+     * deciding. The old flag-centred rule got both cases backwards.
+     */
+    private static TestBlueprint townSleepBlueprint(boolean playerWithTownies) {
+        TownSleepCapture cap = new TownSleepCapture();
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) ->
+                        moveTowniesAway(level, flagPos, town, output, cap, playerWithTownies))
+                .withCustomAssertion((level, flagPos, town, output) ->
+                        assertTownSleep(level, flagPos, town, output, cap, playerWithTownies));
+    }
+
+    private static final class TownSleepCapture {
+        BlockPos farPos;
+        long movedAt;
+        final Map<ServerPlayer, Vec3> playerStarts = new HashMap<>();
+    }
+
+    private static boolean moveTowniesAway(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output,
+            TownSleepCapture cap,
+            boolean playerWithTownies
+    ) {
+        int x = flagPos.getX() + TOWN_SLEEP_DX;
+        int z = flagPos.getZ();
+        net.minecraft.world.level.ChunkPos far = new net.minecraft.world.level.ChunkPos(new BlockPos(x, 0, z));
+        level.setChunkForced(far.x, far.z, true);
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        cap.farPos = new BlockPos(x, y, z);
+        for (LivingEntity e : town.getVillagerHandle().entities()) {
+            e.teleportTo(x + 0.5, y, z + 0.5);
+        }
+        if (playerWithTownies) {
+            // A FakePlayer's teleportTo is a no-op (see VillageGrowthExecutor.movePlayer).
+            for (ServerPlayer p : level.players()) {
+                cap.playerStarts.put(p, p.position());
+                p.moveTo(x + 2.5, y, z + 0.5, p.getYRot(), p.getXRot());
+                level.getChunkSource().move(p);
+            }
+        }
+        cap.movedAt = level.getGameTime();
+        output.msg("town-sleep: moved " + town.getVillagerHandle().entities().size() + " townie(s) to "
+                + cap.farPos.toShortString() + (playerWithTownies ? ", the player beside them" : ", the player at the flag"));
+        return true;
+    }
+
+    private static boolean assertTownSleep(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output,
+            TownSleepCapture cap,
+            boolean playerWithTownies
+    ) {
+        BlockState flag = level.getBlockState(flagPos);
+        boolean asleep = flag.hasProperty(TownFlagBlock.INACTIVE) && flag.getValue(TownFlagBlock.INACTIVE);
+        long lastDecided = -1;
+        for (LivingEntity e : town.getVillagerHandle().entities()) {
+            ca.bradj.questown.town.entity.TownieRuntime townie = town.getTownie(e.getUUID());
+            if (townie != null) {
+                lastDecided = Math.max(lastDecided, townie.lastDecidedAt());
+            }
+        }
+        output.msg("town-sleep: inactive=" + asleep + " lastDecidedAt=" + lastDecided
+                + " movedAt=" + cap.movedAt + " now=" + level.getGameTime());
+        boolean ok;
+        if (playerWithTownies) {
+            ok = report(output, "1 awake: a player is beside its townies, far from the flag", !asleep);
+            ok &= report(output, "2 the far townies kept deciding", lastDecided > cap.movedAt + 50);
+        } else {
+            ok = report(output, "1 asleep: the player is at the flag, its townies are far away", asleep);
+            ok &= report(output, "2 the townies stopped deciding", lastDecided <= cap.movedAt + 1);
+        }
+
+        // Put the world back for the next scenario: townies home, players back, chunk released.
+        for (LivingEntity e : town.getVillagerHandle().entities()) {
+            e.teleportTo(flagPos.getX() + 0.5, flagPos.getY(), flagPos.getZ() + 2.5);
+        }
+        cap.playerStarts.forEach((p, start) -> {
+            p.moveTo(start.x, start.y, start.z, p.getYRot(), p.getXRot());
+            level.getChunkSource().move(p);
+        });
+        net.minecraft.world.level.ChunkPos far = new net.minecraft.world.level.ChunkPos(cap.farPos);
+        level.setChunkForced(far.x, far.z, false);
+        return ok;
     }
 
     private static void setPhase(ServerLevel level, BlockPos flagPos, FlagPhase phase) {

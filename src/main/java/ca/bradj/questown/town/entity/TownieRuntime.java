@@ -49,6 +49,8 @@ public final class TownieRuntime {
     private @Nullable TownieBody body;
     /** Where the townie was when it last had a body in the world (its body's position otherwise). */
     private Vec3 lastPosition;
+    /** The game tick of the townie's last decisions (see {@link #tick}); -1 before its first. */
+    private long lastDecidedAt = -1;
     private final List<Consumer<ImmutableList<Ingredient>>> ingrListeners = new ArrayList<>();
     private final List<Runnable> changeListeners = new ArrayList<>();
     private final Collection<Function<Void, Void>> cleanupJobListeners = new ArrayList<>();
@@ -106,6 +108,14 @@ public final class TownieRuntime {
         }
         this.lastPosition = b.position();
         this.body = null;
+    }
+
+    /**
+     * The game tick in which the townie last made its decisions, or -1 before its first. It stops
+     * advancing while the town sleeps or the townie's body is unloaded, asleep or frozen.
+     */
+    public long lastDecidedAt() {
+        return lastDecidedAt;
     }
 
     /** Where the townie is: its body's position, or where it last stood while it has no body. */
@@ -203,11 +213,33 @@ public final class TownieRuntime {
     }
 
     /**
-     * The first of the townie's per-tick decisions, in tick order: {@link #switchToWorkSeekerIfStuck},
-     * {@link #tickJob}, {@link #steer}, {@link #showOn}. A townie that has collected supplies without
-     * a target for too long goes back to seeking work.
+     * The townie's decisions for one game tick. The flag makes them after every entity has ticked
+     * (entities tick before block entities), and only in a game tick its body ticked in: loaded in an
+     * entity-ticking chunk, awake, its town initialized. That is exactly when the body used to make
+     * them itself, so a townie whose body is unloaded or asleep decides nothing, as before.
      */
-    public void switchToWorkSeekerIfStuck() {
+    void tick(ServerLevel sl, long gameTime) {
+        TownieBody b = body;
+        if (b == null || b.isRemoved() || b.lastTickedAt() != gameTime) {
+            return;
+        }
+        if (spendFrozenTick()) {
+            return;
+        }
+        lastDecidedAt = gameTime;
+        switchToWorkSeekerIfStuck();
+        var ticked = tickJob(b.getShownStatus());
+        town.villagerHandle.delegate.getRequestedPose(uuid).ifPresent(b::takePose);
+        steer(b, ticked);
+        showOn(b, sl, ticked);
+    }
+
+    /**
+     * The first of the townie's per-tick decisions, in tick order: {@link #switchToWorkSeekerIfStuck},
+     * {@link #tickJob}, the requested pose, {@link #steer}, {@link #showOn}. A townie that has
+     * collected supplies without a target for too long goes back to seeking work.
+     */
+    void switchToWorkSeekerIfStuck() {
         if (ticksWithoutJobTarget <= Compat.configGet(Config.MAX_TICKS_WITHOUT_SUPPLIES).get()) {
             return;
         }
@@ -222,7 +254,7 @@ public final class TownieRuntime {
      * the rest of this tick steers and shows by the job that ticked, as the entity always did:
      * the new job has not ticked yet and has no rooms or target to offer.
      */
-    public Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> tickJob(
+    Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> tickJob(
             @Nullable String statusShownByBody
     ) {
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> ticked = job;
@@ -238,7 +270,7 @@ public final class TownieRuntime {
      * still. The target is (re)applied only when the body has no walk target or is already walking
      * to it: a body walking somewhere else keeps going there (behaviour carried over from the entity).
      */
-    public void steer(TownieBody b, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> ticked) {
+    void steer(TownieBody b, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> ticked) {
         if (ticked.shouldStandStill(town, b.blockPosition())) {
             b.clearWalkTarget();
             return;
@@ -259,7 +291,7 @@ public final class TownieRuntime {
      * job that ticked), and counts how long the townie's current job has been collecting supplies
      * without a target.
      */
-    public void showOn(
+    void showOn(
             TownieBody b,
             ServerLevel sl,
             Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> ticked
@@ -405,7 +437,7 @@ public final class TownieRuntime {
     }
 
     /** True, spending one frozen tick, while the townie is frozen. */
-    public boolean spendFrozenTick() {
+    boolean spendFrozenTick() {
         if (freezeTicks <= 0) {
             return false;
         }

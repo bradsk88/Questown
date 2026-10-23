@@ -740,6 +740,12 @@ now gated on the same `playersNearbyOnPrevTick` flag: it fires once on the trans
 log frequency. (Found 2026-10-12 during the econ-tab crash-probe repro; ticket
 `.scratch/day1-playtest-2026-10-11/flag-stopped-ticking-per-tick-log-spam.md`.)
 
+Since 2026-10-23 the "player went far" branch measures from the town's nearest townie, not the
+flag (`TownSleepRadius`; the flag only while the town has no townies), and logs the real distance
+in blocks ("Closest player is N blocks from the town's nearest townie"; it used to print the
+squared distance as "blocks"). The townies' positions come from their runtimes, so an unloaded
+townie counts where it last stood.
+
 # Top-need room quest — lock-until-complete (no per-tick churn)
 
 Phase 2.75 (`tryPhase2_75_topNeedUnlock`) names the town's top unmet need and posts the base
@@ -1592,11 +1598,43 @@ flowchart LR
   `flag/floating_furniture_over_half` and `organizer/fetch [warp]` (the latter goes through
   `recoverMobs`; 3/3 alone).
 
-## Tick order (the entity still triggers it)
+## Tick order — the flag drives the townies
 
-`VisitorMobEntity.tick` → `villagerTick(sl, runtime)`, in the order the entity always ran it:
-body (distractions, look target, starving pose) → `switchToWorkSeekerIfStuck` → body (wall nudge)
-→ `tickJob` → body (requested pose) → `steer` → `validateEntity` → `showOn` → body (gates).
+```mermaid
+flowchart LR
+    subgraph E["entity phase (every entity ticks first)"]
+        B["VisitorMobEntity.tick<br/>lastTickedAt = gameTime<br/>body: distractions, look, starving pose,<br/>wall nudge, validateEntity, gates"]
+    end
+    subgraph F["block-entity phase: flag tick, town awake"]
+        P["AbstractTownFlagTicker: phase 'townies'<br/>(every tick, above the isFlagTick throttle)"]
+        P --> T["TownVillagerHandle.tickTownies"]
+        T --> R["TownieRuntime.tick, if body.lastTickedAt == now:<br/>switchToWorkSeekerIfStuck → tickJob → requested pose<br/>→ steer → showOn"]
+    end
+    E --> F
+```
+
+- **Same gate as before.** A body records `lastTickedAt` only when it ticks awake (not in a bed)
+  in an initialized town, which is when the entity used to make the decisions itself; the flag
+  makes them only for a body that ticked in this game tick. An unloaded, asleep or
+  non-entity-ticking body's townie decides nothing, as before. Entities tick before block entities
+  in `ServerLevel.tick`, so in one game tick the body moves first and the decisions follow.
+- **New: the town's sleep pauses its townies.** The `townies` phase sits inside the ticker's
+  `!stopped` branch: while the town sleeps (`TownSleepRadius`, see `CONTEXT.md` "Town sleep") its
+  townies decide nothing, even with their chunks loaded. Before, they kept working while the flag
+  slept, and the warp on waking replayed that window (code-traced).
+- Freeze ticks: the body skips its own steps while `isTickFrozen()`, and the flag spends one frozen
+  tick per game tick, so a freeze lasts as many ticks as before.
+- The requested pose is applied by the flag between `tickJob` and `steer` (`TownieBody.takePose`),
+  where the entity used to apply it. The body's steps that moved before the decisions
+  (`validateEntity`, `useNearbyGates`) act on the previous tick's walk target.
+- The flag tick's cost now includes the townies' job ticks: `TickProfile` reports them as the
+  `townies` phase. `perf/town_large` on one seed (`level-seed=424242`), base and this change run
+  side by side: 2000 ticks took 204 s vs 206 s of wall time, `roomsHandle` 60.4 vs 61.7 ms, and
+  the new `townies` phase is 33 ms (p95 72 ms) for 20 townies. Total server work is unchanged:
+  that cost used to sit in the entity ticks, where `TickProfile` did not see it. `roomsHandle`
+  itself varies with the seed (0.25 ms to 76 ms across runs), so compare perf runs on one seed.
+- Pinned end to end by `flag/awake_near_a_far_townie` and `flag/asleep_far_from_its_townies`
+  (`commands/test/COMPLEX.md` "Town sleep"); the rule itself by `TownSleepRadiusTest`.
 
 - **The ticked job, not the current one.** A job tick can change the townie's job (a
   pre-state-change rule). `tickJob` returns the job that ticked, and `steer` and most of `showOn`

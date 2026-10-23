@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
@@ -612,6 +613,17 @@ public final class TownVillagerHandle {
     /** Every townie in the town, in arrival order, whether or not its body is loaded. */
     ImmutableList<TownieRuntime> townies() {
         return ImmutableList.copyOf(townies.values());
+    }
+
+    /**
+     * The townies' decisions for this game tick, each made only if its body ticked in it (see
+     * {@link TownieRuntime#tick}). Runs every tick the town is awake, not only on flag ticks.
+     */
+    void tickTownies(ServerLevel sl) {
+        long now = sl.getGameTime();
+        for (TownieRuntime townie : townies()) {
+            townie.tick(sl, now);
+        }
     }
 
     /** The townie died or left the town (absorbed by a shutdown): its runtime goes with it. */

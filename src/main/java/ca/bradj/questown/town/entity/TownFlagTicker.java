@@ -15,6 +15,7 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractTownFlagTicker;
 import ca.bradj.questown.town.TownContainers;
+import ca.bradj.questown.town.TownSleepRadius;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.Completable;
 import ca.bradj.questown.town.quests.Reward;
@@ -26,11 +27,12 @@ import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -53,6 +55,11 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
     @Override
     protected boolean applyNewEconomicsData(TickData tickData) {
         return tickData.entity().getEconomicsHandle().update();
+    }
+
+    @Override
+    protected void tickTownies(TickData tickData) {
+        tickData.entity().villagerHandle.tickTownies(tickData.level());
     }
 
     @Override
@@ -212,28 +219,26 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
 
         ServerLevel level = tickData.level();
         BlockPos blockEntityPos = tickData.blockEntityPos();
-        Player nearestPlayer = level.getNearestPlayer(
-                blockEntityPos.getX(),
-                blockEntityPos.getY(),
-                blockEntityPos.getZ(),
-                -1,
-                null
-        );
-        if (nearestPlayer == null) {
+        List<BlockPos> players = level.players().stream().map(Entity::blockPosition).toList();
+        if (players.isEmpty()) {
             if (playersNearbyOnPrevTick) {
                 logStop(blockEntityPos, "No players are found on server");
             }
             return true;
         }
 
-        BlockPos worldPosition = tickData.entity().getBlockPos();
-        int distToPlayer = (int) nearestPlayer.blockPosition().distSqr(worldPosition);
-        if (distToPlayer <= Config.TOWN_TICK_RADIUS.get()) {
+        // The town sleeps when no player is near any of its townies (its flag, before any arrive).
+        List<BlockPos> townies = tickData.entity().villagerHandle.townies().stream()
+                .map(t -> BlockPos.containing(t.position()))
+                .toList();
+        long nearest = TownSleepRadius.nearestPlayerDistSqr(players, townies, tickData.entity().getBlockPos());
+        if (!TownSleepRadius.isAsleep(nearest, Config.TOWN_TICK_RADIUS.get())) {
             return false;
         }
         if (playersNearbyOnPrevTick) {
-            String msg = "Closest player is %d blocks away";
-            logStop(blockEntityPos, String.format(msg, distToPlayer));
+            String from = townies.isEmpty() ? "the flag" : "the town's nearest townie";
+            String msg = "Closest player is %d blocks from %s";
+            logStop(blockEntityPos, String.format(msg, (long) Math.sqrt(nearest), from));
         }
         return true;
     }

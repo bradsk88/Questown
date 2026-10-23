@@ -169,8 +169,9 @@ flowchart TD
 ### What the interval does and does not change (audited 2026-07-28)
 
 Villager **labour throughput does not depend on this setting at all**: job progress
-is driven by the entity's own tick (`VisitorMobEntity.tick` → `TownieRuntime.tickJob` →
-`DeclarativeJob.tick` → the ticker), which never reads the config. Everything below the `isFlagTick`
+is driven every game tick by the flag's `townies` phase, which runs above the `isFlagTick`
+guard (`TownVillagerHandle.tickTownies` → `TownieRuntime.tick` → `DeclarativeJob.tick` → the
+ticker) and never reads the config. Everything below the `isFlagTick`
 guard, though, runs once per flag tick, and whether that changes pace depends
 entirely on whether the work per call is interval-scaled or fixed:
 

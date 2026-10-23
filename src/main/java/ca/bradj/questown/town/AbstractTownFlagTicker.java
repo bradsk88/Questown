@@ -61,6 +61,9 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         // because non-ticked sub-blocks will self-destruct.
         if (!stopped) {
             notifySubBlocksOfTick(data);
+            // Every tick, not only flag ticks: the townies decide what to do next each game tick.
+            // A sleeping town's townies decide nothing (a warp catches the town up on waking).
+            TickProfile.INSTANCE.phase("townies", () -> tickTownies(data));
         }
 
         if (runDebugTask()) {
@@ -119,6 +122,9 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
     protected abstract ImmutableList<ItemEconomicsData> getTownLevelItemEconomics(TICK_DATA data);
 
     protected abstract boolean applyNewEconomicsData(TICK_DATA data);
+
+    /** The townies' per-game-tick decisions (job work, walk targets, what their bodies show). */
+    protected abstract void tickTownies(TICK_DATA data);
 
     protected abstract void tickVillagers(
             TICK_DATA data,
