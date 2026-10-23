@@ -185,7 +185,9 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         this.guaranteedRoots.putAll(guaranteedRoots);
         this.preRolls.putAll(preRolls);
         addHungryListener(e -> {
-            if (UtilClean.getOrDefault(fullness, delegator.getUUID(e), configs.baseFullness) == 0) {
+            // <= 0, not == 0: the flag is not saved, so a townie reloaded below zero must be
+            // re-flagged by the next broadcast (every 10 below zero), or it is never starving again.
+            if (UtilClean.getOrDefault(fullness, delegator.getUUID(e), configs.baseFullness) <= 0) {
                 starving.put(delegator.getUUID(e), true);
             }
         });

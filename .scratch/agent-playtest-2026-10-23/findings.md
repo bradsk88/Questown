@@ -41,7 +41,7 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
    a Hunter", but the BOPs are in the flag (tutorial grant "3 BOPs added to flag"), not the
    player's inventory. Nothing on the panel points at the flag's Blocks of Progress tab ("Take
    Block of Progress"). A first-time player may not connect the two.
-6. **[FIXED 06222f76, verified live]** (bug, P1) Starving hunter (fullness -272%) with 6 raw beef in
+6. **[FIXED 06222f76 + see #12; live verification of 06222f76 alone was confounded]** (bug, P1) Starving hunter (fullness -272%) with 6 raw beef in
    the storeroom looped `dining_no_table -> downtime -> dining_no_table` every ~200 ticks (5 s at
    40 tps) and never ate. The board's `isReadyForDowntime` gate ran before the diner stage-down,
    and downtime's instant-eat restarted at the first diner, so the raw-food stage (r5's fix,
@@ -86,3 +86,13 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
     the picker falls back to unrequested work when no requested product is producible. Not
     changed (design). Live day 6: the cook's status reads "Cook is looking for supplies. / They
     need Raw Mutton to work." while beef/porkchop/chicken sit in storage.
+12. **[FIXED, verified live]** (bug, P1, root cause of #6 and #9) The starving flag is in-memory
+    only (`SimpleVillagerHandle.starving`, not saved) and the hungry listener set it only when the
+    hunger broadcast caught fullness at exactly 0. After any reload a townie already below zero was
+    never starving again: the board's starving branch (stage-down to raw food) and the #6 guard never
+    applied, so it bounced dining_no_table <-> downtime (#9) and starved beside raw meat. The #6
+    "verified live" was confounded: the hunter reached raw food through DinerNoTableWork's own expiry
+    (it sat in dining_no_table overnight), not through the guard. Now `<= 0`; the next broadcast
+    (every 10 below zero) re-flags a reloaded townie. `SimpleVillagerHandleTest` red/green; eating
+    5/6 (known red dine_at_time). Live after restart: both townies went dining_no_table ->
+    dining_raw_food and ate (fullness -3020 / -5060 -> 2500).

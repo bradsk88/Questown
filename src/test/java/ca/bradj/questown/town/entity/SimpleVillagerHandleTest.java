@@ -398,6 +398,34 @@ class SimpleVillagerHandleTest {
         Assertions.assertEquals(List.of(), t.workStatusResets);
     }
 
+    // 2026-10-23 agent playtest r10: the starving flag is not saved, and it was only set when the
+    // hunger broadcast caught fullness at exactly 0. A villager reloaded below zero (-27%) was never
+    // starving again, so the board kept bouncing it dining_no_table -> downtime -> dining_no_table
+    // and never sent it to raw food.
+    @Test
+    public void reloadedBelowZero_becomesStarvingAtTheNextHungerBroadcast() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = new SimpleVillagerHandle<>(
+                t,
+                new SimpleVillagerHandle.Configs(100, true, 1, 1, 100, 10, 100, 0.5f, 100, 100, 23000)
+        );
+        handle.initialize(
+                ImmutableMap.of(villager, -5),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                true
+        );
+        handle.register(villager);
+        Assertions.assertFalse(handle.isStarving(villager));
+        for (int i = 0; i < 5; i++) {
+            handle.tick(Signals.NOON);
+        }
+        Assertions.assertTrue(handle.isStarving(villager));
+    }
+
     @Test
     public void testTickHungerShouldNotifyHungerListenerAfterTenTicksIfInitializedToZeroFullness() {
         TestDelegator t = new TestDelegator();

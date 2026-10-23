@@ -280,6 +280,10 @@ flowchart TD
   sending a starving diner there restarted the chain at the first diner: 2026-10-23 r10
   a hunter looped dining_no_table -> downtime -> dining_no_table every ~200 ticks at
   fullness -272% beside raw beef, never reaching the raw-food stage.
+- "Starving" is the in-memory `SimpleVillagerHandle.starving` flag (not saved), set by the
+  hungry listener whenever a hunger broadcast (every 10 at or below zero) finds fullness `<= 0`,
+  and cleared by a meal. It used to require exactly 0, so a townie reloaded below zero was never
+  starving again and both gates above stopped applying (2026-10-23 r10 #12).
 
 ## No storage — a deliberate blocker
 
