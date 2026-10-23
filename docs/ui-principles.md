@@ -58,6 +58,10 @@ it is a design state ("unlock ≠ workability", `docs/design-principles.md`).
 - Progress is a count the player can check: " (3/8)" against what they can see in the chest.
 
 **Check:** for every status a townie can show, could the player act on it without the wiki?
+When a fix makes a townie say what it is blocked on, list every surface that shows that townie's
+state and decide each one: the flag villagers tab tooltip, the villager screen's status icon and
+"needs" row, the need bubble, the economics tab (2026-10-23: a status-line-only fix was proposed
+until the dev asked about the needs row).
 And check every displayed number on a townie whose value is *not* the default: the r8 "Lvl N"
 line passed on a level-1 villager while the page showed the wrong townie (fixed c0bd21a2).
 

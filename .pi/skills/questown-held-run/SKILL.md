@@ -96,7 +96,9 @@ command group (since 1.20.3 / snapshot `23w43a`): `query`, **`rate <float>`**
   The old bare-`echo` form can hang the caller indefinitely (a 2026-10-04 write
   cost ~2 h, server up the whole time) — ffeed bounds the write to 15 s and
   confirms delivery, so it never can. Do NOT retry with a second FIFO command
-  after a hang; that second write blocks identically.
+  after a hang; that second write blocks identically. `--expect` matches only
+  log lines written after the feed (since 2026-10-23; before, an older line from
+  the scenario itself "confirmed" a command that had died on `Expected integer`).
   **Delivery truth is in-game pace, not echoes**: ~60 s per day at 200 t/s vs
   ~20 min at 20; `run/pace-guard.sh <log> <claimed-rate>` enforces it (an
   unapplied `/tick rate` is silent — pace is what proves it landed). Full
@@ -297,6 +299,10 @@ files.
 5. **Then** launch the client (it reconnects to the live server):
    `JAVA_HOME=$HOME/.gradle/jdks/jdk-17.0.20+8 LANG=C.UTF-8 nohup ./gradlew
    runClient -Pautojoin > /tmp/village-client.log 2>&1 &`.
+   **Worktree server port:** autojoin dials `localhost:25565`; a worktree's server
+   listens on its own `run/server.properties` `server-port` (`build/wt`: 25585),
+   so add `-Pautoport=<that port>` or the client logs `Connection refused:
+   localhost/[0:0:0:0:0:0:0:1]:25565` (2026-10-23).
    **Fly kick (verified 2026-10-11):** if the client is kicked on join with
    "Flying is not enabled on this server", the quickplay session carried
    creative/fly state from an earlier play — wipe `run-client/saves`
@@ -785,7 +791,12 @@ block the matching hand places it.
   a block-placement tool** — if the held item isn't what the moment needs (the
   town wand from `clickwand`, say), it places nothing, and retrying it won't
   help; that is the wrong hand, not a failed placement. A player too far gets
-  `TOO_FAR_AWAY`.
+  `TOO_FAR_AWAY`. **From a held autotest login** (2026-10-23): the player joins
+  as a spectator, and a spectator's block right-click logs `-> PASS` with no
+  effect; an empty hand logs `has nothing in the main hand`. Give any item and
+  `gamemode survival Dev` first. The arena viewpoint sits inside terrain, so a
+  survival player suffocates within seconds: also `difficulty peaceful` and
+  `effect give Dev minecraft:resistance 3000 255 true`.
 - **Putting a block in the world is its own hand, never `clickheld`.** To put a
   block in the world use `setblock` or the matching command (`place_door`,
   `place_board`, `place_mat`) — the same hand that placed the door and the
