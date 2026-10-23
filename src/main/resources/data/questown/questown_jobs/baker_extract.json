@@ -28,7 +28,6 @@
     {
       "type": "global",
       "rules": [
-        "always_consider",
         "furnace_smelt_warp"
       ]
     },

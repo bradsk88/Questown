@@ -306,7 +306,7 @@ public class TownFlagState {
                 Predicate<JobID> canFit = p -> ServerJobsRegistry.canFit(null, p, dayTime);
                 Predicate<JobID> canAlwaysStart = p -> ServerJobsRegistry.canAlwaysStart(null, p);
 
-                List<JobID> possibleWork = e.getPossibleWork().getFor(currentJob);
+                List<JobID> possibleWork = e.getPossibleWork().getForWarp(currentJob);
 
                 // First try to choose from preselected jobs that match a request
                 JobID work = TownVillagerData.chooseFromList(
@@ -324,7 +324,7 @@ public class TownFlagState {
 
             @Override
             public List<JobID> getPreselectedJobs(JobID currentJob) {
-                return e.getPossibleWork().getFor(currentJob);
+                return e.getPossibleWork().getForWarp(currentJob);
             }
 
             @Override

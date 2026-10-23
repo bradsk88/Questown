@@ -609,7 +609,9 @@ untouched); only the surfacing names the fuel.
 `TownPossibleWork.smelterFuelBlocker` (called from the `!townHasJobSite`
 branch of `gateFacts`): a smelter job (`furnace_smelt_warp` global rule)
 whose room check failed while an `AbstractFurnaceBlock` that is **not
-`LIT`** physically exists in the base room -> `JobFacts.blockedOnLabel =
+`LIT`** physically exists in the base room **with input waiting in slot 0** (2026-10-23: an
+unlit, empty furnace is idle, not blocked; it also runs ahead of `JobFacts.slotNotReady`, see
+`jobs/COMPLEX.md` "Slot jobs score from their slot") -> `JobFacts.blockedOnLabel =
 SMELTER_FUEL_KEY` (`#` + `ItemTags.COALS.location()`, the tag the family's
 own fuel jobs declare). `gateReason` maps a fuel-labelled facts to
 `GateReason.Blocked(0, [coals], [])` - so `registerUnmetNeeds` routes it

@@ -27,7 +27,7 @@
   "special": [
     {
       "type": "global",
-      "rules": ["always_consider", "furnace_smelt_warp"]
+      "rules": ["furnace_smelt_warp"]
     },
     {
       "type": "core_state",

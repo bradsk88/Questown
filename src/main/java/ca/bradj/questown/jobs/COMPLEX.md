@@ -661,7 +661,44 @@ Tried and dropped: gating ALWAYS_CONSIDER jobs on their slot precondition in
 `TownPossibleWork.gateFacts`. It also fed the warp's once-per-warp preselected job list, which then
 lacked cook/extract and baker/extract (furnace/oven empty at warp start): cook/simple_furnace_food
 and baker/bread produced nothing. With fixes 1+2 the cook alternates fuel <-> extract quickly and
-extracts, so the gate was unnecessary.
+extracts, so the gate was unnecessary. (Superseded 2026-10-23: the gate now reads the slot, and the
+warp gets its own list; see "Slot jobs score from their slot" below.)
+
+## Slot jobs score from their slot; the warp keeps its own list (2026-10-23)
+
+`always_consider` was a gate bypass from its introduction (9e533826: "causes the job to ignore
+[the supply gate] so villagers can always start the associated job"). cook/fuel, cook/extract,
+baker/fuel and baker/extract carried it because the scoring gate could not see furnace slots, so
+all four scored 1.0 forever and tied the real cook jobs: selection shuffled ~7 equal candidates
+and the cook's status flipped at random (the coin flip, `.scratch/cook-scoring-tie/`). Dev ruling:
+remove the bypass and have the gate read the data the jobs already declare.
+
+- The four jobs no longer carry `always_consider`. Their `block.has_item_in_slot_initially`
+  (fuel `1/minecraft:air`, extract `2/<product>`) is already part of the job-block predicate
+  (`ResourceJobLoader.isJobBlockV2` → `SlotPrecondition.test`), which the gate's room check runs
+  through, so an idle furnace fails cook/extract and a fuelled one fails cook/fuel.
+- A site that exists with only the slot unmet now is `JobFacts.slotNotReady`: score 0, room
+  present, no item label. It must not fall into the "lacks job site" path, whose
+  `smelterFuelBlocker` would post a coal need for any unlit furnace.
+- **The warp keeps a second list** (`TownPossibleWork.warpPreselectedJobs`, served by `getForWarp`
+  to `TownFlagState.createWork`): the same bands, scored with the slot test skipped
+  (`DeclarativeJob.hasRoomsAtStateIgnoringSlot`; `blockAlreadyUsed=true` is the context switch
+  that skips it). The warp picks once and simulates the furnace step by step, so a stage that is
+  not ready at warp start must still be in its list. That is exactly what broke the 2026-10-22
+  A+B attempt (warp cooked 0 beef).
+- Only a **slot-gated** job (`Work.getSlotPrecondition() != null`) gets the slot-blind view or
+  `slotNotReady`: the slot-blind context also skips special-rule job-block checks, so applying it
+  to every job let a non-furnace job whose rule rejects its block read as "site present". And a
+  furnace that is unlit **with input waiting** stays a fuel need (`smelterFuelBlocker`, checked
+  before `slotNotReady`); an unlit empty furnace is idle, not blocked.
+- `cook/stock_fuel`, `cook/stock_ingredients` and `organizer/fetch` keep `always_consider` for
+  now, so the cook can still tie between those two stock jobs and a ready food job.
+
+Evidence: `_qtdev work_score 0 64 0 cook` on a held `cook/simple_furnace_food` (the dump now prints
+`warpPreselected=`): furnace fuelled with empty output → realtime `[stock_ingredients, stock_fuel,
+beef]`, warp `[..., fuel, beef, extract]`; cooked beef in the output slot → fuel and extract
+back at 1.0 in realtime. Autotests `cook` 7/7 (warp simple_furnace_food 6 cooked beef), `baker` 1/1,
+full sharded suite 92/94 (known reds only), full `:test` 1457/0. No unit seam: the gate is registry-bound (`DeclarativeJob`, the world).
 
 ## A wrapping-up job hands off before fetching (2026-10-19)
 

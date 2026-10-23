@@ -35,6 +35,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import org.jetbrains.annotations.Nullable;
 
@@ -66,6 +67,13 @@ public class TownPossibleWork {
     private final UnsafeTown town = new UnsafeTown(getClass());
 
     private final Map<String, List<JobID>> preselectedJobs = new HashMap<>();
+    /**
+     * The warp's list: scored with job-block slot preconditions ignored. A warp picks from its
+     * list once and then simulates the furnace step by step, so a stage whose slot is not ready
+     * at warp start (cook/extract on an empty output slot) must still be in it. Realtime picks
+     * from {@link #preselectedJobs}, where an unmet slot scores the stage 0.
+     */
+    private final Map<String, List<JobID>> warpPreselectedJobs = new HashMap<>();
     private final Map<UUID, JobCycler> villagerCyclers = new HashMap<>();
     private final Queue<String> rootsAwaitingRecompute = new ArrayDeque<>();
     private @Nullable RootScoring scoringInProgress;
@@ -197,16 +205,9 @@ public class TownPossibleWork {
     ) {
         bigLog(t, root, unfilteredJobs);
 
-        List<JobPossibility> jobs = unfilteredJobs.stream().filter(
-                v -> v.score.value > Config.PREFERRED_JOB_ACCEPTANCE.get()
-        ).toList();
-        if (jobs.isEmpty()) {
-            jobs = unfilteredJobs.stream().filter(
-                    v -> v.score.value > Config.MIN_JOB_ACCEPTANCE.get()
-            ).toList();
-        }
-        ImmutableList<JobID> preselected = jobs.stream().map(v -> v.jobID).collect(ImmutableList.toImmutableList());
+        ImmutableList<JobID> preselected = band(unfilteredJobs, v -> v.score.value);
         preselectedJobs.put(root, preselected);
+        warpPreselectedJobs.put(root, band(unfilteredJobs, JobPossibility::warpScore));
         // Needs are a property of the world state, not of the score band: a
         // job above the acceptance thresholds can still be blocked on a supply
         // (no workable spot until the chest has coal), and that block is what
@@ -217,6 +218,22 @@ public class TownPossibleWork {
                 root,
                 Strings.join(preselected.stream().map(JobID::jobId).toList(), ",")
         );
+    }
+
+    /** The preferred band if any job reaches it, else the minimum band. */
+    private static ImmutableList<JobID> band(
+            List<JobPossibility> unfilteredJobs,
+            java.util.function.ToDoubleFunction<JobPossibility> score
+    ) {
+        List<JobPossibility> jobs = unfilteredJobs.stream().filter(
+                v -> score.applyAsDouble(v) > Config.PREFERRED_JOB_ACCEPTANCE.get()
+        ).toList();
+        if (jobs.isEmpty()) {
+            jobs = unfilteredJobs.stream().filter(
+                    v -> score.applyAsDouble(v) > Config.MIN_JOB_ACCEPTANCE.get()
+            ).toList();
+        }
+        return jobs.stream().map(v -> v.jobID).collect(ImmutableList.toImmutableList());
     }
 
     private static void bigLog(
@@ -381,6 +398,7 @@ public class TownPossibleWork {
     private record JobPossibility(
             JobID jobID,
             WithReason<Double> score,
+            double warpScore,
             @Nullable JobFacts facts,
             @Nullable RequestCheck board,
             Work work
@@ -405,6 +423,7 @@ public class TownPossibleWork {
             return new JobPossibility(
                     w.getKey(),
                     WithReason.always(0.0, "Unsupported job class " + j.getClass().getName()),
+                    0.0,
                     null,
                     null,
                     work
@@ -416,9 +435,14 @@ public class TownPossibleWork {
         // Check if product is requested
         RequestCheck board = boardCheck(t, j.getId());
 
-        JobFacts facts = gateFacts(t, dj);
+        // Only a job that declares a slot precondition has a slot-blind (warp) view: the
+        // slot-blind context also skips special-rule job-block checks, which must keep
+        // applying to every other job.
+        boolean slotGated = work.getSlotPrecondition() != null;
+        JobFacts facts = gateFacts(t, dj, false, slotGated);
         double v = (double) facts.highestState() / dj.getMaxState();
         float shuffler = Compat.nextRandomInt(t.getServerLevel(), 100) / 10000f;
+        double warpV = facts.slotUnmet() ? (double) gateFacts(t, dj, true, true).highestState() / dj.getMaxState() : v;
         return new JobPossibility(
                 w.getKey(),
                 WithReason.always(
@@ -426,6 +450,7 @@ public class TownPossibleWork {
                         "Highest possible job state: " + facts.highestState() + " because " + facts.description()
                         + " (out of " + dj.getMaxState() + ", with randomizer " + shuffler + ")" + board.description()
                 ),
+                warpV + shuffler,
                 facts,
                 board,
                 work
@@ -440,8 +465,33 @@ public class TownPossibleWork {
             int firstBlockedState,
             @Nullable String missingIngredientLabel,
             @Nullable String missingToolLabel,
-            @Nullable String blockedOnLabel
+            @Nullable String blockedOnLabel,
+            boolean slotUnmet
     ) {
+        JobFacts(
+                int highestState,
+                String description,
+                boolean anyStateHasRoom,
+                @Nullable String roomKey,
+                int firstBlockedState,
+                @Nullable String missingIngredientLabel,
+                @Nullable String missingToolLabel,
+                @Nullable String blockedOnLabel
+        ) {
+            this(highestState, description, anyStateHasRoom, roomKey, firstBlockedState, missingIngredientLabel, missingToolLabel, blockedOnLabel, false);
+        }
+
+        /**
+         * The job's site exists, but no job block meets its slot precondition right now (the
+         * job JSON's {@code block.has_item_in_slot_initially}, e.g. cook/extract on an empty
+         * output slot). Nothing is missing, so it carries no item label and registers no need;
+         * the stage just has nothing to do yet.
+         */
+        static JobFacts slotNotReady(String reason) {
+            return new JobFacts(0, "Job site present but its slot precondition does not hold now (" + reason + ")",
+                    true, null, -1, null, null, null, true);
+        }
+
         JobFacts(
                 int highestState,
                 String description,
@@ -481,23 +531,23 @@ public class TownPossibleWork {
         return new RequestCheck(false, null);
     }
 
-    private static JobFacts gateFacts(TownFlagBlockEntity t, DeclarativeJob dj) {
+    /**
+     * @param ignoreSlot test job blocks without their slot precondition (the warp's view: the
+     *                   warp simulates the slot contents itself); only for a slot-gated job
+     * @param slotGated  the job declares {@code block.has_item_in_slot_initially}
+     */
+    private static JobFacts gateFacts(TownFlagBlockEntity t, DeclarativeJob dj, boolean ignoreSlot, boolean slotGated) {
         if (dj.specialGlobalRules.contains(SpecialRules.ALWAYS_CONSIDER)) {
             return new JobFacts(dj.getMaxState(), "Special rule ALWAYS_CONSIDER present", true, null, -1, null, null);
         }
-        WithReason<Boolean> lastRoomCheck = null;
-        boolean townHasJobSite = false;
-        for (int i = 0; i < dj.getMaxState(); i++) {
-            ProductionStatus s = ProductionStatus.fromJobBlockStatus(i);
-            if (!UtilClean.getOrDefaultCollection(dj.specialRules, s, ImmutableList.of())
-                          .contains(SpecialRules.CLAIM_SPOT)) {
-                lastRoomCheck = dj.hasRoomsAtState(t, i);
-                if (lastRoomCheck.value()) {
-                    townHasJobSite = true;
-                    break;
-                }
-            }
+        WithReason<Boolean> lastRoomCheck = hasJobSite(t, dj, ignoreSlot);
+        // A slot that is not ready only because the furnace has input and no fuel is a fuel need,
+        // not "nothing to do yet": that case keeps the smelter fuel surfacing below.
+        if (!lastRoomCheck.value() && !ignoreSlot && slotGated && smelterFuelBlocker(t, dj) == null
+                && hasJobSite(t, dj, true).value()) {
+            return JobFacts.slotNotReady(lastRoomCheck.reason());
         }
+        boolean townHasJobSite = lastRoomCheck.value();
         if (!townHasJobSite) {
             String roomReason = lastRoomCheck != null ? lastRoomCheck.reason() : "No states checked";
             String fuelBlocker = smelterFuelBlocker(t, dj);
@@ -529,7 +579,7 @@ public class TownPossibleWork {
                     jobSiteContainers = Containers.get(
                             t,
                             r -> true,
-                            bp -> isJobBlock(t, dj, bp, sl),
+                            bp -> isJobBlock(t, dj, bp, sl, ignoreSlot),
                             js -> dj.location().baseRoom().equals(js),
                             false
                     );
@@ -606,20 +656,43 @@ public class TownPossibleWork {
                 .anyMatch(stack -> !stack.isEmpty() && tool.test(MCTownItem.fromMCItemStack(stack)));
     }
 
+    /**
+     * Whether any non-claim-spot state of the job has a job block in a base room. The first
+     * passing state wins; otherwise the last state's reason is returned.
+     */
+    private static WithReason<Boolean> hasJobSite(TownFlagBlockEntity t, DeclarativeJob dj, boolean ignoreSlot) {
+        WithReason<Boolean> last = WithReason.always(false, "No states checked");
+        for (int i = 0; i < dj.getMaxState(); i++) {
+            ProductionStatus s = ProductionStatus.fromJobBlockStatus(i);
+            if (UtilClean.getOrDefaultCollection(dj.specialRules, s, ImmutableList.of())
+                         .contains(SpecialRules.CLAIM_SPOT)) {
+                continue;
+            }
+            last = ignoreSlot ? dj.hasRoomsAtStateIgnoringSlot(t, i) : dj.hasRoomsAtState(t, i);
+            if (last.value()) {
+                return last;
+            }
+        }
+        return last;
+    }
+
     private static boolean isJobBlock(
             TownFlagBlockEntity t,
             DeclarativeJob dj,
             BlockPos bp,
-            ServerLevel sl
+            ServerLevel sl,
+            boolean ignoreSlot
     ) {
+        // blockAlreadyUsed=true is the context switch that skips the slot precondition
+        // (ResourceJobLoader.isJobBlockV2).
         return dj.location().isJobBlock()
-                 .test(new JobBlockTestContext(new MinecraftWorldAccess(sl), info(sl), bp, ImmutableList::of, unique(t), false, false));
+                 .test(new JobBlockTestContext(new MinecraftWorldAccess(sl), info(sl), bp, ImmutableList::of, unique(t), ignoreSlot, false));
     }
 
     /**
      * Surfacing (2026-10-13, ruling b - status/econ name the fuel, the decision layer
      * stays as-is): when a smelter job's room check fails, a smelter block that
-     * physically exists in the base room and is NOT lit is exactly the "blocked on
+     * physically exists in the base room, is NOT lit and has input waiting is exactly the "blocked on
      * fuel" state - the missing input is FUEL ({@link #SMELTER_FUEL_KEY}, the same
      * tag the family's own fuel jobs declare), not the site. Naming it keeps the
      * need visible in the item store / UNMET_ITEM bubble / economics tab. The room
@@ -641,7 +714,12 @@ public class TownPossibleWork {
                  t.getRoomHandle().getRoomsMatching(dj.location().baseRoom())) {
             for (BlockPos bp : room.getContainedBlocks().keySet()) {
                 var state = sl.getBlockState(bp);
-                if (state.getBlock() instanceof AbstractFurnaceBlock && !state.getValue(AbstractFurnaceBlock.LIT)) {
+                if (!(state.getBlock() instanceof AbstractFurnaceBlock) || state.getValue(AbstractFurnaceBlock.LIT)) {
+                    continue;
+                }
+                // Unlit with nothing to smelt is idle, not blocked: an empty furnace must not
+                // read as "needs coal" (2026-10-23, the slot-gated furnace stages).
+                if (sl.getBlockEntity(bp) instanceof AbstractFurnaceBlockEntity f && !f.getItem(0).isEmpty()) {
                     return SMELTER_FUEL_KEY;
                 }
             }
@@ -657,6 +735,11 @@ public class TownPossibleWork {
         return UtilClean.getOrDefaultCollection(preselectedJobs, jobId.rootId(), ImmutableList.of());
     }
 
+    /** The warp's list for this job's root (see {@link #warpPreselectedJobs}). */
+    public ImmutableList<JobID> getForWarp(JobID jobId) {
+        return UtilClean.getOrDefaultCollection(warpPreselectedJobs, jobId.rootId(), ImmutableList.of());
+    }
+
     /**
      * Dev/observation: score every regular job of a root and return each job's
      * id, score and the reason the gate scanner stopped (missing room / lacking
@@ -668,6 +751,7 @@ public class TownPossibleWork {
         TownFlagBlockEntity t = town.getUnsafe();
         StringBuilder b = new StringBuilder();
         b.append("preselected=").append(getFor(new JobID(root, "x"))).append("\n");
+        b.append("warpPreselected=").append(getForWarp(new JobID(root, "x"))).append("\n");
         t.getWorkHandle().getRequestedResults().forEach(r -> b.append("board request: ").append(r).append("\n"));
         for (Map.Entry<JobID, Supplier<Work>> job : Works.regularJobs().stream().filter(v -> root.equals(v.getKey().rootId())).toList()) {
             JobPossibility p = evaluateJob(t, job);

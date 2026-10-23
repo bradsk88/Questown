@@ -1,6 +1,7 @@
 ---
 title: "always_consider no-op jobs tie real work at score 1.0 — pick the mechanism"
-status: needs-triage
+status: closed
+closed: 2026-10-23
 created: 2026-10-15
 ---
 
@@ -127,3 +128,12 @@ precondition holds *now* in realtime (fuel: a furnace lacks fuel; extract: a fur
 1.0 when it does and banded when it doesn't, while the warp's preselected list keeps every
 ALWAYS_CONSIDER job unconditionally (the warp checks the furnace per step). B (score order) only
 matters once A gives the scores meaning.
+
+## Resolved 2026-10-23 (dev: drop the bypass, gate on slot data)
+
+Asked whether to score by slot state while keeping `always_consider`, the dev said `always_consider`
+was a cheat to make the jobs work without changing the logic, and chose to remove it from
+cook/fuel, cook/extract, baker/fuel and baker/extract and have the gate read their
+`has_item_in_slot_initially`. The warp gets its own slot-blind list. Mechanism and evidence:
+`jobs/COMPLEX.md` "Slot jobs score from their slot; the warp keeps its own list". Residual: the
+two cook stock jobs still carry `always_consider`, so a ready food job can still tie with them.
