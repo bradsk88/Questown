@@ -58,6 +58,9 @@ relights the campfire", which the Acting section already said.
   `probe-block.sh <block-id> <x y z>...` says which positions hold a block.
 - `_qtdev villager_stats <flag x y z>` logs each townie's server-side level, xp, fullness, mood
   and effects: check a screen against it before calling a number wrong.
+- Read a command's output from the log offset taken **just before** that command
+  (`S=$(wc -l < run/logs/latest.log)`, run, `tail -n +$S`), never "the newest `entity data`
+  line": r10 read another command's line and filed a false "BOPs consumed" bug.
 - `tools/agent-playtest/look.sh <name> [maxlines]`: screenshot plus new server log lines since
   the last look; `PARK="x y"` parks the cursor and waits a frame first (a screen opens with the
   cursor at the window centre, so a card there shows a stale tooltip). Then `Read` the PNG. It waits for a complete PNG (reading a half-written file
@@ -92,7 +95,11 @@ relights the campfire", which the Acting section already said.
   mat has no link and silently fails to place.
 - `item replace entity Dev weapon.mainhand with X` **overwrites** whatever was there (it ate the
   wand twice). Put tools in other hotbar slots (`hotbar.N`) and swap with `item replace ...
-  from entity Dev hotbar.N`.
+  from entity Dev hotbar.N`. **A crafting-tab Craft lands the result in your hand**: park it
+  (`item replace entity Dev hotbar.N from entity Dev weapon.mainhand`) before the next hand
+  replace, or the flag-linked item is gone (r10 ate a crafted mineshaft this way).
+- An `item replace` on the hand while a flag/villager menu is open does not reach the client
+  (vanilla only syncs the open menu's slots): Craft buttons stay greyed. `close`, replace, reopen.
 - Rooms: build with `fill ... hollow`, then wand the door. Probe ground height first (`execute if
   block x y z minecraft:air run say ...`). `hollow` also closes the bottom face, so start the fill
   one block *below* the door's bottom half (the bottom face becomes the floor). With the floor
@@ -148,4 +155,10 @@ relights the campfire", which the Acting section already said.
   ask the dev what they see, ask about the same time of day you're asking about.
 - A log line naming a UUID right after a reload ("Job changed ... for <random> [from X]") is the
   freshly built entity before its saved UUID loads: noise.
+- "Verified live" for a fix needs a log line from the branch you changed, not just the outcome.
+  r10 marked the starving-diner guard verified when the hunter reached raw food through the
+  diner's own overnight expiry (the starving flag was false, so the guard never ran).
+- Before narrowing a guard keyed on a job root or special rule (a loot guarantee, a bypass), grep
+  `**/COMPLEX.md` for the class name: r10 coded, tested and reverted a narrowing of
+  `FirstHunterLootGuarantee` that `jobs/declarative/COMPLEX.md` documents as deliberate.
 - Commit findings as you go; the job's temp dir is deleted with the job.
