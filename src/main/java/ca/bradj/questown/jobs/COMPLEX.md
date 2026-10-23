@@ -423,6 +423,16 @@ warning in `DeclarativeJobs.rooms`):
   the in-range + null cases pin the existing behaviour against
   over-normalization).
 
+**One spot per position across matches.** `DeclarativeJobs.rooms` folds every
+job-site match into one per-position spot map. Overlapping job sites put the
+same block in two matches, and the old `ImmutableMap.Builder` threw "Multiple
+entries with same key". That crashed the server the morning after a Kitchen
+Diner was built (playtest r12 #11, 2026-10-23: `gatherer:dining`/`cook:dining`).
+A spot's state and job-block flag are functions of its position alone, so the
+maps keep the first entry (`putIfAbsent`). The per-room status lists still count
+the block once per room. Pinned by `DeclarativeJobsRoomsSharedBlockTest`
+(red-verified on the exact exception); verified live on the r12 day-12 world.
+
 ## `TownHasSupplies` requirement gate: no workable state ⇒ full requirement set (2026-10-14)
 
 `TownHasSupplies.doPopulate` builds its "relevant ingredients/tools" from the

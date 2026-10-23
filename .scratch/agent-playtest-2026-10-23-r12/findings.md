@@ -170,6 +170,12 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
     unlocks). So one block position came from two job-site matches in the same pass. Crash
     report: `run/crash-reports/crash-2026-10-23_20.16.11-server.txt` (copied to
     `build/agent-playtest/`). Reproduce: `r12-world-day12-verified.tgz`, run to the next morning.
+    **FIXED 2026-10-23:** `rooms(...)` keeps one spot per position across matches
+    (`putIfAbsent` into a `LinkedHashMap`). Red/green: `DeclarativeJobsRoomsSharedBlockTest`.
+    Live: the day-12 world restored, `time set 23900`, ran past dawn (to time 1701). `gatherer:dining`
+    evaluated its gate (IDLE -> GOING_TO_JOB), with no crash and no new crash report. Open (BELIEVED, unchecked): which two
+    job sites overlap at (-19, 76, 199). The dedupe is correct either way, but a room registered
+    twice would be its own bug.
 
 ## Run end
 

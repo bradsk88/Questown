@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.*;
 import java.util.stream.Stream;
@@ -569,8 +570,13 @@ public class DeclarativeJobs {
     ) {
         ImmutableMap.Builder<Integer, RoomsWithWorkableStatefulBlocks<POS>> b = ImmutableMap.builder();
         Supplier<Rooms<POS, ?>> e = () -> {
-            ImmutableMap.Builder<POS, Integer> spotStatuses = ImmutableMap.builder();
-            ImmutableMap.Builder<POS, Boolean> spotJBs = ImmutableMap.builder();
+            // Keyed by position across ALL matches: overlapping job sites (e.g. a Kitchen Diner
+            // sharing blocks with another dining room) contain the same block twice. Its state
+            // and job-block flag depend only on the position, so the first entry is the truth;
+            // an ImmutableMap.Builder threw "Multiple entries with same key" here and crashed
+            // the server (playtest r12 #11, DeclarativeJobsRoomsSharedBlockTest).
+            Map<POS, Integer> spotStatuses = new LinkedHashMap<>();
+            Map<POS, Boolean> spotJBs = new LinkedHashMap<>();
             Map<ROOM, List<Integer>> roomStatuses = new HashMap<>();
             // Work-only rooms count: a job whose state has no tool or ingredient (cook/extract: work
             // 0.1, nothing to hold) gets its rooms ONLY from the dueToWorkOnly bucket. Filtering them
@@ -600,12 +606,12 @@ public class DeclarativeJobs {
                         jobBlockState = State.freshAtState(0);
                     }
                     int v = jobBlockState.processingState();
-                    spotStatuses.put(bp, v);
+                    spotStatuses.putIfAbsent(bp, v);
                     UtilClean.addOrInitializeList(roomStatuses, match.room().getRoom(), v);
-                    spotJBs.put(bp, isJobBlock.test(bp));
+                    spotJBs.computeIfAbsent(bp, isJobBlock::test);
                 }
             });
-            return new Rooms<>(spotStatuses.build(), roomStatuses, spotJBs.build());
+            return new Rooms<>(ImmutableMap.copyOf(spotStatuses), roomStatuses, ImmutableMap.copyOf(spotJBs));
         };
 
         for (int i = 0; i < maxState; i++) {
