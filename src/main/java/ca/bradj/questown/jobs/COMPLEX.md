@@ -518,6 +518,25 @@ hits `getWorkSupplier`'s "No work found ... Falling back to any job in the same 
 times an unrelated job, and the first build of this fix bounced idle townies between board
 and fallback (28k log lines in 2 minutes) until meta-jobs were exempted.
 
+## A same-job max-ticks fallback asks the board (2026-10-23, r12 #8 / r14 #2)
+
+The default fallback (`ExpirationRules.never()`) is the job itself, and re-creating it went
+straight to `changeJob`. A leaver between trips has no work spot, so a hunter hit the
+watchdog every ~3000 ticks and chained `hunter:sword -> hunter:sword` without the board ever
+running. The branches that live only on the board therefore never applied to it:
+- `bop-deposit`: r12's hunter levelled up, latched its BOP, and its XP stayed frozen at 0/1200
+  for 15+ real minutes. The miner, which did go through the board, deposited in ~5.5 min.
+- `starving-diner-stage`: r14's hunter hunted on from 0% to -105% fullness, and ate only when
+  the evening day-fit hand-off sent it through the board.
+
+`JobLogic` now hands a same-job fallback to the board (`changeToNextJob`), on the same path as
+a fallback that won't fit in the day, and with the same once-per-window counter reset. The
+board's `work-roll` re-creates the job when nothing more urgent applies. A fallback to a
+*different* job (e.g. `seeking_work -> downtime`) is a designed transition and still goes
+straight to `changeJob`. Pinned by `JobLogicTest.tick_sameJobMaxTicksFallback_asksTheBoard`
+(red on the old code); the control `tick_shouldHitMaxTicksFallback_WhenIdleWithNoWorkSpot` now
+uses a different-job fallback.
+
 Pinned by `JobLogicTest.tick_maxTicksFallback_handsOffToTheBoard_WhenTheFallbackWontFitInTheDay`
 (red before the check). Live: no bounce and no "No work found" through an evening with 21
 townies; the late-day timeout itself did not recur in that window.

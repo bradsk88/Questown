@@ -120,6 +120,10 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    Contrast: the miner (villager 3) reached level 2 at 19:09:57, went through the board, ran
    `miner:bop_depositing`, and "A Block of Progress was deposited" at 19:15:29 (~5.5 min). The
    hunter, chaining sword -> sword outside the board, is still latched.
+   **FIXED 2026-10-23 (unit + autotest shards):** the chain is `JobLogic`'s max-ticks watchdog
+   ("Reached max ticks for hunter:sword. Falling back to hunter:sword.", r14 debug.log
+   20:56:23), whose same-job fallback skipped the board. It now asks the board. See
+   `jobs/COMPLEX.md` "A same-job max-ticks fallback asks the board"; r13/r14 findings #2.
 9. **[ROOT CAUSE FIXED 2026-10-23, after the run]** (bug, P1) Starving flag misses (day 9):
    a. The hunter's fullness steps by 10 from an odd offset (-11099 -> -11109); the hungry
       listener broadcasts only when `newVal <= 0 && abs(newVal) % 10 == 0`

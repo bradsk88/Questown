@@ -63,3 +63,11 @@ HEAD a5b417d6. Tick rate 40. Random seed; spawn at (-39.5, 74, 149.5).
    the chained re-assignment bypasses the board cascade. It also bypasses the starving check:
    the hunter kept hunting from about 0% to -105% fullness and ate only after `ready-for-downtime`
    ended the job, about 2 minutes later at tick rate 40.
+   **FIXED 2026-10-23:** that change is `JobLogic`'s max-ticks watchdog re-creating the same job
+   ("Reached max ticks for hunter:sword. Falling back to hunter:sword."). A same-job fallback
+   now asks the board (`JobLogicTest.tick_sameJobMaxTicksFallback_asksTheBoard`).
+
+3. (observe, pre-existing flake) `hunter/sword [sleep_mid_trip]` fails about 1 run in 4 with one
+   or both hunters ending `held=[]`, `hunted again=false`. Same rate with and without the
+   watchdog change: 1/4 at HEAD 1b47cc98, 1/3 with it (sweeps 2026-10-23 ~22:05). Not on
+   AGENTS' known list yet.

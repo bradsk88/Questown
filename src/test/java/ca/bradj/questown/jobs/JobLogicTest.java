@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -344,12 +345,46 @@ class JobLogicTest {
 
     @Test
     void tick_shouldHitMaxTicksFallback_WhenIdleWithNoWorkSpot() {
-        // Control: the watchdog still exists for a job with no cycle in progress.
+        // Control: the watchdog still moves a job with no cycle in progress to a declared
+        // fallback that is a different job (e.g. seeking_work -> downtime).
+        JobID other = new JobID("other_root", "other_job");
+        AtomicReference<JobID> changedTo = new AtomicReference<>();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedTo.set(id);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5).withMaxTickFallback(id -> other));
+        }
+
+        Assertions.assertEquals(other, changedTo.get());
+    }
+
+    /**
+     * 2026-10-23 playtest r12 #8 / r14 #2: the default fallback is the same job ("keep doing it
+     * forever"), and re-creating it went straight to changeJob, skipping the board. A hunter
+     * chaining hunter:sword -> hunter:sword never reached the board's bop-deposit branch (its XP
+     * stayed frozen behind the BOP latch for 15+ minutes) or its starving branch (it hunted on
+     * at -105% fullness). A same-job fallback asks the board, which re-rolls the job when
+     * nothing more urgent applies.
+     */
+    @Test
+    void tick_sameJobMaxTicksFallback_asksTheBoard() {
         AtomicBoolean changedJob = new AtomicBoolean();
+        AtomicBoolean handedOff = new AtomicBoolean();
         TestLogicWorld world = new TestLogicWorld(DEFINITION) {
             @Override
             public void changeJob(JobID id) {
                 changedJob.set(true);
+            }
+
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
             }
         };
         TestJobLogic logic = new TestJobLogic(world, DEFINITION);
@@ -358,7 +393,8 @@ class JobLogicTest {
             logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5));
         }
 
-        Assertions.assertTrue(changedJob.get());
+        Assertions.assertFalse(changedJob.get(), "the watchdog re-created the same job without the board");
+        Assertions.assertTrue(handedOff.get(), "the board should decide what comes next");
     }
 
     @Test

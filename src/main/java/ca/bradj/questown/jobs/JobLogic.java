@@ -195,12 +195,17 @@ public class JobLogic<EXTRA, TOWN, POS> {
         if (workSpot == null && !status.isWaitingForTimers() && this.ticksSinceStart > expiration.maxTicks()) {
             JobID fbJov = expiration.maxTicksFallbackFn()
                                     .apply(entityCurrentJob);
-            if (!worldBeforeTick.fitsInDay(fbJov)) {
+            // A same-job fallback ("keep doing this forever") asks the board: re-creating the job
+            // directly skipped the board's BOP-deposit and starving branches, so a chaining
+            // hunter never deposited its BOP and hunted on while starving (r12 #8, r14 #2).
+            // The board re-rolls the same job when nothing more urgent applies.
+            boolean sameJob = fbJov.equals(entityCurrentJob);
+            if (sameJob || !worldBeforeTick.fitsInDay(fbJov)) {
                 // The fallback skips the board, and with it the day-fit rule: a gatherer was
                 // restarted just before evening and left on a trip it slept through (2026-10-22).
                 QT.JOB_LOGGER.debug(
-                        "Reached max ticks for {}. Fallback {} won't fit in the day; asking the board.",
-                        entityCurrentJob, fbJov
+                        "Reached max ticks for {}. Fallback {} {}; asking the board.",
+                        entityCurrentJob, fbJov, sameJob ? "is the same job" : "won't fit in the day"
                 );
                 worldBeforeTick.changeToNextJob();
                 // If the board keeps this job, wait another window before asking again: the
