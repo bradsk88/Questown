@@ -1214,3 +1214,13 @@ by predicate (`isWorkingOnProduction()` after the table lookup) to
 three PNGs are placeholders copied from `gathering.png`, `relaxing.png` and
 `returned_success.png`; replace the files, no code change needed. Pin:
 `StatusArtTest` (no checkerboard for those states, and each texture file ships).
+
+## Change-job panel: the next action and the real timing (2026-10-23, r9 #2)
+
+The panel said "Insert a Block of Progress ... (starting tomorrow morning)" with the Block of
+Progress already in the slot, and in creative, where `JobRootChangeMessage` (which carries the
+player's creative flag) changes the job at once. `JobChangeText.of(inserted, creative,
+promisedRoot, blessed)` picks the line: `insert_bop[_promised]` before insertion,
+`click_unlock[_promised]` after, `insert_bop_blessed` for a "special" stack; the timing is its own
+key (`when_morning` / `when_now`) passed as the last `%s`. Pin: `JobChangeTextTest`. Live
+2026-10-23: survival empty / inserted, and creative inserted ("starting now"), gui-lint OK.

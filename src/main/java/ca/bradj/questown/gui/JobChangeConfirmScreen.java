@@ -13,7 +13,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 
 import java.util.List;
-import java.util.Optional;
 
 public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfirmMenu> {
 
@@ -103,23 +102,28 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
         int textWidth = backgroundWidth - slot.getWidth() - (8 * 2);
 
 
-        String key = "menu.unlock_root.insert_bop";
-        Object[] args = new Object[0];
         // An open onboarding job-change quest decides the root whatever the BOP, so say which
         // job instead of "a random profession" (2026-10-22 r8).
-        Optional<String> promised = menu.getPromisedRoot();
-        if (promised.isPresent()) {
-            key = "menu.unlock_root.insert_bop_promised";
-            args = new Object[]{Compat.translatable("jobs." + promised.get())};
+        JobChangeText text = JobChangeText.of(
+                menu.tx.hasBlockOfProgress(),
+                Minecraft.getInstance().player != null && Minecraft.getInstance().player.isCreative(),
+                menu.getPromisedRoot(),
+                menu.isBlessed()
+        );
+        Component when = Compat.translatable(text.whenKey());
+        Object[] args;
+        if (text.root().isPresent()) {
+            args = new Object[]{Compat.translatable("jobs." + text.root().get()), when};
         } else if (menu.isBlessed()) {
-            key = "menu.unlock_root.insert_bop_blessed";
             // A plain-blessed stack without a guaranteed root keeps the legacy generic text;
             // a "gold" BOP names the root it will change to.
             args = new Object[]{menu.getBlessedJob()
                     .map(j -> Compat.translatable("jobs." + j.rootId()))
-                    .orElseGet(() -> Compat.translatable("menu.unlock_root.unguaranteed_job"))};
+                    .orElseGet(() -> Compat.translatable("menu.unlock_root.unguaranteed_job")), when};
+        } else {
+            args = new Object[]{when};
         }
-        List<FormattedCharSequence> parts = ctx.split(Compat.translatable(key, args), textWidth);
+        List<FormattedCharSequence> parts = ctx.split(Compat.translatable(text.key(), args), textWidth);
         for (FormattedCharSequence part : parts) {
             ctx.darkText(part, x, bgY);
             bgY += 8;
