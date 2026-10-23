@@ -14,7 +14,6 @@ import ca.bradj.questown.gui.VillagerStats;
 import ca.bradj.questown.gui.VillagerStatsMenu;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
-import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
@@ -23,7 +22,9 @@ import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.entity.TownVillagerMobs;
+import ca.bradj.questown.town.entity.TownieRuntime;
 import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.interfaces.TownieBody;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.Quest;
@@ -54,6 +55,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -100,13 +102,11 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static net.minecraft.world.entity.Pose.SLEEPING;
 
 @SuppressWarnings("NullableProblems")
-public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
+public class VisitorMobEntity extends PathfinderMob implements VillagerStats, TownieBody {
 
     public static final String DEFAULT_SCHEDULE_ID = "visitor_default_schedule";
     public static final Schedule DEFAULT_SCHEDULE = new ScheduleBuilder(new Schedule())
@@ -169,23 +169,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private final ArrayList<Integer> targetTimes = new ArrayList<>();
     boolean sitting = true;
     TownInterface town;
-    Supplier<Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> job = this::getInitialJob;
-    private int ticksWithoutJobTarget;
-    private final List<Consumer<ImmutableList<Ingredient>>> ingrListeners = new ArrayList<>();
+    /** The townie this body stands for: its state and decisions, held by the town flag. Null until bound. */
+    private @Nullable TownieRuntime runtime;
+    /** Change listeners added before the runtime is bound (load-time registration runs first). */
+    private final List<ChangeListener> pendingChangeListeners = new ArrayList<>();
     private final List<Consumer<VillagerSleptEvent>> sleepListeners = new ArrayList<>();
     private Signals.DayTime lastBedTime = new Signals.DayTime(Signals.NIGHT_START_TICK);
     private @Nullable Vec3 lastPos = null;
-
-    public WorkToUndo getWorkToUndo() {
-        return workToUndo;
-    }
-
-    private @Nullable WorkToUndo workToUndo;
     private BlockPos wanderTarget;
-    private final List<ChangeListener> changeListeners = new ArrayList<>();
-    private boolean initialized;
-    private final Collection<Function<Void, Void>> cleanupJobListeners = new ArrayList<>();
-    private int freezeTicks;
 
     public VisitorMobEntity(
             EntityType<? extends PathfinderMob> ownType,
@@ -200,11 +191,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             setArrowCount((int) (town.getVillagerHandle()
                                      .getDamageTicksLeft(uuid) / Compat.configGet(Config.DAMAGE_TICKS).get()));
         }
-        this.changeListeners.add(() -> {
-            Collection<Ingredient> ing = ServerJobsRegistry.getWantedResourcesProvider(getJobId())
-                                                           .apply(Jobs.getHeldItems(job.get()));
-            ingrListeners.forEach(l -> l.accept(ImmutableList.copyOf(ing)));
-        });
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
@@ -265,48 +251,32 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // State management should be done via the town block. This entity should
     // only handle cosmetic stuff like position, pose, etc.
 
-    // TODO: Make this abstract or injectable
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    @NotNull
-    private Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitialJob() {
-        Job j = ServerJobsRegistry.getInitialJobForVillager(uuid);
-        // Technically this also gets us item updates because item changes cause status to go back to IDLE
-        // But this is admittedly a bit fragile.
-        this.cleanupJobListeners.add(j.addStatusListener(getNotifiedOfJobStatusChanges()));
-        return j;
+    /** The townie this body stands for, or null until the entity is bound to its town. */
+    public @Nullable TownieRuntime getRuntime() {
+        return runtime;
     }
 
-    public BlockPos getLookTarget() {
-        return job.get().getLook();
+    public @Nullable BlockPos getLookTarget() {
+        return runtime == null ? null : runtime.getLook();
     }
 
     public boolean tryGiveItem(
             MCHeldItem v,
             InventoryFullStrategy inventoryFullStrategy
     ) {
-        // DEV-DIAG: LOOTTRACE grant-site trace, 2026-10-04 — pin the hunted-meat grant path; grep 'DEV-DIAG' to enumerate; keep/remove per handoff
-        QT.VILLAGER_LOGGER.info("[LOOTTRACE] tryGiveItem: item={} strategy={} uuid={}",
-                v == null ? "null" : v.get().toString(),
-                inventoryFullStrategy,
-                UtilClean.truncateMiddle(getUUID()));
-        if (job.get().addToEmptySlot(v)) {
-            return true;
-        }
-        // TODO: Remember the location of the drop and come back to pick them up
-        if (inventoryFullStrategy.equals(InventoryFullStrategy.REMOVE_FROM_WORLD)) {
+        if (runtime == null) {
+            QT.VILLAGER_LOGGER.error("Townie {} is not bound to its town; cannot take {}", getUUID(), v);
             return false;
         }
-        ItemEntity item = new ItemEntity(level(), getX(), getY(), getZ(), v.get().toMCItemStack());
-        level().addFreshEntity(item);
-        return false;
+        return runtime.tryGiveItem(v, inventoryFullStrategy);
     }
 
     public void addSleepListener(Consumer<VillagerSleptEvent> l) {
         this.sleepListeners.add(l);
     }
 
-    public void clearWorkToUndo() {
-        this.workToUndo = null;
+    public @Nullable WorkToUndo getWorkToUndo() {
+        return runtime == null ? null : runtime.getWorkToUndo();
     }
 
     public boolean hasBlockOfProgress() {
@@ -317,108 +287,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @SuppressWarnings("removal")
     public @Nullable VillagerUUID getVUID() {
         return VillagerUUID.from(getUUID());
-    }
-
-    public record WorkToUndo(
-            JobID jobID,
-            BlockPos pos,
-            ImmutableList<MCHeldItem> itemsInserted
-    ) {
-        public static WorkToUndo and(
-                @Nullable VisitorMobEntity.WorkToUndo workToUndo,
-                JobID id,
-                BlockPos bp,
-                MCHeldItem item
-        ) {
-            if (workToUndo == null) {
-                return new WorkToUndo(id, bp, ImmutableList.of(item));
-            }
-            return new WorkToUndo(
-                    id, bp,
-                    ImmutableList.<MCHeldItem>builder().addAll(workToUndo.itemsInserted()).add(item).build()
-            );
-        }
-    }
-
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
-
-    /**
-     * @deprecated Only the town block should call this. Everyone else should change villager jobs using
-     * {@link TownInterface#changeJobForVisitorFromBoard(UUID, JobID)} instead.
-     */
-    @SuppressWarnings("DeprecatedIsStillUsed")
-    public void setJob(Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob) {
-        if (!(level() instanceof ServerLevel sl)) {
-            QT.VILLAGER_LOGGER.error("setJob should never be called from client side");
-            return;
-        }
-
-        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> curJob = job.get();
-        String curJobName = "null";
-        if (curJob != null) {
-            curJobName = curJob.getId().toNiceString();
-        }
-
-        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> oldJob = job.get();
-        job = () -> initializedJob;
-        entityData.set(jobName, initializedJob.getJobName().translationKey());
-        QT.VILLAGER_LOGGER.info("Job changed to {} for {} [from {}]", initializedJob.getId(), uuid, curJobName);
-        Collection<? extends Runnable> newCleanup = oldJob.notifyListenersOfNewJob(l -> {
-            Function<Void, Void> out = initializedJob.addStatusListener(l);
-            return () -> out.apply(null);
-        });
-
-        this.cleanupJobListeners.forEach(v -> v.apply(null));
-        this.cleanupJobListeners.clear();
-        List<Function<Void, Void>> cleanupz = newCleanup.stream().map(UtilClean::voidVoid).toList();
-        this.cleanupJobListeners.addAll(cleanupz);
-
-        this.cleanupJobListeners.add(
-                initializedJob.addStatusListener(getNotifiedOfJobStatusChanges())
-        );
-        this.cleanupJobListeners.add(initializedJob.addItemInsertionListener(
-                (bp, item) -> this.workToUndo = WorkToUndo.and(this.workToUndo, initializedJob.getId(), bp, item)
-        ));
-        this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
-                id -> this.workToUndo = null
-        ));
-        this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
-                id -> this.town.getPossibleWork().invalidate()
-        ));
-        this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
-                id -> {
-                    Job<?, ?, ?> job = ServerJobsRegistry.getInitializedJob(sl, id, getJobJournalSnapshot(), getUUID());
-                    int earned = job.getExperienceEarned();
-                    // Fires once per realtime job-completion (throttled by the world-interaction
-                    // interval, guarded by workLeft == 0, state reset after extraction) - not
-                    // per-tick. Shows whether the completion listener fires and the amount, to
-                    // split listener-not-firing vs getExperienceEarned==0 vs frozen-latch vs
-                    // starvation. See the no-experience problem (Option B).
-                    QT.VILLAGER_LOGGER.info(
-                            "[Experience] +{} from {} for {}",
-                            earned, job.getId().toNiceString(), uuid
-                    );
-                    this.town.getVillagerHandle().addExperience(uuid, earned);
-                }
-        ));
-    }
-
-    private @NotNull StatusListener getNotifiedOfJobStatusChanges() {
-        return new StatusListener() {
-            @Override
-            public Runnable jobChanged(Function<StatusListener, Runnable> listenToNewJob) {
-                // Do nothing, this listener gets removed whenever a job changes
-                return () -> {
-                };
-            }
-
-            @Override
-            public void statusChanged(IStatus<?> newStatus) {
-                changeListeners.forEach(ChangeListener::Changed);
-            }
-        };
     }
 
     @Override
@@ -438,20 +306,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
      * Records that this townie needs the player's help with something, so a bubble can say so.
      * Silence means working (ADR-0011), so this is set only when the townie has actually given up.
      */
-    /**
-     * NO_STORAGE consumer (2026-10-21 dev request): a townie stopped for lack of storage space
-     * bubbles at once. It takes precedence over UNMET_ITEM (full storage is what blocks it right
-     * now; TownPossibleWork does not overwrite it) and clears only its own need.
-     */
-    private void syncStorageNeed(IStatus<?> jobStatus) {
-        boolean blocked = ca.bradj.questown.jobs.production.ProductionStatus.NO_SPACE.equals(jobStatus);
-        if (blocked && (getNeed() == TownieNeed.NONE || getNeed() == TownieNeed.UNMET_ITEM)) {
-            setNeed(TownieNeed.NO_STORAGE);
-        } else if (!blocked && getNeed() == TownieNeed.NO_STORAGE) {
-            setNeed(TownieNeed.NONE);
-        }
-    }
-
+    @Override
     public void setNeed(TownieNeed newNeed) {
         if (level().isClientSide()) {
             return;
@@ -466,6 +321,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
     }
 
+    @Override
     public TownieNeed getNeed() {
         return TownieNeed.fromName(this.entityData.get(need));
     }
@@ -529,7 +385,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
 
-        if (!initialized) {
+        if (runtime == null) {
             return;
         }
 
@@ -539,13 +395,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
         entityData.set(hasBOP, town.getVillagerHandle().hasBlockOfProgress(getUUID()));
 
-        if (freezeTicks > 0) {
-            freezeTicks--;
+        if (runtime.spendFrozenTick()) {
             return;
         }
 
         long start = System.currentTimeMillis();
-        villagerTick(sl);
+        villagerTick(sl, runtime);
         long end = System.currentTimeMillis();
 
         spawnIdleParticlesIfNeeded(sl);
@@ -590,7 +445,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // State management should be done via the town block. This entity should
     // only handle cosmetic stuff like position, pose, etc.
 
-    private void villagerTick(ServerLevel sl) {
+    /**
+     * The body's part of a tick around the townie's decisions ({@link TownieRuntime}): sense who is
+     * looking, show hunger, get unstuck from walls, take the requested pose, open gates.
+     */
+    private void villagerTick(ServerLevel sl, TownieRuntime townie) {
         detectNearbyDistractions(sl);
         town.getVillagerHandle().getLookTarget(getVUID()).ifPresentOrElse(
                 lookControl::setLookAt,
@@ -603,10 +462,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             addParticlesAroundSelf(sl, ParticleTypes.EFFECT);
         }
 
-        if (ticksWithoutJobTarget > Compat.configGet(Config.MAX_TICKS_WITHOUT_SUPPLIES).get()) {
-            JobID seeker = WorkSeekerJob.getIDForRoot(job.get().getId());
-            town.getVillagerHandle().changeJobForVillager(getVUID(), seeker, false);
-        }
+        townie.switchToWorkSeekerIfStuck();
 
         if (isInWall()) {
             Vec3 nudged = position().add(-1.0 + (random.nextDouble() * 2.0), 0, -1.0 + (random.nextDouble() * 2.0));
@@ -616,71 +472,15 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             moveTo(nudged);
         }
 
-        Job<?, ?, ? extends IStatus<?>> j = job.get();
-
-        if (j.getStatus() == null || j.getStatus().isUnset()) {
-            @Nullable String s = getStatusForClient();
-            j.initializeStatusFromEntityData(s);
-        }
-        j.tick(town, this, getDirection());
-        if (level().isClientSide()) {
-            return;
-        }
+        var ticked = townie.tickJob(getStatusForClient());
 
         town.getVillagerHandle().getRequestedPose(uuid).ifPresent(this::applyRequestedPose);
 
-        trySetWalkTargetFromJob(j);
+        townie.steer(this, ticked);
 
-        if (town == null) {
-            QT.VILLAGER_LOGGER.error("Visitor mob's parent could not be determined. Removing");
-            remove(RemovalReason.DISCARDED);
-            return;
-        } else {
-            town.getVillagerHandle().validateEntity(this);
-        }
+        town.getVillagerHandle().validateEntity(this);
 
-        boolean vis = !j.shouldDisappear(town, position());
-        if (!vis) {
-            if (job.get().getId().rootId().equals("gatherer")) {
-                AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
-                        sl,
-                        VisitorTrigger.Triggers.FirstLeaveToGather,
-                        blockPosition()
-                );
-            }
-        }
-        this.entityData.set(visible, vis);
-        if (j.isInitialized()) {
-            entityData.set(status, j.getStatusToSyncToClient());
-            syncStorageNeed(j.getStatus());
-            entityData.set(
-                    heldItem, j.getInventory()
-                               .getItem(0)
-            );
-            if (!j.getGlobalSpecialRules().contains(SpecialRules.ONLY_RENDER_FIRST_ITEM_IN_HAND)) {
-                int size = j.getInventory().getContainerSize();
-                boolean holdingMultiple = false;
-                for (int i = 1; i < size; i++) {
-                    ItemStack item = j.getInventory().getItem(size - i);
-                    if (!item.isEmpty()) {
-                        entityData.set(lastHeldItem, item);
-                        holdingMultiple = true;
-                        break;
-                    }
-                }
-                if (!holdingMultiple) {
-                    entityData.set(lastHeldItem, ItemStack.EMPTY);
-                }
-            }
-            entityData.set(
-                    heldItem, j.getInventory()
-                               .getItem(0)
-            );
-            if (!job.get().isInitialized()) {
-                QT.VILLAGER_LOGGER.error("Wat");
-            }
-            trackTarget();
-        }
+        townie.showOn(this, sl, ticked);
         this.useNearbyGates();
     }
 
@@ -701,40 +501,55 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
     }
 
-    private void trackTarget() {
-        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
-        IStatus<?> status1 = j.getStatus();
-        if (!j.isWorking()) {
-            return;
-        }
-        if (status1 == null) {
-            QT.VILLAGER_LOGGER.error("Null status");
-        } else if (!status1.isCollectingSupplies()) {
-            return;
-        }
-        BlockPos target = j.getTarget(blockPosition(), position(), town);
-        if (target != null) {
-            ticksWithoutJobTarget = 0;
-        } else {
-            ticksWithoutJobTarget++;
-        }
+    @Override
+    public void swingMainHand() {
+        swing(InteractionHand.MAIN_HAND);
     }
 
-    private void trySetWalkTargetFromJob(Job<?, ?, ? extends IStatus<?>> j) {
-        if (j.shouldStandStill(town, blockPosition())) {
-            getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
-            return;
-        }
-        Optional<WalkTarget> curTarget = getBrain().getMemory(MemoryModuleType.WALK_TARGET);
-        @Nullable BlockPos target = j.getTarget(blockPosition(), position(), town);
-        if (target == null) {
-            return;
-        }
-        Boolean isTargetDifferent = curTarget.map(t -> t.getTarget().currentBlockPosition().equals(target))
-                                             .orElse(true);
-        if (isTargetDifferent) {
-            setWalkTarget(target);
-        }
+    @Override
+    public void wearTool(ItemStack tool) {
+        tool.hurtAndBreak(1, level().getRandom(), this, () -> {});
+    }
+
+    @Override
+    public void dropItem(ItemStack stack) {
+        level().addFreshEntity(new ItemEntity(level(), getX(), getY(), getZ(), stack));
+    }
+
+    @Override
+    public Optional<BlockPos> getWalkTarget() {
+        return getBrain().getMemory(MemoryModuleType.WALK_TARGET)
+                         .map(t -> t.getTarget().currentBlockPosition());
+    }
+
+    @Override
+    public void clearWalkTarget() {
+        getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+    }
+
+    @Override
+    public void setVisible(boolean visible) {
+        entityData.set(VisitorMobEntity.visible, visible);
+    }
+
+    @Override
+    public void showJobName(String translationKey) {
+        entityData.set(jobName, translationKey);
+    }
+
+    @Override
+    public void showStatus(String status) {
+        entityData.set(VisitorMobEntity.status, status);
+    }
+
+    @Override
+    public void showMainHandItem(ItemStack item) {
+        entityData.set(heldItem, item);
+    }
+
+    @Override
+    public void showOffhandItem(ItemStack item) {
+        entityData.set(lastHeldItem, item);
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
@@ -877,7 +692,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             BlockPos p_20040_,
             BlockState p_20041_
     ) {
-        if (getJob().shouldBeNoClip(town, blockPosition())) {
+        if (isNoClip()) {
             return false;
         }
         return super.isColliding(p_20040_, p_20041_);
@@ -885,7 +700,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     public boolean canBeCollidedWith() {
-        if (getJob().shouldBeNoClip(town, blockPosition())) {
+        if (isNoClip()) {
             return false;
         }
         return super.canBeCollidedWith();
@@ -893,7 +708,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     public boolean canCollideWith(Entity p_20303_) {
-        if (getJob().shouldBeNoClip(town, blockPosition())) {
+        if (isNoClip()) {
             return false;
         }
         return super.canCollideWith(p_20303_);
@@ -905,17 +720,15 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             double p_20287_,
             double p_20288_
     ) {
-        if (getJob().shouldBeNoClip(town, blockPosition())) {
+        if (isNoClip()) {
             return;
         }
         super.push(p_20286_, p_20287_, p_20288_);
     }
 
-    private Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getJob() {
-        if (level().isClientSide()) {
-            return ClientSideThrowingJob.INSTANCE;
-        }
-        return this.job.get();
+    /** The townie's job lets it pass through blocks and entities (server-side only; never on the client). */
+    private boolean isNoClip() {
+        return runtime != null && runtime.shouldBeNoClip(blockPosition());
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
@@ -924,7 +737,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     protected void pushEntities() {
-        if (getJob().shouldBeNoClip(town, blockPosition())) {
+        if (isNoClip()) {
             return;
         }
         List<Entity> list = this.level().getEntities(this, this.getBoundingBox(), EntitySelector.pushableBy(this));
@@ -961,9 +774,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         // the load side parses those back through MCHeldItem.fromMCItemStack (which
         // maps an EMPTY stack to Air()). A saved AIR stack does NOT work either -
         // new ItemStack(Items.AIR) is itself empty, so save() throws the same way.
-        Jobs.getItems(job.get())
-            .forEach(v -> items.add(v.isEmpty() ? new CompoundTag()
-                : v.save(registryAccess())));
+        if (runtime != null) {
+            Jobs.getItems(runtime.getJob())
+                .forEach(v -> items.add(v.isEmpty() ? new CompoundTag()
+                    : v.save(registryAccess())));
+        }
         p_21484_.put("items", items);
     }
 
@@ -984,7 +799,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                     return MCHeldItem.fromMCItemStack(stack);
                 })
                 .toList();
-        job.get().initializeItems(itemz);
+        if (runtime != null) {
+            runtime.getJob().initializeItems(itemz);
+        }
         entityData.set(status, p_21450_.getString("status"));
     }
 
@@ -1247,7 +1064,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (nodeCount < 10) {
             return;
         }
-        if (job.get().getGlobalSpecialRules().contains(SpecialRules.SLOW_WALK)) {
+        if (runtime != null && runtime.getGlobalSpecialRules().contains(SpecialRules.SLOW_WALK)) {
             getNavigation().setSpeedModifier(slowWalkSpeed);
             return;
         }
@@ -1275,6 +1092,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // State management should be done via the town block. This entity should
     // only handle cosmetic stuff like position, pose, etc.
 
+    @Override
     public void setWalkTarget(BlockPos blockPos) {
         this.wanderTarget = blockPos;
         if (blockPos == null) {
@@ -1292,7 +1110,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return null;
         }
         long start = System.currentTimeMillis();
-        BlockPos target = job.get().getTarget(blockPosition(), position(), town);
+        BlockPos target = runtime == null ? null : runtime.targetFor(this);
         long end = System.currentTimeMillis();
 
         targetTimes.add((int) (end - start));
@@ -1340,7 +1158,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @Override
     protected void jumpFromGround() {
         BlockState onBlock = level().getBlockState(blockPosition());
-        if (!job.get().isJumpingAllowed(onBlock)) {
+        if (runtime != null && !runtime.isJumpingAllowed(onBlock)) {
             // Jumping destroys crops. Don't do it when we don't have to
             return;
         }
@@ -1373,7 +1191,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public Container getInventory() {
-        return job.get().getInventory();
+        if (runtime == null) {
+            return new SimpleContainer(0);
+        }
+        return runtime.getInventory();
     }
 
     public @Nullable String getStatusForClient() {
@@ -1384,49 +1205,34 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return s;
     }
 
-    public IStatus<?> getStatusForServer() {
-        return job.get().getStatus();
+    public @Nullable IStatus<?> getStatusForServer() {
+        return runtime == null ? null : runtime.getStatus();
     }
 
-    /**
-     * The job's current work-site progress (processing state, work/time left),
-     * for the inspect command's eyes-level readout. Null when the job is not a
-     * declarative job or has no current work spot.
-     */
+    /** See {@link TownieRuntime#getWorkProgressDebug()}. */
     public @Nullable String getWorkProgressDebug() {
-        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
-        if (j instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj && town != null) {
-            return dj.getWorkProgressDebug(town);
-        }
-        return null;
+        return runtime == null ? null : runtime.getWorkProgressDebug();
     }
 
-    /**
-     * The timed leaver trip this townie is currently on (absolute server
-     * return tick + total ticks), or null when the townie is not away on a
-     * timed trip. Delegates to the declarative job that owns the timer.
-     */
+    /** See {@link TownieRuntime#getLeaverReturn()}. */
     public @Nullable LeaverReturn getLeaverReturn() {
-        if (town == null) {
-            return null;
-        }
-        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
-        if (j instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj) {
-            return dj.getLeaverReturn(town);
-        }
-        return null;
+        return runtime == null ? null : runtime.getLeaverReturn();
     }
 
     public void addStatusListener(StatusListener l) {
-        this.cleanupJobListeners.add(
-                job.get().addStatusListener(l)
-        );
+        if (runtime != null) {
+            runtime.addStatusListener(l);
+        }
     }
 
-    public ImmutableSnapshot<MCHeldItem, ?> getJobJournalSnapshot() {
-        return job.get().getJournalSnapshot();
+    public @Nullable ImmutableSnapshot<MCHeldItem, ?> getJobJournalSnapshot() {
+        return runtime == null ? null : runtime.getJournalSnapshot();
     }
 
+    /**
+     * Binds this body to the townie it stands for: the town flag builds the townie's runtime from
+     * {@code journal} and this entity becomes its body.
+     */
     @SuppressWarnings("rawtypes")
     public void initialize(
             TownInterface town,
@@ -1437,12 +1243,15 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             Snapshot journal
     ) {
         this.town = town;
-        //noinspection unchecked
-        setJob(ServerJobsRegistry.getInitializedJob(town.getServerLevel(), journal.jobId(), journal, uuid));
-        this.cleanupJobListeners.add(getJob().addStatusListener(getNotifiedOfJobStatusChanges()));
+        if (!(town instanceof TownFlagBlockEntity flag)) {
+            QT.VILLAGER_LOGGER.error("Townie {} can only be bound to a town flag, not {}", uuid, town);
+            return;
+        }
+        this.runtime = flag.bindTownie(uuid, journal, this);
+        pendingChangeListeners.forEach(cl -> runtime.addChangeListener(cl::Changed));
+        pendingChangeListeners.clear();
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
-        this.initialized = true;
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
@@ -1450,19 +1259,19 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // only handle cosmetic stuff like position, pose, etc.
 
     public boolean isInitialized() {
-        return this.initialized;
+        return runtime != null;
     }
 
     public List<Boolean> getSlotLocks() {
-        return getJob().getSlotLockStatuses();
+        return runtime == null ? List.of() : runtime.getSlotLocks();
     }
 
-    public DataSlot getLockSlot(int i) {
-        return job.get().getLockSlot(i);
+    public @Nullable DataSlot getLockSlot(int i) {
+        return runtime == null ? null : runtime.getLockSlot(i);
     }
 
-    public JobName getJobName() {
-        return job.get().getJobName();
+    public @Nullable JobName getJobName() {
+        return runtime == null ? null : runtime.getJobName();
     }
 
     public Collection<? extends Quest<ResourceLocation, MCRoom>> getQuests() {
@@ -1474,12 +1283,15 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public boolean canAcceptJob() {
-        return GathererUnmappedNoToolWorkQtrDay.ID.rootId()
-                                                  .equals(job.get().getId().rootId());
+        return GathererUnmappedNoToolWorkQtrDay.ID.rootId().equals(getJobId().rootId());
     }
 
     public void addChangeListener(ChangeListener cl) {
-        this.changeListeners.add(cl);
+        if (runtime == null) {
+            pendingChangeListeners.add(cl);
+            return;
+        }
+        runtime.addChangeListener(cl::Changed);
     }
 
     @Override
@@ -1487,7 +1299,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             DamageSource p_21016_,
             float p_21017_
     ) {
-        if (getJob().shouldBeNoClip(town, blockPosition())) {
+        if (isNoClip()) {
             return false;
         }
 
@@ -1549,16 +1361,23 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return String.format("%s [%s]", super.toString(), getUUID());
     }
 
+    /**
+     * The townie's current job; a body not yet bound to its town (load-time registration runs
+     * first, and a client entity is never bound) reports the job every townie starts with.
+     */
     public JobID getJobId() {
-        return job.get().getId();
+        if (runtime == null) {
+            return GathererUnmappedNoToolWorkQtrDay.ID;
+        }
+        return runtime.getJobId();
     }
 
     /**
      * Whether the current job lets the hungry->dining short-circuit snap this townie straight
-     * to a dining work. Server-only (the current job is a client-throwing stub on the client).
+     * to a dining work. Server-only.
      */
     public boolean canInstantlySwitchToEating() {
-        return job.get().canInstantlySwitchToEating();
+        return runtime != null && runtime.canInstantlySwitchToEating();
     }
 
     public BlockPos getFlagPos() {
@@ -1570,23 +1389,31 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public void freeze(int ticks) {
-        this.freezeTicks = ticks;
+        if (runtime != null) {
+            runtime.freeze(ticks);
+        }
     }
 
     public boolean isTickFrozen() {
-        return freezeTicks > 0;
+        return runtime != null && runtime.isTickFrozen();
     }
 
     public void removeStatusListener(StatusListener inventoryAndStatusMenu) {
-        job.get().removeStatusListener(inventoryAndStatusMenu);
+        if (runtime != null) {
+            runtime.removeStatusListener(inventoryAndStatusMenu);
+        }
     }
 
     public void addWantedIngredientsListener(Consumer<ImmutableList<Ingredient>> l) {
-        this.ingrListeners.add(l);
+        if (runtime != null) {
+            runtime.addWantedIngredientsListener(l);
+        }
     }
 
     public void removeWantedIngredientsListener(Consumer<ImmutableList<Ingredient>> l) {
-        this.ingrListeners.remove(l);
+        if (runtime != null) {
+            runtime.removeWantedIngredientsListener(l);
+        }
     }
 
     public void addStatsListener(VillagerStatsMenu villagerStatsMenu) {
@@ -1607,11 +1434,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public boolean shouldStandStill() {
-        return job.get().shouldStandStill(town, blockPosition());
+        return runtime != null && runtime.shouldStandStill(blockPosition());
     }
 
     public boolean canStopWorkingAtAnyTime() {
-        return job.get().canStopWorkingAtAnyTime();
+        return runtime != null && runtime.canStopWorkingAtAnyTime();
     }
 
     public interface ChangeListener {

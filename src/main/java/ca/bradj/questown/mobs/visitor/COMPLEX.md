@@ -195,8 +195,8 @@ place for a wall-top penalty if one is needed.
 
 ## NO_STORAGE need: full storage bubbles at once (2026-10-21 dev request)
 
-Fourth need consumer. `VisitorMobEntity.syncStorageNeed` (each server tick, beside the status
-sync): a townie whose job status is NO_SPACE — holding work output with no free town storage slot
+Fourth need consumer. `TownieRuntime.syncStorageNeed` (each server tick, beside the status
+sync in `showOn`; the rule itself is `TownieRuntime.storageNeedAfter`): a townie whose job status is NO_SPACE — holding work output with no free town storage slot
 (`JobStatuses` "stop when holding output and the town has no space") — gets `NO_STORAGE` (drawn
 from `TownieNeed.iconTexture()` — the questown "no space" status art, face-on via
 `BubbleRenderer.renderTextureBubbleFor`; an item-model chest rendered at an angle, front away, hint "Every chest is full: they have nowhere to put what they made."). It replaces NONE

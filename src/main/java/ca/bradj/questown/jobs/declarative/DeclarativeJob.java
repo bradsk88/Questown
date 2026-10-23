@@ -25,10 +25,10 @@ import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownieRuntime;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import ca.bradj.questown.town.workstatus.State;
@@ -45,7 +45,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
@@ -319,14 +318,10 @@ public class DeclarativeJob extends
     @Override
     public void tick(
             TownInterface town,
-            LivingEntity entity,
-            Direction facingPos
+            TownieRuntime townie
     ) {
-        DeclarativeJob self = this;
-        VisitorMobEntity vme = (VisitorMobEntity) entity;
-//        DeclarativeJobTickerDependencies deps = new DeclarativeJobTickerDependencies(this, town,vme);
         DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra, WorkLocation> deps
-                = new DeclarativeJobTickerDependencies(this, (TownFlagBlockEntity) town, vme);
+                = new DeclarativeJobTickerDependencies(this, (TownFlagBlockEntity) town, townie);
         this.ticker.tick(deps, (p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a));
     }
 

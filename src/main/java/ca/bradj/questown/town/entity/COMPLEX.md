@@ -56,9 +56,9 @@ flowchart LR
 
 ## Absorbed journals — a respawned townie keeps its job (#26)
 
-A townie's journal (job, status, the 6 carried items) lives only on its entity; the
-town keeps a copy in `NBT_TOWN_STATE`, republished from the *live* entities on each
-change. The shutdown ritual discards each entity as it absorbs it, so that copy cannot
+A townie's journal (job, status, the 6 carried items) lives only on its runtime, bound
+to its entity (see "Townie runtime and body"); the town keeps a copy in
+`NBT_TOWN_STATE`, republished from the *live* entities on each change. The shutdown ritual discards each entity as it absorbs it, so that copy cannot
 be the respawn's source. Before the fix every respawn (wake, cancel, relocation)
 seeded a fresh gatherer journal (`SpawnVisitorReward.newVisitorJournal`), which
 breaks ADR-0009's "jobs travel".
@@ -1514,3 +1514,65 @@ are now keyed by townie UUID (`addStatsListener(uuid, l)`, wired by `VisitorMobE
 UUID); the flag's save-on-change hook, which does want every townie, uses `addAnyStatsListener`.
 Pins: `SimpleVillagerHandleTest.statsListener_hearsOnlyItsOwnVillager` (red before: heard
 `[4, 1]`), `anyStatsListener_hearsEveryVillager`.
+
+---
+
+# Townie runtime and body — the flag owns the townie, the entity stands in for it (2026-10-23)
+
+A townie's job (status, the 6 carried items, slot locks), the work it may need to undo, its
+supply-target counter, its freeze ticks and its listeners live on a `TownieRuntime`, held by the
+flag in `TownVillagerHandle.townies` (keyed by UUID). `VisitorMobEntity` is the townie's
+`TownieBody` (`town/interfaces`): it moves (brain, navigation, doors and gates), shows (synched
+data) and reports where it is; it decides nothing. Before this the entity held the job and every
+per-tick decision, under its own "TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY" notes.
+
+| Lives on | What |
+|---|---|
+| `TownieRuntime` (flag) | the `Job`, `WorkToUndo`, ticks without a supply target, freeze ticks, status / change / wanted-ingredient listeners |
+| `TownVillagerHandle` (flag, unchanged) | stats: hunger, mood, damage, XP, proficiencies, unlocks, pose requests, look targets |
+| `VisitorMobEntity` (body) | brain + navigation, pose, synched display data (visible, status, job name, held items, need) |
+
+## Binding
+
+```mermaid
+flowchart LR
+    S["SpawnVisitorReward / recoverMobs<br/>/ assumeStateFromTown (load)"] --> I["VisitorMobEntity.initialize(journal)"]
+    I --> B["TownFlagBlockEntity.bindTownie"]
+    B --> H["TownVillagerHandle.bindTownie<br/>job = getInitializedJob(journal)"]
+    H --> R["new TownieRuntime(flag, uuid, job, body)<br/>townies.put(uuid, runtime)"]
+```
+
+- A bind builds a fresh runtime from the journal and replaces the UUID's previous one, as the
+  entity used to rebuild its job on `initialize`. `retireVillager` drops the runtime.
+- Load-time registration (`assumeStateFromTown`) still runs `register` before `initialize`. The
+  change listener `SimpleVillagerHandle.register` adds is buffered on the entity
+  (`pendingChangeListeners`) and handed to the runtime at bind. An unbound body's `getJobId()`
+  reports the gatherer start job, which is what the entity's old lazy initial-job supplier
+  returned, so `register` still unlocks the gatherer default work on load. A late duplicate that
+  `register` discards is not bound (it would have taken over the live copy's roster entry).
+- Client entities are never bound: no-clip off, jumping allowed, no slot locks (what the old
+  client-side `ClientSideThrowingJob`, now deleted, answered).
+- `MCExtra` carries the runtime (`townie()`), not the entity; `RealtimeWorldInteraction` reaches the
+  body only through it (`swingMainHand`, `wearTool`, `blockPosition`, `tryGiveItem`'s drop).
+
+## Tick order (the entity still triggers it)
+
+`VisitorMobEntity.tick` → `villagerTick(sl, runtime)`, in the order the entity always ran it:
+body (distractions, look target, starving pose) → `switchToWorkSeekerIfStuck` → body (wall nudge)
+→ `tickJob` → body (requested pose) → `steer` → `validateEntity` → `showOn` → body (gates).
+
+- **The ticked job, not the current one.** A job tick can change the townie's job (a
+  pre-state-change rule). `tickJob` returns the job that ticked, and `steer` and most of `showOn`
+  (visibility, status, held items) use it, as the entity always did; only the gatherer advancement
+  and `trackTarget` read the current job. Steering by the new, never-ticked job NPEs in
+  `DeclarativeJob.cleanRooms` (`roomsNeedingIngredientsOrTools` is cached by the first tick): the
+  first suite run of this change crashed every shard on it.
+- `steer` keeps the entity's walk-target rule: the job's target is applied only when the body has
+  no walk target or is already walking to that target; a body walking elsewhere keeps going.
+- The first job used to carry two status notifiers (`setJob` and `initialize` each added one); the
+  runtime adds one. A status change still marks the flag changed and refreshes the
+  wanted-ingredient listeners, once instead of twice.
+- `TownieRuntime.storageNeedAfter` (the NO_STORAGE rule) is pure; `TownieRuntimeStorageNeedTest`
+  pins it. The rest needs a live job (registry-bound) and is covered by the full autotest suite:
+  91/94 at this change (baseline 93/94), the extra two being the ledger's load flakes
+  `nav/roof_gatherer` and `flag/floating_furniture_over_half`, each 2/2 alone.

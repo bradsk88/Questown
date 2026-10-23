@@ -5,9 +5,11 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
+import ca.bradj.questown.jobs.Job;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
+import ca.bradj.questown.jobs.Snapshot;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -15,6 +17,7 @@ import ca.bradj.questown.town.Effect;
 import ca.bradj.questown.town.TownVillagerMoods;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.VillagerStatsData;
+import ca.bradj.questown.town.interfaces.TownieBody;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -27,6 +30,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -51,6 +55,11 @@ public final class TownVillagerHandle {
      * handle, and never re-issued. 2026-10-14 playtest ruling: no reuse.
      */
     private final VillagerDisplayNumbers displayNumbers = new VillagerDisplayNumbers();
+    /**
+     * Each townie's live state and decisions, keyed by UUID. The entity is only the townie's body;
+     * see {@link TownieRuntime} and {@code town/entity/COMPLEX.md} "Townie runtime and body".
+     */
+    private final Map<UUID, TownieRuntime> townies = new HashMap<>();
 
     TownVillagerHandle() {
         SimpleVillagerHandle.Configs config = new SimpleVillagerHandle.Configs(
@@ -90,10 +99,15 @@ public final class TownVillagerHandle {
                     VisitorMobEntity f,
                     boolean announce
             ) {
-                f.setJob(ServerJobsRegistry.getInitializedJob(
+                TownieRuntime runtime = f.getRuntime();
+                if (runtime == null) {
+                    QT.FLAG_LOGGER.error("Townie {} is not bound to the town; cannot change its job to {}", villagerUUID, newJob);
+                    return;
+                }
+                runtime.setJob(ServerJobsRegistry.getInitializedJob(
                         town.getServerLevelUnsafe(),
                         newJob,
-                        f.getJobJournalSnapshot().items(),
+                        runtime.getJournalSnapshot().items(),
                         villagerUUID
                 ));
                 @NotNull TownFlagBlockEntity t = town.getUnsafe();
@@ -553,6 +567,32 @@ public final class TownVillagerHandle {
 
     ImmutableMap<UUID, JobID> getPreRolls() {
         return delegate.getPreRolls();
+    }
+
+    /**
+     * Builds the townie's runtime from {@code journal} (its job, status and carried items) and
+     * binds {@code body} to it, replacing any runtime the townie had.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    TownieRuntime bindTownie(
+            TownFlagBlockEntity flag,
+            UUID uuid,
+            Snapshot journal,
+            TownieBody body
+    ) {
+        Job job = ServerJobsRegistry.getInitializedJob(flag.getServerLevel(), journal.jobId(), journal, uuid);
+        TownieRuntime runtime = new TownieRuntime(flag, uuid, job, body);
+        townies.put(uuid, runtime);
+        return runtime;
+    }
+
+    @Nullable TownieRuntime getTownie(UUID uuid) {
+        return townies.get(uuid);
+    }
+
+    /** The townie died or left: its runtime goes with it. */
+    void unbindTownie(UUID uuid) {
+        townies.remove(uuid);
     }
 
     void register(VisitorMobEntity visitorMobEntity) {

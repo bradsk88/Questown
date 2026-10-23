@@ -13,7 +13,6 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
@@ -27,7 +26,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
@@ -93,7 +91,7 @@ public class RealtimeWorldInteraction extends
 
     @Override
     protected int getWorkSpeedOf10(MCExtra mcExtra) {
-        java.util.UUID uuid = mcExtra.entity().getUUID();
+        java.util.UUID uuid = mcExtra.townie().getUUID();
         int base = mcExtra.town().getVillagerHandle().getWorkSpeed(uuid);
         float mult = proficiencyMultiplier(
                 getProficiencyId(),
@@ -112,7 +110,7 @@ public class RealtimeWorldInteraction extends
             MCExtra mcExtra,
             Integer timeToAugment
     ) {
-        return mcExtra.town().getVillagerHandle().getAffectedTime(mcExtra.entity().getUUID(), timeToAugment);
+        return mcExtra.town().getVillagerHandle().getAffectedTime(mcExtra.townie().getUUID(), timeToAugment);
     }
 
     @Override
@@ -124,7 +122,7 @@ public class RealtimeWorldInteraction extends
         if (profId == null) {
             return town;
         }
-        java.util.UUID uuid = mcExtra.entity().getUUID();
+        java.util.UUID uuid = mcExtra.townie().getUUID();
         var handle = mcExtra.town().getVillagerHandle();
         handle.setProficiencies(uuid, levelProficiencies(handle.getProficiencies(uuid), profId));
         return town;
@@ -152,12 +150,7 @@ public class RealtimeWorldInteraction extends
         if (foundTool.isPresent()) {
             int idx = journal.getItems().indexOf(foundTool.get());
             ItemStack is = foundTool.get().get().toQTItemStack();
-            is.hurtAndBreak(
-                    1,
-                    mcExtra.entity().level().getRandom(),
-                    mcExtra.entity(),
-                    () -> {}
-            );
+            mcExtra.townie().wearTool(is);
             journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
             return true;
         }
@@ -251,7 +244,7 @@ public class RealtimeWorldInteraction extends
         @Nullable WorkOutput<@Nullable Boolean, WorkPosition<BlockPos>> o = super.tryWorking(mcExtra, workSpot);
         if (o != null && o.town() != null && o.town()) {
             playSound(mcExtra, o.spot().jobBlock());
-            mcExtra.entity().swing(InteractionHand.MAIN_HAND);
+            mcExtra.townie().swingMainHand();
         }
         return o;
     }
@@ -289,7 +282,7 @@ public class RealtimeWorldInteraction extends
             MCExtra extra,
             BlockPos position
     ) {
-        return Jobs.isCloseTo(extra.entity().blockPosition(), position);
+        return Jobs.isCloseTo(extra.townie().blockPosition(), position);
     }
 
     @Override
@@ -301,7 +294,7 @@ public class RealtimeWorldInteraction extends
     public boolean tryGrabbingInsertedSupplies(
             MCExtra mcExtra
     ) {
-        VisitorMobEntity.WorkToUndo wtu = mcExtra.entity().getWorkToUndo();
+        WorkToUndo wtu = mcExtra.townie().getWorkToUndo();
         boolean res;
         if (wtu == null) {
             res = true;
@@ -316,7 +309,7 @@ public class RealtimeWorldInteraction extends
 
     @Override
     public int timesInserted(MCExtra mcExtra) {
-        VisitorMobEntity.WorkToUndo workToUndo = mcExtra.entity().getWorkToUndo();
+        WorkToUndo workToUndo = mcExtra.townie().getWorkToUndo();
         return workToUndo == null ? 0 : workToUndo.itemsInserted().size();
     }
 
@@ -334,7 +327,7 @@ public class RealtimeWorldInteraction extends
             return;
         }
         mcExtra.town().getEconomicsHandle()
-               .registerUnmetNeed(Util.getTick(serverLevel), mcExtra.entity().getUUID(), apply);
+               .registerUnmetNeed(Util.getTick(serverLevel), mcExtra.townie().getUUID(), apply);
     }
 
     @Override
@@ -346,12 +339,12 @@ public class RealtimeWorldInteraction extends
             throw new UnsupportedOperationException("Cannot run without server level");
         }
         mcExtra.town().getEconomicsHandle()
-               .registerUnmetRoom(Util.getTick(serverLevel), mcExtra.entity().getUUID(), jobRoom.get());
+               .registerUnmetRoom(Util.getTick(serverLevel), mcExtra.townie().getUUID(), jobRoom.get());
 
     }
 
     public void clearInsertedSupplies(MCExtra extra) {
-        extra.entity().clearWorkToUndo();
+        extra.townie().clearWorkToUndo();
     }
 
     @Override
@@ -361,13 +354,13 @@ public class RealtimeWorldInteraction extends
             MCExtra inputs,
             BlockPos position
     ) {
-        VisitorMobEntity.WorkToUndo workToUndo = inputs.entity().getWorkToUndo();
+        WorkToUndo workToUndo = inputs.townie().getWorkToUndo();
         return PreExtractHook.run(
                 didAnything,
                 rules,
                 new MinecraftWorldAccess(inputs.town().getServerLevel()),
                 (in, i, s) -> {
-                    inputs.entity().tryGiveItem(i, s);
+                    inputs.townie().tryGiveItem(i, s);
                     // A rule-taken product (cook/extract's take_from_slot_2) is an extraction too:
                     // it gets the LOOT-quest check like a result item (warp routes it through
                     // tryGiveItems -> postExtractHook already). 2026-10-19: the cook's meals never
@@ -377,12 +370,12 @@ public class RealtimeWorldInteraction extends
                 },
                 position,
                 last(workToUndo),
-                () -> inputs.town().getVillagerHandle().clearPoseRequests(inputs.entity().getUUID()),
+                () -> inputs.town().getVillagerHandle().clearPoseRequests(inputs.townie().getUUID()),
                 () -> ImmutableList.of(position)
         );
     }
 
-    private Item last(VisitorMobEntity.WorkToUndo workToUndo) {
+    private Item last(WorkToUndo workToUndo) {
         if (workToUndo == null) {
             return null;
         }
@@ -416,12 +409,12 @@ public class RealtimeWorldInteraction extends
                     return town;
                 },
                 (in, up) -> {
-                    inputs.town().getVillagerHandle().eat(inputs.entity().getUUID(), up);
+                    inputs.town().getVillagerHandle().eat(inputs.townie().getUUID(), up);
                     return in;
                 },
                 (in, effect, durationTicks) -> {
                     long expiry = Util.getTick(inputs.town().getServerLevel()) + durationTicks;
-                    inputs.town().getVillagerHandle().applyEffect(effect, expiry, inputs.entity().getUUID());
+                    inputs.town().getVillagerHandle().applyEffect(effect, expiry, inputs.townie().getUUID());
                     return in;
                 },
                 extractedItem,
@@ -470,9 +463,9 @@ public class RealtimeWorldInteraction extends
     ) {
         return PostInsertHook.run(
                 aBoolean, rules, new MinecraftWorldAccess(inputs.town().getServerLevel()), position, item.get().toMCItemStack(), (t) -> {
-                    inputs.town().getVillagerHandle().clearBlockOfProgress(inputs.entity().getUUID());
+                    inputs.town().getVillagerHandle().clearBlockOfProgress(inputs.townie().getUUID());
                     return true;
-                }, inputs.entity().getUUID()
+                }, inputs.townie().getUUID()
         );
     }
 
@@ -486,10 +479,10 @@ public class RealtimeWorldInteraction extends
         PreStateChangeHook.run(
                 rules,
                 pose -> inputs.town().getVillagerHandle().requestPose(
-                        inputs.entity().getUUID(),
+                        inputs.townie().getUUID(),
                         new PoseInPlace(pose, decideSpot(rules, position))
                 ),
-                jobId -> inputs.town().getVillagerHandle().changeJobForVillager(inputs.entity().getUUID(), jobId, false)
+                jobId -> inputs.town().getVillagerHandle().changeJobForVillager(inputs.townie().getUUID(), jobId, false)
         );
     }
 

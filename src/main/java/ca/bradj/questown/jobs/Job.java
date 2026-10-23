@@ -1,12 +1,11 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.town.entity.TownieRuntime;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -25,8 +24,7 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     void tick(
             TownInterface town,
-            LivingEntity entity,
-            Direction facingPos
+            TownieRuntime townie
     );
 
     boolean shouldDisappear(

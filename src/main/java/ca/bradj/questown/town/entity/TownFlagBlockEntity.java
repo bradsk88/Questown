@@ -28,6 +28,7 @@ import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.DiningStages;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.Snapshot;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
@@ -892,7 +893,27 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     /** A townie died: remove it from the saved roster so {@link #townVillagerCount} drops. */
     public void retireVillager(UUID villager) {
         villagerHandle.retireDisplayNumber(villager);
+        villagerHandle.unbindTownie(villager);
         setChanged();
+    }
+
+    /**
+     * Binds a townie entity to the townie it stands for: builds the townie's runtime (its job,
+     * status and carried items) from {@code journal} and makes {@code body} its body. See
+     * {@link TownieRuntime}.
+     */
+    @SuppressWarnings("rawtypes")
+    public TownieRuntime bindTownie(
+            UUID villager,
+            Snapshot journal,
+            TownieBody body
+    ) {
+        return villagerHandle.bindTownie(this, villager, journal, body);
+    }
+
+    /** The townie's runtime, or null when no townie with that UUID is bound to this town. */
+    public @Nullable TownieRuntime getTownie(UUID villager) {
+        return villagerHandle.getTownie(villager);
     }
 
     public boolean hasVillagers() {

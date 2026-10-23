@@ -37,6 +37,11 @@ public class TownVillagerMobs {
             return;
         }
         town.villagerHandle.register(visitorMobEntity);
+        if (visitorMobEntity.isRemoved()) {
+            // A live copy of this townie is already registered; this late duplicate was discarded
+            // and must not rebind the townie's runtime to itself.
+            return;
+        }
         TownState.VillagerData<MCHeldItem> m = match.get();
         visitorMobEntity.initialize(town, m.uuid, m.xPosition, m.yPosition, m.zPosition, m.journal);
     }

@@ -17,10 +17,10 @@ import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownieRuntime;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.questown.world.MinecraftWorldAccess;
@@ -49,16 +49,16 @@ public class DeclarativeJobTickerDependencies implements
         DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra, WorkLocation> {
     private final TownFlagBlockEntity town;
     private final DeclarativeJob job;
-    private final VisitorMobEntity entity;
+    private final TownieRuntime townie;
 
     public DeclarativeJobTickerDependencies(
             DeclarativeJob declarativeJob,
             TownFlagBlockEntity town,
-            VisitorMobEntity vme
+            TownieRuntime townie
     ) {
         this.town = town;
         this.job = declarativeJob;
-        this.entity = vme;
+        this.townie = townie;
     }
 
     @Override
@@ -193,12 +193,12 @@ public class DeclarativeJobTickerDependencies implements
         return new DeclarativeJobTicker.EntityHandle<>() {
             @Override
             public BlockPos getBlockPosition() {
-                return entity.blockPosition();
+                return townie.blockPosition();
             }
 
             @Override
             public ImmutableList<MCHeldItem> getHeldItems() {
-                return entity.getJobJournalSnapshot().items();
+                return townie.getJournalSnapshot().items();
             }
         };
     }
@@ -218,7 +218,7 @@ public class DeclarativeJobTickerDependencies implements
 
     @Override
     public UnsafeVillagerData getVillagerData() {
-        return town.getVillagerHandle().getUnprotectedDataHandle(entity.getVUID());
+        return town.getVillagerHandle().getUnprotectedDataHandle(townie.getVUID());
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -386,7 +386,7 @@ public class DeclarativeJobTickerDependencies implements
 
     @Override
     public MCExtra getExtra() {
-        return new MCExtra(town, getWorkStatusHandle(), entity);
+        return new MCExtra(town, getWorkStatusHandle(), townie);
     }
 
     @Override
@@ -448,17 +448,17 @@ public class DeclarativeJobTickerDependencies implements
             RoomsNeedingVillagerInput<MCRoom, RECIPE, BlockPos> rniot,
             @Nullable EntityCurrentJobSite<MCRoom> entityCurrentJobSite
     ) {
-        MCExtra extra = new MCExtra(town, getWorkStatusHandle(), entity);
+        MCExtra extra = new MCExtra(town, getWorkStatusHandle(), townie);
         DeclarativeJobTickerDependencies self = this;
         return new DeclarativeLogicWorld.WorldDeps<>() {
             @Override
             public BlockPos getEntityBlockPosition() {
-                return entity.blockPosition();
+                return townie.blockPosition();
             }
 
             @Override
             public Object getEntityVUID() {
-                return entity.getVUID();
+                return townie.getVUID();
             }
 
             @Override
