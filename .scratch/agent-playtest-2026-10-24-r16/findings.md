@@ -25,6 +25,12 @@ board (-2, 67, -3).
   (21, 66, -8), empty) built the same way (console fill + setblock).
 - 4 stone swords put into the empty storeroom slots 0-3 by console (the player's delivery, as in
   r13).
+- Day 2, 00:12: 8 coal put into empty storeroom slot 10 by console (the player's delivery); a
+  second storeroom chest placed by `clickheld` at (6, 66, -11); a second bed set at (15, 66,
+  -11)/(15, 66, -10) by console.
+- Day 3, 00:20: room 4 (door (28, 66, -8), interior x 27..30, z -11..-9) built by console fill,
+  hanging lantern (30, 68, -10), 4 Dinner Plates (`questown:plate_block`, creative) placed by
+  `clickheld`, first at z -11, then moved to z -10.
 
 ## Fine (checked)
 - Day 0 onboarding, all in ~4 real minutes: flag -> Campfire (at flag Y, completed on placement)
@@ -58,6 +64,16 @@ board (-2, 67, -3).
   open, the coal-icon bubble was plainly visible (bub3.png). The flag villagers-tab tooltip said
   "Cook is fetching food. / They will eat it soon." with no coal line: that is r10 #8's
   documented `StatusNeedLine.keepsOwnLines` rule (`gui/COMPLEX.md`, dev 2026-10-23).
+- Day 2 upgrades: second chest -> "Small Storeroom -> Storeroom", second bed -> "Bedroom -> Big
+  Bedroom", both completed on placement. The cook was `sleepless` at dawn 3 ("bedless last
+  night"): correct, the nightfall capture (00:09:56, "1 of 2 townies have no bed") came before
+  I added the second bed (00:12:28), the documented `BedlessLedger` v1 trade-off.
+- Day 3: with coal in the storeroom the cook's need cleared. It ran `cook:fuel` twice (TOOK
+  coal x2), `cook:extract` gave Cooked Mutton (`[LOOTTRACE] extract 'Cooked Mutton' ... -> true
+  (extracted 1/8)`, card "Food (1/8)"), from raw mutton it took on day 2 (`cook:mutton` TOOK
+  00:06:55). It then ate that cooked mutton itself (-2449 -> 5000) and now needs Raw Mutton
+  ("Cook is resting. They need Raw Mutton to work." in the tooltip). Villager 3 is the cook
+  batch's reward, so no arrival until Food reaches 8/8 (CONTEXT.md "Onboarding arrival").
 - White swirls hanging near the doorway in the frozen shots are vanilla `POOF` particles (leaver
   warp effects), held by the tick freeze. Not a finding.
 
@@ -94,3 +110,18 @@ board (-2, 67, -3).
    eat it soon." (`en_us.json` `tooltips.villagers.job.diner.status_{1,2}.COLLECTING_SUPPLIES`)
    while the town held no food at all (storeroom: leather and stone swords; the only mutton was
    already eaten). The cook gave up 5 s later (`dining_raw_food -> downtime`).
+5. (bug or missing onboarding, needs dev) **A room built to the `dining_room` recipe registers as
+   an Empty Room.** The hunter's flag-tab tooltip asked for it ("Hunter is looking for food. /
+   They also need a place to sit down and eat.", `tooltips.villagers.job.diner.status_2.NO_SUPPLIES`)
+   and no quest offers a dining room. `data/questown/recipes/dining_room.json` is 4
+   `questown:plate_block`, strength 1. Room 4 with 4 plates (all probed present at y66) was
+   wanded: `recipe_created [room.empty_room, [28, -8]]`. Re-placing a plate and then moving all
+   four from the wall row (z -11) to the middle row (z -10) produced no `room_changed`, whereas
+   the furnace (kitchen), second chest and second bed each produced one on placement. Ruled out by
+   reading the RoomRecipes repo's working-tree source (`RecipeDetection.getActiveRecipes`, `RecipeDetectionClean`; not checked against the jar in ~/.m2): all room
+   recipes are considered (no quest filter there), sorted with more ingredients first (dining_room
+   4 > empty_room 0), and the scan covers `room.yCoord..yCoord+1` where the plates sit; wall-row
+   position is not it either (the kitchen furnace also sits on z -11). No recipe load error in the
+   log. Cause not found: next step is a unit test of `RoomRecipe.matches` with four plate blocks
+   (`Ingredient` equality across the four separate plate ingredients), or a scan-result debug
+   dump for room 4 (`TownRoomsHandle` "found recipe" lines aren't logged on this run).
