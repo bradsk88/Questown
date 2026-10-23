@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 /**
  * Enter/exit bookkeeping for a town's unmet needs (design:
@@ -150,10 +151,23 @@ public final class UnmetNeedTracker {
      * a key's liveness or age does.
      */
     public @Nullable String primaryKey(String root, UUID townie) {
+        return primaryKey(root, townie, k -> true);
+    }
+
+    /**
+     * {@link #primaryKey(String, UUID)} over only the keys {@code canHold} accepts: the
+     * townie's hint names an item only for a job that townie can hold (unlock != workability,
+     * {@code docs/design-principles.md}). A key live for the town because another townie
+     * unlocked its job is skipped, and the townie gets no item hint if nothing is left.
+     */
+    public @Nullable String primaryKey(String root, UUID townie, Predicate<String> canHold) {
         String best = null;
         long bestSince = Long.MAX_VALUE;
         for (Row r : rows.values()) {
             if (!r.root().equals(root) || !r.townie().equals(townie) || r.key() == null) {
+                continue;
+            }
+            if (!canHold.test(r.key())) {
                 continue;
             }
             if (r.since() < bestSince || (r.since() == bestSince && best != null && r.key().compareTo(best) < 0)) {

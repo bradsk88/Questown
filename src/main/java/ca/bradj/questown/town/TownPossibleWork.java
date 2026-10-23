@@ -258,6 +258,7 @@ public class TownPossibleWork {
             ServerLevel sl = t.getServerLevel();
             long tick = Util.getTick(sl);
             Map<String, GateReason> liveKeys = new HashMap<>();
+            Map<String, Set<JobID>> keyJobs = new HashMap<>();
             for (JobPossibility p : unfilteredJobs) {
                 if (p.facts() == null || p.board() == null) {
                     continue;
@@ -274,6 +275,7 @@ public class TownPossibleWork {
                 if (key == null) {
                     continue;
                 }
+                keyJobs.computeIfAbsent(key, k -> new HashSet<>()).add(p.jobID());
                 GateReason existing = liveKeys.get(key);
                 // A supply-item need beats a keyless product handle for the same key.
                 if (existing == null || (reason.supplyItem() && !existing.supplyItem())) {
@@ -299,7 +301,8 @@ public class TownPossibleWork {
                 econ.registerUnmetNeed(tick, fe.townie(), fe.key());
             }
             for (VisitorMobEntity villager : townies) {
-                String primary = unmetNeeds.primaryKey(root, villager.getUUID());
+                String primary = unmetNeeds.primaryKey(
+                        root, villager.getUUID(), key -> canHoldAnyOf(t, villager.getUUID(), keyJobs.get(key)));
                 if (primary != null) {
                     // NO_STORAGE (stopped for lack of storage) outranks it; that consumer clears
                     // its own need when space frees, and this pass re-applies UNMET_ITEM then.
@@ -316,6 +319,24 @@ public class TownPossibleWork {
         } catch (Exception e) {
             QT.FLAG_LOGGER.error("Failed to refresh unmet needs for root: {}", root, e);
         }
+    }
+
+    /**
+     * Whether this townie has unlocked any of the jobs that need a key. The town-wide unlock
+     * gate above keeps a key live for the town; this narrower gate keeps a townie from asking
+     * for an item only another townie's job needs (2026-10-11 playtest: "I need a fishing rod
+     * to work" with the rod job locked on that townie's jobs screen).
+     */
+    private static boolean canHoldAnyOf(TownFlagBlockEntity t, UUID townie, @Nullable Set<JobID> jobs) {
+        if (jobs == null) {
+            return false;
+        }
+        for (JobID j : jobs) {
+            if (t.getVillagerHandle().isUnlocked(townie, j)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

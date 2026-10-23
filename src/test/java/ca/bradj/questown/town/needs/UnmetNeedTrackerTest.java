@@ -217,4 +217,20 @@ class UnmetNeedTrackerTest {
         assertEquals(3, ranked.get(0).townies());
         assertEquals(2, ranked.get(1).townies());
     }
+
+    @Test
+    void primaryKeySkipsKeysTheTownieCannotHold() {
+        // Playtest 2026-10-11: a gatherer said "I need a fishing rod to work" while its jobs
+        // screen showed the rod job still locked. The rod key is live for the town (another
+        // gatherer unlocked it), but this townie's hint must name only items for jobs it can
+        // hold (unlock != workability, docs/design-principles.md).
+        UnmetNeedTracker t = new UnmetNeedTracker();
+        t.enter(100, MINER, ALICE, "#questown:fishing_rods", FUEL_BLOCKED);
+        t.enter(200, MINER, ALICE, "#minecraft:coals", FUEL_BLOCKED);
+
+        assertEquals("#minecraft:coals", t.primaryKey(MINER, ALICE, k -> !k.equals("#questown:fishing_rods")));
+        assertNull(t.primaryKey(MINER, ALICE, k -> false));
+        // The unfiltered hint is unchanged: the oldest live key.
+        assertEquals("#questown:fishing_rods", t.primaryKey(MINER, ALICE));
+    }
 }

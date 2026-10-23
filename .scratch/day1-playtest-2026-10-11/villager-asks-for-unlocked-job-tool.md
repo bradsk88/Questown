@@ -1,6 +1,7 @@
 ---
 title: Villager says "I need a fishing rod to work" for a job that is not yet unlocked
-status: ready-for-human
+status: closed
+closed: 2026-10-23
 created: 2026-10-11
 ---
 
@@ -30,3 +31,11 @@ Forensics done (candidate-job gate reasons vs player-visible jobs, gatherer_unma
 ## Audit (2026-10-22)
 
 Design question (the 'why' line names a tool for a job the townie cannot hold yet). Partly moot since JOB_UNLOCK quests were retired 2026-10-22. Queued for the dev.
+
+## Resolved (2026-10-23)
+
+Dev ruling: name only items for jobs the townie can hold. The town-wide unlock gate still keeps
+the key live for the econ ranking; the townie's own hint now goes through
+`UnmetNeedTracker.primaryKey(root, townie, canHold)` with `TownPossibleWork.canHoldAnyOf`
+(per-villager `isUnlocked`). Pin: `UnmetNeedTrackerTest.primaryKeySkipsKeysTheTownieCannotHold`.
+The key->jobs wiring is registry-bound (not unit-testable; held-run covered).

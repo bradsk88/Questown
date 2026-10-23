@@ -441,6 +441,16 @@ the variant's tool need for *every* townie of the root, even though nobody may
 take that job — the day-one econ tab showing `#questown:axes` / `#questown:
 fishing_rods` for a town whose gatherers only know tool-less `gather`.
 
+The **townie's own hint** is narrower still (2026-10-23 dev ruling): the
+bubble / "They need %s to work." line names a key only when *that* townie has
+unlocked one of the jobs that need it (`isUnlocked(UUID, JobID)`, via
+`canHoldAnyOf` and `UnmetNeedTracker.primaryKey(root, townie, canHold)`). The
+town-wide gate keeps the key live for the econ ranking; the per-townie gate
+keeps a gatherer whose rod job is locked from asking for a fishing rod because
+another gatherer unlocked it (2026-10-11 playtest). With no holdable key left,
+the townie drops UNMET_ITEM. Pin: `UnmetNeedTrackerTest.primaryKeySkipsKeysTheTownieCannotHold`;
+the key→jobs wiring is registry-bound (held-run covered).
+
 The pure classifier only receives labels and booleans: the town side supplies
 them from the registry-bound job data and container scans (`evaluateJob` /
 `gateFacts` in `TownPossibleWork`), and the NO_REQUEST / supply key come from
