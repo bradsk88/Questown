@@ -91,14 +91,16 @@ command group (since 1.20.3 / snapshot `23w43a`): `query`, **`rate <float>`**
 `time`, `freeze`, `unfreeze`.
 
 - **Feed it through the ONE proven recipe, not a hand-rolled `echo`**: after boot,
-  `run/ffeed.sh setup` then
-  `run/ffeed.sh feed "/tick rate 200" --expect "Set the target tick rate" <log>`.
+  `tools/ffeed.sh setup` then
+  `tools/ffeed.sh feed "/tick rate 200" --expect "Set the target tick rate" <log>`.
   The old bare-`echo` form can hang the caller indefinitely (a 2026-10-04 write
   cost ~2 h, server up the whole time) — ffeed bounds the write to 15 s and
   confirms delivery, so it never can. Do NOT retry with a second FIFO command
   after a hang; that second write blocks identically. `--expect` matches only
   log lines written after the feed (since 2026-10-23; before, an older line from
   the scenario itself "confirmed" a command that had died on `Expected integer`).
+  Still pick an `--expect` only the command itself prints (`Teleported Dev`, the
+  command's own log prefix), not a phrase the scenario also logs on its own.
   **Delivery truth is in-game pace, not echoes**: ~60 s per day at 200 t/s vs
   ~20 min at 20; `run/pace-guard.sh <log> <claimed-rate>` enforces it (an
   unapplied `/tick rate` is silent — pace is what proves it landed). Full
@@ -474,7 +476,7 @@ across two runs. Size polling from that, not from worst case.
 - **Per-run phase list (each its own ≤60 s call):** (1) kill stragglers by
   pid + port check; (2) launch — `nohup ./gradlew runServer <scenario flags>
 > /tmp/runN.log 2>&1 &`, echo, done; (3) boot check (`worldTimeAtSleep=`
-line); (4) pace via `run/ffeed.sh feed` — the confirm races the log write,
+line); (4) pace via `tools/ffeed.sh feed` — the confirm races the log write,
 expect 2–6 tries until `Set the target tick rate to <N>.0 per second` is in
 the log; (5) 45–60 s polls: `grep -c '\[lock\]'` + last `watch day=` + last
 `container.items=`; (6) verdict capture; (7) kill by pid; (8) port re-check.
@@ -791,12 +793,13 @@ block the matching hand places it.
   a block-placement tool** — if the held item isn't what the moment needs (the
   town wand from `clickwand`, say), it places nothing, and retrying it won't
   help; that is the wrong hand, not a failed placement. A player too far gets
-  `TOO_FAR_AWAY`. **From a held autotest login** (2026-10-23): the player joins
-  as a spectator, and a spectator's block right-click logs `-> PASS` with no
-  effect; an empty hand logs `has nothing in the main hand`. Give any item and
-  `gamemode survival Dev` first. The arena viewpoint sits inside terrain, so a
-  survival player suffocates within seconds: also `difficulty peaceful` and
-  `effect give Dev minecraft:resistance 3000 255 true`.
+  `TOO_FAR_AWAY`. **From a held autotest login, run
+  `tools/held-player.sh Dev <x> <y> <z> <log>` first** (a ground cell next to the
+  target): the player joins as a spectator (`clickheld` logs `-> PASS`, no
+  effect), the arena viewpoint is inside terrain (a survival player suffocates),
+  and switching to survival mid-air kicks it ("Flying is not enabled on this
+  server"). The helper applies peaceful, Resistance 255, the tp, survival and an
+  item, each confirmed (verified 2026-10-23: click `-> SUCCESS`, no death in 30 s).
 - **Putting a block in the world is its own hand, never `clickheld`.** To put a
   block in the world use `setblock` or the matching command (`place_door`,
   `place_board`, `place_mat`) — the same hand that placed the door and the

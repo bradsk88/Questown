@@ -30,7 +30,7 @@ relights the campfire", which the Acting section already said.
 ## Setup (worktree `build/wt`, port 25585; leaves the dev's checkout alone)
 
 1. Ask before stopping the dev's own session; if they say they aren't playing, stop it (client
-   JVM by pid, then `run/ffeed.sh feed stop`). Two clients + servers fit in RAM, but builds
+   JVM by pid, then `tools/ffeed.sh feed stop`). Two clients + servers fit in RAM, but builds
    contend.
 2. **An autotest launch in this worktree wipes `run/world`.** `build.gradle` deletes it before any
    `runServer -Dquestown.autotest=true`, and `tools/autotest-parallel.sh` captures its command
@@ -43,11 +43,11 @@ relights the campfire", which the Acting section already said.
 4. `run-client/options.txt` (edit only while the client is **down**; a running client rewrites it
    on exit and your edit is lost): `guiScale:3`, `pauseOnLostFocus:false` (otherwise the pause
    menu covers every screenshot).
-5. Console: copy `run/ffeed.sh` and `run/pace-guard.sh` from the main checkout if missing, then
-   `run/ffeed.sh setup`. Server: `LANG=C.UTF-8 setsid nohup ./gradlew runServer
+5. Console: copy `tools/ffeed.sh` and `run/pace-guard.sh` from the main checkout if missing, then
+   `tools/ffeed.sh setup`. Server: `LANG=C.UTF-8 setsid nohup ./gradlew runServer
    -Dquestown.tp.fifo=true > <log> 2>&1 &`. Client after the server says `Done (`:
    `LANG=C.UTF-8 setsid nohup ./gradlew runClient -Pautojoin -Pautoport=25585 > <log> 2>&1 &`.
-6. Speed: `run/ffeed.sh feed "tick rate 40"` (dev: "I believe you can observe well at 40tps").
+6. Speed: `tools/ffeed.sh feed "tick rate 40"` (dev: "I believe you can observe well at 40tps").
    A Minecraft day is then 10 real minutes.
 
 ## Observing
@@ -128,7 +128,7 @@ relights the campfire", which the Acting section already said.
   then the `GradleWrapperMain` java whose cmdline has `runClient`. Never `pkill -f`/`pgrep -f` a
   pattern like `runClient -Pautojoin`: it matches your own bash command and kills the tool
   call (exit 144, twice this session).
-- Stop the server with `run/ffeed.sh feed stop` after the client is gone, and wait for its pid.
+- Stop the server with `tools/ffeed.sh feed stop` after the client is gone, and wait for its pid.
 - Write launch logs under `build/agent-playtest/`: the session scratchpad disappeared mid-session
   and took the client log with it.
 - `run/logs/debug.log` has the DEBUG lines `latest.log` lacks (`hunger_updates`, "gave up waiting

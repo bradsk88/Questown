@@ -268,10 +268,10 @@ world events.
 
 RCON does not work in this build. Feed a command to the server through a FIFO:
 
-- THE ONE recipe on this box is **`run/ffeed.sh`** (bounded write + delivery
+- THE ONE recipe on this box is **`tools/ffeed.sh`** (bounded write + delivery
   confirm; never hand-roll the FIFO):
-  `run/ffeed.sh setup` (fifo + idempotent holder) then
-  `run/ffeed.sh feed "/tick rate 200" --expect "Set the target tick rate" <log>`.
+  `tools/ffeed.sh setup` (fifo + idempotent holder) then
+  `tools/ffeed.sh feed "/tick rate 200" --expect "Set the target tick rate" <log>`.
 - Root cause of every historical hang: a bare `echo … > fifo` **blocks the writer
   until something holds the fifo's READ end open**. The holder must therefore open
   the fifo **read-write**: `nohup sh -c 'sleep 999999 <> run/server-cmd.fifo' &`
@@ -279,7 +279,7 @@ RCON does not work in this build. Feed a command to the server through a FIFO:
   from none at all). The 2026-10-04 200-t/s battery worked because its holder was
   `<>`; minutes later, probes with `>`-style holders (or a server whose stdin was a
   plain pipe, not the FIFO — case 3 below) hung the caller 7532 s, server up the
-  entire time. `run/ffeed.sh` bounds the write to 15 s regardless.
+  entire time. `tools/ffeed.sh` bounds the write to 15 s regardless.
 - **Pace, not echo, is delivery truth:** at 20 t/s one in-game day takes ~20 min of
   wall time, at 200 t/s ~60 s. `run/pace-guard.sh <log> <claimed-rate>` enforces
   exactly this (threshold = expected day gap × 1.5 + 30 s). An unapplied `/tick rate`
@@ -297,7 +297,7 @@ RCON does not work in this build. Feed a command to the server through a FIFO:
   delivered). It **blocked indefinitely on the same kind of run** minutes later, the
   bash tool call hanging ~2 h (7532 s) until aborted, server up and healthy the whole
   time. **The concrete difference is who holds the read end** (see the holder bullet
-  above), not autotest-vs-dev or daemon warmth. **Rule: use `run/ffeed.sh` (bounded
+  above), not autotest-vs-dev or daemon warmth. **Rule: use `tools/ffeed.sh` (bounded
   write + `--expect` confirm); and confirm by in-game day pace with
   `run/pace-guard.sh` — nothing in the log proves the rate landed on its own.**
 - **Third block case (verified 2026-10-13): the server's stdin is a plain pipe,

@@ -9,7 +9,7 @@ id=${1:?usage: probe-block.sh <block-id> <x y z> ...}; shift
 LOG=run/logs/latest.log
 n=$(grep -ac 'Test passed\|Test failed' "$LOG"); k=0; pos=()
 while [ $# -ge 3 ]; do
-  run/ffeed.sh feed "execute if block $1 $2 $3 $id" >/dev/null; pos+=("$1 $2 $3"); k=$((k + 1)); shift 3
+  tools/ffeed.sh feed "execute if block $1 $2 $3 $id" >/dev/null; pos+=("$1 $2 $3"); k=$((k + 1)); shift 3
 done
 timeout 10 sh -c "until [ \$(grep -ac 'Test passed\|Test failed' $LOG) -ge $((n + k)) ]; do sleep 0.3; done"
 i=0

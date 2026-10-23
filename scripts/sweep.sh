@@ -47,7 +47,7 @@
 #             so a longer watch just gives more villages the chance to hit the
 #             stall window — see the 2026-10-21 defect map in
 #             .scratch/village-self-sufficiency/unseededMat-test-defect-map.md)
-# Requires:  run/ffeed.sh, run/pace-guard.sh (scratch, untracked — recreate from
+# Requires:  tools/ffeed.sh (tracked), run/pace-guard.sh (scratch, untracked — recreate from
 #            .pi/skills/questown-held-run/SKILL.md if absent), Java 21 on PATH
 #            for this branch's Gradle 8.14.
 #
@@ -110,7 +110,7 @@ SERVER_PID=$(pgrep -af 'BootstrapLauncher' | awk '{print $1}' | head -1 || true)
 echo "server pid $SERVER_PID"
 
 # Raise the tick rate and VERIFY it landed (not blind: a missing echo = dead console).
-timeout 90 run/ffeed.sh feed "/tick rate 200" --expect "Set the target tick rate" "$LOG" || {
+timeout 90 tools/ffeed.sh feed "/tick rate 200" --expect "Set the target tick rate" "$LOG" || {
   echo "CONSOLE DEAD — rate never applied (see the -Dquestown.tp.fifo trap in this script's header)" >&2; exit 2; }
 
 # Watch to the deadline (or the RESULT banner, whichever comes first).
