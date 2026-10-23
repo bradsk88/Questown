@@ -742,3 +742,20 @@ at CANT_REACH and the raw-food quest never closed, because the lookup also gates
 leaver can extract (its own table has no finds yet). Fix the hint on the hint side (known loot ∩
 the job's own table), not here. Ticket:
 `.scratch/playtest-2026-10-20/food-producers-list-includes-leavers.md`.
+
+# No "no quests found" fallback batch (removed 2026-10-23)
+
+`AbstractTownFlagTicker` used to call `ensureCompletableQuestsExist` every tick:
+after ~500 ticks with every quest complete and no quest-adding morning reward
+pending, it asked for a batch for the first villager (`TownFlagTicker.addQuests`
+→ `addBatchOfQuestsForVisitor`). Past onboarding that batch re-ran the last
+tutorial beat (the miner beat: Mineshaft, Miner job, pickaxes, swords, coal),
+whose quests were already satisfied, so backfill closed them the same second and
+chat repeated "Quest completed: Mineshaft" every couple of minutes (agent
+playtest 2026-10-22, findings:100). Dev ruling: drop the fallback entirely;
+quests now come only from the tutorial phases and the quest-completion reward
+chain (`TownQuests.defaultQuestCompletionRewards`,
+`TownQuestsHandle.addReplacementQuestBatch`). Consequence to know: a town whose
+reward chain ends with nothing open gets no new quest from the ticker.
+Removal only; there is no unit seam (the ticker is a 30-hook abstract class
+with no test double).

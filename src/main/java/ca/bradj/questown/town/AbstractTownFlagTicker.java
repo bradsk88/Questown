@@ -2,11 +2,8 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.gui.ItemEconomicsData;
 import ca.bradj.questown.jobs.Signals;
-import ca.bradj.questown.town.quests.Completable;
-import ca.bradj.questown.town.quests.Reward;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,7 +13,6 @@ import java.util.Stack;
 import java.util.function.Supplier;
 
 public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
-    private int ticksWithoutQuests;
     private boolean stopped;
     protected boolean everScanned = false;
     boolean debugMode;
@@ -51,7 +47,6 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         }
 
         Collection<VILLAGERS> villagers = getVillagers(data);
-        ensureCompletableQuestsExist(data, villagers);
 
         boolean alreadyStopped = stopped;
         stopped = allPlayersLeftArea(data, !alreadyStopped);
@@ -236,55 +231,12 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
             boolean playersNearbyOnPrevTick
     );
 
-    private void ensureCompletableQuestsExist(
-            TICK_DATA data,
-            Collection<VILLAGERS> villagers
-    ) {
-        // We use a loop to ensure the more expensive "quests" check is only
-        // run if there is at least one villager in the town.
-        for (VILLAGERS villager : villagers) {
-            if (!isMissingCompletableQuests(data)) {
-                ticksWithoutQuests = 0;
-                break;
-            }
-            boolean allowingForBuffer = ticksWithoutQuests < 500;
-            if (allowingForBuffer) {
-                ticksWithoutQuests++;
-                break;
-            }
-            addQuests(data, villager);
-            ticksWithoutQuests = 0;
-            break; // We only want to add a quest batch for the first villager
-        }
-    }
-
     private void onMorningDetected(long newTime) {
         this.mornings.push(newTime);
         // IMPORTANT: DO NOTHING ELSE IN THIS FUNCTION
         // Adding logic here may cause the game to lock up.
         // Do morning logic via morningTick().
     }
-
-    protected abstract void addQuests(
-            TICK_DATA data,
-            VILLAGERS v
-    );
-
-    private boolean isMissingCompletableQuests(TICK_DATA e) {
-        Collection<Pair<Completable, Reward>> all = getAllQuestsWithRewards(e);
-        if (all.stream().anyMatch(v -> !v.a().isComplete())) {
-            return false;
-        }
-        Collection<Reward> rewards = getMorningRewards(e);
-        if (rewards.stream().anyMatch(Reward::addsQuestsWhenApplied)) {
-            return false;
-        }
-        return true;
-    }
-
-    protected abstract ImmutableList<Pair<Completable, Reward>> getAllQuestsWithRewards(TICK_DATA e);
-
-    protected abstract ImmutableList<Reward> getMorningRewards(TICK_DATA e);
 
     protected abstract ImmutableList<VILLAGERS> getVillagers(TICK_DATA data);
 

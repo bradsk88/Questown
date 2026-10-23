@@ -251,29 +251,6 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
     }
 
     @Override
-    protected void addQuests(
-            TickData tickData,
-            VisitorMobEntity v
-    ) {
-        QT.FLAG_LOGGER.debug("No quests found. Adding a batch for {}", v.getVUID());
-        TownFlagBlockEntity e = tickData.entity();
-        e.questsHandle.addBatchOfQuestsForVisitor(v.getVUID());
-        e.setChanged();
-    }
-
-    @Override
-    protected ImmutableList<Pair<Completable, Reward>> getAllQuestsWithRewards(TickData e) {
-        return e.entity().getAllQuestsWithRewards().stream()
-                .map(v -> new Pair<>((Completable) v.getKey(), (Reward) v.getValue()))
-                .collect(ImmutableList.toImmutableList());
-    }
-
-    @Override
-    protected ImmutableList<Reward> getMorningRewards(TickData e) {
-        return e.entity.morningRewards.children.stream().map(v -> (Reward) v).collect(ImmutableList.toImmutableList());
-    }
-
-    @Override
     protected ImmutableList<VisitorMobEntity> getVillagers(TickData o) {
         return o.entity.villagerHandle.stream().filter(Objects::nonNull).collect(ImmutableList.toImmutableList());
     }
