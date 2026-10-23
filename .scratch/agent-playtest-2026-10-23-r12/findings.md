@@ -33,6 +33,12 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
   `#questown:villager_food` (r10 #11 fix live). Second chest -> Storeroom; second bed -> Big
   Bedroom. Player delivered 16 coal (design: coal is the player's job until a miner); the cook
   went fuel -> mutton -> extract within ~40 s, Food 2/8, then ate one cooked mutton.
+- Day 4-8: Food crawled from 2/8 to 8/8 (closed day 8, 18:58) on cooked mutton only; the cook
+  knows only mutton (r10 #14, parked). Day 9: villager 3 arrived; quests Coal x8 (closed at once
+  from the delivered coal), Wooden Pickaxe x4 (player delivery), Mineshaft (crafted from stone
+  stairs; completed on placement near the flag), Villager job: Miner (BOP -> villager 3; board
+  got `coal`). The flag had 2 BOPs on day 9 though only 1 of the starting 3 was left and the
+  hunter never deposited: a quest reward, probably Food's ("rewarded in the morning").
 
 ## Odd
 1. (observe) "Seeded starting timber ... (1 placements)" here vs 6 in r10's plains world. Check
