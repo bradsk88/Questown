@@ -85,9 +85,21 @@ public class TownCycle {
         // TODO: Move to RoomRecipes?
 
         int radius = Compat.configGet(Config.CAMPFIRE_SEARCH_RADIUS).get();
+        for (int y : CampfireRange.Y_OFFSETS) {
+            Optional<BlockPos> found = findCampfireAtOffset(pos, level, match, radius, y);
+            if (found.isPresent()) {
+                return found;
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<BlockPos> findCampfireAtOffset(
+            BlockPos pos, Level level, Predicate<BlockState> match, int radius, int y
+    ) {
         for(int z = -radius; z < radius; ++z) {
             for(int x = -radius; x < radius; ++x) {
-                BlockPos cfPos = pos.offset(x, 0, z);
+                BlockPos cfPos = pos.offset(x, y, z);
                 BlockState bs = level.getBlockState(cfPos);
                 if (!bs.is(Blocks.CAMPFIRE)) {
                     continue;

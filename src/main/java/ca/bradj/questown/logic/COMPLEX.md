@@ -31,3 +31,16 @@ ids — same disease, not yet patched.)
 `#minecraft:beds` per bed (a bed is two blocks and matching counts both). It was removed in
 `f6097a58` on the belief that a bed counts once (RoomRecipes `deb6333`); both are reverted. See
 `gui/COMPLEX.md` "Room quest cards show one icon per bed".
+
+## Campfire range: radius box, ±2 Y (2026-10-23, r12 #2)
+
+`TownCycle.findCampfire` (the Campfire quest, the chicken's campfire beat via
+`ChickenArcConditions.isCampfireLit`, `TownPois`) and the wand's "registered campfire" gate
+(`TownWand.handleCampfireClick`) both used to require the flag's exact Y. On a slope, a lit
+campfire one block up never completed the quest, and nothing told the player why (r12: flag
+y=74, campfire y=75; a second one at y=74 completed at once). The vertical rule now lives in
+`CampfireRange`: up to `VERTICAL_TOLERANCE` (2) above or below the flag (dev ruling). The scan
+tries the flag's own Y first (`Y_OFFSETS = {0, 1, -1, 2, -2}`), so a level campfire still wins
+over a sloped one. The horizontal rules are unchanged, and they still differ: the scan covers
+`-radius .. radius-1`, while the wand requires `|d| < radius`. Pinned by `CampfireRangeTest`;
+the scan's wiring is registry-bound (`Level`, `Blocks.CAMPFIRE`), so it is checked live.
