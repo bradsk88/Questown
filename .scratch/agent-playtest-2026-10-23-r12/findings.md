@@ -79,3 +79,26 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    a 2-high room meant to be valid for beds?
    Side note: the sleep debug line prints the bed as `TownPosition{x=-22, z=76, scanLevel=205}`
    (y and z in the wrong fields); check whether a TownPosition is built with y/z swapped there.
+7. (bug?, P1) Day 6: starving townies never finish a raw-food meal. Both at fullness -67% ->
+   -209% within ~4 minutes. 18:43-18:47 the cook entered dining_raw_food repeatedly, TOOK a raw
+   chicken 7 times (`[PROBE:supplies] job=cook:dining_raw_food TOOK chicken`, totalTakes 33) and
+   logged "gave up waiting for ingredients after 201 ticks (job: dining_raw_food)" 8 times; the
+   board then rolled it from dining_raw_food straight into work (`-> cook:fuel via work-roll`).
+   No `[Experience] +0 from *:dining_raw_food` (a finished meal) exists in the whole run; the
+   hunter has no finished meal at all. Storage held 1 chicken + 1 porkchop.
+   Hypothesis (BELIEVED, not read in code): `DinerRawFoodWork` holds a raw item as the state-0
+   *tool* (for the in-hand render) and then needs a separate raw item as the state-1
+   *ingredient*, so a meal needs two raw foods, and with one in storage it never completes. r10
+   had 6+ beef, which would explain why raw meals worked there. Settle: read the
+   tool-vs-ingredient supply path for DinerRawFoodWork, or watch a meal with 2 raw items stocked.
+8. (bug, P1 progression) The hunter levelled to 2 at 18:43 ("Villager 1 reached level 2") and has
+   sat at `xp 0/1200` since, though every hunt logs `[Experience] +200 from hunter:sword`
+   (18:51, 18:52, 18:53, ...): the BOP latch (`hasBlockOfProgress`) makes addExperience
+   early-return until the BOP is deposited, and `bop_depositing` has never run this game. The
+   deposit is handed out only by the board cascade's `bop-deposit` branch
+   (`TownFlagBlockEntity` ~L1223, ahead of downtime). The hunter's last `[board]` trace is
+   18:37:05 (`dining_raw_food -> sword via work-roll`); since then it chains
+   `hunter:sword -> hunter:sword` without the cascade ever running, so the deposit (and the
+   starving/downtime branches) never apply to it. The flag gets no BOP and the hunter's XP is
+   frozen. CONTEXT.md "Block of Progress" says the latch stalls a townie only "for the brief
+   level-up -> deposit window"; here it's 15+ real minutes and counting.
