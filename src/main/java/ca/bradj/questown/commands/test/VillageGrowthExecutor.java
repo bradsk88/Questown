@@ -310,8 +310,15 @@ public final class VillageGrowthExecutor {
      * Only the cosmetic campfire bits (temp bed, extinguish) are skipped. Saves the ~11 000
      * idle night ticks per day (2026-10-19: autotest runtime).
      */
+    /**
+     * The driver sleeps a little after dark, like a player who reads the camp-ready toast first:
+     * the toast waits for vanilla's sleep gate (~12542) and Day1BeatChecks reads it at 12742.
+     * Sleeping the instant isNight() turned true raced the toast (it skips sleeping players).
+     */
+    private static final long SLEEP_FROM_DAY_TIME = 13000;
+
     private void sleepThroughTheNightIfDark() {
-        if (!level.isNight()) {
+        if (!level.isNight() || level.getDayTime() % 24000L < SLEEP_FROM_DAY_TIME) {
             return;
         }
         long now = level.getDayTime();

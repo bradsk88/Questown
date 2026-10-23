@@ -38,7 +38,6 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
-import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.LootTableDropsIndex;
 import ca.bradj.questown.town.rewards.CampfireReadyReward;
@@ -922,7 +921,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     /**
-     * "Your camp is ready" belongs to the first evening with a flag and campfire
+     * "Your camp is ready" belongs to the first night with a flag and campfire
      * (2026-10-17 playtest: completed in the afternoon, the toast came and went
      * unseen). Called each evening/night flag tick and from {@code CampfireReadyReward}:
      * shows the toast once per player per session to anyone who has not yet
@@ -936,8 +935,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (!quests.isCampfireQuestComplete()) {
             return;
         }
-        Signals signals = Signals.fromDayTime(new Signals.DayTime(sl.getDayTime()));
-        if (signals != Signals.EVENING && signals != Signals.NIGHT) {
+        // Vanilla's own sleep gate (startSleepInBed -> NOT_POSSIBLE_NOW): the EVENING signal starts
+        // ~1000 ticks before sleep is allowed, and the toast sent players to a wand use that failed.
+        if (sl.isDay()) {
             return;
         }
         ResourceLocation slept = Questown.ResourceLocation(TutorialTrigger.Triggers.FirstCampfireSleep.getID());

@@ -865,7 +865,10 @@ completion and vanish unseen. Now:
   been shown it this session (`campReadyToastShown`, transient), and has not
   completed `questown:first_campfire_sleep` (`Compat.hasCompletedAdvancement`
   — the advancement is the persisted "already slept" bit, so a restart
-  re-shows it only to players who still need it).
+  re-shows it only to players who still need it). It waits for vanilla's sleep
+  gate, `!level.isDay()` (~12542 in clear weather), not the EVENING signal (11500):
+  in that gap the toast's "Use wand on campfire" failed with `NOT_POSSIBLE_NOW`
+  (2026-10-23 r10).
 - **When it hides (client):** `ClientAccess.tickTutorialToasts()` (called from
   `CampfireSleepClientEvents.onClientTick`) hides the active toast once
   `mc.player.isSleeping()`, and hides the camp-ready one once daylight comes
@@ -1239,3 +1242,23 @@ them. Pin: `StatusNeedLineTest`. Live 2026-10-23 (held `cook/fuel [no_coal]`): f
 "Cook is looking for supplies. They need Coal to work."; inventory needs row showed Coal, not the
 Job Board. Not fixed: the inventory screen's own status tooltip still falls back to "busy with
 their work" (`.scratch/agent-playtest-2026-10-22-r9/inventory-status-tooltip-ignores-server-text.md`).
+
+## Status first lines stand alone (2026-10-23 r10)
+
+Many `tooltips.villagers.job.*.status_1.*` strings were half a sentence finished by `status_2`
+("%s can't find work. Check" / "the Economics Tab and the Job Board"). Since `StatusNeedLine`
+replaces the second line with "They need X to work." for any non-working status, the first line
+dangled: a swordless hunter read "Hunter can't find work. Check / They need Swords to work."
+Every non-working first line is now a full sentence and the second line adds to it.
+`StatusFirstLineSentenceTest` reads `en_us.json` and fails on a fragment; crafting-step keys
+(blacksmith, crafter, baker, smelter, one_mushroom_stew) are exempt because a working status
+keeps its own second line.
+
+## Work-request confirm: the job icons name their job (2026-10-23 r10)
+
+"There are N known jobs which produce it" draws one icon per producing job (the job JSON's
+`icon`, often a tool: the gatherer variants are all boots). `RenderUtil.stripOfRequestableItems`
+returns the hovered icon's tooltip lines (root + variant name, `Jobs.getComponentsForTooltip`),
+and `WorkRequestConfirmScreen.renderJobIcons` dropped that return, so hovering only highlighted
+the icon. It now passes the lines to `showTooltip`. Live: hovering the first boot reads
+"Gatherer / Gather (half day)".

@@ -24,7 +24,8 @@ import java.util.function.Consumer;
 final class Day1BeatChecks {
 
     /** Evening begins at Signals.PRODUCTIVE_DAY_END_TICK; give the flag tick a moment. */
-    private static final long EVENING_START = 11500;
+    /** Clear-weather time when vanilla allows sleep ({@code Level.isDay()} turns false). */
+    private static final long EVENING_START = 12542;
     private static final long EVENING_GRACE = 200;
     private static final Set<String> NOT_A_STARTING_COOK_JOB = Set.of("stock_ingredients", "stock_fuel");
 

@@ -672,6 +672,9 @@ the hunter). `Day1BeatChecks` observes each tick and records the named checks (t
 raw-food LOOT quest's completion at that moment; the FIRST_WORK_REQUEST quest's first
 appearance against the roster; the first cook's job). It stops at the cook beat
 (`day1-reached-cook-beat`) or at `MAX_TICKS` (FAIL). PASS = every check passed.
+The driver sleeps through the night from dayTime 13000 (`SLEEP_FROM_DAY_TIME`), not the first
+dark tick: the camp-ready toast waits for vanilla's sleep gate (~12542) and skips sleeping
+players, so an instant sleep raced it and `toast-at-first-dusk` failed (2026-10-23).
 
 First run 2026-10-17: 28/28 in ~8 min. Not covered yet: a save/reload mid-run (the
 arrival-gate restart bypass — needs a chunk unload/reload to replay the real load order),
