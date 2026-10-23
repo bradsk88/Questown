@@ -23,6 +23,10 @@ reported after the first onboarding pass. Keep playing until blocked, until the 
 until context is getting long (then commit findings and hand off). Report progress in short lines
 as you go; do not end the turn to summarise.
 
+**After a context compaction, re-read this whole skill before the next action.** The summary
+keeps what you did, not this file's traps: r9 spent 20 minutes re-deriving "the first wand use
+relights the campfire", which the Acting section already said.
+
 ## Setup (worktree `build/wt`, port 25585; leaves the dev's checkout alone)
 
 1. Ask before stopping the dev's own session; if they say they aren't playing, stop it (client
@@ -94,6 +98,17 @@ as you go; do not end the turn to summarise.
   (fixed 2026-10-22, but don't rely on it).
 - Moving far: `spreadplayers <x> <z> 0 1 false Dev` lands on the surface; a plain `tp` can land
   inside blocks.
+- `_qtdev build_room <door x y z>` (the chicken's shell) is 4x4 *including* walls: a 2x2 interior,
+  on the side of the door with more open space (north on a flat tie). Read the side off the
+  build log's room-shape dump before furnishing; a bed or block set on the wall row breaks the
+  room ("Bedroom destroyed" 0.6 s after "Room became Bedroom", r9).
+- Keep the cell right inside any door empty. A furnace or chest there makes villagers climb onto
+  it: r9's cook stood on its furnace for 13 min without extracting (moved -> six extracts in 50 s).
+- Clock: `time add N`, never `time set`: `time set 14000` reset the day count to day 0 mid-run (r9).
+- Containers: `data get block x y z Items` first and write into an empty slot;
+  `item replace block ... container.N` overwrites (it ate the 20 free carrots, r9).
+- `[LOOTTRACE] ... -> false (extracted N/M)` prints a would-be count; read the quest card for the
+  real progress (r9 showed 8/8 in the log while the card said 7/8).
 - Looking at a villager (nameplate, bubble): villagers move between the tp and the shot, and a
   console `tp ... facing <x y z>` pointed the camera at the sky. Freeze the world, read the
   villager's `Pos`, stand ~3 blocks away on open ground and give the rotation explicitly:

@@ -58,6 +58,8 @@ it is a design state ("unlock ≠ workability", `docs/design-principles.md`).
 - Progress is a count the player can check: " (3/8)" against what they can see in the chest.
 
 **Check:** for every status a townie can show, could the player act on it without the wiki?
+And check every displayed number on a townie whose value is *not* the default: the r8 "Lvl N"
+line passed on a level-1 villager while the page showed the wrong townie (fixed c0bd21a2).
 
 ## 4. Tell the player the next action, not the system
 
