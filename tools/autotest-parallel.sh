@@ -104,6 +104,7 @@ while [ "$i" -le "$N" ]; do
     sed -e "s/^server-port=.*/server-port=$((25700 + i))/" \
         -e "s/^enable-rcon=.*/enable-rcon=false/" \
         -e "s/^online-mode=.*/online-mode=false/" \
+        -e "s/^level-seed=.*/level-seed=/" \
         "$REPO/run/server.properties" > "$D/server.properties"
     RUN_EXTRA=""
     [ "$SHARD" = 1 ] && RUN_EXTRA="-Dquestown.autotest.shard=$i/$N"
