@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.interfaces;
 
+import ca.bradj.questown.town.rooms.RoomDoors;
 import ca.bradj.questown.town.rooms.TownPosition;
 import ca.bradj.questown.town.rooms.TownRoomsMap;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -45,4 +46,12 @@ public interface RoomsHolder {
     ImmutableSet<TownPosition> getAllRegisteredDoors();
 
     void registerBlockAsRoom(ResourceLocation blockId, BlockPos clickedPos);
+
+    /**
+     * The doorway of the registered room that holds {@code pos} (e.g. a bed): where a townie
+     * stands when there is no free floor beside that block.
+     */
+    default Optional<BlockPos> findDoorOfRoomContaining(BlockPos pos) {
+        return RoomDoors.doorOfRoomContaining(getRegisteredRooms().getAllRooms(), pos);
+    }
 }

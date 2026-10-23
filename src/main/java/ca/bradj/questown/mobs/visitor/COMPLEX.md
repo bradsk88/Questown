@@ -205,3 +205,20 @@ no longer overwrites NO_STORAGE with UNMET_ITEM (without both halves the bubble 
 them every recompute pass). It clears only its own need; UNMET_ITEM comes back on the next pass
 if it still applies. The flag-level counterpart (after a tick build-up) is in
 `town/rooms/COMPLEX.md`. Live pin: `cook/fuel [storage_full]`.
+
+## Waking: stand up beside the bed, else in the doorway (2026-10-23, r12 #6)
+
+`VisitorMobEntity.stopSleeping` overrides vanilla's whole wake path. Its copy of vanilla's
+stand-up search checked only `HospitalBedBlock`, so a townie waking in a **vanilla** bed was set
+STANDING at its sleeping position: on top of the bed (r12: y 76.5625). In a room 2 blocks tall
+inside, a ~1.95-tall townie there is wedged under the ceiling and never moves again (r12 day 4:
+both townies pinned until the roof was raised). `standUpBesideBed` now runs for both bed kinds:
+- the unoccupied flag is cleared;
+- `BedBlock.findStandUpPosition` is called with the bed's own `FACING` for a vanilla bed (as
+  vanilla does), or the entity's direction for a hospital bed (as before);
+- with no free floor beside the bed, the townie stands in the doorway of the room holding the
+  bed. That is the dev's fallback, looked up through `RoomsHolder.findDoorOfRoomContaining` ->
+  `RoomDoors`; above the bed is the last resort, when no room is found.
+
+`RoomDoors` is pinned by `RoomDoorsTest`. The entity half is registry-bound (`Level`,
+`BedBlock`), so it is checked live (a 2-high bedroom, a night's sleep, the townie walks off).

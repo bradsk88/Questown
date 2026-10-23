@@ -55,6 +55,9 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    `CAMPFIRE_SEARCH_RADIUS`), so any campfire one block higher or lower is invisible. No message
    tells the player why. Confirmed: a second campfire level with the flag (y=74, 2 blocks away)
    completed the quest within a second. Not fixed live (no-restart run).
+   **FIXED 2026-10-23 (unit; live check pending):** dev ruling "scan ±2 Y". `CampfireRange` holds
+   the rule for both the scan and the wand's registered-campfire gate; the flag's own Y is
+   scanned first. `CampfireRangeTest`; `logic/COMPLEX.md` "Campfire range".
 3. (observe, r10 #9) Day 2 afternoon: the hungry hunter cycles dining_no_table <-> downtime with
    no cooked food in town (no cook yet). Watching whether it reaches raw food when starving.
    Day 3 morning: it went dining_no_table -> dining_raw_food (the starving chain works).
@@ -91,6 +94,12 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    a 2-high room meant to be valid for beds?
    Side note: the sleep debug line prints the bed as `TownPosition{x=-22, z=76, scanLevel=205}`
    (y and z in the wrong fields); check whether a TownPosition is built with y/z swapped there.
+   **FIXED 2026-10-23 (unit; live check pending):** dev ruling "stand up beside the bed, with a
+   fallback to the doorway". Cause: `VisitorMobEntity`'s copy of vanilla's stand-up search ran
+   only for `HospitalBedBlock`, so a vanilla bed left the townie standing on the bed top.
+   `mobs/visitor/COMPLEX.md` "Waking"; `RoomDoorsTest`. The side note is real but harmless:
+   `TownVillagerSleepModule.addSleepListener` passes (x, y, z) to `TownPosition(x, z,
+   scanLevel)`, and the value only reaches a debug log line.
 7. (bug?, P1, hypothesis refuted) Day 6: starving townies never finish a raw-food meal. Both at fullness -67% ->
    -209% within ~4 minutes. 18:43-18:47 the cook entered dining_raw_food repeatedly, TOOK a raw
    chicken 7 times (`[PROBE:supplies] job=cook:dining_raw_food TOOK chicken`, totalTakes 33) and
