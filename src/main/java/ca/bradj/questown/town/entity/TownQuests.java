@@ -734,9 +734,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /**
-     * Two "empty room" quests between the hunter-gatherer batch and the cook batch (dev, 2026-10-19
-     * playtest). Posted once the hunter-gatherer batch is fully done; the cook batch waits for it.
-     * A town whose cook batch is already out (an existing world) skips it.
+     * An "empty room" quest between the hunter-gatherer batch and the cook batch (dev, 2026-10-19
+     * playtest; one room, not two, since 2026-10-23). Posted once the hunter-gatherer batch is
+     * fully done; the cook batch waits for it. A town whose cook batch is already out (an
+     * existing world) skips it.
      */
     private @Nullable Tutorial tryPhase2_4_emptyRooms(TutorialTownView view) {
         if (cookBatchPosted()) {
@@ -767,11 +768,26 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 .anyMatch(b -> b.getAll().stream().allMatch(Quest::isComplete));
     }
 
+    /**
+     * The post-hunter empty-room batch: an EMPTY_ROOM-only batch posted after the hunter-gatherer
+     * batch. Order is the marker, because the day-1 batch (`addEmptyRoomBatch`, posted by the gate
+     * reward before the basics) is also a single EMPTY_ROOM quest. Worlds from before 2026-10-23
+     * hold a two-quest batch here, which this still finds.
+     */
     private @Nullable MCQuestBatch emptyRoomsBatch() {
-        return questBatches.getAllBatches().stream()
-                .filter(b -> b.getAll().size() == 2
-                        && b.getAll().stream().allMatch(q -> SpecialQuests.EMPTY_ROOM.equals(q.getWantedId())))
-                .findFirst().orElse(null);
+        ResourceLocation rawFood = TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location();
+        boolean afterHunterGatherer = false;
+        for (MCQuestBatch b : questBatches.getAllBatches()) {
+            if (b.getAll().stream().anyMatch(q -> q.getType() == Quest.QuestType.LOOT && rawFood.equals(q.getWantedId()))) {
+                afterHunterGatherer = true;
+                continue;
+            }
+            if (afterHunterGatherer && !b.getAll().isEmpty()
+                    && b.getAll().stream().allMatch(q -> SpecialQuests.EMPTY_ROOM.equals(q.getWantedId()))) {
+                return b;
+            }
+        }
+        return null;
     }
 
     private boolean emptyRoomsBatchPosted() {
@@ -786,14 +802,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     void addEmptyRoomsBatch(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
-        // Two NEW rooms: an empty-room quest only completes on a room no completed quest has
-        // claimed (isClaimedByACompletedQuest), so existing rooms do not satisfy these.
-        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.EMPTY_ROOM));
+        // A NEW room: an empty-room quest only completes on a room no completed quest has
+        // claimed (isClaimedByACompletedQuest), so existing rooms do not satisfy it.
         q.addNewQuest(roomQuest(batchUUID, SpecialQuests.EMPTY_ROOM));
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_EMPTY_ROOMS));
         markOnboarding(qq);
         questBatches.add(qq);
-        QT.QUESTS_LOGGER.info("Tutorial empty-rooms batch added (two new rooms before the cook batch)");
+        QT.QUESTS_LOGGER.info("Tutorial empty-room batch added (one new room before the cook batch)");
     }
 
     private @Nullable Tutorial tryPhase2_5_jobChangeAndFood(TutorialTownView view) {

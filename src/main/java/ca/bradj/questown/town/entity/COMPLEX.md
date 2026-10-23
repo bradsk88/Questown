@@ -1447,6 +1447,16 @@ in both the room-created path (`markQuestAsComplete`) and the backfill (picks th
 match). Only EMPTY_ROOM is restricted — the store room still completes in the first empty room.
 Pinned by `TutorialPhaseGateTest` (red on the previous TownQuests); day1 43/43.
 
+**One room since 2026-10-23** (dev: "no compelling reason to get two rooms ready"; two same-named
+"Room" cards read like a duplicate, r9 #7). `addEmptyRoomsBatch` posts a single EMPTY_ROOM quest.
+That made it look exactly like the day-1 empty-room batch (`addEmptyRoomBatch`, also one
+EMPTY_ROOM quest, posted by the gate reward), so `emptyRoomsBatch()` no longer matches on shape
+("2 quests"): it is the first EMPTY_ROOM-only batch **after** the hunter-gatherer batch (the one
+holding the raw-food LOOT quest) in `getAllBatches()` order. That still finds a pre-2026-10-23
+world's two-quest batch. Pins: `TutorialPhaseGateTest.whenHunterGathererDone_oneEmptyRoomBatchAdded_notTheCookBatch`
+and `dayOneEmptyRoomBatch_isNotMistakenForThePostHunterOne` (with the day-1 batch in the fixture,
+shape matching made the phase skip straight to the cook batch).
+
 ## Phase 7 (exotic wood / flagpole) cut (2026-10-19)
 
 Dev: "I've never made it that far, and we already have a bunch of reasons for a person to leave

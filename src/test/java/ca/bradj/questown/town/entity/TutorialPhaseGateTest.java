@@ -247,7 +247,21 @@ class TutorialPhaseGateTest {
 
     /** The hunter-gatherer batch is done; nothing after it posted yet. */
     private TownQuests questsAfterHunterGathererDone() {
+        return questsAfterHunterGathererDone(false);
+    }
+
+    /**
+     * @param withDayOneEmptyRoom include the day-1 single empty-room batch (posted by the gate
+     *                            reward, before the basics), as a real onboarding world has
+     */
+    private TownQuests questsAfterHunterGathererDone(boolean withDayOneEmptyRoom) {
         TownQuests quests = questsWithDayOneBatches();
+        if (withDayOneEmptyRoom) {
+            MCQuestBatch dayOne = new MCQuestBatch(null, null, new NoOpReward());
+            dayOne.addNewQuest(null, SpecialQuests.EMPTY_ROOM);
+            dayOne.markRecipeAsComplete(null, SpecialQuests.EMPTY_ROOM);
+            quests.questBatches.add(dayOne);
+        }
         completeBasics(quests);
         TestTutorialTownView view = TestTutorialTownView.builder()
                 .villagerCount(2)
@@ -261,9 +275,9 @@ class TutorialPhaseGateTest {
     }
 
     @Test
-    void whenHunterGathererDone_twoEmptyRoomsBatchAdded_notTheCookBatch() {
-        // Dev, 2026-10-19 playtest: a batch of two "empty room" quests after the raw-food batch
-        // and before the cook batch.
+    void whenHunterGathererDone_oneEmptyRoomBatchAdded_notTheCookBatch() {
+        // Dev, 2026-10-19 playtest: an "empty room" batch after the raw-food batch and before the
+        // cook batch; one room, not two (dev, 2026-10-23: no compelling reason to get two ready).
         TownQuests quests = questsAfterHunterGathererDone();
         TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
 
@@ -271,7 +285,7 @@ class TutorialPhaseGateTest {
 
         assertEquals(TownQuests.Tutorial.APPLIED, result);
         List<MCQuest> all = quests.questBatches.getAll();
-        assertEquals(2, all.stream().filter(q -> SpecialQuests.EMPTY_ROOM.equals(q.getWantedId())).count());
+        assertEquals(1, all.stream().filter(q -> SpecialQuests.EMPTY_ROOM.equals(q.getWantedId())).count());
         assertTrue(all.stream().noneMatch(q ->
                 q.getType() == Quest.QuestType.JOB_CHANGE
                         && q.getWantedId().equals(JobID.toRL(TownQuests.ONBOARDING_COOK_JOB))
@@ -279,11 +293,29 @@ class TutorialPhaseGateTest {
     }
 
     @Test
+    void dayOneEmptyRoomBatch_isNotMistakenForThePostHunterOne() {
+        // Both batches are a single EMPTY_ROOM quest; the day-1 one (completed, posted before the
+        // hunter-gatherer batch) must not count as the post-hunter batch, or the phase skips
+        // straight to the cook batch.
+        TownQuests quests = questsAfterHunterGathererDone(true);
+        TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
+
+        TownQuests.Tutorial result = quests.addTutorialBatches(view);
+
+        assertEquals(TownQuests.Tutorial.APPLIED, result);
+        assertEquals(1, quests.questBatches.getAll().stream()
+                .filter(q -> SpecialQuests.EMPTY_ROOM.equals(q.getWantedId()) && !q.isComplete()).count(),
+                "one new, open empty-room quest");
+        assertTrue(quests.questBatches.getAll().stream().noneMatch(q ->
+                q.getWantedId().equals(JobID.toRL(TownQuests.ONBOARDING_COOK_JOB))
+        ), "the cook batch waits for the new room");
+    }
+
+    @Test
     void whenEmptyRoomsOpen_cookBatchWaits() {
         TownQuests quests = questsAfterHunterGathererDone();
         TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
         quests.addTutorialBatches(view);
-        quests.questBatches.markRecipeAsComplete(null, SpecialQuests.EMPTY_ROOM);
 
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
 
