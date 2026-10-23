@@ -29,6 +29,8 @@ Three proven shapes, in decreasing preference:
 2. **Wire payload codec** — a `…Payload` class with `write(buf)`/`read(buf)`, round-tripped in a `FriendlyByteBuf(Unpooled.buffer())` test (pattern: `QuestTypesTest`). The entity/server-side data is folded into the payload by the existing writer (e.g. `VillagerMenus.write`); the writer's *callers* do not change.
 3. **`SimpleVillagerHandle`-style fakes** — `TestDelegator`/`TestSleepModule` from `SimpleVillagerHandleTest`; handle logic without MC.
 
+**Seam the path the bug actually took.** When the fix lives in a lifecycle hook (`initialize`, an NBT load / `fromTag` path, `onFlagPlace`), confirm the hook runs on the path that broke. A freshly placed flag runs only each init pair's `onFlagPlace`, never `SimpleVillagerHandle.initialize` (only the NBT load calls that). r12 #9's test called `initialize(...)` and went green while every fresh town stayed broken (r13 #1, fixed in 1b47cc98). The pin now builds the handle without `initialize`.
+
 ## 2. Red, then green
 
 - **Assert with JUnit `org.junit.jupiter.api.Assertions`** — AssertJ is *not* on
