@@ -114,3 +114,17 @@ HEAD a5b417d6. Tick rate 40. Random seed; spawn at (-39.5, 74, 149.5).
    2% -> -24% at 32 s intervals (22:34:27-22:35:31, tick rate 40), about 26% per 32 s, so a full
    stomach lasts about 2 real minutes (~5000 ticks). One hunter's catches barely feed two
    townies. BELIEVED, not counted: the hunter eats many of its own catches.
+6. **r12 #4 re-checked with a properly made cook (r15b, 2026-10-23 23:09-23:12):** the r15 world
+   was reloaded on 1fb248d1 and `qt jobs set` now goes through the Block of Progress
+   `unlockAndChange`. The boot dump showed the old console cook had only `gatherer/gather` +
+   `cook/simple_furnace_food` unlocked. After the re-assign, with no coal in town:
+   - `_qtdev inspect villagers` read the cook `need=UNMET_ITEM`, "needs item: Coal
+     (#minecraft:coals)", in 6/6 samples over 2 minutes (in seeking_work, downtime and cook:mutton);
+   - the in-world bubble over Villager 2 showed a coal icon, captioned "They need Coal to work."
+     (`run-client/diags/r15b-02.png`);
+   - the flag villagers-tab tooltip read "Cook is looking for supplies. They need Coal to work."
+     and "Cook is resting. They need Coal to work."
+   So the existing UNMET_ITEM bubble covers r12 #4, and the dev's model holds. The remaining gap
+   is the dining window: r10 #8 keeps a diner's own status lines, so the coal line is hidden while
+   the cook is eating (r12 #4's original observation). Not checked: whether the bubble also shows
+   during diner statuses.
