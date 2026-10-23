@@ -16,6 +16,9 @@ Town layout: flag (0, 67, 0), campfire (-3, 67, 3), welcome mat (3, 66, 0), room
 board (-2, 67, -3).
 
 ## Interventions
+- Day 5-6: Dev teleported beside the flag (2.5, 66, 2.5) at 00:33:49 (dirt click) and stayed
+  there until 00:47:30, then moved away (spreadplayers -12 14) and back (00:51+) as an A/B
+  for #10. Day 4 and day 5 nights were not slept (natural mornings at 00:34:14 and 00:44:14).
 - Day 4, 00:35: claimed the one-time free food (20 carrots) from the Economics tab's food card,
   as a player would (after a dirt right-click on the flag, per CONTEXT.md, did nothing; see #8).
 - Room 1 built by console `fill 5 65 -12 10 69 -8 cobblestone hollow` + `setblock` oak door, plus
@@ -174,3 +177,38 @@ board (-2, 67, -3).
    Live: a dirt right-click on the flag just opened the flag menu; the food-card click logged
    "Bonus food claimed: 20 carrots deposited into a registered container" (00:35:01). Not edited
    here because the dev's main checkout has uncommitted CONTEXT.md edits.
+9. (bug, medium) **A level-up BOP deposit times out on a 200-tick limit, loops, and strands a
+   duplicate blessed BOP in the storeroom.** `BOPDepositorWork.java:108` passes
+   `Config.MAX_TICKS_WITHOUT_DINING_TABLE` as the job's `maxTicks` (`ExpirationRules`'s 4th
+   parameter), 200 in this config (`run/config/questown-server.toml:143`
+   `MaxTicksWithoutDiningTableV2 = 200`), with fallback `seeking_work`. The job first drops loot
+   into a storeroom chest (BOP included: "is putting questown:block_of_progress in BlockPos{x=6,
+   y=66, z=-11}"), takes the BOP back, then walks to the flag. In this town (storeroom ~13 blocks
+   from the flag) 200 ticks wasn't enough from 00:38:36: "Reached max ticks for
+   hunter:bop_depositing. Falling back to hunter:seeking_work" every 5 s, and the board's
+   `bop-deposit` branch re-sent it (7 cycles until nightfall). At nightfall the hunter dropped the
+   BOP into the chest again (00:39:08) and never took it back; at dawn the board's
+   `if (!carrying)` hand-out (`TownFlagBlockEntity.java:1237`) gave it a fresh BOP (00:44:14),
+   which was deposited (00:44:20, `messages.bop.earned`, tab "Earned by: Hunter x3"). Net: 3
+   credits for 3 level-ups (correct), plus BOP #3, blessed `{jobId:"sword",root:"hunter"}`,
+   still sitting in the storeroom chest (6, 66, -11) as a free extra for any player who opens it.
+   Earlier deposits (00:06, 00:18) finished within 3-5 s, so the limit only bites when the walk
+   is long or something delays the trip. The same 200 is the no-table diner's no-supplies limit
+   (#10).
+10. (bug, cause unknown) **Diners took food and didn't eat it for ~10 minutes, then recovered.**
+   Every diner `TOOK` followed (or not) by a `Fullness changed` within 20 s (script over
+   latest.log + the rotated log): through 00:35:08, 9 of 11 takes became meals 3-5 s later. From
+   00:36:58 to 00:45:22: 10 takes, 1 meal (hunter 00:44:27), both villagers, carrots and
+   porkchops, in `dining_no_table` and `dining_raw_food`. From 00:46:06 on, all 6 takes became
+   meals (one later cook attempt, 00:56:04, took nothing). Failure shape
+   (hunter, 00:36:56-00:37:10, debug.log): TOOK carrot, GOING_TO_JOB, `state:0`, then "hunter gave
+   up waiting for ingredients after 201 ticks (job: dining_no_table)". The cook once held a carrot
+   in `dining_no_table` for the full 2000 ticks (00:37:22-00:38:12, `MaxTicksWithoutFood`)
+   without eating. `JobLogic` counts `noSuppliesTicks` while
+   `status.isWorkingOnProduction() && workSpot == null`, so a diner at `state:0` with no claimed
+   eating spot runs out its 200 ticks; why the spot was missing in that window is not known.
+   **Rejected: the player standing beside the flag.** I stood at (2.5, 66, 2.5) from 00:33:49 to
+   00:47:30 (the window), but standing there again on day 7 (00:52-00:58) 3 of 4 meals
+   succeeded. Next: log the diner's `workSpot` / claim state at `state:0`, or check plate claims
+   (`TownRoomsHandle.resetDiningRooms` clears plate claims only at dawn, and the table diner
+   `dining` hit max ticks just before each failure).
