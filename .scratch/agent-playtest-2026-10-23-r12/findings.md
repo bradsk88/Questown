@@ -55,3 +55,20 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    hungry cook in a coal-less town is exactly when the coal line mattered.
 5. (observe) Economics tab day 3: "Swords 6" while 4 stone swords sit in the storeroom chest and
    the hunter holds one. What does the number count? Check `ItemEconomicsData.timesNeeded`.
+6. **[CONFIRMED]** (bug, P0 for this run) Day 4: both villagers stood motionless on top of the Big Bedroom's beds
+   all day (positions identical to the 1e-15 over minutes: V1 [-21.5, 76.5625, 205.5] on the red
+   bed head, V2 [-22.52, 76.5625, 205.48] on the blue bed head), awake (no `SleepingX`; their
+   bed-sleep listener fired at the 18:29:14 morning skip). Each cycle: seeking_work -> "Reached
+   max ticks ... Falling back to downtime" -> seeking_work. The hunter's last real work was day 2
+   18:20:53, before its first night in a bed; the cook worked all of day 3 and stalled after its
+   first bed night. Interior is 3x3: 2 beds side by side (x -22/-23, z 204-205), lantern at
+   (-24, 206), door at (-25, 205), door cell (-24, 205) free. Player test at dusk: broke the blue
+   bed -> V2 dropped to the floor (y 76.0) but didn't walk in 15 s (dusk, confounded).
+   A/B, day 5 morning: V2 (no bed, slept on the floor) walked to the storeroom, ate, and went to
+   the flag within 40 s; V1 stayed pinned on the red bed at the identical position. Breaking the
+   red bed freed V1 at once (at the flag 10 s later). So a townie that sleeps in a bed is pinned
+   on top of it after waking, until the bed is removed; the town stalls (no hunts after day 2).
+   Open: why r10's 9-day run with a Big Bedroom didn't stall the same way (bed geometry? both
+   runs skipped nights via the campfire sleep).
+   Side note: the sleep debug line prints the bed as `TownPosition{x=-22, z=76, scanLevel=205}`
+   (y and z in the wrong fields); check whether a TownPosition is built with y/z swapped there.
