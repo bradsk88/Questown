@@ -16,6 +16,8 @@ Town layout: flag (0, 67, 0), campfire (-3, 67, 3), welcome mat (3, 66, 0), room
 board (-2, 67, -3).
 
 ## Interventions
+- Day 4, 00:35: claimed the one-time free food (20 carrots) from the Economics tab's food card,
+  as a player would (after a dirt right-click on the flag, per CONTEXT.md, did nothing; see #8).
 - Room 1 built by console `fill 5 65 -12 10 69 -8 cobblestone hollow` + `setblock` oak door, plus
   a grass/air patch in front of the door (a creative player's building).
 - Creative items put in hand by console `item replace`: flag base, campfire, oak pressure plate,
@@ -163,3 +165,12 @@ board (-2, 67, -3).
    dining, takes it (porkchop/chicken/mutton, `Fullness changed ... for 7fe2ffee` 00:26:29,
    00:27:48). Hunger has no visible consequence (damage 0%, mood 100%), so the cost is only the
    Food quest and villager 3's arrival. Related: r10 #9 / r13 #5 (hunger rate), #1 above.
+8. (doc, stale glossary) **CONTEXT.md's "Free-food bonus" still says right-click the flag with
+   dirt.** `CONTEXT.md` (both this worktree and the dev's main checkout, line 279): "the player
+   triggers by right-clicking the **town flag** base with a block of dirt". Since 6865917a
+   (2026-10-12, "Free food: claim it on the economics tab instead of right-clicking the flag with
+   dirt") the claim is the Economics tab's food card (`TownEconomicsScreen.mouseClicked` ->
+   `ClaimFreeFoodMessage`; tooltip "Click to claim 20 free carrots for the town's storeroom.").
+   Live: a dirt right-click on the flag just opened the flag menu; the food-card click logged
+   "Bonus food claimed: 20 carrots deposited into a registered container" (00:35:01). Not edited
+   here because the dev's main checkout has uncommitted CONTEXT.md edits.
