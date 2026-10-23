@@ -110,3 +110,14 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
     change job, Quests, and a BOP tab that opens the flag's BOP page). How does a player learn to
     unlock cook/beef? Also: the request confirm for Food lists 5 known producing jobs (incl.
     "Cook / Potato") that no townie can do yet.
+15. **[FIXED, copy]** The Mineshaft quest said "Place a mineshaft block in a room and register the
+    door." and the crafting row "Place it in a room so a miner can work there." A mineshaft is a
+    block-room (`blocks/COMPLEX.md`): placing it registers its own room, and every miner job's
+    `room` is `questown:block_room/block.questown.mineshaft`. Live: the quest completed the moment
+    the block was placed, 3 s before the door I'd built for it was registered. Now "Craft one at
+    the town flag from stone stairs and place it near the flag." / "Place it near the flag so a
+    miner can work there."
+16. (agent error, not a game bug) "Two BOPs into the change-job slot, one Unlock, both gone" was
+    false: the slot caps at 1, the cursor BOP went back to the inventory on close. My check grepped
+    the newest `entity data` log line, which belonged to a later command. Read a command's output
+    from the log offset taken just before that command.

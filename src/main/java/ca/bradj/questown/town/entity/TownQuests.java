@@ -891,7 +891,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         q.addNewQuest(coalQuest);
 
         MCQuest mineshaftQuest = MCQuest.standalone(batchUUID, null, view.getRoomForJob(new JobID("miner", "coal")));
-        mineshaftQuest.setFlavorText("The miner needs a mineshaft to work in. Place a mineshaft block in a room and register the door.");
+        // A mineshaft is a block-room: the block itself is the room, no walls or door (r10 #15).
+        mineshaftQuest.setFlavorText("The miner needs a mineshaft to work in. Craft one at the town flag from stone stairs and place it near the flag.");
         q.addNewQuest(mineshaftQuest);
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_MINER));

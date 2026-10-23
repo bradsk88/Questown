@@ -1518,3 +1518,12 @@ are now keyed by townie UUID (`addStatsListener(uuid, l)`, wired by `VisitorMobE
 UUID); the flag's save-on-change hook, which does want every townie, uses `addAnyStatsListener`.
 Pins: `SimpleVillagerHandleTest.statsListener_hearsOnlyItsOwnVillager` (red before: heard
 `[4, 1]`), `anyStatsListener_hearsEveryVillager`.
+
+## Mineshaft quest copy: a block-room needs no walls (2026-10-23 r10 #15)
+
+The miner beat's mineshaft quest (`TownQuests`, the post-cook miner batch) said "Place a mineshaft
+block in a room and register the door", and the flag crafting row "Place it in a room". A mineshaft
+is a block-room (`blocks/COMPLEX.md`): placing a flag-linked one registers its own one-block room,
+and every miner job's `room` is `questown:block_room/block.questown.mineshaft`. Live, the quest
+completed on placement, before the door built for it was registered. Both strings now say to
+craft it at the flag and place it near the flag.

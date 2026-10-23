@@ -33,7 +33,7 @@
   "menu.flag_crafting.wand_desc": "Turn a stick into a Town Wand.",
   "menu.flag_crafting.mat_desc": "Turn a pressure plate into a Welcome Mat.",
   "menu.flag_crafting.board_desc": "Turn a sign into a Job Board. Place it near the flag to use it.",
-  "menu.flag_crafting.mineshaft_desc": "Turn stone stairs into a Mineshaft. Place it in a room so a miner can work there.",
+  "menu.flag_crafting.mineshaft_desc": "Turn stone stairs into a Mineshaft. Place it near the flag so a miner can work there.",
   "menu.flag_crafting.fishing_station_desc": "Turn a fishing rod into a Fishing Station. Place it so a fisher can work there.",
   "menu.flag_crafting.begin_moving": "Begin moving this town",
   "menu.flag_crafting.begin_moving.confirm": "Click again to pack the town",
