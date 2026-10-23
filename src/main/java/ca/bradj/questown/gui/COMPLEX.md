@@ -1168,11 +1168,38 @@ Hunter"). Precedence matches the spend: promised beats a blessed BOP's text.
 ## Flag crafting: "Begin moving this town" takes two clicks (2026-10-22, r9)
 
 The relocate button (`FlagCraftingScreen.onBeginMoving`) starts the shutdown ritual, which recalls
-every townsfolk and has no in-game cancel or wake yet (commands only; queued for the dev). It sits
+every townsfolk (cancel and wake now have a UI: see the next section). It sits
 8 px under the last Craft row, so the first click only arms it and relabels it "Click again to pack
 the town" (`menu.flag_crafting.begin_moving.confirm`); the second sends `BeginTownRelocationMessage`.
 `moveArmed` resets in `init()`, so reopening the tab (or a resize) disarms it. docs/ui-principles.md
 rule 10. Live r9: one click armed it with no shutdown; the second logged "Town shutdown started".
+
+## Town shutdown: wake, deed re-issue and cancel from the UI (2026-10-23)
+
+ADR-0009's loss-protection paths (`TownFlagBlockEntity.wakeInPlace`, `reissueDeed`,
+`cancelTownShutdown`) were reachable only through `/qt flag <pos> shutdown wake|reissue|cancel`, so
+a lost deed or a misclicked relocate had no way back without commands (dev ruling: build it now).
+
+- **Right-click on the flag** is decided by the pure `blocks/FlagClickAction.of(deedAvailable,
+  phase)` (pin: `FlagClickActionTest`): a waiting deed is collected first; a DORMANT flag with no
+  deed sends `OpenDormantFlagMessage` and the client opens `DormantFlagScreen` ("Wake the town" /
+  "Get the deed back" / Cancel), whose choice comes back as `DormantFlagChoiceMessage` and calls the
+  owner's `wakeInPlace()` / `reissueDeed()`; every other phase opens the flag menu as before.
+- **During the ritual** the crafting tab's move section reads the synced `TownFlagBlock.PHASE`
+  blockstate on the client (`FlagCraftingScreen.isShuttingDown`, no `FlagInfo` wire change): while
+  SHUTTING_DOWN it shows `cancel_moving_desc` and a one-click "Cancel moving" button
+  (`CancelTownShutdownMessage` → `cancelTownShutdown()`). One click, because cancelling is the safe
+  direction. The button is deactivated before sending (P10).
+- Every server handler re-checks eligibility on the owner and answers in chat either way; a stale
+  open tab (the ritual finished first) gets "This town isn't packing up."
+- `DormantFlagScreen` sizes its message with the 1.5x wrapped line height that `Compat.drawTextWrap`
+  uses; sizing with `font.lineHeight` made gui-lint report the text overlapping "Wake the town".
+
+Verified live 2026-10-23 (held `flag/town_shutdown`, `runClient -Pautojoin -Pautoport=25585`, the
+real right-click via `_qtdev clickheld` in survival; spectator clicks return PASS): deed collect, then
+the dormant screen (gui-lint OK); Wake ("Your townsfolk are unpacking.", town re-activated); Get
+the deed back (reissued deed collected on the next click); Cancel moving mid-ritual ("Town shutdown
+cancelled; flag re-activated"). `flag/` autotests 19/19.
 
 ## Status art for work, waiting and extracting (2026-10-23)
 

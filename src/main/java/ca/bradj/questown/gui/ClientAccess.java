@@ -62,6 +62,10 @@ public class ClientAccess {
         openScreen(() -> new RelocationConfirmScreen(targetPos, farFixtureCount));
     }
 
+    public static void openDormantFlag(BlockPos flagPos) {
+        openScreen(() -> new DormantFlagScreen(flagPos));
+    }
+
     public static void openItemJobs(
             Ingredient requestedItem,
             Collection<UIJob> jobs,

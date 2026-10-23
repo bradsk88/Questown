@@ -1,7 +1,10 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.Coordinate;
+import ca.bradj.questown.blocks.FlagPhase;
+import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.network.BeginTownRelocationMessage;
+import ca.bradj.questown.core.network.CancelTownShutdownMessage;
 import ca.bradj.questown.core.network.FlagCraftMessage;
 import ca.bradj.questown.core.network.FlagCraftRecipes;
 import ca.bradj.questown.core.network.QuestownNetwork;
@@ -10,6 +13,7 @@ import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
@@ -20,6 +24,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +44,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     private final JEI.NineNine background;
     private final BlockPos flagPos;
     private final boolean showMove;
+    private final boolean shuttingDown;
     // One button and one row per FlagCraftRecipes.ALL entry, same index.
     private final List<Button> craftButtons = new ArrayList<>();
 
@@ -68,7 +74,10 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         this.flagPos = menu.getFlagInfo().flagPos();
         // "Begin moving" recalls the townsfolk and relocates the town - meaningless with
         // zero villagers, so hide it until one has joined (same gate as the villagers tab).
-        this.showMove = menu.getFlagInfo().showVillagersTab();
+        // While the shutdown ritual runs the same section offers "Cancel moving" (dev ruling
+        // 2026-10-23), read from the synced PHASE blockstate so the menu payload is unchanged.
+        this.shuttingDown = isShuttingDown(flagPos);
+        this.showMove = menu.getFlagInfo().showVillagersTab() || shuttingDown;
     }
 
     private Component title() {
@@ -76,7 +85,19 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     }
 
     private Component moveDesc() {
+        if (shuttingDown) {
+            return Compat.translatable("menu.flag_crafting.cancel_moving_desc");
+        }
         return Compat.translatable("menu.flag_crafting.begin_moving_desc");
+    }
+
+    private static boolean isShuttingDown(BlockPos flagPos) {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) {
+            return false;
+        }
+        BlockState state = level.getBlockState(flagPos);
+        return state.hasProperty(TownFlagBlock.PHASE) && state.getValue(TownFlagBlock.PHASE) == FlagPhase.SHUTTING_DOWN;
     }
 
     private int lineHeight() {
@@ -127,8 +148,8 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         if (showMove) {
             moveArmed = false;
             this.addRenderableWidget(Compat.button(
-                    Compat.translatable("menu.flag_crafting.begin_moving"),
-                    this::onBeginMoving,
+                    Compat.translatable(shuttingDown ? "menu.flag_crafting.cancel_moving" : "menu.flag_crafting.begin_moving"),
+                    shuttingDown ? this::onCancelMoving : this::onBeginMoving,
                     bgX + MARGIN, bgY + moveButtonY, TEXT_WIDTH, BTN_HEIGHT
             ));
         }
@@ -143,6 +164,14 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
             return;
         }
         QuestownNetwork.sendToServer(new BeginTownRelocationMessage(flagPos));
+        this.onClose();
+    }
+
+    // Cancelling is the safe direction (the townsfolk come back), so one click; the button is
+    // deactivated so a double-click does not send twice (docs/ui-principles.md 10).
+    private void onCancelMoving(Button btn) {
+        btn.active = false;
+        QuestownNetwork.sendToServer(new CancelTownShutdownMessage(flagPos));
         this.onClose();
     }
 

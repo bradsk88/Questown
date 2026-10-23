@@ -11,7 +11,9 @@ import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
+import ca.bradj.questown.core.network.OpenDormantFlagMessage;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.FlagTabs;
 import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.mc.Compat;
@@ -371,9 +373,19 @@ public class TownFlagBlock extends BaseEntityBlock {
             return InteractionResult.sidedSuccess(true);
         }
 
-        if (entity.isDeedAvailable()) {
-            entity.collectDeed((ServerPlayer) player);
-            return InteractionResult.sidedSuccess(false);
+        BlockState flagState = level.getBlockState(pos);
+        FlagPhase phase = flagState.hasProperty(PHASE) ? flagState.getValue(PHASE) : FlagPhase.ACTIVE;
+        switch (FlagClickAction.of(entity.isDeedAvailable(), phase)) {
+            case COLLECT_DEED -> {
+                entity.collectDeed((ServerPlayer) player);
+                return InteractionResult.sidedSuccess(false);
+            }
+            case DORMANT_CHOICES -> {
+                QuestownNetwork.sendToPlayer((ServerPlayer) player, new OpenDormantFlagMessage(pos));
+                return InteractionResult.sidedSuccess(false);
+            }
+            case FLAG_MENU -> {
+            }
         }
 
         // No item-on-flag conversions (removed 2026-10-19, dev): everything that matters is

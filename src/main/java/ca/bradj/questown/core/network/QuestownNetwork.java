@@ -41,6 +41,7 @@ public final class QuestownNetwork {
         channel = Loader.channel(CHANNEL_ID);
         // TO_CLIENT — sent by the server, handled on the client.
         register(Channel.Direction.TO_CLIENT, CloseScreensMessage.class, CloseScreensMessage::encode, CloseScreensMessage::decode, CloseScreensMessage::handle);
+        register(Channel.Direction.TO_CLIENT, OpenDormantFlagMessage.class, OpenDormantFlagMessage::encode, OpenDormantFlagMessage::decode, OpenDormantFlagMessage::handle);
         register(Channel.Direction.TO_CLIENT, EconomicsUpdate.class, EconomicsUpdate::encode, EconomicsUpdate::decode, EconomicsUpdate::handle);
         register(Channel.Direction.TO_CLIENT, JobWantedIngredientsMessage.class, JobWantedIngredientsMessage::encode, JobWantedIngredientsMessage::decode, JobWantedIngredientsMessage::handle);
         register(Channel.Direction.TO_CLIENT, MultiStatusScreenSyncMessage.class, MultiStatusScreenSyncMessage::encode, MultiStatusScreenSyncMessage::decode, MultiStatusScreenSyncMessage::handle);
@@ -59,6 +60,8 @@ public final class QuestownNetwork {
         // TO_SERVER — sent by the client, handled on the server.
         register(Channel.Direction.TO_SERVER, AddWorkFromUIMessage.class, AddWorkFromUIMessage::encode, AddWorkFromUIMessage::decode, AddWorkFromUIMessage::handle);
         register(Channel.Direction.TO_SERVER, BeginTownRelocationMessage.class, BeginTownRelocationMessage::encode, BeginTownRelocationMessage::decode, BeginTownRelocationMessage::handle);
+        register(Channel.Direction.TO_SERVER, CancelTownShutdownMessage.class, CancelTownShutdownMessage::encode, CancelTownShutdownMessage::decode, CancelTownShutdownMessage::handle);
+        register(Channel.Direction.TO_SERVER, DormantFlagChoiceMessage.class, DormantFlagChoiceMessage::encode, DormantFlagChoiceMessage::decode, DormantFlagChoiceMessage::handle);
         register(Channel.Direction.TO_SERVER, ChangeVillagerJobMessage.class, ChangeVillagerJobMessage::encode, ChangeVillagerJobMessage::decode, ChangeVillagerJobMessage::handle);
         register(Channel.Direction.TO_SERVER, CreateStockRequestFromUIMessage.class, CreateStockRequestFromUIMessage::encode, CreateStockRequestFromUIMessage::decode, CreateStockRequestFromUIMessage::handle);
         register(Channel.Direction.TO_SERVER, FlagCraftMessage.class, FlagCraftMessage::encode, FlagCraftMessage::decode, FlagCraftMessage::handle);
