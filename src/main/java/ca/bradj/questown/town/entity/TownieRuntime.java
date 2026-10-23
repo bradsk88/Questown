@@ -25,6 +25,7 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -46,6 +47,8 @@ public final class TownieRuntime {
     private int ticksWithoutJobTarget;
     private int freezeTicks;
     private @Nullable TownieBody body;
+    /** Where the townie was when it last had a body in the world (its body's position otherwise). */
+    private Vec3 lastPosition;
     private final List<Consumer<ImmutableList<Ingredient>>> ingrListeners = new ArrayList<>();
     private final List<Runnable> changeListeners = new ArrayList<>();
     private final Collection<Function<Void, Void>> cleanupJobListeners = new ArrayList<>();
@@ -54,11 +57,13 @@ public final class TownieRuntime {
             TownFlagBlockEntity town,
             UUID uuid,
             Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob,
-            @Nullable TownieBody body
+            @Nullable TownieBody body,
+            Vec3 position
     ) {
         this.town = town;
         this.uuid = uuid;
         this.body = body;
+        this.lastPosition = position;
         this.changeListeners.add(this::notifyWantedIngredients);
         setJob(initializedJob);
     }
@@ -78,6 +83,37 @@ public final class TownieRuntime {
 
     public @Nullable TownieBody getBody() {
         return body;
+    }
+
+    /** Whether the townie's body is in the world (loaded and not removed). */
+    public boolean hasBody() {
+        return body != null && !body.isRemoved();
+    }
+
+    /**
+     * A body stands in for this townie again (its chunk reloaded). The runtime keeps everything it
+     * had while the townie was unloaded; the body only needs to be shown the job.
+     */
+    void attachBody(TownieBody b) {
+        this.body = b;
+        b.showJobName(job.getJobName().translationKey());
+    }
+
+    /** The body left the world (its chunk unloaded): the townie stays, where the body last stood. */
+    public void detachBody(TownieBody b) {
+        if (body != b) {
+            return;
+        }
+        this.lastPosition = b.position();
+        this.body = null;
+    }
+
+    /** Where the townie is: its body's position, or where it last stood while it has no body. */
+    public Vec3 position() {
+        if (body == null) {
+            return lastPosition;
+        }
+        return body.position();
     }
 
     /**

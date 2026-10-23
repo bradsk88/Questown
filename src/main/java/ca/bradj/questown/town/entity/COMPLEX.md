@@ -56,9 +56,9 @@ flowchart LR
 
 ## Absorbed journals — a respawned townie keeps its job (#26)
 
-A townie's journal (job, status, the 6 carried items) lives only on its runtime, bound
-to its entity (see "Townie runtime and body"); the town keeps a copy in
-`NBT_TOWN_STATE`, republished from the *live* entities on each change. The shutdown ritual discards each entity as it absorbs it, so that copy cannot
+A townie's journal (job, status, the 6 carried items) lives only on its runtime (see
+"Townie runtime and body"); the town keeps a copy in `NBT_TOWN_STATE`, republished from
+the runtimes on each change. The shutdown ritual discards each entity as it absorbs it, so that copy cannot
 be the respawn's source. Before the fix every respawn (wake, cancel, relocation)
 seeded a fresh gatherer journal (`SpawnVisitorReward.newVisitorJournal`), which
 breaks ADR-0009's "jobs travel".
@@ -1137,6 +1137,14 @@ persist). Neither is unit-testable (config/registry-bound construction);
 live-verify = zero "Exception loading entity" lines on a world with a
 townie, and re-audit the whole path after ANY change to it.
 
+Re-audited 2026-10-23 (townie runtime): `assumeStateFromTown` now first checks the flag for a
+live runtime without a body (the townie stayed in town while its chunk was unloaded) and takes
+the `register -> reattachBody` path; only without one does it read `NBT_TOWN_STATE` and
+`register -> initialize` as before. Neither path adds a new `getUnsafe()` call; the roster is a
+plain map, readable before the flag initializes (it is simply empty then, so a server-start load
+takes the saved-state path). `village/day1`'s overnight reload takes both: the reloaded body
+re-attaches (entity-deserializer thread), then the absence warp's `recoverMobs` rebinds it.
+
 ## Townie display numbers ("Villager N", 2026-10-14 playtest)
 
 The user-facing name of a townie is "Villager N" where N is its monotonic
@@ -1543,7 +1551,7 @@ flowchart LR
 ```
 
 - A bind builds a fresh runtime from the journal and replaces the UUID's previous one, as the
-  entity used to rebuild its job on `initialize`. `retireVillager` drops the runtime.
+  entity used to rebuild its job on `initialize`.
 - Load-time registration (`assumeStateFromTown`) still runs `register` before `initialize`. The
   change listener `SimpleVillagerHandle.register` adds is buffered on the entity
   (`pendingChangeListeners`) and handed to the runtime at bind. An unbound body's `getJobId()`
@@ -1554,6 +1562,35 @@ flowchart LR
   client-side `ClientSideThrowingJob`, now deleted, answered).
 - `MCExtra` carries the runtime (`townie()`), not the entity; `RealtimeWorldInteraction` reaches the
   body only through it (`swingMainHand`, `wearTool`, `blockPosition`, `tryGiveItem`'s drop).
+
+## Lifetime and persistence — the townie outlives its body
+
+| Event | Roster |
+|---|---|
+| body unloads with its chunk (`onRemovedFromWorld` UNLOADED) | `detachBody`: the runtime stays, remembering where the body stood |
+| body reloads while the runtime has no live body | `assumeStateFromTown` → `register` → `reattachBody`: the body takes back the live runtime (its state may be newer than the saved one) |
+| body loads with no runtime in the roster (server start) | `assumeStateFromTown` → `register` → `initialize`: bind from `NBT_TOWN_STATE`, as before |
+| townie dies (`retireVillager`) or is absorbed by a shutdown | `unbindTownie` |
+| catch-up warp (`recoverMobs`) | `unbindAllTownies`, then every respawned body binds from the warped state |
+
+- **`captureState` reads the runtimes, not the loaded entities.** An unloaded townie used to drop
+  out of `NBT_TOWN_STATE` at the next capture; when its body reloaded, `assumeStateFromTown` found
+  no match ("Villager entity exists but is not present on town state") and the body never
+  initialized. Now the townie stays in the state, at `TownieRuntime.position()` (its body's position,
+  or where the body last stood).
+- **No townie state in entity NBT.** The entity's `items` tag was only ever read into a throwaway
+  initial job and then replaced by the town state on load (`assumeStateFromTown` → `initialize`),
+  so it is gone; the runtime's journal in `NBT_TOWN_STATE` is the only copy.
+- **A reattached body drops its queued change listener.** `SimpleVillagerHandle.register` queues a
+  "mark the flag changed" listener on every registering body; the runtime already has the
+  identical one from its first registration, so `reattachTo` clears the queue instead of adding one
+  more listener per reload.
+- The roster is a `LinkedHashMap`, so captured townies keep arrival order (the entity list's order
+  before).
+- Verified: `village/day1`'s overnight absence takes the reattach path and then the warp rebind,
+  43/43 checks. Full suite 91/94: the known red plus the load flakes
+  `flag/floating_furniture_over_half` and `organizer/fetch [warp]` (the latter goes through
+  `recoverMobs`; 3/3 alone).
 
 ## Tick order (the entity still triggers it)
 

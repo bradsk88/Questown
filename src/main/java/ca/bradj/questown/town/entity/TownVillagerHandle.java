@@ -26,11 +26,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -56,10 +57,11 @@ public final class TownVillagerHandle {
      */
     private final VillagerDisplayNumbers displayNumbers = new VillagerDisplayNumbers();
     /**
-     * Each townie's live state and decisions, keyed by UUID. The entity is only the townie's body;
-     * see {@link TownieRuntime} and {@code town/entity/COMPLEX.md} "Townie runtime and body".
+     * Each townie's live state and decisions, keyed by UUID, in arrival order. A runtime outlives
+     * its body: an unloaded townie is still in the town. See {@link TownieRuntime} and
+     * {@code town/entity/COMPLEX.md} "Townie runtime and body".
      */
-    private final Map<UUID, TownieRuntime> townies = new HashMap<>();
+    private final Map<UUID, TownieRuntime> townies = new LinkedHashMap<>();
 
     TownVillagerHandle() {
         SimpleVillagerHandle.Configs config = new SimpleVillagerHandle.Configs(
@@ -578,11 +580,28 @@ public final class TownVillagerHandle {
             TownFlagBlockEntity flag,
             UUID uuid,
             Snapshot journal,
-            TownieBody body
+            TownieBody body,
+            Vec3 position
     ) {
         Job job = ServerJobsRegistry.getInitializedJob(flag.getServerLevel(), journal.jobId(), journal, uuid);
-        TownieRuntime runtime = new TownieRuntime(flag, uuid, job, body);
+        TownieRuntime runtime = new TownieRuntime(flag, uuid, job, body, position);
         townies.put(uuid, runtime);
+        return runtime;
+    }
+
+    /**
+     * A reloaded body takes back the townie it stands for, when the townie is still in town without
+     * a body in the world. Null when there is no such townie (the caller binds from the saved state).
+     */
+    @Nullable TownieRuntime reattachBody(
+            UUID uuid,
+            TownieBody body
+    ) {
+        TownieRuntime runtime = townies.get(uuid);
+        if (runtime == null || runtime.hasBody()) {
+            return null;
+        }
+        runtime.attachBody(body);
         return runtime;
     }
 
@@ -590,9 +609,19 @@ public final class TownVillagerHandle {
         return townies.get(uuid);
     }
 
-    /** The townie died or left: its runtime goes with it. */
+    /** Every townie in the town, in arrival order, whether or not its body is loaded. */
+    ImmutableList<TownieRuntime> townies() {
+        return ImmutableList.copyOf(townies.values());
+    }
+
+    /** The townie died or left the town (absorbed by a shutdown): its runtime goes with it. */
     void unbindTownie(UUID uuid) {
         townies.remove(uuid);
+    }
+
+    /** A catch-up warp replaces every townie with the warped state's: forget the old ones. */
+    void unbindAllTownies() {
+        townies.clear();
     }
 
     void register(VisitorMobEntity visitorMobEntity) {

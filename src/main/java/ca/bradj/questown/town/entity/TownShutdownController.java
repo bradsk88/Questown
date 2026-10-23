@@ -158,6 +158,8 @@ class TownShutdownController {
         town.rememberAbsorbedJournal(vme);
         progress.markAbsorbed(vme.getUUID());
         handle.remove(vme);
+        // The townie is out of town until it respawns from its remembered journal.
+        town.villagerHandle.unbindTownie(vme.getUUID());
         vme.remove(Entity.RemovalReason.DISCARDED);
     }
 

@@ -42,14 +42,11 @@ import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.game.DebugPackets;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Items;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -653,6 +650,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         RemovalReason reason = getRemovalReason();
         if (reason == RemovalReason.UNLOADED_TO_CHUNK || reason == RemovalReason.UNLOADED_WITH_PLAYER) {
             town.getVillagerHandle().remove(this);
+            if (runtime != null) {
+                runtime.detachBody(this);
+            }
         }
     }
 
@@ -765,43 +765,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         }
     }
 
-    @Override
-    public void addAdditionalSaveData(CompoundTag p_21484_) {
-        super.addAdditionalSaveData(p_21484_);
-        ListTag items = new ListTag();
-        // 1.20.5+: ItemStack.save throws on EMPTY (1.19.2 wrote a raw air tag).
-        // Keep the per-slot size by writing an empty compound for empty slots;
-        // the load side parses those back through MCHeldItem.fromMCItemStack (which
-        // maps an EMPTY stack to Air()). A saved AIR stack does NOT work either -
-        // new ItemStack(Items.AIR) is itself empty, so save() throws the same way.
-        if (runtime != null) {
-            Jobs.getItems(runtime.getJob())
-                .forEach(v -> items.add(v.isEmpty() ? new CompoundTag()
-                    : v.save(registryAccess())));
-        }
-        p_21484_.put("items", items);
-    }
-
+    /**
+     * The townie's carried items are not saved with the body: the flag saves them with the rest of
+     * the townie (its runtime's journal, in the town state). The entity's old "items" tag was only
+     * ever read into a throwaway job and then replaced by the town state on load.
+     */
     @Override
     public void readAdditionalSaveData(CompoundTag p_21450_) {
         super.readAdditionalSaveData(p_21450_);
-        ListTag items = p_21450_.getList("items", Tag.TAG_COMPOUND);
-        List<MCHeldItem> itemz = items
-                .stream()
-                .map(v -> {
-                    CompoundTag tag = (CompoundTag) v;
-                    // Empty compound = a saved empty slot (see addAdditionalSaveData).
-                    // Parsing it would make vanilla log "Tried to load invalid item"
-                    // for every expected-empty slot on every entity load.
-                    ItemStack stack = tag.isEmpty()
-                            ? net.minecraft.world.item.ItemStack.EMPTY
-                            : net.minecraft.world.item.ItemStack.parse(registryAccess(), tag).orElse(net.minecraft.world.item.ItemStack.EMPTY);
-                    return MCHeldItem.fromMCItemStack(stack);
-                })
-                .toList();
-        if (runtime != null) {
-            runtime.getJob().initializeItems(itemz);
-        }
         entityData.set(status, p_21450_.getString("status"));
     }
 
@@ -1247,11 +1218,26 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
             QT.VILLAGER_LOGGER.error("Townie {} can only be bound to a town flag, not {}", uuid, town);
             return;
         }
-        this.runtime = flag.bindTownie(uuid, journal, this);
+        this.runtime = flag.bindTownie(uuid, journal, this, new Vec3(xPos, yPos, zPos));
         pendingChangeListeners.forEach(cl -> runtime.addChangeListener(cl::Changed));
         pendingChangeListeners.clear();
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
+    }
+
+    /**
+     * Binds this reloaded body to the townie it stands for, which stayed in town while the body
+     * was unloaded. The runtime already marks the flag changed on status changes (from the
+     * townie's first registration), so the identical listener this body's registration queued is
+     * dropped rather than piled onto the runtime once per reload.
+     */
+    public void reattachTo(
+            TownFlagBlockEntity flag,
+            TownieRuntime townie
+    ) {
+        this.town = flag;
+        this.runtime = townie;
+        pendingChangeListeners.clear();
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY

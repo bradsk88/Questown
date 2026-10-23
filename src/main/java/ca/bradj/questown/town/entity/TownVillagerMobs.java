@@ -17,6 +17,11 @@ public class TownVillagerMobs {
             TownFlagBlockEntity town,
             VisitorMobEntity visitorMobEntity
     ) {
+        TownieRuntime live = town.villagerHandle.getTownie(visitorMobEntity.getUUID());
+        if (live != null && !live.hasBody()) {
+            reattach(town, visitorMobEntity);
+            return;
+        }
         if (!Compat.getBlockStoredTagData(town).contains(NBT_TOWN_STATE)) {
             QT.FLAG_LOGGER.error(
                     "Villager entity exists but town state is missing. This is a bug and may cause unexpected behaviour.");
@@ -44,5 +49,26 @@ public class TownVillagerMobs {
         }
         TownState.VillagerData<MCHeldItem> m = match.get();
         visitorMobEntity.initialize(town, m.uuid, m.xPosition, m.yPosition, m.zPosition, m.journal);
+    }
+
+    /**
+     * The townie stayed in town while its body was unloaded (the flag kept ticking): the reloaded
+     * body takes back that live runtime instead of rebuilding the townie from the saved state,
+     * which can be older than what the townie did since.
+     */
+    private static void reattach(
+            TownFlagBlockEntity town,
+            VisitorMobEntity body
+    ) {
+        town.villagerHandle.register(body);
+        if (body.isRemoved()) {
+            return;
+        }
+        TownieRuntime runtime = town.villagerHandle.reattachBody(body.getUUID(), body);
+        if (runtime == null) {
+            QT.FLAG_LOGGER.error("Townie {} lost its runtime while its body was loading", body.getUUID());
+            return;
+        }
+        body.reattachTo(town, runtime);
     }
 }

@@ -906,9 +906,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public TownieRuntime bindTownie(
             UUID villager,
             Snapshot journal,
-            TownieBody body
+            TownieBody body,
+            Vec3 position
     ) {
-        return villagerHandle.bindTownie(this, villager, journal, body);
+        return villagerHandle.bindTownie(this, villager, journal, body, position);
     }
 
     /** The townie's runtime, or null when no townie with that UUID is bound to this town. */
@@ -2151,7 +2152,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
      * cancel or relocation restores its job and carried items (#26; ADR-0009 "jobs travel").
      */
     void rememberAbsorbedJournal(VisitorMobEntity absorbed) {
-        CompoundTag villagerTag = TownStateSerializer.storeVillager(TownFlagState.captureVillager(this, absorbed));
+        TownieRuntime townie = absorbed.getRuntime();
+        if (townie == null) {
+            QT.FLAG_LOGGER.error("Absorbed townie {} has no runtime; its journal is lost", absorbed.getUUID());
+            return;
+        }
+        CompoundTag villagerTag = TownStateSerializer.storeVillager(TownFlagState.captureTownie(this, townie));
         AbsorbedJournals.remember(Compat.getBlockStoredTagData(this), absorbed.getUUID(), villagerTag);
         setChanged();
     }

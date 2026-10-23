@@ -18,6 +18,9 @@ public interface TownieBody {
 
     Vec3 position();
 
+    /** The body has left the world (unloaded, killed or discarded). */
+    boolean isRemoved();
+
     /** A work stroke: the arm swing a player sees when the townie works a block. */
     void swingMainHand();
 

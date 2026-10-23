@@ -96,15 +96,14 @@ public class TownFlagState {
         this.parent = parent;
     }
 
+    /**
+     * The town as warp and a reload see it. Its townies come from the flag's runtimes, so a townie
+     * whose body is unloaded is still in the town (where it last stood).
+     */
     @Nullable MCTownState captureState() {
         ImmutableList.Builder<TownState.VillagerData<MCHeldItem>> vB = ImmutableList.builder();
-        for (LivingEntity entity : parent.getVillagerHandle().entities()) {
-            if (entity instanceof VisitorMobEntity) {
-                if (!((VisitorMobEntity) entity).isInitialized()) {
-                    return null;
-                }
-                vB.add(captureVillager(parent, (VisitorMobEntity) entity));
-            }
+        for (TownieRuntime townie : parent.villagerHandle.townies()) {
+            vB.add(captureTownie(parent, townie));
         }
 
         long dayTime = parent.getServerLevel().getDayTime();
@@ -121,15 +120,15 @@ public class TownFlagState {
         );
     }
 
-    static TownState.VillagerData<MCHeldItem> captureVillager(
+    static TownState.VillagerData<MCHeldItem> captureTownie(
             TownFlagBlockEntity town,
-            VisitorMobEntity entity
+            TownieRuntime townie
     ) {
-        Vec3 pos = entity.position();
-        ImmutableSnapshot<MCHeldItem, ?> snapshot = entity.getJobJournalSnapshot();
+        Vec3 pos = townie.position();
+        ImmutableSnapshot<MCHeldItem, ?> snapshot = townie.getJournalSnapshot();
         return new TownState.VillagerData<>(
-                pos.x, pos.y, pos.z, snapshot, entity.getUUID(),
-                town.getVillagerHandle().getProficiencies(entity.getUUID())
+                pos.x, pos.y, pos.z, snapshot, townie.getUUID(),
+                town.villagerHandle.getProficiencies(townie.getUUID())
         );
     }
 
@@ -370,6 +369,8 @@ public class TownFlagState {
             entity.stopSleeping();
             entity.remove(Entity.RemovalReason.DISCARDED);
         }
+        // The warped state's townies replace the town's: each respawned body binds a fresh runtime.
+        e.villagerHandle.unbindAllTownies();
 
         if (Compat.getBlockStoredTagData(e).contains(NBT_TOWN_STATE)) {
             @NotNull ImmutableList<TownState.VillagerData<MCHeldItem>> villagers = TownStateSerializer.loadVillagers(
