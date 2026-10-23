@@ -114,7 +114,8 @@ public class ServerJobsRegistry {
         Ingredient missing = townie.getUnmetItemIngredient();
         Component need = missing == null ? null : Compat.translatable(
                 "message.questown.townie_need.unmet_item.item", Ingredients.getName(missing));
-        return ImmutableList.copyOf(StatusNeedLine.lines(getStatusText(job, status), need, isWorking(status)));
+        boolean keep = StatusNeedLine.keepsOwnLines(isWorking(status), DiningStages.isDiner(job));
+        return ImmutableList.copyOf(StatusNeedLine.lines(getStatusText(job, status), need, keep));
     }
 
     /**
@@ -125,7 +126,8 @@ public class ServerJobsRegistry {
         ImmutableList<Ingredient> wants = getWantedResourcesProvider(townie.getJobId())
                 .apply(Jobs.getHeldItems(townie.getInventory()));
         return ImmutableList.copyOf(StatusNeedLine.neededItems(
-                wants, townie.getUnmetItemIngredient(), isWorking(townie.getStatusForServer())));
+                wants, townie.getUnmetItemIngredient(), StatusNeedLine.keepsOwnLines(
+                        isWorking(townie.getStatusForServer()), DiningStages.isDiner(townie.getJobId()))));
     }
 
     private static boolean isWorking(@Nullable IStatus<?> status) {

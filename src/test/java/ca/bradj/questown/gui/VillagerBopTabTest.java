@@ -15,10 +15,15 @@ class VillagerBopTabTest {
     }
 
     @Test
-    void openedFromTheVillager_noFlagTab() {
-        // "The BOP tab should not be visible when opening villager UI via villager interaction":
-        // only the villager's own earned-BOP screen, as before.
-        assertEquals(new VillagerBopTab(false, false, false), VillagerBopTab.decide(false, false));
+    void openedFromTheVillager_withoutAnEarnedBop_leadsToTheFlagUi() {
+        // Agent playtest r10 #5 (dev trial 2026-10-23, reverses the 10-19 "not visible via
+        // villager interaction" ruling): the change-job panel asks for a BOP the player has to
+        // take from the flag, so the card always offers a way there.
+        assertEquals(new VillagerBopTab(true, true, false), VillagerBopTab.decide(false, false));
+    }
+
+    @Test
+    void openedFromTheVillager_withAnEarnedBop_isTheVillagersOwnScreen() {
         assertEquals(new VillagerBopTab(true, false, true), VillagerBopTab.decide(false, true));
     }
 }

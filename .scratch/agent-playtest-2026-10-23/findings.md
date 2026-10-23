@@ -37,10 +37,13 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
    `status_1`/`status_2`; the need line (65897f02) replaces `status_2` for any non-working status,
    so `status_1` dangled. 19 non-working status pairs rewritten so line 1 is a sentence;
    `StatusFirstLineSentenceTest` guards it.
-5. (judge, onboarding) The change-job panel says "Insert a Block of Progress to make this villager
+5. **[TRIAL, dev 2026-10-23]** (judge, onboarding) The change-job panel says "Insert a Block of Progress to make this villager
    a Hunter", but the BOPs are in the flag (tutorial grant "3 BOPs added to flag"), not the
    player's inventory. Nothing on the panel points at the flag's Blocks of Progress tab ("Take
    Block of Progress"). A first-time player may not connect the two.
+   **Dev:** try a BOP tab on the villager card opened in-world (it was only shown from the
+   flag's click-through). With no earned BOP it now opens the flag's BOP page, from any distance
+   (`VillagerBopTab.decide`). Dev worries the tab strip is at capacity: up to 7 tabs in-world.
 6. **[FIXED 06222f76 + see #12; live verification of 06222f76 alone was confounded]** (bug, P1) Starving hunter (fullness -272%) with 6 raw beef in
    the storeroom looped `dining_no_table -> downtime -> dining_no_table` every ~200 ticks (5 s at
    40 tps) and never ate. The board's `isReadyForDowntime` gate ran before the diner stage-down,
@@ -50,7 +53,7 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
    `dine_at_time`; `eat_direct`, a listed known red, passed).
    The day1 driver now sleeps from dayTime 13000: sleeping on the first dark tick raced the
    toast (which skips sleeping players) and failed `toast-at-first-dusk`.
-7. (judge, by design today) "Quest completed: Raw Food" fired the instant the swordless-until-now
+7. **[FIXED, dev 2026-10-23: meta jobs excluded]** (judge, by design today) "Quest completed: Raw Food" fired the instant the swordless-until-now
    hunter finished *eating* raw beef (`dining_raw_food`), before any hunt: `[LOOTTRACE] extract
    'Raw Mutton' ... (extracted 1/1)`. `FirstHunterLootGuarantee` prepends mutton to any `hunter`
    root result, meals included; `jobs/declarative/COMPLEX.md` "The hunter guarantee" says this is
@@ -60,7 +63,11 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
    `self_sufficiency` cook unlocked 2/3 vs 3/3 unnarrowed. Reverted; the real fix is the doc's
    "deeper fix" (why `hunter/sword` doesn't start). `ChickenArcLootGuarantee` has the same
    any-job shape, also documented as deliberate.
-8. (judge, minor copy) A hungry cook reads "Cook is looking for food. / They need Coal to work.":
+   **Cause of the beef:** the agent seeded it (`r10-server.log` 06:30:00, `item replace block`
+   4 Stone Swords + Raw Beef into the storeroom chest); the hunter had extracted nothing. So a
+   meal on player-stocked meat closed the quest. Now `shouldPrepend` skips `MetaJobs.isMeta`
+   (diners, downtime, resting, seeking_work, bop_depositing); `MetaJobsTest`.
+8. **[FIXED, dev chose "no need line for diners"]** (judge, minor copy) A hungry cook reads "Cook is looking for food. / They need Coal to work.":
    line 1 is the diner status, line 2 the job's blocker (need line replaces any non-working
    line 2, diners included). Both true; the pairing reads like one thought.
 9. (minor, churn) A hungry-but-not-starving cook with no cooked food in town bounced
@@ -108,7 +115,7 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
     "Page 1 / 1": `VillagerQuestsContainer` inherits `isAllComplete() == false`, so the flag tab's
     all-done state never applied. `QuestsScreen` now draws "No open quests right now." when it has
     no cards and no all-done state.
-14. (judge, onboarding, P1) Day 6-7: the onboarding cook can only cook mutton. Its
+14. **[PARKED, dev 2026-10-23]** (judge, onboarding, P1) Day 6-7: the onboarding cook can only cook mutton. Its
     `unlocked_jobs` are extract, fuel and mutton (the `TownQuests` grant); beef/porkchop/chicken
     are progression-unlocked (BOP). The hunter brings mostly beef/porkchop/chicken (storage: beef
     8, porkchop 4, chicken 1, mutton 0), so the cook idles (`seeking_work -> downtime`) while
@@ -118,6 +125,8 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
     change job, Quests, and a BOP tab that opens the flag's BOP page). How does a player learn to
     unlock cook/beef? Also: the request confirm for Food lists 5 known producing jobs (incl.
     "Cook / Potato") that no townie can do yet.
+    **Dev:** leave for now; players can cook in a furnace themselves. The real fix is holistic:
+    a red dot on the skills page for "new skills to unlock" and investment in that UI.
 15. **[FIXED, copy]** The Mineshaft quest said "Place a mineshaft block in a room and register the
     door." and the crafting row "Place it in a room so a miner can work there." A mineshaft is a
     block-room (`blocks/COMPLEX.md`): placing it registers its own room, and every miner job's

@@ -1008,8 +1008,16 @@ calls the (now protected) wrapping helper.
 - **Villager menu BOP tab from the flag.** Opened through the flag's villagers click-through
   (the management view, no inventory tab), the villager menu always shows a BOP tab that
   re-opens the flag UI on its BOP tab (`FlagTabs.makeOpenFn(..., OpenFlagMenuMessage.BOP)`).
-  Opened by interacting with the villager, the tab is the villager's own earned-BOP screen as
-  before (`VillagerBopTab.decide`, `VillagerBopTabTest`).
+  Opened by interacting with the villager, the tab is the villager's own earned-BOP screen when
+  it has one; otherwise (since 2026-10-23, agent playtest r10 #5, a dev *trial* that reverses
+  the 10-19 "not visible via villager interaction" ruling) it also leads to the flag UI's BOP
+  tab, so the change-job panel's "Insert a Block of Progress" has a visible path. There is no
+  distance gate on `OpenFlagMenuMessage`, so this reaches the flag's BOPs from anywhere; that
+  remote reach is what the trial is feeling out (`VillagerBopTab.decide`, `VillagerBopTabTest`).
+  **Tab capacity** (dev worry, 2026-10-23): tabs sit at a 24 px pitch from a 6 px offset on the
+  176 px card, so 7 tabs reach the right edge. Seen in-world: 6 (inventory, economics, stats,
+  change job, quests, BOP); with the skills tab it is 7, the last that fits. An 8th needs a
+  second row or a scrolling strip.
 - **Pending job change on the villagers page.** `MultiStatusScreen.SyncedData.pendingJobChange`
   (server: `VillagerHolder.isJobChangePending`) puts an asterisk on the job title
   (`PendingJobChangeMark`) and a hover tooltip "This villager will change profession in the
@@ -1238,7 +1246,10 @@ need bubble. Dev ruling: row + status line. `VisitorMobEntity.getUnmetItemIngred
 `getNeededItems(townie)` apply `StatusNeedLine`: while the villager is not working (a work state,
 extracting, or going to the job site count as working), the blocker replaces the second status
 line ("They need %s to work.") and the needs row; while working, both stay as the job describes
-them. Pin: `StatusNeedLineTest`. Live 2026-10-23 (held `cook/fuel [no_coal]`): flag villagers tab
+them. A diner (any of the three, `DiningStages.isDiner`) also keeps its own lines and row
+(`StatusNeedLine.keepsOwnLines`, agent playtest r10 #8, dev 2026-10-23): "Cook is looking for
+food. / They need Coal to work." read as one thought; the job's blocker shows again once the
+villager is back at work. Pin: `StatusNeedLineTest`. Live 2026-10-23 (held `cook/fuel [no_coal]`): flag villagers tab
 "Cook is looking for supplies. They need Coal to work."; inventory needs row showed Coal, not the
 Job Board. Not fixed: the inventory screen's own status tooltip still falls back to "busy with
 their work" (`.scratch/agent-playtest-2026-10-22-r9/inventory-status-tooltip-ignores-server-text.md`).

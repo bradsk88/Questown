@@ -48,4 +48,15 @@ class StatusNeedLineTest {
         Assertions.assertEquals(List.of("beef"), StatusNeedLine.neededItems(List.of("beef"), "coal", true));
         Assertions.assertEquals(List.of("job_board"), StatusNeedLine.neededItems(List.of("job_board"), null, false));
     }
+
+    /**
+     * r10 #8 (dev 2026-10-23): a hungry cook read "Cook is looking for food. / They need Coal to
+     * work." A diner keeps its own lines; the job's blocker returns once it is back at work.
+     */
+    @Test
+    void aDiner_keepsItsOwnLines() {
+        Assertions.assertTrue(StatusNeedLine.keepsOwnLines(false, true));
+        Assertions.assertTrue(StatusNeedLine.keepsOwnLines(true, false));
+        Assertions.assertFalse(StatusNeedLine.keepsOwnLines(false, false));
+    }
 }
