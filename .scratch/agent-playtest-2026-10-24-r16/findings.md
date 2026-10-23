@@ -125,3 +125,29 @@ board (-2, 67, -3).
    log. Cause not found: next step is a unit test of `RoomRecipe.matches` with four plate blocks
    (`Ingredient` equality across the four separate plate ingredients), or a scan-result debug
    dump for room 4 (`TownRoomsHandle` "found recipe" lines aren't logged on this run).
+6. (bug, medium) **A slept night's morning stamps day-clock ticks into game-clock state.** The
+   sleep path passes the new *daytime*: `NeoTownWakeEvents.java:19`
+   `TownFlags.onSleepFinished(event.getNewTime())` -> `runMorning(..., newTime)` ->
+   `morningTick(newTime)` -> `SimpleVillagerHandle.handleMorning(tick)`. The natural (unslept)
+   morning passes game time (`AbstractTownFlagTicker.java:196` `onMorningDetected(getTick(data))`;
+   `TownFlagTicker` `getTick` -> `Util.getTick` = `level.getGameTime()`, `Util.java:41`). The
+   state it writes is read on the game clock: moods tick with game time
+   (`TownFlagTicker.java:64` -> `TownVillagerHandle.java:541` `moods.tick(tick)`, expiry
+   `TownVillagerMoods.java:83` keeps an effect while `untilTick >= currentTick`), and the downtime
+   gate gets game time (`TownFlagBlockEntity.java:1198`, in `changeJobForVisitorFromBoard`: `long tick = Util.getTick(getServerLevel());`).
+   A sleep skip advances daytime but not game time, so every slept night widens the gap (here
+   daytime 96000+ vs game time 78378 on day 4).
+   - **Seen live: SLEEPLESS outlasts its day.** Dawn 3 (a slept morning, daytime 72000) logged
+     "Villager 7fe2...f64 was bedless last night; SLEEPLESS applied until tick 95000"
+     (`SimpleVillagerHandle.java:793` `until = tick + configs.sleeplessEffectDuration`, 23000).
+     23000 ticks is ~9.6 real minutes at 40 tps, but the cook still had `[questown:sleepless]`
+     12 minutes later (00:25:49, day 4) because game time was only 78378. It lapses only when game
+     time reaches 95000.
+   - **BELIEVED, not shown: the `ready-for-downtime` branch is muted after a slept dawn.**
+     `handleMorning` also calls `registerMostRecentDowntime(uuid, tick)` with the daytime value, and
+     `DowntimeState.isReadyForRest(now)` (`DowntimeState.java:58-62`) needs `lastWork > lastRest`
+     and `now - lastRest >= n` on game-time `now`. An inflated `lastRest` keeps both false until a
+     game-time rest overwrites it or game time catches up. The board traces fit (`ready-for-downtime`
+     fired on day 1 and once at 00:2x, never on days 2-3), but hunger confounds them: both townies
+     were starving most of the time. Settle with a unit test of `handleMorning` at a daytime ahead
+     of game time, or by logging `lastRest`/`now` in the cascade.
