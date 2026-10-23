@@ -39,6 +39,10 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
   stairs; completed on placement near the flag), Villager job: Miner (BOP -> villager 3; board
   got `coal`). The flag had 2 BOPs on day 9 though only 1 of the starting 3 was left and the
   hunter never deposited: a quest reward, probably Food's ("rewarded in the morning").
+- Day 10: villager 4 (gatherer) arrived; quest Crafting Room (crafting table in a new 3-high
+  room) -> done, "New visitors will arrive in the morning". The miner woke `sleepless` (4
+  townies, 2 beds; no message told the player), so I built a second Big Bedroom (2 beds +
+  lantern, 3-high).
 
 ## Odd
 1. (observe) "Seeded starting timber ... (1 placements)" here vs 6 in r10's plains world. Check
@@ -108,6 +112,7 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    starving/downtime branches) never apply to it. The flag gets no BOP and the hunter's XP is
    frozen. CONTEXT.md "Block of Progress" says the latch stalls a townie only "for the brief
    level-up -> deposit window"; here it's 15+ real minutes and counting.
+   Repeats: the miner (villager 3) reached level 2 at 19:09:57 and sits at xp 0/1200 too.
 9. (bug, P1) Starving flag misses, two shapes (day 9):
    a. The hunter's fullness steps by 10 from an odd offset (-11099 -> -11109); the hungry
       listener broadcasts only when `newVal <= 0 && abs(newVal) % 10 == 0`
