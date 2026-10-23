@@ -13,6 +13,11 @@ import java.util.Map;
 public class StatusArt {
 
     private static final Map<ProductionStatus, String> pArt;
+    // Work states (state:N) are not constants, so they map by predicate in getTexture.
+    // working/waiting/extracting.png are placeholders (copies of existing art) until the
+    // dev's own icons replace them (2026-10-23 ruling, r9 findings #14).
+    private static final String WORKING_ART = "menu/gatherer/working.png";
+    private static final String WAITING_ART = "menu/gatherer/waiting.png";
     public static final ResourceLocation ERROR_TEX = new ResourceLocation("questown", "textures/error.png");
 
     static {
@@ -26,6 +31,8 @@ public class StatusArt {
         b.put(ProductionStatus.COLLECTING_SUPPLIES, "menu/gatherer/get_supplies.png");
         b.put(ProductionStatus.NO_WORK_POSSIBLE, "menu/gatherer/no_work_possible.png");
         b.put(ProductionStatus.DROPPING_LOOT, "menu/gatherer/dropping_loot.png");
+        b.put(ProductionStatus.WAITING_FOR_TIMED_STATE, WAITING_ART);
+        b.put(ProductionStatus.EXTRACTING_PRODUCT, "menu/gatherer/extracting.png");
         pArt = b.build();
     }
 
@@ -35,6 +42,9 @@ public class StatusArt {
     ) {
         if (status instanceof ProductionStatus ps) {
             String art = pArt.get(ps);
+            if (art == null && ps.isWorkingOnProduction()) {
+                art = WORKING_ART;
+            }
             if (WorkSeekerJob.isSeekingWork(jobId) && ps.isExtractingProduct()) {
                 art = "menu/work_seeker.png";
             }

@@ -1173,3 +1173,17 @@ every townsfolk and has no in-game cancel or wake yet (commands only; queued for
 the town" (`menu.flag_crafting.begin_moving.confirm`); the second sends `BeginTownRelocationMessage`.
 `moveArmed` resets in `init()`, so reopening the tab (or a resize) disarms it. docs/ui-principles.md
 rule 10. Live r9: one click armed it with no shutdown; the second logged "Town shutdown started".
+
+## Status art for work, waiting and extracting (2026-10-23)
+
+`StatusArt` maps a `ProductionStatus` to a picture and fell back to
+`textures/error.png` (the purple/black checkerboard) for anything unmapped,
+which included every work state (`state:N`), `WAITING_FOR_TIMED_STATE` and
+`EXTRACTING_PRODUCT`. So a villager at work showed the checkerboard (r9
+findings #14; 1.19.2 does the same). Work states are not constants, so they map
+by predicate (`isWorkingOnProduction()` after the table lookup) to
+`menu/gatherer/working.png`; waiting and extracting have table entries
+(`waiting.png`, `extracting.png`). Dev ruling: new art, drawn by the dev. The
+three PNGs are placeholders copied from `gathering.png`, `relaxing.png` and
+`returned_success.png`; replace the files, no code change needed. Pin:
+`StatusArtTest` (no checkerboard for those states, and each texture file ships).
