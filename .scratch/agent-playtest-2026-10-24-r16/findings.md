@@ -43,12 +43,30 @@ board (-2, 67, -3).
 - No fresh-town hunger deadlock: Villager 1 hit -20% fullness two real minutes after arriving
   (known hunger rate, r10 #9 / r13 #5), took the hunter job, went `starving-diner-stage` with no
   food in town, then `work-roll` back to `hunter:sword` and hunted.
+- Day 2: Small Kitchen (furnace in room 3) completed on placement; Villager 2 (7fe2ffee) made a
+  Cook the player's way (BOP tab -> villager card -> "Insert a Block of Progress to make this
+  villager a Cook (starting now)" -> Unlock): `cook:extract -> seeking_work -> cook:mutton`.
+- **`hatch` open check answered: a coal-less cook keeps its coal need through diner statuses on
+  the bubble and on inspect; only the flag-tab tooltip swaps it out, by design.** A cook made
+  through the BOP path, no coal in town, frozen (`tick freeze`) in `cook:dining_no_table`:
+  `_qtdev inspect villagers` -> `need=UNMET_ITEM`, "needs item: Coal (#minecraft:coals)" (twice,
+  00:07 and 00:10); facing it, the focus hint line read "They need Coal to work." (aim1.png,
+  00:10). That hint fires only for the bubble holder (`NeedBubbleFocus.java:165-166` @
+  5e3850be, `if (townie != null && !isShowingBubble(townie)) return;`), so the coal bubble was
+  held during the diner status. The icon itself was not visible: the diner stood in the
+  storeroom doorway and the bubble falls inside the wall above the door. In downtime, in the
+  open, the coal-icon bubble was plainly visible (bub3.png). The flag villagers-tab tooltip said
+  "Cook is fetching food. / They will eat it soon." with no coal line: that is r10 #8's
+  documented `StatusNeedLine.keepsOwnLines` rule (`gui/COMPLEX.md`, dev 2026-10-23).
+- White swirls hanging near the doorway in the frozen shots are vanilla `POOF` particles (leaver
+  warp effects), held by the tick freeze. Not a finding.
 
 ## Odd
 1. (judge) **A starving hunter brings food home and goes straight back out without eating.**
    Villager 1 at -104% deposited raw mutton at 23:58:26 and stayed in `hunter:sword` for a second
-   full trip; only at that trip's end (`ready-for-downtime`, 23:59:2x) did it go
-   `starving-diner-stage` and eat the mutton (-5920 -> 2500, 23:59:31). About 60 s (a tenth of a
+   full trip (GOING_TO_JOB 23:58:30, back 23:59:20); only at that trip's end (#3's max-ticks
+   fallback -> board -> `ready-for-downtime`) did it go `starving-diner-stage` and eat the mutton
+   (-5920 -> 2500, 23:59:31). About 60 s (a tenth of a
    day at tick rate 40) starving next to a chest of food. The board only re-decides between trips;
    whether a starving leaver should break off after a deposit is a design call.
 2. (bug, low, GUI) **The job board's "Request an item" picker shows the same items on every page.**
@@ -58,3 +76,21 @@ board (-2, 67, -3).
    `:127` passes the whole `work` list to `renderRequestItemIcons`. The page count comes from
    `MAX_CARDS_PER_PAGE` (`:45`, sized for 42-px cards: (166 - 10) / 43 = 3) while the items are
    drawn as an 8-wide icon grid, so any list of more than 3 items gets duplicate pages.
+3. (bug, low) **A leaver's trip that ends on its max-ticks tick has its product deferred to its
+   next shift.** debug.log 23:59:20.602: "Reached max ticks for hunter:sword. Fallback
+   hunter:sword is the same job; asking the board", the same millisecond as `[WHY] ...
+   WAITING_FOR_TIMED_STATE -> EXTRACTING_PRODUCT`. The board picked `ready-for-downtime`, so the
+   trip got no `[LOOTTRACE] extract` and no `[Experience]`. The product was not lost: on day 2,
+   0.7 s after the hunter took `sword` again (00:03:37.926, still GOING_TO_JOB) it extracted
+   Leather with +200 XP (00:03:38.600). So the trip's loot sat in limbo for the night (4+ real
+   minutes). In a starving town that could be the food. Path: `JobLogic.java` @ 5e3850be, the
+   max-ticks branch's guard is `workSpot == null && !status.isWaitingForTimers() &&
+   ticksSinceStart > expiration.maxTicks()`. It protects a leaver while its timer runs, but on
+   the tick the timer completes the status is EXTRACTING_PRODUCT, so the guard opens before the
+   extraction runs. Since 064a1745 (r12 #8) the same-job fallback asks the board rather than
+   re-creating the job, so a downtime switch can land on that tick.
+4. (judge, low) **A diner's tooltip promises food the town doesn't have.** The cook's flag-tab
+   tooltip in `dining_no_table` (COLLECTING_SUPPLIES) read "Cook is fetching food. / They will
+   eat it soon." (`en_us.json` `tooltips.villagers.job.diner.status_{1,2}.COLLECTING_SUPPLIES`)
+   while the town held no food at all (storeroom: leather and stone swords; the only mutton was
+   already eaten). The cook gave up 5 s later (`dining_raw_food -> downtime`).
