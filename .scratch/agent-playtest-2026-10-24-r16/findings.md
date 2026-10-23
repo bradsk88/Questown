@@ -110,21 +110,20 @@ board (-2, 67, -3).
    eat it soon." (`en_us.json` `tooltips.villagers.job.diner.status_{1,2}.COLLECTING_SUPPLIES`)
    while the town held no food at all (storeroom: leather and stone swords; the only mutton was
    already eaten). The cook gave up 5 s later (`dining_raw_food -> downtime`).
-5. (bug or missing onboarding, needs dev) **A room built to the `dining_room` recipe registers as
-   an Empty Room.** The hunter's flag-tab tooltip asked for it ("Hunter is looking for food. /
-   They also need a place to sit down and eat.", `tooltips.villagers.job.diner.status_2.NO_SUPPLIES`)
-   and no quest offers a dining room. `data/questown/recipes/dining_room.json` is 4
-   `questown:plate_block`, strength 1. Room 4 with 4 plates (all probed present at y66) was
-   wanded: `recipe_created [room.empty_room, [28, -8]]`. Re-placing a plate and then moving all
-   four from the wall row (z -11) to the middle row (z -10) produced no `room_changed`, whereas
-   the furnace (kitchen), second chest and second bed each produced one on placement. Ruled out by
-   reading the RoomRecipes repo's working-tree source (`RecipeDetection.getActiveRecipes`, `RecipeDetectionClean`; not checked against the jar in ~/.m2): all room
-   recipes are considered (no quest filter there), sorted with more ingredients first (dining_room
-   4 > empty_room 0), and the scan covers `room.yCoord..yCoord+1` where the plates sit; wall-row
-   position is not it either (the kitchen furnace also sits on z -11). No recipe load error in the
-   log. Cause not found: next step is a unit test of `RoomRecipe.matches` with four plate blocks
-   (`Ingredient` equality across the four separate plate ingredients), or a scan-result debug
-   dump for room 4 (`TownRoomsHandle` "found recipe" lines aren't logged on this run).
+5. (judge/bug, low; CORRECTED same session) **A dining room works, but the game announces it as an
+   Empty Room and says nothing when it becomes one.** The hunter's flag-tab tooltip asked for one
+   ("Hunter is looking for food. / They also need a place to sit down and eat.") and no quest
+   offers it. Room 4 (4 Dinner Plates = `data/questown/recipes/dining_room.json`) was wanded
+   with the plates already in: the only broadcast was `recipe_created [room.empty_room, [28, -8]]`.
+   Re-placing a plate and moving all four from z -11 to z -10 produced no `room_changed`, whereas
+   the furnace, second chest and second bed each produced one. **But the town did match it:** at
+   dawn 4 `TownRoomsHandle.resetDiningRooms` (iterates rooms whose match `anyMatch(dining_room)`)
+   logged "Resetting plate claim and state at" all four plates (00:24:14), and from 00:24:45 both
+   townies went `seeking_work -> dining` (the table diner, chosen only when `hasDiningRoom`).
+   The first draft of this item (commit 140c55a0) said the recipe never matched; that came from
+   reading the announcement as the match. So: the player built the right thing and got told
+   "Empty Room". Whether the match existed at wand time (plates at z -11) is unknown, since there
+   was no diner window before dawn 4.
 6. (bug, medium) **A slept night's morning stamps day-clock ticks into game-clock state.** The
    sleep path passes the new *daytime*: `NeoTownWakeEvents.java:19`
    `TownFlags.onSleepFinished(event.getNewTime())` -> `runMorning(..., newTime)` ->
@@ -151,3 +150,13 @@ board (-2, 67, -3).
      fired on day 1 and once at 00:2x, never on days 2-3), but hunger confounds them: both townies
      were starving most of the time. Settle with a unit test of `handleMorning` at a daytime ahead
      of game time, or by logging `lastRest`/`now` in the cascade.
+7. (judge, balance) **The town's only food producer starves while the cook eats its catch.**
+   By day 4 the hunter had eaten 3 times in 4 days (last 00:16:17, day 3) and sat at -277%
+   (`villager_stats` 00:29); the cook, in town since day 2, ate 6 times, including both Cooked
+   Muttons it made for the Food quest (00:15:33 and 00:29:07, each right after its own
+   `cook:extract`), so Food stood at 2/8 after two days of cooking. The hunter's loop each time it
+   got hungry: `dining -> dining_no_table -> dining_raw_food -> sword` with no meal (no food in
+   the chest at that moment), then its trip's raw food lands in the chest and the cook, already
+   dining, takes it (porkchop/chicken/mutton, `Fullness changed ... for 7fe2ffee` 00:26:29,
+   00:27:48). Hunger has no visible consequence (damage 0%, mood 100%), so the cost is only the
+   Food quest and villager 3's arrival. Related: r10 #9 / r13 #5 (hunger rate), #1 above.
