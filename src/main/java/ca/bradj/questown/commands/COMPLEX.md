@@ -83,3 +83,14 @@ Read-only console view of each townie's server-side stats, one log line per town
 []`). Added after r9's stats page showed another townie's numbers (c0bd21a2): the only ground
 truth then was the flag's raw NBT. Fullness reads negative below empty (hunger keeps ticking
 below zero to drive dining). Pin: `VillagerStatsDataTest`. A position without a flag logs a warning.
+
+## `qt jobs set` assigns through the owner (2026-10-23, r15)
+
+`SetJobCommand` used to change the job and unlock just that one job itself. A townie made that
+way was unlike any player-made one: a console-made cook had no `cook/fuel`, so
+`TownPossibleWork.refreshUnmetNeeds` (which skips locked jobs) never registered its coal need,
+and a playtest finding about the coal-less cook had to be retracted. The command is now a thin
+wrapper over `VillagerHolder.assignJob` -> `SimpleVillagerHandle.assignJob`, the same
+`unlockAndChange` a spent Block of Progress applies at dawn: the job and its root's default work
+are unlocked, and the root's starter requests are posted. Pinned by
+`SimpleVillagerHandleTest.assignJob_makesTheSameWorkerAsARootChange`.

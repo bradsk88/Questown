@@ -152,6 +152,16 @@ public interface VillagerHolder {
     );
 
     /**
+     * Makes the townie a {@code job} worker now, with everything a Block of Progress job change
+     * brings: the root's default work unlocked and its starter requests posted. A bare
+     * {@link #changeJobForVillager} sets the job only.
+     */
+    void assignJob(
+            VillagerUUID villagerUUID,
+            JobID job
+    );
+
+    /**
      * @deprecated Use VillagerUUID version
      */
     @Deprecated(forRemoval = true)

@@ -188,6 +188,14 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public void assignJob(
+                    VillagerUUID villagerUUID,
+                    JobID job
+            ) {
+                villagerHandle.delegate.assignJob(getUUID(villagerUUID), job, villagerHandle.getTick());
+            }
+
+            @Override
             public void changeJobForVillager(
                     UUID villagerUUID,
                     JobID newJob,

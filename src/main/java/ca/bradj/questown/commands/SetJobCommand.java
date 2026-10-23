@@ -1,8 +1,8 @@
 package ca.bradj.questown.commands;
 
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.interfaces.TownInterface;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -75,9 +75,13 @@ public class SetJobCommand {
             if (!(e instanceof VisitorMobEntity vme)) {
                 continue;
             }
-            TownInterface town = vme.getTown();
-            town.getVillagerHandle().changeJobForVillager(vme.getUUID(), job, false);
-            town.getVillagerHandle().unlockJob(vme.getUUID(), job);
+            // The owner makes the worker: a hand-rolled change + single unlock made a cook with
+            // no cook/fuel, unlike any player-made one (r15).
+            VillagerUUID vuid = vme.getVUID();
+            if (vuid == null) {
+                continue;
+            }
+            vme.getTown().getVillagerHandle().assignJob(vuid, job);
         }
         return 0;
     }

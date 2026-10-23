@@ -741,6 +741,30 @@ class SimpleVillagerHandleTest {
     }
 
     @Test
+    public void assignJob_makesTheSameWorkerAsARootChange() {
+        // r15 (2026-10-23): the console `qt jobs set` unlocked only the named job, so its cook had
+        // no cook/fuel, registered no coal need and misled a playtest. Assigning a job now does
+        // what the BOP root change does: the root's default work, the job, the starter requests.
+        TestDelegator t = new TestDelegator();
+        JobID extract = new JobID("cook", "extract");
+        JobID fuel = new JobID("cook", "fuel");
+        JobID mutton = new JobID("cook", "mutton");
+        t.defaultWork = ImmutableList.of(extract, fuel, mutton);
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        handle.assignJob(v, mutton, 0);
+
+        Assertions.assertTrue(
+                t.unlocked.containsAll(List.of(extract, fuel, mutton)),
+                "every default job of the root is unlocked, got " + t.unlocked
+        );
+        Assertions.assertEquals(List.of(mutton), t.jobChanges);
+        Assertions.assertEquals(List.of(mutton), t.starterRequestsPosted);
+    }
+
+    @Test
     public void scheduleJobRootChange_guaranteeBeatsOvernightOverride() {
         TestDelegator t = new TestDelegator();
         t.overnightOverride = new JobID("gatherer", "gatherer");

@@ -853,6 +853,26 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         unlockAndChange(v, newJob, currentTick);
     }
 
+    /**
+     * Makes this townie a {@code job} worker now, the way a spent Block of Progress does at
+     * dawn: the job and its root's default work are unlocked, the job is set, and the root's
+     * starter requests are posted. Dev commands go through here so the townie they make
+     * matches a player-made one (r15: a console-made cook had no cook/fuel and so never
+     * registered its coal need).
+     */
+    public void assignJob(
+            UUID villagerUUID,
+            JobID job,
+            long currentTick
+    ) {
+        ENTITY v = getEntity(villagerUUID);
+        if (v == null) {
+            QT.FLAG_LOGGER.error("Could not find entity {} to assign job: {}", villagerUUID, job);
+            return;
+        }
+        unlockAndChange(v, job, currentTick);
+    }
+
     private void unlockAndChange(
             ENTITY v,
             JobID newJob,
