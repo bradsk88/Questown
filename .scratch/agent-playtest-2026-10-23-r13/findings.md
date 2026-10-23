@@ -71,3 +71,18 @@ HEAD a5b417d6. Tick rate 40. Random seed; spawn at (-39.5, 74, 149.5).
    or both hunters ending `held=[]`, `hunted again=false`. Same rate with and without the
    watchdog change: 1/4 at HEAD 1b47cc98, 1/3 with it (sweeps 2026-10-23 ~22:05). Not on
    AGENTS' known list yet.
+
+## r15 (fresh world, same seed, built at eeba8a2d): live checks of the day's fixes
+
+- **r12 #2 verified live:** a campfire on a dirt step at y=70 (flag y=69) completed the Campfire
+  quest on placement, and the wand accepted it as registered. On a lone dirt pillar the wand said
+  "No safe place to sleep near this campfire" (the temp bed needs floor at the campfire's level,
+  which is correct). With a 5x5 mound at y=69 it slept.
+- **r12 #6 verified live:** a Bedroom 2 blocks tall inside (floor y=68, roof y=71) was recognized.
+  The hunter slept in its bed (SleepingX -9, y 69.5625) and after the morning skip walked out at
+  floor level (y 69.0) to the flag within seconds; it was not pinned on the bed top.
+- **r12 #8 / r14 #2 verified live:** the watchdog logged "Fallback hunter:sword is the same job;
+  asking the board" (22:17:56, 22:20:11), and the board sent the hungry hunter straight to
+  `starving-diner-stage`. Level 2 at 22:24:02 -> `[board] hunter:sword -> bop_depositing via
+  bop-deposit` at 22:24:44 -> deposit trip done at 22:24:48 -> XP moving again (200/1200).
+  In r12 it was latched for 15+ minutes.
