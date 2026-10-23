@@ -59,11 +59,17 @@ relights the campfire", which the Acting section already said.
   `ground.sh <x> <z> [top=72] [bottom=58]` prints the column's top non-air y (the block to
   `clickheld`); on hills pass the range (`ground.sh x z 90 60`): r12 read "72" everywhere on a
   slope that rose to 100. `probe-block.sh <block-id> x y z [x y z ...]` (flat, unquoted triples)
-  says which positions hold a block.
+  says which positions hold a block. `sweep.sh <flag x y z> [from-line]` summarizes the log
+  window since `build/agent-playtest/mark` (job-change counts, extracts, quest broadcasts,
+  arrivals) plus every townie's stats and the clock, then moves the mark;
+  `sleep.sh <campfire x y z> <stand x y z> [wand slot=3]` uses the wand until the night skips
+  (exit 1 with the likely cause if not).
 - `_qtdev villager_stats <flag x y z>` logs each townie's server-side level, xp, fullness, mood
   and effects: check a screen against it before calling a number wrong.
 - Read a command's output with `tools/ffeed.sh feed "<cmd>" --capture run/logs/latest.log
-  "<pattern>"` (only lines written after the write; exit 1 when none match), never "the newest
+  "<pattern>"` (only lines written after the write; exit 1 when none match; the pattern is an
+  extended regex since 2026-10-23, so `"a|b"` alternates: before that `|` was literal and every
+  alternation pattern came back empty), never "the newest
   `entity data` line": r10 read another command's line and filed a false "BOPs consumed" bug.
 - Which path a townie's job change took: `grep -a '\[board\]' run/logs/debug.log` names the
   board-cascade branch per change (`via work-roll`, `via starving-diner-stage`, `via

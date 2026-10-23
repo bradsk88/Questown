@@ -17,7 +17,8 @@
 #   tools/ffeed.sh feed <cmd...> --capture <log> [pattern]
 #                                              # bounded write, then prints the log lines
 #                                              # written after it (waits CAPTURE_SECS, default
-#                                              # 2), only those matching [pattern] if given.
+#                                              # 2), only those matching [pattern] if given
+#                                              # (extended regex: "a|b" alternates).
 #                                              # Read a command's output this way, never as
 #                                              # "the newest matching line": r10 read another
 #                                              # command's `entity data` line and filed a false bug.
@@ -88,7 +89,7 @@ feed)
   if [ -n "$CAPTURE" ]; then
     sleep "${CAPTURE_SECS:-2}"
     # Exit 1 when nothing matched, so "no output" is not read as success.
-    tail -n +"$((CAP_FROM + 1))" "$CAPTURE" 2>/dev/null | grep -a -- "${CAP_PATTERN:-.}" || exit 1
+    tail -n +"$((CAP_FROM + 1))" "$CAPTURE" 2>/dev/null | grep -aE -- "${CAP_PATTERN:-.}" || exit 1
     exit 0
   fi
   if [ -n "$EXPECT" ] && [ ${#LOGS[@]} -gt 0 ]; then

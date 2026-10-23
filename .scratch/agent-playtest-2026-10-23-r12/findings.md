@@ -161,6 +161,15 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
     `SyncBlockItemMessageTest` red ("Empty ItemStack not allowed") -> green. Verified live on the
     day-12 world (19:38): food display + 4 plates placed, no disconnect, "Kitchen Diner" quest
     completed.
+11. (bug, P0, found after the run) Server crash on the day-12 world with a Kitchen Diner, the
+    morning after the plate fix (20:16:10, 2026-10-23): `ReportedException: Ticking entity` <-
+    `IllegalArgumentException: Multiple entries with same key: BlockPos{x=-19, y=76, z=199}=0`
+    at `DeclarativeJobs.lambda$rooms$20` (the `spotStatuses.put(bp, v)` in `rooms(...)`, an
+    `ImmutableMap.Builder`) <- `RoomsWithWorkableStatefulBlocks.populate` <- LZCD. The last jobs
+    logged before it were `cook:dining` and `gatherer:dining` (the table diner the Kitchen Diner
+    unlocks). So one block position came from two job-site matches in the same pass. Crash
+    report: `run/crash-reports/crash-2026-10-23_20.16.11-server.txt` (copied to
+    `build/agent-playtest/`). Reproduce: `r12-world-day12-verified.tgz`, run to the next morning.
 
 ## Run end
 
