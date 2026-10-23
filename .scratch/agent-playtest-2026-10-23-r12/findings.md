@@ -28,6 +28,12 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
 - Work request: board showed the hunter's auto "Raw Mutton"; "+" -> Raw Food ("Any kind will
   do") -> confirm "6 known jobs" -> Yes -> quest complete.
 
+- Day 3: quests Small Kitchen, Storeroom upgrade, Big Bedroom, Villager job: Cook, Food (0/8).
+  Furnace in room 3 -> Small Kitchen. Second BOP -> villager 2 to Cook; the board got
+  `#questown:villager_food` (r10 #11 fix live). Second chest -> Storeroom; second bed -> Big
+  Bedroom. Player delivered 16 coal (design: coal is the player's job until a miner); the cook
+  went fuel -> mutton -> extract within ~40 s, Food 2/8, then ate one cooked mutton.
+
 ## Odd
 1. (observe) "Seeded starting timber ... (1 placements)" here vs 6 in r10's plains world. Check
    whether the starting-timber seeding depends on nearby trees and whether 1 is enough.
@@ -39,3 +45,13 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    completed the quest within a second. Not fixed live (no-restart run).
 3. (observe, r10 #9) Day 2 afternoon: the hungry hunter cycles dining_no_table <-> downtime with
    no cooked food in town (no cook yet). Watching whether it reaches raw food when starving.
+   Day 3 morning: it went dining_no_table -> dining_raw_food (the starving chain works).
+4. (judge, consequence of r10 #8) Day 3: the new cook has no coal (only the pickaxe gatherer and
+   miner produce it; `docs/design-principles.md`: coal is the player's job until the miner
+   exists). The cook is hungry and stays in diner statuses, so its status reads only "Cook is
+   looking for food. / They also need a place to sit down and eat." (#8 now keeps a diner's own
+   lines), while the real blocker for *all* food is coal. The coal need is visible only on the
+   Economics tab (Coal 2). Before #8 the tooltip would have said "They need Coal to work." A
+   hungry cook in a coal-less town is exactly when the coal line mattered.
+5. (observe) Economics tab day 3: "Swords 6" while 4 stone swords sit in the storeroom chest and
+   the hunter holds one. What does the number count? Check `ItemEconomicsData.timesNeeded`.
