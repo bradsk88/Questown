@@ -36,7 +36,9 @@ relights the campfire", which the Acting section already said.
    `runServer -Dquestown.autotest=true`, and `tools/autotest-parallel.sh` captures its command
    that way. Since 2026-10-22 the script sets the world aside during the capture. A hand-run
    autotest in the worktree still wipes it, so tar the world first if you want to keep it
-   (2026-10-22: the saved day-7 world was lost to a suite run).
+   (2026-10-22: the saved day-7 world was lost to a suite run). Tar only after the server has
+   stopped and check the archive (`tar tzf <tgz> | grep -c region/` > 0): a tar that raced the
+   final save came out 4.8 KB for an 18 MB world (r12).
 3. Fresh world: `rm -rf run/world run/logs run-client/diags run-client/.qtdiag-cmd` in the
    worktree. `run/server.properties`: `difficulty=normal`, `gamemode=creative` (creative players
    aren't attacked, so no death-screen captures), `server-port=25585`.
@@ -54,8 +56,10 @@ relights the campfire", which the Acting section already said.
 
 - Helpers (all from the repo root): `tools/agent-playtest/restart.sh <name>` restarts server +
   client and waits for the join (rebuilds; feeds `stop` only to a live server);
-  `ground.sh <x> <z>` prints the column's top non-air y (the block to `clickheld`);
-  `probe-block.sh <block-id> <x y z>...` says which positions hold a block.
+  `ground.sh <x> <z> [top=72] [bottom=58]` prints the column's top non-air y (the block to
+  `clickheld`); on hills pass the range (`ground.sh x z 90 60`): r12 read "72" everywhere on a
+  slope that rose to 100. `probe-block.sh <block-id> x y z [x y z ...]` (flat, unquoted triples)
+  says which positions hold a block.
 - `_qtdev villager_stats <flag x y z>` logs each townie's server-side level, xp, fullness, mood
   and effects: check a screen against it before calling a number wrong.
 - Read a command's output with `tools/ffeed.sh feed "<cmd>" --capture run/logs/latest.log
@@ -95,7 +99,13 @@ relights the campfire", which the Acting section already said.
   of that block. Item ids: `questown:flag_base`, `questown:welcome_mat_block`,
   `questown:town_wand`, `questown:job_board_block`, `questown:mineshaft`. Survival mats, wands,
   boards and mineshafts come from the flag's crafting tab (they carry the flag link); a `give`n
-  mat has no link and silently fails to place.
+  mat has no link and silently fails to place. The placed block lands one *above* the clicked
+  block: clicking a y75 floor puts a chest at y76, so address its container at y76 (r12 wrote
+  swords into the floor). Put the campfire at the flag's own Y until r12 #2 is fixed: one block
+  up the slope and the Campfire quest never completes.
+- With no player online the town's chunks unload and console `setblock`/`data` answer "That
+  position is not loaded" (r12 read an earlier "Changed the block" line as success). Run
+  `forceload add <x1> <z1> <x2> <z2>` first and `forceload remove` after.
 - `item replace entity Dev weapon.mainhand with X` **overwrites** whatever was there (it ate the
   wand twice). Put tools in other hotbar slots (`hotbar.N`) and swap with `item replace ...
   from entity Dev hotbar.N`. **A crafting-tab Craft lands the result in your hand**: park it
@@ -103,7 +113,9 @@ relights the campfire", which the Acting section already said.
   replace, or the flag-linked item is gone (r10 ate a crafted mineshaft this way).
 - An `item replace` on the hand while a flag/villager menu is open does not reach the client
   (vanilla only syncs the open menu's slots): Craft buttons stay greyed. `close`, replace, reopen.
-- Rooms: build with `fill ... hollow`, then wand the door. Probe ground height first (`execute if
+- Rooms: build interiors 3 blocks high (`fill x1 F z1 x2 F+4 z2 ... hollow`, F = floor): a
+  townie standing on a bed (or furniture) in a 2-high room wedges under the ceiling and never
+  moves again (r12 #6; dev: "raise the roof"). Build with `fill ... hollow`, then wand the door. Probe ground height first (`execute if
   block x y z minecraft:air run say ...`). `hollow` also closes the bottom face, so start the fill
   one block *below* the door's bottom half (the bottom face becomes the floor). With the floor
   level with the door's bottom, villagers stand stuck in the doorway: they can't jump the step
@@ -165,4 +177,16 @@ relights the campfire", which the Acting section already said.
 - Before narrowing a guard keyed on a job root or special rule (a loot guarantee, a bypass), grep
   `**/COMPLEX.md` for the class name: r10 coded, tested and reverted a narrowing of
   `FirstHunterLootGuarantee` that `jobs/declarative/COMPLEX.md` documents as deliberate.
+- Head the findings file with every intervention: server restarts, console item seeding,
+  creative placements. After r10's narrated "story" the dev asked "so this wasn't a continuous
+  playthrough?": it hid 8 rebuild-restarts and seeded food. When the dev asks for a continuous
+  run, never restart the server; log bugs instead of fixing them live.
+- Before diagnosing a quest/loot anomaly, trace where the item came from (`grep -a 'Replaced a
+  slot at'` = console seeding; `[LOOTTRACE] extract` = a townie). Dev, 2026-10-23: "How did raw
+  food even get into the town if the hunter didn't produce it?" r10's "a meal closed Raw Food"
+  was the agent's own seeded beef.
+- A mechanism claim in findings ("the flag is never set because ...") enumerates every writer of
+  that state first (`grep -n '<field>.put\|set<Field>('` over the owning class). r12 committed a
+  "`% 10` broadcast gate" cause for the starving flag; dawn's `makeAllTotallyHungry` also wrote
+  it, and the real cause was a shadowed parameter (`e6debc70`).
 - Commit findings as you go; the job's temp dir is deleted with the job.
