@@ -86,3 +86,22 @@ HEAD a5b417d6. Tick rate 40. Random seed; spawn at (-39.5, 74, 149.5).
   `starving-diner-stage`. Level 2 at 22:24:02 -> `[board] hunter:sword -> bop_depositing via
   bop-deposit` at 22:24:44 -> deposit trip done at 22:24:48 -> XP moving again (200/1200).
   In r12 it was latched for 15+ minutes.
+- r15 intervention: villager 2 was made a cook with console `qt jobs set` (the diag client's
+  `vopen` only reaches the first villager), to check r12 #4 (a hungry coal-less cook).
+4. (judge, answers the dev's r12 #4 question "the diner will finish eating and go back to its
+   jobs, showing a need balloon. Is that incorrect?") **Partly incorrect.** r15, cook with no
+   coal in town:
+   - While the town has no raw food, the starving cook loops `dining_no_table ->
+     dining_raw_food` (gave up waiting for ingredients) `-> seeking_work -> downtime` (watchdog,
+     a different-job fallback) `-> dining_no_table`, about every 45 s, and never reaches a cook
+     job (22:28-22:32, fullness down to -210%).
+   - Once the hunter's catches reach the chest it eats (22:34:53, 22:35:49, 22:37:01; each meal
+     refills to 2500), but then only alternates `seeking_work <-> downtime`: no cook job is
+     workable without coal, so the board never assigns `cook:fuel`. Its status tooltip reads
+     "Cook is looking at the job board. They are checking for requests." Coal is never
+     mentioned; that line comes only from inside a cook job.
+   - So the player is told about coal only by the Economics tab, as r12 #4 said. The dev's
+     model holds only once a cook job is actually assigned.
+5. (observe, r10 #9 balance) Hunger drains fast at tick rate 40: a full meal (2500) is gone in
+   about 1-2 real minutes (r15 cook: 22:34:53 full -> -24% by 22:35:31 per `villager_stats`),
+   so one hunter's catches barely feed two townies and the hunter eats most of its own.
