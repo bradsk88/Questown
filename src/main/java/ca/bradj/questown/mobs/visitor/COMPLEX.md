@@ -180,6 +180,10 @@ key id in MapLike[{}]` for it - 12 lines per entity load (every save/reload
 of every townie). The guard: `tag.isEmpty() ? ItemStack.EMPTY : parse(...)`
 before the `orElse` fallback. No behaviour change for non-empty slots.
 
+Retired 2026-10-23: the entity saves and loads no townie state any more (the carried items live
+in the flag's town state), so both hooks and this guard are gone. See `town/entity/COMPLEX.md`
+"Lifetime and persistence".
+
 ## Doorway pathfinding preference — reverted (2026-10-15 → 2026-10-17)
 
 The 2026-10-15 fix ("townies prefer jumping over walls to get inside the room") gave

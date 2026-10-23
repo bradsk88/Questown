@@ -661,16 +661,6 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             QT.FLAG_LOGGER.info("Replaced a stale entity for townie {} on re-registration", id);
         }
         this.add(vEntity);
-        delegator.addChangeListener(
-                vEntity, () -> {
-                    delegator.debug(
-                            QT.FLAG_LOGGER,
-                            DebugLogArgument.TOWN_STATE_CHANGES,
-                            "Entity requests flag to be marked changed"
-                    );
-                    delegator.setChanged();
-                }
-        );
         delegator.setChanged();
     }
 

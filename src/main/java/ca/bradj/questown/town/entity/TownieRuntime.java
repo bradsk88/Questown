@@ -12,7 +12,6 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.DeclarativeJob;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
-import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.TownieNeed;
@@ -21,7 +20,6 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -35,9 +33,9 @@ import java.util.function.Function;
 
 /**
  * A townie's live state and per-tick decisions: its job (status, carried items, slot locks), the
- * work it may need to undo, how long it has gone without a supply target, and who is listening to
- * it. Held by the town flag, keyed by the townie's UUID; the townie entity is only its
- * {@link TownieBody}. See {@code town/entity/COMPLEX.md} "Townie runtime and body".
+ * work it may need to undo, how long it has gone without a supply target, its need bubble, and who
+ * is listening to it. Held by the town flag, keyed by the townie's UUID; the townie entity is only
+ * its {@link TownieBody}. See {@code town/entity/COMPLEX.md} "Townie runtime and body".
  */
 public final class TownieRuntime {
 
@@ -48,7 +46,7 @@ public final class TownieRuntime {
     private int ticksWithoutJobTarget;
     private int freezeTicks;
     private @Nullable TownieBody body;
-    /** Where the townie was when it last had a body in the world (its body's position otherwise). */
+    /** Where the body last stood, set when it leaves the world; read only while there is no body. */
     private Vec3 lastPosition;
     /** The game tick of the townie's last decisions (see {@link #tick}); -1 before its first. */
     private long lastDecidedAt = -1;
@@ -57,21 +55,17 @@ public final class TownieRuntime {
     /** When {@link #need} is {@link TownieNeed#UNMET_ITEM}, the missing ingredient's key; else empty. */
     private String unmetItem = "";
     private final List<Consumer<ImmutableList<Ingredient>>> ingrListeners = new ArrayList<>();
-    private final List<Runnable> changeListeners = new ArrayList<>();
     private final Collection<Function<Void, Void>> cleanupJobListeners = new ArrayList<>();
 
     TownieRuntime(
             TownFlagBlockEntity town,
             UUID uuid,
             Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob,
-            @Nullable TownieBody body,
-            Vec3 position
+            TownieBody body
     ) {
         this.town = town;
         this.uuid = uuid;
-        this.body = body;
-        this.lastPosition = position;
-        this.changeListeners.add(this::notifyWantedIngredients);
+        this.body = Objects.requireNonNull(body);
         setJob(initializedJob);
     }
 
@@ -88,10 +82,6 @@ public final class TownieRuntime {
         return town;
     }
 
-    public @Nullable TownieBody getBody() {
-        return body;
-    }
-
     /** Whether the townie's body is in the world (loaded and not removed). */
     public boolean hasBody() {
         return body != null && !body.isRemoved();
@@ -99,12 +89,11 @@ public final class TownieRuntime {
 
     /**
      * A body stands in for this townie again (its chunk reloaded). The runtime keeps everything it
-     * had while the townie was unloaded; the body only needs to be shown the job.
+     * had while the townie was unloaded; the body only needs to be shown the need.
      */
     void attachBody(TownieBody b) {
         this.body = b;
-        b.showJobName(job.getJobName().translationKey());
-        b.showNeed(need, unmetItem);
+        showNeed();
     }
 
     /** What the townie needs the player's help with (see {@code CONTEXT.md} "Need bubble"). */
@@ -185,15 +174,28 @@ public final class TownieRuntime {
         return body.position();
     }
 
-    /**
-     * Where the townie stands: its body's position. A runtime only does work while it has a body
-     * (the realtime path); without one, warp moves the townie.
-     */
-    public BlockPos blockPosition() {
+    /** {@link #position()} as a block: the body's own (no allocation), or where it last stood. */
+    BlockPos blockPositionOrLastSeen() {
         if (body == null) {
-            throw new IllegalStateException("Townie " + uuid + " has no body to stand anywhere");
+            return BlockPos.containing(lastPosition);
         }
         return body.blockPosition();
+    }
+
+    /** Where the townie stands: its body's position (it only works while it has one). */
+    public BlockPos blockPosition() {
+        return requireBody().blockPosition();
+    }
+
+    /**
+     * The townie's body, for the work it does in the world. Work happens only in {@link #tick},
+     * which runs only with a live body; without one, warp moves the townie.
+     */
+    private TownieBody requireBody() {
+        if (body == null) {
+            throw new IllegalStateException("Townie " + uuid + " has no body to work with");
+        }
+        return body;
     }
 
     public Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getJob() {
@@ -214,9 +216,6 @@ public final class TownieRuntime {
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> oldJob = job;
         String oldJobName = oldJob == null ? "null" : oldJob.getId().toNiceString();
         job = initializedJob;
-        if (body != null) {
-            body.showJobName(initializedJob.getJobName().translationKey());
-        }
         QT.VILLAGER_LOGGER.info("Job changed to {} for {} [from {}]", initializedJob.getId(), uuid, oldJobName);
         Collection<? extends Runnable> newCleanup = oldJob == null ? List.of() : oldJob.notifyListenersOfNewJob(l -> {
             Function<Void, Void> out = initializedJob.addStatusListener(l);
@@ -249,6 +248,7 @@ public final class TownieRuntime {
         }));
     }
 
+    /** A status change refreshes the wanted-ingredient listeners and marks the flag changed (saved). */
     private StatusListener statusChangeNotifier() {
         return new StatusListener() {
             @Override
@@ -260,15 +260,23 @@ public final class TownieRuntime {
 
             @Override
             public void statusChanged(IStatus<?> newStatus) {
-                List.copyOf(changeListeners).forEach(Runnable::run);
+                notifyWantedIngredients();
+                town.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TOWN_STATE_CHANGES).log(
+                        "Townie {} requests flag to be marked changed", UtilClean.truncateMiddle(uuid)
+                );
+                town.setChanged();
             }
         };
     }
 
     private void notifyWantedIngredients() {
-        Collection<Ingredient> ing = ServerJobsRegistry.getWantedResourcesProvider(getJobId())
-                                                       .apply(Jobs.getHeldItems(job));
-        ingrListeners.forEach(l -> l.accept(ImmutableList.copyOf(ing)));
+        if (ingrListeners.isEmpty()) {
+            return;
+        }
+        ImmutableList<Ingredient> wanted = ImmutableList.copyOf(
+                ServerJobsRegistry.getWantedResourcesProvider(getJobId()).apply(Jobs.getHeldItems(job))
+        );
+        ingrListeners.forEach(l -> l.accept(wanted));
     }
 
     /**
@@ -278,27 +286,23 @@ public final class TownieRuntime {
      * them itself, so a townie whose body is unloaded or asleep decides nothing, as before.
      */
     void tick(ServerLevel sl, long gameTime) {
-        TownieBody b = body;
-        if (b == null || b.isRemoved() || b.lastTickedAt() != gameTime) {
+        if (!hasBody() || body.lastTickedAt() != gameTime) {
             return;
         }
         if (spendFrozenTick()) {
             return;
         }
+        TownieBody b = body;
         lastDecidedAt = gameTime;
         switchToWorkSeekerIfStuck();
-        var ticked = tickJob(b.getShownStatus());
+        var ticked = tickJob();
         town.villagerHandle.delegate.getRequestedPose(uuid).ifPresent(b::takePose);
         steer(b, ticked);
         showOn(b, sl, ticked);
     }
 
-    /**
-     * The first of the townie's per-tick decisions, in tick order: {@link #switchToWorkSeekerIfStuck},
-     * {@link #tickJob}, the requested pose, {@link #steer}, {@link #showOn}. A townie that has
-     * collected supplies without a target for too long goes back to seeking work.
-     */
-    void switchToWorkSeekerIfStuck() {
+    /** A townie that has collected supplies without a target for too long goes back to seeking work. */
+    private void switchToWorkSeekerIfStuck() {
         if (ticksWithoutJobTarget <= Compat.configGet(Config.MAX_TICKS_WITHOUT_SUPPLIES).get()) {
             return;
         }
@@ -307,20 +311,21 @@ public final class TownieRuntime {
     }
 
     /**
-     * The job's own tick, after restoring an unset status from what the body last showed.
+     * The job's own tick, after starting an unset status at IDLE.
      *
      * @return the job that ticked. A tick can change the townie's job (a pre-state-change rule);
      * the rest of this tick steers and shows by the job that ticked, as the entity always did:
      * the new job has not ticked yet and has no rooms or target to offer.
      */
-    Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> tickJob(
-            @Nullable String statusShownByBody
-    ) {
+    private Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> tickJob() {
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> ticked = job;
         if (ticked.getStatus() == null || ticked.getStatus().isUnset()) {
-            ticked.initializeStatusFromEntityData(statusShownByBody);
+            // Normally only a job built without a journal gets here. The entity used to seed it
+            // from the status number its body last showed (possibly another job's); a fresh body's
+            // seed, IDLE, is now the only one.
+            ticked.initializeStatusFromEntityData(null);
         }
-        ticked.tick(town, this);
+        ticked.tick(this);
         return ticked;
     }
 
@@ -329,7 +334,7 @@ public final class TownieRuntime {
      * still. The target is (re)applied only when the body has no walk target or is already walking
      * to it: a body walking somewhere else keeps going there (behaviour carried over from the entity).
      */
-    void steer(TownieBody b, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> ticked) {
+    private void steer(TownieBody b, Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> ticked) {
         if (ticked.shouldStandStill(town, b.blockPosition())) {
             b.clearWalkTarget();
             return;
@@ -346,11 +351,10 @@ public final class TownieRuntime {
     }
 
     /**
-     * Shows the body whether the townie is in town, what it is doing and what it carries (by the
-     * job that ticked), and counts how long the townie's current job has been collecting supplies
-     * without a target.
+     * Shows the body whether the townie is in town and what it carries (by the job that ticked),
+     * and counts how long the townie's current job has been collecting supplies without a target.
      */
-    void showOn(
+    private void showOn(
             TownieBody b,
             ServerLevel sl,
             Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> ticked
@@ -367,7 +371,6 @@ public final class TownieRuntime {
         if (!ticked.isInitialized()) {
             return;
         }
-        b.showStatus(ticked.getStatusToSyncToClient());
         syncStorageNeed(ticked.getStatus());
         Container inventory = ticked.getInventory();
         b.showMainHandItem(inventory.getItem(0));
@@ -422,34 +425,24 @@ public final class TownieRuntime {
         } else if (!status.isCollectingSupplies()) {
             return;
         }
-        BlockPos target = job.getTarget(b.blockPosition(), b.position(), town);
-        if (target != null) {
+        if (targetFor(b) != null) {
             ticksWithoutJobTarget = 0;
         } else {
             ticksWithoutJobTarget++;
         }
     }
 
-    /** A work stroke: the body swings its arm, if the townie has one in the world. */
+    /** A work stroke: the body swings its arm. */
     public void swingMainHand() {
-        if (body != null) {
-            body.swingMainHand();
-        }
+        requireBody().swingMainHand();
     }
 
     /** Wears one point of durability off a tool the townie is working with. */
     public void wearTool(ItemStack tool) {
-        if (body != null) {
-            body.wearTool(tool);
-            return;
-        }
-        ServerLevel sl = town.getServerLevel();
-        if (sl != null) {
-            tool.hurtAndBreak(1, sl.getRandom(), (LivingEntity) null, () -> {});
-        }
+        requireBody().wearTool(tool);
     }
 
-    /** The job's next target for the body, or null when the job has none (the body wanders). */
+    /** The current job's next target for the body, or null when it has none (the body wanders). */
     public @Nullable BlockPos targetFor(TownieBody b) {
         return job.getTarget(b.blockPosition(), b.position(), town);
     }
@@ -470,11 +463,7 @@ public final class TownieRuntime {
         if (inventoryFullStrategy.equals(InventoryFullStrategy.REMOVE_FROM_WORLD)) {
             return false;
         }
-        if (body == null) {
-            QT.VILLAGER_LOGGER.error("Townie {} has no body to drop {} at; the item is lost", uuid, v);
-            return false;
-        }
-        body.dropItem(v.get().toMCItemStack());
+        requireBody().dropItem(v.get().toMCItemStack());
         return false;
     }
 
@@ -495,7 +484,7 @@ public final class TownieRuntime {
     }
 
     /** True, spending one frozen tick, while the townie is frozen. */
-    boolean spendFrozenTick() {
+    private boolean spendFrozenTick() {
         if (freezeTicks <= 0) {
             return false;
         }
@@ -509,10 +498,6 @@ public final class TownieRuntime {
 
     public void removeStatusListener(StatusListener l) {
         job.removeStatusListener(l);
-    }
-
-    public void addChangeListener(Runnable l) {
-        changeListeners.add(l);
     }
 
     public void addWantedIngredientsListener(Consumer<ImmutableList<Ingredient>> l) {
@@ -581,10 +566,6 @@ public final class TownieRuntime {
      */
     public boolean canInstantlySwitchToEating() {
         return job.canInstantlySwitchToEating();
-    }
-
-    public boolean canAcceptJob() {
-        return GathererUnmappedNoToolWorkQtrDay.ID.rootId().equals(job.getId().rootId());
     }
 
     /**

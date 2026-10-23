@@ -27,12 +27,13 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -173,14 +174,6 @@ public final class TownVillagerHandle {
             @Override
             public HealingModule<VisitorMobEntity> getHealingModule() {
                 return healing;
-            }
-
-            @Override
-            public void addChangeListener(
-                    VisitorMobEntity vEntity,
-                    Runnable runnable
-            ) {
-                vEntity.addChangeListener(runnable::run);
             }
 
             @Override
@@ -581,28 +574,11 @@ public final class TownVillagerHandle {
             TownFlagBlockEntity flag,
             UUID uuid,
             Snapshot journal,
-            TownieBody body,
-            Vec3 position
-    ) {
-        Job job = ServerJobsRegistry.getInitializedJob(flag.getServerLevel(), journal.jobId(), journal, uuid);
-        TownieRuntime runtime = new TownieRuntime(flag, uuid, job, body, position);
-        townies.put(uuid, runtime);
-        return runtime;
-    }
-
-    /**
-     * A reloaded body takes back the townie it stands for, when the townie is still in town without
-     * a body in the world. Null when there is no such townie (the caller binds from the saved state).
-     */
-    @Nullable TownieRuntime reattachBody(
-            UUID uuid,
             TownieBody body
     ) {
-        TownieRuntime runtime = townies.get(uuid);
-        if (runtime == null || runtime.hasBody()) {
-            return null;
-        }
-        runtime.attachBody(body);
+        Job job = ServerJobsRegistry.getInitializedJob(flag.getServerLevel(), journal.jobId(), journal, uuid);
+        TownieRuntime runtime = new TownieRuntime(flag, uuid, job, body);
+        townies.put(uuid, runtime);
         return runtime;
     }
 
@@ -615,9 +591,19 @@ public final class TownVillagerHandle {
         return ImmutableList.copyOf(townies.values());
     }
 
+    /** Where each townie is (its body's block, or where it last stood), for the town-sleep check. */
+    List<BlockPos> towniePositions() {
+        List<BlockPos> out = new ArrayList<>(townies.size());
+        for (TownieRuntime townie : townies.values()) {
+            out.add(townie.blockPositionOrLastSeen());
+        }
+        return out;
+    }
+
     /**
-     * The townies' decisions for this game tick, each made only if its body ticked in it (see
-     * {@link TownieRuntime#tick}). Runs every tick the town is awake, not only on flag ticks.
+     * The townies' decisions for this game tick ({@link TownieRuntime#tick}). Iterates a copy: what
+     * a townie does in its tick (completing a quest that brings a new townie, say) can change the
+     * roster.
      */
     void tickTownies(ServerLevel sl) {
         long now = sl.getGameTime();

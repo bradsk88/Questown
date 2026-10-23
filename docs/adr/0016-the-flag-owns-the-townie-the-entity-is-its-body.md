@@ -25,7 +25,7 @@ ENTITY". Two models of one townie caused bugs on the seam between them:
   stood, and its reloaded body reattaches to it. The flag's town state is captured from the
   runtimes.
 - The entity is the townie's `TownieBody`. It moves (the vanilla brain, navigation, doors and
-  gates), shows what the flag pushes (visibility, status, job name, held items, need), and reports
+  gates), shows what the flag pushes (visibility, held items, need), and reports
   events (unloaded, killed, gave up reaching). It persists no townie state.
 - The flag makes every townie's decisions in its own tick (the `townies` phase, every game tick),
   only for a townie whose body ticked in that game tick. Those are the moments the entity used to
@@ -43,7 +43,10 @@ ENTITY". Two models of one townie caused bugs on the seam between them:
   tick for 20 townies on one `perf/town_large` seed). Total server work is unchanged: on one seed,
   side by side, 2000 ticks took 204 s at the base and 206 s with this change.
 - A player at the flag of a town whose townies are all far away no longer keeps it awake; a player
-  near any townie does, wherever the flag is.
+  near any townie does, while the flag's own chunk still ticks. The townies' decisions run in the
+  flag's block-entity tick, which runs only in a block-ticking chunk, and Questown holds no chunk
+  ticket for the flag: a player who follows the townies past the simulation distance from the flag
+  finds them standing. Whether the flag should hold a ticket is open.
 - The entity keeps thin getters (`getInventory`, `getJobId`, `getNeed`, ...) that forward to the
   runtime, so code holding an entity keeps working. New code should go to the townie through
   `TownFlagBlockEntity.getTownie(uuid)`.

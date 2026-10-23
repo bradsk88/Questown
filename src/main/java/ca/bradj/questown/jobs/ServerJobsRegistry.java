@@ -180,14 +180,6 @@ public class ServerJobsRegistry {
         return work;
     }
 
-    public static Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getInitialJobForVillager(
-            UUID villagerUUID
-    ) {
-        JobID initialID = GathererUnmappedNoToolWorkQtrDay.ID;
-        Work work = getWorkSupplier(initialID).get();
-        return work.jobFunc.apply(villagerUUID);
-    }
-
     public static ImmutableMap<JobID, ResourceLocation> getAllJobsThatProduce(
             WorksBehaviour.TownData data,
             Ingredient wantedResult

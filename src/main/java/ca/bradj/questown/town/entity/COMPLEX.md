@@ -1145,7 +1145,7 @@ townie, and re-audit the whole path after ANY change to it.
 
 Re-audited 2026-10-23 (townie runtime): `assumeStateFromTown` now first checks the flag for a
 live runtime without a body (the townie stayed in town while its chunk was unloaded) and takes
-the `register -> reattachBody` path; only without one does it read `NBT_TOWN_STATE` and
+the `register -> attachBody` path (`TownVillagerMobs.reattach`); only without one does it read `NBT_TOWN_STATE` and
 `register -> initialize` as before. Neither path adds a new `getUnsafe()` call; the roster is a
 plain map, readable before the flag initializes (it is simply empty then, so a server-start load
 takes the saved-state path). `village/day1`'s overnight reload takes both: the reloaded body
@@ -1542,9 +1542,9 @@ per-tick decision, under its own "TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTI
 
 | Lives on | What |
 |---|---|
-| `TownieRuntime` (flag) | the `Job`, `WorkToUndo`, ticks without a supply target, freeze ticks, the need (bubble) and its unmet item, status / change / wanted-ingredient listeners |
+| `TownieRuntime` (flag) | the `Job`, `WorkToUndo`, ticks without a supply target, freeze ticks, the need (bubble) and its unmet item, status and wanted-ingredient listeners |
 | `TownVillagerHandle` (flag, unchanged) | stats: hunger, mood, damage, XP, proficiencies, unlocks, pose requests, look targets |
-| `VisitorMobEntity` (body) | brain + navigation, pose, synched display data the flag pushes (visible, status, job name, held items, need) |
+| `VisitorMobEntity` (body) | brain + navigation, pose, synched display data the flag pushes (visible, held items, need) |
 
 ## Events from the body
 
@@ -1576,9 +1576,9 @@ flowchart LR
 
 - A bind builds a fresh runtime from the journal and replaces the UUID's previous one, as the
   entity used to rebuild its job on `initialize`.
-- Load-time registration (`assumeStateFromTown`) still runs `register` before `initialize`. The
-  change listener `SimpleVillagerHandle.register` adds is buffered on the entity
-  (`pendingChangeListeners`) and handed to the runtime at bind. An unbound body's `getJobId()`
+- Load-time registration (`assumeStateFromTown`) still runs `register` before `initialize`.
+  `register` adds no change listener: the runtime's status notifier marks the flag changed
+  itself, where a listener `register` queued on every body used to. An unbound body's `getJobId()`
   reports the gatherer start job, which is what the entity's old lazy initial-job supplier
   returned, so `register` still unlocks the gatherer default work on load. A late duplicate that
   `register` discards is not bound (it would have taken over the live copy's roster entry).
@@ -1586,13 +1586,15 @@ flowchart LR
   client-side `ClientSideThrowingJob`, now deleted, answered).
 - `MCExtra` carries the runtime (`townie()`), not the entity; `RealtimeWorldInteraction` reaches the
   body only through it (`swingMainHand`, `wearTool`, `blockPosition`, `tryGiveItem`'s drop).
+  `MCExtra.town()` and `Job.tick(townie)` read the town from the runtime: a townie only ever ticks
+  in its own town, so no caller passes the town beside it.
 
 ## Lifetime and persistence — the townie outlives its body
 
 | Event | Roster |
 |---|---|
 | body unloads with its chunk (`onRemovedFromWorld` UNLOADED) | `detachBody`: the runtime stays, remembering where the body stood |
-| body reloads while the runtime has no live body | `assumeStateFromTown` → `register` → `reattachBody`: the body takes back the live runtime (its state may be newer than the saved one) |
+| body reloads while the runtime has no live body | `assumeStateFromTown` → `TownVillagerMobs.reattach`: `register`, then `attachBody`. The body takes back the live runtime (its state may be newer than the saved one) |
 | body loads with no runtime in the roster (server start) | `assumeStateFromTown` → `register` → `initialize`: bind from `NBT_TOWN_STATE`, as before |
 | townie dies (`retireVillager`) or is absorbed by a shutdown | `unbindTownie` |
 | catch-up warp (`recoverMobs`) | `unbindAllTownies`, then every respawned body binds from the warped state |
@@ -1605,10 +1607,6 @@ flowchart LR
 - **No townie state in entity NBT.** The entity's `items` tag was only ever read into a throwaway
   initial job and then replaced by the town state on load (`assumeStateFromTown` → `initialize`),
   so it is gone; the runtime's journal in `NBT_TOWN_STATE` is the only copy.
-- **A reattached body drops its queued change listener.** `SimpleVillagerHandle.register` queues a
-  "mark the flag changed" listener on every registering body; the runtime already has the
-  identical one from its first registration, so `reattachTo` clears the queue instead of adding one
-  more listener per reload.
 - The roster is a `LinkedHashMap`, so captured townies keep arrival order (the entity list's order
   before).
 - Verified: `village/day1`'s overnight absence takes the reattach path and then the warp rebind,
@@ -1663,8 +1661,17 @@ flowchart LR
 - `steer` keeps the entity's walk-target rule: the job's target is applied only when the body has
   no walk target or is already walking to that target; a body walking elsewhere keeps going.
 - The first job used to carry two status notifiers (`setJob` and `initialize` each added one); the
-  runtime adds one. A status change still marks the flag changed and refreshes the
-  wanted-ingredient listeners, once instead of twice.
+  runtime adds one. A status change still marks the flag changed (`TownFlagBlockEntity.setChanged`,
+  logged under `TOWN_STATE_CHANGES`) and refreshes the wanted-ingredient listeners, once instead of
+  twice.
+- The body shows no status or job name; both synched fields, and the pushes that fed them, are
+  gone. `jobName` had no reader, already at the branch base. `status` had one: a tick seeded a job
+  whose status was unset from it (`initializeStatusFromEntityData`), which served the client-side
+  job deleted earlier in this series. On the server a job can reach a tick unset only when it was
+  built without a journal (`ServerJobsRegistry.newJournal`'s "Null items and journal" path, which
+  skips `initialize`). The seed was then whatever the body last showed, possibly another job's
+  work state. It is now IDLE (`initializeStatusFromEntityData(null)`), as it already was for a
+  fresh body.
 - `TownieRuntime.storageNeedAfter` (the NO_STORAGE rule) is pure; `TownieRuntimeStorageNeedTest`
   pins it. The rest needs a live job (registry-bound) and is covered by the full autotest suite:
   91/94 at this change (baseline 93/94), the extra two being the ledger's load flakes

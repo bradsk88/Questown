@@ -381,12 +381,22 @@ public final class VillageGrowthExecutor {
         phase = Phase.RELOAD_UNLOAD;
     }
 
+    private void movePlayer(double x, double y, double z) {
+        movePlayer(level, player, x, y, z);
+    }
+
     /**
      * NeoForge's FakePlayerNetHandler makes {@code teleportTo}'s connection teleport a no-op, so
      * the fake player never moved and its chunks stayed loaded. Move the entity directly and
      * update the chunk map's view of it.
      */
-    private void movePlayer(double x, double y, double z) {
+    static void movePlayer(
+            ServerLevel level,
+            ServerPlayer player,
+            double x,
+            double y,
+            double z
+    ) {
         player.moveTo(x, y, z, player.getYRot(), player.getXRot());
         level.getChunkSource().move(player);
     }

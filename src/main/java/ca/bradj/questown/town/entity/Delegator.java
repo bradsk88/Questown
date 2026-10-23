@@ -50,11 +50,6 @@ public interface Delegator<ENTITY> {
 
     HealingModule<ENTITY> getHealingModule();
 
-    void addChangeListener(
-            ENTITY vEntity,
-            Runnable runnable
-    );
-
     void broadcastMessage(
             String s,
             Object... args

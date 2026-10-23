@@ -7,6 +7,7 @@ import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.items.RelocationDeedItem;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.town.TownSleepRadius;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.rooms.TownPosition;
 import ca.bradj.questown.town.rooms.TownRoomsMapSerializer;
@@ -249,16 +250,17 @@ public final class TownRelocation {
     }
 
     /**
-     * Whether {@code fixturePos} is farther from {@code targetPos} than the tick radius — the same
-     * squared-distance comparison against {@link Config#TOWN_TICK_RADIUS} the ticker makes
-     * ({@code TownSleepRadius.isAsleep}), measured from the new flag.
+     * Whether {@code fixturePos} is farther from {@code targetPos} than the tick radius: the ticker's
+     * own comparison against {@link Config#TOWN_TICK_RADIUS} ({@link TownSleepRadius#isAsleep}),
+     * measured from the new flag, so "can't tick it from here" and "too far to bring" stay one
+     * definition.
      */
     public static boolean isBeyondRadius(
             BlockPos targetPos,
             BlockPos fixturePos,
             long tickRadiusSq
     ) {
-        return (long) targetPos.distSqr(fixturePos) > tickRadiusSq;
+        return TownSleepRadius.isAsleep((long) targetPos.distSqr(fixturePos), tickRadiusSq);
     }
 
     private static TownFlagBlockEntity placeActiveFlag(

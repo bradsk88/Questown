@@ -19,7 +19,7 @@ public class TownVillagerMobs {
     ) {
         TownieRuntime live = town.villagerHandle.getTownie(visitorMobEntity.getUUID());
         if (live != null && !live.hasBody()) {
-            reattach(town, visitorMobEntity);
+            reattach(town, visitorMobEntity, live);
             return;
         }
         if (!Compat.getBlockStoredTagData(town).contains(NBT_TOWN_STATE)) {
@@ -58,17 +58,14 @@ public class TownVillagerMobs {
      */
     private static void reattach(
             TownFlagBlockEntity town,
-            VisitorMobEntity body
+            VisitorMobEntity body,
+            TownieRuntime live
     ) {
         town.villagerHandle.register(body);
         if (body.isRemoved()) {
             return;
         }
-        TownieRuntime runtime = town.villagerHandle.reattachBody(body.getUUID(), body);
-        if (runtime == null) {
-            QT.FLAG_LOGGER.error("Townie {} lost its runtime while its body was loading", body.getUUID());
-            return;
-        }
-        body.reattachTo(town, runtime);
+        live.attachBody(body);
+        body.reattachTo(town, live);
     }
 }

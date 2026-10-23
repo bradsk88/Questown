@@ -5,7 +5,6 @@ import ca.bradj.questown.town.PoseInPlace;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -24,14 +23,10 @@ public interface TownieBody {
     boolean isRemoved();
 
     /**
-     * The game tick in which the body last ticked as an awake townie of an initialized town
-     * (loaded in an entity-ticking chunk, not asleep in a bed); -1 before its first such tick. The
-     * flag makes the townie's decisions only in a game tick its body ticked in.
+     * The game tick in which the body last ticked awake, in an initialized town; -1 before its first.
+     * See {@link ca.bradj.questown.town.entity.TownieRuntime} {@code tick}.
      */
     long lastTickedAt();
-
-    /** The status the body is showing, or null when it shows none. */
-    @Nullable String getShownStatus();
 
     /** Take the pose the townie's job asked for: into a bed, or out of it. */
     void takePose(PoseInPlace pose);
@@ -54,10 +49,6 @@ public interface TownieBody {
     void clearWalkTarget();
 
     void setVisible(boolean visible);
-
-    void showJobName(String translationKey);
-
-    void showStatus(String status);
 
     void showMainHandItem(ItemStack item);
 

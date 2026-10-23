@@ -152,14 +152,6 @@ class SimpleVillagerHandleTest {
         }
 
         @Override
-        public void addChangeListener(
-                UUID vEntity,
-                Runnable runnable
-        ) {
-
-        }
-
-        @Override
         public void broadcastMessage(
                 String s,
                 Object... args

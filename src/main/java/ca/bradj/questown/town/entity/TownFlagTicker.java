@@ -27,10 +27,11 @@ import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -219,7 +220,10 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
 
         ServerLevel level = tickData.level();
         BlockPos blockEntityPos = tickData.blockEntityPos();
-        List<BlockPos> players = level.players().stream().map(Entity::blockPosition).toList();
+        List<BlockPos> players = new ArrayList<>();
+        for (ServerPlayer p : level.players()) {
+            players.add(p.blockPosition());
+        }
         if (players.isEmpty()) {
             if (playersNearbyOnPrevTick) {
                 logStop(blockEntityPos, "No players are found on server");
@@ -228,9 +232,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         }
 
         // The town sleeps when no player is near any of its townies (its flag, before any arrive).
-        List<BlockPos> townies = tickData.entity().villagerHandle.townies().stream()
-                .map(t -> BlockPos.containing(t.position()))
-                .toList();
+        List<BlockPos> townies = tickData.entity().villagerHandle.towniePositions();
         long nearest = TownSleepRadius.nearestPlayerDistSqr(players, townies, tickData.entity().getBlockPos());
         if (!TownSleepRadius.isAsleep(nearest, Config.TOWN_TICK_RADIUS.get())) {
             return false;

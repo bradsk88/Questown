@@ -100,7 +100,7 @@ public class TownFlagState {
      * The town as warp and a reload see it. Its townies come from the flag's runtimes, so a townie
      * whose body is unloaded is still in the town (where it last stood).
      */
-    @Nullable MCTownState captureState() {
+    MCTownState captureState() {
         ImmutableList.Builder<TownState.VillagerData<MCHeldItem>> vB = ImmutableList.builder();
         for (TownieRuntime townie : parent.villagerHandle.townies()) {
             vB.add(captureTownie(parent, townie));
@@ -785,11 +785,7 @@ public class TownFlagState {
             UUID uuid,
             TownInterface.DebugLogger logger
     ) {
-        @Nullable MCTownState state = captureState();
-        if (state == null) {
-            QT.FLAG_LOGGER.warn("TownState was null. Will not store.");
-            return;
-        }
+        MCTownState state = captureState();
         logger.log("[Tile] Storing state on {}: {}", uuid, state);
         CompoundTag cereal = TownStateSerializer.INSTANCE.store(state);
         flagTag.put(NBT_TOWN_STATE, cereal);

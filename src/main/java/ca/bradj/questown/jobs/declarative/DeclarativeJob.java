@@ -316,12 +316,10 @@ public class DeclarativeJob extends
 
 
     @Override
-    public void tick(
-            TownInterface town,
-            TownieRuntime townie
-    ) {
+    public void tick(TownieRuntime townie) {
         DeclarativeJobTicker.Dependencies<BlockPos, ResourceLocation, MCHeldItem, MCTownItem, MCRoom, RoomRecipeMatch<MCRoom>, MCExtra, WorkLocation> deps
-                = new DeclarativeJobTickerDependencies(this, (TownFlagBlockEntity) town, townie);
+                = new DeclarativeJobTickerDependencies(this, townie);
+        TownFlagBlockEntity town = townie.getTown();
         this.ticker.tick(deps, (p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a));
     }
 

@@ -53,10 +53,9 @@ public class DeclarativeJobTickerDependencies implements
 
     public DeclarativeJobTickerDependencies(
             DeclarativeJob declarativeJob,
-            TownFlagBlockEntity town,
             TownieRuntime townie
     ) {
-        this.town = town;
+        this.town = townie.getTown();
         this.job = declarativeJob;
         this.townie = townie;
     }
@@ -386,7 +385,7 @@ public class DeclarativeJobTickerDependencies implements
 
     @Override
     public MCExtra getExtra() {
-        return new MCExtra(town, getWorkStatusHandle(), townie);
+        return new MCExtra(getWorkStatusHandle(), townie);
     }
 
     @Override
@@ -448,7 +447,7 @@ public class DeclarativeJobTickerDependencies implements
             RoomsNeedingVillagerInput<MCRoom, RECIPE, BlockPos> rniot,
             @Nullable EntityCurrentJobSite<MCRoom> entityCurrentJobSite
     ) {
-        MCExtra extra = new MCExtra(town, getWorkStatusHandle(), townie);
+        MCExtra extra = new MCExtra(getWorkStatusHandle(), townie);
         DeclarativeJobTickerDependencies self = this;
         return new DeclarativeLogicWorld.WorldDeps<>() {
             @Override

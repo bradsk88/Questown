@@ -22,10 +22,8 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     STATUS getStatus();
 
-    void tick(
-            TownInterface town,
-            TownieRuntime townie
-    );
+    /** One realtime tick of the townie's job; the town is the townie's ({@link TownieRuntime#getTown()}). */
+    void tick(TownieRuntime townie);
 
     boolean shouldDisappear(
             TownInterface town,

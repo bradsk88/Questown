@@ -27,6 +27,7 @@ import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.DiningStages;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Snapshot;
 import ca.bradj.questown.jobs.WorksBehaviour;
@@ -906,10 +907,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public TownieRuntime bindTownie(
             UUID villager,
             Snapshot journal,
-            TownieBody body,
-            Vec3 position
+            TownieBody body
     ) {
-        return villagerHandle.bindTownie(this, villager, journal, body, position);
+        return villagerHandle.bindTownie(this, villager, journal, body);
     }
 
     /** The townie's runtime, or null when no townie with that UUID is bound to this town. */
@@ -933,10 +933,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public void townieKilled(VisitorMobEntity body) {
         TownieRuntime townie = body.getRuntime();
         if (townie != null) {
-            Container carried = townie.getInventory();
-            for (int i = 0; i < carried.getContainerSize(); i++) {
-                body.dropItem(carried.getItem(i));
-            }
+            Jobs.getItems(townie.getJob()).forEach(body::dropItem);
         }
         villagerHandle.delegate.remove(body);
         retireVillager(body.getUUID());
@@ -2044,7 +2041,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         tag.putLong(NBT_TIME_WARP_REFERENCE_TICK, getServerLevel().getDayTime());
     }
 
-    public @Nullable MCTownState captureCurrentState() {
+    public MCTownState captureCurrentState() {
         return state.captureState();
     }
 

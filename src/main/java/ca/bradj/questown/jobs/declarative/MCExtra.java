@@ -7,8 +7,11 @@ import ca.bradj.questown.town.interfaces.WorkStatusHandle;
 import net.minecraft.core.BlockPos;
 
 public record MCExtra(
-        TownInterface town,
         WorkStatusHandle<BlockPos, MCHeldItem> work,
         TownieRuntime townie
 ) {
+    /** The townie's town. */
+    public TownInterface town() {
+        return townie.getTown();
+    }
 }

@@ -1401,7 +1401,7 @@ public class TestBlueprintRegistry {
         }
         BlockState ns = level.getBlockState(cap.targetPos);
         FlagPhase phase = ns.hasProperty(TownFlagBlock.PHASE) ? ns.getValue(TownFlagBlock.PHASE) : null;
-        boolean inactive = ns.hasProperty(TownFlagBlock.INACTIVE) && ns.getValue(TownFlagBlock.INACTIVE);
+        boolean inactive = isInactive(ns);
         output.msg("new flag phase=" + phase + " inactive=" + inactive);
         // (2) new flag ACTIVE and not INACTIVE
         ok &= report(output, "2 new-flag-active-not-inactive", phase == FlagPhase.ACTIVE && !inactive);
@@ -1629,7 +1629,7 @@ public class TestBlueprintRegistry {
         }
         BlockState ns = level.getBlockState(cap.targetPos);
         FlagPhase phase = ns.hasProperty(TownFlagBlock.PHASE) ? ns.getValue(TownFlagBlock.PHASE) : null;
-        boolean inactive = ns.hasProperty(TownFlagBlock.INACTIVE) && ns.getValue(TownFlagBlock.INACTIVE);
+        boolean inactive = isInactive(ns);
         // (2) new flag ACTIVE and not INACTIVE
         ok &= report(output, "2 new-flag-active-not-inactive", phase == FlagPhase.ACTIVE && !inactive);
 
@@ -1736,11 +1736,9 @@ public class TestBlueprintRegistry {
             e.teleportTo(x + 0.5, y, z + 0.5);
         }
         if (playerWithTownies) {
-            // A FakePlayer's teleportTo is a no-op (see VillageGrowthExecutor.movePlayer).
             for (ServerPlayer p : level.players()) {
                 cap.playerStarts.put(p, p.position());
-                p.moveTo(x + 2.5, y, z + 0.5, p.getYRot(), p.getXRot());
-                level.getChunkSource().move(p);
+                VillageGrowthExecutor.movePlayer(level, p, x + 2.5, y, z + 0.5);
             }
         }
         cap.movedAt = level.getGameTime();
@@ -1758,7 +1756,7 @@ public class TestBlueprintRegistry {
             boolean playerWithTownies
     ) {
         BlockState flag = level.getBlockState(flagPos);
-        boolean asleep = flag.hasProperty(TownFlagBlock.INACTIVE) && flag.getValue(TownFlagBlock.INACTIVE);
+        boolean asleep = isInactive(flag);
         long lastDecided = -1;
         for (LivingEntity e : town.getVillagerHandle().entities()) {
             ca.bradj.questown.town.entity.TownieRuntime townie = town.getTownie(e.getUUID());
@@ -1781,13 +1779,14 @@ public class TestBlueprintRegistry {
         for (LivingEntity e : town.getVillagerHandle().entities()) {
             e.teleportTo(flagPos.getX() + 0.5, flagPos.getY(), flagPos.getZ() + 2.5);
         }
-        cap.playerStarts.forEach((p, start) -> {
-            p.moveTo(start.x, start.y, start.z, p.getYRot(), p.getXRot());
-            level.getChunkSource().move(p);
-        });
+        cap.playerStarts.forEach((p, start) -> VillageGrowthExecutor.movePlayer(level, p, start.x, start.y, start.z));
         net.minecraft.world.level.ChunkPos far = new net.minecraft.world.level.ChunkPos(cap.farPos);
         level.setChunkForced(far.x, far.z, false);
         return ok;
+    }
+
+    private static boolean isInactive(BlockState flag) {
+        return flag.hasProperty(TownFlagBlock.INACTIVE) && flag.getValue(TownFlagBlock.INACTIVE);
     }
 
     private static void setPhase(ServerLevel level, BlockPos flagPos, FlagPhase phase) {

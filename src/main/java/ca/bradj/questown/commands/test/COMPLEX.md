@@ -691,7 +691,8 @@ same chunks and waits for the flag and its villagers. Checks:
 `reload-flag-chunk-unloaded`, `reload-villagers-restored`; `Day1BeatChecks` pauses arrival
 counting meanwhile. **Trap:** `ServerPlayer.teleportTo` does nothing for a fake player
 (NeoForge's `FakePlayerNetHandler` overrides `teleport` as a no-op) — move it with
-`moveTo` + `ServerChunkCache.move(player)` or the chunks never unload. The flag BE survives
+`moveTo` + `ServerChunkCache.move(player)` or the chunks never unload
+(`VillageGrowthExecutor.movePlayer(level, player, x, y, z)`, which the town-sleep scenarios share). The flag BE survives
 this reload (only the villager entities reload), so it is a chunk-reload test, not a full
 server restart.
 
@@ -891,8 +892,8 @@ The town's tick radius is measured from its townies, not its flag (`CONTEXT.md` 
 ticks), then in the post-spawn action force-load the chunk 160 blocks east of the flag (past the
 default 100-block radius) and teleport every townie there, so their bodies keep ticking:
 
-- `awake_near_a_far_townie` also moves the player beside them (`moveTo` plus
-  `ChunkSource.move`, since a FakePlayer's `teleportTo` is a no-op). Pass: the flag is not
+- `awake_near_a_far_townie` also moves the player beside them (`VillageGrowthExecutor.movePlayer`,
+  since a FakePlayer's `teleportTo` is a no-op). Pass: the flag is not
   `INACTIVE`, and some townie decided (`TownieRuntime.lastDecidedAt`) more than 50 ticks after
   the move. The margin allows for a townie in bed.
 - `asleep_far_from_its_townies` leaves the player at the flag. Pass: the flag is `INACTIVE` and no

@@ -14,7 +14,6 @@ import ca.bradj.questown.gui.VillagerStatsMenu;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
-import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.PoseInPlace;
@@ -127,12 +126,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
     private static final EntityDataAccessor<Boolean> hasBOP = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
     );
-    private static final EntityDataAccessor<String> status = SynchedEntityData.defineId(
-            VisitorMobEntity.class, EntityDataSerializers.STRING
-    );
-    private static final EntityDataAccessor<String> jobName = SynchedEntityData.defineId(
-            VisitorMobEntity.class, EntityDataSerializers.STRING
-    );
     private static final EntityDataAccessor<ItemStack> heldItem = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.ITEM_STACK
     );
@@ -171,8 +164,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
     TownInterface town;
     /** The townie this body stands for: its state and decisions, held by the town flag. Null until bound. */
     private @Nullable TownieRuntime runtime;
-    /** Change listeners added before the runtime is bound (load-time registration runs first). */
-    private final List<ChangeListener> pendingChangeListeners = new ArrayList<>();
     private final List<Consumer<VillagerSleptEvent>> sleepListeners = new ArrayList<>();
     private Signals.DayTime lastBedTime = new Signals.DayTime(Signals.NIGHT_START_TICK);
     private BlockPos wanderTarget;
@@ -268,10 +259,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         this.sleepListeners.add(l);
     }
 
-    public @Nullable WorkToUndo getWorkToUndo() {
-        return runtime == null ? null : runtime.getWorkToUndo();
-    }
-
     public boolean hasBlockOfProgress() {
         Boolean hasBOP = this.entityData.get(VisitorMobEntity.hasBOP);
         return hasBOP;
@@ -287,8 +274,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         super.defineSynchedData(builder);
         builder.define(visible, true);
         builder.define(hasBOP, true);
-        builder.define(status, ProductionStatus.IDLE.name());
-        builder.define(jobName, "jobs.gatherer");
         builder.define(heldItem, ItemStack.EMPTY);
         builder.define(lastHeldItem, ItemStack.EMPTY);
         builder.define(need, TownieNeed.NONE.name());
@@ -402,7 +387,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
             return;
         }
 
-        // The flag makes the townie's decisions in this game tick, after every entity has ticked.
+        // See TownieRuntime#tick: the flag decides only for a body that ticked this game tick.
         lastTickedAt = sl.getGameTime();
         entityData.set(hasBOP, town.getVillagerHandle().hasBlockOfProgress(getUUID()));
 
@@ -454,8 +439,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
 
     /**
      * The body's own tick: sense who is looking, show hunger, get unstuck from walls, stay known to
-     * the town, open gates. The townie's decisions (its job, where to walk, the pose it asks for,
-     * what the body shows) are the flag's, made right after: {@code TownieRuntime.tick}.
+     * the town, open gates. The townie's decisions are the flag's: {@link TownieRuntime}.
      */
     private void villagerTick(ServerLevel sl) {
         detectNearbyDistractions(sl);
@@ -488,23 +472,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         return lastTickedAt;
     }
 
-    @Override
-    public @Nullable String getShownStatus() {
-        return getStatusForClient();
-    }
-
-    @Override
-    public void takePose(PoseInPlace pose) {
-        applyRequestedPose(pose);
-    }
-
     private void setLookFromBrain() {
         brain.getMemory(MemoryModuleType.WALK_TARGET).ifPresent(
                 e -> lookControl.setLookAt(e.getTarget().currentPosition())
         );
     }
 
-    private void applyRequestedPose(PoseInPlace pose) {
+    @Override
+    public void takePose(PoseInPlace pose) {
         switch (pose.pose()) {
             case SLEEPING -> getInBed(pose.place());
             default -> getOutOfBed();
@@ -540,16 +515,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
     @Override
     public void setVisible(boolean visible) {
         entityData.set(VisitorMobEntity.visible, visible);
-    }
-
-    @Override
-    public void showJobName(String translationKey) {
-        entityData.set(jobName, translationKey);
-    }
-
-    @Override
-    public void showStatus(String status) {
-        entityData.set(VisitorMobEntity.status, status);
     }
 
     @Override
@@ -749,17 +714,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
                 this.doPush(entity);
             }
         }
-    }
-
-    /**
-     * The townie's carried items are not saved with the body: the flag saves them with the rest of
-     * the townie (its runtime's journal, in the town state). The entity's old "items" tag was only
-     * ever read into a throwaway job and then replaced by the town state on load.
-     */
-    @Override
-    public void readAdditionalSaveData(CompoundTag p_21450_) {
-        super.readAdditionalSaveData(p_21450_);
-        entityData.set(status, p_21450_.getString("status"));
     }
 
     private void initBrain() {
@@ -1130,14 +1084,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         return runtime.getInventory();
     }
 
-    public @Nullable String getStatusForClient() {
-        String s = entityData.get(status);
-        if (s.isEmpty()) {
-            return null;
-        }
-        return s;
-    }
-
     public @Nullable IStatus<?> getStatusForServer() {
         return runtime == null ? null : runtime.getStatus();
     }
@@ -1180,26 +1126,18 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
             QT.VILLAGER_LOGGER.error("Townie {} can only be bound to a town flag, not {}", uuid, town);
             return;
         }
-        this.runtime = flag.bindTownie(uuid, journal, this, new Vec3(xPos, yPos, zPos));
-        pendingChangeListeners.forEach(cl -> runtime.addChangeListener(cl::Changed));
-        pendingChangeListeners.clear();
+        this.runtime = flag.bindTownie(uuid, journal, this);
         this.setPos(xPos, yPos, zPos);
         this.setUUID(uuid);
     }
 
-    /**
-     * Binds this reloaded body to the townie it stands for, which stayed in town while the body
-     * was unloaded. The runtime already marks the flag changed on status changes (from the
-     * townie's first registration), so the identical listener this body's registration queued is
-     * dropped rather than piled onto the runtime once per reload.
-     */
+    /** Binds this reloaded body to the townie it stands for, which stayed in town while it was unloaded. */
     public void reattachTo(
             TownFlagBlockEntity flag,
             TownieRuntime townie
     ) {
         this.town = flag;
         this.runtime = townie;
-        pendingChangeListeners.clear();
     }
 
     public boolean isInitialized() {
@@ -1224,18 +1162,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
 
     public List<AbstractMap.SimpleEntry<MCQuest, MCReward>> getQuestsWithRewards() {
         return town.getQuestHandle().getQuestsWithRewardsForVillager(uuid);
-    }
-
-    public boolean canAcceptJob() {
-        return GathererUnmappedNoToolWorkQtrDay.ID.rootId().equals(getJobId().rootId());
-    }
-
-    public void addChangeListener(ChangeListener cl) {
-        if (runtime == null) {
-            pendingChangeListeners.add(cl);
-            return;
-        }
-        runtime.addChangeListener(cl::Changed);
     }
 
     @Override
@@ -1379,11 +1305,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
 
     public boolean canStopWorkingAtAnyTime() {
         return runtime != null && runtime.canStopWorkingAtAnyTime();
-    }
-
-    public interface ChangeListener {
-        void Changed();
-
     }
 
 }
