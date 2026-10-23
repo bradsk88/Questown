@@ -169,7 +169,23 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         this.tabs.renderTooltip(bgX, bgY, mouseX, mouseY, key -> this.showTooltip(Compat.translatable(key)));
         if (allComplete && !showingCompleted) {
             renderAllDoneState(ctx);
+            return;
         }
+        if (cardsData().isEmpty()) {
+            renderNothingToShow(ctx);
+        }
+    }
+
+    /**
+     * No cards and no all-done state (a villager's Quests tab: its container has no all-done
+     * summary). The page used to be blank (2026-10-23 r10).
+     */
+    private void renderNothingToShow(RenderContext ctx) {
+        int textWidth = backgroundWidth - 2 * TEXT_MARGIN;
+        Component text = Compat.translatable("menu.quests.none_open");
+        int bgY = (this.height - backgroundHeight) / 2;
+        int top = bgY + (backgroundHeight - wrappedHeight(text, textWidth)) / 2;
+        drawCenteredWrapped(ctx, text, this.width / 2, top, textWidth, TEXT_COLOR);
     }
 
     private void renderAllDoneState(RenderContext ctx) {

@@ -96,3 +96,17 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
     (every 10 below zero) re-flags a reloaded townie. `SimpleVillagerHandleTest` red/green; eating
     5/6 (known red dine_at_time). Live after restart: both townies went dining_no_table ->
     dining_raw_food and ate (fullness -3020 / -5060 -> 2500).
+13. **[FIXED, verified live; gui-lint QuestsScreen OK]** (UI) A villager's Quests tab with nothing open was a blank
+    "Page 1 / 1": `VillagerQuestsContainer` inherits `isAllComplete() == false`, so the flag tab's
+    all-done state never applied. `QuestsScreen` now draws "No open quests right now." when it has
+    no cards and no all-done state.
+14. (judge, onboarding, P1) Day 6-7: the onboarding cook can only cook mutton. Its
+    `unlocked_jobs` are extract, fuel and mutton (the `TownQuests` grant); beef/porkchop/chicken
+    are progression-unlocked (BOP). The hunter brings mostly beef/porkchop/chicken (storage: beef
+    8, porkchop 4, chicken 1, mutton 0), so the cook idles (`seeking_work -> downtime`) while
+    `Prepared for cook: [porkchop,chicken,beef]` and "Food" is on the board. Its status says
+    "They need Raw Mutton to work." which points the player at hunting, not at spending a BOP to
+    unlock a recipe; the cook's card has no visible way to spend a BOP on recipes (its tabs: stats,
+    change job, Quests, and a BOP tab that opens the flag's BOP page). How does a player learn to
+    unlock cook/beef? Also: the request confirm for Food lists 5 known producing jobs (incl.
+    "Cook / Potato") that no townie can do yet.

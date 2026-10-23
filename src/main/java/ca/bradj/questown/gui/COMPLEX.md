@@ -1267,3 +1267,12 @@ Diner statuses (all three diners share the `diner` tooltip category in `JobToolt
 only for NO_SUPPLIES and NO_JOBSITE, so an eating villager read the generic "%s is busy with their
 work." (r10 #10). The diner category now covers its work states (0-2), GOING_TO_JOB,
 COLLECTING_SUPPLIES, WAITING_FOR_TIMED_STATE, EXTRACTING_PRODUCT and IDLE.
+
+## Quests screen: nothing to show (2026-10-23 r10)
+
+`QuestsScreen` had one empty state, the flag's all-done state (`isAllComplete()`, from the town
+summary). A villager's Quests tab (`VillagerQuestsContainer`) inherits `isAllComplete() == false`,
+so with no open quests it drew a blank "Page 1 / 1". When there are no cards and no all-done state,
+`renderNothingToShow` now centres "No open quests right now." (`menu.quests.none_open`). gui-lint:
+`QuestsScreen — OK`.
+
