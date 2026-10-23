@@ -34,6 +34,16 @@ public final class DiningStages {
         };
     }
 
+    /**
+     * Whether the board may send this townie to downtime. A starving diner must reach the
+     * stage-down above instead: downtime's instant-eat restarts the chain at the first diner, so
+     * a townie out of cooked food looped dining_no_table -> downtime -> dining_no_table and never
+     * tried raw food (2026-10-23 r10, fullness -272% beside a chest of raw beef).
+     */
+    public static boolean downtimeMayInterrupt(JobID current, boolean starving) {
+        return !(starving && isDiner(current));
+    }
+
     /** One of the three diners (table, no table, raw food). */
     public static boolean isDiner(JobID job) {
         return switch (job.jobId()) {

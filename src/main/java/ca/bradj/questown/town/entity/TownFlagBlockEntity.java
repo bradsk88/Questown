@@ -1236,7 +1236,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return true;
         }
 
-        if (villagerHandle.isReadyForDowntime(ownerVUID, tick) && !DowntimeWork.matches(currentJob)) {
+        if (villagerHandle.isReadyForDowntime(ownerVUID, tick) && !DowntimeWork.matches(currentJob)
+                && DiningStages.downtimeMayInterrupt(currentJob, villagerHandle.isStarving(ownerVUID))) {
             changeJob.accept(DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
         }

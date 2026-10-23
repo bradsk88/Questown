@@ -275,6 +275,11 @@ flowchart TD
   snap and always passes through the board first.
 - The board's deposit sub-step runs **before** the starving check and the work
   roll, so a working townie's output is stored on its way to eating.
+- The board's "ready for downtime" gate sits above both, and it skips a **starving
+  diner** (`DiningStages.downtimeMayInterrupt`). Downtime is the instant-eat job, so
+  sending a starving diner there restarted the chain at the first diner: 2026-10-23 r10
+  a hunter looped dining_no_table -> downtime -> dining_no_table every ~200 ticks at
+  fullness -272% beside raw beef, never reaching the raw-food stage.
 
 ## No storage — a deliberate blocker
 

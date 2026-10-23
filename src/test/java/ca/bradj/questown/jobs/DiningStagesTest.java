@@ -46,4 +46,22 @@ class DiningStagesTest {
         Assertions.assertFalse(DiningStages.isDiner(new JobID(ROOT, "sword")));
         Assertions.assertFalse(DiningStages.isDiner(new JobID(ROOT, "downtime")));
     }
+
+    /**
+     * 2026-10-23 r10: a starving hunter (fullness -272%) looped dining_no_table -> downtime ->
+     * dining_no_table every ~200 ticks with raw beef in storage. The board's "ready for downtime"
+     * gate ran before the stage-down, and downtime's instant-eat restarted the chain at the first
+     * diner, so raw food was never reached.
+     */
+    @Test
+    void downtimeMustNotInterruptAStarvingDiner() {
+        Assertions.assertFalse(DiningStages.downtimeMayInterrupt(new JobID(ROOT, "dining_no_table"), true));
+        Assertions.assertFalse(DiningStages.downtimeMayInterrupt(new JobID(ROOT, "dining"), true));
+    }
+
+    @Test
+    void downtimeMayInterruptWork_orADinerThatAte() {
+        Assertions.assertTrue(DiningStages.downtimeMayInterrupt(new JobID(ROOT, "sword"), true));
+        Assertions.assertTrue(DiningStages.downtimeMayInterrupt(new JobID(ROOT, "dining_no_table"), false));
+    }
 }
