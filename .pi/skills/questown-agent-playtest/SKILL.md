@@ -58,9 +58,12 @@ relights the campfire", which the Acting section already said.
   `probe-block.sh <block-id> <x y z>...` says which positions hold a block.
 - `_qtdev villager_stats <flag x y z>` logs each townie's server-side level, xp, fullness, mood
   and effects: check a screen against it before calling a number wrong.
-- Read a command's output from the log offset taken **just before** that command
-  (`S=$(wc -l < run/logs/latest.log)`, run, `tail -n +$S`), never "the newest `entity data`
-  line": r10 read another command's line and filed a false "BOPs consumed" bug.
+- Read a command's output with `tools/ffeed.sh feed "<cmd>" --capture run/logs/latest.log
+  "<pattern>"` (only lines written after the write; exit 1 when none match), never "the newest
+  `entity data` line": r10 read another command's line and filed a false "BOPs consumed" bug.
+- Which path a townie's job change took: `grep -a '\[board\]' run/logs/debug.log` names the
+  board-cascade branch per change (`via work-roll`, `via starving-diner-stage`, `via
+  ready-for-downtime`, `via idle-escape`, `via diner-ate`, ... or `stays: no branch applied`).
 - `tools/agent-playtest/look.sh <name> [maxlines]`: screenshot plus new server log lines since
   the last look; `PARK="x y"` parks the cursor and waits a frame first (a screen opens with the
   cursor at the window centre, so a card there shows a stale tooltip). Then `Read` the PNG. It waits for a complete PNG (reading a half-written file
@@ -155,7 +158,8 @@ relights the campfire", which the Acting section already said.
   ask the dev what they see, ask about the same time of day you're asking about.
 - A log line naming a UUID right after a reload ("Job changed ... for <random> [from X]") is the
   freshly built entity before its saved UUID loads: noise.
-- "Verified live" for a fix needs a log line from the branch you changed, not just the outcome.
+- "Verified live" for a fix needs a log line from the branch you changed (the `[board]` trace for
+  the board cascade), not just the outcome.
   r10 marked the starving-diner guard verified when the hunter reached raw food through the
   diner's own overnight expiry (the starving flag was false, so the guard never ran).
 - Before narrowing a guard keyed on a job root or special rule (a loot guarantee, a bypass), grep

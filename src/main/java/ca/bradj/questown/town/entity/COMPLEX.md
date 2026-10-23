@@ -284,6 +284,11 @@ flowchart TD
   hungry listener whenever a hunger broadcast (every 10 at or below zero) finds fullness `<= 0`,
   and cleared by a meal. It used to require exactly 0, so a townie reloaded below zero was never
   starving again and both gates above stopped applying (2026-10-23 r10 #12).
+- Every exit of `changeJobForVisitorFromBoard` logs its branch at debug (`JOB_POSSIBILITIES_COMPUTE`,
+  so it lands in `run/logs/debug.log` without a toggle): `[board] <villager> <from> -> <to> via
+  <branch>` (damaged-rest, bop-deposit, ready-for-downtime, starving-diner-stage, work-roll,
+  idle-escape, diner-ate) or `stays: no branch applied`. r10 marked a fix verified from the
+  outcome while another branch had produced it; the trace makes the path a grep.
 
 ## No storage — a deliberate blocker
 

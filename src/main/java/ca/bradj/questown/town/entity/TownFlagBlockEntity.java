@@ -105,7 +105,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -1195,7 +1195,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     ) {
         long tick = Util.getTick(getServerLevel());
         VillagerUUID ownerVUID = VillagerUUID.from(ownerUUID);
-        Consumer<JobID> changeJob = id -> villagerHandle.changeJobForVillager(ownerVUID, id, false);
+        // Every exit names its branch, so "which path did the townie take" is a grep of debug.log,
+        // not an inference from the outcome (r10: a fix was marked verified while a different
+        // branch had produced the result).
+        BiConsumer<String, JobID> changeJob = (branch, id) -> {
+            getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
+                    "[board] {} {} -> {} via {}", ownerVUID, currentJob, id, branch
+            );
+            villagerHandle.changeJobForVillager(ownerVUID, id, false);
+        };
 
         VisitorMobEntity villager = villagerHandle.getEntity(ownerVUID);
         if (villager == null) {
@@ -1205,7 +1213,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (damagePercent > 0) {
             // The more damaged they are, the more likely they are to rest.
             if (level.getRandom().nextFloat() < damagePercent) {
-                changeJob.accept(ResterWork.getIdForRoot(currentJob.rootId()));
+                changeJob.accept("damaged-rest", ResterWork.getIdForRoot(currentJob.rootId()));
                 return true;
             }
         }
@@ -1232,13 +1240,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 MCHeldItem bop = MCHeldItem.fromTown(bopStack);
                 villager.tryGiveItem(bop, InventoryFullStrategy.REMOVE_FROM_WORLD);
             }
-            changeJob.accept(BOPDepositorWork.getIdForRoot(currentJob.rootId()));
+            changeJob.accept("bop-deposit", BOPDepositorWork.getIdForRoot(currentJob.rootId()));
             return true;
         }
 
         if (villagerHandle.isReadyForDowntime(ownerVUID, tick) && !DowntimeWork.matches(currentJob)
                 && DiningStages.downtimeMayInterrupt(currentJob, villagerHandle.isStarving(ownerVUID))) {
-            changeJob.accept(DowntimeWork.getIdForRoot(currentJob.rootId()));
+            changeJob.accept("ready-for-downtime", DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
         }
 
@@ -1259,7 +1267,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             // Still starving on the way out of a diner = gave up there without eating: next stage.
             JobID diner = DiningStages.next(currentJob, hasDiningRoom);
             if (diner != null) {
-                changeJob.accept(diner);
+                changeJob.accept("starving-diner-stage", diner);
                 return true;
             }
         }
@@ -1292,7 +1300,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             // available next once another NOON/downtime/sleep event anchors a "last rest"
             // tick and it is `maxTicksBeforeDowntime` ticks old.
             villagerHandle.markWorked(VillagerUUID.from(ownerUUID), tick);
-            changeJob.accept(work);
+            changeJob.accept("work-roll", work);
             return true;
         }
 
@@ -1302,16 +1310,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         // last rest" gate does not apply when there is truly nothing to do. Guarded on
         // !DowntimeWork so a townie already resting on DowntimeWork is not re-adopted onto it.
         if (villagerHandle.isReadyForDowntimeIfIdle(ownerVUID, tick) && !DowntimeWork.matches(currentJob)) {
-            changeJob.accept(DowntimeWork.getIdForRoot(currentJob.rootId()));
+            changeJob.accept("idle-escape", DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
         }
         // A diner that has eaten (no longer starving) and has no work to go back to relaxes. Left
         // a diner, its give-up fallback sent it to raw food for a second meal ~880 ticks later
         // (10-21 #17; dev 2026-10-22: hunger acceptable -> back to work, or relax at night).
         if (DiningStages.isDiner(currentJob) && !villagerHandle.isStarving(ownerVUID)) {
-            changeJob.accept(DowntimeWork.getIdForRoot(currentJob.rootId()));
+            changeJob.accept("diner-ate", DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
         }
+        getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
+                "[board] {} {} stays: no branch applied", ownerVUID, currentJob
+        );
         return false;
     }
 
