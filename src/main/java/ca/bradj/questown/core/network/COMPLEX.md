@@ -50,3 +50,12 @@ The unlock broadcast passed the raw villager `UUID` to `Compat.translatable`; 1.
 unlock happened but the message task died. It now passes `VillagerHolder.labelFor(uuid)` (display
 name, or a shortened UUID), pinned by `VillagerHolderLabelTest` (the static `VillagerHolder.label` rule); the crash itself is
 TranslatableContents-bound (the live stack trace was the red).
+
+## Possibly-empty stacks use the optional codec (2026-10-23 playtest r12 #10)
+
+`SyncBlockItemMessage` carries a plate's / food display's / axe rack's slot, which is empty when
+the block is placed. 1.20.6's `ItemStack.STREAM_CODEC` throws "Empty ItemStack not allowed" on an
+empty stack, and an encode failure on a clientbound payload drops the player's connection; every
+rejoin re-sent it (a kick loop). It now uses `ItemStack.OPTIONAL_STREAM_CODEC` both ways. Use the
+optional codec for any stack that can be empty. Pinned by `SyncBlockItemMessageTest` (red on the
+exact live error before the change). `UIJob`'s job-result list still uses the strict codec.

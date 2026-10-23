@@ -131,7 +131,7 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    Day 11 scale: in 3 minutes the cook and the new gatherer each made ~34 dining_no_table <->
    downtime round trips; all five townies sit at -150% to -220% fullness; the cook hardly cooks.
    Hunger is the dominant drag on this run.
-10. (bug, P0) Day 12, 19:22:08: placing the Kitchen-Diner furniture (a food display + empty plate
+10. **[FIXED 2026-10-23, after the run]** (bug, P0) Day 12, 19:22:08: placing the Kitchen-Diner furniture (a food display + empty plate
     blocks, via setblock as a builder would) disconnected the player: "Connection Lost ...
     EncoderException: Failed to encode packet 'clientbound/minecraft:custom_payload'". Server
     cause: `Failed encoding custom payload questown:network_message: ... Empty ItemStack not
@@ -147,3 +147,12 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
     loaded". After removing the food display + 2 plates, the client rejoined (19:29:16) and stayed.
     The Kitchen-Diner quest (furnace + food display + 4 plates) can't be completed in this build:
     any empty plate/display kicks the player. Server never restarted.
+    Fix: `SyncBlockItemMessage` encodes/decodes with `ItemStack.OPTIONAL_STREAM_CODEC`;
+    `SyncBlockItemMessageTest` red ("Empty ItemStack not allowed") -> green.
+
+## Run end
+
+Stopped on day 12 (dev, 2026-10-23: "Stop; fix the P0s"). The server ran continuously from
+18:11 to 19:36 (one server, never restarted); the client was relaunched three times after the #10
+kick. World: `build/agent-playtest/r12-world-day12.tgz`; full server log:
+`build/agent-playtest/r12-server-full.log`.

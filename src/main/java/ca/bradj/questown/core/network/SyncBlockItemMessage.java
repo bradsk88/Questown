@@ -19,7 +19,7 @@ public record SyncBlockItemMessage(
         buffer.writeInt(msg.pos.getX());
         buffer.writeInt(msg.pos.getY());
         buffer.writeInt(msg.pos.getZ());
-        ItemStack.STREAM_CODEC.encode(buffer, msg.item());
+        ItemStack.OPTIONAL_STREAM_CODEC.encode(buffer, msg.item());
         buffer.writeInt(msg.index());
     }
 
@@ -27,7 +27,7 @@ public record SyncBlockItemMessage(
         int blockX = buffer.readInt();
         int blockY = buffer.readInt();
         int blockZ = buffer.readInt();
-        ItemStack item = ItemStack.STREAM_CODEC.decode(buffer);
+        ItemStack item = ItemStack.OPTIONAL_STREAM_CODEC.decode(buffer);
         int index = buffer.readInt();
         return new SyncBlockItemMessage(new BlockPos(blockX, blockY, blockZ), item, index);
     }
