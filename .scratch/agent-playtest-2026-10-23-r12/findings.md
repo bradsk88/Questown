@@ -148,7 +148,9 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
     The Kitchen-Diner quest (furnace + food display + 4 plates) can't be completed in this build:
     any empty plate/display kicks the player. Server never restarted.
     Fix: `SyncBlockItemMessage` encodes/decodes with `ItemStack.OPTIONAL_STREAM_CODEC`;
-    `SyncBlockItemMessageTest` red ("Empty ItemStack not allowed") -> green.
+    `SyncBlockItemMessageTest` red ("Empty ItemStack not allowed") -> green. Verified live on the
+    day-12 world (19:38): food display + 4 plates placed, no disconnect, "Kitchen Diner" quest
+    completed.
 
 ## Run end
 
