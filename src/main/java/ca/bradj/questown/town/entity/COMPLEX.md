@@ -283,7 +283,14 @@ flowchart TD
 - "Starving" is the in-memory `SimpleVillagerHandle.starving` flag (not saved), set by the
   hungry listener whenever a hunger broadcast (every 10 at or below zero) finds fullness `<= 0`,
   and cleared by a meal. It used to require exactly 0, so a townie reloaded below zero was never
-  starving again and both gates above stopped applying (2026-10-23 r10 #12).
+  starving again and both gates above stopped applying (2026-10-23 r10 #12). Dawn
+  (`handleMorning` -> `makeAllTotallyHungry`) also sets it, with fullness 1.
+  The listener reads the **live** `this.fullness`: until r12 #9 (2026-10-23) it read the
+  `initialize` parameter of the same name (the load-time snapshot), so in a fresh town a fed
+  townie was flagged only at dawn and its first meal cleared it until the next dawn; the board
+  then looped it `dining_no_table -> downtime via diner-ate` and never staged it to raw food.
+  r10's live check passed only because it followed a reload (the snapshot held values below
+  zero). Pinned by `SimpleVillagerHandleTest.freshTown_fedTownieBecomesStarvingWhen...`.
 - Every exit of `changeJobForVisitorFromBoard` logs its branch at debug (`JOB_POSSIBILITIES_COMPUTE`,
   so it lands in `run/logs/debug.log` without a toggle): `[board] <villager> <from> -> <to> via
   <branch>` (damaged-rest, bop-deposit, ready-for-downtime, starving-diner-stage, work-roll,

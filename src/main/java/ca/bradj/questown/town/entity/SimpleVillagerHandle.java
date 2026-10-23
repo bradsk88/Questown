@@ -187,7 +187,9 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         addHungryListener(e -> {
             // <= 0, not == 0: the flag is not saved, so a townie reloaded below zero must be
             // re-flagged by the next broadcast (every 10 below zero), or it is never starving again.
-            if (UtilClean.getOrDefault(fullness, delegator.getUUID(e), configs.baseFullness) <= 0) {
+            // this.fullness, not the shadowing parameter: the parameter is the load-time snapshot,
+            // empty in a fresh town, so a fed townie was never flagged again (r12 #9).
+            if (UtilClean.getOrDefault(this.fullness, delegator.getUUID(e), configs.baseFullness) <= 0) {
                 starving.put(delegator.getUUID(e), true);
             }
         });

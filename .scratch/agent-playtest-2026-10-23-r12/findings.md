@@ -91,7 +91,7 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    a 2-high room meant to be valid for beds?
    Side note: the sleep debug line prints the bed as `TownPosition{x=-22, z=76, scanLevel=205}`
    (y and z in the wrong fields); check whether a TownPosition is built with y/z swapped there.
-7. (bug?, P1) Day 6: starving townies never finish a raw-food meal. Both at fullness -67% ->
+7. (bug?, P1, hypothesis refuted) Day 6: starving townies never finish a raw-food meal. Both at fullness -67% ->
    -209% within ~4 minutes. 18:43-18:47 the cook entered dining_raw_food repeatedly, TOOK a raw
    chicken 7 times (`[PROBE:supplies] job=cook:dining_raw_food TOOK chicken`, totalTakes 33) and
    logged "gave up waiting for ingredients after 201 ticks (job: dining_raw_food)" 8 times; the
@@ -103,6 +103,9 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    *ingredient*, so a meal needs two raw foods, and with one in storage it never completes. r10
    had 6+ beef, which would explain why raw meals worked there. Settle: read the
    tool-vs-ingredient supply path for DinerRawFoodWork, or watch a meal with 2 raw items stocked.
+   Refuted after the run: new scenario `eating/eat_raw_food_single` (one beef in town) passes;
+   the gatherer took the beef and finished the meal (fullness -489 -> 2500). Likely downstream of
+   #9 (the cook was rarely flagged starving), not proven; re-check in the next live run.
 8. (bug, P1 progression) The hunter levelled to 2 at 18:43 ("Villager 1 reached level 2") and has
    sat at `xp 0/1200` since, though every hunt logs `[Experience] +200 from hunter:sword`
    (18:51, 18:52, 18:53, ...): the BOP latch (`hasBlockOfProgress`) makes addExperience
@@ -117,7 +120,7 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    Contrast: the miner (villager 3) reached level 2 at 19:09:57, went through the board, ran
    `miner:bop_depositing`, and "A Block of Progress was deposited" at 19:15:29 (~5.5 min). The
    hunter, chaining sword -> sword outside the board, is still latched.
-9. (bug, P1) Starving flag misses, two shapes (day 9):
+9. **[ROOT CAUSE FIXED 2026-10-23, after the run]** (bug, P1) Starving flag misses (day 9):
    a. The hunter's fullness steps by 10 from an odd offset (-11099 -> -11109); the hungry
       listener broadcasts only when `newVal <= 0 && abs(newVal) % 10 == 0`
       (`SimpleVillagerHandle.tickHunger`), so a townie whose fullness ends in a non-zero digit
@@ -131,6 +134,13 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    Day 11 scale: in 3 minutes the cook and the new gatherer each made ~34 dining_no_table <->
    downtime round trips; all five townies sit at -150% to -220% fullness; the cook hardly cooks.
    Hunger is the dominant drag on this run.
+   Root cause (both shapes): the hungry listener in `SimpleVillagerHandle.initialize` read the
+   method's `fullness` *parameter* (the load-time snapshot, empty in a fresh town), not the
+   live field, so it never flagged anyone; `starving` came only from dawn's
+   `makeAllTotallyHungry` and a meal cleared it until the next dawn. (a)'s `% 10` theory was
+   wrong: dawn sets fullness to 1 *and* starving true, which is where the odd values come from.
+   Fix: read `this.fullness`. `SimpleVillagerHandleTest` red -> green; eating 7/7 (incl.
+   dine_at_time and eat_direct, both listed as deterministic reds).
 10. **[FIXED 2026-10-23, after the run]** (bug, P0) Day 12, 19:22:08: placing the Kitchen-Diner furniture (a food display + empty plate
     blocks, via setblock as a builder would) disconnected the player: "Connection Lost ...
     EncoderException: Failed to encode packet 'clientbound/minecraft:custom_payload'". Server

@@ -426,6 +426,36 @@ class SimpleVillagerHandleTest {
         Assertions.assertTrue(handle.isStarving(villager));
     }
 
+    /**
+     * Agent playtest r12 #9: in a fresh town (nothing saved) a fed townie that went hungry was never
+     * flagged starving, so the board kept sending it dining_no_table -> downtime via diner-ate.
+     * The hungry listener read the fullness snapshot handed to initialize, not the live fullness.
+     */
+    @Test
+    public void freshTown_fedTownieBecomesStarvingWhenItsLiveFullnessDropsBelowZero() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = new SimpleVillagerHandle<>(
+                t,
+                new SimpleVillagerHandle.Configs(100, true, 1, 1, 100, 10, 100, 0.5f, 100, 100, 23000)
+        );
+        handle.initialize(
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                true
+        );
+        handle.register(villager);
+        handle.fillHunger(villager, 0.05f);
+        Assertions.assertFalse(handle.isStarving(villager));
+        for (int i = 0; i < 15; i++) {
+            handle.tick(Signals.NOON);
+        }
+        Assertions.assertTrue(handle.isStarving(villager));
+    }
+
     @Test
     public void testTickHungerShouldNotifyHungerListenerAfterTenTicksIfInitializedToZeroFullness() {
         TestDelegator t = new TestDelegator();

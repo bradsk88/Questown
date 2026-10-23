@@ -262,6 +262,7 @@ public class TestBlueprintRegistry {
         jobs.add(eatingEntry("eat_no_table", eatNoTableBlueprint()));
         jobs.add(eatingEntry("dine_at_time", dineAtTimeBlueprint()));
         jobs.add(eatingEntry("eat_raw_food", eatRawFoodBlueprint()));
+        jobs.add(eatingEntry("eat_raw_food_single", eatRawFoodSingleBlueprint()));
         jobs.add(eatingEntryDirect("eat_storage_full", eatWithStorageFullBlueprint()));
         jobs.add(eatingEntryDirect("eat_direct", eatDirectBlueprint()));
         jobs.add(eatingEntryDirect("no_raw_meal_after_eating", noRawMealAfterEatingBlueprint()));
@@ -4396,6 +4397,31 @@ public class TestBlueprintRegistry {
                 // 2026-10-22 r5: 20% after one meal, -40% before the give-up fallback fix).
                 0.15f, null, null,
                 new TestExpectation(List.of(new ExpectedProduct("minecraft:beef", 0, 1)), 0, 1),
+                false
+        );
+    }
+
+    /**
+     * Like eat_raw_food with only one raw item in town. Agent playtest r12 #7: a starving cook took
+     * the town's single chicken for dining_raw_food over and over and "gave up waiting for
+     * ingredients"; no raw meal ever finished. The meal must finish with one raw item.
+     */
+    private static TestBlueprint eatRawFoodSingleBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(
+                new ItemStack(Items.BEEF, 1)
+        ));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 0),
+                base.supplyDoorOffset(), null, null, null, true, 2000,
+                true, true,
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:beef", -1, null)),
+                        1, 1
+                ),
+                0.15f, null, null,
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:beef", 0, 0)), 0, 1),
                 false
         );
     }
