@@ -3,7 +3,12 @@ title: 'Agent playtest 2026-10-23 r13: continuous run to verify r12 #9 (starving
 status: needs-triage
 ---
 
-# Agent playtest 2026-10-23 r13 (continuous)
+# Agent playtest 2026-10-23 r13 (continuous) and r14
+
+r13 stopped on day 1 for #1. r14 is a fresh world on the same seed (-5440946815546586628), built at
+1b47cc98, with the same town layout (flag (-24, 69, 135), campfire (-27, 69, 135), room 1 door
+(-18, 69, 133), storeroom chest (-15, 69, 132), job board (-21, 69, 135), bedroom door
+(-10, 69, 135)).
 
 Goal: verify r12 #9 (the starving flag reads live fullness, e6debc70) in a fresh town, watch for
 r12 #7 (failed raw meals), and note what else turns up. Same rules as r12: the server is never
@@ -43,3 +48,18 @@ HEAD a5b417d6. Tick rate 40. Random seed; spawn at (-39.5, 74, 149.5).
    **FIXED 2026-10-23 (unit):** the listener moved to the `SimpleVillagerHandle` constructor.
    Red/green: `SimpleVillagerHandleTest.freshlyPlacedFlag_neverInitialized_fedTownieStillBecomesStarving`;
    all 62 `town.*` test classes green. Live check in r14.
+
+## r14
+
+- **r12 #9 + r13 #1 verified live (fresh town, no reload).** Day 1 hunter: fullness 56% at
+  20:54, hunted through three trips to -105%, `[board] hunter:sword -> downtime via
+  ready-for-downtime` (20:58:13), the dining-switch listener -> `dining_no_table`, then
+  `[board] dining_no_table -> dining_raw_food via starving-diner-stage` (20:58:20; this branch
+  needs `isStarving`), ate one raw item (`Fullness changed from -6480 to 2500`, 20:58:24), then
+  `diner-ate -> downtime`. No diner-ate churn.
+- **r12 #7 did not recur:** a single raw item was a full meal.
+- Raw Food closed on the hunter's first extraction (Raw Mutton, 20:55:29), not on a meal.
+2. (bug, r12 #8 evidence) `hunter:sword -> hunter:sword` at 20:56:23 has no `[board]` line, so
+   the chained re-assignment bypasses the board cascade. It also bypasses the starving check:
+   the hunter kept hunting from about 0% to -105% fullness and ate only after `ready-for-downtime`
+   ended the job, about 2 minutes later at tick rate 40.
