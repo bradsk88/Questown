@@ -471,7 +471,7 @@
   "menu.common.quantity": "%s x%d",
   "menu.work_add_confirm.title": "Requesting %s",
   "menu.work_add_confirm.there_are_n_known_jobs": "There are %d known jobs",
-  "menu.work_add_confirm.which_produce_this_item": "which produce this item.",
+  "menu.work_add_confirm.which_produce_this_item": "which produce it.",
   "menu.work_add_confirm.and_n_more": "and %d more",
   "menu.work_add_confirm.confirm_text": "Ask villagers to make this?",
   "menu.work_add_confirm.confirm_button": "Request %s",
