@@ -88,9 +88,16 @@ HEAD a5b417d6. Tick rate 40. Random seed; spawn at (-39.5, 74, 149.5).
   In r12 it was latched for 15+ minutes.
 - r15 intervention: villager 2 was made a cook with console `qt jobs set` (the diag client's
   `vopen` only reaches the first villager), to check r12 #4 (a hungry coal-less cook).
-4. (judge, answers the dev's r12 #4 question "the diner will finish eating and go back to its
-   jobs, showing a need balloon. Is that incorrect?") **Partly incorrect.** r15, cook with no
-   coal in town:
+4. **[RETRACTED 2026-10-23: invalid setup]** The cook below was made with console `qt jobs set`,
+   which unlocks only the named job (`cook/simple_furnace_food`). The BOP path
+   (`SimpleVillagerHandle.unlockAndChange`) also unlocks the root's default work (extract + fuel
+   + starter recipe) and posts starter requests. `TownPossibleWork.refreshUnmetNeeds` skips
+   locked jobs (`isUnlocked`), so `cook:fuel`'s coal need was never registered: `_qtdev inspect
+   villagers` read the cook `need=NONE` three times (23:00-23:01). For a BOP-made cook, the
+   existing UNMET_ITEM bubble ("They need Coal to work") may well cover r12 #4. Re-check with a
+   BOP-made cook. Original (invalid) notes kept for the record:
+   (judge, the dev's r12 #4 question "the diner will finish eating and go back to its jobs,
+   showing a need balloon. Is that incorrect?") r15, cook with no coal in town:
    - While the town has no raw food, the starving cook loops `dining_no_table ->
      dining_raw_food` (gave up waiting for ingredients) `-> seeking_work -> downtime` (watchdog,
      a different-job fallback) `-> dining_no_table`, about every 45 s, and never reaches a cook
