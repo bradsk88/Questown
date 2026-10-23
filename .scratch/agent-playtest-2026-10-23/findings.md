@@ -50,3 +50,13 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
    `dine_at_time`; `eat_direct`, a listed known red, passed).
    The day1 driver now sleeps from dayTime 13000: sleeping on the first dark tick raced the
    toast (which skips sleeping players) and failed `toast-at-first-dusk`.
+7. (judge, by design today) "Quest completed: Raw Food" fired the instant the swordless-until-now
+   hunter finished *eating* raw beef (`dining_raw_food`), before any hunt: `[LOOTTRACE] extract
+   'Raw Mutton' ... (extracted 1/1)`. `FirstHunterLootGuarantee` prepends mutton to any `hunter`
+   root result, meals included; `jobs/declarative/COMPLEX.md` "The hunter guarantee" says this is
+   deliberate ("job-agnostic within hunter", because `hunter/sword` never starts in ~78% of seeds).
+   A player sees the raw-food quest close on a meal. Tried narrowing it to the root's production
+   jobs (diners/downtime/rest/BOP/seeking excluded): unit-green, hunter 7/7 + loot 5/5, but
+   `self_sufficiency` cook unlocked 2/3 vs 3/3 unnarrowed. Reverted; the real fix is the doc's
+   "deeper fix" (why `hunter/sword` doesn't start). `ChickenArcLootGuarantee` has the same
+   any-job shape, also documented as deliberate.
