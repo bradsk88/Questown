@@ -457,6 +457,26 @@ class SimpleVillagerHandleTest {
     }
 
     @Test
+    public void freshlyPlacedFlag_neverInitialized_fedTownieStillBecomesStarving() {
+        // A freshly placed flag never calls initialize(...): only the NBT load path does
+        // (TownVillagerHandlerSerializer). So the starving listener must not live in initialize
+        // (playtest r13 #1: the fresh town's diners churned out via diner-ate).
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = new SimpleVillagerHandle<>(
+                t,
+                new SimpleVillagerHandle.Configs(100, true, 1, 1, 100, 10, 100, 0.5f, 100, 100, 23000)
+        );
+        handle.register(villager);
+        handle.fillHunger(villager, 0.05f);
+        Assertions.assertFalse(handle.isStarving(villager));
+        for (int i = 0; i < 15; i++) {
+            handle.tick(Signals.NOON);
+        }
+        Assertions.assertTrue(handle.isStarving(villager));
+    }
+
+    @Test
     public void testTickHungerShouldNotifyHungerListenerAfterTenTicksIfInitializedToZeroFullness() {
         TestDelegator t = new TestDelegator();
         SimpleVillagerHandle<String, UUID> handle = new SimpleVillagerHandle<>(

@@ -138,6 +138,17 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         this.delegator = del;
         this.configs = config;
         this.hungerEnabled = config.hungerEnabled;
+        // Registered here, not in initialize(...): a freshly placed flag never calls initialize
+        // (only the NBT load path does), so a fresh town never flagged anyone starving after
+        // dawn and its diners churned back out via diner-ate (playtest r13 #1).
+        addHungryListener(e -> {
+            // <= 0, not == 0: the flag is not saved, so a townie reloaded below zero must be
+            // re-flagged by the next broadcast (every 10 below zero), or it is never starving again.
+            // Live fullness: a fed townie must be flagged again when it runs down (r12 #9).
+            if (UtilClean.getOrDefault(this.fullness, delegator.getUUID(e), configs.baseFullness) <= 0) {
+                starving.put(delegator.getUUID(e), true);
+            }
+        });
     }
 
     public void initialize(
@@ -184,15 +195,6 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         this.jobChangesPending.putAll(jobChangesPending);
         this.guaranteedRoots.putAll(guaranteedRoots);
         this.preRolls.putAll(preRolls);
-        addHungryListener(e -> {
-            // <= 0, not == 0: the flag is not saved, so a townie reloaded below zero must be
-            // re-flagged by the next broadcast (every 10 below zero), or it is never starving again.
-            // this.fullness, not the shadowing parameter: the parameter is the load-time snapshot,
-            // empty in a fresh town, so a fed townie was never flagged again (r12 #9).
-            if (UtilClean.getOrDefault(this.fullness, delegator.getUUID(e), configs.baseFullness) <= 0) {
-                starving.put(delegator.getUUID(e), true);
-            }
-        });
         this.hungerEnabled = hungerEnabled;
     }
 

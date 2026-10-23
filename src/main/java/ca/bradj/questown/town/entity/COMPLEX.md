@@ -291,6 +291,14 @@ flowchart TD
   then looped it `dining_no_table -> downtime via diner-ate` and never staged it to raw food.
   r10's live check passed only because it followed a reload (the snapshot held values below
   zero). Pinned by `SimpleVillagerHandleTest.freshTown_fedTownieBecomesStarvingWhen...`.
+  The listener is registered in the **constructor**. In r12 #9 it was added inside
+  `initialize(...)`, and only the NBT load path calls that (`TownVillagerHandlerSerializer`
+  via the villager pair's `fromTag`). A freshly placed flag runs only `onFlagPlace`, so a fresh
+  town had no starving listener at all until its first reload. r13 #1 (2026-10-23) saw it live:
+  the dining-switch listener (`TownFlagTileData`) moved a −76% gatherer into
+  `dining_no_table`, and the board bounced it out `via diner-ate` about 20 times in 4 minutes.
+  The r12 #9 test called `initialize` with empty maps, which no fresh town does. Pinned by
+  `SimpleVillagerHandleTest.freshlyPlacedFlag_neverInitialized_fedTownieStillBecomesStarving`.
 - Every exit of `changeJobForVisitorFromBoard` logs its branch at debug (`JOB_POSSIBILITIES_COMPUTE`,
   so it lands in `run/logs/debug.log` without a toggle): `[board] <villager> <from> -> <to> via
   <branch>` (damaged-rest, bop-deposit, ready-for-downtime, starving-diner-stage, work-roll,
