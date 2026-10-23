@@ -69,6 +69,10 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
    diner to downtime; downtime's instant-eat restarts the diner) but the #6 guard only covers a
    starving diner, and the raw-food fallback is starving-only. Self-resolved; once cooked mutton
    existed the cook ate (07:26:56). Status flaps between dining/relaxing during it.
+   **Update after #12:** the cycle now resolves: downtime -> dining_no_table (gives up after ~200
+   ticks, no cooked food) -> dining_raw_food -> eats -> downtime (08:08-08:09, every ~70 s at 40 tps;
+   one villager reached -7000 before a meal). Remaining cost is the meal frequency (r9 #11 balance
+   note) and #14 (the cook can't cook what the town has).
 10. **[FIXED, pending live verify]** (bug, copy) An eating villager's status read "Cook is busy
     with their work." The `diner` tooltip category had keys only for NO_SUPPLIES and NO_JOBSITE;
     every other diner status (work states 0-2, GOING_TO_JOB, COLLECTING_SUPPLIES,
