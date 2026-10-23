@@ -68,7 +68,14 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    the flag within 40 s; V1 stayed pinned on the red bed at the identical position. Breaking the
    red bed freed V1 at once (at the flag 10 s later). So a townie that sleeps in a bed is pinned
    on top of it after waking, until the bed is removed; the town stalls (no hunts after day 2).
-   Open: why r10's 9-day run with a Big Bedroom didn't stall the same way (bed geometry? both
-   runs skipped nights via the campfire sleep).
+   Cause (confirmed by the roof raise; dev's call "raise the roof"): the room is 2 blocks tall inside (floor
+   y75, roof y78); a townie standing on a bed top (y 76.5625) is ~1.95 tall, so it reaches
+   ~78.5 and is wedged under the ceiling. r9's cook stood on its furnace for 13 min in the same
+   2-high rooms. Dev ruling 2026-10-23: raise the roof for this run, fix after the continuous run.
+   Done at 18:40 (roof moved to y79, beds restored, Big Bedroom re-recognized). Next morning
+   (day 6, 18:42:58) both slept in the beds and walked off them: the headroom explanation holds
+   (the hunter went straight back to hunter:sword). To settle after
+   the run: does a townie wake on top of the bed (vanilla stand-up position not found?) and is
+   a 2-high room meant to be valid for beds?
    Side note: the sleep debug line prints the bed as `TownPosition{x=-22, z=76, scanLevel=205}`
    (y and z in the wrong fields); check whether a TownPosition is built with y/z swapped there.
