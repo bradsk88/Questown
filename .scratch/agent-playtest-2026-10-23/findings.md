@@ -78,7 +78,7 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
     every other diner status (work states 0-2, GOING_TO_JOB, COLLECTING_SUPPLIES,
     WAITING_FOR_TIMED_STATE, EXTRACTING_PRODUCT, IDLE) fell to `JobTooltips.FALLBACK_LINE_1`. Added
     diner copy ("%s is going to eat.", "%s is eating.", ...).
-11. (judge, P1 for onboarding flow) Day 5: the new cook idles with raw beef, porkchop and chicken
+11. **[FIXED, dev chose "starter request = food tag" 2026-10-23]** (judge, P1 for onboarding flow) Day 5: the new cook idles with raw beef, porkchop and chicken
     in storage, coal 12, and the cook-batch "Food (4/8)" quest open (any `#villager_food`).
     `_qtdev work_score`: beef/porkchop/chicken 1.0 but "[Product not requested]"; the board's
     cook request is the auto-posted `cooked_mutton` (the cook's starter request), and the hunter
@@ -90,6 +90,10 @@ between the acceptance bands). Spawn was a y=111 meadow/mountain; moved to plain
     the picker falls back to unrequested work when no requested product is producible. Not
     changed (design). Live day 6: the cook's status reads "Cook is looking for supplies. / They
     need Raw Mutton to work." while beef/porkchop/chicken sit in storage.
+    **Resolved:** `postStarterRequests` posts each declared `initial_request` intact (tag stays a
+    tag) and drops an item a declared tag covers, so a new cook's board ask is
+    `#questown:villager_food`, not `cooked_mutton`. `StarterRequestsTest` 4/4. #14 (mutton-only
+    recipe set) is unaffected.
 12. **[FIXED, verified live]** (bug, P1, root cause of #6 and #9) The starving flag is in-memory
     only (`SimpleVillagerHandle.starving`, not saved) and the hungry listener set it only when the
     hunger broadcast caught fullness at exactly 0. After any reload a townie already below zero was

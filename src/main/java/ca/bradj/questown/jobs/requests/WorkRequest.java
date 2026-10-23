@@ -65,6 +65,14 @@ public class WorkRequest {
         return Ingredient.of();
     }
 
+    /** True when this is a tag request whose tag holds {@code other}'s item. */
+    public boolean covers(WorkRequest other) {
+        if (tag == null || other.item == null) {
+            return false;
+        }
+        return other.item.getDefaultInstance().is(tag);
+    }
+
     public void toNetwork(FriendlyByteBuf buffer) {
         buffer.writeUtf(item == null ? "" : Loader.itemIdOf(item).toString());
         buffer.writeUtf(tag == null ? "" : tag.location().toString());

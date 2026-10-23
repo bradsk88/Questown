@@ -18,6 +18,7 @@ import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.gui.FlagTabsEmbedding;
+import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
@@ -86,6 +87,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.Block;
@@ -2295,12 +2297,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (!isBoardAutoRequest()) {
             return;
         }
+        List<WorkRequest> declared = new ArrayList<>();
         for (JobID work : ServerJobsRegistry.getDefaultWork(root)) {
-            ItemStack output = ServerJobsRegistry.getDefaultWorkForNewWorker(getServerLevel(), work);
-            if (output.isEmpty()) {
+            Ingredient request = ServerJobsRegistry.getInitialRequest(getServerLevel(), work);
+            if (request == null || request.isEmpty()) {
                 continue;
             }
-            workHandle.requestWork(output.getItem());
+            declared.add(Ingredients.asWorkRequest(request));
+        }
+        for (WorkRequest r : StarterRequests.toPost(declared, WorkRequest::covers)) {
+            workHandle.requestWork(r);
         }
     }
 

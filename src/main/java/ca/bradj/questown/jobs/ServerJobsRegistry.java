@@ -852,26 +852,23 @@ public class ServerJobsRegistry {
         return workSupplier;
     }
 
-    public static ItemStack getDefaultWorkForNewWorker(
+    /**
+     * The work's declared {@code initial_request} as declared (a tag stays a tag), or null when it
+     * has none. A new worker's starter board requests come from this.
+     */
+    public static @Nullable Ingredient getInitialRequest(
             ServerLevel sl,
             JobID v
     ) {
         if (isSeekingWork(v)) {
-            return ItemStack.EMPTY;
+            return null;
         }
         Supplier<Work> w = getWorkSupplier(v);
         if (w == null) {
             QT.JOB_LOGGER.error("[Default Work Request] No recognized job for ID: {}", v);
-            return ItemStack.EMPTY;
+            return null;
         }
-        Ingredient apply = w.get().initialRequest.apply(sl);
-        if (apply == null) {
-            return ItemStack.EMPTY;
-        }
-        for (ItemStack item : apply.getItems()) {
-            return item;
-        }
-        return ItemStack.EMPTY;
+        return w.get().initialRequest.apply(sl);
     }
 
     /**

@@ -993,6 +993,14 @@ graph LR
   (`SimpleVillagerHandle.unlockAndChange` → `Delegator.postStarterRequests`). It checks
   `isBoardAutoRequest()`. Manual posting (`AddWorkFromUIMessage` → `requestWork`) is never
   gated. (Until 2026-10-19 only the quest reward posted; see "BOP root change ..." below.)
+- **What it posts** (2026-10-23, agent playtest r10 #11, dev decision): each default work's
+  `initial_request` *as declared* (`ServerJobsRegistry.getInitialRequest` →
+  `Ingredients.asWorkRequest`), so a tag stays a tag, and an item request another declared
+  request covers is dropped (`StarterRequests.toPost` with `WorkRequest::covers`). A new cook
+  therefore posts only `#questown:villager_food` (cook/extract, cook/fuel), not cook/mutton's
+  `cooked_mutton`. Before, each request was flattened to its first item, so the board's cook ask
+  was a specific `cooked_mutton` and the cook idled when the hunter brought beef. It does not
+  unlock beef/porkchop/chicken recipes (r10 #14 stays open). Pinned by `StarterRequestsTest`.
 - **Idempotency**: `TownWorkHandle.requestWork(WorkRequest)` now no-ops when the
   request is already pending. The board is a set of *unfulfilled* requests — a
   fulfilled one drops off (`removeWorkRequest`) and may be re-requested then.
