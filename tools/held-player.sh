@@ -24,12 +24,12 @@ LOG=${5:?$USAGE}
 FF="$(cd "$(dirname "$0")" && pwd)/ffeed.sh"
 fail=0
 
-"$FF" feed "difficulty peaceful" --expect "difficulty" "$LOG" || fail=1
-"$FF" feed "effect give $P minecraft:resistance 3000 255 true" --expect "Applied effect" "$LOG" || fail=1
-"$FF" feed "tp $P $X $Y $Z" --expect "Teleported $P" "$LOG" || fail=1
+bash "$FF" feed "difficulty peaceful" --expect "difficulty" "$LOG" || fail=1
+bash "$FF" feed "effect give $P minecraft:resistance 3000 255 true" --expect "Applied effect" "$LOG" || fail=1
+bash "$FF" feed "tp $P $X $Y $Z" --expect "Teleported $P" "$LOG" || fail=1
 # No --expect: vanilla prints nothing when the mode is already survival.
-"$FF" feed "gamemode survival $P" >/dev/null || fail=1
-"$FF" feed "give $P minecraft:paper" --expect "Gave 1" "$LOG" || fail=1
+bash "$FF" feed "gamemode survival $P" >/dev/null || fail=1
+bash "$FF" feed "give $P minecraft:paper" --expect "Gave 1" "$LOG" || fail=1
 
 if [ "$fail" -ne 0 ]; then
     echo "held-player: a step was not confirmed (is $P online? is the FIFO console enabled?)" >&2
