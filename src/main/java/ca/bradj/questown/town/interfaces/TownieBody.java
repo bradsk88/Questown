@@ -63,7 +63,9 @@ public interface TownieBody {
 
     void showOffhandItem(ItemStack item);
 
-    TownieNeed getNeed();
-
-    void setNeed(TownieNeed need);
+    /** Show the townie's need bubble (and, for UNMET_ITEM, which item). */
+    void showNeed(
+            TownieNeed need,
+            String unmetItem
+    );
 }

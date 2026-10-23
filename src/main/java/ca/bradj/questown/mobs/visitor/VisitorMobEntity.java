@@ -5,7 +5,6 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
@@ -302,35 +301,28 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
     }
 
     /**
-     * Records that this townie needs the player's help with something, so a bubble can say so.
-     * Silence means working (ADR-0011), so this is set only when the townie has actually given up.
+     * Server-only: the townie needs the player's help with something. The need is the townie's,
+     * kept by its runtime, which shows it on this body; see {@link TownieRuntime#setNeed}.
      */
-    @Override
     public void setNeed(TownieNeed newNeed) {
-        if (level().isClientSide()) {
-            return;
-        }
-        if (newNeed.name().equals(this.entityData.get(need))) {
-            return;
-        }
-        QT.VILLAGER_LOGGER.debug("Townie {} need is now {}", UtilClean.truncateMiddle(getUUID()), newNeed);
-        this.entityData.set(need, newNeed.name());
-        if (newNeed != TownieNeed.UNMET_ITEM) {
-            this.entityData.set(unmetItem, "");
+        if (runtime != null) {
+            runtime.setNeed(newNeed);
         }
     }
 
-    @Override
+    /** The townie's need: its runtime's on the server, what this body shows on the client. */
     public TownieNeed getNeed() {
+        if (runtime != null) {
+            return runtime.getNeed();
+        }
         return TownieNeed.fromName(this.entityData.get(need));
     }
 
     /** Server-only: the item the {@code UNMET_ITEM} need is about, cleared by {@link #setNeed}. */
     public void setUnmetItem(String itemKey) {
-        if (level().isClientSide()) {
-            return;
+        if (runtime != null) {
+            runtime.setUnmetItem(itemKey);
         }
-        this.entityData.set(unmetItem, itemKey == null ? "" : itemKey);
     }
 
     /**
@@ -353,8 +345,35 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         }
     }
 
+    /** The UNMET_ITEM need's item: its runtime's on the server, what this body shows on the client. */
     public String getUnmetItem() {
+        if (runtime != null) {
+            return runtime.getUnmetItem();
+        }
         return this.entityData.get(unmetItem);
+    }
+
+    @Override
+    public void showNeed(
+            TownieNeed townieNeed,
+            String item
+    ) {
+        this.entityData.set(need, townieNeed.name());
+        this.entityData.set(unmetItem, item);
+    }
+
+    /** The brain gave up walking to its target: see {@link TownieRuntime#gaveUpReaching}. */
+    public void reportGaveUpReaching() {
+        if (runtime != null) {
+            runtime.gaveUpReaching();
+        }
+    }
+
+    /** The brain can reach its targets again: see {@link TownieRuntime#canReachAgain}. */
+    public void reportCanReachAgain() {
+        if (runtime != null) {
+            runtime.canReachAgain();
+        }
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
@@ -655,15 +674,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
     @Override
     public void onRemovedFromWorld() {
         super.onRemovedFromWorld();
-        if (town == null || level().isClientSide()) {
+        if (level().isClientSide() || !(town instanceof TownFlagBlockEntity flag)) {
             return;
         }
         RemovalReason reason = getRemovalReason();
         if (reason == RemovalReason.UNLOADED_TO_CHUNK || reason == RemovalReason.UNLOADED_WITH_PLAYER) {
-            town.getVillagerHandle().remove(this);
-            if (runtime != null) {
-                runtime.detachBody(this);
-            }
+            flag.townieBodyUnloaded(this);
         }
     }
 
@@ -680,20 +696,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
                     position().y,
                     position().z
             );
-            for (int i = 0; i < getInventory().getContainerSize(); i++) {
-                level().addFreshEntity(new ItemEntity(
-                        level(),
-                        position().x,
-                        position().y,
-                        position().z,
-                        getInventory().getItem(i)
-                ));
-            }
-            if (town != null) {
-                town.getVillagerHandle().remove(this);
-            }
             if (town instanceof TownFlagBlockEntity flag) {
-                flag.retireVillager(getUUID());
+                flag.townieKilled(this);
             }
         }
     }

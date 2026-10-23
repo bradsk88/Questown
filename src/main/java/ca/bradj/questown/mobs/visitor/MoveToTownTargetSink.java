@@ -196,7 +196,7 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
         }
 
         if (hasGivenUpReaching(p_23617_, brain)) {
-            vme.setNeed(TownieNeed.CANT_REACH);
+            vme.reportGaveUpReaching();
             brain.eraseMemory(MemoryModuleType.WALK_TARGET);
             brain.eraseMemory(MemoryModuleType.PATH);
             stuckTicks = 0;
@@ -248,9 +248,7 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
         if (!(mob instanceof VisitorMobEntity vme)) {
             return;
         }
-        if (vme.getNeed() == TownieNeed.CANT_REACH) {
-            vme.setNeed(TownieNeed.NONE);
-        }
+        vme.reportCanReachAgain();
     }
 
     private boolean hasGivenUpReaching(

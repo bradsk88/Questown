@@ -2,6 +2,7 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
+import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
@@ -51,6 +52,10 @@ public final class TownieRuntime {
     private Vec3 lastPosition;
     /** The game tick of the townie's last decisions (see {@link #tick}); -1 before its first. */
     private long lastDecidedAt = -1;
+    /** What the townie needs the player's help with, which its body shows as a bubble. */
+    private TownieNeed need = TownieNeed.NONE;
+    /** When {@link #need} is {@link TownieNeed#UNMET_ITEM}, the missing ingredient's key; else empty. */
+    private String unmetItem = "";
     private final List<Consumer<ImmutableList<Ingredient>>> ingrListeners = new ArrayList<>();
     private final List<Runnable> changeListeners = new ArrayList<>();
     private final Collection<Function<Void, Void>> cleanupJobListeners = new ArrayList<>();
@@ -99,6 +104,60 @@ public final class TownieRuntime {
     void attachBody(TownieBody b) {
         this.body = b;
         b.showJobName(job.getJobName().translationKey());
+        b.showNeed(need, unmetItem);
+    }
+
+    /** What the townie needs the player's help with (see {@code CONTEXT.md} "Need bubble"). */
+    public TownieNeed getNeed() {
+        return need;
+    }
+
+    /** The missing ingredient's key while the need is {@link TownieNeed#UNMET_ITEM}; else empty. */
+    public String getUnmetItem() {
+        return unmetItem;
+    }
+
+    /**
+     * Records that this townie needs the player's help with something, so its body can say so.
+     * Silence means working (ADR-0011), so this is set only when the townie has actually given up.
+     * Any need but UNMET_ITEM clears the unmet item.
+     */
+    public void setNeed(TownieNeed newNeed) {
+        if (newNeed == need) {
+            return;
+        }
+        town.getDebugLogger(QT.VILLAGER_LOGGER, DebugLogArgument.JOB_LOGIC).log(
+                "Townie {} need is now {}", UtilClean.truncateMiddle(uuid), newNeed
+        );
+        need = newNeed;
+        if (newNeed != TownieNeed.UNMET_ITEM) {
+            unmetItem = "";
+        }
+        showNeed();
+    }
+
+    /** The item the {@code UNMET_ITEM} need is about; {@link #setNeed} clears it. */
+    public void setUnmetItem(@Nullable String itemKey) {
+        unmetItem = itemKey == null ? "" : itemKey;
+        showNeed();
+    }
+
+    /** The body gave up walking to its target: the townie asks the player for help (CANT_REACH). */
+    public void gaveUpReaching() {
+        setNeed(TownieNeed.CANT_REACH);
+    }
+
+    /** The body can get where it is going again: a CANT_REACH need (only that one) clears. */
+    public void canReachAgain() {
+        if (need == TownieNeed.CANT_REACH) {
+            setNeed(TownieNeed.NONE);
+        }
+    }
+
+    private void showNeed() {
+        if (body != null) {
+            body.showNeed(need, unmetItem);
+        }
     }
 
     /** The body left the world (its chunk unloaded): the townie stays, where the body last stood. */
@@ -309,7 +368,7 @@ public final class TownieRuntime {
             return;
         }
         b.showStatus(ticked.getStatusToSyncToClient());
-        syncStorageNeed(b, ticked.getStatus());
+        syncStorageNeed(ticked.getStatus());
         Container inventory = ticked.getInventory();
         b.showMainHandItem(inventory.getItem(0));
         if (!ticked.getGlobalSpecialRules().contains(SpecialRules.ONLY_RENDER_FIRST_ITEM_IN_HAND)) {
@@ -330,11 +389,10 @@ public final class TownieRuntime {
         return ItemStack.EMPTY;
     }
 
-    private static void syncStorageNeed(TownieBody b, IStatus<?> jobStatus) {
-        TownieNeed need = b.getNeed();
+    private void syncStorageNeed(IStatus<?> jobStatus) {
         TownieNeed next = storageNeedAfter(need, jobStatus);
         if (next != need) {
-            b.setNeed(next);
+            setNeed(next);
         }
     }
 

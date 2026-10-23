@@ -14,8 +14,9 @@ See `CONTEXT.md` → **Need bubble** for the vocabulary, and
 flowchart TD
     Sink["MoveToTownTargetSink.tick<br/>(brain activity)"]
     Sink -->|"CANT_REACH_WALK_TARGET_SINCE older than 200 ticks<br/>OR 3 failed unstick shoves"| GiveUp["hasGivenUpReaching"]
-    GiveUp --> Set["vme.setNeed(CANT_REACH)<br/>+ erase WALK_TARGET / PATH"]
-    Set --> Data["SynchedEntityData 'need' (String)"]
+    GiveUp --> Set["vme.reportGaveUpReaching()<br/>+ erase WALK_TARGET / PATH"]
+    Set --> Runtime["TownieRuntime.gaveUpReaching<br/>→ setNeed(CANT_REACH) (the need is the flag's)"]
+    Runtime --> Data["body.showNeed → SynchedEntityData 'need' (String)"]
 
     Data -.auto-syncs.-> Focus["NeedBubbleFocus.tick<br/>(client tick, 16-block box)"]
     Focus -->|"best crosshairAlignment >= 0.9,<br/>one winner"| Hold["current = that townie's UUID"]
@@ -110,7 +111,7 @@ bubble shows that item, not a generic stand-in.
 flowchart LR
     TCP["tryComputePath"] -->|reachedTarget| Clear["clearCantReachNeed"]
     TCP -->|"path.canReach()"| Clear
-    Clear --> Reset["failedUnsticks = 0<br/>setNeed(NONE) if CANT_REACH"]
+    Clear --> Reset["failedUnsticks = 0<br/>vme.reportCanReachAgain()<br/>→ runtime: NONE if CANT_REACH"]
     Reset --> Sync["synched need = NONE"]
     Sync -.-> Forget["NeedBubbleFocus.forgetIfResolved<br/>(called from the renderer)"]
 ```
@@ -118,8 +119,12 @@ flowchart LR
 - **There is no backoff and no silent re-targeting.** A townie that gave up retries,
   fails, and re-bubbles until the player clears the way — silent self-correction is
   the failure mode the mechanism exists to kill (CONTEXT.md, 2026-07-28).
-- Only the server writes `need`; `setNeed` no-ops client-side and on an unchanged
-  value, so the synched field is quiet unless something actually changed.
+- Only the server writes `need`: the townie's runtime on the flag owns it
+  (`TownieRuntime.setNeed`, no-op on an unchanged value) and pushes it to the body
+  (`TownieBody.showNeed`), so the synched field is quiet unless something actually changed.
+  The entity's `setNeed`/`setUnmetItem` forward to the runtime (no-op on the client, where
+  there is none) and its `getNeed`/`getUnmetItem` read the runtime on the server and the
+  synched field on the client. A body that reattaches to its townie re-shows the need.
 - `failedUnsticks` also resets in `start`, i.e. whenever a fresh path is taken up.
   Without that, a shove count earned against one target would carry to the next and
   make the townie give up on it instantly, before trying.

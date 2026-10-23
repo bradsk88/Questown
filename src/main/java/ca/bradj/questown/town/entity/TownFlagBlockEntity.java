@@ -917,6 +917,31 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return villagerHandle.getTownie(villager);
     }
 
+    /** A townie's body unloaded with its chunk: the townie stays in town, without a body for now. */
+    public void townieBodyUnloaded(VisitorMobEntity body) {
+        villagerHandle.delegate.remove(body);
+        TownieRuntime townie = body.getRuntime();
+        if (townie != null) {
+            townie.detachBody(body);
+        }
+    }
+
+    /**
+     * A townie's body was killed: what the townie carried drops where its body fell, and the
+     * townie leaves the town for good.
+     */
+    public void townieKilled(VisitorMobEntity body) {
+        TownieRuntime townie = body.getRuntime();
+        if (townie != null) {
+            Container carried = townie.getInventory();
+            for (int i = 0; i < carried.getContainerSize(); i++) {
+                body.dropItem(carried.getItem(i));
+            }
+        }
+        villagerHandle.delegate.remove(body);
+        retireVillager(body.getUUID());
+    }
+
     public boolean hasVillagers() {
         return townVillagerCount() > 0;
     }

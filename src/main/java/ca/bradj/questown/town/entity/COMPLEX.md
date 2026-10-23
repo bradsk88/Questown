@@ -1542,9 +1542,27 @@ per-tick decision, under its own "TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTI
 
 | Lives on | What |
 |---|---|
-| `TownieRuntime` (flag) | the `Job`, `WorkToUndo`, ticks without a supply target, freeze ticks, status / change / wanted-ingredient listeners |
+| `TownieRuntime` (flag) | the `Job`, `WorkToUndo`, ticks without a supply target, freeze ticks, the need (bubble) and its unmet item, status / change / wanted-ingredient listeners |
 | `TownVillagerHandle` (flag, unchanged) | stats: hunger, mood, damage, XP, proficiencies, unlocks, pose requests, look targets |
-| `VisitorMobEntity` (body) | brain + navigation, pose, synched display data (visible, status, job name, held items, need) |
+| `VisitorMobEntity` (body) | brain + navigation, pose, synched display data the flag pushes (visible, status, job name, held items, need) |
+
+## Events from the body
+
+The body reports; the flag decides what follows.
+
+| The body | Calls | The flag |
+|---|---|---|
+| unloads with its chunk | `TownFlagBlockEntity.townieBodyUnloaded` | unregisters the body, detaches it from the runtime |
+| is killed | `TownFlagBlockEntity.townieKilled` | drops what the townie carried where the body fell, unregisters it, retires the townie |
+| gives up walking (brain, `MoveToTownTargetSink`) | `VisitorMobEntity.reportGaveUpReaching` | `TownieRuntime.gaveUpReaching`: need CANT_REACH |
+| can reach its targets again | `VisitorMobEntity.reportCanReachAgain` | `TownieRuntime.canReachAgain`: clears CANT_REACH only |
+| sees a player looking at it | `setLookTarget` on the villager handle (unchanged) | the look target the body then faces |
+| is right-clicked | `Jobs.openInventoryAndStatusScreen` (unchanged) | opens the townie's screens |
+
+The need (bubble) is the runtime's: `TownPossibleWork`'s UNMET_ITEM, the runtime's own
+NO_STORAGE and the brain's CANT_REACH all set it there, and the body only shows it
+(`TownieBody.showNeed`). The entity's need getters read the runtime on the server and the
+synched field on the client.
 
 ## Binding
 
