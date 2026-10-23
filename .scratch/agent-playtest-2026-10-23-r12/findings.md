@@ -108,3 +108,14 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
    starving/downtime branches) never apply to it. The flag gets no BOP and the hunter's XP is
    frozen. CONTEXT.md "Block of Progress" says the latch stalls a townie only "for the brief
    level-up -> deposit window"; here it's 15+ real minutes and counting.
+9. (bug, P1) Starving flag misses, two shapes (day 9):
+   a. The hunter's fullness steps by 10 from an odd offset (-11099 -> -11109); the hungry
+      listener broadcasts only when `newVal <= 0 && abs(newVal) % 10 == 0`
+      (`SimpleVillagerHandle.tickHunger`), so a townie whose fullness ends in a non-zero digit
+      after a meal (`setFullness` = percent * base) is never re-flagged starving. The hunter has
+      had no broadcast since 18:23. This also explains why its board branches never apply (#8).
+   b. The cook (fullness -7650/-7660, broadcast every second since 19:06:2x) still churns
+      `dining_no_table -> downtime via diner-ate` every ~5 s (26 times 19:04-19:07), and
+      `diner-ate` requires `!isStarving`. Only `setFullness(percent > 0)` writes false. Not
+      settled in-run: whether the board's `isStarving(ownerVUID)` reads a different key than
+      the listener's `delegator.getUUID(e)`. A starving cook never reaches dining_raw_food.
