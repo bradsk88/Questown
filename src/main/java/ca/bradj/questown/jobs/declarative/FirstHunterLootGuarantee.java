@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.MetaJobs;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.QuestsHolder;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -35,8 +36,9 @@ import java.util.List;
  * without double-counting — the bit guarantees exactly-one-prepend per town.
  *
  * <p>Unlike the chicken-arc prepend, this is not tied to the arc — it fires
- * whenever the raw-food LOOT is still open, the job's root is {@code hunter},
- * and the once-bit has not fired.
+ * whenever the raw-food LOOT is still open, the job's root is {@code hunter}
+ * and the job is not one of the root's upkeep jobs ({@link MetaJobs}), and the
+ * once-bit has not fired.
  */
 public final class FirstHunterLootGuarantee {
 
@@ -81,6 +83,11 @@ public final class FirstHunterLootGuarantee {
             return false;
         }
         if (jobId == null || !"hunter".equals(jobId.rootId())) {
+            return false;
+        }
+        // A meal is not a hunt: a starving hunter eating player-stocked raw beef closed the
+        // raw-food quest with the prepended mutton (agent playtest r10 #7, dev 2026-10-23).
+        if (MetaJobs.isMeta(jobId)) {
             return false;
         }
         return rawFoodLootQuestActive(flag);

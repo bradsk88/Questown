@@ -58,7 +58,11 @@ one mutton per town.
 
 The guard reads:
 - `!flag.isFirstHunterLootGuaranteeFired()` (the once-only bit).
-- `jobId.rootId().equals("hunter")` (job-agnostic within hunter).
+- `jobId.rootId().equals("hunter")` (job-agnostic within hunter's own work), and
+  `!MetaJobs.isMeta(jobId)`: not one of the root's upkeep jobs (the three diners, downtime,
+  resting, seeking_work, bop_depositing). Since 2026-10-23 (agent playtest r10 #7, dev ruling): a
+  starving hunter eating player-stocked raw beef had closed the raw-food quest on the meal. Check:
+  `MetaJobsTest`; self_sufficiency 3/3 cook unlocked (baseline 3/4), each closed by a hunted item.
 - `rawFoodLootQuestActive(flag)` — there is an ACTIVE `LOOT`-type quest whose
   wanted item matches the raw-food tag (the same tag a matching item would
   close).
