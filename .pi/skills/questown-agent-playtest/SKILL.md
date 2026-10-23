@@ -99,16 +99,28 @@ relights the campfire", which the Acting section already said.
   straight off the PNG and do not scale it; 2026-10-22 a 2x guess hovered nothing and produced a
   false "hover isn't capturable" note; same space as `cursor`) presses buttons and, as two clicks,
   moves an item between slots. `close` = Escape. `cursor 1 1` before a clean shot.
-  **Screenshot before clicking**: screens resize as the town grows (the crafting tab gained a
-  "Begin moving this town" section on day 3 and every Craft button moved up).
+  **Screenshot before clicking**: screens resize as the town grows. The crafting tab's Craft
+  buttons (x 345) sit at y 271/301/331/361/391 (stick, plate, sign, stairs, rod) while the flag
+  shows 2 tabs. Once the first villager arrives it shows 4 tabs plus "Begin moving this town",
+  and the rows move up to y 228/258/288/318/348. r13 clicked the old y, and the "wand" it used
+  on the door was a plain stick.
+- Known positions (guiScale 3, verified r13-r15): BOP tab "Take Block of Progress" (302, 354);
+  change-job panel: hotbar slot 1 (231, 391) -> insert slot (230, 256) -> Unlock (264, 305).
+  `vopen <type>` only opens the *first* synced villager. To give another villager a job use
+  `qt jobs set @e[type=questown:visitor,name="Villager N",limit=1] <root>/<job>` (since 1fb248d1
+  it is the Block of Progress path) and log it as an intervention. `inquire <flag x y z> <item>`
+  (the flag's position; the board's opens nothing) opens the work-request confirm, Yes at
+  (263, 385).
 - Placing like a player: hold the item, then `_qtdev clickheld <x y z>` right-clicks the top face
   of that block. Item ids: `questown:flag_base`, `questown:welcome_mat_block`,
   `questown:town_wand`, `questown:job_board_block`, `questown:mineshaft`. Survival mats, wands,
   boards and mineshafts come from the flag's crafting tab (they carry the flag link); a `give`n
   mat has no link and silently fails to place. The placed block lands one *above* the clicked
   block: clicking a y75 floor puts a chest at y76, so address its container at y76 (r12 wrote
-  swords into the floor). Put the campfire at the flag's own Y until r12 #2 is fixed: one block
-  up the slope and the Campfire quest never completes.
+  swords into the floor). `clickheld` with an empty hand does nothing ("Dev has nothing in the
+  main hand"). A campfire may sit up to 2 blocks above or below the flag (dd064f85). The wand's
+  temp bed needs floor at the campfire's own level: on a lone pillar the wand says "No safe place
+  to sleep near this campfire".
 - With no player online the town's chunks unload and console `setblock`/`data` answer "That
   position is not loaded" (r12 read an earlier "Changed the block" line as success). Run
   `forceload add <x1> <z1> <x2> <z2>` first and `forceload remove` after.
@@ -119,9 +131,9 @@ relights the campfire", which the Acting section already said.
   replace, or the flag-linked item is gone (r10 ate a crafted mineshaft this way).
 - An `item replace` on the hand while a flag/villager menu is open does not reach the client
   (vanilla only syncs the open menu's slots): Craft buttons stay greyed. `close`, replace, reopen.
-- Rooms: build interiors 3 blocks high (`fill x1 F z1 x2 F+4 z2 ... hollow`, F = floor): a
-  townie standing on a bed (or furniture) in a 2-high room wedges under the ceiling and never
-  moves again (r12 #6; dev: "raise the roof"). Build with `fill ... hollow`, then wand the door. Probe ground height first (`execute if
+- Rooms: 2-high bedrooms are fine since eeba8a2d (townies stand up beside the bed; verified
+  r15). Furniture other than beds can still wedge a townie in a 2-high room (r9's cook on its
+  furnace), so default to 3-high interiors (`fill x1 F z1 x2 F+4 z2 ... hollow`, F = floor). Build with `fill ... hollow`, then wand the door. Probe ground height first (`execute if
   block x y z minecraft:air run say ...`). `hollow` also closes the bottom face, so start the fill
   one block *below* the door's bottom half (the bottom face becomes the floor). With the floor
   level with the door's bottom, villagers stand stuck in the doorway: they can't jump the step
@@ -195,4 +207,13 @@ relights the campfire", which the Acting section already said.
   that state first (`grep -n '<field>.put\|set<Field>('` over the owning class). r12 committed a
   "`% 10` broadcast gate" cause for the starving flag; dawn's `makeAllTotallyHungry` also wrote
   it, and the real cause was a shadowed parameter (`e6debc70`).
+- **A finding about the player's experience is tested on a player-made state and read on every
+  surface.** r15 told the dev "the coal-less cook never mentions coal" and had to retract it. The
+  cook was console-made (the old `qt jobs set` unlocked one job, not the root's default work), so
+  its coal need could never register. And only the flag-tab tooltip had been read. Before such a
+  claim, check that the intervention is the owner's path, and read all three surfaces: `_qtdev
+  inspect villagers <flag>` (`need=` / `needs item:`), the in-world bubble (a shot facing the
+  townie; one bubble at a time, nearest the crosshair), and the flag villagers-tab tooltip.
+- `Fullness changed from X to Y` names no villager. Attribute meals from `_qtdev villager_stats`
+  readings, not from those lines (r15 nearly credited the hunter's meal to the cook).
 - Commit findings as you go; the job's temp dir is deleted with the job.
