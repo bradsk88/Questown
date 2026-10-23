@@ -23,6 +23,7 @@ import ca.bradj.questown.commands.FlagCraftCommand;
 import ca.bradj.questown.commands.FlagDestroyCommand;
 import ca.bradj.questown.commands.FlagPlaceBlockCommand;
 import ca.bradj.questown.commands.FlagPlaceBoardCommand;
+import ca.bradj.questown.commands.VillagerStatsCommand;
 import ca.bradj.questown.commands.FlagPlaceDoorCommand;
 import ca.bradj.questown.commands.FlagPlacePlayerCommand;
 import ca.bradj.questown.commands.FlagShutdownCommand;
@@ -86,6 +87,7 @@ public class CommandInit {
         QtDevInspectCommand.register(event.getDispatcher(), event.getBuildContext());
         FlagCraftCommand.register(event.getDispatcher());
         FlagPlaceBoardCommand.register(event.getDispatcher());
+        VillagerStatsCommand.register(event.getDispatcher());
         FlagPlaceDoorCommand.register(event.getDispatcher());
         FlagBuildRoomCommand.register(event.getDispatcher());
         QtDevHelpCommand.register(event.getDispatcher());

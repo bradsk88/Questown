@@ -52,8 +52,15 @@ relights the campfire", which the Acting section already said.
 
 ## Observing
 
+- Helpers (all from the repo root): `tools/agent-playtest/restart.sh <name>` restarts server +
+  client and waits for the join (rebuilds; feeds `stop` only to a live server);
+  `ground.sh <x> <z>` prints the column's top non-air y (the block to `clickheld`);
+  `probe-block.sh <block-id> <x y z>...` says which positions hold a block.
+- `_qtdev villager_stats <flag x y z>` logs each townie's server-side level, xp, fullness, mood
+  and effects: check a screen against it before calling a number wrong.
 - `tools/agent-playtest/look.sh <name> [maxlines]`: screenshot plus new server log lines since
-  the last look. Then `Read` the PNG. It waits for a complete PNG (reading a half-written file
+  the last look; `PARK="x y"` parks the cursor and waits a frame first (a screen opens with the
+  cursor at the window centre, so a card there shows a stale tooltip). Then `Read` the PNG. It waits for a complete PNG (reading a half-written file
   fails `crop.py`'s `assert d[:8] == b'\x89PNG...'`).
 - `tools/agent-playtest/zoom.py <png> <out> x0 y0 x1 y1 [factor]`: crop and upscale small GUI
   text (no PIL on this box). Use it for quest cards, tooltips, bars and bubbles.

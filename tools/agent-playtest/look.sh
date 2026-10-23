@@ -4,6 +4,7 @@
 # complete (a partial file breaks readers), prints its path, then prints the server log lines
 # written since the previous look (multi-line [WHY] dump bodies filtered out).
 #   PLAY_LOG   server log to tail (default: <repo>/run/logs/latest.log)
+#   PARK       "x y": park the cursor there (screenshot pixels) and wait 1 s before the shot
 # State: <repo>/build/agent-playtest/offset (log line reached by the last look).
 set -u
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
@@ -11,6 +12,9 @@ LOG=${PLAY_LOG:-$REPO/run/logs/latest.log}
 STATE=$REPO/build/agent-playtest; mkdir -p "$STATE"; OFF=$STATE/offset
 name=${1:?usage: look.sh <name> [maxlines]}; max=${2:-40}
 f=$REPO/run-client/diags/$name.png
+# PARK="x y" parks the cursor first and lets a frame render, so a stale hover (the cursor rests at
+# the window centre when a screen opens) is not in the shot. Screenshot pixels, 1x.
+if [ -n "${PARK:-}" ]; then echo "cursor $PARK" >> "$REPO/run-client/.qtdiag-cmd"; sleep 1; fi
 echo "shot $name" >> "$REPO/run-client/.qtdiag-cmd"
 prev=-1
 for i in $(seq 1 60); do

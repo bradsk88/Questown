@@ -75,3 +75,11 @@ and (mirrored 2026-10-01) `open_jobs`; it has **no** `board_request`, so a
 card-rich work board on the golden side must be driven through the AddWork
 confirm flow or the same command mirrored over (the golden's `WorkScreen`
 card path is otherwise the same).
+
+## `_qtdev villager_stats <flag pos>` (2026-10-23)
+
+Read-only console view of each townie's server-side stats, one log line per townie from
+`VillagerStatsData.summary()` (`Lvl 4, xp 960/1728, fullness -16%, mood 100%, damage 0%, effects
+[]`). Added after r9's stats page showed another townie's numbers (c0bd21a2): the only ground
+truth then was the flag's raw NBT. Fullness reads negative below empty (hunger keeps ticking
+below zero to drive dining). Pin: `VillagerStatsDataTest`. A position without a flag logs a warning.
