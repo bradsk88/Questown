@@ -43,8 +43,8 @@ import java.util.Set;
 public final class ChickenRoomShellPlan {
 
     /**
-     * The room is {@value #ROOM_SIZE} wide by {@value #ROOM_SIZE} deep. A 4×4
-     * gives a 3×3 interior (9 cells): the chicken stands on one interior cell to
+     * The room is {@value #ROOM_SIZE} wide by {@value #ROOM_SIZE} deep, walls
+     * included. A 4×4 gives a 2×2 interior (4 cells): the chicken stands on one interior cell to
      * drop the chest while the player occupies a different one to witness it, so
      * the two can coexist. A 3×3 shell has a single interior cell, which the
      * chicken and the player both need, so the chest beat could never complete.
@@ -57,7 +57,7 @@ public final class ChickenRoomShellPlan {
     public record BlockStep(BlockPos pos, int scanY) {
     }
 
-    /** The finished layout: the blocks to lay, and the cell the chicken drops the chest on. */
+    /** The finished layout: the blocks to lay, and the cell one row in from the door (not the chest's cell; see HelperChickenSunsetChestGoal.chestCandidates). */
     public record Plan(List<BlockStep> steps, BlockPos chestCell) {
     }
 
@@ -281,9 +281,9 @@ public final class ChickenRoomShellPlan {
             addPair(steps, feet, y, isOccupied, laid);
         }
 
-        // The chest cell: the first interior cell, at feet level. The interior
-        // is everything the perimeter is not; the goal drops the chest on the
-        // cell one row in from the door's edge.
+        // The cell one row in from the door, at feet level. Not where the chest
+        // lands: HelperChickenSunsetChestGoal.chestCandidates picks the interior
+        // cell farthest from the door, so the chest does not block the doorway.
         BlockPos chest = new BlockPos(
                 frame.doorPos().getX(),
                 y,

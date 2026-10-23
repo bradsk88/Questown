@@ -21,8 +21,11 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.pathfinder.Path;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -282,7 +285,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
 
     /**
      * Pick a target cell inside the registered store shell for the chest: the
-     * first passable interior cell of the shell's largest space, at the
+     * passable interior cell farthest from the door (see {@link #chestCandidates}), at the
      * chicken's ground Y. The chicken walks there, waits for the player to be
      * in the room, then drops the chest on that cell (see {@link #tick}).
      * Falls back to {@code null} when no registered shell or no passable
@@ -309,15 +312,11 @@ public class HelperChickenSunsetChestGoal extends Goal {
                 "[chicken-arc] storeroom chest: shell yCoord={} spaces={} chickenY={}",
                 shell.yCoord, shell.getSpaces().size(), chickenY
         );
-        for (InclusiveSpace space : shell.getSpaces()) {
-            for (Position p : InclusiveSpaces.getPositions(
-                    space, InclusiveSpaces.PositionType.INTERIOR_ONLY
-            )) {
-                for (int y : levels) {
-                    BlockPos c = new BlockPos(p.x, y, p.z);
-                    if (isPassableForChest(sl, c)) {
-                        return c;
-                    }
+        for (Position p : chestCandidates(shell.getSpaces(), shell.getDoorPos())) {
+            for (int y : levels) {
+                BlockPos c = new BlockPos(p.x, y, p.z);
+                if (isPassableForChest(sl, c)) {
+                    return c;
                 }
             }
         }
@@ -326,6 +325,28 @@ public class HelperChickenSunsetChestGoal extends Goal {
                 shell.yCoord, shell.getSpaces().size()
         );
         return null;
+    }
+
+    /**
+     * The shell's interior cells, farthest from the door first. The storeroom is a 2x2
+     * interior, so a chest on the cell just inside the door blocks the doorway and
+     * villagers climb over it to get in (r9 findings #13); the far corner leaves the
+     * path through the door open. Ties keep a fixed order so the pick is stable.
+     */
+    static List<Position> chestCandidates(Collection<InclusiveSpace> spaces, Position door) {
+        List<Position> cells = new ArrayList<>();
+        for (InclusiveSpace space : spaces) {
+            cells.addAll(InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY));
+        }
+        cells.sort(Comparator.comparingInt((Position p) -> distSq(p, door)).reversed()
+                             .thenComparing(Comparator.naturalOrder()));
+        return cells;
+    }
+
+    private static int distSq(Position a, Position b) {
+        int dx = a.x - b.x;
+        int dz = a.z - b.z;
+        return dx * dx + dz * dz;
     }
 
     /** The registered room with the largest footprint — the store shell. */

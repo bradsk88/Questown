@@ -77,6 +77,15 @@ flowchart TD
   and picks a passable interior cell across the room's `yCoord`, `yCoord + 1`,
   and the chicken's ground Y (a door in open ground registers as a door but
   yields no enclosed room, so the goal stands down until a real room exists).
+  **The chest goes in the interior cell farthest from the door** (`chestCandidates`,
+  2026-10-23): the shell is 4×4 *with* walls, so its interior is 2×2, and a chest on
+  the cell just inside the door blocks the doorway — villagers then climb onto it to
+  reach the room (r9 findings #13: a cook stood on a furnace in that cell for 13 min).
+  Before, the goal took the first interior cell in `InclusiveSpaces` iteration order,
+  so whether it landed by the door depended on the door's facing.
+  `ChickenRoomShellPlan.Plan.chestCell` is the cell one row in from the door and is
+  not used for placement. Pin: `HelperChickenSunsetChestGoalTest.chestCandidates_*`
+  (all four facings).
   `SUNSET_AND_MAP` follows the chest beat, driven by the same `chickenSunsetChestSpawned`
   flag the chest goal sets when it drops the chest. **No map in this chest since
   F1 (2026-10-13):** the flag-centered filled map is granted to the placer at
