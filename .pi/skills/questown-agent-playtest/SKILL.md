@@ -106,9 +106,10 @@ relights the campfire", which the Acting section already said.
   on the door was a plain stick.
 - Known positions (guiScale 3, verified r13-r15): BOP tab "Take Block of Progress" (302, 354);
   change-job panel: hotbar slot 1 (231, 391) -> insert slot (230, 256) -> Unlock (264, 305).
-  `vopen <type>` only opens the *first* synced villager. To give another villager a job use
-  `qt jobs set @e[type=questown:visitor,name="Villager N",limit=1] <root>/<job>` (since 1fb248d1
-  it is the Block of Progress path) and log it as an intervention. `inquire <flag x y z> <item>`
+  `vopen <type> <uuid-prefix>` opens that villager's menu; without a prefix it picks an
+  arbitrary one. `_qtdev villager_stats <flag>` maps "Villager N" to its UUID. For a quick job
+  change, `qt jobs set @e[type=questown:visitor,name="Villager N",limit=1] <root>/<job>` (since
+  1fb248d1 it is the Block of Progress path) works too; log it as an intervention. `inquire <flag x y z> <item>`
   (the flag's position; the board's opens nothing) opens the work-request confirm, Yes at
   (263, 385).
 - Placing like a player: hold the item, then `_qtdev clickheld <x y z>` right-clicks the top face
@@ -214,6 +215,6 @@ relights the campfire", which the Acting section already said.
   claim, check that the intervention is the owner's path, and read all three surfaces: `_qtdev
   inspect villagers <flag>` (`need=` / `needs item:`), the in-world bubble (a shot facing the
   townie; one bubble at a time, nearest the crosshair), and the flag villagers-tab tooltip.
-- `Fullness changed from X to Y` names no villager. Attribute meals from `_qtdev villager_stats`
-  readings, not from those lines (r15 nearly credited the hunter's meal to the cook).
+- `Fullness changed from X to Y for <uuid>` names the villager. Before 2026-10-23 it didn't, and
+  r15 nearly credited the hunter's meal to the cook.
 - Commit findings as you go; the job's temp dir is deleted with the job.

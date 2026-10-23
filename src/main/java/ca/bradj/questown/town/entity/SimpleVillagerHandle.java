@@ -421,7 +421,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         int newHunger = (int) (percent * configs.baseFullness);
         Integer oldHunger = fullness.get(uuid);
         if (oldHunger == null || oldHunger != newHunger) {
-            QT.VILLAGER_LOGGER.info("Fullness changed from {} to {}", oldHunger, newHunger);
+            QT.VILLAGER_LOGGER.info("Fullness changed from {} to {} for {}", oldHunger, newHunger, uuid);
         }
         fullness.put(uuid, newHunger);
         if (percent > 0) {

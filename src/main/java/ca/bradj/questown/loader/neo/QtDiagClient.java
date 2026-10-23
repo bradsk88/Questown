@@ -14,6 +14,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.List;
@@ -46,9 +47,10 @@ import java.util.List;
  * {@code flagtab <type> [x y z]} (send the flag tab's {@code OpenFlagMenuMessage}
  * so the server opens the flag-scoped screen — {@code villagers} or
  * {@code economics} — the same message a flag-tab click sends) and
- * {@code vopen <type>} (open a villager's own tab menu the
+ * {@code vopen <type> [uuid-prefix]} (open a villager's own tab menu the
  * {@code _qtdev openvillager <type>} console path uses, read as a fallback from
- * the open flag-menu screen context: the flag pos + first synced villager UUID,
+ * the open flag-menu screen context: the flag pos + the synced villager whose UUID
+ * starts with the prefix (any villager when omitted),
  * via the same {@link OpenVillagerMenuMessage} a tab click sends),
  * {@code click <x> <y>} (left-click the open screen at a window-pixel position) and
  * {@code close} (close the open screen as Escape does).
@@ -116,7 +118,7 @@ public class QtDiagClient {
                 case "scroll" -> scroll(mc, Double.parseDouble(parts[1]), Double.parseDouble(parts[2]), Double.parseDouble(parts[3]));
                 case "close" -> close(mc);
                 case "inquire" -> inquire(mc, parts[1], parts[2], parts[3], parts.length > 4 ? parts[4] : null);
-                case "vopen" -> vopen(mc, parts[1]);
+                case "vopen" -> vopen(mc, parts[1], parts.length > 2 ? parts[2] : null);
                 case "cmd" -> chat(mc, parts);
                 case "flagtab" -> flagtab(mc, parts[1],
                         parts.length > 2 ? parts[2] : "0",
@@ -277,7 +279,7 @@ public class QtDiagClient {
         System.out.println("[qtdiag] flagtab " + type + " at " + x + "," + y + "," + z + " sent");
     }
 
-    private static void vopen(Minecraft mc, String type) {
+    private static void vopen(Minecraft mc, String type, @Nullable String uuidPrefix) {
         // open a VILLAGER's tab menu without the console (/_qtdev openvillager<>)
         // when the server's stdin is a dead pipe: needs the flag's villagers
         // menu open first (flagtab villagers) for the flag pos + villager UUIDs
@@ -296,7 +298,16 @@ public class QtDiagClient {
             System.out.println("[qtdiag] vopen: no villager UUIDs synced to the flag menu yet");
             return;
         }
-        java.util.UUID villager = villagers.keySet().iterator().next();
+        // The synced map decodes as a HashMap, so "first" is arbitrary: pick by UUID prefix
+        // (`_qtdev villager_stats` prints "Villager N (<uuid>)") to reach a given villager.
+        java.util.UUID villager = villagers.keySet().stream()
+                .filter(u -> uuidPrefix == null || u.toString().startsWith(uuidPrefix))
+                .findFirst()
+                .orElse(null);
+        if (villager == null) {
+            System.out.println("[qtdiag] vopen: no synced villager matches " + uuidPrefix);
+            return;
+        }
         QuestownNetwork.sendToServer(new OpenVillagerMenuMessage(
                 pos.getX(), pos.getY(), pos.getZ(), villager, type, true
         ));
