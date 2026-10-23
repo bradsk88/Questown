@@ -220,20 +220,13 @@ public class TownPossibleWork {
         );
     }
 
-    /** The preferred band if any job reaches it, else the minimum band. */
     private static ImmutableList<JobID> band(
             List<JobPossibility> unfilteredJobs,
             java.util.function.ToDoubleFunction<JobPossibility> score
     ) {
-        List<JobPossibility> jobs = unfilteredJobs.stream().filter(
-                v -> score.applyAsDouble(v) > Config.PREFERRED_JOB_ACCEPTANCE.get()
-        ).toList();
-        if (jobs.isEmpty()) {
-            jobs = unfilteredJobs.stream().filter(
-                    v -> score.applyAsDouble(v) > Config.MIN_JOB_ACCEPTANCE.get()
-            ).toList();
-        }
-        return jobs.stream().map(v -> v.jobID).collect(ImmutableList.toImmutableList());
+        return JobScoreBands.band(
+                unfilteredJobs, score, Config.PREFERRED_JOB_ACCEPTANCE.get(), Config.MIN_JOB_ACCEPTANCE.get()
+        ).stream().map(v -> v.jobID).collect(ImmutableList.toImmutableList());
     }
 
     private static void bigLog(
@@ -440,7 +433,9 @@ public class TownPossibleWork {
         // applying to every other job.
         boolean slotGated = work.getSlotPrecondition() != null;
         JobFacts facts = gateFacts(t, dj, false, slotGated);
-        double v = (double) facts.highestState() / dj.getMaxState();
+        double v = dj.specialGlobalRules.contains(SpecialRules.ALWAYS_CONSIDER)
+                ? JobScoreBands.alwaysConsiderScore(Config.PREFERRED_JOB_ACCEPTANCE.get(), Config.MIN_JOB_ACCEPTANCE.get())
+                : (double) facts.highestState() / dj.getMaxState();
         float shuffler = Compat.nextRandomInt(t.getServerLevel(), 100) / 10000f;
         double warpV = facts.slotUnmet() ? (double) gateFacts(t, dj, true, true).highestState() / dj.getMaxState() : v;
         return new JobPossibility(
@@ -538,7 +533,7 @@ public class TownPossibleWork {
      */
     private static JobFacts gateFacts(TownFlagBlockEntity t, DeclarativeJob dj, boolean ignoreSlot, boolean slotGated) {
         if (dj.specialGlobalRules.contains(SpecialRules.ALWAYS_CONSIDER)) {
-            return new JobFacts(dj.getMaxState(), "Special rule ALWAYS_CONSIDER present", true, null, -1, null, null);
+            return new JobFacts(dj.getMaxState(), "Special rule ALWAYS_CONSIDER present (scored between the acceptance bands)", true, null, -1, null, null);
         }
         WithReason<Boolean> lastRoomCheck = hasJobSite(t, dj, ignoreSlot);
         // A slot that is not ready only because the furnace has input and no fuel is a fuel need,

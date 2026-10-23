@@ -137,3 +137,10 @@ cook/fuel, cook/extract, baker/fuel and baker/extract and have the gate read the
 `has_item_in_slot_initially`. The warp gets its own slot-blind list. Mechanism and evidence:
 `jobs/COMPLEX.md` "Slot jobs score from their slot; the warp keeps its own list". Residual: the
 two cook stock jobs still carry `always_consider`, so a ready food job can still tie with them.
+
+## Residual closed 2026-10-23 (dev: keep the bypass, rank it lower)
+
+Option A above, applied to the rule: every `always_consider` job now scores midway between the
+acceptance bands (`JobScoreBands.alwaysConsiderScore`, 0.45 at defaults), so a ready food job
+(> 0.65) drops the stock jobs from the band. `town/COMPLEX.md` "always_consider jobs score
+between the bands".

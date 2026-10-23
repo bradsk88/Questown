@@ -771,3 +771,24 @@ chain (`TownQuests.defaultQuestCompletionRewards`,
 reward chain ends with nothing open gets no new quest from the ticker.
 Removal only; there is no unit seam (the ticker is a 30-hook abstract class
 with no test double).
+
+## always_consider jobs score between the bands (`JobScoreBands`, 2026-10-23)
+
+`applyScores` keeps the PREFERRED band (score > `PreferredJobAcceptance`, 0.65) when any job of
+the root reaches it, else the MIN band (> `MinJobAcceptance`, 0.25). An `always_consider` job
+skips the supply gate (`gateFacts` returns max state), so it used to score 1.0 and sit in the
+PREFERRED band beside a job that could really be done: cook/stock_fuel and
+cook/stock_ingredients tied a ready food job, and the selection shuffle picked (the coin flip,
+`.scratch/cook-scoring-tie/`). Dev ruling: keep the bypass, rank it lower.
+
+- `evaluateJob` now scores an `always_consider` job at `JobScoreBands.alwaysConsiderScore`, the
+  midpoint of the two thresholds (0.45 at defaults). A ready job (> 0.65) pushes it out of the
+  band; when nothing reaches 0.65 it is still a candidate, so stocking runs whenever the root
+  has no better work. It never checks whether the chest already holds the item.
+- Applies to every job carrying the rule: the four stock jobs (cook/baker) and organizer/fetch,
+  which is the only organizer job, so its selection is unchanged. `downtime` / `seeking_work`
+  are unregistered meta-jobs, not scored here. The stock jobs are `exclude_from_warp`, so the
+  warp list loses nothing.
+- Unit seam: `JobScoreBands` (band filter + the score, thresholds passed in; `Config` cannot be
+  read in a unit JVM). `JobScoreBandsTest`: ready food beats stock; stock still runs with no
+  ready work.

@@ -691,8 +691,9 @@ remove the bypass and have the gate read the data the jobs already declare.
   to every job let a non-furnace job whose rule rejects its block read as "site present". And a
   furnace that is unlit **with input waiting** stays a fuel need (`smelterFuelBlocker`, checked
   before `slotNotReady`); an unlit empty furnace is idle, not blocked.
-- `cook/stock_fuel`, `cook/stock_ingredients` and `organizer/fetch` keep `always_consider` for
-  now, so the cook can still tie between those two stock jobs and a ready food job.
+- `cook/stock_fuel`, `cook/stock_ingredients` and `organizer/fetch` keep `always_consider`.
+  Their tie with a ready food job is closed by scoring the rule between the acceptance bands
+  (2026-10-23; `town/COMPLEX.md` "always_consider jobs score between the bands").
 
 Evidence: `_qtdev work_score 0 64 0 cook` on a held `cook/simple_furnace_food` (the dump now prints
 `warpPreselected=`): furnace fuelled with empty output → realtime `[stock_ingredients, stock_fuel,
