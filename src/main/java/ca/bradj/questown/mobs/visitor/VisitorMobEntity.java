@@ -101,6 +101,15 @@ import java.util.function.Consumer;
 
 import static net.minecraft.world.entity.Pose.SLEEPING;
 
+/**
+ * A townie's body: it walks (the vanilla brain, navigation, doors and gates), shows what its town
+ * flag pushes to it (visibility, status, job name, held items, need bubble) and reports what
+ * happens to it (unloaded, killed, gave up reaching). The townie itself (its job, carried items,
+ * status, need and every decision) is a {@link TownieRuntime} held by the flag, which makes the
+ * townie's decisions in its own tick. Keep townie state and decisions off this class: the getters
+ * that look like townie state here only forward to the runtime. See ADR-0016 and
+ * {@code town/entity/COMPLEX.md} "Townie runtime and body".
+ */
 @SuppressWarnings("NullableProblems")
 public class VisitorMobEntity extends PathfinderMob implements VillagerStats, TownieBody {
 
@@ -147,17 +156,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
             VisitorMobEntity.class, EntityDataSerializers.STRING
     );
 
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
-
     private static final String NBT_TOWN_X = "town_x";
     private static final String NBT_TOWN_Y = "town_y";
     private static final String NBT_TOWN_Z = "town_z";
     private static final ImmutableList<SensorType<? extends Sensor<? super Villager>>> SENSOR_TYPES = ImmutableList.of(
             SensorType.NEAREST_BED
     );
-    private static final int inventoryCapacity = 6;
     private static final float slowWalkSpeed = 0.25f;
     private static final float walkSpeed = 0.3f;
     private static final float runSpeed = 0.4f;
@@ -171,7 +175,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
     private final List<ChangeListener> pendingChangeListeners = new ArrayList<>();
     private final List<Consumer<VillagerSleptEvent>> sleepListeners = new ArrayList<>();
     private Signals.DayTime lastBedTime = new Signals.DayTime(Signals.NIGHT_START_TICK);
-    private @Nullable Vec3 lastPos = null;
     private BlockPos wanderTarget;
     /** See {@link TownieBody#lastTickedAt()}. */
     private long lastTickedAt = -1;
@@ -190,10 +193,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
                                      .getDamageTicksLeft(uuid) / Compat.configGet(Config.DAMAGE_TICKS).get()));
         }
     }
-
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
 
     public VisitorMobEntity(
             ServerLevel level,
@@ -244,10 +243,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         b.add(Pair.of(99, UpdateActivityFromSchedule.create()));
         return b.build();
     }
-
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
 
     /** The townie this body stands for, or null until the entity is bound to its town. */
     public @Nullable TownieRuntime getRuntime() {
@@ -376,10 +371,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         }
     }
 
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
-
     @Override
     public boolean removeWhenFarAway(double p_21542_) {
         // See keepAlive
@@ -461,10 +452,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         sl.sendParticles(p_35288_, this.getRandomX(1.0D), this.getRandomY() + 1.0D, this.getRandomZ(1.0D), 2, 0, d0, d1, d2);
     }
 
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
-
     /**
      * The body's own tick: sense who is looking, show hunger, get unstuck from walls, stay known to
      * the town, open gates. The townie's decisions (its job, where to walk, the pose it asks for,
@@ -516,10 +503,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
                 e -> lookControl.setLookAt(e.getTarget().currentPosition())
         );
     }
-
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
 
     private void applyRequestedPose(PoseInPlace pose) {
         switch (pose.pose()) {
@@ -578,10 +561,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
     public void showOffhandItem(ItemStack item) {
         entityData.set(lastHeldItem, item);
     }
-
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
 
     private void detectNearbyDistractions(ServerLevel sl) {
         List<Player> ps = level().getNearbyPlayers(
@@ -659,10 +638,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
             }
         }
     }
-
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
 
     /**
      * A chunk unload stops tracking the entity without calling {@link #remove} (only KILLED
@@ -746,10 +721,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         return runtime != null && runtime.shouldBeNoClip(blockPosition());
     }
 
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
-
     @Override
     protected void pushEntities() {
         if (isNoClip()) {
@@ -803,10 +774,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         this.getBrain()
             .setMemory(MemoryModuleType.PATH, Optional.empty());
     }
-
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
 
     @Override
     public ItemStack getMainHandItem() {
@@ -864,10 +831,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
             }
         }
     }
-
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
 
     @Override
     protected PathNavigation createNavigation(Level p_21480_) {
@@ -931,10 +894,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         this.brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
         this.lastBedTime = Util.getDayTime(level());
     }
-
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
 
     private void getInBed(BlockPos p_21141_) {
         brain.eraseMemory(MemoryModuleType.WALK_TARGET);
@@ -1012,10 +971,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         return sleepingPos;
     }
 
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
-
     @Override
     public void aiStep() {
         this.updateSwingTime();
@@ -1073,10 +1028,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         }
         return this.wanderTarget;
     }
-
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
 
     @Override
     public void setWalkTarget(BlockPos blockPos) {
@@ -1150,10 +1101,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         }
         super.jumpFromGround();
     }
-
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
 
     @Override
     public InteractionResult interactAt(
@@ -1255,10 +1202,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
         pendingChangeListeners.clear();
     }
 
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
-
     public boolean isInitialized() {
         return runtime != null;
     }
@@ -1353,10 +1296,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
     }
 
 
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
-
     @Override
     public String toString() {
         return String.format("%s [%s]", super.toString(), getUUID());
@@ -1447,7 +1386,4 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats, To
 
     }
 
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
 }

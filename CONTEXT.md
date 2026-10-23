@@ -14,6 +14,10 @@ _Avoid_: villager (too generic — minecraft has its own), citizen, NPC.
 A **townie**'s individual identity, shown the way player and named-pet names are shown (world-space nameplate) rather than in the **need bubble**, which stays icon-only. Townies are currently **anonymous** — `VisitorMobEntity` has no name handling, and the one message that identifies an individual (`message.villager.leveled_up`) prints `UtilClean.truncateMiddle(uuid)`, so the player reads *"a1b2…f9e8 reached level 3"*. Names are a **prerequisite for the per-townie systems to land**: **proficiency** exists so each townie has a distinct contribution, but "Mira is your best baker" is a thought the player cannot currently have. Custom naming is intended to be available at a cost (possibly a **Block of Progress**); the default name source is unsettled — see `docs/todo/townie-names.md`.
 _Avoid_: "villager name" (see **Townie**); assuming names live in the bubble.
 
+**Townie runtime / townie body**:
+A **townie** is its runtime (`TownieRuntime`, held by its town flag: its job, carried items, status, need bubble and per-tick decisions) plus, while it is loaded, a body: the `VisitorMobEntity` that walks, shows what the flag pushes to it, and reports what happens to it. The townie outlives its body: an unloaded townie is still in the town, where it last stood, and its body reattaches when it reloads. The flag decides; the body never does (ADR-0016, `town/entity/COMPLEX.md` "Townie runtime and body").
+_Avoid_: "the villager entity" for the townie itself (the entity is only its body); adding townie state or decisions to the entity.
+
 **Town flag**:
 The placed block that marks a town's origin and owns its persistent state (rooms, jobs, beats, registered fixtures).
 _Avoid_: banner, marker.
