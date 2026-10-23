@@ -140,8 +140,11 @@ board (-2, 67, -3).
      "Villager 7fe2...f64 was bedless last night; SLEEPLESS applied until tick 95000"
      (`SimpleVillagerHandle.java:793` `until = tick + configs.sleeplessEffectDuration`, 23000).
      23000 ticks is ~9.6 real minutes at 40 tps, but the cook still had `[questown:sleepless]`
-     12 minutes later (00:25:49, day 4) because game time was only 78378. It lapses only when game
-     time reaches 95000.
+     12 minutes later (00:25:49, day 4) because game time was only 78378. **It lapsed exactly at
+     game time 95000:** `villager_stats` showed `[questown:sleepless]` at game time 95014 and
+     `effects []` (mood 60% -> 100%) at 95775 (~00:33). Applied at game time ~50460 (78378 at
+     00:26:10 minus 698 s x 40 t/s), it lasted ~44500 game ticks, nearly double the intended 23000,
+     and the overshoot grows with every slept night.
    - **BELIEVED, not shown: the `ready-for-downtime` branch is muted after a slept dawn.**
      `handleMorning` also calls `registerMostRecentDowntime(uuid, tick)` with the daytime value, and
      `DowntimeState.isReadyForRest(now)` (`DowntimeState.java:58-62`) needs `lastWork > lastRest`
