@@ -128,3 +128,22 @@ to the lakeside strip at (-32, 74, 194). Flag at -32 74 194.
       `diner-ate` requires `!isStarving`. Only `setFullness(percent > 0)` writes false. Not
       settled in-run: whether the board's `isStarving(ownerVUID)` reads a different key than
       the listener's `delegator.getUUID(e)`. A starving cook never reaches dining_raw_food.
+   Day 11 scale: in 3 minutes the cook and the new gatherer each made ~34 dining_no_table <->
+   downtime round trips; all five townies sit at -150% to -220% fullness; the cook hardly cooks.
+   Hunger is the dominant drag on this run.
+10. (bug, P0) Day 12, 19:22:08: placing the Kitchen-Diner furniture (a food display + empty plate
+    blocks, via setblock as a builder would) disconnected the player: "Connection Lost ...
+    EncoderException: Failed to encode packet 'clientbound/minecraft:custom_payload'". Server
+    cause: `Failed encoding custom payload questown:network_message: ... Empty ItemStack not
+    allowed` at `ItemStack$2.encode` <- `SyncBlockItemMessage.encode(SyncBlockItemMessage.java:22)`:
+    the block-item sync writes an empty stack through the non-optional ItemStack stream codec
+    (1.20.6 has `ItemStack.OPTIONAL_STREAM_CODEC` for possibly-empty stacks). Same tick:
+    "[questown] no item-handler capability for FoodDisplayEntity". Server kept running. The room
+    became "Cafe" (furnace + food display) at 19:22:07, just before the kick.
+    Rejoin is a kick loop: a fresh client joined at 19:24:08.108 and was dropped at .646 with
+    the same encoder error (the empty-stack sync is re-sent on chunk load). A player cannot get
+    back in to break the block. Recovery from the server console needed `forceload add` first:
+    with no player online the town's chunks unload and `setblock` answers "That position is not
+    loaded". After removing the food display + 2 plates, the client rejoined (19:29:16) and stayed.
+    The Kitchen-Diner quest (furnace + food display + 4 plates) can't be completed in this build:
+    any empty plate/display kicks the player. Server never restarted.
