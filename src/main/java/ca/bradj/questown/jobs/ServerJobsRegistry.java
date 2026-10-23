@@ -1,6 +1,8 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.gui.StatusNeedLine;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.core.Pair;
@@ -98,6 +100,36 @@ public class ServerJobsRegistry {
             QT.JOB_LOGGER.error("Failed to apply status texture override");
         }
         return StatusArt.getTexture(job, status);
+    }
+
+    /**
+     * {@link #getStatusText(JobID, IStatus)} for a specific townie: while it is not working, the
+     * item it is blocked on replaces the generic second line ({@code StatusNeedLine}).
+     */
+    public static @NotNull ImmutableList<Component> getStatusText(
+            JobID job,
+            IStatus<?> status,
+            VisitorMobEntity townie
+    ) {
+        Ingredient missing = townie.getUnmetItemIngredient();
+        Component need = missing == null ? null : Compat.translatable(
+                "message.questown.townie_need.unmet_item.item", Ingredients.getName(missing));
+        return ImmutableList.copyOf(StatusNeedLine.lines(getStatusText(job, status), need, isWorking(status)));
+    }
+
+    /**
+     * The needs row's items for a specific townie: the job's wants while it works, otherwise the
+     * item it is blocked on (a seeking-work townie used to show a Job Board here regardless).
+     */
+    public static ImmutableList<Ingredient> getNeededItems(VisitorMobEntity townie) {
+        ImmutableList<Ingredient> wants = getWantedResourcesProvider(townie.getJobId())
+                .apply(Jobs.getHeldItems(townie.getInventory()));
+        return ImmutableList.copyOf(StatusNeedLine.neededItems(
+                wants, townie.getUnmetItemIngredient(), isWorking(townie.getStatusForServer())));
+    }
+
+    private static boolean isWorking(@Nullable IStatus<?> status) {
+        return status instanceof ProductionStatus ps && (ps.isWorkingOnProduction() || ps.isGoingToJobsite());
     }
 
     public static @NotNull ImmutableList<Component> getStatusText(

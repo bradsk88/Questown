@@ -31,6 +31,7 @@ heartbeat fix 49dc0a9a and the vanilla checkbox d559ded6).
    still says "Insert a Block of Progress" with the BOP already in the slot. Recommendation: say
    "starting now" when the player is in creative; after insertion, "Click Unlock to make this
    villager a Hunter".
+   **Dev answer (2026-10-23):** fix both, as recommended.
 3. (by design, 2026-10-15 dev call) The "Villager job: Hunter" quest card has a title and an empty
    body: `QuestsScreen.renderRecipeCardIcons` drops the always-BOP icon ("We can just not render the
    BOP"). Only idea left: the job's own icon (`gui/villager/advancements/VillagerAdvancements.getIcon`) could fill it.
@@ -46,6 +47,9 @@ heartbeat fix 49dc0a9a and the vanilla checkbox d559ded6).
    ("Swords 1"), and the quests ask for "Stone Sword x4". Recommendation: when the missing supply
    is a held tool, the status says "needs a Stone Sword (or better) to work".
    Sword placed in the storeroom chest -> the hunter ate, switched to hunter:sword and TOOK it.
+   **Dev answer (2026-10-23):** row + status line. The inventory/status "needs" row (which shows a
+   Job Board for any seeking-work villager) shows the townie's unmet item instead when it has one,
+   and the status tooltip also names it.
 5. (agent error, not a game finding) `item replace block ... container.0` overwrote the 20 free
    carrots the economics claim had just delivered; restored them into slot 1 by hand.
 
@@ -69,8 +73,10 @@ heartbeat fix 49dc0a9a and the vanilla checkbox d559ded6).
 7. (judge) Day 3 shows two identical "Room" cards (the tutorial empty-rooms batch, "two new rooms
    before the cook batch" by design). Two same-named cards read like a duplicate; "Room (1 of 2)"
    or one "Rooms x2" card would say it's intended.
+   **Dev answer (2026-10-23):** drop the batch to one room; no compelling reason to get two ready.
 8. (judge, minor copy) The request confirm for a category says "There are 10 known jobs which
    produce this item." for "Raw Food" (a category, not an item): "which produce it".
+   **Dev answer (2026-10-23):** "which produce it", as recommended.
 9. (known, queued Q1) The new cook flips cook:fuel <-> cook:extract every few seconds with nothing
    in the furnace (the coin-flip thrash).
 

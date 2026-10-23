@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
+import org.jetbrains.annotations.Nullable;
 import ca.bradj.questown.core.network.*;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
@@ -34,6 +35,7 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
     final JobID jobId;
 
     private final Stack<Runnable> closers = new Stack<>();
+    private @Nullable VisitorMobEntity townie;
     private final boolean showBlockOfProgressTab;
     private final boolean showSkillsTab;
     private final boolean showInventoryTab;
@@ -86,7 +88,9 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
             return;
         }
         ResourceLocation tex = ServerJobsRegistry.getTexture(jobId, newStatus);
-        @NotNull ImmutableList<Component> text = ServerJobsRegistry.getStatusText(jobId, newStatus);
+        @NotNull ImmutableList<Component> text = townie == null
+                ? ServerJobsRegistry.getStatusText(jobId, newStatus)
+                : ServerJobsRegistry.getStatusText(jobId, newStatus, townie);
         if (newStatus instanceof ProductionStatus ps) {
             QuestownNetwork.sendToPlayer(
                     sp,
@@ -137,6 +141,7 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
             VisitorMobEntity e,
             ServerPlayer sender
     ) {
+        this.townie = e;
         IStatus<?> status = e.getStatusForServer();
         addStatusListener(e, status);
         addWantedIngredientsListener(e, sender);
@@ -172,7 +177,6 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
     private static @NotNull JobWantedIngredientsMessage buildMessage(
             VisitorMobEntity e
     ) {
-        Function<List<MCHeldItem>, ImmutableList<Ingredient>> wantFn = ServerJobsRegistry.getWantedResourcesProvider(e.getJobId());
-        return new JobWantedIngredientsMessage(wantFn.apply(Jobs.getHeldItems(e.getInventory())));
+        return new JobWantedIngredientsMessage(ServerJobsRegistry.getNeededItems(e));
     }
 }

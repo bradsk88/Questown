@@ -189,18 +189,7 @@ public final class NeedBubbleFocus {
         if (townie == null) {
             return null;
         }
-        if (townie.getNeed() != TownieNeed.UNMET_ITEM) {
-            return null;
-        }
-        String key = townie.getUnmetItem();
-        if (key.isEmpty()) {
-            return null;
-        }
-        try {
-            return Ingredients.fromString(key);
-        } catch (RuntimeException e) {
-            return null;
-        }
+        return townie.getUnmetItemIngredient();
     }
 
     /**

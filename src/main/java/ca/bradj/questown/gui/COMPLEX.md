@@ -1224,3 +1224,18 @@ promisedRoot, blessed)` picks the line: `insert_bop[_promised]` before insertion
 `click_unlock[_promised]` after, `insert_bop_blessed` for a "special" stack; the timing is its own
 key (`when_morning` / `when_now`) passed as the last `%s`. Pin: `JobChangeTextTest`. Live
 2026-10-23: survival empty / inserted, and creative inserted ("starting now"), gui-lint OK.
+
+## The status tooltip and needs row name what a villager is blocked on (2026-10-23, r9 #4)
+
+A swordless hunter read "Hunter is looking for supplies. They will search in room chests." and its
+needs row showed a Job Board (`getWantedResourcesProvider` hardcodes the board for any seeking-work
+villager), while the town already knew the blocker: the townie's UNMET_ITEM key, which drives the
+need bubble. Dev ruling: row + status line. `VisitorMobEntity.getUnmetItemIngredient()` (moved from
+`NeedBubbleFocus`) is the one source. `ServerJobsRegistry.getStatusText(job, status, townie)` and
+`getNeededItems(townie)` apply `StatusNeedLine`: while the villager is not working (a work state,
+extracting, or going to the job site count as working), the blocker replaces the second status
+line ("They need %s to work.") and the needs row; while working, both stay as the job describes
+them. Pin: `StatusNeedLineTest`. Live 2026-10-23 (held `cook/fuel [no_coal]`): flag villagers tab
+"Cook is looking for supplies. They need Coal to work."; inventory needs row showed Coal, not the
+Job Board. Not fixed: the inventory screen's own status tooltip still falls back to "busy with
+their work" (`.scratch/agent-playtest-2026-10-22-r9/inventory-status-tooltip-ignores-server-text.md`).

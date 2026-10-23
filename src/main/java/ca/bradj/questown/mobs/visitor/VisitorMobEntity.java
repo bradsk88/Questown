@@ -82,6 +82,7 @@ import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import ca.bradj.questown.gui.Ingredients;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
@@ -475,6 +476,26 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
         this.entityData.set(unmetItem, itemKey == null ? "" : itemKey);
+    }
+
+    /**
+     * The item this townie is blocked on (its {@link TownieNeed#UNMET_ITEM} key), or null for any
+     * other need or when the key does not resolve. Read by the need bubble, the inventory needs
+     * row and the status tooltip.
+     */
+    public @Nullable Ingredient getUnmetItemIngredient() {
+        if (getNeed() != TownieNeed.UNMET_ITEM) {
+            return null;
+        }
+        String key = getUnmetItem();
+        if (key.isEmpty()) {
+            return null;
+        }
+        try {
+            return Ingredients.fromString(key);
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     public String getUnmetItem() {

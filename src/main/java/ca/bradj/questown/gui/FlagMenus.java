@@ -132,7 +132,7 @@ public class FlagMenus {
             IStatus<?> vStatus
     ) {
         ResourceLocation tex = ServerJobsRegistry.getTexture(v.getJobId(), vStatus);
-        ImmutableList<Component> texts = ServerJobsRegistry.getStatusText(v.getJobId(), vStatus);
+        ImmutableList<Component> texts = ServerJobsRegistry.getStatusText(v.getJobId(), vStatus, v);
         LeaverReturn leaverReturn = v.getLeaverReturn();
         StatusPacket value = new StatusPacket(
                 v.getJobId(),
