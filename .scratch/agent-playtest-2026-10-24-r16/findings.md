@@ -16,6 +16,12 @@ Town layout: flag (0, 67, 0), campfire (-3, 67, 3), welcome mat (3, 66, 0), room
 board (-2, 67, -3).
 
 ## Interventions
+- Day 10: mineshaft crafted from stone stairs at the flag and placed at (-6, 68, 2); 4 wooden
+  pickaxes put into empty storeroom slots 20-23 by console (the player's delivery); Villager 3
+  (8d37b55b) made a Miner through the BOP path.
+- Day 13, 01:42: 8 coal put into empty slot 25 of the second chest by console (the player's
+  delivery); "Coal x8" completed at once.
+- Days 11-13 ran unslept (natural mornings 01:30:36, 01:40:36) while the session was paused.
 - Day 5-6: Dev teleported beside the flag (2.5, 66, 2.5) at 00:33:49 (dirt click) and stayed
   there until 00:47:30, then moved away (spreadplayers -12 14) and back (00:51+) as an A/B
   for #10. Day 4 and day 5 nights were not slept (natural mornings at 00:34:14 and 00:44:14).
@@ -84,6 +90,14 @@ board (-2, 67, -3).
   be rewarded in the morning". Slow mostly because the cook eats its own output (#7) and spends
   long stretches starving (cook -11039 before a meal on day 8). The cook was still level 1
   (24/1000 xp) on day 9; the hunter was level 6.
+- Day 10 miner beat (CONTEXT "Onboarding arrival" order): Wooden Pickaxe x4 and Mineshaft
+  completed on delivery/placement, "Insert a Block of Progress to make this villager a Miner
+  (starting now)" -> `miner:coal`. "Coal x8" is an ITEM quest (`TownQuests.java:889`
+  `MCQuest.item(..., COAL, 8)`), which `QuestBatches.processItemQuests` satisfies from the stacks
+  in town storage at that moment. The miner can't fill it on its own: 7 trips in 3 days, 2 coal,
+  and the cook took each within ~20 s (`cook:fuel` TOOK coal 01:22:34, 01:33:06), so storage held
+  0 and the card stayed 0/8 until the player delivered (like the swords and pickaxes). (judge:
+  the card doesn't say the player is the expected source.)
 - White swirls hanging near the doorway in the frozen shots are vanilla `POOF` particles (leaver
   warp effects), held by the tick freeze. Not a finding.
 
@@ -217,3 +231,22 @@ board (-2, 67, -3).
    succeeded. Next: log the diner's `workSpot` / claim state at `state:0`, or check plate claims
    (`TownRoomsHandle.resetDiningRooms` clears plate claims only at dawn, and the table diner
    `dining` hit max ticks just before each failure).
+11. (judge, design gap) **The onboarding beds leave one townie permanently bedless.** CONTEXT.md
+   "Onboarding arrival" (`CONTEXT.md:404`): each arrival's batch carries its bed (hunter-gatherer
+   Bedroom = 1 bed for villager 2; the cook batch's Bedroom -> Big Bedroom = 2 beds, the second for
+   villager 3), and villager 1 is the gate exception, arriving "before the town has rooms". So
+   three townies get two beds. Live: every night since villager 3 arrived logged "Nightfall: 1 of 3
+   townies have no bed for the night" (01:25:23, 01:35:23) and dawn put SLEEPLESS on Villager 3
+   each time (01:20:36, 01:30:36, 01:40:36); its mood was 45% on day 13. No quest asks for a third
+   bed, so a player following the quests never learns why.
+12. (trivia) The raw-food mood effect id is misspelled: `MoodEffects.java:18`
+   `ATE_RAW_FOOD = Questown.ResourceLocation("are_raw_food")`, shown in `_qtdev villager_stats` as
+   `questown:are_raw_food`. Players see the right text (lang key
+   `menu.villager_stats.effect.are_raw_food` = "Ate raw food"); renaming needs a save migration.
+
+## Skill/tool traps (for the retro)
+- The BOP tab's "Take Block of Progress" button moves down once an "Earned by: ..." line shows:
+  (302, 376), not the skill's (302, 354). A click at 354 silently took nothing (day 10).
+- The mineshaft needs **stone** stairs; cobblestone stairs leave the row greyed.
+- `run/logs/latest.log` rotates at midnight (to `run/logs/<date>-1.log.gz`); a grep over
+  latest.log alone silently loses the earlier lines.
