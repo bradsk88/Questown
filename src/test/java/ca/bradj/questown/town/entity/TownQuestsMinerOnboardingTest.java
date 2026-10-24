@@ -72,10 +72,12 @@ class TownQuestsMinerOnboardingTest {
                 && Compat.getItemId(Items.WOODEN_PICKAXE).equals(q.getWantedId())
                 && q.getCountNeeded() == 4));
 
-        // N of the miner's initial item (coal)
-        assertTrue(batch.getAll().stream().anyMatch(q -> q.getType() == Quest.QuestType.ITEM
+        // N of the miner's initial item (coal), counted as the miner extracts it: a LOOT quest
+        // (r16 #7, dev 2026-10-24). As a stock (ITEM) quest the cook burned each coal before the
+        // count rose, so the player had to deliver it.
+        assertTrue(batch.getAll().stream().anyMatch(q -> q.getType() == Quest.QuestType.LOOT
                 && Compat.getItemId(Items.COAL).equals(q.getWantedId())
-                && q.getCountNeeded() == 8));
+                && q.getCountNeeded() == 3));
     }
 
     private static TutorialTownView view() {

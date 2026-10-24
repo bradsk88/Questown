@@ -936,8 +936,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         pickaxeQuest.setFlavorText("Craft 4 wooden pickaxes and place them in your store room chest. Each miner carries one.");
         q.addNewQuest(pickaxeQuest);
 
-        MCQuest coalQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.COAL), 8);
-        coalQuest.setFlavorText("Stock the town on coal: place 8 coal in your store room chest so the furnaces keep running.");
+        // A LOOT quest, counted as the miner extracts coal (r16 #7, dev 2026-10-24): as a stock
+        // (ITEM) quest the cook burned each coal within seconds, so only the player could fill it.
+        // Three, not eight (dev): coal is ~27% of a miner's trip (jobs/miner/default.json, weight
+        // 50 of 182), so eight extracted coal took ~29 trips, about twelve in-game days.
+        MCQuest coalQuest = MCQuest.loot(batchUUID, null, Compat.getItemId(Items.COAL), 3);
+        coalQuest.setFlavorText("Your miner will dig coal so the furnaces keep running. This completes once they have mined 3.");
         q.addNewQuest(coalQuest);
 
         MCQuest mineshaftQuest = MCQuest.standalone(batchUUID, null, view.getRoomForJob(new JobID("miner", "coal")));

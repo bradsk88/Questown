@@ -407,6 +407,11 @@ board (-2, 67, -3).
   asks the board (`JobLogic.redecideIfStarving`, both drop points). Pins in `JobLogicTest` (the
   starving test is red with the call removed). Autotests: `loot_on_extract` x3, `eating/*` x7,
   `cook_extract_food` x2 all PASS. A starving deposit was not observed live in these runs.
+- #7 / Coal **done 2026-10-24 (dev: swords/pickaxes are deposit quests, the rest are loot
+  extraction quests; Food x8 already was):** the miner batch's coal quest is a LOOT quest, Coal x3
+  (dev chose 3: coal is weight 50 of 182 in `jobs/miner/default.json`, so 8 extracted coal was ~29
+  trips, ~12 days). `TownQuestsMinerOnboardingTest` red on the ITEM quest, green now. **Live check
+  still owed:** the growth run after it stalled at roster 2 (cook beat), before the miner beat.
 - **New (#18, seen while verifying #2; pre-existing, not ruled):** the picker offers Carrot (and
   other single foods) though its confirm says "There are 0 known jobs which produce it". ADR-0007
   says the board offers only fulfillable products. The slots come from expanding multi-item
