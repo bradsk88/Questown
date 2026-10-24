@@ -426,8 +426,29 @@ board (-2, 67, -3).
   rolls are guaranteed).
 - **New (#18, seen while verifying #2; pre-existing, not ruled):** the picker offers Carrot (and
   other single foods) though its confirm says "There are 0 known jobs which produce it". ADR-0007
-  says the board offers only fulfillable products. The slots come from expanding multi-item
-  request ingredients (unchanged by the #2 fix). Not investigated.
+  says the board offers only fulfillable products. **Cause (code-read 2026-10-24, not changed):**
+  `ServerJobsRegistry.getAllOutputs` adds each unlocked work's `initialRequest.getItems()` as
+  separate outputs, and `cook/extract`, `cook/fuel`, `cook/stock_fuel`, `baker/fuel` (and more,
+  `scripts/job-producers.py minecraft:carrot`) request `#questown:villager_food`, so every food in
+  the tag (carrot, apple, melon...) becomes its own picker slot; the confirm's producer hint
+  counts real producers and finds none. **Why not fixed overnight:** the "Food" category slot is
+  derived from the same flattened list (`TownWorkHandle.offeredCategories` -> `RequestCategories.
+  offered`), and the cook's own result is `uses_special_rules`, so dropping the flattened members
+  may also drop the Food category the onboarding relies on. Options for the dev: (a) add a tag
+  request as its category only (no member slots) and feed `offeredCategories` from requests too;
+  (b) keep members but filter them by `staticProducerRootsForItem`.
 - Not ruled; agent's default, fix unless the dev objects: #10 instrument first (workSpot/claim at state 0); #2 picker
   paging; #13 effects-line tooltip; #5 investigate the "Empty Room" announcement; #12 leave (needs
   a save migration); #8 CONTEXT.md:279 fix after the dev's CONTEXT.md edits are committed.
+
+## Overnight regression check (2026-10-24, HEAD 50068588)
+- Full unit suite: 1519 tests, 52 skipped, 0 failures.
+- Full autotest suite (`tools/autotest-parallel.sh --shard 4`): 91/95. Failures, all on the
+  AGENTS known list: `chicken-arc:skip_chicken_command` (deterministic), `farmer/harvest_wheat
+  [proficiency_parity]`, `organizer/fetch [warp]`, `flag/floating_furniture_over_half` (flaky).
+  Passing here though listed as deterministic knowns: `eating/dine_at_time`, `eating/eat_direct`,
+  `nav/roof_gatherer`.
+- village/growth: capped runs (10 min) reached roster 3-4; stalls were the open inn-upgrade ticket
+  and, once, a roster-2 cook-beat stall that an A/B showed was run variance. The coal LOOT quest
+  closes from the miner's own extraction.
+
