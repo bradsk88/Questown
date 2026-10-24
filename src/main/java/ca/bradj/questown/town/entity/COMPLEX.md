@@ -1571,3 +1571,13 @@ is a block-room (`blocks/COMPLEX.md`): placing a flag-linked one registers its o
 and every miner job's `room` is `questown:block_room/block.questown.mineshaft`. Live, the quest
 completed on placement, before the door built for it was registered. Both strings now say to
 craft it at the flag and place it near the flag.
+
+## Random root rolls prefer unheld roots (r16 #14, dev ruling 2026-10-24)
+
+A plain Block of Progress job change rolls a random root, at the spend (`rollPendingRoot`, the
+pre-roll) or at dawn (`handleMorning`'s fallback). Both now draw from `RootRoll.candidates`: roots
+no townie holds yet, or every root but the townie's own when all are held (`RootRollTest`). r16's
+two rolls gave a baker and a second hunter while the town's top need had no producer. A gold BOP
+still forces its root (ADR-0015), and an overnight quest override still wins. The rest of the
+ruling (alternating job-change and job batches) is a plan with open decisions:
+`docs/plans/2026-10-24-001-feat-post-onboarding-job-change-alternation-plan.md`.

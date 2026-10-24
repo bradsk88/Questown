@@ -417,6 +417,13 @@ board (-2, 67, -3).
   quest closed (done list), the miner batch completed, and the run hit its 10-min cap waiting
   for the next arrival. An A/B for #1 (growth at HEAD vs `redecideIfStarving` stubbed) reached
   the same roster 3 with 9 vs 11 cooked meals; an earlier roster-2 stall was run variance.
+- #14 **partly done 2026-10-24:** random Block of Progress job changes now prefer roots no
+  townie holds (`RootRoll`, `RootRollTest` 3/3, wired into both rolls in `SimpleVillagerHandle`;
+  a gold BOP still forces its root). The alternation itself (job-change quest <-> batch for the
+  job it became) has open sub-decisions and is written up, not built:
+  `docs/plans/2026-10-24-001-feat-post-onboarding-job-change-alternation-plan.md` ("Open
+  decisions"). Not shown live: no random roll happened in the verification runs (the onboarding
+  rolls are guaranteed).
 - **New (#18, seen while verifying #2; pre-existing, not ruled):** the picker offers Carrot (and
   other single foods) though its confirm says "There are 0 known jobs which produce it". ADR-0007
   says the board offers only fulfillable products. The slots come from expanding multi-item

@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.RootRoll;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
@@ -23,6 +24,7 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public final class SimpleVillagerHandle<DATA, ENTITY> {
@@ -764,16 +766,23 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     }
 
     /**
-     * The candidate roots a pending change may take: every registry root except the townie's
-     * current one, randomly picked. Empty when the registry offers no alternative.
+     * The root a pending change takes: a random pick among roots no townie holds yet, or among
+     * every other root when all are held ({@link RootRoll}; r16 #14). Empty when the registry
+     * offers no alternative.
      */
     Optional<JobID> rollPendingRoot(JobID currentJob) {
-        ImmutableSet<JobID> allRoots = ServerJobsRegistry.getAllRootJobs();
-        List<JobID> allOtherJobs = allRoots.stream().filter(z -> !currentJob.sameRoot(z)).toList();
-        if (allOtherJobs.isEmpty()) {
+        ImmutableSet<JobID> candidates = rootCandidates(currentJob);
+        if (candidates.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(delegator.shuffle(ImmutableSet.copyOf(allOtherJobs)).get(0));
+        return Optional.of(delegator.shuffle(candidates).get(0));
+    }
+
+    private ImmutableSet<JobID> rootCandidates(JobID currentJob) {
+        Set<String> held = entities.stream()
+                .map(e -> delegator.getJobId(e).rootId())
+                .collect(Collectors.toSet());
+        return RootRoll.candidates(ServerJobsRegistry.getAllRootJobs(), currentJob, held);
     }
 
     public void handleMorning(long tick) {
@@ -831,21 +840,18 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             return;
         }
 
-        ImmutableSet<JobID> allRoots = ServerJobsRegistry.getAllRootJobs();
-        List<JobID> allOtherJobs = allRoots.stream().filter(z -> !delegator.getJobId(v).sameRoot(z)).toList();
+        ImmutableSet<JobID> allOtherJobs = rootCandidates(delegator.getJobId(v));
         QT.FLAG_LOGGER.info(
                 "Changing villager from {} to one of [{}]",
                 delegator.getJobId(v).rootId(),
-                String.join(", ", allRoots.stream().map(JobID::rootId).toList())
+                String.join(", ", allOtherJobs.stream().map(JobID::rootId).toList())
         );
         if (allOtherJobs.isEmpty()) {
             QT.FLAG_LOGGER.error("Only one job root detected in town? This is likely a poorly configured data pack.");
             jobChangesPending.put(delegator.getUUID(v), false);
             return;
         }
-        ImmutableList<JobID> shuffled = delegator.shuffle(
-                ImmutableSet.copyOf(allOtherJobs)
-        );
+        ImmutableList<JobID> shuffled = delegator.shuffle(allOtherJobs);
         JobID newJob = shuffled.get(0);
         if (delegator.getJobId(v).sameRoot(newJob)) {
             QT.logBug("Root change resulted in same root. From {} to {}.", delegator.getJobId(v), newJob);
