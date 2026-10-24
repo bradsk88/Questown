@@ -348,6 +348,18 @@ board (-2, 67, -3).
 - #7 / Coal x8 (stock-counted quests stall): ruling: quests count **produced totals** since
   posting, not stock on hand.
 - #16 (starving town, "all caught up", missing random batch): **deferred.**
+  **Cause of the missing batch found overnight (not fixed, per the deferral):**
+  `TownQuests.addUpgradeQuest` logs "No upgrade paths could be determined ... Skipping generation.
+  The flag entity will generate a random batch instead." and then just `return`s, in both
+  no-upgrade branches; nothing generates that batch (the procedural pop in `TownQuests.tick` only
+  hands out a batch when `questRequests` holds a request, and these branches add none). Written
+  that way since `6cd4a57e` (2026-01-03). It is reached when `defaultQuestCompletionRewards`
+  rolls its upgrade branch (`AddRandomUpgradeQuest`) for a villager who has completed no quests
+  of their own. **Reproduced in village/growth** (overnight sweep, run 3 of 3): the top-need
+  (breadmaker) batch completed, its reward took that branch for villager 781cd8ae, and the town
+  sat with zero open quests at roster 4 until the 240000-tick timeout. Likely fix: queue a
+  procedural batch request there (`addBatchForVisitor(town, quests, visitorUUID)`), so the log's
+  promise holds. The other two sweep runs passed 5/5.
 - #15 **resolved 2026-10-24 (text):** the shared diner `status_2.NO_SUPPLIES` line no longer blames
   a missing seat ("They also need a place to sit down and eat." -> "They can't find any food in
   storage."); a missing seat is NO_JOBSITE, which already says "looking for a place to eat".
