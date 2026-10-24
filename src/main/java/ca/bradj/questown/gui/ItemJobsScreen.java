@@ -80,7 +80,8 @@ public class ItemJobsScreen extends CompatScreen {
             return ItemStack.EMPTY;
         }
         UIJob j = jobs.get(delegate.getCurrentPageIndex());
-        ImmutableList<ItemStack> r = j.result();
+        // The request is for what the player clicked, not the job's first loot item.
+        List<ItemStack> r = ProducedMatches.of(j.result(), requestedItem);
         if (r.isEmpty()) {
             return ItemStack.EMPTY;
         }
@@ -282,7 +283,7 @@ public class ItemJobsScreen extends CompatScreen {
 
         Component producesText = Compat.translatable("menu.item_jobs.produces");
         rc.darkText(producesText, x, (c = down.apply(c)).topY() + labelOffset);
-        List<Ingredient> v = Ingredients.fromItems(d.result());
+        List<Ingredient> v = Ingredients.fromItems(ImmutableList.copyOf(ProducedMatches.of(d.result(), requestedItem)));
         List<Component> tt3 = renderStrip.apply(c, putRequestedItemFirst(v), true);
         c = c.shiftedDown(font.lineHeight);
 

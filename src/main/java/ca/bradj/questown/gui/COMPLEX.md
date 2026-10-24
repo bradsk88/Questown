@@ -1339,3 +1339,8 @@ space. `QuestsScreen.panelHeight()` adds `FOOTER_GAP + BUTTON_HEIGHT + FOOTER_PA
 the footer button shows (not in the all-done state, where it is centred inside the panel), and
 both the panel draw and `getExtraAreas` use it. The top edge stays put, so cards and the page row
 do not move.
+
+The Produces row and the "Add To Work Requests" item use `ProducedMatches.of(result, requested)`
+(r17, dev: "should only show matching items"): only the job's results that match the clicked item,
+or all of them when none match. Before, a click on raw food listed the hunter's whole loot and the
+button requested the job's first result, whatever it was. `ProducedMatchesTest`.

@@ -109,3 +109,7 @@ Server log `/tmp/dev-server-27.log` (launched 23:42:18 box time, ready 23:42:44,
 13. (design, dev 00:33:57) **"The campfire shouldn't go out in the morning. It's useful for
     finding the way back to the village."** `CampfireSleepHandler.onWake` extinguished it
     (0eb1191c, 2026-04-08). Fixed: it stays lit. Server-side: loads at the next server restart.
+14. (GUI, dev 00:38:11) **"When looking at the 'what jobs make this item' UI, the 'Produces' row
+    should only show matching items."** Fixed: `ProducedMatches.of` filters the row (and the
+    Add button's item) to results matching the clicked item, falling back to all when none match.
+    Client-side; needs a client restart.
