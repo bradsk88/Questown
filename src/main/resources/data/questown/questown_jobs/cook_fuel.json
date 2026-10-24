@@ -2,6 +2,7 @@
   "version": 2,
   "id": "cook/fuel",
   "priority": 10000,
+  "experience": 200,
   "parent": "cook/extract",
   "unlocked_with_root_job": true,
   "icon": "minecraft:furnace",

@@ -2,6 +2,7 @@
   "version": 2,
   "id": "cook/stock_fuel",
   "priority": "20000",
+  "experience": 200,
   "parent": "cook/fuel",
   "icon": "minecraft:chest",
   "initial_request": "#questown:villager_food",

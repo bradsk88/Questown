@@ -390,7 +390,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
                 id -> {
                     Job<?, ?, ?> job = ServerJobsRegistry.getInitializedJob(sl, id, getJobJournalSnapshot(), getUUID());
-                    int earned = job.getExperienceEarned();
+                    int earned = ServerJobsRegistry.getExperienceEarned(job.getId(), job.getExperienceEarned());
                     // Fires once per realtime job-completion (throttled by the world-interaction
                     // interval, guarded by workLeft == 0, state reset after extraction) - not
                     // per-tick. Shows whether the completion listener fires and the amount, to

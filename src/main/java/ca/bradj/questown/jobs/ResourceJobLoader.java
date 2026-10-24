@@ -182,7 +182,7 @@ public class ResourceJobLoader {
                     if (slotPrecondition.isPresent()) {
                         cookWork = cookWork.withSlotPrecondition(slotPrecondition.get());
                     }
-                    cookWork = cookWork.withProficiencyId(proficiencyId(obj));
+                    cookWork = cookWork.withProficiencyId(proficiencyId(obj)).withExperience(experience(obj));
                     cookWork = cookWork.withUnlockedWithRootJob(
                             unlockedWithRootJob(obj) || starter
                     );
@@ -270,7 +270,7 @@ public class ResourceJobLoader {
                         wwi,
                         loadRulesV1(obj),
                         loadSoundV1(obj)
-                ).withPriority(requiredInt(obj, "priority"));
+                ).withPriority(requiredInt(obj, "priority")).withExperience(experience(obj));
                 b.put(expandedId, armorerWork);
             }
             return b.build();
@@ -388,7 +388,8 @@ public class ResourceJobLoader {
             if (overrides != null) {
                 wb = wb.withOverrides(overrides);
             }
-            wb = wb.withUnlockedWithRootJob(unlockedWithRootJob(object)).withAvailableAtLevel(availableAtLevel(object));
+            wb = wb.withUnlockedWithRootJob(unlockedWithRootJob(object)).withAvailableAtLevel(availableAtLevel(object))
+                   .withExperience(experience(object));
             return wb.withProficiencyId(proficiencyId(object));
         }
 
@@ -509,7 +510,8 @@ public class ResourceJobLoader {
                 if (slotPrecondition.isPresent()) {
                     work = work.withSlotPrecondition(slotPrecondition.get());
                 }
-                work = work.withUnlockedWithRootJob(unlockedWithRootJob(obj)).withAvailableAtLevel(availableAtLevel(obj));
+                work = work.withUnlockedWithRootJob(unlockedWithRootJob(obj)).withAvailableAtLevel(availableAtLevel(obj))
+                           .withExperience(experience(obj));
                 return work.withProficiencyId(proficiencyId(obj));
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
@@ -1096,6 +1098,11 @@ public class ResourceJobLoader {
     private static boolean unlockedWithRootJob(JsonObject object) {
         Boolean flag = optional(object, "unlocked_with_root_job", JsonElement::getAsBoolean);
         return Boolean.TRUE.equals(flag);
+    }
+
+    /** The optional `experience` value: XP per completion, replacing the formula. */
+    private static @Nullable Integer experience(JsonObject object) {
+        return optional(object, "experience", JsonElement::getAsInt);
     }
 
     /**

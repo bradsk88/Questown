@@ -2,6 +2,7 @@
   "version": 2,
   "id": "baker/fuel",
   "priority": 10000,
+  "experience": 200,
   "parent": "baker/extract",
   "unlocked_with_root_job": true,
   "icon": "minecraft:coal",

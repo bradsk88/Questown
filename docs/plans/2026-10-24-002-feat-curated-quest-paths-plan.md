@@ -31,7 +31,7 @@ origin: r16 #14 design chat, dev rulings 2026-10-24. Supersedes
 6. **Shape: parallel branches.**
    ```
    Start (at the fork): crafter job change + crafting room + sticks
-   ├─ Armor:   armorer + armory -> leather chestplate (hunter's leather)
+   ├─ Armor:   armory + leather armor (crafter branch, hunter's leather)
    ├─ Weapons: wooden sword (crafter lvl 7, smithy) -> stone sword (lvl 12)
    └─ Iron:    deep miner + smeltery -> raw iron -> smelter ingot branch -> iron ingots
    Finale (all three branches done): iron sword + iron armor (lvl 17) -> "Outfitters" achievement
@@ -42,7 +42,9 @@ origin: r16 #14 design chat, dev rulings 2026-10-24. Supersedes
    are recast as depth: going deeper brings rarer loot. **A loot table per depth**: deeper means
    less cobblestone and coal, more iron ore, and the rare ores only at depth. **New job ids**
    (not only display names), so old saves need a rename-on-load step.
-9. **Iron armor: armorer children at level 17**, matching the blacksmith's iron tier.
+9. **Iron armor: at level 17**, matching the blacksmith's iron tier. **Correction (same day):**
+   iron armor jobs already exist (see Facts); the work is adding the level-17 gate to the iron
+   tier of the armorer expansion, not new jobs. Told to the dev in the chat.
 10. **XP: an optional `experience` value per job JSON**, used instead of the formula when
     present. Set it on the cook and baker jobs first (they earn +1 today), then on path jobs
     where pacing matters.
@@ -60,8 +62,15 @@ origin: r16 #14 design chat, dev rulings 2026-10-24. Supersedes
   wooden_sword (7)`, `wooden_shovel -> stone_shovel (12) -> stone_sword (12)`,
   `stone_shovel -> iron_shovel (17) -> iron_sword (17)`. Level gates are per townie
   (`Work.availableAtLevel`, `jobs/COMPLEX.md` "available_at_level").
-- Armorer jobs (`armorer_{helmet,chestplate,leggings,boots}.json`) are leather only, room
-  `questown:armory`, parent `crafter/stick`. No job makes iron armor.
+- **Corrected 2026-10-24:** the four `armorer_{boots,helmet,leggings,chestplate}.json` files are
+  templates. `ResourceJobLoader.makeArmorerJobs` expands each per material in
+  `#questown:armor_materials` (leather, iron ingot, gold ingot, diamond) into `crafter/<material>_
+  <piece>` jobs (16 in all), room `questown:armory`. Parents (`deriveArmorerParent`): leather boots
+  <- `crafter/stick`, each later piece <- the previous piece of its material, and each non-leather
+  material's boots <- `crafter/leather_boots`. So armor is a **crafter** branch, like the
+  blacksmith tiers, and iron armor jobs already exist. The expansion chains no
+  `available_at_level`. Runtime evidence: the suite's `crafter/leather_boots` autotest passes.
+  (`scripts/job-producers.py` reads the raw templates and misses all of this.)
 - No job makes iron ingots. `smelter/process_ore` turns 1 iron ore into 2 raw iron (needs a
   pickaxe, room `questown:smeltery`).
 - Miner loot (`loot_tables/jobs/miner/default.json`, total weight 182): cobblestone 100, coal
@@ -94,7 +103,8 @@ origin: r16 #14 design chat, dev rulings 2026-10-24. Supersedes
    path file, keeping the existing onboarding unit tests green; cut top-need, crafter and the
    farmer/baker/crafter step from the trunk (ruling 2).
 4. **New job content**: smelter ingot branch (7), depth miners with new ids, per-depth loot
-   tables and the old-id rename on load (8), iron armorer jobs (9).
+   tables and the old-id rename on load (8), the level-17 gate on the iron armor expansion (9).
+   Also done this session: `crafter/plate` (dev ruling, Dinner Plates had no source).
 5. **Outfitter path file** (5, 6) + the "Outfitters" advancement.
 6. **#16 fix** (garden after a no-upgrade roll), since the garden is the post-path fallback (4).
 7. **Verification**: `village/growth` retargeted at the trunk + Outfitter path; a held playtest.

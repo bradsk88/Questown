@@ -959,3 +959,24 @@ count only.
 - Pins: `LootTableDropsTest` (walk + the real tables: seeds only in the no-tool gatherer tables),
   autotest `flag/producer_count_own_tables` (display roots `[gatherer]` vs engine
   `[gatherer, hunter, miner]`; red with the display lookup pointed at the engine one).
+
+## `experience`: declared XP per completion (dev ruling 2026-10-24)
+
+XP for a completed job came only from `DeclarativeJob.getExperienceEarned`: work units x action
+length + a tenth of the timed duration, at least 1. That pays a timed trip ~0.1 XP per tick and a
+worked action ~1 XP per tick, and it pays furnace jobs nothing: every cook and baker job declares
+`"work": 0.1`, which `ResourceJobLoader` reads with `getAsInt()` as 0, so each completion earned
+the minimum 1 (logs: 267 `[Experience] +1 from cook` beside `+200 from hunter`), and a cook needed
+~1000 meals for level 2. The dev rejected that as the status quo and chose an explicit field.
+
+- The optional JSON `experience` is parsed on all four loader paths (v1, v2, the cook
+  simple-furnace template, the armorer template) into `Work.experience`, carried through every
+  `Work` copy (`withPriority`, `withNeeds`, `withOverrides`, `withSlotPrecondition`).
+- The realtime grant (`VisitorMobEntity`'s completion listener) asks
+  `ServerJobsRegistry.getExperienceEarned(id, formula)`: the declared value, else the formula.
+- All 11 cook and baker jobs declare 200 (the dev's value: a hunter's short trip; cooks complete
+  about as often as hunters in the logs).
+- `JobExperienceFieldTest` pins the v1/v2 parse through the production loader and the 200 on every
+  cook/baker file. The template expansions are registry-bound in a unit JVM (empty item tags).
+- Not changed, noted: warp grants no XP at all (the only `addExperience` caller outside commands
+  and an autotest is the realtime listener).

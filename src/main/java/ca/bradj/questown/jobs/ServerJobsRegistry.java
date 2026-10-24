@@ -570,6 +570,18 @@ public class ServerJobsRegistry {
      * work speed, no leveling). Resolved from the same job definition on both the realtime and
      * warp paths so effective speed stays symmetric. See ADR-0010.
      */
+    /**
+     * XP for one completion of {@code jobID}: its declared `experience` when the job JSON has one,
+     * else {@code formula} ({@link Work#experienceEarned}).
+     */
+    public static int getExperienceEarned(JobID jobID, int formula) {
+        Work work = getWork(jobID, true);
+        if (work == null) {
+            return formula;
+        }
+        return work.experienceEarned(formula);
+    }
+
     public static @Nullable String getProficiencyId(JobID jobID) {
         String overridden = proficiencyIdOverrides.get(jobID);
         if (overridden != null) {

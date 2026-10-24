@@ -63,6 +63,8 @@ public class Work {
      * hidden (2026-10-13 skills-tab ruling, skills-tab-hidden-until-level-2.md).
      */
     private int availableAtLevel = DEFAULT_AVAILABLE_AT_LEVEL;
+    /** The JSON `experience`: XP per completion, replacing the formula. Null = the formula. */
+    private @Nullable Integer experience;
 
     /** The `available_at_level` default: the first level at which the skills tab appears. */
     public static final int DEFAULT_AVAILABLE_AT_LEVEL = 2;
@@ -176,6 +178,24 @@ public class Work {
         return this;
     }
 
+    /** Chains the optional `experience` JSON value parsed by {@code ResourceJobLoader}. */
+    public Work withExperience(@Nullable Integer experience) {
+        this.experience = experience;
+        return this;
+    }
+
+    /**
+     * XP for one completion: the job's declared `experience`, else {@code formula}
+     * ({@code DeclarativeJob.getExperienceEarned}). The cook and baker jobs earned 1 from the
+     * formula (dev ruling 2026-10-24, {@code JobExperienceFieldTest}).
+     */
+    public int experienceEarned(int formula) {
+        if (experience == null) {
+            return formula;
+        }
+        return experience;
+    }
+
     public Work withPriority(int priority) {
         Work work = new Work(
                 id,
@@ -197,6 +217,7 @@ public class Work {
         );
         work.proficiencyId = proficiencyId;
         work.unlockedWithRootJob = unlockedWithRootJob;
+        work.experience = experience;
         return work;
     }
 
@@ -223,6 +244,7 @@ public class Work {
         );
         work.proficiencyId = proficiencyId;
         work.unlockedWithRootJob = unlockedWithRootJob;
+        work.experience = experience;
         return work;
     }
 
@@ -258,6 +280,7 @@ public class Work {
         work.overrides = overrides;
         work.proficiencyId = proficiencyId;
         work.unlockedWithRootJob = unlockedWithRootJob;
+        work.experience = experience;
         return work;
     }
 
@@ -271,6 +294,7 @@ public class Work {
         work.slotPrecondition = sp;
         work.proficiencyId = proficiencyId;
         work.unlockedWithRootJob = unlockedWithRootJob;
+        work.experience = experience;
         return work;
     }
 

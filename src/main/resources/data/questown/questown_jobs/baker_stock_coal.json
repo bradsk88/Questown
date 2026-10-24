@@ -2,6 +2,7 @@
   "version": 2,
   "id": "baker/stock_coal",
   "priority": "20000",
+  "experience": 200,
   "parent": "baker/fuel",
   "icon": "minecraft:chest",
   "initial_request": "minecraft:bread",

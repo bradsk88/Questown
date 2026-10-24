@@ -2,6 +2,7 @@
   "version": 2,
   "id": "baker/extract",
   "priority": 1000,
+  "experience": 200,
   "parent": null,
   "icon": "minecraft:bread",
   "initial_request": "minecraft:bread",

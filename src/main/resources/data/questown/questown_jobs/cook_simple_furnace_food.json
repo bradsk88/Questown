@@ -2,6 +2,7 @@
   "version": 2,
   "id": "cook/simple_furnace_food",
   "priority": 2000,
+  "experience": 200,
   "parent": "cook/extract",
   "starter_recipes": ["mutton"],
   "icon": "minecraft:beef",

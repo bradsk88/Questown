@@ -2,6 +2,7 @@
   "version": 2,
   "id": "baker/stock_wheat",
   "priority": "15000",
+  "experience": 200,
   "parent": "baker/extract",
   "icon": "minecraft:chest",
   "initial_request": "minecraft:bread",
