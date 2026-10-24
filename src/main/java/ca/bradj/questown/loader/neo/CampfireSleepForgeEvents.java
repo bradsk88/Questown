@@ -1,5 +1,7 @@
 package ca.bradj.questown.loader.neo;
 
+import ca.bradj.questown.mc.Compat;
+
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
@@ -79,5 +81,8 @@ public final class CampfireSleepForgeEvents {
     private static void applyGrogginess(ServerPlayer player) {
         player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 6000, 0, false, false));
         player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 6000, 0, false, false));
+        // The effects are created invisible (no particles, no icon), so without this line the
+        // player is weaker and slower with no idea why (r17, dev 2026-10-25).
+        player.displayClientMessage(Compat.translatable("message.questown.campfire_sleep.groggy"), false);
     }
 }

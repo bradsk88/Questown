@@ -54,3 +54,9 @@ Server log `/tmp/dev-server-27.log` (launched 23:42:18 box time, ready 23:42:44,
    quests' button isn't weirdly floating in space."** (Quests screen.) Fixed: the panel grows down
    by gap + button + 6 px padding while the footer button shows (`QuestsScreen.panelHeight`).
    Needs a client restart and the dev's eyes (not seen yet).
+8. (feedback, dev 00:17:58) **"A message should say 'you feel groggy from sleeping on the ground'
+   (status effects applied) or something."** `CampfireSleepForgeEvents.applyGrogginess` gives
+   Mining Fatigue + Weakness for 6000 ticks, created with `visible=false` (no particles, no icon),
+   and said nothing. Fixed: a chat line on wake, `message.questown.campfire_sleep.groggy`
+   ("You feel groggy from sleeping on the ground: Mining Fatigue and Weakness for 5 minutes.").
+   Server-side: loads at the next server restart. Open: whether the effect icons should show too.

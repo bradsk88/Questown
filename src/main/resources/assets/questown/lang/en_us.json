@@ -386,6 +386,7 @@
   "block.questown.axe_rack_block": "Axe Rack",
   "dialog.visitors.instruction.flag_quests": "Right-click the town flag base at any time to view your active quests",
   "dialog.visitors.instruction.sleep_visitors": "New visitors will arrive in the morning",
+  "message.questown.campfire_sleep.groggy": "You feel groggy from sleeping on the ground: Mining Fatigue and Weakness for 5 minutes.",
   "dialog.visitors.instruction.new_quests_now": "More quests have been added. Right-click the Flag Base block for more info.",
   "dialog.visitors.first_contact.intro": "Hey! I came as soon as I noticed your campfire on the horizon.",
   "dialog.visitors.first_contact.request": "I'm pretty tired and don't have anywhere else to stay. Would you build somewhere for me to sleep?",

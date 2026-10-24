@@ -255,3 +255,10 @@ scrolled ("Paged menus no longer scroll between pages", 2026-10-11 playtest). It
 `ScreenEvent.MouseScrolled.Pre` and cancels when the screen handled it. Verified live (r8):
 the quests tab's "Page 1 / 2" went to "Page 2 / 2" on one wheel step, injected through the real
 `onScroll` by the diag client's `scroll <x> <y> <delta>` command.
+
+## Campfire sleep: the player is told about the grogginess (r17, dev 2026-10-25)
+
+Waking from a campfire sleep, `CampfireSleepForgeEvents.applyGrogginess` gives Mining Fatigue and
+Weakness for 6000 ticks. Both are created with `visible=false`, so there are no particles and no
+icon, and the player had no idea why they were weaker. It now also sends a chat line,
+`message.questown.campfire_sleep.groggy`.
