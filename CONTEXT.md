@@ -276,7 +276,7 @@ The activity a villager switches to when hungry: it seeks food and eats. Three v
 _Avoid_: feeding.
 
 **Free-food bonus**:
-A one-time free-food reward the player triggers by right-clicking the **town flag** base with a block of dirt; it drops food a **townie** can eat, refilling **fullness**. Distinct from **dining** (which the townie does on its own) and from the gatherer's **Worldly Seeds** (a tutorial trigger, not food, and not given via the flag — ADR-0014).
+A one-time free-food reward the player claims on the **town flag**'s Economics tab: clicking the food card deposits 20 carrots into a registered storeroom container (`TownEconomicsScreen.mouseClicked` -> `ClaimFreeFoodMessage`; since 6865917a, 2026-10-12, it is no longer a dirt right-click on the flag). It is food a **townie** can eat, refilling **fullness**. Distinct from **dining** (which the townie does on its own) and from the gatherer's **Worldly Seeds** (a tutorial trigger, not food, and not given via the flag — ADR-0014).
 _Avoid_: "bonus food" (ambiguous); conflating with **Worldly Seeds** (a different item and mechanic); treating it as repeatable (it is one-time).
 
 **Fullness**:
@@ -401,7 +401,7 @@ Room recipes count **blocks**, and a bed is two (head and foot), so a recipe lis
 _Avoid_: reading a recipe's `#minecraft:beds` count as a bed count; "a bed counts once".
 
 **Onboarding arrival**:
-A villager the scripted onboarding brings, as a **morning reward** of one specific quest batch — not a random reward. Fixed order (2026-10-18): the **town gate** batch → villager 1; the **hunter-gatherer** batch (raw food, 4 stone swords, hunter job change, bedroom) → villager 2; the **cook** batch (cook job change, cooked food, kitchen, storeroom upgrade, bedroom upgrade) → villager 3 (`TownFlagTutorialAdapter.makeReward`). **A batch that brings a villager carries the bed that villager will sleep in** (dev rule): the hunter-gatherer Bedroom (1 bed) and the cook batch's Bedroom → Big Bedroom upgrade (2 beds; see **Bed room recipe**); the gate batch is the exception (villager 1 arrives before the town has rooms). Other batches bring no one, so at most one villager arrives per morning.
+A villager the scripted onboarding brings, as a **morning reward** of one specific quest batch — not a random reward. Fixed order (2026-10-18): the **town gate** batch → villager 1; the **hunter-gatherer** batch (raw food, 4 stone swords, hunter job change, bedroom) → villager 2; the **cook** batch (cook job change, cooked food, kitchen, storeroom upgrade, bedroom upgrade) → villager 3 (`TownFlagTutorialAdapter.makeReward`). **A batch that brings a villager carries the bed that villager will sleep in** (dev rule): the hunter-gatherer Bedroom (1 bed) and the cook batch's Bedroom → Big Bedroom upgrade (2 beds; see **Bed room recipe**); the gate batch is the exception (villager 1 arrives before the town has rooms). Later batches bring villagers too (the miner batch, and procedural batches through `defaultQuestCompletionRewards`). Since 2026-10-24 (r16 #11/#17) any batch whose reward brings a villager also asks for that villager's bed and a storeroom: a bedroom quest per bed the town will be short once the arrival is counted, minus the batch's own bed quests, plus a storage quest unless the batch has one (`TownQuests.provisionArrival`, `ArrivalProvisions`).
 _Avoid_: giving a non-bedroom batch a villager reward; using `defaultQuestCompletionRewards` for an onboarding arrival (it can roll an upgrade quest instead of a villager).
 
 ### Testing
@@ -418,6 +418,10 @@ _Avoid_: job (a job can own multiple scenarios), test case, blueprint (that's th
 
 **Helper chicken**:
 A guide entity that walks a new player through onboarding by pecking, displaying bubbles, and waiting for player actions.
+
+**Curated quest path**:
+A hand-designed sequence of quest batches a player chooses after the shared onboarding trunk (dev, 2026-10-24: "a tree of curated experiences"; v1 focuses on curated content over tuning random batches). The **fork point** is after the onboarding miner step: each path's starter batch appears there, completing one opens the rest of that path, and a player can take several. The procedural **quest garden** is the fallback once the taken paths are done. Paths are data files, and onboarding moves onto the same format. The first path is the **Outfitter** (the town supplies food, armor and a sword: wood, stone and iron tiers, in parallel branches). Plan: `docs/plans/2026-10-24-002-feat-curated-quest-paths-plan.md` (not yet implemented).
+_Avoid_: "tutorial phase" for a path batch (the trunk is the tutorial); "random batch" for a path batch.
 
 **Chicken arc**:
 The staged onboarding sequence the helper chicken walks the player through: stick → wand → campfire → wall → door → sign → chest → welcome mat → free food → ui → seeds delivery, branched by sunset map.

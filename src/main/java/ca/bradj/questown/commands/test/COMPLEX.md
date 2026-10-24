@@ -906,3 +906,14 @@ method the quest-removal screen also uses); the town posts a replacement next mo
 attempt that furnished the `from` room and then added the missing blocks broke the cook batch's
 upgrades (big_bedroom never closed, roster 2) and was dropped. Live: growth passed 5/5 with this
 change, but no inn was rolled, so the discard itself has not fired in a run yet.
+
+## Village scenarios run on peaceful (dev ruling 2026-10-24)
+
+One overnight `village/growth` run lost its whole town to creepers at the flag (two blasts, then
+two drownings in what looked like the flooded crater; ticket
+`.scratch/autotest-suite/growth-townies-killed-by-creepers.md`). `AutoTestRunner` set peaceful
+only in `VillageWatchListener.onLogin`, i.e. when a spectator joined a held run, so headless runs
+kept the world's default difficulty. It now sets peaceful at boot for every village scenario
+(`village/growth`, `village/day1`, `village/self_sufficiency`) and logs `[village] difficulty set to
+peaceful`. The scenarios test the quest and economy flow, not survival; a threat test should turn
+monsters on deliberately (ADR-0012).

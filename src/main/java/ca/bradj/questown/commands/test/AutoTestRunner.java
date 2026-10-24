@@ -131,6 +131,12 @@ public class AutoTestRunner {
         if (runVillage || runSelfSuff) {
             runJobs = false;
             runChicken = false;
+            // The village scenarios test the quest and economy flow, not survival: a creeper at
+            // the flag killed a whole growth town (2026-10-24, dev ruling: peaceful). The watch
+            // listener's login hook set this only when a spectator joined; headless runs ran on
+            // the world's default difficulty.
+            server.setDifficulty(net.minecraft.world.Difficulty.PEACEFUL, true);
+            QT.FLAG_LOGGER.info("[village] difficulty set to peaceful");
             // The growth scenario runs for many minutes; let a spectator client
             // join and watch while it plays, not only in post-run hold mode.
             if ("true".equals(System.getProperty(SYSPROP_HOLD))) {
