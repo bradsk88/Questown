@@ -79,6 +79,11 @@ board (-2, 67, -3).
   00:06:55). It then ate that cooked mutton itself (-2449 -> 5000) and now needs Raw Mutton
   ("Cook is resting. They need Raw Mutton to work." in the tooltip). Villager 3 is the cook
   batch's reward, so no arrival until Food reaches 8/8 (CONTEXT.md "Onboarding arrival").
+- Food (8/8), the cook batch's last quest, completed on day 9 (01:07:29) after eight Cooked
+  Muttons (the card read 1/8 on day 3, 2/8 day 4, 5/8 day 7, 6/8 day 8); quests tab: "You will
+  be rewarded in the morning". Slow mostly because the cook eats its own output (#7) and spends
+  long stretches starving (cook -11039 before a meal on day 8). The cook was still level 1
+  (24/1000 xp) on day 9; the hunter was level 6.
 - White swirls hanging near the doorway in the frozen shots are vanilla `POOF` particles (leaver
   warp effects), held by the tick freeze. Not a finding.
 
