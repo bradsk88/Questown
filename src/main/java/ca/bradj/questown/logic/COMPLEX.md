@@ -13,6 +13,20 @@ result per recipe id anyway; the dedupe matters because many *different* recipes
 the same unweighted ids. Callers: `QuestBatchSeed.computeQuestCost` (quest cost /
 `Matches.matches`).
 
+## Weights saturate at MAX ("never recommend"; r16 #5, 2026-10-24)
+
+`RecipeItemConfig` gives "never recommend" items `Integer.MAX_VALUE` (the plate, the bowl rack,
+`#questown:job_board_inputs`). `getRecipeWeight` summed them in a plain int, so a recipe with
+several such ingredients overflowed: four plates made `dining_room` weigh **-4**. `getTopMatch`
+(the room announcement's choice among a room's matched recipe ids, by max cost) then preferred
+`empty_room` (0), so a working dining room was announced as "Empty Room" and a plate change
+announced nothing (both sides read `empty_room`). The sum now saturates
+(`UtilClean.saturatingAdd`, `SaturatingAddTest`): `dining_room` = MAX, announced correctly
+(live: `room_changed [dining_room -> empty_room]` and back on a plate removed and restored).
+Quest generation is unchanged: `AbstractQuestGarden.notValid` already rejects both MAX and
+negative costs, so plate rooms are never quested either way. The plate's MAX weight carries a
+TODO from when dining was off ("Bring back hunger/dining and reduce this cost").
+
 ## `RoomRecipes.getName`: block rooms fall through to the block's own lang key
 
 A block room is registered as `block_room/block.<ns>.<block>`

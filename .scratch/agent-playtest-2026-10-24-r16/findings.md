@@ -365,6 +365,15 @@ board (-2, 67, -3).
   (`VillagerStatsScreen.renderMoodEffects`/`renderCustomTooltip`). Live on the restored r16 world
   after raw mutton went into the storeroom: "Ate without a table, Ate raw fo…" hovered to "Ate
   without a table / Ate raw food"; `[gui-lint] VillagerStatsScreen ... OK`. GUI only, no unit pin.
+- #5 **resolved 2026-10-24 (cause found):** not a missing match. `plate_block` weighs
+  `Integer.MAX_VALUE` ("never recommend", `RecipeItemConfig`), and four of them overflowed the int
+  sum to -4, so `getTopMatch` announced `empty_room` (0) over `dining_room`. The sum now saturates
+  (`UtilClean.saturatingAdd`, `SaturatingAddTest`). Live on the r16 world: a plate removed and
+  restored gave no broadcast before the fix, and `room_changed [dining_room -> empty_room]` /
+  `[empty_room -> dining_room]` after it. Quest generation unchanged (`notValid` rejects MAX and
+  negative). **Open design question for the dev:** the plate's MAX weight still keeps dining rooms
+  out of every quest (its TODO: "Bring back hunger/dining and reduce this cost to represent plate
+  recipe"); r16 #5's hunter tooltip asked for a dining room no quest offers.
 - **New (#18, seen while verifying #2; pre-existing, not ruled):** the picker offers Carrot (and
   other single foods) though its confirm says "There are 0 known jobs which produce it". ADR-0007
   says the board offers only fulfillable products. The slots come from expanding multi-item

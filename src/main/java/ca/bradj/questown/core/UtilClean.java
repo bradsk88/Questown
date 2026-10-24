@@ -16,6 +16,16 @@ import java.util.stream.Stream;
 
 public class UtilClean {
 
+    /**
+     * {@code a + b}, capped at {@code Integer.MAX_VALUE}. Room recipe weights use MAX_VALUE for
+     * "never recommend" items, and a plain sum of four of them overflowed to -4 (r16 #5: the
+     * dining room outweighed by the empty room). Pinned by {@code SaturatingAddTest}.
+     */
+    public static int saturatingAdd(int a, int b) {
+        return (int) Math.min(Integer.MAX_VALUE, (long) a + b);
+    }
+
+
     public static <X> List<Pair<Integer, X>> enumerate(List<X> list) {
         ImmutableList.Builder<Pair<Integer, X>> b = ImmutableList.builder();
         for (int i = 0; i < list.size(); i++) {

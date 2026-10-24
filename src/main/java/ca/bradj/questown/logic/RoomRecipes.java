@@ -2,6 +2,7 @@ package ca.bradj.questown.logic;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.RecipeItemConfig;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.RecipeRef;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -109,7 +110,7 @@ public class RoomRecipes {
                 String id = getAsJsonObject(in).get("item").getAsString();
                 Integer itemWeight = allWeights.get(id);
                 if (itemWeight != null) {
-                    weight += itemWeight;
+                    weight = UtilClean.saturatingAdd(weight, itemWeight);
                     foundWeight = true;
                 } else {
                     reportUnweighted("item", id);
@@ -120,14 +121,14 @@ public class RoomRecipes {
                 String tID = String.format("#%s", id);
                 Integer tagWeight = allWeights.get(tID);
                 if (tagWeight != null) {
-                    weight += tagWeight;
+                    weight = UtilClean.saturatingAdd(weight, tagWeight);
                     foundWeight = true;
                 } else {
                     reportUnweighted("tag", id);
                 }
             }
             if (!foundWeight) {
-                weight += Compat.configGet(ca.bradj.questown.core.Config.DEFAULT_ITEM_WEIGHT).get();
+                weight = UtilClean.saturatingAdd(weight, Compat.configGet(ca.bradj.questown.core.Config.DEFAULT_ITEM_WEIGHT).get());
             }
         }
         return weight;
