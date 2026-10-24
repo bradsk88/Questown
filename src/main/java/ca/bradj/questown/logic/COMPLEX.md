@@ -58,3 +58,24 @@ tries the flag's own Y first (`Y_OFFSETS = {0, 1, -1, 2, -2}`), so a level campf
 over a sloped one. The horizontal rules are unchanged, and they still differ: the scan covers
 `-radius .. radius-1`, while the wand requires `|d| < radius`. Pinned by `CampfireRangeTest`;
 the scan's wiring is registry-bound (`Level`, `Blocks.CAMPFIRE`), so it is checked live.
+
+## The Dinner Plate gets a source and a real weight (dev ruling 2026-10-24)
+
+`RecipeItemConfig` weighted `questown:plate_block` at `Integer.MAX_VALUE` ("never recommend",
+TODO "bring back hunger/dining and reduce this cost"), so the garden never offered a dining room.
+Dining is back, but the plate also had **no source**: no crafting recipe anywhere in the
+resources and no job made it (r16's dining room used creative plates). Dev ruling: a crafter
+makes plates. `crafter/plate` (`questown_jobs/crafter_plate.json`, child of `crafter/bowl`): 1
+plank -> 2 plates at the crafting table, the bowl's shape (`PlateProducerDataTest`). The plate's
+weight is now `RecipeItemConfig.PLATE` (a crafting-table item from planks), so a dining room
+weighs four of those.
+
+- **Saved configs keep the old value.** `questown-item-weights-server.toml` stores the whole map
+  as one string (`ItemWeightCodec`) and `getWeights` decodes only the stored string, so an
+  install that already wrote the file keeps `plate_block=2147483647` until the entry is edited
+  or the file deleted. The new default reaches fresh installs.
+- The recognition side (a 4-plate room still matches `dining_room` over `empty_room`, now that
+  the plates no longer dominate `getTopMatch`) is not unit-testable: `getRecipeWeight` reads the
+  loaded config and `RecipeItemConfig`'s static init touches the item registry. Left to a live
+  check.
+- The growth driver discards a dining-room quest (4 plates > its 3-item row), like the inn.

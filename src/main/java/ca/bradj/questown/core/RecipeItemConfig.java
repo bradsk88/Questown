@@ -158,6 +158,13 @@ public class RecipeItemConfig {
                     CraftedResources.FURNACE
             ), false
     );
+    // A crafter makes plates from planks (crafter/plate, dev 2026-10-24); the plate had no source
+    // before, so it carried "never recommend".
+    public static final int PLATE = RecipeItemScore.requiresCraftingTable(
+            ImmutableList.of(
+                    CraftedResources.PLANKS
+            ), false
+    );
     public static final int FOOD_DISPLAY = RecipeItemScore.requiresCraftingTable(
             ImmutableList.of(
                     CraftedResources.PLANKS,
@@ -203,8 +210,7 @@ public class RecipeItemConfig {
         add(Questown.ResourceLocation(SmallSoupPotBlock.ITEM_ID), SMALL_SOUP_POT);
         add(SoupPotBlock.ITEM_ID, BIG_SOUP_POT);
         add(assumePresent(Items.COMPOSTER), COMPOSTER);
-        // TODO: Bring back hunger/dining and reduce this cost to represent plate recipe
-        add(ItemsInit.PLATE_BLOCK.id(), Integer.MAX_VALUE);
+        add(ItemsInit.PLATE_BLOCK.id(), PLATE);
         add(String.format("#%s", TagsInit.Items.SOUP_POTS.location()), SMALL_SOUP_POT);
         // TODO: Add a crafter job for building bowl racks (should probably upgrade job board so we can make "one time" requests)
         add(ItemsInit.BOWL_RACK_BLOCK.id(), Integer.MAX_VALUE);
