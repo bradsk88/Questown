@@ -1001,7 +1001,10 @@ that warped earned no levels and therefore no Blocks of Progress. Now:
    `addExperience` per townie, logs `[warp] experience granted: {...}`, then clears the map. The
    map is never serialized, so a reload cannot grant it twice.
 
-Known limit, inherited from `addExperience` and left for the dev: a warp's XP arrives as one call
-per townie, so a warp levels a townie at most once (`addExperience` keeps `newExp % target`), and
-adds nothing while the townie holds an unspent Block of Progress. Realtime can level several
-times over the same span because the townie deposits each BOP in between.
+**At most one level per townie per warp, by design** (dev 2026-10-24: "we want to discourage
+players from leaving for too long"). A warp's XP arrives as one `addExperience` call per townie,
+which levels at most once (it keeps `newExp % target`) and adds nothing while the townie holds an
+unspent Block of Progress. Realtime can level several times over the same span (the townie
+deposits each BOP in between); the warp cannot, so a long absence yields at most one BOP per
+townie. That is the BOP stall's job as the counterweight to warp (`CONTEXT.md` "Block of
+Progress"). Do not loop the grant or simulate deposits during warp.
