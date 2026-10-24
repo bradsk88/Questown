@@ -166,6 +166,13 @@ class JobLogicTest {
             return holdsWorkOutput;
         }
 
+        boolean starving = false;
+
+        @Override
+        public boolean isStarving() {
+            return starving;
+        }
+
         @Override
         public void tryGetSupplies() {
 
@@ -217,6 +224,24 @@ class JobLogicTest {
                     new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
                     world,
                     (a, b) -> blockState.apply(b),
+                    Integer.MAX_VALUE
+            );
+        }
+
+        /** Dropping loot with items in hand, as {@code job}. */
+        public void tickDropping(JobID job) {
+            tick(
+                    null,
+                    () -> ProductionStatus.DROPPING_LOOT,
+                    job,
+                    false,
+                    false,
+                    false,
+                    true,
+                    maxTicksOf(3000),
+                    new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
+                    world,
+                    (a, b) -> 0,
                     Integer.MAX_VALUE
             );
         }
@@ -276,6 +301,60 @@ class JobLogicTest {
         }
 
         Assertions.assertFalse(changedJob.get(), "the watchdog re-created the job mid-timer");
+    }
+
+    /**
+     * r16 #1 (dev ruling 2026-10-24): a starving hunter deposited its catch and went straight back
+     * out for a whole second trip; the board, which sends a starving townie to dine, is asked only
+     * between jobs. A deposit is now a decision point for a starving townie.
+     */
+    @Test
+    void tick_starvingTownieAsksTheBoard_afterADeposit() {
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = droppingWorld(handedOff);
+        world.starving = true;
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        logic.tickDropping(new JobID("hunter", "sword"));
+
+        Assertions.assertTrue(handedOff.get(), "a starving townie should re-decide after a deposit");
+    }
+
+    @Test
+    void tick_fedTownieCarriesOn_afterADeposit() {
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestJobLogic logic = new TestJobLogic(droppingWorld(handedOff), DEFINITION);
+
+        logic.tickDropping(new JobID("hunter", "sword"));
+
+        Assertions.assertFalse(handedOff.get(), "a fed townie keeps its job after a deposit");
+    }
+
+    /** A starving diner is already going to eat: re-deciding would skip it to the next diner stage. */
+    @Test
+    void tick_starvingDinerCarriesOn_afterADeposit() {
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = droppingWorld(handedOff);
+        world.starving = true;
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        logic.tickDropping(new JobID("hunter", "dining"));
+
+        Assertions.assertFalse(handedOff.get(), "a diner must not be sent back to the board by its own hunger");
+    }
+
+    private static TestLogicWorld droppingWorld(AtomicBoolean handedOff) {
+        return new TestLogicWorld(DEFINITION) {
+            @Override
+            public boolean tryDropLoot() {
+                return true;
+            }
+
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
     }
 
     /**

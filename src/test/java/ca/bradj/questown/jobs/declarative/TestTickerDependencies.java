@@ -525,6 +525,11 @@ public class TestTickerDependencies implements
             }
 
             @Override
+            public boolean isOwnerStarving() {
+                return false;
+            }
+
+            @Override
             public UUID getOwnerUUID() {
                 return self.getOwnerUUID();
             }

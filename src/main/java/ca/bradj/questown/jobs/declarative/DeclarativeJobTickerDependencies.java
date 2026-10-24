@@ -518,6 +518,11 @@ public class DeclarativeJobTickerDependencies implements
             }
 
             @Override
+            public boolean isOwnerStarving() {
+                return town.getVillagerHandle().isStarving(VillagerUUID.from(job.getOwnerUUID()));
+            }
+
+            @Override
             public BlockPos getRandomHorizontalFrom(BlockPos bp) {
                 ServerLevel sl = town.getServerLevel();
                 return bp.relative(Compat.getRandomHorizontal(sl));

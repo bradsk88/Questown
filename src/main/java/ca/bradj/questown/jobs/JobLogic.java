@@ -61,6 +61,9 @@ public class JobLogic<EXTRA, TOWN, POS> {
          */
         boolean holdsWorkOutput();
 
+        /** Whether the townie is starving (fullness at zero). */
+        boolean isStarving();
+
         void tryGetSupplies();
 
         Map<Integer, Collection<WorkPosition<POS>>> listAllWorkSpots();
@@ -156,6 +159,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         if (status.isDroppingLoot() && worldBeforeTick.tryDropLoot()) {
             this.workSpot = null;
+            redecideIfStarving(worldBeforeTick, entityCurrentJob);
             return;
         }
 
@@ -278,6 +282,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         if (status.isDroppingLoot() && worldBeforeTick.tryDropLoot()) {
             this.workSpot = null;
+            redecideIfStarving(worldBeforeTick, entityCurrentJob);
             return;
         }
 
@@ -361,6 +366,22 @@ public class JobLogic<EXTRA, TOWN, POS> {
             }
         }
         return WithReason.unformatted(wrappingUp, "If worked");
+    }
+
+    /**
+     * A deposit is a decision point for a starving townie: the board (which sends it to dine) is
+     * otherwise asked only between jobs, and a hunter went straight back out for a whole trip at
+     * -104% with food in the chest (r16 #1, dev ruling 2026-10-24). A diner is already going to
+     * eat; re-deciding would skip it to the next diner stage.
+     */
+    private void redecideIfStarving(
+            JLWorld<EXTRA, TOWN, POS> world,
+            JobID currentJob
+    ) {
+        if (!world.isStarving() || DiningStages.isDiner(currentJob)) {
+            return;
+        }
+        world.changeToNextJob();
     }
 
     protected void setWorkSpot(WorkPosition<POS> spot) {

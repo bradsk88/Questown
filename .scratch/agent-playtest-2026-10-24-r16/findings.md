@@ -403,6 +403,10 @@ board (-2, 67, -3).
   uncommitted CONTEXT.md is in:** "Onboarding arrival" says "Other batches bring no one", but
   `defaultQuestCompletionRewards` (miner, top-need, procedural, item/loot batches) can spawn one;
   those now carry a bed + storage quest.
+- #1 **done 2026-10-24:** after a successful drop, a starving townie that is not already a diner
+  asks the board (`JobLogic.redecideIfStarving`, both drop points). Pins in `JobLogicTest` (the
+  starving test is red with the call removed). Autotests: `loot_on_extract` x3, `eating/*` x7,
+  `cook_extract_food` x2 all PASS. A starving deposit was not observed live in these runs.
 - **New (#18, seen while verifying #2; pre-existing, not ruled):** the picker offers Carrot (and
   other single foods) though its confirm says "There are 0 known jobs which produce it". ADR-0007
   says the board offers only fulfillable products. The slots come from expanding multi-item

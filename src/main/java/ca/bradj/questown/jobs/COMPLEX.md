@@ -510,6 +510,19 @@ XP waited unextracted until the next shift. While extracting, the watchdog now a
 extracting still hands off. Pinned by `JobLogicTest.tick_shouldNotHitMaxTicksFallback_OnTheExtractTick`
 and `tick_maxTicksFallback_stillFires_WhenExtractingPastTheGrace`.
 
+## A deposit is a decision point for a starving townie (r16 #1, dev ruling 2026-10-24)
+
+Only jobs flagged `CAN_INSTANTLY_SWITCH_TO_EATING` switch to dining from the hungry listener
+(`TownFlagTileData`); every other townie reaches the board's `starving-diner-stage` branch only
+when its job hands off. A leaver's job does not hand off at a deposit: the next tick starts the
+next trip. r16: a hunter at -104% deposited raw mutton and hunted a whole second trip before the
+board sent it to eat. Both drop points in `JobLogic.tick` now call `redecideIfStarving`: a
+starving townie (`JLWorld.isStarving`, via `WorldDeps.isOwnerStarving` ->
+`VillagerHolder.isStarving`) asks the board (`changeToNextJob`) after a successful drop, unless
+its job is already a diner (`DiningStages.isDiner`; re-deciding would advance it to the next
+diner stage). Pinned by `JobLogicTest.tick_starvingTownieAsksTheBoard_afterADeposit` (red with
+the call removed), `tick_fedTownieCarriesOn_afterADeposit`, `tick_starvingDinerCarriesOn_afterADeposit`.
+
 ## Max-ticks fallback respects the day-fit rule (2026-10-22 playtest)
 
 The fallback goes straight to `changeJob`, so it skipped the job board's day rule
