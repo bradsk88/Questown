@@ -77,7 +77,7 @@ public class MCAdvanceTime extends AbstractAdvanceTime<
 
     @Override
     protected MCTownState finalizeState(MCTownState state, long currentTick) {
-        // Carry the warp-recorded LOOT extractions: the terminal rebuild discards
+        // Carry the warp-recorded LOOT extractions and XP: the terminal rebuild discards
         // instance fields, and the settle point (TownFlagState.warp) reads the final
         // state — a fresh list here would silently drop them (2026-10-04 oracle red).
         return new MCTownState(
@@ -90,7 +90,8 @@ public class MCAdvanceTime extends AbstractAdvanceTime<
                 state.blocksOfProgress,
                 currentTick,
                 com.google.common.collect.ImmutableMap.of(),
-                new java.util.ArrayList<>(state.recordedLootExtractions())
+                new java.util.ArrayList<>(state.recordedLootExtractions()),
+                new java.util.HashMap<>(state.recordedExperience())
         );
     }
 }

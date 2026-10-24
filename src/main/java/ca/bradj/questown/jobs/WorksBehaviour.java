@@ -44,7 +44,8 @@ public class WorksBehaviour {
             int pauseForAction,
             WorkStates states,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
-            Map<ProductionStatus, Collection<String>> specialRules
+            Map<ProductionStatus, Collection<String>> specialRules,
+            int experiencePerCompletion
     ) {
         TimeWarpWorldInteraction wi = new TimeWarpWorldInteraction(
                 townPos,
@@ -59,7 +60,7 @@ public class WorksBehaviour {
                 warpInput.roomPositions(),
                 warpInput.assignedWorkBlock(),
                 warpInput.warpWorld()
-        );
+        ).withExperiencePerCompletion(experiencePerCompletion);
         return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction, warpInput.slotPrecondition());
     }
 
@@ -221,7 +222,15 @@ public class WorksBehaviour {
                         world.actionDuration(),
                         states,
                         world.resultGenerator()::generate,
-                        special.specialStatusRules()
+                        special.specialStatusRules(),
+                        // Resolved per warp (the registry is loaded by then): the same value the
+                        // realtime grant pays.
+                        ServerJobsRegistry.getExperienceEarned(jobId, JobExperience.formula(
+                                special.containsGlobal(SpecialRules.NO_EXPERIENCE_GAINED),
+                                states.workRequired().values(),
+                                world.actionDuration(),
+                                states.timeRequired().values()
+                        ))
                 ),
                 1,
                 world.resultGenerator().isResultAlwaysEmpty(),

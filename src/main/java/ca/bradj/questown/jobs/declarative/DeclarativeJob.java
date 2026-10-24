@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.jobs.JobExperience;
+
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.commands.DebugLogArgument;
@@ -953,18 +955,15 @@ public class DeclarativeJob extends
 
     @Override
     public int getExperienceEarned() {
-        if (specialGlobalRules.contains(SpecialRules.NO_EXPERIENCE_GAINED)) {
-            return 0;
-        }
-        int workPart = initialWork.values().stream().reduce(0, Integer::sum) * workInterval;
-        long timePart = workPart + Math.max((totalDuration / 10), 1);
-        QT.JOB_LOGGER.debug(
-                "{} gained experience: {} from work, {} from time",
-                UtilClean.truncateMiddle(ownerUUID),
-                workPart,
-                timePart
+        // The warp grant uses the same formula (JobExperience, shared since 2026-10-24).
+        int earned = JobExperience.formula(
+                specialGlobalRules.contains(SpecialRules.NO_EXPERIENCE_GAINED),
+                initialWork.values(),
+                workInterval,
+                List.of(Math.toIntExact(totalDuration))
         );
-        return (int) timePart;
+        QT.JOB_LOGGER.debug("{} gained experience: {}", UtilClean.truncateMiddle(ownerUUID), earned);
+        return earned;
     }
 
     public int getMaxState() {

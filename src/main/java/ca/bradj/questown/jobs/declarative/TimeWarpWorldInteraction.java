@@ -53,6 +53,7 @@ public class TimeWarpWorldInteraction extends
     private final @Nullable BlockPos assignedWorkBlock;
     private final Map<ProductionStatus, Collection<String>> specialRulesMap;
     private final @Nullable ca.bradj.questown.world.QTWorldAccess warpWorld;
+    private int experiencePerCompletion = 0;
 
     public record Inputs(MCTownState town, ServerLevel level, UUID vUUID) {
     }
@@ -80,6 +81,29 @@ public class TimeWarpWorldInteraction extends
         this.assignedWorkBlock = assignedWorkBlock;
         this.specialRulesMap = specialRules;
         this.warpWorld = warpWorld;
+    }
+
+    /** XP a completed cycle earns this townie during warp (the realtime grant's value). */
+    public TimeWarpWorldInteraction withExperiencePerCompletion(int experiencePerCompletion) {
+        this.experiencePerCompletion = experiencePerCompletion;
+        return this;
+    }
+
+    /**
+     * Records the cycle's XP on the warp state for {@code TownFlagState.warp} to grant once
+     * (realtime's completion listener has no warp counterpart; a warp paid no XP before
+     * 2026-10-24). Pinned by {@code TimeWarpExperienceTest}.
+     */
+    @Override
+    protected MCTownState onJobCompleted(
+            Inputs inputs,
+            MCTownState town
+    ) {
+        if (town == null || experiencePerCompletion <= 0) {
+            return town;
+        }
+        town.recordExperience(town.getVillager(villagerIndex).uuid, experiencePerCompletion);
+        return town;
     }
 
     private ca.bradj.questown.world.QTWorldAccess resolveWorld(Inputs inputs) {

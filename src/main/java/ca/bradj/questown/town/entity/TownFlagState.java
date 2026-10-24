@@ -360,6 +360,23 @@ public class TownFlagState {
         };
     }
 
+    /**
+     * Grants the XP the warp recorded (per townie, {@code MCTownState.recordExperience}) once, after
+     * the townies are back, then consumes it. One {@code addExperience} call per townie, so a warp
+     * levels a townie at most once: {@code addExperience} keeps only the remainder past one level,
+     * and adds nothing while the townie holds an unspent Block of Progress (dev 2026-10-24: warp
+     * paid no XP before).
+     */
+    private static void grantWarpExperience(TownFlagBlockEntity e, MCTownState state) {
+        Map<UUID, Integer> earned = state.recordedExperience();
+        if (earned.isEmpty()) {
+            return;
+        }
+        earned.forEach((uuid, xp) -> e.getVillagerHandle().addExperience(uuid, xp));
+        QT.FLAG_LOGGER.info("[warp] experience granted: {}", earned);
+        state.clearRecordedExperience();
+    }
+
     static void recoverMobs(
             TownFlagBlockEntity e,
             ServerLevel sl
@@ -566,6 +583,7 @@ public class TownFlagState {
                 e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Storing state on {}: {}", e.getUUID(), newState);
                 Compat.getBlockStoredTagData(e).put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
                 TownFlagState.recoverMobs(parent, level);
+                grantWarpExperience(parent, newState);
                 TownFlagState.restoreWarpVisuals(level, newState);
                 parent.getKnowledgeHandle().registerFoundLoots(newState.knowledge());
 

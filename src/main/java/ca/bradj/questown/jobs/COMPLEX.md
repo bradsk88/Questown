@@ -978,5 +978,30 @@ the minimum 1 (logs: 267 `[Experience] +1 from cook` beside `+200 from hunter`),
   about as often as hunters in the logs).
 - `JobExperienceFieldTest` pins the v1/v2 parse through the production loader and the 200 on every
   cook/baker file. The template expansions are registry-bound in a unit JVM (empty item tags).
-- Not changed, noted: warp grants no XP at all (the only `addExperience` caller outside commands
-  and an autotest is the realtime listener).
+- Warp XP: see the next section.
+
+## Warp pays XP too (dev ruling 2026-10-24: "fix the warp XP gap")
+
+Realtime XP comes from a job-completion listener `VisitorMobEntity` registers on its own job's
+world interaction. Warp runs each job through a fresh `TimeWarpWorldInteraction`
+(`WorksBehaviour.productionWarper`) that has no listener, and nothing else wrote XP, so a town
+that warped earned no levels and therefore no Blocks of Progress. Now:
+
+1. **One formula.** `JobExperience.formula` (work x action length + a tenth of the timed
+   duration, at least 1; 0 under `no_experience_gained`) is what `DeclarativeJob` pays, and
+   `productionWork` computes the same value for the warper from the job's `WorkStates`, then
+   `ServerJobsRegistry.getExperienceEarned` applies a declared `experience`
+   (`JobExperienceTest`).
+2. **Record on the warp state.** `AbstractWorldInteraction.tryExtractProduct` calls a new
+   `onJobCompleted` hook beside the completion listeners (default: no change). The warp override
+   adds the cycle's XP to `MCTownState.recordExperience` for that townie: a mutable map shared by
+   reference through the copy paths and carried by `MCAdvanceTime.finalizeState`, the same channel
+   shape as the LOOT records (`TimeWarpExperienceTest`).
+3. **Settle once.** `TownFlagState.warp`, after `recoverMobs`, calls `grantWarpExperience`: one
+   `addExperience` per townie, logs `[warp] experience granted: {...}`, then clears the map. The
+   map is never serialized, so a reload cannot grant it twice.
+
+Known limit, inherited from `addExperience` and left for the dev: a warp's XP arrives as one call
+per townie, so a warp levels a townie at most once (`addExperience` keeps `newExp % target`), and
+adds nothing while the townie holds an unspent Block of Progress. Realtime can level several
+times over the same span because the townie deposits each BOP in between.

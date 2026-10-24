@@ -643,6 +643,18 @@ public abstract class AbstractWorldInteraction<
         return checks.getQuantityForStep(state, 0);
     }
 
+    /**
+     * Called once per completed job cycle, after the reset. Realtime pays XP through a job
+     * completion listener on the townie's own job, so the default changes nothing; the warp lane
+     * records the XP on its state instead ({@code TimeWarpWorldInteraction}).
+     */
+    protected TOWN onJobCompleted(
+            EXTRA extra,
+            TOWN town
+    ) {
+        return town;
+    }
+
     protected TOWN tryExtractProduct(
             @NotNull EXTRA inputs,
             POS position
@@ -664,6 +676,7 @@ public abstract class AbstractWorldInteraction<
             if (town != null) {
                 town = getResetFunc(inputs, position).apply(town);
                 triggerCompletionAdvancement(inputs, position);
+                town = onJobCompleted(inputs, town);
                 jobCompletedListeners.forEach(r -> r.accept(jobId));
             }
             return town;

@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,6 +33,15 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
      */
     private final ArrayList<MCHeldItem> recordedLootExtractions;
 
+    /**
+     * Warp-path XP channel, beside the LOOT one and kept the same way: XP each townie earned from
+     * job completions during the warp (by UUID), shared by reference through the copy paths so the
+     * settle point ({@code TownFlagState.warp}) grants it once through the live villager handle.
+     * Realtime grants XP from a job-completion listener on the townie's own job; the warp's world
+     * interactions had none, so a warp paid no XP at all (dev, 2026-10-24).
+     */
+    private final HashMap<UUID, Integer> recordedExperience;
+
     public MCTownState(
             @NotNull List<VillagerData<MCHeldItem>> villagers,
             @NotNull List<ContainerTarget<MCContainer, MCTownItem>> containers,
@@ -42,7 +52,7 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
             @NotNull ImmutableMap<UUID, Boolean> blocksOfProgress,
             long worldTimeAtSleep
     ) {
-        this(villagers, containers, workStates, workTimers, gates, knowledge, blocksOfProgress, worldTimeAtSleep, ImmutableMap.of(), new ArrayList<>());
+        this(villagers, containers, workStates, workTimers, gates, knowledge, blocksOfProgress, worldTimeAtSleep, ImmutableMap.of(), new ArrayList<>(), new HashMap<>());
     }
 
     public MCTownState(
@@ -55,12 +65,14 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
             @NotNull ImmutableMap<UUID, Boolean> blocksOfProgress,
             long worldTimeAtSleep,
             @NotNull ImmutableMap<Integer, ImmutableMap<BlockPos, ImmutableList<MCHeldItem>>> insertedItems,
-            @NotNull ArrayList<MCHeldItem> recordedLootExtractions
+            @NotNull ArrayList<MCHeldItem> recordedLootExtractions,
+            @NotNull HashMap<UUID, Integer> recordedExperience
     ) {
         super(villagers, containers, workStates, workTimers, gates, blocksOfProgress, worldTimeAtSleep);
         this.knowledge.addAll(knowledge);
         this.insertedItems = insertedItems;
         this.recordedLootExtractions = recordedLootExtractions;
+        this.recordedExperience = recordedExperience;
     }
 
     @Override
@@ -85,7 +97,8 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
                 blocksOfProgress,
                 worldTimeAtSleep,
                 insertedItems,
-                recordedLootExtractions
+                recordedLootExtractions,
+                recordedExperience
         );
     }
 
@@ -105,6 +118,25 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
      */
     public MCTownState clearRecordedLootExtractions() {
         recordedLootExtractions.clear();
+        return this;
+    }
+
+    /** Adds {@code xp} to what {@code villager} earned during this warp, for the settle point. */
+    public void recordExperience(UUID villager, int xp) {
+        if (xp <= 0) {
+            return;
+        }
+        recordedExperience.merge(villager, xp, Integer::sum);
+    }
+
+    /** XP earned per townie during this warp (a copy; the map itself is mutable). */
+    public ImmutableMap<UUID, Integer> recordedExperience() {
+        return ImmutableMap.copyOf(recordedExperience);
+    }
+
+    /** Consumes the recorded XP exactly once, like {@link #clearRecordedLootExtractions}. */
+    public MCTownState clearRecordedExperience() {
+        recordedExperience.clear();
         return this;
     }
 
@@ -129,7 +161,8 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
                 blocksOfProgress,
                 worldTimeAtSleep,
                 ImmutableMap.copyOf(newOuter),
-                recordedLootExtractions
+                recordedLootExtractions,
+                recordedExperience
         );
     }
 
@@ -154,7 +187,8 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
                 blocksOfProgress,
                 worldTimeAtSleep,
                 ImmutableMap.copyOf(newOuter),
-                recordedLootExtractions
+                recordedLootExtractions,
+                recordedExperience
         );
         return new java.util.AbstractMap.SimpleEntry<>(newState, allItems.build());
     }
