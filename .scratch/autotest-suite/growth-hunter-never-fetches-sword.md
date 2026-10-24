@@ -52,3 +52,10 @@ its walk target / nav target, the path's end node and `isDone`, and the supply t
 how the driver picks that building and pin it there, so the repro does not wait on chance.
 Related: `.scratch/playtest-2026-10-21/hunters-stuck-collecting-after-sleep.md` (stuck in
 COLLECTING_SUPPLIES with swords in the chest; a different trigger, unreproduced).
+
+## Correction (2026-10-24, next growth run)
+
+The south-row location is **not sufficient**: the following growth run (35/35, roster 5/5) also
+used the chest at (4, 11) in that building (471 supply checks name it) and its hunter fetched
+normally. So the location may matter but something else decides it. The instrumentation in
+"Next" is still the way to settle it.
