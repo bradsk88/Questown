@@ -264,8 +264,9 @@ board (-2, 67, -3).
    miner])" posted a room-only "Crafting Room" quest ("...Build the crafter room and register its
    door so one has a place to work"). Built and completed on day 14; the batch reward is
    `MCDelayedReward(defaultQuestCompletionRewards)` (`TownFlagTutorialAdapter.makeReward`,
-   `PHASE_NEW_JOB_ROOM`), so dawn 15 brought no crafter, only the next top-need batch (baker,
-   "Bread Maker's Shop"; crafter is now excluded as built). Room-only is the dev's ruling
+   `PHASE_NEW_JOB_ROOM`). Dawn 15 brought Villager 5 (e4f3a0de, "Registered entity with town" at
+   the gate 01:51:32) as a **gatherer**, not a crafter, plus the next top-need batch (baker, "Bread
+   Maker's Shop"; crafter is now excluded as built). Room-only is the dev's ruling
    (`TownQuests.java` comment, 2026-10-22: the old "Unlock job" quest's BOP spend "rolls a random
    root, so it rarely delivered the producer"). But that leaves the same gamble as the only path:
    a townie's change-job tab offers just "Insert a Block of Progress to change to a different,
