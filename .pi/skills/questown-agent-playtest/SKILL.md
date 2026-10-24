@@ -185,8 +185,9 @@ relights the campfire", which the Acting section already said.
   for ingredients", "Reached max ticks ... Falling back to"): trace job loops there.
 - `run/logs/latest.log` rotates at midnight (box time) to `run/logs/<date>-1.log.gz`; a grep over
   latest.log alone then silently drops the earlier half of the run (r16: 5 lines where there were
-  14). Search both: `(zcat run/logs/*.log.gz; cat run/logs/latest.log) | grep -a ...`. An `awk
-  '$2>="00:28"'` time filter also matches every 23:xx line from before midnight.
+  14). Use `tools/agent-playtest/logs.sh '<regex>' ['24Oct2026 00:28:00'] [debug]`: it reads the
+  rotated logs then latest.log and filters on full date+time (an `awk '$2>="00:28"'` filter also
+  matches every 23:xx line from before midnight).
 - A world with a huge flag (the 2026-10-22 cascade) once broke joining: "Tried to read NBT tag
   that was too big" in the client log is a server-side payload bug, not a client problem (fixed
   5422b91f).
