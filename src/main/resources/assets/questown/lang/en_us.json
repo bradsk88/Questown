@@ -271,7 +271,7 @@
   "tooltips.villagers.job.work_seeker.status_1.NO_JOBSITE": "%s is looking for a job board.",
   "tooltips.villagers.job.work_seeker.status_2.NO_JOBSITE": "Make sure one exists and add requests",
   "tooltips.villagers.job.diner.status_1.NO_SUPPLIES": "%s is looking for food.",
-  "tooltips.villagers.job.diner.status_2.NO_SUPPLIES": "They also need a place to sit down and eat.",
+  "tooltips.villagers.job.diner.status_2.NO_SUPPLIES": "They can't find any food in storage.",
   "tooltips.villagers.job.diner.status_1.NO_JOBSITE": "%s is looking for a place to eat.",
   "tooltips.villagers.job.diner.status_2.NO_JOBSITE": "Somewhere comfortable to sit.",
   "tooltips.villagers.job.diner.status_1.GOING_TO_JOB": "%s is going to eat.",

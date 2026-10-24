@@ -348,7 +348,15 @@ board (-2, 67, -3).
 - #7 / Coal x8 (stock-counted quests stall): ruling: quests count **produced totals** since
   posting, not stock on hand.
 - #16 (starving town, "all caught up", missing random batch): **deferred.**
-- Not ruled; agent's default, fix unless the dev objects: #15 + #4 diner text split on
-  `hasDiningRoom` / food-in-town; #10 instrument first (workSpot/claim at state 0); #2 picker
+- #15 **resolved 2026-10-24 (text):** the shared diner `status_2.NO_SUPPLIES` line no longer blames
+  a missing seat ("They also need a place to sit down and eat." -> "They can't find any food in
+  storage."); a missing seat is NO_JOBSITE, which already says "looking for a place to eat".
+  NO_SUPPLIES is the status tree's final fall-through leaf, so the text says what the townie
+  found, not that storage is provably empty.
+- #4 **no change (agent's call; BELIEVED, not verified):** "fetching food / They will eat it soon"
+  is right in the normal case (COLLECTING_SUPPLIES fires when the town has supplies); r16's case
+  looks like a race (the cook went for food another townie had just eaten and gave up 5 s
+  later). Settle by logging the diner's supply target on COLLECTING_SUPPLIES if it recurs.
+- Not ruled; agent's default, fix unless the dev objects: #10 instrument first (workSpot/claim at state 0); #2 picker
   paging; #13 effects-line tooltip; #5 investigate the "Empty Room" announcement; #12 leave (needs
   a save migration); #8 CONTEXT.md:279 fix after the dev's CONTEXT.md edits are committed.
