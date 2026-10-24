@@ -883,3 +883,12 @@ builder clears worldgen first; without that, the detected room varied by seed (1
 of 42). Red: with the `deb6333` jar, the 1-bed room matched no bedroom (that commit's own run
 passed "one-bed-is-not-a-bedroom"). The quest cards show one icon per bed through
 `RoomRecipes.filterSpecialBlocks` (`gui/COMPLEX.md` "Room quest cards show one icon per bed").
+
+## Growth driver: no deliveries toward LOOT quests (2026-10-24, r16 #7)
+
+`VillageGrowthExecutor.fulfilItemQuests` deposits the wanted count for every open
+`minecraft:`-item quest, the way a player fills an ITEM (stock) quest. A LOOT quest counts the
+town's own extractions, so a deposit never fills it, and once the miner beat's Coal became a LOOT
+quest the driver deposited 3 coal every pass (108 deposits in one run) until every chest was full
+and all townies sat at `NO_STORAGE`. The driver now skips LOOT quests, as a player would wait for
+the miner. Live: the miner extracted 3 Coal and the quest closed.

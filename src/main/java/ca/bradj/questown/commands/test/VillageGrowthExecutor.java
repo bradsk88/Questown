@@ -739,6 +739,12 @@ public final class VillageGrowthExecutor {
             if (q.isComplete()) {
                 continue;
             }
+            if (q.getType() == Quest.QuestType.LOOT) {
+                // A LOOT quest counts the town's own production (r16 #7: Coal is mined), so a
+                // delivery never fills it; depositing for it every pass filled storage (108 coal
+                // deposits) until no townie could work.
+                continue;
+            }
             ResourceLocation wanted = q.getWantedId();
             if (wanted == null || !"minecraft".equals(wanted.getNamespace())) {
                 continue; // room/special quests handled elsewhere (door registration)

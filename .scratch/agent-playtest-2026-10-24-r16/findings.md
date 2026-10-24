@@ -410,8 +410,13 @@ board (-2, 67, -3).
 - #7 / Coal **done 2026-10-24 (dev: swords/pickaxes are deposit quests, the rest are loot
   extraction quests; Food x8 already was):** the miner batch's coal quest is a LOOT quest, Coal x3
   (dev chose 3: coal is weight 50 of 182 in `jobs/miner/default.json`, so 8 extracted coal was ~29
-  trips, ~12 days). `TownQuestsMinerOnboardingTest` red on the ITEM quest, green now. **Live check
-  still owed:** the growth run after it stalled at roster 2 (cook beat), before the miner beat.
+  trips, ~12 days). `TownQuestsMinerOnboardingTest` red on the ITEM quest, green now. Live
+  (village/growth): the growth driver deposited 3 coal toward the LOOT quest every pass (108x)
+  until storage filled and every townie sat at NO_STORAGE; the driver now skips LOOT quests (a
+  player can't deliver toward them). After that fix the miner extracted 3 Coal and the coal
+  quest closed (done list), the miner batch completed, and the run hit its 10-min cap waiting
+  for the next arrival. An A/B for #1 (growth at HEAD vs `redecideIfStarving` stubbed) reached
+  the same roster 3 with 9 vs 11 cooked meals; an earlier roster-2 stall was run variance.
 - **New (#18, seen while verifying #2; pre-existing, not ruled):** the picker offers Carrot (and
   other single foods) though its confirm says "There are 0 known jobs which produce it". ADR-0007
   says the board offers only fulfillable products. The slots come from expanding multi-item
