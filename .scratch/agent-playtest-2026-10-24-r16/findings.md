@@ -23,6 +23,9 @@ board (-2, 67, -3).
   delivery); "Coal x8" completed at once.
 - Day 13, ~01:46: a third bed set at (13, 66, -10)/(13, 66, -9) in the Big Bedroom by console (the
   player's response to "Didn't sleep"; tests #11).
+- Day 15: a BOP spent on Villager 4 through its change-job tab (random roll -> baker); room 6
+  (door (42, 66, -8)) built by console fill with a bread oven placed by `clickheld` at
+  (44, 66, -11) -> "Bread Maker's Shop" completed.
 - Days 11-13 ran unslept (natural mornings 01:30:36, 01:40:36) while the session was paused.
 - Day 5-6: Dev teleported beside the flag (2.5, 66, 2.5) at 00:33:49 (dirt click) and stayed
   there until 00:47:30, then moved away (spreadplayers -12 14) and back (00:51+) as an A/B
@@ -256,6 +259,17 @@ board (-2, 67, -3).
 13. (bug, low, GUI) **The villager stats tab truncates the effects line with no way to read the
    rest.** Miner, day 13: "Didn't sleep, works slower, Ate…" (sleepless + ate-raw-food joined on
    one line, cut with an ellipsis); hovering the line shows no tooltip (st2.png).
+14. (judge) **A top-need room gets built and then nothing staffs it.** Day 14: "Top-need batch:
+   chose need #questown:pickaxes (x12) -> producer crafter (unlocked [cook, gatherer, hunter,
+   miner])" posted a room-only "Crafting Room" quest ("...Build the crafter room and register its
+   door so one has a place to work"). Built and completed on day 14; the batch reward is
+   `MCDelayedReward(defaultQuestCompletionRewards)` (`TownFlagTutorialAdapter.makeReward`,
+   `PHASE_NEW_JOB_ROOM`), so dawn 15 brought no crafter, only the next top-need batch (baker,
+   "Bread Maker's Shop"; crafter is now excluded as built). Room-only is the dev's ruling
+   (`TownQuests.java` comment, 2026-10-22: the old "Unlock job" quest's BOP spend "rolls a random
+   root, so it rarely delivered the producer"). But that leaves the same gamble as the only path:
+   a townie's change-job tab offers just "Insert a Block of Progress to change to a different,
+   random profession". The pickaxe need stays unmet while the crafting room sits empty.
 
 ## Skill/tool traps (for the retro)
 - The BOP tab's "Take Block of Progress" button moves down once an "Earned by: ..." line shows:
