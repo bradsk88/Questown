@@ -1077,6 +1077,19 @@ draws only `Pages.slice(slots, page, perPage)` (`PagesTest`). Live on the r16 wo
 each item once, gui-lint OK, a click opens that item's confirm. `CreateStockRequestScreen` (the
 deprecated fetcher's clipboard) still has the unused range, latent below its 81-slot page.
 
+**A tag product is its category's tile, not one tile per member (r16 #18, 2026-10-24).** The cook
+and baker jobs declare `"initial_request": "#questown:villager_food"` (their `result` is
+`uses_special_rules`: the furnace decides the cooked item). `ServerJobsRegistry.getAllOutputs`
+added every member of that tag as its own product, so the picker offered carrot, apple and the
+other 14 foods though no job makes most of them (the confirm said "0 known jobs"). It now keeps a
+tag request as one tag ingredient (`RequestOutputs.of`, `RequestOutputsTest`), and
+`TownWorkHandle.openMenuRequested` drops a product that is an offered category
+(`RequestCategories.withoutCategories`, `RequestCategoriesTest`): the category slot (one cycling
+icon, one tag request) already stands for it. The categories are still computed from the full
+product set, so "Food" stays offered. The stock-request clipboard (`StockRequestClipboardItem`)
+gets the kept-whole tag too; its screen draws a multi-item ingredient as a cycling slot plus one
+per member, so it still lists the members.
+
 ## Request confirm title names the item (2026-10-22 playtest)
 
 `WorkRequestConfirmScreen` titled itself `Compat.translatable(Ingredients.toString(requested))`.

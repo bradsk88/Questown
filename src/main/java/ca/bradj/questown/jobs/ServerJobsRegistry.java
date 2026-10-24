@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.requests.RequestOutputs;
+
 import ca.bradj.questown.QT;
 import ca.bradj.questown.gui.StatusNeedLine;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -887,6 +889,8 @@ public class ServerJobsRegistry {
      * Gatherer-style {@code results} are additionally narrowed to discovered
      * loot upstream, via {@code t}'s known-gather-results function (the job's
      * fixed {@code initialRequest} item is not loot and is not narrowed).
+     * <p>
+     * A tag {@code initialRequest} stays one tag ingredient ({@link RequestOutputs}, r16 #18).
      */
     public static ImmutableSet<Ingredient> getAllOutputs(
             WorksBehaviour.TownData t,
@@ -896,16 +900,11 @@ public class ServerJobsRegistry {
                                      .map(Supplier::get)
                                      .filter(work -> jobIsUnlocked.test(work.id))
                                      .map(work -> {
-                                         ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
-                                         work.results.apply(t).forEach(z -> b.add(z.toMCItemStack()));
-                                         @Nullable Ingredient req = work.initialRequest.apply(t.serverLevel());
-                                         if (req != null) {
-                                             for (ItemStack item : req.getItems()) {
-                                                 b.add(item);
-                                             }
-                                         }
+                                         ImmutableSet.Builder<Ingredient> b = ImmutableSet.builder();
+                                         work.results.apply(t).forEach(z -> b.add(Ingredient.of(z.toMCItemStack())));
+                                         b.addAll(RequestOutputs.of(work.initialRequest.apply(t.serverLevel())));
                                          return b.build();
-                                     }).flatMap(Collection::stream).map(Ingredient::of).filter(v -> !v.isEmpty()).map(Ingredients::asWorkRequest)
+                                     }).flatMap(Collection::stream).filter(v -> !v.isEmpty()).map(Ingredients::asWorkRequest)
                                      .collect(Collectors.toSet()).stream().map(WorkRequest::asIngredient).toList();
         return ImmutableSet.copyOf(list);
     }

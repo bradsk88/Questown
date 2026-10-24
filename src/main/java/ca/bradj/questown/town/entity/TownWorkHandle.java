@@ -9,6 +9,7 @@ import ca.bradj.questown.gui.TownWorkContainer;
 import ca.bradj.questown.gui.UIWork;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.jobs.requests.RequestCategories;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
@@ -131,8 +132,11 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
         BlockPos flagPos = parent.getTownFlagBasePos();
         WorksBehaviour.TownData td = parent.getTownData();
-        ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td, parent.getVillagerHandle()::isUnlocked);
-        List<ResourceLocation> categories = offeredCategories(allOutputs);
+        ImmutableSet<Ingredient> producible = ServerJobsRegistry.getAllOutputs(td, parent.getVillagerHandle()::isUnlocked);
+        List<ResourceLocation> categories = offeredCategories(producible);
+        // A tag product that is an offered category is drawn by the category's tile (r16 #18).
+        ImmutableSet<Ingredient> allOutputs = ImmutableSet.copyOf(RequestCategories.withoutCategories(
+                producible, TownWorkHandle::tagOf, categories));
         Compat.openScreen(
                 sp, new MenuProvider() {
                     @Override
@@ -177,6 +181,11 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
      * The request categories ("Food", "Swords") to offer: those some unlocked job makes an item in
      * (RequestCategories). Requesting one posts a tag request.
      */
+    private static @Nullable ResourceLocation tagOf(Ingredient ingredient) {
+        String tag = Ingredients.getTag(ingredient);
+        return tag == null ? null : new ResourceLocation(tag);
+    }
+
     private static List<ResourceLocation> offeredCategories(ImmutableSet<Ingredient> outputs) {
         List<ItemStack> producible = outputs.stream()
                 .flatMap(i -> Arrays.stream(i.getItems()))
