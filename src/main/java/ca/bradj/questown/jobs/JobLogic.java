@@ -239,11 +239,17 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 
         if (noSuppliesTicks > maxNoSupplyTicks) {
+            // The state behind the give-up, for r16 #10 (diners took food, then gave up at
+            // state:0 without eating; which of spot / site / insert was missing is unknown).
             QT.JOB_LOGGER.debug(
-                    "{} gave up waiting for ingredients after {} ticks (job: {})",
+                    "{} gave up waiting for ingredients after {} ticks (job: {}, status: {}, workSpot: {}, inJobSite: {}, inserted: {})",
                     entityCurrentJob.rootId(),
                     noSuppliesTicks,
-                    entityCurrentJob.jobId()
+                    entityCurrentJob.jobId(),
+                    status,
+                    workSpot,
+                    isEntityInJobSite,
+                    worldBeforeTick.timesInserted()
             );
             this.grabbingInsertedSupplies = true;
             if (status == ProductionStatus.NO_SUPPLIES) {

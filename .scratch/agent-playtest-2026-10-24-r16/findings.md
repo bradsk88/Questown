@@ -374,6 +374,11 @@ board (-2, 67, -3).
   negative). **Open design question for the dev:** the plate's MAX weight still keeps dining rooms
   out of every quest (its TODO: "Bring back hunger/dining and reduce this cost to represent plate
   recipe"); r16 #5's hunter tooltip asked for a dining room no quest offers.
+- #10 **instrumented 2026-10-24 (cause still unknown):** the "gave up waiting for ingredients"
+  debug line now carries `status`, `workSpot`, `inJobSite` and `inserted` (`JobLogic`). Live: it
+  fired as `cook ... (job: dining_raw_food, status: NO_SUPPLIES, workSpot: null, inJobSite: false,
+  inserted: 0)`, an ordinary out-of-food give-up. Next time a diner TOOK food and gives up at
+  `state:0`, that line says which precondition was missing.
 - **New (#18, seen while verifying #2; pre-existing, not ruled):** the picker offers Carrot (and
   other single foods) though its confirm says "There are 0 known jobs which produce it". ADR-0007
   says the board offers only fulfillable products. The slots come from expanding multi-item
