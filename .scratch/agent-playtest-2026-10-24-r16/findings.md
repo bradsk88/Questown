@@ -379,6 +379,14 @@ board (-2, 67, -3).
   fired as `cook ... (job: dining_raw_food, status: NO_SUPPLIES, workSpot: null, inJobSite: false,
   inserted: 0)`, an ordinary out-of-food give-up. Next time a diner TOOK food and gives up at
   `state:0`, that line says which precondition was missing.
+- #17 part 1 **done 2026-10-24:** the NO_SPACE tooltip (gatherer + production keys) now reads
+  "<Job> has nowhere to put their items. / Storage is full or missing: add a chest to a room."
+  (it said "needs an empty chest. / It must be in a room", which reads as a setup problem; NO_SPACE
+  also covers a town with no chest, hence "or missing"). Live on the r16 world with all three chests
+  filled: the second hunter showed the new text; server `[WHY]` settled at `NO_SPACE -> NO_SPACE`.
+  r16's "dropping loot" tooltip during full storage did **not** reproduce at this HEAD (BELIEVED:
+  #9's drop change is why, since a full-handed hunter no longer tries to drop its sword; not
+  shown). Part 2 (a chest with each villager-bringing batch) pending with #11.
 - **New (#18, seen while verifying #2; pre-existing, not ruled):** the picker offers Carrot (and
   other single foods) though its confirm says "There are 0 known jobs which produce it". ADR-0007
   says the board offers only fulfillable products. The slots come from expanding multi-item
