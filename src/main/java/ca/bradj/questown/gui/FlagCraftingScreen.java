@@ -54,7 +54,6 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     private int panelHeight = 166;
     private int titleY;
     private int[] rowY = new int[0];
-    private int moveDescY;
     private int moveButtonY;
     private boolean moveArmed;
 
@@ -122,9 +121,9 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
 
         // The "Begin moving" section (recall + relocate) only makes sense with villagers,
         // so collapse it entirely when none have joined.
+        // The description is the button's hover tooltip, not a paragraph: with five recipe rows the
+        // panel outgrew a 240-px-tall GUI (r17 screenshot 00:39: title and button cut off).
         if (showMove) {
-            moveDescY = y;
-            y += wrappedHeight(moveDesc()) + BLOCK_PAD;
             moveButtonY = y;
             y += BTN_HEIGHT + 8;
         }
@@ -242,8 +241,8 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
             renderRecipeRow(ctx, bgX, bgY + rowY[i], r.icon().get(), new ItemStack(r.output().get()), mouseX, mouseY);
         }
 
-        if (showMove) {
-            ctx.darkTextWrap(new Coordinate(bgX + MARGIN, bgY + moveDescY), TEXT_WIDTH, moveDesc());
+        if (showMove && isOverMoveButton(mouseX, mouseY, bgX, bgY)) {
+            showTooltip(Compat.splitText(font, moveDesc(), TOOLTIP_WIDTH));
         }
 
         for (int i = 0; i < craftButtons.size(); i++) {
@@ -274,6 +273,12 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         } else if (mouseInside(mouseX, mouseY, x + 50, iconY + 2)) {
             showTooltip(Compat.getHoverName(output));
         }
+    }
+
+    private boolean isOverMoveButton(int mouseX, int mouseY, int bgX, int bgY) {
+        int x = bgX + MARGIN;
+        int y = bgY + moveButtonY;
+        return mouseX >= x && mouseX < x + TEXT_WIDTH && mouseY >= y && mouseY < y + BTN_HEIGHT;
     }
 
     /** The 16x16 icon box at (x, y). */

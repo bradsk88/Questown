@@ -1344,3 +1344,11 @@ The Produces row and the "Add To Work Requests" item use `ProducedMatches.of(res
 (r17, dev: "should only show matching items"): only the job's results that match the clicked item,
 or all of them when none match. Before, a click on raw food listed the hunter's whole loot and the
 button requested the job's first result, whatever it was. `ProducedMatchesTest`.
+
+## Flag crafting: the "Begin moving" description is a tooltip (r17, dev 2026-10-25)
+
+With five recipe rows plus the moving section (shown once a villager has joined), the panel was
+~257 GUI px, taller than a 240-px GUI (1280x720 at scale 3): the title and the button were cut
+off. The 4-line description moved from the layout into the move button's hover tooltip
+(`isOverMoveButton`, wrapped to `TOOLTIP_WIDTH`), which saves ~60 px. Hiding the mineshaft and
+fishing station rows until their quests (r17 finding #1) will save more.

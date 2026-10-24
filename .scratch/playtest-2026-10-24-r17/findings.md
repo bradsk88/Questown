@@ -118,4 +118,7 @@ Server log `/tmp/dev-server-27.log` (launched 23:42:18 box time, ready 23:42:44,
     slot, and categories come first, so the first row read darker. Fixed: no tint; the cycling icon
     and the category tooltip mark categories. (Assumed this screen: the job board's only dark fill
     is the page-number bar.) Needs the dev's eyes after a client restart.
-16. (GUI, dev 00:39:48) **"Crafting menu got too big."** Screenshot pending.
+16. (GUI, dev 00:39:48) **"Crafting menu got too big."** Screenshot `2026-10-25_00.39.54.png`:
+    5 recipe rows + the 4-line "Begin moving" paragraph + button = ~257 GUI px in a 240-px GUI;
+    the title and the button were cut off. Fixed: the paragraph is now the move button's hover
+    tooltip (~197 px). #1 (hide mineshaft/fishing rows) will shrink it further.
