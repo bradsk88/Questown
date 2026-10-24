@@ -21,6 +21,8 @@ board (-2, 67, -3).
   (8d37b55b) made a Miner through the BOP path.
 - Day 13, 01:42: 8 coal put into empty slot 25 of the second chest by console (the player's
   delivery); "Coal x8" completed at once.
+- Day 13, ~01:46: a third bed set at (13, 66, -10)/(13, 66, -9) in the Big Bedroom by console (the
+  player's response to "Didn't sleep"; tests #11).
 - Days 11-13 ran unslept (natural mornings 01:30:36, 01:40:36) while the session was paused.
 - Day 5-6: Dev teleported beside the flag (2.5, 66, 2.5) at 00:33:49 (dirt click) and stayed
   there until 00:47:30, then moved away (spreadplayers -12 14) and back (00:51+) as an A/B
@@ -140,7 +142,8 @@ board (-2, 67, -3).
    offers it. Room 4 (4 Dinner Plates = `data/questown/recipes/dining_room.json`) was wanded
    with the plates already in: the only broadcast was `recipe_created [room.empty_room, [28, -8]]`.
    Re-placing a plate and moving all four from z -11 to z -10 produced no `room_changed`, whereas
-   the furnace, second chest and second bed each produced one. **But the town did match it:** at
+   the furnace, second chest and second bed each produced one, and so did a single crafting table
+   in room 5 on day 14 (`room_changed [empty_room -> crafting_room]`). **But the town did match it:** at
    dawn 4 `TownRoomsHandle.resetDiningRooms` (iterates rooms whose match `anyMatch(dining_room)`)
    logged "Resetting plate claim and state at" all four plates (00:24:14), and from 00:24:45 both
    townies went `seeking_work -> dining` (the table diner, chosen only when `hasDiningRoom`).
@@ -238,11 +241,21 @@ board (-2, 67, -3).
    three townies get two beds. Live: every night since villager 3 arrived logged "Nightfall: 1 of 3
    townies have no bed for the night" (01:25:23, 01:35:23) and dawn put SLEEPLESS on Villager 3
    each time (01:20:36, 01:30:36, 01:40:36); its mood was 45% on day 13. No quest asks for a third
-   bed, so a player following the quests never learns why.
+   bed. Surfaces on day 13: the flag villagers-tab tooltip said "Miner is underground. They are
+   searching for resources." (nothing about sleep); the villager's stats tab said "Didn't sleep,
+   works slower, Ate…" (`menu.villager_stats.effect.sleepless` = "Didn't sleep, works slower",
+   no mention of a bed). A player learns the townie didn't sleep, not why.
+   A third bed fixed that night ("Nightfall: 0 of 3", 01:45:23). Then the miner batch's reward,
+   Villager 4 (day 14), came with no bed either: "Nightfall: 1 of 4 townies have no bed"
+   (01:51:03). So it isn't only the gate exception: only the two bedroom batches bring beds, and
+   every other arrival (gate, miner, presumably later top-need batches) adds a bedless townie.
 12. (trivia) The raw-food mood effect id is misspelled: `MoodEffects.java:18`
    `ATE_RAW_FOOD = Questown.ResourceLocation("are_raw_food")`, shown in `_qtdev villager_stats` as
    `questown:are_raw_food`. Players see the right text (lang key
    `menu.villager_stats.effect.are_raw_food` = "Ate raw food"); renaming needs a save migration.
+13. (bug, low, GUI) **The villager stats tab truncates the effects line with no way to read the
+   rest.** Miner, day 13: "Didn't sleep, works slower, Ate…" (sleepless + ate-raw-food joined on
+   one line, cut with an ellipsis); hovering the line shows no tooltip (st2.png).
 
 ## Skill/tool traps (for the retro)
 - The BOP tab's "Take Block of Progress" button moves down once an "Earned by: ..." line shows:
