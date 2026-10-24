@@ -45,3 +45,12 @@ Server log `/tmp/dev-server-27.log` (launched 23:42:18 box time, ready 23:42:44,
    loot producers count only once their drops are known, and the hunter had not returned yet.
    **Fixed same session:** empty-list guard + a "No job in your town is known to make this yet"
    line. Pre-existing (not from today's picker change: different lookup).
+6. (GUI, dev 00:14:35, screenshot `run-client/screenshots/2026-10-25_00.14.10.png`) The #5
+   empty-state text overlapped the "Page 1 / 1" row (a fixed +24 from the title), and said
+   "Townies". **Dev rule: players must NEVER see the word "townie".** Fixed: text placed under
+   the page-navigation row, aligned to it; wording says "Villagers". (The other `townie` hits in
+   `en_us.json` are keys only.)
+7. (GUI request, dev 00:15:01) **"I'd like the menu background extended so the 'view completed
+   quests' button isn't weirdly floating in space."** (Quests screen.) Fixed: the panel grows down
+   by gap + button + 6 px padding while the footer button shows (`QuestsScreen.panelHeight`).
+   Needs a client restart and the dev's eyes (not seen yet).

@@ -538,7 +538,7 @@
   "menu.villager_stats.experience": "Experience",
   "menu.villager_stats.damage": "Damage",
   "menu.item_jobs.room": "Room: %s",
-  "menu.item_jobs.none_known": "No job in your town is known to make this yet. Townies who leave town learn what they can bring back.",
+  "menu.item_jobs.none_known": "No job in your town is known to make this yet. Villagers who leave town learn what they can bring back.",
   "menu.item_jobs.title_tooltip": "Jobs that can produce:",
   "menu.item_jobs.items_used": "Items Used:",
   "menu.item_jobs.tools_used": "Tools Used:",

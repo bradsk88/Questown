@@ -1322,3 +1322,15 @@ already seen, so on day 1 the raw-food quest's icon got an empty list, and `getF
 (called every frame from `renderPrologue`) did `jobs.get(0)`: `ArrayIndexOutOfBoundsException`,
 client crash. `getFirst` now returns empty for an empty list (the Add button hides, as for a
 job with no result), and the screen draws `menu.item_jobs.none_known` under the title.
+
+The empty-state line sits under the page-navigation row, aligned to it (the first placement, a
+fixed offset from the title, drew over "Page 1 / 1": r17 screenshot 00:14). Player text says
+"villagers", never "townies" (dev rule).
+
+## Quests panel grows to hold the "View completed quests" button (r17, dev 2026-10-25)
+
+The footer button sits just below the 166 px panel (`footerButtonY`), which read as floating in
+space. `QuestsScreen.panelHeight()` adds `FOOTER_GAP + BUTTON_HEIGHT + FOOTER_PADDING` while
+the footer button shows (not in the all-done state, where it is centred inside the panel), and
+both the panel draw and `getExtraAreas` use it. The top edge stays put, so cards and the page row
+do not move.

@@ -164,10 +164,12 @@ public class ItemJobsScreen extends CompatScreen {
         );
         this.delegate.afterRender(ctx, mouseX, mouseY, partialTicks, jobs, false);
         if (jobs.isEmpty()) {
-            int left = (this.width - backgroundWidth) / 2 + BIG_PADDING;
+            // Below the page-navigation row, aligned with it (r17 screenshot: a fixed offset from
+            // the title drew the text over "Page 1 / 1").
+            ImmutableRect2i nav = MathUtil.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
             ctx.darkTextWrap(
-                    new Coordinate(left, textArea.getY() + 24),
-                    backgroundWidth - (2 * BIG_PADDING),
+                    new Coordinate(nav.getX(), nav.getY() + nav.getHeight() + 6),
+                    nav.getWidth(),
                     Compat.translatable("menu.item_jobs.none_known")
             );
         }

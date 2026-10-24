@@ -47,6 +47,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private static final int BUTTON_HEIGHT = 20;
     private static final int BUTTON_H_PADDING = 16;
     private static final int FOOTER_GAP = 2;
+    /** Space under the footer button, inside the grown panel. */
+    private static final int FOOTER_PADDING = 6;
 
     private final List<UIQuest> quests;
     private final JEI.NineNine background;
@@ -603,7 +605,23 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         super.renderBgContent(ctx, partialTicks, mouseX, mouseY);
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
+        ctx.drawNineNine(this.background, x, y, backgroundWidth, panelHeight());
+    }
+
+    /**
+     * The panel grows down to hold the "View completed quests" footer button while it shows, so
+     * the button sits inside the panel instead of floating below it (r17, dev 2026-10-25). The top
+     * edge stays put, so the cards and page row do not move.
+     */
+    private int panelHeight() {
+        if (!footerButtonShowing()) {
+            return backgroundHeight;
+        }
+        return backgroundHeight + FOOTER_GAP + BUTTON_HEIGHT + FOOTER_PADDING;
+    }
+
+    private boolean footerButtonShowing() {
+        return viewCompletedButton != null && viewCompletedButton.visible && !allComplete;
     }
 
     @Override
@@ -671,7 +689,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     public List<Rect2i> getExtraAreas() {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        return ImmutableList.of(new Rect2i(x, y, backgroundWidth, backgroundHeight));
+        return ImmutableList.of(new Rect2i(x, y, backgroundWidth, panelHeight()));
     }
 
     @Override
