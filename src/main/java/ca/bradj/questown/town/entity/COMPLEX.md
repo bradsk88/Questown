@@ -1579,8 +1579,8 @@ pre-roll) or at dawn (`handleMorning`'s fallback). Both now draw from `RootRoll.
 no townie holds yet, or every root but the townie's own when all are held (`RootRollTest`). r16's
 two rolls gave a baker and a second hunter while the town's top need had no producer. A gold BOP
 still forces its root (ADR-0015), and an overnight quest override still wins. The rest of the
-ruling (alternating job-change and job batches) is a plan with open decisions:
-`docs/plans/2026-10-24-001-feat-post-onboarding-job-change-alternation-plan.md`.
+ruling (alternating job-change and job batches) was superseded the same day by curated quest
+paths: `docs/plans/2026-10-24-002-feat-curated-quest-paths-plan.md`.
 
 ## `QuestsHolder.removeBatch` (2026-10-24)
 
@@ -1589,3 +1589,15 @@ replacement batch or upgrade quest for the morning, broadcast `batchRemoved`) mo
 private `TownQuestsHandle.doRemove` onto the owner as `removeBatch(UUID)`, so the growth driver
 discards a batch the same way a player does (commands/test/COMPLEX.md "discard room quests a
 spare building can't hold"). `doRemove` now calls it and only handles the screen.
+
+## An upgrade roll with nothing to upgrade still queues a batch (r16 #16, 2026-10-24)
+
+`defaultQuestCompletionRewards` can reward a completion with `AddRandomUpgradeQuest` for a random
+villager. `TownQuests.addUpgradeQuest` finds that villager's completed quests and posts an upgrade
+for the first one with an upgrade recipe. When there is none (no completed quests of their own, or
+no recipe for any of them) it logs "The flag entity will generate a random batch instead." That
+was only true once a request sat in `questRequests`: `tick` grows a procedural batch only for a
+queued request, and since `6cd4a57e` (2026-01-03) these branches queued none, so the town sat with
+zero quests (village/growth stalled at roster 4). Both branches now call `addBatchForVisitor`.
+`TownQuestsUpgradeFallbackTest` pins the no-completed-quests branch (the no-recipe branch reads
+the level's recipe manager, which is registry-bound).

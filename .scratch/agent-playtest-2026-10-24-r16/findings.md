@@ -464,3 +464,21 @@ board (-2, 67, -3).
   and, once, a roster-2 cook-beat stall that an A/B showed was run variance. The coal LOOT quest
   closes from the miner's own extraction.
 
+
+## Rulings, second design chat (dev, 2026-10-24 day)
+- #14: **superseded** by curated quest paths. Full rulings: `docs/plans/2026-10-24-002-feat-curated-quest-paths-plan.md`
+  (fork after the miner, top-need batch cut, Outfitter path first, garden as fallback, path data
+  files with onboarding moved onto them, per-job `experience` XP field). `RootRoll` stays.
+- #16: **fix now** (queue `addBatchForVisitor` in both no-upgrade branches of `addUpgradeQuest`);
+  the garden is the post-path fallback.
+- #18: the picker shows **one cycling Food tile** for a tag product (the existing category slot),
+  no tile per tag member; a food gets its own tile only when a job names it directly. Fix in
+  `ServerJobsRegistry.getAllOutputs` (stop flattening a tag `initial_request`).
+- Dinner Plate weight: **give it a real cost** (the `RecipeItemConfig` TODO), pin the dining-room
+  match, one growth run.
+- CONTEXT.md: edit in the worktree now; the dev merges with their uncommitted version.
+- Creeper wipe: **peaceful growth world** (ticket `.scratch/autotest-suite/growth-townies-killed-by-creepers.md`).
+- `qt-wt-work` fast-forwarded into `1.20.6-neoforge-wip` at `180ec5e4` (dev: "rebase now"; main
+  had not moved, so the rebase was a no-op and the update a fast-forward).
+- Cook XP: the dev rejected "meals give 1 XP" as the status quo: cause is `"work": 0.1` read by
+  `getAsInt()` as 0; fix is the per-job `experience` field (plan phase 1).
