@@ -26,6 +26,9 @@ board (-2, 67, -3).
 - Day 15: a BOP spent on Villager 4 through its change-job tab (random roll -> baker); room 6
   (door (42, 66, -8)) built by console fill with a bread oven placed by `clickheld` at
   (44, 66, -11) -> "Bread Maker's Shop" completed.
+- Day 16: a BOP spent on Villager 5 (change-job tab, random roll -> hunter). Day 17, 02:13: a
+  third chest placed by `clickheld` at (8, 66, -9) in the storeroom (-> "store_room_big"), the
+  player's response to #17.
 - Days 11-13 ran unslept (natural mornings 01:30:36, 01:40:36) while the session was paused.
 - Day 5-6: Dev teleported beside the flag (2.5, 66, 2.5) at 00:33:49 (dirt click) and stayed
   there until 00:47:30, then moved away (spreadplayers -12 14) and back (00:51+) as an A/B
@@ -270,7 +273,8 @@ board (-2, 67, -3).
    (`TownQuests.java` comment, 2026-10-22: the old "Unlock job" quest's BOP spend "rolls a random
    root, so it rarely delivered the producer"). But that leaves the same gamble as the only path:
    a townie's change-job tab offers just "Insert a Block of Progress to change to a different,
-   random profession". The pickaxe need stays unmet while the crafting room sits empty.
+   random profession". The pickaxe need stays unmet while the crafting room sits empty. Two rolls
+   this run: Villager 4 -> baker (day 15), Villager 5 -> hunter (day 16).
 15. (bug, low, text) **A hungry townie's tooltip asks for a dining room the town already has.**
    Day 16, the baker in a town with a working dining room (room 4, table diner in use since day
    4): "Baker is looking for food. / They also need a place to sit down and eat." All three diner
@@ -286,6 +290,16 @@ board (-2, 67, -3).
    `villager_food`) never worked: it only cycled the diner stages, with `need=NONE`. Hunger has no
    cost beyond lost work (damage 0%), so nothing breaks, but nothing tells the player that food is
    the town's problem or what would fix it.
+17. (bug/guidance, medium) **Full storage silently stops all production; the tooltips say the
+   townies are depositing.** Day 17: both storeroom chests had 27/27 slots used (unstacked
+   deposits, by design per CONTEXT.md "Unstacked deposit"), mostly junk: 9 feathers, 8+4
+   cobblestone, 8 leather, 3 string, 2 iron nuggets, and **3 stray BOP items** (#9 recurring).
+   Hunter 1 spent the day in `hunter:sword` at **NO_SPACE** (18 `[WHY]` dumps in a row) until "Reached
+   max ticks ... asking the board" every 75 s, then diner stages, then back: no XP and no trips for a
+   whole day. Hunter 2's need flipped to NO_STORAGE (debug "need is now NO_STORAGE"). No one ate
+   (all five at -241%). The flag villagers tab said "Hunter is dropping loot. / They will place
+   items in chests." for both hunters. Nothing a player reads says storage is full; the quests tab
+   said "You're all caught up" (#16).
 
 ## Skill/tool traps (for the retro)
 - The BOP tab's "Take Block of Progress" button moves down once an "Earned by: ..." line shows:
