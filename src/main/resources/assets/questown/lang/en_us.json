@@ -531,7 +531,7 @@
   "menu.villager_stats.mood": "Mood",
   "menu.villager_stats.level": "Lvl %s",
   "menu.villager_stats.mood_effects": "%s",
-  "menu.villager_stats.effect.sleepless": "Didn't sleep, works slower",
+  "menu.villager_stats.effect.sleepless": "No bed last night, works slower",
   "menu.villager_stats.effect.are_raw_food": "Ate raw food",
   "menu.villager_stats.effect.uncomfortable_eating": "Ate without a table",
   "menu.villager_stats.effect.comfortable_eating": "Ate at a table",

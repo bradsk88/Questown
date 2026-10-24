@@ -387,6 +387,10 @@ board (-2, 67, -3).
   r16's "dropping loot" tooltip during full storage did **not** reproduce at this HEAD (BELIEVED:
   #9's drop change is why, since a full-handed hunter no longer tries to drop its sword; not
   shown). Part 2 (a chest with each villager-bringing batch) pending with #11.
+- #11 text part **done 2026-10-24:** `menu.villager_stats.effect.sleepless` reads "No bed last
+  night, works slower" (was "Didn't sleep, works slower"). SLEEPLESS has one source, the dawn drain
+  of the bedless ledger (`SimpleVillagerHandle.handleMorning`), so the bed is always the cause.
+  Live: Villager e4f3a0de's stats tab shows the new line. The bed-per-arrival part is pending.
 - **New (#18, seen while verifying #2; pre-existing, not ruled):** the picker offers Carrot (and
   other single foods) though its confirm says "There are 0 known jobs which produce it". ADR-0007
   says the board offers only fulfillable products. The slots come from expanding multi-item
