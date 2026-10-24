@@ -38,7 +38,10 @@ relights the campfire", which the Acting section already said.
    autotest in the worktree still wipes it, so tar the world first if you want to keep it
    (2026-10-22: the saved day-7 world was lost to a suite run). Tar only after the server has
    stopped and check the archive (`tar tzf <tgz> | grep -c region/` > 0): a tar that raced the
-   final save came out 4.8 KB for an 18 MB world (r12).
+   final save came out 4.8 KB for an 18 MB world (r12). **Tar `run/logs` with it** (`tar czf
+   <tgz> -C run world logs`): every server start rotates `latest.log`/`debug.log` and only the
+   newest few rotations are kept, so a morning of restarts and autotests deletes the run's own
+   evidence (2026-10-24: r16's 00:00-02:22 logs were gone before #11's batch could be checked).
 3. Fresh world: `rm -rf run/world run/logs run-client/diags run-client/.qtdiag-cmd` in the
    worktree. `run/server.properties`: `difficulty=normal`, `gamemode=creative` (creative players
    aren't attacked, so no death-screen captures), `server-port=25585`.
