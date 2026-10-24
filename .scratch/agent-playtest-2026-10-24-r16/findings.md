@@ -271,6 +271,21 @@ board (-2, 67, -3).
    root, so it rarely delivered the producer"). But that leaves the same gamble as the only path:
    a townie's change-job tab offers just "Insert a Block of Progress to change to a different,
    random profession". The pickaxe need stays unmet while the crafting room sits empty.
+15. (bug, low, text) **A hungry townie's tooltip asks for a dining room the town already has.**
+   Day 16, the baker in a town with a working dining room (room 4, table diner in use since day
+   4): "Baker is looking for food. / They also need a place to sit down and eat." All three diner
+   stages share `tooltips.villagers.job.diner.*` (`en_us.json:273-292`), and
+   `status_2.NO_SUPPLIES` always blames the missing seat; the real blocker was no food in town.
+16. (judge, balance/guidance) **By day 16 the town starves and the board says "You're all caught
+   up".** Five townies, one hunter, 3 beds: `villager_stats` at 02:01 had all five at -106% to
+   -198%; only 2 meals in the 4 minutes before. The quests tab read "You're all caught up. New
+   quests will appear soon"; dawn 16 logged "No upgrade paths could be determined because no
+   quests have been completed yet for VillagerUUID[a4b439d9...] / Skipping generation. The flag
+   entity will generate a random batch instead", and no batch appeared. Economics page 1 ranked
+   Coal (needed 43x), Raw Mutton (42x), Pickaxes (12x). The baker (top-need producer for
+   `villager_food`) never worked: it only cycled the diner stages, with `need=NONE`. Hunger has no
+   cost beyond lost work (damage 0%), so nothing breaks, but nothing tells the player that food is
+   the town's problem or what would fix it.
 
 ## Skill/tool traps (for the retro)
 - The BOP tab's "Take Block of Progress" button moves down once an "Earned by: ..." line shows:
