@@ -1313,3 +1313,12 @@ so with no open quests it drew a blank "Page 1 / 1". When there are no cards and
 `renderNothingToShow` now centres "No open quests right now." (`menu.quests.none_open`). gui-lint:
 `QuestsScreen — OK`.
 
+
+## Item jobs screen: no known producer (r17 crash, 2026-10-25)
+
+Clicking a quest's item icon opens `ItemJobsScreen` with the producers
+`ServerJobsRegistry.getJobsKnownToProduce` returns. Loot jobs count only for drops the town has
+already seen, so on day 1 the raw-food quest's icon got an empty list, and `getFirst`
+(called every frame from `renderPrologue`) did `jobs.get(0)`: `ArrayIndexOutOfBoundsException`,
+client crash. `getFirst` now returns empty for an empty list (the Add button hides, as for a
+job with no result), and the screen draws `menu.item_jobs.none_known` under the title.

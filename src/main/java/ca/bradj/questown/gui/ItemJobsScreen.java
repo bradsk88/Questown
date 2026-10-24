@@ -74,6 +74,11 @@ public class ItemJobsScreen extends CompatScreen {
     }
 
     private ItemStack getFirst() {
+        // No producer known yet (a loot job's drops are listed only once the town has seen them):
+        // the raw-food quest's icon on day 1 crashed the client here (r17, 2026-10-25).
+        if (jobs.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
         UIJob j = jobs.get(delegate.getCurrentPageIndex());
         ImmutableList<ItemStack> r = j.result();
         if (r.isEmpty()) {
@@ -158,6 +163,14 @@ public class ItemJobsScreen extends CompatScreen {
                 textArea.getY() - 6
         );
         this.delegate.afterRender(ctx, mouseX, mouseY, partialTicks, jobs, false);
+        if (jobs.isEmpty()) {
+            int left = (this.width - backgroundWidth) / 2 + BIG_PADDING;
+            ctx.darkTextWrap(
+                    new Coordinate(left, textArea.getY() + 24),
+                    backgroundWidth - (2 * BIG_PADDING),
+                    Compat.translatable("menu.item_jobs.none_known")
+            );
+        }
         renderTooltips(ctx, mouseX, mouseY, textArea.expandBy(4));
     }
 
