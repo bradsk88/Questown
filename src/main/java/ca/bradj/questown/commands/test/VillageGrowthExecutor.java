@@ -819,6 +819,9 @@ public final class VillageGrowthExecutor {
                 return craftAndPlaceRoomBlock(id);
             }
             ca.bradj.roomrecipes.recipes.RoomRecipe recipe = roomRecipe(id);
+            if (recipe != null && placements(recipe).size() > ROW_CAPACITY) {
+                return discardUnbuildable(q);
+            }
             if (recipe == null || nextSpareBuilding >= buildingCorners.size()) {
                 msg("UNCLEAR room quest " + id + ": no recipe or no spare building to furnish");
                 return false;
@@ -844,6 +847,39 @@ public final class VillageGrowthExecutor {
             return true;
         }
         return false;
+    }
+
+    /** Items placed in one row of a spare building's 3x3 interior. */
+    private static final int ROW_CAPACITY = BUILDING_SIZE - 2;
+
+    /**
+     * A room quest the 3x3 spare buildings can't hold (the inn: six beds) is discarded the way a
+     * player's remove-batch button does; the town posts a replacement next morning. Without it the
+     * run stalled at roster 4 on the inn upgrade
+     * (`.scratch/autotest-suite/growth-driver-cannot-build-inn-or-kitchen-upgrades.md`).
+     */
+    private boolean discardUnbuildable(MCQuest q) {
+        boolean removed = flag.getQuestHandle().removeBatch(q.getBatchUUID());
+        msg("Discarded the batch of room quest " + q.getWantedId() + ": it does not fit a spare building -> " + removed);
+        check("unbuildable-discarded[" + q.getWantedId() + "]", removed);
+        return removed;
+    }
+
+    /** One item per placement (a bed item places both of the recipe's bed entries). */
+    private static List<ItemStack> placements(ca.bradj.roomrecipes.recipes.RoomRecipe recipe) {
+        List<net.minecraft.world.item.crafting.Ingredient> perBed = ca.bradj.questown.logic.BedHalves.oneEntryPerBed(
+                recipe.getIngredients(),
+                ing -> ing.getItems().length > 0
+                        && ing.getItems()[0].getItem() instanceof net.minecraft.world.item.BedItem
+        );
+        List<ItemStack> out = new ArrayList<>();
+        for (net.minecraft.world.item.crafting.Ingredient ing : perBed) {
+            ItemStack[] options = ing.getItems();
+            if (options.length > 0) {
+                out.add(options[0].copyWithCount(1));
+            }
+        }
+        return out;
     }
 
     private @Nullable ca.bradj.roomrecipes.recipes.RoomRecipe roomRecipe(ResourceLocation id) {

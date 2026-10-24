@@ -892,3 +892,17 @@ town's own extractions, so a deposit never fills it, and once the miner beat's C
 quest the driver deposited 3 coal every pass (108 deposits in one run) until every chest was full
 and all townies sat at `NO_STORAGE`. The driver now skips LOOT quests, as a player would wait for
 the miner. Live: the miner extracted 3 Coal and the quest closed.
+
+## Growth driver: discard room quests a spare building can't hold (2026-10-24)
+
+The driver furnishes each room quest in one of its 3x3-interior spare buildings, one item per cell
+along a row. A fresh room of the target recipe completes upgrade quests too (the cook batch's
+`store_room -> store_room_medium` and `bedroom -> big_bedroom` close that way), but the `inn`
+(six beds plus a light and a sign) can't fit, so it never matched and growth stalled at roster 4
+(`.scratch/autotest-suite/growth-driver-cannot-build-inn-or-kitchen-upgrades.md`). A room quest
+whose recipe needs more placements than a row holds (`ROW_CAPACITY`, beds counted once per bed)
+is now discarded through the player's remove-batch path (`QuestsHolder.removeBatch`, the owner
+method the quest-removal screen also uses); the town posts a replacement next morning. A first
+attempt that furnished the `from` room and then added the missing blocks broke the cook batch's
+upgrades (big_bedroom never closed, roster 2) and was dropped. Live: growth passed 5/5 with this
+change, but no inn was rolled, so the discard itself has not fired in a run yet.

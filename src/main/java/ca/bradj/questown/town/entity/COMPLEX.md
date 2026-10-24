@@ -1581,3 +1581,11 @@ two rolls gave a baker and a second hunter while the town's top need had no prod
 still forces its root (ADR-0015), and an overnight quest override still wins. The rest of the
 ruling (alternating job-change and job batches) is a plan with open decisions:
 `docs/plans/2026-10-24-001-feat-post-onboarding-job-change-alternation-plan.md`.
+
+## `QuestsHolder.removeBatch` (2026-10-24)
+
+The quest-removal screen's discard (decline the batch, mark `playerDiscardedLastBatch`, queue a
+replacement batch or upgrade quest for the morning, broadcast `batchRemoved`) moved from the
+private `TownQuestsHandle.doRemove` onto the owner as `removeBatch(UUID)`, so the growth driver
+discards a batch the same way a player does (commands/test/COMPLEX.md "discard room quests a
+spare building can't hold"). `doRemove` now calls it and only handles the screen.

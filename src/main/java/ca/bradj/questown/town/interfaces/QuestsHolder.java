@@ -41,6 +41,12 @@ public interface QuestsHolder {
     void addEmptyRoomBatch();
 
     /**
+     * Discard the batch {@code batchID} the way the player's remove button does (a replacement
+     * batch or upgrade quest follows next morning). False when no such batch is open.
+     */
+    boolean removeBatch(UUID batchID);
+
+    /**
      * Posts the day-one "basics" batch (job board + store room). Called by
      * {@link ca.bradj.questown.town.rewards.AddBasicsBatchReward} when the
      * empty-room quest completes (D#2 re-gated it on the room-building beat).
