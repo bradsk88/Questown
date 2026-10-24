@@ -334,20 +334,22 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             TownQuests quests,
             VillagerUUID visitorUUID
     ) {
+        addUpgradeQuest(town, quests, visitorUUID, Set.of());
+    }
+
+    /**
+     * @param declinedFrom rooms whose upgrade the player just declined: a discard's replacement
+     *                     must not repost it (dev ruling 2026-10-24)
+     */
+    public static void addUpgradeQuest(
+            TownInterface town,
+            TownQuests quests,
+            VillagerUUID visitorUUID,
+            Set<ResourceLocation> declinedFrom
+    ) {
         MCRewardList reward = defaultQuestCompletionRewards(town);
 
-        Collection<MCQuest> doneAndMaybeAlreadyUpgraded = quests.getAllForVillager(visitorUUID).stream()
-                                                                .filter(Quest::isComplete).toList();
-        List<MCQuest> doneAndReadyForFirstUpgrade = doneAndMaybeAlreadyUpgraded.stream()
-                                                                               // TODO: Filter out recipes that have already been slated for upgrade?
-                                                                               .filter(v -> v.fromRecipeID().isEmpty())
-                                                                               .toList();
-        Collection<MCQuest> villagerQuests = doneAndReadyForFirstUpgrade;
-
-        // Prefer upgrading non-upgraded quests, but move up to the next tier if there are none left
-        if (villagerQuests.isEmpty()) {
-            villagerQuests = doneAndMaybeAlreadyUpgraded;
-        }
+        Collection<MCQuest> villagerQuests = upgradeSources(quests.getAllForVillager(visitorUUID), declinedFrom);
 
         if (villagerQuests.isEmpty()) {
             QT.QUESTS_LOGGER.error(
@@ -442,6 +444,28 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     /** Batch requests waiting for {@link #tick} to grow them into procedural batches. */
     int pendingBatchRequests() {
         return questRequests.size();
+    }
+
+    /**
+     * The completed room quests an upgrade may build on: first-tier rooms (not themselves upgrades)
+     * when there are any, else the upgraded ones, minus the rooms in {@code declinedFrom}. Pinned by
+     * {@code TownQuestsUpgradeSourcesTest}.
+     */
+    static List<MCQuest> upgradeSources(
+            Collection<MCQuest> villagerQuests,
+            Set<ResourceLocation> declinedFrom
+    ) {
+        List<MCQuest> done = villagerQuests.stream()
+                .filter(Quest::isComplete)
+                .filter(q -> !declinedFrom.contains(q.getWantedId()))
+                .toList();
+        // TODO: Filter out recipes that have already been slated for upgrade?
+        List<MCQuest> firstTier = done.stream().filter(q -> q.fromRecipeID().isEmpty()).toList();
+        // Prefer upgrading non-upgraded quests, but move up to the next tier if there are none left
+        if (firstTier.isEmpty()) {
+            return done;
+        }
+        return firstTier;
     }
 
     public static void addBatchForVisitor(

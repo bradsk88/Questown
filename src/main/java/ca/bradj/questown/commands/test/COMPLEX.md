@@ -917,3 +917,7 @@ kept the world's default difficulty. It now sets peaceful at boot for every vill
 (`village/growth`, `village/day1`, `village/self_sufficiency`) and logs `[village] difficulty set to
 peaceful`. The scenarios test the quest and economy flow, not survival; a threat test should turn
 monsters on deliberately (ADR-0012).
+
+The growth driver keys the room quests it has handled by batch + room id
+(`furnishedRoomQuests`), not room id alone, so a room quest reposted in a new batch (a
+discarded inn coming back) is handled again instead of sitting open until the timeout.

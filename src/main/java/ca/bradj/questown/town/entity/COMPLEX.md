@@ -1601,3 +1601,15 @@ queued request, and since `6cd4a57e` (2026-01-03) these branches queued none, so
 zero quests (village/growth stalled at roster 4). Both branches now call `addBatchForVisitor`.
 `TownQuestsUpgradeFallbackTest` pins the no-completed-quests branch (the no-recipe branch reads
 the level's recipe manager, which is registry-bound).
+
+## A discard never reposts the upgrade just declined (dev ruling 2026-10-24)
+
+`removeBatch` queues a replacement for the morning (`TownQuestsHandle.addReplacementQuestBatch`):
+a coin flip between a random batch and `AddRandomUpgradeQuest` for the batch's owner. The upgrade
+roll picks among the owner's completed rooms, so a hunter whose only room was a bedroom got the
+declined bedroom -> inn upgrade straight back (village/growth stalled at roster 3 on a reposted
+inn). The replacement now carries the declined batch's upgrade sources (`fromRecipeID` of its
+quests) in the reward, saved in its NBT (`declined_from`), and `TownQuests.upgradeSources` drops
+those rooms from the candidates. With nothing left, `addUpgradeQuest` takes the no-upgrade branch,
+which queues a random batch (r16 #16). The exclusion covers that one replacement, not later
+upgrade rolls. Pinned by `TownQuestsUpgradeSourcesTest` (red with the filter removed).

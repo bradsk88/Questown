@@ -184,9 +184,9 @@ public class TownQuestsHandle implements QuestsHolder {
     }
 
     @Override
-    public void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID) {
+    public void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID, Set<ResourceLocation> declinedFrom) {
         TownFlagBlockEntity t = unsafeGetTown();
-        TownQuests.addUpgradeQuest(t, t.quests, visitorUUID);
+        TownQuests.addUpgradeQuest(t, t.quests, visitorUUID, declinedFrom);
         t.setChanged();
     }
 
@@ -312,15 +312,21 @@ public class TownQuestsHandle implements QuestsHolder {
             return;
         }
 
+        // The upgrade replacement must not repost what was just declined (dev ruling 2026-10-24:
+        // a hunter whose only room was a bedroom got the declined bedroom -> inn back).
+        ImmutableSet<ResourceLocation> declinedFrom = b.getAll().stream()
+                .map(MCQuest::fromRecipeID)
+                .flatMap(Optional::stream)
+                .collect(ImmutableSet.toImmutableSet());
         if (b.getOwner() != null) {
-            t.addMorningReward(new AddRandomUpgradeQuest(t, b.getOwner()));
+            t.addMorningReward(new AddRandomUpgradeQuest(t, b.getOwner(), declinedFrom));
             return;
         }
 
         QT.QUESTS_LOGGER.error("Quest batch owner was null, assigning next batch to someone else.");
         UUID owner = t.getRandomVillager();
         if (owner != null) {
-            t.addMorningReward(new AddRandomUpgradeQuest(t, owner));
+            t.addMorningReward(new AddRandomUpgradeQuest(t, VillagerUUID.from(owner), declinedFrom));
             return;
         }
 

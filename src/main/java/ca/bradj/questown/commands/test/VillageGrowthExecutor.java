@@ -101,7 +101,10 @@ public final class VillageGrowthExecutor {
     /** village/day1: symptoms the game survives (self-healed stalls, ERROR lines) still fail. */
     private final @Nullable LogTripwire tripwire;
     private final List<BlockPos> buildingCorners = new ArrayList<>();
-    private final java.util.Set<ResourceLocation> furnishedRoomQuests = new java.util.HashSet<>();
+    // Keyed by batch + room id, not room id alone: a discarded room quest can come back in a new
+    // batch (an inn reposted after its discard stalled a run at roster 3, 2026-10-24), and that
+    // copy must be handled again.
+    private final java.util.Set<String> furnishedRoomQuests = new java.util.HashSet<>();
     private int nextSpareBuilding = 2;
     private boolean firstWorkRequestPosted = false;
     private boolean reloadDone = false;
@@ -812,7 +815,7 @@ public final class VillageGrowthExecutor {
             MCQuest q = e.getKey();
             ResourceLocation id = q.getWantedId();
             if (q.isComplete() || q.getType() != Quest.QuestType.ROOM
-                    || ROOM_QUESTS_HANDLED_ELSEWHERE.contains(id) || !furnishedRoomQuests.add(id)) {
+                    || ROOM_QUESTS_HANDLED_ELSEWHERE.contains(id) || !furnishedRoomQuests.add(q.getBatchUUID() + "/" + id)) {
                 continue;
             }
             if (ca.bradj.questown.blocks.RoomBlock.isBlockRoom(id)) {

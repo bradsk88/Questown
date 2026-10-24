@@ -70,7 +70,10 @@ public interface QuestsHolder {
      */
     Map<ResourceLocation, Integer> openQuestProgress();
 
-    void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID);
+    /**
+     * @param declinedFrom rooms whose upgrade the player just declined; the new upgrade skips them
+     */
+    void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID, Set<ResourceLocation> declinedFrom);
 
     void addItemQuest(
             ResourceLocation itemId,
