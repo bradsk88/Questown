@@ -1,6 +1,6 @@
 ---
 title: 'Post-onboarding batches alternate a job change with a batch for the job it became'
-status: draft (needs the dev's answers to "Open decisions")
+status: superseded by 2026-10-24-002-feat-curated-quest-paths-plan.md (dev, 2026-10-24: curated paths instead of a random alternation). The RootRoll change below shipped and stays.
 origin: r16 agent playtest #14; dev ruling 2026-10-24 (design chat, handoff `jetty`)
 ---
 
