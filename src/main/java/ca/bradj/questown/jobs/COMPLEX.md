@@ -805,13 +805,21 @@ new cycle** when the villager holds work output and the town has space. The cook
 extracting first; every job walks its output home before a new cycle.
 
 "Work output" is `EntityInvStateProvider.holdsWorkOutput()`: an item no state of the job uses as
-ingredient or tool (`DeclarativeJobTicker.holdsWorkOutput`, from `deps.item(s)`/`deps.tools(s)`
+ingredient or tool (`DeclarativeJobTicker.holdsWorkOutput` -> `HeldWorkOutput`, from `deps.item(s)`/`deps.tools(s)`
 for every state). The first cut used `hasNonSupplyItems`, which only counts ingredients of the
 states that need input right now: a held tool or another state's ingredient counted as loot, so a
 baker dropped the coal it had just fetched (9 unit reds: Baker/CookEquivalence, baker stock jobs,
-crafter fishing rod). JobLogic's wrap-up carry-on uses the same query. Known: the drop step
+crafter fishing rod). JobLogic's wrap-up carry-on uses the same query. ~~Known: the drop step
 (`Jobs.tryDropLoot`) still empties every unlocked item, so a hunter leaves its sword in the chest
-and re-fetches it, as the old board deposit did.
+and re-fetches it, as the old board deposit did.~~ **Closed 2026-10-24 (r16 #9):** the drop takes
+`HeldWorkOutput.itemsToDrop` (`DeclarativeJob.getItemsForDrop`): the work output only, so a hunter
+keeps its sword and a BOP depositor its BOP (it used to drop the BOP with its trip loot, re-take it,
+time out on the walk, and strand a blessed BOP in storage). With **no** output in hand it still
+drops every item: the other drop branches ("hands full", "no work supplies available", "no work
+possible") fire without output and would otherwise sit in DROPPING_LOOT forever. Consequence:
+tools are no longer shared between trips (each hunter keeps its own sword). Pinned by
+`HeldWorkOutputTest`. The BOP deposit also stopped borrowing the 200-tick dining-table timeout
+(`BOPDepositorWork.MAX_TICKS` = 3000, the production limit).
 Red: `JobStatusesTest.StatusShouldBe_DroppingLoot_WhenHoldingOutput_BeforeUsingItemsForANewCycle`
 (item_work before). Two older tests set "holding non-supply items" incidentally (their names are
 about holding supplies) and now pass false; the tree-shape test walks the new node;

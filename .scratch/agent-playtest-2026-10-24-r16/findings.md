@@ -319,6 +319,15 @@ board (-2, 67, -3).
   `ready-for-downtime` belief.
 - #9 (BOP deposit): fix as a bug. Keep BOPs out of the loot drop (source of the stray gold BOPs)
   and give the deposit its own timeout instead of `MAX_TICKS_WITHOUT_DINING_TABLE`.
+  **Resolved 2026-10-24 (dev chose the general drop fix):** the loot drop stores only the job's
+  work output (`HeldWorkOutput.itemsToDrop`, the same rule as `holdsWorkOutput`), falling back to
+  every item when none is held so the other drop branches can't stall. A hunter keeps its sword
+  and a BOP depositor its BOP; tools are no longer shared between trips. `BOPDepositorWork.MAX_TICKS`
+  = 3000 (the production limit). Pin `HeldWorkOutputTest` (red on drop-everything). Autotests:
+  `loot_on_extract` x3, `bop_` x2, `cook_extract_food` x2 all PASS; the hunter run stored
+  beef/chicken/leather/mutton with 0 sword drops (r16's log had 10 stone-sword, 7 pickaxe, 3 BOP
+  drops). Not shown live: the r16 long-walk deposit loop itself (the `bop_` scenarios deposit at
+  the flag with no trip loot).
 - #3 (deferred product): fix as a bug. The max-ticks guard must not fire on the extract tick.
 - #1 (starving leaver): ruling: re-decide after a deposit when the townie is starving (ask the
   board, which can send it to dine) instead of starting another trip.
