@@ -329,6 +329,10 @@ board (-2, 67, -3).
   drops). Not shown live: the r16 long-walk deposit loop itself (the `bop_` scenarios deposit at
   the flag with no trip loot).
 - #3 (deferred product): fix as a bug. The max-ticks guard must not fire on the extract tick.
+  **Resolved 2026-10-24:** the watchdog gives EXTRACTING_PRODUCT a bounded grace
+  (`JobLogic.EXTRACT_GRACE_TICKS` = 200; a stuck extract still hands off). Pins in `JobLogicTest`
+  (the extract-tick test was red before the fix: the watchdog asked the board).
+  `loot_on_extract` x3 PASS. The exact timer/window collision was not reproduced live.
 - #1 (starving leaver): ruling: re-decide after a deposit when the townie is starving (ask the
   board, which can send it to dine) instead of starting another trip.
 - #17 (full storage): ruling: (1) NO_SPACE/NO_STORAGE gets its own storage-full status text

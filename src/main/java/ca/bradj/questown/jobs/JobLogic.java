@@ -16,6 +16,14 @@ import java.util.function.Supplier;
 
 public class JobLogic<EXTRA, TOWN, POS> {
 
+    /**
+     * Extra ticks the max-ticks watchdog waits while the job is EXTRACTING_PRODUCT, so the tick a
+     * leaver's trip timer completes extracts the trip's product before any hand-off (r16 #3). A
+     * window, not an exemption: a job stuck extracting still hands off. Pinned by
+     * {@code JobLogicTest.tick_shouldNotHitMaxTicksFallback_OnTheExtractTick}.
+     */
+    static final long EXTRACT_GRACE_TICKS = 200;
+
     private int worked = 0;
     private int ticksWithoutNextJob = 0;
 
@@ -192,7 +200,10 @@ public class JobLogic<EXTRA, TOWN, POS> {
         WorkPosition<POS> workSpot = worldBeforeTick.getWorkSpot();
         // A job waiting on a timer has its cycle in progress (a leaver is away, so it has no
         // work spot): re-creating it then lost the hunt's product (2026-10-17 playtest).
-        if (workSpot == null && !status.isWaitingForTimers() && this.ticksSinceStart > expiration.maxTicks()) {
+        // The tick a timer completes is EXTRACTING_PRODUCT: a hand-off then left the trip's loot
+        // unextracted until the next shift (r16 #3), so extraction gets a grace window.
+        long maxTicks = expiration.maxTicks() + (status.isExtractingProduct() ? EXTRACT_GRACE_TICKS : 0);
+        if (workSpot == null && !status.isWaitingForTimers() && this.ticksSinceStart > maxTicks) {
             JobID fbJov = expiration.maxTicksFallbackFn()
                                     .apply(entityCurrentJob);
             // A same-job fallback ("keep doing this forever") asks the board: re-creating the job

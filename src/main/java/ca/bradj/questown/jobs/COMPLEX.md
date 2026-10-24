@@ -501,6 +501,15 @@ Pinned by `JobLogicTest.tick_shouldNotHitMaxTicksFallback_WhileWaitingForTimedSt
 extracted after a >3000-tick cycle) is not yet autotest-verified — ticket
 `.scratch/playtest-2026-10-17/hunter-collecting-supplies-after-hunt.md`.
 
+**Extract tick (r16 #3, 2026-10-24).** The timer guard opens on the tick a trip timer completes:
+the status is then EXTRACTING_PRODUCT, not waiting on timers. r16's hunter hit its window on that
+tick ("Reached max ticks for hunter:sword ... asking the board" in the same millisecond as
+`WAITING_FOR_TIMED_STATE -> EXTRACTING_PRODUCT`), the board chose downtime, and the trip's loot and
+XP waited unextracted until the next shift. While extracting, the watchdog now allows
+`JobLogic.EXTRACT_GRACE_TICKS` (200) more ticks: a window, not an exemption, so a job stuck
+extracting still hands off. Pinned by `JobLogicTest.tick_shouldNotHitMaxTicksFallback_OnTheExtractTick`
+and `tick_maxTicksFallback_stillFires_WhenExtractingPastTheGrace`.
+
 ## Max-ticks fallback respects the day-fit rule (2026-10-22 playtest)
 
 The fallback goes straight to `changeJob`, so it skipped the job board's day rule

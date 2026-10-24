@@ -279,6 +279,56 @@ class JobLogicTest {
     }
 
     /**
+     * r16 #3: a hunter's trip timer completed on the same tick the watchdog's window ran out. The
+     * status was already EXTRACTING_PRODUCT (no longer waiting on the timer), so the watchdog asked
+     * the board, which sent the hunter to downtime; the trip's loot sat unextracted until its next
+     * shift. The extract tick finishes the cycle, so the watchdog must not fire on it.
+     */
+    @Test
+    void tick_shouldNotHitMaxTicksFallback_OnTheExtractTick() {
+        AtomicBoolean changedJob = new AtomicBoolean();
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedJob.set(true);
+            }
+
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.EXTRACTING_PRODUCT, maxTicksOf(5));
+        }
+
+        Assertions.assertFalse(changedJob.get(), "the watchdog re-created the job on the extract tick");
+        Assertions.assertFalse(handedOff.get(), "the watchdog asked the board before the product was extracted");
+    }
+
+    /** The extract grace is a window, not an exemption: a job stuck extracting still hands off. */
+    @Test
+    void tick_maxTicksFallback_stillFires_WhenExtractingPastTheGrace() {
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 5 + JobLogic.EXTRACT_GRACE_TICKS + 5; i++) {
+            logic.tickAway(ProductionStatus.EXTRACTING_PRODUCT, maxTicksOf(5));
+        }
+
+        Assertions.assertTrue(handedOff.get(), "a job stuck extracting must not stall forever");
+    }
+
+    /**
      * 2026-10-22 playtest: a gatherer back from a long trip hit the max-ticks watchdog just
      * before evening and was re-created as the same job, which skipped the board's day-fit rule;
      * it left on a 2000-tick trip at nightfall and slept through it. A fallback that won't fit
