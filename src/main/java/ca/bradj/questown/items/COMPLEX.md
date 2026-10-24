@@ -152,3 +152,11 @@ lit at night -> `sleep_hint`. The unlit copy said "The campfire must be lit", wh
 find flint and steel" while the wand itself lights it; it now says "Right-click to light the
 campfire". (An agent driving `_qtdev clickheld` without aiming sees only a silent PASS on that
 first click: it is the lighting, not a failure.)
+
+## The campfire stays lit after a campfire sleep (r17, dev 2026-10-25)
+
+`CampfireSleepHandler.onWake` used to put the sleeper's campfire out (`extinguishCampfire`,
+0eb1191c, 2026-04-08: "requires lit state to sleep and extinguishes on wake"), so the player
+relit it before every night. Dev: it should stay lit, because the smoke is how the player finds
+the way back to the village. `onWake` now only forgets the fire's position. Sleeping still
+requires a lit campfire.

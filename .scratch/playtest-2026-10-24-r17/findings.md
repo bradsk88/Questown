@@ -106,3 +106,6 @@ Server log `/tmp/dev-server-27.log` (launched 23:42:18 box time, ready 23:42:44,
     `QuestsScreen.cardsData()` returned the whole list in the completed view (by the earlier
     design). Fixed: completed only, and the button toggles back ("← View open quests"),
     returning to page 1. Client-side; needs the dev's eyes after a client restart.
+13. (design, dev 00:33:57) **"The campfire shouldn't go out in the morning. It's useful for
+    finding the way back to the village."** `CampfireSleepHandler.onWake` extinguished it
+    (0eb1191c, 2026-04-08). Fixed: it stays lit. Server-side: loads at the next server restart.

@@ -236,10 +236,10 @@ public class CampfireSleepHandler {
         if (headPos != null && facing != null) {
             removeTempBed(player.level(), headPos, facing);
         }
-        BlockPos firePos = campfirePositions.remove(uuid);
-        if (firePos != null) {
-            extinguishCampfire(player.level(), firePos);
-        }
+        // The campfire stays lit after the night (r17, dev 2026-10-25: it guides the player back
+        // to the village). It used to be put out on wake (0eb1191c, 2026-04-08), which only made
+        // the player relight it before every sleep; sleeping still needs it lit.
+        campfirePositions.remove(uuid);
         BlockPos flagPos = sleepingFlagPositions.remove(uuid);
         if (flagPos != null
                 && player.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
@@ -247,14 +247,4 @@ public class CampfireSleepHandler {
         }
     }
 
-    private static void extinguishCampfire(Level level, BlockPos pos) {
-        BlockState state = level.getBlockState(pos);
-        if (!state.hasProperty(CampfireBlock.LIT)) {
-            return;
-        }
-        if (!state.getValue(CampfireBlock.LIT)) {
-            return;
-        }
-        level.setBlockAndUpdate(pos, state.setValue(CampfireBlock.LIT, false));
-    }
 }
