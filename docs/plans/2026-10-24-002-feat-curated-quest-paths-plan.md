@@ -117,5 +117,6 @@ origin: r16 #14 design chat, dev rulings 2026-10-24. Supersedes
 3. New depth miner ids and display names.
 4. Quest counts per batch (sticks, leather, swords, ingots).
 5. What `village/growth` checks once the garden is a fallback.
-6. The `hunger_fill_half` on the half-day miner trip that the full-day trip lacks: oversight
-   or intended?
+6. ~~The `hunger_fill_half` on the half-day miner trip that the full-day trip lacks.~~ **By
+   design** (dev 2026-10-24): one food ration lasts a medium trip, not a full one. Recorded in
+   `CONTEXT.md` "Leaver job" (Trip rations); keep it when recasting the tiers as depth.

@@ -482,3 +482,6 @@ board (-2, 67, -3).
   had not moved, so the rebase was a no-op and the update a fast-forward).
 - Cook XP: the dev rejected "meals give 1 XP" as the status quo: cause is `"work": 0.1` read by
   `getAsInt()` as 0; fix is the per-job `experience` field (plan phase 1).
+- Full-day trips with no hunger refill (raised by the agent as a possible oversight): **by design**
+  (dev 2026-10-24). The one food ration covers a medium trip, not a full one, so a full-day
+  townie comes back hungry. Glossary: CONTEXT.md "Leaver job", Trip rations.
