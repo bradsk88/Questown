@@ -1027,7 +1027,7 @@ public class DeclarativeJob extends
                 journal.getStatus().isCollectingSupplies(),
                 !java.util.Objects.equals(this.lastSupplyTick, before),
                 currentTick,
-                () -> describeCollectingStall(town, roomsNeedingInput),
+                () -> describeCollectingStall(town, roomsNeedingInput, entityBlockPos),
                 msg -> QT.JOB_LOGGER.warn("[STALL:collecting] job={} villager={} {}", jobId, ownerUUID, msg)
         );
     }
@@ -1037,16 +1037,61 @@ public class DeclarativeJob extends
     /** What the job sees while stuck collecting: its own and the town's non-zero spots, and the input it is told about. */
     private String describeCollectingStall(
             TownInterface town,
-            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingInput
+            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingInput,
+            BlockPos entityBlockPos
     ) {
         StringBuilder b = new StringBuilder();
         b.append("status=").append(journal.getStatus())
          .append(" held=").append(journal.getItems().stream().filter(i -> !i.isEmpty()).map(MCHeldItem::getShortName).toList())
          .append(" suppliesTarget=").append(suppliesTarget == null ? "none" : suppliesTarget.toShortString(false))
          .append(" statesNeedingInput=").append(roomsNeedingInput.getNonEmptyStates());
+        appendSupplyWalk(b, entityBlockPos);
+        appendNavigation(b, town);
         appendSpots(b, "own", town.getWorkStatusHandle(ownerUUID));
         appendSpots(b, "town", town.getWorkStatusHandle(null));
         return b.toString();
+    }
+
+    /**
+     * Where the villager stands, the walk target the job computes for the supply chest, the
+     * distance between them, and the chest's room (2026-10-24 growth stall: a hunter stood ~5
+     * blocks outside the storeroom with matching swords inside; ticket
+     * growth-hunter-never-fetches-sword.md).
+     */
+    private void appendSupplyWalk(StringBuilder b, BlockPos entityBlockPos) {
+        b.append(" pos=").append(entityBlockPos.toShortString());
+        if (suppliesTarget == null) {
+            return;
+        }
+        BlockPos walk = navTargetForContainer(suppliesTarget);
+        b.append(" walkTarget=").append(walk.toShortString())
+         .append(" dist=").append(String.format("%.1f", Math.sqrt(entityBlockPos.distSqr(walk))))
+         .append(" chestRoom=").append(suppliesTarget.getRoom());
+    }
+
+    /** What the live entity is doing: its brain's walk target and its current path's end. */
+    private void appendNavigation(StringBuilder b, TownInterface town) {
+        net.minecraft.world.entity.Mob mob = town.getVillagerHandle().entities().stream()
+                .filter(e -> e.getUUID().equals(ownerUUID))
+                .filter(e -> e instanceof net.minecraft.world.entity.Mob)
+                .map(e -> (net.minecraft.world.entity.Mob) e)
+                .findFirst().orElse(null);
+        if (mob == null) {
+            b.append(" entity=none");
+            return;
+        }
+        b.append(" brainWalkTarget=").append(mob.getBrain()
+                .getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET)
+                .map(w -> w.getTarget().currentBlockPosition().toShortString())
+                .orElse("none"));
+        net.minecraft.world.level.pathfinder.Path path = mob.getNavigation().getPath();
+        b.append(" navDone=").append(mob.getNavigation().isDone());
+        if (path == null || path.getEndNode() == null) {
+            b.append(" pathEnd=none");
+            return;
+        }
+        b.append(" pathEnd=").append(path.getEndNode().asBlockPos().toShortString())
+         .append(" pathReaches=").append(path.canReach());
     }
 
     private void appendSpots(StringBuilder b, String label, Object handle) {

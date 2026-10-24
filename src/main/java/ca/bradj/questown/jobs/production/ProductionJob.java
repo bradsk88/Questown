@@ -413,7 +413,7 @@ public abstract class ProductionJob<
      * room at the door. Pinning the walk target to the room's floor level closes that escape and
      * forces the path through the door.
      */
-    static @NotNull BlockPos navTargetForContainer(ContainerTarget<MCContainer, MCTownItem> target) {
+    protected static @NotNull BlockPos navTargetForContainer(ContainerTarget<MCContainer, MCTownItem> target) {
         MCRoom room = target.getRoom();
         if (room == null) {
             return Positions.ToBlock(target.getInteractPosition(), target.getYPosition());

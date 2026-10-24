@@ -131,3 +131,14 @@ town says need input, and every non-zero spot in the villager's own and the town
 store with its timer and whether this villager can claim it. Added to catch the after-sleep
 hunter stall (`.scratch/playtest-2026-10-21/hunters-stuck-collecting-after-sleep.md`), which no
 autotest reproduces. Silent across the full suite (81/82, 0 reports).
+
+Extended 2026-10-24 (growth stall: a hunter stood ~5 blocks outside the storeroom while its
+swords sat inside; ticket `.scratch/autotest-suite/growth-hunter-never-fetches-sword.md`): the
+line also prints `pos` (the villager's block), `walkTarget` (what `navTargetForContainer`
+gives for the supply chest), `dist`, `chestRoom` (the container's room: door and spaces),
+and from the live entity `brainWalkTarget`, `navDone`, `pathEnd` and `pathReaches`. Checked
+live by dropping the first-report threshold to 20 for one `hunter/sword` run (5/5): e.g.
+`pos=3, 64, 2 walkTarget=6, 64, 0 dist=3.6 chestRoom=Room{doorPos=...} brainWalkTarget=6, 64, 0
+navDone=false pathEnd=6, 64, 0 pathReaches=true`. A mismatch between `walkTarget`,
+`brainWalkTarget` and `pathEnd`, or `pathReaches=false`, is what to read next time.
+
