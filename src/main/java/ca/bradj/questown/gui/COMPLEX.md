@@ -1112,7 +1112,12 @@ not yet seen live.
 ## Quests tab: open quests only, completed behind the link (2026-10-22)
 
 `QuestsScreen.cardsData()` shows only non-COMPLETED quests until the player presses
-"View completed quests →" (`menu.quests.view_completed`), which then shows the whole list.
+"View completed quests →" (`menu.quests.view_completed`). That used to show the whole list;
+since r17 (dev 2026-10-25: "it shows incomplete quests too, it shouldn't") it shows COMPLETED
+quests only, and the button becomes a toggle ("← View open quests", `menu.quests.view_open`)
+that flips `showingCompleted`, returns to page 1 (`PagedCardScreen.firstPage`) and rebuilds
+the widgets. In the completed view the toggle always sits in the footer (the all-done centred
+spot would sit on the cards).
 Completed cards used to share the main list and padded it to dozens of pages (agent
 playtest: 4 open quests on "Page 1 / 7"; 48 pages after the quest cascade). Dev ruling:
 open only + the link. The link was previously only the all-done empty state's; it now also

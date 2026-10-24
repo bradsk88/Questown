@@ -519,6 +519,7 @@
   "menu.quests.all_done_caught_up": "You're all caught up. New quests will appear soon",
   "menu.quests.none_open": "No open quests right now.",
   "menu.quests.view_completed": "View completed quests →",
+  "menu.quests.view_open": "← View open quests",
   "menu.questown.quests.job_quest_1": "Assign one of your villagers to the job: %s",
   "menu.questown.quests.job_quest_2": "This is part of the career: %s",
   "menu.questown.quests.job_unlock_1": "A villager needs the %s job. Unlock it for a villager with a Block of Progress",

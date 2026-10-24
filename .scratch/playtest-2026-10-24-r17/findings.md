@@ -60,3 +60,49 @@ Server log `/tmp/dev-server-27.log` (launched 23:42:18 box time, ready 23:42:44,
    and said nothing. Fixed: a chat line on wake, `message.questown.campfire_sleep.groggy`
    ("You feel groggy from sleeping on the ground: Mining Fatigue and Weakness for 5 minutes.").
    Server-side: loads at the next server restart. Open: whether the effect icons should show too.
+9. (design request, dev 00:19:40-48) **"While we will leave it mostly to the player to get wool for
+   building beds, it would be nice if the hunter could bring SOME back (maybe 1 every 5 trips, or
+   whatever random chance would be equivalent) to unblock a scenario where wool or steel (for
+   shears) is scant."**
+   - Today: wool in `loot_tables/jobs/hunter_sword/default.json` (weight 5 of 130),
+     `desert.json` and `savanna.json` (10 of 85); **none** in forest, taiga, dark_forest, jungle,
+     snowy, mushroom_fields. A biome's own table replaces the default, so a forest hunter never
+     brings wool.
+   - Trips: `hunter/sword` 1 attempt, `sword_half_day` 2, `sword_full_day` 4 (`biome_loot`).
+   - Rolls: `Loots.loadFromTables` calls vanilla `LootTable.getRandomItems` repeatedly until the
+     trip's item count is reached, so a per-roll chance is not a per-trip chance; the per-trip rate
+     depends on how many items a trip brings.
+   - Possible gate: the `VillageSelfSufficiencyExecutor.seedGatherKnowledge` comment says a
+     leaver's biome_loot extract is narrowed to items the town already knows. If so, wool must
+     become known before it can come back; verify in the extract path before picking numbers.
+   - Plan: compute a weight (or a conditioned pool) per table that gives ~1 wool per 5 short
+     trips, add it to every hunter table, and check the knowledge gate.
+10. (judge/status text, dev ~00:27) **"Hunter is looking for supplies currently. But they have all
+    they need..."** Log: Villager 1 levelled to 2 (00:26:05), deposited its BOP (`bop_depositing`
+    00:26:13-17), tried to eat, then `downtime` (status `NO_SUPPLIES`, the downtime job needs
+    nothing) and `seeking_work` from 00:27:21. Storage held 4 stone swords + food throughout. It
+    is evening/night: `Nightfall` logged 00:26:35 (woke 00:17:00 at dayTime 0). A trip only starts
+    when it fits before the next day window (`ServerJobsRegistry.canFit`, `DayWindowTest`: the
+    short trip is 2000 ticks), so the hunter is correctly waiting for morning. **The bug is the
+    text:** it reads as missing supplies when the real reason is "too late in the day to set out".
+    Not the sword-fetch stall (no COLLECTING_SUPPLIES, no `[STALL:collecting]`). To check: what the
+    tooltip said exactly, and whether it resumes at dawn. Fix shape: when the seeker is idle
+    because no job fits the remaining day, show e.g. "It's too late to set out today. They'll
+    leave in the morning."
+    **Dev (00:3x): "I think it was just too late in the day. Their status probably should have
+    been 'there's not enough time for this villager to do their work' - or just skip ahead to
+    'relaxing'."** Two options to choose between when building: (a) a dedicated status text for
+    "no job fits the rest of the day"; (b) go straight to the downtime/"relaxing" status.
+    Agent suggestion: (b) with the reason as the tooltip's second line ("Relaxing. Too late in the
+    day to set out."), so the screen shows calm, not a problem, and still says why.
+11. (GUI, dev 00:31:47) **"It's a bit annoying that 'take BOP' closes the whole menu."** Same
+    screen as #3. The button's handler sends `GiveBOPMessage` and then
+    `Minecraft.getInstance().setScreen(null)`. Staying open needs the count to refresh:
+    `menu.blocksOfProgressCount` (and `bopRootJobs`) are filled when the menu opens, so either the
+    server answers the take with the new count (preferred: true after a rejected take too) or the
+    screen decrements locally. Hide or disable the button at 0. Build together with #3
+    (bottom-aligned button).
+12. (bug, dev 00:32:49) **"'View completed quests' shows incomplete quests too, it shouldn't."**
+    `QuestsScreen.cardsData()` returned the whole list in the completed view (by the earlier
+    design). Fixed: completed only, and the button toggles back ("← View open quests"),
+    returning to page 1. Client-side; needs the dev's eyes after a client restart.

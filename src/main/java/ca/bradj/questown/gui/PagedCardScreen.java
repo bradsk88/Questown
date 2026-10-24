@@ -272,6 +272,11 @@ public final class PagedCardScreen<D> {
         ctx.lightText(pageString, textArea.getX(), textArea.getY());
     }
 
+    /** Back to page 1, for a screen whose card list just changed (QuestsScreen's open/completed toggle). */
+    public void firstPage() {
+        currentPage = 0;
+    }
+
     private void nextPage() {
         int totalPages = Pages.count(cardsData.get().size(), MAX_CARDS_PER_PAGE);
         if (currentPage < totalPages - 1) {

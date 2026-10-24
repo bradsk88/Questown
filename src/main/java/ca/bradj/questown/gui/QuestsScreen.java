@@ -86,8 +86,11 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
      */
     @Override
     protected ImmutableList<UIQuest> cardsData() {
+        // The completed view shows completed quests only (r17, dev: it listed open ones too).
         if (showingCompleted) {
-            return ImmutableList.copyOf(quests);
+            return quests.stream()
+                         .filter(q -> Quest.QuestStatus.COMPLETED.equals(q.status))
+                         .collect(ImmutableList.toImmutableList());
         }
         return quests.stream()
                      .filter(q -> !Quest.QuestStatus.COMPLETED.equals(q.status))
@@ -102,19 +105,21 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     protected void init() {
         super.init();
         this.viewCompletedButton = null;
-        if (showingCompleted || !anyCompleted()) {
+        if (!anyCompleted()) {
             return;
         }
-        Component link = Compat.translatable("menu.quests.view_completed");
+        // A toggle between the open and the completed quests (r17: the completed view now shows
+        // completed quests only, so it needs a way back).
+        Component link = Compat.translatable(showingCompleted ? "menu.quests.view_open" : "menu.quests.view_completed");
         int btnW = this.font.width(link) + BUTTON_H_PADDING;
-        // All done: centred in the empty panel. Otherwise: just below the panel, under the open cards.
-        int btnY = allComplete ? emptyStateButtonY() : footerButtonY();
+        // All done (open view): centred in the empty panel. Otherwise: in the footer, under the cards.
+        int btnY = allComplete && !showingCompleted ? emptyStateButtonY() : footerButtonY();
         this.viewCompletedButton = Compat.button(
                 link,
                 btn -> {
-                    showingCompleted = true;
-                    btn.visible = false;
-                    btn.active = false;
+                    showingCompleted = !showingCompleted;
+                    firstPage();
+                    rebuildWidgets();
                 },
                 (this.width - btnW) / 2, btnY, btnW, BUTTON_HEIGHT
         );
@@ -621,7 +626,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     }
 
     private boolean footerButtonShowing() {
-        return viewCompletedButton != null && viewCompletedButton.visible && !allComplete;
+        return viewCompletedButton != null && viewCompletedButton.visible && (!allComplete || showingCompleted);
     }
 
     @Override
