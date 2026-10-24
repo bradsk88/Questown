@@ -10,6 +10,16 @@ import java.util.List;
 
 class TestTutorialTownView implements TutorialTownView {
 
+    // Arrival provisioning reads the live town's beds and rewards; the planner is pinned by
+    // ArrivalProvisionsTest, so tutorial-flow tests leave batches as built.
+    @Override
+    public void provisionArrival(
+            ca.bradj.questown.town.quests.MCReward reward,
+            java.util.Collection<net.minecraft.resources.ResourceLocation> wanted,
+            java.util.function.Consumer<net.minecraft.resources.ResourceLocation> addRoomQuest
+    ) {
+    }
+
     private int villagerCount;
     private boolean tutorialBopGranted;
     private int bopGranted;

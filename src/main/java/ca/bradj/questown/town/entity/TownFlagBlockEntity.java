@@ -1556,6 +1556,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
+    public int missingBedsWithArrivals(int arrivals) {
+        return roomsHandle.missingBeds(villagerHandle.size() + arrivals);
+    }
+
+    @Override
     public boolean isInitialized() {
         return isInitializedQuests && biomes.isInitialized() && initializers.isEmpty();
     }

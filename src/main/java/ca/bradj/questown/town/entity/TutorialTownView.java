@@ -5,6 +5,9 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.quests.MCReward;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.Collection;
+import java.util.function.Consumer;
+
 
 public interface TutorialTownView {
 
@@ -36,4 +39,10 @@ public interface TutorialTownView {
     ResourceLocation getRoomForJob(JobID job);
 
     MCReward makeReward(String phaseName);
+
+    /**
+     * Adds the bed and storage quests a villager-bringing {@code reward} needs
+     * ({@code TownQuests.provisionArrival}). {@code wanted} is the batch's room ids so far.
+     */
+    void provisionArrival(MCReward reward, Collection<ResourceLocation> wanted, Consumer<ResourceLocation> addRoomQuest);
 }

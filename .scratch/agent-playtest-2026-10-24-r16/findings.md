@@ -391,6 +391,18 @@ board (-2, 67, -3).
   night, works slower" (was "Didn't sleep, works slower"). SLEEPLESS has one source, the dawn drain
   of the bedless ledger (`SimpleVillagerHandle.handleMorning`), so the bed is always the cause.
   Live: Villager e4f3a0de's stats tab shows the new line. The bed-per-arrival part is pending.
+- #11 + #17 part 2 **done 2026-10-24 (dev chose "count the arrival"):** a batch whose reward
+  brings a villager (procedural pop in `TownQuests.tick`; tutorial miner + top-need builders) gets
+  one bedroom quest per bed still short counting the arrival, and a `store_room` quest unless it
+  has a storage room (`TownQuests.provisionArrival`, pure `ArrivalProvisions.plan`,
+  `ArrivalProvisionsTest` 5/5). village/growth (10-min cap): "Batch brings a villager: added 1
+  bedroom quest(s), storage quest: true"; the driver built and completed both (done list holds
+  the extra `bedroom` and a second `store_room`). The run then stalled at roster 4 on an `inn`
+  upgrade quest, the open ticket `.scratch/autotest-suite/growth-driver-cannot-build-inn-or-kitchen-upgrades.md`
+  (same shape and log line), not this change. **CONTEXT.md needs an edit once the dev's
+  uncommitted CONTEXT.md is in:** "Onboarding arrival" says "Other batches bring no one", but
+  `defaultQuestCompletionRewards` (miner, top-need, procedural, item/loot batches) can spawn one;
+  those now carry a bed + storage quest.
 - **New (#18, seen while verifying #2; pre-existing, not ruled):** the picker offers Carrot (and
   other single foods) though its confirm says "There are 0 known jobs which produce it". ADR-0007
   says the board offers only fulfillable products. The slots come from expanding multi-item

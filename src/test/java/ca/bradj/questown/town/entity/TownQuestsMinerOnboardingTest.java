@@ -81,6 +81,13 @@ class TownQuestsMinerOnboardingTest {
     private static TutorialTownView view() {
         return new TutorialTownView() {
             @Override
+            public void provisionArrival(
+                    ca.bradj.questown.town.quests.MCReward reward,
+                    java.util.Collection<net.minecraft.resources.ResourceLocation> wanted,
+                    java.util.function.Consumer<net.minecraft.resources.ResourceLocation> addRoomQuest
+            ) {
+            }
+            @Override
             public int villagerCount() {
                 return 4;
             }

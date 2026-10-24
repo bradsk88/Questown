@@ -16,8 +16,10 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Items;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import static ca.bradj.questown.town.entity.TownQuests.defaultQuestCompletionRewards;
 
@@ -99,6 +101,15 @@ class TownFlagTutorialAdapter implements TutorialTownView {
                     new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
             default -> new AddBatchOfQuestsForVisitorReward(flag, null);
         };
+    }
+
+    @Override
+    public void provisionArrival(
+            MCReward reward,
+            Collection<ResourceLocation> wanted,
+            Consumer<ResourceLocation> addRoomQuest
+    ) {
+        TownQuests.provisionArrival(flag, reward, wanted, addRoomQuest);
     }
 
     /** A morning arrival plus its quest batch, under one id so the batch belongs to the villager who arrives. */

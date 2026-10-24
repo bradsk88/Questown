@@ -62,19 +62,24 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
 
     @Override
     protected int bedQuestCount(MCQuestBatch mcQuestBatch) {
-        return (int) mcQuestBatch.getAll().stream().filter(v -> this.hasBeds(level, v)).count();
+        return (int) mcQuestBatch.getAll().stream().filter(v -> isBedRoom(level, v.getWantedId())).count();
     }
 
-    private boolean hasBeds(
+    /** Whether the room recipe {@code roomId} contains a bed. */
+    public static boolean isBedRoom(
             ServerLevel level,
-            MCQuest quest
+            ResourceLocation roomId
     ) {
         Map<ResourceLocation, RoomRecipe> rr = RoomRecipes.hydrate(level.getRecipeManager(), true);
-        NonNullList<Ingredient> roomIngredients = rr.get(quest.getWantedId()).getIngredients();
-        return roomIngredients.stream().anyMatch(this::isBed);
+        RoomRecipe recipe = rr.get(roomId);
+        if (recipe == null) {
+            return false;
+        }
+        NonNullList<Ingredient> roomIngredients = recipe.getIngredients();
+        return roomIngredients.stream().anyMatch(QuestBatchSeed::isBed);
     }
 
-    private boolean isBed(Ingredient ing) {
+    private static boolean isBed(Ingredient ing) {
         String tag = Ingredients.getTag(ing);
         if (tag != null) {
             return ItemTags.BEDS.location().equals(new ResourceLocation(tag));

@@ -1419,6 +1419,22 @@ and 3 both on day 3) and `TutorialPhaseGateTest.whenHunterDoneAndTwoVillagers_jo
 The hunter-gatherer bedroom quest also lost its flavor text, so its card shows the standard
 room-recipe tooltip (dev preference; `TownQuestsHunterGathererOnboardingTest`).
 
+**Every villager-bringing batch asks for its bed and storage (dev ruling 2026-10-24, r16 #11 /
+#17).** The "dev observation" above became a rule. `defaultQuestCompletionRewards` (procedural
+batches, and the tutorial miner and top-need batches via `makeReward(PHASE_MINER |
+PHASE_NEW_JOB_ROOM)`) can spawn a villager, and the bed shortfall the procedural garden covers
+(`TownInterface.missingBeds`) counted only townies already in town, never the arrival. r16: the
+miner batch's Villager 4 arrived bedless, and storage filled with nothing asking for chests.
+`TownQuests.provisionArrival` runs where such a batch is built (the procedural pop in
+`TownQuests.tick`; the miner and top-need tutorial builders via `TutorialTownView.provisionArrival`).
+When the reward contains `RewardsInit.VISITOR`, it adds one bedroom quest per bed still short
+counting the arrival (`missingBedsWithArrivals(1)` minus the bed-room quests already in the batch)
+and one `store_room` quest unless the batch already has a storage room. The decision is the pure
+`ArrivalProvisions.plan` (`ArrivalProvisionsTest`); the hunter-gatherer and cook batches carry
+their beds by design and are not re-provisioned (their reward is `arrivalWithQuestBatch`, not
+these call sites). `QuestBatchSeed.isBedRoom` (was the private `hasBeds`) now returns false for a
+wanted id with no hydrated recipe instead of throwing.
+
 ## BOP root change unlocks the new root's default work (2026-10-18 playtest)
 
 A cook made by a blessed BOP had no fuel or `cook_mutton` jobs.
