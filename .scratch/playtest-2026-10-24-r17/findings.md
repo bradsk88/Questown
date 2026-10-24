@@ -122,3 +122,44 @@ Server log `/tmp/dev-server-27.log` (launched 23:42:18 box time, ready 23:42:44,
     5 recipe rows + the 4-line "Begin moving" paragraph + button = ~257 GUI px in a 240-px GUI;
     the title and the button were cut off. Fixed: the paragraph is now the move button's hover
     tooltip (~197 px). #1 (hide mineshaft/fishing rows) will shrink it further.
+17. (bug?, dev 00:41:05) **"Not sure why gatherer 'needs blocks of progress'."** Villager 2
+    (gatherer 4f54c263) levelled at 00:40:14, entered `gatherer:bop_depositing`, deposited
+    (`messages.bop.earned` 00:40:24, `[Experience] +0 from gatherer:bop_depositing`), then at
+    00:40:49 re-entered `bop_depositing` (from `bop_depositing`) and sits in NO_SUPPLIES: the job's
+    tool is the BOP itself (`relevant tools` = one ingredient), and it holds none, so the needs row
+    shows Block of Progress. Open: why the job was re-entered after a completed deposit (latch not
+    cleared? a self-restart of the job?). The hunter's deposit at 00:26 went straight to downtime.
+    Watch: the 3000-tick BOP-deposit limit (r16 #9) should end it near 00:43:20.
+18. (text, dev 00:40:41) **"^ that message should be two lines."** Most likely the level-up chat
+    line (00:40:14, `message.villager.leveled_up` = "%s reached level %s"); to confirm which.
+19. (cook bug, dev 00:45:03) **"I put coal in the furnace, but the villager keeps walking up to
+    the furnace with raw food, standing for a second, then inserting it, but it does not go into
+    the furnace or cook."** Cook = villager 4f54c263 (the former gatherer), job `cook:mutton`.
+    It took a raw mutton 30 times by 00:45:07, about every 13 s, each followed ~8 s later by
+    `Job changed to cook:mutton [from cook:mutton]`, with no insert. That is the JobLogic max-ticks
+    path: `workSpot == null` past `maxTicks` -> `changeToNextJob` -> the board re-rolls the same job
+    (the "Reached max ticks ... asking the board" line is DEBUG, so absent from the dev log). So the
+    cook finds no usable furnace spot for mutton. Hypothesis to confirm with the dev's screenshot:
+    the coal went into the furnace's top (input) slot, blocking the mutton. The #17 gatherer
+    `bop_depositing -> bop_depositing` loop is the same max-ticks path.
+20. (GUI, dev 00:46:25) **"We should remove the quests tab from villager UIs. It's not useful."**
+    #17 screenshot `2026-10-25_00.40.57.png`: villager 2's inventory tab shows two Block of Progress
+    icons in its needs area during the deposit loop, and the villager "Quests" button (#20).
+    #19 dev 00:47:15: "Yep, something very broken with this cook. They are not successfully
+    inserting the mutton. Not sure why. Stop playtest now." No furnace screenshot was taken, so
+    the slot hypothesis is unconfirmed; repro from the archived world.
+
+## Session end (00:47, dev asked to stop)
+
+Client then server stopped by pid; the world saved on shutdown (`run/world/level.dat` 00:47:52).
+Archive: `~/questown-worlds/r17-dev-playtest-2026-10-25.tgz` (run/world, run/logs, the
+/tmp/dev-server-27 and dev-client-27/28 logs, the 2026-10-25 screenshots, the 00:09 crash report).
+
+Fixed during the session (committed, in 1.20.6-neoforge-wip; never seen running, because the
+client/server were not restarted): #5/#6 item-jobs empty screen, #7 quests panel footer, #8 groggy
+message, #12 completed-only view + toggle, #13 campfire stays lit, #14 Produces filter, #15 picker
+tint, #16 crafting menu height.
+Open: #1 recipe hiding, #2 soup pot weight key, #3/#11 BOP tab button + stays open, #4 leave-town
+poof, #9 hunter wool, #10 "too late in the day" status, #17 BOP-deposit re-entry loop, #18 which
+message should be two lines, #19 cook cannot insert mutton (top priority), #20 remove villager
+Quests tab.
