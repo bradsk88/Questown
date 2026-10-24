@@ -113,3 +113,9 @@ Server log `/tmp/dev-server-27.log` (launched 23:42:18 box time, ready 23:42:44,
     should only show matching items."** Fixed: `ProducedMatches.of` filters the row (and the
     Add button's item) to results matching the clicked item, falling back to all when none match.
     Client-side; needs a client restart.
+15. (GUI, dev 00:39:07) **"The first row on the work requests UI is darker than the rest."** The
+    request picker (`AddWorkScreen`) drew a translucent dark fill (0x30000000) behind each category
+    slot, and categories come first, so the first row read darker. Fixed: no tint; the cycling icon
+    and the category tooltip mark categories. (Assumed this screen: the job board's only dark fill
+    is the page-number bar.) Needs the dev's eyes after a client restart.
+16. (GUI, dev 00:39:48) **"Crafting menu got too big."** Screenshot pending.

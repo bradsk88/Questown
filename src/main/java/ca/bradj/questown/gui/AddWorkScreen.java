@@ -211,10 +211,8 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
             Ingredient request,
             @Nullable Component categoryName
     ) {
-        if (categoryName != null) {
-            // A faint frame marks a category slot apart from single items.
-            ctx.fill(iconX - 1, y, iconX + 17, y + 18, 0x30000000);
-        }
+        // No tint on category slots: they come first, so the tint read as a darker first row (r17,
+        // dev 2026-10-25). The cycling icon and the category tooltip mark them.
         ctx.renderItemAndDecorations(itemStack, iconX, y + 1);
         if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
             ctx.fill(
