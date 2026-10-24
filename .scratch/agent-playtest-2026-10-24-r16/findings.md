@@ -357,6 +357,14 @@ board (-2, 67, -3).
   is right in the normal case (COLLECTING_SUPPLIES fires when the town has supplies); r16's case
   looks like a race (the cook went for food another townie had just eaten and gave up 5 s
   later). Settle by logging the diner's supply target on COLLECTING_SUPPLIES if it recurs.
+- #2 **resolved 2026-10-24:** the picker pages flattened grid slots and draws only the page's
+  slice (`Pages.slice`, `PagesTest`). Live on the restored r16 world: "Page 1 / 1", each item once,
+  `[gui-lint] AddWorkScreen ... OK`, clicking the carrot opened "Requesting Carrot".
+  `CreateStockRequestScreen` keeps the same unused range (latent: its page holds 81 slots).
+- **New (#18, seen while verifying #2; pre-existing, not ruled):** the picker offers Carrot (and
+  other single foods) though its confirm says "There are 0 known jobs which produce it". ADR-0007
+  says the board offers only fulfillable products. The slots come from expanding multi-item
+  request ingredients (unchanged by the #2 fix). Not investigated.
 - Not ruled; agent's default, fix unless the dev objects: #10 instrument first (workSpot/claim at state 0); #2 picker
   paging; #13 effects-line tooltip; #5 investigate the "Empty Room" announcement; #12 leave (needs
   a save migration); #8 CONTEXT.md:279 fix after the dev's CONTEXT.md edits are committed.

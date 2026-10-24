@@ -1068,6 +1068,15 @@ The empty job board read "Page 1 / 0". The five paged screens (`PagedCardScreen`
 `ceil(size / perPage)`; they now share `Pages.count`, which floors the total at 1 (`PagesTest`).
 The next-page checks use the same count, and stay closed on a single page either way.
 
+**The request picker pages grid slots (r16 #2, 2026-10-24).** `AddWorkScreen` sized its pages for
+42-px cards (3 per page) but draws an 8-wide icon grid, and it computed the page's range without
+using it, so every page drew the whole list (4 items read "Page 1 / 2" with both pages identical).
+It now flattens the requests into grid slots once (`RequestSlot`: a category is one slot, a
+multi-item ingredient one slot plus one per member), pages them by `SLOTS_PER_PAGE` (8 x 7) and
+draws only `Pages.slice(slots, page, perPage)` (`PagesTest`). Live on the r16 world: "Page 1 / 1",
+each item once, gui-lint OK, a click opens that item's confirm. `CreateStockRequestScreen` (the
+deprecated fetcher's clipboard) still has the unused range, latent below its 81-slot page.
+
 ## Request confirm title names the item (2026-10-22 playtest)
 
 `WorkRequestConfirmScreen` titled itself `Compat.translatable(Ingredients.toString(requested))`.

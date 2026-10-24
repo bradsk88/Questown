@@ -37,15 +37,17 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
 
     private static final int TEXT_COLOR = 0xFF404040;
 
-    private static final int CARD_PADDING = 1;
     private static final int PAGE_PADDING = 10;
-    private static final int CARD_WIDTH = (backgroundWidth) - (PAGE_PADDING * 2);
-    private static final int CARD_HEIGHT = 42;
 
-    private static final int MAX_CARDS_PER_PAGE = (backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING);
+    // The requests are drawn as an icon grid, so pages hold grid slots, not cards (r16 #2: a
+    // card-sized page of 3 made a 4-item list "Page 1 / 2" with every item on both pages).
+    private static final int GRID_COLUMNS = 8;
+    private static final int GRID_ROWS = 7;
+    private static final int SLOTS_PER_PAGE = GRID_COLUMNS * GRID_ROWS;
 
     private final List<Ingredient> work;
     private final List<Ingredient> categories;
+    private final List<RequestSlot> requestSlots;
     private final JEI.NineNine background;
     private final JEI.NineNine cardBackground;
     private final GuiIconButtonSmall nextPage;
@@ -67,6 +69,7 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
                 .addAll(this.categories)
                 .addAll(container.getAddableWork())
                 .build();
+        this.requestSlots = flattenRequests();
         this.background = JEI.getRecipeGuiBackground();
         this.cardBackground = JEI.getRecipeBackground();
 
@@ -117,14 +120,12 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
 
         y = pageStringY + PAGE_PADDING;
 
-        int startIndex = currentPage * MAX_CARDS_PER_PAGE;
-        int endIndex = Math.min(startIndex + MAX_CARDS_PER_PAGE, work.size());
-
         x = x + PAGE_PADDING;
         y = y + PAGE_PADDING;
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
-        ImmutableList<Slot> slotz = renderRequestItemIcons(ctx, work, x, y, mouseX, mouseY);
+        List<RequestSlot> page = Pages.slice(requestSlots, currentPage, SLOTS_PER_PAGE);
+        ImmutableList<Slot> slotz = renderRequestItemIcons(ctx, page, x, y, mouseX, mouseY);
         b.addAll(slotz);
 
         int idX = x + PAGE_PADDING;
@@ -145,55 +146,54 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
         return categories.contains(ing);
     }
 
+    /**
+     * One grid slot per request: a category is a single slot that requests the whole tag; a
+     * multi-item ingredient gets its own slot followed by one per member.
+     */
+    private record RequestSlot(Ingredient request, ItemStack[] shown, @Nullable Component categoryName) {
+    }
+
+    private List<RequestSlot> flattenRequests() {
+        ImmutableList.Builder<RequestSlot> b = ImmutableList.builder();
+        for (Ingredient ing : work) {
+            ItemStack[] allPossible = ing.getItems();
+            if (allPossible.length == 0) {
+                continue;
+            }
+            // A category (a tag: "Food") is one slot that requests the whole category; its members
+            // are not listed after it (most of a tag is not something the town can make - the
+            // producible ones already have their own slots).
+            boolean category = isCategory(ing);
+            b.add(new RequestSlot(ing, allPossible, category ? Ingredients.getName(ing) : null));
+            if (category || allPossible.length == 1) {
+                continue;
+            }
+            for (ItemStack specificItem : allPossible) {
+                b.add(new RequestSlot(Ingredient.of(specificItem), new ItemStack[]{specificItem}, null));
+            }
+        }
+        return b.build();
+    }
+
     private ImmutableList<Slot> renderRequestItemIcons(
             RenderContext ctx,
-            Iterable<Ingredient> possibleRequests,
+            List<RequestSlot> page,
             int x,
             int y,
             int mouseX,
             int mouseY
     ) {
-        Container dummyInv = new SimpleContainer(1028);
+        Container dummyInv = new SimpleContainer(SLOTS_PER_PAGE);
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
-
-        int slotIndex = 0;
-        int slotX = 0;
         slotRequests.clear();
-        for (Ingredient ing : possibleRequests) {
-            if (slotX >= 8) {
-                y = y + 16;
-                slotX = 0;
-            }
-            int iconX = x + 8 + slotX * 18;
-
-            ItemStack[] allPossible = ing.getItems();
-            if (allPossible.length == 0) {
-                continue;
-            }
-            int curSeconds = (int) (System.currentTimeMillis() / 1000);
-            ItemStack itemStack = allPossible[curSeconds % allPossible.length];
-            // A category (a tag: "Food") is one slot that requests the whole category; its members
-            // are not listed after it (most of a tag is not something the town can make - the
-            // producible ones already have their own slots).
-            boolean category = isCategory(ing);
-            renderRequest(ctx, y, mouseX, mouseY, itemStack, iconX, dummyInv, slotIndex, b,
-                    ing, category ? Ingredients.getName(ing) : null);
-            slotIndex++;
-            slotX++;
-            if (category || allPossible.length == 1) {
-                continue;
-            }
-            for (ItemStack specificItem : allPossible) {
-                if (slotX >= 8) {
-                    y = y + 16;
-                    slotX = 0;
-                }
-                iconX = x + 8 + slotX * 18;
-                renderRequest(ctx, y, mouseX, mouseY, specificItem, iconX, dummyInv, slotIndex, b,
-                        Ingredient.of(specificItem), null);
-                slotIndex++;
-                slotX++;
-            }
+        int curSeconds = (int) (System.currentTimeMillis() / 1000);
+        for (int i = 0; i < page.size(); i++) {
+            RequestSlot r = page.get(i);
+            int iconX = x + 8 + (i % GRID_COLUMNS) * 18;
+            int iconY = y + (i / GRID_COLUMNS) * 16;
+            ItemStack itemStack = r.shown()[curSeconds % r.shown().length];
+            renderRequest(ctx, iconY, mouseX, mouseY, itemStack, iconX, dummyInv, i, b,
+                    r.request(), r.categoryName());
         }
         return b.build();
     }
@@ -254,7 +254,7 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
                 nextPage.getY() + buttonHeight,
                 0x30000000
         );
-        int totalPages = Pages.count(work.size(), MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(requestSlots.size(), SLOTS_PER_PAGE);
         String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
@@ -270,7 +270,7 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
     }
 
     private void nextPage() {
-        int totalPages = Pages.count(work.size(), MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(requestSlots.size(), SLOTS_PER_PAGE);
         if (currentPage < totalPages - 1) {
             currentPage++;
         }
