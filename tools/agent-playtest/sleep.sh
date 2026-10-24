@@ -8,6 +8,14 @@ cd "$REPO"
 cx=${1:?usage: sleep.sh <campfire x y z> <stand x y z> [wand-slot]}; cy=${2:?}; cz=${3:?}
 sx=${4:?usage: sleep.sh <campfire x y z> <stand x y z> [wand-slot]}; sy=${5:?}; sz=${6:?}; slot=${7:-3}
 L=run/logs/latest.log
+# Beds only work from daytime 12542 to 23459; the nightfall bed capture logs at 11500, and a run
+# started on that line used to fail "too early (isDay)" (r16). Wait for the window, up to a day.
+for _ in $(seq 1 45); do
+  t=$(tools/ffeed.sh feed "time query daytime" --capture $L "The time is" | sed 's/.*The time is //')
+  [ "$t" -ge 23460 ] 2>/dev/null && { echo "daytime $t: too close to dawn to sleep" >&2; exit 1; }
+  [ "$t" -ge 12542 ] 2>/dev/null && break
+  echo "waiting for night (daytime $t)" >&2; sleep 15
+done
 before=$(grep -ac 'SleepFinishedTimeEvent' $L)
 tools/ffeed.sh feed "item replace entity Dev weapon.mainhand from entity Dev hotbar.$slot" >/dev/null
 tools/ffeed.sh feed "tp Dev $sx $sy $sz" >/dev/null; sleep 1

@@ -149,7 +149,8 @@ relights the campfire", which the Acting section already said.
   a use while asleep used to strand the temp bed and skip the campfire-sleep advancement
   (fixed 2026-10-22, but don't rely on it). The nightfall bed capture logs at 11500 ("Nightfall: N
   of M townies have no bed"), but beds only take you from 12542: `sleep.sh` run on that line fails
-  "not asleep after 3 uses: too early (isDay)" (r16). Poll `time query daytime` >= 12600 first. A
+  "not asleep after 3 uses: too early (isDay)" (r16); since then `sleep.sh` waits for the bed
+  window itself ("waiting for night (daytime N)"; fails fast at >= 23460, near dawn). A
   day is 10 real minutes at tick rate 40: a 5-minute poll is the whole working day, and pausing to
   investigate lets whole days pass unslept (r16 lost track of three).
 - Moving far: `spreadplayers <x> <z> 0 1 false Dev` lands on the surface; a plain `tp` can land
