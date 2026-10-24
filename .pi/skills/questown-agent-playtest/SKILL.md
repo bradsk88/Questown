@@ -104,7 +104,9 @@ relights the campfire", which the Acting section already said.
   shows 2 tabs. Once the first villager arrives it shows 4 tabs plus "Begin moving this town",
   and the rows move up to y 228/258/288/318/348. r13 clicked the old y, and the "wand" it used
   on the door was a plain stick.
-- Known positions (guiScale 3, verified r13-r15): BOP tab "Take Block of Progress" (302, 354);
+- Known positions (guiScale 3, verified r13-r16): BOP tab "Take Block of Progress" (302, 354),
+  but (302, 376) once the tab shows an "Earned by: ..." line (any villager-earned BOP; r16's click
+  at 354 took nothing, silently);
   change-job panel: hotbar slot 1 (231, 391) -> insert slot (230, 256) -> Unlock (264, 305).
   `vopen <type> <uuid-prefix>` opens that villager's menu; without a prefix it picks an
   arbitrary one. `_qtdev villager_stats <flag>` maps "Villager N" to its UUID. For a quick job
@@ -114,7 +116,9 @@ relights the campfire", which the Acting section already said.
   (263, 385).
 - Placing like a player: hold the item, then `_qtdev clickheld <x y z>` right-clicks the top face
   of that block. Item ids: `questown:flag_base`, `questown:welcome_mat_block`,
-  `questown:town_wand`, `questown:job_board_block`, `questown:mineshaft`. Survival mats, wands,
+  `questown:town_wand`, `questown:job_board_block`, `questown:mineshaft`. The mineshaft row's
+  input is **stone** stairs (`minecraft:stone_stairs`); cobblestone stairs look the same in the row
+  icon and leave it greyed (r16). Survival mats, wands,
   boards and mineshafts come from the flag's crafting tab (they carry the flag link); a `give`n
   mat has no link and silently fails to place. The placed block lands one *above* the clicked
   block: clicking a y75 floor puts a chest at y76, so address its container at y76 (r12 wrote
@@ -143,7 +147,11 @@ relights the campfire", which the Acting section already said.
 - Sleep: wand on the campfire. If the fire is out (after a night), the first use relights it and
   the second sleeps. Use once, then check the log for `startSleepInBed RIGHT` before using again:
   a use while asleep used to strand the temp bed and skip the campfire-sleep advancement
-  (fixed 2026-10-22, but don't rely on it).
+  (fixed 2026-10-22, but don't rely on it). The nightfall bed capture logs at 11500 ("Nightfall: N
+  of M townies have no bed"), but beds only take you from 12542: `sleep.sh` run on that line fails
+  "not asleep after 3 uses: too early (isDay)" (r16). Poll `time query daytime` >= 12600 first. A
+  day is 10 real minutes at tick rate 40: a 5-minute poll is the whole working day, and pausing to
+  investigate lets whole days pass unslept (r16 lost track of three).
 - Moving far: `spreadplayers <x> <z> 0 1 false Dev` lands on the surface; a plain `tp` can land
   inside blocks.
 - `_qtdev build_room <door x y z>` (the chicken's shell) is 4x4 *including* walls: a 2x2 interior,
@@ -174,6 +182,10 @@ relights the campfire", which the Acting section already said.
   and took the client log with it.
 - `run/logs/debug.log` has the DEBUG lines `latest.log` lacks (`hunger_updates`, "gave up waiting
   for ingredients", "Reached max ticks ... Falling back to"): trace job loops there.
+- `run/logs/latest.log` rotates at midnight (box time) to `run/logs/<date>-1.log.gz`; a grep over
+  latest.log alone then silently drops the earlier half of the run (r16: 5 lines where there were
+  14). Search both: `(zcat run/logs/*.log.gz; cat run/logs/latest.log) | grep -a ...`. An `awk
+  '$2>="00:28"'` time filter also matches every 23:xx line from before midnight.
 - A world with a huge flag (the 2026-10-22 cascade) once broke joining: "Tried to read NBT tag
   that was too big" in the client log is a server-side payload bug, not a client problem (fixed
   5422b91f).
@@ -215,6 +227,16 @@ relights the campfire", which the Acting section already said.
   claim, check that the intervention is the owner's path, and read all three surfaces: `_qtdev
   inspect villagers <flag>` (`need=` / `needs item:`), the in-world bubble (a shot facing the
   townie; one bubble at a time, nearest the crosshair), and the flag villagers-tab tooltip.
+- **A world-state claim needs the state's own oracle, not the announcement or a missing grep hit.**
+  r16 committed "the dining room recipe never matches" because the only broadcast said Empty Room;
+  the dawn `resetDiningRooms` debug line ("Resetting plate claim and state at ...") and townies
+  entering `jobId='dining'` (the table diner, chosen only with a dining room) showed it matched.
+  r16 also wrote "dawn brought no villager" from an arrival grep that missed the real wording:
+  arrivals log as "Registered entity with town <uuid>"; `_qtdev villager_stats <flag>` counts them.
+- A townie standing in a doorway has its bubble inside the wall above the door: no icon shows from
+  any side. The focus hint line ("They need X to work.") fires only for the bubble holder
+  (`NeedBubbleFocus`), so a hint line in a shot proves the bubble is held. Aim at the head (pitch
+  ~0 at 3 blocks; the cone is ~10 degrees) and take several frames: it repeats every 40 ticks.
 - `Fullness changed from X to Y for <uuid>` names the villager. Before 2026-10-23 it didn't, and
   r15 nearly credited the hunter's meal to the cook.
 - Commit findings as you go; the job's temp dir is deleted with the job.
