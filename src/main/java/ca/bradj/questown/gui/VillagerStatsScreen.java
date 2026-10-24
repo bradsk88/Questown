@@ -27,6 +27,9 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
     private ImmutableRect2i hngBar = new ImmutableRect2i(0, 0, 0, 0);
     private ImmutableRect2i moodBar = new ImmutableRect2i(0, 0, 0, 0);
     private ImmutableRect2i dmgBar = new ImmutableRect2i(0, 0, 0, 0);
+    // The effects line's box and names while it is cut short, so a hover can list them all.
+    private ImmutableRect2i effectsLine = new ImmutableRect2i(0, 0, 0, 0);
+    private List<String> truncatedEffects = List.of();
 
     public VillagerStatsScreen(
             VillagerStatsMenu menu,
@@ -74,6 +77,11 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
                 mouseY,
                 key -> this.showTooltip(Compat.translatable(key))
         )) {
+            return;
+        }
+
+        if (!truncatedEffects.isEmpty() && JEI.isCoordInBox(mouseX, mouseY, effectsLine)) {
+            this.showTooltip(truncatedEffects.stream().map(n -> Compat.visualOrder(Compat.literal(n))).toList());
             return;
         }
 
@@ -173,12 +181,14 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
             RenderContext rc,
             int position
     ) {
+        truncatedEffects = List.of();
         if (menu.getMoodEffects().isEmpty()) {
             return;
         }
         int bgX = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2 + (25 * position) + 16;
-        // One line in the stats row (rows are 25 px apart); a long list ends in "...".
+        // One line in the stats row (rows are 25 px apart); a long list ends in "..." and shows
+        // whole on hover (r16 #13: "Didn't sleep, works slower, Ate…" had no way to read the rest).
         List<String> names = new ArrayList<>();
         for (String effect : menu.getMoodEffects()) {
             String path = effect.substring(effect.indexOf(':') + 1);
@@ -187,7 +197,12 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
             ).getString());
         }
         String line = Compat.translatable("menu.villager_stats.mood_effects", String.join(", ", names)).getString();
-        rc.darkText(Compat.literal(Compat.fitToWidth(this.font, line, backgroundWidth - 16)), bgX + 8, y);
+        String shown = Compat.fitToWidth(this.font, line, backgroundWidth - 16);
+        rc.darkText(Compat.literal(shown), bgX + 8, y);
+        effectsLine = new ImmutableRect2i(bgX + 8, y, this.font.width(shown), this.font.lineHeight);
+        if (!shown.equals(line)) {
+            truncatedEffects = List.copyOf(names);
+        }
     }
 
     private void renderMood(

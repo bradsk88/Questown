@@ -361,6 +361,10 @@ board (-2, 67, -3).
   slice (`Pages.slice`, `PagesTest`). Live on the restored r16 world: "Page 1 / 1", each item once,
   `[gui-lint] AddWorkScreen ... OK`, clicking the carrot opened "Requesting Carrot".
   `CreateStockRequestScreen` keeps the same unused range (latent: its page holds 81 slots).
+- #13 **resolved 2026-10-24:** a truncated effects line lists every effect on hover
+  (`VillagerStatsScreen.renderMoodEffects`/`renderCustomTooltip`). Live on the restored r16 world
+  after raw mutton went into the storeroom: "Ate without a table, Ate raw fo…" hovered to "Ate
+  without a table / Ate raw food"; `[gui-lint] VillagerStatsScreen ... OK`. GUI only, no unit pin.
 - **New (#18, seen while verifying #2; pre-existing, not ruled):** the picker offers Carrot (and
   other single foods) though its confirm says "There are 0 known jobs which produce it". ADR-0007
   says the board offers only fulfillable products. The slots come from expanding multi-item

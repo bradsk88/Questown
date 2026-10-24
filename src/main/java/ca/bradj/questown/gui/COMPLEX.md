@@ -1151,6 +1151,10 @@ their count, and the card caps at the target, so the count at completion always 
   duplicate encoding). "Lvl N" is right-aligned on the experience title; the old mood row lists the
   active effects in words on one fitted line (`menu.villager_stats.effect.<path>`, else
   `JobNames.variant`). Live: r8 showed "Lvl 1" and a sleepless villager's effect.
+  A line cut short by `Compat.fitToWidth` lists every effect, one per line, on hover (r16 #13:
+  "Didn't sleep, works slower, Ate…" had no way to read the rest); a line that fits shows no
+  tooltip, as with quest-card titles. Live on the r16 world: "Ate without a table, Ate raw fo…"
+  hovered to both names.
 
 ## Request categories on the job board (2026-10-22)
 
