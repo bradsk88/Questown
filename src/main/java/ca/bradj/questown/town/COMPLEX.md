@@ -637,6 +637,21 @@ long)` on `AbstractTownFlagTicker` sets `isMorning = true` then calls
 Idempotent: the detection path already set the flag, so the wrapper is a
 no-op there.
 
+## Morning clock: game time in, daytime read locally (r16 #6, 2026-10-24)
+
+`TownFlagBlockEntity.morningTick(long gameTime)` has three callers and they used to disagree:
+the ticker's MORNING detection passed game time (`getTick`), the campfire-sleep wake passed the
+`SleepFinishedTimeEvent`'s new **daytime**, and the missed-morning catch-up
+(`TownFlagState.runMissedMorning`) passed `level.getDayTime()`. The pass writes into two clocks:
+`handleMorning` stamps SLEEPLESS expiry (`until = tick + sleeplessEffectDuration`) and
+last-downtime ticks that are read on **game time** (`TownVillagerMoods` expiry, `DowntimeState`),
+while `NBT_TIME_WARP_REFERENCE_TICK` is compared with `level.getDayTime()`. A sleep skip advances
+daytime but not game time, so the daytime stamp stretched SLEEPLESS (r16: ~44 500 ticks instead
+of 23 000) and grew with every slept night. Now every caller passes game time
+(`AbstractTownFlagTicker.runSleptMorning` for the wake, `runMissedMorning(..., gameTime)`), and
+`morningTick` reads the warp reference's daytime from the level itself. Pinned by
+`SleepMorningClockTest` (the wake path; the block-entity half is registry-bound).
+
 ## Stuck-block self-heal (`reseedStuckBlocks`, 2026-10-15 playtest P0)
 
 A job block sitting in a non-fresh state with **no timer** can be dead:

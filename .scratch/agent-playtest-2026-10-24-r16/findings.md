@@ -307,3 +307,35 @@ board (-2, 67, -3).
 - The mineshaft needs **stone** stairs; cobblestone stairs leave the row greyed.
 - `run/logs/latest.log` rotates at midnight (to `run/logs/<date>-1.log.gz`); a grep over
   latest.log alone silently loses the earlier lines.
+
+## Rulings (dev, 2026-10-24 design chat)
+- #6 (clock): fix as a bug. **Resolved 2026-10-24:** all three `morningTick` callers pass game
+  time (slept wake via `AbstractTownFlagTicker.runSleptMorning`; the missed-morning catch-up had
+  the same daytime bug); the warp reference reads daytime from the level. Pin
+  `SleepMorningClockTest` (red on the daytime variant: expected 50460, was 72000). The
+  `ready-for-downtime` belief shares the fix (same `handleMorning` tick) but was not separately
+  shown; `morningTick` itself is registry-bound, not unit-tested. The slept morning passes game time (`level.getGameTime()`), so both
+  morning paths run on one clock; a unit test of `handleMorning` also settles the
+  `ready-for-downtime` belief.
+- #9 (BOP deposit): fix as a bug. Keep BOPs out of the loot drop (source of the stray gold BOPs)
+  and give the deposit its own timeout instead of `MAX_TICKS_WITHOUT_DINING_TABLE`.
+- #3 (deferred product): fix as a bug. The max-ticks guard must not fire on the extract tick.
+- #1 (starving leaver): ruling: re-decide after a deposit when the townie is starving (ask the
+  board, which can send it to dine) instead of starting another trip.
+- #17 (full storage): ruling: (1) NO_SPACE/NO_STORAGE gets its own storage-full status text
+  ("build more chests"), not "dropping loot"; and (2) every batch that brings a villager (+ its
+  bed, #11) also asks for a chest, either a storeroom upgrade or a new storage room.
+- #11 (beds): ruling: every batch that brings a villager carries a bed (enforce the dev rule; first
+  find out why the miner batch brought Villager 4), plus the Sleepless text says the cause when it
+  was a missing bed ("Didn't sleep — no bed").
+- #14 (unstaffed top-need room): ruling: **invert it.** Past onboarding, job choice is fully random
+  again (no top-need producer steering). Batches alternate: a "change a villager's job" quest, then
+  a batch of quests *for the job it became* (its room, tools, inputs), then the next job-change
+  quest. The random job roll prefers roots no townie holds yet.
+- #7 / Coal x8 (stock-counted quests stall): ruling: quests count **produced totals** since
+  posting, not stock on hand.
+- #16 (starving town, "all caught up", missing random batch): **deferred.**
+- Not ruled; agent's default, fix unless the dev objects: #15 + #4 diner text split on
+  `hasDiningRoom` / food-in-town; #10 instrument first (workSpot/claim at state 0); #2 picker
+  paging; #13 effects-line tooltip; #5 investigate the "Empty Room" announcement; #12 leave (needs
+  a save migration); #8 CONTEXT.md:279 fix after the dev's CONTEXT.md edits are committed.

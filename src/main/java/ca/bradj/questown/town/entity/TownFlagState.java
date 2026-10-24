@@ -457,7 +457,7 @@ public class TownFlagState {
                 } else {
                     flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
                 }
-                runMissedMorning(e, lastTick, gt);
+                runMissedMorning(e, lastTick, gt, level.getGameTime());
             }
         } else {
             flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
@@ -496,12 +496,12 @@ public class TownFlagState {
      * ticker's MORNING detection, which a non-ticking flag never sees. After the catch-up warp
      * (so it acts on the recovered villagers), run the one morning the absence skipped.
      */
-    private void runMissedMorning(TownFlagBlockEntity e, long lastTick, long now) {
+    private void runMissedMorning(TownFlagBlockEntity e, long lastTick, long now, long gameTime) {
         if (!ca.bradj.questown.town.MissedMorning.missedDuringAbsence(lastTick, now)) {
             return;
         }
         QT.FLAG_LOGGER.info("Running the morning the town slept through while no player was near (from {} to {})", lastTick, now);
-        e.morningTick(now);
+        e.morningTick(gameTime);
     }
 
     private boolean isDueForContainerScan() {

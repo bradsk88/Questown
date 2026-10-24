@@ -632,7 +632,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
 
-    void morningTick(Long newTime) {
+    /**
+     * @param gameTime game time ({@code Util.getTick}), the clock {@code handleMorning}'s SLEEPLESS
+     *                 expiry and last-downtime stamps are read on. Every caller passes it (r16 #6:
+     *                 a daytime value stretched SLEEPLESS by the slept nights' daytime skips). The
+     *                 time-warp reference is a daytime field, so it is read from the level here.
+     */
+    void morningTick(long gameTime) {
         // Playtest ruling: the second villager arrives only after the raw-food quest is
         // complete. A queued spawn that misses the gate rolls into the next morning.
         TownQuests.ArrivalRelease<MCReward> release = quests.releaseArrivals(
@@ -652,13 +658,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             );
         }
         this.setChanged();
-        villagerHandle.handleMorning(newTime);
+        villagerHandle.handleMorning(gameTime);
         // Re-arm "Your camp is ready" for tonight: a player who didn't sleep gets it again (the
         // client hides it at dawn, 2026-10-22 r3 #17).
         campReadyToastShown.clear();
         roomsHandle.handleMorning();
         CompoundTag tag = Compat.getBlockStoredTagData(this);
-        tag.putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
+        tag.putLong(NBT_TIME_WARP_REFERENCE_TICK, getServerLevel().getDayTime());
         TownInterface.DebugLogger loger = getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TOWN_STATE_CHANGES);
         state.putStateOnTile(tag, getUUID(), loger);
 

@@ -29,7 +29,9 @@ public class TownFlags {
 
     /**
      * The morning-wake domain step (the bus binding lives in
-     * {@code loader.neo.NeoTownWakeEvents}, the G6 events slice).
+     * {@code loader.neo.NeoTownWakeEvents}, the G6 events slice). {@code newTime} is the wake's
+     * new daytime and is only logged: the morning pass runs on game time
+     * ({@code runSleptMorning}, r16 #6).
      */
     public static void onSleepFinished(long newTime) {
         // Diagnostic: this is the definitive "did morning come" signal. In the
@@ -41,7 +43,7 @@ public class TownFlags {
                 newTime
         );
         for (TownFlagBlockEntity e : flags.values()) {
-            e.ticker.runMorning(TownFlagTicker.TickData.fromFlag(e), newTime);
+            e.ticker.runSleptMorning(TownFlagTicker.TickData.fromFlag(e));
         }
     }
 

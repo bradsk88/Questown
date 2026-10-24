@@ -181,6 +181,17 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         onMorning(data, newTime);
     }
 
+    /**
+     * The campfire-sleep wake's morning pass. It runs on {@link #getTick} (game time), the same
+     * clock as the ticker's own morning detection, never the wake event's new daytime: the morning
+     * pass stamps SLEEPLESS expiry and last-downtime ticks that are read against game time, and a
+     * sleep skip advances daytime but not game time (r16 #6: SLEEPLESS lasted ~44 500 ticks
+     * instead of 23 000). Pinned by {@code SleepMorningClockTest}.
+     */
+    public void runSleptMorning(TICK_DATA data) {
+        runMorning(data, getTick(data));
+    }
+
     protected abstract void onMorning(
             TICK_DATA data,
             Long pop
