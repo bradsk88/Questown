@@ -122,10 +122,18 @@ server would let them verify.
 ## Before the server goes down (restart / teardown / world wipe)
 
 The live log is about to become a static artifact, and any user report not yet
-ticketed loses its evidence chain. Before killing the server for a restart or
-tear-down:
+ticketed loses its evidence chain. **A restart to apply a committed fix counts
+too** — the user queues more chat while they watch the fix work. Before
+killing the server for ANY reason:
 
-1. Re-run the chat capture above; any user line without a ticket gets one now.
+1. Run the chat capture NOW (do not jump to the loop section):
+   `grep -a '^\[' /tmp/dev-server-N.log | grep -a '\[Not Secure\] <Dev>' | sed 's/^\[\([0-9:]*\)\].*<Dev>/\1: /'`
+   Then diff against `.scratch/<playtest-dir>/` — any user line without a
+   ticket gets one now. (2026-10-14: the 04:34 fix-restart skipped this and
+   10 server-19 lines + all 11 server-20 lines went unticketed until the
+   user had to ask "capture my chat feedback as todo items first" — the
+   fix-restart case is exactly when the sweep is needed, because the user
+   is actively watching and keeps dictating.)
 2. For each unresolved bug report ("X wasn't working"), read the decision /
    evidence lines while the log is warm — the log is the oracle (the
    `questown-status-why` loop: dump the decision, not the status).
@@ -142,6 +150,11 @@ ticket is what survived the restart.)
   source. Anchor runtime greps on `^\[HH:MM:SS\]` / `[Server thread`.
 - **`pkill -f` / `pgrep -f` self-match** — bracket the pattern (`[r]unServer`);
   a bare token in your own `bash -c` line kills your shell (exit 143).
+- **pkill teardown can report "Command aborted" while SUCCEEDING (2026-10-14)** —
+  the client→server pkill sequence came back "Command aborted" with both
+  processes actually dead. Never read that as a failed kill and re-pkill in the
+  same breath: verify process state with a SEPARATE call
+  (`ps -eo pid,args | grep -E 'forgeserveruser|GradleWrapperMain' | grep -v grep | wc -l`).
 - **`pgrep -f` phantom** — it can return your own bash pid; recheck.
 - **FIFO writer pid (2026-10-13)**: `pgrep -f 'sleep 999999 <> run/server-cmd.fifo'` self-matches your own `bash -c` launcher (its cmdline contains the literal string) and hands back the wrong pid. The real writer is the `sh -c` wrapper — confirm with `ps -o comm=` (it says `sh`, not `bash`), then verify with `ls -la /proc/<pid>/fd` for `0 -> .../server-cmd.fifo` (a **pipe** link, not a regular file — `grep -c regular` will read 0 and look like a failure). Full procedure: the `questown-held-run` skill's FIFO section; the server must be launched with `-Dquestown.tp.fifo=true` (build.gradle gate) or the console feeds are silently dropped.
 - **Fresh from-zero world: `rm -rf run/world run-client/saves`** before launch,
