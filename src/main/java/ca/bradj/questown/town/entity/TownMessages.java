@@ -158,7 +158,7 @@ public class TownMessages {
     ) {
         return switch (type) {
             case ITEM -> Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), countNeeded);
-            case LOOT -> Compat.translatable(ca.bradj.questown.gui.UIQuest.lootNameKey(wantedId));
+            case LOOT -> ca.bradj.questown.gui.UIQuest.lootName(wantedId);
             case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", jobName(wantedId));
             case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", jobName(wantedId));
             default -> RoomRecipes.getName(wantedId);

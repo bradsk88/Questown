@@ -394,7 +394,7 @@ class TutorialPhaseGateTest {
         ));
         assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.LOOT
-                        && q.getWantedId().equals(TagsInit.Items.VILLAGER_FOOD.location())
+                        && q.getWantedId().equals(TagsInit.Items.VILLAGER_COOKED_FOOD.location())
         ));
         // The batch carries the cook's room quest too: every cook/* job requires
         // kitchen_small (see cook_simple_furnace_food.json), and without it the
@@ -483,13 +483,13 @@ class TutorialPhaseGateTest {
         TestTutorialTownView view = TestTutorialTownView.builder()
                 .villagerCount(3)
                 .build();
-        quests.addTutorialBatches(view);   // applies phase 2.5: cook JOB_CHANGE + kitchen ROOM + VILLAGER_FOOD LOOT
+        quests.addTutorialBatches(view);   // applies phase 2.5: cook JOB_CHANGE + kitchen ROOM + VILLAGER_COOKED_FOOD LOOT
 
         // Complete the second job change (the cook) and the cooked-food LOOT quest.
         // (The kitchen ROOM quest is not needed for the phase gate, which tracks
         // JOB_CHANGE completions; the batch reward does need it.)
         quests.questBatches.markRecipeAsComplete(null, JobID.toRL(TownQuests.ONBOARDING_COOK_JOB));
-        quests.questBatches.markRecipeAsComplete(null, TagsInit.Items.VILLAGER_FOOD.location());
+        quests.questBatches.markRecipeAsComplete(null, TagsInit.Items.VILLAGER_COOKED_FOOD.location());
 
         // Two completed job changes open the post-cook miner beat (phase 2.7): post it and
         // complete all four of its quests (JOB_CHANGE + farm room + pickaxes + coal). The

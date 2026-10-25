@@ -55,8 +55,13 @@ public class UIQuest implements Comparable<UIQuest> {
      * The LOOT quest's name key by what it wants: the hunter's raw-food quest is "Raw Food",
      * any other (the cook's #questown:villager_food) is "Food" (2026-10-15/17 playtest calls).
      */
-    public static String lootNameKey(ResourceLocation wantedId) {
-        return RAW_FOOD_TAG.equals(wantedId) ? "menu.quests.raw_food" : "menu.quests.food";
+    /** A LOOT quest's name: its tag's name, or the wanted item's own name ({@link LootQuestNames}). */
+    public static MutableComponent lootName(ResourceLocation wantedId) {
+        String key = LootQuestNames.key(wantedId);
+        if (key == null) {
+            return Compat.getItemName(wantedId).copy();
+        }
+        return Compat.translatable(key);
     }
     private final Quest.QuestType type;
     private final ImmutableList<Ingredient> ingredients;
@@ -261,7 +266,7 @@ public class UIQuest implements Comparable<UIQuest> {
             case LOOT -> {
                 // The card is "Raw Food"/"Food" + "(extracted/count)": the extraction
                 // progress the 2026-10-15 accumulation ruling made real.
-                MutableComponent name = Compat.translatable(lootNameKey(wantedId));
+                MutableComponent name = lootName(wantedId);
                 if (deposited != null) {
                     name.append(Compat.literal(" (" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
                 }

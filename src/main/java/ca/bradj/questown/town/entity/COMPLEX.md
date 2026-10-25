@@ -1624,3 +1624,19 @@ branch applied") and showed "needs Block of Progress", the job's tool. The hunte
 only because it was due for downtime. New last branch: `BoardIdleExits.depositFinished` ->
 downtime, logged `via bop-deposited` (the latch branch comes first, so the deposit is done).
 `BoardIdleExitsTest`.
+
+## The cook batch's food quest counts cooked food only (r17, dev 2026-10-25)
+
+"Should probably have a tag for 'cooked food'. Otherwise the food quest can technically be
+completed by lucky hunters and gatherers." The quest was `MCQuest.loot(#questown:villager_food, 8)`,
+and that tag holds apples, carrots, melon slices and beetroot, which gatherers bring. It now counts
+`#questown:villager_cooked_food` (`data/questown/tags/items/villager_cooked_food.json`: bread, the
+cooked meats and fish, baked potato, the stews). LOOT matching resolves a wanted id as an item,
+else a tag (`Ingredients.asIngredient`), so no matcher changed. `#villager_food` still drives
+eating and the Food request category.
+
+LOOT quest names: `UIQuest.lootName` (card) and `TownMessages` (completion line) used
+`lootNameKey`, which named every LOOT quest "Food" unless it was the raw-food tag, so the miner's
+Coal x3 (r16 #7) read "Food (n/3)". `LootQuestNames.key` names the three food tags ("Raw Food",
+"Food", "Cooked Food") and anything else uses the wanted item's own name. `LootQuestNamesTest`.
+Existing saves keep their old food quest (tag `villager_food`).

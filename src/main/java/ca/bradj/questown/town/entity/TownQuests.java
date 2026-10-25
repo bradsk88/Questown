@@ -1353,8 +1353,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         cookJobQuest.setFlavorText("Your town needs a cook. Teach a villager the cook job so raw food becomes a meal.");
         q.addNewQuest(cookJobQuest);
 
+        // Cooked food only: with #villager_food a gatherer's apples and carrots could fill it (r17,
+        // dev 2026-10-25: "the food quest can technically be completed by lucky hunters and gatherers").
         MCQuest cookedFoodQuest = MCQuest.loot(
-                batchUUID, null, TagsInit.Items.VILLAGER_FOOD.location(), 8
+                batchUUID, null, TagsInit.Items.VILLAGER_COOKED_FOOD.location(), 8
         );
         cookedFoodQuest.setFlavorText("Feed your growing village. Produce eight pieces of food from the raw food you have gathered.");
         q.addNewQuest(cookedFoodQuest);

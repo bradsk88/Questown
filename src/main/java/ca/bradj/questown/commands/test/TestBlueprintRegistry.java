@@ -2753,7 +2753,8 @@ public class TestBlueprintRegistry {
     }
 
     private static TestBlueprint cookExtractCreditsFoodQuestBlueprint(WorkRequest boardRequest) {
-        ResourceLocation food = TagsInit.Items.VILLAGER_FOOD.location();
+        // The cook batch's quest counts cooked food since r17 (VILLAGER_COOKED_FOOD).
+        ResourceLocation food = TagsInit.Items.VILLAGER_COOKED_FOOD.location();
         return cookRealtimeBlueprint(cookBlueprint().supplyItems(), new TestExpectation(List.of(), 0, 100))
                 .withSetupHook((level, flagPos, town, output) -> {
                     town.getQuestHandle().addLootQuest(food, 8);

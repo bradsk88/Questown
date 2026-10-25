@@ -189,3 +189,13 @@ Quests tab.
   never returned to the hunt. Open again. Safer next try: the dev's other option, a status text
   ("Too late to set out today. They'll leave in the morning.") with no job change.
 - #9 hunter wool **done**: white wool is a fifth of every hunter table's roll (~1 short trip in 5; longer trips proportionally more). Tradeoff for the dev: the food share of a roll drops by the same fifth.
+21. (design, dev 00:41:59, **missed during the session**, found reading the chat log) **"Should probably
+    have a tag for 'cooked food'. Otherwise the food quest can technically be completed by lucky
+    hunters and gatherers."** **Fixed:** new `#questown:villager_cooked_food`; the cook batch's
+    quest counts it. Also fixed on the way: every LOOT quest card that was not raw food read
+    "Food", including the miner's Coal x3 (r16 #7); cards now use the item's own name.
+22. (GUI, dev 01:02:07, typed into the agent's repro client) **"The squares behind job icons on
+    the 'skills' UI look like they're grabbing the wrong part of the texture. Needs to be adjusted
+    by 1 or 2 pixels horizontally."**
+- #18 resolved: the message was the BOP-deposit broadcast at 00:40:24 ("A Block of Progress was
+  deposited at the town flag! Right-click the flag to collect it."): should be two lines.
