@@ -174,3 +174,6 @@ Quests tab.
   storeroom) the mutton went in and came out cooked. The coal-in-top-slot guess was wrong (the
   furnace was empty in the save). Side notes from the repro: villager 3 (8212b2ea) also became a
   cook on load (a pending BOP job change).
+- #17 BOP deposit loop **fixed**: after the deposit, the board's cascade had no exit for a done
+  deposit; the gatherer (not due for downtime, no work to roll) "stayed" 501 times. New branch
+  `bop-deposited` -> downtime (`BoardIdleExits`). To confirm live in the agent playtest.

@@ -1613,3 +1613,14 @@ quests) in the reward, saved in its NBT (`declined_from`), and `TownQuests.upgra
 those rooms from the candidates. With nothing left, `addUpgradeQuest` takes the no-upgrade branch,
 which queues a random batch (r16 #16). The exclusion covers that one replacement, not later
 upgrade rolls. Pinned by `TownQuestsUpgradeSourcesTest` (red with the filter removed).
+
+## A finished BOP deposit leaves the deposit job (r17 #17, 2026-10-25)
+
+After a deposit the BOP job asks the board for the next job. The board's cascade (damaged rest,
+BOP latch, ready-for-downtime, carried output, starving diner, work roll, idle escape, diner-ate)
+had no exit for a done deposit, so a townie not yet due for downtime with no work to roll (late
+in the day) "stayed" on `bop_depositing`: dev r17, the gatherer was asked 501 times ("stays: no
+branch applied") and showed "needs Block of Progress", the job's tool. The hunter's deposit left
+only because it was due for downtime. New last branch: `BoardIdleExits.depositFinished` ->
+downtime, logged `via bop-deposited` (the latch branch comes first, so the deposit is done).
+`BoardIdleExitsTest`.

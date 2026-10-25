@@ -1,5 +1,7 @@
 package ca.bradj.questown.town.entity;
 
+import ca.bradj.questown.jobs.BoardIdleExits;
+
 import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.loader.ItemHandler;
@@ -1326,6 +1328,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         // (10-21 #17; dev 2026-10-22: hunger acceptable -> back to work, or relax at night).
         if (DiningStages.isDiner(currentJob) && !villagerHandle.isStarving(ownerVUID)) {
             changeJob.accept("diner-ate", DowntimeWork.getIdForRoot(currentJob.rootId()));
+            return true;
+        }
+        // A finished BOP deposit with nothing else to do relaxes too (r17 #17: a gatherer sat in
+        // bop_depositing for minutes, "needing" a Block of Progress it had already deposited).
+        if (BoardIdleExits.depositFinished(currentJob)) {
+            changeJob.accept("bop-deposited", DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
         }
         getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
