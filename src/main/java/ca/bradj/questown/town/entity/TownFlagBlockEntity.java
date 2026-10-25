@@ -1463,6 +1463,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return pois.getVisitorJoinPos(getServerLevel(), getBlockPos());
     }
 
+    @Override
+    public Collection<BlockPos> getTownAnchors() {
+        BlockPos flagPos = getBlockPos();
+        List<BlockPos> anchors = new ArrayList<>();
+        anchors.add(flagPos);
+        anchors.addAll(pois.getWelcomeMats());
+        // A door's scanLevel is its Y offset from the flag, not a world Y.
+        roomsHandle.getAllRegisteredDoors().forEach(d -> anchors.add(new BlockPos(d.x, flagPos.getY() + d.scanLevel, d.z)));
+        return anchors;
+    }
+
     // Rate-limits the wander-failure warning so a stuck villager logs once per
     // window instead of every tick. Keyed by the avoiding position (a proxy for
     // the stuck villager), value is the game tick when the window opened.

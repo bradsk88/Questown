@@ -41,6 +41,9 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     Vec3 getVisitorJoinPos();
 
+    /** The points that mark out where the town is: the flag, the welcome mats and every registered door. */
+    Collection<BlockPos> getTownAnchors();
+
     /**
      * The journal a returning townie respawns with (job, status, carried items), consumed on read;
      * empty for a new visitor, who starts as a gatherer.

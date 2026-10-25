@@ -229,3 +229,26 @@ A leaver vanishes when its job's `remove_from_world` rule applies (`VisitorMobEn
 synced `visible` flag from `!job.shouldDisappear(...)` every tick), with nothing to mark it. When
 the flag flips (either way) the server now sends 12 `POOF` particles around the body. A villager
 that loads already away puffs once on its first tick (the synced value starts visible).
+
+## Stranded outside the town: poof back to the gate (r20, dev 2026-10-25)
+
+A villager that fell off a cliff into water floated 8 blocks below the town for minutes. Dev call:
+rescue it, but only **outside** the town, and visibly. Inside the town a blocked path is usually
+something the player built, so it stays a `CANT_REACH` bubble (ADR-0011).
+
+- **Outside the town** (`StrandedRescue.isOutsideTown`): outside the box around
+  `TownInterface.getTownAnchors()` (the flag, the welcome mats, every registered door; a door's
+  `scanLevel` is a Y offset from the flag), widened 8 blocks sideways and 4 below the lowest
+  anchor. No ceiling. The vertical margin is load-bearing: the r20 villager was only 7 blocks from
+  the flag sideways, but 8 below it.
+- **Triggers** (`MoveToTownTargetSink.tick`, after the `shouldBeMoving` gate): (1) the existing
+  give-up (`hasGivenUpReaching`) fires while outside, and the rescue replaces the bubble; (2) in or
+  directly over water for 200 ticks without getting a block closer to the walk target
+  (`StrandedRescue.observeWater`). The water case exists because the unstick ladder keys on
+  "position not changing", and a drifting swimmer keeps changing position.
+- **The poof** (`VisitorMobEntity.rescueToGate`): `POOF` particles plus the chorus-fruit teleport
+  sound at both ends, a teleport to `getVisitorJoinPos()` (beside the gate, clear of the campfire's
+  burn radius), the need cleared, and an INFO `[rescue]` line on `Questown:Villagers`. A villager
+  hidden on a trip (`visible` false) is never "stranded".
+- Pinned by `StrandedRescueTest` (footprint + water window). The sink and the teleport are
+  registry-bound and not unit-tested; they still need a live catch (a `[rescue]` line).

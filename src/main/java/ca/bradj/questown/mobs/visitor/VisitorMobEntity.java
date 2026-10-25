@@ -94,6 +94,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.sounds.SoundEvents;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -1584,6 +1585,38 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public TownInterface getTown() {
         return town;
+    }
+
+    /** Outside the town's footprint (see {@link StrandedRescue}); false while hidden on a trip. */
+    public boolean isStrandedOutsideTown() {
+        if (town == null || !entityData.get(visible)) {
+            return false;
+        }
+        return StrandedRescue.isOutsideTown(blockPosition(), town.getTownAnchors());
+    }
+
+    /**
+     * Poof a stranded villager back beside the town gate (r20: one fell off a cliff into water and
+     * could not get home). Visible on purpose, a puff and a sound at both ends, so the player reads
+     * it as a rescue rather than a glitch.
+     */
+    public void rescueToGate(String why) {
+        if (!(level() instanceof ServerLevel sl)) {
+            return;
+        }
+        Vec3 from = position();
+        Vec3 to = town.getVisitorJoinPos();
+        poofHere(sl);
+        getNavigation().stop();
+        teleportTo(to.x + 0.5, to.y, to.z + 0.5);
+        poofHere(sl);
+        setNeed(TownieNeed.NONE);
+        QT.VILLAGER_LOGGER.info("[rescue] {} poofed from {} to the gate at {} ({})", uuid, from, to, why);
+    }
+
+    private void poofHere(ServerLevel sl) {
+        sl.sendParticles(ParticleTypes.POOF, getX(), getY() + 0.8, getZ(), 20, 0.3, 0.5, 0.3, 0.02);
+        Compat.playNeutralSound(sl, blockPosition(), SoundEvents.CHORUS_FRUIT_TELEPORT);
     }
 
     public void freeze(int ticks) {
