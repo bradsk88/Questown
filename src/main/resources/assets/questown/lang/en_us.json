@@ -128,7 +128,7 @@
   "message.villager.leveled_up": "%s reached level %s",
   "messages.command.failed_not_flag": "No flag found. Command failed for position %s",
   "messages.player.took_bop": "%s took %s from the town flag at %s",
-  "messages.bop.earned": "A Block of Progress was deposited at the town flag! Right-click the flag to collect it.",
+  "messages.bop.earned": "A Block of Progress was deposited at the town flag!\nRight-click the flag to collect it.",
   "messages.quest.procedural_flavor": "Your village needs a %s. Build one to keep production flowing.",
   "tooltips.villagers": "Villagers",
   "tooltips.quests": "Quests",

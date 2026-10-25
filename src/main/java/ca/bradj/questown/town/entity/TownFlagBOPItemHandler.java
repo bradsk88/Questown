@@ -89,6 +89,8 @@ public class TownFlagBOPItemHandler implements ItemHandler {
             town.bopStacks.add(stored);
             town.syncBopFull();
             QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", town.getBopCount());
+            // Two lines in one message (r17 #18, dev: "that message should be two lines"): the lang
+            // value carries the line break, since two broadcasts are paced 100 ticks apart.
             town.messages.broadcastMessage("messages.bop.earned");
         });
     }

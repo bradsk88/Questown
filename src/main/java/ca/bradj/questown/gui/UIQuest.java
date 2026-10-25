@@ -48,8 +48,6 @@ public class UIQuest implements Comparable<UIQuest> {
     public final Quest.QuestStatus status;
     private final ResourceLocation wantedId;
 
-    private static final ResourceLocation RAW_FOOD_TAG =
-            new ResourceLocation("questown", "villager_simple_furnace_food_raw");
 
     /**
      * The LOOT quest's name key by what it wants: the hunter's raw-food quest is "Raw Food",
