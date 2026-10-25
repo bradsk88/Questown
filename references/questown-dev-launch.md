@@ -247,13 +247,10 @@ it while you work on items between checks, three facts keep the work honest:
   is a complete record; grepping it each turn catches everything since the last
   check. A background watcher is a *bonus* for continuous capture, not the source
   of truth.
-- **A background watcher is a `tail -F` filter, not a daemon you babysit.**
-  `nohup sh -c 'tail -n0 -F /tmp/dev-server.log | grep --line-buffered -E "<patterns>" >> /tmp/dev-watch.log 2>/dev/null' > /dev/null 2>&1 &`
-  appends matching new lines to `/tmp/dev-watch.log` as they happen (verified: it
-  caught live chat + a live exception the full-log scan would also have caught).
-  Start/stop it with **bracket patterns** (the `pkill -f` self-match trap above
-  applies to killing a stale watcher). It only captures from the start onward, so
-  always pair it with a full-log scan for anything earlier.
+- **A background watcher: `tools/agent-playtest/logwatch.sh` under Monitor, proven with a
+  `say qt-watch-test`.** The older `tail -F | grep --line-buffered` filter was silent inside
+  Monitor for 30 min on 2026-10-25 (the full procedure is in the `questown-playtest-watch` skill,
+  "Watching"). Pair it with a full-log scan for anything before it started.
 
 **The dev log is ~90% gradle compile output, not just server events.** A
 `runServer` log interleaves the compile stream (warnings **and echoed Java source

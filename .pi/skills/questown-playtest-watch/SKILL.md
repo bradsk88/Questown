@@ -25,57 +25,56 @@ as they reproduce live, and (d) works `ready-for-agent` items between polls.
 Do NOT drive the run (do not place blocks, do not open menus for the user) —
 that is the user's job. This is the inverse of `questown-held-run`.
 
-## The one trap that defines the mode: the polling model
+## Watching: a proven Monitor, then a full-log re-scan each turn
 
-**You only check the log when you run a command in a turn. You do NOT poll
-between turns.** Do not claim "watch mode" / "continuously monitoring." Say
-plainly: "I check on each turn; nothing's lost because the log is a complete
-record." The full re-scan each turn is the source of truth; a background watcher
-is a bonus. The log-composition trap (dev log is ~90% gradle compile output,
-incl. echoed Java source) and the exact watcher command live in
-`references/questown-dev-launch.md` → "Reading the dev log while the user
-plays". Read that section before the first poll.
+Load this skill when the user says "watch the logs" (2026-10-25: it was skipped, and the user's
+chat sat unseen twice before they said "Doesn't seem like you're watching").
+
+1. Arm a Monitor on the offset-polling watcher, with `qt-watch-test` in the regex:
+   `tools/agent-playtest/logwatch.sh run/logs/latest.log '<Dev>|qt-watch-test|<other patterns>'`
+   (absolute paths). Not `tail -F | grep --line-buffered`: inside Monitor that delivered nothing
+   for 30 min on 2026-10-25, missing a job change, though the same pipeline worked from Bash.
+   Never end it in `cut` or `awk` (both buffer).
+2. **Prove it before saying "watching":** `tools/ffeed.sh feed "say qt-watch-test"` and wait for
+   that event. No event means no watch.
+3. Chat lines read `]: [Not Secure] <Dev> ...`: match `<Dev>`, never `\]: <`.
+4. Monitors expire after 30 min. On expiry, re-scan the log since the last event before
+   re-arming. The log is the record; the watch only makes it timely.
 
 ## Launching the fresh from-zero server + client for the user
 
 Before any gradle invocation, check for a live session (`pgrep -af '[r]unServer|[r]unClient'`).
-To hand the user a clean from-zero world:
 
-1. **Wipe the world**: `rm -rf run/world run-client/saves`.
-2. **Kill the old server + client FIRST** (bracket patterns; `pkill -f` with a
-   bare token self-kills — see the dev-launch ref). Kill order: client, then
-   server, then any gradle wrappers.
-3. **Launch the server first, then the client** (so a compile doesn't OOM-kill
-   the server). Server: `nohup ./gradlew runServer > /tmp/dev-server.log 2>&1 &`
-   (fresh log name). Verify generation: the `Flag block entity live` / boot
-   timestamp must be AFTER your launch, and `pgrep -af 'forgeserveruserde[v]'`
-   must show the server. Then the client: `nohup ./gradlew runClient -Pautojoin
-   > /tmp/dev-client.log 2>&1 &`.
-4. **On 1.20.6 the forked server's stdin is /dev/null** — FIFO command injection
-   does not connect. Drive in-world state with in-game chat commands
-   (`qt` / `_qtdev`), not the console.
-5. **If the user's machine rebooted / lost power**, it is NOT a clean kill: the
-   world was not saved-on-shutdown and *everything* is dead. Bound the loss
-   window (check `run/world/level.dat` mtime vs their last play) and do a
-   clean server-first relaunch — dev-launch ref, "Hard machine reboot / power
-   loss".
-
-Full launch discipline (kill-order, env, port check) is in
-`references/questown-dev-launch.md` and the `questown-held-run` skill.
+1. **Gamemode first:** `run/server.properties` is shared with agent playtests, which set
+   `gamemode=creative` (`questown-agent-playtest`). For the user's run, set
+   `gamemode=survival` before launch (2026-10-25: "Why am I in creative mode?").
+2. Wipe and launch: `rm -rf run/world run/logs run-client/diags run-client/.qtdiag-cmd`, then
+   `tools/agent-playtest/restart.sh <run-name>` (client down, server stop via FIFO, server
+   first, then client, waits for the join; launches with `-Dquestown.tp.fifo=true`, so
+   `tools/ffeed.sh feed "<console command>"` reaches the server on 1.20.6).
+3. **Op the user:** `tools/ffeed.sh feed "op Dev"` and see `Made Dev a server operator` in
+   `run/logs/latest.log` (2026-10-25: `run/ops.json` was empty, and `/qt flag` was refused).
+4. Arm and prove the watch (section above).
+5. **Tell the user which earlier items still need their eyes.** Grep the last findings files for
+   "needs the dev's eyes" / "unseen live" and list them (2026-10-25: r17 #15, the darker first
+   row, was marked that way, never re-checked, and turned out mis-scoped).
+6. **If the user's machine rebooted / lost power**, it is NOT a clean kill: the world was not
+   saved-on-shutdown. Bound the loss window (`run/world/level.dat` mtime vs their last play)
+   and do a clean server-first relaunch (dev-launch ref, "Hard machine reboot / power loss").
 
 ## The loop (each turn)
 
-1. **Poll the log** (full re-scan, anchored to runtime lines `^\[HH:MM:SS\]` /
+1. **Poll the log** (full re-scan of `run/logs/latest.log`, runtime lines only:
    `[Server thread`): new user chat, new errors/exceptions, BOP events
    (`took_bop` / `bop.earned`), townie registrations (`Registered entity with
    town`), menu navigation (`Opening flag menu`), campfire-sleep transitions.
-   Also read `/tmp/dev-watch.log` (the background watcher's capture) as a
-   cross-check.
+   The Monitor's events are the timely copy; this re-scan is the record.
 2. **Log new user chat feedback on the fly** → a ticket in
    `.scratch/<feature>/<slug>.md` (see `docs/agents/issue-tracker.md`). The exact
    capture (verified 2026-10-12 — this is how the day-1 playtest's 13 chat lines
    were collected in one pass):
-   `grep -a '^\[' /tmp/dev-server-N.log | grep -a '\[Not Secure\] <Dev>' | sed 's/^\[\([0-9:]*\)\].*<Dev>/\1: /'`
+   `grep -a '\[Not Secure\] <Dev>' run/logs/latest.log | sed -E 's/^\[([0-9A-Za-z]+ )?([0-9:]{8})[^]]*\].*<Dev>/\2:/'`
+   (re-verified 2026-10-25 on both `run/logs/latest.log` and restart.sh's `build/agent-playtest/<name>-server.log`)
    **Run it at the end of EVERY turn, not only when it looks like one** —
    batching to session end is the exact failure that makes the user have to ask
    "capture my chat messages". YAML frontmatter discipline: single-quote any
@@ -127,7 +126,8 @@ too** — the user queues more chat while they watch the fix work. Before
 killing the server for ANY reason:
 
 1. Run the chat capture NOW (do not jump to the loop section):
-   `grep -a '^\[' /tmp/dev-server-N.log | grep -a '\[Not Secure\] <Dev>' | sed 's/^\[\([0-9:]*\)\].*<Dev>/\1: /'`
+   `grep -a '\[Not Secure\] <Dev>' run/logs/latest.log | sed -E 's/^\[([0-9A-Za-z]+ )?([0-9:]{8})[^]]*\].*<Dev>/\2:/'`
+   (re-verified 2026-10-25 on both `run/logs/latest.log` and restart.sh's `build/agent-playtest/<name>-server.log`)
    Then diff against `.scratch/<playtest-dir>/` — any user line without a
    ticket gets one now. (2026-10-14: the 04:34 fix-restart skipped this and
    10 server-19 lines + all 11 server-20 lines went unticketed until the
@@ -159,6 +159,14 @@ ticket is what survived the restart.)
 - **FIFO writer pid (2026-10-13)**: `pgrep -f 'sleep 999999 <> run/server-cmd.fifo'` self-matches your own `bash -c` launcher (its cmdline contains the literal string) and hands back the wrong pid. The real writer is the `sh -c` wrapper — confirm with `ps -o comm=` (it says `sh`, not `bash`), then verify with `ls -la /proc/<pid>/fd` for `0 -> .../server-cmd.fifo` (a **pipe** link, not a regular file — `grep -c regular` will read 0 and look like a failure). Full procedure: the `questown-held-run` skill's FIFO section; the server must be launched with `-Dquestown.tp.fifo=true` (build.gradle gate) or the console feeds are silently dropped.
 - **Fresh from-zero world: `rm -rf run/world run-client/saves`** before launch,
   and verify the new server's boot timestamp beats the wipe.
+- **Containers and furnaces: read the block, not a log dump.** Container lists in the log are
+  snapshots from whenever a job last dumped them. `tools/ffeed.sh feed "data get block x y z"`
+  shows the live slots (2026-10-25: a stale dump made "no coal" reach the user; `data get block`
+  showed iron ingots jamming the furnace output).
+- **Command shapes: grep before feeding.** `grep -n 'literal(\|argument(' <Command>.java`.
+  Shapes verified 2026-10-25: `_qtdev work_score <flag x y z> <root>` (the work seeker's per-job
+  scores and gate reasons, the first move for "why isn't my X working?"), `_qtdev look_room <door
+  x y z>` (room grid with furniture letters), `_qtdev unlock_skill <villager uuid> <root/job>`.
 - **`_qtdev` output: grep the output marker, not the command text** — the log
   lines are prefixed `[_qtdev ...]` (e.g. `grep -a '\[_qtdev inspect\]'`); the
   command you fed is never echoed. (2026-10-13: grepping `inspect economy`
