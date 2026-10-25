@@ -59,7 +59,7 @@ public class FlagMenus {
             menus.initMultiVillagerStatusMenuClientSide(windowId, flagInfo);
             menus.initEconClientSide(windowId, flagInfo);
             menus.initBlocksOfProgress(windowId, flagInfo, bopResult.bopRootJobs());
-            menus.initCrafting(windowId, flagInfo);
+            menus.initCrafting(windowId, flagInfo, quests.stream().map(UIQuest::getWantedId).filter(java.util.Objects::nonNull).toList());
             return menus;
         } catch (Exception e) {
             QT.GUI_LOGGER.error("Failed to open town quests container: {}", e.getMessage());
@@ -183,8 +183,9 @@ public class FlagMenus {
 
     private void initCrafting(
             int windowId,
-            FlagTabsEmbedding.FlagInfo flagInfo
+            FlagTabsEmbedding.FlagInfo flagInfo,
+            Collection<ResourceLocation> postedQuests
     ) {
-        craftingMenu = new FlagCraftingMenu(windowId, flagInfo);
+        craftingMenu = new FlagCraftingMenu(windowId, flagInfo, postedQuests);
     }
 }

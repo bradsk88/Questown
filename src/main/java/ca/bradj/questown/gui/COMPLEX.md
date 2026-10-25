@@ -1368,3 +1368,16 @@ re-open pattern. Check with gui-lint that the text never reaches the button.
 the inventory tab's "Quests" button is gone: its handler (`openQuestsScreen`) was empty, so it
 never did anything. The villager quests container and its open path are still there, unreachable
 from the UI. Tab positions after it shift left by one (playtest skill click positions).
+
+## Flag crafting rows wait for their quest (r17 #1, dev 2026-10-25)
+
+"The mineshaft and fishing station crafting recipes should be hidden until the relevant quests have
+been opened." `FlagCraftRecipes` carries `unlockedByQuest` (the mineshaft row:
+`questown:block_room/block.questown.mineshaft`, the miner beat's room quest via
+`getRoomForJob(miner/coal)`; the fishing station row: `questown:block_room/block.questown.fishing_station`,
+the fisher's room). The flag menus payload already carries the town's quests, so
+`FlagMenus.fromNetwork` hands their wanted ids to `FlagCraftingMenu`, and `FlagCraftingScreen` lays
+out only rows `FlagCraftGates.visible` accepts, each button keeping its index in `ALL`.
+`FlagCraftMessage` re-checks against the flag's own quests. Posted = open or completed, so a row
+stays once seen. `FlagCraftRecipes.craft` itself is ungated (the growth driver calls it directly).
+`FlagCraftGatesTest`.

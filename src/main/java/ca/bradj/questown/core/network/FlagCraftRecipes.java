@@ -1,6 +1,8 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
+import net.minecraft.resources.ResourceLocation;
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
@@ -31,31 +33,37 @@ import java.util.function.Supplier;
  * @param output        what the player gets
  * @param descKey       the row's tooltip description
  * @param advancement   fired on craft, or null
+ * @param unlockedByQuest the room quest that unlocks this row once posted, or null for always
+ *                        (r17 #1, {@code FlagCraftGates})
  */
 public record FlagCraftRecipes(
         Supplier<Ingredient> input,
         Supplier<ItemStack> icon,
         Supplier<Item> output,
         String descKey,
-        @Nullable RoomTrigger.Triggers advancement
+        @Nullable RoomTrigger.Triggers advancement,
+        @Nullable ResourceLocation unlockedByQuest
 ) {
+
+    public static final ResourceLocation MINESHAFT_QUEST = Questown.ResourceLocation("block_room/block.questown.mineshaft");
+    public static final ResourceLocation FISHING_STATION_QUEST = Questown.ResourceLocation("block_room/block.questown.fishing_station");
 
     public static final ImmutableList<FlagCraftRecipes> ALL = ImmutableList.of(
             // The "how to register" journal entry (003) opens on getting a wand.
             new FlagCraftRecipes(() -> Ingredient.of(Items.STICK), Items.STICK::getDefaultInstance,
-                    ItemsInit.TOWN_WAND::get, "menu.flag_crafting.wand_desc", RoomTrigger.Triggers.WandGet),
+                    ItemsInit.TOWN_WAND::get, "menu.flag_crafting.wand_desc", RoomTrigger.Triggers.WandGet, null),
             // Any wooden pressure plate (the player may hold spruce, birch, ...).
             new FlagCraftRecipes(() -> Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES), Items.OAK_PRESSURE_PLATE::getDefaultInstance,
-                    ItemsInit.WELCOME_MAT_BLOCK::get, "menu.flag_crafting.mat_desc", null),
+                    ItemsInit.WELCOME_MAT_BLOCK::get, "menu.flag_crafting.mat_desc", null, null),
             // Any sign: the #questown:job_board_inputs recipe tag is #minecraft:signs plus the board.
             new FlagCraftRecipes(() -> Ingredient.of(ItemTags.SIGNS), Items.OAK_SIGN::getDefaultInstance,
-                    ItemsInit.JOB_BOARD_BLOCK::get, "menu.flag_crafting.board_desc", null),
+                    ItemsInit.JOB_BOARD_BLOCK::get, "menu.flag_crafting.board_desc", null, null),
             // Dev's recipe (2026-10-19), replacing the removed item-on-flag stamping.
             new FlagCraftRecipes(() -> Ingredient.of(Items.STONE_STAIRS), Items.STONE_STAIRS::getDefaultInstance,
-                    ItemsInit.MINESHAFT_BLOCK::get, "menu.flag_crafting.mineshaft_desc", null),
+                    ItemsInit.MINESHAFT_BLOCK::get, "menu.flag_crafting.mineshaft_desc", null, MINESHAFT_QUEST),
             // Dev's recipe (2026-10-19): the fishing station is a stamped room block too.
             new FlagCraftRecipes(() -> Ingredient.of(Items.FISHING_ROD), Items.FISHING_ROD::getDefaultInstance,
-                    ItemsInit.FISHING_STATION_BLOCK::get, "menu.flag_crafting.fishing_station_desc", null)
+                    ItemsInit.FISHING_STATION_BLOCK::get, "menu.flag_crafting.fishing_station_desc", null, FISHING_STATION_QUEST)
     );
 
     /**

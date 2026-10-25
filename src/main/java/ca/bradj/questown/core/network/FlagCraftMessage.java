@@ -1,5 +1,13 @@
 package ca.bradj.questown.core.network;
 
+import java.util.List;
+
+import net.minecraft.resources.ResourceLocation;
+
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+
+import ca.bradj.questown.gui.FlagCraftGates;
+
 import ca.bradj.questown.core.init.AdvancementsInit;
 
 
@@ -36,7 +44,19 @@ public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
                 QT.GUI_LOGGER.error("Unknown flag craft recipe index: {}", recipeIndex);
                 return;
             }
-            FlagCraftRecipes.ALL.get(recipeIndex).craft(sender, flagPos);
+            FlagCraftRecipes recipe = FlagCraftRecipes.ALL.get(recipeIndex);
+            // The screen hides a gated row until its quest is posted; refuse it by index too (r17 #1).
+            if (recipe.unlockedByQuest() != null
+                    && sender.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
+                List<ResourceLocation> posted = flag.getQuestHandle().getAllQuestsWithRewards().stream()
+                        .map(e -> e.getKey().getWantedId())
+                        .toList();
+                if (!FlagCraftGates.visible(recipe.unlockedByQuest(), posted)) {
+                    QT.GUI_LOGGER.warn("Flag craft {} refused: its quest has not been posted", recipeIndex);
+                    return;
+                }
+            }
+            recipe.craft(sender, flagPos);
         });
     }
 }

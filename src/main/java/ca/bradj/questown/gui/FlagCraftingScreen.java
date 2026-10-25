@@ -45,8 +45,10 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     private final BlockPos flagPos;
     private final boolean showMove;
     private final boolean shuttingDown;
-    // One button and one row per FlagCraftRecipes.ALL entry, same index.
+    // One button and one row per visible FlagCraftRecipes.ALL entry; visibleRecipes maps the row
+    // to its index in ALL (what FlagCraftMessage sends). Gated rows wait for their quest (r17 #1).
     private final List<Button> craftButtons = new ArrayList<>();
+    private List<Integer> visibleRecipes = new ArrayList<>();
 
     // Flow layout, recomputed each init() from the actual wrapped-text heights so blocks can never
     // overlap regardless of string length / translation. All values are offsets from the panel's
@@ -113,7 +115,13 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         titleY = y;
         y += wrappedHeight(title()) + BLOCK_PAD;
 
-        rowY = new int[FlagCraftRecipes.ALL.size()];
+        visibleRecipes = new ArrayList<>();
+        for (int i = 0; i < FlagCraftRecipes.ALL.size(); i++) {
+            if (FlagCraftGates.visible(FlagCraftRecipes.ALL.get(i).unlockedByQuest(), menu.getPostedQuests())) {
+                visibleRecipes.add(i);
+            }
+        }
+        rowY = new int[visibleRecipes.size()];
         for (int i = 0; i < rowY.length; i++) {
             rowY[i] = y;
             y += ICON_ROW_HEIGHT + BLOCK_PAD;
@@ -140,7 +148,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
 
         craftButtons.clear();
         for (int i = 0; i < rowY.length; i++) {
-            Button b = craftButton(bgX + CRAFT_BTN_X, bgY + rowY[i], i);
+            Button b = craftButton(bgX + CRAFT_BTN_X, bgY + rowY[i], visibleRecipes.get(i));
             craftButtons.add(b);
             this.addRenderableWidget(b);
         }
@@ -204,7 +212,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     // grey the button out when the local player has none — clicking it would be a no-op.
     private void updateCraftButtonStates() {
         for (int i = 0; i < craftButtons.size(); i++) {
-            craftButtons.get(i).active = countMatching(FlagCraftRecipes.ALL.get(i).input().get()) > 0;
+            craftButtons.get(i).active = countMatching(FlagCraftRecipes.ALL.get(visibleRecipes.get(i)).input().get()) > 0;
         }
     }
 
@@ -237,7 +245,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         ctx.darkTextWrap(new Coordinate(bgX + MARGIN, bgY + titleY), TEXT_WIDTH, title());
 
         for (int i = 0; i < rowY.length; i++) {
-            FlagCraftRecipes r = FlagCraftRecipes.ALL.get(i);
+            FlagCraftRecipes r = FlagCraftRecipes.ALL.get(visibleRecipes.get(i));
             renderRecipeRow(ctx, bgX, bgY + rowY[i], r.icon().get(), new ItemStack(r.output().get()), mouseX, mouseY);
         }
 
@@ -247,7 +255,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
 
         for (int i = 0; i < craftButtons.size(); i++) {
             if (craftButtons.get(i).isHovered()) {
-                FlagCraftRecipes r = FlagCraftRecipes.ALL.get(i);
+                FlagCraftRecipes r = FlagCraftRecipes.ALL.get(visibleRecipes.get(i));
                 renderCraftTooltip(Compat.translatable(r.descKey()), r.input().get(), mouseX, mouseY);
             }
         }

@@ -181,3 +181,4 @@ Quests tab.
 - #3 / #11 BOP tab **fixed**: Take button bottom-aligned, hidden at 0, and the server re-opens the tab after a take. To check in the agent playtest (gui-lint).
 - #20 villager Quests tab **removed** (and the inventory tab's dead "Quests" button, whose handler was empty).
 - #4 leave-town poof **added** (12 POOF particles on leaving and on returning).
+- #1 mineshaft / fishing station rows **hidden** until their room quest has been posted (screen + server check).
