@@ -51,4 +51,22 @@ class InteractionSpotsTest {
 
         assertEquals(doorSide, InteractionSpots.find(CHEST, STORE_ROOM, standable::contains));
     }
+
+    /**
+     * r17 (2026-10-25): the dev's kitchen, walls x -149..-147, z -155..-151, door (-148, -151),
+     * with the furnace built into the east wall at (-147, -154). Room matching counts wall blocks,
+     * so the kitchen quest completed; the villager must stand inside, not on the outside of the
+     * wall, to use it.
+     */
+    @Test
+    void jobBlockInAWall_getsTheInteriorNeighbour_notTheOutsideOne() {
+        Room kitchen = new Room(new Position(-148, -151), InclusiveSpace.from(-149, -155).to(-147, -151));
+        BlockPos furnace = new BlockPos(-147, FLOOR_Y, -154);
+        BlockPos inside = new BlockPos(-148, FLOOR_Y, -154);
+        BlockPos outside = new BlockPos(-146, FLOOR_Y, -154);
+
+        BlockPos spot = InteractionSpots.find(furnace, kitchen, Set.of(inside, outside)::contains);
+
+        assertEquals(inside, spot);
+    }
 }

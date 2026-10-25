@@ -1,5 +1,7 @@
 package ca.bradj.questown.town.entity;
 
+import ca.bradj.questown.jobs.JobBlockScan;
+
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.commands.DebugLogArgument;
@@ -192,11 +194,11 @@ public class TownFlagState {
         // Create Work implementation that bridges to entity methods
         Work w = createWork(e, sl);
 
-        // Collect real room block positions for warp rules
+        // Collect real room block positions for warp rules (walls too: JobBlockScan, r17)
         ImmutableList.Builder<BlockPos> roomPosBuilder = ImmutableList.builder();
         for (MCRoom room : e.roomsHandle.getAllRoomsIncludingMetaAndFarms()) {
             room.getSpaces().stream()
-                    .flatMap(space -> InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY).stream())
+                    .flatMap(space -> InclusiveSpaces.getPositions(space, JobBlockScan.CELLS).stream())
                     .forEach(v -> {
                         BlockPos pos = Positions.ToBlock(v, room.yCoord);
                         roomPosBuilder.add(pos);

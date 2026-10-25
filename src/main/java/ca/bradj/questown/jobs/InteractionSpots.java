@@ -33,6 +33,17 @@ public final class InteractionSpots {
             Room room,
             Predicate<BlockPos> isStandable
     ) {
+        // A job block built into the wall (room matching counts wall blocks, so the room quest
+        // completes) is used from inside: the first standable neighbour could be outdoors (r17:
+        // the dev's kitchen furnace in its east wall).
+        if (isWallCell(bp, room)) {
+            for (Direction dd : Direction.Plane.HORIZONTAL) {
+                BlockPos n = bp.relative(dd);
+                if (isInteriorCell(n, room) && isStandable.test(n)) {
+                    return n;
+                }
+            }
+        }
         Direction d = doorDirectionFromCenter(room);
         if (isStandable.test(bp.relative(d))) {
             return bp.relative(d);
@@ -46,6 +57,17 @@ public final class InteractionSpots {
             return Positions.ToBlock(room.getDoorPos(), bp.getY());
         }
         return null;
+    }
+
+    private static boolean isInteriorCell(BlockPos bp, Room room) {
+        return room.getSpaces().stream().anyMatch(s -> s.getWestX() < bp.getX() && bp.getX() < s.getEastX()
+                && s.getNorthZ() < bp.getZ() && bp.getZ() < s.getSouthZ());
+    }
+
+    private static boolean isWallCell(BlockPos bp, Room room) {
+        boolean inBounds = room.getSpaces().stream().anyMatch(s -> s.getWestX() <= bp.getX() && bp.getX() <= s.getEastX()
+                && s.getNorthZ() <= bp.getZ() && bp.getZ() <= s.getSouthZ());
+        return inBounds && !isInteriorCell(bp, room);
     }
 
     public static Direction doorDirectionFromCenter(Room room) {

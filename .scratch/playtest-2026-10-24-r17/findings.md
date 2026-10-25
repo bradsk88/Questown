@@ -163,3 +163,14 @@ Open: #1 recipe hiding, #2 soup pot weight key, #3/#11 BOP tab button + stays op
 poof, #9 hunter wool, #10 "too late in the day" status, #17 BOP-deposit re-entry loop, #18 which
 message should be two lines, #19 cook cannot insert mutton (top priority), #20 remove villager
 Quests tab.
+
+## Resolutions (agent, dev at dinner, 2026-10-25)
+
+- #19 cook **fixed**: the kitchen's furnace was built into the room's wall (x -147 of walls
+  x -149..-147). Room matching counts wall blocks (kitchen quest completed), the job scans read
+  the interior only, so the cook found no work spot (`spotsByState: {}`) and looped on max ticks.
+  The job-block scans now include walls (`JobBlockScan.CELLS`), and a wall block is used from an
+  interior cell. Verified on the saved r17 world: fuel went in, then (with 4 mutton seeded into the
+  storeroom) the mutton went in and came out cooked. The coal-in-top-slot guess was wrong (the
+  furnace was empty in the save). Side notes from the repro: villager 3 (8212b2ea) also became a
+  cook on load (a pending BOP job change).

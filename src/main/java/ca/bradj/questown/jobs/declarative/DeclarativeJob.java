@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.jobs.JobBlockScan;
+
 import ca.bradj.questown.jobs.JobExperience;
 
 import ca.bradj.questown.QT;
@@ -714,7 +716,7 @@ public class DeclarativeJob extends
         Consumer<BlockPos> tryAdd = bp -> tryAddSpot(town, bp, b, is, isJobBlock);
 
         jobSite.room().getSpaces().stream()
-               .flatMap(space -> InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY)
+               .flatMap(space -> InclusiveSpaces.getPositions(space, JobBlockScan.CELLS)
                                                 .stream())
                .forEach(v -> {
                    BlockPos pos = Positions.ToBlock(v, jobSite.room().yCoord);

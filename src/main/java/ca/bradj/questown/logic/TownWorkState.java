@@ -1,5 +1,7 @@
 package ca.bradj.questown.logic;
 
+import ca.bradj.questown.jobs.JobBlockScan;
+
 import ca.bradj.questown.jobs.production.Valued;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.workstatus.State;
@@ -28,7 +30,7 @@ public class TownWorkState {
     ) {
         roomsWhereSpecialRulesApply.get().forEach(
                 (status, rooms) -> rooms.forEach(
-                        room -> room.getSpaces().forEach(space -> InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY).forEach(
+                        room -> room.getSpaces().forEach(space -> InclusiveSpaces.getPositions(space, JobBlockScan.CELLS).forEach(
                                 block -> {
                                     if (isJobBlock.test(block, room)) {
                                         State jobBlockState = getState.apply(block, room);

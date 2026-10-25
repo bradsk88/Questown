@@ -1008,3 +1008,24 @@ unspent Block of Progress. Realtime can level several times over the same span (
 deposits each BOP in between); the warp cannot, so a long absence yields at most one BOP per
 townie. That is the BOP stall's job as the counterweight to warp (`CONTEXT.md` "Block of
 Progress"). Do not loop the grant or simulate deposits during warp.
+
+## Job blocks in walls count (r17 #19, 2026-10-25)
+
+The dev's cook carried raw mutton to the kitchen 30 times and never inserted. The kitchen's
+furnace was built into the room's east wall. Room recipe matching (RoomRecipes
+`RecipeDetectionClean.getBlocksInRoom`) reads every block from corner to corner, walls included,
+so the kitchen quest completed; but the job-block scans read only the interior
+(`InclusiveSpaces.PositionType.INTERIOR_ONLY`), so the cook saw no work spot
+(`gave up waiting ... workSpot: null, inJobSite: true, ... spotsByState: {}`, the r16 #10
+give-up line, which now also prints `spotsByState`). Every job got stuck in a max-ticks loop:
+JobLogic asked the board, the board re-rolled the same job.
+
+- `JobBlockScan.CELLS` (= `WALLS_AND_INTERIOR`) is used by the three job-block scans:
+  `DeclarativeJob.listAllWorkSpots` (live work spots), `TownWorkState` (special-rule state
+  seeding) and `TownFlagState`'s warp room positions. The farm scan and wander targets stay
+  interior-only. `JobBlockScanTest`.
+- A job block in a wall line is used from inside: `InteractionSpots.find` first tries a standable
+  neighbour in the room's interior (`InteractionSpotsTest.jobBlockInAWall_...`; red before: it
+  picked the outdoor cell).
+- Verified live on the dev's saved r17 world: the cook targeted the wall furnace, fuelled it, and
+  with mutton in the storeroom produced cooked mutton (`data get block -147 63 -154 Items`).
