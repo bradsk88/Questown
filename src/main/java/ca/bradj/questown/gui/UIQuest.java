@@ -275,7 +275,8 @@ public class UIQuest implements Comparable<UIQuest> {
             case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", extractRootJobName());
             case CONCURRENT_JOBS -> Compat.literal("Multiple Jobs Active");
             case FIRST_WORK_REQUEST -> Compat.translatable("menu.quests.first_work_request");
-            case SKILL_UNLOCK -> Compat.translatable("menu.quests.skill_unlock", extractRootJobName());
+            case SKILL_UNLOCK -> Compat.translatable("menu.quests.skill_unlock",
+                    Compat.translatable("jobs." + MCQuest.skillTreeRoot(wantedId)));
             case UNKNOWN -> Compat.literal("ERROR");
         };
     }

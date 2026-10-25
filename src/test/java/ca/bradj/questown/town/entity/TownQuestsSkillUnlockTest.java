@@ -16,13 +16,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The miner batch's SKILL_UNLOCK quest (dev, 2026-10-25): "unlock any skill on the cook's skill
- * tree". It completes when the player spends a Block of Progress on a skill-tree node of that root
- * ({@code UnlockJobMessage}), which teaches skill unlocking.
+ * The cook batch's SKILL_UNLOCK quest (dev, 2026-10-25): "unlock any skill on the cook's skill
+ * tree", beside the cooked-food quest it helps fill. It completes when the player spends a Block of
+ * Progress on a skill-tree node of that root ({@code UnlockJobMessage}), which teaches skill
+ * unlocking.
  */
 class TownQuestsSkillUnlockTest {
 
-    private static final JobID COOK_TREE = new JobID("cook", "extract");
+    private static final String COOK_TREE = "cook";
 
     private static final QuestBatch.ChangeListener<MCQuest> NO_OP_LISTENER = new QuestBatch.ChangeListener<>() {
         @Override
@@ -94,6 +95,30 @@ class TownQuestsSkillUnlockTest {
             }
         }, ImmutableList.of(batch));
 
-        assertEquals(JobID.toRL(COOK_TREE), skillQuest(town).getWantedId());
+        assertEquals(COOK_TREE, MCQuest.skillTreeRoot(skillQuest(town).getWantedId()));
+    }
+
+    /**
+     * Batch completion matches by wanted id alone. The first build used the cook JOB_CHANGE quest's
+     * id (cook/extract), so in the cook batch completing the job change could close the skill quest.
+     */
+    @Test
+    void completingTheCookJobChange_leavesTheSkillQuestOpen() {
+        TownQuests quests = new TownQuests();
+        quests.questBatches.addChangeListener(NO_OP_LISTENER);
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs inputs = new MCQuestBatch.Inputs(batchUUID, null);
+        inputs.addNewQuest(MCQuest.skillUnlock(batchUUID, null, COOK_TREE));
+        inputs.addNewQuest(MCQuest.jobChange(batchUUID, null, TownQuests.ONBOARDING_COOK_JOB));
+        quests.questBatches.add(inputs.withRewardUponCompletion(new NoOpReward()));
+
+        quests.questBatches.markRecipeAsComplete(null, JobID.toRL(TownQuests.ONBOARDING_COOK_JOB));
+
+        assertFalse(skillQuest(quests).isComplete());
+    }
+
+    @Test
+    void skillTreeRoot_readsTheFirstBuildsJobIdToo() {
+        assertEquals("cook", MCQuest.skillTreeRoot(JobID.toRL(new JobID("cook", "extract"))));
     }
 }

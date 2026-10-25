@@ -250,6 +250,12 @@ Fix: dedicated factory methods (`QuestFactory.newFirstWorkRequestQuest` /
 generic path can ask any quest for its job list without a cast. Pinned by
 `QuestBatchesInitializeTypeTest` (red-verified: both asserts fail on the pre-fix switch).
 
+**The type does not take part in matching, though: a wanted id must be unique within its batch.**
+`QuestBatch.markRecipeAsComplete` and the load replay match on wanted id alone and take the first
+open match. Two quest types in one batch that share an id (a JOB_CHANGE and a SKILL_UNLOCK both
+on `cook_qt_extract`, 2026-10-25) can close each other. Give a new quest type its own id space
+(`questown:skill_unlock/<root>`, see "SKILL_UNLOCK" below).
+
 ## A complete quest is perma-done: `markRecipeAsLost` skips it (2026-10-14)
 
 `QuestBatch.markRecipeAsLost(oldRoom, recipeID)` matched the quest by
@@ -294,14 +300,23 @@ now returns `null`, the same hand-off as the in-flight case. Pinned by
 `questsWithTwoJobChangesDone` helper lost its extra walk, which the replay used
 to absorb and which now posts the crafter phase.
 
-## SKILL_UNLOCK: the miner batch asks for a cook skill (2026-10-25)
+## SKILL_UNLOCK: the cook batch asks for a cook skill (2026-10-25)
 
-Dev ask: the miner batch also asks the player to unlock any skill on the cook's skill
-tree, which teaches skill unlocking with a Block of Progress and gives the cook a second
-recipe. It is a new quest type, `SKILL_UNLOCK`. Its wanted id is the tree's root node as a
-job RL (`JobID.toRL(cook/extract)`, i.e. `TownQuests.ONBOARDING_COOK_JOB`), so the card
-("Unlock a Cook skill", lang `menu.quests.skill_unlock`), the chat name and the BOP icon
-reuse the job-quest helpers.
+Dev ask: onboarding asks the player to unlock any skill on the cook's skill tree, which teaches
+skill unlocking with a Block of Progress. It is a new quest type, `SKILL_UNLOCK`. It first rode
+the miner batch. The same day, after the r19 playtest, the dev moved it into the cook batch
+(`addQuestsForJobChangeAndFood`), beside Cooked Food x8, because it helps fill that quest: the
+onboarding cook knows only mutton, and a second recipe cooks the hunter's other raw meat. The
+cook can take a skill once its first meals level it (skills unlock from level 2,
+`Work.DEFAULT_AVAILABLE_AT_LEVEL`).
+
+**Its own wanted id: `questown:skill_unlock/<root>`.** Batch completion
+(`QuestBatch.markRecipeAsComplete`) and load replay match a quest by wanted id alone and take
+the first open match. The first build used the tree root's job RL (`cook_qt_extract`), the
+same id as the cook batch's JOB_CHANGE quest, so completing the job change could close the
+skill quest. `MCQuest.skillTreeRoot` reads the root back, and also accepts the old job-RL form
+for r19 saves. The card ("Unlock a Cook skill", lang `menu.quests.skill_unlock`) and the chat
+name translate `jobs.<root>`.
 
 **Completion trigger: the player's spend only.** `UnlockJobMessage` (the skills tab's
 confirm) now calls `TownFlagBlockEntity.unlockSkillFromPlayer`, which unlocks and then
@@ -320,8 +335,9 @@ children of the villager's job, gated by `available_at_level`. Callers are `_qtd
 unlock_skill <villager> <root/job>` and the `village/growth` driver
 (`spendBopOnOpenSkillUnlock`, after the job-change spend so an open job change gets the BOP
 first). The rebuild path has its own factory (`newSkillUnlockQuest`), per the section
-above. Pinned by `TownQuestsSkillUnlockTest` (completion, other-root no-op, load rebuild)
-and `TownQuestsMinerOnboardingTest` (the batch carries it).
+above. Pinned by `TownQuestsSkillUnlockTest` (completion, other-root no-op, load rebuild,
+`completingTheCookJobChange_leavesTheSkillQuestOpen`, and the old-id read) and
+`TutorialPhaseGateTest.whenHunterDoneAndThreeVillagers_jobChangeAndFoodAdded` (the batch carries it).
 
 ## World-load replay re-claims finished batches' rewards (every load, by construction)
 

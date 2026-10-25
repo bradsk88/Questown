@@ -258,7 +258,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 if (q.getType() != Quest.QuestType.SKILL_UNLOCK || q.isComplete()) {
                     continue;
                 }
-                if (!JobID.fromRL(q.getWantedId()).sameRoot(unlocked)) {
+                if (!MCQuest.skillTreeRoot(q.getWantedId()).equals(unlocked.rootId())) {
                     continue;
                 }
                 batch.markRecipeAsComplete(null, q.getWantedId());
@@ -1001,10 +1001,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         mineshaftQuest.setFlavorText("The miner needs a mineshaft to work in. Craft one at the town flag from stone stairs and place it near the flag.");
         q.addNewQuest(mineshaftQuest);
 
-        // A skill on the cook's tree (dev, 2026-10-25): teaches skill unlocking with a BOP, and a
-        // second cook recipe makes the village more self-sufficient.
-        q.addNewQuest(MCQuest.skillUnlock(batchUUID, null, ONBOARDING_COOK_JOB));
-
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_MINER));
         provisionArrival(view, qq);
         // Onboarding-flow quest: like the other tutorial-phase batches, it is
@@ -1383,6 +1379,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         );
         cookedFoodQuest.setFlavorText("Feed your growing village. Produce eight pieces of food from the raw food you have gathered.");
         q.addNewQuest(cookedFoodQuest);
+
+        // A skill on the cook's tree, beside the food quest it helps fill (dev, 2026-10-25; it rode
+        // the miner batch first): the cook knows only mutton, and a second recipe cooks the other
+        // raw meat the hunter brings. Teaches skill unlocking with a BOP. The cook can take a skill
+        // once its first meals level it (skills unlock from level 2).
+        q.addNewQuest(MCQuest.skillUnlock(batchUUID, null, ONBOARDING_COOK_JOB.rootId()));
 
         MCQuest kitchenQuest = MCQuest.standalone(batchUUID, null, KITCHEN_SMALL);
         kitchenQuest.setFlavorText("The cook needs a kitchen. Place a furnace in a room and register the door.");

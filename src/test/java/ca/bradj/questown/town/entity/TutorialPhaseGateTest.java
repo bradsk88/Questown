@@ -396,6 +396,11 @@ class TutorialPhaseGateTest {
                 q.getType() == Quest.QuestType.LOOT
                         && q.getWantedId().equals(TagsInit.Items.VILLAGER_COOKED_FOOD.location())
         ));
+        // ...and a skill on the cook's tree, beside the food quest it helps fill (dev, 2026-10-25).
+        assertTrue(all.stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.SKILL_UNLOCK
+                        && "cook".equals(MCQuest.skillTreeRoot(q.getWantedId()))
+        ), "phase 2.5 batch must carry the cook skill-unlock quest");
         // The batch carries the cook's room quest too: every cook/* job requires
         // kitchen_small (see cook_simple_furnace_food.json), and without it the
         // staffed cook has no selectable work and the batch can never complete.

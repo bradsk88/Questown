@@ -7,7 +7,7 @@
         {
           "type": "minecraft:item",
           "name": "minecraft:white_wool",
-          "weight": 21,
+          "weight": 9,
           "functions": [{"function": "minecraft:set_count", "count": 1}]
         },
         {

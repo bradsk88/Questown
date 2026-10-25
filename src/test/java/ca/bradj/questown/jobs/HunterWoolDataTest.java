@@ -20,15 +20,16 @@ import java.util.stream.Stream;
  * r17 #9 (dev 2026-10-25): "it would be nice if the hunter could bring SOME [wool] back (maybe 1
  * every 5 trips, or whatever random chance would be equivalent) to unblock a scenario where wool or
  * steel (for shears) is scant." A short trip brings one item from one roll of its biome table, so
- * every hunter table gives white wool about a fifth of the roll. Before, forest, taiga and four
- * other biome tables had none.
+ * every hunter table gives white wool about a tenth of the roll. Before, forest, taiga and four
+ * other biome tables had none. It was a fifth until the r19 playtest (dev 2026-10-25: "The rate of
+ * wool is too high for the hunter. It should be about 50% lower.").
  */
 class HunterWoolDataTest {
 
     private static final Gson GSON = new Gson();
 
     @Test
-    void everyHunterTableGivesWoolAboutOneRollInFive() throws IOException, URISyntaxException {
+    void everyHunterTableGivesWoolAboutOneRollInTen() throws IOException, URISyntaxException {
         URL dir = HunterWoolDataTest.class.getClassLoader().getResource("data/questown/loot_tables/jobs/hunter_sword");
         Assertions.assertNotNull(dir);
         List<Path> tables;
@@ -51,7 +52,7 @@ class HunterWoolDataTest {
                 }
             }
             double share = (double) wool / total;
-            Assertions.assertTrue(share >= 0.18 && share <= 0.22, p.getFileName() + " wool share " + share);
+            Assertions.assertTrue(share >= 0.08 && share <= 0.12, p.getFileName() + " wool share " + share);
         }
     }
 }

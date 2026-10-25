@@ -1,6 +1,5 @@
 package ca.bradj.questown.town.quests;
 
-import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.init.RewardsInit;
@@ -85,7 +84,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
 
             @Override
             public MCQuest newSkillUnlockQuest(@Nullable UUID ownerId, ResourceLocation treeRootId) {
-                return MCQuest.skillUnlock(batchUUID, dep(ownerId), JobID.fromRL(treeRootId));
+                return MCQuest.skillUnlock(batchUUID, dep(ownerId), MCQuest.skillTreeRoot(treeRootId));
             }
 
             @Override

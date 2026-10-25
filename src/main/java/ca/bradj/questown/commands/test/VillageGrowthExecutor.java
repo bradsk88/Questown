@@ -800,7 +800,7 @@ public final class VillageGrowthExecutor {
     }
 
     /**
-     * Spend a Block of Progress on a skill while a SKILL_UNLOCK quest is open (the miner batch's
+     * Spend a Block of Progress on a skill while a SKILL_UNLOCK quest is open (the cook batch's
      * cook skill) - the player's skills-tab spend (owner path: spendBopToUnlockSkill). Picks the
      * first node the skills tab offers a villager of the quest's root that it has not unlocked yet.
      * Runs after the job-change spend, so an open job change gets the BOP first.
@@ -809,16 +809,16 @@ public final class VillageGrowthExecutor {
         if (flag.getBlocksOfProgress() <= 0) {
             return false;
         }
-        java.util.Optional<JobID> tree = flag.getQuestHandle().getAllQuestsWithRewards().stream()
+        java.util.Optional<String> tree = flag.getQuestHandle().getAllQuestsWithRewards().stream()
                 .map(AbstractMap.SimpleEntry::getKey)
                 .filter(q -> q.getType() == Quest.QuestType.SKILL_UNLOCK && !q.isComplete())
-                .map(q -> JobID.fromRL(q.getWantedId()))
+                .map(q -> ca.bradj.questown.town.quests.MCQuest.skillTreeRoot(q.getWantedId()))
                 .findFirst();
         if (tree.isEmpty()) {
             return false;
         }
         for (LivingEntity v : flag.getVillagerHandle().entities()) {
-            if (!((VisitorMobEntity) v).getJobId().sameRoot(tree.get())) {
+            if (!((VisitorMobEntity) v).getJobId().rootId().equals(tree.get())) {
                 continue;
             }
             java.util.Optional<JobID> node = flag.getVillagerHandle().getUnlockableSkills(v.getUUID()).stream()
