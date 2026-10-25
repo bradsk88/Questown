@@ -1,13 +1,16 @@
 package ca.bradj.questown.mobs.visitor;
 
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.PathFinder;
 import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.level.pathfinder.PathfindingContext;
@@ -28,6 +31,21 @@ public class VillagerPathNavigation extends GroundPathNavigation {
         super(visitorMobEntity, p21480);
         setCanOpenDoors(true);
         setCanPassDoors(true);
+    }
+
+    /**
+     * A doorway is a target as it stands. Vanilla lifts any target whose block {@code isSolid()}
+     * up to the first non-solid block, and a closed door counts as solid: a chest in a 3x3 store
+     * room is used from its doorway, so the villager aimed at the roof above the door, found no
+     * path, and stood in the next room facing the wall (r20 #4, probe: walkTarget 150 71 48,
+     * pathTarget 150 75 48). A door-opening villager can stand in a door cell.
+     */
+    @Override
+    public Path createPath(BlockPos pos, int accuracy) {
+        if (level.getBlockState(pos).getBlock() instanceof DoorBlock) {
+            return createPath(ImmutableSet.of(pos), 8, false, accuracy);
+        }
+        return super.createPath(pos, accuracy);
     }
 
     @Override

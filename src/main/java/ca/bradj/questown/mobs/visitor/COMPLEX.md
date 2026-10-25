@@ -187,6 +187,10 @@ symptoms 2026-10-17: villagers could not enter rooms through open doors ("if I c
 door, they open it and walk through"), routed over walls / onto a bed, and stood on top
 of a supply chest unable to path off. The override is removed (vanilla costs).
 
+**Root cause found 2026-10-25 (r20):** the wall-facing half of this was never a path-cost
+problem. A walk target in a closed doorway was lifted onto the roof by vanilla; see "A door
+target is lifted to the roof" below.
+
 **Rule:** a malus is never negative — to make one route cheaper, raise the cost of the
 alternative instead. The original wall-climb complaint is open again
 (`.scratch/playtest-2026-10-17/villager-stuck-on-bed-pathing-over-wall.md`).
@@ -261,3 +265,18 @@ the CANT_REACH_WALK_TARGET_SINCE timestamp, and the need. Added when two village
 bedroom facing the wall shared with the store room, and three code readings of the target pickers
 (`InteractionSpots.find`, the no-room chest-front branch, standable-on-the-wall) all pointed at
 the store room's doorway instead. Output: `[_qtdev nav]` on `Questown:Villagers`.
+
+## A door target is lifted to the roof (r20 #4, 2026-10-25)
+
+`GroundPathNavigation.createPath(BlockPos, int)` paths to a target only if its block is not
+`isSolid()`; otherwise it walks the target up to the first non-solid block. A closed door counts
+as solid. A 3x3 store room's chest is used from its doorway (`InteractionSpots.find` falls back
+to the door cell), so the villager's path target became the roof above the door, unreachable,
+and the partial path ended on the bed in the next room, against the shared wall. Live probe:
+`walkTarget=150 71 48 pathTarget=150 75 48 pathEnd=151 72 46 canReach=false`.
+
+Fix: `VillagerPathNavigation.createPath(BlockPos, int)` keeps a `DoorBlock` target as it stands
+(`createPath(ImmutableSet.of(pos), 8, false, accuracy)`, the call vanilla's own overload makes).
+Any other solid target is still lifted, so target pickers must return standable cells.
+Not unit-tested (a navigation needs a live mob and level); the live check is the same probe on the r20 world reading `pathTarget == walkTarget` and the villager reaching the doorway.
+The general learning: `docs/solutions/best-practices/vanilla-lifts-solid-path-targets-2026-10-25.md`.
