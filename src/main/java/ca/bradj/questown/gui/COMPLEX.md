@@ -1352,3 +1352,12 @@ With five recipe rows plus the moving section (shown once a villager has joined)
 off. The 4-line description moved from the layout into the move button's hover tooltip
 (`isOverMoveButton`, wrapped to `TOOLTIP_WIDTH`), which saves ~60 px. Hiding the mineshaft and
 fishing station rows until their quests (r17 finding #1) will save more.
+
+## BOP tab: bottom-aligned Take button that keeps the tab open (r17 #3, #11, 2026-10-25)
+
+`TownBlockofProgressScreen` put the Take button wherever its text ended, so it moved when the
+optional "Earned by" or red "flag full" line appeared. It is now anchored to the panel's bottom
+(`BUTTON_MARGIN` above the edge) and hidden at 0 BOPs. A click used to send `GiveBOPMessage` and
+close the screen; now it disables itself and `GiveBOPMessage.handle` re-opens the BOP tab
+(`menus.showUI(..., OpenFlagMenuMessage.BOP, ...)`) with the new count, the job board's
+re-open pattern. Check with gui-lint that the text never reaches the button.

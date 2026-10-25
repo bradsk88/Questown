@@ -8,7 +8,6 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -23,6 +22,8 @@ import java.util.Map;
 public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockofProgressMenu> {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
+    private static final int BUTTON_HEIGHT = 20;
+    private static final int BUTTON_MARGIN = 6;
     private final FlagTabs tabs;
 
     public static EconomicsUpdate lastUpdate = new EconomicsUpdate(ImmutableList.of());
@@ -51,9 +52,11 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
         super.init();
         this.unlockButton = this.addRenderableWidget(Compat.button(
                 Compat.translatable("menu.block_of_progress.take"), (p_96776_) -> {
+            // The server answers by re-opening this tab with the new count (r17 #11: closing the
+            // whole menu after every take was annoying). One click per BOP.
+            p_96776_.active = false;
             QuestownNetwork.sendToServer(new GiveBOPMessage(menu.getFlagInfo().flagPos()));
-            Minecraft.getInstance().setScreen(null);
-        }, 0, 0, backgroundWidth - 8, 20));
+        }, 0, 0, backgroundWidth - 8, BUTTON_HEIGHT));
     }
 
     @Override
@@ -73,6 +76,7 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
     protected void renderPrologue(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         unlockButton.setX(buttonX + 4);
         unlockButton.setY(buttonY);
+        unlockButton.visible = menu.blocksOfProgressCount > 0;
     }
 
     @Override
@@ -148,7 +152,9 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
                 tWidth,
                 Compat.translatable("menu.block_of_progress.many_uses")
         );
-        this.buttonY = bgY;
+        // Bottom-aligned (r17 #3): the optional "Earned by" / "flag full" lines used to push the
+        // button down, so it moved and a click at its old spot took nothing.
+        this.buttonY = (this.height - backgroundHeight) / 2 + backgroundHeight - BUTTON_HEIGHT - BUTTON_MARGIN;
         this.buttonX = bgX;
     }
 

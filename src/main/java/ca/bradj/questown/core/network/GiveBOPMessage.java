@@ -36,6 +36,8 @@ public record GiveBOPMessage(BlockPos flagPos) {
                 return;
             }
             flag.ejectBlockOfProgress(sender);
+            // Re-open the tab with the new count instead of the client closing it (r17 #11).
+            flag.menus.showUI(sender, OpenFlagMenuMessage.BOP, flag.getInfo(), flag.getBlocksOfProgress());
         });
 
     }
