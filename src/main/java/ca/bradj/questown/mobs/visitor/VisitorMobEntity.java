@@ -649,6 +649,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 );
             }
         }
+        if (vis != this.entityData.get(visible)) {
+            // A puff where the villager leaves town (or comes back), instead of silently popping
+            // out of the world (r17 #4, dev 2026-10-25: "some kind of poof or sparkle").
+            sl.sendParticles(ParticleTypes.POOF, getX(), getY() + 0.8, getZ(), 12, 0.3, 0.5, 0.3, 0.02);
+        }
         this.entityData.set(visible, vis);
         if (j.isInitialized()) {
             entityData.set(status, j.getStatusToSyncToClient());

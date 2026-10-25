@@ -222,3 +222,10 @@ both townies pinned until the roof was raised). `standUpBesideBed` now runs for 
 
 `RoomDoors` is pinned by `RoomDoorsTest`. The entity half is registry-bound (`Level`,
 `BedBlock`), so it is checked live (a 2-high bedroom, a night's sleep, the townie walks off).
+
+## A puff when a villager leaves town or comes back (r17 #4, dev 2026-10-25)
+
+A leaver vanishes when its job's `remove_from_world` rule applies (`VisitorMobEntity` sets the
+synced `visible` flag from `!job.shouldDisappear(...)` every tick), with nothing to mark it. When
+the flag flips (either way) the server now sends 12 `POOF` particles around the body. A villager
+that loads already away puffs once on its first tick (the synced value starts visible).
