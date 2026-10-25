@@ -104,13 +104,7 @@ public class VillagerTabs extends Tabs implements SubUI {
                     RenderSystem.setShaderTexture(0, txBefore);
                 }, setScreen(changeRootScreenFn), "tooltips.change_root", changeRootScreenFn == null, changeRootAttention
         ));
-        b.add(new Tab(
-                (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.BOOK.getDefaultInstance(), x + 10, y + 7),
-                setScreen(qScreenFn),
-                "tooltips.quests",
-                qScreenFn == null,
-                false
-        ));
+        // No Quests tab on villagers (r17 #20, dev: "not useful"); the flag's Quests tab stays.
         if (showBopTab) {
             b.add(new Tab(
                     (rc, x, y) -> RenderUtil.renderItemScaled(

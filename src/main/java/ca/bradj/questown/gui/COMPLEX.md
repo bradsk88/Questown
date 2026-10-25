@@ -1361,3 +1361,10 @@ optional "Earned by" or red "flag full" line appeared. It is now anchored to the
 close the screen; now it disables itself and `GiveBOPMessage.handle` re-opens the BOP tab
 (`menus.showUI(..., OpenFlagMenuMessage.BOP, ...)`) with the new count, the job board's
 re-open pattern. Check with gui-lint that the text never reaches the button.
+
+## Villager menus have no Quests tab (r17 #20, dev 2026-10-25: "not useful")
+
+`VillagerTabs.build` no longer adds the book-icon Quests tab (the flag's Quests tab stays), and
+the inventory tab's "Quests" button is gone: its handler (`openQuestsScreen`) was empty, so it
+never did anything. The villager quests container and its open path are still there, unreachable
+from the UI. Tab positions after it shift left by one (playtest skill click positions).

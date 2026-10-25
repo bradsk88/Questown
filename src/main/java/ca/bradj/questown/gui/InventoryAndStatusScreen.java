@@ -58,22 +58,8 @@ public class InventoryAndStatusScreen extends CompatContainerScreen<InventoryAnd
     protected void init() {
         super.init();
         ClientAccess.dismissTutorialToast();
-        int maybeX = (this.width / 2) + 32;
-        int maybeY = ((this.height - backgroundHeight) / 2) + 32 + 16 + 8;
-
-        this.addRenderableWidget(
-                Compat.button(
-                        Compat.translatable("menu.quests"),
-                        (p_96776_) -> {
-                            openQuestsScreen();
-                        },
-                        maybeX, maybeY, 48, 20
-                )
-        );
-    }
-
-    private void openQuestsScreen() {
-//        this.minecraft.setScreen(questScreen);
+        // No "Quests" button: it did nothing (an empty handler), and the dev removed quests from
+        // the villager UI (r17 #20).
     }
 
     @Override

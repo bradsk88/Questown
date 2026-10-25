@@ -179,3 +179,4 @@ Quests tab.
   `bop-deposited` -> downtime (`BoardIdleExits`). To confirm live in the agent playtest.
 - #2 soup pot weight key **fixed** (namespaced; saved configs keep the old key).
 - #3 / #11 BOP tab **fixed**: Take button bottom-aligned, hidden at 0, and the server re-opens the tab after a take. To check in the agent playtest (gui-lint).
+- #20 villager Quests tab **removed** (and the inventory tab's dead "Quests" button, whose handler was empty).
