@@ -275,7 +275,7 @@ to the door cell), so the villager's path target became the roof above the door,
 and the partial path ended on the bed in the next room, against the shared wall. Live probe:
 `walkTarget=150 71 48 pathTarget=150 75 48 pathEnd=151 72 46 canReach=false`.
 
-Fix: `VillagerPathNavigation.createPath(BlockPos, int)` keeps a `DoorBlock` target as it stands
+Fix: `VillagerPathNavigation.createPath(BlockPos, int)` stops the lift at a door (a `DoorBlock` target, or a solid target with a door right above it; r21's cook aimed at the floor under the doorway, `150 70 48`) and paths there
 (`createPath(ImmutableSet.of(pos), 8, false, accuracy)`, the call vanilla's own overload makes).
 Any other solid target is still lifted, so target pickers must return standable cells.
 Not unit-tested (a navigation needs a live mob and level); verified live on the r20 world (23:11): after the fix the stuck hunter's path reached (`canReach=true`), it collected supplies (inspect: "carrying: 1x minecraft:stone_sword") and went to the gate; before it, five probe reads showed `pathTarget=150 75 48`. Still open: the cook in `downtime`/NO_SUPPLIES was seen (23:12:02) with `walkTarget=151 71 48`, the chest block itself, lifted to `151 73 48`. That is a second target picker handing the navigator a solid block, not yet traced.

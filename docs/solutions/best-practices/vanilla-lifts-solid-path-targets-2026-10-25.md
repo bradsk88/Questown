@@ -36,9 +36,11 @@ sighting looked like a path-cost problem.
    navigator aims somewhere else. `_qtdev nav` prints both; `walkTarget != pathTarget` means the
    navigation layer moved it.
 2. **A door is a valid standing cell for a door-opening villager.**
-   `VillagerPathNavigation.createPath` keeps a door target as it stands
-   (`createPath(ImmutableSet.of(pos), 8, false, accuracy)`, the call vanilla's own overload
-   makes) instead of letting `GroundPathNavigation` lift it.
+   `VillagerPathNavigation.createPath` stops the lift at a door: a target that is a door, or a
+   solid target with a door right above it (r21: the cook's target came out one block low, on the
+   floor under the doorway, `walkTarget=150 70 48`, and was lifted to the roof the same way). It
+   paths there with `createPath(ImmutableSet.of(pos), 8, false, accuracy)`, the call vanilla's own
+   overload makes. Where the one-block-low target comes from is still untraced.
 3. **Any other solid target is still lifted.** Pick targets that are standable (non-solid foot
    and torso cells, solid ground: `WalkTargets.isStandable`), not the block being used. If a new
    caller must target a solid block, extend the `VillagerPathNavigation` override rather than

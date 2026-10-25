@@ -9,12 +9,14 @@ import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.PathFinder;
 import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.level.pathfinder.PathfindingContext;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Visitor mob pathfinding. In 1.20.6 the per-cell hook is
@@ -38,14 +40,40 @@ public class VillagerPathNavigation extends GroundPathNavigation {
      * up to the first non-solid block, and a closed door counts as solid: a chest in a 3x3 store
      * room is used from its doorway, so the villager aimed at the roof above the door, found no
      * path, and stood in the next room facing the wall (r20 #4, probe: walkTarget 150 71 48,
-     * pathTarget 150 75 48). A door-opening villager can stand in a door cell.
+     * pathTarget 150 75 48). A door-opening villager can stand in a door cell, so the lift stops
+     * at a door: the target itself, or a door right above a solid target (r21: a target one block
+     * low, on the floor under the doorway, walkTarget 150 70 48).
      */
     @Override
     public Path createPath(BlockPos pos, int accuracy) {
-        if (level.getBlockState(pos).getBlock() instanceof DoorBlock) {
-            return createPath(ImmutableSet.of(pos), 8, false, accuracy);
+        BlockPos door = doorAtOrJustAbove(pos);
+        if (door != null) {
+            return createPath(ImmutableSet.of(door), 8, false, accuracy);
         }
         return super.createPath(pos, accuracy);
+    }
+
+    private @Nullable BlockPos doorAtOrJustAbove(BlockPos pos) {
+        if (isDoor(pos)) {
+            return lowerHalf(pos);
+        }
+        if (!level.getBlockState(pos).isSolid()) {
+            return null;
+        }
+        BlockPos above = pos.above();
+        return isDoor(above) ? lowerHalf(above) : null;
+    }
+
+    private boolean isDoor(BlockPos pos) {
+        return level.getBlockState(pos).getBlock() instanceof DoorBlock;
+    }
+
+    private BlockPos lowerHalf(BlockPos doorPos) {
+        BlockState state = level.getBlockState(doorPos);
+        if (state.getValue(DoorBlock.HALF) == DoubleBlockHalf.UPPER) {
+            return doorPos.below();
+        }
+        return doorPos;
     }
 
     @Override
