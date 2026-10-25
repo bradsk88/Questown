@@ -1381,3 +1381,13 @@ out only rows `FlagCraftGates.visible` accepts, each button keeping its index in
 `FlagCraftMessage` re-checks against the flag's own quests. Posted = open or completed, so a row
 stays once seen. `FlagCraftRecipes.craft` itself is ungated (the growth driver calls it directly).
 `FlagCraftGatesTest`.
+
+## Skills tree: frame columns are vanilla's (r17 #22, dev 2026-10-25)
+
+"The squares behind job icons on the skills UI look like they're grabbing the wrong part of the
+texture; needs to be adjusted by 1 or 2 pixels horizontally." `VillagerAdvancementsWidget.
+getFrameType` hardcoded u 1 (task) and 54 (goal) for the bundled `widgets.png`; that sheet has the
+vanilla layout (26-px cells at u 0 / 26 / 52, `FrameType.getTexture()` in 1.19.2 by javap; the
+golden calls `FrameType.X.getTexture()`), and 1 / 54 are only where the art's opaque pixels start.
+Now 0 / 26 / 52. Checked from the PNG (opaque runs on row 140: x 1-24, 27-50, 54-75), not yet on
+screen.

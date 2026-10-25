@@ -203,14 +203,17 @@ public class VillagerAdvancementsWidget {
 
     private int getFrameType() {
         // 1.20.6 dropped FrameType and the vanilla advancement widget sheet, so the
-        // sheet is bundled as questown:textures/gui/advancements/widgets.png.
-        // These u-origins are the frame columns of that bundled sheet (task x1,
-        // challenge x26, goal x54; obtained row v128, unobtained v154).
+        // sheet is bundled as questown:textures/gui/advancements/widgets.png. It has the
+        // vanilla layout: 26-px frame cells at u 0 (task), 26 (challenge), 52 (goal),
+        // FrameType.getTexture() in 1.19.2 (javap). The port had 1 and 54, the first
+        // opaque column of the task and goal art, so the squares behind the job icons
+        // sampled 1-2 px to the right (r17 #22, dev 2026-10-25). Opaque runs on row 140:
+        // x 1-24, 27-50, 54-75.
         int ft = -1;
         if (unlocked) {
-            ft = 1; // TASK
+            ft = 0; // TASK
         } else if (canUnlock) {
-            ft = 54; // GOAL
+            ft = 52; // GOAL
         } else if (minecraft.player.isCreative()) {
             ft = 26; // CHALLENGE
         }

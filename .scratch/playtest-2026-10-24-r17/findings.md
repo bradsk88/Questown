@@ -200,3 +200,4 @@ Quests tab.
 - #18 resolved: the message was the BOP-deposit broadcast at 00:40:24 ("A Block of Progress was
   deposited at the town flag! Right-click the flag to collect it."): should be two lines.
 - #18 **fixed**: the BOP-deposit message is one message with a line break (two broadcasts would be paced 100 ticks apart). Rendering to check in the agent playtest.
+- #22 skills UI squares **fixed**: frame u-columns were 1 (task) and 54 (goal) instead of vanilla 0 / 52 (bundled sheet = vanilla layout, checked by PNG decode and 1.19.2 javap). To see on screen in the agent playtest.
