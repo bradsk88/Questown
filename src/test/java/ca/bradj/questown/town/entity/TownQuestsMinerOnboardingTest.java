@@ -78,6 +78,10 @@ class TownQuestsMinerOnboardingTest {
         assertTrue(batch.getAll().stream().anyMatch(q -> q.getType() == Quest.QuestType.LOOT
                 && Compat.getItemId(Items.COAL).equals(q.getWantedId())
                 && q.getCountNeeded() == 3));
+
+        // a skill on the cook's tree, which teaches skill unlocking (dev, 2026-10-25)
+        assertTrue(batch.getAll().stream().anyMatch(q -> q.getType() == Quest.QuestType.SKILL_UNLOCK
+                && JobID.toRL(new JobID("cook", "extract")).equals(q.getWantedId())));
     }
 
     private static TutorialTownView view() {

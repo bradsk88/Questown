@@ -548,6 +548,9 @@ public final class VillageGrowthExecutor {
         if (spendBopOnOpenJobChange()) {
             return;
         }
+        if (spendBopOnOpenSkillUnlock()) {
+            return;
+        }
         if (furnishNextRoomQuest()) {
             return;
         }
@@ -791,6 +794,44 @@ public final class VillageGrowthExecutor {
             if (r == TownFlagBlockEntity.JobChangeResult.REQUESTED) {
                 bopJobChangeVillager = v.getUUID();
             }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Spend a Block of Progress on a skill while a SKILL_UNLOCK quest is open (the miner batch's
+     * cook skill) - the player's skills-tab spend (owner path: spendBopToUnlockSkill). Picks the
+     * first node the skills tab offers a villager of the quest's root that it has not unlocked yet.
+     * Runs after the job-change spend, so an open job change gets the BOP first.
+     */
+    private boolean spendBopOnOpenSkillUnlock() {
+        if (flag.getBlocksOfProgress() <= 0) {
+            return false;
+        }
+        java.util.Optional<JobID> tree = flag.getQuestHandle().getAllQuestsWithRewards().stream()
+                .map(AbstractMap.SimpleEntry::getKey)
+                .filter(q -> q.getType() == Quest.QuestType.SKILL_UNLOCK && !q.isComplete())
+                .map(q -> JobID.fromRL(q.getWantedId()))
+                .findFirst();
+        if (tree.isEmpty()) {
+            return false;
+        }
+        for (LivingEntity v : flag.getVillagerHandle().entities()) {
+            if (!((VisitorMobEntity) v).getJobId().sameRoot(tree.get())) {
+                continue;
+            }
+            java.util.Optional<JobID> node = flag.getVillagerHandle().getUnlockableSkills(v.getUUID()).stream()
+                    .filter(j -> !flag.getVillagerHandle().isUnlocked(v.getUUID(), j))
+                    .sorted(java.util.Comparator.comparing(JobID::toNiceString))
+                    .findFirst();
+            if (node.isEmpty()) {
+                continue;
+            }
+            TownFlagBlockEntity.SkillUnlockResult r = flag.spendBopToUnlockSkill(v.getUUID(), node.get());
+            msg("Spent a BOP on skill " + node.get().toNiceString() + " for townie "
+                    + shortId((VisitorMobEntity) v) + " for the open skill-unlock quest: " + r);
+            check("bop-spent-for-skill-unlock", r == TownFlagBlockEntity.SkillUnlockResult.UNLOCKED);
             return true;
         }
         return false;

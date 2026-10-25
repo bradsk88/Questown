@@ -89,6 +89,13 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.quests.add(this.questFactory.newJobUnlockQuest(id));
     }
 
+    public void addSkillUnlockQuest(
+            @Nullable VillagerUUID ownerId,
+            KEY treeRootId
+    ) {
+        this.quests.add(this.questFactory.newSkillUnlockQuest(dep(ownerId), treeRootId));
+    }
+
     public void addNewUpgradeQuest(
             @Nullable VillagerUUID ownerId,
             KEY fromID,

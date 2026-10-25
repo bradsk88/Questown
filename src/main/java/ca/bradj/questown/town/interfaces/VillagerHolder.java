@@ -246,6 +246,9 @@ public interface VillagerHolder {
 
     boolean isUnlocked(JobID jobID);
 
+    /** The villager's skills-tab nodes (level-gated, including ones already unlocked). */
+    ImmutableSet<JobID> getUnlockableSkills(UUID villagerUUID);
+
     /**
      * Per-townie unlocked jobs. The JOB_UNLOCK quest checks the town-wide unlocked set to
      * confirm a producer root is held by no one before suggesting the unlock, and to complete

@@ -294,6 +294,35 @@ now returns `null`, the same hand-off as the in-flight case. Pinned by
 `questsWithTwoJobChangesDone` helper lost its extra walk, which the replay used
 to absorb and which now posts the crafter phase.
 
+## SKILL_UNLOCK: the miner batch asks for a cook skill (2026-10-25)
+
+Dev ask: the miner batch also asks the player to unlock any skill on the cook's skill
+tree, which teaches skill unlocking with a Block of Progress and gives the cook a second
+recipe. It is a new quest type, `SKILL_UNLOCK`. Its wanted id is the tree's root node as a
+job RL (`JobID.toRL(cook/extract)`, i.e. `TownQuests.ONBOARDING_COOK_JOB`), so the card
+("Unlock a Cook skill", lang `menu.quests.skill_unlock`), the chat name and the BOP icon
+reuse the job-quest helpers.
+
+**Completion trigger: the player's spend only.** `UnlockJobMessage` (the skills tab's
+confirm) now calls `TownFlagBlockEntity.unlockSkillFromPlayer`, which unlocks and then
+calls `TownQuests.markSkillUnlocked(id)`. That closes every open SKILL_UNLOCK quest whose
+root matches `id`'s root. The other unlock paths do not count: a job change's default work,
+`TestExecutor` and blueprint setup all call `VillagerHolder.unlockJob` directly. That is
+the same rule as the first-work-request quest, where only the player's request counts.
+There is no backfill. A cook skill bought before the batch posts does not count, but the
+cook tree has more nodes than a new cook's default work, so a later spend closes it.
+
+**Flag-BOP spend for agents.** `spendBopToUnlockSkill(villager, job)` spends one of the
+flag's deposited BOPs, like `spendBopToRequestJobChange`. It accepts only a node in
+`VillagerHolder.getUnlockableSkills`, which is the skills tab's own set
+(`TownVillagerUIsHandle.unlockableSkills`, extracted from the two `showUI` copies): known
+children of the villager's job, gated by `available_at_level`. Callers are `_qtdev
+unlock_skill <villager> <root/job>` and the `village/growth` driver
+(`spendBopOnOpenSkillUnlock`, after the job-change spend so an open job change gets the BOP
+first). The rebuild path has its own factory (`newSkillUnlockQuest`), per the section
+above. Pinned by `TownQuestsSkillUnlockTest` (completion, other-root no-op, load rebuild)
+and `TownQuestsMinerOnboardingTest` (the batch carries it).
+
 ## World-load replay re-claims finished batches' rewards (every load, by construction)
 
 `QuestBatches.initialize` (the quest-deserializer's rebuild, NOT the flag

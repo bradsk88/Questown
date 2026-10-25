@@ -248,6 +248,25 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
     }
 
+    /**
+     * Completes every open SKILL_UNLOCK quest on {@code unlocked}'s skill tree (same root) when the
+     * player spends a Block of Progress on a skill ({@code TownFlagBlockEntity.unlockSkillFromPlayer}).
+     */
+    public void markSkillUnlocked(JobID unlocked) {
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (q.getType() != Quest.QuestType.SKILL_UNLOCK || q.isComplete()) {
+                    continue;
+                }
+                if (!JobID.fromRL(q.getWantedId()).sameRoot(unlocked)) {
+                    continue;
+                }
+                batch.markRecipeAsComplete(null, q.getWantedId());
+                QT.QUESTS_LOGGER.info("Skill-unlock quest completed: {} unlocked", unlocked.toNiceString());
+            }
+        }
+    }
+
     @NotNull
     /** Storage room recipes: any of them answers an arrival's storage quest. */
     private static final ImmutableSet<ResourceLocation> STORAGE_ROOMS = ImmutableSet.of(
@@ -981,6 +1000,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         // A mineshaft is a block-room: the block itself is the room, no walls or door (r10 #15).
         mineshaftQuest.setFlavorText("The miner needs a mineshaft to work in. Craft one at the town flag from stone stairs and place it near the flag.");
         q.addNewQuest(mineshaftQuest);
+
+        // A skill on the cook's tree (dev, 2026-10-25): teaches skill unlocking with a BOP, and a
+        // second cook recipe makes the village more self-sufficient.
+        q.addNewQuest(MCQuest.skillUnlock(batchUUID, null, ONBOARDING_COOK_JOB));
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_MINER));
         provisionArrival(view, qq);

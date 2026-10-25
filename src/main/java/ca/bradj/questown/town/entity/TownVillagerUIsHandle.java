@@ -25,15 +25,7 @@ public class TownVillagerUIsHandle {
             String type,
             UUID villagerId
     ) {
-        // Skills-tab gate (2026-10-13 ruling): a job is only unlockable - and so only shown
-        // in the skills tab - once the townie's level reaches its JSON available_at_level.
-        // At the starting level (1) the set is empty, which is what hides the tab.
-        int level = villagers.getLevel(villagerId);
-        ImmutableSet<JobID> unlockable = villagers
-                .getChildJobsKnownToExist(villagers.getEntity(villagerId).getJobId())
-                .stream()
-                .filter(job -> ServerJobsRegistry.getAvailableAtLevel(job) <= level)
-                .collect(ImmutableSet.toImmutableSet());
+        ImmutableSet<JobID> unlockable = unlockableSkills(villagerId);
         TownVillagerUIs.showUI(
                 sender,
                 villagers.entities(),
@@ -50,12 +42,7 @@ public class TownVillagerUIsHandle {
             UUID villagerId,
             boolean showInventoryTab
     ) {
-        int level = villagers.getLevel(villagerId);
-        ImmutableSet<JobID> unlockable = villagers
-                .getChildJobsKnownToExist(villagers.getEntity(villagerId).getJobId())
-                .stream()
-                .filter(job -> ServerJobsRegistry.getAvailableAtLevel(job) <= level)
-                .collect(ImmutableSet.toImmutableSet());
+        ImmutableSet<JobID> unlockable = unlockableSkills(villagerId);
         TownVillagerUIs.showUI(
                 sender,
                 villagers.entities(),
@@ -65,6 +52,25 @@ public class TownVillagerUIsHandle {
                 unlockable,
                 showInventoryTab
         );
+    }
+
+    /**
+     * The skills tab's nodes for this villager: children of its job known to exist, filtered by
+     * the skills-tab gate (2026-10-13 ruling) - a job is only unlockable, and so only shown, once
+     * the townie's level reaches its JSON available_at_level. At the starting level (1) the set is
+     * empty, which is what hides the tab. Includes nodes the villager already unlocked.
+     */
+    public ImmutableSet<JobID> unlockableSkills(UUID villagerId) {
+        VisitorMobEntity entity = villagers.getEntity(villagerId);
+        if (entity == null) {
+            return ImmutableSet.of();
+        }
+        int level = villagers.getLevel(villagerId);
+        return villagers
+                .getChildJobsKnownToExist(entity.getJobId())
+                .stream()
+                .filter(job -> ServerJobsRegistry.getAvailableAtLevel(job) <= level)
+                .collect(ImmutableSet.toImmutableSet());
     }
 
     public void showMultiStatusUI(ServerPlayer player, Collection<VisitorMobEntity> entities) {

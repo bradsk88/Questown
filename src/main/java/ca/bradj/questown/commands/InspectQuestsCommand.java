@@ -88,6 +88,9 @@ public class InspectQuestsCommand {
         if (type == Quest.QuestType.JOB_CHANGE) {
             return "job: " + q.getWantedId();
         }
+        if (type == Quest.QuestType.SKILL_UNLOCK) {
+            return "skill tree: " + q.getWantedId();
+        }
         return null;
     }
 

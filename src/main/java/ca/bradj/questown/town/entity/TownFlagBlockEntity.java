@@ -520,6 +520,31 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return JobChangeResult.REQUESTED;
     }
 
+    public enum SkillUnlockResult {
+        UNLOCKED, NO_BOP, NOT_UNLOCKABLE
+    }
+
+    /**
+     * Spend one of the flag's deposited Blocks of Progress on a skill, as the player does on the
+     * villager's skills tab (there the BOP comes from the player's inventory, via the confirm
+     * menu). Only a node the skills tab offers the villager may be unlocked - the level gate
+     * {@code UnlockJobMessage} applies, plus tree membership. For the growth driver and
+     * {@code _qtdev unlock_skill}.
+     */
+    public SkillUnlockResult spendBopToUnlockSkill(UUID villagerUUID, JobID id) {
+        if (!getVillagerHandle().getUnlockableSkills(villagerUUID).contains(id)) {
+            return SkillUnlockResult.NOT_UNLOCKABLE;
+        }
+        if (bopStacks.isEmpty()) {
+            return SkillUnlockResult.NO_BOP;
+        }
+        bopStacks.remove(0);
+        setChanged();
+        syncBopFull();
+        unlockSkillFromPlayer(villagerUUID, id);
+        return SkillUnlockResult.UNLOCKED;
+    }
+
     /**
      * Dev/test only: fill the flag's deposited BOPs directly, mirroring the tutorial
      * {@code grantBop}. Lets a scenario pre-fill the flag (e.g. to 63, one below the 64-slot cap)
@@ -2307,6 +2332,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
      * auto-posted starter request ({@link #postStarterRequests}), it completes the F2 "post your
      * first work request" quest (dev, 2026-10-22: only the player's own request counts).
      */
+    /**
+     * A skill the player unlocks with a Block of Progress on a villager's skills tab. Unlike a
+     * setup unlock (job change defaults, test fixtures), it completes the miner batch's
+     * SKILL_UNLOCK quest.
+     */
+    public void unlockSkillFromPlayer(UUID villagerUUID, JobID id) {
+        getVillagerHandle().unlockJob(villagerUUID, id);
+        quests.markSkillUnlocked(id);
+    }
+
     public void requestWorkFromPlayer(WorkRequest request) {
         workHandle.requestWork(request);
         quests.markFirstWorkRequestCompleteIfActive();

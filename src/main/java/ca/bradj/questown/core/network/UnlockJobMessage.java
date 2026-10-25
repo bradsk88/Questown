@@ -112,7 +112,7 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
             Optional<TownFlagBlockEntity> flag,
             ServerPlayer sender
     ) {
-        flag.get().getVillagerHandle().unlockJob(villagerUUID, id);
+        flag.get().unlockSkillFromPlayer(villagerUUID, id);
         String key = "messages.jobs.unlocked_by_mod";
         // The villager by name, not the raw UUID: 1.20.6 rejects a UUID translation argument
         // (2026-10-20 playtest: "TranslatableContents' arguments must be ...", unlock unsent).

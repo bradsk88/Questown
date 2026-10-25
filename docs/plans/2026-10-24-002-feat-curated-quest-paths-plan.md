@@ -52,6 +52,10 @@ origin: r16 #14 design chat, dev rulings 2026-10-24. Supersedes
 12. **Rewards: an arrival on some batches**, chosen per batch in the path file, with the r16
     #11/#17 bed + storeroom provisioning. BOPs stay level-up-only (`CONTEXT.md`: no BOP quest
     reward).
+13. **The miner batch asks for a cook skill (2026-10-25).** A new quest type, `SKILL_UNLOCK`:
+    unlock any skill on the cook's skill tree. It teaches skill unlocking and makes the village
+    more self-sufficient. Shipped in code (`TownQuests.addMiner`, `town/quests/COMPLEX.md`
+    "SKILL_UNLOCK"). The path data format (11) will need to express this quest type.
 
 ## Facts this rests on (checked 2026-10-24 in the worktree `qt-wt-work`)
 

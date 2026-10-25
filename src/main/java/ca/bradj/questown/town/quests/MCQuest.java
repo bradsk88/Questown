@@ -151,6 +151,24 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return q;
     }
 
+    /**
+     * Unlock any skill on a job's skill tree (the miner batch asks for the cook's, dev
+     * 2026-10-25). {@code treeRoot} is the tree's root node; the wanted id is its
+     * {@link JobID#toRL}, so the card and chat name the job like a job quest does. Completes from
+     * {@code TownQuests.markSkillUnlocked} when the player spends a Block of Progress on a node
+     * with the same root.
+     */
+    public static MCQuest skillUnlock(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            JobID treeRoot
+    ) {
+        MCQuest q = new MCQuest(batchUUID, ownerId, JobID.toRL(treeRoot), null, QuestType.SKILL_UNLOCK, 1);
+        q.setFlavorText("Open your " + treeRoot.rootId() + "'s skills tab and spend a Block of Progress "
+                + "on any skill. New skills let a villager make more things.");
+        return q;
+    }
+
     public static MCQuest jobUnlock(
             UUID batchUUID,
             @Nullable VillagerUUID ownerId,

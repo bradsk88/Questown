@@ -372,7 +372,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             case JOB_CHANGE -> renderJobQuestTooltip(recipe);
             case JOB_UNLOCK -> renderJobUnlockTooltip(recipe);
             case CONCURRENT_JOBS -> ImmutableList.of(Compat.literal("Have all listed jobs active at the same time"));
-            case FIRST_WORK_REQUEST -> ImmutableList.of();
+            case FIRST_WORK_REQUEST, SKILL_UNLOCK -> ImmutableList.of();
             case UNKNOWN -> null;
         };
     }
@@ -683,7 +683,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private static @Nullable ResourceLocation lessonEntryForQuestType(Quest.QuestType type) {
         return switch (type) {
             case JOB_CHANGE -> new ResourceLocation(Questown.MODID, "entries/lesson_bop");
-            case JOB_UNLOCK -> new ResourceLocation(Questown.MODID, "entries/lesson_bop");
+            case JOB_UNLOCK, SKILL_UNLOCK -> new ResourceLocation(Questown.MODID, "entries/lesson_bop");
             case ROOM -> new ResourceLocation(Questown.MODID, "entries/lesson_room_recipes");
             case ITEM, LOOT -> new ResourceLocation(Questown.MODID, "entries/lesson_needs");
             case CONCURRENT_JOBS -> new ResourceLocation(Questown.MODID, "entries/014-supply-chains");

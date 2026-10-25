@@ -498,6 +498,7 @@
   "menu.quests.item_quest": "Add %d %s to town storage (Can be done by villagers or players)",
   "menu.quests.loot_quest": "A villager must produce %d %s for the town",
   "menu.quests.first_work_request": "Post a work request",
+  "menu.quests.skill_unlock": "Unlock a %s skill",
   "job_board.auto_request": "Auto-post new requests",
   "job_board.auto_request.tooltip.on": "Auto-post is ON: when a villager takes up a new job, its first request is posted here automatically. Click to turn off.",
   "job_board.auto_request.tooltip.off": "Auto-post is OFF: new jobs do not post their first request here - post requests yourself with the + button. Click to turn on.",

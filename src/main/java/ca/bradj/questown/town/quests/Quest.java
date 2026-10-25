@@ -226,7 +226,7 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     }
 
     public enum QuestType {
-        ITEM, ROOM, JOB_CHANGE, JOB_UNLOCK, CONCURRENT_JOBS, LOOT, FIRST_WORK_REQUEST, UNKNOWN;
+        ITEM, ROOM, JOB_CHANGE, JOB_UNLOCK, CONCURRENT_JOBS, LOOT, FIRST_WORK_REQUEST, SKILL_UNLOCK, UNKNOWN;
     }
 
     protected interface QuestFactory<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>> {
@@ -267,6 +267,9 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
          * {@link #newQuest}: the job list lives outside the wanted id and would be lost.
          */
         QUEST newConcurrentJobsQuest(@Nullable UUID ownerId, Collection<KEY> jobIds);
+
+        /** A SKILL_UNLOCK quest on the skill tree whose root node is {@code treeRootId}. */
+        QUEST newSkillUnlockQuest(@Nullable UUID ownerId, KEY treeRootId);
 
         QUEST completed(
                 ROOM room,

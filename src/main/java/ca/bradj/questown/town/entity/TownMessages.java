@@ -161,6 +161,7 @@ public class TownMessages {
             case LOOT -> ca.bradj.questown.gui.UIQuest.lootName(wantedId);
             case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", jobName(wantedId));
             case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", jobName(wantedId));
+            case SKILL_UNLOCK -> Compat.translatable("menu.quests.skill_unlock", jobName(wantedId));
             default -> RoomRecipes.getName(wantedId);
         };
     }
