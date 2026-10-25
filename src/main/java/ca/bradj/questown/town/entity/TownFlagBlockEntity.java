@@ -1284,12 +1284,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();
         WorksBehaviour.TownData td = getTownData();
-        int[] rejectedForTime = {0};
         Predicate<JobID> canFit = p -> {
             if (ServerJobsRegistry.canFit(uuid, p, Util.getDayTime(getServerLevel()))) {
                 return true;
             }
-            rejectedForTime[0]++;
             getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
                     "Villager will not do {} because there is not enough time left in the day", p
             );
@@ -1313,10 +1311,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             // tick and it is `maxTicksBeforeDowntime` ticks old.
             villagerHandle.markWorked(VillagerUUID.from(ownerUUID), tick);
             changeJob.accept("work-roll", work);
-            return true;
-        }
-        if (BoardIdleExits.tooLateInTheDay(false, rejectedForTime[0]) && !DowntimeWork.matches(currentJob)) {
-            changeJob.accept("too-late-in-day", DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
         }
 

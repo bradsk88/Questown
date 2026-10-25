@@ -1624,13 +1624,3 @@ branch applied") and showed "needs Block of Progress", the job's tool. The hunte
 only because it was due for downtime. New last branch: `BoardIdleExits.depositFinished` ->
 downtime, logged `via bop-deposited` (the latch branch comes first, so the deposit is done).
 `BoardIdleExitsTest`.
-
-## Too late in the day: relax instead of "looking for supplies" (r17 #10, 2026-10-25)
-
-At dusk the work roll turns down every leaver trip that would not finish before the next day window
-(`ServerJobsRegistry.canFit`), so a hunter with swords and food in storage sat in `seeking_work`,
-whose status read as missing supplies. The board now counts those rejections; when the roll
-found nothing and at least one job was turned down only for time, the townie goes to downtime
-(`via too-late-in-day`, `BoardIdleExits.tooLateInTheDay`). The dev offered this or a dedicated
-"not enough time" status; downtime ("relaxing") was the simpler of the two. At dawn the trip fits
-again and the work roll takes over.
