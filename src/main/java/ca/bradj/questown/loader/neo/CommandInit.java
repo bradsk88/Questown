@@ -5,6 +5,7 @@ import ca.bradj.questown.commands.AddDamageCommand;
 import ca.bradj.questown.commands.AddExperienceCommand;
 import ca.bradj.questown.commands.ChangeJobCommand;
 import ca.bradj.questown.commands.UnlockSkillCommand;
+import ca.bradj.questown.commands.NavProbeCommand;
 import ca.bradj.questown.commands.ChickenRemoveCommand;
 import ca.bradj.questown.commands.DebugAllDoorsCommand;
 import ca.bradj.questown.commands.DebugCommand;
@@ -100,6 +101,7 @@ public class CommandInit {
         LookRoomCommand.register(event.getDispatcher());
         ChangeJobCommand.register(event.getDispatcher());
         UnlockSkillCommand.register(event.getDispatcher());
+        NavProbeCommand.register(event.getDispatcher());
         FlagPlaceBlockCommand.register(event.getDispatcher());
     }
 }

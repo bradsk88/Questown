@@ -252,3 +252,12 @@ something the player built, so it stays a `CANT_REACH` bubble (ADR-0011).
   hidden on a trip (`visible` false) is never "stranded".
 - Pinned by `StrandedRescueTest` (footprint + water window). The sink and the teleport are
   registry-bound and not unit-tested; they still need a live catch (a `[rescue]` line).
+
+## `_qtdev nav <villager>`: read the walk target, do not infer it (r20 #4)
+
+Read-only probe over `VisitorMobEntity.describeNav()`: position, status, the brain's WALK_TARGET
+(and its close-enough distance), the navigation path's target, end node, `canReach` and progress,
+the CANT_REACH_WALK_TARGET_SINCE timestamp, and the need. Added when two villagers stood in the
+bedroom facing the wall shared with the store room, and three code readings of the target pickers
+(`InteractionSpots.find`, the no-room chest-front branch, standable-on-the-wall) all pointed at
+the store room's doorway instead. Output: `[_qtdev nav]` on `Questown:Villagers`.

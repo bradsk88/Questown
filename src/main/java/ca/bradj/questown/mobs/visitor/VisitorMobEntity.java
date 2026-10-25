@@ -1614,6 +1614,34 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         QT.VILLAGER_LOGGER.info("[rescue] {} poofed from {} to the gate at {} ({})", uuid, from, to, why);
     }
 
+    /**
+     * What the navigator is working from right now, for `_qtdev nav`: the brain's walk target,
+     * the navigation path's end and whether it reaches, and the can't-reach timestamp. Reads the
+     * same objects the nav sink reads, at the moment of the call.
+     */
+    public String describeNav() {
+        StringBuilder b = new StringBuilder();
+        b.append("pos=").append(blockPosition()).append(" status=").append(getStatusForServer());
+        getBrain().getMemory(MemoryModuleType.WALK_TARGET).ifPresentOrElse(
+                wt -> b.append(" walkTarget=").append(wt.getTarget().currentBlockPosition())
+                       .append(" closeEnough=").append(wt.getCloseEnoughDist()),
+                () -> b.append(" walkTarget=none")
+        );
+        Path path = getNavigation().getPath();
+        if (path == null) {
+            b.append(" path=none");
+        } else {
+            b.append(" pathTarget=").append(path.getTarget())
+             .append(" pathEnd=").append(path.getEndNode() == null ? "none" : path.getEndNode().asBlockPos())
+             .append(" canReach=").append(path.canReach())
+             .append(" node=").append(path.getNextNodeIndex()).append('/').append(path.getNodeCount());
+        }
+        getBrain().getMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE)
+                  .ifPresent(t -> b.append(" cantReachSince=").append(t));
+        b.append(" need=").append(getNeed());
+        return b.toString();
+    }
+
     private void poofHere(ServerLevel sl) {
         sl.sendParticles(ParticleTypes.POOF, getX(), getY() + 0.8, getZ(), 20, 0.3, 0.5, 0.3, 0.02);
         Compat.playNeutralSound(sl, blockPosition(), SoundEvents.CHORUS_FRUIT_TELEPORT);
