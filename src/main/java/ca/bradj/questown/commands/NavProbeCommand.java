@@ -32,6 +32,11 @@ public class NavProbeCommand {
     }
 
     private static int run(ServerLevel level, UUID villagerUUID) {
+        if (level == null) {
+            // A console command queued before the overworld loads has no level yet.
+            QT.VILLAGER_LOGGER.warn("[_qtdev nav] no level yet (server still starting)");
+            return 1;
+        }
         Entity e = level.getEntity(villagerUUID);
         if (!(e instanceof VisitorMobEntity vme)) {
             QT.VILLAGER_LOGGER.warn("[_qtdev nav] no villager {} in {}", villagerUUID, level.dimension());
