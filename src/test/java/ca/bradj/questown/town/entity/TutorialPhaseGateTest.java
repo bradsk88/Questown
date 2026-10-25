@@ -392,15 +392,9 @@ class TutorialPhaseGateTest {
                 q.getType() == Quest.QuestType.JOB_CHANGE
                         && q.getWantedId().equals(JobID.toRL(TownQuests.ONBOARDING_COOK_JOB))
         ));
-        assertTrue(all.stream().anyMatch(q ->
-                q.getType() == Quest.QuestType.LOOT
-                        && q.getWantedId().equals(TagsInit.Items.VILLAGER_COOKED_FOOD.location())
-        ));
-        // ...and a skill on the cook's tree, beside the food quest it helps fill (dev, 2026-10-25).
-        assertTrue(all.stream().anyMatch(q ->
-                q.getType() == Quest.QuestType.SKILL_UNLOCK
-                        && "cook".equals(MCQuest.skillTreeRoot(q.getWantedId()))
-        ), "phase 2.5 batch must carry the cook skill-unlock quest");
+        // Cooked Food x8 and the cook skill wait for the cook (r20, dev 2026-10-25: "the cook's
+        // batch is too bulky"); the follow-up batch carries them.
+        assertFalse(hasCookFollowUpQuest(all), "phase 2.5 batch must not carry the cook follow-up quests");
         // The batch carries the cook's room quest too: every cook/* job requires
         // kitchen_small (see cook_simple_furnace_food.json), and without it the
         // staffed cook has no selectable work and the batch can never complete.
@@ -418,15 +412,72 @@ class TutorialPhaseGateTest {
         ), "phase 2.5 batch must carry the Small Storeroom -> Storeroom upgrade quest");
         assertTrue(view.getTriggersFired().contains(TutorialTrigger.Triggers.FirstRoomUpgrade),
                 "the upgrades lesson opens with the batch that carries the first upgrade");
+    }
+
+    @Test
+    void cookFollowUp_notPostedBeforeTheCookIsUnlocked() {
+        TownQuests quests = questsAtPhase2_5();
+        TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
+        quests.addTutorialBatches(view);
+
+        quests.postCookFollowUpIfDue(view);
+
+        assertFalse(hasCookFollowUpQuest(quests.questBatches.getAll()));
+    }
+
+    @Test
+    void cookFollowUp_postedOnceTheCookIsUnlocked() {
+        TownQuests quests = questsAtPhase2_5();
+        TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
+        quests.addTutorialBatches(view);
+        quests.questBatches.markRecipeAsComplete(null, JobID.toRL(TownQuests.ONBOARDING_COOK_JOB));
+
+        quests.postCookFollowUpIfDue(view);
+
+        List<MCQuest> all = quests.questBatches.getAll();
+        assertTrue(all.stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.LOOT
+                        && q.getWantedId().equals(TagsInit.Items.VILLAGER_COOKED_FOOD.location())
+        ), "follow-up must carry Cooked Food x8");
+        // A skill on the cook's tree, beside the food quest it helps fill (dev, 2026-10-25).
+        assertTrue(all.stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.SKILL_UNLOCK
+                        && "cook".equals(MCQuest.skillTreeRoot(q.getWantedId()))
+        ), "follow-up must carry the cook skill-unlock quest");
         // Onboarding rule (dev, 2026-10-18): a batch that brings a villager carries the bed that
-        // villager will sleep in. This batch brings villager 3: Bedroom (2 beds) -> Big Bedroom.
+        // villager will sleep in. The follow-up brings villager 3: Bedroom (2 beds) -> Big Bedroom.
         ResourceLocation bedroom = new ResourceLocation("questown", "bedroom");
         ResourceLocation bigBedroom = new ResourceLocation("questown", "big_bedroom");
         assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.ROOM
                         && bigBedroom.equals(q.getWantedId())
                         && q.fromRecipeID().map(bedroom::equals).orElse(false)
-        ), "the cook batch (brings villager 3) must carry the Bedroom -> Big Bedroom upgrade");
+        ), "the follow-up (brings villager 3) must carry the Bedroom -> Big Bedroom upgrade");
+    }
+
+    @Test
+    void cookFollowUp_postedOnlyOnce() {
+        TownQuests quests = questsAtPhase2_5();
+        TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
+        quests.addTutorialBatches(view);
+        quests.questBatches.markRecipeAsComplete(null, JobID.toRL(TownQuests.ONBOARDING_COOK_JOB));
+
+        quests.postCookFollowUpIfDue(view);
+        quests.postCookFollowUpIfDue(view);
+
+        long skillQuests = quests.questBatches.getAll().stream()
+                .filter(q -> q.getType() == Quest.QuestType.SKILL_UNLOCK)
+                .count();
+        assertEquals(1, skillQuests);
+    }
+
+    private static boolean hasCookFollowUpQuest(List<MCQuest> all) {
+        return all.stream().anyMatch(q ->
+                (q.getType() == Quest.QuestType.LOOT
+                        && q.getWantedId().equals(TagsInit.Items.VILLAGER_COOKED_FOOD.location()))
+                        || q.getType() == Quest.QuestType.SKILL_UNLOCK
+                        || new ResourceLocation("questown", "big_bedroom").equals(q.getWantedId())
+        );
     }
 
     @Test

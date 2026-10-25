@@ -10,6 +10,7 @@ import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
+import ca.bradj.questown.town.rewards.GrantBlockOfProgressReward;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.resources.ResourceLocation;
@@ -97,6 +98,8 @@ class TownFlagTutorialAdapter implements TutorialTownView {
             // the cook's used to be defaultQuestCompletionRewards, a coin flip once villager 2
             // had quests, which could leave the miner beat (3 villagers) waiting forever.
             case TutorialTownView.PHASE_HUNTER_GATHERER, TutorialTownView.PHASE_JOB_CHANGE_FOOD -> arrivalWithQuestBatch();
+            // The cook-job batch pays the Block of Progress its follow-up's cook skill costs.
+            case TutorialTownView.PHASE_COOK_JOB -> new MCInstantReward(flag, new GrantBlockOfProgressReward(flag, 1));
             case TutorialTownView.PHASE_NEW_JOB_ROOM, TutorialTownView.PHASE_MINER ->
                     new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
             default -> new AddBatchOfQuestsForVisitorReward(flag, null);

@@ -548,6 +548,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     public void tick(TownInterface town) {
         retireJobUnlockQuests();
         backfillSatisfiedQuests(town);
+        postCookFollowUpIfDue(TownFlagTutorialAdapter.from(this.town.getUnsafe(), questBatches));
 
         ServerLevel level = town.getServerLevel();
         int size = getVillagers(this).size();
@@ -1372,6 +1373,67 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         cookJobQuest.setFlavorText("Your town needs a cook. Teach a villager the cook job so raw food becomes a meal.");
         q.addNewQuest(cookJobQuest);
 
+        // Cooked Food x8, the cook skill and villager 3's bed wait for the cook: they ride the
+        // follow-up batch (postCookFollowUpIfDue). r20, dev 2026-10-25: "the cook's batch is too bulky".
+
+        MCQuest kitchenQuest = MCQuest.standalone(batchUUID, null, KITCHEN_SMALL);
+        kitchenQuest.setFlavorText("The cook needs a kitchen. Place a furnace in a room and register the door.");
+        q.addNewQuest(kitchenQuest);
+
+        // Storage starts to fill around the kitchen beat (playtests 2026-10-12, 2026-10-18), so
+        // the Small Storeroom (1 chest) -> Storeroom (2 chests) upgrade rides this batch. It
+        // replaces the old storage-upgrade phase 6 (dev, 2026-10-18).
+        MCQuest storageUpgradeQuest = MCQuest.upgrade(batchUUID, null, SpecialQuests.STORE_ROOM_SMALL, STORE_ROOM_MEDIUM);
+        storageUpgradeQuest.setFlavorText("Storage fills fast. Upgrade before production stops.");
+        q.addNewQuest(storageUpgradeQuest);
+
+        // Villager 3 is the follow-up's reward. This one grants a Block of Progress: the cook
+        // skill the follow-up asks for costs one.
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_COOK_JOB));
+        // Onboarding-flow quest: like the other tutorial-phase batches, it is
+        // onboarding-flagged (see `.scratch/cook-skill-unlock/cook-skill-unlock.md`).
+        // The cook it staffs gets the starter recipe (cook/mutton) through the
+        // root's default work — the simple-furnace template's `starter_recipes`
+        // lists it, so every cook (onboarding or not) unlocks extract + fuel +
+        // mutton at staff (see ChangeJobReward.getApplier / ServerJobsRegistry).
+        // Its room quest completes on a superset room per the
+        // storeroom design (.scratch/storeroom-quest-completion).
+        markOnboarding(qq);
+        questBatches.add(qq);
+        QT.QUESTS_LOGGER.debug("Tutorial batch #2 was added to town: {}", qq.toNiceString());
+    }
+
+    /**
+     * Posts the cook follow-up batch (Cooked Food x8, a cook skill, villager 3's bed) once the
+     * onboarding cook JOB_CHANGE is complete, by whatever path it completed. Runs every tick;
+     * a no-op once any onboarding cooked-food quest exists, so an old-shape cook batch (which
+     * carried these quests itself) never gets a second copy.
+     */
+    void postCookFollowUpIfDue(TutorialTownView view) {
+        ResourceLocation cookJob = JobID.toRL(ONBOARDING_COOK_JOB);
+        ResourceLocation cookedFood = TagsInit.Items.VILLAGER_COOKED_FOOD.location();
+        List<MCQuest> all = questBatches.getAll();
+        boolean cookUnlocked = all.stream().anyMatch(q -> q.isOnboarding()
+                && q.getType() == Quest.QuestType.JOB_CHANGE
+                && cookJob.equals(q.getWantedId())
+                && q.isComplete());
+        if (!cookUnlocked) {
+            return;
+        }
+        boolean posted = all.stream().anyMatch(q -> q.isOnboarding()
+                && q.getType() == Quest.QuestType.LOOT
+                && cookedFood.equals(q.getWantedId()));
+        if (posted) {
+            return;
+        }
+        addCookFollowUpBatch(view);
+        notifyNewQuests(view);
+    }
+
+    private void addCookFollowUpBatch(TutorialTownView view) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+
         // Cooked food only: with #villager_food a gatherer's apples and carrots could fill it (r17,
         // dev 2026-10-25: "the food quest can technically be completed by lucky hunters and gatherers").
         MCQuest cookedFoodQuest = MCQuest.loot(
@@ -1386,17 +1448,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         // once its first meals level it (skills unlock from level 2).
         q.addNewQuest(MCQuest.skillUnlock(batchUUID, null, ONBOARDING_COOK_JOB.rootId()));
 
-        MCQuest kitchenQuest = MCQuest.standalone(batchUUID, null, KITCHEN_SMALL);
-        kitchenQuest.setFlavorText("The cook needs a kitchen. Place a furnace in a room and register the door.");
-        q.addNewQuest(kitchenQuest);
-
-        // Storage starts to fill around the kitchen beat (playtests 2026-10-12, 2026-10-18), so
-        // the Small Storeroom (1 chest) -> Storeroom (2 chests) upgrade rides this batch. It
-        // replaces the old storage-upgrade phase 6 (dev, 2026-10-18).
-        MCQuest storageUpgradeQuest = MCQuest.upgrade(batchUUID, null, SpecialQuests.STORE_ROOM_SMALL, STORE_ROOM_MEDIUM);
-        storageUpgradeQuest.setFlavorText("Storage fills fast. Upgrade before production stops.");
-        q.addNewQuest(storageUpgradeQuest);
-
         // This batch brings villager 3, so it carries a bed for them: the hunter-gatherer
         // bedroom (2 beds) becomes a big bedroom (4 beds). Onboarding rule (dev, 2026-10-18):
         // a batch that brings a villager carries the bed that villager will sleep in.
@@ -1404,17 +1455,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         q.addNewQuest(MCQuest.upgrade(batchUUID, null, SpecialQuests.BEDROOM, BIG_BEDROOM));
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_JOB_CHANGE_FOOD));
-        // Onboarding-flow quest: like the other tutorial-phase batches, it is
-        // onboarding-flagged (see `.scratch/cook-skill-unlock/cook-skill-unlock.md`).
-        // The cook it staffs gets the starter recipe (cook/mutton) through the
-        // root's default work — the simple-furnace template's `starter_recipes`
-        // lists it, so every cook (onboarding or not) unlocks extract + fuel +
-        // mutton at staff (see ChangeJobReward.getApplier / ServerJobsRegistry).
-        // Its room quest completes on a superset room per the
-        // storeroom design (.scratch/storeroom-quest-completion).
         markOnboarding(qq);
         questBatches.add(qq);
-        QT.QUESTS_LOGGER.debug("Tutorial batch #2 was added to town: {}", qq.toNiceString());
+        QT.QUESTS_LOGGER.info("Cook follow-up batch posted (cooked food + cook skill) on cook unlock");
     }
 
     private void addQuestForNewJobRoom(

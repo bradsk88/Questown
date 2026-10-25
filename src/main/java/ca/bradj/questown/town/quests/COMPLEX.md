@@ -310,6 +310,19 @@ onboarding cook knows only mutton, and a second recipe cooks the hunter's other 
 cook can take a skill once its first meals level it (skills unlock from level 2,
 `Work.DEFAULT_AVAILABLE_AT_LEVEL`).
 
+**Split out of the cook batch (r20, 2026-10-25).** Dev: "The cook's batch is too bulky. The
+'food x 8' and 'unlock a cook skill' quests should not show up until the cook itself has been
+unlocked." The cook batch (`addQuestsForJobChangeAndFood`) now holds the cook JOB_CHANGE, the
+small kitchen and the storeroom upgrade, and its reward is one Block of Progress
+(`PHASE_COOK_JOB`; the cook skill costs one). Cooked Food x8, the cook skill and the
+Bedroom -> Big Bedroom upgrade ride a follow-up batch (`addCookFollowUpBatch`) whose reward is
+still villager 3 (`PHASE_JOB_CHANGE_FOOD`), so the miner beat (3 villagers) still waits for the
+whole cook beat. `TownQuests.postCookFollowUpIfDue` runs every `tick`, because the phase ladder
+only runs on a batch request: it posts the follow-up once an onboarding cook JOB_CHANGE is
+complete, by any completion path, and does nothing once any onboarding cooked-food LOOT quest
+exists. That also keeps an old-shape cook batch (which carried those quests) from getting a
+second copy. Pinned by `TutorialPhaseGateTest.cookFollowUp_*`.
+
 **Its own wanted id: `questown:skill_unlock/<root>`.** Batch completion
 (`QuestBatch.markRecipeAsComplete`) and load replay match a quest by wanted id alone and take
 the first open match. The first build used the tree root's job RL (`cook_qt_extract`), the
