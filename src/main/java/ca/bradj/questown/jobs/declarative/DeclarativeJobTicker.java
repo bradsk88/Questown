@@ -31,7 +31,6 @@ package ca.bradj.questown.jobs.declarative;
  */
 
 import ca.bradj.questown.jobs.ItemsHolder;
-import java.util.List;
 import java.util.function.IntFunction;
 import java.util.function.Predicate;
 import ca.bradj.questown.QT;
