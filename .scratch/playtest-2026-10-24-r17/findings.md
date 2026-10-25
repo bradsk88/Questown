@@ -182,3 +182,4 @@ Quests tab.
 - #20 villager Quests tab **removed** (and the inventory tab's dead "Quests" button, whose handler was empty).
 - #4 leave-town poof **added** (12 POOF particles on leaving and on returning).
 - #1 mineshaft / fishing station rows **hidden** until their room quest has been posted (screen + server check).
+- #10 **done** with the dev's second option: when nothing fits the rest of the day, the townie relaxes (`via too-late-in-day`).

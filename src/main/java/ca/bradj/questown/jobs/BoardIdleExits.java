@@ -19,4 +19,14 @@ public final class BoardIdleExits {
     public static boolean depositFinished(JobID current) {
         return BOPDepositorWork.ID.equals(current.jobId());
     }
+
+    /**
+     * The board found no work, and at least one job was turned down only because it would not
+     * finish before the next day window ({@code ServerJobsRegistry.canFit}). The townie relaxes
+     * until morning instead of idling in seeking_work, whose status read as missing supplies
+     * (r17 #10, dev 2026-10-25: "or just skip ahead to 'relaxing'").
+     */
+    public static boolean tooLateInTheDay(boolean foundWork, int rejectedForTime) {
+        return !foundWork && rejectedForTime > 0;
+    }
 }
