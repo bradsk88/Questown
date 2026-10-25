@@ -6,6 +6,12 @@
       "entries": [
         {
           "type": "minecraft:item",
+          "name": "minecraft:white_wool",
+          "weight": 21,
+          "functions": [{"function": "minecraft:set_count", "count": 1}]
+        },
+        {
+          "type": "minecraft:item",
           "name": "minecraft:feather",
           "weight": 40,
           "functions": [{"function": "minecraft:set_count", "count": 1}]

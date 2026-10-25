@@ -1029,3 +1029,14 @@ JobLogic asked the board, the board re-rolled the same job.
   picked the outdoor cell).
 - Verified live on the dev's saved r17 world: the cook targeted the wall furnace, fuelled it, and
   with mutton in the storeroom produced cooked mutton (`data get block -147 63 -154 Items`).
+
+## Hunters bring back some wool (r17 #9, dev 2026-10-25)
+
+"Leave it mostly to the player to get wool for beds, but the hunter could bring SOME back (maybe
+1 every 5 trips) to unblock a scenario where wool or steel (for shears) is scant." Every
+`loot_tables/jobs/hunter_sword` table now gives `minecraft:white_wool` a fifth of its roll weight
+(before: default 5/130, desert and savanna 10/85, the six other biome tables none, and a biome's
+own table replaces the default). A short trip is one item from one roll (`Loots.loadFromTables`,
+attempts 1), so about 1 trip in 5 brings wool; half-day and full-day trips (2 and 4 items) bring
+proportionally more. The food share of each roll drops by the same fifth. Known loot (town
+knowledge) only shapes the job's described outputs, not the roll. `HunterWoolDataTest`.

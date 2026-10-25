@@ -183,3 +183,4 @@ Quests tab.
 - #4 leave-town poof **added** (12 POOF particles on leaving and on returning).
 - #1 mineshaft / fishing station rows **hidden** until their room quest has been posted (screen + server check).
 - #10 **done** with the dev's second option: when nothing fits the rest of the day, the townie relaxes (`via too-late-in-day`).
+- #9 hunter wool **done**: white wool is a fifth of every hunter table's roll (~1 short trip in 5; longer trips proportionally more). Tradeoff for the dev: the food share of a roll drops by the same fifth.
