@@ -201,7 +201,7 @@ Note: `TownTickRadius` in `questown-server.toml` is compared against **squared**
 
 ## Agent skills
 
-Project skills live under `.pi/skills/` and are **tracked in git** — commit a new skill with the work that created it. An untracked skill exists only in your working tree and vanishes on a clean checkout.
+Project skills live under `.pi/skills/` and are **tracked in git** — commit a new skill with the work that created it. An untracked skill exists only in your working tree and vanishes on a clean checkout. `.claude/skills/*` are untracked symlinks into `.pi/skills/` that exist only in the main checkout (a worktree has no `.claude/skills`): edit `.pi/skills/<name>/SKILL.md`.
 
 - `questown-strangler` — the strangler-shrink loop (gate as source of truth, cluster order, per-leaf G1 pipeline, the session-learned traps). **Shelved** — load only if the user resumes the shrink work.
 
