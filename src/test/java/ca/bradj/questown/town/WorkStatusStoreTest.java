@@ -56,6 +56,21 @@ class WorkStatusStoreTest {
 
     }
 
+    /**
+     * A job that claims no spots (the diner jobs: their claim supplier returns null) may work a
+     * block another villager claimed, as AbstractItemWI already allows on insert. canClaim used to
+     * call owner() on the null claim, and the NPE crashed the server (village/growth, 2026-10-25:
+     * a hunter dining at a spot the cook held).
+     */
+    @Test
+    void canClaim_aJobWithNoClaimMayWorkAClaimedSpot() {
+        TestWorkStatusStore s = new TestWorkStatusStore();
+        Position pos = new Position(1, 2);
+        s.claimSpot(pos, new Claim(UUID.randomUUID(), 100));
+
+        Assertions.assertTrue(s.canClaim(pos, () -> null));
+    }
+
     @Test
     void Test_GetTimeLeftShouldReturnNullForUntouchedBlock() {
         TestWorkStatusStore s = new TestWorkStatusStore();

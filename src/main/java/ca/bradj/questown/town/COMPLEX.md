@@ -807,3 +807,13 @@ cook/stock_ingredients tied a ready food job, and the selection shuffle picked (
 - Unit seam: `JobScoreBands` (band filter + the score, thresholds passed in; `Config` cannot be
   read in a unit JVM). `JobScoreBandsTest`: ready food beats stock; stock still runs with no
   ready work.
+
+## `canClaim` with no claim: allowed, not a crash (2026-10-25)
+
+A job's claim supplier may return null: the diner jobs claim no spots. `AbstractItemWI`
+already reads a null claim as "insert without claiming". `AbstractWorkStatusStore.canClaim`
+called `owner()` on it instead, so a diner trying a spot another villager had claimed threw
+an NPE during the entity tick and crashed the server. That happened in `village/growth` on
+2026-10-25: a hunter in `dining_no_table` hit a spot the cook held, just after the miner
+batch's new cook skill (`cook:beef`) was unlocked. A null claim now returns true. Pinned by
+`WorkStatusStoreTest.canClaim_aJobWithNoClaimMayWorkAClaimedSpot` (red on the pre-fix NPE).

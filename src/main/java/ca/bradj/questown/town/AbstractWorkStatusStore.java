@@ -425,7 +425,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             return true;
         }
         Claim newClaim = makeClaim.get();
-        boolean r = prevClaim.owner().equals(newClaim.owner());
-        return r;
+        if (newClaim == null) {
+            // A job that claims no spots (the diners) is never blocked by a claim, the same rule
+            // AbstractItemWI applies on insert.
+            return true;
+        }
+        return prevClaim.owner().equals(newClaim.owner());
     }
 }
