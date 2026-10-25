@@ -177,3 +177,4 @@ Quests tab.
 - #17 BOP deposit loop **fixed**: after the deposit, the board's cascade had no exit for a done
   deposit; the gatherer (not due for downtime, no work to roll) "stayed" 501 times. New branch
   `bop-deposited` -> downtime (`BoardIdleExits`). To confirm live in the agent playtest.
+- #2 soup pot weight key **fixed** (namespaced; saved configs keep the old key).

@@ -208,7 +208,9 @@ public class RecipeItemConfig {
         add(assumePresent(Items.TARGET), TARGET);
         add(assumePresent(Items.CAULDRON), CAULDRON);
         add(Questown.ResourceLocation(SmallSoupPotBlock.ITEM_ID), SMALL_SOUP_POT);
-        add(SoupPotBlock.ITEM_ID, BIG_SOUP_POT);
+        // Namespaced like the small pot: room recipes name it questown:soup_pot, and the bare key
+        // never matched, so the big pot weighed the default 100 (r17 #2).
+        add(Questown.ResourceLocation(SoupPotBlock.ITEM_ID), BIG_SOUP_POT);
         add(assumePresent(Items.COMPOSTER), COMPOSTER);
         add(ItemsInit.PLATE_BLOCK.id(), PLATE);
         add(String.format("#%s", TagsInit.Items.SOUP_POTS.location()), SMALL_SOUP_POT);

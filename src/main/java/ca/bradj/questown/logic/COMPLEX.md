@@ -79,3 +79,8 @@ weighs four of those.
   loaded config and `RecipeItemConfig`'s static init touches the item registry. Left to a live
   check.
 - The growth driver discards a dining-room quest (4 plates > its 3-item row), like the inn.
+
+The big soup pot's weight was registered under the bare id `soup_pot` (`SoupPotBlock.ITEM_ID`);
+room recipes name `questown:soup_pot`, so the lookup missed and the pot weighed the default 100
+(startup warning "No weight specified for item ... [questown:soup_pot]", r17 #2). It is now
+namespaced like the small pot. As with the plate, saved weight configs keep the old key.
