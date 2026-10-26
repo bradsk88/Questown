@@ -926,8 +926,23 @@ skill unlock posts nothing, so the crafter with Wooden Sword unlocked idled (fin
 `.scratch/agent-playtest-2026-10-26-outfitter/` #10, a design question for the game side). **A path run feeds a starving
 town** (`feedAStarvingTown`: 8 cooked beef while any villager `isStarving`, at most every 2400
 ticks, logged `INTERVENTION fed the town`): past the fork the food economy ran dry and the crafter
-cycled the dining jobs instead of working (findings #14). Count the interventions per run before
-reading a path run's timings.
+cycled the dining jobs instead of working (findings #14). It feeds only past the fork and only
+when no chest holds villager food (feeding on a timer filled storage: 41 feedings, villagers stuck
+at `NO_STORAGE`). Count the interventions per run before reading a path run's timings.
+
+**Furnishing no longer deletes deposits** (2026-10-26). Furnishing clears the spare building's
+chest; it now empties it first and re-deposits the contents (`emptyChest`). Before, the coal and
+mutton deposited for the cook landed in a chest that the cook follow-up's furnishing cleared two
+seconds later, the furnace sat with raw mutton and no fuel, and the 3-attempt need cap meant no
+more coal came: this was the intermittent growth stall at the cook beat (findings
+`.scratch/agent-playtest-2026-10-26-outfitter/` #16). A placement that did not land (an item use
+onto a cell a villager stands in places nothing) is re-tried for a room quest still open 600 ticks
+later (`refurnishMissing`). A path request is taken off the board once its quest completes
+(`withdrawPathLootRequest`): left up, the crafter kept forging and used the stock the next quests
+needed. While a path's named skill is above its villager's level, the driver requests what that
+villager's unlocked jobs make, once each, and withdraws them at the next skill spend
+(`requestWorkToLevel`): the crafter otherwise idled at level 4 after Weapons I, short of the stone
+tier.
 
 ## Village scenarios run on peaceful (dev ruling 2026-10-24)
 

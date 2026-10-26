@@ -638,6 +638,9 @@ public final class VillageGrowthExecutor {
         if (furnishNextRoomQuest()) {
             return;
         }
+        if (refurnishMissing()) {
+            return;
+        }
         if (postFirstWorkRequest()) {
             return;
         }
@@ -830,14 +833,20 @@ public final class VillageGrowthExecutor {
     private static final int FEED_INTERVAL_TICKS = 2400;
 
     /**
-     * Path runs only: while a villager is starving, leave 8 cooked beef in a town chest (at most
-     * every {@link #FEED_INTERVAL_TICKS}), as a player does when the town runs out of food. Past
+     * Path runs only, past the fork: while a villager is starving and no chest holds villager
+     * food, leave 8 cooked beef in a town chest (at most every {@link #FEED_INTERVAL_TICKS}), as a
+     * player does when the town runs out of food. Past
      * the fork the onboarding food economy runs dry at roster 5-6 and the crafter spent whole
      * stretches cycling the dining jobs with nothing to eat (2026-10-26 runs 1 and 3; findings
      * #12). Logged as an intervention each time so the economy gap stays visible.
      */
     private boolean feedAStarvingTown() {
-        if (goal != Goal.PATHS_FINISHED || ticks - lastFedTick < FEED_INTERVAL_TICKS) {
+        if (goal != Goal.PATHS_FINISHED || ticks - lastFedTick < FEED_INTERVAL_TICKS || !pathStarterPosted()) {
+            return false;
+        }
+        if (townHasVillagerFood()) {
+            // Food in a chest means the diners can eat: feeding then only filled storage
+            // (run 11:39: 41 feedings, villagers stuck at NO_STORAGE).
             return false;
         }
         long starving = flag.getVillagerHandle().entities().stream()
@@ -850,6 +859,19 @@ public final class VillageGrowthExecutor {
         timesFed++;
         msg("INTERVENTION fed the town 8 cooked beef (" + starving + " starving; feeding #" + timesFed + ")");
         return true;
+    }
+
+    private boolean townHasVillagerFood() {
+        for (ContainerTarget<MCContainer, MCTownItem> target : TownContainers.getAllContainers(flag, level)) {
+            if (level.getBlockEntity(target.getBlockPos()) instanceof Container c) {
+                for (int i = 0; i < c.getContainerSize(); i++) {
+                    if (c.getItem(i).is(ca.bradj.questown.core.init.TagsInit.Items.VILLAGER_FOOD)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     /** Deposit items wanted by open quests. Real player path: leave them in a town chest. */
@@ -948,6 +970,40 @@ public final class VillageGrowthExecutor {
     }
 
     private String lastSkillUnlockBlocked = "";
+    private final java.util.Set<Item> levellingRequests = new java.util.HashSet<>();
+
+    /**
+     * A named skill is above the villager's level: ask the board for what its unlocked jobs make,
+     * once each, so it works and levels the way a player keeps a crafter busy. Without it the
+     * crafter idled at level 4 for 35 min after Weapons I, short of Weapons II's stone tier (5),
+     * with nothing on the board (2026-10-26 run 12:11, run 1).
+     */
+    private void requestWorkToLevel(UUID villager) {
+        java.util.Set<JobID> unlocked = flag.getVillagerHandle().getUnlockedJobs()
+                .getOrDefault(ca.bradj.questown.core.VillagerUUID.from(villager), com.google.common.collect.ImmutableSet.of());
+        for (JobID j : unlocked) {
+            net.minecraft.world.item.crafting.Ingredient product = ServerJobsRegistry.getInitialRequest(level, j);
+            if (product == null || product.isEmpty()) {
+                continue;
+            }
+            Item item = product.getItems()[0].getItem();
+            if (item == net.minecraft.world.item.Items.AIR || !levellingRequests.add(item)) {
+                continue;
+            }
+            flag.requestWorkFromPlayer(ca.bradj.questown.jobs.requests.WorkRequest.of(item));
+            msg("Posted a work request (" + Loader.itemIdOf(item) + ") to level townie " + villager.toString().substring(0, 8));
+        }
+    }
+
+    private void withdrawLevellingRequests() {
+        for (Item item : levellingRequests) {
+            flag.getWorkHandle().removeWorkRequest(ca.bradj.questown.jobs.requests.WorkRequest.of(item));
+        }
+        if (!levellingRequests.isEmpty()) {
+            msg("Removed " + levellingRequests.size() + " levelling work request(s)");
+        }
+        levellingRequests.clear();
+    }
 
     /**
      * Spends a BOP on the first skills-tab node a villager of the quest's root can unlock and has
@@ -967,11 +1023,16 @@ public final class VillageGrowthExecutor {
                     .sorted(java.util.Comparator.comparing(JobID::toNiceString))
                     .findFirst();
             if (node.isEmpty()) {
+                int villagerLevel = flag.getVillagerHandle().getVillagerLevel(v.getUUID());
                 why.add(wanted.getPath() + ": townie " + shortId((VisitorMobEntity) v) + " level "
-                        + flag.getVillagerHandle().getVillagerLevel(v.getUUID()) + " offers "
+                        + villagerLevel + " offers "
                         + unlockable.stream().map(JobID::toNiceString).sorted().toList());
+                if (named.isPresent() && ServerJobsRegistry.getAvailableAtLevel(named.get()) > villagerLevel) {
+                    requestWorkToLevel(v.getUUID());
+                }
                 continue;
             }
+            withdrawLevellingRequests();
             TownFlagBlockEntity.SkillUnlockResult r = flag.spendBopToUnlockSkill(v.getUUID(), node.get());
             msg("Spent a BOP on skill " + node.get().toNiceString() + " for townie "
                     + shortId((VisitorMobEntity) v) + " for the open skill-unlock quest: " + r);
@@ -1015,8 +1076,10 @@ public final class VillageGrowthExecutor {
                 return false;
             }
             BlockPos corner = buildingCorners.get(nextSpareBuilding++);
+            List<ItemStack> rescued = emptyChest(corner.offset(1, 0, 1));
             level.setBlockAndUpdate(corner.offset(1, 0, 1), Blocks.AIR.defaultBlockState());
             int slot = 0;
+            List<Placement> placed = new ArrayList<>();
             // A bed item places a whole bed, which is two of the recipe's bed entries.
             List<net.minecraft.world.item.crafting.Ingredient> toPlace = ca.bradj.questown.logic.BedHalves.oneEntryPerBed(
                     recipe.getIngredients(),
@@ -1028,10 +1091,74 @@ public final class VillageGrowthExecutor {
                 if (options.length == 0) {
                     continue;
                 }
-                placeViaItemUse(corner.offset(FURNISH_SLOTS.get(slot++)), options[0].copyWithCount(1));
+                Placement p = new Placement(corner.offset(FURNISH_SLOTS.get(slot++)), options[0].copyWithCount(1));
+                placeViaItemUse(p.pos(), p.stack().copy());
+                placed.add(p);
             }
+            furnishings.put(q.getBatchUUID() + "/" + id, new Furnishing(id, placed, ticks));
+            rescued.forEach(this::deposit);
             msg("Furnished room quest " + id + " in the building at " + corner.toShortString());
             check("room-quest-furnished[" + id + "]", true);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Take everything out of the spare building's chest before it is cleared for furnishing, the
+     * way a player empties a chest before breaking it. Clearing it with its contents deleted what
+     * the driver had just deposited there: the cook's coal and mutton went at 12:14:08-10 on
+     * 2026-10-26 (held run), and the cook beat stalled with an empty furnace (findings #4).
+     */
+    private List<ItemStack> emptyChest(BlockPos pos) {
+        List<ItemStack> out = new ArrayList<>();
+        if (level.getBlockEntity(pos) instanceof Container c) {
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                if (!c.getItem(i).isEmpty()) {
+                    out.add(c.getItem(i).copy());
+                    c.setItem(i, ItemStack.EMPTY);
+                }
+            }
+            c.setChanged();
+        }
+        return out;
+    }
+
+    private record Placement(BlockPos pos, ItemStack stack) {
+    }
+
+    private record Furnishing(ResourceLocation room, List<Placement> placements, int tick) {
+    }
+
+    /** Keyed like furnishedRoomQuests (batch uuid / room id): a completed quest is a new object. */
+    private final java.util.Map<String, Furnishing> furnishings = new java.util.HashMap<>();
+    private static final int REFURNISH_AFTER_TICKS = 600;
+
+    /**
+     * Re-place any furnishing block that did not land, for a room quest still open a while after
+     * it was furnished. An item use onto a cell a villager stands in places nothing, silently: a
+     * smithy got its light but no table and never became a room (2026-10-26 run 12:11, run 2).
+     */
+    private boolean refurnishMissing() {
+        java.util.Set<String> open = flag.getQuestHandle().getAllQuestsWithRewards().stream()
+                .map(AbstractMap.SimpleEntry::getKey)
+                .filter(q -> !q.isComplete() && q.getType() == Quest.QuestType.ROOM)
+                .map(q -> q.getBatchUUID() + "/" + q.getWantedId())
+                .collect(java.util.stream.Collectors.toSet());
+        furnishings.keySet().retainAll(open);
+        for (java.util.Map.Entry<String, Furnishing> e : furnishings.entrySet()) {
+            if (ticks - e.getValue().tick() < REFURNISH_AFTER_TICKS) {
+                continue;
+            }
+            List<Placement> missing = e.getValue().placements().stream()
+                    .filter(p -> level.getBlockState(p.pos()).isAir())
+                    .toList();
+            e.setValue(new Furnishing(e.getValue().room(), e.getValue().placements(), ticks));
+            if (missing.isEmpty()) {
+                continue;
+            }
+            missing.forEach(p -> placeViaItemUse(p.pos(), p.stack().copy()));
+            msg("Re-placed " + missing.size() + " furnishing block(s) for open room quest " + e.getValue().room());
             return true;
         }
         return false;
@@ -1135,7 +1262,8 @@ public final class VillageGrowthExecutor {
         return true;
     }
 
-    private final java.util.Set<ResourceLocation> pathLootRequested = new java.util.HashSet<>();
+    private final java.util.Map<ResourceLocation, Item> pathLootRequested = new java.util.HashMap<>();
+    private final java.util.Set<ResourceLocation> pathLootWithdrawn = new java.util.HashSet<>();
 
     /**
      * Post a job-board request for each open curated-path LOOT item, once, the way a player asks
@@ -1146,18 +1274,37 @@ public final class VillageGrowthExecutor {
     private boolean requestPathLoot() {
         for (AbstractMap.SimpleEntry<MCQuest, ?> e : flag.getQuestHandle().getAllQuestsWithRewards()) {
             MCQuest q = e.getKey();
-            if (q.isComplete() || q.getType() != Quest.QuestType.LOOT || q.pathBatch().isEmpty()) {
+            if (q.getType() != Quest.QuestType.LOOT || q.pathBatch().isEmpty()) {
+                continue;
+            }
+            if (q.isComplete()) {
+                withdrawPathLootRequest(q.getWantedId());
                 continue;
             }
             Item item = Loader.itemFromId(q.getWantedId());
-            if (item == null || item == net.minecraft.world.item.Items.AIR || !pathLootRequested.add(q.getWantedId())) {
+            if (item == null || item == net.minecraft.world.item.Items.AIR || pathLootRequested.containsKey(q.getWantedId())) {
                 continue;
             }
+            pathLootRequested.put(q.getWantedId(), item);
             flag.requestWorkFromPlayer(ca.bradj.questown.jobs.requests.WorkRequest.of(item));
             msg("Posted a work request (" + q.getWantedId() + ") for path quest " + q.toShortString());
             return true;
         }
         return false;
+    }
+
+    /**
+     * Take a path request off the board once its quest is done, as a player would: left up, the
+     * crafter kept forging (3 leather boots, 3 wooden swords) and used the stock the next quests
+     * needed (2026-10-26 run 11:39).
+     */
+    private void withdrawPathLootRequest(ResourceLocation wanted) {
+        Item item = pathLootRequested.get(wanted);
+        if (item == null || !pathLootWithdrawn.add(wanted)) {
+            return;
+        }
+        flag.getWorkHandle().removeWorkRequest(ca.bradj.questown.jobs.requests.WorkRequest.of(item));
+        msg("Removed the work request (" + wanted + "): its path quest is complete");
     }
 
     private boolean registerNextDoor() {
