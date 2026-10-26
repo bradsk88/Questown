@@ -473,3 +473,15 @@ jobs and rooms exist; the armorer `crafter/<material>_<piece>` expansion counts 
 `TownQuestsCuratedPathsTest` (fork, once-only posting, branch order, garden hold, tag NBT),
 `TownQuestsSkillUnlockTest.namedSkillQuest_*`, `TownQuestsCuratedPathsTest.postingABatch_revealsItsNamedSkills`.
 End to end: `paths/at_fork` and `paths/outfitter` (AUTOTESTS.md).
+
+## The ITEM stock check closes only open ITEM quests (2026-10-26)
+
+`QuestBatches.processItemQuests` (the per-tick backfill for ITEM quests, stock in town chests)
+collected **every** ITEM quest, finished ones included, and on a count met called the batch-wide
+`markRecipeAsComplete(wantedId)`, which closes the first open quest wanting that id **whatever its
+type**. So a finished ITEM quest for X plus X in stock closed any later open quest for X: in the
+held `paths/outfitter` run the hunter onboarding's finished "Stone Sword" ITEM quest and the
+stone swords in stock closed the Outfitter's "make a Stone Sword" LOOT card the tick Weapons II
+posted (a LOOT quest counts production, plan ruling 16). Now only open ITEM quests take part and
+only an ITEM quest is completed (`QuestBatch.markRecipeAsComplete(room, recipe, which)`).
+Pinned by `TownQuestsItemQuestScopeTest`.

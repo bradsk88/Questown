@@ -154,7 +154,16 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
             ROOM room,
             KEY recipe
     ) {
-        Stream<QUEST> matches = this.quests.stream().filter(v -> recipe.equals(v.getWantedId()));
+        return markRecipeAsComplete(room, recipe, v -> true);
+    }
+
+    /** As {@link #markRecipeAsComplete(Object, Object)}, completing only a quest {@code which} accepts. */
+    public boolean markRecipeAsComplete(
+            ROOM room,
+            KEY recipe,
+            java.util.function.Predicate<QUEST> which
+    ) {
+        Stream<QUEST> matches = this.quests.stream().filter(v -> recipe.equals(v.getWantedId())).filter(which);
         Optional<QUEST> incomplete = matches.filter(v -> !v.isComplete()).findFirst();
         if (incomplete.isEmpty()) {
             return false;

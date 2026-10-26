@@ -76,8 +76,11 @@ public class QuestBatches<
             BiPredicate<KEY, ITEM> questMatchesStack,
             Tracker<ITEM_KEY, ITEM, QUEST> tracker
     ) {
+        // Open ITEM quests only, and only an ITEM quest is completed: a finished ITEM quest for X
+        // plus X in stock used to close the next open quest wanting X whatever its type, so a
+        // LOOT ("make X") card closed on stock (2026-10-26, the Outfitter's Stone Sword).
         List<QUEST> stacksToFind = getAll().stream()
-                                           .filter(v -> v.getType() == Quest.QuestType.ITEM)
+                                           .filter(v -> v.getType() == Quest.QuestType.ITEM && !v.isComplete())
                                            .collect(Collectors.toCollection(ArrayList::new));
         if (stacksToFind.isEmpty()) {
             return;
@@ -93,7 +96,7 @@ public class QuestBatches<
             }
             int result = tracker.addCount(itemCounts, stack);
             if (result >= quest.get().getCountNeeded()) {
-                markRecipeAsComplete(null, quest.get().getWantedId());
+                markItemQuestAsComplete(quest.get().getWantedId());
                 stacksToFind.remove(quest.get());
                 if (stacksToFind.isEmpty()) {
                     return;
@@ -259,6 +262,14 @@ public class QuestBatches<
 
     public ImmutableList<QUEST> getAll() {
         return ImmutableList.copyOf(this.batches.stream().flatMap(QuestBatch::stream).toList());
+    }
+
+    private void markItemQuestAsComplete(KEY itemId) {
+        for (BATCH b : batches) {
+            if (b.markRecipeAsComplete(null, itemId, q -> q.getType() == Quest.QuestType.ITEM)) {
+                return;
+            }
+        }
     }
 
     public void markRecipeAsComplete(
