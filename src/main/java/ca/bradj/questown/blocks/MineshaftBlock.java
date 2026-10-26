@@ -3,7 +3,9 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.mc.Compat;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -37,6 +39,10 @@ public class MineshaftBlock extends RoomBlock {
             return InteractionResult.CONSUME;
         }
         Compat.sendMessage(sp, Compat.translatable("message.questown.mineshaft.use"));
+        // A deep-cave echo from the shaft (dev, r21): vanilla cave ambience, a random variant each use.
+        if (p_60504_ instanceof ServerLevel sl) {
+            Compat.playSound(sl, p_60505_, Compat.caveAmbience(), SoundSource.BLOCKS);
+        }
         return InteractionResult.CONSUME;
     }
 

@@ -41,7 +41,7 @@ sighting looked like a path-cost problem.
    floor under the doorway, `walkTarget=150 70 48`, and was lifted to the roof the same way). It
    paths there with `createPath(ImmutableSet.of(pos), 8, false, accuracy)`, the call vanilla's own
    overload makes. Where the one-block-low target comes from is still untraced.
-3. **A target under another solid block goes beside, never on top (dev: "the roof never is").** `besideSolidStack` picks the first door or standable neighbour at the target's level. **A single solid block is still lifted one block** Pick targets that are standable (non-solid foot
+3. **A target under another solid block goes beside, never on top (dev: "the roof never is").** `besideSolidStack` picks the first door or standable neighbour at the target's level. **A single solid block is still lifted one block.** Pick targets that are standable (non-solid foot
    and torso cells, solid ground: `WalkTargets.isStandable`), not the block being used. If a new
    caller must target a solid block, extend the `VillagerPathNavigation` override rather than
    adding a cost tweak.

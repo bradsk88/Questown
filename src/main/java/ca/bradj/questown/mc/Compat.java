@@ -73,6 +73,14 @@ public class Compat {
         );
     }
 
+    /**
+     * Vanilla's cave ambience: a random one of its variants each play. A {@code Holder} on 1.20+,
+     * a plain {@code SoundEvent} on 1.19.2.
+     */
+    public static SoundEvent caveAmbience() {
+        return net.minecraft.sounds.SoundEvents.AMBIENT_CAVE.value();
+    }
+
     public static void playSound(
             ServerLevel serverLevel,
             BlockPos pos,
