@@ -930,7 +930,10 @@ cycled the dining jobs instead of working (findings #14). It feeds only past the
 when no chest holds villager food (feeding on a timer filled storage: 41 feedings, villagers stuck
 at `NO_STORAGE`). Count the interventions per run before reading a path run's timings.
 
-**Furnishing no longer deletes deposits** (2026-10-26). Furnishing clears the spare building's
+**The driver deposits into chests only, never a furnace** (2026-10-26): a furnace is a town
+container, and `deposit` once filled the kitchen's (cooked salmon in the input, bread in the fuel
+slot, a stone sword in the output), so the cook could neither fuel nor load it and the cook beat
+stalled. **Furnishing no longer deletes deposits** (2026-10-26). Furnishing clears the spare building's
 chest; it now empties it first and re-deposits the contents (`emptyChest`). Before, the coal and
 mutton deposited for the cook landed in a chest that the cook follow-up's furnishing cleared two
 seconds later, the furnace sat with raw mutton and no fuel, and the 3-attempt need cap meant no

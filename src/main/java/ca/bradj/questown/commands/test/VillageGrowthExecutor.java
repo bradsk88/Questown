@@ -1335,7 +1335,11 @@ public final class VillageGrowthExecutor {
     private boolean deposit(ItemStack stack) {
         List<ContainerTarget<MCContainer, MCTownItem>> containers = TownContainers.getAllContainers(flag, level);
         for (ContainerTarget<?, MCTownItem> target : containers) {
-            if (level.getBlockEntity(target.getBlockPos()) instanceof Container c) {
+            // Chests only, as a player stocks a town: a furnace is a town container too, and the
+            // driver once filled the kitchen's (cooked salmon in the input, bread in the fuel slot,
+            // a sword in the output) and the cook could never use it (2026-10-26 13:14).
+            if (level.getBlockEntity(target.getBlockPos()) instanceof Container c
+                    && !(c instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity)) {
                 for (int i = 0; i < c.getContainerSize() && !stack.isEmpty(); i++) {
                     if (c.getItem(i).isEmpty()) {
                         // Respect max stack size — a larger stack is clamped to 1
