@@ -648,7 +648,9 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     }
 
     public void register(ENTITY vEntity) {
-        QT.FLAG_LOGGER.info("Registered entity with town {}: {}", delegator.getUUID(vEntity), vEntity);
+        // Fires on every load of the entity, not only an arrival; the UUID is the villager's (r20 read
+        // the old "Registered entity with town <uuid>" wording as the town's UUID).
+        QT.FLAG_LOGGER.info("Registered villager {} with the town (arrival or reload): {}", delegator.getUUID(vEntity), vEntity);
         // One entry per townie: a reloaded entity is a new object with the same UUID, and the
         // stale copy (unloaded with its chunk) stayed listed - the town counted the villager
         // twice and the raw-food arrival gate opened (2026-10-17 village/day1 reload step).

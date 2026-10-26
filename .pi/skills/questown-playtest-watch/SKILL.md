@@ -175,9 +175,12 @@ ticket is what survived the restart.)
   `_qtdev nav <villager uuid>` (the live walk target, the path's target and end, canReach: the
   first move for "a villager is stuck / faces a wall". `walkTarget` != `pathTarget` means vanilla
   moved the target; see `docs/solutions/best-practices/vanilla-lifts-solid-path-targets-2026-10-25.md`.
-  r20 spent three code readings guessing the target before this existed).
-- **"Registered entity with town <uuid>": the UUID is the villager's**, not the town's. The same
-  UUID again with a new entity id is a chunk reload, not an arrival (r20: told the dev a second
+  r20 spent three code readings guessing the target before this existed). To watch it over time:
+  `tools/agent-playtest/navwatch.sh <restart.sh server log> <uuid>...` under a Monitor (prints on
+  change, keeps "no villager" answers; pipe through `grep --line-buffered 'canReach=false'` for stuck paths).
+- **"Registered villager <uuid> with the town (arrival or reload)"** (before 2026-10-26: "Registered
+  entity with town <uuid>"; the UUID was always the villager's, not the town's). The same UUID again
+  with a new entity id is a chunk reload, not an arrival (r20: told the dev a second
   villager had joined; it was the first one reloading).
 - **Villagers vanish from probes, or "That position is not loaded": check whether the player is
   dead.** `data get entity Dev Health` = 0.0 means the respawn screen, and the town unloads (r20

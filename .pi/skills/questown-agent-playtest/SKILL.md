@@ -241,7 +241,8 @@ relights the campfire", which the Acting section already said.
   the dawn `resetDiningRooms` debug line ("Resetting plate claim and state at ...") and townies
   entering `jobId='dining'` (the table diner, chosen only with a dining room) showed it matched.
   r16 also wrote "dawn brought no villager" from an arrival grep that missed the real wording:
-  arrivals log as "Registered entity with town <uuid>"; `_qtdev villager_stats <flag>` counts them.
+  arrivals (and every reload) log as "Registered villager <uuid> with the town" ("Registered entity
+  with town <uuid>" before 2026-10-26); `_qtdev villager_stats <flag>` counts them.
 - A townie standing in a doorway has its bubble inside the wall above the door: no icon shows from
   any side. The focus hint line ("They need X to work.") fires only for the bubble holder
   (`NeedBubbleFocus`), so a hint line in a shot proves the bubble is held. Aim at the head (pitch

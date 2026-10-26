@@ -13,7 +13,7 @@ echo "--- job changes (counts)"
 tail -n +"$from" $L | grep -a 'Job changed to' \
   | sed -E "s/.*rootId='([a-z_]+)', jobId='([a-z_]+)'.*/\1:\2/" | sort | uniq -c | sort -rn | head -12
 echo "--- extracts / quests / arrivals"
-tail -n +"$from" $L | grep -aE "LOOTTRACE\] extract '[^']+' vs LOOT quest [^ ]+ -> true|Broadcasting message|Registered entity with town|Nightfall" \
+tail -n +"$from" $L | grep -aE "LOOTTRACE\] extract '[^']+' vs LOOT quest [^ ]+ -> true|Broadcasting message|Registered (entity with town|villager)|Nightfall" \
   | sed -E 's/^\[[^]]*\] \[[^]]*\] \[[^]]*\]: //' | cut -c1-150 | uniq -c | tail -15
 n=$(wc -l < $L)
 tools/ffeed.sh feed "_qtdev villager_stats $fx $fy $fz" >/dev/null
