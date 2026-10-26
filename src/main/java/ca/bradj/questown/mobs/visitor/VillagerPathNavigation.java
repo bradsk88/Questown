@@ -1,7 +1,9 @@
 package ca.bradj.questown.mobs.visitor;
 
+import ca.bradj.questown.jobs.WalkTargets;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.level.Level;
@@ -50,7 +52,33 @@ public class VillagerPathNavigation extends GroundPathNavigation {
         if (door != null) {
             return createPath(ImmutableSet.of(door), 8, false, accuracy);
         }
+        BlockPos beside = besideSolidStack(pos);
+        if (beside != null) {
+            return createPath(ImmutableSet.of(beside), 8, false, accuracy);
+        }
         return super.createPath(pos, accuracy);
+    }
+
+    /**
+     * A target buried under another solid block (a stacked chest, a wall) would be lifted to the
+     * top of the stack, usually the roof: the target is fine, the roof never is (dev, r21). Stand
+     * beside it instead, at its own level: the first door or standable cell next to it. A single
+     * solid block (a bed) keeps vanilla's one-block lift, which sleeping relies on.
+     */
+    private @Nullable BlockPos besideSolidStack(BlockPos pos) {
+        if (!level.getBlockState(pos).isSolid() || !level.getBlockState(pos.above()).isSolid()) {
+            return null;
+        }
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            BlockPos n = pos.relative(d);
+            if (isDoor(n)) {
+                return lowerHalf(n);
+            }
+            if (WalkTargets.isStandable(level, n)) {
+                return n;
+            }
+        }
+        return null;
     }
 
     private @Nullable BlockPos doorAtOrJustAbove(BlockPos pos) {

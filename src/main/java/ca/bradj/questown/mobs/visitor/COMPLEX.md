@@ -280,3 +280,10 @@ Fix: `VillagerPathNavigation.createPath(BlockPos, int)` stops the lift at a door
 Any other solid target is still lifted, so target pickers must return standable cells.
 Not unit-tested (a navigation needs a live mob and level); verified live on the r20 world (23:11): after the fix the stuck hunter's path reached (`canReach=true`), it collected supplies (inspect: "carrying: 1x minecraft:stone_sword") and went to the gate; before it, five probe reads showed `pathTarget=150 75 48`. Still open: the cook in `downtime`/NO_SUPPLIES was seen (23:12:02) with `walkTarget=151 71 48`, the chest block itself, lifted to `151 73 48`. That is a second target picker handing the navigator a solid block, not yet traced.
 The general learning: `docs/solutions/best-practices/vanilla-lifts-solid-path-targets-2026-10-25.md`.
+
+**Never the roof (dev ruling, r21, 2026-10-26):** "the storeroom is a valid choice for a wandering
+'relaxing' villager, but the roof never is." A target buried under another solid block (the stacked
+store chest the downtime job picks, a wall) now resolves to the first door or standable cell beside
+it at its own level (`VillagerPathNavigation.besideSolidStack`), not the top of the stack. A single
+solid block with air above (a bed) keeps vanilla's one-block lift. Why downtime picks the chest at
+all (it declares no ingredients) is still untraced: `.scratch/agent-playtest-2026-10-25-r21/findings.md` #6/#15.
