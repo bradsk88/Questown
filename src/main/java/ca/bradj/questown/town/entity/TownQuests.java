@@ -9,6 +9,9 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
+import ca.bradj.questown.town.quests.paths.QuestPath;
+import ca.bradj.questown.town.quests.paths.QuestPathProgress;
+import ca.bradj.questown.town.quests.paths.QuestPaths;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.core.init.TagsInit;
@@ -251,6 +254,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     /**
      * Completes every open SKILL_UNLOCK quest on {@code unlocked}'s skill tree (same root) when the
      * player spends a Block of Progress on a skill ({@code TownFlagBlockEntity.unlockSkillFromPlayer}).
+     * A quest that names a skill ({@link MCQuest#namedSkill}) completes only for that skill.
      */
     public void markSkillUnlocked(JobID unlocked) {
         for (MCQuestBatch batch : questBatches.getAllBatches()) {
@@ -259,6 +263,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                     continue;
                 }
                 if (!MCQuest.skillTreeRoot(q.getWantedId()).equals(unlocked.rootId())) {
+                    continue;
+                }
+                if (MCQuest.namedSkill(q.getWantedId()).map(s -> !s.equals(unlocked)).orElse(false)) {
                     continue;
                 }
                 batch.markRecipeAsComplete(null, q.getWantedId());
@@ -549,6 +556,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         retireJobUnlockQuests();
         backfillSatisfiedQuests(town);
         postCookFollowUpIfDue(TownFlagTutorialAdapter.from(this.town.getUnsafe(), questBatches));
+        postPathBatchesIfDue(TownFlagTutorialAdapter.from(this.town.getUnsafe(), questBatches));
 
         ServerLevel level = town.getServerLevel();
         int size = getVillagers(this).size();
@@ -808,6 +816,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         r = tryPhase2_4_emptyRooms(view);             if (r != null) return r;
         r = tryPhase2_5_jobChangeAndFood(view);       if (r != null) return r;
         r = tryPhase2_7_miner(view);                  if (r != null) return r;
+        if (!curatedPaths.get().isEmpty()) {
+            // The fork (plan ruling 2): the top-need, crafter and supply-chain phases left the
+            // trunk; the curated paths follow the miner beat.
+            r = tryPhase3_newJobRoom(view);           if (r != null) return r;
+            r = tryCuratedPaths(view);                if (r != null) return r;
+            return Tutorial.DONE;
+        }
         r = tryPhase2_75_topNeedUnlock(view);         if (r != null) return r;
         r = tryPhase3_newJobRoom(view);               if (r != null) return r;
         r = tryPhase4_crafter(view);                  if (r != null) return r;
@@ -974,6 +989,126 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         addMiner(view);
         notifyNewQuests(view);
         return Tutorial.APPLIED;
+    }
+
+    /** The loaded curated paths; a test substitutes its own. */
+    Supplier<List<QuestPath>> curatedPaths = QuestPaths::all;
+
+    /**
+     * The fork (plan ruling 2): the onboarding miner batch is complete. Each path's starter batches
+     * post there, so the paths follow the trunk.
+     */
+    boolean atTheFork() {
+        ResourceLocation minerJob = JobID.toRL(ONBOARDING_MINER_JOB);
+        return questBatches.getAllBatches().stream()
+                .filter(b -> b.getAll().stream().anyMatch(q -> q.isOnboarding()
+                        && q.getType() == Quest.QuestType.JOB_CHANGE
+                        && minerJob.equals(q.getWantedId())))
+                .anyMatch(b -> b.getAll().stream().allMatch(Quest::isComplete));
+    }
+
+    /**
+     * Posts every path batch that is due: starters at the fork, then any batch whose opens_after
+     * batches are complete ({@link QuestPathProgress}). Runs every tick, because a batch with no
+     * arrival queues no batch request for the ladder to answer (like {@link #postCookFollowUpIfDue}).
+     */
+    void postPathBatchesIfDue(TutorialTownView view) {
+        if (!atTheFork()) {
+            return;
+        }
+        boolean postedAny = false;
+        for (QuestPath path : curatedPaths.get()) {
+            Set<String> posted = pathBatchIds(path, false);
+            for (QuestPath.Batch b : QuestPathProgress.toPost(path, posted, pathBatchIds(path, true))) {
+                if (b.isStarter()) {
+                    view.fireTutorialTrigger(TutorialTrigger.Triggers.TutorialComplete);
+                }
+                addPathBatch(view, path, b);
+                postedAny = true;
+            }
+        }
+        if (postedAny) {
+            notifyNewQuests(view);
+        }
+    }
+
+    /**
+     * The ladder's path step: holds the garden while a taken path has batches left (plan ruling 4).
+     * Until a path is taken the garden waits too, so the starters are the only new quests.
+     */
+    @Nullable Tutorial tryCuratedPaths(TutorialTownView view) {
+        if (!atTheFork()) {
+            return Tutorial.SKIPPED;
+        }
+        postPathBatchesIfDue(view);
+        boolean anyTaken = false;
+        for (QuestPath path : curatedPaths.get()) {
+            Set<String> done = pathBatchIds(path, true);
+            if (!QuestPathProgress.taken(path, done)) {
+                continue;
+            }
+            anyTaken = true;
+            if (!QuestPathProgress.finished(path, pathBatchIds(path, false), done)) {
+                return Tutorial.SKIPPED;
+            }
+        }
+        return anyTaken ? null : Tutorial.SKIPPED;
+    }
+
+    /** The batch ids of {@code path} this town has posted, or (completeOnly) completed. */
+    Set<String> pathBatchIds(QuestPath path, boolean completeOnly) {
+        String prefix = path.id() + "/";
+        Map<String, Boolean> allComplete = new HashMap<>();
+        for (MCQuest q : questBatches.getAll()) {
+            q.pathBatch()
+             .filter(t -> t.startsWith(prefix))
+             .ifPresent(t -> allComplete.merge(t.substring(prefix.length()), q.isComplete(), Boolean::logicalAnd));
+        }
+        if (!completeOnly) {
+            return allComplete.keySet();
+        }
+        return allComplete.entrySet().stream()
+                          .filter(Map.Entry::getValue)
+                          .map(Map.Entry::getKey)
+                          .collect(Collectors.toSet());
+    }
+
+    private void addPathBatch(TutorialTownView view, QuestPath path, QuestPath.Batch batch) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        for (QuestPath.Step s : batch.quests()) {
+            q.addNewQuest(pathQuest(batchUUID, s));
+        }
+        String phase = batch.arrival() ? TutorialTownView.PHASE_PATH_ARRIVAL : TutorialTownView.PHASE_PATH;
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(phase));
+        if (batch.arrival()) {
+            provisionArrival(view, qq);
+        }
+        // Tag after provisioning, so the arrival's bed and storeroom quests count toward the batch.
+        qq.getAll().forEach(quest -> quest.setPathBatch(path.batchTag(batch)));
+        // Onboarding-flagged (plan ruling 22): a path's job change gets the trunk's guaranteed root
+        // and applies at the spend.
+        markOnboarding(qq);
+        questBatches.add(qq);
+        QT.QUESTS_LOGGER.info("Quest path batch posted: {}", path.batchTag(batch));
+    }
+
+    private static MCQuest pathQuest(UUID batchUUID, QuestPath.Step s) {
+        return switch (s.kind()) {
+            case ROOM -> MCQuest.standalone(batchUUID, null, new ResourceLocation(s.id()));
+            case JOB_CHANGE -> {
+                MCQuest job = MCQuest.jobChange(batchUUID, null, pathJob(s.id()));
+                job.setFlavorText("Right-click a villager and use Blocks of Progress");
+                yield job;
+            }
+            case LOOT -> MCQuest.loot(batchUUID, null, new ResourceLocation(s.id()), s.count());
+            case SKILL -> MCQuest.namedSkillUnlock(batchUUID, null, pathJob(s.id()));
+        };
+    }
+
+    private static JobID pathJob(String rootSlashJob) {
+        String[] parts = rootSlashJob.split("/");
+        return new JobID(parts[0], parts[1]);
     }
 
     private boolean minerBeatPosted() {

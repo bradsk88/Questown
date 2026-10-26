@@ -39,6 +39,10 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     // need), or null. Locks the top-need beat while open and retires that producer once built.
     @Nullable
     private String topNeedProducer;
+    // The curated-path batch this quest was posted for ("questown:outfitter/start", QuestPath.batchTag),
+    // or null. The record of which path batches a town has posted and completed.
+    @Nullable
+    private String pathBatch;
 
     Quest() {
         this(null, null, null, null, null, 1);
@@ -188,6 +192,14 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         this.topNeedProducer = producerRoot;
     }
 
+    public Optional<String> pathBatch() {
+        return Optional.ofNullable(pathBatch);
+    }
+
+    public void setPathBatch(@Nullable String pathBatchTag) {
+        this.pathBatch = pathBatchTag;
+    }
+
     /**
      * Copy the saved state the load replay's typed rebuild (QuestBatches.filterOutDuplicateCompletion)
      * does not reconstruct: the onboarding marker (it gates arrivals) and the flavor text.
@@ -197,6 +209,7 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         this.discardable = saved.discardable;
         this.flavorText = saved.flavorText;
         this.topNeedProducer = saved.topNeedProducer;
+        this.pathBatch = saved.pathBatch;
     }
 
     public enum QuestStatus {

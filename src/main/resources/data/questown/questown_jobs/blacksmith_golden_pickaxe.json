@@ -1,7 +1,7 @@
 {
   "version": 1,
   "id": "crafter/golden_pickaxe",
- "available_at_level": 22,
+ "available_at_level": 11,
   "unlocks_title": "blacksmith",
   "priority": "3000",
   "parent": "crafter/golden_hoe",

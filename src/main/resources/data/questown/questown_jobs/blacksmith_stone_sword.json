@@ -1,7 +1,7 @@
 {
   "version": 1,
   "id": "crafter/stone_sword",
- "available_at_level": 12,
+ "available_at_level": 5,
   "unlocks_title": "blacksmith",
   "priority": "4000",
   "parent": "crafter/stone_shovel",

@@ -5,6 +5,7 @@ import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.ShowTutorialToastMessage;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -161,8 +162,10 @@ public class TownMessages {
             case LOOT -> ca.bradj.questown.gui.UIQuest.lootName(wantedId);
             case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", jobName(wantedId));
             case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", jobName(wantedId));
-            case SKILL_UNLOCK -> Compat.translatable("menu.quests.skill_unlock",
-                    Compat.translatable("jobs." + MCQuest.skillTreeRoot(wantedId)));
+            case SKILL_UNLOCK -> MCQuest.namedSkill(wantedId)
+                    .map(s -> Compat.translatable("menu.quests.skill_unlock.named", Jobs.getVariantNameComponent(s)))
+                    .orElseGet(() -> Compat.translatable("menu.quests.skill_unlock",
+                            Compat.translatable("jobs." + MCQuest.skillTreeRoot(wantedId))));
             default -> RoomRecipes.getName(wantedId);
         };
     }

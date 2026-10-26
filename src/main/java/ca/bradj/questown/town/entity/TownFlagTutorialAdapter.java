@@ -105,6 +105,9 @@ class TownFlagTutorialAdapter implements TutorialTownView {
             case TutorialTownView.PHASE_HUNTER_GATHERER, TutorialTownView.PHASE_JOB_CHANGE_FOOD -> arrivalWithQuestBatch();
             // The cook-job batch pays the Block of Progress its follow-up's cook skill costs.
             case TutorialTownView.PHASE_COOK_JOB -> new MCInstantReward(flag, new GrantBlockOfProgressReward(flag, 1));
+            // Curated path batches (plan ruling 19): an arrival on some, nothing on the rest.
+            case TutorialTownView.PHASE_PATH_ARRIVAL -> arrivalWithQuestBatch();
+            case TutorialTownView.PHASE_PATH -> new MCRewardList(flag);
             case TutorialTownView.PHASE_NEW_JOB_ROOM, TutorialTownView.PHASE_MINER ->
                     new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
             default -> new AddBatchOfQuestsForVisitorReward(flag, null);

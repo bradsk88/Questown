@@ -9,6 +9,9 @@ import ca.bradj.questown.town.quests.QuestBatches;
 import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -115,6 +118,41 @@ class TownQuestsSkillUnlockTest {
         quests.questBatches.markRecipeAsComplete(null, JobID.toRL(TownQuests.ONBOARDING_COOK_JOB));
 
         assertFalse(skillQuest(quests).isComplete());
+    }
+
+    /**
+     * A curated path's skill quest names one skill (dev, 2026-10-26: "Unlock Wooden Shovel, then
+     * Wooden Sword"): only that node completes it.
+     */
+    @Test
+    void namedSkillQuest_completesOnlyForItsSkill() {
+        TownQuests quests = new TownQuests();
+        quests.questBatches.addChangeListener(NO_OP_LISTENER);
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs inputs = new MCQuestBatch.Inputs(batchUUID, null);
+        JobID shovel = new JobID("crafter", "wooden_shovel");
+        JobID sword = new JobID("crafter", "wooden_sword");
+        inputs.addNewQuest(MCQuest.namedSkillUnlock(batchUUID, null, shovel));
+        inputs.addNewQuest(MCQuest.namedSkillUnlock(batchUUID, null, sword));
+        quests.questBatches.add(inputs.withRewardUponCompletion(new NoOpReward()));
+
+        quests.markSkillUnlocked(shovel);
+
+        Map<JobID, Boolean> done = new HashMap<>();
+        quests.questBatches.getAll().forEach(q ->
+                done.put(MCQuest.namedSkill(q.getWantedId()).orElseThrow(), q.isComplete()));
+        assertEquals(Map.of(shovel, true, sword, false), done);
+    }
+
+    @Test
+    void namedSkillQuest_namesItsTreeAndSkill() {
+        JobID sword = new JobID("crafter", "wooden_sword");
+        MCQuest q = MCQuest.namedSkillUnlock(UUID.randomUUID(), null, sword);
+
+        assertEquals("crafter", MCQuest.skillTreeRoot(q.getWantedId()));
+        assertEquals(Optional.of(sword), MCQuest.namedSkill(q.getWantedId()));
+        assertEquals(Optional.empty(),
+                MCQuest.namedSkill(MCQuest.skillUnlock(UUID.randomUUID(), null, COOK_TREE).getWantedId()));
     }
 
     @Test

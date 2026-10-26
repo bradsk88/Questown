@@ -104,7 +104,7 @@ public class AutoTestRunner {
         // chunk loaded regardless.
         boolean heldVillage = only != null
                 && (nameMatches("village/growth", only) || nameMatches("village/day1", only)
-                        || nameMatches("village/self_sufficiency", only))
+                        || nameMatches("village/self_sufficiency", only) || nameMatches("paths/at_fork", only))
                 && "true".equals(System.getProperty(SYSPROP_HOLD));
         GameProfile profile = new GameProfile(UUID.randomUUID(), "[AutoTest]");
         var fakePlayer = FakePlayerFactory.get(overworld, profile);
@@ -126,7 +126,9 @@ public class AutoTestRunner {
         List<ChickenArcBlueprint> chickenList = runChicken ? ChickenArcBlueprintRegistry.all() : List.of();
 
         boolean runDay1 = only != null && nameMatches("village/day1", only);
-        boolean runVillage = only != null && (nameMatches("village/growth", only) || runDay1);
+        // paths/at_fork: growth's driver, stopped (and, held, kept) at the curated-path fork.
+        boolean runAtFork = only != null && nameMatches("paths/at_fork", only);
+        boolean runVillage = only != null && (nameMatches("village/growth", only) || runDay1 || runAtFork);
         boolean runSelfSuff = only != null && nameMatches("village/self_sufficiency", only);
         if (runVillage || runSelfSuff) {
             runJobs = false;
@@ -183,7 +185,7 @@ public class AutoTestRunner {
                 ? new ChickenArcAllExecutor(overworld, server, fakePlayer, ORIGIN, output, chickenList)
                 : null;
         VillageGrowthExecutor villageExecutor = runVillage
-                ? new VillageGrowthExecutor(overworld, server, fakePlayer, ORIGIN, runDay1)
+                ? new VillageGrowthExecutor(overworld, server, fakePlayer, ORIGIN, runDay1, runAtFork)
                 : null;
         VillageSelfSufficiencyExecutor selfSuffExecutor = runSelfSuff
                 ? new VillageSelfSufficiencyExecutor(overworld, server, fakePlayer, ORIGIN)

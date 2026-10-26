@@ -362,7 +362,8 @@ reaches the job's `available_at_level` (JSON field, default
 start at level 1, so a fresh town has no unlockable jobs and the tab is hidden).
 The 25 blacksmith material-tier files (`blacksmith_{wood,stone,iron,golden,diamond}_
 {axe,shovel,pickaxe,hoe,sword}.json` - crafter-family ids, not a blacksmith root)
-carry the values: wood 7, stone 12, iron 17, golden 22, diamond 27. The gate
+carry the values: wood 3, stone 5, iron 8, golden 11, diamond 14 (lowered 2026-10-26 for the
+Outfitter path, plan ruling 15; were 7 / 12 / 17 / 22 / 27). The gate
 lives on the **job, not the layer**: `ResourceJobLoader` parses the optional int
 into `Work.availableAtLevel`; `ServerJobsRegistry.getAvailableAtLevel(JobID)` is
 the lookup (pre-startup NPE guard, like `getAllRootJobs`); `TownVillagerUIsHandle.showUI`

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "id": "crafter/iron_axe",
- "available_at_level": 17,
+ "available_at_level": 8,
   "unlocks_title": "blacksmith",
   "priority": "4000",
   "parent": "crafter/iron_shovel",

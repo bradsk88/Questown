@@ -124,16 +124,24 @@ public final class VillageGrowthExecutor {
             ServerPlayer player,
             BlockPos origin
     ) {
-        this(level, server, player, origin, false);
+        this(level, server, player, origin, false, false);
     }
+
+    /**
+     * paths/at_fork: play onboarding the real way and stop once a curated path's starter batch has
+     * posted - a town at the fork, held as the jumping-off point for path playtests (dev, 2026-10-26).
+     */
+    private final boolean stopAtFork;
 
     public VillageGrowthExecutor(
             ServerLevel level,
             MinecraftServer server,
             ServerPlayer player,
             BlockPos origin,
-            boolean day1
+            boolean day1,
+            boolean stopAtFork
     ) {
+        this.stopAtFork = stopAtFork;
         this.level = level;
         this.server = server;
         this.player = player;
@@ -275,12 +283,18 @@ public final class VillageGrowthExecutor {
             }
         }
         long roster = flag.getVillagerHandle().size();
+        if (stopAtFork && pathStarterPosted()) {
+            msg("At the fork: a curated path's starter batch is posted (roster=" + roster + ")");
+            check("path-starter-posted", true);
+            phase = Phase.CHECK_RESULTS;
+            return;
+        }
         if (day1 != null) {
             if (day1Finished()) {
                 phase = Phase.CHECK_RESULTS;
                 return;
             }
-        } else if (roster >= TARGET_VILLAGERS) {
+        } else if (!stopAtFork && roster >= TARGET_VILLAGERS) {
             msg("Roster reached " + roster + " >= " + TARGET_VILLAGERS);
             check("reached-5-villagers", true);
             phase = Phase.CHECK_RESULTS;
@@ -289,7 +303,7 @@ public final class VillageGrowthExecutor {
         sleepThroughTheNightIfDark();
         if (day1 == null && ticks >= MAX_TICKS) {
             msg("FAIL timed out after " + MAX_TICKS + " ticks at roster=" + roster);
-            check("reached-5-villagers", false);
+            check(stopAtFork ? "path-starter-posted" : "reached-5-villagers", false);
             phase = Phase.CHECK_RESULTS;
             return;
         }
@@ -498,13 +512,19 @@ public final class VillageGrowthExecutor {
     private void checkResults() {
         checkTripwire();
         long roster = flag != null ? flag.getVillagerHandle().size() : 0;
-        passed = day1 != null ? passedChecks == totalChecks : roster >= TARGET_VILLAGERS;
+        passed = day1 != null || stopAtFork ? passedChecks == totalChecks : roster >= TARGET_VILLAGERS;
         msg("========================================");
         msg("RESULT: roster=" + roster + "/" + TARGET_VILLAGERS
                 + " checks=" + passedChecks + "/" + totalChecks
                 + " -> " + (passed ? "PASS" : "FAIL"));
         msg("========================================");
         phase = Phase.DONE;
+    }
+
+    private boolean pathStarterPosted() {
+        return flag.getAllQuestsWithRewards().stream()
+                   .map(AbstractMap.SimpleEntry::getKey)
+                   .anyMatch(q -> q.pathBatch().isPresent());
     }
 
     // ---- player actions (real mechanisms only) ----
@@ -802,27 +822,31 @@ public final class VillageGrowthExecutor {
     /**
      * Spend a Block of Progress on a skill while a SKILL_UNLOCK quest is open (the cook batch's
      * cook skill) - the player's skills-tab spend (owner path: spendBopToUnlockSkill). Picks the
-     * first node the skills tab offers a villager of the quest's root that it has not unlocked yet.
-     * Runs after the job-change spend, so an open job change gets the BOP first.
+     * first node the skills tab offers a villager of the quest's root that it has not unlocked yet,
+     * or the quest's own skill when it names one (curated paths). Runs after the job-change spend, so
+     * an open job change gets the BOP first.
      */
     private boolean spendBopOnOpenSkillUnlock() {
         if (flag.getBlocksOfProgress() <= 0) {
             return false;
         }
-        java.util.Optional<String> tree = flag.getQuestHandle().getAllQuestsWithRewards().stream()
+        java.util.Optional<ResourceLocation> wanted = flag.getQuestHandle().getAllQuestsWithRewards().stream()
                 .map(AbstractMap.SimpleEntry::getKey)
                 .filter(q -> q.getType() == Quest.QuestType.SKILL_UNLOCK && !q.isComplete())
-                .map(q -> ca.bradj.questown.town.quests.MCQuest.skillTreeRoot(q.getWantedId()))
+                .map(Quest::getWantedId)
                 .findFirst();
-        if (tree.isEmpty()) {
+        if (wanted.isEmpty()) {
             return false;
         }
+        java.util.Optional<String> tree = wanted.map(ca.bradj.questown.town.quests.MCQuest::skillTreeRoot);
+        java.util.Optional<JobID> named = ca.bradj.questown.town.quests.MCQuest.namedSkill(wanted.get());
         for (LivingEntity v : flag.getVillagerHandle().entities()) {
             if (!((VisitorMobEntity) v).getJobId().rootId().equals(tree.get())) {
                 continue;
             }
             java.util.Optional<JobID> node = flag.getVillagerHandle().getUnlockableSkills(v.getUUID()).stream()
                     .filter(j -> !flag.getVillagerHandle().isUnlocked(v.getUUID(), j))
+                    .filter(j -> named.map(j::equals).orElse(true))
                     .sorted(java.util.Comparator.comparing(JobID::toNiceString))
                     .findFirst();
             if (node.isEmpty()) {

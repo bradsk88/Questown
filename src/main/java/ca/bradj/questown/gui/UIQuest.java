@@ -7,6 +7,7 @@ import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.*;
@@ -275,8 +276,10 @@ public class UIQuest implements Comparable<UIQuest> {
             case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", extractRootJobName());
             case CONCURRENT_JOBS -> Compat.literal("Multiple Jobs Active");
             case FIRST_WORK_REQUEST -> Compat.translatable("menu.quests.first_work_request");
-            case SKILL_UNLOCK -> Compat.translatable("menu.quests.skill_unlock",
-                    Compat.translatable("jobs." + MCQuest.skillTreeRoot(wantedId)));
+            case SKILL_UNLOCK -> MCQuest.namedSkill(wantedId)
+                    .map(s -> Compat.translatable("menu.quests.skill_unlock.named", Jobs.getVariantNameComponent(s)))
+                    .orElseGet(() -> Compat.translatable("menu.quests.skill_unlock",
+                            Compat.translatable("jobs." + MCQuest.skillTreeRoot(wantedId))));
             case UNKNOWN -> Compat.literal("ERROR");
         };
     }

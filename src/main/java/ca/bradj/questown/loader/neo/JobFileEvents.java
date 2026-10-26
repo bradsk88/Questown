@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.SyncWorkForCommandsMessage;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.town.quests.paths.QuestPaths;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.server.level.ServerPlayer;
@@ -23,6 +24,7 @@ public class JobFileEvents {
         ImmutableMap<JobID, Work> jobs = ResourceJobLoader.LISTENER.getJobs();
         Works.staticInitialize(jobs);
         ServerJobsRegistry.staticInitialize(jobs);
+        QuestPaths.LISTENER.loadFromFiles(event.getServer().getResourceManager());
     }
 
     @SubscribeEvent

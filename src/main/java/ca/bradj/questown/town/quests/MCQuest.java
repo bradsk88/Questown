@@ -4,6 +4,7 @@ import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.gui.QuestTypes;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.JobNames;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -171,6 +172,23 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return q;
     }
 
+    /**
+     * A SKILL_UNLOCK quest that names one skill: only unlocking {@code skill} completes it (curated
+     * paths, dev 2026-10-26: "Unlock Wooden Shovel, then Wooden Sword"). Wanted id
+     * {@code questown:skill_unlock/<root>/<job>}.
+     */
+    public static MCQuest namedSkillUnlock(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            JobID skill
+    ) {
+        ResourceLocation id = Questown.ResourceLocation(SKILL_UNLOCK_PREFIX + skill.rootId() + "/" + skill.jobId());
+        MCQuest q = new MCQuest(batchUUID, ownerId, id, null, QuestType.SKILL_UNLOCK, 1);
+        q.setFlavorText("Once your " + skill.rootId() + " can learn it, open its skills tab and spend a "
+                + "Block of Progress on " + JobNames.variant(skill.jobId()) + ".");
+        return q;
+    }
+
     private static final String SKILL_UNLOCK_PREFIX = "skill_unlock/";
 
     /**
@@ -180,9 +198,25 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
     public static String skillTreeRoot(ResourceLocation wantedId) {
         String path = wantedId.getPath();
         if (path.startsWith(SKILL_UNLOCK_PREFIX)) {
-            return path.substring(SKILL_UNLOCK_PREFIX.length());
+            String tree = path.substring(SKILL_UNLOCK_PREFIX.length());
+            int slash = tree.indexOf('/');
+            return slash < 0 ? tree : tree.substring(0, slash);
         }
         return JobID.fromRL(wantedId).rootId();
+    }
+
+    /** The one skill a named SKILL_UNLOCK quest wants; empty for an any-skill-on-the-tree quest. */
+    public static Optional<JobID> namedSkill(ResourceLocation wantedId) {
+        String path = wantedId.getPath();
+        if (!path.startsWith(SKILL_UNLOCK_PREFIX)) {
+            return Optional.empty();
+        }
+        String tree = path.substring(SKILL_UNLOCK_PREFIX.length());
+        int slash = tree.indexOf('/');
+        if (slash < 0) {
+            return Optional.empty();
+        }
+        return Optional.of(new JobID(tree.substring(0, slash), tree.substring(slash + 1)));
     }
 
     public static MCQuest jobUnlock(
@@ -268,6 +302,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.setOnboarding(this.isOnboarding());
         q.setDiscardable(this.isDiscardable());
         q.setTopNeedProducer(this.topNeedProducer().orElse(null));
+        q.setPathBatch(this.pathBatch().orElse(null));
         q.concurrentJobIdsEncoded = this.concurrentJobIdsEncoded;
         return q;
     }
@@ -287,6 +322,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.setOnboarding(this.isOnboarding());
         q.setDiscardable(this.isDiscardable());
         q.setTopNeedProducer(this.topNeedProducer().orElse(null));
+        q.setPathBatch(this.pathBatch().orElse(null));
         return q;
     }
 
@@ -301,6 +337,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         private static final String NBT_ONBOARDING = "onboarding";
         private static final String NBT_DISCARDABLE = "discardable";
         private static final String NBT_TOP_NEED_PRODUCER = "top_need_producer";
+        private static final String NBT_PATH_BATCH = "path_batch";
         private static final String NBT_CONCURRENT_JOB_IDS = "concurrent_job_ids";
         private static final String NBT_STATUS = "status";
         private static final String NBT_LOOT_EXTRACTED = "loot_extracted";
@@ -343,6 +380,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
                 ct.putBoolean(NBT_DISCARDABLE, true);
             }
             quest.topNeedProducer().ifPresent(p -> ct.putString(NBT_TOP_NEED_PRODUCER, p));
+            quest.pathBatch().ifPresent(p -> ct.putString(NBT_PATH_BATCH, p));
             if (quest instanceof MCQuest mcq && mcq.concurrentJobIdsEncoded != null) {
                 ct.putString(NBT_CONCURRENT_JOB_IDS, mcq.concurrentJobIdsEncoded);
             }
@@ -408,6 +446,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             }
             if (nbt.contains(NBT_TOP_NEED_PRODUCER)) {
                 quest.setTopNeedProducer(nbt.getString(NBT_TOP_NEED_PRODUCER));
+            }
+            if (nbt.contains(NBT_PATH_BATCH)) {
+                quest.setPathBatch(nbt.getString(NBT_PATH_BATCH));
             }
             if (nbt.contains(NBT_CONCURRENT_JOB_IDS)) {
                 quest.concurrentJobIdsEncoded = nbt.getString(NBT_CONCURRENT_JOB_IDS);

@@ -1,6 +1,6 @@
 ---
 title: 'Curated quest paths: a shared onboarding trunk, then data-defined paths (first: Outfitter)'
-status: draft (rulings recorded; phases not started)
+status: in progress (phase 1 shipped 2026-10-24; first-cut engine + Outfitter file built 2026-10-26)
 origin: r16 #14 design chat, dev rulings 2026-10-24. Supersedes
   2026-10-24-001-feat-post-onboarding-job-change-alternation-plan.md
 ---
@@ -145,6 +145,11 @@ One file per path, `data/questown/questown_paths/<path>.json`:
     guaranteed to give the named root and applies at the spend, like the onboarding trunk.
 23. **A batch opening shows only the new cards**: the standard new-quests notice, no extra chat
     line, toast or lesson.
+24. **A jumping-off scenario, `paths/at_fork`** (dev 2026-10-26: "Pre-populate a town already
+    finished all the onboarding quests"): the growth driver plays onboarding the real way and
+    stops at the fork, held for a playtest. Also a world snapshot of the dev's r22 town at the
+    fork: `~/questown-worlds/r22-at-the-fork-2026-10-26.tgz` (it has the old top-need crafter-room
+    batch open, which the new build no longer posts).
 
 Facts behind these (read 2026-10-26 @ 299f6404): the sword jobs chain behind their shovels
 (`crafter/wooden_shovel` -> `crafter/wooden_sword`, `crafter/stone_shovel` -> `crafter/stone_sword`,

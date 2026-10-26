@@ -425,3 +425,38 @@ discardable quest (the card uses that id for nothing else, so no x otherwise), a
 refuses removal of a non-discardable batch. Worlds saved before this load their procedural batches
 as non-discardable (no x) until replaced. Pins: `MCQuestDiscardableTest` (red against the old card:
 a tutorial quest offered its batch).
+
+## Curated quest paths: files, tags and the fork (2026-10-26)
+
+Plan: `docs/plans/2026-10-24-002-feat-curated-quest-paths-plan.md` (rulings 14-24). A path is a
+data file, `data/<ns>/questown_paths/<path>.json` (first: `outfitter.json`), read at server start
+by `QuestPaths.LISTENER` (`JobFileEvents`, after the jobs). Format and rules are pure and
+Forge-free (`town/quests/paths`): `QuestPathParser` (each quest has one of `room`, `job_change`,
+`loot` + `count`, `skill`), `QuestPathValidator` (unique ids, `opens_after` resolves, no cycle, a
+starter, root/job ids), `QuestPathProgress` (what to post, taken, finished). A file that fails is
+skipped with an ERROR, not fatal.
+
+- **Record of progress: a per-quest tag.** Each posted quest carries `pathBatch`
+  (`<path id>/<batch id>`, `Quest.pathBatch`, NBT `path_batch`, carried by `carrySavedStateFrom`,
+  `completed()` and `lost()`, like `topNeedProducer`). Completed batches stay in the quest list, so
+  `TownQuests.pathBatchIds` reads posted and completed batch ids from the tags; a player's discard
+  (`QuestBatches.decline`) removes a batch, and the engine would post it again.
+- **The fork** (`TownQuests.atTheFork`): the onboarding miner batch is complete. With any path
+  loaded, the tutorial ladder stops after the miner beat and `tryPhase3_newJobRoom`, and the
+  top-need, crafter and supply-chain phases are not reached (plan ruling 2); with no path loaded
+  (unit tests, a pack without path files) the old ladder runs unchanged.
+- **Posting** (`postPathBatchesIfDue`, every `tick`): a batch with no arrival queues no batch
+  request, so like `postCookFollowUpIfDue` it can't wait for the ladder. Starters fire
+  `TutorialComplete`. A batch's quests are tagged after `provisionArrival`, so an arrival's bed and
+  storeroom quests count toward it, and the batch is onboarding-flagged (ruling 22). Rewards:
+  `PHASE_PATH_ARRIVAL` (a villager + batch request) or `PHASE_PATH` (an empty `MCRewardList`).
+- **The garden** (`tryCuratedPaths`): held until some path is taken (a starter complete) and every
+  taken path is finished (ruling 4); untaken starters stay open beside it.
+- **Named skill quests**: `MCQuest.namedSkillUnlock` (wanted id `skill_unlock/<root>/<job>`,
+  `MCQuest.namedSkill`) completes only for that skill in `markSkillUnlocked`; the card reads
+  "Unlock <job name>" (`menu.quests.skill_unlock.named`, `Jobs.getVariantNameComponent`).
+
+Pins: `QuestPathTest` (format, validator, progress), `QuestPathDataTest` (every shipped file's
+jobs and rooms exist; the armorer `crafter/<material>_<piece>` expansion counts as jobs),
+`TownQuestsCuratedPathsTest` (fork, once-only posting, branch order, garden hold, tag NBT),
+`TownQuestsSkillUnlockTest.namedSkillQuest_*`. End to end: `paths/at_fork` (AUTOTESTS.md).

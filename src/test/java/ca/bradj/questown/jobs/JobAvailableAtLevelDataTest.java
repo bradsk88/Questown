@@ -36,8 +36,9 @@ class JobAvailableAtLevelDataTest {
 
     @Test
     void materialTierJobs_declareTheExpectedLevels() throws Exception {
+        // Lowered for the Outfitter path (dev, 2026-10-26; were 7 / 12 / 17 / 22 / 27).
         List<String> expectations = List.of(
-                "wood:7", "stone:12", "iron:17", "golden:22", "diamond:27"
+                "wood:3", "stone:5", "iron:8", "golden:11", "diamond:14"
         );
         for (String expectation : expectations) {
             String tier = expectation.split(":")[0];
