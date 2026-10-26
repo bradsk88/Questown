@@ -367,7 +367,8 @@ Outfitter path, plan ruling 15; were 7 / 12 / 17 / 22 / 27). The gate
 lives on the **job, not the layer**: `ResourceJobLoader` parses the optional int
 into `Work.availableAtLevel`; `ServerJobsRegistry.getAvailableAtLevel(JobID)` is
 the lookup (pre-startup NPE guard, like `getAllRootJobs`); `TownVillagerUIsHandle.showUI`
-filters `getChildJobsKnownToExist` by level and the empty set is what hides the
+filters `getChildJobsKnownToExist` (every known child under the villager's root, since
+2026-10-26; `town/entity/COMPLEX.md` "Skills tab") by level and the empty set is what hides the
 tab (client-side via `VillagerMenusPayload.showSkillsTab` + `VillagerTabs.
 hideSkills`/`forMenu` gate); `UnlockJobMessage` re-checks server-side so a stale
 client or a direct packet can't unlock a not-yet-available job. Onboarding jobs
@@ -377,6 +378,8 @@ set, not existing grants.
 - Data oracle: `JobAvailableAtLevelDataTest` pins the 25 tier files to their
   values AND asserts no other job JSON carries the field (default semantics).
 - `WorkAvailableAtLevelTest` pins the default + the `withAvailableAtLevel` chain.
+- `ServerJobsRegistry.getParentOf(JobID)` (2026-10-26) reads a job's `parentID`, for revealing a
+  curated path's named skill under its parent (`TownVillagerHandle.revealSkill`).
 
 The timed leaver trip ("when will the leaver be back") is the gate-mat
 timer: while a leaver job's timed state (the `time` work state — the roam

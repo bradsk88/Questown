@@ -1285,6 +1285,22 @@ progressive-discovery card, and its job-icon column all see only town-known
 jobs. Registry-bound end-to-end (the handle ctor reads
 `Config.JOB_TREE_GROWTH`) — held-run-covered.
 
+## Skills tab: every known child of the root, not the first key's (2026-10-26)
+
+`TownVillagerUIsHandle.unlockableSkills` (the skills tab's nodes, also the growth driver's BOP
+spend) reads `TownVillagerLearningHandle.getChildJobsKnownToExist(villager's job)`. Each villager's
+known-map has one key per job (the awareness tick registers every job's next children to every
+villager), and the lookup took only the **first** HashMap key on the villager's root
+(`UtilClean.getOrDefaultCollectionByKeyPredicate`). So the tab showed the children of an
+arbitrary parent: the Outfitter crafter at level 3 was offered nothing (its first key was a
+higher armor tier), and the path's skill quests stalled with BOPs in hand. Now
+`childJobsKnownToExist` unions every same-root key across villagers (`TownVillagerLearningHandleTest`).
+The client still only shows a node whose parent is unlocked, and the level gate is unchanged.
+
+A path's named skills are also revealed when their batch posts (`TownVillagerHandle.revealSkill`,
+`TownVillagerLearningHandle.registerAsKnownForAll`, `ServerJobsRegistry.getParentOf`); see
+`town/quests/COMPLEX.md` "Curated quest paths".
+
 ## Second-villager hold: raw-food (LOOT) gate (2026-10-15, reworked 2026-10-17)
 
 Pacing ruling (user chat 10-15 05:34:56, restated 10-17 04:31:52): "the second
@@ -1422,8 +1438,8 @@ room-recipe tooltip (dev preference; `TownQuestsHunterGathererOnboardingTest`).
 **Every villager-bringing batch asks for its bed and storage (dev ruling 2026-10-24, r16 #11 /
 #17).** The "dev observation" above became a rule. `defaultQuestCompletionRewards` (procedural
 batches, and the tutorial top-need batch via `makeReward(PHASE_NEW_JOB_ROOM)`; the miner batch
-moved to `arrivalWithQuestBatch` on 2026-10-26, a guaranteed villager 4 for the curated path's
-first job change) can spawn a villager, and the bed shortfall the procedural garden covers
+moved to `arrivalOnly`, a plain guaranteed arrival, on 2026-10-26: villager 4 for the curated
+path's first job change, with no visitor quest batch past the fork) can spawn a villager, and the bed shortfall the procedural garden covers
 (`TownInterface.missingBeds`) counted only townies already in town, never the arrival. r16: the
 miner batch's Villager 4 arrived bedless, and storage filled with nothing asking for chests.
 `TownQuests.provisionArrival` runs where such a batch is built (the procedural pop in

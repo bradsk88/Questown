@@ -133,6 +133,20 @@ class TownQuestsCuratedPathsTest {
         assertEquals(Set.of("start", "weapons_1"), quests.pathBatchIds(OUTFITTER, true));
     }
 
+    /** Progressive discovery reveals a few random children per job; a named skill quest must not hinge on it. */
+    @Test
+    void postingABatch_revealsItsNamedSkills() {
+        TownQuests quests = townWithMinerBeat(true);
+        TestTutorialTownView view = view();
+        quests.postPathBatchesIfDue(view);
+        assertEquals(List.of(), view.getRevealedSkills(), "the starter names no skill");
+
+        completeBatch(quests, "start");
+        quests.postPathBatchesIfDue(view);
+
+        assertEquals(List.of(new JobID("crafter", "wooden_shovel")), view.getRevealedSkills());
+    }
+
     /** The ladder's path step: null (go on to the garden) only once a taken path is finished. */
     @Test
     void thePathStep_holdsTheGardenUntilTheTakenPathIsFinished() {

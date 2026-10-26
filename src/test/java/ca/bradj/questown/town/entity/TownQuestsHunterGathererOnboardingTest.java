@@ -90,6 +90,9 @@ class TownQuestsHunterGathererOnboardingTest {
             ) {
             }
             @Override
+            public void revealSkill(ca.bradj.questown.jobs.JobID skill) {
+            }
+            @Override
             public int villagerCount() {
                 return 2;
             }

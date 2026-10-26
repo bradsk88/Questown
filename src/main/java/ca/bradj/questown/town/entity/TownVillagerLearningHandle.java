@@ -105,15 +105,24 @@ public class TownVillagerLearningHandle {
     }
 
     public ImmutableSet<JobID> getChildJobsKnownToExist(JobID parent) {
+        return childJobsKnownToExist(jobsKnownToExist, parent);
+    }
+
+    /**
+     * Every child known to exist under any job of the parent's root, across all villagers. Each
+     * villager's map has one key per known job of a root (the awareness tick registers every job's
+     * children to every villager), so taking only the first same-root key showed the children of
+     * an arbitrary parent: the Outfitter crafter at level 3 was offered nothing (its first key's
+     * children were a higher tier), and the path's skill quests could not be done (2026-10-26).
+     */
+    static ImmutableSet<JobID> childJobsKnownToExist(Map<UUID, ? extends Map<JobID, ? extends Set<JobID>>> known, JobID parent) {
         ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
-        for (Map.Entry<UUID, Map<JobID, Set<JobID>>> kjs : jobsKnownToExist.entrySet()) {
-            Map<JobID, Set<JobID>> villagerKnown = kjs.getValue();
-            ImmutableList<JobID> known = UtilClean.getOrDefaultCollectionByKeyPredicate(
-                    villagerKnown,
-                    parent::sameRoot,
-                    ImmutableList.of()
-            );
-            b.addAll(known);
+        for (Map<JobID, ? extends Set<JobID>> villagerKnown : known.values()) {
+            for (Map.Entry<JobID, ? extends Set<JobID>> e : villagerKnown.entrySet()) {
+                if (parent.sameRoot(e.getKey())) {
+                    b.addAll(e.getValue());
+                }
+            }
         }
         return b.build();
     }
@@ -172,6 +181,15 @@ public class TownVillagerLearningHandle {
                 jobsKnownToExist.toNiceString(),
                 contributingVillager
         );
+    }
+
+    /** Registers {@code child} under {@code parent} for every villager the town has learning for. */
+    public void registerAsKnownForAll(JobID parent, JobID child) {
+        Set<UUID> villagers = new HashSet<>(unlockedJobs.keySet());
+        villagers.addAll(jobsKnownToExist.keySet());
+        for (UUID villager : villagers) {
+            registerAsKnown(villager, parent, child);
+        }
     }
 
     public void requestKnowledge(

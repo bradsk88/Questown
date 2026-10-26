@@ -51,4 +51,11 @@ public interface TutorialTownView {
      * ({@code TownQuests.provisionArrival}). {@code wanted} is the batch's room ids so far.
      */
     void provisionArrival(MCReward reward, Collection<ResourceLocation> wanted, Consumer<ResourceLocation> addRoomQuest);
+
+    /**
+     * Makes {@code skill} a node the town knows exists, so the skills tab can offer it once its
+     * level gate and parent allow. Progressive discovery reveals only a few random children per
+     * job (JobTreeGrowth); a path's named skill quest must not hinge on that roll.
+     */
+    void revealSkill(JobID skill);
 }

@@ -281,7 +281,7 @@ pickaxes + 8 coal + the miner's room (mineshaft). It is markOnboarding-flagged
 so the open miner JOB_CHANGE fills the BOP-spend guarantee slot (the same
 mechanism as the hunter/cook beats; `TownQuestsMinerOnboardingTest` pins the
 flag + the guarantee). The reward rides `PHASE_MINER` ->
-`arrivalWithQuestBatch` (a guaranteed villager 4; it was
+`arrivalOnly` (a guaranteed villager 4 and no visitor quest batch; it was
 `defaultQuestCompletionRewards`, which can roll an upgrade quest instead).
 Villager 4 is the one a curated path's starter re-roles (the Outfitter's
 crafter): r22 overnight growth reached the fork at roster 3 (hunter, cook,
@@ -453,14 +453,23 @@ skipped with an ERROR, not fatal.
   request, so like `postCookFollowUpIfDue` it can't wait for the ladder. Starters fire
   `TutorialComplete`. A batch's quests are tagged after `provisionArrival`, so an arrival's bed and
   storeroom quests count toward it, and the batch is onboarding-flagged (ruling 22). Rewards:
-  `PHASE_PATH_ARRIVAL` (a villager + batch request) or `PHASE_PATH` (an empty `MCRewardList`).
+  `PHASE_PATH_ARRIVAL` (a plain morning arrival, `TownFlagTutorialAdapter.arrivalOnly`) or
+  `PHASE_PATH` (an empty `MCRewardList`). The arrival brings no visitor quest batch: it first used
+  the onboarding `arrivalWithQuestBatch`, and each arrival put a procedural crafting room +
+  mineshaft on the board past the fork, against ruling 20 (2026-10-26 `paths/outfitter` runs).
 - **The garden** (`tryCuratedPaths`): held until some path is taken (a starter complete) and every
   taken path is finished (ruling 4); untaken starters stay open beside it.
 - **Named skill quests**: `MCQuest.namedSkillUnlock` (wanted id `skill_unlock/<root>/<job>`,
   `MCQuest.namedSkill`) completes only for that skill in `markSkillUnlocked`; the card reads
   "Unlock <job name>" (`menu.quests.skill_unlock.named`, `Jobs.getVariantNameComponent`).
+  Posting a batch reveals its named skills (`TutorialTownView.revealSkill` ->
+  `TownVillagerHandle.revealSkill`, registered as known under the job's parent for every villager).
+  Progressive discovery reveals only `JobTreeGrowth` (default 2) random children per job, and
+  `crafter/stick` has about ten, so "Unlock Wooden Shovel" could otherwise never appear in the
+  skills tab.
 
 Pins: `QuestPathTest` (format, validator, progress), `QuestPathDataTest` (every shipped file's
 jobs and rooms exist; the armorer `crafter/<material>_<piece>` expansion counts as jobs),
 `TownQuestsCuratedPathsTest` (fork, once-only posting, branch order, garden hold, tag NBT),
-`TownQuestsSkillUnlockTest.namedSkillQuest_*`. End to end: `paths/at_fork` (AUTOTESTS.md).
+`TownQuestsSkillUnlockTest.namedSkillQuest_*`, `TownQuestsCuratedPathsTest.postingABatch_revealsItsNamedSkills`.
+End to end: `paths/at_fork` and `paths/outfitter` (AUTOTESTS.md).

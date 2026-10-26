@@ -28,6 +28,16 @@ class TestTutorialTownView implements TutorialTownView {
     private final List<TutorialTrigger.Triggers> triggersFired = new ArrayList<>();
     private final List<String> rewardPhaseNames = new ArrayList<>();
     private ResourceLocation roomForJob;
+    private final List<JobID> revealedSkills = new ArrayList<>();
+
+    @Override
+    public void revealSkill(JobID skill) {
+        revealedSkills.add(skill);
+    }
+
+    List<JobID> getRevealedSkills() {
+        return revealedSkills;
+    }
 
     private TestTutorialTownView() {
     }

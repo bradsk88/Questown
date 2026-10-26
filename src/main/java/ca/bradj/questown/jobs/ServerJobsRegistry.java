@@ -314,6 +314,12 @@ public class ServerJobsRegistry {
         return roots;
     }
 
+    /** The job's skill-tree parent, or null for a root job or a job with no Work. */
+    public static @Nullable JobID getParentOf(JobID child) {
+        Work work = getWork(child, false);
+        return work == null ? null : work.parentID;
+    }
+
     /**
      * False when the child has no Work (seeking work) or no parent.
      */

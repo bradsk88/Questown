@@ -1078,6 +1078,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
         for (QuestPath.Step s : batch.quests()) {
             q.addNewQuest(pathQuest(batchUUID, s));
+            if (s.kind() == QuestPath.Kind.SKILL) {
+                view.revealSkill(pathJob(s.id()));
+            }
         }
         String phase = batch.arrival() ? TutorialTownView.PHASE_PATH_ARRIVAL : TutorialTownView.PHASE_PATH;
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(phase));

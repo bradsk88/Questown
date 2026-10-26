@@ -461,6 +461,14 @@ public final class TownVillagerHandle {
         return delegate.getLevel(villagerUUID);
     }
 
+    /** See {@link TutorialTownView#revealSkill}. No-op for a root job (no parent) or unknown job. */
+    public void revealSkill(JobID skill) {
+        JobID parent = ServerJobsRegistry.getParentOf(skill);
+        if (parent != null) {
+            learning.registerAsKnownForAll(parent, skill);
+        }
+    }
+
     ImmutableMap<UUID, Map<JobID, ? extends Collection<JobID>>> getJobsKnownToExist() {
         return ImmutableMap.copyOf(learning.jobsKnownToExist);
     }

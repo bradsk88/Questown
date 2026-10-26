@@ -105,14 +105,17 @@ class TownFlagTutorialAdapter implements TutorialTownView {
             case TutorialTownView.PHASE_HUNTER_GATHERER, TutorialTownView.PHASE_JOB_CHANGE_FOOD -> arrivalWithQuestBatch();
             // The cook-job batch pays the Block of Progress its follow-up's cook skill costs.
             case TutorialTownView.PHASE_COOK_JOB -> new MCInstantReward(flag, new GrantBlockOfProgressReward(flag, 1));
-            // Curated path batches (plan ruling 19): an arrival on some, nothing on the rest.
-            case TutorialTownView.PHASE_PATH_ARRIVAL -> arrivalWithQuestBatch();
+            // Curated path batches (plan ruling 19): an arrival on some, nothing on the rest. The
+            // arrival brings no quest batch of its own: past the fork only path batches post
+            // (ruling 20), and a visitor batch put a stray crafting room + mineshaft on the board.
+            case TutorialTownView.PHASE_PATH_ARRIVAL -> arrivalOnly();
             case TutorialTownView.PHASE_PATH -> new MCRewardList(flag);
             // The miner batch brings villager 4, the one a curated path's starter turns into its
             // first new job (the Outfitter's crafter). defaultQuestCompletionRewards could roll an
             // upgrade quest instead, and the path's job change then had no free villager (r22
-            // overnight growth: roster 3 at the fork, "Job change: crafter" never closed).
-            case TutorialTownView.PHASE_MINER -> arrivalWithQuestBatch();
+            // overnight growth: roster 3 at the fork, "Job change: crafter" never closed). No quest
+            // batch with it, for the same reason as the path arrivals.
+            case TutorialTownView.PHASE_MINER -> arrivalOnly();
             case TutorialTownView.PHASE_NEW_JOB_ROOM -> new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
             default -> new AddBatchOfQuestsForVisitorReward(flag, null);
         };
@@ -125,6 +128,16 @@ class TownFlagTutorialAdapter implements TutorialTownView {
             Consumer<ResourceLocation> addRoomQuest
     ) {
         TownQuests.provisionArrival(flag, reward, wanted, addRoomQuest);
+    }
+
+    @Override
+    public void revealSkill(JobID skill) {
+        flag.getTownVillagerHandle().revealSkill(skill);
+    }
+
+    /** A morning arrival and nothing else (the gate batch's reward shape). */
+    private MCReward arrivalOnly() {
+        return new MCDelayedReward(flag, new SpawnVisitorReward(flag, VillagerUUID.random()));
     }
 
     /** A morning arrival plus its quest batch, under one id so the batch belongs to the villager who arrives. */
