@@ -285,5 +285,7 @@ The general learning: `docs/solutions/best-practices/vanilla-lifts-solid-path-ta
 'relaxing' villager, but the roof never is." A target buried under another solid block (the stacked
 store chest the downtime job picks, a wall) now resolves to the first door or standable cell beside
 it at its own level (`VillagerPathNavigation.besideSolidStack`), not the top of the stack. A single
-solid block with air above (a bed) keeps vanilla's one-block lift. Why downtime picks the chest at
-all (it declares no ingredients) is still untraced: `.scratch/agent-playtest-2026-10-25-r21/findings.md` #6/#15.
+solid block with air above (a bed) keeps vanilla's one-block lift. Downtime picks the chest because
+its `RANDOM_SHORT_LIVED_WORKSPOT_PREFER_SOCIAL` rule (`RandomShortLivedWorkSpot`) walks to a random
+spot inside a room (`getRandomWanderTarget`), and a 3x3 store room's only interior cell is the chest
+(believed from the code path, r21 findings #19).
