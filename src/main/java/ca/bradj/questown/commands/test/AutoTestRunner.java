@@ -104,7 +104,8 @@ public class AutoTestRunner {
         // chunk loaded regardless.
         boolean heldVillage = only != null
                 && (nameMatches("village/growth", only) || nameMatches("village/day1", only)
-                        || nameMatches("village/self_sufficiency", only) || nameMatches("paths/at_fork", only))
+                        || nameMatches("village/self_sufficiency", only) || nameMatches("paths/at_fork", only)
+                        || nameMatches("paths/outfitter", only))
                 && "true".equals(System.getProperty(SYSPROP_HOLD));
         GameProfile profile = new GameProfile(UUID.randomUUID(), "[AutoTest]");
         var fakePlayer = FakePlayerFactory.get(overworld, profile);
@@ -128,7 +129,11 @@ public class AutoTestRunner {
         boolean runDay1 = only != null && nameMatches("village/day1", only);
         // paths/at_fork: growth's driver, stopped (and, held, kept) at the curated-path fork.
         boolean runAtFork = only != null && nameMatches("paths/at_fork", only);
-        boolean runVillage = only != null && (nameMatches("village/growth", only) || runDay1 || runAtFork);
+        // paths/outfitter: the same driver played on until every curated path batch is complete.
+        boolean runPaths = only != null && nameMatches("paths/outfitter", only);
+        boolean runVillage = only != null && (nameMatches("village/growth", only) || runDay1 || runAtFork || runPaths);
+        VillageGrowthExecutor.Goal villageGoal = runPaths ? VillageGrowthExecutor.Goal.PATHS_FINISHED
+                : runAtFork ? VillageGrowthExecutor.Goal.FORK : VillageGrowthExecutor.Goal.FIVE_VILLAGERS;
         boolean runSelfSuff = only != null && nameMatches("village/self_sufficiency", only);
         if (runVillage || runSelfSuff) {
             runJobs = false;
@@ -185,7 +190,7 @@ public class AutoTestRunner {
                 ? new ChickenArcAllExecutor(overworld, server, fakePlayer, ORIGIN, output, chickenList)
                 : null;
         VillageGrowthExecutor villageExecutor = runVillage
-                ? new VillageGrowthExecutor(overworld, server, fakePlayer, ORIGIN, runDay1, runAtFork)
+                ? new VillageGrowthExecutor(overworld, server, fakePlayer, ORIGIN, runDay1, villageGoal)
                 : null;
         VillageSelfSufficiencyExecutor selfSuffExecutor = runSelfSuff
                 ? new VillageSelfSufficiencyExecutor(overworld, server, fakePlayer, ORIGIN)

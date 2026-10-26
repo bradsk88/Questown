@@ -124,14 +124,28 @@ public final class VillageGrowthExecutor {
             ServerPlayer player,
             BlockPos origin
     ) {
-        this(level, server, player, origin, false, false);
+        this(level, server, player, origin, false, Goal.FIVE_VILLAGERS);
     }
 
-    /**
-     * paths/at_fork: play onboarding the real way and stop once a curated path's starter batch has
-     * posted - a town at the fork, held as the jumping-off point for path playtests (dev, 2026-10-26).
-     */
-    private final boolean stopAtFork;
+    /** When a (non-day1) run stops. */
+    public enum Goal {
+        /** village/growth: the roster reaches {@link #TARGET_VILLAGERS}. */
+        FIVE_VILLAGERS,
+        /**
+         * paths/at_fork: a curated path's starter batch has posted - a town at the fork, held as
+         * the jumping-off point for path playtests (dev, 2026-10-26).
+         */
+        FORK,
+        /**
+         * paths/outfitter: play on past the fork until every curated path batch has posted and
+         * completed, with a check per batch posted and per batch completed.
+         */
+        PATHS_FINISHED
+    }
+
+    private final Goal goal;
+    private final java.util.Set<String> pathBatchesSeen = new java.util.HashSet<>();
+    private final java.util.Set<String> pathBatchesDone = new java.util.HashSet<>();
 
     public VillageGrowthExecutor(
             ServerLevel level,
@@ -139,9 +153,9 @@ public final class VillageGrowthExecutor {
             ServerPlayer player,
             BlockPos origin,
             boolean day1,
-            boolean stopAtFork
+            Goal goal
     ) {
-        this.stopAtFork = stopAtFork;
+        this.goal = goal;
         this.level = level;
         this.server = server;
         this.player = player;
@@ -189,15 +203,17 @@ public final class VillageGrowthExecutor {
         doorOffsets.clear();
         chestOffsets.clear();
         buildingCorners.clear();
-        // Two rows of four simple rectangular buildings, single south door.
+        // Two rows of four simple rectangular buildings, single south door. A path run adds a
+        // third row: onboarding furnishes all eight, and the path's rooms (crafting room, armory,
+        // smithy) and its arrivals' beds need more (2026-10-26: armory "no spare building").
         int[] xs = {-21, -9, 3, 15};
-        int[] zs = {-16, 10};
+        int[] zs = goal == Goal.PATHS_FINISHED ? new int[]{-16, 10, 22} : new int[]{-16, 10};
         for (int z : zs) {
             for (int x : xs) {
                 buildOneBuilding(new BlockPos(origin.getX() + x, origin.getY(), origin.getZ() + z));
             }
         }
-        msg("Built 8 buildings (" + BUILDING_SIZE + "x" + BUILDING_SIZE + ", one door each); no doors registered");
+        msg("Built " + buildingCorners.size() + " buildings (" + BUILDING_SIZE + "x" + BUILDING_SIZE + ", one door each); no doors registered");
         phase = Phase.PLACE_FLAG;
     }
 
@@ -283,7 +299,12 @@ public final class VillageGrowthExecutor {
             }
         }
         long roster = flag.getVillagerHandle().size();
-        if (stopAtFork && pathStarterPosted()) {
+        if (goal == Goal.PATHS_FINISHED && trackPathBatches()) {
+            msg("Every curated path batch is posted and complete (roster=" + roster + ")");
+            phase = Phase.CHECK_RESULTS;
+            return;
+        }
+        if (goal == Goal.FORK && pathStarterPosted()) {
             msg("At the fork: a curated path's starter batch is posted (roster=" + roster + ")");
             check("path-starter-posted", true);
             phase = Phase.CHECK_RESULTS;
@@ -294,16 +315,16 @@ public final class VillageGrowthExecutor {
                 phase = Phase.CHECK_RESULTS;
                 return;
             }
-        } else if (!stopAtFork && roster >= TARGET_VILLAGERS) {
+        } else if (goal == Goal.FIVE_VILLAGERS && roster >= TARGET_VILLAGERS) {
             msg("Roster reached " + roster + " >= " + TARGET_VILLAGERS);
             check("reached-5-villagers", true);
             phase = Phase.CHECK_RESULTS;
             return;
         }
         sleepThroughTheNightIfDark();
-        if (day1 == null && ticks >= MAX_TICKS) {
-            msg("FAIL timed out after " + MAX_TICKS + " ticks at roster=" + roster);
-            check(stopAtFork ? "path-starter-posted" : "reached-5-villagers", false);
+        if (day1 == null && ticks >= maxTicks()) {
+            msg("FAIL timed out after " + maxTicks() + " ticks at roster=" + roster);
+            check(timeoutCheck(), false);
             phase = Phase.CHECK_RESULTS;
             return;
         }
@@ -512,13 +533,53 @@ public final class VillageGrowthExecutor {
     private void checkResults() {
         checkTripwire();
         long roster = flag != null ? flag.getVillagerHandle().size() : 0;
-        passed = day1 != null || stopAtFork ? passedChecks == totalChecks : roster >= TARGET_VILLAGERS;
+        passed = day1 != null || goal != Goal.FIVE_VILLAGERS ? passedChecks == totalChecks : roster >= TARGET_VILLAGERS;
         msg("========================================");
         msg("RESULT: roster=" + roster + "/" + TARGET_VILLAGERS
                 + " checks=" + passedChecks + "/" + totalChecks
                 + " -> " + (passed ? "PASS" : "FAIL"));
         msg("========================================");
         phase = Phase.DONE;
+    }
+
+    /** A path run gets twice growth's budget: the path is played after the onboarding. */
+    private int maxTicks() {
+        return goal == Goal.PATHS_FINISHED ? MAX_TICKS * 2 : MAX_TICKS;
+    }
+
+    private String timeoutCheck() {
+        return switch (goal) {
+            case FIVE_VILLAGERS -> "reached-5-villagers";
+            case FORK -> "path-starter-posted";
+            case PATHS_FINISHED -> "paths-finished";
+        };
+    }
+
+    /**
+     * Checks each curated path batch as it posts and as it completes; true once every batch of
+     * every loaded path has done both.
+     */
+    private boolean trackPathBatches() {
+        java.util.Map<String, Boolean> completeByTag = new java.util.HashMap<>();
+        for (AbstractMap.SimpleEntry<MCQuest, ?> e : flag.getAllQuestsWithRewards()) {
+            MCQuest q = e.getKey();
+            q.pathBatch().ifPresent(tag -> completeByTag.merge(tag, q.isComplete(), Boolean::logicalAnd));
+        }
+        boolean all = true;
+        for (ca.bradj.questown.town.quests.paths.QuestPath path : ca.bradj.questown.town.quests.paths.QuestPaths.all()) {
+            for (ca.bradj.questown.town.quests.paths.QuestPath.Batch b : path.batches()) {
+                String tag = path.batchTag(b);
+                Boolean complete = completeByTag.get(tag);
+                if (complete != null && pathBatchesSeen.add(tag)) {
+                    check("path-batch-posted[" + tag + "]", true);
+                }
+                if (Boolean.TRUE.equals(complete) && pathBatchesDone.add(tag)) {
+                    check("path-batch-complete[" + tag + "]", true);
+                }
+                all &= Boolean.TRUE.equals(complete);
+            }
+        }
+        return all && !completeByTag.isEmpty();
     }
 
     private boolean pathStarterPosted() {
@@ -562,6 +623,9 @@ public final class VillageGrowthExecutor {
         if (fulfilUnmetItemNeeds()) {
             return;
         }
+        if (feedAStarvingTown()) {
+            return;
+        }
         if (fulfilItemQuests()) {
             return;
         }
@@ -575,6 +639,9 @@ public final class VillageGrowthExecutor {
             return;
         }
         if (postFirstWorkRequest()) {
+            return;
+        }
+        if (requestPathLoot()) {
             return;
         }
         // In a manual (FIFO-driven) run the agent owns the clock; the executor
@@ -758,6 +825,33 @@ public final class VillageGrowthExecutor {
         return false;
     }
 
+    private int lastFedTick = -FEED_INTERVAL_TICKS;
+    private int timesFed;
+    private static final int FEED_INTERVAL_TICKS = 2400;
+
+    /**
+     * Path runs only: while a villager is starving, leave 8 cooked beef in a town chest (at most
+     * every {@link #FEED_INTERVAL_TICKS}), as a player does when the town runs out of food. Past
+     * the fork the onboarding food economy runs dry at roster 5-6 and the crafter spent whole
+     * stretches cycling the dining jobs with nothing to eat (2026-10-26 runs 1 and 3; findings
+     * #12). Logged as an intervention each time so the economy gap stays visible.
+     */
+    private boolean feedAStarvingTown() {
+        if (goal != Goal.PATHS_FINISHED || ticks - lastFedTick < FEED_INTERVAL_TICKS) {
+            return false;
+        }
+        long starving = flag.getVillagerHandle().entities().stream()
+                .filter(v -> flag.getTownVillagerHandle().isStarving(ca.bradj.questown.core.VillagerUUID.from(v.getUUID())))
+                .count();
+        if (starving == 0 || !deposit(new ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, 8))) {
+            return false;
+        }
+        lastFedTick = ticks;
+        timesFed++;
+        msg("INTERVENTION fed the town 8 cooked beef (" + starving + " starving; feeding #" + timesFed + ")");
+        return true;
+    }
+
     /** Deposit items wanted by open quests. Real player path: leave them in a town chest. */
     private boolean fulfilItemQuests() {
         for (AbstractMap.SimpleEntry<MCQuest, ?> e : flag.getQuestHandle().getAllQuestsWithRewards()) {
@@ -830,26 +924,52 @@ public final class VillageGrowthExecutor {
         if (flag.getBlocksOfProgress() <= 0) {
             return false;
         }
-        java.util.Optional<ResourceLocation> wanted = flag.getQuestHandle().getAllQuestsWithRewards().stream()
+        // Every open skill quest, not just the first: a path can have several open at once
+        // (Outfitter: leather boots, wooden shovel, wooden sword), and one not yet unlockable must
+        // not hide the others.
+        List<ResourceLocation> wanted = flag.getQuestHandle().getAllQuestsWithRewards().stream()
                 .map(AbstractMap.SimpleEntry::getKey)
                 .filter(q -> q.getType() == Quest.QuestType.SKILL_UNLOCK && !q.isComplete())
                 .map(Quest::getWantedId)
-                .findFirst();
-        if (wanted.isEmpty()) {
-            return false;
+                .distinct()
+                .toList();
+        List<String> why = new ArrayList<>();
+        for (ResourceLocation w : wanted) {
+            if (spendBopOnSkillFor(w, why)) {
+                return true;
+            }
         }
-        java.util.Optional<String> tree = wanted.map(ca.bradj.questown.town.quests.MCQuest::skillTreeRoot);
-        java.util.Optional<JobID> named = ca.bradj.questown.town.quests.MCQuest.namedSkill(wanted.get());
+        String line = why.toString();
+        if (!wanted.isEmpty() && !line.equals(lastSkillUnlockBlocked)) {
+            lastSkillUnlockBlocked = line;
+            msg("KNOWN open skill quests, a BOP in hand, nothing unlockable: " + line);
+        }
+        return false;
+    }
+
+    private String lastSkillUnlockBlocked = "";
+
+    /**
+     * Spends a BOP on the first skills-tab node a villager of the quest's root can unlock and has
+     * not, or on the quest's own skill when it names one. Adds why nothing was spendable to why.
+     */
+    private boolean spendBopOnSkillFor(ResourceLocation wanted, List<String> why) {
+        String tree = ca.bradj.questown.town.quests.MCQuest.skillTreeRoot(wanted);
+        java.util.Optional<JobID> named = ca.bradj.questown.town.quests.MCQuest.namedSkill(wanted);
         for (LivingEntity v : flag.getVillagerHandle().entities()) {
-            if (!((VisitorMobEntity) v).getJobId().rootId().equals(tree.get())) {
+            if (!((VisitorMobEntity) v).getJobId().rootId().equals(tree)) {
                 continue;
             }
-            java.util.Optional<JobID> node = flag.getVillagerHandle().getUnlockableSkills(v.getUUID()).stream()
+            java.util.Set<JobID> unlockable = flag.getVillagerHandle().getUnlockableSkills(v.getUUID());
+            java.util.Optional<JobID> node = unlockable.stream()
                     .filter(j -> !flag.getVillagerHandle().isUnlocked(v.getUUID(), j))
                     .filter(j -> named.map(j::equals).orElse(true))
                     .sorted(java.util.Comparator.comparing(JobID::toNiceString))
                     .findFirst();
             if (node.isEmpty()) {
+                why.add(wanted.getPath() + ": townie " + shortId((VisitorMobEntity) v) + " level "
+                        + flag.getVillagerHandle().getVillagerLevel(v.getUUID()) + " offers "
+                        + unlockable.stream().map(JobID::toNiceString).sorted().toList());
                 continue;
             }
             TownFlagBlockEntity.SkillUnlockResult r = flag.spendBopToUnlockSkill(v.getUUID(), node.get());
@@ -1013,6 +1133,31 @@ public final class VillageGrowthExecutor {
         msg("Posted a work request (wheat seeds) for the first-work-request quest");
         check("first-work-request-posted", true);
         return true;
+    }
+
+    private final java.util.Set<ResourceLocation> pathLootRequested = new java.util.HashSet<>();
+
+    /**
+     * Post a job-board request for each open curated-path LOOT item, once, the way a player asks
+     * for "Make a wooden sword": a production job only runs while the board asks for its product,
+     * and only a job change's starter work is requested automatically (2026-10-26: the crafter
+     * had wooden_sword unlocked and idled 10 min, "stays: no branch applied").
+     */
+    private boolean requestPathLoot() {
+        for (AbstractMap.SimpleEntry<MCQuest, ?> e : flag.getQuestHandle().getAllQuestsWithRewards()) {
+            MCQuest q = e.getKey();
+            if (q.isComplete() || q.getType() != Quest.QuestType.LOOT || q.pathBatch().isEmpty()) {
+                continue;
+            }
+            Item item = Loader.itemFromId(q.getWantedId());
+            if (item == null || item == net.minecraft.world.item.Items.AIR || !pathLootRequested.add(q.getWantedId())) {
+                continue;
+            }
+            flag.requestWorkFromPlayer(ca.bradj.questown.jobs.requests.WorkRequest.of(item));
+            msg("Posted a work request (" + q.getWantedId() + ") for path quest " + q.toShortString());
+            return true;
+        }
+        return false;
     }
 
     private boolean registerNextDoor() {

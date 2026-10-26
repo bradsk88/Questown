@@ -914,6 +914,21 @@ armory batch posted, discarded and reposted every tick). `discardUnbuildable` fa
 `path-room-fits[<room>]` for a path quest instead: a path room the driver can't build is a driver
 gap to fix, not a quest to drop.
 
+**Path runs (`Goal.PATHS_FINISHED`, `paths/outfitter`) build a third row of four buildings**:
+onboarding furnishes all eight, and the path's crafting room, armory and smithy then had no spare
+building. **The skill-unlock spend tries every open SKILL_UNLOCK quest** (it took the first
+only: with Leather Boots, Wooden Shovel and Wooden Sword open, one not yet unlockable hid the
+others) and logs, once per change, what each villager of the root offers when nothing is
+spendable (`KNOWN open skill quests, a BOP in hand, nothing unlockable: ...`). **It posts a job-board
+request for each open path LOOT item, once** (`requestPathLoot`, the board's owner path
+`requestWorkFromPlayer`): a production job runs only while the board asks for its product, and a
+skill unlock posts nothing, so the crafter with Wooden Sword unlocked idled (findings
+`.scratch/agent-playtest-2026-10-26-outfitter/` #10, a design question for the game side). **A path run feeds a starving
+town** (`feedAStarvingTown`: 8 cooked beef while any villager `isStarving`, at most every 2400
+ticks, logged `INTERVENTION fed the town`): past the fork the food economy ran dry and the crafter
+cycled the dining jobs instead of working (findings #14). Count the interventions per run before
+reading a path run's timings.
+
 ## Village scenarios run on peaceful (dev ruling 2026-10-24)
 
 One overnight `village/growth` run lost its whole town to creepers at the flag (two blasts, then

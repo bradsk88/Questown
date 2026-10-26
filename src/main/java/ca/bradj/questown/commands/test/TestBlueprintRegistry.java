@@ -314,7 +314,7 @@ public class TestBlueprintRegistry {
      * registering as an entry).
      */
     public static final List<String> VILLAGE_SCENARIO_NAMES =
-            List.of("village/growth", "village/self_sufficiency", "paths/at_fork");
+            List.of("village/growth", "village/self_sufficiency", "paths/at_fork", "paths/outfitter");
 
     /**
      * All the scenario names available to
