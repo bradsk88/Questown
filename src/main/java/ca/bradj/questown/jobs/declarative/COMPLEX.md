@@ -142,3 +142,15 @@ live by dropping the first-report threshold to 20 for one `hunter/sword` run (5/
 navDone=false pathEnd=6, 64, 0 pathReaches=true`. A mismatch between `walkTarget`,
 `brainWalkTarget` and `pathEnd`, or `pathReaches=false`, is what to read next time.
 
+
+## A job sound that isn't registered is skipped, not played (2026-10-26)
+
+`RealtimeWorldInteraction.playSound` resolves the job JSON's `sound.id` with `Loader.soundFromId`,
+which answers null for an id with no registered `SoundEvent`. The null went on to
+`ServerLevel.playSound` and crashed the server ("Ticking entity", NPE on `SoundEvent.getRange`)
+the first time a villager worked the job: all three `paths/outfitter` runs died the moment the
+crafter forged a wooden sword (`minecraft:item.sword.hit`, never a vanilla sound). Now a missing
+sound is skipped with one warning per id. The data is fixed too: the five sword jobs use
+`entity.player.attack.sweep`, `arborist/plant_tree` uses `block.grass.place` (was
+`item.shovel.place`). `JobSoundIdsDataTest` checks every job JSON's sound against the sound
+registry.

@@ -26,7 +26,7 @@
   ],
   "cooldown_ticks": 10,
   "sound": {
-    "id": "minecraft:item.shovel.place",
+    "id": "minecraft:block.grass.place",
     "chance": "100",
     "duration": 5
   },
