@@ -19,10 +19,14 @@ public class JobLogic<EXTRA, TOWN, POS> {
     /**
      * Extra ticks the max-ticks watchdog waits while the job is EXTRACTING_PRODUCT, so the tick a
      * leaver's trip timer completes extracts the trip's product before any hand-off (r16 #3). A
-     * window, not an exemption: a job stuck extracting still hands off. Pinned by
+     * window, not an exemption: a job stuck extracting still hands off. Counted from the first
+     * extracting tick, not the job's start: a trip that outlasts the job's window reached its extract
+     * tick already past a start-counted grace, and the board's BOP deposit sent the villager home
+     * without the loot (r22). Pinned by
      * {@code JobLogicTest.tick_shouldNotHitMaxTicksFallback_OnTheExtractTick}.
      */
     static final long EXTRACT_GRACE_TICKS = 200;
+    private long extractingTicks = 0;
 
     private int worked = 0;
     private int ticksWithoutNextJob = 0;
@@ -206,8 +210,10 @@ public class JobLogic<EXTRA, TOWN, POS> {
         // work spot): re-creating it then lost the hunt's product (2026-10-17 playtest).
         // The tick a timer completes is EXTRACTING_PRODUCT: a hand-off then left the trip's loot
         // unextracted until the next shift (r16 #3), so extraction gets a grace window.
-        long maxTicks = expiration.maxTicks() + (status.isExtractingProduct() ? EXTRACT_GRACE_TICKS : 0);
-        if (workSpot == null && !status.isWaitingForTimers() && this.ticksSinceStart > maxTicks) {
+        extractingTicks = status.isExtractingProduct() ? extractingTicks + 1 : 0;
+        boolean inExtractGrace = extractingTicks > 0 && extractingTicks <= EXTRACT_GRACE_TICKS;
+        if (workSpot == null && !status.isWaitingForTimers() && !inExtractGrace
+                && this.ticksSinceStart > expiration.maxTicks()) {
             JobID fbJov = expiration.maxTicksFallbackFn()
                                     .apply(entityCurrentJob);
             // A same-job fallback ("keep doing this forever") asks the board: re-creating the job

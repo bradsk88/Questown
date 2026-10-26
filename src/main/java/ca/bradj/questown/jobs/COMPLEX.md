@@ -510,6 +510,16 @@ XP waited unextracted until the next shift. While extracting, the watchdog now a
 extracting still hands off. Pinned by `JobLogicTest.tick_shouldNotHitMaxTicksFallback_OnTheExtractTick`
 and `tick_maxTicksFallback_stillFires_WhenExtractingPastTheGrace`.
 
+**Counted from the first extract tick (r22, 2026-10-26).** The grace was added to the window counted
+from the job's start (`maxTicks + 200`). A trip longer than that window (r22's miner: GOING_TO_JOB
+21:10:47, extract tick 21:12:55) reached its extract tick already past it, so the watchdog asked the
+board in the same tick; the board's `bop-deposit` branch (level-up latch set on the previous trip)
+sent the miner home with only the BOP, and it went back for the coal after (dev: "Why can't they
+bring both the loot and the BOP at once?"). `JobLogic` now counts `extractingTicks` and holds the
+hand-off for the first `EXTRACT_GRACE_TICKS` of extracting. Pinned by
+`tick_shouldNotHitMaxTicksFallback_OnTheExtractTick_AfterATripLongerThanTheWindow` (red on the
+start-counted grace).
+
 ## A deposit is a decision point for a starving townie (r16 #1, dev ruling 2026-10-24)
 
 Only jobs flagged `CAN_INSTANTLY_SWITCH_TO_EATING` switch to dining from the hungry listener

@@ -388,6 +388,30 @@ class JobLogicTest {
         Assertions.assertFalse(handedOff.get(), "the watchdog asked the board before the product was extracted");
     }
 
+    /**
+     * r22: a miner's trip outlasted the job's window, so its extract tick came long after a grace
+     * counted from the job's start; the board handed out the level-up BOP and the villager walked
+     * home without the loot, then went back for it. The grace counts from the first extract tick.
+     */
+    @Test
+    void tick_shouldNotHitMaxTicksFallback_OnTheExtractTick_AfterATripLongerThanTheWindow() {
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 5 + JobLogic.EXTRACT_GRACE_TICKS + 100; i++) {
+            logic.tickAway(ProductionStatus.WAITING_FOR_TIMED_STATE, maxTicksOf(5));
+        }
+        logic.tickAway(ProductionStatus.EXTRACTING_PRODUCT, maxTicksOf(5));
+
+        Assertions.assertFalse(handedOff.get(), "the watchdog asked the board on the extract tick of a long trip");
+    }
+
     /** The extract grace is a window, not an exemption: a job stuck extracting still hands off. */
     @Test
     void tick_maxTicksFallback_stillFires_WhenExtractingPastTheGrace() {
