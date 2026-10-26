@@ -49,7 +49,9 @@ Before any gradle invocation, check for a live session (`pgrep -af '[r]unServer|
    `gamemode=creative` (`questown-agent-playtest`). For the user's run, set
    `gamemode=survival` before launch (2026-10-25: "Why am I in creative mode?").
 2. Wipe and launch: `rm -rf run/world run/logs run-client/diags run-client/.qtdiag-cmd`, then
-   `tools/agent-playtest/restart.sh <run-name>` (client down, server stop via FIFO, server
+   `ENABLE_DEV_COMMANDS=1 tools/agent-playtest/restart.sh <run-name>` (without the env var
+   `_qtdev debug <flag> toggle_log <log>` is unregistered: `Unknown or incomplete command`, r20;
+   client down, server stop via FIFO, server
    first, then client, waits for the join; launches with `-Dquestown.tp.fifo=true`, so
    `tools/ffeed.sh feed "<console command>"` reaches the server on 1.20.6).
 3. **Op the user:** `tools/ffeed.sh feed "op Dev"` and see `Made Dev a server operator` in
@@ -99,7 +101,10 @@ Before any gradle invocation, check for a live session (`pgrep -af '[r]unServer|
 4. **Work `ready-for-agent` items between polls in an isolated worktree** —
    NEVER run gradle in the main project dir while the user's session is live
    (it contends for `build/` + the daemon and can OOM-kill their server). Use
-   `git worktree add --detach /tmp/<name> HEAD` → copy changed files → build
+   `git worktree add --detach /tmp/<name> HEAD` → copy changed files → build. For an autotest
+   there, first copy `run/server.properties` and `run/eula.txt` into it: without them
+   `tools/autotest-parallel.sh` prints `sed: can't read .../run/server.properties`, exits 0 and
+   runs nothing (r20) →
    (`compileJava` / `:test` / `importCheck` / `stranglerCheck`) →
    `git worktree remove --force /tmp/<name>` → commit in the main tree.
 
@@ -166,7 +171,17 @@ ticket is what survived the restart.)
 - **Command shapes: grep before feeding.** `grep -n 'literal(\|argument(' <Command>.java`.
   Shapes verified 2026-10-25: `_qtdev work_score <flag x y z> <root>` (the work seeker's per-job
   scores and gate reasons, the first move for "why isn't my X working?"), `_qtdev look_room <door
-  x y z>` (room grid with furniture letters), `_qtdev unlock_skill <villager uuid> <root/job>`.
+  x y z>` (room grid with furniture letters), `_qtdev unlock_skill <villager uuid> <root/job>`,
+  `_qtdev nav <villager uuid>` (the live walk target, the path's target and end, canReach: the
+  first move for "a villager is stuck / faces a wall". `walkTarget` != `pathTarget` means vanilla
+  moved the target; see `docs/solutions/best-practices/vanilla-lifts-solid-path-targets-2026-10-25.md`.
+  r20 spent three code readings guessing the target before this existed).
+- **"Registered entity with town <uuid>": the UUID is the villager's**, not the town's. The same
+  UUID again with a new entity id is a chunk reload, not an arrival (r20: told the dev a second
+  villager had joined; it was the first one reloading).
+- **Villagers vanish from probes, or "That position is not loaded": check whether the player is
+  dead.** `data get entity Dev Health` = 0.0 means the respawn screen, and the town unloads (r20
+  22:42 zombie, r21 23:17 spider).
 - **`_qtdev` output: grep the output marker, not the command text** — the log
   lines are prefixed `[_qtdev ...]` (e.g. `grep -a '\[_qtdev inspect\]'`); the
   command you fed is never echoed. (2026-10-13: grepping `inspect economy`

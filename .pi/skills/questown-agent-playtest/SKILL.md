@@ -102,6 +102,9 @@ relights the campfire", which the Acting section already said.
   straight off the PNG and do not scale it; 2026-10-22 a 2x guess hovered nothing and produced a
   false "hover isn't capturable" note; same space as `cursor`) presses buttons and, as two clicks,
   moves an item between slots. `close` = Escape. `cursor 1 1` before a clean shot.
+  **Hover first on hover-picked widgets:** the skills tab's nodes (it reads `hoveredWidget`, set at
+  render), the BOP tab's Take button and the confirm screen's slots ignore a bare `click`. Send
+  `cursor x y`, wait a frame, then `click x y` (r21: two bare clicks on a skill node did nothing).
   **Screenshot before clicking**: screens resize as the town grows. The crafting tab's Craft
   buttons (x 345) sit at y 271/301/331/361/391 (stick, plate, sign, stairs, rod) while the flag
   shows 2 tabs. Once the first villager arrives it shows 4 tabs plus "Begin moving this town",
@@ -109,7 +112,8 @@ relights the campfire", which the Acting section already said.
   on the door was a plain stick.
 - Known positions (guiScale 3, verified r13-r16): BOP tab "Take Block of Progress" (302, 354),
   but (302, 376) once the tab shows an "Earned by: ..." line (any villager-earned BOP; r16's click
-  at 354 took nothing, silently);
+  at 354 took nothing, silently), and (302, 389) with 6 BOPs and a longer "Earned by" (r21): read
+  the y off the shot;
   change-job panel: hotbar slot 1 (231, 391) -> insert slot (230, 256) -> Unlock (264, 305).
   `vopen <type> <uuid-prefix>` opens that villager's menu; without a prefix it picks an
   arbitrary one. `_qtdev villager_stats <flag>` maps "Villager N" to its UUID. For a quick job
