@@ -511,6 +511,7 @@
   "menu.quests.roomblock.welcome_mat": "Craft a welcome mat and place it where you'd like people to enter/exit your village.",
   "menu.quests.roomblock.empty_room": "Build a room: four walls and a door. Use your town wand to register the door.",
   "menu.quests.roomblock.job_board": "Craft a job board at the town flag and place it near the flag.",
+  "menu.quests.roomblock.mineshaft": "Craft a mineshaft at the town flag from stone stairs and place it near the flag.",
   "menu.quests.roomblock.click_crafting": "Click to open crafting",
   "menu.quests.job_change.click_villagers": "Click to open villagers",
   "menu.quests.item.click_item_jobs": "Click to see jobs that make this",

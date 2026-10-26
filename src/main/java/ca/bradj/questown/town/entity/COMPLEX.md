@@ -1640,3 +1640,39 @@ LOOT quest names: `UIQuest.lootName` (card) and `TownMessages` (completion line)
 Coal x3 (r16 #7) read "Food (n/3)". `LootQuestNames.key` names the three food tags ("Raw Food",
 "Food", "Cooked Food") and anything else uses the wanted item's own name. `LootQuestNamesTest`.
 Existing saves keep their old food quest (tag `villager_food`).
+
+## The post-hunter beat is a new bedroom; a room quest needs a room not spent on its recipe (r22, 2026-10-26)
+
+Dev, r22: "I'm stuck waiting ... Now would be a good time to build a bedroom since we anticipate
+a new villager." After the raw-food quest, villager 2 is held to the morning (`isArrivalGateOpen`)
+and the cook batch waits for 2 villagers, so once the one empty room was built the player had no
+open quest. `tryPhase2_4_emptyRooms` now posts `addNewcomerBedroomBatch`: one BEDROOM quest, same
+reward (`PHASE_EMPTY_ROOMS`) and gate as the empty room it replaces. Beds: the gate batch's
+villager 1 is the bed rule's exception (CONTEXT.md "Onboarding arrival"), so a town had 2 beds for
+3 villagers (dev: "We have 3 villagers but only two beds via quests"); now hunter-gatherer bedroom +
+newcomer bedroom, and the cook follow-up's Bedroom -> Big Bedroom upgrade makes 3.
+`emptyRoomsBatch()` matches a BEDROOM-only or EMPTY_ROOM-only batch after the hunter-gatherer
+batch (`POST_HUNTER_ROOMS`), so a world from before r22 still finds its empty-room batch.
+
+A second BEDROOM quest would close at once on the hunter-gatherer bedroom (the "Cook batch carries
+the bed" section above). `TownQuests.isClaimedFor(room, recipe)` now guards both completion paths
+(`markQuestAsComplete`, the backfill's room filter): EMPTY_ROOM keeps its rule (no completed quest
+claimed the room); any other room quest skips a room that already completed a quest for the **same
+recipe**. A room spent on another recipe still counts (the store room in the day-1 empty room).
+That also makes `provisionArrival`'s extra bedroom quests ask for new bedrooms. Pins:
+`TutorialPhaseGateTest.whenHunterGathererDone_newcomerBedroomBatchAdded_notTheCookBatch`,
+`bedroomQuest_needsABedroomNoBedroomQuestClaimed`, `roomQuest_mayCompleteOnARoomClaimedForAnotherRecipe`;
+growth r22 run 3 furnished `room-quest-furnished[questown:bedroom]` twice.
+
+## Onboarding job changes apply at the spend (r22, dev 2026-10-26)
+
+Dev: "I'm wondering if the job changes should be instant during onboarding..." (after "I find
+myself midday, waiting only on the cook quests"). `TownFlagBlockEntity.requestJobRootChange` passes
+`instant || promised.isPresent()`, where promised is `onboardingJobChangeGuarantee` (an open
+onboarding JOB_CHANGE quest). Every other change keeps the morning (ADR-0015). The instant branch of
+`SimpleVillagerHandle.scheduleJobRootChange` runs `changeJobRootNow` (which consumes the guarantee)
+and now returns the guarantee instead of empty, so `markJobChangeCompleteAtSpend` still closes the
+quest at the spend; a creative spend with no guarantee still returns empty. Pinned by
+`SimpleVillagerHandleTest.scheduleJobRootChange_instantWithGuarantee_appliesNowAndReturnsTheRoot`;
+the flag-side choice is registry-bound (a BE), covered by growth r22 run 3 (hunter, cook and miner
+each logged "will change to a new job NOW" and the quest close in the same tick).

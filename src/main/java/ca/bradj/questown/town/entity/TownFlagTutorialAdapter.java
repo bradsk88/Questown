@@ -44,6 +44,11 @@ class TownFlagTutorialAdapter implements TutorialTownView {
     }
 
     @Override
+    public boolean anyVillagerOnRoot(String rootId) {
+        return flag.getVillagerHandle().getJobs().stream().anyMatch(j -> rootId.equals(j.rootId()));
+    }
+
+    @Override
     public boolean tutorialBopGranted() {
         return flag.tutorialBopGranted;
     }

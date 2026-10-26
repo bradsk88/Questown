@@ -187,6 +187,9 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
                     second);
         }
 
+        // The page header leaves a non-white shader colour behind, which tinted card 1 only
+        // (r22: 174 vs 198 grey); reset before the first card, as PagedCardScreen does.
+        Compat.resetShaderColor();
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
         for (int i = startIndex; i < endIndex; i++) {
             int row = i - startIndex;

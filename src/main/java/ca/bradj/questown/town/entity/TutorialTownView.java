@@ -24,6 +24,9 @@ public interface TutorialTownView {
 
     int villagerCount();
 
+    /** Whether a villager's current job is on {@code rootId} (a job change applies in the morning, after its quest closed). */
+    boolean anyVillagerOnRoot(String rootId);
+
     boolean tutorialBopGranted();
 
     void grantBop(int amount);

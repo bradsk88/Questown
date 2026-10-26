@@ -837,10 +837,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /**
-     * An "empty room" quest between the hunter-gatherer batch and the cook batch (dev, 2026-10-19
-     * playtest; one room, not two, since 2026-10-23). Posted once the hunter-gatherer batch is
-     * fully done; the cook batch waits for it. A town whose cook batch is already out (an
-     * existing world) skips it.
+     * A bedroom quest between the hunter-gatherer batch and the cook batch, filling the wait for
+     * villager 2's morning arrival (dev, r22 2026-10-26: "now would be a good time to build a
+     * bedroom since we anticipate a new villager"; it was one empty room from 2026-10-19). Posted
+     * once the hunter-gatherer batch is fully done; the cook batch waits for it. A town whose cook
+     * batch is already out (an existing world) skips it.
      */
     private @Nullable Tutorial tryPhase2_4_emptyRooms(TutorialTownView view) {
         if (cookBatchPosted()) {
@@ -850,7 +851,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             return Tutorial.SKIPPED;
         }
         if (!emptyRoomsBatchPosted()) {
-            addEmptyRoomsBatch(view);
+            addNewcomerBedroomBatch(view);
             notifyNewQuests(view);
             return Tutorial.APPLIED;
         }
@@ -872,10 +873,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /**
-     * The post-hunter empty-room batch: an EMPTY_ROOM-only batch posted after the hunter-gatherer
-     * batch. Order is the marker, because the day-1 batch (`addEmptyRoomBatch`, posted by the gate
-     * reward before the basics) is also a single EMPTY_ROOM quest. Worlds from before 2026-10-23
-     * hold a two-quest batch here, which this still finds.
+     * The post-hunter room batch: a BEDROOM-only batch (EMPTY_ROOM-only in worlds from before r22)
+     * posted after the hunter-gatherer batch. Order is the marker, because the day-1 batch
+     * (`addEmptyRoomBatch`, posted by the gate reward before the basics) is also a single EMPTY_ROOM
+     * quest. Worlds from before 2026-10-23 hold a two-quest batch here, which this still finds.
      */
     private @Nullable MCQuestBatch emptyRoomsBatch() {
         ResourceLocation rawFood = TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location();
@@ -886,7 +887,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 continue;
             }
             if (afterHunterGatherer && !b.getAll().isEmpty()
-                    && b.getAll().stream().allMatch(q -> SpecialQuests.EMPTY_ROOM.equals(q.getWantedId()))) {
+                    && b.getAll().stream().allMatch(q -> POST_HUNTER_ROOMS.contains(q.getWantedId()))) {
                 return b;
             }
         }
@@ -902,16 +903,20 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return b != null && b.getAll().stream().allMatch(Quest::isComplete);
     }
 
-    void addEmptyRoomsBatch(TutorialTownView view) {
+    private static final Set<ResourceLocation> POST_HUNTER_ROOMS = Set.of(SpecialQuests.BEDROOM, SpecialQuests.EMPTY_ROOM);
+
+    void addNewcomerBedroomBatch(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
-        // A NEW room: an empty-room quest only completes on a room no completed quest has
-        // claimed (isClaimedByACompletedQuest), so existing rooms do not satisfy it.
-        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.EMPTY_ROOM));
+        // A NEW bedroom: a room quest never completes on a room that already completed a quest for
+        // the same recipe (isClaimedFor), so the hunter-gatherer bedroom does not satisfy it. With
+        // it the town has a bed each for villagers 1 and 2. No flavor text: the standard
+        // room-recipe tooltip (dev preference 2026-10-18).
+        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.BEDROOM));
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_EMPTY_ROOMS));
         markOnboarding(qq);
         questBatches.add(qq);
-        QT.QUESTS_LOGGER.info("Tutorial empty-room batch added (one new room before the cook batch)");
+        QT.QUESTS_LOGGER.info("Tutorial bedroom batch added (a new bedroom before the cook batch)");
     }
 
     private @Nullable Tutorial tryPhase2_5_jobChangeAndFood(TutorialTownView view) {
@@ -1373,7 +1378,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         cookJobQuest.setFlavorText("Your town needs a cook. Teach a villager the cook job so raw food becomes a meal.");
         q.addNewQuest(cookJobQuest);
 
-        // Cooked Food x8, the cook skill and villager 3's bed wait for the cook: they ride the
+        // Cooked Food x4, the cook skill and villager 3's bed wait for the cook: they ride the
         // follow-up batch (postCookFollowUpIfDue). r20, dev 2026-10-25: "the cook's batch is too bulky".
 
         MCQuest kitchenQuest = MCQuest.standalone(batchUUID, null, KITCHEN_SMALL);
@@ -1404,8 +1409,10 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /**
-     * Posts the cook follow-up batch (Cooked Food x8, a cook skill, villager 3's bed) once the
-     * onboarding cook JOB_CHANGE is complete, by whatever path it completed. Runs every tick;
+     * Posts the cook follow-up batch (Cooked Food x4, a cook skill, villager 3's bed) once the
+     * onboarding cook JOB_CHANGE is complete, by whatever path it completed, and a villager is on
+     * the cook root. A BOP spend closes the quest at once but the job changes the next morning
+     * (r22, dev: "They won't be a cook until morning"). Runs every tick;
      * a no-op once any onboarding cooked-food quest exists, so an old-shape cook batch (which
      * carried these quests itself) never gets a second copy.
      */
@@ -1420,6 +1427,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         if (!cookUnlocked) {
             return;
         }
+        if (!view.anyVillagerOnRoot(ONBOARDING_COOK_JOB.rootId())) {
+            return;
+        }
         boolean posted = all.stream().anyMatch(q -> q.isOnboarding()
                 && q.getType() == Quest.QuestType.LOOT
                 && cookedFood.equals(q.getWantedId()));
@@ -1430,6 +1440,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         notifyNewQuests(view);
     }
 
+    /** Was 8 until r22 (dev, 2026-10-26: "this cooked food quest should probably only ask for 4"). */
+    static final int COOKED_FOOD_COUNT = 4;
+
     private void addCookFollowUpBatch(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
@@ -1437,9 +1450,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         // Cooked food only: with #villager_food a gatherer's apples and carrots could fill it (r17,
         // dev 2026-10-25: "the food quest can technically be completed by lucky hunters and gatherers").
         MCQuest cookedFoodQuest = MCQuest.loot(
-                batchUUID, null, TagsInit.Items.VILLAGER_COOKED_FOOD.location(), 8
+                batchUUID, null, TagsInit.Items.VILLAGER_COOKED_FOOD.location(), COOKED_FOOD_COUNT
         );
-        cookedFoodQuest.setFlavorText("Feed your growing village. Produce eight pieces of food from the raw food you have gathered.");
+        cookedFoodQuest.setFlavorText("Feed your growing village. Produce four pieces of food from the raw food you have gathered.");
         q.addNewQuest(cookedFoodQuest);
 
         // A skill on the cook's tree, beside the food quest it helps fill (dev, 2026-10-25; it rode
@@ -1486,10 +1499,26 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             MCRoom room,
             ResourceLocation q
     ) {
-        if (SpecialQuests.EMPTY_ROOM.equals(q) && isClaimedByACompletedQuest(room)) {
+        if (isClaimedFor(room, q)) {
             return;
         }
         questBatches.markRecipeAsComplete(room, q);
+    }
+
+    /**
+     * Whether {@code room} is already spent for a quest wanting {@code q}: an empty-room quest needs a
+     * room no completed quest claimed; any other room quest needs a room that has not completed a
+     * quest for the same recipe, so two bedroom quests take two bedrooms (r22: a second bedroom
+     * quest closed at once on the existing one, as did ArrivalProvisions' bed quests).
+     */
+    boolean isClaimedFor(MCRoom room, ResourceLocation q) {
+        if (SpecialQuests.EMPTY_ROOM.equals(q)) {
+            return isClaimedByACompletedQuest(room);
+        }
+        return questBatches.getAll().stream()
+                .filter(done -> q.equals(done.getWantedId()))
+                .map(Quest::completedOn)
+                .anyMatch(r -> r != null && r.yCoord == room.yCoord && r.doorPos.equals(room.doorPos));
     }
 
     /**
@@ -1884,7 +1913,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(q.getWantedId());
             Optional<MCRoom> eligible = rooms.stream()
                     .map(RoomRecipeMatch::getRoom)
-                    .filter(r -> !SpecialQuests.EMPTY_ROOM.equals(q.getWantedId()) || !isClaimedByACompletedQuest(r))
+                    .filter(r -> !isClaimedFor(r, q.getWantedId()))
                     .findFirst();
             if (eligible.isPresent()) {
                 markQuestAsComplete(eligible.get(), q.getWantedId());

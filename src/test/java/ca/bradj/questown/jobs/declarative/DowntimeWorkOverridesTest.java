@@ -26,4 +26,16 @@ class DowntimeWorkOverridesTest {
         Assertions.assertNotNull(o.textureFor(ProductionStatus.EXTRACTING_PRODUCT));
         Assertions.assertNotNull(o.statusTextOverrides().get(ProductionStatus.EXTRACTING_PRODUCT));
     }
+
+    @Test
+    void noSupplies_readsAsRelaxing() {
+        // r22: downtime needs no supplies; the status circuit falls back to NO_SUPPLIES when no
+        // wander spot is found, and the tab said "is looking for supplies".
+        Overrides o = DowntimeWork.overrides();
+
+        Assertions.assertEquals(
+                o.statusTextOverrides().get(ProductionStatus.NO_JOBSITE),
+                o.statusTextOverrides().get(ProductionStatus.NO_SUPPLIES)
+        );
+    }
 }

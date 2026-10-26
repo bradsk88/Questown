@@ -2,7 +2,7 @@
   "version": 2,
   "id": "cook/extract",
   "priority": 1000,
-  "experience": 200,
+  "experience": 0,
   "parent": null,
   "icon": "minecraft:cooked_beef",
   "initial_request": "#questown:villager_food",

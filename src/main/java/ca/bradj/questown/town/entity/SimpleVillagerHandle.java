@@ -726,7 +726,8 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     /**
      * Schedules a root change and returns the root decided at the spend moment: the blessed
      * guarantee when the BOP carried one, otherwise a pre-roll from the registry's roots. Empty
-     * when instant (applied now) or when no candidate root exists (the morning then re-rolls).
+     * when no candidate root exists (the morning then re-rolls), or when an instant change had no
+     * guarantee (it rolled now); an instant change with a guarantee returns it, already applied.
      */
     public Optional<JobID> scheduleJobRootChange(
             UUID villagerUUID,
@@ -747,11 +748,11 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         );
         if (instant) {
             QT.FLAG_LOGGER.info(
-                    "Villager {} will change to a new job NOW (creative mode)",
+                    "Villager {} will change to a new job NOW (creative mode or onboarding)",
                     UtilClean.truncateMiddle(villagerUUID)
             );
             changeJobRootNow(e, currentTick);
-            return Optional.empty();
+            return guaranteedRoot;
         }
         // Decide the outcome at spend time: an ordinary BOP pre-rolls its root now, so the
         // player's act (and any quest it satisfies) resolves immediately. The morning only

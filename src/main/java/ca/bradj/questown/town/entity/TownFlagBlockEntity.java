@@ -475,16 +475,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
      * (the root is decided here - an onboarding quest's root beats the BOP's own blessing,
      * a blessed BOP beats a pre-roll, and the morning applies the decided root) and, when a
      * pending root was decided, completes the matching JOB_CHANGE quest at the spend moment
-     * - the reward lands on the player's act, not on the morning application.
+     * - the reward lands on the player's act, not on the morning application. An onboarding
+     * quest's change applies at the spend (dev, r22 2026-10-26: the morning wait left the
+     * tutorial with nothing to do); every other change keeps the morning (ADR-0015).
      */
     public Optional<JobID> requestJobRootChange(
             UUID villagerUUID,
             boolean instant,
             Optional<JobID> guaranteedRoot
     ) {
-        Optional<JobID> effectiveGuarantee = promisedJobChange(villagerUUID).or(() -> guaranteedRoot);
+        Optional<JobID> promised = promisedJobChange(villagerUUID);
+        Optional<JobID> effectiveGuarantee = promised.or(() -> guaranteedRoot);
+        boolean now = instant || promised.isPresent();
         Optional<JobID> pending =
-                getVillagerHandle().scheduleJobRootChange(villagerUUID, instant, effectiveGuarantee);
+                getVillagerHandle().scheduleJobRootChange(villagerUUID, now, effectiveGuarantee);
         pending.ifPresent(root ->
                 quests.markJobChangeCompleteAtSpend(VillagerUUID.from(villagerUUID), root)
         );

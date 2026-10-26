@@ -2,7 +2,7 @@
   "version": 2,
   "id": "cook/stock_ingredients",
   "priority": "15000",
-  "experience": 200,
+  "experience": 0,
   "parent": "cook/extract",
   "icon": "minecraft:chest",
   "initial_request": "#questown:villager_food",

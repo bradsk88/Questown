@@ -95,6 +95,11 @@ class TownQuestsHunterGathererOnboardingTest {
             }
 
             @Override
+            public boolean anyVillagerOnRoot(String rootId) {
+                return false;
+            }
+
+            @Override
             public boolean tutorialBopGranted() {
                 return true;
             }

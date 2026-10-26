@@ -666,6 +666,23 @@ class SimpleVillagerHandleTest {
     }
 
     @Test
+    public void scheduleJobRootChange_instantWithGuarantee_appliesNowAndReturnsTheRoot() {
+        // r22: an onboarding spend applies at once; the returned root lets the spend close its quest.
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+        JobID cook = new JobID("cook", "extract");
+
+        Optional<JobID> pending = handle.scheduleJobRootChange(v, 0, true, Optional.of(cook));
+
+        Assertions.assertEquals(Optional.of(cook), pending);
+        Assertions.assertEquals(List.of(cook), t.jobChanges, "applied at the spend, not at morning");
+        Assertions.assertFalse(handle.isJobChangePending(v));
+        Assertions.assertTrue(handle.getGuaranteedRoots().isEmpty(), "the guarantee is consumed");
+    }
+
+    @Test
     public void register_replacesACopyThatLeftTheWorld() {
         // 2026-10-17: a reloaded townie is a new object with the same UUID; the copy that
         // unloaded with its chunk must not stay listed.

@@ -231,8 +231,10 @@ both townies pinned until the roof was raised). `standUpBesideBed` now runs for 
 
 A leaver vanishes when its job's `remove_from_world` rule applies (`VisitorMobEntity` sets the
 synced `visible` flag from `!job.shouldDisappear(...)` every tick), with nothing to mark it. When
-the flag flips (either way) the server now sends 12 `POOF` particles around the body. A villager
-that loads already away puffs once on its first tick (the synced value starts visible).
+the flag flips (either way) the server now sends 12 `HAPPY_VILLAGER` sparkles around the body
+(`POOF` until r22; dev 2026-10-26: "looks like a death animation"). A villager that loads already
+away sparkles once on its first tick (the synced value starts visible). The stranded rescue below
+keeps `POOF` (the dev's r20 pick).
 
 ## Stranded outside the town: poof back to the gate (r20, dev 2026-10-25)
 

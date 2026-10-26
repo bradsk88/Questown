@@ -1391,3 +1391,22 @@ vanilla layout (26-px cells at u 0 / 26 / 52, `FrameType.getTexture()` in 1.19.2
 golden calls `FrameType.X.getTexture()`), and 1 / 54 are only where the art's opaque pixels start.
 Now 0 / 26 / 52. Checked from the PNG (opaque runs on row 140: x 1-24, 27-50, 54-75), not yet on
 screen.
+
+## Work requests: card 1 is no longer tinted (r22, 2026-10-26)
+
+Dev: "The first card on the work requests UI is still shaded. Other UIs are fixed though." The F2
+shot (Raw Food + Raw Mutton) measured card 1's interior at RGB 174, card 2 and the panel at 198; the
+1.19.2 golden draws every card at 198, and JEI's `single_recipe_background.png` centre is an opaque
+198, so it was a draw-time tint. `PagedCardScreen.renderCards` resets the shader colour before card 1;
+`WorkScreen` reset it only after each `drawNineNine`, so card 1 inherited what the page header
+(`renderPageNum`'s fill + drawString) left. `WorkScreen.renderScreenContent` now calls
+`Compat.resetShaderColor()` before the card loop. Which call leaves the colour is not identified.
+Verify with a shot of 2+ cards (`QtDiagClient.shot`), not a one-card bank.
+
+## The mineshaft quest card opens crafting (r22, 2026-10-26)
+
+Dev: "The 'mineshaft' quest should have a hint for looking at the crafting tab, like the job board
+and welcome mat quests do." `QuestsScreen.opensCrafting(wantedId)` (welcome mat, empty room, job
+board, `FlagCraftRecipes.MINESHAFT_QUEST`) drives both the two-line tooltip (`menu.quests.roomblock.mineshaft`
++ grey `click_crafting`) and the click deep link to the crafting tab. The fishing station
+(`FISHING_STATION_QUEST`, also a flag crafting row) is not included; nobody asked.

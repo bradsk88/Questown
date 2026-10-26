@@ -323,6 +323,15 @@ complete, by any completion path, and does nothing once any onboarding cooked-fo
 exists. That also keeps an old-shape cook batch (which carried those quests) from getting a
 second copy. Pinned by `TutorialPhaseGateTest.cookFollowUp_*`.
 
+**It also waits for a cook (r22, 2026-10-26).** The JOB_CHANGE quest closes at the BOP spend, but
+a non-instant root change applies the next morning, so the follow-up showed "Food 0/8" and the cook
+skill to a town with no cook (dev: "They won't be a cook until morning"). `postCookFollowUpIfDue`
+also needs `TutorialTownView.anyVillagerOnRoot("cook")` (the adapter reads
+`VillagerHolder.getJobs()`). Onboarding changes are instant since r22 (`town/entity/COMPLEX.md`),
+so in a fresh town both hold in the same tick; the gate covers any morning-applied path. Pinned by
+`cookFollowUp_waitsForTheMorningJobChange`. The food quest asks for 4 (`COOKED_FOOD_COUNT`; dev r22:
+"should probably only ask for 4").
+
 **Its own wanted id: `questown:skill_unlock/<root>`.** Batch completion
 (`QuestBatch.markRecipeAsComplete`) and load replay match a quest by wanted id alone and take
 the first open match. The first build used the tree root's job RL (`cook_qt_extract`), the

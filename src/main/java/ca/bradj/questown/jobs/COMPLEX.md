@@ -1040,3 +1040,28 @@ own table replaces the default). A short trip is one item from one roll (`Loots.
 attempts 1), so about 1 trip in 5 brings wool; half-day and full-day trips (2 and 4 items) bring
 proportionally more. The food share of each roll drops by the same fifth. Known loot (town
 knowledge) only shapes the job's described outputs, not the roll. `HunterWoolDataTest`.
+
+## Only the cook's recipe steps pay XP; eating is twice the r19 work (r22, dev 2026-10-26)
+
+"Seems like the cook might be leveling a touch too fast": every cook step paid 200, so one meal
+(`cook:fuel`, the recipe step e.g. `cook:mutton`, `cook:extract`) was ~600 XP against a 1000 / x1.2
+curve (r22: level 2 -> 4 in 11 minutes). Dev ruling: only the recipe step pays. `cook_fuel`,
+`cook_extract`, `cook_stock_fuel` and `cook_stock_ingredients` declare `"experience": 0` (a declared
+0 replaces the formula like any value, `Work.experienceEarned`); the recipe template
+`cook_simple_furnace_food` and `cook_fish` keep 200. The cook now reaches level 2 (the cook skill
+quest) about 3x later. Pinned by `JobExperienceFieldTest.cookRecipeStepsAndBakerJobsEarn200_cookSupportStepsNothing`
+and `declaredZero_earnsNothing_notTheFormula`.
+
+"Villagers eat too quickly. I would update it to 2x the work.": NEED_EAT work is 10 at a table
+(`DinerWork`) and 6 without one or for raw food (`DinerNoTableWork`, `DinerRawFoodWork`), from the
+2026-10-19 tenth (5 / 3). Pinned by `DiningWorkDurationTest`.
+
+## Downtime never reads "looking for supplies" (r22, 2026-10-26)
+
+The `JobStatuses` circuit's last fallback is `noSupplies`. Downtime needs no supplies, but its
+`tryChoosingItemlessWork` is null when no wander spot is found ("Could not find wander target: all
+N room(s) filtered out"), so a relaxing villager fell through and the tab said "is looking for
+supplies" (r22: 36x `hunter:downtime` NO_SUPPLIES in one run). `DowntimeWork.overrides()` maps
+NO_SUPPLIES to the relaxing text like NO_JOBSITE. Pinned by
+`DowntimeWorkOverridesTest.noSupplies_readsAsRelaxing`. Why the wander filter rejects every room is
+not addressed here.

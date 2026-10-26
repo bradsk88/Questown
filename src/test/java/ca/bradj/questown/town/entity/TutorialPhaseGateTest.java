@@ -237,10 +237,9 @@ class TutorialPhaseGateTest {
         quests.questBatches.markRecipeAsComplete(null, Compat.getItemId(Items.STONE_SWORD));
         quests.questBatches.markRecipeAsComplete(null, SpecialQuests.BEDROOM);
 
-        // The two-empty-rooms batch sits between the hunter-gatherer batch and the cook batch.
+        // The newcomer-bedroom batch sits between the hunter-gatherer batch and the cook batch.
         quests.addTutorialBatches(view);
-        quests.questBatches.markRecipeAsComplete(null, SpecialQuests.EMPTY_ROOM);
-        quests.questBatches.markRecipeAsComplete(null, SpecialQuests.EMPTY_ROOM);
+        quests.questBatches.markRecipeAsComplete(null, SpecialQuests.BEDROOM);
 
         return quests;
     }
@@ -275,9 +274,9 @@ class TutorialPhaseGateTest {
     }
 
     @Test
-    void whenHunterGathererDone_oneEmptyRoomBatchAdded_notTheCookBatch() {
-        // Dev, 2026-10-19 playtest: an "empty room" batch after the raw-food batch and before the
-        // cook batch; one room, not two (dev, 2026-10-23: no compelling reason to get two ready).
+    void whenHunterGathererDone_newcomerBedroomBatchAdded_notTheCookBatch() {
+        // Dev, r22 2026-10-26: a bedroom fills the wait for villager 2's morning arrival (it was one
+        // empty room from 2026-10-19).
         TownQuests quests = questsAfterHunterGathererDone();
         TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
 
@@ -285,18 +284,20 @@ class TutorialPhaseGateTest {
 
         assertEquals(TownQuests.Tutorial.APPLIED, result);
         List<MCQuest> all = quests.questBatches.getAll();
-        assertEquals(1, all.stream().filter(q -> SpecialQuests.EMPTY_ROOM.equals(q.getWantedId())).count());
+        assertEquals(1, all.stream().filter(q -> SpecialQuests.BEDROOM.equals(q.getWantedId()) && !q.isComplete()).count(),
+                "one new, open bedroom quest");
+        assertTrue(all.stream().noneMatch(q -> SpecialQuests.EMPTY_ROOM.equals(q.getWantedId())));
         assertTrue(all.stream().noneMatch(q ->
                 q.getType() == Quest.QuestType.JOB_CHANGE
                         && q.getWantedId().equals(JobID.toRL(TownQuests.ONBOARDING_COOK_JOB))
-        ), "the cook batch waits for the empty rooms");
+        ), "the cook batch waits for the bedroom");
     }
 
     @Test
     void dayOneEmptyRoomBatch_isNotMistakenForThePostHunterOne() {
-        // Both batches are a single EMPTY_ROOM quest; the day-1 one (completed, posted before the
-        // hunter-gatherer batch) must not count as the post-hunter batch, or the phase skips
-        // straight to the cook batch.
+        // The day-1 batch is a single EMPTY_ROOM quest, as the post-hunter batch was before r22; the
+        // day-1 one (completed, posted before the hunter-gatherer batch) must not count as the
+        // post-hunter batch, or the phase skips straight to the cook batch.
         TownQuests quests = questsAfterHunterGathererDone(true);
         TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
 
@@ -304,8 +305,8 @@ class TutorialPhaseGateTest {
 
         assertEquals(TownQuests.Tutorial.APPLIED, result);
         assertEquals(1, quests.questBatches.getAll().stream()
-                .filter(q -> SpecialQuests.EMPTY_ROOM.equals(q.getWantedId()) && !q.isComplete()).count(),
-                "one new, open empty-room quest");
+                .filter(q -> SpecialQuests.BEDROOM.equals(q.getWantedId()) && !q.isComplete()).count(),
+                "one new, open bedroom quest");
         assertTrue(quests.questBatches.getAll().stream().noneMatch(q ->
                 q.getWantedId().equals(JobID.toRL(TownQuests.ONBOARDING_COOK_JOB))
         ), "the cook batch waits for the new room");
@@ -343,6 +344,44 @@ class TutorialPhaseGateTest {
         quests.markQuestAsComplete(b, SpecialQuests.EMPTY_ROOM);
         assertEquals(2, quests.questBatches.getAll().stream().filter(Quest::isComplete).count(),
                 "a second, new room completes the second quest");
+    }
+
+    @Test
+    void bedroomQuest_needsABedroomNoBedroomQuestClaimed() {
+        // r22: the town already has the hunter-gatherer bedroom, so the newcomer's bedroom quest
+        // must not close on it.
+        TownQuests quests = newTownQuests();
+        MCQuestBatch batch = new MCQuestBatch(null, null, new NoOpReward());
+        batch.addNewQuest(null, SpecialQuests.BEDROOM);
+        batch.addNewQuest(null, SpecialQuests.BEDROOM);
+        quests.questBatches.add(batch);
+        MCRoom a = room(0, 0);
+        MCRoom b = room(10, 0);
+
+        quests.markQuestAsComplete(a, SpecialQuests.BEDROOM);
+        quests.markQuestAsComplete(a, SpecialQuests.BEDROOM);
+        assertEquals(1, quests.questBatches.getAll().stream().filter(Quest::isComplete).count(),
+                "the same bedroom cannot complete both bedroom quests");
+
+        quests.markQuestAsComplete(b, SpecialQuests.BEDROOM);
+        assertEquals(2, quests.questBatches.getAll().stream().filter(Quest::isComplete).count(),
+                "a second, new bedroom completes the second quest");
+    }
+
+    @Test
+    void roomQuest_mayCompleteOnARoomClaimedForAnotherRecipe() {
+        // Only the same recipe claims a room: the store room still completes in the day-1 empty room.
+        TownQuests quests = newTownQuests();
+        MCQuestBatch batch = new MCQuestBatch(null, null, new NoOpReward());
+        batch.addNewQuest(null, SpecialQuests.EMPTY_ROOM);
+        batch.addNewQuest(null, SpecialQuests.STORE_ROOM_SMALL);
+        quests.questBatches.add(batch);
+        MCRoom a = room(0, 0);
+
+        quests.markQuestAsComplete(a, SpecialQuests.EMPTY_ROOM);
+        quests.markQuestAsComplete(a, SpecialQuests.STORE_ROOM_SMALL);
+
+        assertEquals(2, quests.questBatches.getAll().stream().filter(Quest::isComplete).count());
     }
 
     private static MCRoom room(int x, int z) {
@@ -392,7 +431,7 @@ class TutorialPhaseGateTest {
                 q.getType() == Quest.QuestType.JOB_CHANGE
                         && q.getWantedId().equals(JobID.toRL(TownQuests.ONBOARDING_COOK_JOB))
         ));
-        // Cooked Food x8 and the cook skill wait for the cook (r20, dev 2026-10-25: "the cook's
+        // Cooked Food x4 and the cook skill wait for the cook (r20, dev 2026-10-25: "the cook's
         // batch is too bulky"); the follow-up batch carries them.
         assertFalse(hasCookFollowUpQuest(all), "phase 2.5 batch must not carry the cook follow-up quests");
         // The batch carries the cook's room quest too: every cook/* job requires
@@ -426,9 +465,25 @@ class TutorialPhaseGateTest {
     }
 
     @Test
+    void cookFollowUp_waitsForTheMorningJobChange() {
+        // r22, dev: a BOP spend closes the cook JOB_CHANGE at once, but "they won't be a cook until
+        // morning"; Food x8 and the cook skill wait for a villager on the cook root.
+        TownQuests quests = questsAtPhase2_5();
+        TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2)
+                .villagerRoots("hunter", "gatherer").build();
+        quests.addTutorialBatches(view);
+        quests.questBatches.markRecipeAsComplete(null, JobID.toRL(TownQuests.ONBOARDING_COOK_JOB));
+
+        quests.postCookFollowUpIfDue(view);
+
+        assertFalse(hasCookFollowUpQuest(quests.questBatches.getAll()));
+    }
+
+    @Test
     void cookFollowUp_postedOnceTheCookIsUnlocked() {
         TownQuests quests = questsAtPhase2_5();
-        TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
+        TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2)
+                .villagerRoots("hunter", "cook").build();
         quests.addTutorialBatches(view);
         quests.questBatches.markRecipeAsComplete(null, JobID.toRL(TownQuests.ONBOARDING_COOK_JOB));
 
@@ -438,7 +493,8 @@ class TutorialPhaseGateTest {
         assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.LOOT
                         && q.getWantedId().equals(TagsInit.Items.VILLAGER_COOKED_FOOD.location())
-        ), "follow-up must carry Cooked Food x8");
+                        && q.getCountNeeded() == TownQuests.COOKED_FOOD_COUNT
+        ), "follow-up must carry Cooked Food x4");
         // A skill on the cook's tree, beside the food quest it helps fill (dev, 2026-10-25).
         assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.SKILL_UNLOCK
@@ -458,7 +514,8 @@ class TutorialPhaseGateTest {
     @Test
     void cookFollowUp_postedOnlyOnce() {
         TownQuests quests = questsAtPhase2_5();
-        TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
+        TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2)
+                .villagerRoots("hunter", "cook").build();
         quests.addTutorialBatches(view);
         quests.questBatches.markRecipeAsComplete(null, JobID.toRL(TownQuests.ONBOARDING_COOK_JOB));
 

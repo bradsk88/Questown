@@ -21,6 +21,7 @@ class TestTutorialTownView implements TutorialTownView {
     }
 
     private int villagerCount;
+    private java.util.Set<String> villagerRoots;
     private boolean tutorialBopGranted;
     private int bopGranted;
     private final List<String> messagesSent = new ArrayList<>();
@@ -38,6 +39,11 @@ class TestTutorialTownView implements TutorialTownView {
     @Override
     public int villagerCount() {
         return villagerCount;
+    }
+
+    @Override
+    public boolean anyVillagerOnRoot(String rootId) {
+        return villagerRoots.contains(rootId);
     }
 
     @Override
@@ -100,11 +106,17 @@ class TestTutorialTownView implements TutorialTownView {
 
     static class Builder {
         private int villagerCount = 1;
+        private java.util.Set<String> villagerRoots = java.util.Set.of();
         private boolean tutorialBopGranted = false;
         private ResourceLocation roomForJob = new ResourceLocation("questown", "farm");
 
         Builder villagerCount(int count) {
             this.villagerCount = count;
+            return this;
+        }
+
+        Builder villagerRoots(String... roots) {
+            this.villagerRoots = java.util.Set.of(roots);
             return this;
         }
 
@@ -122,6 +134,7 @@ class TestTutorialTownView implements TutorialTownView {
         TestTutorialTownView build() {
             TestTutorialTownView view = new TestTutorialTownView();
             view.villagerCount = villagerCount;
+            view.villagerRoots = villagerRoots;
             view.tutorialBopGranted = tutorialBopGranted;
             view.roomForJob = roomForJob;
             return view;

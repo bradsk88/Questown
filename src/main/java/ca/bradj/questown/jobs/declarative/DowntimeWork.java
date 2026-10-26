@@ -112,7 +112,8 @@ public class DowntimeWork {
     /**
      * Downtime is spent in the work states and extraction, which have no default art or text
      * (the villagers tab showed the error checkerboard and "busy with their work"): they all
-     * read as relaxing.
+     * read as relaxing. So does NO_SUPPLIES, the status circuit's fallback when no wander spot is
+     * found (r22, dev: "status is 'looking for supplies' but should be 'relaxing'").
      */
     static Overrides overrides() {
         Pair<String, String> relaxingText = new Pair<>(
@@ -121,6 +122,7 @@ public class DowntimeWork {
         );
         ImmutableMap.Builder<IStatus<?>, Pair<String, String>> text = ImmutableMap.builder();
         text.put(ProductionStatus.NO_JOBSITE, relaxingText);
+        text.put(ProductionStatus.NO_SUPPLIES, relaxingText);
         text.put(ProductionStatus.EXTRACTING_PRODUCT, relaxingText);
         for (int i = 0; i < MAX_STATE; i++) {
             text.put(ProductionStatus.fromJobBlockStatus(i), relaxingText);

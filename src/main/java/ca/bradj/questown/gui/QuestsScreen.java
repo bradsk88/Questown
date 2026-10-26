@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.network.FlagCraftRecipes;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.RoomBlock;
@@ -324,15 +325,16 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         // room_quest line instead of its own copy (user report, 2026-10-14).
         // JOB_BOARD joined the mat/room format on the same day (playtest chat):
         // two-line tooltip + click-to-craft deep link, like the welcome mat.
-        if (recipe.getType() == Quest.QuestType.ROOM
-                && (SpecialQuests.TOWN_GATE.equals(recipe.getWantedId())
-                        || SpecialQuests.EMPTY_ROOM.equals(recipe.getWantedId())
-                        || SpecialQuests.JOB_BOARD.equals(recipe.getWantedId()))) {
+        // The mineshaft joined them in r22 (dev: "should have a hint for looking at the crafting
+        // tab, like the job board and welcome mat quests do").
+        if (recipe.getType() == Quest.QuestType.ROOM && opensCrafting(recipe.getWantedId())) {
             String key;
             if (SpecialQuests.TOWN_GATE.equals(recipe.getWantedId())) {
                 key = "menu.quests.roomblock.welcome_mat";
             } else if (SpecialQuests.JOB_BOARD.equals(recipe.getWantedId())) {
                 key = "menu.quests.roomblock.job_board";
+            } else if (FlagCraftRecipes.MINESHAFT_QUEST.equals(recipe.getWantedId())) {
+                key = "menu.quests.roomblock.mineshaft";
             } else {
                 key = "menu.quests.roomblock.empty_room";
             }
@@ -636,6 +638,14 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
     private static final ResourceLocation BOOK_ID = new ResourceLocation(Questown.MODID, "intro");
 
+    /** Quest cards answered at the flag's crafting tab: a click opens it, and the tooltip says so. */
+    static boolean opensCrafting(ResourceLocation wantedId) {
+        return SpecialQuests.TOWN_GATE.equals(wantedId)
+                || SpecialQuests.EMPTY_ROOM.equals(wantedId)
+                || SpecialQuests.JOB_BOARD.equals(wantedId)
+                || FlagCraftRecipes.MINESHAFT_QUEST.equals(wantedId);
+    }
+
     private boolean openLessonForClickedCard(double mouseX, double mouseY) {
         for (Card<UIQuest> card : cards()) {
             CardCoordinates c = card.coords();
@@ -651,9 +661,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             // "Clicking on the welcome mat quest should take me to the flag's crafting tab."
             // The empty-room card deep-links there too: its grey line says "Click to open
             // crafting" because the Town Wand - the one thing it needs - is crafted there.
-            if ((SpecialQuests.TOWN_GATE.equals(quest.getWantedId())
-                    || SpecialQuests.EMPTY_ROOM.equals(quest.getWantedId())
-                    || SpecialQuests.JOB_BOARD.equals(quest.getWantedId()))
+            if (opensCrafting(quest.getWantedId())
                     && this.tabs instanceof Tabs tabs && tabs.openTab("tooltips.crafting")) {
                 return true;
             }
