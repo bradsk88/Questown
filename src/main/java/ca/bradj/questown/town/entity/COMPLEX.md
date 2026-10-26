@@ -1421,8 +1421,9 @@ room-recipe tooltip (dev preference; `TownQuestsHunterGathererOnboardingTest`).
 
 **Every villager-bringing batch asks for its bed and storage (dev ruling 2026-10-24, r16 #11 /
 #17).** The "dev observation" above became a rule. `defaultQuestCompletionRewards` (procedural
-batches, and the tutorial miner and top-need batches via `makeReward(PHASE_MINER |
-PHASE_NEW_JOB_ROOM)`) can spawn a villager, and the bed shortfall the procedural garden covers
+batches, and the tutorial top-need batch via `makeReward(PHASE_NEW_JOB_ROOM)`; the miner batch
+moved to `arrivalWithQuestBatch` on 2026-10-26, a guaranteed villager 4 for the curated path's
+first job change) can spawn a villager, and the bed shortfall the procedural garden covers
 (`TownInterface.missingBeds`) counted only townies already in town, never the arrival. r16: the
 miner batch's Villager 4 arrived bedless, and storage filled with nothing asking for chests.
 `TownQuests.provisionArrival` runs where such a batch is built (the procedural pop in

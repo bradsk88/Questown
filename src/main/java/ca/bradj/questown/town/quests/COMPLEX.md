@@ -281,8 +281,12 @@ pickaxes + 8 coal + the miner's room (mineshaft). It is markOnboarding-flagged
 so the open miner JOB_CHANGE fills the BOP-spend guarantee slot (the same
 mechanism as the hunter/cook beats; `TownQuestsMinerOnboardingTest` pins the
 flag + the guarantee). The reward rides `PHASE_MINER` ->
-`defaultQuestCompletionRewards` (BOP + next villager), same as the other
-post-kickoff phases. The coal pain the beat answers: the kitchen makes coal
+`arrivalWithQuestBatch` (a guaranteed villager 4; it was
+`defaultQuestCompletionRewards`, which can roll an upgrade quest instead).
+Villager 4 is the one a curated path's starter re-roles (the Outfitter's
+crafter): r22 overnight growth reached the fork at roster 3 (hunter, cook,
+miner) and the path's `crafter/stick` JOB_CHANGE had nobody to take it. Dev
+OK 2026-10-26. The coal pain the beat answers: the kitchen makes coal
 the town's top need the moment it starts feeding, so the need-driven
 top-need batch below it now picks up whichever need is NOT coal.
 `TutorialPhaseGateTest` walks the full ladder through the miner beat (the

@@ -108,8 +108,12 @@ class TownFlagTutorialAdapter implements TutorialTownView {
             // Curated path batches (plan ruling 19): an arrival on some, nothing on the rest.
             case TutorialTownView.PHASE_PATH_ARRIVAL -> arrivalWithQuestBatch();
             case TutorialTownView.PHASE_PATH -> new MCRewardList(flag);
-            case TutorialTownView.PHASE_NEW_JOB_ROOM, TutorialTownView.PHASE_MINER ->
-                    new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
+            // The miner batch brings villager 4, the one a curated path's starter turns into its
+            // first new job (the Outfitter's crafter). defaultQuestCompletionRewards could roll an
+            // upgrade quest instead, and the path's job change then had no free villager (r22
+            // overnight growth: roster 3 at the fork, "Job change: crafter" never closed).
+            case TutorialTownView.PHASE_MINER -> arrivalWithQuestBatch();
+            case TutorialTownView.PHASE_NEW_JOB_ROOM -> new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
             default -> new AddBatchOfQuestsForVisitorReward(flag, null);
         };
     }

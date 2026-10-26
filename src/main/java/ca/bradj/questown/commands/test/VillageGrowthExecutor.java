@@ -887,7 +887,7 @@ public final class VillageGrowthExecutor {
                 return craftAndPlaceRoomBlock(id);
             }
             ca.bradj.roomrecipes.recipes.RoomRecipe recipe = roomRecipe(id);
-            if (recipe != null && placements(recipe).size() > ROW_CAPACITY) {
+            if (recipe != null && placements(recipe).size() > FURNISH_SLOTS.size()) {
                 return discardUnbuildable(q);
             }
             if (recipe == null || nextSpareBuilding >= buildingCorners.size()) {
@@ -896,7 +896,7 @@ public final class VillageGrowthExecutor {
             }
             BlockPos corner = buildingCorners.get(nextSpareBuilding++);
             level.setBlockAndUpdate(corner.offset(1, 0, 1), Blocks.AIR.defaultBlockState());
-            int col = 0;
+            int slot = 0;
             // A bed item places a whole bed, which is two of the recipe's bed entries.
             List<net.minecraft.world.item.crafting.Ingredient> toPlace = ca.bradj.questown.logic.BedHalves.oneEntryPerBed(
                     recipe.getIngredients(),
@@ -908,7 +908,7 @@ public final class VillageGrowthExecutor {
                 if (options.length == 0) {
                     continue;
                 }
-                placeViaItemUse(corner.offset(1 + col++, 0, 1), options[0].copyWithCount(1));
+                placeViaItemUse(corner.offset(FURNISH_SLOTS.get(slot++)), options[0].copyWithCount(1));
             }
             msg("Furnished room quest " + id + " in the building at " + corner.toShortString());
             check("room-quest-furnished[" + id + "]", true);
@@ -917,8 +917,17 @@ public final class VillageGrowthExecutor {
         return false;
     }
 
-    /** Items placed in one row of a spare building's 3x3 interior. */
-    private static final int ROW_CAPACITY = BUILDING_SIZE - 2;
+    /**
+     * Where furnishing goes in a spare building's 3x3 interior (offsets from its corner): the back
+     * row, then the sides, keeping a corridor from the door (south wall, middle) clear. Seven slots,
+     * so the armory (blacksmith's table + 4 chests, curated Outfitter path) fits; one row of three
+     * made the driver discard it, and the path engine posted it again every tick (r22 overnight).
+     */
+    private static final List<BlockPos> FURNISH_SLOTS = List.of(
+            new BlockPos(1, 0, 1), new BlockPos(2, 0, 1), new BlockPos(3, 0, 1),
+            new BlockPos(1, 0, 2), new BlockPos(3, 0, 2),
+            new BlockPos(1, 0, 3), new BlockPos(3, 0, 3)
+    );
 
     /**
      * A room quest the 3x3 spare buildings can't hold (the inn: six beds) is discarded the way a
@@ -927,6 +936,13 @@ public final class VillageGrowthExecutor {
      * (`.scratch/autotest-suite/growth-driver-cannot-build-inn-or-kitchen-upgrades.md`).
      */
     private boolean discardUnbuildable(MCQuest q) {
+        if (q.pathBatch().isPresent()) {
+            // A player can't discard a path batch (not discardable), and the engine would post it
+            // again at once: a room the driver can't build is a driver gap, so it fails loudly.
+            msg("FAIL path room quest " + q.getWantedId() + " does not fit a spare building");
+            check("path-room-fits[" + q.getWantedId() + "]", false);
+            return false;
+        }
         boolean removed = flag.getQuestHandle().removeBatch(q.getBatchUUID());
         msg("Discarded the batch of room quest " + q.getWantedId() + ": it does not fit a spare building -> " + removed);
         check("unbuildable-discarded[" + q.getWantedId() + "]", removed);
