@@ -945,7 +945,13 @@ later (`refurnishMissing`). A path request is taken off the board once its quest
 needed. While a path's named skill is above its villager's level, the driver requests what that
 villager's unlocked jobs make, once each, and withdraws them at the next skill spend
 (`requestWorkToLevel`): the crafter otherwise idled at level 4 after Weapons I, short of the stone
-tier.
+tier. A finished path request is left up when a levelling request wants the same item (the board
+holds one request per item).
+
+**Stall dump** (2026-10-26): when the roster has not changed for 60 000 driver ticks, the driver
+logs the work seeker's score report for every villager root once (`STALL work_score <root>: ...`,
+the same text as `_qtdev work_score`), so an unheld run that stalls carries its own "why". Added
+after a growth run stalled at the hunter beat with the debug log already rotated (findings #23).
 
 ## Village scenarios run on peaceful (dev ruling 2026-10-24)
 

@@ -1300,7 +1300,9 @@ public final class VillageGrowthExecutor {
      */
     private void withdrawPathLootRequest(ResourceLocation wanted) {
         Item item = pathLootRequested.get(wanted);
-        if (item == null || !pathLootWithdrawn.add(wanted)) {
+        if (item == null || !pathLootWithdrawn.add(wanted) || levellingRequests.contains(item)) {
+            // A levelling request for the same item is still wanted (the board holds one request
+            // per item, so removing this one would take that down too).
             return;
         }
         flag.getWorkHandle().removeWorkRequest(ca.bradj.questown.jobs.requests.WorkRequest.of(item));
@@ -1360,6 +1362,30 @@ public final class VillageGrowthExecutor {
 
     // ---- observation: the two player questions ----
 
+    private int rosterChangedTick;
+    private int stallDumpedAtTick = -1;
+    private static final int STALL_DUMP_AFTER_TICKS = 60000;
+
+    /**
+     * Once per stall (the roster unchanged for {@link #STALL_DUMP_AFTER_TICKS}), log the work
+     * seeker's scores for every villager's root: the same dump as {@code _qtdev work_score}, for
+     * unheld runs that have no console. Added for the hunter-beat stall (findings
+     * `.scratch/agent-playtest-2026-10-26-outfitter/` #23), whose debug log had rotated away.
+     */
+    private void dumpWorkScoresIfStalled() {
+        if (ticks - rosterChangedTick < STALL_DUMP_AFTER_TICKS || stallDumpedAtTick >= rosterChangedTick) {
+            return;
+        }
+        stallDumpedAtTick = ticks;
+        java.util.Set<String> roots = new java.util.TreeSet<>();
+        flag.getVillagerHandle().entities().forEach(v -> roots.add(((VisitorMobEntity) v).getJobId().rootId()));
+        for (String root : roots) {
+            for (String line : flag.getPossibleWork().scoreDump(root).split("\n")) {
+                msg("STALL work_score " + root + ": " + line);
+            }
+        }
+    }
+
     private void observe() {
         long roster = flag != null ? flag.getVillagerHandle().size() : 0;
         long dayTime = level.getDayTime() % 24000L;
@@ -1367,7 +1393,11 @@ public final class VillageGrowthExecutor {
 
         // A) As a player, what do I know about the village?
         msg("KNOWN roster=" + roster + (roster != lastObservedRoster ? " (changed from " + lastObservedRoster + ")" : ""));
+        if (roster != lastObservedRoster) {
+            rosterChangedTick = ticks;
+        }
         lastObservedRoster = roster;
+        dumpWorkScoresIfStalled();
         for (LivingEntity v : flag.getVillagerHandle().entities()) {
             VisitorMobEntity t = (VisitorMobEntity) v;
             String need = t.getNeed() == TownieNeed.UNMET_ITEM
