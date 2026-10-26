@@ -58,6 +58,102 @@ origin: r16 #14 design chat, dev rulings 2026-10-24. Supersedes
     in code (`TownQuests.addQuestsForJobChangeAndFood`, `town/quests/COMPLEX.md` "SKILL_UNLOCK").
     The path data format (11) will need to express this quest type.
 
+## Outfitter first cut (dev rulings 2026-10-26, after r22)
+
+The dev chose to design the Outfitter content before the engine, so the engine fits real content.
+
+14. **First cut = Start + Armor + Weapons (wood -> stone).** The Iron branch (depth miners,
+    per-depth loot, the smelter ingot job, the old-id rename) and the iron finale come in a second
+    pass.
+15. **Lower the crafter level gates: wood 3, stone 5, iron 8, gold 11, diamond 14** (were 7 / 12 /
+    17 / 22 / 27, `available_at_level` in the `blacksmith_*.json` files). Crafter XP stays on the
+    formula for now; no crafter XP has been logged yet, so measure it in the first run. Ruling 9's
+    "iron armor at 17" becomes 8 to match.
+16. **Path "make X" quests count production (LOOT)**, the villagers' own output, like the miner's
+    Coal x3, not chest contents.
+17. **Skill quests name a skill.** A new form of SKILL_UNLOCK that completes only for the named job
+    (e.g. `crafter/wooden_sword`); today's form accepts any skill on a root's tree.
+18. **Batch layout:**
+    ```
+    START (posted at the fork)
+      - Crafting room
+      - Job change: crafter
+      - Your crafter makes 8 sticks              (LOOT)
+      opens -> ARMOR, WEAPONS I
+    ARMOR
+      - Armory (blacksmith's table + 4 chests)
+      - Your hunters bring 4 leather             (LOOT)
+      - Unlock Leather Boots                     (named skill)
+      - Your crafter makes leather boots         (LOOT)
+    WEAPONS I
+      - Smithy (blacksmith's table + light)
+      - Unlock Wooden Shovel, then Wooden Sword  (named skills)
+      - Your crafter makes a wooden sword        (LOOT)
+      opens -> WEAPONS II
+    WEAPONS II
+      - Unlock Stone Shovel, then Stone Sword    (named skills)
+      - Your crafter makes a stone sword         (LOOT; the miner already brings cobblestone)
+    ```
+19. **Arrivals: Start and Weapons II** each bring a villager (with the bed + storeroom
+    provisioning); Armor and Weapons I bring none.
+20. **Fork cut confirmed** (ruling 2): `tryPhase2_75_topNeedUnlock`, `tryPhase4_crafter` and
+    `tryPhase5_supplyChain` leave the trunk; only the path's Start batch appears after the miner.
+
+21. **Build: path files first, onboarding later.** The path data format, loader and engine come
+    with Outfitter as the first file; onboarding stays in Java and hands off at the fork. Porting
+    the trunk onto the format (phase 3) waits until the dev has played the path.
+
+### Engine sketch (draft for review, not built)
+
+One file per path, `data/questown/questown_paths/<path>.json`:
+
+```json
+{
+  "id": "questown:outfitter",
+  "batches": [
+    {"id": "start", "opens_after": [], "arrival": true, "quests": [
+      {"room": "questown:crafting_room"},
+      {"job_change": "crafter/stick"},
+      {"loot": "minecraft:stick", "count": 8}]},
+    {"id": "armor", "opens_after": ["start"], "quests": [
+      {"room": "questown:armory"},
+      {"loot": "minecraft:leather", "count": 4},
+      {"skill": "crafter/leather_boots"},
+      {"loot": "minecraft:leather_boots", "count": 1}]},
+    {"id": "weapons_1", "opens_after": ["start"], "quests": [
+      {"room": "questown:smithy"},
+      {"skill": "crafter/wooden_shovel"},
+      {"skill": "crafter/wooden_sword"},
+      {"loot": "minecraft:wooden_sword", "count": 1}]},
+    {"id": "weapons_2", "opens_after": ["weapons_1"], "arrival": true, "quests": [
+      {"skill": "crafter/stone_shovel"},
+      {"skill": "crafter/stone_sword"},
+      {"loot": "minecraft:stone_sword", "count": 1}]}
+  ]
+}
+```
+
+- Loader: a data reload listener like `ResourceJobLoader`; a pure validator test over every path
+  file (ids unique, `opens_after` names a batch in the same file, no cycles, at least one starter,
+  every job id and room id resolves).
+- Engine (in `TownQuests`, after the trunk reports done): post each path's starter batches
+  (`opens_after: []`) once; post any batch whose `opens_after` batches are all complete. Each posted
+  `MCQuestBatch` carries its path and batch id (NBT), which is the record of what has been posted.
+- "Taken" = a path whose starter batch is complete. The garden runs once every taken path has no
+  batch left to open; untaken starters stay in the quest list beside it (ruling 3).
+22. **A path's JOB_CHANGE gets onboarding's treatment** (dev 2026-10-26): the BOP spend is
+    guaranteed to give the named root and applies at the spend, like the onboarding trunk.
+23. **A batch opening shows only the new cards**: the standard new-quests notice, no extra chat
+    line, toast or lesson.
+
+Facts behind these (read 2026-10-26 @ 299f6404): the sword jobs chain behind their shovels
+(`crafter/wooden_shovel` -> `crafter/wooden_sword`, `crafter/stone_shovel` -> `crafter/stone_sword`,
+all room `questown:smithy`); the leather armor templates take 1 `minecraft:leather` per piece and
+have no level gate (`armorer_*.json`, room `questown:armory`); `smithy` = light source +
+`questown:blacksmiths_table`, `armory` = blacksmith's table + 4 `#c:chests`, both blocks have
+crafting recipes; crafter jobs declare no `experience`. Observed XP across this session's logs:
+hunter:sword, miner:coal, gatherer:gather +200 each, no crafter line at all.
+
 ## Facts this rests on (checked 2026-10-24 in the worktree `qt-wt-work`)
 
 - The garden only runs once onboarding reports DONE: `TownQuests.tick` calls
