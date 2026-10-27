@@ -20,7 +20,7 @@ public final class QuestCardProgress {
             int countNeeded,
             @Nullable Integer live
     ) {
-        if (type != Quest.QuestType.ITEM && type != Quest.QuestType.LOOT) {
+        if (type != Quest.QuestType.ITEM && type != Quest.QuestType.LOOT && type != Quest.QuestType.VILLAGER_LEVEL) {
             return null;
         }
         if (status == Quest.QuestStatus.COMPLETED) {

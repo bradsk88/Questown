@@ -187,6 +187,7 @@ public class QuestBatches<
                     case CONCURRENT_JOBS -> e.addConcurrentJobsQuest(owner, q.getConcurrentJobIds());
                     case FIRST_WORK_REQUEST -> e.addFirstWorkRequestQuest(owner);
                     case SKILL_UNLOCK -> e.addSkillUnlockQuest(owner, q.getWantedId());
+                    case VILLAGER_LEVEL -> e.addVillagerLevelQuest(owner, q.getWantedId());
                     case UNKNOWN -> QT.QUESTS_LOGGER.error("Unexpected type: {}. Skipping duplicate check.", q.getType());
                 }
                 if (q.getType() != Quest.QuestType.UNKNOWN) {

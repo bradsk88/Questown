@@ -11,8 +11,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -51,10 +53,78 @@ class QuestPathDataTest {
     void outfitterShipsTheFirstCut() throws IOException {
         QuestPath p = QuestPathParser.parse(read(DATA.resolve("questown_paths").resolve("outfitter.json")));
 
-        Assertions.assertEquals(List.of("start", "armor", "weapons_1", "weapons_2"),
+        Assertions.assertEquals(List.of("start", "train_crafter_3", "armor", "weapons_1", "train_crafter_5", "weapons_2"),
                 p.batches().stream().map(QuestPath.Batch::id).toList());
-        Assertions.assertEquals(List.of(true, false, false, true),
+        Assertions.assertEquals(List.of(true, false, false, false, false, true),
                 p.batches().stream().map(QuestPath.Batch::arrival).toList(), "plan ruling 19");
+    }
+
+    /**
+     * Dev 2026-10-27: a batch that names a skill opens only once a villager can learn it, so a
+     * level quest for the skill's root, in the batch's opens_after chain, reaches the skill's
+     * available_at_level. Otherwise the card sits blank and the batch can't be finished.
+     */
+    @Test
+    void everyNamedSkill_isLearnableWhenItsBatchOpens() throws IOException {
+        Map<String, Integer> gates = skillLevelGates();
+        List<String> problems = new ArrayList<>();
+        for (Path f : files(DATA.resolve("questown_paths"))) {
+            QuestPath path = QuestPathParser.parse(read(f));
+            Map<String, QuestPath.Batch> byId = new HashMap<>();
+            path.batches().forEach(b -> byId.put(b.id(), b));
+            for (QuestPath.Batch b : path.batches()) {
+                for (QuestPath.Step s : b.quests()) {
+                    if (s.kind() != QuestPath.Kind.SKILL) {
+                        continue;
+                    }
+                    String root = s.id().split("/")[0];
+                    int gate = gates.getOrDefault(s.id(), DEFAULT_LEVEL);
+                    int trained = trainedLevel(root, b, byId, new HashSet<>());
+                    if (gate > 1 && trained < gate) {
+                        problems.add(path.batchTag(b) + ": " + s.id() + " needs level " + gate
+                                + " but the batch opens after level " + trained);
+                    }
+                }
+            }
+        }
+        Assertions.assertEquals(List.of(), problems);
+    }
+
+    /** The highest LEVEL quest for {@code root} among the batches {@code b} opens after (transitively). */
+    private static int trainedLevel(String root, QuestPath.Batch b, Map<String, QuestPath.Batch> byId, Set<String> seen) {
+        int best = 1;
+        for (String after : b.opensAfter()) {
+            QuestPath.Batch a = byId.get(after);
+            if (a == null || !seen.add(after)) {
+                continue;
+            }
+            for (QuestPath.Step s : a.quests()) {
+                if (s.kind() == QuestPath.Kind.LEVEL && s.id().equals(root)) {
+                    best = Math.max(best, s.count());
+                }
+            }
+            best = Math.max(best, trainedLevel(root, a, byId, seen));
+        }
+        return best;
+    }
+
+    /** Mirrors Work.DEFAULT_AVAILABLE_AT_LEVEL (Work is registry-bound in a unit JVM). */
+    private static final int DEFAULT_LEVEL = 2;
+
+    private static Map<String, Integer> skillLevelGates() throws IOException {
+        Map<String, Integer> gates = new HashMap<>();
+        for (Path f : files(DATA.resolve("questown_jobs"))) {
+            JsonObject job = read(f);
+            if (job.has("id") && job.has("available_at_level")) {
+                gates.put(job.get("id").getAsString(), job.get("available_at_level").getAsInt());
+            }
+        }
+        for (String m : ARMOR_MATERIALS) {
+            for (String p : ARMOR_PIECES) {
+                gates.put("crafter/" + m + "_" + p, ca.bradj.questown.jobs.ArmorTierLevels.forPrefix(m));
+            }
+        }
+        return gates;
     }
 
     private static List<String> stepProblems(String where, QuestPath.Step s, Set<String> jobs) {
@@ -62,6 +132,8 @@ class QuestPathDataTest {
             case JOB_CHANGE, SKILL -> jobs.contains(s.id()) ? List.of() : List.of(where + ": no job " + s.id());
             case ROOM -> roomExists(s.id()) ? List.of() : List.of(where + ": no room recipe " + s.id());
             case LOOT -> s.id().contains(":") ? List.of() : List.of(where + ": loot wants a namespaced id " + s.id());
+            case LEVEL -> jobs.stream().anyMatch(j -> j.startsWith(s.id() + "/"))
+                    ? List.of() : List.of(where + ": no job root " + s.id());
         };
     }
 

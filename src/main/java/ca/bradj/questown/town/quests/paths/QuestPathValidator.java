@@ -10,7 +10,7 @@ import java.util.Set;
 /**
  * The structure rules a path file must meet: unique batch ids, {@code opens_after} names a batch
  * of the same path, no cycle, at least one starter, quests in every batch, positive counts, and a
- * {@code root/job} id on job-change and skill quests. Whether the ids exist in the game's data is
+ * {@code root/job} id on job-change and skill quests, and a bare job root on level quests. Whether the ids exist in the game's data is
  * {@code QuestPathDataTest}'s job (it reads the job and recipe files).
  */
 public final class QuestPathValidator {
@@ -58,6 +58,9 @@ public final class QuestPathValidator {
         boolean needsJobId = s.kind() == QuestPath.Kind.JOB_CHANGE || s.kind() == QuestPath.Kind.SKILL;
         if (needsJobId && s.id().split("/").length != 2) {
             errors.add(where + ": " + s.kind() + " wants a root/job id, got " + s.id());
+        }
+        if (s.kind() == QuestPath.Kind.LEVEL && s.id().contains("/")) {
+            errors.add(where + ": LEVEL wants a job root, got " + s.id());
         }
         return errors;
     }

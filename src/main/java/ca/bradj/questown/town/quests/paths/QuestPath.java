@@ -17,10 +17,13 @@ public record QuestPath(String id, ImmutableList<Batch> batches) {
     }
 
     public enum Kind {
-        ROOM, JOB_CHANGE, LOOT, SKILL
+        ROOM, JOB_CHANGE, LOOT, SKILL, LEVEL
     }
 
-    /** One quest: a room recipe id, a job id ({@code root/job}), or an item/tag id with a count. */
+    /**
+     * One quest: a room recipe id, a job id ({@code root/job}), an item/tag id with a count, or (LEVEL)
+     * a job root with the level a villager working it must reach in {@code count}.
+     */
     public record Step(Kind kind, String id, int count) {
     }
 

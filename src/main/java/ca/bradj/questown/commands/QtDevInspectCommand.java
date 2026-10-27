@@ -548,6 +548,9 @@ public class QtDevInspectCommand {
         if (type == Quest.QuestType.SKILL_UNLOCK) {
             return "skill tree: " + q.getWantedId();
         }
+        if (type == Quest.QuestType.VILLAGER_LEVEL) {
+            return "villager level: " + q.getWantedId();
+        }
         return String.valueOf(q.getWantedId());
     }
 

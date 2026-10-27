@@ -84,7 +84,18 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
 
             @Override
             public MCQuest newSkillUnlockQuest(@Nullable UUID ownerId, ResourceLocation treeRootId) {
-                return MCQuest.skillUnlock(batchUUID, dep(ownerId), MCQuest.skillTreeRoot(treeRootId));
+                // A named skill keeps its name: rebuilding it as the any-skill form on load let any
+                // crafter skill close "Unlock Wooden Shovel".
+                return MCQuest.namedSkill(treeRootId)
+                              .map(s -> MCQuest.namedSkillUnlock(batchUUID, dep(ownerId), s))
+                              .orElseGet(() -> MCQuest.skillUnlock(batchUUID, dep(ownerId), MCQuest.skillTreeRoot(treeRootId)));
+            }
+
+            @Override
+            public MCQuest newVillagerLevelQuest(@Nullable UUID ownerId, ResourceLocation id) {
+                VillagerLevelQuests.Target t = VillagerLevelQuests.target(id).orElseThrow(
+                        () -> new IllegalArgumentException("Not a villager-level quest id: " + id));
+                return MCQuest.villagerLevel(batchUUID, dep(ownerId), t.root(), t.level());
             }
 
             @Override

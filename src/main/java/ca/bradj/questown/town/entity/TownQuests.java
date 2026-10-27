@@ -274,6 +274,27 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
     }
 
+    /**
+     * Completes every open VILLAGER_LEVEL quest whose job root has a villager at its level
+     * ({@link VillagerLevelQuests}). Runs from the tick's backfill pass, so a quest posted after
+     * the level was reached closes on the next tick.
+     */
+    void markVillagerLevelsReached(Map<String, Integer> highestLevelByRoot) {
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (q.getType() != Quest.QuestType.VILLAGER_LEVEL || q.isComplete()) {
+                    continue;
+                }
+                Optional<VillagerLevelQuests.Target> t = VillagerLevelQuests.target(q.getWantedId());
+                if (t.isEmpty() || !VillagerLevelQuests.met(t.get(), highestLevelByRoot)) {
+                    continue;
+                }
+                batch.markRecipeAsComplete(null, q.getWantedId());
+                QT.QUESTS_LOGGER.info("Villager-level quest completed: a {} reached level {}", t.get().root(), t.get().level());
+            }
+        }
+    }
+
     @NotNull
     /** Storage room recipes: any of them answers an arrival's storage quest. */
     private static final ImmutableSet<ResourceLocation> STORAGE_ROOMS = ImmutableSet.of(
@@ -1106,6 +1127,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             }
             case LOOT -> MCQuest.loot(batchUUID, null, new ResourceLocation(s.id()), s.count());
             case SKILL -> MCQuest.namedSkillUnlock(batchUUID, null, pathJob(s.id()));
+            case LEVEL -> MCQuest.villagerLevel(batchUUID, null, s.id(), s.count());
         };
     }
 
@@ -1983,7 +2005,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
      */
     public Map<ResourceLocation, Integer> openQuestProgress() {
         List<MCQuest> open = questBatches.getAll().stream()
-                .filter(q -> (q.getType() == Quest.QuestType.ITEM || q.getType() == Quest.QuestType.LOOT)
+                .filter(q -> (q.getType() == Quest.QuestType.ITEM || q.getType() == Quest.QuestType.LOOT
+                        || q.getType() == Quest.QuestType.VILLAGER_LEVEL)
                         && !q.isComplete())
                 .toList();
         if (open.isEmpty()) {
@@ -1994,10 +2017,15 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         ImmutableList<MCTownItem> stacks = anyItems
                 ? TownContainers.getAllStacks(t, t.getServerLevel())
                 : ImmutableList.of();
+        boolean anyLevels = open.stream().anyMatch(q -> q.getType() == Quest.QuestType.VILLAGER_LEVEL);
+        Map<String, Integer> levels = anyLevels ? t.highestLevelByRoot() : Map.of();
         Map<ResourceLocation, Integer> out = new HashMap<>();
         for (MCQuest q : open) {
             if (q.getType() == Quest.QuestType.LOOT) {
                 out.put(q.getWantedId(), q.getExtracted());
+            } else if (q.getType() == Quest.QuestType.VILLAGER_LEVEL) {
+                VillagerLevelQuests.target(q.getWantedId())
+                        .ifPresent(l -> out.put(q.getWantedId(), levels.getOrDefault(l.root(), 0)));
             } else {
                 out.put(q.getWantedId(), stacks.stream()
                         .filter(s -> questMatchesStack(q.getWantedId(), s))
@@ -2031,6 +2059,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         // EVERY quest — and the journal is unbounded (completed batches are never
         // pruned), so the steady-state cost was a growing flat copy every tick.
         final boolean[] openItems = {false};
+        final boolean[] openLevels = {false};
         List<MCQuest> openRooms = new ArrayList<>();
         questBatches.getAllBatches().stream()
             .flatMap(b -> QuestBatch.stream(b))
@@ -2041,9 +2070,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 switch (q.getType()) {
                     case ROOM -> openRooms.add(q);
                     case ITEM -> openItems[0] = true;
+                    case VILLAGER_LEVEL -> openLevels[0] = true;
                     default -> { }
                 }
             });
+        if (openLevels[0]) {
+            markVillagerLevelsReached(this.town.getUnsafe().highestLevelByRoot());
+        }
         if (openRooms.isEmpty() && !openItems[0]) {
             return;
         }

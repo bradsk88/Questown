@@ -510,3 +510,35 @@ level; it fills in once a villager reaches it.
 Chat names a quest only on completion or loss (`TownMessages`), by which time it's unlocked, so
 chat needs no blanking. The lock is level-only: a skill whose parent isn't unlocked yet but whose
 level is met shows normally (the skills tab still won't offer it until the parent is unlocked).
+
+## "Train a Crafter to level N" quests gate a path's skill batches (dev 2026-10-27)
+
+#20's blank card hid a skill's name, but the batch's "Leather Boots (0/1)" card named it anyway,
+and nothing on the board could be done until the crafter levelled. Skill unlocks are per villager
+(`TownVillagerLearningHandle.unlockJob(villagerUUID, id)`; the work seeker filters on
+`isUnlocked(ownerUUID, ...)`), so the level matters for the one villager the player will spend the
+Block of Progress on. Ruling: a curated path posts a one-quest batch, "Train a Crafter to level 3",
+ahead of any batch whose skills need that level, so the batch appears only once someone can learn
+them.
+
+- Type `VILLAGER_LEVEL`, wanted id `questown:villager_level/<root>/<level>`
+  (`VillagerLevelQuests.path` / `target`, `MCQuest.villagerLevel`). Count stays 1; the level lives in
+  the id so the card and chat can name it without the quest object.
+- Completes when any villager whose job root is `<root>` is at the level or higher
+  (`VillagerLevelQuests.met`). `TownQuests.backfillSatisfiedQuests` notes an open one and calls
+  `markVillagerLevelsReached(TownFlagBlockEntity.highestLevelByRoot())` each tick, so a quest posted
+  after the level was already reached closes on the next tick. `highestLevelByRoot` is the same
+  per-root max `lockedSkillQuestLevels` uses.
+- Card: `UIQuest.villagerLevelName` ("Train a Crafter to level 3 (1/3)"), progress from
+  `TownQuests.openQuestProgress` (the root's highest level) through `QuestCardProgress.shown`. Chat
+  (`TownMessages.questName`) uses the same name without progress.
+- Reload: `QuestBatches.filterOutDuplicateCompletion`'s typed rebuild goes through
+  `QuestFactory.newVillagerLevelQuest`. The same rebuild used to turn a named skill quest into the
+  any-skill form (`MCQuestBatch`'s `newSkillUnlockQuest` passed only the root), so after a reload any
+  crafter skill closed "Unlock Wooden Shovel"; it now keeps the name (`QuestBatchesLoadReplayTest`).
+- Path file: `{"level": "crafter", "at": 3}` (`QuestPathParser`, `QuestPath.Kind.LEVEL`, the level in
+  `Step.count`); the validator wants a bare root. `QuestPathDataTest.everyNamedSkill_isLearnableWhenItsBatchOpens`
+  checks every named skill's `available_at_level` (armor via `ArmorTierLevels`) is reached by a level
+  quest in its batch's `opens_after` chain.
+- The growth driver (`VillageGrowthExecutor.requestWorkForOpenLevelQuests`) posts the root's
+  villagers' product requests while one is open, the way a player keeps a crafter busy.

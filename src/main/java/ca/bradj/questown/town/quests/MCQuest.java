@@ -192,6 +192,23 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
     private static final String SKILL_UNLOCK_PREFIX = "skill_unlock/";
 
     /**
+     * Any villager working {@code root} reaches {@code level} ({@link VillagerLevelQuests}). A
+     * curated path posts it ahead of a batch whose skills need that level.
+     */
+    public static MCQuest villagerLevel(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            String root,
+            int level
+    ) {
+        ResourceLocation id = Questown.ResourceLocation(VillagerLevelQuests.path(root, level));
+        MCQuest q = new MCQuest(batchUUID, ownerId, id, null, QuestType.VILLAGER_LEVEL, 1);
+        q.setFlavorText("Villagers level up by working. Post requests on the job board for your " + root
+                + " to make, and new skills open up once one of them reaches level " + level + ".");
+        return q;
+    }
+
+    /**
      * The job root a SKILL_UNLOCK quest's wanted id names. Falls back to a job RL
      * ({@code cook_qt_extract}), the id the first build used (r19 playtest saves).
      */

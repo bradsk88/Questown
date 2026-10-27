@@ -239,7 +239,7 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     }
 
     public enum QuestType {
-        ITEM, ROOM, JOB_CHANGE, JOB_UNLOCK, CONCURRENT_JOBS, LOOT, FIRST_WORK_REQUEST, SKILL_UNLOCK, UNKNOWN;
+        ITEM, ROOM, JOB_CHANGE, JOB_UNLOCK, CONCURRENT_JOBS, LOOT, FIRST_WORK_REQUEST, SKILL_UNLOCK, VILLAGER_LEVEL, UNKNOWN;
     }
 
     protected interface QuestFactory<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>> {
@@ -283,6 +283,9 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
 
         /** A SKILL_UNLOCK quest on the skill tree whose root node is {@code treeRootId}. */
         QUEST newSkillUnlockQuest(@Nullable UUID ownerId, KEY treeRootId);
+
+        /** A VILLAGER_LEVEL quest: a villager of a job root reaches a level, both encoded in {@code id}. */
+        QUEST newVillagerLevelQuest(@Nullable UUID ownerId, KEY id);
 
         QUEST completed(
                 ROOM room,

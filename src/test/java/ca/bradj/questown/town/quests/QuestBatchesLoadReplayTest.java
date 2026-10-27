@@ -71,6 +71,28 @@ class QuestBatchesLoadReplayTest {
         return reloaded.getAll().get(0);
     }
 
+    // 2026-10-27: a curated path's "Train a Crafter to level 3" survives a reload.
+    @Test
+    void loadReplay_keepsAVillagerLevelQuest() {
+        MCQuest saved = MCQuest.villagerLevel(UUID.randomUUID(), null, "crafter", 3);
+
+        MCQuest loaded = reloadOne(saved);
+
+        Assertions.assertEquals(Quest.QuestType.VILLAGER_LEVEL, loaded.getType());
+        Assertions.assertEquals(saved.getWantedId(), loaded.getWantedId());
+    }
+
+    // Before 2026-10-27 the typed rebuild made "Unlock Wooden Shovel" an any-crafter-skill quest.
+    @Test
+    void loadReplay_keepsANamedSkillQuestsSkill() {
+        ca.bradj.questown.jobs.JobID shovel = new ca.bradj.questown.jobs.JobID("crafter", "wooden_shovel");
+        MCQuest saved = MCQuest.namedSkillUnlock(UUID.randomUUID(), null, shovel);
+
+        MCQuest loaded = reloadOne(saved);
+
+        Assertions.assertEquals(java.util.Optional.of(shovel), MCQuest.namedSkill(loaded.getWantedId()));
+    }
+
     // village/day1 2026-10-17: after a real flag reload every quest read onboarding=false, the
     // arrival gate (TownQuests.isArrivalGateOpen) opened, and villager 2 arrived before Raw Food.
     @Test

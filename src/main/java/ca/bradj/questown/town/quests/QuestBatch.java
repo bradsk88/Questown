@@ -96,6 +96,13 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.quests.add(this.questFactory.newSkillUnlockQuest(dep(ownerId), treeRootId));
     }
 
+    public void addVillagerLevelQuest(
+            @Nullable VillagerUUID ownerId,
+            KEY id
+    ) {
+        this.quests.add(this.questFactory.newVillagerLevelQuest(dep(ownerId), id));
+    }
+
     public void addNewUpgradeQuest(
             @Nullable VillagerUUID ownerId,
             KEY fromID,

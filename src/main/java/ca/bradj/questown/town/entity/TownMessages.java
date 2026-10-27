@@ -166,6 +166,7 @@ public class TownMessages {
                     .map(s -> Compat.translatable("menu.quests.skill_unlock.named", Jobs.getVariantNameComponent(s)))
                     .orElseGet(() -> Compat.translatable("menu.quests.skill_unlock",
                             Compat.translatable("jobs." + MCQuest.skillTreeRoot(wantedId))));
+            case VILLAGER_LEVEL -> ca.bradj.questown.gui.UIQuest.villagerLevelName(wantedId, null);
             default -> RoomRecipes.getName(wantedId);
         };
     }

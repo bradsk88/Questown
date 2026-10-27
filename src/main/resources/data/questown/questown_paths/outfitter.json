@@ -11,8 +11,15 @@
       ]
     },
     {
-      "id": "armor",
+      "id": "train_crafter_3",
       "opens_after": ["start"],
+      "quests": [
+        {"level": "crafter", "at": 3}
+      ]
+    },
+    {
+      "id": "armor",
+      "opens_after": ["train_crafter_3"],
       "quests": [
         {"room": "questown:armory"},
         {"loot": "minecraft:leather", "count": 4},
@@ -22,7 +29,7 @@
     },
     {
       "id": "weapons_1",
-      "opens_after": ["start"],
+      "opens_after": ["train_crafter_3"],
       "quests": [
         {"room": "questown:smithy"},
         {"skill": "crafter/wooden_shovel"},
@@ -31,8 +38,15 @@
       ]
     },
     {
-      "id": "weapons_2",
+      "id": "train_crafter_5",
       "opens_after": ["weapons_1"],
+      "quests": [
+        {"level": "crafter", "at": 5}
+      ]
+    },
+    {
+      "id": "weapons_2",
+      "opens_after": ["train_crafter_5"],
       "arrival": true,
       "quests": [
         {"skill": "crafter/stone_shovel"},

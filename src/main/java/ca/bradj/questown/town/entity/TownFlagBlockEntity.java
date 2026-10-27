@@ -2377,6 +2377,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (named.isEmpty()) {
             return Map.of();
         }
+        return SkillQuestLocks.lockedLevels(named, this::skillLevelGate, highestLevelByRoot());
+    }
+
+    /** Job root -> the highest level among the town's villagers working it. */
+    public Map<String, Integer> highestLevelByRoot() {
         Map<String, Integer> highest = new HashMap<>();
         for (LivingEntity e : getVillagerHandle().entities()) {
             if (!(e instanceof VisitorMobEntity v) || v.getVUID() == null) {
@@ -2385,7 +2390,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             int level = villagerHandle.getLevel(VillagerUUID.get(v.getVUID()));
             highest.merge(v.getJobId().rootId(), level, Math::max);
         }
-        return SkillQuestLocks.lockedLevels(named, this::skillLevelGate, highest);
+        return highest;
     }
 
     private int skillLevelGate(JobID skill) {

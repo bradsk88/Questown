@@ -70,6 +70,11 @@ class QuestBatchesTest {
         }
 
         @Override
+        public TestQuest newVillagerLevelQuest(@Nullable UUID ownerId, Integer id) {
+            throw new UnsupportedOperationException("Not implemented");
+        }
+
+        @Override
         public TestQuest newConcurrentJobsQuest(@Nullable UUID ownerId, Collection<Integer> jobIds) {
             throw new UnsupportedOperationException("Not implemented");
         }

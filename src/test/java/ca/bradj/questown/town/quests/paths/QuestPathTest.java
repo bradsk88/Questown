@@ -47,6 +47,29 @@ class QuestPathTest {
     }
 
     @Test
+    void parse_readsALevelQuest_rootAndLevel() {
+        QuestPath p = parse("""
+                {"id": "x", "batches": [{"id": "a", "quests": [{"level": "crafter", "at": 3}]}]}""");
+
+        Assertions.assertEquals(new QuestPath.Step(QuestPath.Kind.LEVEL, "crafter", 3), p.batches().get(0).quests().get(0));
+        Assertions.assertEquals(List.of(), QuestPathValidator.errors(p));
+    }
+
+    @Test
+    void parse_rejectsALevelQuestWithNoLevel() {
+        Assertions.assertThrows(IllegalArgumentException.class, () -> parse("""
+                {"id": "x", "batches": [{"id": "a", "quests": [{"level": "crafter"}]}]}"""));
+    }
+
+    @Test
+    void validator_flagsALevelQuestNamingAJobInsteadOfARoot() {
+        QuestPath p = parse("""
+                {"id": "x", "batches": [{"id": "a", "quests": [{"level": "crafter/stick", "at": 3}]}]}""");
+
+        Assertions.assertTrue(QuestPathValidator.errors(p).stream().anyMatch(e -> e.contains("job root")));
+    }
+
+    @Test
     void parse_rejectsAQuestWithNoKind() {
         Assertions.assertThrows(IllegalArgumentException.class, () -> parse("""
                 {"id": "x", "batches": [{"id": "a", "quests": [{"count": 3}]}]}"""));

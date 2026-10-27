@@ -635,6 +635,7 @@ public final class VillageGrowthExecutor {
         if (spendBopOnOpenSkillUnlock()) {
             return;
         }
+        requestWorkForOpenLevelQuests();
         if (furnishNextRoomQuest()) {
             return;
         }
@@ -967,6 +968,25 @@ public final class VillageGrowthExecutor {
             msg("KNOWN open skill quests, a BOP in hand, nothing unlockable: " + line);
         }
         return false;
+    }
+
+    /**
+     * An open "Train a Crafter to level N" quest: keep every villager of that root busy with board
+     * requests, the way a player would. Falls through: posting requests is not the step's whole turn.
+     */
+    private void requestWorkForOpenLevelQuests() {
+        flag.getQuestHandle().getAllQuestsWithRewards().stream()
+                .map(AbstractMap.SimpleEntry::getKey)
+                .filter(q -> q.getType() == Quest.QuestType.VILLAGER_LEVEL && !q.isComplete())
+                .map(q -> ca.bradj.questown.town.quests.VillagerLevelQuests.target(q.getWantedId()))
+                .flatMap(java.util.Optional::stream)
+                .forEach(t -> {
+                    for (LivingEntity v : flag.getVillagerHandle().entities()) {
+                        if (((VisitorMobEntity) v).getJobId().rootId().equals(t.root())) {
+                            requestWorkToLevel(v.getUUID());
+                        }
+                    }
+                });
     }
 
     private String lastSkillUnlockBlocked = "";

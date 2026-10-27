@@ -236,6 +236,7 @@ public class UIQuest implements Comparable<UIQuest> {
             case CONCURRENT_JOBS -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case FIRST_WORK_REQUEST -> ImmutableList.of();
             case SKILL_UNLOCK -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
+            case VILLAGER_LEVEL -> ImmutableList.of();
             case UNKNOWN -> ImmutableList.of();
         };
     }
@@ -320,8 +321,23 @@ public class UIQuest implements Comparable<UIQuest> {
                     .map(s -> Compat.translatable("menu.quests.skill_unlock.named", Jobs.getVariantNameComponent(s)))
                     .orElseGet(() -> Compat.translatable("menu.quests.skill_unlock",
                             Compat.translatable("jobs." + MCQuest.skillTreeRoot(wantedId))));
+            case VILLAGER_LEVEL -> villagerLevelName(wantedId, deposited);
             case UNKNOWN -> Compat.literal("ERROR");
         };
+    }
+
+    /** "Train a Crafter to level 3 (1/3)": the progress is the root's highest villager level. */
+    public static MutableComponent villagerLevelName(ResourceLocation wantedId, @Nullable Integer highestLevel) {
+        Optional<VillagerLevelQuests.Target> t = VillagerLevelQuests.target(wantedId);
+        if (t.isEmpty()) {
+            return Compat.literal("ERROR").copy();
+        }
+        MutableComponent name = Compat.translatable("menu.quests.villager_level",
+                Compat.translatable("jobs." + t.get().root()), t.get().level());
+        if (highestLevel != null) {
+            name.append(Compat.literal(" (" + Math.min(highestLevel, t.get().level()) + "/" + t.get().level() + ")"));
+        }
+        return name;
     }
 
     /** The level a blank (locked) skill card needs, or null when the card shows its skill. */

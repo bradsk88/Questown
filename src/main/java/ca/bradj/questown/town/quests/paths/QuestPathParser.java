@@ -7,7 +7,9 @@ import com.google.gson.JsonObject;
 
 /**
  * Reads one path file. Each quest is an object with exactly one kind key ({@code room},
- * {@code job_change}, {@code loot}, {@code skill}) and, for {@code loot}, a {@code count}. Throws
+ * {@code job_change}, {@code loot}, {@code skill},
+ * {@code level}) and, for {@code loot}, a {@code count}; a {@code level} quest names a job root and
+ * the level to reach in {@code at}. Throws
  * {@link IllegalArgumentException} naming the field on a malformed file.
  */
 public final class QuestPathParser {
@@ -52,7 +54,13 @@ public final class QuestPathParser {
             int count = json.has("count") ? json.get("count").getAsInt() : 1;
             return new QuestPath.Step(QuestPath.Kind.LOOT, string(json, "loot"), count);
         }
-        throw new IllegalArgumentException(where + ": a quest needs one of room, job_change, skill, loot: " + json);
+        if (json.has("level")) {
+            if (!json.has("at")) {
+                throw new IllegalArgumentException(where + ": a level quest needs \"at\": " + json);
+            }
+            return new QuestPath.Step(QuestPath.Kind.LEVEL, string(json, "level"), json.get("at").getAsInt());
+        }
+        throw new IllegalArgumentException(where + ": a quest needs one of room, job_change, skill, loot, level: " + json);
     }
 
     private static String string(JsonObject json, String key) {
