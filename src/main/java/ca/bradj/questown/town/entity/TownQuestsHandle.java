@@ -89,7 +89,8 @@ public class TownQuestsHandle implements QuestsHolder {
         @SuppressWarnings("DataFlowIssue") List<UIQuest> quests = UIQuest.fromLevel(
                 t.getServerLevel(),
                 aQ,
-                t.quests.openQuestProgress()
+                t.quests.openQuestProgress(),
+                t.lockedSkillQuestLevels()
         );
 
         QuestScreenSummary summary = new QuestScreenSummary(

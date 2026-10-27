@@ -1705,3 +1705,10 @@ toggle, deduplicated by `StarterRequests.toPost` and the board's own `requestWor
 Setup unlocks (job-change defaults, fixtures, `unlockJob` directly) don't post. Each posted
 starter request now logs `Starter request for [<jobs>]: <request>` at info. Not unit-testable
 (the flag BE); verified by the held `paths/outfitter` run's log.
+
+## Locked skill quests for the quest tab (Outfitter #20, dev 2026-10-26)
+
+`TownFlagBlockEntity.lockedSkillQuestLevels` gathers the open named-skill quests, each villager's
+job root and level and the `Works` level gates for `SkillQuestLocks`; `TownQuestsHandle.showQuestsUI`
+and `TownFlagMenus` pass the result to `UIQuest.fromLevel`. See `town/quests/COMPLEX.md` "A skill
+quest above every villager's level is a blank card".

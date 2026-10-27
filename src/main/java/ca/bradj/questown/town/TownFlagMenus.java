@@ -65,7 +65,8 @@ public class TownFlagMenus {
         List<UIQuest> uiQuests = UIQuest.fromLevel(
                 sender.serverLevel(),
                 quests,
-                flagEntity.getQuestHandle().openQuestProgress()
+                flagEntity.getQuestHandle().openQuestProgress(),
+                flagEntity.lockedSkillQuestLevels()
         );
 
         QuestScreenSummary summary = new QuestScreenSummary(

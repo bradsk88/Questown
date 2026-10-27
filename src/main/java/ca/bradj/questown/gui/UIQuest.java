@@ -80,6 +80,12 @@ public class UIQuest implements Comparable<UIQuest> {
      */
     @Nullable
     private final Integer deposited;
+    /**
+     * For a named-skill quest no villager in the skill's job is levelled for yet: the level it
+     * needs. The card then names neither the skill nor its item (Outfitter #20). Null otherwise.
+     */
+    @Nullable
+    private final Integer lockedUntilLevel;
     public final boolean isBroken;
 
     public UIQuest(
@@ -94,6 +100,24 @@ public class UIQuest implements Comparable<UIQuest> {
             @Nullable String flavorText,
             @Nullable Integer deposited
     ) {
+        this(batchUUID, wantedId, type, ingredients, status, fromRecipe, jobRecipientUUID, jobName, flavorText,
+                deposited, null);
+    }
+
+    public UIQuest(
+            UUID batchUUID,
+            ResourceLocation wantedId,
+            Quest.QuestType type,
+            @Nullable Collection<Ingredient> ingredients,
+            Quest.QuestStatus status,
+            @Nullable ResourceLocation fromRecipe,
+            @Nullable VillagerUUID jobRecipientUUID,
+            @Nullable String jobName,
+            @Nullable String flavorText,
+            @Nullable Integer deposited,
+            @Nullable Integer lockedUntilLevel
+    ) {
+        this.lockedUntilLevel = lockedUntilLevel;
         this.isBroken = SpecialQuests.BROKEN.equals(wantedId) || ingredients == null;
         this.wantedId = wantedId;
         this.type = type;
@@ -133,6 +157,19 @@ public class UIQuest implements Comparable<UIQuest> {
             Level level,
             Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ,
             Map<ResourceLocation, Integer> questProgress
+    ) {
+        return fromLevel(level, aQ, questProgress, java.util.Map.of());
+    }
+
+    /**
+     * Same as the three-arg form, and each quest id in {@code lockedSkillLevels} (the flag's
+     * {@code lockedSkillQuestLevels}) shows as a blank skill card needing that level.
+     */
+    public static List<UIQuest> fromLevel(
+            Level level,
+            Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ,
+            Map<ResourceLocation, Integer> questProgress,
+            Map<ResourceLocation, Integer> lockedSkillLevels
     ) {
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
@@ -180,7 +217,8 @@ public class UIQuest implements Comparable<UIQuest> {
                     jobRecipientUUID,
                     job,
                     v.getFlavorText(),
-                    QuestCardProgress.shown(v.getType(), v.getStatus(), v.getCountNeeded(), questProgress.get(v.getWantedId()))
+                    QuestCardProgress.shown(v.getType(), v.getStatus(), v.getCountNeeded(), questProgress.get(v.getWantedId())),
+                    v.isComplete() ? null : lockedSkillLevels.get(v.getWantedId())
             );
         }).toList();
     }
@@ -276,12 +314,19 @@ public class UIQuest implements Comparable<UIQuest> {
             case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", extractRootJobName());
             case CONCURRENT_JOBS -> Compat.literal("Multiple Jobs Active");
             case FIRST_WORK_REQUEST -> Compat.translatable("menu.quests.first_work_request");
-            case SKILL_UNLOCK -> MCQuest.namedSkill(wantedId)
+            case SKILL_UNLOCK -> lockedUntilLevel != null
+                    ? Compat.translatable("menu.quests.skill_unlock.hidden")
+                    : MCQuest.namedSkill(wantedId)
                     .map(s -> Compat.translatable("menu.quests.skill_unlock.named", Jobs.getVariantNameComponent(s)))
                     .orElseGet(() -> Compat.translatable("menu.quests.skill_unlock",
                             Compat.translatable("jobs." + MCQuest.skillTreeRoot(wantedId))));
             case UNKNOWN -> Compat.literal("ERROR");
         };
+    }
+
+    /** The level a blank (locked) skill card needs, or null when the card shows its skill. */
+    public @Nullable Integer getLockedUntilLevel() {
+        return lockedUntilLevel;
     }
 
     @Nullable
@@ -348,6 +393,7 @@ public class UIQuest implements Comparable<UIQuest> {
             buf.writeUtf(p_44102_.batchUUID == null ? "" : p_44102_.batchUUID.toString());
             buf.writeUtf(p_44102_.flavorText == null ? "" : p_44102_.flavorText);
             buf.writeInt(p_44102_.deposited == null ? -1 : p_44102_.deposited);
+            buf.writeInt(p_44102_.lockedUntilLevel == null ? -1 : p_44102_.lockedUntilLevel);
         }
 
         @Nullable
@@ -376,7 +422,9 @@ public class UIQuest implements Comparable<UIQuest> {
                 flavorText = null;
             }
             int deposited = buf.readInt();
-            return new UIQuest(batchUUID, wanteId, type, ingrs, status, from, villagerUUID, jobName, flavorText, deposited < 0 ? null : deposited);
+            int locked = buf.readInt();
+            return new UIQuest(batchUUID, wanteId, type, ingrs, status, from, villagerUUID, jobName, flavorText,
+                    deposited < 0 ? null : deposited, locked < 0 ? null : locked);
         }
     }
 }

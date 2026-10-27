@@ -28,6 +28,7 @@ import ca.bradj.questown.integration.minecraft.TownStateSerializer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.IStatus;
+import ca.bradj.questown.jobs.Works;
 import ca.bradj.questown.jobs.DiningStages;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
@@ -86,6 +87,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -2358,6 +2360,39 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         // Outfitter #10 (dev 2026-10-26): a work runs only while the board requests its product,
         // so a new skill posts its first request like a job change does (same toggle).
         postStarterRequests(List.of(id));
+    }
+
+    /**
+     * Open named-skill quests no villager in the skill's job is levelled for yet, with the level
+     * each needs: their cards show blank ({@link ca.bradj.questown.town.quests.SkillQuestLocks}).
+     */
+    public Map<ResourceLocation, Integer> lockedSkillQuestLevels() {
+        Map<ResourceLocation, JobID> named = new HashMap<>();
+        for (MCQuest q : quests.questBatches.getAll()) {
+            if (q.getType() != Quest.QuestType.SKILL_UNLOCK || q.isComplete()) {
+                continue;
+            }
+            MCQuest.namedSkill(q.getWantedId()).ifPresent(skill -> named.put(q.getWantedId(), skill));
+        }
+        if (named.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, Integer> highest = new HashMap<>();
+        for (LivingEntity e : getVillagerHandle().entities()) {
+            if (!(e instanceof VisitorMobEntity v) || v.getVUID() == null) {
+                continue;
+            }
+            int level = villagerHandle.getLevel(VillagerUUID.get(v.getVUID()));
+            highest.merge(v.getJobId().rootId(), level, Math::max);
+        }
+        return SkillQuestLocks.lockedLevels(named, this::skillLevelGate, highest);
+    }
+
+    private int skillLevelGate(JobID skill) {
+        if (!Works.isInitialized() || !Works.ids().contains(skill)) {
+            return 0;
+        }
+        return Works.get(skill).get().getAvailableAtLevel();
     }
 
     public void requestWorkFromPlayer(WorkRequest request) {

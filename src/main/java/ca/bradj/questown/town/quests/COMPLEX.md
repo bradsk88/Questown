@@ -485,3 +485,28 @@ stone swords in stock closed the Outfitter's "make a Stone Sword" LOOT card the 
 posted (a LOOT quest counts production, plan ruling 16). Now only open ITEM quests take part and
 only an ITEM quest is completed (`QuestBatch.markRecipeAsComplete(room, recipe, which)`).
 Pinned by `TownQuestsItemQuestScopeTest`.
+
+## A skill quest above every villager's level is a blank card (Outfitter #20, dev 2026-10-26)
+
+Weapons II asks for "Unlock Stone shovel" (level 5) when the crafter is ~4, and nothing told the
+player why the skills tab didn't offer it. Ruling: while no villager in the skill's job is at its
+`available_at_level`, the card shows neither the skill nor its item, and its tooltip gives the
+level; it fills in once a villager reaches it.
+
+- `SkillQuestLocks.lockedLevels` (pure, `SkillQuestLocksTest`): open named-skill quest id -> the
+  level needed, when the highest level among the root's villagers is below the gate. With no
+  villager in the root, it's locked.
+- `TownFlagBlockEntity.lockedSkillQuestLevels` feeds it the open SKILL_UNLOCK quests
+  (`MCQuest.namedSkill`), each villager's root (`VisitorMobEntity.getJobId`) and level
+  (`TownVillagerHandle.getLevel`), and the gate from `Works` (`Work.getAvailableAtLevel`).
+- `UIQuest.fromLevel`'s four-arg form carries the level as `lockedUntilLevel` (networked as an int,
+  -1 = none) for incomplete quests only. The two flag quest-tab builders (`TownFlagMenus`,
+  `TownQuestsHandle.showQuestsUI`) pass it; the villager-menu quest list and `_qtdev inspect` use
+  the shorter forms and show cards unblanked.
+- A locked card's name is `menu.quests.skill_unlock.hidden` ("Unlock ???", keeping the BOP icon);
+  `QuestsScreen`'s tooltip checks `getLockedUntilLevel()` before the flavor text and shows
+  `menu.quests.skill_unlock.locked` with the root's name and the level.
+
+Chat names a quest only on completion or loss (`TownMessages`), by which time it's unlocked, so
+chat needs no blanking. The lock is level-only: a skill whose parent isn't unlocked yet but whose
+level is met shows normally (the skills tab still won't offer it until the parent is unlocked).

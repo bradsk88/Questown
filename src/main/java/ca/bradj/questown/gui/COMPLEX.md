@@ -1410,3 +1410,10 @@ and welcome mat quests do." `QuestsScreen.opensCrafting(wantedId)` (welcome mat,
 board, `FlagCraftRecipes.MINESHAFT_QUEST`) drives both the two-line tooltip (`menu.quests.roomblock.mineshaft`
 + grey `click_crafting`) and the click deep link to the crafting tab. The fishing station
 (`FISHING_STATION_QUEST`, also a flag crafting row) is not included; nobody asked.
+
+## Blank skill cards (Outfitter #20, dev 2026-10-26)
+
+`UIQuest.lockedUntilLevel` (networked after `deposited`, -1 = none) blanks a named-skill card: the
+name becomes "Unlock ???" and `QuestsScreen`'s tooltip, checked before the flavor text, gives the
+job and level. The server side and the rule are in `town/quests/COMPLEX.md` "A skill quest above
+every villager's level is a blank card".

@@ -15,6 +15,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Journal;
 import ca.bradj.questown.mc.JEI;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
@@ -347,6 +348,15 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
         if (recipe.getType() == Quest.QuestType.JOB_CHANGE) {
             return jobChangeTooltip(recipe, villagersTabShown);
+        }
+
+        if (recipe.getLockedUntilLevel() != null) {
+            // Outfitter #20: a blank skill card says how far off it is, not what it is.
+            return ImmutableList.of(Compat.translatable(
+                    "menu.quests.skill_unlock.locked",
+                    Compat.translatable("jobs." + MCQuest.skillTreeRoot(recipe.getWantedId())),
+                    recipe.getLockedUntilLevel()
+            ));
         }
 
         if (recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()) {
