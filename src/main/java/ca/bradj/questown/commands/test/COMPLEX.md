@@ -929,6 +929,15 @@ ticks, logged `INTERVENTION fed the town`): past the fork the food economy ran d
 cycled the dining jobs instead of working (findings #14). It feeds only past the fork and only
 when no chest holds villager food (feeding on a timer filled storage: 41 feedings, villagers stuck
 at `NO_STORAGE`). Count the interventions per run before reading a path run's timings.
+**It clears surplus from full chests** (`clearSurplusFromFullStorage`, 2026-10-27): when half the
+villagers say `NO_STORAGE`, it takes everything out of the chests except villager food, items with
+durability (leavers take their tools from these chests) and 2 of each other item, as a player
+emptying them would; logged `INTERVENTION took N surplus stacks`. The skill unlocks' starter
+requests are standing orders and each deposit takes its own slot, so the crafter filled the chests
+with boots, swords and shovels and Armor's Leather x4 never closed (2026-10-27 smoke run 2; findings
+`.scratch/agent-playtest-2026-10-27-outfitter/` #2). **An open villager-level quest** ("Train a
+Crafter to level 3") gets the same levelling requests for every villager of its root
+(`requestWorkForOpenLevelQuests` -> `requestWorkToLevel`).
 
 **The driver deposits into chests only, never a furnace** (2026-10-26): a furnace is a town
 container, and `deposit` once filled the kitchen's (cooked salmon in the input, bread in the fuel

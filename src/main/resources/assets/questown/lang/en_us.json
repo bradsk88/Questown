@@ -501,7 +501,7 @@
   "menu.quests.skill_unlock": "Unlock a %s skill",
   "menu.quests.skill_unlock.named": "Unlock %s",
   "menu.quests.skill_unlock.hidden": "Unlock ???",
-  "menu.quests.villager_level": "Train a %s to level %s",
+  "menu.quests.villager_level": "Level %2$s %1$s",
   "menu.quests.skill_unlock.locked": "A new skill for your %s. They need to reach level %s before you can see it.",
   "job_board.auto_request": "Auto-post new requests",
   "job_board.auto_request.tooltip.on": "Auto-post is ON: when a villager takes up a new job, its first request is posted here automatically. Click to turn off.",

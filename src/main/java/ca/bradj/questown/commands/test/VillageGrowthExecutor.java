@@ -626,6 +626,9 @@ public final class VillageGrowthExecutor {
         if (feedAStarvingTown()) {
             return;
         }
+        if (clearSurplusFromFullStorage()) {
+            return;
+        }
         if (fulfilItemQuests()) {
             return;
         }
@@ -859,6 +862,58 @@ public final class VillageGrowthExecutor {
         lastFedTick = ticks;
         timesFed++;
         msg("INTERVENTION fed the town 8 cooked beef (" + starving + " starving; feeding #" + timesFed + ")");
+        return true;
+    }
+
+    private int lastClearedTick = -FEED_INTERVAL_TICKS;
+    private int timesCleared;
+    /** Copies of one item a clear leaves in the town's chests: crafting inputs stay on hand. */
+    private static final int KEEP_PER_ITEM = 2;
+
+    /**
+     * Half the villagers say NO_STORAGE: take the surplus out of the chests, as a player emptying
+     * them would. Board requests are standing orders and every deposit takes its own slot, so a
+     * crafter on a skill's request fills the chests and the leavers stop (2026-10-27 run 2: leather
+     * x4 open, chests full of leather boots, stone swords and shovels; 2026-10-26 #26). Keeps food,
+     * anything with durability (leavers take their tools from these chests), and
+     * {@link #KEEP_PER_ITEM} of everything else.
+     */
+    private boolean clearSurplusFromFullStorage() {
+        if (goal != Goal.PATHS_FINISHED || ticks - lastClearedTick < FEED_INTERVAL_TICKS || !pathStarterPosted()) {
+            return false;
+        }
+        List<LivingEntity> villagers = List.copyOf(flag.getVillagerHandle().entities());
+        long noStorage = villagers.stream().filter(v -> ((VisitorMobEntity) v).getNeed() == TownieNeed.NO_STORAGE).count();
+        if (villagers.isEmpty() || noStorage * 2 < villagers.size()) {
+            return false;
+        }
+        java.util.Map<Item, Integer> seen = new java.util.HashMap<>();
+        int taken = 0;
+        for (ContainerTarget<MCContainer, MCTownItem> target : TownContainers.getAllContainers(flag, level)) {
+            if (!(level.getBlockEntity(target.getBlockPos()) instanceof Container c)
+                    || c instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity) {
+                continue;
+            }
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                ItemStack st = c.getItem(i);
+                if (st.isEmpty() || st.isDamageableItem() || st.is(ca.bradj.questown.core.init.TagsInit.Items.VILLAGER_FOOD)) {
+                    continue;
+                }
+                if (seen.merge(st.getItem(), 1, Integer::sum) <= KEEP_PER_ITEM) {
+                    continue;
+                }
+                c.setItem(i, ItemStack.EMPTY);
+                taken++;
+            }
+            c.setChanged();
+        }
+        lastClearedTick = ticks;
+        if (taken == 0) {
+            return false;
+        }
+        timesCleared++;
+        msg("INTERVENTION took " + taken + " surplus stacks out of the town's chests (" + noStorage + "/"
+                + villagers.size() + " NO_STORAGE; clear #" + timesCleared + ")");
         return true;
     }
 
