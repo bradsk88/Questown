@@ -4,6 +4,7 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.SyncWorkForCommandsMessage;
 import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.town.TownVillagerUIs;
 import ca.bradj.questown.town.quests.paths.QuestPaths;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -35,6 +36,7 @@ public class JobFileEvents {
         ImmutableList<JobID> ids = ImmutableList.copyOf(Works.ids());
         SyncWorkForCommandsMessage ms = new SyncWorkForCommandsMessage(ids);
         QuestownNetwork.sendToPlayer(sp, ms);
+        TownVillagerUIs.syncWorkToClient(sp);
     }
 
 }

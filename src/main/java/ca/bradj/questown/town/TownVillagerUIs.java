@@ -322,7 +322,11 @@ public class TownVillagerUIs {
         runnable.accept(d);
     }
 
-    private static void syncWorkToClient(ServerPlayer sender) {
+    /**
+     * Sends every job's parent and icon (the skill tree and job names read them). On join too
+     * (Outfitter #19): a quest card's item-named skill reads the icon before any villager menu opens.
+     */
+    public static void syncWorkToClient(ServerPlayer sender) {
         Map<JobID, @Nullable JobID> b = new HashMap<>();
         Map<JobID, ResourceLocation> b2 = new HashMap<>();
         Works.values().forEach(w -> {

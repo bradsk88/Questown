@@ -1112,6 +1112,9 @@ baker/bread, miner/coal, ...); leaver variants (`hunter/sword_half_day` -> iron 
 helper jobs (`cook/fuel` -> furnace) don't match and keep the fallback. The icon comes from the
 loaded `Works` on the server and from the synced copy on the client
 (`VillagerAdvancements.getIconId`, filled by `SyncVillagerAdvancementsMessage`), so a dedicated
-client and the server's chat read the same name. The named-skill quest's flavor text uses the same
+client and the server's chat read the same name. That sync used to go out only when a villager
+menu opened, so the held check (2026-10-26) saw chat say "Unlock Wooden Sword" while the quest card
+still read "Unlock Wooden sword"; `JobFileEvents.playerJoined` now sends it on join too
+(`TownVillagerUIs.syncWorkToClient`). The named-skill quest's flavor text uses the same
 name. Pinned by `JobNamesTest.aProductJobIsNamedForItsIconItem` and
 `aJobWhoseIconIsAnotherItemHasNoProduct`.
