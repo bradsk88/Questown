@@ -108,6 +108,15 @@ ticks, same one ration) carries **no** refill rule on purpose: the ration ran ou
 comes back hungry. Short trips (2000 ticks) mostly take no food and refill nothing (the gatherer
 no-tool short trip takes food and refills fully). Applies to the miner, hunter and gatherer
 tiers alike; it is not a missing rule on the full-day files.
+_Trip yields (dev, 2026-10-26, Outfitter #25):_ a longer trip must bring back more, net of its
+ration. A trip carries at most **6** items (the inventory is 6 unstacked slots), and a
+`biome_loot` result's `attempts` is the trip's **maximum**: it returns a random count from half of
+it up to it (`Loots.loadFromTables`). Every half-day tier has `attempts: 5` (the Java shovel
+half-day reads `GathererHalfDayLootAmountV2`, default 5). Every full-day tier has `attempts: 6`
+and `prefer_requested`: it rolls a second time and that roll's **board-requested** items fill
+empty slots, then each replaces a random non-requested item (`RequestedLootPreference`, applied
+beside the loot guarantees in both world interactions). So the full-day trip is the *targeted*
+one: with nothing requested it brings the same as a half-day roll.
 _Avoid_: remote job, expedition job ("leaver" matches the `jobs/leaver/` package and `NewLeaverWork`).
 
 **Job root**:

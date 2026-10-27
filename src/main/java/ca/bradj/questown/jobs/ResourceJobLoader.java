@@ -390,7 +390,7 @@ public class ResourceJobLoader {
                 wb = wb.withOverrides(overrides);
             }
             wb = wb.withUnlockedWithRootJob(unlockedWithRootJob(object)).withAvailableAtLevel(availableAtLevel(object))
-                   .withExperience(experience(object));
+                   .withExperience(experience(object)).withPrefersRequestedLoot(prefersRequestedLoot(object));
             return wb.withProficiencyId(proficiencyId(object));
         }
 
@@ -512,7 +512,7 @@ public class ResourceJobLoader {
                     work = work.withSlotPrecondition(slotPrecondition.get());
                 }
                 work = work.withUnlockedWithRootJob(unlockedWithRootJob(obj)).withAvailableAtLevel(availableAtLevel(obj))
-                           .withExperience(experience(obj));
+                           .withExperience(experience(obj)).withPrefersRequestedLoot(prefersRequestedLoot(obj));
                 return work.withProficiencyId(proficiencyId(obj));
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
@@ -1104,6 +1104,16 @@ public class ResourceJobLoader {
     /** The optional `experience` value: XP per completion, replacing the formula. */
     private static @Nullable Integer experience(JsonObject object) {
         return optional(object, "experience", JsonElement::getAsInt);
+    }
+
+    /** The `biome_loot` result's `prefer_requested` flag (full-day leaver trips); absent = false. */
+    private static boolean prefersRequestedLoot(JsonObject object) {
+        JsonElement result = object.get("result");
+        if (result == null || !result.isJsonObject()) {
+            return false;
+        }
+        Boolean prefer = optional(result.getAsJsonObject(), "prefer_requested", JsonElement::getAsBoolean);
+        return prefer != null && prefer;
     }
 
     /**

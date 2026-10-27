@@ -65,6 +65,11 @@ public class Work {
     private int availableAtLevel = DEFAULT_AVAILABLE_AT_LEVEL;
     /** The JSON `experience`: XP per completion, replacing the formula. Null = the formula. */
     private @Nullable Integer experience;
+    /**
+     * The `biome_loot` result's `prefer_requested` flag: a full-day leaver trip rolls a second time
+     * and keeps that roll's board-requested items ({@code RequestedLootPreference}).
+     */
+    private boolean prefersRequestedLoot;
 
     /** The `available_at_level` default: the first level at which the skills tab appears. */
     public static final int DEFAULT_AVAILABLE_AT_LEVEL = 2;
@@ -178,6 +183,16 @@ public class Work {
         return this;
     }
 
+    public boolean prefersRequestedLoot() {
+        return prefersRequestedLoot;
+    }
+
+    /** Chains the `biome_loot` result's `prefer_requested` flag parsed by {@code ResourceJobLoader}. */
+    public Work withPrefersRequestedLoot(boolean prefersRequestedLoot) {
+        this.prefersRequestedLoot = prefersRequestedLoot;
+        return this;
+    }
+
     /** Chains the optional `experience` JSON value parsed by {@code ResourceJobLoader}. */
     public Work withExperience(@Nullable Integer experience) {
         this.experience = experience;
@@ -218,6 +233,7 @@ public class Work {
         work.proficiencyId = proficiencyId;
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
+        work.prefersRequestedLoot = prefersRequestedLoot;
         return work;
     }
 
@@ -245,6 +261,7 @@ public class Work {
         work.proficiencyId = proficiencyId;
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
+        work.prefersRequestedLoot = prefersRequestedLoot;
         return work;
     }
 
@@ -281,6 +298,7 @@ public class Work {
         work.proficiencyId = proficiencyId;
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
+        work.prefersRequestedLoot = prefersRequestedLoot;
         return work;
     }
 
@@ -295,6 +313,7 @@ public class Work {
         work.proficiencyId = proficiencyId;
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
+        work.prefersRequestedLoot = prefersRequestedLoot;
         return work;
     }
 

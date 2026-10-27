@@ -1693,3 +1693,15 @@ quest at the spend; a creative spend with no guarantee still returns empty. Pinn
 `SimpleVillagerHandleTest.scheduleJobRootChange_instantWithGuarantee_appliesNowAndReturnsTheRoot`;
 the flag-side choice is registry-bound (a BE), covered by growth r22 run 3 (hunter, cook and miner
 each logged "will change to a new job NOW" and the quest close in the same tick).
+
+## A player's skill unlock posts the skill's first request (Outfitter #10, dev 2026-10-26)
+
+A work runs only while the board requests its product, and only a job change posted starter
+requests, so a crafter given "Wooden Sword" by a BOP kept making sticks until the player put the
+sword on the board by hand. `TownFlagBlockEntity.unlockSkillFromPlayer` (the skills-tab spend via
+`spendBopToUnlockSkill` / `UnlockJobMessage`) now calls `postStarterRequests(List.of(id))`, the
+same path a job change uses over the root's default works: gated by the board's auto-request
+toggle, deduplicated by `StarterRequests.toPost` and the board's own `requestWork` idempotence.
+Setup unlocks (job-change defaults, fixtures, `unlockJob` directly) don't post. Each posted
+starter request now logs `Starter request for [<jobs>]: <request>` at info. Not unit-testable
+(the flag BE); verified by the held `paths/outfitter` run's log.

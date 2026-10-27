@@ -154,3 +154,23 @@ sound is skipped with one warning per id. The data is fixed too: the five sword 
 `entity.player.attack.sweep`, `arborist/plant_tree` uses `block.grass.place` (was
 `item.shovel.place`). `JobSoundIdsDataTest` checks every job JSON's sound against the sound
 registry.
+
+## Full-day trips prefer requested items; half-day trips bring up to 5 (Outfitter #25, dev 2026-10-26)
+
+Ruling: a longer leaver trip must yield more, net of its one-food ration, within the 6-slot
+inventory. Half-day tiers went to `attempts: 5` (hunter 2, axe/rod 3, gather/miner 4; the Java
+shovel half-day's config moved to `GathererHalfDayLootAmountV2`, default 5, so existing configs take
+it). Full-day tiers have `attempts: 6` (the hunter's was 4) and `"prefer_requested": true` in the
+`biome_loot` result (the Java shovel full-day sets `withPrefersRequestedLoot(true)`), parsed onto
+`Work.prefersRequestedLoot` (copied by every `Work` copy constructor).
+
+`AbstractWorldInteraction.withRequestedLootPreference` runs inside `getResults` in both lanes
+(`RealtimeWorldInteraction`, `TimeWarpWorldInteraction`), before `withLootGuarantees` prepends.
+For a flagged job with anything on the board it calls the result generator a second time (the
+same table and biome) and passes both rolls to `RequestedLootPreference.prefer`: the second roll's
+requested items (matched by `WorkRequest.asIngredient()`) fill empty slots up to 6, then replace a
+random non-requested item; its other items are dropped. A town with an empty board, or any other
+job, keeps the first roll unchanged. `attempts` is a maximum (`Loots.loadFromTables` returns half
+to all of it), so "12 rolls" is up to 6 + up to 6. Pinned by `RequestedLootPreferenceTest` (pure);
+the job-data and lane wiring are covered by held runs, not a unit JVM (the lanes need a loaded
+flag and loot tables).

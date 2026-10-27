@@ -359,7 +359,8 @@ class GathererJobStructureTest {
 
     @Test
     void lootAttempts_shouldScaleWithDuration() {
-        // Short = 1-2 attempts, Half/Med = 3-4 attempts, Full = 6 attempts
+        // Short = 1-2 attempts, Half/Med = 5, Full = 6 plus a requested-item second roll (dev
+        // ruling 2026-10-26, Outfitter #25: a longer trip yields more, net of its ration)
         Map<String, Integer> shortJobs = Map.of(
                 "gatherer_unmapped_axe_short.json", 1,
                 "gatherer_unmapped_notool_short.json", 2,
@@ -367,9 +368,9 @@ class GathererJobStructureTest {
         );
 
         Map<String, Integer> halfJobs = Map.of(
-                "gatherer_unmapped_axe_med.json", 3,
-                "gatherer_unmapped_notool_med.json", 4,
-                "gatherer_unmapped_rod_half.json", 3
+                "gatherer_unmapped_axe_med.json", 5,
+                "gatherer_unmapped_notool_med.json", 5,
+                "gatherer_unmapped_rod_half.json", 5
         );
 
         Map<String, Integer> fullJobs = Map.of(
@@ -382,6 +383,12 @@ class GathererJobStructureTest {
         assertAttempts(shortJobs, "short");
         assertAttempts(halfJobs, "half/med");
         assertAttempts(fullJobs, "full");
+        for (String full : fullJobs.keySet()) {
+            JsonObject job = loadedJobs.get(full);
+            if (job == null) continue;
+            Assertions.assertTrue(job.getAsJsonObject("result").get("prefer_requested").getAsBoolean(),
+                    full + " should prefer requested items");
+        }
     }
 
     private void assertAttempts(Map<String, Integer> expected, String durationName) {

@@ -220,9 +220,15 @@ public class RealtimeWorldInteraction extends
             MCExtra inputs,
             Collection<MCHeldItem> mcHeldItems
     ) {
+        ca.bradj.questown.town.entity.TownFlagBlockEntity flag = resolveFlagFromTown(inputs);
+        ServerLevel level = inputs.town().getServerLevel();
         return withLootGuarantees(
-                resolveFlagFromTown(inputs),
-                resultGenerator.apply(inputs.town().getServerLevel(), mcHeldItems)
+                flag,
+                withRequestedLootPreference(
+                        flag, level,
+                        resultGenerator.apply(level, mcHeldItems),
+                        () -> resultGenerator.apply(level, mcHeldItems)
+                )
         );
     }
 

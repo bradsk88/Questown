@@ -2355,6 +2355,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public void unlockSkillFromPlayer(UUID villagerUUID, JobID id) {
         getVillagerHandle().unlockJob(villagerUUID, id);
         quests.markSkillUnlocked(id);
+        // Outfitter #10 (dev 2026-10-26): a work runs only while the board requests its product,
+        // so a new skill posts its first request like a job change does (same toggle).
+        postStarterRequests(List.of(id));
     }
 
     public void requestWorkFromPlayer(WorkRequest request) {
@@ -2363,11 +2366,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public void postStarterRequests(JobID root) {
+        postStarterRequests(ServerJobsRegistry.getDefaultWork(root));
+    }
+
+    private void postStarterRequests(Collection<JobID> works) {
         if (!isBoardAutoRequest()) {
             return;
         }
         List<WorkRequest> declared = new ArrayList<>();
-        for (JobID work : ServerJobsRegistry.getDefaultWork(root)) {
+        for (JobID work : works) {
             Ingredient request = ServerJobsRegistry.getInitialRequest(getServerLevel(), work);
             if (request == null || request.isEmpty()) {
                 continue;
@@ -2375,6 +2382,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             declared.add(Ingredients.asWorkRequest(request));
         }
         for (WorkRequest r : StarterRequests.toPost(declared, WorkRequest::covers)) {
+            QT.FLAG_LOGGER.info("Starter request for {}: {}", works, r);
             workHandle.requestWork(r);
         }
     }
