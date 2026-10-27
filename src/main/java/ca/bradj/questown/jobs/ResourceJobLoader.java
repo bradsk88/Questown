@@ -270,7 +270,8 @@ public class ResourceJobLoader {
                         wwi,
                         loadRulesV1(obj),
                         loadSoundV1(obj)
-                ).withPriority(requiredInt(obj, "priority")).withExperience(experience(obj));
+                ).withPriority(requiredInt(obj, "priority")).withExperience(experience(obj))
+                 .withAvailableAtLevel(ArmorTierLevels.forPrefix(prefix));
                 b.put(expandedId, armorerWork);
             }
             return b.build();

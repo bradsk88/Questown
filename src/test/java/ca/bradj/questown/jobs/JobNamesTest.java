@@ -1,8 +1,10 @@
 package ca.bradj.questown.jobs;
 
+import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class JobNamesTest {
 
@@ -26,5 +28,19 @@ class JobNamesTest {
     void aBareLengthWordIsKept() {
         // "full" alone is a job name, not a trip length.
         assertEquals("Full", JobNames.variant("full"));
+    }
+
+    /** Outfitter playtest #19: "Unlock Wooden shovel" read like a job id, not the item. */
+    @Test
+    void aProductJobIsNamedForItsIconItem() {
+        ResourceLocation shovel = new ResourceLocation("minecraft", "wooden_shovel");
+        assertEquals(shovel, JobNames.product(new JobID("crafter", "wooden_shovel"), shovel));
+    }
+
+    @Test
+    void aJobWhoseIconIsAnotherItemHasNoProduct() {
+        assertNull(JobNames.product(new JobID("hunter", "sword_half_day"), new ResourceLocation("minecraft", "iron_sword")));
+        assertNull(JobNames.product(new JobID("cook", "fuel"), new ResourceLocation("minecraft", "furnace")));
+        assertNull(JobNames.product(new JobID("crafter", "stick"), null));
     }
 }

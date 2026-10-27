@@ -4,6 +4,7 @@ import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 import ca.bradj.questown.loader.Loader;
 
 import java.util.ArrayList;
@@ -69,6 +70,11 @@ public class VillagerAdvancements {
     public static void registerIcons(Map<JobID, ResourceLocation> in) {
         icons.clear();;
         icons.putAll(in);
+    }
+
+    /** The synced icon's item id, or null before the server's sync (or for an unknown job). */
+    public static @Nullable ResourceLocation getIconId(JobID job) {
+        return icons.get(job);
     }
 
     public static ItemStack getIcon(JobID prerequisite) {

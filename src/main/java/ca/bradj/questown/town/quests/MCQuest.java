@@ -4,7 +4,7 @@ import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.gui.QuestTypes;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.JobNames;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -185,7 +185,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         ResourceLocation id = Questown.ResourceLocation(SKILL_UNLOCK_PREFIX + skill.rootId() + "/" + skill.jobId());
         MCQuest q = new MCQuest(batchUUID, ownerId, id, null, QuestType.SKILL_UNLOCK, 1);
         q.setFlavorText("Once your " + skill.rootId() + " can learn it, open its skills tab and spend a "
-                + "Block of Progress on " + JobNames.variant(skill.jobId()) + ".");
+                + "Block of Progress on " + Jobs.getVariantNameComponent(skill).getString() + ".");
         return q;
     }
 

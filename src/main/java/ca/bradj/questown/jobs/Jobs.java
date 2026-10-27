@@ -4,6 +4,7 @@ import ca.bradj.questown.blocks.TakeFn;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
+import ca.bradj.questown.gui.villager.advancements.VillagerAdvancements;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -314,11 +315,26 @@ public class Jobs {
         return Compat.translatable("jobs." + job.rootId());
     }
 
-    /** The variant's name: a {@code jobs.<root>.<job>} lang key, else {@link JobNames#variant}. */
+    /**
+     * The variant's name: a product job's item name ({@link JobNames#product}), else a
+     * {@code jobs.<root>.<job>} lang key, else {@link JobNames#variant}.
+     */
     public static @NotNull Component getVariantNameComponent(JobID job) {
+        ResourceLocation product = JobNames.product(job, iconId(job));
+        if (product != null) {
+            return Compat.getItemName(product);
+        }
         return Compat.translatableWithFallback(
                 "jobs." + job.rootId() + "." + job.jobId(), JobNames.variant(job.jobId())
         );
+    }
+
+    /** The job's icon: from the loaded jobs on the server, else the copy synced to the client. */
+    private static @Nullable ResourceLocation iconId(JobID job) {
+        if (Works.isInitialized() && Works.ids().contains(job)) {
+            return Compat.getItemId(Works.get(job).get().icon.getItem());
+        }
+        return VillagerAdvancements.getIconId(job);
     }
 
     public static String getNiceString(ImmutableList<JobID> value) {

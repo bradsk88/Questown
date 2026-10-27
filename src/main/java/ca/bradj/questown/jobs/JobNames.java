@@ -1,5 +1,8 @@
 package ca.bradj.questown.jobs;
 
+import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -13,6 +16,20 @@ import java.util.Locale;
 public final class JobNames {
 
     private JobNames() {
+    }
+
+    /**
+     * The item a product job is named for: its icon, when the icon's path is the job id
+     * ({@code crafter/wooden_shovel} -> {@code minecraft:wooden_shovel}). Its name then reads like
+     * the item's tooltip, "Wooden Shovel" (dev ruling 2026-10-26, Outfitter playtest #19). Leaver
+     * variants and helper jobs ({@code hunter/sword_half_day}, {@code cook/fuel}) have none and
+     * keep {@link #variant}.
+     */
+    public static @Nullable ResourceLocation product(JobID job, @Nullable ResourceLocation icon) {
+        if (icon == null || !icon.getPath().equals(job.jobId())) {
+            return null;
+        }
+        return icon;
     }
 
     public static String variant(String jobId) {

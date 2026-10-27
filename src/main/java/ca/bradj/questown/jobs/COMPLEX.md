@@ -1079,3 +1079,39 @@ supplies" (r22: 36x `hunter:downtime` NO_SUPPLIES in one run). `DowntimeWork.ove
 NO_SUPPLIES to the relaxing text like NO_JOBSITE. Pinned by
 `DowntimeWorkOverridesTest.noSupplies_readsAsRelaxing`. Why the wander filter rejects every room is
 not addressed here.
+
+## Hunters bring back leather a quarter of the time (Outfitter #21, dev 2026-10-26)
+
+The Outfitter's Armor batch asks for Leather x4, and at forest's 10.4% that took ~40 short trips:
+Armor finished long after both Weapons batches. Every `hunter_sword` table that drops leather now
+gives it at least a quarter of the roll: `default`, `forest`, `dark_forest`, `snowy` and `taiga`
+were raised to 25% (weight = the rest of the table / 3); `desert`, `savanna` (48%) and
+`mushroom_fields` (27%) were already above it; `jungle` has no leather. The rest of the table
+shrinks in proportion, so forest's meat share drops from 69% to 58% and wool stays inside the
+8-12% band `HunterWoolDataTest` pins. Pinned by `HunterLeatherDataTest`.
+
+## Armor tiers are level-gated like tool tiers (Outfitter #11, dev 2026-10-26)
+
+The armorer templates (`armorer_*.json`) expand per material in
+`ResourceJobLoader.makeArmorerJobs`, which never read `available_at_level`, so every piece up to
+diamond was open from level 2 for one BOP each. The expansion now sets
+`ArmorTierLevels.forPrefix(prefix)`: leather 3, iron 8, golden 11, diamond 14, beside the tool
+tiers' 3/5/8/11/14. The parent chain (`deriveArmorerParent`) is unchanged. `ArmorTierLevels` is a
+registry-free class so the mapping is unit-testable (`ArmorTierLevelsTest`); the loader itself
+touches `Items` and can't load in a unit JVM.
+
+## A product job is named for its item (Outfitter #19, dev 2026-10-26)
+
+`Jobs.getVariantNameComponent` (skill cards, chat, the skill tree, "Learn More") fell back to
+`JobNames.variant`, which sentence-cases the id: "Unlock Wooden shovel". Now, when a job's icon is
+the item its id names (`JobNames.product`: the icon's path equals the job id, e.g.
+`crafter/wooden_shovel` -> `minecraft:wooden_shovel`), the name is that item's own name
+(`Compat.getItemName`), so it reads like the tooltip and is translated by the game. A scan of the
+job files at the time matched 35 jobs (the crafter's tools, armor expansions, stick, bowl, paper,
+baker/bread, miner/coal, ...); leaver variants (`hunter/sword_half_day` -> iron sword icon) and
+helper jobs (`cook/fuel` -> furnace) don't match and keep the fallback. The icon comes from the
+loaded `Works` on the server and from the synced copy on the client
+(`VillagerAdvancements.getIconId`, filled by `SyncVillagerAdvancementsMessage`), so a dedicated
+client and the server's chat read the same name. The named-skill quest's flavor text uses the same
+name. Pinned by `JobNamesTest.aProductJobIsNamedForItsIconItem` and
+`aJobWhoseIconIsAnotherItemHasNoProduct`.

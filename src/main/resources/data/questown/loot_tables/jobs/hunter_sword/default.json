@@ -47,7 +47,7 @@
         {
           "type": "minecraft:item",
           "name": "minecraft:leather",
-          "weight": 10,
+          "weight": 43,
           "functions": [
             {"function": "minecraft:set_count", "count": 1}
           ]
