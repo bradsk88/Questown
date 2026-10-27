@@ -109,9 +109,10 @@ comes back hungry. Short trips (2000 ticks) mostly take no food and refill nothi
 no-tool short trip takes food and refills fully). Applies to the miner, hunter and gatherer
 tiers alike; it is not a missing rule on the full-day files.
 _Trip yields (dev, 2026-10-26, Outfitter #25):_ a longer trip must bring back more, net of its
-ration. A trip carries at most **6** items (the inventory is 6 unstacked slots), and a
-`biome_loot` result's `attempts` is the trip's **maximum**: it returns a random count from half of
-it up to it (`Loots.loadFromTables`). Every half-day tier has `attempts: 5` (the Java shovel
+ration. A trip carries at most **6** items (the inventory is 6 unstacked slots), and **every
+attempt brings back one item** (dev, 2026-10-26): a `biome_loot` result's `attempts` is the exact
+count, and an empty roll doesn't count (`Loots.loadFromTables` rolls until it has them). Before,
+a trip returned a random count from half of `attempts` up to it. Every half-day tier has `attempts: 5` (the Java shovel
 half-day reads `GathererHalfDayLootAmountV2`, default 5). Every full-day tier has `attempts: 6`
 and `prefer_requested`: it rolls a second time and that roll's **board-requested** items fill
 empty slots, then each replaces a random non-requested item (`RequestedLootPreference`, applied

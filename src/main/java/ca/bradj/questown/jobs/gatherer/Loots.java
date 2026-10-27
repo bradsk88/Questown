@@ -35,8 +35,8 @@ public class Loots {
             GathererTools.LootTableParameters lt
     ) {
         final ResourceLocation biome = finalizeBiome(items);
-        int maxAmount = items.size();
-        return getFromLootTables(level, maxAmount / 2, maxAmount, lt, biome);
+        int amount = items.size();
+        return getFromLootTables(level, amount, amount, lt, biome);
     }
 
     @NotNull
@@ -46,7 +46,7 @@ public class Loots {
             int maxAmount,
             GathererTools.LootTableParameters lt
     ) {
-        return getFromLootTables(level, Math.max(1, maxAmount / 2), maxAmount, lt, finalizeBiome(items));
+        return getFromLootTables(level, maxAmount, maxAmount, lt, finalizeBiome(items));
     }
 
     @NotNull
@@ -56,7 +56,7 @@ public class Loots {
             GathererTools.LootTableParameters lt,
             ResourceLocation biome
     ) {
-        return getFromLootTables(level, maxAmount / 2, maxAmount, lt, biome);
+        return getFromLootTables(level, maxAmount, maxAmount, lt, biome);
     }
 
     @NotNull
@@ -121,21 +121,15 @@ public class Loots {
         LootParams.Builder lcb = new LootParams.Builder(level);
         LootParams lc = lcb.create(LootContextParamSets.EMPTY);
 
-        ArrayList<ItemStack> rItems = new ArrayList<>();
         int max = minItems + (level.random.nextInt(maxItems - minItems + 1));
-        for (int i = 0; i < Compat.configGet(Config.BASE_MAX_LOOP).get(); i++) {
-            if (rItems.size() >= max) {
-                break;
-            }
-            rItems.addAll(lootTable.getRandomItems(lc));
-        }
+        // Empty rolls don't count: a leaver brings back one item per attempt (dev, 2026-10-26).
+        List<ItemStack> rItems = new ArrayList<>(LootRolls.roll(
+                max, Compat.configGet(Config.BASE_MAX_LOOP).get(), () -> lootTable.getRandomItems(lc), ItemStack::isEmpty
+        ));
         Collections.shuffle(rItems);
-        int subLen = Math.min(rItems.size(), maxItems);
-        List<MCTownItem> list = rItems.stream()
-                .filter(v -> !v.isEmpty())
+        return rItems.stream()
+                .limit(max)
                 .map(MCTownItem::fromMCItemStack)
-                .toList()
-                .subList(0, subLen);
-        return list;
+                .toList();
     }
 }

@@ -37,3 +37,9 @@ flowchart TD
   `Config.BASE_MAX_LOOP`, shuffles, and truncates to `maxItems`.
 - **Nothing here touches a live entity.** The hunted animal is a table roll; a town
   with no animals in the world still hunts, as long as it holds a known biome.
+
+## One item per attempt (dev, 2026-10-26)
+
+`Loots`' leaver overloads roll exactly `attempts` items (they used to pick a random count from half
+to all), and `LootRolls.roll` skips empty rolls. Details: `jobs/declarative/COMPLEX.md` "A leaver
+attempt always brings back an item".

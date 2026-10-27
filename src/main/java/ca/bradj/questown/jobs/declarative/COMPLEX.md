@@ -170,7 +170,19 @@ For a flagged job with anything on the board it calls the result generator a sec
 same table and biome) and passes both rolls to `RequestedLootPreference.prefer`: the second roll's
 requested items (matched by `WorkRequest.asIngredient()`) fill empty slots up to 6, then replace a
 random non-requested item; its other items are dropped. A town with an empty board, or any other
-job, keeps the first roll unchanged. `attempts` is a maximum (`Loots.loadFromTables` returns half
-to all of it), so "12 rolls" is up to 6 + up to 6. Pinned by `RequestedLootPreferenceTest` (pure);
+job, keeps the first roll unchanged. "12 rolls" is 6 + 6: every leaver attempt brings back
+exactly one item (next section). Pinned by `RequestedLootPreferenceTest` (pure);
 the job-data and lane wiring are covered by held runs, not a unit JVM (the lanes need a loaded
 flag and loot tables).
+
+## A leaver attempt always brings back an item (dev, 2026-10-26)
+
+Ruling: "Leaver work should ALWAYS bring back an item per attempt." `Loots.getFromLootTables`'s
+leaver overloads passed `min = max / 2`, so `loadFromTables` picked a random count from half of
+`attempts` to all of it (a 2-attempt hunter brought 1 or 2); since 2023 (`dcf7be84`, no recorded
+reason). They now pass `min = max`. `loadFromTables` counts through `jobs/gatherer/LootRolls.roll`, which
+skips empty rolls, so an empty table entry can't eat an attempt; it still gives up after
+`Config.BASE_MAX_LOOP` rolls. Pinned by `LootRollsTest`. The
+old `subList(0, min(size, max))` was sized before filtering empties and could overrun; it is a
+`limit(max)` after the filter now. The fisher's `loot` result (`fisher_fish.json`, in town) still
+calls `loadFromTables(level, loot, 1, maxResults)` and keeps its 1..2 range: it isn't a leaver.
