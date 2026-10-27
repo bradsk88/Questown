@@ -178,6 +178,13 @@ relights the campfire", which the Acting section already said.
   villager's `Pos`, stand ~3 blocks away on open ground and give the rotation explicitly:
   `tick freeze`, `tp Dev <x> <y> <z> <yaw> <pitch>` (yaw 90 faces -x), shot, `tick unfreeze`.
   Bubbles are focus-based, so only the villager under the crosshair shows one.
+- Watching a held `paths/outfitter` / `village/growth` run (the growth driver plays): `tick freeze`
+  stops the world, not the driver. It acts on server tick events, so it spent BOPs on both wooden
+  skills 2 s after the freeze (2026-10-27). Launch with `-Dquestown.autotest.tickrate=100` (the
+  autotest default is 1000 t/s: onboarding is over before the client joins) and shoot the quest page
+  on each `New quests are available` chat line instead (`tools/agent-playtest/autoshot.sh <client log>
+  <prefix>` under a Monitor: `flagtab quests 0 64 0`, shot, page 2, close). An open quest page is a snapshot: a
+  card can read (0/4) while chat already says it completed.
 
 ## Process hygiene (2026-10-22)
 
