@@ -811,7 +811,7 @@ public abstract class AbstractWorldInteraction<
         if (flag == null || !prefersRequestedLoot()) {
             return rolled;
         }
-        ImmutableList<WorkRequest> requests = flag.getWorkHandle().getRequestedResults();
+        ImmutableList<WorkRequest> requests = flag.getWorkHandle().getBoardRequests().toWork();
         if (requests.isEmpty()) {
             return rolled;
         }

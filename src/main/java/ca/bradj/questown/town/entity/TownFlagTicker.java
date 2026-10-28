@@ -36,6 +36,9 @@ import java.util.function.Function;
 
 public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickData, VisitorMobEntity> {
 
+    // Board requests pause once storage holds enough (BoardRequests); a container scan every 5 s.
+    private static final long STOCK_CHECK_INTERVAL = 100;
+
     @Override
     protected void triggerUnmetNeedsAdvancement(TickData tickData) {
         AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
@@ -135,7 +138,11 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
 
     @Override
     protected void tickWorkHandle(TickData tickData) {
-        tickData.entity().workHandle.tick(tickData.level());
+        TownFlagBlockEntity e = tickData.entity();
+        e.workHandle.tick(tickData.level());
+        if (tickData.level().getGameTime() % STOCK_CHECK_INTERVAL == 0) {
+            e.refreshStockedRequests(TownContainers.getAllStacks(e, tickData.level()));
+        }
     }
 
     @Override

@@ -13,6 +13,7 @@ import ca.bradj.questown.jobs.declarative.DeclarativeJob;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.mc.Compat;
@@ -513,12 +514,12 @@ public class TownPossibleWork {
     }
 
     private static RequestCheck boardCheck(TownFlagBlockEntity t, JobID jobId) {
-        ImmutableList<WorkRequest> requests = t.getWorkHandle().getRequestedResults();
+        BoardRequests requests = t.getWorkHandle().getBoardRequests();
         if (requests.isEmpty()) {
             return new RequestCheck(true, null);
         }
         WorksBehaviour.TownData td = t.getTownData();
-        for (WorkRequest r : requests) {
+        for (WorkRequest r : requests.toWork()) {
             if (ServerJobsRegistry.canSatisfy(td, jobId, r.asIngredient())) {
                 return new RequestCheck(false, r);
             }
@@ -762,7 +763,7 @@ public class TownPossibleWork {
             JobID currentJob,
             Predicate<JobID> canAlwaysStart,
             Predicate<JobID> canFitInDay,
-            ImmutableList<WorkRequest> requestedResults,
+            BoardRequests requestedResults,
             WorksBehaviour.TownData td
     ) {
         JobCycler cycler = villagerCyclers.computeIfAbsent(villagerUUID, k -> new JobCycler());

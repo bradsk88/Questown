@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.Coordinate;
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -31,6 +32,7 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
     private static final int buttonHeight = 13;
 
     private static final int TEXT_COLOR = 0xFF404040;
+    private static final int PAUSED_TEXT_COLOR = 0xFF8B8B8B;
 
     private static final int CARD_PADDING = 1;
     private static final int PAGE_PADDING = 10;
@@ -209,7 +211,9 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
             int idX = x + PAGE_PADDING;
             int idY = iconY - 10;
             // Name the request ("Raw Food", "Wheat Seeds") instead of "An item was requested".
-            ctx.text(Ingredients.getName(jobPosting.getResultWanted().asIngredient()), idX, idY, TEXT_COLOR, false);
+            // A paused request (storage holds enough) is greyed; its icon tooltip says why.
+            int nameColor = jobPosting.isStocked() ? PAUSED_TEXT_COLOR : TEXT_COLOR;
+            ctx.text(Ingredients.getName(jobPosting.getResultWanted().asIngredient()), idX, idY, nameColor, false);
 
             int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
             ctx.lightText(
@@ -275,7 +279,12 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
         ItemStack itemStack = Ingredients.representativeItemStack(ing);
         if (itemStack != null) {
             ctx.renderItemAndDecorations(itemStack, iconX, y);
-            highlightAndTooltip(ctx, mouseX, mouseY, iconX, y, itemStack.getItem().getName(itemStack));
+            Component name = itemStack.getItem().getName(itemStack);
+            Component tooltip = recipe.isStocked()
+                    // The card's own name: a tag request's icon cycles items ("Food", not "Cooked Mutton").
+                    ? Compat.translatable("job_board.request_stocked", Ingredients.getName(ing), BoardRequests.PAUSE_AT)
+                    : name;
+            highlightAndTooltip(ctx, mouseX, mouseY, iconX, y, tooltip);
             Slot element = new Slot(dummyInv, 0, iconX, y + 1);
             element.set(itemStack);
             b.add(element);

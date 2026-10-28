@@ -18,6 +18,7 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.gui.ItemEconomicsData;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
@@ -1014,6 +1015,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     /** The loaded curated paths; a test substitutes its own. */
     Supplier<List<QuestPath>> curatedPaths = QuestPaths::all;
+    // Paths whose finish has fired its advancement this session (announceIfFinished); not saved.
+    private final Set<String> announcedPaths = new HashSet<>();
 
     /**
      * The fork (plan ruling 2): the onboarding miner batch is complete. Each path's starter batches
@@ -1040,17 +1043,36 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         boolean postedAny = false;
         for (QuestPath path : curatedPaths.get()) {
             Set<String> posted = pathBatchIds(path, false);
-            for (QuestPath.Batch b : QuestPathProgress.toPost(path, posted, pathBatchIds(path, true))) {
+            Set<String> done = pathBatchIds(path, true);
+            for (QuestPath.Batch b : QuestPathProgress.toPost(path, posted, done)) {
                 if (b.isStarter()) {
                     view.fireTutorialTrigger(TutorialTrigger.Triggers.TutorialComplete);
                 }
                 addPathBatch(view, path, b);
                 postedAny = true;
             }
+            announceIfFinished(view, path, posted, done);
         }
         if (postedAny) {
             notifyNewQuests(view);
         }
+    }
+
+    /**
+     * A finished path fires its advancement (agent playtest 2026-10-27 #4) once per session: a
+     * path batch's reward queues no ladder pass, so this per-tick step is where the end is seen.
+     * A reload fires it again; the grant is once per player.
+     */
+    private void announceIfFinished(TutorialTownView view, QuestPath path, Set<String> posted, Set<String> done) {
+        if (announcedPaths.contains(path.id()) || !QuestPathProgress.taken(path, done)) {
+            return;
+        }
+        if (!QuestPathProgress.finished(path, posted, done)) {
+            return;
+        }
+        announcedPaths.add(path.id());
+        TutorialTrigger.Triggers.forPath(path.id()).ifPresent(view::fireTutorialTrigger);
+        QT.QUESTS_LOGGER.info("Quest path finished: {}", path.id());
     }
 
     /**
@@ -2034,6 +2056,27 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             }
         }
         return out;
+    }
+
+    /**
+     * Which board requests an open quest still needs, so they never pause on a full store
+     * ({@link ca.bradj.questown.jobs.requests.BoardRequests}). An ITEM or LOOT quest needs a
+     * request for its item. An open villager-level quest needs every request: its villager
+     * levels by filling them.
+     */
+    public Predicate<WorkRequest> requestsOpenQuestsNeed() {
+        List<MCQuest> open = questBatches.getAll().stream().filter(q -> !q.isComplete()).toList();
+        if (open.stream().anyMatch(q -> q.getType() == Quest.QuestType.VILLAGER_LEVEL)) {
+            return r -> true;
+        }
+        List<ItemStack> wanted = open.stream()
+                .filter(q -> q.getType() == Quest.QuestType.ITEM || q.getType() == Quest.QuestType.LOOT)
+                .flatMap(q -> Arrays.stream(Ingredients.asIngredient(q.getWantedId()).getItems()))
+                .toList();
+        return r -> {
+            Ingredient requested = r.asIngredient();
+            return wanted.stream().anyMatch(requested);
+        };
     }
 
     /**

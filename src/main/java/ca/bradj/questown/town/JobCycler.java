@@ -3,8 +3,8 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.jobs.requests.WorkRequest;
-import com.google.common.collect.ImmutableList;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,7 +21,7 @@ public class JobCycler {
             Iterable<JobID> availableJobs,
             Predicate<JobID> canAlwaysStart,
             Predicate<JobID> canFitInDay,
-            ImmutableList<WorkRequest> requestedResults,
+            BoardRequests requestedResults,
             WorksBehaviour.TownData td
     ) {
         Set<JobID> currentSet = toSet(availableJobs);
@@ -51,7 +51,7 @@ public class JobCycler {
             JobID candidate,
             Predicate<JobID> canAlwaysStart,
             Predicate<JobID> canFitInDay,
-            ImmutableList<WorkRequest> requestedResults,
+            BoardRequests requestedResults,
             WorksBehaviour.TownData td
     ) {
         if (!canAlwaysStart.test(candidate) && !canFitInDay.test(candidate)) {
@@ -60,7 +60,7 @@ public class JobCycler {
         if (requestedResults.isEmpty()) {
             return true;
         }
-        for (WorkRequest request : requestedResults) {
+        for (WorkRequest request : requestedResults.toWork()) {
             Ingredient ingredient = request.asIngredient();
             if (ServerJobsRegistry.canSatisfy(td, candidate, ingredient)) {
                 return true;

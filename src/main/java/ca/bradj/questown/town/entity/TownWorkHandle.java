@@ -10,12 +10,14 @@ import ca.bradj.questown.gui.UIWork;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.jobs.requests.RequestCategories;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.WorkHandle;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -54,6 +56,9 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
     }
 
     final Collection<WorkRequest> requestedResults = new ArrayList<>();
+
+    // Not saved: recomputed from storage (TownFlagBlockEntity.refreshStockedRequests).
+    private ImmutableSet<WorkRequest> stocked = ImmutableSet.of();
 
     private final Stack<Consumer<ServerLevel>> nextTick = new Stack<>();
 
@@ -158,7 +163,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
                                 ? (parent.topUnmetNeedName() == null ? "" : parent.topUnmetNeedName())
                                 : "";
                         return new TownWorkContainer(
-                                windowId, requestedResults.stream().map(UIWork::new).toList(), r,
+                                windowId, requestedResults.stream().map(w -> new UIWork(w, stocked.contains(w))).toList(), r,
                                 flagPos, skipToAdd, parent.isBoardAutoRequest(), topNeed
                         );
                     }
@@ -166,7 +171,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
                     AddWorkContainer.writeWorkResults(allOutputs, data);
                     AddWorkContainer.writeCategories(categories, data);
                     AddWorkContainer.writeFlagPosition(flagPos, data);
-                    TownWorkContainer.writeWork(requestedResults, data);
+                    TownWorkContainer.writeWork(requestedResults, stocked, data);
                     TownWorkContainer.writeFlagPosition(flagPos, data);
                     data.writeBoolean(skipToAdd);
                     data.writeBoolean(parent.isBoardAutoRequest());
@@ -195,6 +200,24 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
     public ImmutableList<WorkRequest> getRequestedResults() {
         return ImmutableList.copyOf(requestedResults);
+    }
+
+    @Override
+    public BoardRequests getBoardRequests() {
+        return new BoardRequests(getRequestedResults(), stocked);
+    }
+
+    void setStocked(ImmutableSet<WorkRequest> nowStocked) {
+        if (nowStocked.equals(stocked)) {
+            return;
+        }
+        Sets.difference(nowStocked, stocked).forEach(r -> QT.FLAG_LOGGER.info(
+                "Request paused: storage holds {} of {}", BoardRequests.PAUSE_AT, r));
+        // A request that left the board also leaves the set; only one still posted has resumed.
+        Sets.difference(stocked, nowStocked).stream()
+            .filter(requestedResults::contains)
+            .forEach(r -> QT.FLAG_LOGGER.info("Request resumed: {}", r));
+        this.stocked = nowStocked;
     }
 
     @Override

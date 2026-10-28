@@ -3,8 +3,8 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.jobs.requests.WorkRequest;
-import com.google.common.collect.ImmutableList;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,7 +18,7 @@ public class TownVillagerData {
     public static @Nullable JobID chooseFromList(
             Predicate<JobID> canFitInDay,
             Predicate<JobID> canAlwaysStart,
-            ImmutableList<WorkRequest> requestedResults,
+            BoardRequests requestedResults,
             WorksBehaviour.TownData td,
             Collection<JobID> preferenceIn
     ) {
@@ -38,7 +38,7 @@ public class TownVillagerData {
             if (requestedResults.isEmpty()) {
                 return p;
             }
-            List<Ingredient> i = requestedResults.stream()
+            List<Ingredient> i = requestedResults.toWork().stream()
                                                  .map(WorkRequest::asIngredient)
                                                  .toList();
             for (Ingredient requestedResult : i) {

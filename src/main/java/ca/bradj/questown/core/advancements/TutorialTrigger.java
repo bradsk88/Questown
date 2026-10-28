@@ -48,7 +48,9 @@ public class TutorialTrigger extends SimpleCriterionTrigger<TutorialTrigger.Inst
         Chapter2,
         Chapter3,
         Chapter4,
-        FirstCampfireSleep;
+        FirstCampfireSleep,
+        // Curated path finished (agent playtest 2026-10-27 #4): "path_" + the path id's path.
+        OutfitterPath;
 
         private static final BiMap<Triggers, String> stringVals = ImmutableBiMap.<Triggers, String>builder()
                 .put(Triggers.TutorialComplete, "tutorial_complete")
@@ -61,7 +63,14 @@ public class TutorialTrigger extends SimpleCriterionTrigger<TutorialTrigger.Inst
                 .put(Triggers.Chapter3, "chapter_3")
                 .put(Triggers.Chapter4, "chapter_4")
                 .put(Triggers.FirstCampfireSleep, "first_campfire_sleep")
+                .put(Triggers.OutfitterPath, "path_outfitter")
                 .build();
+
+        /** The trigger for finishing curated path {@code pathId} ("questown:outfitter"), if it has one. */
+        public static Optional<Triggers> forPath(String pathId) {
+            String name = pathId.substring(pathId.indexOf(':') + 1);
+            return Optional.ofNullable(stringVals.inverse().get("path_" + name));
+        }
 
                 public static final Codec<Triggers> CODEC = Codec.STRING.xmap(
                 key -> {

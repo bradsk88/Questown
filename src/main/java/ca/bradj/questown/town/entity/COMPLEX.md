@@ -1712,3 +1712,48 @@ starter request now logs `Starter request for [<jobs>]: <request>` at info. Not 
 job root and level and the `Works` level gates for `SkillQuestLocks`; `TownQuestsHandle.showQuestsUI`
 and `TownFlagMenus` pass the result to `UIQuest.fromLevel`. See `town/quests/COMPLEX.md` "A skill
 quest above every villager's level is a blank card".
+
+## A board request pauses while storage holds 8 (Outfitter agent playtest #2, dev 2026-10-28)
+
+A board request is a standing order, and villager deposits never stack, so a crafter filling
+its skill unlocks' starter requests filled every chest until the whole town sat at NO_STORAGE
+(agent playtest 2026-10-27 #2; the growth driver's `clearSurplusFromFullStorage` was the
+stopgap). Dev: "ideally yes" to a stop condition.
+
+- **Rule** (`jobs/requests/BoardRequests`): a request is *paused* while town storage holds
+  `PAUSE_AT` (8) of its item. It stays on the board and the board is not "empty" (an empty board
+  lets a villager pick any work, which would fill the chests anyway), but `toWork()` drops it,
+  so no villager picks work for it. It resumes once the stock drops below 8.
+- **Exempt** (`TownQuests.requestsOpenQuestsNeed`): a request whose item an open ITEM or LOOT
+  quest wants never pauses (a "Stick x8" LOOT quest counts fresh extractions, so 8 sticks in a
+  chest must not stop the crafter). While any villager-level quest is open, no request pauses:
+  the villager levels by filling them.
+- **Refresh**: `TownFlagTicker.tickWorkHandle` calls `TownFlagBlockEntity.refreshStockedRequests`
+  every 100 ticks (one container scan); `TownWorkHandle.setStocked` logs "Request paused: storage
+  holds 8 of ..." / "Request resumed: ..." on a change. The set is not saved; it is recomputed.
+- **Readers**: the work-selection sites take `getBoardRequests()` (`JobCycler.isValid`,
+  `TownVillagerData.chooseFromList` for the warp, `TownPossibleWork.boardCheck`,
+  `updateWorkersAfterRequestChange`, the leaver requested-loot preference). `getRequestedResults()`
+  is still the raw list (UI, attention flag, auto-request).
+- **UI**: `TownWorkContainer.writeWork` writes a stocked boolean after each request; `WorkScreen`
+  greys a paused request's name and its icon tooltip reads "job_board.request_stocked".
+- Tests: `BoardRequestsTest`.
+
+## A finished curated path fires its advancement (Outfitter agent playtest #4, dev 2026-10-28)
+
+Finishing the Outfitter had no moment: the last quest closed and the page said "You're all caught
+up". Dev: "Maybe a minecraft advancement?". `postPathBatchesIfDue` (every quest tick) calls
+`announceIfFinished` per path: once a taken path is finished it fires
+`TutorialTrigger.Triggers.forPath(path.id())` and logs "Quest path finished: ...". The trigger
+maps "questown:outfitter" to `OutfitterPath` ("path_outfitter",
+`data/questown/advancements/path_outfitter.json`, "Outfitted", child of tutorial_complete). A new
+path needs its own enum value and advancement file.
+
+- **Not the ladder**: the first cut fired from `tryCuratedPaths`, which only runs when a quest
+  request is pending. A path batch's reward (`PHASE_PATH`, an empty reward list) queues none, so it
+  never ran after the last batch (held run 2026-10-28: PASS, no advancement).
+- **Once per session**: `announcedPaths` (not saved) stops a per-tick refire; a reload fires once
+  more, and the grant is once per player anyway. Like the chapter triggers it goes to the nearest
+  player within 16 blocks of the flag, so a player who is away when the path finishes only gets it
+  after a reload while nearby.
+- Test: `TownQuestsCuratedPathsTest.finishingThePath_firesItsAdvancementOnce_andNotBefore`.

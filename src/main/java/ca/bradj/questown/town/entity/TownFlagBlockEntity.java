@@ -39,6 +39,7 @@ import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
@@ -891,7 +892,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private void updateWorkersAfterRequestChange() {
         WorksBehaviour.TownData td = getTownData();
         Stream<VisitorMobEntity> relevantWorkers = villagerHandle.stream().filter(Objects::nonNull).filter(e -> {
-            for (WorkRequest r : workHandle.getRequestedResults()) {
+            for (WorkRequest r : workHandle.getBoardRequests().toWork()) {
                 if (ServerJobsRegistry.canSatisfy(td, e.getJobId(), r.asIngredient())) {
                     // A downtime townie has no server status; null counts as not busy.
                     if (IStatus.isBusy(e.getStatusForServer())) {
@@ -1042,6 +1043,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         TownQuests.setUpQuestsForNewlyPlacedFlag(this, quests);
         this.isInitializedQuests = true;
         setChanged();
+    }
+
+    /** Pauses the board requests storage already holds enough of ({@link BoardRequests}). */
+    void refreshStockedRequests(ImmutableList<MCTownItem> stacks) {
+        workHandle.setStocked(BoardRequests.stocked(
+                workHandle.getRequestedResults(),
+                r -> countInStorage(stacks, r),
+                quests.requestsOpenQuestsNeed()
+        ));
+    }
+
+    private static int countInStorage(ImmutableList<MCTownItem> stacks, WorkRequest r) {
+        Ingredient requested = r.asIngredient();
+        return stacks.stream().filter(s -> requested.test(s.toQTItemStack())).mapToInt(MCTownItem::quantity).sum();
     }
 
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAllQuests() {
@@ -1313,7 +1328,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
         }
 
-        ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();
+        BoardRequests requestedResults = workHandle.getBoardRequests();
         WorksBehaviour.TownData td = getTownData();
         Predicate<JobID> canFit = p -> {
             if (ServerJobsRegistry.canFit(uuid, p, Util.getDayTime(getServerLevel()))) {

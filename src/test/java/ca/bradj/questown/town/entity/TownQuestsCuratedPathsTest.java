@@ -165,6 +165,29 @@ class TownQuestsCuratedPathsTest {
         assertNull(quests.tryCuratedPaths(view));
     }
 
+    /**
+     * Agent playtest 2026-10-27 #4: finishing the Outfitter had no moment; it fires an advancement.
+     * The per-tick poster sees the end: a path batch's reward queues no ladder pass (held run
+     * 2026-10-28, the first cut fired from tryCuratedPaths and never ran).
+     */
+    @Test
+    void finishingThePath_firesItsAdvancementOnce_andNotBefore() {
+        TownQuests quests = townWithMinerBeat(true);
+        TestTutorialTownView view = view();
+        quests.postPathBatchesIfDue(view);
+        for (String b : List.of("start", "armor", "weapons_1")) {
+            completeBatch(quests, b);
+            quests.postPathBatchesIfDue(view);
+        }
+        assertFalse(view.getTriggersFired().contains(TutorialTrigger.Triggers.OutfitterPath), "weapons_2 is still open");
+
+        completeBatch(quests, "weapons_2");
+        quests.postPathBatchesIfDue(view);
+        quests.postPathBatchesIfDue(view);
+
+        assertEquals(1, view.getTriggersFired().stream().filter(TutorialTrigger.Triggers.OutfitterPath::equals).count());
+    }
+
     @Test
     void thePathStep_waitsForTheFork() {
         assertEquals(TownQuests.Tutorial.SKIPPED, townWithMinerBeat(false).tryCuratedPaths(view()));

@@ -1,0 +1,36 @@
+{
+  "display": {
+    "title": {
+      "text": "Outfitted",
+      "color": "white"
+    },
+    "description": {
+      "text": "Finish the Outfitter path: your crafter makes armor and stone weapons"
+    },
+    "icon": {
+      "item": "minecraft:stone_sword"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true,
+    "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  },
+  "criteria": {
+    "Trigger": {
+      "trigger": "questown:tutorial_trigger",
+      "conditions": {
+        "context": "path_outfitter"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "Trigger"
+    ]
+  ],
+  "rewards": {
+    "experience": 200
+  },
+  "parent": "questown:tutorial_complete"
+}
