@@ -131,7 +131,9 @@ scenario `flag/floating_furniture_over_half` by seed (new [FAIL] in the
 2026-10-15 full suite; the morning's "instrumented vs un-instrumented" 2/2 vs
 2/2 split was two different world seeds, not a build effect). Both
 rejection-asserting builders now clear their footprint (feet + head levels)
-to air before building. Rule and the accept-vs-reject fragility asymmetry:
+to air before building; since 2026-10-29 they flatten a 3-block margin as well
+(`flattenAroundPostSpawnRoom`), because terrain around the door could enclose
+its far side into a room of its own. Rule and the accept-vs-reject fragility asymmetry:
 `AUTOTESTS.md` "Post-spawn rooms live outside the arena flatten". Ticket:
 `.scratch/floaty-room-2026-10-15/floating-furniture-over-half.md`.
 

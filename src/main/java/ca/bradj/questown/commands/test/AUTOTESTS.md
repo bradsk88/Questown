@@ -135,7 +135,11 @@ hatch **accepts** the room — which flips any scenario that expects *rejection*
 Both rejection-asserting flag builders (`floating_furniture_over_half`,
 `too_short_room_dead`) now clear their footprint (feet + head levels) to air
 before building. **Rule: a postSpawn-built room in a REJECTION test must clear
-its own footprint first.** Accept-expected rooms (`floating_chest_room`,
+its own footprint first.** 2026-10-29: the footprint alone isn't enough. Terrain
+left around the room walled off the far side of the door, and the detector
+registered that region as the door's room (`deadDoors={}; rooms=2`, about 1 run
+in 3). Both builders now call `flattenAroundPostSpawnRoom` (the footprint plus a
+3-block margin through `TestArenaPreparer.flatten`); 6/6 and 3/3 after. Accept-expected rooms (`floating_chest_room`,
 `filled_storeroom_alive`) pass under either terrain — the same escape hatch
 accepts them — so they are not seed-fragile for pass/fail.
 

@@ -737,15 +737,7 @@ public class TestBlueprintRegistry {
         // 5x5 footprint: floor at y-1, two-tall walls (so IsWall holds), and a ceiling at y+1 over
         // the interior only — so each interior cell is air at feet (y) but solid at head (y+1).
         BlockPos base = flagPos.offset(TOO_SHORT_ROOM_OFFSET);
-        // Clear the room volume first (postSpawn room, outside the arena flatten — see the
-        // sibling fix in buildFloatingFurnitureOverHalfAndRegister): a solid terrain foot level
-        // would read floorCells=0 and accept the room, flipping this rejection test by seed.
-        for (int x = 0; x < 5; x++) {
-            for (int z = 0; z < 5; z++) {
-                level.setBlockAndUpdate(base.offset(x, 0, z), Blocks.AIR.defaultBlockState());
-                level.setBlockAndUpdate(base.offset(x, 1, z), Blocks.AIR.defaultBlockState());
-            }
-        }
+        flattenAroundPostSpawnRoom(level, base, 5);
         for (int x = 0; x < 5; x++) {
             for (int z = 0; z < 5; z++) {
                 boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
@@ -1034,6 +1026,24 @@ public class TestBlueprintRegistry {
                 .withCustomAssertion(TestBlueprintRegistry::assertFloatingFurnitureOverHalfDead);
     }
 
+    /**
+     * A room built in postSpawn is not in {@code blueprint.blocks()}, so the arena flatten never
+     * covered it. Flatten its footprint and a 3-block margin. Terrain left in the footprint gave
+     * a solid foot level the day-1 storeroom rule accepts (2026-10-15); terrain left around it
+     * walled off the far side of the door, and the detector registered that region as the door's
+     * room (2026-10-29). Either flipped a rejection test by seed.
+     */
+    private static void flattenAroundPostSpawnRoom(
+            ServerLevel level,
+            BlockPos base,
+            int size
+    ) {
+        int margin = 3;
+        TestArenaPreparer.flatten(level, base, new TestArenaPreparer.ClearRegion(
+                -margin, size - 1 + margin, -margin, size - 1 + margin, 4
+        ));
+    }
+
     private static boolean buildFloatingFurnitureOverHalfAndRegister(
             ServerLevel level,
             BlockPos flagPos,
@@ -1043,18 +1053,7 @@ public class TestBlueprintRegistry {
         // 4x4 footprint: floor at y-1, two-tall cobble walls, interior open at both levels — except
         // three interior cells (of four) carry a chest at head height (y+1) with air at their feet.
         BlockPos base = flagPos.offset(FLOATING_FURNITURE_ROOM_OFFSET);
-        // Clear the room volume first. The room is built here in postSpawn (it is NOT part of
-        // blueprint.blocks()), so the arena preparer's flatten never covered this footprint: the
-        // interior foot level was un-flattened random terrain, and whenever it happened to be solid
-        // the walkability filter read floorCells=0 and accepted the room via the day-1 storeroom
-        // rule ("fully furnished interior, no open floor cells") instead of rejecting it —
-        // seed-dependent autotest flake, 2026-10-15 (.scratch/floaty-room-2026-10-15/).
-        for (int x = 0; x < 4; x++) {
-            for (int z = 0; z < 4; z++) {
-                level.setBlockAndUpdate(base.offset(x, 0, z), Blocks.AIR.defaultBlockState());
-                level.setBlockAndUpdate(base.offset(x, 1, z), Blocks.AIR.defaultBlockState());
-            }
-        }
+        flattenAroundPostSpawnRoom(level, base, 4);
         for (int x = 0; x < 4; x++) {
             for (int z = 0; z < 4; z++) {
                 boolean isEdge = x == 0 || x == 3 || z == 0 || z == 3;
