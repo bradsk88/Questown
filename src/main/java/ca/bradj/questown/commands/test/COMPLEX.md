@@ -1024,3 +1024,16 @@ realtime ceiling: the most generous trip tier repeated across 12000 productive t
 two half-day trips (10 items; 1 in 3 runs on 10-29, before and after `3269f84f`). Both are now 15,
 and `OneDayYieldCapsTest` recomputes them from `hunter_unmapped_*` / `gatherer_unmapped_axe_*`.
 3 runs each after: hunter 10, 10, 6 (cap 15); gatherer 10, 10, 6.
+
+## BOP deposit by night and by day (2026-10-29)
+
+`flag/bop_deposit_at_night` / `flag/bop_deposit_by_day` (`bopDepositBlueprint`): one villager,
+realtime only. The realtime monitor always starts at daytime 1000 (`TestExecutor.startMonitor`), so
+the post-spawn hook registers `LevelUpAt`, a one-shot server-tick listener that levels every
+villager up once the clock reaches 13000 (night) or 2000 (day); the phase runs 3000 ticks past
+that. PASS = the flag holds 1 BOP and no villager still holds the latch. The assertion prints each
+villager's job, status and its per-owner flag record. Before the 2026-10-29 fixes the night case
+failed 4/4 (first relaxing with the BOP, then, past the work-seeker fix, at state:0 beside a
+downtime record of 6 or 8); `jobs/COMPLEX.md` "Foreign work-state records" and
+`town/entity/COMPLEX.md` "At any hour".
+

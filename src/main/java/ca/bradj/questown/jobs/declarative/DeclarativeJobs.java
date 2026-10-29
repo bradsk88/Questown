@@ -43,6 +43,24 @@ import java.util.function.*;
 import java.util.stream.Stream;
 
 public class DeclarativeJobs {
+
+    /**
+     * Records as a job with {@code maxState} reads them: one out of its range is a foreign work's
+     * record at a shared block (jobs/COMPLEX.md "Foreign work-state records read as fresh") and
+     * reads as fresh. A missing record stays missing: that spot is not seeded.
+     */
+    static <P> Function<P, @Nullable State> inRange(
+            Function<P, @Nullable State> raw,
+            int maxState
+    ) {
+        return pos -> {
+            State s = raw.apply(pos);
+            if (s != null && s.processingState() > maxState) {
+                return State.freshAtState(0);
+            }
+            return s;
+        };
+    }
     public static final IProductionStatusFactory<ProductionStatus> STATUS_FACTORY = new IProductionStatusFactory<>() {
         @Override
         public ProductionStatus fromJobBlockState(int s) {

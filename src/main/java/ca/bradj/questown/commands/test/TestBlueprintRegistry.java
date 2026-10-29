@@ -298,6 +298,10 @@ public class TestBlueprintRegistry {
         // BOP cap (report): pre-fill the flag and drive one deposit across the 64-slot boundary.
         jobs.add(flagEntry("bop_boundary_63", bopBoundaryBlueprint()));
         jobs.add(flagEntry("bop_full_64", bopFullBlueprint()));
+        // Dev playtest 2026-10-28: two BOP depositors stood at the flag from dusk, "busy with their
+        // work", and never deposited. A gate, by night and (control) by day.
+        jobs.add(flagEntry("bop_deposit_at_night", bopDepositBlueprint(13000L)));
+        jobs.add(flagEntry("bop_deposit_by_day", bopDepositBlueprint(2000L)));
 
         // Perf measurements (always pass; they report timings). Baseline first so the pair can be
         // compared within a single run.
@@ -3925,6 +3929,63 @@ public class TestBlueprintRegistry {
             }
             return true;
         };
+    }
+
+    /**
+     * A level-up at daytime {@code levelUpAt} must put its BOP in the flag within 3000 ticks. The
+     * realtime monitor always starts at daytime 1000, so the level-up waits for the clock.
+     */
+    private static TestBlueprint bopDepositBlueprint(long levelUpAt) {
+        return bopStallBase((int) (levelUpAt - 1000) + 3000)
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new LevelUpAt(levelUpAt, level, town, output));
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    VillagerHolder vh = town.getVillagerHandle();
+                    boolean anyHeld = false;
+                    for (var e : vh.entities()) {
+                        VisitorMobEntity vme = (VisitorMobEntity) e;
+                        boolean held = vh.hasBlockOfProgress(vme.getUUID());
+                        anyHeld |= held;
+                        output.msg("[bop-deposit] townie " + vme.getUUID() + ": job=" + vme.getJobId()
+                                + " status=" + vme.getStatusForServer() + " still holding=" + held
+                                + " flag record=" + town.getWorkStatusHandle(vme.getUUID()).getJobBlockState(flagPos));
+                    }
+                    int count = town.getBlocksOfProgress();
+                    output.msg("[bop-deposit] level-up at " + levelUpAt + ": bopCount=" + count
+                            + ", daytime now " + level.getDayTime() % 24000);
+                    return count >= 1 && !anyHeld;
+                });
+    }
+
+    /** Levels up every villager once, on the first server tick at or past daytime {@code at}. */
+    private static final class LevelUpAt {
+        private final long at;
+        private final ServerLevel level;
+        private final TownFlagBlockEntity town;
+        private final TestOutput output;
+
+        private LevelUpAt(long at, ServerLevel level, TownFlagBlockEntity town, TestOutput output) {
+            this.at = at;
+            this.level = level;
+            this.town = town;
+            this.output = output;
+        }
+
+        @net.neoforged.bus.api.SubscribeEvent
+        public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+            if (level.getDayTime() % 24000 < at) {
+                return;
+            }
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(this);
+            bopForceLevelUp().run(level, flagPos(), town, output);
+            output.msg("[bop-deposit] leveled up at daytime " + level.getDayTime() % 24000);
+        }
+
+        private BlockPos flagPos() {
+            return town.getBlockPos();
+        }
     }
 
     private static TestBlueprint bopBoundaryBlueprint() {

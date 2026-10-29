@@ -90,4 +90,23 @@ class DeclarativeJobsRoomsForeignStateTest {
         assertTrue(gates.get(0).apply(() -> null).value,
                 "an unseeded block must read as state 0");
     }
+
+    /**
+     * 2026-10-29 (dev playtest 2026-10-28, autotest {@code flag/bop_deposit_at_night}): the
+     * depositor's work loop lists spots by state from the raw record ({@code
+     * DeclarativeJob.listAllWorkSpots}); downtime's 6 or 8 at the flag filed the flag under a
+     * state the depositor never works, so it stood at state 0 holding its BOP all night.
+     */
+    @Test
+    void inRange_foreignStateBeyondMaxStateReadsAsFresh() {
+        var read = DeclarativeJobs.inRange(pos -> State.freshAtState(8), 2);
+        assertTrue(read.apply(FLAG).processingState() == 0, "a state-8 record is out of range for a max-2 job");
+    }
+
+    @Test
+    void inRange_keepsInRangeAndMissingRecords() {
+        assertTrue(DeclarativeJobs.inRange(pos -> State.freshAtState(1), 2).apply(FLAG).processingState() == 1);
+        assertTrue(DeclarativeJobs.<Position>inRange(pos -> null, 2).apply(FLAG) == null,
+                "a missing record means the spot is not seeded, which is not the same as fresh");
+    }
 }

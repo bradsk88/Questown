@@ -186,3 +186,11 @@ skips empty rolls, so an empty table entry can't eat an attempt; it still gives 
 old `subList(0, min(size, max))` was sized before filtering empties and could overrun; it is a
 `limit(max)` after the filter now. The fisher's `loot` result (`fisher_fish.json`, in town) still
 calls `loadFromTables(level, loot, 1, maxResults)` and keeps its 1..2 range: it isn't a leaver.
+
+## A BOP deposit after dusk (2026-10-29, pointers)
+
+Two gates kept a villager who leveled up at night from depositing (dev playtest 2026-10-28):
+`WorkSeekerJob` only sent a latched seeker to the board in the morning/noon branch, and
+`DeclarativeJob.listAllWorkSpots` read downtime's leftover flag record (6 or 8) raw, so the
+depositor found no state-0 spot. Both are fixed; the write-ups are `town/entity/COMPLEX.md`
+"At any hour" and `jobs/COMPLEX.md` "Foreign work-state records read as fresh".

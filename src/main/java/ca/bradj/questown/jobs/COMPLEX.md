@@ -426,6 +426,15 @@ warning in `DeclarativeJobs.rooms`):
   assign"). Pinned by `DeclarativeJobsRoomsForeignStateTest` (red-verified;
   the in-range + null cases pin the existing behaviour against
   over-normalization).
+- `DeclarativeJob.listAllWorkSpots` (the work loop's spots-by-state, read by
+  `JobLogic.doTryWorking` and `setWorkLeftAtFreshState`), through
+  `DeclarativeJobs.inRange` (2026-10-29). Dev playtest 2026-10-28: a depositor
+  leveled up after dusk stood at the flag at state:0 holding its BOP all night;
+  downtime's 6 or 8 filed the flag under a state the depositor never works, so
+  `doTryWorking` found no state-0 spot ("Production spot was null somehow" every
+  tick). A missing record stays missing there (an unseeded spot). Autotest
+  `flag/bop_deposit_at_night`: 0/4 before, 3/3 after; unit
+  `DeclarativeJobsRoomsForeignStateTest.inRange_*`.
 
 **One spot per position across matches.** `DeclarativeJobs.rooms` folds every
 job-site match into one per-position spot map. Overlapping job sites put the

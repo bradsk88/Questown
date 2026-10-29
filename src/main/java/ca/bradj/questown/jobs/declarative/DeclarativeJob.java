@@ -713,7 +713,8 @@ public class DeclarativeJob extends
         };
 
         Map<Integer, List<WorkPosition<BlockPos>>> b = new HashMap<>();
-        Consumer<BlockPos> tryAdd = bp -> tryAddSpot(town, bp, b, is, isJobBlock);
+        Function<BlockPos, State> states = DeclarativeJobs.inRange(town, getMaxState());
+        Consumer<BlockPos> tryAdd = bp -> tryAddSpot(states, bp, b, is, isJobBlock);
 
         jobSite.room().getSpaces().stream()
                .flatMap(space -> InclusiveSpaces.getPositions(space, JobBlockScan.CELLS)

@@ -141,6 +141,12 @@ flowchart TD
     Seek -->|"hasBlockOfProgress = true\n(before the downtime check)"| Give["bless BOP stack with\nthe earning root job;\ngive + BOPDepositorWork"]
 ```
 
+- **At any hour** (2026-10-29): `WorkSeekerJob.getComputeStatusOverrideForSpecialJobs` sends a
+  latched work seeker to the board before its morning/noon branch. The check sat inside that
+  branch (2025-09 `3e655b7b`), so a villager who leveled up after dusk relaxed until morning
+  with its BOP (dev playtest 2026-10-28: "Its night time, but that shouldn't matter";
+  `BOPDepositorWork` already has `WORK_IN_EVENING`). Autotests `flag/bop_deposit_at_night`
+  (level-up at daytime 13000) and `flag/bop_deposit_by_day` (2000) gate the deposit.
 - The level-up chat line names the villager and its root job ("Villager 4 (Cook) reached level
   2", `message.villager.leveled_up_job`; dev playtest 2026-10-28). It falls back to the job-less
   `leveled_up` line only when the handle has no job for the villager. Pin:
