@@ -1257,14 +1257,16 @@ three PNGs are placeholders copied from `gathering.png`, `relaxing.png` and
 `returned_success.png`; replace the files, no code change needed. Pin:
 `StatusArtTest` (no checkerboard for those states, and each texture file ships).
 **A root's own working art (dev playtest 2026-10-28).** `working.png` is the leaver's gathering
-art, so a crafter at its table showed it ("makes no sense"). Every crafter-root job JSON (the
-`crafter_*` files and the `blacksmith_*` files, whose ids are `crafter/...`) declares
-`{"type": "working", "new_texture": "minecraft:textures/block/crafting_table_top.png"}` (16x16;
-`StatusGraphic` blits 32x32 with the size declared 32x32, so the whole texture fills the box);
-the display jobs name their own. `ServerJobsRegistry.getTexture` applies it before `StatusArt`, and
-like the cook's furnace art it also covers extraction. 2026-10-29: this was a Java
-`ROOT_WORKING_ART` map in `StatusArt`, moved to data so per-job art stays one mechanism. Pin:
-`JobDataRootsTest.everyCrafterJobDeclaresItsWorkingArt`.
+art, so a crafter at its table showed it ("makes no sense"). Every crafter-root job JSON declares
+a `{"type": "working", "new_texture": ...}` override showing the table it works at: the
+`crafter_*` files show `minecraft:textures/block/crafting_table_top.png`, the `blacksmith_*` files
+(ids `crafter/...`) show `questown:textures/blocks/blacksmiths_table_front.png` (dev 2026-10-29; the
+face its item icon shows, since the top is a plain dark square at icon size), and the display jobs
+name their own. Both are 16x16; `StatusGraphic` blits 32x32 with the size declared 32x32, so the
+whole texture fills the box. `ServerJobsRegistry.getTexture` applies the override before
+`StatusArt`, and like the cook's furnace art it also covers extraction. 2026-10-29: this was a Java
+`ROOT_WORKING_ART` map in `StatusArt`, moved to data so per-job art stays one mechanism. Pins:
+`JobDataRootsTest.everyCrafterJobDeclaresItsWorkingArt`, `blacksmithsTableJobs_showTheBlacksmithsTable`.
 
 ## Change-job panel: the next action and the real timing (2026-10-23, r9 #2)
 

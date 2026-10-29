@@ -34,6 +34,6 @@
     "duration": 5
   },
   "status_texture_overrides": [
-    {"type": "working", "new_texture": "minecraft:textures/block/crafting_table_top.png"}
+    {"type": "working", "new_texture": "questown:textures/blocks/blacksmiths_table_front.png"}
   ]
 }

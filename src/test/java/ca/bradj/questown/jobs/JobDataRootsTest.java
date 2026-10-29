@@ -61,16 +61,36 @@ class JobDataRootsTest {
         Assertions.assertEquals(List.of(), missing, "crafter jobs without a \"working\" status texture");
     }
 
-    private static boolean hasWorkingTexture(JsonObject job) {
-        if (!job.has("status_texture_overrides")) {
-            return false;
-        }
-        for (JsonElement row : job.getAsJsonArray("status_texture_overrides")) {
-            if ("working".equals(row.getAsJsonObject().get("type").getAsString())) {
-                return true;
+    /** Dev 2026-10-29: a job worked at the blacksmith's table shows that table, not the crafting table. */
+    @Test
+    void blacksmithsTableJobs_showTheBlacksmithsTable() throws IOException, URISyntaxException {
+        List<String> wrong = new ArrayList<>();
+        for (JsonObject job : allJobs()) {
+            JsonElement block = job.get("block");
+            boolean atBlacksmithsTable = block != null && block.isJsonPrimitive()
+                    && "questown:blacksmiths_table".equals(block.getAsString());
+            if (atBlacksmithsTable && !"questown:textures/blocks/blacksmiths_table_front.png".equals(workingTexture(job))) {
+                wrong.add(job.get("id").getAsString());
             }
         }
-        return false;
+        Assertions.assertEquals(List.of(), wrong, "blacksmith's table jobs without its working art");
+    }
+
+    private static boolean hasWorkingTexture(JsonObject job) {
+        return workingTexture(job) != null;
+    }
+
+    private static String workingTexture(JsonObject job) {
+        if (!job.has("status_texture_overrides")) {
+            return null;
+        }
+        for (JsonElement row : job.getAsJsonArray("status_texture_overrides")) {
+            JsonObject r = row.getAsJsonObject();
+            if ("working".equals(r.get("type").getAsString())) {
+                return r.get("new_texture").getAsString();
+            }
+        }
+        return null;
     }
 
     private static List<JsonObject> allJobs() throws IOException, URISyntaxException {
