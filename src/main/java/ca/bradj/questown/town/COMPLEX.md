@@ -757,6 +757,10 @@ over-production.
 
 Pinned by `WarpCycleBudgetTest` (pure) and the autotest `hunter/sword [one_day_yield]`
 (`*` delta 1..8 over a 24000-tick warp): red on the pre-fix code (got 21), green after (3).
+2026-10-29: the cap is now `OneDayYieldCaps.HUNTER` = 15. Outfitter ruling #25 (2026-10-26,
+`ee97681d`) raised half-day trips to 5 attempts and full-day to 6, so two half-day trips bank 10 in
+8000 ticks and the old cap of 8 failed ~1 run in 3. `OneDayYieldCapsTest` recomputes both one-day
+caps (hunter, gatherer) from the job JSON, so the next yield change fails a unit test.
 Full suite 71/75, all known reds.
 
 ## Known loot lookup ignores its prefix, and leavers depend on that (2026-10-20)

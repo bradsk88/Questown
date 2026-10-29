@@ -1014,3 +1014,13 @@ Grand Armory and Grand Smithy); on raw terrain, room detection around its doors 
 ~18 t/s (onboarding 30 min instead of 5). The half-width is now derived from the rows
 (`rowZs()`: farthest row + `BUILDING_SIZE` + 3, at least 28), so path runs flatten 42 and a new
 row widens the arena with it: `paths/outfitter` PASS 90/90 in 18 min wall, showcase included.
+
+## One-day yield caps come from the job data (2026-10-29)
+
+`hunter/sword [one_day_yield]` and `gatherer/gather [one_day_loot]` cap one warp day's loot at the
+realtime ceiling: the most generous trip tier repeated across 12000 productive ticks
+(`OneDayYieldCaps`). Both caps were hand-written from the trip yields before Outfitter ruling #25
+(`ee97681d`, half-day trips 5 attempts, full-day 6), so the hunter's 8 failed whenever the warp ran
+two half-day trips (10 items; 1 in 3 runs on 10-29, before and after `3269f84f`). Both are now 15,
+and `OneDayYieldCapsTest` recomputes them from `hunter_unmapped_*` / `gatherer_unmapped_axe_*`.
+3 runs each after: hunter 10, 10, 6 (cap 15); gatherer 10, 10, 6.

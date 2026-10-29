@@ -188,13 +188,13 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("gatherer", "axe"), gathererBlueprint()));
         jobs.add(entry(new JobID("explorer", "explore"), explorerBlueprint()));
         jobs.add(entry(new JobID("hunter", "sword"), hunterBlueprint()));
-        // One warp day (24000 ticks, at most 12000 productive) must not out-produce realtime: the
-        // most generous hunter tier (sword_full_day, 4 attempts per 6000 ticks, 1 item each) caps
-        // a day at 8. Before the warp cycle budget a fresh hunter banked ~24 (2026-10-18 playtest).
+        // One warp day must not out-produce realtime: OneDayYieldCaps.HUNTER is the most generous
+        // trip tier across a day's productive ticks. Before the warp cycle budget a fresh hunter
+        // banked ~24 (2026-10-18 playtest).
         jobs.add(edgeCaseEntry("hunter", "sword", "warp_then_realtime", hunterWarpThenRealtimeBlueprint()));
         jobs.add(edgeCaseEntry("hunter", "sword", "sleep_mid_trip", hunterSleepMidTripBlueprint()));
         jobs.add(edgeCaseEntry("hunter", "sword", "one_day_yield", hunterBlueprint().withExpectation(
-                new TestExpectation(List.of(new ExpectedProduct("*", 1, 8)), 1, 100))));
+                new TestExpectation(List.of(new ExpectedProduct("*", 1, OneDayYieldCaps.HUNTER)), 1, 100))));
         // loot_on_extract: the 2.5 raw-food gate as a deterministic measurement. Posts the
         // raw-meat LOOT quest, drives one hunter cycle on the REALTIME path (the quest check
         // lives in RealtimeWorldInteraction.postExtractHook -> Quests.processLootQuests),
@@ -3192,8 +3192,6 @@ public class TestBlueprintRegistry {
         );
     }
 
-    /** Most generous gatherer tier: 6 attempts per 6000 ticks, so ~12 items in 12000 productive ticks. */
-    private static final int GATHERER_ONE_DAY_LOOT_CAP = 12;
 
     /**
      * One warp day (24000 ticks, at most 12000 productive) for a fed base gatherer. The cap counts
@@ -3224,8 +3222,8 @@ public class TestBlueprintRegistry {
                 }
             }
             int total = loot.values().stream().mapToInt(Integer::intValue).sum();
-            output.msg("gatherer one_day_loot: " + total + " items (cap " + GATHERER_ONE_DAY_LOOT_CAP + ") " + loot);
-            return total >= 1 && total <= GATHERER_ONE_DAY_LOOT_CAP;
+            output.msg("gatherer one_day_loot: " + total + " items (cap " + OneDayYieldCaps.GATHERER + ") " + loot);
+            return total >= 1 && total <= OneDayYieldCaps.GATHERER;
         });
     }
 
