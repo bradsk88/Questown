@@ -544,7 +544,10 @@ public class ServerJobsRegistry {
     ) {
         BlockState state = ctx.blockInfo().state(ctx.blockPos());
         if (state.isAir()) {
-            return false;
+            // A display (armor stand, item frame) stands in air; only the display jobs claim it.
+            return ctx.world() != null
+                    && !ctx.world().getDisplaySlots(ctx.blockPos()).isEmpty()
+                    && Works.values().stream().anyMatch(v -> v.get().isJobBlock.test(ctx));
         }
         BlockState bs = state;
         Block b = bs.getBlock();
@@ -788,6 +791,18 @@ public class ServerJobsRegistry {
                 return entity;
             }
         };
+    }
+
+    /**
+     * True when the job's cycle makes nothing ({@link Work#hasNoOutput}: a fuel, stock or display
+     * job). A paused board request still counts for it ({@code BoardRequests.toWorkFor}).
+     */
+    public static boolean makesNothing(JobID p) {
+        if (isSeekingWork(p) || specialJobs.stream().anyMatch(sj -> sj.idTest().test(p))) {
+            return false;
+        }
+        Supplier<Work> w = getWorkSupplier(p);
+        return w != null && w.get().hasNoOutput();
     }
 
     public static boolean canSatisfy(

@@ -817,3 +817,10 @@ an NPE during the entity tick and crashed the server. That happened in `village/
 2026-10-25: a hunter in `dining_no_table` hit a spot the cook held, just after the miner
 batch's new cook skill (`cook:beef`) was unlocked. A null claim now returns true. Pinned by
 `WorkStatusStoreTest.canClaim_aJobWithNoClaimMayWorkAClaimedSpot` (red on the pre-fix NPE).
+
+## Displays in town storage and the work-status store (2026-10-28, pointers)
+
+`TownContainers.getAllContainersAndDisplays` / `getAllStacks` count armor stands and item frames
+in town rooms as storage; `getAllContainers` leaves them out (`integration/minecraft/COMPLEX.md`
+"Displays count as storage"). `TownWorkStatusStore` seeds an air position holding a display at
+state 0 for the display jobs (`jobs/COMPLEX.md` "Display jobs").

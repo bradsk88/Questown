@@ -984,3 +984,24 @@ block since the dev playtest, `blocks/COMPLEX.md` "Blacksmith's and armorer's ta
 chest: exactly the Armory tier. With the old 4 chests, the room's top match could be a store room
 (`blocks/COMPLEX.md` "Armory tiers"). The
 growth driver needs no change: it furnishes a room quest from the room recipe's ingredients.
+
+## Tick coverage follows rooms as they register (2026-10-28)
+
+`VillageWatchListener.checkTickCoverage` force-loads room chunks outside the boot 3x3 (no player,
+no chunk ticket: mobs outside entity-ticking chunks freeze). It ran once, at the first room,
+logged "all town room chunks are inside the 3x3" and stopped, so rooms registered later (the
+growth village's west row, chunk -2) stayed unloaded: twice on 2026-10-28 the `paths/at_fork`
+hunter froze there for the whole run (`.scratch/dev-playtest-2026-10-28-outfitter/hunter-stuck-on-room-corner-at-fork-launch.md`).
+It now re-runs every ~10 s for the whole run and force-loads each newly covered chunk once
+(`tickCoverageForced`), logging `EXTENDED` per batch.
+
+## Display job fixtures (2026-10-28)
+
+`crafter/display_armor` and `crafter/display_weapons` (`TestBlueprintRegistry.displayBlueprint`):
+the Armory fixture plus an empty armor stand, and the smithy fixture (light + table + chest) plus
+an item frame on the floor; one piece of armor / a stone sword in the chest; realtime only (the
+display jobs are excluded from warp), 1500 ticks. The display is spawned in the setup hook, which
+runs after the fixture's room registers, so the fixture waits for the **base** room (Armory,
+Smithy) and the room becomes Armor Display / Weapon Display on the next recipe recheck. The custom
+assertion reads the display's slots. First pass 2026-10-28: boots on the stand's feet, sword in the
+frame, both rooms upgraded.

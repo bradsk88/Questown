@@ -41,6 +41,7 @@ import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import ca.bradj.questown.jobs.special.DisplayFit;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.block.Block;
@@ -485,14 +486,18 @@ public class ResourceJobLoader {
 
             try {
                 JsonObject block = obj.getAsJsonObject("block");
-                Predicate<JobBlockTestContext> isJobBlock = ResourceJobLoader.isJobBlockV2(
-                        block,
-                        special
-                );
+                boolean display = block.has("display");
+                Predicate<JobBlockTestContext> isJobBlock = display
+                        ? isDisplayJobBlock(block)
+                        : ResourceJobLoader.isJobBlockV2(block, special);
                 int cooldownTicks = requiredInt(obj, "cooldown_ticks");
                 WorkWorldInteractions wwi = worldWorkInt(obj, cooldownTicks);
                 JobID id = JobID.fromJSON(Util.getOrDefault(obj, "id", JsonElement::getAsString, null));
-                BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitWS = shouldInitWS(block, special);
+                // A display stands in air, so no block state answers "does a job care"; the work
+                // status store seeds displays itself (TownWorkStatusStore).
+                BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitWS = display
+                        ? (i, p) -> false
+                        : shouldInitWS(block, special);
                 Optional<SlotPrecondition> slotPrecondition = getSlotComparator(block);
                 Work work = WorksBehaviour.productionWork(
                         iconItem.getDefaultInstance(),
@@ -930,6 +935,43 @@ public class ResourceJobLoader {
             }
             BlockState state = i.state(p);
             return baseTest.test(state);
+        };
+    }
+
+    /**
+     * {@code "block": {"display": "armor_stand" | "item_frame", "accepts": "<item or #tag>"}}: the
+     * work spot is a display standing there (dev 2026-10-28: the villager "works" at the stand).
+     * Carrying an accepted item, only a display it fits counts, so boots never go to a stand whose
+     * only gap is the head. Empty-handed, a display fits if a stored accepted item fits it, or, when
+     * the caller passes no town items (the job's own checks), if it has any empty slot: whether the
+     * town has the item is the scorer's tool check. No "already used" shortcut: that would send a
+     * villager holding boots to any stand.
+     */
+    private static Predicate<JobBlockTestContext> isDisplayJobBlock(JsonObject block) {
+        boolean armorStand = "armor_stand".equals(required(block, "display", JsonElement::getAsString));
+        Ingredient accepts = getIngredient(required(block, "accepts", JsonElement::getAsString));
+        return ctx -> {
+            if (ctx.world() == null) {
+                return false;
+            }
+            List<ItemStack> slots = ctx.world().getDisplaySlots(ctx.blockPos());
+            if (slots.isEmpty() || DisplayFit.isArmorStand(slots) != armorStand) {
+                return false;
+            }
+            List<ItemStack> held = new ArrayList<>();
+            ctx.heldItems().get().forEach(h -> held.add(h.get().toMCItemStack()));
+            List<ItemStack> heldAccepted = held.stream().filter(accepts).toList();
+            if (!heldAccepted.isEmpty()) {
+                return DisplayFit.anyFits(slots, heldAccepted);
+            }
+            List<ItemStack> stored = ctx.townUniqueItems().get().stream()
+                                        .map(net.minecraft.world.item.Item::getDefaultInstance)
+                                        .filter(accepts)
+                                        .toList();
+            if (!stored.isEmpty()) {
+                return DisplayFit.anyFits(slots, stored);
+            }
+            return slots.stream().anyMatch(ItemStack::isEmpty);
         };
     }
 

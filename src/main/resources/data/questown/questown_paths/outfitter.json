@@ -21,7 +21,7 @@
       "id": "armor",
       "opens_after": ["train_crafter_3"],
       "quests": [
-        {"room": "questown:grand_armory"},
+        {"room": "questown:armory"},
         {"loot": "minecraft:leather", "count": 4},
         {"skill": "crafter/leather_boots"},
         {"loot": "minecraft:leather_boots", "count": 1}
@@ -52,6 +52,16 @@
         {"skill": "crafter/stone_shovel"},
         {"skill": "crafter/stone_sword"},
         {"loot": "minecraft:stone_sword", "count": 1}
+      ]
+    },
+    {
+      "id": "showcase",
+      "opens_after": ["armor", "weapons_2"],
+      "quests": [
+        {"room": "questown:grand_armory"},
+        {"skill": "crafter/display_armor"},
+        {"room": "questown:grand_smithy"},
+        {"skill": "crafter/display_weapons"}
       ]
     }
   ]

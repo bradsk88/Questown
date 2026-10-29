@@ -473,6 +473,11 @@ public class AutoTestRunner {
         private int ticks = 0;
         private int tickCoverageTries = 0;
         private boolean tickCoverageDone = false;
+        private boolean tickCoverageReported = false;
+        // Room chunks this check already force-loaded. Rooms register over several seconds, so
+        // a one-shot check at the first room missed the later ones (2026-10-28: the at_fork
+        // hunter froze in an unloaded west room for the whole run).
+        private final java.util.Set<String> tickCoverageForced = new java.util.TreeSet<>();
 
         @SubscribeEvent
         public void onLogin(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
@@ -509,8 +514,8 @@ public class AutoTestRunner {
         // non-player mobs tick ONLY inside entity-ticking chunks. A room laid down
         // outside an entity-ticking chunk stalls any leaver that crosses into it
         // (811/812 class soft-lock). Boot force-loads only the 3x3 around the flag, so
-        // this one-shot watches for rooms outside that region and force-loads their
-        // chunks (idempotent), logging what it found. Fails open: never blocks the run.
+        // this watches (every ~10 s) for rooms outside that region and force-loads their
+        // chunks (idempotent), logging each newly covered chunk. Fails open: never blocks the run.
         private void checkTickCoverage() {
             if (tickCoverageDone) {
                 return;
@@ -548,17 +553,20 @@ public class AutoTestRunner {
                 for (BlockPos p : m.getContainedBlocks().keySet()) {
                     ChunkPos cp = new ChunkPos(p);
                     if (Math.abs(cp.x - base.x) > 1 || Math.abs(cp.z - base.z) > 1) {
-                        over.setChunkForced(cp.x, cp.z, true);
-                        extended.add(cp.x + "," + cp.z);
+                        String key = cp.x + "," + cp.z;
+                        if (tickCoverageForced.add(key)) {
+                            over.setChunkForced(cp.x, cp.z, true);
+                            extended.add(key);
+                        }
                     }
                 }
             }
-            tickCoverageDone = true;
-            if (extended.isEmpty()) {
-                QT.FLAG_LOGGER.info("[village] tick-coverage OK: all town room chunks are inside the force-loaded 3x3 around {}", base);
-            } else {
+            if (!extended.isEmpty()) {
                 QT.FLAG_LOGGER.info("[village] tick-coverage EXTENDED: force-loaded town room chunk(s) outside the boot 3x3: {}", extended);
+            } else if (!tickCoverageReported) {
+                QT.FLAG_LOGGER.info("[village] tick-coverage OK so far: {} room(s), all inside the force-loaded 3x3 around {}", matches.size(), base);
             }
+            tickCoverageReported = true;
         }
 
         private void aim(net.minecraft.server.level.ServerPlayer sp) {

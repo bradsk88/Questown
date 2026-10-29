@@ -519,7 +519,7 @@ public class TownPossibleWork {
             return new RequestCheck(true, null);
         }
         WorksBehaviour.TownData td = t.getTownData();
-        for (WorkRequest r : requests.toWork()) {
+        for (WorkRequest r : requests.toWorkFor(ServerJobsRegistry.makesNothing(jobId))) {
             if (ServerJobsRegistry.canSatisfy(td, jobId, r.asIngredient())) {
                 return new RequestCheck(false, r);
             }

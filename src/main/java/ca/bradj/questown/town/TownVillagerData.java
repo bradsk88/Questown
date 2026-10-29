@@ -38,7 +38,7 @@ public class TownVillagerData {
             if (requestedResults.isEmpty()) {
                 return p;
             }
-            List<Ingredient> i = requestedResults.toWork().stream()
+            List<Ingredient> i = requestedResults.toWorkFor(ServerJobsRegistry.makesNothing(p)).stream()
                                                  .map(WorkRequest::asIngredient)
                                                  .toList();
             for (Ingredient requestedResult : i) {

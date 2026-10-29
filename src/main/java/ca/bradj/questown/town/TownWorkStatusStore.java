@@ -12,7 +12,7 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.LevelReader;
+import ca.bradj.questown.integration.minecraft.DisplaySlots;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -28,8 +28,13 @@ public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHel
                     );
                     return builder.build();
                 },
-                LevelReader::isEmptyBlock,
+                // A display (armor stand, item frame) stands in an air block and is a work spot
+                // for the display jobs (dev 2026-10-28: the villager "works" at the stand).
+                (level, pos) -> level.isEmptyBlock(pos) && DisplaySlots.at(level, pos) == null,
                 (level, pos) -> {
+                    if (level.isEmptyBlock(pos)) {
+                        return DisplaySlots.at(level, pos) == null ? null : State.fresh();
+                    }
                     BlockState mbs = level.getBlockState(pos);
                     Block b = mbs.getBlock();
                     if (State.isWelcomeMat(b.toString())) {

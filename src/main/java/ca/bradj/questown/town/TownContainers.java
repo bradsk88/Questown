@@ -3,6 +3,8 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.DisplaySlots;
+import ca.bradj.questown.integration.minecraft.MCDisplayContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.InteractionSpots;
@@ -17,6 +19,8 @@ import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
@@ -95,6 +99,83 @@ public class TownContainers {
                 x -> true
         );
         return Stream.concat(allChestsStream, entities).toList();
+    }
+
+    /**
+     * Every container plus the displays (armor stands, item frames) in town rooms: what the town
+     * holds, for counting. Displays stay out of {@link #getAllContainers}, which picks deposit
+     * targets, supply sources and "is there space" answers.
+     */
+    public static List<ContainerTarget<MCContainer, MCTownItem>> getAllContainersAndDisplays(
+            TownInterface town,
+            ServerLevel level
+    ) {
+        return Stream.concat(
+                getAllContainers(town, level).stream(),
+                getAllDisplaysStream(town.getRoomHandle(), level, x -> true)
+        ).toList();
+    }
+
+    /** Whether a container is a display (armor stand, item frame), {@link MCDisplayContainer}. */
+    public static boolean isDisplay(ContainerTarget<?, ?> target) {
+        return target.getContainer() instanceof MCDisplayContainer;
+    }
+
+    /**
+     * Armor stands and item frames standing in a town room, as storage (dev 2026-10-28: they "count
+     * as storage"). One entity query per room, over the room's scanned positions.
+     */
+    private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllDisplaysStream(
+            RoomsHolder rooms,
+            ServerLevel level,
+            Predicate<RoomRecipeMatch<MCRoom>> includeRoom
+    ) {
+        return rooms.getMatches(includeRoom).stream().flatMap(m -> displaysIn(m, level));
+    }
+
+    private static Stream<ContainerTarget<MCContainer, MCTownItem>> displaysIn(
+            RoomRecipeMatch<MCRoom> match,
+            ServerLevel level
+    ) {
+        Set<BlockPos> positions = match.getContainedBlocks().keySet();
+        if (positions.isEmpty()) {
+            return Stream.empty();
+        }
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        for (BlockPos p : positions) {
+            minX = Math.min(minX, p.getX());
+            minY = Math.min(minY, p.getY());
+            minZ = Math.min(minZ, p.getZ());
+            maxX = Math.max(maxX, p.getX());
+            maxY = Math.max(maxY, p.getY());
+            maxZ = Math.max(maxZ, p.getZ());
+        }
+        AABB box = new AABB(minX, minY, minZ, maxX + 1, maxY + 1, maxZ + 1);
+        return level.getEntitiesOfClass(Entity.class, box, e -> DisplaySlots.of(e) != null)
+                    .stream()
+                    .filter(e -> positions.contains(e.blockPosition()))
+                    .map(e -> fromDisplay(match.room, e));
+    }
+
+    private static ContainerTarget<MCContainer, MCTownItem> fromDisplay(
+            MCRoom room,
+            Entity e
+    ) {
+        BlockPos p = e.blockPosition();
+        Position position = Positions.FromBlockPos(p);
+        return new ContainerTarget<>(
+                position,
+                p.getY(),
+                position,
+                new MCDisplayContainer(DisplaySlots.of(e)),
+                () -> e.isAlive() && e.blockPosition().equals(p),
+                item -> {
+                },
+                item -> false,
+                NO_BOOST,
+                room
+        );
     }
 
     @NotNull
@@ -347,7 +428,7 @@ public class TownContainers {
             TownFlagBlockEntity e,
             ServerLevel serverLevel
     ) {
-        List<ContainerTarget<MCContainer, MCTownItem>> cs = getAllContainers(e, serverLevel);
+        List<ContainerTarget<MCContainer, MCTownItem>> cs = getAllContainersAndDisplays(e, serverLevel);
         return cs.stream().map(ContainerTarget::getItems).flatMap(Collection::stream).filter(v -> !v.isEmpty())
                  .collect(ImmutableList.toImmutableList());
     }

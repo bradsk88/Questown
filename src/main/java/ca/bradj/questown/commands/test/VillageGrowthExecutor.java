@@ -205,9 +205,11 @@ public final class VillageGrowthExecutor {
         buildingCorners.clear();
         // Two rows of four simple rectangular buildings, single south door. A path run adds a
         // third row: onboarding furnishes all eight, and the path's rooms (crafting room, armory,
-        // smithy) and its arrivals' beds need more (2026-10-26: armory "no spare building").
+        // smithy) and its arrivals' beds need more (2026-10-26: armory "no spare building"); the
+        // showcase batch's Grand Armory and Grand Smithy need a fourth row (2026-10-28: "no spare
+        // building to furnish" for the Grand Smithy).
         int[] xs = {-21, -9, 3, 15};
-        int[] zs = goal == Goal.PATHS_FINISHED ? new int[]{-16, 10, 22} : new int[]{-16, 10};
+        int[] zs = goal == Goal.PATHS_FINISHED ? new int[]{-16, 10, 22, 34} : new int[]{-16, 10};
         for (int z : zs) {
             for (int x : xs) {
                 buildOneBuilding(new BlockPos(origin.getX() + x, origin.getY(), origin.getZ() + z));

@@ -245,6 +245,27 @@ public class TestWorldAccess implements QTWorldAccess {
         return extracted;
     }
 
+    private final Map<BlockPos, List<ItemStack>> displays = new HashMap<>();
+
+    public void setDisplay(BlockPos pos, List<ItemStack> slots) {
+        displays.put(pos, new ArrayList<>(slots));
+    }
+
+    @Override
+    public List<ItemStack> getDisplaySlots(BlockPos pos) {
+        return displays.getOrDefault(pos, List.of());
+    }
+
+    @Override
+    public boolean setDisplaySlot(BlockPos pos, int slot, ItemStack item) {
+        List<ItemStack> slots = displays.get(pos);
+        if (slots == null || slot < 0 || slot >= slots.size()) {
+            return false;
+        }
+        slots.set(slot, item);
+        return true;
+    }
+
     @Override
     public boolean insertIntoContainer(BlockPos pos, ItemStack item) {
         List<ItemStack> slots = containers.get(pos);

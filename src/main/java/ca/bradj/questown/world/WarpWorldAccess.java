@@ -553,6 +553,17 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         return extracted;
     }
 
+    /** No displays in warp: the display jobs are excluded from it. */
+    @Override
+    public List<ItemStack> getDisplaySlots(BlockPos pos) {
+        return List.of();
+    }
+
+    @Override
+    public boolean setDisplaySlot(BlockPos pos, int slot, ItemStack item) {
+        return false;
+    }
+
     @Override
     public boolean insertIntoContainer(BlockPos pos, ItemStack item) {
         List<ItemStack> slots = containerSlots.get(pos);

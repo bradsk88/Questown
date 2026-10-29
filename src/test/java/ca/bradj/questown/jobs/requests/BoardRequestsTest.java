@@ -62,4 +62,14 @@ class BoardRequestsTest {
         BoardRequests board = new BoardRequests(ImmutableList.of(stick, sword, boots), ImmutableSet.of(sword));
         Assertions.assertEquals(ImmutableList.of(stick, boots), board.toWork());
     }
+
+    /** Dev 2026-10-28: a pause stops makers only; a display or fuel job still answers it. */
+    @Test
+    void toWorkFor_aJobThatMakesNothingStillSeesPausedRequests() {
+        WorkRequest armor = WorkRequest.of(Items.LEATHER_BOOTS);
+        WorkRequest stick = WorkRequest.of(Items.STICK);
+        BoardRequests board = new BoardRequests(ImmutableList.of(armor, stick), ImmutableSet.of(armor));
+        Assertions.assertEquals(ImmutableList.of(armor, stick), board.toWorkFor(true));
+        Assertions.assertEquals(ImmutableList.of(stick), board.toWorkFor(false));
+    }
 }

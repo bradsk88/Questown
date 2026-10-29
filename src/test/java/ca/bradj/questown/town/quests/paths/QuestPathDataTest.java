@@ -53,9 +53,10 @@ class QuestPathDataTest {
     void outfitterShipsTheFirstCut() throws IOException {
         QuestPath p = QuestPathParser.parse(read(DATA.resolve("questown_paths").resolve("outfitter.json")));
 
-        Assertions.assertEquals(List.of("start", "train_crafter_3", "armor", "weapons_1", "train_crafter_5", "weapons_2"),
+        // showcase (dev 2026-10-28): the crescendo, a Grand Armory the crafter dresses.
+        Assertions.assertEquals(List.of("start", "train_crafter_3", "armor", "weapons_1", "train_crafter_5", "weapons_2", "showcase"),
                 p.batches().stream().map(QuestPath.Batch::id).toList());
-        Assertions.assertEquals(List.of(true, false, false, false, false, true),
+        Assertions.assertEquals(List.of(true, false, false, false, false, true, false),
                 p.batches().stream().map(QuestPath.Batch::arrival).toList(), "plan ruling 19");
     }
 

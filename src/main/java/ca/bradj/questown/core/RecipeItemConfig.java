@@ -120,6 +120,10 @@ public class RecipeItemConfig {
                     CraftedResources.CRAFTING_TABLE
             ), false
     );
+    private static final int ITEM_FRAME = RecipeItemScore.requiresCraftingTable(
+            Collections.nCopies(8, CraftedResources.STICK),
+            false
+    );
     private static final int ARMOR_STAND = RecipeItemScore.requiresCraftingTable(
             ImmutableList.<Resource>builder()
                     .addAll(Collections.nCopies(6, CraftedResources.STICK))
@@ -239,6 +243,7 @@ public class RecipeItemConfig {
         add(ItemsInit.BLACKSMITHS_TABLE_BLOCK.id(), WORK_TABLE);
         add(ItemsInit.ARMORERS_TABLE_BLOCK.id(), WORK_TABLE);
         add(assumePresent(Items.ARMOR_STAND), ARMOR_STAND);
+        add(assumePresent(Items.ITEM_FRAME), ITEM_FRAME);
         add(String.format("#%s", TagsInit.Items.JOB_BOARD_INPUTS.location()), Integer.MAX_VALUE); // Never recommend job board
 //        add(ForgeRegistries.ITEMS.getKey(ItemsInit.HOSPITAL_BED.get()).toString(), HOSPITAL_BED);
     }

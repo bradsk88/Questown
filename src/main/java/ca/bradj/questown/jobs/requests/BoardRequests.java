@@ -34,6 +34,15 @@ public record BoardRequests(
     }
 
     /**
+     * The requests a job may answer. A pause stops makers only (dev 2026-10-28): a job that makes
+     * nothing (a fuel, stock or display job) still answers a paused request, since it uses the
+     * stored items rather than adding to them.
+     */
+    public ImmutableList<WorkRequest> toWorkFor(boolean jobMakesNothing) {
+        return jobMakesNothing ? all : toWork();
+    }
+
+    /**
      * The requests storage holds at least {@link #PAUSE_AT} of. An exempt request (an open quest
      * still wants the item) never pauses.
      */

@@ -102,6 +102,11 @@ can be data-only later. Limit: rooms are scanned at the furniture layer and one 
   `crafter/leather_boots` PASS on the Armory-tier fixture. `perf/town_large`: the entity query
   isn't measurable (`roomsHandle` 66.5 ms with it, 69.8 ms with the old jar); `roomsHandle` is
   slow at HEAD either way (`.scratch/perf-2026-10/roomshandle-70ms-in-town-large.md`).
+- Phase 3 (display jobs, displays as storage, "pause stops makers only"), smithy tiers and the
+  showcase batch built 2026-10-28. Live: the `crafter/display_armor` and `crafter/display_weapons`
+  fixtures PASS (boots on a stand, sword in a frame). The full `paths/outfitter` showcase run is
+  blocked on room-detection speed (`.scratch/perf-2026-10/roomshandle-70ms-in-town-large.md`; the
+  dev's next task).
 - Phase 1 and 2 built 2026-10-28: RoomRecipes `a1029a4` (published to `~/.m2`; the previous jar is
   saved in the session scratchpad as `roomrecipes-1.20.6-neoforge-940aeb9.jar`), Questown tier
   recipes, names, weights, path. Phases 3 (display job, entity work location) and "stands count

@@ -212,3 +212,13 @@ every scan pass (`TownRoomsMap` `recheckRecipes`), so placing or breaking a stan
 with no extra trigger. Weights: `RecipeItemConfig` scores both work tables as the iron recipe and
 the stand as 6 sticks + a slab. Pin: `WorkTableRecipesTest.armoryTiers_eachContainTheTierBefore`;
 plan `docs/plans/2026-10-28-001-feat-armory-tiers-and-armor-stands-plan.md`.
+
+### Smithy tiers (2026-10-28)
+
+Dev: "the blacksmith probably has a similar setup, but with item frames on walls". `smithy`
+`[light, BT]` -> `smithy_stocked` `[+ chest]` -> `weapon_display` `[+ item frame]` ->
+`grand_smithy` `[+ 4 item frames]`. The blacksmith jobs keep `smithy`, the lowest tier. Frames
+count only at the furniture layer and one above (the room scan's layers), so a frame hung higher
+on a wall does not. The Outfitter's `showcase` batch (after Armor and Weapons II) asks for the
+Grand Armory, `crafter/display_armor`, the Grand Smithy and `crafter/display_weapons`: the
+crescendo is a crafter who fills both rooms. Pin: `WorkTableRecipesTest.smithyTiers_eachContainTheTierBefore`.

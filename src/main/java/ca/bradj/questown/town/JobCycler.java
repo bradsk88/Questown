@@ -60,7 +60,7 @@ public class JobCycler {
         if (requestedResults.isEmpty()) {
             return true;
         }
-        for (WorkRequest request : requestedResults.toWork()) {
+        for (WorkRequest request : requestedResults.toWorkFor(ServerJobsRegistry.makesNothing(candidate))) {
             Ingredient ingredient = request.asIngredient();
             if (ServerJobsRegistry.canSatisfy(td, candidate, ingredient)) {
                 return true;

@@ -1123,3 +1123,32 @@ still read "Unlock Wooden sword"; `JobFileEvents.playerJoined` now sends it on j
 (`TownVillagerUIs.syncWorkToClient`). The named-skill quest's flavor text uses the same
 name. Pinned by `JobNamesTest.aProductJobIsNamedForItsIconItem` and
 `aJobWhoseIconIsAnotherItemHasNoProduct`.
+
+## Display jobs: the villager works at an armor stand or item frame (2026-10-28)
+
+Dev: putting armor on a stand is "its own job ... the villager \"work\"[s] at the stand", and the
+same for swords in item frames. `crafter/display_armor` (parent `crafter/leather_boots`) and
+`crafter/display_weapons` (parent `crafter/stone_sword`) are v2 JSON jobs shaped like the stock
+jobs: state 0 holds the item as a tool (fetched from storage), state 1 inserts it, and the
+`dress_display` rule (`DressDisplaySpecialRule`) puts it in the display's slot that fits
+(`DisplayFit.slotFor`: a stand's feet/legs/chest/head by the item's `Equipable` slot; a frame's
+one slot).
+
+A display stands in an **air** block, which every work-spot path rejected. Four changes:
+- **Job JSON** `"block": {"display": "armor_stand" | "item_frame", "accepts": "<item/#tag>"}`
+  (`ResourceJobLoader.isDisplayJobBlock`): the spot is a display of that kind with an empty slot
+  that an accepted item the villager holds, or the town stores, fits. Its `shouldInitWS` is
+  always false: no block state can answer it, so it must stay out of the block-state interest
+  cache (`ServerJobsRegistry.shouldInitializeWithState`).
+- **Work-status store** (`TownWorkStatusStore`): an air position holding a display is seeded at
+  state 0, and the "block is gone" check is "air and no display".
+- **`ServerJobsRegistry.isJobBlock`**: for air, asks the jobs' own predicates when a display
+  stands there.
+- **World seam** (`QTWorldAccess.getDisplaySlots` / `setDisplaySlot`); warp has no displays, and
+  both jobs carry `exclude_from_warp`.
+
+Selection follows `cook/fuel` (dev ruling): `initial_request` is what the job serves (armor,
+`#questown:swords`), so it answers those board requests (a skill unlock posts one), and no
+`always_consider`: it scores only where its work-spot predicate finds a display to fill.
+A job with `initial_request: null` satisfies **every** request (`ServerJobsRegistry.canSatisfy`),
+so a display job must name one.

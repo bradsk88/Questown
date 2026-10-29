@@ -50,6 +50,24 @@ class WorkTableRecipesTest {
         Assertions.assertEquals(List.of("questown:armorers_table", "#c:chests"), tiers.get(1));
         Assertions.assertEquals(List.of("questown:armorers_table", "#c:chests", "minecraft:armor_stand"), tiers.get(2));
         Assertions.assertEquals(4, tiers.get(3).stream().filter("minecraft:armor_stand"::equals).count());
+        assertNested(tiers);
+    }
+
+    /** Dev 2026-10-28: "the blacksmith probably has a similar setup, but with item frames". */
+    @Test
+    void smithyTiers_eachContainTheTierBefore() throws IOException {
+        List<List<String>> tiers = List.of(
+                items(read("smithy.json")),
+                items(read("smithy_stocked.json")),
+                items(read("weapon_display.json")),
+                items(read("grand_smithy.json"))
+        );
+        Assertions.assertTrue(tiers.get(2).contains("minecraft:item_frame"), tiers.get(2).toString());
+        Assertions.assertEquals(4, tiers.get(3).stream().filter("minecraft:item_frame"::equals).count());
+        assertNested(tiers);
+    }
+
+    private static void assertNested(List<List<String>> tiers) {
         for (int i = 1; i < tiers.size(); i++) {
             List<String> rest = new ArrayList<>(tiers.get(i));
             for (String ing : tiers.get(i - 1)) {

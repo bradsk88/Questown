@@ -52,3 +52,10 @@ the old `getChunkIfPresent` - there is no `getChunkIfPresent` on
 null = the region boundary, instead of generating the chunk from the
 warp tick. Pinned by `WarpWorldAccessChunkBoundaryTest` (red-verified
 against the pre-fix unconditional read).
+
+## Displays through the seam (2026-10-28)
+
+`QTWorldAccess.getDisplaySlots(pos)` / `setDisplaySlot(pos, slot, item)`: the armor stand or item
+frame standing at pos (`DisplaySlots.at`, a one-block entity query). `WarpWorldAccess` has none
+(the display jobs are excluded from warp); `TestWorldAccess.setDisplay` seeds one for unit tests.
+Used by the display jobs (`jobs/COMPLEX.md` "Display jobs").

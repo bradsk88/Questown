@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown._vanilla.TreeFeatureResolver;
 import ca.bradj.questown._vanilla.VoidLevel;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.integration.minecraft.DisplaySlots;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -331,6 +332,29 @@ public class MinecraftWorldAccess implements QTWorldAccess {
             return ItemStack.EMPTY;
         }
         return c.removeItem(slot, count);
+    }
+
+    @Override
+    public List<ItemStack> getDisplaySlots(BlockPos pos) {
+        DisplaySlots d = DisplaySlots.at(level, pos);
+        if (d == null) {
+            return List.of();
+        }
+        List<ItemStack> out = new ArrayList<>();
+        for (int i = 0; i < d.getContainerSize(); i++) {
+            out.add(d.getItem(i));
+        }
+        return out;
+    }
+
+    @Override
+    public boolean setDisplaySlot(BlockPos pos, int slot, ItemStack item) {
+        DisplaySlots d = DisplaySlots.at(level, pos);
+        if (d == null || slot < 0 || slot >= d.getContainerSize()) {
+            return false;
+        }
+        d.setItem(slot, item);
+        return true;
     }
 
     @Override

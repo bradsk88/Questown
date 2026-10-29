@@ -30,3 +30,14 @@ Pinned by `MCHeldItemTagRoundTripTest` (the pure seam) + the `held_tool_warp` au
 Rule going forward: **never pre-unwrap the "item" compound before calling
 `MCTownItem.of`.** `TownStateSerializer`'s container path (`MCTownItem.of(icTag)` on the
 whole stored compound) is the reference shape.
+
+## Displays count as storage, but take no deposits (2026-10-28)
+
+Dev: armor on a stand "count[s] as storage". `DisplaySlots` presents an armor stand's four armor
+slots, or an item frame's item, as a vanilla `Container`; `MCDisplayContainer` (an `MCContainer`
+that refuses `canAcceptIfSpaceAllows`) marks it. `TownContainers.getAllContainersAndDisplays`
+adds every display standing in a town room's scanned positions, and `getAllStacks` (item quests,
+the board's 8-in-storage pause, the warp summary) reads that. `getAllContainers` does **not**
+include displays: it picks deposit targets (`Jobs.tryDropLoot` writes the first empty slot of
+whatever target it is given), supply sources and "is there space" answers, so including them
+would put cobblestone on a stand, and a display job could move armor from stand to stand.

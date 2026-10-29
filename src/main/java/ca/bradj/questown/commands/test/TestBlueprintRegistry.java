@@ -229,6 +229,8 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("miner", "coal", "storage_full", minerStorageFullBlueprint()));
         jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
         jobs.add(entry(new JobID("crafter", "leather_boots"), armorerBlueprint()));
+        jobs.add(entry(new JobID("crafter", "display_armor"), displayArmorBlueprint()));
+        jobs.add(entry(new JobID("crafter", "display_weapons"), displayWeaponsBlueprint()));
         jobs.add(entry(new JobID("arborist", "cut_trees"), arboristCutTreesBlueprint()));
         jobs.add(entry(new JobID("arborist", "plant_sapling"), arboristPlantSaplingBlueprint()));
         jobs.add(edgeCaseEntry("arborist", "cut_trees", "full_cycle", arboristFullCycleBlueprint()));
@@ -2963,6 +2965,98 @@ public class TestBlueprintRegistry {
                 new ResourceLocation(Questown.MODID, "armory"),
                 expectation
         );
+    }
+
+    // An empty armor stand in the Armory fixture (armorer's table at ox+1/oz+1, chest at
+    // ox+1/oz+3) and an item frame on the smithy fixture's floor (table ox+1/oz+1, torch ox+3/oz+1,
+    // chest ox+3/oz+3), at the free interior corner.
+    private static final BlockPos DISPLAY_STAND_OFFSET = new BlockPos(4 + 3, 0, -2 + 1);
+    private static final BlockPos DISPLAY_FRAME_OFFSET = new BlockPos(4 + 1, 0, -2 + 3);
+
+    /**
+     * Dev 2026-10-28: putting armor on a stand is its own job, worked at the stand. The Armory
+     * fixture plus an empty armor stand (an Armor Display) and leather boots in the chest: the
+     * crafter on crafter/display_armor must put the boots on the stand's feet within 1500 ticks.
+     */
+    private static TestBlueprint displayArmorBlueprint() {
+        return displayBlueprint(
+                armorerBlueprint(),
+                List.of(new ItemStack(Items.LEATHER_BOOTS, 1)),
+                (level, pos) -> new net.minecraft.world.entity.decoration.ArmorStand(
+                        level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5),
+                DISPLAY_STAND_OFFSET,
+                new ResourceLocation(Questown.MODID, "armor_display"),
+                "minecraft:leather_boots"
+        );
+    }
+
+    /** As {@link #displayArmorBlueprint}, for a stone sword and an item frame (a Weapon Display). */
+    private static TestBlueprint displayWeaponsBlueprint() {
+        return displayBlueprint(
+                blacksmithBlueprint(),
+                List.of(new ItemStack(Items.STONE_SWORD, 1)),
+                (level, pos) -> new net.minecraft.world.entity.decoration.ItemFrame(
+                        level, pos, net.minecraft.core.Direction.UP),
+                DISPLAY_FRAME_OFFSET,
+                new ResourceLocation(Questown.MODID, "weapon_display"),
+                "minecraft:stone_sword"
+        );
+    }
+
+    private static TestBlueprint displayBlueprint(
+            TestBlueprint base,
+            List<ItemStack> supplies,
+            java.util.function.BiFunction<ServerLevel, BlockPos, net.minecraft.world.entity.Entity> display,
+            BlockPos displayOffset,
+            ResourceLocation roomId,
+            String expectedItem
+    ) {
+        // The fixture waits for the base room (the display is spawned after registration, in the
+        // setup hook); the room becomes `roomId` on the next recipe recheck.
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), supplies,
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 100),
+                base.supplyDoorOffset(),
+                null,        // warpAmountOverride
+                1000L,       // startTimeTick: morning
+                1,           // villagerCount
+                true,        // realtimePhase
+                1500,        // realtimeTicks
+                false,       // drainHungerBeforeTest
+                true,        // skipWarp: the display jobs are excluded from warp
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        ).withSetupHook((level, flagPos, town, output) -> {
+            BlockPos at = flagPos.offset(displayOffset);
+            net.minecraft.world.entity.Entity e = display.apply(level, at);
+            boolean added = level.addFreshEntity(e);
+            output.msg("display fixture: spawned " + e.getType().getDescriptionId() + " at " + at.toShortString() + " -> " + added);
+            return added;
+        }).withCustomAssertion((level, flagPos, town, output) -> {
+            BlockPos at = flagPos.offset(displayOffset);
+            ca.bradj.questown.integration.minecraft.DisplaySlots slots =
+                    ca.bradj.questown.integration.minecraft.DisplaySlots.at(level, at);
+            if (slots == null) {
+                output.msg("FAIL display fixture: no display at " + at.toShortString());
+                return false;
+            }
+            boolean shown = false;
+            StringBuilder contents = new StringBuilder();
+            for (int i = 0; i < slots.getContainerSize(); i++) {
+                ItemStack s = slots.getItem(i);
+                contents.append(i).append('=').append(s).append(' ');
+                shown |= !s.isEmpty() && expectedItem.equals(Compat.getItemId(s.getItem()).toString());
+            }
+            output.msg("display fixture: display at " + at.toShortString() + " holds " + contents
+                    + "; room is " + roomId + ": " + !town.getRoomHandle().getRoomsMatching(roomId).isEmpty());
+            for (LivingEntity v : town.getVillagerHandle().entities()) {
+                if (v instanceof VisitorMobEntity vme) {
+                    output.msg("display fixture: end state job=" + vme.getJobId() + " status=" + vme.getStatusForServer()
+                            + " held=" + vme.getJobJournalSnapshot().items());
+                }
+            }
+            return report(output, "display-shows-" + expectedItem, shown);
+        });
     }
 
     private static TestBlueprint crafterBlueprint() {
