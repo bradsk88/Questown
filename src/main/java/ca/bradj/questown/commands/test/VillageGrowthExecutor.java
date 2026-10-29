@@ -192,7 +192,10 @@ public final class VillageGrowthExecutor {
     // ---- phases ----
 
     private void resetArena() {
-        TestArenaPreparer.PreparerOptions opts = new TestArenaPreparer.PreparerOptions(28, true, true, true);
+        // Half-width 28 clears rows to z=26; a path run's fourth row (z 34-38) stood on raw terrain,
+        // and room detection around its doors cut the run to ~18 t/s (2026-10-29).
+        int halfWidth = goal == Goal.PATHS_FINISHED ? 42 : 28;
+        TestArenaPreparer.PreparerOptions opts = new TestArenaPreparer.PreparerOptions(halfWidth, true, true, true);
         TestArenaPreparer.destroyNearbyFlags(level, origin, opts, player);
         TestArenaPreparer.flatten(level, origin, opts);
         msg("Arena reset around " + origin.toShortString());

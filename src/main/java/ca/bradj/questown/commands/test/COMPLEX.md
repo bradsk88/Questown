@@ -1005,3 +1005,11 @@ runs after the fixture's room registers, so the fixture waits for the **base** r
 Smithy) and the room becomes Armor Display / Weapon Display on the next recipe recheck. The custom
 assertion reads the display's slots. First pass 2026-10-28: boots on the stand's feet, sword in the
 frame, both rooms upgraded.
+
+## Path runs clear a wider arena (2026-10-29)
+
+`VillageGrowthExecutor.resetArena` flattens half-width 28 for most runs, which covers building rows
+to z=26. A path run (`Goal.PATHS_FINISHED`) has a fourth row (z 34-38, for the showcase batch's
+Grand Armory and Grand Smithy); on raw terrain, room detection around its doors ran the server at
+~18 t/s (onboarding 30 min instead of 5). Path runs now flatten half-width 42: `paths/outfitter`
+PASS 90/90 in 18 min wall, showcase included.
