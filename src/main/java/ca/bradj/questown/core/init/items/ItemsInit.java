@@ -55,6 +55,11 @@ public class ItemsInit {
             () -> new BlockItem(BlocksInit.BLACKSMITHS_TABLE_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)
     );
 
+    public static final Holder<Item> ARMORERS_TABLE_BLOCK = ITEMS.register(
+            ArmorersTableBlock.ITEM_ID,
+            () -> new BlockItem(BlocksInit.ARMORERS_TABLE_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)
+    );
+
     public static final Holder<Item> PLATE_BLOCK = ITEMS.register(
             PlateBlock.ITEM_ID,
             () -> new BlockItem(BlocksInit.PLATE_BLOCK.get(), Questown.DEFAULT_ITEM_PROPS)

@@ -2938,7 +2938,7 @@ public class TestBlueprintRegistry {
                 net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
         )));
 
-        blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 1), BlocksInit.BLACKSMITHS_TABLE_BLOCK.get().defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 1), BlocksInit.ARMORERS_TABLE_BLOCK.get().defaultBlockState()));
         blocks.add(new BlockPlacement(new BlockPos(ox + 3, 0, oz + 1), Blocks.CHEST.defaultBlockState()));
         blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 3), Blocks.CHEST.defaultBlockState()));
         blocks.add(new BlockPlacement(new BlockPos(ox + 3, 0, oz + 3), Blocks.CHEST.defaultBlockState()));

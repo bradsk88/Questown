@@ -177,3 +177,21 @@ on air fails too, so the player kept the stack and also got the drop: a survival
 The placer gets an on-screen line saying why (`TownFlagBlock.tellPlacerNotLinked`). Pinned by
 `flag/unlinked_placement_no_dupe` (held + dropped = 1 for a mat and a board; it was 2 before the
 fix).
+
+## Blacksmith's and armorer's tables (dev playtest 2026-10-28)
+
+The armory (blacksmith's table + 4 chests) was a smithy (blacksmith's table + light) plus extras,
+so a lit armory matched both room recipes (dev: "an armory IS a smithy"). The armory now uses its
+own work block, `ArmorersTableBlock` (`questown:armorers_table`): a subclass of
+`BlacksmithsTableBlock` whose textures are the blacksmith's with every neutral-grey pixel shifted
+to blue (wood unchanged). The four `armorer_*` job templates work at it.
+
+How a player gets them (there was no in-game way but 2 iron, which no villager produces): a
+crafting table ringed by 4 Blocks of Progress. Plus shape (left, right, up, down) = blacksmith's
+table (`recipes/blacksmiths_table_from_blocks_of_progress.json`; the iron recipe stays); corners =
+armorer's table (`recipes/armorers_table.json`). A shaped recipe's item ingredient ignores
+components, so blessed BOPs count.
+
+`getDrops` returned an ore processing block for the blacksmith's table; both tables now drop
+themselves (`asItem()`). Pin: `WorkTableRecipesTest` (data: room recipes share no work block, the
+two shapes, the armorer jobs' block). Registry-bound parts (drop, render) are held-run only.

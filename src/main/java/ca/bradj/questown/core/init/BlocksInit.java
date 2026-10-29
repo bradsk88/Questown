@@ -39,6 +39,9 @@ public class BlocksInit {
     public static final Holder<Block> BLACKSMITHS_TABLE_BLOCK = BLOCKS.register(
             BlacksmithsTableBlock.ITEM_ID, BlacksmithsTableBlock::new
     );
+    public static final Holder<Block> ARMORERS_TABLE_BLOCK = BLOCKS.register(
+            ArmorersTableBlock.ITEM_ID, ArmorersTableBlock::new
+    );
     public static final Holder<Block> PLATE_BLOCK = BLOCKS.register(
             PlateBlock.ITEM_ID, PlateBlock::new
     );

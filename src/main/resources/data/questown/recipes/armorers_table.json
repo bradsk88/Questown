@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "B B",
+    " C ",
+    "B B"
+  ],
+  "key": {
+    "B": {
+      "item": "questown:block_of_progress"
+    },
+    "C": {
+      "item": "minecraft:crafting_table"
+    }
+  },
+  "result": {
+    "id": "questown:armorers_table"
+  }
+}

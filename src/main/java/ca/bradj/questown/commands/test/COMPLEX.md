@@ -976,3 +976,9 @@ monsters on deliberately (ADR-0012).
 The growth driver keys the room quests it has handled by batch + room id
 (`furnishedRoomQuests`), not room id alone, so a room quest reposted in a new batch (a
 discarded inn coming back) is handled again instead of sitting open until the timeout.
+
+## The armorer fixture uses the armorer's table (2026-10-28)
+
+`TestBlueprintRegistry.armorerBlueprint` places `ARMORERS_TABLE_BLOCK` (the armory's own work
+block since the dev playtest, `blocks/COMPLEX.md` "Blacksmith's and armorer's tables"). The
+growth driver needs no change: it furnishes a room quest from the room recipe's ingredients.

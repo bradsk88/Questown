@@ -81,7 +81,7 @@ The dev chose to design the Outfitter content before the engine, so the engine f
       - Your crafter makes 8 sticks              (LOOT)
       opens -> ARMOR, WEAPONS I
     ARMOR
-      - Armory (blacksmith's table + 4 chests)
+      - Armory (armorer's table + 4 chests; was the blacksmith's table until 2026-10-28)
       - Your hunters bring 4 leather             (LOOT)
       - Unlock Leather Boots                     (named skill)
       - Your crafter makes leather boots         (LOOT)

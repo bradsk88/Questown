@@ -1242,7 +1242,7 @@ public final class VillageGrowthExecutor {
     /**
      * Where furnishing goes in a spare building's 3x3 interior (offsets from its corner): the back
      * row, then the sides, keeping a corridor from the door (south wall, middle) clear. Seven slots,
-     * so the armory (blacksmith's table + 4 chests, curated Outfitter path) fits; one row of three
+     * so the armory (armorer's table + 4 chests, curated Outfitter path) fits; one row of three
      * made the driver discard it, and the path engine posted it again every tick (r22 overnight).
      */
     private static final List<BlockPos> FURNISH_SLOTS = List.of(

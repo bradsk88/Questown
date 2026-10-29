@@ -4,7 +4,7 @@
   "farm": false,
   "ingredients": [
     {
-      "item": "questown:blacksmiths_table"
+      "item": "questown:armorers_table"
     },
     {
       "tag": "c:chests"

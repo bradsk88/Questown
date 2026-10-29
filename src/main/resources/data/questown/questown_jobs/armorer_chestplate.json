@@ -12,7 +12,7 @@
     "fallback": "minecraft:leather_chestplate",
     "quantity": 1
   },
-  "block": "questown:blacksmiths_table",
+  "block": "questown:armorers_table",
   "room": "questown:armory",
   "work_states": [
     {

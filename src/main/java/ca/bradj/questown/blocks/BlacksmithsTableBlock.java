@@ -3,7 +3,6 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.MapC;
 
-import ca.bradj.questown.core.init.items.ItemsInit;
 import com.mojang.serialization.MapCodec;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
@@ -27,7 +26,7 @@ public class BlacksmithsTableBlock extends Block {
             MapCodec.unit(BlacksmithsTableBlock::new);
 
     @Override
-    public MapCodec<BlacksmithsTableBlock> codec() {
+    public MapCodec<? extends BlacksmithsTableBlock> codec() {
         return CODEC;
     }
 
@@ -50,7 +49,8 @@ public class BlacksmithsTableBlock extends Block {
         // TODO: Also drop stuff inside
         //  Maybe something like onHurt() { town.dropInsertedItems(this.pos) }
         //  So the first hit from a player will cause the items to pop out.
-        return ImmutableList.of(ItemsInit.ORE_PROCESSING_BLOCK.get().getDefaultInstance());
+        // Drops itself; it dropped an ore processing block (dev playtest 2026-10-28).
+        return ImmutableList.of(new ItemStack(asItem()));
     }
 
     @Override
