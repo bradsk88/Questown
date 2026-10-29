@@ -19,6 +19,11 @@ public class StatusArt {
     private static final String WORKING_ART = "menu/gatherer/working.png";
     private static final String WAITING_ART = "menu/gatherer/waiting.png";
     public static final ResourceLocation ERROR_TEX = new ResourceLocation("questown", "textures/error.png");
+    // A root's own working art beats the placeholder, which is the leaver's gathering art (dev
+    // playtest 2026-10-28: "Crafter is showing the \"leaver\" icon when they work").
+    private static final Map<String, ResourceLocation> ROOT_WORKING_ART = Map.of(
+            "crafter", new ResourceLocation("minecraft", "textures/block/crafting_table_top.png")
+    );
 
     static {
         ImmutableMap.Builder<ProductionStatus, String> b = ImmutableMap.builder();
@@ -43,6 +48,10 @@ public class StatusArt {
         if (status instanceof ProductionStatus ps) {
             String art = pArt.get(ps);
             if (art == null && ps.isWorkingOnProduction()) {
+                ResourceLocation rootArt = ROOT_WORKING_ART.get(jobId.rootId());
+                if (rootArt != null) {
+                    return rootArt;
+                }
                 art = WORKING_ART;
             }
             if (WorkSeekerJob.isSeekingWork(jobId) && ps.isExtractingProduct()) {

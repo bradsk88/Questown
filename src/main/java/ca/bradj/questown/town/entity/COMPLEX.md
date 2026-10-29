@@ -135,12 +135,16 @@ therefore two distinct states, not one:
 flowchart TD
     Work["townie works a job\naddExperience as it goes"] --> Lvl{"exp >= target?"}
     Lvl -- no --> Work
-    Lvl -- yes --> Latch["level up\nhasBlockOfProgress = true\n(broadcast leveled_up)"]
+    Lvl -- yes --> Latch["level up\nhasBlockOfProgress = true\n(broadcast leveled_up_job)"]
     Latch --> Stall["addExperience early-returns\nno more XP while latched"]
     Latch --> Seek["WorkSeekerJob seeks work\nchangeJobForVisitorFromBoard"]
     Seek -->|"hasBlockOfProgress = true\n(before the downtime check)"| Give["bless BOP stack with\nthe earning root job;\ngive + BOPDepositorWork"]
 ```
 
+- The level-up chat line names the villager and its root job ("Villager 4 (Cook) reached level
+  2", `message.villager.leveled_up_job`; dev playtest 2026-10-28). It falls back to the job-less
+  `leveled_up` line only when the handle has no job for the villager. Pin:
+  `SimpleVillagerHandleTest.levelUp_chatNamesTheJob`.
 - The latch is a `Boolean`, not a counter — one townie holds at most one BOP, so
   it stalls for the brief level-up→deposit window, **not** until the player
   collects (collection never touches the latch).

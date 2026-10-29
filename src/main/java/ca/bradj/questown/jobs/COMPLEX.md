@@ -923,6 +923,11 @@ showed the `error.png` checkerboard with "Gatherer is busy with their work." Its
 `overrides()` now sets the relaxing art as the working texture and the existing
 `job_common.status_1.DOWNTIME` text ("is relaxing for a moment.") on every work state and
 extraction. Unit: `DowntimeWorkOverridesTest`.
+**The art is idle, not RELAXING (dev playtest 2026-10-28).** The 2026-10-22 fix picked
+`ProductionStatus.RELAXING`'s art for the word "relaxing", but RELAXING is the end-of-day status
+("has finished for the day") and its art (`relaxing.png`) is the night scene. Every downtime status
+(work states, extraction, NO_JOBSITE, NO_SUPPLIES) now shows `idle.png`. Pin:
+`DowntimeWorkOverridesTest.everyDowntimeStatus_showsTheIdleArt` (asserts the texture, not just "some art").
 
 ## Deposits never stack, by design (pointer, 2026-10-21)
 

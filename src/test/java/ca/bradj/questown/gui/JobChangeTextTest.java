@@ -49,4 +49,17 @@ class JobChangeTextTest {
         Assertions.assertEquals("menu.unlock_root.when_now",
                 JobChangeText.of(true, true, Optional.of("hunter"), false).whenKey());
     }
+
+    /**
+     * Dev playtest 2026-10-28: "Text on job change screen still says \"will change tomorrow\" but it
+     * changed instantly." A quest-promised change applies at the spend
+     * ({@code TownFlagBlockEntity.requestJobRootChange}), in survival too.
+     */
+    @Test
+    void promised_is_now_in_survival() {
+        Assertions.assertEquals("menu.unlock_root.when_now",
+                JobChangeText.of(false, false, Optional.of("hunter"), false).whenKey());
+        Assertions.assertEquals("menu.unlock_root.when_now",
+                JobChangeText.of(true, false, Optional.of("hunter"), false).whenKey());
+    }
 }

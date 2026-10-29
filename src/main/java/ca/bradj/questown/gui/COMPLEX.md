@@ -1256,6 +1256,13 @@ by predicate (`isWorkingOnProduction()` after the table lookup) to
 three PNGs are placeholders copied from `gathering.png`, `relaxing.png` and
 `returned_success.png`; replace the files, no code change needed. Pin:
 `StatusArtTest` (no checkerboard for those states, and each texture file ships).
+**A root's own working art (dev playtest 2026-10-28).** `working.png` is the leaver's gathering
+art, so a crafter at its table showed it ("makes no sense"). `ROOT_WORKING_ART` gives a root its
+own work-state picture ahead of the placeholder: crafter -> vanilla
+`minecraft:textures/block/crafting_table_top.png` (16x16; `StatusGraphic` blits 32x32 with the
+size declared 32x32, so the whole texture fills the box). A job JSON `"working"` override still
+wins (it is applied before `StatusArt`, in `ServerJobsRegistry.getTexture`). Pin:
+`StatusArtTest.crafterWorking_showsTheCraftingTableTop`.
 
 ## Change-job panel: the next action and the real timing (2026-10-23, r9 #2)
 
@@ -1266,6 +1273,19 @@ promisedRoot, blessed)` picks the line: `insert_bop[_promised]` before insertion
 `click_unlock[_promised]` after, `insert_bop_blessed` for a "special" stack; the timing is its own
 key (`when_morning` / `when_now`) passed as the last `%s`. Pin: `JobChangeTextTest`. Live
 2026-10-23: survival empty / inserted, and creative inserted ("starting now"), gui-lint OK.
+**A promised change is "now" too (dev playtest 2026-10-28).** Since r22 a quest-promised change
+(onboarding or a path's JOB_CHANGE) applies at the spend (`TownFlagBlockEntity.requestJobRootChange`:
+`now = instant || promised.isPresent()`), and the menu's promised root comes from the same
+`promisedJobChange` (`TownVillagerUIs`). `when_now` = creative or promised. Pin:
+`JobChangeTextTest.promised_is_now_in_survival`.
+
+## A tag's name: lang key "#<tag>", with a fallback (dev playtest 2026-10-28)
+
+`Ingredients.getName` names a tag ingredient through the lang key `"#<tag>"`. With no entry the key
+itself rendered (the economics tab showed "#minecraft:saplings"). It now uses
+`Compat.translatableWithFallback`, with `tagFallbackName` (the path's last segment, words
+capitalized: "Saplings") as the fallback. The real names live in `en_us.json`;
+`TagNamesTest` fails when a tag in `questown_jobs/` or `questown_paths/` has none.
 
 ## The status tooltip and needs row name what a villager is blocked on (2026-10-23, r9 #4)
 

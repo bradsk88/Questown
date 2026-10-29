@@ -36,6 +36,14 @@ class StatusArtTest {
         }
     }
 
+    @Test
+    void crafterWorking_showsTheCraftingTableTop() {
+        // Dev playtest 2026-10-28: the crafter showed the leaver's gathering art while working.
+        ResourceLocation tex = StatusArt.getTexture(new JobID("crafter", "stick"), ProductionStatus.fromJobBlockStatus(0));
+        Assertions.assertEquals(new ResourceLocation("minecraft", "textures/block/crafting_table_top.png"), tex);
+        Assertions.assertNotEquals(tex, StatusArt.getTexture(GATHERER, ProductionStatus.fromJobBlockStatus(0)));
+    }
+
     private static void assertShipped(ResourceLocation tex) {
         Path file = Path.of("src/main/resources/assets", tex.getNamespace(), tex.getPath());
         Assertions.assertTrue(Files.isRegularFile(file), "texture file missing: " + file);

@@ -12,6 +12,7 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Blocks;
@@ -127,13 +128,16 @@ public class DowntimeWork {
         for (int i = 0; i < MAX_STATE; i++) {
             text.put(ProductionStatus.fromJobBlockStatus(i), relaxingText);
         }
+        // Idle art throughout: the RELAXING status art is the night scene ("finished for the day"),
+        // not "relaxing for a moment" (dev playtest 2026-10-28).
+        ResourceLocation idle = StatusArt.getTexture(getIdForRoot("___"), ProductionStatus.IDLE);
         return new Overrides(
                 ImmutableMap.of(
-                        ProductionStatus.NO_JOBSITE,
-                        StatusArt.getTexture(getIdForRoot("___"), ProductionStatus.IDLE)
+                        ProductionStatus.NO_JOBSITE, idle,
+                        ProductionStatus.NO_SUPPLIES, idle
                 ),
                 text.build(),
-                StatusArt.getTexture(getIdForRoot("___"), ProductionStatus.RELAXING)
+                idle
         );
     }
 

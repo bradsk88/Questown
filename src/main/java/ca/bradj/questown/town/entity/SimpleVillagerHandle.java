@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.RootRoll;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
@@ -696,9 +697,24 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         if (newExp >= target) {
             Integer newLvl = levels.compute(uuid, (x, cur) -> cur == null ? 2 : cur + 1);
             experience.put(uuid, newExp % target);
-            delegator.broadcastMessage("message.villager.leveled_up", chatName(uuid), newLvl);
+            broadcastLevelUp(uuid, newLvl);
             hasBlockOfProgress.put(uuid, true);
         }
+    }
+
+    /** "Villager 4 (Cook) reached level 2" (dev playtest 2026-10-28: the line didn't name the job). */
+    private void broadcastLevelUp(
+            UUID uuid,
+            int newLvl
+    ) {
+        JobID job = getVillagerJobs().get(uuid);
+        if (job == null) {
+            delegator.broadcastMessage("message.villager.leveled_up", chatName(uuid), newLvl);
+            return;
+        }
+        delegator.broadcastMessage(
+                "message.villager.leveled_up_job", chatName(uuid), Jobs.getRootNameComponent(job), newLvl
+        );
     }
 
     /** The villager's name for a chat line: "Villager 1", or a truncated UUID while it has none. */

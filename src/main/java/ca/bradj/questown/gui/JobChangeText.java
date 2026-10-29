@@ -6,7 +6,8 @@ import java.util.Optional;
  * Which line the change-job panel shows (pure so it is unit-testable; the screen turns it into
  * components). It names the next action, inserting a Block of Progress or clicking Unlock, and
  * the real timing: the change lands the next morning in survival but at once in creative
- * ({@code JobRootChangeMessage} carries the player's creative flag). r9 findings #2.
+ * ({@code JobRootChangeMessage} carries the player's creative flag) or when a quest promises the
+ * job (dev playtest 2026-10-28). r9 findings #2.
  *
  * @param key     the lang key of the line
  * @param root    the job root the line names, if any (promised by an onboarding quest)
@@ -26,7 +27,9 @@ public record JobChangeText(String key, Optional<String> root, String whenKey) {
             Optional<String> promisedRoot,
             boolean blessed
     ) {
-        String when = creative ? "menu.unlock_root.when_now" : "menu.unlock_root.when_morning";
+        // A promised change applies at the spend (TownFlagBlockEntity.requestJobRootChange).
+        boolean now = creative || promisedRoot.isPresent();
+        String when = now ? "menu.unlock_root.when_now" : "menu.unlock_root.when_morning";
         if (promisedRoot.isPresent()) {
             String key = inserted ? "menu.unlock_root.click_unlock_promised" : "menu.unlock_root.insert_bop_promised";
             return new JobChangeText(key, promisedRoot, when);

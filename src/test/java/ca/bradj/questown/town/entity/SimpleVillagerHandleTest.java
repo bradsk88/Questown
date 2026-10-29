@@ -285,7 +285,25 @@ class SimpleVillagerHandleTest {
 
         handle.addExperience(villager, 1_000_000);
 
-        Assertions.assertTrue(t.broadcast.contains("message.villager.leveled_up [Villager 1, 2]"), t.broadcast.toString());
+        Assertions.assertTrue(
+                t.broadcast.stream().anyMatch(b -> b.startsWith("message.villager.leveled_up_job [Villager 1, ")),
+                t.broadcast.toString()
+        );
+    }
+
+    // Dev playtest 2026-10-28: "That message should say \"Villager 4 (cook) reached level 2\"".
+    @Test
+    public void levelUp_chatNamesTheJob() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        t.names.put(villager, "Villager 1");
+        SimpleVillagerHandle<String, UUID> handle = handleFor(t, villager);
+
+        handle.addExperience(villager, 1_000_000);
+
+        String line = t.broadcast.stream().filter(b -> b.startsWith("message.villager.leveled_up_job")).findFirst().orElse("");
+        Assertions.assertTrue(line.contains("jobs.tester"), t.broadcast.toString());
+        Assertions.assertTrue(line.endsWith(", 2]"), line);
     }
 
     // 2026-10-22 agent playtest r9: the hunter's stats page read "Lvl 1" while the flag held level 4.

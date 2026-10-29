@@ -34,7 +34,7 @@ public class Ingredients {
         JsonElement j = toJson(item);
         String tag = getTag(j);
         if (tag != null) {
-            return Compat.translatable("#" + tag);
+            return Compat.translatableWithFallback("#" + tag, tagFallbackName(tag));
         }
         if (j.isJsonObject() && j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
@@ -44,6 +44,26 @@ public class Ingredients {
             }
         }
         return Compat.translatable("this");
+    }
+
+    /**
+     * A tag's name when the lang file has none: its path, words capitalized
+     * ("minecraft:saplings" -> "Saplings"), never the raw id (dev playtest 2026-10-28).
+     */
+    static String tagFallbackName(String tag) {
+        String path = tag.substring(tag.indexOf(':') + 1);
+        path = path.substring(path.lastIndexOf('/') + 1);
+        StringBuilder b = new StringBuilder();
+        for (String word : path.split("_")) {
+            if (word.isEmpty()) {
+                continue;
+            }
+            if (!b.isEmpty()) {
+                b.append(' ');
+            }
+            b.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        }
+        return b.toString();
     }
 
     public static WorkRequest asWorkRequest(Ingredient item) {

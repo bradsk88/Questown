@@ -47,4 +47,20 @@ class IngredientsTest {
         assertTrue(Ingredients.isTag(ing));
         assertFalse(ing.test(new ItemStack(Items.MUTTON)));
     }
+
+    // Dev playtest 2026-10-28: the economics tab showed "#minecraft:saplings".
+    @Test
+    void getName_unnamedTag_fallsBackToItsPathNotTheRawId() {
+        Ingredient ing = Ingredient.of(Compat.itemTag(new ResourceLocation("questown", "no_such_tag")));
+        net.minecraft.network.chat.contents.TranslatableContents c =
+                (net.minecraft.network.chat.contents.TranslatableContents) Ingredients.getName(ing).getContents();
+        assertEquals("#questown:no_such_tag", c.getKey());
+        assertEquals("No Such Tag", c.getFallback());
+    }
+
+    @Test
+    void tagFallbackName_capitalizesThePathsLastSegment() {
+        assertEquals("Saplings", Ingredients.tagFallbackName("minecraft:saplings"));
+        assertEquals("Empty Town Biomes", Ingredients.tagFallbackName("questown:has_structure/empty_town_biomes"));
+    }
 }
