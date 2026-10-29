@@ -21,7 +21,7 @@
       "id": "armor",
       "opens_after": ["train_crafter_3"],
       "quests": [
-        {"room": "questown:armory"},
+        {"room": "questown:grand_armory"},
         {"loot": "minecraft:leather", "count": 4},
         {"skill": "crafter/leather_boots"},
         {"loot": "minecraft:leather_boots", "count": 1}

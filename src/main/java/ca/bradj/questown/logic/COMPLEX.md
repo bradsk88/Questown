@@ -84,3 +84,10 @@ The big soup pot's weight was registered under the bare id `soup_pot` (`SoupPotB
 room recipes name `questown:soup_pot`, so the lookup missed and the pot weighed the default 100
 (startup warning "No weight specified for item ... [questown:soup_pot]", r17 #2). It is now
 namespaced like the small pot. As with the plate, saved weight configs keep the old key.
+
+## Work tables and armor stands have weights (2026-10-28)
+
+The blacksmith's and armorer's tables logged "No weight specified ... default of 100", and the
+armor stand would have too once the armory tiers named it. `RecipeItemConfig` now scores both
+tables as their iron recipe (2 iron, 2 crafting tables; the Block of Progress recipes have no
+resource to score) and the stand as 6 sticks + a stone slab (cobblestone).

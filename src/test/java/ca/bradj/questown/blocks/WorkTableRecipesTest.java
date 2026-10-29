@@ -33,6 +33,32 @@ class WorkTableRecipesTest {
         Assertions.assertFalse(armory.contains("questown:blacksmiths_table"), armory.toString());
     }
 
+    /**
+     * Dev 2026-10-28: "Armorers Table --> [AT, Chest] --> [AT, Chest, Stand] --> [AT, Chest, four
+     * stands]". A room is every recipe it contains and its identity is the heaviest, so each tier
+     * must contain the one before.
+     */
+    @Test
+    void armoryTiers_eachContainTheTierBefore() throws IOException {
+        List<List<String>> tiers = List.of(
+                items(read("armorers_corner.json")),
+                items(read("armory.json")),
+                items(read("armor_display.json")),
+                items(read("grand_armory.json"))
+        );
+        Assertions.assertEquals(List.of("questown:armorers_table"), tiers.get(0));
+        Assertions.assertEquals(List.of("questown:armorers_table", "#c:chests"), tiers.get(1));
+        Assertions.assertEquals(List.of("questown:armorers_table", "#c:chests", "minecraft:armor_stand"), tiers.get(2));
+        Assertions.assertEquals(4, tiers.get(3).stream().filter("minecraft:armor_stand"::equals).count());
+        for (int i = 1; i < tiers.size(); i++) {
+            List<String> rest = new ArrayList<>(tiers.get(i));
+            for (String ing : tiers.get(i - 1)) {
+                Assertions.assertTrue(rest.remove(ing), "tier " + i + " lacks " + ing + " from the tier before");
+            }
+            Assertions.assertFalse(rest.isEmpty(), "tier " + i + " adds nothing");
+        }
+    }
+
     @Test
     void blacksmithsTable_isACraftingTableWithBlocksOfProgressLeftRightUpDown() throws IOException {
         assertShape("blacksmiths_table_from_blocks_of_progress.json", List.of(" B ", "BCB", " B "), "questown:blacksmiths_table");
@@ -49,6 +75,8 @@ class WorkTableRecipesTest {
             for (Path f : files.filter(p -> p.getFileName().toString().startsWith("armorer_")).toList()) {
                 JsonObject job = new Gson().fromJson(Files.readString(f, StandardCharsets.UTF_8), JsonObject.class);
                 Assertions.assertEquals("questown:armorers_table", job.get("block").getAsString(), f.getFileName().toString());
+                // The lowest tier, so the jobs work in every armory tier.
+                Assertions.assertEquals("questown:armorers_corner", job.get("room").getAsString(), f.getFileName().toString());
             }
         }
     }

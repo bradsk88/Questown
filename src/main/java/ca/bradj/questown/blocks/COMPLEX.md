@@ -195,3 +195,20 @@ components, so blessed BOPs count.
 `getDrops` returned an ore processing block for the blacksmith's table; both tables now drop
 themselves (`asItem()`). Pin: `WorkTableRecipesTest` (data: room recipes share no work block, the
 two shapes, the armorer jobs' block). Registry-bound parts (drop, render) are held-run only.
+
+### Armory tiers (2026-10-28)
+
+The dev's progression ("Armorers Table --> [AT, Chest] --> [AT, Chest, Stand] --> [AT, Chest,
+four stands]"): `armorers_corner` `[AT]`, `armory` `[AT, chest]`, `armor_display` `[+ armor
+stand]`, `grand_armory` `[+ 4 armor stands]`. Each tier contains the one before, and a room's
+identity is its heaviest contained recipe (`town/quests/COMPLEX.md` "Top match"), so adding
+furniture upgrades the room. The armorer jobs name `armorers_corner`, so they work in every tier.
+The Outfitter's Armor batch asks for the Grand Armory.
+
+Armor stands are entities. RoomRecipes (`a1029a4`) adds one `minecraft:armor_stand` /
+`item_frame` / `glow_item_frame` item per such entity whose block position is one of the room's
+scanned positions (furniture layer and one above) before matching. Rooms are re-matched after
+every scan pass (`TownRoomsMap` `recheckRecipes`), so placing or breaking a stand updates the room
+with no extra trigger. Weights: `RecipeItemConfig` scores both work tables as the iron recipe and
+the stand as 6 sticks + a slab. Pin: `WorkTableRecipesTest.armoryTiers_eachContainTheTierBefore`;
+plan `docs/plans/2026-10-28-001-feat-armory-tiers-and-armor-stands-plan.md`.

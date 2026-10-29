@@ -13,7 +13,7 @@
     "quantity": 1
   },
   "block": "questown:armorers_table",
-  "room": "questown:armory",
+  "room": "questown:armorers_corner",
   "work_states": [
     {
       "ingredients": "minecraft:leather",

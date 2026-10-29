@@ -980,5 +980,7 @@ discarded inn coming back) is handled again instead of sitting open until the ti
 ## The armorer fixture uses the armorer's table (2026-10-28)
 
 `TestBlueprintRegistry.armorerBlueprint` places `ARMORERS_TABLE_BLOCK` (the armory's own work
-block since the dev playtest, `blocks/COMPLEX.md` "Blacksmith's and armorer's tables"). The
+block since the dev playtest, `blocks/COMPLEX.md` "Blacksmith's and armorer's tables") and one
+chest: exactly the Armory tier. With the old 4 chests, the room's top match could be a store room
+(`blocks/COMPLEX.md` "Armory tiers"). The
 growth driver needs no change: it furnishes a room quest from the room recipe's ingredients.

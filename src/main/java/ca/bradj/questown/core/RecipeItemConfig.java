@@ -110,6 +110,23 @@ public class RecipeItemConfig {
     );
 
     private static final int HOSPITAL_BED = STICK_SCORE + BED;
+    // The iron recipe; the Block of Progress recipes (dev playtest 2026-10-28) have no resource to
+    // score, and the armorer's table is the same table recoloured.
+    private static final int WORK_TABLE = RecipeItemScore.canCraftInFourGrid(
+            ImmutableList.of(
+                    CraftedResources.IRON_INGOT,
+                    CraftedResources.IRON_INGOT,
+                    CraftedResources.CRAFTING_TABLE,
+                    CraftedResources.CRAFTING_TABLE
+            ), false
+    );
+    private static final int ARMOR_STAND = RecipeItemScore.requiresCraftingTable(
+            ImmutableList.<Resource>builder()
+                    .addAll(Collections.nCopies(6, CraftedResources.STICK))
+                    .add(MinedResources.COBBLESTONE)
+                    .build(),
+            false
+    );
 
     public static final int SMALL_SOUP_POT = RecipeItemScore.canCraftInFourGrid(
             ImmutableList.of(
@@ -219,6 +236,9 @@ public class RecipeItemConfig {
         add(ItemsInit.ORE_PROCESSING_BLOCK.id(), ORE_PROCESSING_BLOCK);
         add(ItemsInit.BREAD_OVEN_BLOCK.id(), BREAD_OVEN_BLOCK);
         add(ItemsInit.FOOD_DISPLAY_BLOCK.id(), FOOD_DISPLAY);
+        add(ItemsInit.BLACKSMITHS_TABLE_BLOCK.id(), WORK_TABLE);
+        add(ItemsInit.ARMORERS_TABLE_BLOCK.id(), WORK_TABLE);
+        add(assumePresent(Items.ARMOR_STAND), ARMOR_STAND);
         add(String.format("#%s", TagsInit.Items.JOB_BOARD_INPUTS.location()), Integer.MAX_VALUE); // Never recommend job board
 //        add(ForgeRegistries.ITEMS.getKey(ItemsInit.HOSPITAL_BED.get()).toString(), HOSPITAL_BED);
     }
