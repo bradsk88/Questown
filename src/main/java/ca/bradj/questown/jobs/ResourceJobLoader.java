@@ -951,16 +951,21 @@ public class ResourceJobLoader {
         boolean armorStand = "armor_stand".equals(required(block, "display", JsonElement::getAsString));
         Ingredient accepts = getIngredient(required(block, "accepts", JsonElement::getAsString));
         return ctx -> {
-            if (ctx.world() == null) {
+            // A display stands in air; skip the entity lookup everywhere else.
+            if (ctx.world() == null || !ctx.blockInfo().state(ctx.blockPos()).isAir()) {
                 return false;
             }
             List<ItemStack> slots = ctx.world().getDisplaySlots(ctx.blockPos());
             if (slots.isEmpty() || DisplayFit.isArmorStand(slots) != armorStand) {
                 return false;
             }
-            List<ItemStack> held = new ArrayList<>();
-            ctx.heldItems().get().forEach(h -> held.add(h.get().toMCItemStack()));
-            List<ItemStack> heldAccepted = held.stream().filter(accepts).toList();
+            List<ItemStack> heldAccepted = new ArrayList<>();
+            ctx.heldItems().get().forEach(h -> {
+                ItemStack s = h.get().toMCItemStack();
+                if (accepts.test(s)) {
+                    heldAccepted.add(s);
+                }
+            });
             if (!heldAccepted.isEmpty()) {
                 return DisplayFit.anyFits(slots, heldAccepted);
             }

@@ -1739,6 +1739,12 @@ stopgap). Dev: "ideally yes" to a stop condition.
   `TownVillagerData.chooseFromList` for the warp, `TownPossibleWork.boardCheck`,
   `updateWorkersAfterRequestChange`, the leaver requested-loot preference). `getRequestedResults()`
   is still the raw list (UI, attention flag, auto-request).
+- **A pause stops makers only** (dev 2026-10-28): a job that makes nothing (a fuel, stock or
+  display job, `ServerJobsRegistry.makesNothing`) still answers a paused request. The four
+  work-selection sites above go through `ServerJobsRegistry.firstAnswerable(td, job, requests)`,
+  which applies that rule and `canSatisfy` together (2026-10-29: `updateWorkersAfterRequestChange`
+  had kept the maker-only `toWork()`); the leaver loot preference is a maker case and keeps
+  `toWork()`.
 - **UI**: `TownWorkContainer.writeWork` writes a stocked boolean after each request; `WorkScreen`
   greys a paused request's name and its icon tooltip reads "job_board.request_stocked".
 - Tests: `BoardRequestsTest`.

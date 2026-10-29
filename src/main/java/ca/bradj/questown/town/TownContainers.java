@@ -20,6 +20,7 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -138,22 +139,8 @@ public class TownContainers {
             ServerLevel level
     ) {
         Set<BlockPos> positions = match.getContainedBlocks().keySet();
-        if (positions.isEmpty()) {
-            return Stream.empty();
-        }
-        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
-        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
-        for (BlockPos p : positions) {
-            minX = Math.min(minX, p.getX());
-            minY = Math.min(minY, p.getY());
-            minZ = Math.min(minZ, p.getZ());
-            maxX = Math.max(maxX, p.getX());
-            maxY = Math.max(maxY, p.getY());
-            maxZ = Math.max(maxZ, p.getZ());
-        }
-        AABB box = new AABB(minX, minY, minZ, maxX + 1, maxY + 1, maxZ + 1);
-        return level.getEntitiesOfClass(Entity.class, box, e -> DisplaySlots.of(e) != null)
-                    .stream()
+        return BoundingBox.encapsulatingPositions(positions).map(AABB::of).stream()
+                    .flatMap(box -> level.getEntitiesOfClass(Entity.class, box, DisplaySlots::isDisplay).stream())
                     .filter(e -> positions.contains(e.blockPosition()))
                     .map(e -> fromDisplay(match.room, e));
     }
@@ -172,7 +159,7 @@ public class TownContainers {
                 () -> e.isAlive() && e.blockPosition().equals(p),
                 item -> {
                 },
-                item -> false,
+                REJECTS_EVERYTHING,
                 NO_BOOST,
                 room
         );

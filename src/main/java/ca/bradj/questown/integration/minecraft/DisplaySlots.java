@@ -13,6 +13,7 @@ import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 /**
  * An armor stand's armor slots, or an item frame's one item, as a vanilla {@link Container}, so a
@@ -30,12 +31,16 @@ public abstract class DisplaySlots implements Container {
             Level level,
             BlockPos pos
     ) {
-        for (Entity e : level.getEntitiesOfClass(Entity.class, new AABB(pos), x -> of(x) != null)) {
+        for (Entity e : level.getEntitiesOfClass(Entity.class, new AABB(pos), DisplaySlots::isDisplay)) {
             if (e.blockPosition().equals(pos)) {
                 return of(e);
             }
         }
         return null;
+    }
+
+    public static boolean isDisplay(Entity e) {
+        return e instanceof ArmorStand || e instanceof ItemFrame;
     }
 
     public static @Nullable DisplaySlots of(Entity e) {
@@ -48,14 +53,13 @@ public abstract class DisplaySlots implements Container {
         return null;
     }
 
+    public List<ItemStack> items() {
+        return IntStream.range(0, getContainerSize()).mapToObj(this::getItem).toList();
+    }
+
     @Override
     public boolean isEmpty() {
-        for (int i = 0; i < getContainerSize(); i++) {
-            if (!getItem(i).isEmpty()) {
-                return false;
-            }
-        }
-        return true;
+        return items().stream().allMatch(ItemStack::isEmpty);
     }
 
     @Override

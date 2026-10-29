@@ -3042,8 +3042,9 @@ public class TestBlueprintRegistry {
             }
             boolean shown = false;
             StringBuilder contents = new StringBuilder();
-            for (int i = 0; i < slots.getContainerSize(); i++) {
-                ItemStack s = slots.getItem(i);
+            List<ItemStack> items = slots.items();
+            for (int i = 0; i < items.size(); i++) {
+                ItemStack s = items.get(i);
                 contents.append(i).append('=').append(s).append(' ');
                 shown |= !s.isEmpty() && expectedItem.equals(Compat.getItemId(s.getItem()).toString());
             }

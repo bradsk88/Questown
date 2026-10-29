@@ -1011,5 +1011,6 @@ frame, both rooms upgraded.
 `VillageGrowthExecutor.resetArena` flattens half-width 28 for most runs, which covers building rows
 to z=26. A path run (`Goal.PATHS_FINISHED`) has a fourth row (z 34-38, for the showcase batch's
 Grand Armory and Grand Smithy); on raw terrain, room detection around its doors ran the server at
-~18 t/s (onboarding 30 min instead of 5). Path runs now flatten half-width 42: `paths/outfitter`
-PASS 90/90 in 18 min wall, showcase included.
+~18 t/s (onboarding 30 min instead of 5). The half-width is now derived from the rows
+(`rowZs()`: farthest row + `BUILDING_SIZE` + 3, at least 28), so path runs flatten 42 and a new
+row widens the arena with it: `paths/outfitter` PASS 90/90 in 18 min wall, showcase included.

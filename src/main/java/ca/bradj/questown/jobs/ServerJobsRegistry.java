@@ -22,6 +22,7 @@ import ca.bradj.questown.jobs.declarative.*;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
@@ -803,6 +804,20 @@ public class ServerJobsRegistry {
         }
         Supplier<Work> w = getWorkSupplier(p);
         return w != null && w.get().hasNoOutput();
+    }
+
+    /**
+     * The first board request job p can answer. A pause stops makers only (dev 2026-10-28), so a
+     * job that makes nothing still answers a paused request.
+     */
+    public static Optional<WorkRequest> firstAnswerable(
+            WorksBehaviour.TownData town,
+            JobID p,
+            BoardRequests requests
+    ) {
+        return requests.toWorkFor(makesNothing(p)).stream()
+                       .filter(r -> canSatisfy(town, p, r.asIngredient()))
+                       .findFirst();
     }
 
     public static boolean canSatisfy(

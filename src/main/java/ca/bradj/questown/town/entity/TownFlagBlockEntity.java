@@ -891,17 +891,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     //  cannot complete their current work (e.g. no supplies)
     private void updateWorkersAfterRequestChange() {
         WorksBehaviour.TownData td = getTownData();
-        Stream<VisitorMobEntity> relevantWorkers = villagerHandle.stream().filter(Objects::nonNull).filter(e -> {
-            for (WorkRequest r : workHandle.getBoardRequests().toWork()) {
-                if (ServerJobsRegistry.canSatisfy(td, e.getJobId(), r.asIngredient())) {
-                    // A downtime townie has no server status; null counts as not busy.
-                    if (IStatus.isBusy(e.getStatusForServer())) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        });
+        BoardRequests requests = workHandle.getBoardRequests();
+        // A downtime townie has no server status; null counts as not busy.
+        Stream<VisitorMobEntity> relevantWorkers = villagerHandle.stream().filter(Objects::nonNull).filter(
+                e -> !IStatus.isBusy(e.getStatusForServer())
+                        || ServerJobsRegistry.firstAnswerable(td, e.getJobId(), requests).isEmpty()
+        );
         relevantWorkers.forEach(e -> villagerHandle.changeJobForVillager(
                 e.getVUID(),
                 WorkSeekerJob.getIDForRoot(e.getJobId()),

@@ -337,14 +337,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     @Override
     public List<ItemStack> getDisplaySlots(BlockPos pos) {
         DisplaySlots d = DisplaySlots.at(level, pos);
-        if (d == null) {
-            return List.of();
-        }
-        List<ItemStack> out = new ArrayList<>();
-        for (int i = 0; i < d.getContainerSize(); i++) {
-            out.add(d.getItem(i));
-        }
-        return out;
+        return d == null ? List.of() : d.items();
     }
 
     @Override

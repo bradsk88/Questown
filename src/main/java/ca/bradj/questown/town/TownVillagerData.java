@@ -4,8 +4,6 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.requests.BoardRequests;
-import ca.bradj.questown.jobs.requests.WorkRequest;
-import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -38,13 +36,8 @@ public class TownVillagerData {
             if (requestedResults.isEmpty()) {
                 return p;
             }
-            List<Ingredient> i = requestedResults.toWorkFor(ServerJobsRegistry.makesNothing(p)).stream()
-                                                 .map(WorkRequest::asIngredient)
-                                                 .toList();
-            for (Ingredient requestedResult : i) {
-                if (ServerJobsRegistry.canSatisfy(td, p, requestedResult)) {
-                    return p;
-                }
+            if (ServerJobsRegistry.firstAnswerable(td, p, requestedResults).isPresent()) {
+                return p;
             }
         }
         return null;

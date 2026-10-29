@@ -1139,7 +1139,8 @@ A display stands in an **air** block, which every work-spot path rejected. Four 
   (`ResourceJobLoader.isDisplayJobBlock`): the spot is a display of that kind with an empty slot
   that an accepted item the villager holds, or the town stores, fits. Its `shouldInitWS` is
   always false: no block state can answer it, so it must stay out of the block-state interest
-  cache (`ServerJobsRegistry.shouldInitializeWithState`).
+  cache (`ServerJobsRegistry.shouldInitializeWithState`). It returns false before the entity
+  lookup when the block isn't air, so job-site scans over a room's solid blocks stay cheap.
 - **Work-status store** (`TownWorkStatusStore`): an air position holding a display is seeded at
   state 0, and the "block is gone" check is "air and no display".
 - **`ServerJobsRegistry.isJobBlock`**: for air, asks the jobs' own predicates when a display

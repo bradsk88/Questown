@@ -43,6 +43,7 @@ import org.jetbrains.annotations.Nullable;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.function.Predicate;
+import com.google.common.base.Suppliers;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -519,12 +520,7 @@ public class TownPossibleWork {
             return new RequestCheck(true, null);
         }
         WorksBehaviour.TownData td = t.getTownData();
-        for (WorkRequest r : requests.toWorkFor(ServerJobsRegistry.makesNothing(jobId))) {
-            if (ServerJobsRegistry.canSatisfy(td, jobId, r.asIngredient())) {
-                return new RequestCheck(false, r);
-            }
-        }
-        return new RequestCheck(false, null);
+        return new RequestCheck(false, ServerJobsRegistry.firstAnswerable(td, jobId, requests).orElse(null));
     }
 
     /**
@@ -572,10 +568,11 @@ public class TownPossibleWork {
             if (ing != null && !ing.isEmpty()) {
                 townHasIngredient = false;
                 if (jobSiteContainers == null) {
+                    Supplier<? extends Collection<Item>> stored = unique(t);
                     jobSiteContainers = Containers.get(
                             t,
                             r -> true,
-                            bp -> isJobBlock(t, dj, bp, sl, ignoreSlot),
+                            bp -> isJobBlock(dj, bp, sl, ignoreSlot, stored),
                             js -> dj.location().baseRoom().equals(js),
                             false
                     );
@@ -673,16 +670,16 @@ public class TownPossibleWork {
     }
 
     private static boolean isJobBlock(
-            TownFlagBlockEntity t,
             DeclarativeJob dj,
             BlockPos bp,
             ServerLevel sl,
-            boolean ignoreSlot
+            boolean ignoreSlot,
+            Supplier<? extends Collection<Item>> stored
     ) {
         // blockAlreadyUsed=true is the context switch that skips the slot precondition
         // (ResourceJobLoader.isJobBlockV2).
         return dj.location().isJobBlock()
-                 .test(new JobBlockTestContext(new MinecraftWorldAccess(sl), info(sl), bp, ImmutableList::of, unique(t), ignoreSlot, false));
+                 .test(new JobBlockTestContext(new MinecraftWorldAccess(sl), info(sl), bp, ImmutableList::of, stored, ignoreSlot, false));
     }
 
     /**
@@ -723,8 +720,9 @@ public class TownPossibleWork {
         return null;
     }
 
+    /** Read once per scan, not once per position: it walks every town container. */
     private static Supplier<? extends Collection<Item>> unique(TownFlagBlockEntity t) {
-        return () -> TownContainers.getUniqueItems(t);
+        return Suppliers.memoize(() -> TownContainers.getUniqueItems(t));
     }
 
     public ImmutableList<JobID> getFor(JobID jobId) {

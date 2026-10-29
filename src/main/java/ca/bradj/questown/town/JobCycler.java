@@ -4,8 +4,6 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.requests.BoardRequests;
-import ca.bradj.questown.jobs.requests.WorkRequest;
-import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -60,13 +58,7 @@ public class JobCycler {
         if (requestedResults.isEmpty()) {
             return true;
         }
-        for (WorkRequest request : requestedResults.toWorkFor(ServerJobsRegistry.makesNothing(candidate))) {
-            Ingredient ingredient = request.asIngredient();
-            if (ServerJobsRegistry.canSatisfy(td, candidate, ingredient)) {
-                return true;
-            }
-        }
-        return false;
+        return ServerJobsRegistry.firstAnswerable(td, candidate, requestedResults).isPresent();
     }
 
     private void reshuffleFrom(Set<JobID> jobs) {

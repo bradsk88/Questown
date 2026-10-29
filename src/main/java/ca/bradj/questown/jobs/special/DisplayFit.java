@@ -30,7 +30,7 @@ public final class DisplayFit {
         if (slots.size() == 1) {
             return slots.get(0).isEmpty() ? 0 : NO_SLOT;
         }
-        if (slots.size() != DisplaySlots.ARMOR_STAND_SLOTS.size()) {
+        if (!isArmorStand(slots)) {
             return NO_SLOT;
         }
         Equipable equipable = Equipable.get(item);

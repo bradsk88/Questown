@@ -34,6 +34,7 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.AbstractMap;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -192,9 +193,10 @@ public final class VillageGrowthExecutor {
     // ---- phases ----
 
     private void resetArena() {
-        // Half-width 28 clears rows to z=26; a path run's fourth row (z 34-38) stood on raw terrain,
+        // The arena must cover every building row: a path run's fourth row once stood on raw terrain,
         // and room detection around its doors cut the run to ~18 t/s (2026-10-29).
-        int halfWidth = goal == Goal.PATHS_FINISHED ? 42 : 28;
+        int farthestRow = Arrays.stream(rowZs()).map(Math::abs).max().orElse(0);
+        int halfWidth = Math.max(28, farthestRow + BUILDING_SIZE + 3);
         TestArenaPreparer.PreparerOptions opts = new TestArenaPreparer.PreparerOptions(halfWidth, true, true, true);
         TestArenaPreparer.destroyNearbyFlags(level, origin, opts, player);
         TestArenaPreparer.flatten(level, origin, opts);
@@ -212,14 +214,17 @@ public final class VillageGrowthExecutor {
         // showcase batch's Grand Armory and Grand Smithy need a fourth row (2026-10-28: "no spare
         // building to furnish" for the Grand Smithy).
         int[] xs = {-21, -9, 3, 15};
-        int[] zs = goal == Goal.PATHS_FINISHED ? new int[]{-16, 10, 22, 34} : new int[]{-16, 10};
-        for (int z : zs) {
+        for (int z : rowZs()) {
             for (int x : xs) {
                 buildOneBuilding(new BlockPos(origin.getX() + x, origin.getY(), origin.getZ() + z));
             }
         }
         msg("Built " + buildingCorners.size() + " buildings (" + BUILDING_SIZE + "x" + BUILDING_SIZE + ", one door each); no doors registered");
         phase = Phase.PLACE_FLAG;
+    }
+
+    private int[] rowZs() {
+        return goal == Goal.PATHS_FINISHED ? new int[]{-16, 10, 22, 34} : new int[]{-16, 10};
     }
 
     /** One rectangular building: floor, plank walls, flat roof, one oak door (south), one chest. */

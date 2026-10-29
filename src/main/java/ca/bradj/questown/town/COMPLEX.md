@@ -823,4 +823,7 @@ batch's new cook skill (`cook:beef`) was unlocked. A null claim now returns true
 `TownContainers.getAllContainersAndDisplays` / `getAllStacks` count armor stands and item frames
 in town rooms as storage; `getAllContainers` leaves them out (`integration/minecraft/COMPLEX.md`
 "Displays count as storage"). `TownWorkStatusStore` seeds an air position holding a display at
-state 0 for the display jobs (`jobs/COMPLEX.md` "Display jobs").
+state 0 for the display jobs (`jobs/COMPLEX.md` "Display jobs"). `displaysIn` makes one entity
+query per room (the room's `BoundingBox.encapsulatingPositions` as an AABB) filtered by
+`DisplaySlots.isDisplay`. `TownPossibleWork`'s job-site scan memoizes the town's unique items once
+per scan: a display job's block predicate reads them at each display position.

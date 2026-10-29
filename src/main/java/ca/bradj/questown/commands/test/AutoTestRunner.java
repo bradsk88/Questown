@@ -521,7 +521,7 @@ public class AutoTestRunner {
                 return;
             }
             if (++tickCoverageTries % 200 != 0) {
-                return; // once at boot + every ~10 s until the town has rooms
+                return; // once at boot + every ~10 s
             }
             net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
             if (server == null) {
