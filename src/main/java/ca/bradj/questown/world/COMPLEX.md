@@ -25,6 +25,16 @@ property instead — a cut block is AIR, so stale work-stack entries are no-ops.
 Pinned by `WarpWorldAccessTest.chopTree_cutsLargeConnectedRegion_withoutStackOverflow`
 (5000-log line; red on the recursive variant, green on the iterative one).
 
+**Only `#minecraft:logs` is chopped (2026-10-29).** Both `chopTree`s first check the trunk
+block, because `ChopDownTree` scans every room position. That check was `instanceof
+RotatedPillarBlock`, a tag-free stand-in for logs, but deepslate, basalt, hay bales, bone blocks
+and quartz/purpur pillars are pillars too: the warp arborist banked `deepslate=5`
+(`arborist/cut_trees` flake on the known-failures list, ticket
+`.scratch/autotest-suite/arborist-cuts-deepslate.md`), and the realtime one could break those
+blocks in the world. Both now check `BlockTags.LOGS`. A unit JVM loads no tags, so
+`WarpWorldAccessTest` binds `#minecraft:logs` to oak logs in `@BeforeAll`. Pinned by
+`chopTree_returnsEmpty_forAPillarThatIsNotALog` (red on the stand-in); `arborist` autotests 9/9.
+
 ## `WarpWorldAccess` test constructor with `fallbackStateProvider`
 
 The 5-arg package-private test constructor

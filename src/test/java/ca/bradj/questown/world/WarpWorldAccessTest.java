@@ -1,5 +1,6 @@
 package ca.bradj.questown.world;
 
+import net.minecraft.tags.BlockTags;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.Bootstrap;
@@ -24,6 +25,8 @@ class WarpWorldAccessTest {
     static void bootstrap() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
+        // A unit JVM loads no tags; chopTree only chops #minecraft:logs.
+        Blocks.OAK_LOG.builtInRegistryHolder().bindTags(Set.of(BlockTags.LOGS));
     }
 
     // -------------------------------------------------------------------------
@@ -356,6 +359,24 @@ class WarpWorldAccessTest {
         assertEquals(1, drops.size());
         assertFalse(world.isAir(stone));
         assertFalse(world.dirtyBlocks.contains(stone));
+    }
+
+    /**
+     * 2026-10-20 suite runs: the warp arborist banked {@code deepslate=5} instead of oak logs.
+     * Deepslate (like basalt, hay bales, bone blocks) is a RotatedPillarBlock, which chopTree
+     * once used as a tag-free stand-in for #minecraft:logs.
+     */
+    @Test
+    void chopTree_returnsEmpty_forAPillarThatIsNotALog() {
+        BlockPos base = new BlockPos(0, 64, 0);
+        Map<BlockPos, BlockState> blocks = new HashMap<>();
+        blocks.put(base, Blocks.DEEPSLATE.defaultBlockState());
+        blocks.put(base.above(), Blocks.DEEPSLATE.defaultBlockState());
+
+        WarpWorldAccess world = new WarpWorldAccess(blocks, new HashMap<>(), i -> Optional.empty(), i -> 0);
+
+        assertTrue(world.chopTree(base).isEmpty());
+        assertFalse(world.isAir(base));
     }
 
     @Test

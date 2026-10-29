@@ -5,6 +5,7 @@ import ca.bradj.questown.blocks.BreadOvenBake;
 import ca.bradj.questown._vanilla.SnapshotWorldGenLevel;
 import ca.bradj.questown._vanilla.TreeFeatureResolver;
 import ca.bradj.questown.mc.Compat;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
@@ -270,10 +271,9 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
     @Override
     public List<ItemStack> chopTree(BlockPos trunkPos) {
         BlockState trunkState = resolveBlockState(trunkPos);
-        // Only chop log/wood columns. RotatedPillarBlock (logs, wood, stems) is a tag-free proxy for
-        // #minecraft:logs that also holds when datapack tags aren't loaded (unit tests). This keeps
-        // ChopDownTree's scan over all room positions from chopping chests, grass, or saplings.
-        if (trunkState == null || !(trunkState.getBlock() instanceof net.minecraft.world.level.block.RotatedPillarBlock)) {
+        // Only chop logs: ChopDownTree scans every room position. A RotatedPillarBlock stand-in
+        // also took deepslate, basalt and hay bales (2026-10-20: the warp arborist banked deepslate).
+        if (trunkState == null || !trunkState.is(BlockTags.LOGS)) {
             return List.of();
         }
         Block trunkBlock = trunkState.getBlock();
