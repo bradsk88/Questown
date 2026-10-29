@@ -94,3 +94,15 @@ wrapper over `VillagerHolder.assignJob` -> `SimpleVillagerHandle.assignJob`, the
 `unlockAndChange` a spent Block of Progress applies at dawn: the job and its root's default work
 are unlocked, and the root's starter requests are posted. Pinned by
 `SimpleVillagerHandleTest.assignJob_makesTheSameWorkerAsARootChange`.
+
+## `qt flag <pos> place_above`: the chicken bits survive the flag's onLoad (2026-10-29)
+
+A command-placed flag skips the helper-chicken arc (`chicken-ever-spawned` and
+`chicken-rotation-detected` true). `FlagCommand` set the bits right after `setBlockAndUpdate`,
+assuming the block entity's `onLoad` had already applied its InitPair defaults. On this branch the
+fresh flag's `onLoad` can run after the command, and its defaults cleared the bits:
+`chicken-arc/skip_chicken_command` failed every run (`chicken-ever-spawned: expected=true
+actual=false`; on the AGENTS.md deterministic known-failures list). The command now calls the
+owner, `TownFlagBlockEntity.markChickenArcIneligible()`, which applies the bits and queues them
+again on the flag's init queue, so they land after the defaults in either order. 3/3 after; full
+shard suite 98/99 (the known `flag/floating_furniture_over_half` flake).

@@ -2334,6 +2334,26 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         this.chickenEverSpawned = v;
     }
 
+    /**
+     * A command-placed flag skips the helper-chicken arc: only worldgen-placed flags satisfy its
+     * scaffolding. Applied now and again from the init queue, because a freshly placed flag can
+     * run onLoad (whose defaults clear these bits) after the command that placed it.
+     */
+    public void markChickenArcIneligible() {
+        applyChickenArcIneligible();
+        initializers.add(t -> {
+            t.applyChickenArcIneligible();
+            return true;
+        });
+    }
+
+    private void applyChickenArcIneligible() {
+        setChickenEverSpawned(true);
+        setChickenRotationDetected(true);
+        writeTownData(Compat.getBlockStoredTagData(this));
+        setChanged();
+    }
+
     /** Grants N Blocks of Progress to the flag's BOP store (onboarding rewards). */
     public void grantBlockOfProgress(int amount) {
         for (int i = 0; i < amount; i++) {

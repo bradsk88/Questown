@@ -1773,3 +1773,9 @@ path needs its own enum value and advancement file.
   player within 16 blocks of the flag, so a player who is away when the path finishes only gets it
   after a reload while nearby.
 - Test: `TownQuestsCuratedPathsTest.finishingThePath_firesItsAdvancementOnce_andNotBefore`.
+
+## `markChickenArcIneligible` re-applies from the init queue (2026-10-29, pointer)
+
+Writes made to a flag right after it is placed can be cleared by its `onLoad` defaults, which may
+run on the next tick. `markChickenArcIneligible` applies the command-placed flag's chicken bits now
+and queues them again on `initializers`; `commands/COMPLEX.md` "`qt flag <pos> place_above`".
