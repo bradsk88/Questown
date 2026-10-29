@@ -45,6 +45,34 @@ class JobDataRootsTest {
         Assertions.assertEquals(Map.of(), parentlessByRoot, "roots with more than one parentless job");
     }
 
+    /**
+     * Dev playtest 2026-10-28: "Crafter is showing the \"leaver\" icon when they work". The
+     * default working art is the leaver's gathering picture, so every crafter job names its own.
+     */
+    @Test
+    void everyCrafterJobDeclaresItsWorkingArt() throws IOException, URISyntaxException {
+        List<String> missing = new ArrayList<>();
+        for (JsonObject job : allJobs()) {
+            String id = job.get("id").getAsString();
+            if (id.startsWith("crafter/") && !hasWorkingTexture(job)) {
+                missing.add(id);
+            }
+        }
+        Assertions.assertEquals(List.of(), missing, "crafter jobs without a \"working\" status texture");
+    }
+
+    private static boolean hasWorkingTexture(JsonObject job) {
+        if (!job.has("status_texture_overrides")) {
+            return false;
+        }
+        for (JsonElement row : job.getAsJsonArray("status_texture_overrides")) {
+            if ("working".equals(row.getAsJsonObject().get("type").getAsString())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static List<JsonObject> allJobs() throws IOException, URISyntaxException {
         URL dir = JobDataRootsTest.class.getClassLoader().getResource("data/questown/questown_jobs");
         Assertions.assertNotNull(dir, "job data directory on the test classpath");

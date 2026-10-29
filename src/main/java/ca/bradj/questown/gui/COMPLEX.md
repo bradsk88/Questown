@@ -1257,12 +1257,14 @@ three PNGs are placeholders copied from `gathering.png`, `relaxing.png` and
 `returned_success.png`; replace the files, no code change needed. Pin:
 `StatusArtTest` (no checkerboard for those states, and each texture file ships).
 **A root's own working art (dev playtest 2026-10-28).** `working.png` is the leaver's gathering
-art, so a crafter at its table showed it ("makes no sense"). `ROOT_WORKING_ART` gives a root its
-own work-state picture ahead of the placeholder: crafter -> vanilla
-`minecraft:textures/block/crafting_table_top.png` (16x16; `StatusGraphic` blits 32x32 with the
-size declared 32x32, so the whole texture fills the box). A job JSON `"working"` override still
-wins (it is applied before `StatusArt`, in `ServerJobsRegistry.getTexture`). Pin:
-`StatusArtTest.crafterWorking_showsTheCraftingTableTop`.
+art, so a crafter at its table showed it ("makes no sense"). Every crafter-root job JSON (the
+`crafter_*` files and the `blacksmith_*` files, whose ids are `crafter/...`) declares
+`{"type": "working", "new_texture": "minecraft:textures/block/crafting_table_top.png"}` (16x16;
+`StatusGraphic` blits 32x32 with the size declared 32x32, so the whole texture fills the box);
+the display jobs name their own. `ServerJobsRegistry.getTexture` applies it before `StatusArt`, and
+like the cook's furnace art it also covers extraction. 2026-10-29: this was a Java
+`ROOT_WORKING_ART` map in `StatusArt`, moved to data so per-job art stays one mechanism. Pin:
+`JobDataRootsTest.everyCrafterJobDeclaresItsWorkingArt`.
 
 ## Change-job panel: the next action and the real timing (2026-10-23, r9 #2)
 

@@ -32,5 +32,8 @@
     "id": "minecraft:item.axe.scrape",
     "chance": "100",
     "duration": 5
-  }
+  },
+  "status_texture_overrides": [
+    {"type": "working", "new_texture": "minecraft:textures/block/crafting_table_top.png"}
+  ]
 }
