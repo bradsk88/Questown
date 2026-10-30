@@ -222,3 +222,12 @@ count only at the furniture layer and one above (the room scan's layers), so a f
 on a wall does not. The Outfitter's `showcase` batch (after Armor and Weapons II) asks for the
 Grand Armory, `crafter/display_armor`, the Grand Smithy and `crafter/display_weapons`: the
 crescendo is a crafter who fills both rooms. Pin: `WorkTableRecipesTest.smithyTiers_eachContainTheTierBefore`.
+
+## Armorer's table is a lighter blue than the blacksmith's grey (dev playtest 2026-10-29)
+
+"Armorers table and blacksmiths table look too similar. Armorers blue should be lighter." The two
+tables share the wood front; the armorer's top/band was navy (9,14,56 base) against the
+blacksmith's near-black grey (21,21,21). In `armorers_table_{front,side,top}.png` every blue pixel
+with blue < 170 was lightened (`c * 1.6 + 25` per channel: base -> 39,47,114, band -> 69,95,218);
+brighter blues (the front's tool art) are unchanged so they do not wash out. Preview (blacksmith /
+old / new): `.scratch/dev-playtest-2026-10-29-fresh/armorer-vs-blacksmith-preview.png`.
