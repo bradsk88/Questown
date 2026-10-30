@@ -819,6 +819,12 @@ public class DeclarativeJob extends
     }
 
     @Override
+    public @Nullable BlockPos getWorkSpotBlock() {
+        WorkPosition<BlockPos> spot = ticker.workSpot();
+        return spot == null ? null : spot.jobBlock();
+    }
+
+    @Override
     protected @NotNull WithReason<@Nullable BlockPos> findJobSite(
             TownInterface town,
             RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> blocksSrc,

@@ -1,5 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -37,5 +39,18 @@ class TripVisibilityTest {
         TripVisibility tv = new TripVisibility();
         Assertions.assertTrue(tv.next(true, true));
         Assertions.assertFalse(tv.next(true, false));
+    }
+
+    @Test
+    void leaving_sparklesAboveTheWorkSpot() {
+        Vec3 at = TripVisibility.sparkleAt(false, new Vec3(81.5, 64, -5.5), new BlockPos(80, 64, -6));
+        Assertions.assertEquals(new Vec3(80.5, 65, -5.5), at);
+    }
+
+    @Test
+    void returning_orNoWorkSpot_sparklesAtTheVillager() {
+        Vec3 villager = new Vec3(81.5, 64, -5.5);
+        Assertions.assertEquals(villager, TripVisibility.sparkleAt(true, villager, new BlockPos(80, 64, -6)));
+        Assertions.assertEquals(villager, TripVisibility.sparkleAt(false, villager, null));
     }
 }

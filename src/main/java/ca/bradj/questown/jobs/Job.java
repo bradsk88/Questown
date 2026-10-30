@@ -98,6 +98,11 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     BlockPos getLook();
 
+    /** The job block the villager is working at now, or null (jobs without work spots). */
+    default @Nullable BlockPos getWorkSpotBlock() {
+        return null;
+    }
+
     boolean isWorking();
 
     Collection<String> getGlobalSpecialRules();

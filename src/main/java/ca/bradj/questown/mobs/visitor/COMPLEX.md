@@ -258,6 +258,11 @@ hiding is immediate, showing waits for two allowed ticks in a row, so the one-ti
 longer shows the villager and a return is one tick later. After: each hunter stays hidden for
 its whole trip and reappears at DROPPING_LOOT on return. `TripVisibilityTest`.
 
+Leaving sparkles go above the work spot the villager leaves from (`Job.getWorkSpotBlock`, the
+declarative job's current work spot; `TripVisibility.sparkleAt`), not at the villager (dev playtest
+2026-10-29: "the sparkles should appear above their work spot"). A return, or a job with no work
+spot, still sparkles at the villager. The `[visibility]` line names the sparkle position.
+
 ## Stranded outside the town: poof back to the gate (r20, dev 2026-10-25)
 
 A villager that fell off a cliff into water floated 8 blocks below the town for minutes. Dev call:

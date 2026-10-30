@@ -655,9 +655,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             // Sparkles where the villager leaves town (or comes back), instead of silently popping
             // out of the world (r17 #4, dev 2026-10-25: "some kind of poof or sparkle"). Not POOF:
             // it "looks like a death animation" (r22, dev 2026-10-26).
-            sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, getX(), getY() + 0.8, getZ(), 12, 0.4, 0.6, 0.4, 0.0);
-            QT.VILLAGER_LOGGER.debug("[visibility] {} {} at status {} ({})", UtilClean.truncateMiddle(uuid),
-                    vis ? "shown" : "hidden", j.getStatus(), j.getId());
+            Vec3 sparkle = TripVisibility.sparkleAt(vis, position(), j.getWorkSpotBlock());
+            sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, sparkle.x, sparkle.y + 0.8, sparkle.z, 12, 0.4, 0.6, 0.4, 0.0);
+            QT.VILLAGER_LOGGER.debug("[visibility] {} {} at status {} ({}), sparkles at {}", UtilClean.truncateMiddle(uuid),
+                    vis ? "shown" : "hidden", j.getStatus(), j.getId(), sparkle);
         }
         this.entityData.set(visible, vis);
         if (j.isInitialized()) {
