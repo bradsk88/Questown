@@ -35,12 +35,13 @@ public class VillagerTabs extends Tabs implements SubUI {
             boolean showBopTab,
             boolean bopTabAttention,
             boolean showSkillsTab,
+            boolean showInventoryTab,
             boolean changeRootAttention
     ) {
-        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, changeRootScreenFn, econScreenFn, bopScreenFn, showBopTab, bopTabAttention, showSkillsTab, changeRootAttention));
+        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, changeRootScreenFn, econScreenFn, bopScreenFn, showBopTab, bopTabAttention, showSkillsTab, showInventoryTab, changeRootAttention));
     }
 
-    private static @NotNull ImmutableList<Tab> build(
+    static @NotNull ImmutableList<Tab> build(
             @Nullable Runnable invScreenFn,
             @Nullable Runnable qScreenFn,
             @Nullable Runnable sScreenFn,
@@ -51,16 +52,21 @@ public class VillagerTabs extends Tabs implements SubUI {
             boolean showBopTab,
             boolean bopTabAttention,
             boolean showSkillsTab,
+            boolean showInventoryTab,
             boolean changeRootAttention
     ) {
         ImmutableList.Builder<Tab> b = ImmutableList.builder();
-        b.add(new Tab(
-                (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.CHEST.getDefaultInstance(), x + 10, y + 7),
-                setScreen(invScreenFn),
-                "tooltips.inventory",
-                invScreenFn == null,
-                false
-        ));
+        // The flag's click-through hides the inventory; a tab with no open fn would render lit
+        // beside the current pane (dev playtest 2026-10-29), so leave it out like the skills tab.
+        if (showInventoryTab) {
+            b.add(new Tab(
+                    (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.CHEST.getDefaultInstance(), x + 10, y + 7),
+                    setScreen(invScreenFn),
+                    "tooltips.inventory",
+                    invScreenFn == null,
+                    false
+            ));
+        }
         b.add(new Tab(
                 (rc, x, y) -> {
                     int txBefore = RenderSystem.getShaderTexture(0);
@@ -173,6 +179,7 @@ public class VillagerTabs extends Tabs implements SubUI {
                 bop.shown(),
                 bop.attention(),
                 menu.showSkillsTab(),
+                menu.showInventoryTab(),
                 CHANGE_ROOT_ATTENTION.getOrDefault(menu.getVillagerUUID(), false)
         );
     }

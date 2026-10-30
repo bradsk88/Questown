@@ -458,6 +458,12 @@ there. (2) Pre-existing since the 1.20.1 migration (also in the golden): the cha
 borrowed `skillScreenFn == null` for its selected flag, so any null skills fn lit change_root
 too - now `changeRootScreenFn == null`, lit only when the change-root pane is open.
 
+**2026-10-29 (dev playtest: "the inventory tab is shown co-highlighted with the stats tab when
+opening villager Ui from flag"):** the same lit-dead defect for the inventory tab. A
+management-only session drops INVENTORY from `getEnabledTabs()`, so `forMenu` passed a null
+inventory fn, and `build()` still added the tab, lit. `build()` now takes `showInventoryTab`
+and omits the tab when false, like the skills tab. Pinned in `VillagerTabsRowTest`.
+
 ## MultiStatusScreen: full-card click opens the villager UI in management-only mode (2026-10-14)
 
 The flag's villagers-tab card had no card-body click handler - only the 32x32 status icon
