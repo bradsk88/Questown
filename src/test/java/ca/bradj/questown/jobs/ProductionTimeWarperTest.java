@@ -232,6 +232,30 @@ class ProductionTimeWarperTest {
         ), after);
     }
     @Test
+    void dropIntoContainers_ShouldLeaveABlockOfProgressWithTheVillager() {
+        // Dev 2026-10-30: "BOPs should ALWAYS be deposited on the flag."
+        ImmutableList<TestItem> items = ImmutableList.of(
+                new TestItem("block_of_progress"),
+                new TestItem("gold")
+        );
+        TestContainer<TestItem> chest = new TestContainer<>(2, () -> new TestItem(""));
+        @NotNull ImmutableList<ContainerTarget<TestContainer<TestItem>, TestItem>> containers = ImmutableList.of(
+                new ContainerTarget<>(
+                        new Position(1, 2), 3,
+                        new Position(2, 2),
+                        chest,
+                        () -> true,
+                        item -> {},
+                        i -> true,
+                        RankBoost.SAME_AS_VANILLA_CHEST.value()
+                )
+        );
+        dropIntoContainers(items, containers);
+        Assertions.assertEquals(new TestItem("gold"), chest.getItem(0));
+        Assertions.assertEquals(new TestItem(""), chest.getItem(1));
+    }
+
+    @Test
     void dropIntoContainers_ShouldReturnNoItems_IfAllCanFitInContainers() {
         ImmutableList<TestItem> items = ImmutableList.of(
                 new TestItem("bread"),

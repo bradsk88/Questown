@@ -185,6 +185,13 @@ flowchart TD
   stack alone), pinned by `TownFlagBOPDepositTest`. Worlds that already hold
   empty entries drop them on the next load (`serializeBOP` skips empties).
 
+
+A carried BOP is sent to the depositor even with no latch (dev 2026-10-30, "BOPs should ALWAYS be
+deposited on the flag"): one fetched from storage, or a second one. The board's BOP branch fires on
+`hasBlockOfProgress || carriesBlockOfProgress(villager)`, and hands out a new BOP only to a latched
+villager that carries none. Loot drops keep the BOP (`jobs/COMPLEX.md` "A Block of Progress never
+goes into a chest"); `flag/bop_carried_with_loot` pins both halves.
+
 ## Deposit — the 64-slot cap
 
 ```mermaid

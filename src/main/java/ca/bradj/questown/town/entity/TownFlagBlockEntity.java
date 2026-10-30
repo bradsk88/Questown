@@ -1294,20 +1294,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
         }
 
-        if (villagerHandle.hasBlockOfProgress(ownerVUID)) {
+        boolean carrying = carriesBlockOfProgress(villager);
+        // A carried BOP is deposited even without a latch (one fetched from storage, or a second
+        // one): loot drops keep it (HeldItem.staysWithVillager), so only the flag takes it.
+        if (villagerHandle.hasBlockOfProgress(ownerVUID) || carrying) {
             // The latch outlives the first hand-out until the deposit clears it
             // (ClearBOPSpecialRule), so a stalled deposit loop re-enters this
             // branch on every flag visit. One townie carries at most one BOP
             // (town/entity/COMPLEX.md "Earn → latch → assign"): hand out only
             // when the townie is not already carrying one.
-            boolean carrying = false;
-            Container inv = villager.getInventory();
-            for (int i = 0; i < inv.getContainerSize(); i++) {
-                if (inv.getItem(i).is(ItemsInit.BLOCK_OF_PROGRESS.get())) {
-                    carrying = true;
-                    break;
-                }
-            }
             if (!carrying) {
                 // Bless the BOP with the job that earned it: a "gold" BOP guarantees that root job
                 // when spent on a job change (see BlockOfProgress.bless / getBlessedJob).
@@ -1413,6 +1408,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
                 "[board] {} {} stays: no branch applied", ownerVUID, currentJob
         );
+        return false;
+    }
+
+    private static boolean carriesBlockOfProgress(VisitorMobEntity villager) {
+        Container inv = villager.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            if (inv.getItem(i).is(ItemsInit.BLOCK_OF_PROGRESS.get())) {
+                return true;
+            }
+        }
         return false;
     }
 

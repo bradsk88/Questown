@@ -34,6 +34,7 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.mobs.visitor.TownieNeed;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.core.VillagerUUID;
@@ -311,6 +312,7 @@ public class TestBlueprintRegistry {
         // work", and never deposited. A gate, by night and (control) by day.
         jobs.add(flagEntry("bop_deposit_at_night", bopDepositBlueprint(13000L)));
         jobs.add(flagEntry("bop_deposit_by_day", bopDepositBlueprint(2000L)));
+        jobs.add(flagEntry("bop_carried_with_loot", bopCarriedWithLootBlueprint()));
 
         // Perf measurements (always pass; they report timings). Baseline first so the pair can be
         // compared within a single run.
@@ -3972,6 +3974,35 @@ public class TestBlueprintRegistry {
                     output.msg("[bop-deposit] level-up at " + levelUpAt + ": bopCount=" + count
                             + ", daytime now " + level.getDayTime() % 24000);
                     return count >= 1 && !anyHeld;
+                });
+    }
+
+    /**
+     * Dev 2026-10-30: "BOPs should ALWAYS be deposited on the flag." A villager carrying a Block of
+     * Progress it did not earn (no latch: one taken from storage, or a second one) plus some loot
+     * stored the BOP with the loot (r23 #7). It must store the loot and take the BOP to the flag.
+     */
+    private static TestBlueprint bopCarriedWithLootBlueprint() {
+        return bopStallBase(3000)
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    for (var e : town.getVillagerHandle().entities()) {
+                        VisitorMobEntity vme = (VisitorMobEntity) e;
+                        vme.tryGiveItem(MCHeldItem.fromTown(ItemsInit.BLOCK_OF_PROGRESS.get()), InventoryFullStrategy.REMOVE_FROM_WORLD);
+                        vme.tryGiveItem(MCHeldItem.fromTown(Items.COBBLESTONE), InventoryFullStrategy.REMOVE_FROM_WORLD);
+                        output.msg("[bop-carried] gave a BOP and cobblestone to " + vme.getUUID());
+                    }
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    int stored = 0;
+                    for (var target : ca.bradj.questown.town.TownContainers.getAllContainers(town, level)) {
+                        stored += (int) target.getItems().stream()
+                                .filter(i -> i.get().equals(ItemsInit.BLOCK_OF_PROGRESS.get()))
+                                .count();
+                    }
+                    int count = town.getBlocksOfProgress();
+                    output.msg("[bop-carried] bopCount=" + count + " BOPs in town chests=" + stored);
+                    return count >= 1 && stored == 0;
                 });
     }
 

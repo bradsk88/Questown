@@ -1039,3 +1039,11 @@ failed 4/4 (first relaxing with the BOP, then, past the work-seeker fix, at stat
 downtime record of 6 or 8); `jobs/COMPLEX.md` "Foreign work-state records" and
 `town/entity/COMPLEX.md` "At any hour".
 
+
+## BOP carried with loot (2026-10-30)
+
+`flag/bop_carried_with_loot` (`bopCarriedWithLootBlueprint`): one villager, realtime 3000 ticks,
+handed an unlatched Block of Progress and a cobblestone after spawn. PASS = the flag holds a BOP and
+no town chest does. Before the fix: flag 0, chest 1 (the farmer's loot drop stored it). Run alone
+as the only scenario of a server it once failed "Town flag failed to initialize (timeout after 200
+ticks)" at the first tick; inside `--shard 2 'flag/bop_'` it ran normally (not chased).

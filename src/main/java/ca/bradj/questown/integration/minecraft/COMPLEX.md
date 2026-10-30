@@ -55,3 +55,9 @@ open (`ChestBlockEntity.getOpenCount > 0`) is left alone. Timing pinned in `Ches
 the lid was seen in game 2026-10-30: open while a hunter took from the store chest
 (`.scratch/dev-playtest-2026-10-29-fresh/overnight-shots/chest-lid-open.png`, caught at tick rate 10
 in a 0.6 s screenshot burst, diffing the chest's top face). The sound was not checked (no audio here).
+
+## A Block of Progress is not loot (2026-10-30)
+
+`MCTownItem.isBlockOfProgress` (`instanceof BlockOfProgressItem`, no registry lookup, so unit
+JVMs stay safe) and `MCHeldItem`'s delegate feed `HeldItem.staysWithVillager`, which keeps a BOP
+out of every loot drop: `jobs/COMPLEX.md` "A Block of Progress never goes into a chest".

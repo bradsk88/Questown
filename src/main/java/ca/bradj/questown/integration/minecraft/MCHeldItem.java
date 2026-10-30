@@ -93,6 +93,11 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     }
 
     @Override
+    public boolean isBlockOfProgress() {
+        return delegate.isBlockOfProgress();
+    }
+
+    @Override
     public MCHeldItem shrink() {
         return new MCHeldItem(delegate.shrink(), locked, prefix, biome);
     }

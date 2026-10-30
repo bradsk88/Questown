@@ -1174,3 +1174,17 @@ doorway floor. `WalkTargets.surfaceFeet` now leaves a door cell alone (the same 
 `VillagerPathNavigation`'s door stop); other solid cells still lift one block.
 `WalkTargetsSurfaceFeetTest`. See also `mobs/visitor/COMPLEX.md` "A door target is lifted to the
 roof".
+
+## A Block of Progress never goes into a chest (dev 2026-10-30)
+
+Dev, on r23 #7 (a depositor carried a stored BOP to the flag and kept its own): "Storage is fine.
+The fact that blocks are ending up IN STORAGE is the real suspicious thing. BOPs should ALWAYS be
+deposited on the flag." The path: `HeldWorkOutput.itemsToDrop` treats a BOP as output for every
+job but the depositor, and with no output in hand falls back to every item, so the loot drop
+stored it. `Item.isBlockOfProgress` (`MCTownItem`: `instanceof BlockOfProgressItem`) and
+`HeldItem.staysWithVillager` (locked or a BOP) now gate every villager-to-chest path that skipped
+locked items: `Jobs.tryDropLoot`, `ProductionJournal.hasAnyLootToDrop`,
+`DefaultInventoryStateProvider.hasAnyDroppableLoot`, `ProductionTimeWarper.dropIntoContainers` and
+the warp's drop simulation. The flag side is `town/entity/COMPLEX.md` "Earn → latch → assign".
+Pinned by `ProductionTimeWarperTest.dropIntoContainers_ShouldLeaveABlockOfProgressWithTheVillager`
+and the `flag/bop_carried_with_loot` autotest (red before: flag 0, chest 1).

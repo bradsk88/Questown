@@ -382,8 +382,8 @@ public class Jobs {
                 continue;
             }
             // TODO: Unit tests of this logic!
-            if (mct.isLocked()) {
-                dropper.log("Villager is not putting away {} because it is locked", mct.toShortString());
+            if (mct.staysWithVillager()) {
+                dropper.log("Villager is not putting away {} because it is locked or goes to the flag", mct.toShortString());
                 continue;
             }
 
