@@ -27,13 +27,13 @@ class VillagerTabsRowTest {
     private static List<String> titles(boolean showInventoryTab) {
         // The stats pane is open (its fn is null); every other tab can be opened.
         Runnable inv = showInventoryTab ? OPEN : null;
-        return VillagerTabs.build(inv, OPEN, null, OPEN, OPEN, OPEN, OPEN, true, false, true, showInventoryTab, false)
+        return VillagerTabs.build(inv, OPEN, null, OPEN, OPEN, OPEN, OPEN, true, false, true, showInventoryTab, true, false)
                 .stream().map(Tab::titleKey).toList();
     }
 
     private static List<String> litTitles(boolean showInventoryTab) {
         Runnable inv = showInventoryTab ? OPEN : null;
-        return VillagerTabs.build(inv, OPEN, null, OPEN, OPEN, OPEN, OPEN, true, false, true, showInventoryTab, false)
+        return VillagerTabs.build(inv, OPEN, null, OPEN, OPEN, OPEN, OPEN, true, false, true, showInventoryTab, true, false)
                 .stream().filter(Tab::selected).map(Tab::titleKey).toList();
     }
 
@@ -51,5 +51,14 @@ class VillagerTabsRowTest {
     void fullMenu_keepsTheInventoryTab() {
         assertEquals(true, titles(true).contains("tooltips.inventory"));
         assertEquals(List.of("tooltips.stats"), litTitles(true));
+    }
+
+    /** Dev playtest 2026-10-29: onboarding hides the change-job tab from non-gatherers. */
+    @Test
+    void hiddenChangeRoot_omitsTheChangeJobTab() {
+        List<String> titles = VillagerTabs.build(OPEN, OPEN, null, OPEN, OPEN, OPEN, OPEN, true, false, true, true, false, false)
+                .stream().map(Tab::titleKey).toList();
+        assertEquals(false, titles.contains("tooltips.change_root"));
+        assertEquals(true, titles(true).contains("tooltips.change_root"));
     }
 }

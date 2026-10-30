@@ -1838,6 +1838,18 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         );
     }
 
+    /**
+     * The change-job tab is hidden from non-gatherers until the onboarding trunk reaches the fork
+     * (dev playtest 2026-10-29): the trunk's job changes all start from a gatherer. Curated path
+     * quests are onboarding-flagged too, so "onboarding" here ends at {@link #atTheFork}.
+     */
+    public boolean hidesJobChangeFrom(JobID villagerJob) {
+        if (GATHERER_ROOT.equals(villagerJob.rootId())) {
+            return false;
+        }
+        return getAll().stream().anyMatch(Quest::isOnboarding) && !atTheFork();
+    }
+
     private static final String GATHERER_ROOT = "gatherer";
 
     /** The campfire quest is posted and not yet complete: the flag keeps looking for a lit campfire. */

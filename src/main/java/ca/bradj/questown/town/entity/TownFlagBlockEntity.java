@@ -926,6 +926,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return quests.wantsJobChangeFrom(villagerJob);
     }
 
+    public boolean hidesJobChangeFrom(JobID villagerJob) {
+        return quests.hidesJobChangeFrom(villagerJob);
+    }
+
     /** A townie died: remove it from the saved roster so {@link #townVillagerCount} drops. */
     public void retireVillager(UUID villager) {
         villagerHandle.retireDisplayNumber(villager);

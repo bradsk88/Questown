@@ -36,9 +36,10 @@ public class VillagerTabs extends Tabs implements SubUI {
             boolean bopTabAttention,
             boolean showSkillsTab,
             boolean showInventoryTab,
+            boolean showChangeRootTab,
             boolean changeRootAttention
     ) {
-        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, changeRootScreenFn, econScreenFn, bopScreenFn, showBopTab, bopTabAttention, showSkillsTab, showInventoryTab, changeRootAttention));
+        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, changeRootScreenFn, econScreenFn, bopScreenFn, showBopTab, bopTabAttention, showSkillsTab, showInventoryTab, showChangeRootTab, changeRootAttention));
     }
 
     static @NotNull ImmutableList<Tab> build(
@@ -53,6 +54,7 @@ public class VillagerTabs extends Tabs implements SubUI {
             boolean bopTabAttention,
             boolean showSkillsTab,
             boolean showInventoryTab,
+            boolean showChangeRootTab,
             boolean changeRootAttention
     ) {
         ImmutableList.Builder<Tab> b = ImmutableList.builder();
@@ -101,15 +103,18 @@ public class VillagerTabs extends Tabs implements SubUI {
                     }, setScreen(skillScreenFn), "tooltips.skills", skillScreenFn == null, false
             ));
         }
-        b.add(new Tab(
-                (rc, x, y) -> {
-                    int txBefore = RenderSystem.getShaderTexture(0);
-                    RenderSystem.setShaderColor(0.25f, 0.25f, 0.25f, 1f);
-                    Util.blitTab(rc.gui(), x, y, 1);
-                    RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-                    RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(changeRootScreenFn), "tooltips.change_root", changeRootScreenFn == null, changeRootAttention
-        ));
+        // Onboarding hides the change-job tab from non-gatherers (dev playtest 2026-10-29).
+        if (showChangeRootTab) {
+            b.add(new Tab(
+                    (rc, x, y) -> {
+                        int txBefore = RenderSystem.getShaderTexture(0);
+                        RenderSystem.setShaderColor(0.25f, 0.25f, 0.25f, 1f);
+                        Util.blitTab(rc.gui(), x, y, 1);
+                        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+                        RenderSystem.setShaderTexture(0, txBefore);
+                    }, setScreen(changeRootScreenFn), "tooltips.change_root", changeRootScreenFn == null, changeRootAttention
+            ));
+        }
         // No Quests tab on villagers (r17 #20, dev: "not useful"); the flag's Quests tab stays.
         if (showBopTab) {
             b.add(new Tab(
@@ -180,6 +185,7 @@ public class VillagerTabs extends Tabs implements SubUI {
                 bop.attention(),
                 menu.showSkillsTab(),
                 menu.showInventoryTab(),
+                SHOW_CHANGE_ROOT_TAB.getOrDefault(menu.getVillagerUUID(), true),
                 CHANGE_ROOT_ATTENTION.getOrDefault(menu.getVillagerUUID(), false)
         );
     }
@@ -194,6 +200,13 @@ public class VillagerTabs extends Tabs implements SubUI {
 
     static void recordChangeRootAttention(UUID villager, boolean attention) {
         CHANGE_ROOT_ATTENTION.put(villager, attention);
+    }
+
+    /** Client-side, like {@link #CHANGE_ROOT_ATTENTION}: false while onboarding hides the tab. */
+    private static final Map<UUID, Boolean> SHOW_CHANGE_ROOT_TAB = new HashMap<>();
+
+    static void recordShowChangeRootTab(UUID villager, boolean show) {
+        SHOW_CHANGE_ROOT_TAB.put(villager, show);
     }
 
     /** The tab list minus the skills tab (the level gate: no unlockable jobs, no tab). */

@@ -43,6 +43,7 @@ public class VillagerMenus {
     ) {
         VillagerMenusPayload p = VillagerMenusPayload.read(buf);
         VillagerTabs.recordChangeRootAttention(p.villager, p.changeRootAttention);
+        VillagerTabs.recordShowChangeRootTab(p.villager, p.showChangeRootTab);
         VillagerMenus menus = new VillagerMenus();
         menus.initQuestsMenu(windowId, p.villager, p.quests, p.flagPos, p.showBlockOfProgressTab, p.showSkillsTab, p.showInventoryTab);
         VillagerStatsMenu statsMenu =
@@ -104,7 +105,8 @@ public class VillagerMenus {
             boolean jobChangeAlreadyPending,
             String villagerDisplayName,
             boolean changeRootAttention,
-            String promisedRoot
+            String promisedRoot,
+            boolean showChangeRootTab
     ) {
         new VillagerMenusPayload(
                 e.getId(),
@@ -122,7 +124,8 @@ public class VillagerMenus {
                 e.getSlotLocks(),
                 villagerDisplayName == null ? "" : villagerDisplayName,
                 changeRootAttention,
-                promisedRoot
+                promisedRoot,
+                showChangeRootTab
         ).write(data);
     }
 

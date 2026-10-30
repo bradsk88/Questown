@@ -464,6 +464,15 @@ management-only session drops INVENTORY from `getEnabledTabs()`, so `forMenu` pa
 inventory fn, and `build()` still added the tab, lit. `build()` now takes `showInventoryTab`
 and omits the tab when false, like the skills tab. Pinned in `VillagerTabsRowTest`.
 
+**Change-job tab during onboarding (2026-10-29, dev playtest: "During onboarding, the change-job
+screen should be hidden for all non-gatherer villagers"):** the server computes
+`TownQuests.hidesJobChangeFrom(job)` (not a gatherer, an onboarding quest exists, the trunk has not
+reached `atTheFork`) and sends `VillagerMenusPayload.showChangeRootTab`; the client records it per
+villager (`VillagerTabs.recordShowChangeRootTab`, the same channel as the red dot) and `build()`
+omits the tab. Onboarding ends at the fork because curated path quests are onboarding-flagged too.
+Server-side the CHANGE_ROOT route is not blocked. Pinned in `TownQuestsJobChangeAttentionTest`,
+`VillagerTabsRowTest`, `VillagerMenusPayloadTest`.
+
 ## MultiStatusScreen: full-card click opens the villager UI in management-only mode (2026-10-14)
 
 The flag's villagers-tab card had no card-body click handler - only the 32x32 status icon

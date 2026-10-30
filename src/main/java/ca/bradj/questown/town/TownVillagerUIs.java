@@ -529,6 +529,14 @@ public class TownVillagerUIs {
         return flag != null && flag.wantsJobChangeFrom(e.getJobId());
     }
 
+    private static boolean hidesJobChange(ServerPlayer sender, VisitorMobEntity e) {
+        if (e.getFlagPos() == null) {
+            return false;
+        }
+        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level(), e.getFlagPos());
+        return flag != null && flag.hidesJobChangeFrom(e.getJobId());
+    }
+
     private static String promisedRoot(ServerPlayer sender, VisitorMobEntity e) {
         if (e.getFlagPos() == null) {
             return "";
@@ -580,7 +588,8 @@ public class TownVillagerUIs {
                         isJobChangePending,
                         villagerDisplayName,
                         wantsJobChange(sender, e),
-                        promisedRoot(sender, e)
+                        promisedRoot(sender, e),
+                        !hidesJobChange(sender, e)
                 )
         );
         if (e.getFlagPos() != null) {

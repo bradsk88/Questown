@@ -50,6 +50,38 @@ class TownQuestsJobChangeAttentionTest {
         assertFalse(townWith(MCQuest.jobChange(UUID.randomUUID(), null, HUNTER)).wantsJobChangeFrom(HUNTER));
     }
 
+    /** Dev playtest 2026-10-29: "During onboarding, the change-job screen should be hidden for all non-gatherer villagers". */
+    @Test
+    void onboardingBeforeTheFork_hidesJobChangeFromNonGatherers() {
+        TownQuests quests = onboardingTown(false);
+        assertTrue(quests.hidesJobChangeFrom(HUNTER));
+        assertFalse(quests.hidesJobChangeFrom(GATHERER));
+    }
+
+    @Test
+    void atTheFork_showsJobChangeToEveryone() {
+        assertFalse(onboardingTown(true).hidesJobChangeFrom(HUNTER));
+    }
+
+    @Test
+    void noOnboarding_showsJobChangeToEveryone() {
+        assertFalse(townWith(MCQuest.jobChange(UUID.randomUUID(), null, HUNTER)).hidesJobChangeFrom(HUNTER));
+    }
+
+    private static TownQuests onboardingTown(boolean minerDone) {
+        TownQuests quests = new TownQuests();
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs inputs = new MCQuestBatch.Inputs(batchUUID, null);
+        MCQuest miner = MCQuest.jobChange(batchUUID, null, TownQuests.ONBOARDING_MINER_JOB);
+        if (minerDone) {
+            miner = miner.completed(null);
+        }
+        miner.setOnboarding(true);
+        inputs.addNewQuest(miner);
+        quests.addBatch(inputs.withRewardUponCompletion(new NoOpReward()));
+        return quests;
+    }
+
     private static TownQuests townWith(MCQuest q) {
         TownQuests quests = new TownQuests();
         MCQuestBatch.Inputs inputs = new MCQuestBatch.Inputs(UUID.randomUUID(), null);

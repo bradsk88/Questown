@@ -41,7 +41,8 @@ class VillagerMenusPayloadTest {
                 List.of(true, false, true, false, false, false, false, false),
                 "Villager 2",
                 true,
-                "hunter"
+                "hunter",
+                false
         );
     }
 
@@ -67,6 +68,7 @@ class VillagerMenusPayloadTest {
         assertEquals(2, r.stats.level());
         assertEquals(List.of("questown:sleepless"), r.stats.moodEffects());
         assertEquals("hunter", r.promisedRoot);
+        assertEquals(false, r.showChangeRootTab);
         assertEquals(p.showBlockOfProgressTab, r.showBlockOfProgressTab);
         assertEquals(p.showSkillsTab, r.showSkillsTab);
         assertEquals(false, r.showInventoryTab);
