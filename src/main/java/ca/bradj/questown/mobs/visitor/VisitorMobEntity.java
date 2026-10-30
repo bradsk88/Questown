@@ -63,7 +63,6 @@ import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.behavior.*;
-import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
@@ -118,6 +117,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_.is(PoiTypes.HOME)
     );
     private final TripVisibility tripVisibility = new TripVisibility();
+    // Built in registerGoals: Mob's constructor calls it before this class's field initializers run.
+    private @Nullable LingeringDoorGoal doorGoal;
     private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
     );
@@ -649,6 +650,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             town.getVillagerHandle().validateEntity(this);
         }
 
+        if (doorGoal != null) {
+            doorGoal.tickLingeringDoor();
+        }
         boolean vis = tripVisibility.next(this.entityData.get(visible), !j.shouldDisappear(town, position()));
         if (!vis) {
             if (job.get().getId().rootId().equals("gatherer")) {
@@ -1103,7 +1107,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @Override
     protected void registerGoals() {
         super.registerGoals();
-        this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
+        this.doorGoal = new LingeringDoorGoal(this);
+        this.goalSelector.addGoal(2, doorGoal);
         this.goalSelector.addGoal(2, new OpenGateGoal(this, true));
     }
 

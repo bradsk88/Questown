@@ -200,3 +200,8 @@ be sword_full_day (`JobCycler`'s longest-trip pick).
 `cook/mutton [no_kitchen]` (2026-10-29 overnight): a town with only a store room and a cook (cook
 defaults + mutton unlocked, started at the board). A listener records the first tick a villager has
 `getMissingRoom()`; it must be a kitchen (seen: questown:kitchen_small).
+
+
+`cook/mutton [door_flaps]` (2026-10-29 overnight): the doorway kitchen; a server-tick listener counts
+the kitchen door's closes and those with a villager within 1.5 blocks (a flap). Passes on 0 flaps
+(vanilla OpenDoorGoal: 8 of 8 closes were flaps).

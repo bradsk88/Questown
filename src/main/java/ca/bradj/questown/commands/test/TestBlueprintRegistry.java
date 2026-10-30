@@ -182,6 +182,7 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("cook", "mutton", "doorway_kitchen", cookDoorwayKitchenBlueprint(false, false)));
         jobs.add(edgeCaseEntry("cook", "mutton", "rest_then_eat", cookDoorwayKitchenBlueprint(true, false)));
         jobs.add(edgeCaseEntry("cook", "mutton", "raw_food_only", cookDoorwayKitchenBlueprint(true, true)));
+        jobs.add(edgeCaseEntry("cook", "mutton", "door_flaps", cookDoorFlapsBlueprint()));
         jobs.add(edgeCaseEntry("cook", "fuel", "storage_full", cookStorageFullBlueprint()));
         jobs.add(entry(new JobID("baker", "bread"), bakerBlueprint()));
         jobs.add(entry(new JobID("crafter", "stick"), crafterBlueprint()));
@@ -4054,6 +4055,51 @@ public class TestBlueprintRegistry {
             net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new StarveAt(restFirst ? 1600 : 1900, restFirst, level, town, output));
             return true;
         });
+    }
+
+    /**
+     * Dev playtest 2026-10-29: "Can we debounce how many times a navigating villager interacts with a
+     * door?" - walking through and standing in the doorway both flapped it, "common in 3x3 rooms".
+     * The doorway kitchen's cook works from the door cell. A flap is the door closing while a
+     * villager is still in or beside it (within 1.5 blocks): it then bumps it open again.
+     */
+    private static TestBlueprint cookDoorFlapsBlueprint() {
+        BlockPos doorOffset = new BlockPos(5, 0, 0);
+        int[] closesOnVillager = {0};
+        int[] closes = {0};
+        Boolean[] last = {null};
+        TestBlueprint base = cookDoorwayKitchenBlueprint(false, false);
+        return base
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    if (base.postSpawnAction() != null && !base.postSpawnAction().run(level, flagPos, town, output)) {
+                        return false;
+                    }
+                    BlockPos door = flagPos.offset(doorOffset);
+                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new Object() {
+                        @net.neoforged.bus.api.SubscribeEvent
+                        public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+                            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(door);
+                            if (!(st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) {
+                                return;
+                            }
+                            boolean open = st.getValue(net.minecraft.world.level.block.DoorBlock.OPEN);
+                            if (Boolean.TRUE.equals(last[0]) && !open) {
+                                closes[0]++;
+                                boolean near = town.getVillagerHandle().entities().stream().anyMatch(
+                                        e -> e.distanceToSqr(door.getX() + 0.5, e.getY(), door.getZ() + 0.5) <= 1.5 * 1.5);
+                                if (near) {
+                                    closesOnVillager[0]++;
+                                }
+                            }
+                            last[0] = open;
+                        }
+                    });
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg("[door_flaps] closes: " + closes[0] + ", on a villager: " + closesOnVillager[0]);
+                    return closesOnVillager[0] == 0;
+                });
     }
 
     /** Empties every villager's hunger once, on the first server tick at or past daytime {@code at}. */

@@ -344,3 +344,16 @@ the look hint and the flag villager tooltip say `missing_room.room` with `RoomRe
 Pins: `UnmetNeedTrackerTest.primaryRoom_*`, `NeedBubbleFocusTest.Test_MissingRoomBubbleCycles...`,
 autotest `cook/mutton [no_kitchen]` (need=MISSING_ROOM room=questown:kitchen_small). Bubble not yet
 seen in game.
+
+
+## Doors stay open while a villager is near (dev playtest 2026-10-29)
+
+"Can we debounce how many times a navigating villager interacts with a door?" - both walking through
+and standing in the doorway, "common in 3x3 rooms" (a 1x1 interior is used from its door cell).
+Vanilla `OpenDoorGoal(mob, true)` closes the door in `stop()` 20 ticks after opening it, wherever the
+mob is; a villager still in the doorway bumped it open again. `LingeringDoorGoal` keeps the door open
+when it stops with the villager within 2.5 blocks and closes it from the entity tick
+(`tickLingeringDoor`) once the villager has moved away. It is built in `registerGoals` (Mob's
+constructor calls that before field initializers). Autotest `cook/mutton [door_flaps]` counts closes
+while a villager is within 1.5 blocks: vanilla 8 of 8, now 0 of 7. `LingeringDoorGoalTest`.
+A door is left open if its villager unloads while near it.
