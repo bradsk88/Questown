@@ -13,15 +13,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 public record EconomicsUpdate(
-        ImmutableList<ItemEconomicsData> data
+        ImmutableList<ItemEconomicsData> data,
+        /** The same needs over the last NoMCEconomics.RECENT_WINDOW_TICKS (empty where not sent). */
+        ImmutableList<ItemEconomicsData> recent
 ) {
+
+    public EconomicsUpdate(ImmutableList<ItemEconomicsData> data) {
+        this(data, ImmutableList.of());
+    }
 
     public static void encode(
             EconomicsUpdate msg,
             RegistryFriendlyByteBuf buffer
     ) {
+        writeItems(buffer, msg.data);
+        writeItems(buffer, msg.recent);
+    }
+
+    private static void writeItems(RegistryFriendlyByteBuf buffer, ImmutableList<ItemEconomicsData> items) {
         buffer.writeCollection(
-                msg.data, (b, i) -> {
+                items, (b, i) -> {
                     b.writeUtf(i.ingredientKey());
                     b.writeInt(i.timesNeeded());
                 }
@@ -30,7 +41,8 @@ public record EconomicsUpdate(
 
     public static EconomicsUpdate decode(RegistryFriendlyByteBuf buffer) {
         List<ItemEconomicsData> l = buffer.readCollection(ArrayList::new, b -> new ItemEconomicsData(b.readUtf(), b.readInt()));
-        return new EconomicsUpdate(ImmutableList.copyOf(l));
+        List<ItemEconomicsData> r = buffer.readCollection(ArrayList::new, b -> new ItemEconomicsData(b.readUtf(), b.readInt()));
+        return new EconomicsUpdate(ImmutableList.copyOf(l), ImmutableList.copyOf(r));
     }
 
     public void handle(

@@ -21,6 +21,7 @@ import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.questown.mc.RecipeRef;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -97,7 +98,8 @@ public class TownFlagMenus {
                 ),
                 OpenFlagMenuMessage.ECONOMICS,
                 () -> {
-                    QuestownNetwork.sendToPlayer(sender, new EconomicsUpdate(flag.getEconomicsHandle().getAggregatedItems(null)));
+                    QuestownNetwork.sendToPlayer(sender, new EconomicsUpdate(flag.getEconomicsHandle().getAggregatedItems(null),
+                            flag.getEconomicsHandle().getRecentItems(Util.getTick(sender.serverLevel()))));
                     openMenu(
                             sender, (windowId, inv, p) -> new TownEconomicsMenu(
                                     windowId, realFlagInfo

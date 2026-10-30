@@ -43,9 +43,24 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         this.tabs = FlagTabs.forMenu(menu, "tooltips.economics");
     }
 
+    // Client-side view toggle (dev playtest 2026-10-29: "in last 1000 ticks" view): all time or recent.
+    private static boolean showRecent = false;
+
     @Override
     protected ImmutableList<ItemEconomicsData> cardsData() {
-        return EconomicsCardOrder.order(lastUpdate.data(), bonusFoodAvailable(), FOOD_NEED_KEY);
+        return EconomicsCardOrder.order(showRecent ? lastUpdate.recent() : lastUpdate.data(), bonusFoodAvailable(), FOOD_NEED_KEY);
+    }
+
+    private int viewToggleX() {
+        return (this.width - backgroundWidth) / 2 + 8;
+    }
+
+    private int viewToggleY() {
+        return (this.height - backgroundHeight()) / 2 + backgroundHeight() - 8 - this.font.lineHeight;
+    }
+
+    private Component viewToggleLabel() {
+        return Compat.translatable(showRecent ? "questown.menu.economics.view.recent" : "questown.menu.economics.view.all");
     }
 
     @Override
@@ -76,6 +91,12 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
             int mouseY,
             float partialTicks
     ) {
+        ctx.darkText(viewToggleLabel(), viewToggleX(), viewToggleY());
+        if (UtilClean.isCoordInBox(mouseX, mouseY, viewToggleX(), viewToggleY(),
+                this.font.width(viewToggleLabel()), this.font.lineHeight)) {
+            this.showTooltip(Compat.translatable("questown.menu.economics.view.tooltip"));
+            return;
+        }
         renderTooltips(ctx, mouseX, mouseY);
     }
 
@@ -221,6 +242,11 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
                 QuestownNetwork.sendToServer(msg);
                 return true;
             }
+        }
+        if (UtilClean.isCoordInBox(mouseX, mouseY, viewToggleX(), viewToggleY(),
+                this.font.width(viewToggleLabel()), this.font.lineHeight)) {
+            showRecent = !showRecent;
+            return true;
         }
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight()) / 2;

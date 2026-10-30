@@ -1544,3 +1544,15 @@ Same pass: the skills pane's tab embedding did not override `showInventoryTab()`
 from the flag it still drew a lit, dead inventory tab - the co-highlight from 471ad99a's report on
 this pane. It now returns the screen's flag (`overnight-shots/mgmt-skills2.png`: economics, stats,
 skills lit, BOP).
+
+## Economics: all time / last 1000 ticks (dev playtest 2026-10-29)
+
+"Economics should probably have 'in last 1000 ticks' view too, that would be more actionable" +
+ruling "Toggle: recent / all time". The flag's economics tab now receives both aggregates
+(`EconomicsUpdate.recent`, from `NoMCEconomics.getRecentItems(now)` = `aggregateSince(records, now -
+RECENT_WINDOW_TICKS)`, `NoMCEconomicsRecentTest`); `TownEconomicsScreen` draws "View: all time" /
+"View: last 1000 ticks" at the panel's bottom-left (tooltip: click to switch) and swaps
+`cardsData` on click, client-side. Caveat: the records are first-enter events (a townie becoming
+blocked on an item, `TownPossibleWork`), so "last 1000 ticks" counts needs that started in the
+window, not ongoing ones. The villager economics pane keeps all-time only. Seen in game
+(`overnight-shots/econ-recent.png`); gui-lint OK.
