@@ -231,3 +231,14 @@ blacksmith's near-black grey (21,21,21). In `armorers_table_{front,side,top}.png
 with blue < 170 was lightened (`c * 1.6 + 25` per channel: base -> 39,47,114, band -> 69,95,218);
 brighter blues (the front's tool art) are unchanged so they do not wash out. Preview (blacksmith /
 old / new): `.scratch/dev-playtest-2026-10-29-fresh/armorer-vs-blacksmith-preview.png`.
+
+## The table recipes show in the recipe book (dev playtest 2026-10-29)
+
+"What do we have to do to get the armorer's table and blacksmith's table to show up in the green
+book menu on a crafting table?" A crafting recipe shows in the recipe book only once it is
+unlocked, and vanilla unlocks each through a recipe advancement (`advancements/recipes/...`,
+`inventory_changed` OR `recipe_unlocked`, reward `recipes`). The mod had none.
+`data/questown/advancements/recipes/`: `armorers_table` and `blacksmiths_table_from_blocks_of_progress`
+unlock on holding a Block of Progress, `blacksmiths_table` (iron) on an iron ingot; the JSON is
+vanilla 1.20.6's shape (copied from `recipes/decorations/loom.json`). `RecipeUnlockAdvancementsTest`
+pins the files and their recipes; the in-game load is checked in a server log, not a unit test.

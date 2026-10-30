@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_block_of_progress": {
+      "conditions": {
+        "items": [
+          {
+            "items": "questown:block_of_progress"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "questown:armorers_table"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_block_of_progress"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "questown:armorers_table"
+    ]
+  }
+}
