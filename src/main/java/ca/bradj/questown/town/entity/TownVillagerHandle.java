@@ -507,6 +507,27 @@ public final class TownVillagerHandle {
         delegate.changeJobForVillager(getUuid(uuid), idForRoot, getTick(), b);
     }
 
+    private final ca.bradj.questown.town.PendingJobSwitches<VillagerUUID, JobID> switchesAfterTrip =
+            new ca.bradj.questown.town.PendingJobSwitches<>();
+
+    /**
+     * A player-chosen switch that applies now: the villager's work-spot records are cleared first,
+     * so a trip in progress is dropped on purpose rather than clobbered (dev playtest 2026-10-29).
+     */
+    void switchJobNow(VillagerUUID uuid, JobID job) {
+        town.getUnsafe().resetWorkStatusFor(getUuid(uuid));
+        changeJobForVillager(uuid, job, true);
+    }
+
+    /** A player-chosen switch that waits for the villager's next job pick (after its trip). */
+    void switchJobAfterTrip(VillagerUUID uuid, JobID job) {
+        switchesAfterTrip.request(uuid, job);
+    }
+
+    @Nullable JobID takeSwitchAfterTrip(VillagerUUID uuid) {
+        return switchesAfterTrip.take(uuid);
+    }
+
     VisitorMobEntity getEntity(VillagerUUID ownerUUID) {
         return delegate.getEntity(getUuid(ownerUUID));
     }

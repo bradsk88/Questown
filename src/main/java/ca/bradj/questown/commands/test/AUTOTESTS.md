@@ -185,3 +185,10 @@ so the cooked-food diner expires and the raw-food diner must eat. All three pass
 run: they did not reproduce the dev's "stuck in going to eat" cook
 (`.scratch/dev-playtest-2026-10-29-fresh/cook-stuck-going-to-eat.md`), which rules out the doorway
 work spot (40323611), the downtime record on the flag, and the raw diner on a single chest.
+
+## Mid-trip job switch (2026-10-29 overnight)
+
+`hunter/sword [switch_after_trip]` and `[switch_now]`: a `SwitchWhenAway` server-tick listener waits
+until the hunter is away (`isAwayOnTrip`), then calls `switchJob` to the other trip (sword_half_day,
+or sword if already on it). After-trip passes when the job is unchanged right after the request and
+changes later; now passes when it changes at once. Both also logged no `Clobbered time` ERROR.

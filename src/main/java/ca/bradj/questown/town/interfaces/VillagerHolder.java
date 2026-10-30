@@ -151,6 +151,9 @@ public interface VillagerHolder {
             boolean announce
     );
 
+    /** The player's switch from the skill tree: now (a trip in progress is dropped) or after the trip. */
+    void switchJob(VillagerUUID villagerUUID, JobID job, boolean afterTrip);
+
     /**
      * Makes the townie a {@code job} worker now, with everything a Block of Progress job change
      * brings: the root's default work unlocked and its starter requests posted. A bare

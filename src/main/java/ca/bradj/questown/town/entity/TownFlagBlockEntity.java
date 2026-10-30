@@ -1330,6 +1330,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
         }
 
+        // The player chose "after this trip" in the skill tree: applied at the next job pick, once
+        // the trip's loot is deposited (dev playtest 2026-10-29).
+        JobID chosen = villagerHandle.takeSwitchAfterTrip(ownerVUID);
+        if (chosen != null) {
+            changeJob.accept("player-after-trip", chosen);
+            return true;
+        }
+
         BoardRequests requestedResults = workHandle.getBoardRequests();
         WorksBehaviour.TownData td = getTownData();
         Predicate<JobID> canFit = p -> {

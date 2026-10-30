@@ -1,25 +1,26 @@
 package ca.bradj.questown.gui.villager.advancements;
 
-import ca.bradj.questown.core.network.ChangeVillagerJobMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.UnlockJobMessage;
 import ca.bradj.questown.gui.CompatScreen;
 import ca.bradj.questown.gui.RenderContext;
 import ca.bradj.questown.gui.ScrollableScreen;
+import ca.bradj.questown.gui.SwitchJobConfirmScreen;
 import ca.bradj.questown.gui.VillagerTabs;
 import ca.bradj.questown.gui.VillagerTabsEmbedding;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.advancements.AdvancementType;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Items;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -251,21 +252,27 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
             return true;
         }
 
-        changeJobAndClose(id);
+        confirmSwitch(id);
         return true;
     }
 
-    private void changeJobAndClose(JobID id) {
+    /** An unlocked job: ask before switching (dev playtest 2026-10-29), see SwitchJobConfirmScreen. */
+    private void confirmSwitch(JobID id) {
+        VisitorMobEntity villager = clientVillager();
+        Component name = villager == null ? Compat.translatable("menu.switch_job.this_villager") : villager.getDisplayName();
+        boolean away = villager != null && villager.isAwayOnTrip();
+        this.minecraft.setScreen(new SwitchJobConfirmScreen(flagPos, villagerUUID, id, name, away));
+    }
 
-        QuestownNetwork.sendToServer(new ChangeVillagerJobMessage(
-                flagPos.getX(),
-                flagPos.getY(),
-                flagPos.getZ(),
-                villagerUUID,
-                id,
-                true
-        ));
-
-        this.minecraft.setScreen((Screen) null);
+    private @Nullable VisitorMobEntity clientVillager() {
+        if (this.minecraft.level == null) {
+            return null;
+        }
+        for (net.minecraft.world.entity.Entity e : this.minecraft.level.entitiesForRendering()) {
+            if (e instanceof VisitorMobEntity v && villagerUUID.equals(v.getUUID())) {
+                return v;
+            }
+        }
+        return null;
     }
 }

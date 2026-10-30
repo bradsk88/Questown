@@ -1,5 +1,7 @@
 package ca.bradj.questown.core.network;
 
+import ca.bradj.questown.core.VillagerUUID;
+
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.jobs.JobID;
@@ -13,7 +15,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 public record ChangeVillagerJobMessage(
-        int flagX, int flagY, int flagZ, UUID villagerUUID, JobID newJob, boolean announce
+        int flagX, int flagY, int flagZ, UUID villagerUUID, JobID newJob, boolean announce,
+        /** The skill-tree confirm's "after this trip" (dev playtest 2026-10-29); false = now. */
+        boolean afterTrip
 ) {
 
     public static void encode(
@@ -26,6 +30,7 @@ public record ChangeVillagerJobMessage(
         buffer.writeUUID(msg.villagerUUID());
         NetworkCompat.toNetwork(buffer, msg.newJob());
         buffer.writeBoolean(msg.announce());
+        buffer.writeBoolean(msg.afterTrip());
     }
 
     public static ChangeVillagerJobMessage decode(RegistryFriendlyByteBuf buffer) {
@@ -35,7 +40,8 @@ public record ChangeVillagerJobMessage(
         UUID id = buffer.readUUID();
         JobID job = NetworkCompat.fromNetworkJobID(buffer);
         boolean announce1 = buffer.readBoolean();
-        return new ChangeVillagerJobMessage(flagX, flagY, flagZ, id, job, announce1);
+        boolean afterTrip = buffer.readBoolean();
+        return new ChangeVillagerJobMessage(flagX, flagY, flagZ, id, job, announce1, afterTrip);
     }
 
 
@@ -50,7 +56,8 @@ public record ChangeVillagerJobMessage(
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Quest will not be removed.", flagX, flagY, flagZ);
                 return;
             }
-            flag.getVillagerHandle().changeJobForVillager(villagerUUID, newJob, announce);
+            // The UUID wire field predates VillagerUUID; from() is the conversion the board cascade uses too.
+            flag.getVillagerHandle().switchJob(VillagerUUID.from(villagerUUID), newJob, afterTrip);
         });
 
     }

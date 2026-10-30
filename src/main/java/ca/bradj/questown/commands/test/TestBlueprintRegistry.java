@@ -196,6 +196,8 @@ public class TestBlueprintRegistry {
         // banked ~24 (2026-10-18 playtest).
         jobs.add(edgeCaseEntry("hunter", "sword", "warp_then_realtime", hunterWarpThenRealtimeBlueprint()));
         jobs.add(edgeCaseEntry("hunter", "sword", "sleep_mid_trip", hunterSleepMidTripBlueprint()));
+        jobs.add(edgeCaseEntry("hunter", "sword", "switch_after_trip", hunterSwitchMidTripBlueprint(true)));
+        jobs.add(edgeCaseEntry("hunter", "sword", "switch_now", hunterSwitchMidTripBlueprint(false)));
         jobs.add(edgeCaseEntry("hunter", "sword", "one_day_yield", hunterBlueprint().withExpectation(
                 new TestExpectation(List.of(new ExpectedProduct("*", 1, OneDayYieldCaps.HUNTER)), 1, 100))));
         // loot_on_extract: the 2.5 raw-food gate as a deterministic measurement. Posts the
@@ -4085,6 +4087,87 @@ public class TestBlueprintRegistry {
                 town.getVillagerHandle().fillHunger(uuid, 0.0f);
             }
             output.msg("[doorway_kitchen] hunger emptied at daytime " + level.getDayTime() % 24000);
+        }
+    }
+
+    /**
+     * Dev playtest 2026-10-29: switching a hunter's job from the skill tree mid-trip offers "after
+     * this trip" or "now (trip is lost)". Once the hunter is away, a listener requests the other
+     * trip (sword_half_day, or sword if it is already on the half day). After-trip: the job must stay
+     * while away and change later (the board's next pick). Now: the job changes at once.
+     */
+    private static TestBlueprint hunterSwitchMidTripBlueprint(boolean afterTrip) {
+        TestBlueprint base = hunterBlueprint();
+        SwitchWhenAway watcher = new SwitchWhenAway(afterTrip,
+                new JobID("hunter", "sword_half_day"), new JobID("hunter", "sword"));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, 1000L, 1, true, 6000, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            watcher.start(town, output);
+            return true;
+        }).withCustomAssertion((level, flagPos, town, output) -> {
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(watcher);
+            output.msg("[switch] requested=" + watcher.requested + " jobRightAfter=" + watcher.jobRightAfter
+                    + " sawNewJob=" + watcher.sawNewJob);
+            if (!watcher.requested || !watcher.sawNewJob) {
+                return false;
+            }
+            boolean switchedAtOnce = watcher.chosen.equals(watcher.jobRightAfter);
+            return afterTrip != switchedAtOnce;
+        });
+    }
+
+    /** Requests a job switch the first tick the villager is away on a trip, then watches for it. */
+    private static final class SwitchWhenAway {
+        private final boolean afterTrip;
+        private final JobID target;
+        private final JobID fallback;
+        private TownFlagBlockEntity town;
+        private TestOutput output;
+        boolean requested;
+        JobID chosen;
+        JobID jobRightAfter;
+        boolean sawNewJob;
+
+        private SwitchWhenAway(boolean afterTrip, JobID target, JobID fallback) {
+            this.afterTrip = afterTrip;
+            this.target = target;
+            this.fallback = fallback;
+        }
+
+        void start(TownFlagBlockEntity town, TestOutput output) {
+            this.town = town;
+            this.output = output;
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(this);
+        }
+
+        @net.neoforged.bus.api.SubscribeEvent
+        public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                VisitorMobEntity v = town.getVillagerHandle().entities().stream()
+                        .filter(e -> e instanceof VisitorMobEntity && uuid.equals(e.getUUID()))
+                        .map(e -> (VisitorMobEntity) e).findFirst().orElse(null);
+                if (v == null) {
+                    continue;
+                }
+                if (!requested && v.isAwayOnTrip()) {
+                    JobID away = v.getJobId();
+                    chosen = target.equals(away) ? fallback : target;
+                    town.getVillagerHandle().switchJob(vuid, chosen, afterTrip);
+                    requested = true;
+                    jobRightAfter = v.getJobId();
+                    output.msg("[switch] away on " + away + "; requested " + chosen + " afterTrip=" + afterTrip);
+                }
+                if (requested && chosen.equals(v.getJobId())) {
+                    sawNewJob = true;
+                }
+            }
         }
     }
 

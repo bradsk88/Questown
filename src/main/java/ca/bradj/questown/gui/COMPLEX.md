@@ -1487,3 +1487,15 @@ board, `FlagCraftRecipes.MINESHAFT_QUEST`) drives both the two-line tooltip (`me
 name becomes "Unlock ???" and `QuestsScreen`'s tooltip, checked before the flavor text, gives the
 job and level. The server side and the rule are in `town/quests/COMPLEX.md` "A skill quest above
 every villager's level is a blank card".
+
+## Switching to an unlocked job asks first (dev playtest 2026-10-29)
+
+"Skill tab click on already-unlocked job. It instantly switched without informing me of the
+consequences and asking for confirmation." `VillagerAdvancementsScreen.mouseClicked` on an unlocked
+node now opens `SwitchJobConfirmScreen` (client-only, the `RelocationConfirmScreen` shape) instead of
+sending `ChangeVillagerJobMessage`. The screen names the villager and the new job; if the client
+entity is away (`VisitorMobEntity.isAwayOnTrip`, the synced visibility flag) it offers "Switch after
+this trip" / "Switch now (trip is lost)" / Cancel, else "Switch now" / Cancel
+(`SwitchJobChoice.forTrip`, `SwitchJobChoiceTest`). The message gained `afterTrip`; the server routes
+it through `VillagerHolder.switchJob` (`town/entity/COMPLEX.md`). Locked nodes keep the unlock path.
+Screen not yet seen in game.

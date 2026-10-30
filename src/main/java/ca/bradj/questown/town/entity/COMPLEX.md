@@ -1779,3 +1779,16 @@ path needs its own enum value and advancement file.
 Writes made to a flag right after it is placed can be cleared by its `onLoad` defaults, which may
 run on the next tick. `markChickenArcIneligible` applies the command-placed flag's chicken bits now
 and queues them again on `initializers`; `commands/COMPLEX.md` "`qt flag <pos> place_above`".
+
+## Player job switches: now or after the trip (dev playtest 2026-10-29)
+
+`VillagerHolder.switchJob(villager, job, afterTrip)` (from `ChangeVillagerJobMessage`):
+- now: `TownVillagerHandle.switchJobNow` clears the villager's per-owner work-spot records
+  (`resetWorkStatusFor`) before the change, so a trip in progress is dropped on purpose; the old
+  path re-set the mat's timer and logged `Clobbered time ... from 740 to 6900` as an ERROR.
+- after the trip: `switchJobAfterTrip` queues it (`town.PendingJobSwitches`, latest wins, not
+  saved); the board cascade applies it at the villager's next pick, after the trip's loot is
+  deposited, as `[board] ... via player-after-trip`.
+Autotests `hunter/sword [switch_after_trip]` / `[switch_now]` (AUTOTESTS.md); unit
+`PendingJobSwitchesTest`. `ChangeVillagerJobMessage` converts its UUID with the deprecated
+`VillagerUUID.from`, as the board cascade does (the previous handler used a deprecated overload too).

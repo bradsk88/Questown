@@ -1026,6 +1026,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return getEntityData().get(lastHeldItem);
     }
 
+    /** Hidden by its job (away on a trip); synced, so the client can read it. */
+    public boolean isAwayOnTrip() {
+        return !this.entityData.get(visible);
+    }
+
     @Override
     public boolean shouldRender(
             double p_20296_,
