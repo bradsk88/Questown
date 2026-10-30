@@ -41,3 +41,15 @@ the board's 8-in-storage pause, the warp summary) reads that. `getAllContainers`
 include displays: it picks deposit targets (`Jobs.tryDropLoot` writes the first empty slot of
 whatever target it is given), supply sources and "is there space" answers, so including them
 would put cobblestone on a stand, and a display job could move armor from stand to stand.
+
+## Chest lids open when villagers use them (dev playtest 2026-10-29)
+
+"When villagers insert loot into chests (or take items) it would be nice if the chest would open
+and close and make a sound like it does when a player interacts." `TownContainers` builds each
+town chest's `MCContainer` with a touch callback (`ChestTouches.touch(level, pos)`), which
+`removeItem`/`setItem` run. The first touch sends vanilla's lid block event (type 1, openers 1)
+to the chest and its other half, and plays `CHEST_OPEN`; `ChestLidTimers` keeps the lid up for 10
+ticks after the latest touch, so several items in a row do not flap it. `TownFlagBlockEntity.tick`
+calls `ChestTouches.tick`, which sends openers 0 and `CHEST_CLOSE` when due. A chest a player has
+open (`ChestBlockEntity.getOpenCount > 0`) is left alone. Timing pinned in `ChestLidTimersTest`;
+the lid and sound themselves are **not yet seen in game**.

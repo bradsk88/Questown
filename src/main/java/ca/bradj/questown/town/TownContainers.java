@@ -2,6 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Pair;
+import ca.bradj.questown.integration.minecraft.ChestTouches;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.DisplaySlots;
 import ca.bradj.questown.integration.minecraft.MCDisplayContainer;
@@ -299,7 +300,7 @@ public class TownContainers {
         if (container == null) {
             throw new IllegalStateException("Container is null at " + p);
         }
-        MCContainer mcContainer = new MCContainer(container);
+        MCContainer mcContainer = new MCContainer(container, () -> ChestTouches.touch(level, p));
 
         return new ContainerTarget<>(
                 position,

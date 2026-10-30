@@ -831,3 +831,9 @@ state 0 for the display jobs (`jobs/COMPLEX.md` "Display jobs"). `displaysIn` ma
 query per room (the room's `BoundingBox.encapsulatingPositions` as an AABB) filtered by
 `DisplaySlots.isDisplay`. `TownPossibleWork`'s job-site scan memoizes the town's unique items once
 per scan: a display job's block predicate reads them at each display position.
+
+## Town chests carry a touch callback (2026-10-29)
+
+`TownContainers` passes `() -> ChestTouches.touch(level, p)` into each chest's `MCContainer`, so a
+villager's take or deposit animates the lid; see `integration/minecraft/COMPLEX.md` "Chest lids
+open when villagers use them". The flag tick drives the closes.

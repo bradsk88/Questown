@@ -652,6 +652,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (level instanceof ServerLevel sl && e.isInitialized() && sl.getGameTime() % 20L == 0) {
             e.syncAttentionState();
         }
+        if (level instanceof ServerLevel sl) {
+            ca.bradj.questown.integration.minecraft.ChestTouches.tick(sl);
+        }
         // Gate chicken-arc on isInitialized: until the load queue drains, the
         // arc fields (chickenEverSpawned, chickenRotationDetected, ...) still
         // hold their default values. Running detector/spawner here pre-init
