@@ -196,3 +196,7 @@ changes later; now passes when it changes at once. Both also logged no `Clobbere
 `hunter/sword [longest_trip]` (2026-10-29 overnight): the hunter has sword / sword_half_day /
 sword_full_day unlocked and starts at the board (seeking_work) at daytime 1000; its first trip must
 be sword_full_day (`JobCycler`'s longest-trip pick).
+
+`cook/mutton [no_kitchen]` (2026-10-29 overnight): a town with only a store room and a cook (cook
+defaults + mutton unlocked, started at the board). A listener records the first tick a villager has
+`getMissingRoom()`; it must be a kitchen (seen: questown:kitchen_small).

@@ -314,14 +314,28 @@ public class TownPossibleWork {
                 econ.registerUnmetNeed(tick, fe.townie(), fe.key());
             }
             for (VisitorMobEntity villager : townies) {
+                boolean shownItemOrRoom = villager.getNeed() == TownieNeed.UNMET_ITEM
+                        || villager.getNeed() == TownieNeed.MISSING_ROOM;
                 if (!showsUnmetNeed(villager.getJobId())) {
-                    if (villager.getNeed() == TownieNeed.UNMET_ITEM) {
+                    if (shownItemOrRoom) {
                         villager.setNeed(TownieNeed.NONE);
                     }
                     continue;
                 }
                 String primary = unmetNeeds.primaryKey(
                         root, villager.getUUID(), key -> canHoldAnyOf(t, villager.getUUID(), keyJobs.get(key)));
+                String room = primary != null ? null : unmetNeeds.primaryRoom(
+                        root, villager.getUUID(), key -> canHoldAnyOf(t, villager.getUUID(), keyJobs.get(key)));
+                if (room != null) {
+                    // NO_STORAGE outranks it, as it does UNMET_ITEM.
+                    if (villager.getNeed() != TownieNeed.MISSING_ROOM && villager.getNeed() != TownieNeed.NO_STORAGE) {
+                        villager.setNeed(TownieNeed.MISSING_ROOM);
+                    }
+                    if (!room.equals(villager.getUnmetItem())) {
+                        villager.setUnmetItem(room);
+                    }
+                    continue;
+                }
                 if (primary != null) {
                     // NO_STORAGE (stopped for lack of storage) outranks it; that consumer clears
                     // its own need when space frees, and this pass re-applies UNMET_ITEM then.
@@ -331,7 +345,7 @@ public class TownPossibleWork {
                     if (!primary.equals(villager.getUnmetItem())) {
                         villager.setUnmetItem(primary);
                     }
-                } else if (villager.getNeed() == TownieNeed.UNMET_ITEM) {
+                } else if (shownItemOrRoom) {
                     villager.setNeed(TownieNeed.NONE);
                 }
             }

@@ -6,6 +6,8 @@
   "message.questown.townie_need.unmet_item": "They don't have the supplies they need to work.",
   "message.questown.townie_need.unmet_item.item": "They need %s to work.",
   "message.questown.townie_need.no_storage": "Every chest is full: they have nowhere to put what they made.",
+  "message.questown.townie_need.missing_room": "They need a new room to work.",
+  "message.questown.townie_need.missing_room.room": "They need a %s to work.",
   "message.questown.door_need.not_enclosed": "This door has no room — finish the walls and roof.",
   "message.questown.door_need.no_recipe": "This room matches no recipe — try different furniture.",
   "message.questown.attention.incomplete_quests": "This flag still has incomplete quests — open the flag menu to see them.",

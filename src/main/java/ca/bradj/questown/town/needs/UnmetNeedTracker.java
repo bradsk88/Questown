@@ -183,6 +183,29 @@ public final class UnmetNeedTracker {
         return best;
     }
 
+    /**
+     * The room the townie's oldest missing-room need asks for (the dev's "They need a Smithy to
+     * work", 2026-10-29), over the keys {@code canHold} accepts; null when no such need is live.
+     * Used only when {@link #primaryKey} names no supply.
+     */
+    public @Nullable String primaryRoom(String root, UUID townie, Predicate<String> canHold) {
+        String best = null;
+        long bestSince = Long.MAX_VALUE;
+        for (Row r : rows.values()) {
+            if (!r.root().equals(root) || !r.townie().equals(townie) || r.key() == null) {
+                continue;
+            }
+            if (!(r.reason() instanceof GateReason.NoRoom nr) || nr.room() == null || !canHold.test(r.key())) {
+                continue;
+            }
+            if (r.since() < bestSince || (r.since() == bestSince && best != null && nr.room().compareTo(best) < 0)) {
+                best = nr.room();
+                bestSince = r.since();
+            }
+        }
+        return best;
+    }
+
     /** Clear every need under a root — the town found viable work there again. */
     public void exitRoot(String root) {
         rows.values().removeIf(r -> r.root().equals(root));

@@ -330,3 +330,17 @@ solid block with air above (a bed) keeps vanilla's one-block lift. Downtime pick
 its `RANDOM_SHORT_LIVED_WORKSPOT_PREFER_SOCIAL` rule (`RandomShortLivedWorkSpot`) walks to a random
 spot inside a room (`getRandomWanderTarget`), and a 3x3 store room's only interior cell is the chest
 (believed from the code path, r21 findings #19).
+
+## MISSING_ROOM: "They need a Smithy to work" (dev playtest 2026-10-29)
+
+Follow-up to 997257f2 (a missing room's product no longer reads as a supply). Ruling: "Yes, name the
+room", plus "Their bubble can show the room blocks too". `TownieNeed.MISSING_ROOM` is set by the
+need pass (`TownPossibleWork`) when the townie has no supply key but `UnmetNeedTracker.primaryRoom`
+names a room (the oldest NO_ROOM row over jobs it can hold); the room id rides the unmet-item key
+(`setNeed` keeps it for MISSING_ROOM; `VisitorMobEntity.getMissingRoom`). NO_STORAGE outranks it;
+relaxing and the evening hide it like UNMET_ITEM. The bubble cycles through the room recipe's blocks
+one per second (`NeedBubbleFocus.missingRoomIcon`, client `RoomRecipes.getById`, beds counted once);
+the look hint and the flag villager tooltip say `missing_room.room` with `RoomRecipes.getName`.
+Pins: `UnmetNeedTrackerTest.primaryRoom_*`, `NeedBubbleFocusTest.Test_MissingRoomBubbleCycles...`,
+autotest `cook/mutton [no_kitchen]` (need=MISSING_ROOM room=questown:kitchen_small). Bubble not yet
+seen in game.

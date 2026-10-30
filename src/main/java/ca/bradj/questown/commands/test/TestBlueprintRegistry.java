@@ -199,6 +199,7 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("hunter", "sword", "switch_after_trip", hunterSwitchMidTripBlueprint(true)));
         jobs.add(edgeCaseEntry("hunter", "sword", "switch_now", hunterSwitchMidTripBlueprint(false)));
         jobs.add(edgeCaseEntry("hunter", "sword", "longest_trip", hunterLongestTripBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "mutton", "no_kitchen", cookNoKitchenBlueprint()));
         jobs.add(edgeCaseEntry("hunter", "sword", "one_day_yield", hunterBlueprint().withExpectation(
                 new TestExpectation(List.of(new ExpectedProduct("*", 1, OneDayYieldCaps.HUNTER)), 1, 100))));
         // loot_on_extract: the 2.5 raw-food gate as a deterministic measurement. Posts the
@@ -4162,6 +4163,53 @@ public class TestBlueprintRegistry {
             return true;
         }).withCustomAssertion((level, flagPos, town, output) ->
                 new JobID("hunter", "sword_full_day").equals(firstTrip[0]));
+    }
+
+    /**
+     * Dev playtest 2026-10-29: "They need a Smithy to work" - a villager whose every job waits on a
+     * missing room names the room. A cook in a town with no kitchen (only the store room) must show
+     * MISSING_ROOM naming a kitchen at some point (relaxing hides it, so a listener samples).
+     */
+    private static TestBlueprint cookNoKitchenBlueprint() {
+        SupplyRoom store = buildSupplyRoom(-6, -2);
+        String[] seen = {null};
+        return new TestBlueprint(
+                RoomType.INDOOR,
+                store.blocks,
+                List.of(new ItemStack(Items.MUTTON, 16), new ItemStack(Items.COAL, 16), new ItemStack(Items.COOKED_BEEF, 8)),
+                store.doorOffset,
+                store.chestOffset,
+                SpecialQuests.STORE_ROOM_SMALL,
+                new TestExpectation(List.of(), 0, 100),
+                null, null, 1000L, 1, true, 2000, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                for (JobID job : ServerJobsRegistry.getDefaultWork(new JobID("cook", "extract"))) {
+                    town.getVillagerHandle().unlockJob(uuid, job);
+                }
+                town.getVillagerHandle().unlockJob(uuid, new JobID("cook", "mutton"));
+                town.getVillagerHandle().changeJobForVillager(vuid,
+                        ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.getIDForRoot(new JobID("cook", "mutton")), false);
+            }
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new Object() {
+                @net.neoforged.bus.api.SubscribeEvent
+                public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (seen[0] == null && e instanceof VisitorMobEntity v && v.getMissingRoom() != null) {
+                            seen[0] = v.getMissingRoom().toString();
+                            output.msg("[no_kitchen] need=" + v.getNeed() + " room=" + seen[0]);
+                            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(this);
+                        }
+                    }
+                }
+            });
+            return true;
+        }).withCustomAssertion((level, flagPos, town, output) -> {
+            output.msg("[no_kitchen] missing room seen: " + seen[0]);
+            return seen[0] != null && seen[0].contains("kitchen");
+        });
     }
 
     /** Requests a job switch the first tick the villager is away on a trip, then watches for it. */

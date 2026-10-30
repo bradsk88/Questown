@@ -447,7 +447,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
      */
     private void syncStorageNeed(IStatus<?> jobStatus) {
         boolean blocked = ca.bradj.questown.jobs.production.ProductionStatus.NO_SPACE.equals(jobStatus);
-        if (blocked && (getNeed() == TownieNeed.NONE || getNeed() == TownieNeed.UNMET_ITEM)) {
+        if (blocked && (getNeed() == TownieNeed.NONE || getNeed() == TownieNeed.UNMET_ITEM || getNeed() == TownieNeed.MISSING_ROOM)) {
             setNeed(TownieNeed.NO_STORAGE);
         } else if (!blocked && getNeed() == TownieNeed.NO_STORAGE) {
             setNeed(TownieNeed.NONE);
@@ -463,7 +463,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
         QT.VILLAGER_LOGGER.debug("Townie {} need is now {}", UtilClean.truncateMiddle(getUUID()), newNeed);
         this.entityData.set(need, newNeed.name());
-        if (newNeed != TownieNeed.UNMET_ITEM) {
+        if (newNeed != TownieNeed.UNMET_ITEM && newNeed != TownieNeed.MISSING_ROOM) {
             this.entityData.set(unmetItem, "");
         }
     }
@@ -502,6 +502,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public String getUnmetItem() {
         return this.entityData.get(unmetItem);
+    }
+
+    /** The room a MISSING_ROOM need asks for, or null. */
+    public @Nullable ResourceLocation getMissingRoom() {
+        if (getNeed() != TownieNeed.MISSING_ROOM || getUnmetItem().isEmpty()) {
+            return null;
+        }
+        return ResourceLocation.tryParse(getUnmetItem());
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY

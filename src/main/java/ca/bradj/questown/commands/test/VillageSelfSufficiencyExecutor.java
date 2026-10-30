@@ -1133,7 +1133,7 @@ public final class VillageSelfSufficiencyExecutor {
             jobCounts.merge(t.getJobId().rootId(), 1L, Long::sum);
             var need = t.getNeed();
             switch (need) {
-                case UNMET_ITEM -> unmetItem++;
+                case UNMET_ITEM, MISSING_ROOM -> unmetItem++;
                 case CANT_REACH -> cantReach++;
                 case NO_STORAGE -> noStorage++;
                 case NONE -> noneNeed++;

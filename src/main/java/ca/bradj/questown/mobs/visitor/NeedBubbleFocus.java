@@ -202,6 +202,11 @@ public final class NeedBubbleFocus {
             @Nullable VisitorMobEntity townie,
             String hintKey
     ) {
+        net.minecraft.resources.ResourceLocation room = townie == null ? null : townie.getMissingRoom();
+        if (room != null) {
+            return Compat.translatable("message.questown.townie_need.missing_room.room",
+                    ca.bradj.questown.logic.RoomRecipes.getName(room));
+        }
         Ingredient missing = unmetNeedIngredient(townie);
         if (missing == null) {
             return Compat.translatable(hintKey);
@@ -251,6 +256,36 @@ public final class NeedBubbleFocus {
     static boolean villagerNeedsShowAt(long dayTime) {
         Signals s = Signals.fromDayTime(new Signals.DayTime(dayTime));
         return s == Signals.MORNING || s == Signals.NOON;
+    }
+
+    /**
+     * The bubble icon for a MISSING_ROOM need: the room's blocks in turn, one a second, so the
+     * bubble shows what to build (dev playtest 2026-10-29: "Their bubble can show the room blocks
+     * too"). Null when the room or its recipe is unknown here.
+     */
+    static @Nullable net.minecraft.world.item.ItemStack missingRoomIcon(VisitorMobEntity townie) {
+        net.minecraft.resources.ResourceLocation room = townie.getMissingRoom();
+        if (room == null) {
+            return null;
+        }
+        java.util.List<net.minecraft.world.item.ItemStack> blocks = new java.util.ArrayList<>();
+        ca.bradj.questown.logic.RoomRecipes.getById(townie.level(), room).ifPresent(r -> {
+            for (Ingredient i : ca.bradj.questown.logic.RoomRecipes.filterSpecialBlocks(r.getIngredients())) {
+                net.minecraft.world.item.ItemStack[] stacks = i.getItems();
+                if (stacks.length > 0) {
+                    blocks.add(stacks[0]);
+                }
+            }
+        });
+        return cycle(blocks, System.currentTimeMillis() / 1000);
+    }
+
+    /** The item shown in second {@code seconds} when cycling through {@code items}; null when empty. */
+    static <T> @Nullable T cycle(java.util.List<T> items, long seconds) {
+        if (items.isEmpty()) {
+            return null;
+        }
+        return items.get((int) (seconds % items.size()));
     }
 
     /** The holder keeps the bubble only while it is still needy and still in front of the player. */

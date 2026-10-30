@@ -103,4 +103,13 @@ class NeedBubbleFocusTest {
         Assertions.assertFalse(NeedBubbleFocus.villagerNeedsShowAt(23999));
         Assertions.assertTrue(NeedBubbleFocus.villagerNeedsShowAt(24000 * 3 + 100));
     }
+
+    /** The missing room's bubble shows its blocks in turn, one per second. */
+    @Test
+    void Test_MissingRoomBubbleCyclesThroughTheRoomsBlocks() {
+        java.util.List<String> blocks = java.util.List.of("blacksmiths_table", "door");
+        Assertions.assertEquals("blacksmiths_table", NeedBubbleFocus.cycle(blocks, 10));
+        Assertions.assertEquals("door", NeedBubbleFocus.cycle(blocks, 11));
+        Assertions.assertNull(NeedBubbleFocus.cycle(java.util.List.of(), 11));
+    }
 }

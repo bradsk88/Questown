@@ -117,6 +117,11 @@ public class ServerJobsRegistry {
         Ingredient missing = townie.getUnmetItemIngredient();
         Component need = missing == null ? null : Compat.translatable(
                 "message.questown.townie_need.unmet_item.item", Ingredients.getName(missing));
+        ResourceLocation room = townie.getMissingRoom();
+        if (room != null) {
+            need = Compat.translatable("message.questown.townie_need.missing_room.room",
+                    ca.bradj.questown.logic.RoomRecipes.getName(room));
+        }
         boolean keep = StatusNeedLine.keepsOwnLines(isWorking(status), DiningStages.isDiner(job));
         return ImmutableList.copyOf(StatusNeedLine.lines(getStatusText(job, status), need, keep));
     }

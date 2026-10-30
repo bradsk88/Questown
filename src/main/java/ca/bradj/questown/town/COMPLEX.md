@@ -859,3 +859,9 @@ job 0); ties (all in-town jobs) keep the rotation. Validity still includes `canF
 evening), so late in the day a shorter trip wins. The return from eating is not a separate path: it
 goes through the same work roll (`[board] ... dining_* -> sword via work-roll`). `JobCyclerTest`;
 autotest `hunter/sword [longest_trip]` (first pick from the board is sword_full_day).
+
+## Missing-room need (2026-10-29)
+
+`TownPossibleWork`'s need pass falls back to `UnmetNeedTracker.primaryRoom` when no supply key
+applies and sets `TownieNeed.MISSING_ROOM` with the room id; see `mobs/visitor/COMPLEX.md`
+"MISSING_ROOM". The NO_ROOM rows still never write the econ item store.

@@ -21,7 +21,12 @@ public enum TownieNeed {
     /** No viable job because the town lacks the item(s) the job needs as input. */
     UNMET_ITEM,
     /** Holding work output with nowhere to put it: every town chest is full (NO_SPACE status). */
-    NO_STORAGE;
+    NO_STORAGE,
+    /**
+     * Every job it could do waits on a room the town lacks; the room id rides the unmet-item key
+     * (dev playtest 2026-10-29: "They need a Smithy to work", the bubble shows the room's blocks).
+     */
+    MISSING_ROOM;
 
     public static TownieNeed fromName(String name) {
         for (TownieNeed v : values()) {
@@ -46,6 +51,7 @@ public enum TownieNeed {
             case CANT_REACH -> Items.BARRIER.getDefaultInstance();
             case UNMET_ITEM -> Items.BUNDLE.getDefaultInstance();
             case NO_STORAGE -> ItemStack.EMPTY; // drawn from iconTexture()
+            case MISSING_ROOM -> Items.CRAFTING_TABLE.getDefaultInstance(); // fallback; the renderer shows the room's blocks
             case NONE -> ItemStack.EMPTY;
         };
     }

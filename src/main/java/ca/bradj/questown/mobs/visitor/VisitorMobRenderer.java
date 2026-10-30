@@ -82,6 +82,10 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
      * representative, as the Inventory screen's "needs" row does); any other need keeps its icon.
      */
     private static ItemStack needBubbleIcon(VisitorMobEntity entity) {
+        ItemStack roomBlock = NeedBubbleFocus.missingRoomIcon(entity);
+        if (roomBlock != null) {
+            return roomBlock;
+        }
         Ingredient missing = NeedBubbleFocus.unmetNeedIngredient(entity);
         if (missing == null) {
             return entity.getNeed().icon();

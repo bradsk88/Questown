@@ -247,4 +247,22 @@ class UnmetNeedTrackerTest {
         t.enter(200, MINER, ALICE, "#fuel", FUEL_BLOCKED);
         assertEquals("#fuel", t.primaryKey(MINER, ALICE));
     }
+
+    /** Dev playtest 2026-10-29: a crafter with no smithy should say "They need a Smithy to work". */
+    @Test
+    void primaryRoom_namesTheMissingRoom_forJobsTheTownieCanHold() {
+        UnmetNeedTracker t = new UnmetNeedTracker();
+        GateReason noSmithy = GateReason.classify(false, "questown:smithy", -1, List.of(), List.of(), true, "minecraft:wooden_shovel");
+        t.enter(100, MINER, ALICE, "minecraft:wooden_shovel", noSmithy);
+        assertEquals("questown:smithy", t.primaryRoom(MINER, ALICE, k -> true));
+        assertNull(t.primaryRoom(MINER, ALICE, k -> false));
+        assertNull(t.primaryRoom(MINER, BOB, k -> true));
+    }
+
+    @Test
+    void primaryRoom_ignoresSupplyNeeds() {
+        UnmetNeedTracker t = new UnmetNeedTracker();
+        t.enter(100, MINER, ALICE, "#fuel", FUEL_BLOCKED);
+        assertNull(t.primaryRoom(MINER, ALICE, k -> true));
+    }
 }
