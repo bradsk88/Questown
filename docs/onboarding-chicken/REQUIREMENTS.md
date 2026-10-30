@@ -199,6 +199,9 @@ Defined under `src/main/resources/data/questown/`:
 - `structures/empty_town.nbt` — the structure blocks themselves.
 - `worldgen/structure/empty_town.json` — placement config, biome tag,
   start_height (`absolute: -4` after the terrain shaper's Y shift).
+- `worldgen/structure_set/empty_town.json` — `random_spread` placement with an
+  `exclusion_zone` of 10 chunks around `minecraft:villages`, as vanilla's pillager outposts
+  (dev playtest 2026-10-29: an empty_town generated inside a village). `EmptyTownPlacementTest`.
 - `worldgen/template_pool/empty_town/start_pool.json` — projection (rigid),
   no processors.
 - `tags/worldgen/biome/has_structure/empty_town_biomes.json` — allowed
