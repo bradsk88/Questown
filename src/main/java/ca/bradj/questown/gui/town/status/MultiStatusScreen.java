@@ -142,6 +142,12 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         return Compat.translatable("jobs." + syncedData.villagerStatuses.get(uuid).jobId().rootId()).getString();
     }
 
+    private static boolean isOverCard(CardCoordinates coords, int mouseX, int mouseY) {
+        Coordinate tl = coords.topLeft();
+        Coordinate br = coords.bottomRight();
+        return UtilClean.isCoordInBox(mouseX, mouseY, tl.x(), tl.y(), br.x() - tl.x(), br.y() - tl.y());
+    }
+
     private boolean isOverJobTitle(CardCoordinates coords, UUID uuid, int mouseX, int mouseY) {
         int nameX = coords.leftXPadded() + Util.faceWidth + 4;
         String job = jobTitle(uuid);
@@ -236,8 +242,16 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         }
 
         for (Card<UUID> v : cards()) {
-            if (MORNING_ARRIVAL_SENTINEL.equals(v.data())) continue;
             CardCoordinates coords = v.coords();
+            if (MORNING_ARRIVAL_SENTINEL.equals(v.data())) {
+                // Says why a villager is coming (dev playtest 2026-10-29). The first-arrival card
+                // stays unexplained: it does not telegraph villagers (gui/COMPLEX.md).
+                if (!syncedData.villagerStatuses.isEmpty() && isOverCard(coords, mouseX, mouseY)) {
+                    this.showTooltip(Compat.translatable("gui.status.villager_arriving_morning.tooltip"));
+                    return;
+                }
+                continue;
+            }
             if (syncedData.pendingJobChange().contains(v.data()) && isOverJobTitle(coords, v.data(), mouseX, mouseY)) {
                 this.showTooltip(Compat.translatable("menu.unlock_root.already_pending"));
                 return;

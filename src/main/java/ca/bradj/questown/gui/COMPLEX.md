@@ -997,6 +997,10 @@ Ticket: `.scratch/playtest-2026-10-17/job-board-empty-state-needs-blank-line.md`
 villagers yet and an arrival is queued. Its copy is "A reward will be granted in the morning": the
 player may not know about villagers yet, so the first arrival is not telegraphed. Once villagers
 exist, `gui.status.villager_arriving_morning` ("...and one more in the morning") still names them.
+Hovering that card shows `gui.status.villager_arriving_morning.tooltip` ("For completing your
+quests, a new villager will join your town in the morning"; dev playtest 2026-10-29). The `.first`
+card stays without a tooltip, so the first arrival is still not telegraphed
+(`MultiStatusScreen.renderTooltipContent`, `isOverCard`). Not unit-tested (screen code).
 
 ## Economics card tooltip wraps like the other card screens (2026-10-17 round 6)
 
