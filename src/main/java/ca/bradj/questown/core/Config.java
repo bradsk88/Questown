@@ -191,6 +191,8 @@ public class Config {
                 "and \"baker\" is unlocked when this is set to 2, only 2 jobs from \"bread\", \"cakes\" and \"cookies\" "
         ).comment(
                 "will become available for unlocking."
+        ).comment(
+                "Currently ignored: every sub-job is offered (2026-10-29), until education gates learning."
         ).defineInRange("JobTreeGrowth", 2, 1, 10);
 
         // Job Proficiency Config

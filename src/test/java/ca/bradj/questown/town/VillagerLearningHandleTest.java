@@ -206,4 +206,21 @@ class VillagerLearningHandleTest {
         assertIterableEquals(expected, h.getNextJobAwareness("cook:steak"));
     }
 
+
+    /** Dev playtest 2026-10-29: beef was not offered because only 2 random children were revealed. */
+    @Test
+    public void revealAll_offersEveryUnknownChild() {
+        ImmutableSet<String> allJobs = ImmutableSet.of("mutton", "beef", "porkchop", "chicken", "rabbit", "potato");
+        VillagerLearningHandle<String> h = new VillagerLearningHandle<>(
+                () -> allJobs,
+                j -> ImmutableList.copyOf(allJobs),
+                (j1, j2) -> true,
+                (j1) -> true,
+                VillagerLearningHandle.REVEAL_ALL
+        );
+        h.init(ImmutableList.of("mutton"));
+        h.tick(ImmutableList.of("cook"));
+        assertEquals(ImmutableSet.of("beef", "porkchop", "chicken", "rabbit", "potato"),
+                ImmutableSet.copyOf(h.getNextJobAwareness("cook")));
+    }
 }

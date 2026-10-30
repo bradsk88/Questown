@@ -2,7 +2,6 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.commands.DebugLogArgument;
-import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.JobID;
@@ -30,7 +29,7 @@ public class TownVillagerLearningHandle {
             return true;
         }
         return false;
-    }, j -> true, Config.JOB_TREE_GROWTH.get()
+    }, j -> true, ca.bradj.questown.town.VillagerLearningHandle.REVEAL_ALL // was Config.JOB_TREE_GROWTH (random 2)
     );
     private long lastTicked;
     private long lastComputed;

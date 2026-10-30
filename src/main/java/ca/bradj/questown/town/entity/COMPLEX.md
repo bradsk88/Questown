@@ -1792,3 +1792,13 @@ and queues them again on `initializers`; `commands/COMPLEX.md` "`qt flag <pos> p
 Autotests `hunter/sword [switch_after_trip]` / `[switch_now]` (AUTOTESTS.md); unit
 `PendingJobSwitchesTest`. `ChangeVillagerJobMessage` converts its UUID with the deprecated
 `VillagerUUID.from`, as the board cascade does (the previous handler used a deprecated overload too).
+
+## Every child job is offered, not 2 random ones (dev playtest 2026-10-29)
+
+"Why isn't beef listed as one of the cook's unlockable skills?" -> "For now, show all children -
+remember the education path we have planned for the future." `TownVillagerLearningHandle` passed
+`Config.JOB_TREE_GROWTH` (default 2) to `VillagerLearningHandle`, which reveals that many children
+from a shuffled list per unlocked job. It now passes `VillagerLearningHandle.REVEAL_ALL`; the config
+key stays (marked "currently ignored") so the planned education path can restore a limit.
+`VillagerLearningHandleTest.revealAll_offersEveryUnknownChild` (red with 2). Risk: a root with many
+children (crafter) now shows them all in the skill tree; not yet checked on screen.
