@@ -870,3 +870,12 @@ applies and sets `TownieNeed.MISSING_ROOM` with the room id; see `mobs/visitor/C
 
 The villager card shows a queued "switch after this trip" until it applies, so the store gained a
 non-consuming `peek` beside `take` (`PendingJobSwitchesTest.aPeek_showsTheSwitchWithoutTakingIt`).
+
+## Skill card products (2026-10-30)
+
+`TownVillagerUIs.skillResults` fills a skill details card's results. A `biome_loot` job (its
+`Work.lootTableDefault`, the result's `default` table, set by `ResourceJobLoader`) lists that table's
+items most likely first (`LootTableDropsIndex.mostLikely` → `jobs/gatherer` `LootTableLikelihood`),
+whatever the town has discovered; any other job keeps `ServerJobsRegistry.getResults`. Before, a loot
+job listed only the town's known finds for its table, which was empty for the r23 hunter. The
+producer search (`getJobsKnownToProduce`) still uses the known finds.

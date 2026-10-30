@@ -70,6 +70,11 @@ public class Work {
      * and keeps that roll's board-requested items ({@code RequestedLootPreference}).
      */
     private boolean prefersRequestedLoot;
+    /**
+     * The `biome_loot` result's `default` loot table path ("jobs/hunter_sword/default"), or null for
+     * any other result: the skill details' "Produces:" lists its items, most likely first.
+     */
+    private @Nullable String lootTableDefault;
 
     /** The `available_at_level` default: the first level at which the skills tab appears. */
     public static final int DEFAULT_AVAILABLE_AT_LEVEL = 2;
@@ -187,6 +192,16 @@ public class Work {
         return prefersRequestedLoot;
     }
 
+    public @Nullable String lootTableDefault() {
+        return lootTableDefault;
+    }
+
+    /** Chains the `biome_loot` result's `default` table parsed by {@code ResourceJobLoader}. */
+    public Work withLootTableDefault(@Nullable String lootTableDefault) {
+        this.lootTableDefault = lootTableDefault;
+        return this;
+    }
+
     /** Chains the `biome_loot` result's `prefer_requested` flag parsed by {@code ResourceJobLoader}. */
     public Work withPrefersRequestedLoot(boolean prefersRequestedLoot) {
         this.prefersRequestedLoot = prefersRequestedLoot;
@@ -234,6 +249,7 @@ public class Work {
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
+        work.lootTableDefault = lootTableDefault;
         return work;
     }
 
@@ -262,6 +278,7 @@ public class Work {
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
+        work.lootTableDefault = lootTableDefault;
         return work;
     }
 
@@ -299,6 +316,7 @@ public class Work {
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
+        work.lootTableDefault = lootTableDefault;
         return work;
     }
 
@@ -314,6 +332,7 @@ public class Work {
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
+        work.lootTableDefault = lootTableDefault;
         return work;
     }
 

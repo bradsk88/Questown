@@ -1,5 +1,9 @@
 package ca.bradj.questown.town;
 
+import net.minecraft.server.packs.resources.ResourceManager;
+import ca.bradj.questown.loader.Loader;
+import ca.bradj.questown.mc.LootTableDropsIndex;
+import ca.bradj.questown.jobs.Works;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.core.UtilClean;
@@ -177,6 +181,32 @@ public class TownVillagerUIs {
         QuestownNetwork.sendToPlayer(sender, msg);
     }
 
+    /**
+     * What a skill's details card lists under "Produces:". A loot job lists its default table's
+     * items, most likely first (dev 2026-10-30: a hunter's list was empty, since only loot the town
+     * has already found counted); any other job lists its results.
+     */
+    private static ImmutableList<ItemStack> skillResults(
+            TownFlagBlockEntity unsafe,
+            JobID job
+    ) {
+        String table = Works.isInitialized() && Works.ids().contains(job) ? Works.get(job).get().lootTableDefault() : null;
+        if (table == null) {
+            return ServerJobsRegistry.getResults(unsafe.getTownDataForDisplay(), job).stream()
+                                     .map(v -> v.get().getDefaultInstance())
+                                     .collect(ImmutableList.toImmutableList());
+        }
+        ResourceManager rm = unsafe.getServerLevel().getServer().getResourceManager();
+        ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
+        for (String id : LootTableDropsIndex.mostLikely(rm, table)) {
+            net.minecraft.world.item.Item item = Loader.itemFromId(new ResourceLocation(id));
+            if (item != null) {
+                b.add(item.getDefaultInstance());
+            }
+        }
+        return b.build();
+    }
+
     private static @NotNull ImmutableList<Ingredient> getRoomIngredients(
             DeclarativeJob dj,
             ImmutableMap<ResourceLocation, RoomRecipe> rMap
@@ -277,7 +307,6 @@ public class TownVillagerUIs {
         if (!(j instanceof DeclarativeJob dj)) {
             return null;
         }
-        ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafe.getTownDataForDisplay(), job);
         return new UIJob(
                 j.getId(),
                 ImmutableList.copyOf(villagersByJob.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())),
@@ -285,9 +314,7 @@ public class TownVillagerUIs {
                 ImmutableList.copyOf(dj.initialTools.values()),
                 dj.location().baseRoom(),
                 getRoomIngredients(dj, rMap),
-                results.stream()
-                       .map(v -> v.get().getDefaultInstance())
-                       .collect(ImmutableList.toImmutableList())
+                skillResults(unsafe, job)
         );
     }
 

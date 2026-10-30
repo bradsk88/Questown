@@ -33,27 +33,28 @@ public class RenderUtil {
             BiConsumer<Component, Coordinate> renderDarkText,
             BiConsumer<Coordinate, Coordinate> renderHighlight
     ) {
-        int itemX = data.topLeft.x() + (24 * data.maxItemsBeforeEllipses);
-        Coordinate squareTopLeft = new Coordinate(itemX, data.topLeft.y());
-        renderDarkText.accept(Compat.literal("…"), squareTopLeft.shifted(4, 2));
-        if (UtilClean.isCoordInBox(data.mouse, squareTopLeft.shifted(-4, 0), squareTopLeft.shifted(20, 16))) {
-            return getEllipseTooltip(data, renderHighlight, itemX);
-        }
-        return null;
-    }
-
-    private static @Nullable List<Component> getEllipseTooltip(
-            EllipsesData data,
-            BiConsumer<Coordinate, Coordinate> renderHighlight,
-            int itemX
-    ) {
-        Coordinate itemTopLeft = new Coordinate(itemX, data.topLeft.y());
-        renderHighlight.accept(itemTopLeft, itemTopLeft.shifted(16, 16));
         MutableComponent andMore = Compat.translatable(
                 "menu.work_add_confirm.and_n_more",
                 data.totalItemCount - data.maxItemsBeforeEllipses
         );
-        return ImmutableList.of(andMore);
+        return renderEllipsesAndReturnTooltip(data, andMore, renderDarkText, renderHighlight);
+    }
+
+    /** The "…" after a strip's last item, and {@code tooltip} while the mouse is over it. */
+    public static @Nullable List<Component> renderEllipsesAndReturnTooltip(
+            EllipsesData data,
+            Component tooltip,
+            BiConsumer<Component, Coordinate> renderDarkText,
+            BiConsumer<Coordinate, Coordinate> renderHighlight
+    ) {
+        int itemX = data.topLeft.x() + (24 * data.maxItemsBeforeEllipses);
+        Coordinate squareTopLeft = new Coordinate(itemX, data.topLeft.y());
+        renderDarkText.accept(Compat.literal("…"), squareTopLeft.shifted(4, 2));
+        if (!UtilClean.isCoordInBox(data.mouse, squareTopLeft.shifted(-4, 0), squareTopLeft.shifted(20, 16))) {
+            return null;
+        }
+        renderHighlight.accept(squareTopLeft, squareTopLeft.shifted(16, 16));
+        return ImmutableList.of(tooltip);
     }
 
     // TODO: Make this a widget so it can handle clicks and send an OpenItemJobsMessage

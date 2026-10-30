@@ -1582,3 +1582,21 @@ villager's next status change, so the note clears when the switch applies. Seen 
 day-6 world: `.scratch/dev-playtest-2026-10-29-fresh/overnight-shots/after-trip-*.png` (confirm,
 chat + tooltip, card, card cleared after the board's player-switch branch applied it). gui-lint OK
 for MultiStatusScreen. The short form was added after that check (unit-tested only).
+
+## Skill details: Produces and Tools (dev 2026-10-30)
+
+r23 #18: hunter skills showed an empty "Produces:" and cook skills "Tools Used: Raw Beef" beside
+"Items Used: Raw Beef". Dev: list the three most likely loot items and "…" with an "and others"
+tooltip; list a tool that is also used up under Items Used only.
+- `ItemJobsScreen` shows at most `PRODUCES_SHOWN` (3) products, then "…" whose tooltip is
+  `menu.item_jobs.and_others` ("And others"; `RenderUtil.renderEllipsesAndReturnTooltip` gained a
+  tooltip overload, the old "and N more" one delegates to it). The order comes from the server
+  (`town/COMPLEX.md` "Skill card products").
+- Tools pass `ToolsNotUsedUp.of(tools, ingredients, Ingredients::equal)`, and the Tools row is not
+  drawn at all when nothing is left (any job with no tools to list, so a cook card has no row).
+- The card's own tooltips (an item's name, the "…" note) had never shown: `afterRender`'s return
+  was dropped (the 1.19.2 screen dropped it too). `renderScreenContent` now shows it.
+Seen in game on the r23 world: `.scratch/dev-playtest-2026-10-29-fresh/overnight-shots/skill-*.png`
+(hunter: leather, mutton, porkchop, "…" with "And others"; cook: no Tools row, "Raw Beef" on hover).
+gui-lint OK for ItemJobsScreen. The "jobs that make this item" screen shares the card, so it also
+caps products at three. Not asked and left as is: an empty "Items Used:" row (a hunter's) still shows.

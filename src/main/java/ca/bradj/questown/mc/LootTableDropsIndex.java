@@ -4,6 +4,8 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.gatherer.LootTableDrops;
+import ca.bradj.questown.jobs.gatherer.LootTableLikelihood;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
@@ -16,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Per-prefix cache of {@link LootTableDrops} over the server's job loot tables
@@ -36,6 +39,7 @@ public final class LootTableDropsIndex {
     ) {
         if (manager != indexedManager) {
             DROPS.clear();
+            LIKELY.clear();
             indexedManager = manager;
         }
         return DROPS.computeIfAbsent(prefix, p -> read(manager, p));
@@ -58,5 +62,41 @@ public final class LootTableDropsIndex {
             }
         }
         return LootTableDrops.itemIds(tables);
+    }
+
+    private static final Map<String, ImmutableList<String>> LIKELY = new HashMap<>();
+
+    /**
+     * The item ids of one questown loot table ({@code data/questown/loot_tables/<path>.json}), most
+     * likely first ({@link LootTableLikelihood}); empty when the table cannot be read.
+     */
+    public static synchronized ImmutableList<String> mostLikely(
+            ResourceManager manager,
+            String path
+    ) {
+        if (manager != indexedManager) {
+            DROPS.clear();
+            LIKELY.clear();
+            indexedManager = manager;
+        }
+        return LIKELY.computeIfAbsent(path, p -> readLikely(manager, p));
+    }
+
+    private static ImmutableList<String> readLikely(
+            ResourceManager manager,
+            String path
+    ) {
+        ResourceLocation id = new ResourceLocation(Questown.MODID, "loot_tables/" + path + ".json");
+        Optional<Resource> res = manager.getResource(id);
+        if (res.isEmpty()) {
+            QT.JOB_LOGGER.error("No loot table {} to rank its drops", id);
+            return ImmutableList.of();
+        }
+        try (Reader r = res.get().openAsReader()) {
+            return LootTableLikelihood.itemIdsByLikelihood(JsonParser.parseReader(r));
+        } catch (Exception ex) {
+            QT.JOB_LOGGER.error("Could not read loot table {} to rank its drops", id, ex);
+            return ImmutableList.of();
+        }
     }
 }

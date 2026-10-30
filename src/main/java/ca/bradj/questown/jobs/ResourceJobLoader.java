@@ -391,7 +391,8 @@ public class ResourceJobLoader {
                 wb = wb.withOverrides(overrides);
             }
             wb = wb.withUnlockedWithRootJob(unlockedWithRootJob(object)).withAvailableAtLevel(availableAtLevel(object))
-                   .withExperience(experience(object)).withPrefersRequestedLoot(prefersRequestedLoot(object));
+                   .withExperience(experience(object)).withPrefersRequestedLoot(prefersRequestedLoot(object))
+                   .withLootTableDefault(lootTableDefault(object));
             return wb.withProficiencyId(proficiencyId(object));
         }
 
@@ -517,7 +518,8 @@ public class ResourceJobLoader {
                     work = work.withSlotPrecondition(slotPrecondition.get());
                 }
                 work = work.withUnlockedWithRootJob(unlockedWithRootJob(obj)).withAvailableAtLevel(availableAtLevel(obj))
-                           .withExperience(experience(obj)).withPrefersRequestedLoot(prefersRequestedLoot(obj));
+                           .withExperience(experience(obj)).withPrefersRequestedLoot(prefersRequestedLoot(obj))
+                           .withLootTableDefault(lootTableDefault(obj));
                 return work.withProficiencyId(proficiencyId(obj));
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
@@ -1151,6 +1153,19 @@ public class ResourceJobLoader {
     /** The optional `experience` value: XP per completion, replacing the formula. */
     private static @Nullable Integer experience(JsonObject object) {
         return optional(object, "experience", JsonElement::getAsInt);
+    }
+
+    /** The `biome_loot` result's `default` table path; null for any other result type. */
+    private static @Nullable String lootTableDefault(JsonObject object) {
+        JsonElement result = object.get("result");
+        if (result == null || !result.isJsonObject()) {
+            return null;
+        }
+        JsonObject r = result.getAsJsonObject();
+        if (!r.has("type") || !"biome_loot".equals(r.get("type").getAsString())) {
+            return null;
+        }
+        return optional(r, "default", JsonElement::getAsString);
     }
 
     /** The `biome_loot` result's `prefer_requested` flag (full-day leaver trips); absent = false. */

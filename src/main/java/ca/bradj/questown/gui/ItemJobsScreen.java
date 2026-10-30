@@ -37,6 +37,10 @@ import static ca.bradj.questown.gui.PagedCardScreen.*;
 
 public class ItemJobsScreen extends CompatScreen {
 
+    /** How many of a job's products the card shows before "…". */
+    private static final int PRODUCES_SHOWN = 3;
+
+
     public static final int EXTRA_HEIGHT = 56;
     private final List<UIJob> jobs;
     private final PagedCardScreen<UIJob> delegate;
@@ -225,7 +229,9 @@ public class ItemJobsScreen extends CompatScreen {
                 textArea.getX() + textArea.getWidth() - 16,
                 textArea.getY() - 6
         );
-        this.delegate.afterRender(ctx, mouseX, mouseY, partialTicks, jobs, false);
+        // The hovered item's name, or the "…" note. The returned tooltip was dropped (also in
+        // 1.19.2), so no item on this card showed one (found 2026-10-30 adding "And others").
+        List<Component> cardTooltip = this.delegate.afterRender(ctx, mouseX, mouseY, partialTicks, jobs, false);
         if (jobs.isEmpty()) {
             // Below the page-navigation row, aligned with it (r17 screenshot: a fixed offset from
             // the title drew the text over "Page 1 / 1").
@@ -237,6 +243,9 @@ public class ItemJobsScreen extends CompatScreen {
             );
         }
         renderTooltips(ctx, mouseX, mouseY, textArea.expandBy(4));
+        if (cardTooltip != null && !cardTooltip.isEmpty()) {
+            this.showTooltip(cardTooltip.stream().map(Compat::componentText).toList());
+        }
     }
 
     @Override
@@ -338,15 +347,30 @@ public class ItemJobsScreen extends CompatScreen {
         List<Component> tt1 = renderStrip.apply(c, d.ingredients(), true);
         c = c.shiftedDown(font.lineHeight);
 
-        Component toolsText = Compat.translatable("menu.item_jobs.tools_used");
-        rc.darkText(toolsText, x, (c = down.apply(c)).topY() + labelOffset);
-        List<Component> tt2 = renderStrip.apply(c, d.tools(), true);
-        c = c.shiftedDown(font.lineHeight);
+        // A job with no tools to list (or only ones it also uses up) has no Tools row at all.
+        List<Ingredient> tools = ToolsNotUsedUp.of(d.tools(), d.ingredients(), Ingredients::equal);
+        List<Component> tt2 = null;
+        if (!tools.isEmpty()) {
+            Component toolsText = Compat.translatable("menu.item_jobs.tools_used");
+            rc.darkText(toolsText, x, (c = down.apply(c)).topY() + labelOffset);
+            tt2 = renderStrip.apply(c, tools, true);
+            c = c.shiftedDown(font.lineHeight);
+        }
 
         Component producesText = Compat.translatable("menu.item_jobs.produces");
         rc.darkText(producesText, x, (c = down.apply(c)).topY() + labelOffset);
-        List<Ingredient> v = Ingredients.fromItems(ImmutableList.copyOf(ProducedMatches.of(d.result(), requestedItem)));
-        List<Component> tt3 = renderStrip.apply(c, putRequestedItemFirst(v), true);
+        List<Ingredient> v = putRequestedItemFirst(Ingredients.fromItems(ImmutableList.copyOf(ProducedMatches.of(d.result(), requestedItem))));
+        // The three most likely, then "…" (dev 2026-10-30; a loot job's results come most likely first).
+        List<Component> tt3 = renderStrip.apply(c, v.subList(0, Math.min(PRODUCES_SHOWN, v.size())), true);
+        if (v.size() > PRODUCES_SHOWN) {
+            List<Component> more = RenderUtil.renderEllipsesAndReturnTooltip(
+                    new RenderUtil.EllipsesData(mouse, c.topLeft().shifted(64, 0), PRODUCES_SHOWN, v.size()),
+                    Compat.translatable("menu.item_jobs.and_others"),
+                    (text, coord) -> rc.darkText(text, coord.x(), coord.y()),
+                    (topLeft, botRight) -> RenderUtil.highlight(rc.gui(), topLeft, botRight)
+            );
+            tt3 = tt3 != null ? tt3 : more;
+        }
         c = c.shiftedDown(font.lineHeight);
 
         Component roomName = Compat.translatable("room." + d.roomNameTranslationKey().getPath());

@@ -579,6 +579,7 @@
   "menu.item_jobs.items_used": "Items Used:",
   "menu.item_jobs.tools_used": "Tools Used:",
   "menu.item_jobs.produces": "Produces:",
+  "menu.item_jobs.and_others": "And others",
   "menu.item_jobs.add_to_work_requests": "Add To Work Requests",
   "menu.unlock_job.insert_bop": "Insert a Block of Progress to unlock job",
   "menu.unlock_root.insert_bop": "Insert a Block of Progress to change to a different, random profession (%s)",

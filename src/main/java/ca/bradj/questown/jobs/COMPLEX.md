@@ -1188,3 +1188,7 @@ locked items: `Jobs.tryDropLoot`, `ProductionJournal.hasAnyLootToDrop`,
 the warp's drop simulation. The flag side is `town/entity/COMPLEX.md` "Earn → latch → assign".
 Pinned by `ProductionTimeWarperTest.dropIntoContainers_ShouldLeaveABlockOfProgressWithTheVillager`
 and the `flag/bop_carried_with_loot` autotest (red before: flag 0, chest 1).
+
+`Work.lootTableDefault` (2026-10-30): the `biome_loot` result's `default` table path, chained by
+`ResourceJobLoader` beside `prefer_requested` and copied by every `Work.with*`; null for other
+results. Only the skill card reads it (`town/COMPLEX.md` "Skill card products").

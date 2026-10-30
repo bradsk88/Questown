@@ -43,3 +43,12 @@ flowchart TD
 `Loots`' leaver overloads roll exactly `attempts` items (they used to pick a random count from half
 to all), and `LootRolls.roll` skips empty rolls. Details: `jobs/declarative/COMPLEX.md` "A leaver
 attempt always brings back an item".
+
+## LootTableLikelihood (2026-10-30)
+
+A loot table's item ids, most likely first, from the table JSON alone: per pool, rolls (a number, or
+a `{min, max}` mean) times weight / total weight (weight defaults to 1; empty and tag entries take a
+share and are not listed), summed over pools; ties keep table order. Used by the skill card's
+"Produces:" (`town/COMPLEX.md` "Skill card products"); `LootTableDropsIndex.mostLikely` reads and
+caches it per table path, cleared with the drops cache on a resource reload. Pinned by
+`LootTableLikelihoodTest` (incl. the real hunter default table: leather, mutton, porkchop).
