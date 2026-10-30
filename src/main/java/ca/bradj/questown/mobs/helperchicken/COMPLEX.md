@@ -110,6 +110,12 @@ flowchart TD
   on quests and the beat waited through the first night (2026-10-30 agent playtest). The
   chicken-arc autotests had marked it directly (`MarkFlagUiOpened`); `F3_right_click_flag_after_mat`
   drives the real block use (`RightClickFlag`) and was red before the fix.
+- The closing beat leaves a stone statue where the chicken stood
+  (`ChickenStatueTransformHandler.statuePos`): its own cell when that cell is replaceable or a
+  small flower, else the cell above. Flowers are not `canBeReplaced()` in vanilla, so a chicken
+  standing in a cornflower used to leave its statue floating a block up (2026-10-30 agent playtest;
+  `ChickenStatuePosTest`). The statue's rendering fixes of the same day are in
+  `docs/solutions/conventions/render-block-entity-3d-model-1.19.2.md`.
 - Beats are persisted by `name()` under `chicken-beat-state`. There is no live
   onboarding in the field, so the order and names may be reordered or renamed
   freely (not just inserted); only the persistence key is stable across a

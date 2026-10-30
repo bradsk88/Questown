@@ -51,6 +51,7 @@ public final class QuestownClient {
         BlockEntityRenderers.register(TilesInit.AXE_RACK.get(), AxeRackBlockEntityRenderer::new);
         BlockEntityRenderers.register(TilesInit.HOSPITAL_BED.get(), HospitalBedEntityRenderer::new);
         BlockEntityRenderers.register(TilesInit.TOWN_FLAG.get(), ca.bradj.questown.blocks.entity.renderer.TownFlagDeedRenderer::new);
+        BlockEntityRenderers.register(TilesInit.CHICKEN_STATUE.get(), ca.bradj.questown.blocks.entity.renderer.ChickenStatueBlockEntityRenderer::new);
     }
 
     /**

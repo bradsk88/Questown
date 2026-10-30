@@ -9,6 +9,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -35,26 +37,34 @@ public final class ChickenStatueTransformHandler {
         if (!(chicken.level() instanceof ServerLevel sl)) {
             return;
         }
-        BlockPos statuePos = findStatuePos(sl, chicken);
+        BlockPos statuePos = statuePos(sl, chicken.blockPosition());
         placeStatue(sl, statuePos);
         playEffects(sl, statuePos);
         markArcComplete(flag);
         chicken.discard();
     }
 
-    private static BlockPos findStatuePos(
-            ServerLevel level,
-            HelperChickenEntity chicken
+    /**
+     * Where the chicken stood, unless something solid is there. A flower is not "replaceable" in
+     * vanilla, so a chicken standing in one used to leave its statue floating a block up
+     * (2026-10-30 agent playtest: a cornflower at the gate).
+     */
+    static BlockPos statuePos(
+            BlockGetter level,
+            BlockPos at
     ) {
-        BlockPos at = chicken.blockPosition();
-        if (level.getBlockState(at).canBeReplaced()) {
+        if (canHoldStatue(level.getBlockState(at))) {
             return at;
         }
         BlockPos above = at.above();
-        if (level.getBlockState(above).canBeReplaced()) {
+        if (canHoldStatue(level.getBlockState(above))) {
             return above;
         }
         return at;
+    }
+
+    private static boolean canHoldStatue(BlockState state) {
+        return state.canBeReplaced() || state.is(BlockTags.SMALL_FLOWERS);
     }
 
     private static void placeStatue(

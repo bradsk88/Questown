@@ -22,7 +22,7 @@ import net.minecraft.world.entity.animal.Chicken;
     // bakeLayer(...) fails; bake the geometry straight from the static layer
     // builder and colour it with our stone texture at render time via renderType.
     private static final ResourceLocation TEXTURE =
-            new ResourceLocation("minecraft", "textures/blocks/stone.png");
+            new ResourceLocation("minecraft", "textures/block/stone.png");
     // A chicken is ~1.25 blocks tall; scale it down to sit inside the cube.
     private static final float SCALE = 0.8F;
     private final ChickenModel<Chicken> model;
@@ -43,14 +43,16 @@ import net.minecraft.world.entity.animal.Chicken;
             int packedOverlay
     ) {
         poseStack.pushPose();
-        poseStack.translate(0.5D, 0.0D, 0.5D);
-        poseStack.scale(SCALE, SCALE, SCALE);
+        // Entity models are authored upside down with their feet at y = 1.501; flip and lift
+        // them as LivingEntityRenderer does, so the chicken stands on the block's floor.
+        poseStack.translate(0.5D, 1.501D * SCALE, 0.5D);
+        poseStack.scale(-SCALE, -SCALE, SCALE);
         RenderType renderType = this.model.renderType(TEXTURE);
         this.model.renderToBuffer(
                 poseStack,
                 bufferSource.getBuffer(renderType),
                 packedLight,
-                0,
+                packedOverlay,
                 1.0F, 1.0F, 1.0F, 1.0F
         );
         poseStack.popPose();
