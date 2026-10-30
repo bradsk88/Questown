@@ -847,3 +847,15 @@ open when villagers use them". The flag tick drives the closes.
 
 `TownPossibleWork.showsUnmetNeed`: a villager on a downtime job gets no UNMET_ITEM need; see
 `mobs/visitor/COMPLEX.md` "A relaxing villager has no unmet-item need".
+
+## The work roll takes the longest trip that fits the day (dev playtest 2026-10-29)
+
+"hunter is preferring to work shorter jobs. But longer jobs are more beneficial (and are available)";
+ruling: "Longest that fits the day". `JobCycler.nextValid` used to return the first valid job in its
+shuffled rotation; the trip variants all scored ~1.0, so the pick was random. It now walks every
+valid job and takes the one with the greatest `ServerJobsRegistry.tripLength` (a job that
+`leavesTown()` - any status carries `remove_from_world` - returns its `getTotalDuration()`, any other
+job 0); ties (all in-town jobs) keep the rotation. Validity still includes `canFit` (finishes by
+evening), so late in the day a shorter trip wins. The return from eating is not a separate path: it
+goes through the same work roll (`[board] ... dining_* -> sword via work-roll`). `JobCyclerTest`;
+autotest `hunter/sword [longest_trip]` (first pick from the board is sword_full_day).

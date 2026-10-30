@@ -192,3 +192,7 @@ work spot (40323611), the downtime record on the flag, and the raw diner on a si
 until the hunter is away (`isAwayOnTrip`), then calls `switchJob` to the other trip (sword_half_day,
 or sword if already on it). After-trip passes when the job is unchanged right after the request and
 changes later; now passes when it changes at once. Both also logged no `Clobbered time` ERROR.
+
+`hunter/sword [longest_trip]` (2026-10-29 overnight): the hunter has sword / sword_half_day /
+sword_full_day unlocked and starts at the board (seeking_work) at daytime 1000; its first trip must
+be sword_full_day (`JobCycler`'s longest-trip pick).

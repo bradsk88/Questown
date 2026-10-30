@@ -779,7 +779,8 @@ public class TownPossibleWork {
         ImmutableList<JobID> possible = getFor(currentJob).stream()
                 .filter(jobID -> vh.isUnlocked(villagerUUID, jobID))
                 .collect(ImmutableList.toImmutableList());
-        return cycler.nextValid(possible, canAlwaysStart, canFitInDay, requestedResults, td);
+        return cycler.nextValid(possible, canAlwaysStart, canFitInDay, requestedResults, td,
+                job -> ServerJobsRegistry.tripLength(villagerUUID, job));
     }
 
     /**

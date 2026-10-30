@@ -98,6 +98,11 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     BlockPos getLook();
 
+    /** True for a trip: some status takes the villager out of the world (remove_from_world). */
+    default boolean leavesTown() {
+        return false;
+    }
+
     /** The job block the villager is working at now, or null (jobs without work spots). */
     default @Nullable BlockPos getWorkSpotBlock() {
         return null;

@@ -198,6 +198,7 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("hunter", "sword", "sleep_mid_trip", hunterSleepMidTripBlueprint()));
         jobs.add(edgeCaseEntry("hunter", "sword", "switch_after_trip", hunterSwitchMidTripBlueprint(true)));
         jobs.add(edgeCaseEntry("hunter", "sword", "switch_now", hunterSwitchMidTripBlueprint(false)));
+        jobs.add(edgeCaseEntry("hunter", "sword", "longest_trip", hunterLongestTripBlueprint()));
         jobs.add(edgeCaseEntry("hunter", "sword", "one_day_yield", hunterBlueprint().withExpectation(
                 new TestExpectation(List.of(new ExpectedProduct("*", 1, OneDayYieldCaps.HUNTER)), 1, 100))));
         // loot_on_extract: the 2.5 raw-food gate as a deterministic measurement. Posts the
@@ -4120,6 +4121,47 @@ public class TestBlueprintRegistry {
             boolean switchedAtOnce = watcher.chosen.equals(watcher.jobRightAfter);
             return afterTrip != switchedAtOnce;
         });
+    }
+
+    /**
+     * Dev playtest 2026-10-29: "Longest that fits the day". With sword, sword_half_day and
+     * sword_full_day unlocked and the morning ahead, the hunter's first trip is the full day.
+     */
+    private static TestBlueprint hunterLongestTripBlueprint() {
+        TestBlueprint base = hunterBlueprint();
+        JobID[] firstTrip = {null};
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, 1000L, 1, true, 1500, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                for (String j : List.of("sword", "sword_half_day", "sword_full_day")) {
+                    town.getVillagerHandle().unlockJob(uuid, new JobID("hunter", j));
+                }
+                // Start at the board, so the first trip is the work roll's choice, not the fixture's.
+                town.getVillagerHandle().changeJobForVillager(vuid,
+                        ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.getIDForRoot(new JobID("hunter", "sword")), false);
+            }
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new Object() {
+                @net.neoforged.bus.api.SubscribeEvent
+                public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (firstTrip[0] == null && e instanceof VisitorMobEntity v && v.isAwayOnTrip()) {
+                            firstTrip[0] = v.getJobId();
+                            output.msg("[longest_trip] first trip: " + firstTrip[0]);
+                            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(this);
+                        }
+                    }
+                }
+            });
+            return true;
+        }).withCustomAssertion((level, flagPos, town, output) ->
+                new JobID("hunter", "sword_full_day").equals(firstTrip[0]));
     }
 
     /** Requests a job switch the first tick the villager is away on a trip, then watches for it. */

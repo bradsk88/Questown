@@ -509,6 +509,11 @@ public abstract class ProductionJob<
     protected abstract Collection<? extends Predicate<MCTownItem>> cleanRooms();
 
     @Override
+    public boolean leavesTown() {
+        return specialRules.values().stream().anyMatch(rules -> rules.contains(SpecialRules.REMOVE_FROM_WORLD));
+    }
+
+    @Override
     public boolean shouldDisappear(
             TownInterface town,
             Vec3 entityPosition

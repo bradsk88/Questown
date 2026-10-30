@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.function.ToLongFunction;
 
 public class JobCycler {
 
@@ -22,6 +23,22 @@ public class JobCycler {
             BoardRequests requestedResults,
             WorksBehaviour.TownData td
     ) {
+        return nextValid(availableJobs, canAlwaysStart, canFitInDay, requestedResults, td, j -> 0L);
+    }
+
+    /**
+     * {@code tripLength} ranks the valid jobs: the longest trip that fits the day wins (dev playtest
+     * 2026-10-29: "Longest that fits the day"); jobs that are not trips (length 0) and ties keep the
+     * shuffled rotation.
+     */
+    public @Nullable JobID nextValid(
+            Iterable<JobID> availableJobs,
+            Predicate<JobID> canAlwaysStart,
+            Predicate<JobID> canFitInDay,
+            BoardRequests requestedResults,
+            WorksBehaviour.TownData td,
+            ToLongFunction<JobID> tripLength
+    ) {
         Set<JobID> currentSet = toSet(availableJobs);
         if (!currentSet.equals(knownJobs)) {
             reshuffleFrom(currentSet);
@@ -32,13 +49,23 @@ public class JobCycler {
         }
 
         int size = shuffled.size();
+        int bestPos = -1;
+        long bestLength = -1;
         for (int i = 0; i < size; i++) {
             int pos = (index + i) % size;
             JobID candidate = shuffled.get(pos);
-            if (isValid(candidate, canAlwaysStart, canFitInDay, requestedResults, td)) {
-                index = (pos + 1) % size;
-                return candidate;
+            if (!isValid(candidate, canAlwaysStart, canFitInDay, requestedResults, td)) {
+                continue;
             }
+            long length = tripLength.applyAsLong(candidate);
+            if (length > bestLength) {
+                bestPos = pos;
+                bestLength = length;
+            }
+        }
+        if (bestPos >= 0) {
+            index = (bestPos + 1) % size;
+            return shuffled.get(bestPos);
         }
 
         reshuffleFrom(currentSet);
