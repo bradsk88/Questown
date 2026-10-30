@@ -269,7 +269,7 @@ public final class NeedBubbleFocus {
             return null;
         }
         java.util.List<net.minecraft.world.item.ItemStack> blocks = new java.util.ArrayList<>();
-        ca.bradj.questown.logic.RoomRecipes.getById(townie.level(), room).ifPresent(r -> {
+        ca.bradj.questown.logic.RoomRecipes.getByIdOrSpecial(townie.level(), room).ifPresent(r -> {
             for (Ingredient i : ca.bradj.questown.logic.RoomRecipes.filterSpecialBlocks(r.getIngredients())) {
                 net.minecraft.world.item.ItemStack[] stacks = i.getItems();
                 if (stacks.length > 0) {

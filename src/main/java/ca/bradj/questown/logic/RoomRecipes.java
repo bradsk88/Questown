@@ -59,6 +59,21 @@ public class RoomRecipes {
         return RecipeRef.recipeById(level.getRecipeManager(), RecipesInit.ROOM, id);
     }
 
+    /**
+     * {@link #getById}, or the built-in recipe of a special room (the town gate, the flag, the
+     * campfire), which lives in {@link SpecialQuests} rather than the recipe manager.
+     */
+    public static Optional<RoomRecipe> getByIdOrSpecial(
+            Level level,
+            ResourceLocation id
+    ) {
+        Optional<RoomRecipe> r = getById(level, id);
+        if (r.isPresent()) {
+            return r;
+        }
+        return Optional.ofNullable(SpecialQuests.getSpecialQuests().get(id));
+    }
+
     @NotNull
     public static List<RoomRecipe> getAllRecipes(Level level) {
         return RecipeRef.recipesOf(level.getRecipeManager(), RecipesInit.ROOM);

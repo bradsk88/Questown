@@ -339,11 +339,16 @@ need pass (`TownPossibleWork`) when the townie has no supply key but `UnmetNeedT
 names a room (the oldest NO_ROOM row over jobs it can hold); the room id rides the unmet-item key
 (`setNeed` keeps it for MISSING_ROOM; `VisitorMobEntity.getMissingRoom`). NO_STORAGE outranks it;
 relaxing and the evening hide it like UNMET_ITEM. The bubble cycles through the room recipe's blocks
-one per second (`NeedBubbleFocus.missingRoomIcon`, client `RoomRecipes.getById`, beds counted once);
+one per second (`NeedBubbleFocus.missingRoomIcon`, client `RoomRecipes.getByIdOrSpecial`, beds counted once);
 the look hint and the flag villager tooltip say `missing_room.room` with `RoomRecipes.getName`.
 Pins: `UnmetNeedTrackerTest.primaryRoom_*`, `NeedBubbleFocusTest.Test_MissingRoomBubbleCycles...`,
-autotest `cook/mutton [no_kitchen]` (need=MISSING_ROOM room=questown:kitchen_small). Bubble not yet
-seen in game.
+autotest `cook/mutton [no_kitchen]` (need=MISSING_ROOM room=questown:kitchen_small).
+
+Seen in game 2026-10-30 on a gate-less town (gatherer and hunter both `need=MISSING_ROOM`): the hint
+read "They need a Town Gate to work.", but the bubble drew the crafting-table fallback. The gate, flag
+and campfire recipes live in `SpecialQuests.getSpecialQuests()`, not the recipe manager, so
+`getById` found nothing. The bubble now looks up `RoomRecipes.getByIdOrSpecial`, and the gate's
+bubble shows the welcome mat (`.scratch/dev-playtest-2026-10-29-fresh/overnight-shots/missing-room-gate.png`).
 
 
 ## Doors stay open while a villager is near (dev playtest 2026-10-29)
