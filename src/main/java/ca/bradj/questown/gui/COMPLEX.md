@@ -1525,3 +1525,22 @@ click's path) or "Switch to this job" (unlocked: `SwitchJobConfirmScreen.open`, 
 villager's name and trip state from the client entity). Seen in game (`overnight-shots/skill-details*.png`,
 `details-to-confirm.png`); gui-lint OK for ItemJobsScreen and SwitchJobConfirmScreen. No autotest:
 the round trip needs a connected player.
+
+## Spend the flag's Block of Progress on a skill (dev playtest 2026-10-29)
+
+"If the user is viewing the skill or job unlock screens via the flag menu (not via the villager menu)
+and the flag has BOPs on it, the slot should change to an item renderer and they should be able to
+just spend directly from the flag instead of having to withdraw first." Ruling: flag menu only.
+`VillagerAdvancementsScreen.fromFlag` (= management-only, `!showInventoryTab`) rides
+`OpenSkillDetailsMessage`; the server answers with the flag's count (`getBopCount`) in
+`ShowSkillDetailsMessage.flagBops`; for a locked skill the details screen draws the Block of Progress
+item (count) left of a narrowed "Unlock from the flag" button, which sends
+`SpendFlagBopOnSkillMessage` -> `TownFlagBlockEntity.spendBopToUnlockSkill` (level gate + tree, the
+owner call the growth driver and `_qtdev unlock_skill` use). Seen in game:
+`overnight-shots/flag-unlock2.png` and chat "Dev spent a Block of Progress from the flag: Villager 1
+can now do hunter:sword_half_day" (`after-click.png`). Not done: the change-job panel (root change).
+
+Same pass: the skills pane's tab embedding did not override `showInventoryTab()` (default true), so
+from the flag it still drew a lit, dead inventory tab - the co-highlight from 471ad99a's report on
+this pane. It now returns the screen's flag (`overnight-shots/mgmt-skills2.png`: economics, stats,
+skills lit, BOP).

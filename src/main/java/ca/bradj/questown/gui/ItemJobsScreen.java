@@ -1,10 +1,12 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.AddWorkFromUIMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.core.network.SpendFlagBopOnSkillMessage;
 import ca.bradj.questown.core.network.UnlockJobMessage;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
@@ -45,17 +47,20 @@ public class ItemJobsScreen extends CompatScreen {
     // screen"): one skill's card, with Unlock (locked) or Switch (unlocked) instead of Add.
     private final @Nullable UUID skillVillager;
     private final boolean skillLocked;
+    // Opened from the flag with Blocks of Progress there: Unlock spends one of the flag's (dev playtest
+    // 2026-10-29: "spend directly from the flag instead of having to withdraw first").
+    private final int flagBops;
 
     public ItemJobsScreen(
             Ingredient requestedItem,
             Collection<UIJob> jobs,
             BlockPos flagPos
     ) {
-        this(requestedItem, jobs, flagPos, null, false);
+        this(requestedItem, jobs, flagPos, null, false, 0);
     }
 
-    public static ItemJobsScreen forSkill(UIJob job, BlockPos flagPos, UUID villager, boolean locked) {
-        return new ItemJobsScreen(Ingredient.EMPTY, List.of(job), flagPos, villager, locked);
+    public static ItemJobsScreen forSkill(UIJob job, BlockPos flagPos, UUID villager, boolean locked, int flagBops) {
+        return new ItemJobsScreen(Ingredient.EMPTY, List.of(job), flagPos, villager, locked, flagBops);
     }
 
     private ItemJobsScreen(
@@ -63,11 +68,13 @@ public class ItemJobsScreen extends CompatScreen {
             Collection<UIJob> jobs,
             BlockPos flagPos,
             @Nullable UUID skillVillager,
-            boolean skillLocked
+            boolean skillLocked,
+            int flagBops
     ) {
         super(Compat.translatable(skillVillager == null ? "menu.work_add_confirm.title" : "menu.skill_details.title"));
         this.skillVillager = skillVillager;
         this.skillLocked = skillLocked;
+        this.flagBops = flagBops;
 
         this.delegate = new PagedCardScreen<>(
                 () -> height,
@@ -85,12 +92,23 @@ public class ItemJobsScreen extends CompatScreen {
 
     }
 
+    private static final int FLAG_BOP_ICON_SPACE = 20;
+
+    private boolean showsFlagBop() {
+        return skillVillager != null && skillLocked && flagBops > 0;
+    }
+
     private void act() {
         if (skillVillager == null) {
             send();
             return;
         }
         UIJob job = jobs.get(0);
+        if (skillLocked && flagBops > 0) {
+            QuestownNetwork.sendToServer(new SpendFlagBopOnSkillMessage(flagPos, skillVillager, job.jobId()));
+            this.onClose();
+            return;
+        }
         if (skillLocked) {
             QuestownNetwork.sendToServer(new UnlockJobMessage(flagPos, skillVillager, job.jobId(), true));
             this.onClose();
@@ -147,14 +165,17 @@ public class ItemJobsScreen extends CompatScreen {
         int pageTopY = ((this.height - delegate.backgroundHeight)) / 2;
         int pageLeftX = ((this.width - backgroundWidth) / 2);
         int buttonHeight = (2 * font.lineHeight) + 2;
+        // The flag's Block of Progress is drawn left of Unlock (the "slot" as an item, not empty).
+        int bopSpace = showsFlagBop() ? FLAG_BOP_ICON_SPACE : 0;
         this.addButton = this.addRenderableWidget(
                 Compat.button(
                         Compat.translatable(skillVillager == null ? "menu.item_jobs.add_to_work_requests"
-                                : skillLocked ? "menu.skill_details.unlock" : "menu.skill_details.switch"),
+                                : !skillLocked ? "menu.skill_details.switch"
+                                : flagBops > 0 ? "menu.skill_details.unlock_from_flag" : "menu.skill_details.unlock"),
                         (p_96776_) -> this.act(),
-                        pageLeftX + BIG_PADDING,
+                        pageLeftX + BIG_PADDING + bopSpace,
                         pageTopY + delegate.backgroundHeight - buttonHeight - BIG_PADDING,
-                        backgroundWidth - (2 * BIG_PADDING),
+                        backgroundWidth - (2 * BIG_PADDING) - bopSpace,
                         buttonHeight
                 )
         );
@@ -191,6 +212,10 @@ public class ItemJobsScreen extends CompatScreen {
             int mouseY,
             float partialTicks
     ) {
+        if (showsFlagBop()) {
+            ItemStack bop = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance().copyWithCount(Math.min(flagBops, 64));
+            ctx.renderItemAndDecorations(bop, addButton.getX() - FLAG_BOP_ICON_SPACE + 1, addButton.getY() + 1);
+        }
         String renderString = skillVillager == null ? "Jobs:" : title.getString() + ":";
         ImmutableRect2i textArea = getTitleArea();
         ctx.lightText(renderString, textArea.getX(), textArea.getY());

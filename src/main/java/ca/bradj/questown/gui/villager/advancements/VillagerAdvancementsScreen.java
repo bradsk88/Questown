@@ -32,6 +32,8 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
     public static final int backgroundHeight = 140;
     private final BlockPos flagPos;
     private final UUID villagerUUID;
+    // Opened from the flag (management-only): a skill unlock may spend the flag's Block of Progress.
+    private final boolean fromFlag;
     private final VillagerAdvancementsContent content;
     private final VillagerTabs tabs;
     private boolean isScrolling;
@@ -67,6 +69,7 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
         );
         this.flagPos = flagPos;
         this.villagerUUID = villagerUUID;
+        this.fromFlag = !showInventoryTab;
         this.tabs = VillagerTabs.forMenu(new VillagerTabsEmbedding() {
             @Override
             public Collection<String> getEnabledTabs() {
@@ -90,6 +93,13 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
             @Override
             public boolean showBlockOfProgressTab() {
                 return showBlockOfProgressTab;
+            }
+
+            // Without this the row kept the inventory tab (default true) with no open fn, drawn
+            // lit beside the skills tab - the co-highlight the dev reported (playtest 2026-10-29).
+            @Override
+            public boolean showInventoryTab() {
+                return showInventoryTab;
             }
         });
     }
@@ -246,7 +256,7 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
 
         // A click opens the skill's details (what it needs, where, what it makes); Unlock / Switch
         // live there (dev playtest 2026-10-29: "Details with Unlock button").
-        QuestownNetwork.sendToServer(new OpenSkillDetailsMessage(flagPos, villagerUUID, id, content.isLocked(id)));
+        QuestownNetwork.sendToServer(new OpenSkillDetailsMessage(flagPos, villagerUUID, id, content.isLocked(id), fromFlag));
         return true;
     }
 }

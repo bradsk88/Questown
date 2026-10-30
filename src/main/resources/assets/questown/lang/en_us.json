@@ -494,6 +494,8 @@
   "menu.switch_job.title": "Change job?",
   "menu.skill_details.title": "Skill",
   "menu.skill_details.unlock": "Unlock",
+  "menu.skill_details.unlock_from_flag": "Unlock from the flag",
+  "messages.jobs.unlocked_from_flag": "%s spent a Block of Progress from the flag: %s can now do %s",
   "menu.skill_details.switch": "Switch to this job",
   "menu.switch_job.body": "%s will start working as %s.",
   "menu.switch_job.away": "%s is away on a trip.",

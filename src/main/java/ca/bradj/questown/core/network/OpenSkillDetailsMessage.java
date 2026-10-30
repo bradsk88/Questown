@@ -19,7 +19,9 @@ public record OpenSkillDetailsMessage(
         BlockPos flagPos,
         UUID villager,
         JobID job,
-        boolean locked
+        boolean locked,
+        /** Opened from the flag: the details offer the flag's Block of Progress for Unlock. */
+        boolean fromFlag
 ) {
 
     public static void encode(
@@ -30,11 +32,12 @@ public record OpenSkillDetailsMessage(
         buffer.writeUUID(msg.villager);
         Jobs.writeIdToNetwork(buffer, msg.job);
         buffer.writeBoolean(msg.locked);
+        buffer.writeBoolean(msg.fromFlag);
     }
 
     public static OpenSkillDetailsMessage decode(RegistryFriendlyByteBuf buffer) {
         return new OpenSkillDetailsMessage(
-                buffer.readBlockPos(), buffer.readUUID(), Jobs.getIdFromNetwork(buffer), buffer.readBoolean()
+                buffer.readBlockPos(), buffer.readUUID(), Jobs.getIdFromNetwork(buffer), buffer.readBoolean(), buffer.readBoolean()
         );
     }
 
@@ -49,7 +52,8 @@ public record OpenSkillDetailsMessage(
                 return;
             }
             TownVillagerUIs.showSkillDetailsUI(
-                    sender, flag.get(), flag.get().getVillagerHandle().entities(), job, villager, locked
+                    sender, flag.get(), flag.get().getVillagerHandle().entities(), job, villager, locked,
+                    fromFlag ? flag.get().getBopCount() : 0
             );
         });
     }

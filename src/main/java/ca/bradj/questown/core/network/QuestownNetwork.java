@@ -73,6 +73,7 @@ public final class QuestownNetwork {
         register(Channel.Direction.TO_SERVER, OpenItemJobsMessage.class, OpenItemJobsMessage::encode, OpenItemJobsMessage::decode, OpenItemJobsMessage::handle);
         register(Channel.Direction.TO_SERVER, OpenJobMessage.class, OpenJobMessage::encode, OpenJobMessage::decode, OpenJobMessage::handle);
         register(Channel.Direction.TO_SERVER, OpenSkillDetailsMessage.class, OpenSkillDetailsMessage::encode, OpenSkillDetailsMessage::decode, OpenSkillDetailsMessage::handle);
+        register(Channel.Direction.TO_SERVER, SpendFlagBopOnSkillMessage.class, SpendFlagBopOnSkillMessage::encode, SpendFlagBopOnSkillMessage::decode, SpendFlagBopOnSkillMessage::handle);
         register(Channel.Direction.TO_SERVER, OpenQuestsMenuMessage.class, OpenQuestsMenuMessage::encode, OpenQuestsMenuMessage::decode, OpenQuestsMenuMessage::handle);
         register(Channel.Direction.TO_SERVER, OpenVillagerMenuMessage.class, OpenVillagerMenuMessage::encode, OpenVillagerMenuMessage::decode, OpenVillagerMenuMessage::handle);
         register(Channel.Direction.TO_SERVER, RelocationChoiceMessage.class, RelocationChoiceMessage::encode, RelocationChoiceMessage::decode, RelocationChoiceMessage::handle);

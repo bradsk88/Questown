@@ -243,7 +243,8 @@ public class TownVillagerUIs {
             Collection<? extends LivingEntity> entities,
             JobID job,
             UUID villager,
-            boolean locked
+            boolean locked,
+            int flagBops
     ) {
         Map<JobID, List<UUID>> vb = new HashMap<>();
         for (LivingEntity entity : entities) {
@@ -256,7 +257,7 @@ public class TownVillagerUIs {
             QT.GUI_LOGGER.error("No details for skill {}", job);
             return;
         }
-        QuestownNetwork.sendToPlayer(sender, new ShowSkillDetailsMessage(card, unsafe.getTownFlagBasePos(), villager, locked));
+        QuestownNetwork.sendToPlayer(sender, new ShowSkillDetailsMessage(card, unsafe.getTownFlagBasePos(), villager, locked, flagBops));
     }
 
     private static ImmutableMap<ResourceLocation, RoomRecipe> roomRecipes(ServerPlayer sender) {
