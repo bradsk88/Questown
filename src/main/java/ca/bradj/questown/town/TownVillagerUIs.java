@@ -517,7 +517,8 @@ public class TownVillagerUIs {
                                 d.jobChangePending(),
                                 !d.unlockableJobs().isEmpty(),
                                 d.showInventoryTab(),
-                                promisedRoot(d.sender(), d.entity())
+                                promisedRoot(d.sender(), d.entity()),
+                                JobChangeConfirmMenu.FlagBop.NONE
                         ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                 )
         );
@@ -573,6 +574,21 @@ public class TownVillagerUIs {
         }
         TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level(), e.getFlagPos());
         return flag != null && flag.wantsJobChangeFrom(e.getJobId());
+    }
+
+    /** The flag's Blocks of Progress for a panel opened from the flag (management-only). */
+    private static JobChangeConfirmMenu.FlagBop flagBop(ServerPlayer sender, VisitorMobEntity e) {
+        if (e.getFlagPos() == null
+                || !(TownFlagBlockEntity.getFromPos(sender.level(), e.getFlagPos()) instanceof TownFlagBlockEntity flag)) {
+            return JobChangeConfirmMenu.FlagBop.NONE;
+        }
+        return flag.peekOldestBop()
+                .map(bop -> new JobChangeConfirmMenu.FlagBop(
+                        flag.getBopCount(),
+                        ca.bradj.questown.blocks.BlockOfProgress.isBlessed(bop),
+                        ca.bradj.questown.blocks.BlockOfProgress.getBlessedJob(bop).map(JobID::rootId).orElse("")
+                ))
+                .orElse(JobChangeConfirmMenu.FlagBop.NONE);
     }
 
     private static boolean hidesJobChange(ServerPlayer sender, VisitorMobEntity e) {
@@ -635,7 +651,8 @@ public class TownVillagerUIs {
                         villagerDisplayName,
                         wantsJobChange(sender, e),
                         promisedRoot(sender, e),
-                        !hidesJobChange(sender, e)
+                        !hidesJobChange(sender, e),
+                        showInventoryTab ? JobChangeConfirmMenu.FlagBop.NONE : flagBop(sender, e)
                 )
         );
         if (e.getFlagPos() != null) {

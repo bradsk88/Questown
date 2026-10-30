@@ -42,7 +42,10 @@ class VillagerMenusPayloadTest {
                 "Villager 2",
                 true,
                 "hunter",
-                false
+                false,
+                3,
+                true,
+                "cook"
         );
     }
 
@@ -69,6 +72,9 @@ class VillagerMenusPayloadTest {
         assertEquals(List.of("questown:sleepless"), r.stats.moodEffects());
         assertEquals("hunter", r.promisedRoot);
         assertEquals(false, r.showChangeRootTab);
+        assertEquals(3, r.flagBops);
+        assertEquals(true, r.flagBopBlessed);
+        assertEquals("cook", r.flagBopRoot);
         assertEquals(p.showBlockOfProgressTab, r.showBlockOfProgressTab);
         assertEquals(p.showSkillsTab, r.showSkillsTab);
         assertEquals(false, r.showInventoryTab);

@@ -3,6 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.network.JobRootChangeMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.mc.JEI;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import net.minecraft.client.Minecraft;
@@ -11,6 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 
@@ -57,7 +59,8 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
                     QuestownNetwork.sendToServer(new JobRootChangeMessage(
                             menu.flagPos,
                             menu.villagerUUID,
-                            Minecraft.getInstance().player.isCreative()
+                            Minecraft.getInstance().player.isCreative(),
+                            menu.usesFlagBop()
                     ));
                     Minecraft.getInstance().setScreen(null);
                 },
@@ -87,7 +90,14 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
         }
 
         if (unlockButton != null) {
-            unlockButton.active = menu.tx.hasBlockOfProgress();
+            unlockButton.active = menu.hasBlockOfProgress();
+        }
+        if (menu.usesFlagBop()) {
+            // The flag's Block of Progress in the empty slot, as an item (the dev's "the slot should
+            // change to an item renderer"); Unlock spends it from the flag.
+            Slot bopSlot = menu.slots.get(menu.slots.size() - 1);
+            ItemStack bop = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance().copyWithCount(Math.min(menu.flagBopCount(), 64));
+            ctx.renderItemAndDecorations(bop, bgX + bopSlot.x, bgY + bopSlot.y);
         }
         renderChangeText(ctx, jobIconX, bgY + menu.gathererInventoryYOffset);
         this.tabs.renderTooltip(bgX, bgY, mouseX, mouseY, key -> this.showTooltip(Compat.translatable(key)));
@@ -105,7 +115,7 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
         // An open onboarding job-change quest decides the root whatever the BOP, so say which
         // job instead of "a random profession" (2026-10-22 r8).
         JobChangeText text = JobChangeText.of(
-                menu.tx.hasBlockOfProgress(),
+                menu.hasBlockOfProgress(),
                 Minecraft.getInstance().player != null && Minecraft.getInstance().player.isCreative(),
                 menu.getPromisedRoot(),
                 menu.isBlessed()

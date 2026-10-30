@@ -947,6 +947,11 @@ flowchart LR
   needs to *win* at dawn, not be *known* at spend, so the spend-time decision is
   blessed-or-preroll and the morning priority is unchanged:
   blessed > override > pre-roll > re-roll.
+- The flag's deposited BOPs are spent oldest-first through one owner call,
+  `TownFlagBlockEntity.takeOldestBop()` (remove, `setChanged`, `syncBopFull`):
+  `spendBopToRequestJobChange`, `spendBopToUnlockSkill`, and `JobRootChangeMessage`
+  when `fromFlag` (the change-job panel opened from the flag, 2026-10-30).
+  `peekOldestBop()` lets the panel show that BOP's blessing before the spend.
 - Quest completion is the flag's call, not the message's: `JobRootChangeMessage`
   and `spendBopToRequestJobChange` both route through
   `TownFlagBlockEntity.requestJobRootChange`, which schedules and then calls

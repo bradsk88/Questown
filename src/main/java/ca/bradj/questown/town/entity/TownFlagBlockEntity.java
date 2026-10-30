@@ -514,17 +514,31 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (!inTown) {
             return JobChangeResult.NO_VILLAGER;
         }
-        if (bopStacks.isEmpty()) {
+        Optional<net.minecraft.world.item.ItemStack> consumed = takeOldestBop();
+        if (consumed.isEmpty()) {
             return JobChangeResult.NO_BOP;
         }
-        net.minecraft.world.item.ItemStack consumed = bopStacks.remove(0);
-        setChanged();
-        syncBopFull();
         requestJobRootChange(
                 villagerUUID, false,
-                BlockOfProgress.getBlessedJob(consumed)
+                BlockOfProgress.getBlessedJob(consumed.get())
         );
         return JobChangeResult.REQUESTED;
+    }
+
+    /** The flag's oldest deposited Block of Progress (the one a spend takes), without taking it. */
+    public Optional<net.minecraft.world.item.ItemStack> peekOldestBop() {
+        return bopStacks.isEmpty() ? Optional.empty() : Optional.of(bopStacks.get(0));
+    }
+
+    /** Removes and returns the flag's oldest deposited Block of Progress (the player collects them in this order). */
+    public Optional<net.minecraft.world.item.ItemStack> takeOldestBop() {
+        if (bopStacks.isEmpty()) {
+            return Optional.empty();
+        }
+        net.minecraft.world.item.ItemStack taken = bopStacks.remove(0);
+        setChanged();
+        syncBopFull();
+        return Optional.of(taken);
     }
 
     public enum SkillUnlockResult {
@@ -542,12 +556,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (!getVillagerHandle().getUnlockableSkills(villagerUUID).contains(id)) {
             return SkillUnlockResult.NOT_UNLOCKABLE;
         }
-        if (bopStacks.isEmpty()) {
+        if (takeOldestBop().isEmpty()) {
             return SkillUnlockResult.NO_BOP;
         }
-        bopStacks.remove(0);
-        setChanged();
-        syncBopFull();
         unlockSkillFromPlayer(villagerUUID, id);
         return SkillUnlockResult.UNLOCKED;
     }

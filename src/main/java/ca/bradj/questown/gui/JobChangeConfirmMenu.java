@@ -37,6 +37,17 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
 
     private final String promisedRoot;
 
+    /**
+     * The flag's Blocks of Progress when the panel was opened from the flag (dev playtest
+     * 2026-10-29: spend "directly from the flag instead of having to withdraw first"): how many, and
+     * whether the oldest (the one a spend takes) is blessed and with which root ("" none).
+     */
+    public record FlagBop(int count, boolean blessed, String root) {
+        public static final FlagBop NONE = new FlagBop(0, false, "");
+    }
+
+    private final FlagBop flagBop;
+
     public <S extends IStatus<S>> JobChangeConfirmMenu(
             int windowId,
             Container gathererInv,
@@ -47,10 +58,12 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
             boolean alreadyPending,
             boolean showSkillsTab,
             boolean showInventoryTab,
-            String promisedRoot
+            String promisedRoot,
+            FlagBop flagBop
     ) {
         super(MenuTypesInit.CONFIRM_JOB_CHANGE.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
         this.promisedRoot = promisedRoot;
+        this.flagBop = flagBop;
         gathererInventoryYOffset = 8;
         this.jobId = jobId;
         this.showSkillsTab = showSkillsTab;
@@ -98,12 +111,31 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
         return promisedRoot.isEmpty() ? Optional.empty() : Optional.of(promisedRoot);
     }
 
+    /** The panel spends the flag's Block of Progress: nothing in the slot, and the flag has one. */
+    public boolean usesFlagBop() {
+        return !tx.hasBlockOfProgress() && flagBop.count() > 0;
+    }
+
+    public boolean hasBlockOfProgress() {
+        return tx.hasBlockOfProgress() || usesFlagBop();
+    }
+
+    public int flagBopCount() {
+        return flagBop.count();
+    }
+
     public boolean isBlessed() {
+        if (usesFlagBop()) {
+            return flagBop.blessed();
+        }
         return tx.hasBlockOfProgress() && tx.isBlessed();
     }
 
     /** The root job a blessed ("gold") BOP guarantees, or empty for a plain BOP. */
     public java.util.Optional<JobID> getBlessedJob() {
+        if (usesFlagBop()) {
+            return flagBop.root().isEmpty() ? Optional.empty() : Optional.of(new JobID(flagBop.root(), ""));
+        }
         return tx.getBlessedJob();
     }
 }

@@ -1538,7 +1538,18 @@ item (count) left of a narrowed "Unlock from the flag" button, which sends
 `SpendFlagBopOnSkillMessage` -> `TownFlagBlockEntity.spendBopToUnlockSkill` (level gate + tree, the
 owner call the growth driver and `_qtdev unlock_skill` use). Seen in game:
 `overnight-shots/flag-unlock2.png` and chat "Dev spent a Block of Progress from the flag: Villager 1
-can now do hunter:sword_half_day" (`after-click.png`). Not done: the change-job panel (root change).
+can now do hunter:sword_half_day" (`after-click.png`).
+
+The change-job panel (root change) does the same from the flag. `TownVillagerUIs.openMenu` fills
+`VillagerMenusPayload.flagBops/flagBopBlessed/flagBopRoot` from the flag's oldest BOP
+(`TownFlagBlockEntity.peekOldestBop`, the one a spend takes) for a management-only open, and
+`FlagBop.NONE` for the full villager menu. `JobChangeConfirmMenu.usesFlagBop()` (slot empty, flag
+count > 0) enables Unlock and makes `isBlessed()`/`getBlessedJob()` describe the flag's BOP;
+`JobChangeConfirmScreen` draws the BOP item over the slot and sends `JobRootChangeMessage.fromFlag`,
+whose handler takes `flag.takeOldestBop()` instead of `BopTransactionSyncer.syncConsumedBOP`. Seen in
+game: the "special" BOP text with Unlock lit (`run-client/diags/change-job-flag.png`), chat
+"Villager 2 will change to a new job in the morning", and the flag's BOP tab at 0 afterwards;
+gui-lint OK for JobChangeConfirmScreen.
 
 Same pass: the skills pane's tab embedding did not override `showInventoryTab()` (default true), so
 from the flag it still drew a lit, dead inventory tab - the co-highlight from 471ad99a's report on
