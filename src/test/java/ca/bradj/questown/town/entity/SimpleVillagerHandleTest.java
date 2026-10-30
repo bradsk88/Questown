@@ -82,6 +82,7 @@ class SimpleVillagerHandleTest {
         List<String> logs = new ArrayList<>();
         List<String> broadcast = new ArrayList<>();
         Map<UUID, String> names = new HashMap<>();
+        int changes = 0;
         Map<UUID, Boolean> dining = new HashMap<>();
         JobID overnightOverride = null;
         List<JobID> unlocked = new ArrayList<>();
@@ -116,6 +117,7 @@ class SimpleVillagerHandleTest {
 
         @Override
         public void setChanged() {
+            changes++;
         }
 
         @Override
@@ -304,6 +306,48 @@ class SimpleVillagerHandleTest {
         String line = t.broadcast.stream().filter(b -> b.startsWith("message.villager.leveled_up_job")).findFirst().orElse("");
         Assertions.assertTrue(line.contains("jobs.tester"), t.broadcast.toString());
         Assertions.assertTrue(line.endsWith(", 2]"), line);
+    }
+
+    // 2026-10-30 overnight visual check: a hunter carrying its earned BOP across a server restart lost
+    // the latch (never saved), so the board stopped routing it to the flag and the BOP was dropped
+    // into a storage chest as loot. The latch survives a save/load through the handle's own state.
+    @Test
+    public void blockOfProgressLatch_survivesSaveAndLoad() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> before = handleFor(t, villager);
+        before.addExperience(villager, 1_000_000);
+        Assertions.assertTrue(before.hasBlockOfProgress(villager));
+
+        SimpleVillagerHandle<String, UUID> after = handleFor(new TestDelegator(), villager);
+        after.restoreBlockOfProgress(before.getBlockOfProgressLatches());
+
+        Assertions.assertTrue(after.hasBlockOfProgress(villager));
+    }
+
+    // The flag writes its data on its tick only when marked changed (TownFlagTicker), so a level-up
+    // (new level, experience, latch) marks it rather than relying on some other change to save it.
+    @Test
+    public void levelUp_marksTheTownChanged() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = handleFor(t, villager);
+        int before = t.changes;
+
+        handle.addExperience(villager, 1_000_000);
+
+        Assertions.assertTrue(t.changes > before);
+    }
+
+    @Test
+    public void blockOfProgressLatches_holdOnlyLatchedVillagers() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = handleFor(t, villager);
+        handle.addExperience(villager, 1_000_000);
+        handle.clearBlockOfProgress(villager);
+
+        Assertions.assertEquals(ImmutableMap.of(), handle.getBlockOfProgressLatches());
     }
 
     // 2026-10-22 agent playtest r9: the hunter's stats page read "Lvl 1" while the flag held level 4.

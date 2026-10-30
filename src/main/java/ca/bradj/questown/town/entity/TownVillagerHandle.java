@@ -313,6 +313,10 @@ public final class TownVillagerHandle {
         moods.initialize(moodEffects);
         this.proficiencies.initialize(proficiencies);
         this.displayNumbers.restore(displayNumbersIn, highestDisplayNumberIn);
+        // Villagers register as their chunks load, before this restore, and take numbers in
+        // load order; re-stamp them with their saved numbers (2026-10-30: the nameplates of two
+        // villagers swapped after a restart while chat kept the saved ones).
+        delegate.entities().forEach(this::stampNameplate);
     }
 
     /** The townie's display number, or 0 if none assigned yet. */
@@ -331,6 +335,15 @@ public final class TownVillagerHandle {
     /** The townie died: drop it from the saved roster (its number is never re-issued). */
     void retireDisplayNumber(UUID vuid) {
         displayNumbers.retire(vuid);
+    }
+
+    private void stampNameplate(VisitorMobEntity villager) {
+        int displayNumber = displayNumberFor(villager.getUUID());
+        if (displayNumber <= 0) {
+            return;
+        }
+        villager.setCustomName(VillagerDisplayNumbers.nameplate(displayNumber));
+        villager.setCustomNameVisible(true);
     }
 
     /** "Villager N" (the user-facing display name); the raw root as a last resort. */
@@ -584,15 +597,19 @@ public final class TownVillagerHandle {
         return delegate.getPreRolls();
     }
 
+    ImmutableMap<UUID, Boolean> getBlockOfProgressLatches() {
+        return delegate.getBlockOfProgressLatches();
+    }
+
+    void restoreBlockOfProgress(Map<UUID, Boolean> latches) {
+        delegate.restoreBlockOfProgress(latches);
+    }
+
     void register(VisitorMobEntity visitorMobEntity) {
         delegate.register(visitorMobEntity);
 
         assignDisplayNumber(visitorMobEntity.getUUID());
-        int displayNumber = displayNumberFor(visitorMobEntity.getUUID());
-        if (displayNumber > 0) {
-            visitorMobEntity.setCustomName(VillagerDisplayNumbers.nameplate(displayNumber));
-            visitorMobEntity.setCustomNameVisible(true);
-        }
+        stampNameplate(visitorMobEntity);
 
         seedProficiencies(visitorMobEntity.getUUID());
 

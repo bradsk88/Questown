@@ -700,6 +700,9 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             broadcastLevelUp(uuid, newLvl);
             hasBlockOfProgress.put(uuid, true);
         }
+        // Experience, levels and the latch are saved with the flag, which writes on its tick only
+        // when marked changed (TownFlagTicker).
+        delegator.setChanged();
     }
 
     /** "Villager 4 (Cook) reached level 2" (dev playtest 2026-10-28: the line didn't name the job). */
@@ -729,6 +732,22 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public void clearBlockOfProgress(UUID uuid) {
         hasBlockOfProgress.put(uuid, false);
+        delegator.setChanged();
+    }
+
+    /** The latched villagers, for saving: a villager carrying its earned BOP across a reload still deposits it. */
+    public ImmutableMap<UUID, Boolean> getBlockOfProgressLatches() {
+        ImmutableMap.Builder<UUID, Boolean> b = ImmutableMap.builder();
+        hasBlockOfProgress.forEach((uuid, latched) -> {
+            if (latched) {
+                b.put(uuid, true);
+            }
+        });
+        return b.build();
+    }
+
+    public void restoreBlockOfProgress(Map<UUID, Boolean> latches) {
+        hasBlockOfProgress.putAll(latches);
     }
 
     public Optional<JobID> scheduleJobRootChange(

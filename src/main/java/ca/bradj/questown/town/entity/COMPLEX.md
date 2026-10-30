@@ -151,6 +151,17 @@ flowchart TD
   2", `message.villager.leveled_up_job`; dev playtest 2026-10-28). It falls back to the job-less
   `leveled_up` line only when the handle has no job for the villager. Pin:
   `SimpleVillagerHandleTest.levelUp_chatNamesTheJob`.
+- **The latch is saved (2026-10-30).** It used to live only in memory: a villager latched
+  across a restart came back unlatched, so the board never routed it to the flag. One whose
+  BOP had not been handed out yet lost it entirely. A hunter already carrying its BOP dropped it
+  into a storage chest with its trip loot; the next depositor then took that orphan from the chest
+  as a supply. `TownVillagerHandlerSerializer` writes `block_of_progress_latches` (only latched
+  villagers) and restores it after `initialize`. `addExperience`/`clearBlockOfProgress` now
+  `setChanged()`, because the flag writes its data on its tick only when changed
+  (`TownFlagTicker`). Pins: `SimpleVillagerHandleTest.blockOfProgressLatch_survivesSaveAndLoad`,
+  `levelUp_marksTheTownChanged`. Seen in game: a cook latched in downtime, then restarted, took
+  `[board] ... via bop-deposit` and the flag's count rose. Test trap: `tick freeze` stops the flag
+  tick, so changes made while frozen are never written (a frozen level-up "vanished" twice).
 - The latch is a `Boolean`, not a counter — one townie holds at most one BOP, so
   it stalls for the brief level-up→deposit window, **not** until the player
   collects (collection never touches the latch).
@@ -1819,3 +1830,14 @@ takes the per-request limit. The board payload carries stock and limit per `UIWo
 `SetRequestLimitMessage` sets a limit and re-opens the board. Pins: `RequestLimitsTest`,
 `TownWorkHandleRequestWorkTest.requestLimit_isSaved_andForgottenWithTheRequest`, autotest
 `crafter/stick [request_limit]` (5 bread stored: paused at limit 4, resumed at 6).
+
+## Nameplates follow the saved display numbers after a reload (2026-10-30)
+
+Villagers register as their chunks load, before the flag's initializers restore the saved display
+numbers, so `register` assigned numbers in load order and stamped those nameplates.
+`VillagerDisplayNumbers.restore` then replaced the map (chat and the flag tabs read the map) but not
+the names. Seen: the cook's nameplate read "Villager 1" while its level-up chat said "Villager 2",
+flipping with load order between restarts. `TownVillagerHandle.initialize` now re-stamps every
+registered villager after the restore (`stampNameplate`, shared with `register`). Verified in game:
+two restarts with the cook loading first both kept "Villager 2". Unit gap noted as `@Disabled` in
+`VillagerDisplayNumbersTest` (the handle's constructor reads config).

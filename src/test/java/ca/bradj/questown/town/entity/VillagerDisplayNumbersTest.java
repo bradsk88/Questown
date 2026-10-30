@@ -1,6 +1,8 @@
 package ca.bradj.questown.town.entity;
 
 import net.minecraft.network.chat.contents.TranslatableContents;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -73,5 +75,19 @@ class VillagerDisplayNumbersTest {
         var contents = (TranslatableContents) raw;
         assertEquals("menu.villager.name", contents.getKey());
         assertArrayEquals(new Object[]{3}, contents.getArgs());
+    }
+
+    /**
+     * 2026-10-30: villagers register (and take a number in load order) before the flag restores
+     * the saved numbers, so their nameplates swapped after a restart while chat kept the saved
+     * ones. The re-stamp lives in {@link TownVillagerHandle#initialize}, whose constructor reads
+     * config, which unit tests cannot do.
+     */
+    @Test
+    @Disabled("Testability gap: TownVillagerHandle reads config in its constructor and stamps "
+            + "VisitorMobEntity nameplates. Verified in game: nameplates match chat across restarts "
+            + "(town/entity/COMPLEX.md). Per AGENTS.md we do not simulate.")
+    void nameplatesFollowTheRestoredNumbers_afterAReload() {
+        Assertions.fail("see @Disabled reason");
     }
 }

@@ -33,6 +33,7 @@ public class TownVillagerHandlerSerializer {
     private static final String NBT_PENDING_JOB_CHANGES = "pending_job_changes";
     private static final String NBT_GUARANTEED_ROOTS = "guaranteed_roots";
     private static final String NBT_PRE_ROLL_ROOTS = "pre_roll_roots";
+    private static final String NBT_BOP_LATCHES = "block_of_progress_latches";
     private static final String NBT_PROFICIENCIES = "proficiencies";
     private static final String NBT_DISPLAY_NUMBERS = "display_numbers";
     private static final String NBT_DISPLAY_HIGHEST = "display_numbers_highest";
@@ -114,6 +115,9 @@ public class TownVillagerHandlerSerializer {
                 fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending, proficiencies,
                 guaranteedRoots, preRolls, displayNumbers, highestDisplayNumber
         );
+        // A villager that levelled up but has not yet deposited its BOP stays routed to the flag
+        // after a reload (2026-10-30: the unsaved latch let a carried BOP go into a storage chest).
+        villagerHandle.restoreBlockOfProgress(deserializeMap(compound, NBT_BOP_LATCHES, simpleBool));
     }
 
     private <X> ImmutableMap<UUID, X> deserializeMap(
@@ -225,6 +229,7 @@ public class TownVillagerHandlerSerializer {
                     t.put(NBT_PROFICIENCIES, pt);
                 }
         );
+        serializeMap(compound, NBT_BOP_LATCHES, villagerHandle.getBlockOfProgressLatches(), simpleBool);
         serializeMap(compound, NBT_DISPLAY_NUMBERS, villagerHandle.getDisplayNumbers(), simpleInt);
         compound.putInt(NBT_DISPLAY_HIGHEST, villagerHandle.getHighestDisplayNumber());
         return compound;
