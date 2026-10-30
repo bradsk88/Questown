@@ -388,6 +388,11 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public @org.jetbrains.annotations.Nullable JobID getSwitchAfterTrip(VillagerUUID vuid) {
+                return villagerHandle.peekSwitchAfterTrip(vuid);
+            }
+
+            @Override
             public boolean isJobChangePending(VillagerUUID vuid) {
                 return villagerHandle.delegate.isJobChangePending(getUUID(vuid));
             }

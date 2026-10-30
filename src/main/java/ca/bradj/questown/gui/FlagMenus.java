@@ -19,6 +19,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import org.jetbrains.annotations.NotNull;
 
+import ca.bradj.questown.jobs.JobID;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -107,9 +108,14 @@ public class FlagMenus {
         HashMap<UUID, StatusPacket> b = new HashMap<>();
         HashMap<UUID, ImmutableList<Item>> b2 = new HashMap<>();
         HashSet<UUID> pending = new HashSet<>();
+        HashMap<UUID, JobID> afterTrip = new HashMap<>();
         for (VisitorMobEntity v : es) {
             if (v.getTown() != null && v.getTown().getVillagerHandle().isJobChangePending(v.getVUID())) {
                 pending.add(v.getUUID());
+            }
+            JobID becomes = v.getTown() == null ? null : v.getTown().getVillagerHandle().getSwitchAfterTrip(v.getVUID());
+            if (becomes != null) {
+                afterTrip.put(v.getUUID(), becomes);
             }
             if (b.containsKey(v.getUUID()) || b2.containsKey(v.getUUID())) {
                 QT.FLAG_LOGGER.error("Villager {} detected twice. This is probably a bug!", v.getUUID());
@@ -124,7 +130,7 @@ public class FlagMenus {
                                .toList();
             b2.put(v.getUUID(), ImmutableList.copyOf(list));
         }
-        return new MultiStatusScreen.SyncedData(b, b2, morningSpawnPending, pending);
+        return new MultiStatusScreen.SyncedData(b, b2, morningSpawnPending, pending, afterTrip);
     }
 
     private static @NotNull StatusPacket createStatusPacket(

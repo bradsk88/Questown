@@ -1567,3 +1567,18 @@ RECENT_WINDOW_TICKS)`, `NoMCEconomicsRecentTest`); `TownEconomicsScreen` draws "
 blocked on an item, `TownPossibleWork`), so "last 1000 ticks" counts needs that started in the
 window, not ongoing ones. The villager economics pane keeps all-time only. Seen in game
 (`overnight-shots/econ-recent.png`); gui-lint OK.
+
+## "Switch after this trip" says so (dev 2026-10-30)
+
+The choice gave no feedback (r23). Dev: a chat line on confirm and a note on the villager card
+until it happens. `ChangeVillagerJobMessage.handle` sends the sender "Villager 1 will start working
+as Gatherer - Gather when they get back from their trip." The pending switch is read with
+`PendingJobSwitches.peek` (`VillagerHolder.getSwitchAfterTrip`) into
+`MultiStatusScreen.SyncedData.switchAfterTrip` (`FlagMenus.makeSyncData`), and the villagers-tab
+card's job title becomes "Hunter → Gatherer" (`PendingJobChangeMark.afterTripTitle`; the variant's
+name when the root stays the same; "→ Gatherer" when the full title would run under the status
+art), with the hover tooltip "Becomes Gatherer - Gather after this trip". The card re-syncs on the
+villager's next status change, so the note clears when the switch applies. Seen in game on the r23
+day-6 world: `.scratch/dev-playtest-2026-10-29-fresh/overnight-shots/after-trip-*.png` (confirm,
+chat + tooltip, card, card cleared after the board's player-switch branch applied it). gui-lint OK
+for MultiStatusScreen. The short form was added after that check (unit-tested only).

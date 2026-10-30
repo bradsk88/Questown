@@ -290,6 +290,9 @@ public interface VillagerHolder {
 
     boolean isJobChangePending(VillagerUUID vuid);
 
+    /** The job a "switch after this trip" will apply, or null (dev 2026-10-30: shown on the card). */
+    @org.jetbrains.annotations.Nullable JobID getSwitchAfterTrip(VillagerUUID vuid);
+
     boolean isStarving(@Nullable VillagerUUID vuid);
 
     void setStarving(

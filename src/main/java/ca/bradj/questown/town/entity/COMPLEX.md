@@ -1848,3 +1848,6 @@ flipping with load order between restarts. `TownVillagerHandle.initialize` now r
 registered villager after the restore (`stampNameplate`, shared with `register`). Verified in game:
 two restarts with the cook loading first both kept "Villager 2". Unit gap noted as `@Disabled` in
 `VillagerDisplayNumbersTest` (the handle's constructor reads config).
+
+`PendingJobSwitches.peek` (2026-10-30) reads a "switch after this trip" without taking it, for the
+villager card (`gui/COMPLEX.md` "Switch after this trip says so"); still not saved across a reload.

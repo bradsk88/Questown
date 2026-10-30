@@ -18,6 +18,11 @@ public final class PendingJobSwitches<V, J> {
         pending.put(villager, job);
     }
 
+    /** The pending switch, or null, left in place (the villager card shows it until it happens). */
+    public @Nullable J peek(V villager) {
+        return pending.get(villager);
+    }
+
     /** The switch to apply now, or null; it is forgotten once taken. */
     public @Nullable J take(V villager) {
         return pending.remove(villager);

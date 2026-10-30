@@ -59,3 +59,10 @@ empty stack, and an encode failure on a clientbound payload drops the player's c
 rejoin re-sent it (a kick loop). It now uses `ItemStack.OPTIONAL_STREAM_CODEC` both ways. Use the
 optional codec for any stack that can be empty. Pinned by `SyncBlockItemMessageTest` (red on the
 exact live error before the change). `UIJob`'s job-result list still uses the strict codec.
+
+## ChangeVillagerJobMessage: after-trip chat line (2026-10-30)
+
+With `afterTrip`, the handler also tells the sender which job the villager takes when back
+(`message.questown.switch_after_trip`); `gui/COMPLEX.md` "Switch after this trip says so". The
+villagers-tab sync (`MultiStatusScreenSyncMessage`) now also carries the pending after-trip job per
+villager (a UUID → JobID map after the morning-change set).

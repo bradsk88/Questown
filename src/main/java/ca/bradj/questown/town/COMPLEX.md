@@ -865,3 +865,8 @@ autotest `hunter/sword [longest_trip]` (first pick from the board is sword_full_
 `TownPossibleWork`'s need pass falls back to `UnmetNeedTracker.primaryRoom` when no supply key
 applies and sets `TownieNeed.MISSING_ROOM` with the room id; see `mobs/visitor/COMPLEX.md`
 "MISSING_ROOM". The NO_ROOM rows still never write the econ item store.
+
+## PendingJobSwitches.peek (2026-10-30)
+
+The villager card shows a queued "switch after this trip" until it applies, so the store gained a
+non-consuming `peek` beside `take` (`PendingJobSwitchesTest.aPeek_showsTheSwitchWithoutTakingIt`).

@@ -504,6 +504,8 @@
   "menu.switch_job.body": "%s will start working as %s.",
   "menu.switch_job.away": "%s is away on a trip.",
   "menu.switch_job.after_trip": "Switch after this trip",
+  "message.questown.switch_after_trip": "%s will start working as %s when they get back from their trip.",
+  "gui.status.switch_after_trip": "Becomes %s after this trip",
   "menu.switch_job.now_lose_trip": "Switch now (trip is lost)",
   "menu.switch_job.now": "Switch now",
   "menu.switch_job.this_villager": "This villager",

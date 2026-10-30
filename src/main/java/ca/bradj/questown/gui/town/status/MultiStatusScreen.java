@@ -7,6 +7,7 @@ import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
@@ -33,17 +34,20 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     /**
      * @param pendingJobChange villagers whose job (root) changes next morning: their job title
      *                         shows an asterisk and a hover tooltip (dev, 2026-10-19 playtest)
+     * @param switchAfterTrip  the job each villager becomes after its trip ("Switch after this
+     *                         trip"): the job title names it, with a hover tooltip (dev 2026-10-30)
      */
     public record SyncedData(Map<UUID, StatusPacket> villagerStatuses,
                              Map<UUID, ImmutableList<net.minecraft.world.item.Item>> items,
                              boolean villagerArrivingInMorning,
-                             Set<UUID> pendingJobChange) {
+                             Set<UUID> pendingJobChange,
+                             Map<UUID, JobID> switchAfterTrip) {
         public JobID getJob(UUID uuid) {
             return Util.orNull(villagerStatuses.get(uuid), StatusPacket::jobId);
         }
     }
 
-    static public SyncedData syncedData = new SyncedData(new HashMap<>(), new HashMap<>(), false, Set.of());
+    static public SyncedData syncedData = new SyncedData(new HashMap<>(), new HashMap<>(), false, Set.of(), Map.of());
 
     public MultiStatusScreen(
             MultiStatusMenu menu,
@@ -130,8 +134,36 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int destY = coords.topYPadded();
         Util.blitFace(ctx.gui(), uuid, x, destY);
         int nameX = x + Util.faceWidth + 4;
+        ctx.darkText(Compat.literal(fitTitle(uuid, getStatusX(coords) - nameX - 2)), nameX, destY);
+    }
+
+    /** The card title, or the short after-trip form when the full one would run under the status art. */
+    private String fitTitle(UUID uuid, int width) {
+        String title = cardTitle(uuid);
+        JobID becomes = syncedData.switchAfterTrip().get(uuid);
+        if (becomes == null || font.width(title) <= width) {
+            return title;
+        }
+        return PendingJobChangeMark.afterTripTitleShort(becomesName(uuid, becomes).getString());
+    }
+
+    /** The job title, marked for a morning change or naming the job a switch after the trip brings. */
+    private static String cardTitle(UUID uuid) {
         String job = jobTitle(uuid);
-        ctx.darkText(Compat.literal(PendingJobChangeMark.title(job, syncedData.pendingJobChange().contains(uuid))), nameX, destY);
+        JobID becomes = syncedData.switchAfterTrip().get(uuid);
+        if (becomes != null) {
+            return PendingJobChangeMark.afterTripTitle(job, becomesName(uuid, becomes).getString());
+        }
+        return PendingJobChangeMark.title(job, syncedData.pendingJobChange().contains(uuid));
+    }
+
+    /** The other root's name ("Cook"), or the variant's within the same root ("Sword"). */
+    private static Component becomesName(UUID uuid, JobID becomes) {
+        JobID now = syncedData.getJob(uuid);
+        if (now != null && now.sameRoot(becomes)) {
+            return Jobs.getVariantNameComponent(becomes);
+        }
+        return Jobs.getRootNameComponent(becomes);
     }
 
     /** The root job's name ("Gatherer"). The bare root id is no lang key, so it showed "gatherer". */
@@ -147,8 +179,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
 
     private boolean isOverJobTitle(CardCoordinates coords, UUID uuid, int mouseX, int mouseY) {
         int nameX = coords.leftXPadded() + Util.faceWidth + 4;
-        String job = jobTitle(uuid);
-        int w = font.width(PendingJobChangeMark.title(job, true));
+        int w = font.width(cardTitle(uuid) + "*");
         return UtilClean.isCoordInBox(mouseX, mouseY, nameX, coords.topYPadded(), w, font.lineHeight);
     }
 
@@ -248,6 +279,13 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
                     return;
                 }
                 continue;
+            }
+            JobID becomes = syncedData.switchAfterTrip().get(v.data());
+            if (becomes != null && isOverJobTitle(coords, v.data(), mouseX, mouseY)) {
+                ImmutableList<Component> jc = Jobs.getComponentsForTooltip(becomes);
+                this.showTooltip(Compat.translatable("gui.status.switch_after_trip",
+                        Compat.translatable("menu.common.job_name", jc.get(0), jc.get(1))));
+                return;
             }
             if (syncedData.pendingJobChange().contains(v.data()) && isOverJobTitle(coords, v.data(), mouseX, mouseY)) {
                 this.showTooltip(Compat.translatable("menu.unlock_root.already_pending"));

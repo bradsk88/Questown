@@ -537,6 +537,10 @@ public final class TownVillagerHandle {
         switchesAfterTrip.request(uuid, job);
     }
 
+    @Nullable JobID peekSwitchAfterTrip(VillagerUUID uuid) {
+        return switchesAfterTrip.peek(uuid);
+    }
+
     @Nullable JobID takeSwitchAfterTrip(VillagerUUID uuid) {
         return switchesAfterTrip.take(uuid);
     }

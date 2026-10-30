@@ -14,6 +14,17 @@ class PendingJobChangeMarkTest {
     }
 
     @Test
+    void switchAfterTrip_showsTheJobItBecomes() {
+        // Dev 2026-10-30: "Switch after this trip" gets a note on the villager card until it happens.
+        assertEquals("Hunter \u2192 Cook", PendingJobChangeMark.afterTripTitle("Hunter", "Cook"));
+    }
+
+    @Test
+    void switchAfterTrip_shortFormKeepsTheNewJob() {
+        assertEquals("\u2192 Blacksmith", PendingJobChangeMark.afterTripTitleShort("Blacksmith"));
+    }
+
+    @Test
     void noPendingChange_plainTitle() {
         assertEquals("Gatherer", PendingJobChangeMark.title("Gatherer", false));
     }

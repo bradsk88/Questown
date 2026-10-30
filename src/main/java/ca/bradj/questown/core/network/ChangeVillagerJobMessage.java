@@ -5,6 +5,10 @@ import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
+import ca.bradj.questown.mc.Compat;
+import com.google.common.collect.ImmutableList;
+import net.minecraft.network.chat.Component;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
@@ -58,6 +62,13 @@ public record ChangeVillagerJobMessage(
             }
             // The UUID wire field predates VillagerUUID; from() is the conversion the board cascade uses too.
             flag.getVillagerHandle().switchJob(VillagerUUID.from(villagerUUID), newJob, afterTrip);
+            if (afterTrip) {
+                // Dev 2026-10-30: the choice gave no feedback; the villager card notes it too.
+                ImmutableList<Component> jc = Jobs.getComponentsForTooltip(newJob);
+                Compat.sendMessage(sender, Compat.translatable("message.questown.switch_after_trip",
+                        flag.getVillagerHandle().labelFor(villagerUUID),
+                        Compat.translatable("menu.common.job_name", jc.get(0), jc.get(1))));
+            }
         });
 
     }
