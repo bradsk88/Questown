@@ -138,9 +138,16 @@ relights the campfire", which the Acting section already said.
   `forceload add <x1> <z1> <x2> <z2>` first and `forceload remove` after.
 - `item replace entity Dev weapon.mainhand with X` **overwrites** whatever was there (it ate the
   wand twice). Put tools in other hotbar slots (`hotbar.N`) and swap with `item replace ...
-  from entity Dev hotbar.N`. **A crafting-tab Craft lands the result in your hand**: park it
-  (`item replace entity Dev hotbar.N from entity Dev weapon.mainhand`) before the next hand
-  replace, or the flag-linked item is gone (r10 ate a crafted mineshaft this way).
+  from entity Dev hotbar.N`. **Find a crafting-tab Craft's result before replacing the hand**: r10
+  saw it land in the hand (a hand replace then ate a crafted mineshaft); r23 (2026-10-30) saw it go
+  to the next free hotbar slot (wand -> slot 2, mat -> slot 3) with the hand unchanged. Read
+  `data get entity Dev Inventory`, then move it with `item replace entity Dev weapon.mainhand from
+  entity Dev hotbar.N`.
+- The chicken arc only runs for a flag inside an `empty_town` (a hand-placed flag gets no chicken);
+  `execute as Dev at Dev run locate structure questown:empty_town`, then `spreadplayers` there.
+  The chicken walks to a beat's target only while you hold that beat's item (stick, a block, a door,
+  a pressure plate, the mat); `execute as Dev at Dev run _qtdev help` names the beat and the action.
+  Beat targets are `HelperChickenBeatOffsets` rotated by the structure (r23: (x, z) -> (z, -x)).
 - An `item replace` on the hand while a flag/villager menu is open does not reach the client
   (vanilla only syncs the open menu's slots): Craft buttons stay greyed. `close`, replace, reopen.
 - Rooms: 2-high bedrooms are fine since eeba8a2d (townies stand up beside the bed; verified
