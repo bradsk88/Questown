@@ -54,9 +54,11 @@ class QuestPathDataTest {
         QuestPath p = QuestPathParser.parse(read(DATA.resolve("questown_paths").resolve("outfitter.json")));
 
         // showcase (dev 2026-10-28): the crescendo, a Grand Armory the crafter dresses.
-        Assertions.assertEquals(List.of("start", "train_crafter_3", "armor", "weapons_1", "train_crafter_5", "weapons_2", "showcase"),
+        // train_crafter_2 (dev playtest 2026-10-29: "Maybe two quests? One for level 2 and one for
+        // level 3?"): crafter skills open at level 2, the path's skills at 3.
+        Assertions.assertEquals(List.of("start", "train_crafter_2", "train_crafter_3", "armor", "weapons_1", "train_crafter_5", "weapons_2", "showcase"),
                 p.batches().stream().map(QuestPath.Batch::id).toList());
-        Assertions.assertEquals(List.of(true, false, false, false, false, true, false),
+        Assertions.assertEquals(List.of(true, false, false, false, false, false, true, false),
                 p.batches().stream().map(QuestPath.Batch::arrival).toList(), "plan ruling 19");
     }
 
@@ -89,6 +91,56 @@ class QuestPathDataTest {
             }
         }
         Assertions.assertEquals(List.of(), problems);
+    }
+
+    /**
+     * Dev playtest 2026-10-29: "the level up your crafter quest asks for level 3, but skills can be
+     * unlocked at level 2" -> "Maybe two quests? One for level 2 and one for level 3?". The level
+     * quest a skill batch opens directly after asks for the level its skills need, not a higher one.
+     * (A batch may still follow a higher level transitively for content order, as the showcase does.)
+     */
+    @Test
+    void everySkillBatch_waitsOnlyForTheLevelItNeeds() throws IOException {
+        Map<String, Integer> gates = skillLevelGates();
+        List<String> problems = new ArrayList<>();
+        for (Path f : files(DATA.resolve("questown_paths"))) {
+            QuestPath path = QuestPathParser.parse(read(f));
+            Map<String, QuestPath.Batch> byId = new HashMap<>();
+            path.batches().forEach(b -> byId.put(b.id(), b));
+            for (QuestPath.Batch b : path.batches()) {
+                Map<String, Integer> needed = new HashMap<>();
+                for (QuestPath.Step s : b.quests()) {
+                    if (s.kind() == QuestPath.Kind.SKILL) {
+                        needed.merge(s.id().split("/")[0], gates.getOrDefault(s.id(), DEFAULT_LEVEL), Math::max);
+                    }
+                }
+                needed.forEach((root, gate) -> {
+                    int trained = directLevelGate(root, b, byId);
+                    if (trained > gate) {
+                        problems.add(path.batchTag(b) + ": skills need " + root + " level " + gate
+                                + " but the batch waits for level " + trained);
+                    }
+                });
+            }
+        }
+        Assertions.assertEquals(List.of(), problems);
+    }
+
+    /** The highest LEVEL quest for {@code root} in the batches {@code b} opens directly after. */
+    private static int directLevelGate(String root, QuestPath.Batch b, Map<String, QuestPath.Batch> byId) {
+        int best = 1;
+        for (String after : b.opensAfter()) {
+            QuestPath.Batch a = byId.get(after);
+            if (a == null) {
+                continue;
+            }
+            for (QuestPath.Step s : a.quests()) {
+                if (s.kind() == QuestPath.Kind.LEVEL && s.id().equals(root)) {
+                    best = Math.max(best, s.count());
+                }
+            }
+        }
+        return best;
     }
 
     /** The highest LEVEL quest for {@code root} among the batches {@code b} opens after (transitively). */

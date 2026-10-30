@@ -543,3 +543,14 @@ them.
   quest in its batch's `opens_after` chain.
 - The growth driver (`VillageGrowthExecutor.requestWorkForOpenLevelQuests`) posts the root's
   villagers' product requests while one is open, the way a player keeps a crafter busy.
+
+## Outfitter: train the crafter to level 2, then 3 (dev playtest 2026-10-29)
+
+"The level up your crafter quest asks for level 3, but skills can be unlocked at level 2" -> "Maybe
+two quests? One for level 2 and one for level 3?". Level 3 was right for the path's skills
+(leather boots: `ArmorTierLevels` leather = 3; wooden shovel/sword: `available_at_level` 3), but
+crafter skills in general open at level 2 (`Work.DEFAULT_AVAILABLE_AT_LEVEL`). `outfitter.json` now
+posts `train_crafter_2` after `start` and `train_crafter_3` after that; armor and weapons_1 still open
+after `train_crafter_3`. Pins: `QuestPathDataTest.outfitterShipsTheFirstCut` (order) and the new
+`everySkillBatch_waitsOnlyForTheLevelItNeeds` (the level quest a skill batch opens directly after
+is not higher than its skills need; transitive order, like the showcase after weapons_2, is fine).

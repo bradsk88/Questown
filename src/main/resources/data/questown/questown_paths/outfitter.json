@@ -11,8 +11,15 @@
       ]
     },
     {
-      "id": "train_crafter_3",
+      "id": "train_crafter_2",
       "opens_after": ["start"],
+      "quests": [
+        {"level": "crafter", "at": 2}
+      ]
+    },
+    {
+      "id": "train_crafter_3",
+      "opens_after": ["train_crafter_2"],
       "quests": [
         {"level": "crafter", "at": 3}
       ]
