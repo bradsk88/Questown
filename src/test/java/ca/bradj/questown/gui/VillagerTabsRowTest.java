@@ -70,4 +70,12 @@ class VillagerTabsRowTest {
         assertEquals("tooltips.skills.locked", skills.titleKey());
         assertEquals(false, skills.selected());
     }
+
+    /** Dev playtest 2026-10-29: "When viewing the skill tab, the tab itself should be highlighted". */
+    @Test
+    void skillsPane_leavesOutItsOwnTab() {
+        assertEquals(false, VillagerTabs.skillsPaneTabs(true).contains(ca.bradj.questown.core.network.OpenVillagerMenuMessage.SKILLS));
+        assertEquals(false, VillagerTabs.skillsPaneTabs(false).contains(ca.bradj.questown.core.network.OpenVillagerMenuMessage.SKILLS));
+        assertEquals(false, VillagerTabs.skillsPaneTabs(false).contains(ca.bradj.questown.core.network.OpenVillagerMenuMessage.INVENTORY));
+    }
 }

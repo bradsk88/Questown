@@ -483,6 +483,12 @@ not unlocked to 0.45 grey; `drawHover` redraws the hovered node at full colour. 
 inside the blit (`blitShaded`). Tab row pinned in `VillagerTabsRowTest`; the tints are **not yet
 verified on screen** (no capture taken).
 
+**Skills pane lights its own tab (2026-10-29, dev playtest: "When viewing the skill tab, the tab
+itself should be highlighted. Currently it shows no tabs highlighted"):** the skills screen's
+embedding returned `VillagerTabs.all()`, so SKILLS had an open fn and rendered unlit, unlike every
+other pane, which excludes its own tab. It now returns `VillagerTabs.skillsPaneTabs(showInventoryTab)`
+(all but SKILLS, minus INVENTORY when management-only). `VillagerTabsRowTest`.
+
 ## MultiStatusScreen: full-card click opens the villager UI in management-only mode (2026-10-14)
 
 The flag's villagers-tab card had no card-body click handler - only the 32x32 status icon

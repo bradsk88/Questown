@@ -215,6 +215,15 @@ public class VillagerTabs extends Tabs implements SubUI {
         SHOW_CHANGE_ROOT_TAB.put(villager, show);
     }
 
+    /**
+     * The skills pane's tabs: every tab but its own, so the skills tab renders lit ("you are here",
+     * dev playtest 2026-10-29: it showed no tab highlighted), minus inventory when management-only.
+     */
+    public static Collection<String> skillsPaneTabs(boolean showInventoryTab) {
+        Collection<String> others = except(OpenVillagerMenuMessage.SKILLS);
+        return showInventoryTab ? others : hideInventory(others);
+    }
+
     /** The tab list minus the skills tab (the level gate: no unlockable jobs, no tab). */
     public static Collection<String> hideSkills(Collection<String> tabs) {
         return tabs.stream().filter(v -> !v.equals(OpenVillagerMenuMessage.SKILLS)).toList();

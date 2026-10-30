@@ -76,9 +76,7 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
                 // (every other tabbed villager menu filters on showInventoryTab;
                 // this screen used to return VillagerTabs.all() and resurrected
                 // the tab - 2026-10-15 playtest).
-                return showInventoryTab
-                        ? VillagerTabs.all()
-                        : VillagerTabs.hideInventory(VillagerTabs.all());
+                return VillagerTabs.skillsPaneTabs(showInventoryTab);
             }
 
             @Override
