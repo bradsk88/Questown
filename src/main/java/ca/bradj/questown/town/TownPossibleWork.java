@@ -15,6 +15,7 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.jobs.requests.WorkRequest;
+import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
@@ -313,6 +314,12 @@ public class TownPossibleWork {
                 econ.registerUnmetNeed(tick, fe.townie(), fe.key());
             }
             for (VisitorMobEntity villager : townies) {
+                if (!showsUnmetNeed(villager.getJobId())) {
+                    if (villager.getNeed() == TownieNeed.UNMET_ITEM) {
+                        villager.setNeed(TownieNeed.NONE);
+                    }
+                    continue;
+                }
                 String primary = unmetNeeds.primaryKey(
                         root, villager.getUUID(), key -> canHoldAnyOf(t, villager.getUUID(), keyJobs.get(key)));
                 if (primary != null) {
@@ -773,6 +780,14 @@ public class TownPossibleWork {
                 .filter(jobID -> vh.isUnlocked(villagerUUID, jobID))
                 .collect(ImmutableList.toImmutableList());
         return cycler.nextValid(possible, canAlwaysStart, canFitInDay, requestedResults, td);
+    }
+
+    /**
+     * A relaxing villager (downtime) shows no unmet-item need (dev playtest 2026-10-29: "Relaxing
+     * villager shouldn't show a need bubble"); the next pass after it seeks work again re-applies it.
+     */
+    static boolean showsUnmetNeed(JobID currentJob) {
+        return !DowntimeWork.matches(currentJob);
     }
 
     public void invalidate() {

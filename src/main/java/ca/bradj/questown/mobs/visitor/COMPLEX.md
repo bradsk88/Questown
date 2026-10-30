@@ -164,6 +164,15 @@ need stops nothing. The server still sets the need; only the client bubble (and 
 waits for morning. Door and attention bubbles are unaffected. Pinned by
 `NeedBubbleFocusTest.Test_VillagerNeedsShowOnlyInTheWorkingDay`.
 
+## A relaxing villager has no unmet-item need (dev playtest 2026-10-29)
+
+"Relaxing villager shouldn't show a need bubble." The live cook was in downtime ("%s is relaxing
+for a moment") with `need=UNMET_ITEM` for Raw Porkchop (its new skill), though it was idle because
+the food request was paused, not for lack of porkchop. `TownPossibleWork`'s unmet-need pass clears
+UNMET_ITEM for a villager on a downtime job and skips it (`showsUnmetNeed`); the pass after it
+seeks work again re-applies the need. `TownPossibleWorkUnmetNeedTest`. Open: the primary unmet key
+named porkchop while mutton work was available (not traced).
+
 ## Townie skin pool (`TownieSkins`, 2026-10-14)
 
 Townie skins are a deterministic per-UUID pick from a pool: the 9 vanilla

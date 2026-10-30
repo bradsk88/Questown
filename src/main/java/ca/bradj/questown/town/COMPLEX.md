@@ -837,3 +837,8 @@ per scan: a display job's block predicate reads them at each display position.
 `TownContainers` passes `() -> ChestTouches.touch(level, p)` into each chest's `MCContainer`, so a
 villager's take or deposit animates the lid; see `integration/minecraft/COMPLEX.md` "Chest lids
 open when villagers use them". The flag tick drives the closes.
+
+## Unmet-need pass skips relaxing villagers (2026-10-29)
+
+`TownPossibleWork.showsUnmetNeed`: a villager on a downtime job gets no UNMET_ITEM need; see
+`mobs/visitor/COMPLEX.md` "A relaxing villager has no unmet-item need".
