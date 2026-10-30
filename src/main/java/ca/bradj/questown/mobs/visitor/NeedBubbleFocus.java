@@ -1,7 +1,6 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.gui.ClientAccess;
-import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.rooms.AttentionBubbles;
@@ -195,25 +194,16 @@ public final class NeedBubbleFocus {
     }
 
     /**
-     * The on-look hint for a bubble holder. A resolved {@code UNMET_ITEM} names the missing item
-     * (the Inventory screen's "needs" row pattern); anything else keeps the generic per-need key.
+     * The on-look hint for a bubble holder. A need with a key names it ({@link TownieNeedDetail}:
+     * the missing room or item, or the room it cannot get into); anything else keeps the generic
+     * per-need key.
      */
     private static Component hintComponent(
             @Nullable VisitorMobEntity townie,
             String hintKey
     ) {
-        net.minecraft.resources.ResourceLocation room = townie == null ? null : townie.getMissingRoom();
-        if (room != null) {
-            return Compat.translatable("message.questown.townie_need.missing_room.room",
-                    ca.bradj.questown.logic.RoomRecipes.getName(room));
-        }
-        Ingredient missing = unmetNeedIngredient(townie);
-        if (missing == null) {
-            return Compat.translatable(hintKey);
-        }
-        return Compat.translatable(
-                "message.questown.townie_need.unmet_item.item", Ingredients.getName(missing)
-        );
+        Component detail = townie == null ? null : TownieNeedDetail.of(townie);
+        return detail != null ? detail : Compat.translatable(hintKey);
     }
 
     private static void adopt(@Nullable Object best, double bestScore) {

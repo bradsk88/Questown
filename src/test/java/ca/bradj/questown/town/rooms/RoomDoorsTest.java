@@ -51,4 +51,30 @@ class RoomDoorsTest {
                 RoomDoors.doorOfRoomContaining(ImmutableList.of(BEDROOM), new BlockPos(0, 69, 0))
         );
     }
+
+    // r23 #16 (dev 2026-10-30): a villager that gives up walking to a spot inside a room is told
+    // which room it cannot get into.
+    @Test
+    void walkTargetInsideARoom_isThatRoom() {
+        Optional<MCRoom> room = RoomDoors.roomHolding(
+                ImmutableList.of(UPSTAIRS, BEDROOM), new BlockPos(-9, 69, 132)
+        );
+        Assertions.assertEquals(Optional.of(BEDROOM), room);
+    }
+
+    @Test
+    void walkTargetOneAboveTheFloor_isStillThatRoom() {
+        Optional<MCRoom> room = RoomDoors.roomHolding(
+                ImmutableList.of(BEDROOM), new BlockPos(-9, 70, 132)
+        );
+        Assertions.assertEquals(Optional.of(BEDROOM), room);
+    }
+
+    @Test
+    void walkTargetOutsideEveryRoom_isNoRoom() {
+        Assertions.assertEquals(
+                Optional.empty(),
+                RoomDoors.roomHolding(ImmutableList.of(BEDROOM), new BlockPos(0, 69, 0))
+        );
+    }
 }

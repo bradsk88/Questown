@@ -16,7 +16,10 @@ import net.minecraft.world.item.Items;
 public enum TownieNeed {
     /** Nothing wrong. Silence is the signal that the townie is fine. */
     NONE,
-    /** Gave up walking somewhere: no viable path, or wedged despite one. */
+    /**
+     * Gave up walking somewhere: no viable path, or wedged despite one. The key names the room the
+     * target is in, if any, so the hint can say which room it cannot get into.
+     */
     CANT_REACH,
     /** No viable job because the town lacks the item(s) the job needs as input. */
     UNMET_ITEM,
@@ -40,6 +43,14 @@ public enum TownieNeed {
 
     public boolean isNeeded() {
         return this != NONE;
+    }
+
+    /**
+     * Whether the need keeps a key beside it (the synced unmet-item field): the missing item, the
+     * missing room, or the room a CANT_REACH townie could not get into (dev 2026-10-30).
+     */
+    public boolean carriesKey() {
+        return this == UNMET_ITEM || this == MISSING_ROOM || this == CANT_REACH;
     }
 
     /**

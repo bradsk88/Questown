@@ -365,3 +365,17 @@ when it stops with the villager within 2.5 blocks and closes it from the entity 
 constructor calls that before field initializers). Autotest `cook/mutton [door_flaps]` counts closes
 while a villager is within 1.5 blocks: vanilla 8 of 8, now 0 of 7. `LingeringDoorGoalTest`.
 A door is left open if its villager unloads while near it.
+
+## A CANT_REACH need names the room it cannot get into (dev 2026-10-30)
+
+r23 #16: leaves grew across the kitchen door and the cook's only hint was "They can't find a way
+there." Dev: name the room. When `MoveToTownTargetSink` gives up, `unreachableRoomKey` asks the town
+(`TownInterface.roomRecipeHolding`, the flag's top recipe for the room whose floor plan or doorway
+holds the walk target, `RoomDoors.roomHolding`) and stores the recipe id in the synced unmet-item
+field, which `TownieNeed.carriesKey` now keeps for CANT_REACH too. `VisitorMobEntity.getUnreachableRoom`
+reads it back. `TownieNeedDetail.of` builds the named need line for both surfaces (the on-look hint
+in `NeedBubbleFocus` and the status tooltip in `ServerJobsRegistry.getStatusText`): "They can't get
+into the %s. Is its door blocked?". A target outside every room keeps the generic line. Pinned by
+`RoomDoorsTest` (inside, one above the floor, outside) and the
+`cook/mutton [blocked_kitchen_door]` autotest (persistent leaves outside the doorway kitchen's door;
+red with the lookup off: "unreachable room named: null").

@@ -90,6 +90,9 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     RoomsHolder getRoomHandle();
 
+    /** The recipe of the town room holding {@code pos} (its doorway included), if any. */
+    Optional<ResourceLocation> roomRecipeHolding(BlockPos pos);
+
     VillagerHolder getVillagerHandle();
 
     TownHealingHandle getHealHandle();

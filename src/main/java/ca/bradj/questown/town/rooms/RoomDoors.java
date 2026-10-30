@@ -29,4 +29,21 @@ public final class RoomDoors {
                     .findFirst()
                     .map(r -> Positions.ToBlock(r.doorPos, r.yCoord));
     }
+
+    /**
+     * The room whose floor plan holds {@code pos}, from its floor up to head height (a walk target
+     * is a furniture block or the cell a villager stands in, the doorway included: a cook can work
+     * from it), so a villager that cannot reach the
+     * spot can say which room it cannot get into.
+     */
+    public static Optional<MCRoom> roomHolding(
+            Collection<MCRoom> rooms,
+            BlockPos pos
+    ) {
+        Position flat = new Position(pos.getX(), pos.getZ());
+        return rooms.stream()
+                    .filter(r -> pos.getY() >= r.yCoord && pos.getY() <= r.yCoord + 1)
+                    .filter(r -> r.doorPos.equals(flat) || InclusiveSpaces.contains(r.getSpaces(), flat))
+                    .findFirst();
+    }
 }

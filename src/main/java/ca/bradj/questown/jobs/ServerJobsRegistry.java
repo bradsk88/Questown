@@ -4,6 +4,7 @@ import ca.bradj.questown.jobs.requests.RequestOutputs;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.gui.StatusNeedLine;
+import ca.bradj.questown.mobs.visitor.TownieNeedDetail;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.JobBoardBlock;
@@ -114,14 +115,7 @@ public class ServerJobsRegistry {
             IStatus<?> status,
             VisitorMobEntity townie
     ) {
-        Ingredient missing = townie.getUnmetItemIngredient();
-        Component need = missing == null ? null : Compat.translatable(
-                "message.questown.townie_need.unmet_item.item", Ingredients.getName(missing));
-        ResourceLocation room = townie.getMissingRoom();
-        if (room != null) {
-            need = Compat.translatable("message.questown.townie_need.missing_room.room",
-                    ca.bradj.questown.logic.RoomRecipes.getName(room));
-        }
+        Component need = TownieNeedDetail.of(townie);
         boolean keep = StatusNeedLine.keepsOwnLines(isWorking(status), DiningStages.isDiner(job));
         return ImmutableList.copyOf(StatusNeedLine.lines(getStatusText(job, status), need, keep));
     }

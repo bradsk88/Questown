@@ -464,7 +464,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
         QT.VILLAGER_LOGGER.debug("Townie {} need is now {}", UtilClean.truncateMiddle(getUUID()), newNeed);
         this.entityData.set(need, newNeed.name());
-        if (newNeed != TownieNeed.UNMET_ITEM && newNeed != TownieNeed.MISSING_ROOM) {
+        if (!newNeed.carriesKey()) {
             this.entityData.set(unmetItem, "");
         }
     }
@@ -503,6 +503,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public String getUnmetItem() {
         return this.entityData.get(unmetItem);
+    }
+
+    /** The room a CANT_REACH need could not get into, or null (the target was not in a room). */
+    public @Nullable ResourceLocation getUnreachableRoom() {
+        if (getNeed() != TownieNeed.CANT_REACH || getUnmetItem().isEmpty()) {
+            return null;
+        }
+        return ResourceLocation.tryParse(getUnmetItem());
     }
 
     /** The room a MISSING_ROOM need asks for, or null. */

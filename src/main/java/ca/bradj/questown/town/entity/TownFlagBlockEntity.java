@@ -1052,6 +1052,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return roomsHandle;
     }
 
+    @Override
+    public Optional<ResourceLocation> roomRecipeHolding(BlockPos pos) {
+        Collection<RoomRecipeMatch<MCRoom>> matches = roomsHandle.getMatches(m -> true);
+        Optional<MCRoom> room = ca.bradj.questown.town.rooms.RoomDoors.roomHolding(
+                matches.stream().map(RoomRecipeMatch::getRoom).toList(), pos);
+        return room.flatMap(r -> matches.stream()
+                                        .filter(m -> m.getRoom().equals(r))
+                                        .findFirst()
+                                        .flatMap(m -> getTopMatch(this::recipesFromLevel, m)));
+    }
+
     void setUpQuestsForNewlyPlacedFlag() {
         TownQuests.setUpQuestsForNewlyPlacedFlag(this, quests);
         this.isInitializedQuests = true;

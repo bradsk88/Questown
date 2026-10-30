@@ -183,6 +183,7 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("cook", "mutton", "doorway_kitchen", cookDoorwayKitchenBlueprint(false, false)));
         jobs.add(edgeCaseEntry("cook", "mutton", "rest_then_eat", cookDoorwayKitchenBlueprint(true, false)));
         jobs.add(edgeCaseEntry("cook", "mutton", "raw_food_only", cookDoorwayKitchenBlueprint(true, true)));
+        jobs.add(edgeCaseEntry("cook", "mutton", "blocked_kitchen_door", cookBlockedKitchenDoorBlueprint()));
         jobs.add(edgeCaseEntry("cook", "mutton", "door_flaps", cookDoorFlapsBlueprint()));
         jobs.add(edgeCaseEntry("cook", "fuel", "storage_full", cookStorageFullBlueprint()));
         jobs.add(entry(new JobID("baker", "bread"), bakerBlueprint()));
@@ -4087,6 +4088,50 @@ public class TestBlueprintRegistry {
             net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new StarveAt(restFirst ? 1600 : 1900, restFirst, level, town, output));
             return true;
         });
+    }
+
+    /**
+     * r23 #16 (dev 2026-10-30): leaves grew across the kitchen door and the cook's only hint was
+     * "They can't find a way there." The doorway kitchen's door is blocked from outside by
+     * persistent leaves; the cook must give up with a CANT_REACH need that names the kitchen
+     * ("They can't get into the Kitchen. Is its door blocked?").
+     */
+    private static TestBlueprint cookBlockedKitchenDoorBlueprint() {
+        BlockPos outside = new BlockPos(5, 0, 1);
+        ResourceLocation[] named = {null};
+        TestBlueprint base = cookDoorwayKitchenBlueprint(false, false);
+        return base
+                .withRealtimeExpectation(new TestExpectation(List.of(), 0, 100))
+                .withSetupHook((level, flagPos, town, output) -> {
+                    net.minecraft.world.level.block.state.BlockState leaves = Blocks.OAK_LEAVES.defaultBlockState()
+                            .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
+                    level.setBlockAndUpdate(flagPos.offset(outside), leaves);
+                    level.setBlockAndUpdate(flagPos.offset(outside.above()), leaves);
+                    output.msg("[blocked-door] leaves outside the kitchen door at " + flagPos.offset(outside));
+                    return true;
+                })
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    if (base.postSpawnAction() != null && !base.postSpawnAction().run(level, flagPos, town, output)) {
+                        return false;
+                    }
+                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new Object() {
+                        @net.neoforged.bus.api.SubscribeEvent
+                        public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+                            for (var e : town.getVillagerHandle().entities()) {
+                                ResourceLocation room = ((VisitorMobEntity) e).getUnreachableRoom();
+                                if (room != null && named[0] == null) {
+                                    named[0] = room;
+                                    output.msg("[blocked-door] CANT_REACH names room " + room);
+                                }
+                            }
+                        }
+                    });
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg("[blocked-door] unreachable room named: " + named[0]);
+                    return new ResourceLocation(Questown.MODID, "kitchen_small").equals(named[0]);
+                });
     }
 
     /**

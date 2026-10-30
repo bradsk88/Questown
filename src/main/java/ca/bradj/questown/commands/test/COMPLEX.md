@@ -1047,3 +1047,11 @@ handed an unlatched Block of Progress and a cobblestone after spawn. PASS = the 
 no town chest does. Before the fix: flag 0, chest 1 (the farmer's loot drop stored it). Run alone
 as the only scenario of a server it once failed "Town flag failed to initialize (timeout after 200
 ticks)" at the first tick; inside `--shard 2 'flag/bop_'` it ran normally (not chased).
+
+## Blocked kitchen door (2026-10-30)
+
+`cook/mutton [blocked_kitchen_door]` (`cookBlockedKitchenDoorBlueprint`): the doorway kitchen with
+persistent oak leaves in the two cells outside its door (the setup hook). A server-tick listener
+records the first room a villager's CANT_REACH need names; PASS = `questown:kitchen_small`. The
+realtime cooked-mutton expectation is dropped (`TestBlueprint.withRealtimeExpectation`): the cook
+cannot get in.

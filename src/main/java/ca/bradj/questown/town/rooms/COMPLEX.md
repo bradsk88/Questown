@@ -101,3 +101,10 @@ free slot or when nobody is blocked. Synced like the other attention booleans
 (`attentionStorageFull` in the update tag). The townies themselves bubble immediately
 (`TownieNeed.NO_STORAGE`, `mobs/visitor/COMPLEX.md`). Unit: `StorageBlockTallyTest`; live:
 `cook/fuel [storage_full]` (3000 realtime ticks, every container filled with dirt).
+
+## RoomDoors.roomHolding (2026-10-30)
+
+The room whose floor plan or doorway holds a position, from the floor (`yCoord`, the door's bottom
+Y) to one above it: a walk target is a furniture block, the cell a villager stands in, or the door
+cell a doorway cook works from. Used by the CANT_REACH hint (`mobs/visitor/COMPLEX.md` "A CANT_REACH
+need names the room").

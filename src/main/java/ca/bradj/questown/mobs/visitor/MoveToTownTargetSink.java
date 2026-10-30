@@ -6,6 +6,7 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -208,6 +209,7 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
                 return;
             }
             vme.setNeed(TownieNeed.CANT_REACH);
+            vme.setUnmetItem(unreachableRoomKey(vme, brain));
             brain.eraseMemory(MemoryModuleType.WALK_TARGET);
             brain.eraseMemory(MemoryModuleType.PATH);
             stuckTicks = 0;
@@ -277,6 +279,20 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
      * pathfinding says the target is unreachable, or a path exists but the townie is physically
      * wedged and the unstick nudges have not freed it.
      */
+    /** The recipe id of the room holding the walk target, or "" when it is not in a room. */
+    private static String unreachableRoomKey(
+            VisitorMobEntity vme,
+            Brain<?> brain
+    ) {
+        if (vme.getTown() == null) {
+            return "";
+        }
+        return brain.getMemory(MemoryModuleType.WALK_TARGET)
+                    .flatMap(w -> vme.getTown().roomRecipeHolding(w.getTarget().currentBlockPosition()))
+                    .map(ResourceLocation::toString)
+                    .orElse("");
+    }
+
     /** A townie that can get where it is going is no longer asking for help. */
     private void clearCantReachNeed(Mob mob) {
         failedUnsticks = 0;
