@@ -1511,3 +1511,17 @@ and + between the item icon and the remove "x"; clicks ride the `removes` positi
 `TownWorkContainer.sendLimit` (limit - 1 / + 1). The paused tooltip names the request's own limit.
 Server side: `town/entity/COMPLEX.md` "Board requests: per-request limit". Not yet seen in game
 (gui-lint pending).
+
+## A skill click opens its details (dev playtest 2026-10-29)
+
+"Clicking on a skill on the skill UI should take the player to a variant of the existing 'who makes
+<item>' screen" + ruling "Details with Unlock button". `VillagerAdvancementsScreen.mouseClicked` sends
+`OpenSkillDetailsMessage(flag, villager, job, locked)`; the server builds that job's `UIJob` card with
+the same builder as the jobs screens (`TownVillagerUIs.uiJob`, extracted from
+`showJobsWithSameRootUI`) and answers `ShowSkillDetailsMessage`; the client opens
+`ItemJobsScreen.forSkill`: header "Skill:", the card (items, tools, products, room and its blocks,
+villagers), and the bottom button "Unlock" (locked: `UnlockJobMessage(..., confirmFirst=true)`, the old
+click's path) or "Switch to this job" (unlocked: `SwitchJobConfirmScreen.open`, which reads the
+villager's name and trip state from the client entity). Seen in game (`overnight-shots/skill-details*.png`,
+`details-to-confirm.png`); gui-lint OK for ItemJobsScreen and SwitchJobConfirmScreen. No autotest:
+the round trip needs a connected player.

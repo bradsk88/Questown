@@ -221,28 +221,73 @@ public class TownVillagerUIs {
                                                       .collect(ImmutableList.toImmutableList());
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
         for (JobID job : jubz) {
-            Job<?, ?, ?> j = ServerJobsRegistry.getUninitializedJob(job, VillagerUUID.random()).getJob();
-            if (!(j instanceof DeclarativeJob dj)) {
-                continue;
+            UIJob card = uiJob(unsafe, vb, job, rMap);
+            if (card != null) {
+                b.add(card);
             }
-
-            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafe.getTownDataForDisplay(), job);
-            RoomRecipe r = rMap.get(dj.location().baseRoom());
-            b.add(new UIJob(
-                    j.getId(),
-                    ImmutableList.copyOf(vb.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())),
-                    ImmutableList.copyOf(dj.initialIngredients.values()),
-                    ImmutableList.copyOf(dj.initialTools.values()),
-                    dj.location().baseRoom(),
-                    getRoomIngredients(dj, rMap),
-                    results.stream()
-                           .map(v -> v.get().getDefaultInstance())
-                           .collect(ImmutableList.toImmutableList())
-            ));
         }
 
         Object msg = new ShowItemJobsMessage(Ingredient.of(ItemStack.EMPTY), b.build(), unsafe.getTownFlagBasePos());
         QuestownNetwork.sendToPlayer(sender, msg);
+    }
+
+    /**
+     * One skill's details for the skill tree (dev playtest 2026-10-29: "Clicking on a skill ... should
+     * take the player to a variant of the existing 'who makes <item>' screen"): the job's card, sent
+     * back with the villager and whether the skill is still locked so the screen offers Unlock or
+     * Switch.
+     */
+    public static void showSkillDetailsUI(
+            ServerPlayer sender,
+            @NotNull TownFlagBlockEntity unsafe,
+            Collection<? extends LivingEntity> entities,
+            JobID job,
+            UUID villager,
+            boolean locked
+    ) {
+        Map<JobID, List<UUID>> vb = new HashMap<>();
+        for (LivingEntity entity : entities) {
+            if (entity instanceof VisitorMobEntity vme) {
+                UtilClean.addOrInitializeList(vb, vme.getJobId(), vme.getUUID());
+            }
+        }
+        UIJob card = uiJob(unsafe, vb, job, roomRecipes(sender));
+        if (card == null) {
+            QT.GUI_LOGGER.error("No details for skill {}", job);
+            return;
+        }
+        QuestownNetwork.sendToPlayer(sender, new ShowSkillDetailsMessage(card, unsafe.getTownFlagBasePos(), villager, locked));
+    }
+
+    private static ImmutableMap<ResourceLocation, RoomRecipe> roomRecipes(ServerPlayer sender) {
+        ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
+        SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
+        sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.id(), v.value()));
+        return rMapB.build();
+    }
+
+    private static @Nullable UIJob uiJob(
+            TownFlagBlockEntity unsafe,
+            Map<JobID, List<UUID>> villagersByJob,
+            JobID job,
+            ImmutableMap<ResourceLocation, RoomRecipe> rMap
+    ) {
+        Job<?, ?, ?> j = ServerJobsRegistry.getUninitializedJob(job, VillagerUUID.random()).getJob();
+        if (!(j instanceof DeclarativeJob dj)) {
+            return null;
+        }
+        ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafe.getTownDataForDisplay(), job);
+        return new UIJob(
+                j.getId(),
+                ImmutableList.copyOf(villagersByJob.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())),
+                ImmutableList.copyOf(dj.initialIngredients.values()),
+                ImmutableList.copyOf(dj.initialTools.values()),
+                dj.location().baseRoom(),
+                getRoomIngredients(dj, rMap),
+                results.stream()
+                       .map(v -> v.get().getDefaultInstance())
+                       .collect(ImmutableList.toImmutableList())
+        );
     }
 
     public static void showUI(

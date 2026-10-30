@@ -50,6 +50,7 @@ public final class QuestownNetwork {
         register(Channel.Direction.TO_CLIENT, OpenRelocationConfirmMessage.class, OpenRelocationConfirmMessage::encode, OpenRelocationConfirmMessage::decode, OpenRelocationConfirmMessage::handle);
         register(Channel.Direction.TO_CLIENT, OpenVillagerAdvancementsMenuMessage.class, OpenVillagerAdvancementsMenuMessage::encode, OpenVillagerAdvancementsMenuMessage::decode, OpenVillagerAdvancementsMenuMessage::handle);
         register(Channel.Direction.TO_CLIENT, ShowItemJobsMessage.class, ShowItemJobsMessage::encode, ShowItemJobsMessage::decode, ShowItemJobsMessage::handle);
+        register(Channel.Direction.TO_CLIENT, ShowSkillDetailsMessage.class, ShowSkillDetailsMessage::encode, ShowSkillDetailsMessage::decode, ShowSkillDetailsMessage::handle);
         register(Channel.Direction.TO_CLIENT, ShowTutorialToastMessage.class, ShowTutorialToastMessage::encode, ShowTutorialToastMessage::decode, ShowTutorialToastMessage::handle);
         register(Channel.Direction.TO_CLIENT, SyncBlockItemMessage.class, SyncBlockItemMessage::encode, SyncBlockItemMessage::decode, SyncBlockItemMessage::handle);
         register(Channel.Direction.TO_CLIENT, SyncStatusArtMessage.class, SyncStatusArtMessage::encode, SyncStatusArtMessage::decode, SyncStatusArtMessage::handle);
@@ -71,6 +72,7 @@ public final class QuestownNetwork {
         register(Channel.Direction.TO_SERVER, OpenFlagMenuMessage.class, OpenFlagMenuMessage::encode, OpenFlagMenuMessage::decode, OpenFlagMenuMessage::handle);
         register(Channel.Direction.TO_SERVER, OpenItemJobsMessage.class, OpenItemJobsMessage::encode, OpenItemJobsMessage::decode, OpenItemJobsMessage::handle);
         register(Channel.Direction.TO_SERVER, OpenJobMessage.class, OpenJobMessage::encode, OpenJobMessage::decode, OpenJobMessage::handle);
+        register(Channel.Direction.TO_SERVER, OpenSkillDetailsMessage.class, OpenSkillDetailsMessage::encode, OpenSkillDetailsMessage::decode, OpenSkillDetailsMessage::handle);
         register(Channel.Direction.TO_SERVER, OpenQuestsMenuMessage.class, OpenQuestsMenuMessage::encode, OpenQuestsMenuMessage::decode, OpenQuestsMenuMessage::handle);
         register(Channel.Direction.TO_SERVER, OpenVillagerMenuMessage.class, OpenVillagerMenuMessage::encode, OpenVillagerMenuMessage::decode, OpenVillagerMenuMessage::handle);
         register(Channel.Direction.TO_SERVER, RelocationChoiceMessage.class, RelocationChoiceMessage::encode, RelocationChoiceMessage::decode, RelocationChoiceMessage::handle);

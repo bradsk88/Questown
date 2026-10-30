@@ -7,7 +7,10 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -51,6 +54,23 @@ public class SwitchJobConfirmScreen extends CompatScreen {
         this.job = job;
         this.villagerName = villagerName;
         this.awayOnTrip = awayOnTrip;
+    }
+
+    /** Opens the confirm for {@code villager} (its name and trip state read from the client entity). */
+    public static void open(BlockPos flagPos, UUID villagerUUID, JobID job) {
+        Minecraft mc = Minecraft.getInstance();
+        VisitorMobEntity villager = null;
+        if (mc.level != null) {
+            for (Entity e : mc.level.entitiesForRendering()) {
+                if (e instanceof VisitorMobEntity v && villagerUUID.equals(v.getUUID())) {
+                    villager = v;
+                    break;
+                }
+            }
+        }
+        Component name = villager == null ? Compat.translatable("menu.switch_job.this_villager") : villager.getDisplayName();
+        boolean away = villager != null && villager.isAwayOnTrip();
+        mc.setScreen(new SwitchJobConfirmScreen(flagPos, villagerUUID, job, name, away));
     }
 
     @Override

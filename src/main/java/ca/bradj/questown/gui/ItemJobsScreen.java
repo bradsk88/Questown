@@ -5,6 +5,7 @@ import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.AddWorkFromUIMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.core.network.UnlockJobMessage;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
@@ -19,6 +20,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Collection;
@@ -39,13 +41,33 @@ public class ItemJobsScreen extends CompatScreen {
     private @NotNull Ingredient requestedItem;
     private final BlockPos flagPos;
     private Button addButton;
+    // Skill-tree mode (dev playtest 2026-10-29: "a variant of the existing 'who makes <item>'
+    // screen"): one skill's card, with Unlock (locked) or Switch (unlocked) instead of Add.
+    private final @Nullable UUID skillVillager;
+    private final boolean skillLocked;
 
     public ItemJobsScreen(
             Ingredient requestedItem,
             Collection<UIJob> jobs,
             BlockPos flagPos
     ) {
-        super(Compat.translatable("menu.work_add_confirm.title"));
+        this(requestedItem, jobs, flagPos, null, false);
+    }
+
+    public static ItemJobsScreen forSkill(UIJob job, BlockPos flagPos, UUID villager, boolean locked) {
+        return new ItemJobsScreen(Ingredient.EMPTY, List.of(job), flagPos, villager, locked);
+    }
+
+    private ItemJobsScreen(
+            Ingredient requestedItem,
+            Collection<UIJob> jobs,
+            BlockPos flagPos,
+            @Nullable UUID skillVillager,
+            boolean skillLocked
+    ) {
+        super(Compat.translatable(skillVillager == null ? "menu.work_add_confirm.title" : "menu.skill_details.title"));
+        this.skillVillager = skillVillager;
+        this.skillLocked = skillLocked;
 
         this.delegate = new PagedCardScreen<>(
                 () -> height,
@@ -61,6 +83,20 @@ public class ItemJobsScreen extends CompatScreen {
         this.requestedItem = requestedItem;
         this.flagPos = flagPos;
 
+    }
+
+    private void act() {
+        if (skillVillager == null) {
+            send();
+            return;
+        }
+        UIJob job = jobs.get(0);
+        if (skillLocked) {
+            QuestownNetwork.sendToServer(new UnlockJobMessage(flagPos, skillVillager, job.jobId(), true));
+            this.onClose();
+            return;
+        }
+        SwitchJobConfirmScreen.open(flagPos, skillVillager, job.jobId());
     }
 
     private void send() {
@@ -113,8 +149,9 @@ public class ItemJobsScreen extends CompatScreen {
         int buttonHeight = (2 * font.lineHeight) + 2;
         this.addButton = this.addRenderableWidget(
                 Compat.button(
-                        Compat.translatable("menu.item_jobs.add_to_work_requests"),
-                        (p_96776_) -> this.send(),
+                        Compat.translatable(skillVillager == null ? "menu.item_jobs.add_to_work_requests"
+                                : skillLocked ? "menu.skill_details.unlock" : "menu.skill_details.switch"),
+                        (p_96776_) -> this.act(),
                         pageLeftX + BIG_PADDING,
                         pageTopY + delegate.backgroundHeight - buttonHeight - BIG_PADDING,
                         backgroundWidth - (2 * BIG_PADDING),
@@ -130,7 +167,7 @@ public class ItemJobsScreen extends CompatScreen {
             int mouseY,
             float partialTicks
     ) {
-        this.addButton.visible = !getFirst().isEmpty();
+        this.addButton.visible = skillVillager != null || !getFirst().isEmpty();
     }
 
     @Override
@@ -154,7 +191,7 @@ public class ItemJobsScreen extends CompatScreen {
             int mouseY,
             float partialTicks
     ) {
-        String renderString = "Jobs:";
+        String renderString = skillVillager == null ? "Jobs:" : title.getString() + ":";
         ImmutableRect2i textArea = getTitleArea();
         ctx.lightText(renderString, textArea.getX(), textArea.getY());
         Ingredients.render(
