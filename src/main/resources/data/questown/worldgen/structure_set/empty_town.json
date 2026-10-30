@@ -12,7 +12,7 @@
     "salt": 835770375,
     "exclusion_zone": {
       "other_set": "minecraft:villages",
-      "chunk_count": 10
+      "chunk_count": 4
     }
   }
 }

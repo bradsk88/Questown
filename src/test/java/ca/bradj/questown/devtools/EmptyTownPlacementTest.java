@@ -23,7 +23,9 @@ class EmptyTownPlacementTest {
         JsonObject zone = placement.getAsJsonObject("exclusion_zone");
         Assertions.assertNotNull(zone, "empty_town placement has an exclusion_zone");
         Assertions.assertEquals("minecraft:villages", zone.get("other_set").getAsString());
-        Assertions.assertTrue(zone.get("chunk_count").getAsInt() > 0, "exclusion radius in chunks");
+        // Dev 2026-10-30: 4 chunks. 10 (the outposts' value) removed a third of all empty towns on a
+        // measured seed, half of them nowhere near a real village; 4 kept 38 of 39.
+        Assertions.assertEquals(4, zone.get("chunk_count").getAsInt(), "exclusion radius in chunks");
     }
 
     private static JsonObject structureSet() throws IOException {
