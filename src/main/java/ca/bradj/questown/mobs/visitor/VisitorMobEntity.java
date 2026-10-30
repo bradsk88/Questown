@@ -117,6 +117,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VisitorMobEntity, Holder<PoiType>>> POI_MEMORIES = ImmutableMap.of(
             MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_.is(PoiTypes.HOME)
     );
+    private final TripVisibility tripVisibility = new TripVisibility();
     private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
     );
@@ -640,7 +641,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             town.getVillagerHandle().validateEntity(this);
         }
 
-        boolean vis = !j.shouldDisappear(town, position());
+        boolean vis = tripVisibility.next(this.entityData.get(visible), !j.shouldDisappear(town, position()));
         if (!vis) {
             if (job.get().getId().rootId().equals("gatherer")) {
                 AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
@@ -655,6 +656,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             // out of the world (r17 #4, dev 2026-10-25: "some kind of poof or sparkle"). Not POOF:
             // it "looks like a death animation" (r22, dev 2026-10-26).
             sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, getX(), getY() + 0.8, getZ(), 12, 0.4, 0.6, 0.4, 0.0);
+            QT.VILLAGER_LOGGER.debug("[visibility] {} {} at status {} ({})", UtilClean.truncateMiddle(uuid),
+                    vis ? "shown" : "hidden", j.getStatus(), j.getId());
         }
         this.entityData.set(visible, vis);
         if (j.isInitialized()) {

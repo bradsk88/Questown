@@ -245,6 +245,19 @@ the flag flips (either way) the server now sends 12 `HAPPY_VILLAGER` sparkles ar
 away sparkles once on its first tick (the synced value starts visible). The stranded rescue below
 keeps `POOF` (the dev's r20 pick).
 
+## Leaving town flickered: show only after two allowed ticks (dev playtest 2026-10-29)
+
+"Villagers flicker when they leave town. They go visible -> invisible -> visible -> invisible."
+The `[visibility]` debug line (each flip with its status) on the hunter/sword autotests showed
+`hidden at state:1` -> `shown at DROPPING_LOOT` (one tick, ~10 ms later) -> `hidden at
+WAITING_FOR_TIMED_STATE`. The status routine passes through DROPPING_LOOT for one tick between
+the leaving state and the trip's timer (`JobStatuses.productionRoutine` picks
+`waitingForTimedState` only when `usualRoutine` returns null/idle/no-supplies; not traced
+further). `TripVisibility` sits between `Job.shouldDisappear` and the synced `visible` flag:
+hiding is immediate, showing waits for two allowed ticks in a row, so the one-tick status no
+longer shows the villager and a return is one tick later. After: each hunter stays hidden for
+its whole trip and reappears at DROPPING_LOOT on return. `TripVisibilityTest`.
+
 ## Stranded outside the town: poof back to the gate (r20, dev 2026-10-25)
 
 A villager that fell off a cliff into water floated 8 blocks below the town for minutes. Dev call:
