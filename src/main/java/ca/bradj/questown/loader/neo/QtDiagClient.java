@@ -5,6 +5,7 @@ import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.VillagerTabsEmbedding;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.core.BlockPos;
@@ -52,7 +53,9 @@ import java.util.List;
  * the open flag-menu screen context: the flag pos + the synced villager whose UUID
  * starts with the prefix (any villager when omitted),
  * via the same {@link OpenVillagerMenuMessage} a tab click sends),
- * {@code click <x> <y>} (left-click the open screen at a window-pixel position) and
+ * {@code click <x> <y>} (left-click the open screen at a window-pixel position),
+ * {@code use} (press the use key once: a right-click on whatever the crosshair is on, e.g. an
+ * entity a block-only {@code _qtdev clickheld} cannot reach) and
  * {@code close} (close the open screen as Escape does).
  */
 public class QtDiagClient {
@@ -117,6 +120,7 @@ public class QtDiagClient {
                 case "click" -> click(mc, Double.parseDouble(parts[1]), Double.parseDouble(parts[2]));
                 case "scroll" -> scroll(mc, Double.parseDouble(parts[1]), Double.parseDouble(parts[2]), Double.parseDouble(parts[3]));
                 case "close" -> close(mc);
+                case "use" -> use(mc);
                 case "inquire" -> inquire(mc, parts[1], parts[2], parts[3], parts.length > 4 ? parts[4] : null);
                 case "vopen" -> vopen(mc, parts[1], parts.length > 2 ? parts[2] : null);
                 case "cmd" -> chat(mc, parts);
@@ -222,6 +226,11 @@ public class QtDiagClient {
     }
 
     /** Close the open screen the way Escape does. */
+    private static void use(Minecraft mc) {
+        KeyMapping.click(mc.options.keyUse.getKey());
+        System.out.println("[qtdiag] use key pressed");
+    }
+
     private static void close(Minecraft mc) {
         if (mc.screen == null) {
             System.out.println("[qtdiag] close: no screen open");
