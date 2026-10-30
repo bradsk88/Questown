@@ -333,8 +333,9 @@ skill to a town with no cook (dev: "They won't be a cook until morning"). `postC
 also needs `TutorialTownView.anyVillagerOnRoot("cook")` (the adapter reads
 `VillagerHolder.getJobs()`). Onboarding changes are instant since r22 (`town/entity/COMPLEX.md`),
 so in a fresh town both hold in the same tick; the gate covers any morning-applied path. Pinned by
-`cookFollowUp_waitsForTheMorningJobChange`. The food quest asks for 4 (`COOKED_FOOD_COUNT`; dev r22:
-"should probably only ask for 4").
+`cookFollowUp_waitsForTheMorningJobChange`. The food quest asks for 5 (`COOKED_FOOD_COUNT`; 4 since dev r22,
+5 since the 2026-10-29 dev playtest: "That would make the cook level up", i.e. five 200 XP cooks
+make the 1000 XP first level).
 
 **Its own wanted id: `questown:skill_unlock/<root>`.** Batch completion
 (`QuestBatch.markRecipeAsComplete`) and load replay match a quest by wanted id alone and take

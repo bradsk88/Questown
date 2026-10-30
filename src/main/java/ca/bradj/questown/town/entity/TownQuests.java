@@ -1560,7 +1560,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         cookJobQuest.setFlavorText("Your town needs a cook. Teach a villager the cook job so raw food becomes a meal.");
         q.addNewQuest(cookJobQuest);
 
-        // Cooked Food x4, the cook skill and villager 3's bed wait for the cook: they ride the
+        // Cooked Food x5, the cook skill and villager 3's bed wait for the cook: they ride the
         // follow-up batch (postCookFollowUpIfDue). r20, dev 2026-10-25: "the cook's batch is too bulky".
 
         MCQuest kitchenQuest = MCQuest.standalone(batchUUID, null, KITCHEN_SMALL);
@@ -1591,7 +1591,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /**
-     * Posts the cook follow-up batch (Cooked Food x4, a cook skill, villager 3's bed) once the
+     * Posts the cook follow-up batch (Cooked Food x5, a cook skill, villager 3's bed) once the
      * onboarding cook JOB_CHANGE is complete, by whatever path it completed, and a villager is on
      * the cook root. A BOP spend closes the quest at once but the job changes the next morning
      * (r22, dev: "They won't be a cook until morning"). Runs every tick;
@@ -1622,8 +1622,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         notifyNewQuests(view);
     }
 
-    /** Was 8 until r22 (dev, 2026-10-26: "this cooked food quest should probably only ask for 4"). */
-    static final int COOKED_FOOD_COUNT = 4;
+    /**
+     * Five cooks at 200 XP each (cook:mutton) reach the default first level (Level1ExperienceRequired
+     * 1000), so the quest ends on a Block of Progress (dev playtest 2026-10-29). Was 8 until r22, then 4.
+     */
+    static final int COOKED_FOOD_COUNT = 5;
 
     private void addCookFollowUpBatch(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
@@ -1634,7 +1637,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCQuest cookedFoodQuest = MCQuest.loot(
                 batchUUID, null, TagsInit.Items.VILLAGER_COOKED_FOOD.location(), COOKED_FOOD_COUNT
         );
-        cookedFoodQuest.setFlavorText("Feed your growing village. Produce four pieces of food from the raw food you have gathered.");
+        cookedFoodQuest.setFlavorText("Feed your growing village. Produce five pieces of food from the raw food you have gathered.");
         q.addNewQuest(cookedFoodQuest);
 
         // A skill on the cook's tree, beside the food quest it helps fill (dev, 2026-10-25; it rode
