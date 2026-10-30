@@ -489,6 +489,13 @@ embedding returned `VillagerTabs.all()`, so SKILLS had an open fn and rendered u
 other pane, which excludes its own tab. It now returns `VillagerTabs.skillsPaneTabs(showInventoryTab)`
 (all but SKILLS, minus INVENTORY when management-only). `VillagerTabsRowTest`.
 
+**A villager on a timed trip keeps its own status lines (2026-10-29, dev playtest: "The 'they need
+food to work' tooltip on the longer job statuses is weird"):** the live hunter on
+`hunter:sword_full_day` was WAITING_FOR_TIMED_STATE with an unmet Food need (the next full-day trip
+wants food), and its tooltip's second line became "They need Food to work." while it was out
+working. `StatusNeedLine.isWorking` (moved from `ServerJobsRegistry`) now counts
+WAITING_FOR_TIMED_STATE as working, so `keepsOwnLines` keeps the trip's lines. `StatusNeedLineTest`.
+
 ## MultiStatusScreen: full-card click opens the villager UI in management-only mode (2026-10-14)
 
 The flag's villagers-tab card had no card-body click handler - only the 32x32 status icon

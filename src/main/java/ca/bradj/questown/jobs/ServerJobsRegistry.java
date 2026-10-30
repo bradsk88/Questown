@@ -134,7 +134,7 @@ public class ServerJobsRegistry {
     }
 
     private static boolean isWorking(@Nullable IStatus<?> status) {
-        return status instanceof ProductionStatus ps && (ps.isWorkingOnProduction() || ps.isGoingToJobsite());
+        return StatusNeedLine.isWorking(status);
     }
 
     public static @NotNull ImmutableList<Component> getStatusText(

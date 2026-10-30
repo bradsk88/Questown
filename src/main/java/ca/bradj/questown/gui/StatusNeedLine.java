@@ -1,5 +1,7 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.jobs.IStatus;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -23,6 +25,15 @@ public final class StatusNeedLine {
      * diner's job blocker read as one thought with the diner line ("Cook is looking for food. /
      * They need Coal to work.", agent playtest r10 #8, dev 2026-10-23).
      */
+    /**
+     * Working on production, walking to the job site, or away on a timed trip: a hunter out for the
+     * day read "They need Food to work." (dev playtest 2026-10-29).
+     */
+    public static boolean isWorking(@Nullable IStatus<?> status) {
+        return status instanceof ProductionStatus ps && (ps.isWorkingOnProduction() || ps.isGoingToJobsite()
+                || ProductionStatus.WAITING_FOR_TIMED_STATE.equals(ps));
+    }
+
     public static boolean keepsOwnLines(boolean working, boolean dining) {
         return working || dining;
     }

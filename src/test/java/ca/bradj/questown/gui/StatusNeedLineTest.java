@@ -59,4 +59,11 @@ class StatusNeedLineTest {
         Assertions.assertTrue(StatusNeedLine.keepsOwnLines(true, false));
         Assertions.assertFalse(StatusNeedLine.keepsOwnLines(false, false));
     }
+
+    /** Dev playtest 2026-10-29: "The 'they need food to work' tooltip on the longer job statuses is weird". */
+    @Test
+    void awayOnATimedTrip_countsAsWorking() {
+        Assertions.assertTrue(StatusNeedLine.isWorking(ca.bradj.questown.jobs.production.ProductionStatus.WAITING_FOR_TIMED_STATE));
+        Assertions.assertFalse(StatusNeedLine.isWorking(ca.bradj.questown.jobs.production.ProductionStatus.IDLE));
+    }
 }
