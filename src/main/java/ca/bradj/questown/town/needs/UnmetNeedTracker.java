@@ -167,6 +167,11 @@ public final class UnmetNeedTracker {
             if (!r.root().equals(root) || !r.townie().equals(townie) || r.key() == null) {
                 continue;
             }
+            // A missing room's key is its job's product, not a supply the townie lacks (dev playtest
+            // 2026-10-29: "needs Wooden Shovel" for a crafter with no smithy).
+            if (!r.reason().supplyItem()) {
+                continue;
+            }
             if (!canHold.test(r.key())) {
                 continue;
             }

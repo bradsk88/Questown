@@ -185,7 +185,7 @@ class UnmetNeedTrackerTest {
     void primaryKeyIsTheOldestLiveKeyTieBrokenByKeyAscending() {
         UnmetNeedTracker t = new UnmetNeedTracker();
         t.enter(100, MINER, ALICE, "#questown:raw_food", FUEL_BLOCKED);
-        t.enter(100, MINER, ALICE, "#minecraft:coals", COAL_NO_ROOM);
+        t.enter(100, MINER, ALICE, "#minecraft:coals", FUEL_BLOCKED);
         // Same since: the earlier key in ascending order wins - the hint is
         // deterministic given the world state, not the pass's argmax.
         assertEquals("#minecraft:coals", t.primaryKey(MINER, ALICE));
@@ -232,5 +232,19 @@ class UnmetNeedTrackerTest {
         assertNull(t.primaryKey(MINER, ALICE, k -> false));
         // The unfiltered hint is unchanged: the oldest live key.
         assertEquals("#questown:fishing_rods", t.primaryKey(MINER, ALICE));
+    }
+
+    /**
+     * Dev playtest 2026-10-29: a crafter with no smithy read "needs Wooden Shovel to work". A
+     * missing room's key is the job's product, not a supply (town/COMPLEX.md: only supplyItem()
+     * reasons reach the item store and the bubble), so it never becomes the hint.
+     */
+    @Test
+    void primaryKeySkipsAMissingRoomsProduct() {
+        UnmetNeedTracker t = new UnmetNeedTracker();
+        t.enter(100, MINER, ALICE, "minecraft:wooden_shovel", COAL_NO_ROOM);
+        assertNull(t.primaryKey(MINER, ALICE));
+        t.enter(200, MINER, ALICE, "#fuel", FUEL_BLOCKED);
+        assertEquals("#fuel", t.primaryKey(MINER, ALICE));
     }
 }

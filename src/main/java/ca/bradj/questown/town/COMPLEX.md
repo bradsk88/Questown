@@ -395,6 +395,11 @@ job's *product* (`initial_request`) — as the tracker's producer handle, but
 it must not arrive at the store as a supply (the run-14 `oak_wood` mislabel:
 the town's top need read "wood" because a gatherer's product leaked in by
 this path). `NO_REQUEST`/`Ok` name no item at all.
+The bubble half of that rule was not enforced until 2026-10-29: `UnmetNeedTracker.primaryKey` took
+the oldest live key of any reason, so a crafter with no smithy read "They need Wooden Shovel to
+work" (the NO_ROOM row's product key; dev playtest). It now skips rows whose reason is not
+`supplyItem()` (`UnmetNeedTrackerTest.primaryKeySkipsAMissingRoomsProduct`; the 10-14 ordering
+test now uses a supply block for its coal key).
 
 The decision — which class a gate produces, which key it names — is pure
 (`GateReason.classify`), and the bookkeeping behind it is a small state machine
