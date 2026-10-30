@@ -17,6 +17,7 @@ import ca.bradj.questown.town.HelperChickenSpawnController;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -28,6 +29,7 @@ import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
@@ -311,6 +313,10 @@ public final class ChickenArcTestExecutor {
             handleMarkFlagUiOpened();
             return;
         }
+        if (action instanceof ChickenArcScriptedAction.RightClickFlag) {
+            handleRightClickFlag();
+            return;
+        }
         if (action instanceof ChickenArcScriptedAction.AdvanceTicks) {
             // settle-only; the phase machine consumes postActionWaitTicks()
             return;
@@ -525,6 +531,15 @@ public final class ChickenArcTestExecutor {
             return;
         }
         ChickenArcUiObservations.markFlagUiOpened(level, flagPos);
+    }
+
+    private void handleRightClickFlag() {
+        if (fakePlayer == null || flagPos == null) {
+            failAction("RightClickFlag", "fake player or flag missing");
+            return;
+        }
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(flagPos), Direction.UP, flagPos, false);
+        level.getBlockState(flagPos).useWithoutItem(level, fakePlayer, hit);
     }
 
     private void handleRightClickChicken(ChickenArcScriptedAction.RightClickChickenWithHand a) {

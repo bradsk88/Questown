@@ -10,6 +10,7 @@ import ca.bradj.questown.commands.test.ChickenArcScriptedAction.MarkVillagerUiOp
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.MovePlayer;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.PlaceBlock;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.RegisterDoorViaWand;
+import ca.bradj.questown.commands.test.ChickenArcScriptedAction.RightClickFlag;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.RightClickChickenWithHand;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.RunCommand;
 import ca.bradj.questown.commands.test.ChickenArcScriptedAction.SetUpRegisteredRoomWithChest;
@@ -111,6 +112,7 @@ public final class ChickenArcBlueprintRegistry {
                 f1StickToCampfire(),
                 f2ChestSpawnAfterCampfire(),
                 f3BuildRoomToWelcomeMat(),
+                f3RightClickFlagAfterMat(),
                 f4SeedsToStatue(),
                 f1RotationClockwise90(),
                 rotationAmbiguityForfeit(),
@@ -215,14 +217,41 @@ public final class ChickenArcBlueprintRegistry {
 
     // Scenario 3 — F3: build a whole room to the welcome-mat beat.
     private static ChickenArcBlueprint f3BuildRoomToWelcomeMat() {
+        return ChickenArcBlueprint.builder("F3_build_room_to_welcome_mat")
+                .actions(f3Actions())
+                .expectation(ChickenArcExpectation.builder()
+                        .finalBeat(ChickenBeatState.WAITING_FOR_FLAG_UI)
+                        .chickenSpawned(true)
+                        .build())
+                .build();
+    }
+
+    /**
+     * The flag-UI beat after the mat, done the player's way: a right-click on the flag. The
+     * first villager has not arrived yet, so the villagers tab is hidden and the flag opens on
+     * another tab (2026-10-30 agent playtest: the chicken waited on "Look at the flag" all night).
+     */
+    private static ChickenArcBlueprint f3RightClickFlagAfterMat() {
+        List<ChickenArcScriptedAction> actions = new java.util.ArrayList<>(f3Actions());
+        actions.add(new RightClickFlag(2));
+        actions.add(new AdvanceTicks(20));
+        return ChickenArcBlueprint.builder("F3_right_click_flag_after_mat")
+                .actions(actions)
+                .expectation(ChickenArcExpectation.builder()
+                        .finalBeat(ChickenBeatState.WAITING_FOR_FREE_FOOD)
+                        .chickenSpawned(true)
+                        .build())
+                .build();
+    }
+
+    private static List<ChickenArcScriptedAction> f3Actions() {
         BlockPos doorOffset = HelperChickenBeatOffsets.DOOR_OFFSET;
         BlockPos wallOffset = HelperChickenBeatOffsets.WALL_BLOCK_OFFSET;
         BlockPos signOffset = HelperChickenBeatOffsets.SIGN_OFFSET;
         BlockPos chestOffset = HelperChickenBeatOffsets.CHEST_OFFSET;
         BlockPos gateCenter = HelperChickenBeatOffsets.GATE_CENTER_OFFSET;
 
-        return ChickenArcBlueprint.builder("F3_build_room_to_welcome_mat")
-                .actions(List.of(
+        return List.of(
                         // Arrive at F3 entry: wand already bound + campfire lit.
                         new GiveBoundWand(BlockPos.ZERO, 1),
                         new WandRightClick(HelperChickenBeatOffsets.CAMPFIRE_OFFSET, 2),
@@ -247,12 +276,7 @@ public final class ChickenArcBlueprintRegistry {
                         // sees getWelcomeMats() as non-empty.
                         new PlaceBlock(gateCenter, welcomeMatBlockState(), 2),
                         new AdvanceTicks(20)
-                ))
-                .expectation(ChickenArcExpectation.builder()
-                        .finalBeat(ChickenBeatState.WAITING_FOR_FLAG_UI)
-                        .chickenSpawned(true)
-                        .build())
-                .build();
+        );
     }
 
     // Scenario 4 — AE5 — seeds to statue. Uses SetUpRegisteredRoomWithChest to
@@ -481,5 +505,5 @@ public final class ChickenArcBlueprintRegistry {
      * Pin the scenario count so accidental additions or drops fail the
      * registry test before they land in a release.
      */
-    public static final int EXPECTED_SCENARIO_COUNT = 14;
+    public static final int EXPECTED_SCENARIO_COUNT = 15;
 }

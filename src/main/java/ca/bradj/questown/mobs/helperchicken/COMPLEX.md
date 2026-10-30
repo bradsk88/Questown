@@ -102,6 +102,14 @@ flowchart TD
   wall hole; a hand-placed flag has no such hole, so `wallBlockPlaced` can never
   be true and the beat would stall the arc. It is skipped when the flag is
   hand-placed; the room lesson is still carried by the door beats that follow.
+- The flag-UI beat (`WAITING_FOR_FLAG_UI`, right after the mat) advances on a right-click of
+  the flag, whichever tab opens (`TownFlagBlock.useFlag` -> `ChickenArcUiObservations.markFlagUiOpened`).
+  The mark used to sit only in `TownVillagerUIs.showMultiStatusUI` (the villagers overview), from
+  when the flag opened there (a9121849). The same day 530c8923 hid the villagers tab until the first
+  arrival, and 437a770f (10-17) opens the red-dot tab, so before the first villager the flag opens
+  on quests and the beat waited through the first night (2026-10-30 agent playtest). The
+  chicken-arc autotests had marked it directly (`MarkFlagUiOpened`); `F3_right_click_flag_after_mat`
+  drives the real block use (`RightClickFlag`) and was red before the fix.
 - Beats are persisted by `name()` under `chicken-beat-state`. There is no live
   onboarding in the field, so the order and names may be reordered or renamed
   freely (not just inserted); only the persistence key is stable across a

@@ -95,6 +95,14 @@ public sealed interface ChickenArcScriptedAction {
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
+    /**
+     * Right-click the flag block with the fake player, through the block's own use path (what a
+     * player does), rather than marking the flag-UI observation directly.
+     */
+    record RightClickFlag(
+            int postActionWaitTicks
+    ) implements ChickenArcScriptedAction {}
+
     /** Advance {@code ticks} server ticks with no action. */
     record AdvanceTicks(
             int ticks

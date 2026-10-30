@@ -18,6 +18,7 @@ import ca.bradj.questown.gui.FlagTabs;
 import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.MapC;
+import ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
@@ -408,6 +409,10 @@ public class TownFlagBlock extends BaseEntityBlock {
             } else {
                 entity.menus.showUI((ServerPlayer) player, tab, info, entity.getBlocksOfProgress());
             }
+            // The chicken's "Look at the flag" beat is the right-click, whichever tab opens:
+            // before the first arrival the villagers tab is hidden and the flag opens on another
+            // one (2026-10-30: the beat waited all night).
+            ChickenArcUiObservations.markFlagUiOpened(level, pos);
         } else {
             if (!entity.isInitializing()) {
                 entity.initializeFreshFlag(true);
