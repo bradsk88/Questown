@@ -52,4 +52,6 @@ to the chest and its other half, and plays `CHEST_OPEN`; `ChestLidTimers` keeps 
 ticks after the latest touch, so several items in a row do not flap it. `TownFlagBlockEntity.tick`
 calls `ChestTouches.tick`, which sends openers 0 and `CHEST_CLOSE` when due. A chest a player has
 open (`ChestBlockEntity.getOpenCount > 0`) is left alone. Timing pinned in `ChestLidTimersTest`;
-the lid and sound themselves are **not yet seen in game**.
+the lid was seen in game 2026-10-30: open while a hunter took from the store chest
+(`.scratch/dev-playtest-2026-10-29-fresh/overnight-shots/chest-lid-open.png`, caught at tick rate 10
+in a 0.6 s screenshot burst, diffing the chest's top face). The sound was not checked (no audio here).

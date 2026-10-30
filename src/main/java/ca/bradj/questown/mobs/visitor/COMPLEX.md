@@ -274,6 +274,9 @@ Leaving sparkles go above the work spot the villager leaves from (`Job.getWorkSp
 declarative job's current work spot; `TripVisibility.sparkleAt`), not at the villager (dev playtest
 2026-10-29: "the sparkles should appear above their work spot"). A return, or a job with no work
 spot, still sparkles at the villager. The `[visibility]` line names the sparkle position.
+Seen in game 2026-10-30: a hunter leaving from the welcome mat logged `sparkles at (13.5, 67.0,
+6.x)` (the mat at 13 66 6), and the frame after showed the green sparkles rising over the mat
+(`.scratch/dev-playtest-2026-10-29-fresh/overnight-shots/leaving-sparkles.png`).
 
 ## Stranded outside the town: poof back to the gate (r20, dev 2026-10-25)
 
