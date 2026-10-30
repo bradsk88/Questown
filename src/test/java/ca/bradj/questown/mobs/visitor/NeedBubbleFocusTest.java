@@ -92,4 +92,15 @@ class NeedBubbleFocusTest {
         Assertions.assertEquals("message.questown.attention.no_work_requests",
                 AttentionBubbles.Kind.NO_WORK_REQUESTS.hintKey);
     }
+
+    /** Dev playtest 2026-10-29: "Villagers should stop showing their need balloon in the evening". */
+    @Test
+    void Test_VillagerNeedsShowOnlyInTheWorkingDay() {
+        Assertions.assertTrue(NeedBubbleFocus.villagerNeedsShowAt(0));
+        Assertions.assertTrue(NeedBubbleFocus.villagerNeedsShowAt(11499));
+        Assertions.assertFalse(NeedBubbleFocus.villagerNeedsShowAt(11500));
+        Assertions.assertFalse(NeedBubbleFocus.villagerNeedsShowAt(18000));
+        Assertions.assertFalse(NeedBubbleFocus.villagerNeedsShowAt(23999));
+        Assertions.assertTrue(NeedBubbleFocus.villagerNeedsShowAt(24000 * 3 + 100));
+    }
 }

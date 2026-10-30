@@ -2,6 +2,7 @@ package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.rooms.AttentionBubbles;
 import ca.bradj.questown.town.rooms.DeadDoorBubbles;
@@ -102,10 +103,11 @@ public final class NeedBubbleFocus {
         @Nullable VisitorMobEntity bestTownie = null;
         @Nullable String bestHintKey = null;
         @Nullable Vec3 bestPos = null;
+        boolean townieNeedsShow = villagerNeedsShowAt(mc.level.getDayTime());
         for (VisitorMobEntity townie : mc.level.getEntitiesOfClass(
                 VisitorMobEntity.class, mc.player.getBoundingBox().inflate(16.0D)
         )) {
-            if (!townie.getNeed().isNeeded()) {
+            if (!townieNeedsShow || !townie.getNeed().isNeeded()) {
                 continue;
             }
             double score = crosshairAlignment(mc.player, townie.getEyePosition());
@@ -239,6 +241,16 @@ public final class NeedBubbleFocus {
             return true;
         }
         return challengerScore < holderScore + TAKEOVER_MARGIN;
+    }
+
+    /**
+     * Villager bubbles show only in the working day (morning and noon): from the evening on, the
+     * town is eating and sleeping, so a work need is not stopping anything (dev playtest
+     * 2026-10-29). Door and attention bubbles are not affected.
+     */
+    static boolean villagerNeedsShowAt(long dayTime) {
+        Signals s = Signals.fromDayTime(new Signals.DayTime(dayTime));
+        return s == Signals.MORNING || s == Signals.NOON;
     }
 
     /** The holder keeps the bubble only while it is still needy and still in front of the player. */

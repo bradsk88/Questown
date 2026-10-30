@@ -155,6 +155,15 @@ rules apply; the holder type is carried through `current` as `Object`, so
 (action-bar text on close examination) comes from `Kind.hintKey` —
 `message.questown.attention.*` in en_us.json.
 
+## Villager bubbles only in the working day (dev playtest 2026-10-29)
+
+"Villagers should stop showing their need balloon in the evening." `NeedBubbleFocus.tick` skips
+townies as candidates unless `villagerNeedsShowAt(dayTime)`: morning or noon by `Signals`
+(before `PRODUCTIVE_DAY_END_TICK`, 11500). From the evening the town eats and sleeps, so a work
+need stops nothing. The server still sets the need; only the client bubble (and its hint line)
+waits for morning. Door and attention bubbles are unaffected. Pinned by
+`NeedBubbleFocusTest.Test_VillagerNeedsShowOnlyInTheWorkingDay`.
+
 ## Townie skin pool (`TownieSkins`, 2026-10-14)
 
 Townie skins are a deterministic per-UUID pick from a pool: the 9 vanilla
