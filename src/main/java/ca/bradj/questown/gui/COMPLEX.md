@@ -1033,6 +1033,10 @@ Hovering that card shows `gui.status.villager_arriving_morning.tooltip` ("For co
 quests, a new villager will join your town in the morning"; dev playtest 2026-10-29). The `.first`
 card stays without a tooltip, so the first arrival is still not telegraphed
 (`MultiStatusScreen.renderTooltipContent`, `isOverCard`). Not unit-tested (screen code).
+The arrival card now comes first (`ArrivalCard.order`, `ArrivalCardTest`): appended after every
+villager it sat on page 2 once the first page was full, and the dev was surprised by a villager
+(dev playtest 2026-10-29: "Maybe it should always be shown on page 1 - pushing other villagers
+down"). The screen finds the card by its sentinel UUID, never by position.
 
 ## Economics card tooltip wraps like the other card screens (2026-10-17 round 6)
 

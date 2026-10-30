@@ -75,11 +75,8 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
 
     @Override
     protected ImmutableList<UUID> cardsData() {
-        ImmutableList<UUID> villagers = ImmutableList.copyOf(syncedData.villagerStatuses.keySet());
-        if (!syncedData.villagerArrivingInMorning()) {
-            return villagers;
-        }
-        return ImmutableList.<UUID>builder().addAll(villagers).add(MORNING_ARRIVAL_SENTINEL).build();
+        return ArrivalCard.order(ImmutableList.copyOf(syncedData.villagerStatuses.keySet()),
+                MORNING_ARRIVAL_SENTINEL, syncedData.villagerArrivingInMorning());
     }
 
     @Override
