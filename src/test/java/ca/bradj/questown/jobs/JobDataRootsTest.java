@@ -64,16 +64,30 @@ class JobDataRootsTest {
     /** Dev 2026-10-29: a job worked at the blacksmith's table shows that table, not the crafting table. */
     @Test
     void blacksmithsTableJobs_showTheBlacksmithsTable() throws IOException, URISyntaxException {
+        Assertions.assertEquals(List.of(), jobsAtBlockWithoutArt("questown:blacksmiths_table",
+                "questown:textures/blocks/blacksmiths_table_front.png"), "blacksmith's table jobs without its working art");
+    }
+
+    /**
+     * Dev playtest 2026-10-29: "Crafter building boots is showing the 'left town' icon". The
+     * armorer files' ids start "armorer/", so the crafter check above missed them.
+     */
+    @Test
+    void armorersTableJobs_showTheArmorersTable() throws IOException, URISyntaxException {
+        Assertions.assertEquals(List.of(), jobsAtBlockWithoutArt("questown:armorers_table",
+                "questown:textures/blocks/armorers_table_front.png"), "armorer's table jobs without its working art");
+    }
+
+    private static List<String> jobsAtBlockWithoutArt(String blockId, String texture) throws IOException, URISyntaxException {
         List<String> wrong = new ArrayList<>();
         for (JsonObject job : allJobs()) {
             JsonElement block = job.get("block");
-            boolean atBlacksmithsTable = block != null && block.isJsonPrimitive()
-                    && "questown:blacksmiths_table".equals(block.getAsString());
-            if (atBlacksmithsTable && !"questown:textures/blocks/blacksmiths_table_front.png".equals(workingTexture(job))) {
+            boolean atBlock = block != null && block.isJsonPrimitive() && blockId.equals(block.getAsString());
+            if (atBlock && !texture.equals(workingTexture(job))) {
                 wrong.add(job.get("id").getAsString());
             }
         }
-        Assertions.assertEquals(List.of(), wrong, "blacksmith's table jobs without its working art");
+        return wrong;
     }
 
     private static boolean hasWorkingTexture(JsonObject job) {

@@ -28,5 +28,8 @@
     "id": "minecraft:item.armor.equip_leather",
     "chance": "100",
     "duration": 5
-  }
+  },
+  "status_texture_overrides": [
+    {"type": "working", "new_texture": "questown:textures/blocks/armorers_table_front.png"}
+  ]
 }

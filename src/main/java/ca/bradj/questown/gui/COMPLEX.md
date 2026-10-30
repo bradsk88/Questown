@@ -1309,6 +1309,10 @@ whole texture fills the box. `ServerJobsRegistry.getTexture` applies the overrid
 `StatusArt`, and like the cook's furnace art it also covers extraction. 2026-10-29: this was a Java
 `ROOT_WORKING_ART` map in `StatusArt`, moved to data so per-job art stays one mechanism. Pins:
 `JobDataRootsTest.everyCrafterJobDeclaresItsWorkingArt`, `blacksmithsTableJobs_showTheBlacksmithsTable`.
+The four `armorer_*` files (ids `armorer/...`, run under the crafter root) were missed by the
+`crafter/` id check and showed the leaver art (dev playtest 2026-10-29: "Crafter building boots is
+showing the 'left town' icon"); they now show `armorers_table_front.png`, pinned by
+`armorersTableJobs_showTheArmorersTable` (the table checks key on the job's `block`, not its id).
 
 ## Change-job panel: the next action and the real timing (2026-10-23, r9 #2)
 
