@@ -2870,7 +2870,10 @@ public class TestBlueprintRegistry {
      * A kitchen with raw mutton (the cook's starter recipe) and no fuel anywhere. The cook can't
      * fuel the furnace, so it must say so: the need bubble names coal (UNMET_ITEM on a coal key),
      * which is what tells the player to bring fuel. A guard, not a fix pin: it passed when added
-     * (2026-10-19, ruling out "no coal need" as the village/growth cook stall).
+     * (2026-10-19, ruling out "no coal need" as the village/growth cook stall). Since 64cd1b54 a
+     * relaxing (downtime) villager's bubble is hidden (dev playtest 2026-10-29), and a cook blocked
+     * on coal idles into downtime; then the town must still hold the coal need for it, so the
+     * bubble returns when it seeks work again.
      */
     private static TestBlueprint cookNoCoalBlueprint() {
         TestExpectation realtime = new TestExpectation(List.of(), 0, 100);
@@ -2885,6 +2888,11 @@ public class TestBlueprintRegistry {
                                 + " unmetItem=" + v.getUnmetItem());
                         String item = v.getUnmetItem();
                         anyCoalNeed |= v.getNeed() == TownieNeed.UNMET_ITEM && item != null && item.contains("coal");
+                        if (ca.bradj.questown.jobs.declarative.DowntimeWork.matches(v.getJobId())) {
+                            String tracked = town.getPossibleWork().trackedUnmetKey(v.getJobId().rootId(), v.getUUID());
+                            output.msg("cook no-coal: relaxing, tracked need=" + tracked);
+                            anyCoalNeed |= tracked != null && tracked.contains("coal");
+                        }
                     }
                     return anyCoalNeed;
                 });

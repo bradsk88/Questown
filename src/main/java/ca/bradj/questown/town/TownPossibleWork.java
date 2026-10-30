@@ -783,6 +783,14 @@ public class TownPossibleWork {
     }
 
     /**
+     * The supply the town has recorded this townie as blocked on, whether or not its bubble shows
+     * now (a relaxing villager's is hidden, {@link #showsUnmetNeed}).
+     */
+    public @Nullable String trackedUnmetKey(String root, UUID townie) {
+        return unmetNeeds.primaryKey(root, townie);
+    }
+
+    /**
      * A relaxing villager (downtime) shows no unmet-item need (dev playtest 2026-10-29: "Relaxing
      * villager shouldn't show a need bubble"); the next pass after it seeks work again re-applies it.
      */

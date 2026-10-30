@@ -172,6 +172,9 @@ the food request was paused, not for lack of porkchop. `TownPossibleWork`'s unme
 UNMET_ITEM for a villager on a downtime job and skips it (`showsUnmetNeed`); the pass after it
 seeks work again re-applies the need. `TownPossibleWorkUnmetNeedTest`. Open: the primary unmet key
 named porkchop while mutton work was available (not traced).
+Side effect caught by `cook/fuel [no_coal]` (22:19 shard): a cook blocked on coal idles into
+downtime, so its coal bubble now shows only while it seeks work. The town still tracks the need
+(`TownPossibleWork.trackedUnmetKey`), and the guard accepts that while the cook relaxes.
 
 ## Townie skin pool (`TownieSkins`, 2026-10-14)
 
