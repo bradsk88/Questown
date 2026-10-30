@@ -179,6 +179,9 @@ public class TestBlueprintRegistry {
         // all starting jobs unlocked); realtime, so job selection is exercised.
         jobs.add(edgeCaseEntry("cook", "fuel", "fuelled_output_ready", cookOutputReadyBlueprint()));
         jobs.add(edgeCaseEntry("cook", "fuel", "no_coal", cookNoCoalBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "mutton", "doorway_kitchen", cookDoorwayKitchenBlueprint(false, false)));
+        jobs.add(edgeCaseEntry("cook", "mutton", "rest_then_eat", cookDoorwayKitchenBlueprint(true, false)));
+        jobs.add(edgeCaseEntry("cook", "mutton", "raw_food_only", cookDoorwayKitchenBlueprint(true, true)));
         jobs.add(edgeCaseEntry("cook", "fuel", "storage_full", cookStorageFullBlueprint()));
         jobs.add(entry(new JobID("baker", "bread"), bakerBlueprint()));
         jobs.add(entry(new JobID("crafter", "stick"), crafterBlueprint()));
@@ -3964,6 +3967,125 @@ public class TestBlueprintRegistry {
                             + ", daytime now " + level.getDayTime() % 24000);
                     return count >= 1 && !anyHeld;
                 });
+    }
+
+    /**
+     * Dev playtest 2026-10-29: a 3x3 kitchen (walls included, one interior cell holding the
+     * furnace) is used from its door cell. The cook stood on the roof (40323611 keeps it in the
+     * doorway) and later stalled in "going to eat" with no walk target. Here the cook cooks from
+     * the doorway, its hunger is emptied mid-run, and it must leave the doorway, eat from the supply
+     * room and still have cooked. With {@code restFirst} the cook starts in downtime, which works at
+     * the flag (states 0-9) and leaves its per-owner record there; the diner stages also use the flag
+     * (states 0-2). The live cook then stalled in "going to eat" (cook-stuck-going-to-eat.md).
+     * With {@code rawOnly} the town has raw mutton and no coal or cooked food, as the live town did:
+     * the cooked-food diner must expire and the raw-food diner must eat the mutton.
+     */
+    private static TestBlueprint cookDoorwayKitchenBlueprint(boolean restFirst, boolean rawOnly) {
+        List<BlockPlacement> blocks = new ArrayList<>();
+        int ox = 4;
+        int oz = -2;
+        for (int x = 0; x < 3; x++) {
+            for (int z = 0; z < 3; z++) {
+                boolean isEdge = x == 0 || x == 2 || z == 0 || z == 2;
+                blocks.add(new BlockPlacement(new BlockPos(ox + x, -1, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                if (isEdge) {
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 0, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 1, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                }
+                blocks.add(new BlockPlacement(new BlockPos(ox + x, 2, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+            }
+        }
+        BlockPos doorLower = new BlockPos(ox + 1, 0, oz + 2);
+        BlockPos doorUpper = new BlockPos(ox + 1, 1, oz + 2);
+        blocks.removeIf(bp -> bp.offset().equals(doorLower) || bp.offset().equals(doorUpper));
+        blocks.add(new BlockPlacement(doorLower, Blocks.OAK_DOOR.defaultBlockState()));
+        blocks.add(new BlockPlacement(doorUpper, Blocks.OAK_DOOR.defaultBlockState().setValue(
+                net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
+        )));
+        blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 1), Blocks.FURNACE.defaultBlockState()));
+
+        SupplyRoom store = buildSupplyRoom(-6, -2);
+        blocks.addAll(store.blocks);
+
+        TestExpectation realtime = rawOnly
+                ? new TestExpectation(List.of(new ExpectedProduct("minecraft:mutton", null, -1)), 0, 100)
+                : new TestExpectation(List.of(
+                        new ExpectedProduct("minecraft:cooked_mutton", 1, null),
+                        new ExpectedProduct("minecraft:cooked_beef", null, -1)
+                ), 0, 100);
+        List<ItemStack> supplies = rawOnly
+                ? List.of(new ItemStack(Items.MUTTON, 16))
+                : List.of(new ItemStack(Items.MUTTON, 16), new ItemStack(Items.COAL, 16), new ItemStack(Items.COOKED_BEEF, 8));
+        return new TestBlueprint(
+                RoomType.INDOOR,
+                blocks,
+                supplies,
+                doorLower,
+                store.chestOffset,
+                new ResourceLocation(Questown.MODID, "kitchen_small"),
+                new TestExpectation(List.of(), 0, 100),
+                store.doorOffset, // supplyDoorOffset: registers the store room
+                null,        // warpAmountOverride
+                1000L,       // startTimeTick
+                1,           // villagerCount
+                true,        // realtimePhase
+                rawOnly ? 6000 : 3000, // realtimeTicks: the cooked-food diner expires first
+                false,       // drainHungerBeforeTest (drained mid-run instead)
+                true,        // skipWarp
+                realtime, null, null, null, null, false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                for (JobID job : ServerJobsRegistry.getDefaultWork(new JobID("cook", "extract"))) {
+                    town.getVillagerHandle().unlockJob(uuid, job);
+                }
+                town.getVillagerHandle().unlockJob(uuid, new JobID("cook", "mutton"));
+                if (restFirst) {
+                    town.getVillagerHandle().changeJobForVillager(vuid,
+                            ca.bradj.questown.jobs.declarative.DowntimeWork.getIdFor(new JobID("cook", "mutton")), false);
+                    output.msg("[rest_then_eat] cook starts in downtime");
+                }
+            }
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new StarveAt(restFirst ? 1600 : 1900, restFirst, level, town, output));
+            return true;
+        });
+    }
+
+    /** Empties every villager's hunger once, on the first server tick at or past daytime {@code at}. */
+    private static final class StarveAt {
+        private final long at;
+        private final boolean leaveDowntimeRecord;
+        private final ServerLevel level;
+        private final TownFlagBlockEntity town;
+        private final TestOutput output;
+
+        private StarveAt(long at, boolean leaveDowntimeRecord, ServerLevel level, TownFlagBlockEntity town, TestOutput output) {
+            this.at = at;
+            this.leaveDowntimeRecord = leaveDowntimeRecord;
+            this.level = level;
+            this.town = town;
+            this.output = output;
+        }
+
+        @net.neoforged.bus.api.SubscribeEvent
+        public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+            if (level.getDayTime() % 24000 < at) {
+                return;
+            }
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(this);
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                if (leaveDowntimeRecord) {
+                    // The live cook's record (`_qtdev inspect` 21:37:36): downtime at state 3 on the flag.
+                    town.getRealWorkStatusHandle(uuid).setJobBlockState(town.getBlockPos(),
+                            ca.bradj.questown.town.workstatus.State.freshAtState(3));
+                    output.msg("[rest_then_eat] seeded the downtime record: state 3 at the flag for " + uuid);
+                }
+                town.getVillagerHandle().fillHunger(uuid, 0.0f);
+            }
+            output.msg("[doorway_kitchen] hunger emptied at daytime " + level.getDayTime() % 24000);
+        }
     }
 
     /** Levels up every villager once, on the first server tick at or past daytime {@code at}. */

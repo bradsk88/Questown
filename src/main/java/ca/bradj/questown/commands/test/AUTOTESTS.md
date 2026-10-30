@@ -173,3 +173,15 @@ offset — the script handles it.
 - Evidence standard (server log, not pixels) and reading a "stuck at roster 0"
   run: the `questown-behavior-verify` skill.
 - Held-run launch order and teardown: the `questown-held-run` skill.
+
+## Doorway kitchen and diner guards (2026-10-29 overnight)
+
+`cook/mutton [doorway_kitchen]`, `[rest_then_eat]`, `[raw_food_only]`: a 3x3 kitchen (walls
+included; the furnace fills the one interior cell, so the cook works from the door cell) plus a
+store room (`buildSupplyRoom(-6, -2)`). A `StarveAt` server-tick listener empties hunger mid-run
+(daytime 1900 / 1600). `rest_then_eat` starts the cook in downtime and seeds its flag record at state
+3 (the live cook's `_qtdev inspect`); `raw_food_only` has raw mutton only (no coal, no cooked food),
+so the cooked-food diner expires and the raw-food diner must eat. All three passed on their first
+run: they did not reproduce the dev's "stuck in going to eat" cook
+(`.scratch/dev-playtest-2026-10-29-fresh/cook-stuck-going-to-eat.md`), which rules out the doorway
+work spot (40323611), the downtime record on the flag, and the raw diner on a single chest.
