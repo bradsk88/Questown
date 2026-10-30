@@ -98,6 +98,10 @@ relights the campfire", which the Acting section already said.
 
 - `flagtab <type> <flag x y z>` opens a flag tab. Types: `quests`, `villagers`, `economics`,
   `crafting`, `blocks_of_progress` (not `bop`: the server throws `Unexpected menu type`).
+- `use` presses the use key once at the crosshair: the way to right-click an entity (hand the
+  chicken its seeds), which `_qtdev clickheld` (blocks only) cannot. Aim first: `tp Dev x y z yaw
+  pitch`, a shot, and zoom the crosshair (r23: from one side a flower's outline was in front of the
+  chicken). It does nothing while `tick freeze` holds the client: unfreeze before the press.
 - `click <x> <y>` (window pixels = the screenshot's own pixels on this box, 1x: read the target
   straight off the PNG and do not scale it; 2026-10-22 a 2x guess hovered nothing and produced a
   false "hover isn't capturable" note; same space as `cursor`) presses buttons and, as two clicks,
