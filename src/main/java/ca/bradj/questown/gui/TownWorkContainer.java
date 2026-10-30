@@ -1,5 +1,9 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.network.SetRequestLimitMessage;
+
+import java.util.function.ToIntFunction;
+
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.RemoveWorkFromUIMessage;
@@ -87,20 +91,30 @@ public class TownWorkContainer extends AbstractContainerMenu {
         int size = data.readInt();
         return data.readCollection(
                 c -> new ArrayList<>(size),
-                buf -> new UIWork(WorkRequest.fromNetwork(buf), buf.readBoolean())
+                buf -> new UIWork(WorkRequest.fromNetwork(buf), buf.readBoolean(), buf.readInt(), buf.readInt())
         );
     }
 
     public static void writeWork(
             Collection<WorkRequest> requestedResults,
             Set<WorkRequest> stocked,
+            ToIntFunction<WorkRequest> stock,
+            ToIntFunction<WorkRequest> limit,
             FriendlyByteBuf data
     ) {
         data.writeInt(requestedResults.size());
         data.writeCollection(requestedResults, (buf, w) -> {
             w.toNetwork(buf);
             buf.writeBoolean(stocked.contains(w));
+            buf.writeInt(stock.applyAsInt(w));
+            buf.writeInt(limit.applyAsInt(w));
         });
+    }
+
+    public void sendLimit(UIWork jobPosting, int limit) {
+        QuestownNetwork.sendToServer(
+                new SetRequestLimitMessage(jobPosting.getResultWanted(), limit, flag.getX(), flag.getY(), flag.getZ())
+        );
     }
 
     public static void writeFlagPosition(

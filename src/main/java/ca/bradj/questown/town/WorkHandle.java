@@ -12,6 +12,9 @@ public interface WorkHandle {
 
     void removeWorkRequest(WorkRequest requested);
 
+    /** How much storage may hold before {@code request} pauses (dev playtest 2026-10-29); clamped. */
+    void setRequestLimit(WorkRequest request, int limit);
+
     boolean hasAtLeastOneBoard();
 
     ImmutableList<WorkRequest> getRequestedResults();

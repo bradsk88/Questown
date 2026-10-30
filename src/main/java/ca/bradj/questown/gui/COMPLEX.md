@@ -1503,3 +1503,11 @@ this trip" / "Switch now (trip is lost)" / Cancel, else "Switch now" / Cancel
 (`SwitchJobChoice.forTrip`, `SwitchJobChoiceTest`). The message gained `afterTrip`; the server routes
 it through `VillagerHolder.switchJob` (`town/entity/COMPLEX.md`). Locked nodes keep the unlock path.
 Screen not yet seen in game.
+
+## Job board: stock/limit with - and + per request (dev playtest 2026-10-29)
+
+`WorkScreen.renderStockAndLimit` draws "6/8" (storage holds / pauses at; greyed when paused) and -
+and + between the item icon and the remove "x"; clicks ride the `removes` position map and call
+`TownWorkContainer.sendLimit` (limit - 1 / + 1). The paused tooltip names the request's own limit.
+Server side: `town/entity/COMPLEX.md` "Board requests: per-request limit". Not yet seen in game
+(gui-lint pending).

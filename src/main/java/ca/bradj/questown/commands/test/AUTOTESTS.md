@@ -205,3 +205,6 @@ defaults + mutton unlocked, started at the board). A listener records the first 
 `cook/mutton [door_flaps]` (2026-10-29 overnight): the doorway kitchen; a server-tick listener counts
 the kitchen door's closes and those with a villager within 1.5 blocks (a flap). Passes on 0 flaps
 (vanilla OpenDoorGoal: 8 of 8 closes were flaps).
+
+`crafter/stick [request_limit]` (2026-10-29 overnight): a store room with 5 bread, a bread request at
+limit 4; after 100 ticks it must be paused, then the limit goes to 6 and after 100 more it must not be.

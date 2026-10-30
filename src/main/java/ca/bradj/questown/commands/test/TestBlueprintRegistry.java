@@ -201,6 +201,7 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("hunter", "sword", "switch_now", hunterSwitchMidTripBlueprint(false)));
         jobs.add(edgeCaseEntry("hunter", "sword", "longest_trip", hunterLongestTripBlueprint()));
         jobs.add(edgeCaseEntry("cook", "mutton", "no_kitchen", cookNoKitchenBlueprint()));
+        jobs.add(edgeCaseEntry("crafter", "stick", "request_limit", requestLimitBlueprint()));
         jobs.add(edgeCaseEntry("hunter", "sword", "one_day_yield", hunterBlueprint().withExpectation(
                 new TestExpectation(List.of(new ExpectedProduct("*", 1, OneDayYieldCaps.HUNTER)), 1, 100))));
         // loot_on_extract: the 2.5 raw-food gate as a deterministic measurement. Posts the
@@ -4255,6 +4256,54 @@ public class TestBlueprintRegistry {
         }).withCustomAssertion((level, flagPos, town, output) -> {
             output.msg("[no_kitchen] missing room seen: " + seen[0]);
             return seen[0] != null && seen[0].contains("kitchen");
+        });
+    }
+
+    /**
+     * Dev playtest 2026-10-29: "Keep as designed, but the player needs some way to see 'we've hit
+     * the limit' and to see and adjust the limit." Storage holds 5 bread and the board requests bread:
+     * at limit 4 the request pauses, raised to 6 it resumes; the work handle reports stock 5.
+     */
+    private static TestBlueprint requestLimitBlueprint() {
+        SupplyRoom store = buildSupplyRoom(-6, -2);
+        java.util.List<String> seen = new java.util.ArrayList<>();
+        return new TestBlueprint(
+                RoomType.INDOOR,
+                store.blocks,
+                List.of(new ItemStack(Items.BREAD, 5)),
+                store.doorOffset,
+                store.chestOffset,
+                SpecialQuests.STORE_ROOM_SMALL,
+                new TestExpectation(List.of(), 0, 100),
+                null, null, 1000L, 1, true, 400, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            ca.bradj.questown.jobs.requests.WorkRequest bread = ca.bradj.questown.jobs.requests.WorkRequest.of(Items.BREAD);
+            town.getWorkHandle().requestWork(bread);
+            town.getWorkHandle().setRequestLimit(bread, 4);
+            long start = level.getGameTime();
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new Object() {
+                int step = 0;
+
+                @net.neoforged.bus.api.SubscribeEvent
+                public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+                    long t = level.getGameTime() - start;
+                    boolean paused = town.getWorkHandle().getBoardRequests().paused().contains(bread);
+                    if (step == 0 && t >= 100) {
+                        seen.add("limit4 paused=" + paused);
+                        town.getWorkHandle().setRequestLimit(bread, 6);
+                        step = 1;
+                    } else if (step == 1 && t >= 200) {
+                        seen.add("limit6 paused=" + paused);
+                        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(this);
+                        step = 2;
+                    }
+                }
+            });
+            return true;
+        }).withCustomAssertion((level, flagPos, town, output) -> {
+            output.msg("[request_limit] " + seen);
+            return seen.equals(List.of("limit4 paused=true", "limit6 paused=false"));
         });
     }
 

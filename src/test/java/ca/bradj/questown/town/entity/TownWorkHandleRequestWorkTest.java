@@ -101,4 +101,20 @@ class TownWorkHandleRequestWorkTest {
         assertFalse(q.isComplete());
         assertNotNull(q.getFlavorText(), "the quest must carry player-facing guidance");
     }
+
+    /** Dev playtest 2026-10-29: a request's limit is adjustable, kept across saves, dropped with the request. */
+    @Test
+    void requestLimit_isSaved_andForgottenWithTheRequest() {
+        TownWorkHandle h = newHandle();
+        WorkRequest food = WorkRequest.of(Items.BREAD);
+        h.requestWork(food);
+        h.setRequestLimit(food, 20);
+
+        TownWorkHandle loaded = newHandle();
+        TownWorkHandleSerializer.INSTANCE.deserializeNBT(TownWorkHandleSerializer.INSTANCE.serializeNBT(h), loaded);
+        assertEquals(20, loaded.limitOf(food));
+
+        h.removeWorkRequest(food);
+        assertEquals(ca.bradj.questown.jobs.requests.BoardRequests.PAUSE_AT, h.limitOf(food));
+    }
 }

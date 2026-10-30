@@ -1,7 +1,6 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.Coordinate;
-import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -230,6 +229,8 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
                     Compat.translatable("job_board.remove_work")
             );
             this.removes.put(new Position(removeX, iconY), () -> menu.sendRemoveRequest(jobPosting));
+
+            renderStockAndLimit(ctx, jobPosting, removeX, iconY, mouseX, mouseY);
         }
         slots.clear();
         slots.addAll(b.build());
@@ -262,6 +263,30 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
 
     private List<Slot> slots = new ArrayList<>();
 
+    /**
+     * "6/8" (storage holds / pauses at) with - and + to lower or raise the limit, left of the
+     * remove button (dev playtest 2026-10-29: "see 'we've hit the limit' and see and adjust the
+     * limit"). Clicks ride the same per-frame position map as remove.
+     */
+    private void renderStockAndLimit(RenderContext ctx, UIWork jobPosting, int removeX, int iconY, int mouseX, int mouseY) {
+        int plusX = removeX - buttonWidth - 2;
+        int minusX = plusX - buttonWidth - 2;
+        String count = jobPosting.getStock() + "/" + jobPosting.getLimit();
+        int countX = minusX - 4 - this.font.width(count);
+        int color = jobPosting.isStocked() ? PAUSED_TEXT_COLOR : TEXT_COLOR;
+        ctx.text(Compat.literal(count), countX, iconY + borderPadding - 1, color, false);
+        highlightAndTooltip(ctx, mouseX, mouseY, countX, iconY,
+                Compat.translatable("job_board.request_stock", jobPosting.getStock(), jobPosting.getLimit()));
+
+        ctx.lightText("-", minusX + borderPadding - 1, iconY + borderPadding - 1);
+        highlightAndTooltip(ctx, mouseX, mouseY, minusX, iconY, Compat.translatable("job_board.limit_down"));
+        this.removes.put(new Position(minusX, iconY), () -> menu.sendLimit(jobPosting, jobPosting.getLimit() - 1));
+
+        ctx.lightText("+", plusX + borderPadding - 1, iconY + borderPadding - 1);
+        highlightAndTooltip(ctx, mouseX, mouseY, plusX, iconY, Compat.translatable("job_board.limit_up"));
+        this.removes.put(new Position(plusX, iconY), () -> menu.sendLimit(jobPosting, jobPosting.getLimit() + 1));
+    }
+
     private ImmutableList<Slot> renderJobCardIcons(
             RenderContext ctx,
             UIWork recipe,
@@ -282,7 +307,7 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
             Component name = itemStack.getItem().getName(itemStack);
             Component tooltip = recipe.isStocked()
                     // The card's own name: a tag request's icon cycles items ("Food", not "Cooked Mutton").
-                    ? Compat.translatable("job_board.request_stocked", Ingredients.getName(ing), BoardRequests.PAUSE_AT)
+                    ? Compat.translatable("job_board.request_stocked", Ingredients.getName(ing), recipe.getLimit())
                     : name;
             highlightAndTooltip(ctx, mouseX, mouseY, iconX, y, tooltip);
             Slot element = new Slot(dummyInv, 0, iconX, y + 1);

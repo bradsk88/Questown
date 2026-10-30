@@ -51,9 +51,19 @@ public record BoardRequests(
             ToIntFunction<R> inStorage,
             Predicate<R> exempt
     ) {
+        return stocked(requests, inStorage, exempt, r -> PAUSE_AT);
+    }
+
+    /** {@link #stocked(Collection, ToIntFunction, Predicate)} at each request's own limit ({@link RequestLimits}). */
+    public static <R> ImmutableSet<R> stocked(
+            Collection<R> requests,
+            ToIntFunction<R> inStorage,
+            Predicate<R> exempt,
+            ToIntFunction<R> limit
+    ) {
         return requests.stream()
                 .filter(r -> !exempt.test(r))
-                .filter(r -> inStorage.applyAsInt(r) >= PAUSE_AT)
+                .filter(r -> inStorage.applyAsInt(r) >= limit.applyAsInt(r))
                 .collect(ImmutableSet.toImmutableSet());
     }
 }

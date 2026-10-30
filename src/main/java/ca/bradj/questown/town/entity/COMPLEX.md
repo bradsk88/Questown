@@ -1802,3 +1802,15 @@ from a shuffled list per unlocked job. It now passes `VillagerLearningHandle.REV
 key stays (marked "currently ignored") so the planned education path can restore a limit.
 `VillagerLearningHandleTest.revealAll_offersEveryUnknownChild` (red with 2). Risk: a root with many
 children (crafter) now shows them all in the skill tree; not yet checked on screen.
+
+## Board requests: per-request limit, stock shown (dev playtest 2026-10-29)
+
+Ruling on the paused food request: "Keep as designed, but the player needs some way to see 'we've hit
+the limit' and to see and adjust the limit." `TownWorkHandle` keeps a `RequestLimits` (default
+`BoardRequests.PAUSE_AT` = 8, clamped 1..64, saved as `limits` in `TownWorkHandleSerializer`, read
+with `QTNBT.contains` since QTNBT prefixes keys; dropped with the request) and the latest stock per
+request (`setStock`, from `TownFlagBlockEntity.refreshStockedRequests`). `BoardRequests.stocked`
+takes the per-request limit. The board payload carries stock and limit per `UIWork`;
+`SetRequestLimitMessage` sets a limit and re-opens the board. Pins: `RequestLimitsTest`,
+`TownWorkHandleRequestWorkTest.requestLimit_isSaved_andForgottenWithTheRequest`, autotest
+`crafter/stick [request_limit]` (5 bread stored: paused at limit 4, resumed at 6).
