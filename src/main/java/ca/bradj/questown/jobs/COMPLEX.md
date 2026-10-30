@@ -1162,3 +1162,15 @@ Selection follows `cook/fuel` (dev ruling): `initial_request` is what the job se
 `always_consider`: it scores only where its work-spot predicate finds a display to fill.
 A job with `initial_request: null` satisfies **every** request (`ServerJobsRegistry.canSatisfy`),
 so a display job must name one.
+
+## Work-spot feet are never lifted out of a doorway (dev playtest 2026-10-29)
+
+"3x3 room (walls included) the only valid interaction spot is the door. But the villager chooses
+to stand on the roof instead." `InteractionSpots.find` returns the door cell for a 1x1-interior
+room, and `Util.workWithSurfaceInteractionPos` then lifted any solid feet cell one block. A closed
+door counts as solid, and the lift is re-applied to its own output each pass, so the live cook's
+spot went 83,65,3 (door top) -> 83,66,3 (wall) -> 83,67,3 (roof), 27/27/3 log lines, never the
+doorway floor. `WalkTargets.surfaceFeet` now leaves a door cell alone (the same rule as
+`VillagerPathNavigation`'s door stop); other solid cells still lift one block.
+`WalkTargetsSurfaceFeetTest`. See also `mobs/visitor/COMPLEX.md` "A door target is lifted to the
+roof".

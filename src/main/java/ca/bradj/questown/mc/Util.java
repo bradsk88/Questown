@@ -14,6 +14,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -294,10 +295,11 @@ public class Util {
             ServerLevel sl,
             WorkOutput<X, WorkPosition<BlockPos>> v
     ) {
-        BlockPos feet = v.spot().entityFeetPos();
-        if (sl.getBlockState(feet).isSolid()) {
-            feet = feet.above();
-        }
+        BlockPos feet = WalkTargets.surfaceFeet(
+                v.spot().entityFeetPos(),
+                p -> sl.getBlockState(p).isSolid(),
+                p -> sl.getBlockState(p).getBlock() instanceof DoorBlock
+        );
         return new WorkOutput<>(
                 v.worked(),
                 v.claimed(),
