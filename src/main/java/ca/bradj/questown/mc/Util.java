@@ -341,6 +341,24 @@ public class Util {
         gui.blit(texture, screenX, screenY, firstPixelInFilex, firstPixelInFileY, drawNumPixelsX, drawNumPixelsY, 256, 256);
     }
 
+    /** {@link #blit(GuiGraphics, ResourceLocation, int, int, float, float, int, int)} tinted grey by {@code shade} (1 = unchanged). */
+    public static void blitShaded(
+            GuiGraphics gui,
+            ResourceLocation texture,
+            int screenX,
+            int screenY,
+            float firstPixelInFilex,
+            float firstPixelInFileY,
+            int drawNumPixelsX,
+            int drawNumPixelsY,
+            float shade
+    ) {
+        blitState();
+        RenderSystem.setShaderColor(shade, shade, shade, 1f);
+        gui.blit(texture, screenX, screenY, firstPixelInFilex, firstPixelInFileY, drawNumPixelsX, drawNumPixelsY, 256, 256);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+    }
+
     /**
      * Blit of a region of a texture that is not the 256x256 sheet, passing the texture's
      * true native size as "widthOfEntireFile"/"texFileHeight".

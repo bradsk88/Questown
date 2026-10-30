@@ -136,6 +136,7 @@
   "tooltips.stats": "Stats",
   "tooltips.inventory": "Inventory",
   "tooltips.skills": "Skills",
+  "tooltips.skills.locked": "Skills (locked): no skills to learn yet. Villagers learn skills as they level up.",
   "tooltips.economics": "Economics",
   "tooltips.blocks_of_progress": "Blocks of Progress",
   "tooltips.change_root": "Change Profession",

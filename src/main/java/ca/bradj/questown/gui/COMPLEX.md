@@ -473,6 +473,16 @@ omits the tab. Onboarding ends at the fork because curated path quests are onboa
 Server-side the CHANGE_ROOT route is not blocked. Pinned in `TownQuestsJobChangeAttentionTest`,
 `VillagerTabsRowTest`, `VillagerMenusPayloadTest`.
 
+**Locked skills tab and dimmed skill nodes (2026-10-29, dev playtest: "show the skills TAB but not
+allow it to be opened until the villager is leveled at least once"; "Locked skills should be dimmed
+until hovered"):** the skills tab is no longer omitted when `showSkillsTab` is false. It is drawn at
+0.35 grey (`Util.blitShaded`), its click is a no-op, it is never lit, and its tooltip is
+`tooltips.skills.locked`. In the skill tree, `VillagerAdvancementsWidget.draw` tints a node that is
+not unlocked to 0.45 grey; `drawHover` redraws the hovered node at full colour. Note
+`Util.blit`/`blitState` reset the shader colour to white, so a tint set before them is lost: tint
+inside the blit (`blitShaded`). Tab row pinned in `VillagerTabsRowTest`; the tints are **not yet
+verified on screen** (no capture taken).
+
 ## MultiStatusScreen: full-card click opens the villager UI in management-only mode (2026-10-14)
 
 The flag's villagers-tab card had no card-body click handler - only the 32x32 status icon

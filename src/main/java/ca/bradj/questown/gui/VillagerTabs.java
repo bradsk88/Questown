@@ -85,24 +85,30 @@ public class VillagerTabs extends Tabs implements SubUI {
                     RenderSystem.setShaderTexture(0, txBefore);
                 }, setScreen(sScreenFn), "tooltips.stats", sScreenFn == null, false
         ));
-        if (showSkillsTab) {
-            b.add(new Tab(
-                    (rc, x, y) -> {
-                        int txBefore = RenderSystem.getShaderTexture(0);
-                        RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
-                        PoseStack stack = rc.stack();
-                        stack.pushPose();
-                        stack.scale(15f / 30f, 15f / 30f, 1);
-                        int adjustedX = (int) ((x + 11) / (15f / 30f));
-                        int adjustedY = (int) ((y + 7) / (15f / 30f));
-                        // 1.19.2 golden: blit(stack, adjX, adjY, z=0, u=17, v=7, 30, 30, 256, 256).
-                        Util.blit(rc.gui(), Questown.ResourceLocation("textures/menu/gatherer/menu.png"), adjustedX, adjustedY, 17, 7, 30, 30);
-                        stack.popPose();
+        // Before the villager has skills to learn, the tab shows locked: dimmed, no-op, and its
+        // tooltip says why (dev playtest 2026-10-29). Not omitted, and not lit (the 10-14 lit-dead
+        // defect, gui/COMPLEX.md).
+        float skillsShade = showSkillsTab ? 1f : 0.35f;
+        b.add(new Tab(
+                (rc, x, y) -> {
+                    int txBefore = RenderSystem.getShaderTexture(0);
+                    RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
+                    PoseStack stack = rc.stack();
+                    stack.pushPose();
+                    stack.scale(15f / 30f, 15f / 30f, 1);
+                    int adjustedX = (int) ((x + 11) / (15f / 30f));
+                    int adjustedY = (int) ((y + 7) / (15f / 30f));
+                    // 1.19.2 golden: blit(stack, adjX, adjY, z=0, u=17, v=7, 30, 30, 256, 256).
+                    Util.blitShaded(rc.gui(), Questown.ResourceLocation("textures/menu/gatherer/menu.png"), adjustedX, adjustedY, 17, 7, 30, 30, skillsShade);
+                    stack.popPose();
 
-                        RenderSystem.setShaderTexture(0, txBefore);
-                    }, setScreen(skillScreenFn), "tooltips.skills", skillScreenFn == null, false
-            ));
-        }
+                    RenderSystem.setShaderTexture(0, txBefore);
+                },
+                showSkillsTab ? setScreen(skillScreenFn) : setScreen(null),
+                showSkillsTab ? "tooltips.skills" : "tooltips.skills.locked",
+                showSkillsTab && skillScreenFn == null,
+                false
+        ));
         // Onboarding hides the change-job tab from non-gatherers (dev playtest 2026-10-29).
         if (showChangeRootTab) {
             b.add(new Tab(

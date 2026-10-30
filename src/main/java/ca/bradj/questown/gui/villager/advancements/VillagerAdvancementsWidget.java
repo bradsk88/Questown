@@ -42,6 +42,7 @@ public class VillagerAdvancementsWidget {
     private VillagerAdvancementsWidget parent;
     private final List<VillagerAdvancementsWidget> children = Lists.newArrayList();
     private final boolean active;
+    private static final float LOCKED_SHADE = 0.45f;
     private final boolean unlocked;
     private final boolean canUnlock;
     private final int x;
@@ -187,8 +188,14 @@ public class VillagerAdvancementsWidget {
             int y = p_97269_ + this.y;
             int ft = getFrameType();
             if (ft >= 0) {
-                this.blit(ctx, x, y, ft, v1, v2, v3);
+                // A skill not yet unlocked is dimmed; drawHover redraws it at full colour, so it
+                // lights up under the cursor (dev playtest 2026-10-29: "too subtle").
+                float shade = unlocked ? 1f : LOCKED_SHADE;
+                Util.blitState(); // 1.19.2's GuiComponent.blit set the blit state itself
+                RenderSystem.setShaderColor(shade, shade, shade, 1f);
+                ctx.gui().blit(WIDGETS_LOCATION, x, y, ft, v1, v2, v3);
                 ctx.renderItemAndDecorations(this.display.getIcon(), p_97268_ + this.x + 8, p_97269_ + this.y + 5);
+                RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
             }
         }
 

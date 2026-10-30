@@ -61,4 +61,13 @@ class VillagerTabsRowTest {
         assertEquals(false, titles.contains("tooltips.change_root"));
         assertEquals(true, titles(true).contains("tooltips.change_root"));
     }
+
+    /** Dev playtest 2026-10-29: "show the skills TAB but not allow it to be opened until the villager is leveled". */
+    @Test
+    void noSkillsYet_showsALockedSkillsTab_notLit() {
+        List<Tab> tabs = VillagerTabs.build(OPEN, OPEN, null, null, OPEN, OPEN, OPEN, true, false, false, true, true, false);
+        Tab skills = tabs.stream().filter(t -> t.titleKey().startsWith("tooltips.skills")).findFirst().orElseThrow();
+        assertEquals("tooltips.skills.locked", skills.titleKey());
+        assertEquals(false, skills.selected());
+    }
 }
