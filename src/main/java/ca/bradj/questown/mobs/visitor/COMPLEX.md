@@ -137,5 +137,269 @@ flowchart TD
 - `keepsBubble` is deliberately pure and package-visible so the flicker rule is unit
   tested (`NeedBubbleFocusTest`) without a client level; the cone threshold itself is
   only verifiable in-game.
+- `holderScore` is the holder's score **this tick** (`holderScoreIf`, 0 once it leaves the
+  cone). Until 2026-10-31 it was the score saved when the holder last won, which went stale:
+  look dead-on at the flag (~1.0) and nothing in the cone could beat 1.0 + 0.02, so the flag's
+  "!" kept the bubble while the crosshair sat on a needy cook. That is why the 2026-10-30 held
+  run never showed a villager bubble. Verified live in `cook/fuel [open_request_no_pork]`: flag
+  first, then the cook's raw-pork bubble and its hint.
 - Focus state is **static** — there is exactly one local player, and exactly one
   bubble is shown town-wide by design.
+
+# Third holder type: attention targets (G1+G2 "!" bubbles)
+
+The one-bubble contest now has three candidate classes: townies (UUID holders),
+dead doors (raw `BlockPos` holders) and **attention targets**
+(`AttentionBubbles.Target` record holders — a flag with incomplete quests, or a
+job board with zero work requests). The same cone/hysteresis/`keepsBubble`
+rules apply; the holder type is carried through `current` as `Object`, so
+`currentDoor()` still means "holder is a raw BlockPos" and
+`currentAttention()` is the new accessor. When an attention target wins,
+`NeedBubbleClientEvents` draws the "!" texture bubble
+(`BubbleRenderer.renderTextureBubbleAtBlock`, authored
+`textures/bubble/attention.png`) instead of the door's item bubble. The hint
+(action-bar text on close examination) comes from `Kind.hintKey` —
+`message.questown.attention.*` in en_us.json.
+
+## Villager bubbles only in the working day (dev playtest 2026-10-29)
+
+"Villagers should stop showing their need balloon in the evening." `NeedBubbleFocus.tick` skips
+townies as candidates unless `villagerNeedsShowAt(dayTime)`: morning or noon by `Signals`
+(before `PRODUCTIVE_DAY_END_TICK`, 11500). From the evening the town eats and sleeps, so a work
+need stops nothing. The server still sets the need; only the client bubble (and its hint line)
+waits for morning. Door and attention bubbles are unaffected. Pinned by
+`NeedBubbleFocusTest.Test_VillagerNeedsShowOnlyInTheWorkingDay`.
+
+## A relaxing villager has no unmet-item need (dev playtest 2026-10-29)
+
+"Relaxing villager shouldn't show a need bubble." The live cook was in downtime ("%s is relaxing
+for a moment") with `need=UNMET_ITEM` for Raw Porkchop (its new skill), though it was idle because
+the food request was paused, not for lack of porkchop. `TownPossibleWork`'s unmet-need pass clears
+UNMET_ITEM for a villager on a downtime job and skips it (`showsUnmetNeed`); the pass after it
+seeks work again re-applies the need. `TownPossibleWorkUnmetNeedTest`. Open: the primary unmet key
+named porkchop while mutton work was available (not traced).
+Side effect caught by `cook/fuel [no_coal]` (22:19 shard): a cook blocked on coal idles into
+downtime, so its coal bubble now shows only while it seeks work. The town still tracks the need
+(`TownPossibleWork.trackedUnmetKey`), and the guard accepts that while the cook relaxes.
+
+## A working villager drops its item/room need at once (2026-10-31)
+
+`clearNeedWhileWorking(job, status)` runs at `setJob` and on every tick's status sync: an
+UNMET_ITEM or MISSING_ROOM need is cleared when `TownPossibleWork.showsUnmetNeed` says the
+villager isn't having a hard time (working, eating, relaxing). Dev ruling: a cook working through
+beef shows no bubble; the recompute pass had left the need from seeking work for up to a pass.
+NO_STORAGE is untouched (its own consumer, `syncStorageNeed`). See `town/COMPLEX.md` "All my
+requests are done".
+
+## Townie skin pool (`TownieSkins`, 2026-10-14)
+
+Townie skins are a deterministic per-UUID pick from a pool: the 9 vanilla
+1.20.6 character skins (slim variants, `minecraft:textures/entity/player/
+slim/{alex,ari,efe,kai,makena,noor,steve,sunny,zuri}.png` — added alongside
+Steve/Alex in 1.20.5) plus the mod's 6 custom `textures/entity/1-6.png`.
+`VisitorMobRenderer` bakes `PLAYER_SLIM`, so the slim textures are the
+match. `TownieSkins` is pure (pool + floor-mod pick) so it is
+unit-testable without the client; the renderer delegates to it. Use
+floor-mod, not `Math.abs`, for the hash (MIN_VALUE edge).
+
+## Held-item NBT load: empty-slot guard (2026-10-15 playtest)
+
+`readAdditionalSaveData` mapped every saved held-item tag through
+`ItemStack.parse(...)`. `addAdditionalSaveData` saves an **empty compound**
+for empty slots, and vanilla's parser logs `Tried to load invalid item: No
+key id in MapLike[{}]` for it - 12 lines per entity load (every save/reload
+of every townie). The guard: `tag.isEmpty() ? ItemStack.EMPTY : parse(...)`
+before the `orElse` fallback. No behaviour change for non-empty slots.
+
+## Doorway pathfinding preference — reverted (2026-10-15 → 2026-10-17)
+
+The 2026-10-15 fix ("townies prefer jumping over walls to get inside the room") gave
+`VisitorMobEntity.getPathfindingMalus` a 0.5 discount on `DOOR_WOOD_CLOSED` /
+`DOOR_IRON_CLOSED` / `DOOR_OPEN`. **That made open doors impassable**: vanilla's
+`WalkNodeEvaluator` treats any malus `< 0.0F` as unwalkable (its `>= 0.0F` gates), and
+`DOOR_OPEN`'s default is `0.0F` → `-0.5`. A closed wooden door was unaffected because a
+door-opening mob's evaluator re-types it to `WALKABLE_DOOR` (not discounted). Live
+symptoms 2026-10-17: villagers could not enter rooms through open doors ("if I close the
+door, they open it and walk through"), routed over walls / onto a bed, and stood on top
+of a supply chest unable to path off. The override is removed (vanilla costs).
+
+**Root cause found 2026-10-25 (r20):** the wall-facing half of this was never a path-cost
+problem. A walk target in a closed doorway was lifted onto the roof by vanilla; see "A door
+target is lifted to the roof" below.
+
+**Rule:** a malus is never negative — to make one route cheaper, raise the cost of the
+alternative instead. The original wall-climb complaint is open again
+(`.scratch/playtest-2026-10-17/villager-stuck-on-bed-pathing-over-wall.md`).
+The `VillagerPathNavigation` seam (re-classifying campfire, water, fence cells) is the
+place for a wall-top penalty if one is needed.
+
+## NO_STORAGE need: full storage bubbles at once (2026-10-21 dev request)
+
+Fourth need consumer. `VisitorMobEntity.syncStorageNeed` (each server tick, beside the status
+sync): a townie whose job status is NO_SPACE — holding work output with no free town storage slot
+(`JobStatuses` "stop when holding output and the town has no space") — gets `NO_STORAGE` (drawn
+from `TownieNeed.iconTexture()` — the questown "no space" status art, face-on via
+`BubbleRenderer.renderTextureBubbleFor`; an item-model chest rendered at an angle, front away, hint "Every chest is full: they have nowhere to put what they made."). It replaces NONE
+or UNMET_ITEM: full storage is the blocker right now, and `TownPossibleWork.refreshUnmetNeeds`
+no longer overwrites NO_STORAGE with UNMET_ITEM (without both halves the bubble flapped between
+them every recompute pass). It clears only its own need; UNMET_ITEM comes back on the next pass
+if it still applies. The flag-level counterpart (after a tick build-up) is in
+`town/rooms/COMPLEX.md`. Live pin: `cook/fuel [storage_full]`.
+
+## Waking: stand up beside the bed, else in the doorway (2026-10-23, r12 #6)
+
+`VisitorMobEntity.stopSleeping` overrides vanilla's whole wake path. Its copy of vanilla's
+stand-up search checked only `HospitalBedBlock`, so a townie waking in a **vanilla** bed was set
+STANDING at its sleeping position: on top of the bed (r12: y 76.5625). In a room 2 blocks tall
+inside, a ~1.95-tall townie there is wedged under the ceiling and never moves again (r12 day 4:
+both townies pinned until the roof was raised). `standUpBesideBed` now runs for both bed kinds:
+- the unoccupied flag is cleared;
+- `BedBlock.findStandUpPosition` is called with the bed's own `FACING` for a vanilla bed (as
+  vanilla does), or the entity's direction for a hospital bed (as before);
+- with no free floor beside the bed, the townie stands in the doorway of the room holding the
+  bed. That is the dev's fallback, looked up through `RoomsHolder.findDoorOfRoomContaining` ->
+  `RoomDoors`; above the bed is the last resort, when no room is found.
+
+`RoomDoors` is pinned by `RoomDoorsTest`. The entity half is registry-bound (`Level`,
+`BedBlock`), so it is checked live (a 2-high bedroom, a night's sleep, the townie walks off).
+
+## A puff when a villager leaves town or comes back (r17 #4, dev 2026-10-25)
+
+A leaver vanishes when its job's `remove_from_world` rule applies (`VisitorMobEntity` sets the
+synced `visible` flag from `!job.shouldDisappear(...)` every tick), with nothing to mark it. When
+the flag flips (either way) the server now sends 12 `HAPPY_VILLAGER` sparkles around the body
+(`POOF` until r22; dev 2026-10-26: "looks like a death animation"). A villager that loads already
+away sparkles once on its first tick (the synced value starts visible). The stranded rescue below
+keeps `POOF` (the dev's r20 pick).
+
+## Leaving town flickered: show only after two allowed ticks (dev playtest 2026-10-29)
+
+"Villagers flicker when they leave town. They go visible -> invisible -> visible -> invisible."
+The `[visibility]` debug line (each flip with its status) on the hunter/sword autotests showed
+`hidden at state:1` -> `shown at DROPPING_LOOT` (one tick, ~10 ms later) -> `hidden at
+WAITING_FOR_TIMED_STATE`. The status routine passes through DROPPING_LOOT for one tick between
+the leaving state and the trip's timer (`JobStatuses.productionRoutine` picks
+`waitingForTimedState` only when `usualRoutine` returns null/idle/no-supplies; not traced
+further). `TripVisibility` sits between `Job.shouldDisappear` and the synced `visible` flag:
+hiding was immediate (20 ticks since 2026-10-30: "Leaving villagers hide a second later"), showing waits for two allowed ticks in a row, so the one-tick status no
+longer shows the villager and a return is one tick later. After: each hunter stays hidden for
+its whole trip and reappears at DROPPING_LOOT on return. `TripVisibilityTest`.
+
+Leaving sparkles go above the work spot the villager leaves from (`Job.getWorkSpotBlock`, the
+declarative job's current work spot; `TripVisibility.sparkleAt`), not at the villager (dev playtest
+2026-10-29: "the sparkles should appear above their work spot"). A return, or a job with no work
+spot, still sparkles at the villager. The `[visibility]` line names the sparkle position.
+Seen in game 2026-10-30: a hunter leaving from the welcome mat logged `sparkles at (13.5, 67.0,
+6.x)` (the mat at 13 66 6), and the frame after showed the green sparkles rising over the mat
+(`.scratch/dev-playtest-2026-10-29-fresh/overnight-shots/leaving-sparkles.png`).
+
+## Stranded outside the town: poof back to the gate (r20, dev 2026-10-25)
+
+A villager that fell off a cliff into water floated 8 blocks below the town for minutes. Dev call:
+rescue it, but only **outside** the town, and visibly. Inside the town a blocked path is usually
+something the player built, so it stays a `CANT_REACH` bubble (ADR-0011).
+
+- **Outside the town** (`StrandedRescue.isOutsideTown`): outside the box around
+  `TownInterface.getTownAnchors()` (the flag, the welcome mats, every registered door; a door's
+  `scanLevel` is a Y offset from the flag), widened 8 blocks sideways and 4 below the lowest
+  anchor. No ceiling. The vertical margin is load-bearing: the r20 villager was only 7 blocks from
+  the flag sideways, but 8 below it.
+- **Triggers** (`MoveToTownTargetSink.tick`, after the `shouldBeMoving` gate): (1) the existing
+  give-up (`hasGivenUpReaching`) fires while outside, and the rescue replaces the bubble; (2) in or
+  directly over water for 200 ticks without getting a block closer to the walk target
+  (`StrandedRescue.observeWater`). The water case exists because the unstick ladder keys on
+  "position not changing", and a drifting swimmer keeps changing position.
+- **The poof** (`VisitorMobEntity.rescueToGate`): `POOF` particles plus the chorus-fruit teleport
+  sound at both ends, a teleport to `getVisitorJoinPos()` (beside the gate, clear of the campfire's
+  burn radius), the need cleared, and an INFO `[rescue]` line on `Questown:Villagers`. A villager
+  hidden on a trip (`visible` false) is never "stranded".
+- Pinned by `StrandedRescueTest` (footprint + water window). The sink and the teleport are
+  registry-bound and not unit-tested; they still need a live catch (a `[rescue]` line).
+
+## `_qtdev nav <villager>`: read the walk target, do not infer it (r20 #4)
+
+Read-only probe over `VisitorMobEntity.describeNav()`: position, status, the brain's WALK_TARGET
+(and its close-enough distance), the navigation path's target, end node, `canReach` and progress,
+the CANT_REACH_WALK_TARGET_SINCE timestamp, and the need. Added when two villagers stood in the
+bedroom facing the wall shared with the store room, and three code readings of the target pickers
+(`InteractionSpots.find`, the no-room chest-front branch, standable-on-the-wall) all pointed at
+the store room's doorway instead. Output: `[_qtdev nav]` on `Questown:Villagers`.
+
+## A door target is lifted to the roof (r20 #4, 2026-10-25)
+
+`GroundPathNavigation.createPath(BlockPos, int)` paths to a target only if its block is not
+`isSolid()`; otherwise it walks the target up to the first non-solid block. A closed door counts
+as solid. A 3x3 store room's chest is used from its doorway (`InteractionSpots.find` falls back
+to the door cell), so the villager's path target became the roof above the door, unreachable,
+and the partial path ended on the bed in the next room, against the shared wall. Live probe:
+`walkTarget=150 71 48 pathTarget=150 75 48 pathEnd=151 72 46 canReach=false`.
+
+Fix: `VillagerPathNavigation.createPath(BlockPos, int)` stops the lift at a door (a `DoorBlock` target, or a solid target with a door right above it; r21's cook aimed at the floor under the doorway, `150 70 48`) and paths there
+(`createPath(ImmutableSet.of(pos), 8, false, accuracy)`, the call vanilla's own overload makes).
+Any other solid target is still lifted, so target pickers must return standable cells.
+Not unit-tested (a navigation needs a live mob and level); verified live on the r20 world (23:11): after the fix the stuck hunter's path reached (`canReach=true`), it collected supplies (inspect: "carrying: 1x minecraft:stone_sword") and went to the gate; before it, five probe reads showed `pathTarget=150 75 48`. Still open: the cook in `downtime`/NO_SUPPLIES was seen (23:12:02) with `walkTarget=151 71 48`, the chest block itself, lifted to `151 73 48`. That is a second target picker handing the navigator a solid block, not yet traced.
+The general learning: `docs/solutions/best-practices/vanilla-lifts-solid-path-targets-2026-10-25.md`.
+
+**Never the roof (dev ruling, r21, 2026-10-26):** "the storeroom is a valid choice for a wandering
+'relaxing' villager, but the roof never is." A target buried under another solid block (the stacked
+store chest the downtime job picks, a wall) now resolves to the first door or standable cell beside
+it at its own level (`VillagerPathNavigation.besideSolidStack`), not the top of the stack. A single
+solid block with air above (a bed) keeps vanilla's one-block lift. Downtime picks the chest because
+its `RANDOM_SHORT_LIVED_WORKSPOT_PREFER_SOCIAL` rule (`RandomShortLivedWorkSpot`) walks to a random
+spot inside a room (`getRandomWanderTarget`), and a 3x3 store room's only interior cell is the chest
+(believed from the code path, r21 findings #19).
+
+## MISSING_ROOM: "They need a Smithy to work" (dev playtest 2026-10-29)
+
+Follow-up to 997257f2 (a missing room's product no longer reads as a supply). Ruling: "Yes, name the
+room", plus "Their bubble can show the room blocks too". `TownieNeed.MISSING_ROOM` is set by the
+need pass (`TownPossibleWork`) when the townie has no supply key but `UnmetNeedTracker.primaryRoom`
+names a room (the oldest NO_ROOM row over jobs it can hold); the room id rides the unmet-item key
+(`setNeed` keeps it for MISSING_ROOM; `VisitorMobEntity.getMissingRoom`). NO_STORAGE outranks it;
+relaxing and the evening hide it like UNMET_ITEM. The bubble cycles through the room recipe's blocks
+one per second (`NeedBubbleFocus.missingRoomIcon`, client `RoomRecipes.getByIdOrSpecial`, beds counted once);
+the look hint and the flag villager tooltip say `missing_room.room` with `RoomRecipes.getName`.
+Pins: `UnmetNeedTrackerTest.primaryRoom_*`, `NeedBubbleFocusTest.Test_MissingRoomBubbleCycles...`,
+autotest `cook/mutton [no_kitchen]` (need=MISSING_ROOM room=questown:kitchen_small).
+
+Seen in game 2026-10-30 on a gate-less town (gatherer and hunter both `need=MISSING_ROOM`): the hint
+read "They need a Town Gate to work.", but the bubble drew the crafting-table fallback. The gate, flag
+and campfire recipes live in `SpecialQuests.getSpecialQuests()`, not the recipe manager, so
+`getById` found nothing. The bubble now looks up `RoomRecipes.getByIdOrSpecial`, and the gate's
+bubble shows the welcome mat (`.scratch/dev-playtest-2026-10-29-fresh/overnight-shots/missing-room-gate.png`).
+
+
+## Doors stay open while a villager is near (dev playtest 2026-10-29)
+
+"Can we debounce how many times a navigating villager interacts with a door?" - both walking through
+and standing in the doorway, "common in 3x3 rooms" (a 1x1 interior is used from its door cell).
+Vanilla `OpenDoorGoal(mob, true)` closes the door in `stop()` 20 ticks after opening it, wherever the
+mob is; a villager still in the doorway bumped it open again. `LingeringDoorGoal` keeps the door open
+when it stops with the villager within 2.5 blocks and closes it from the entity tick
+(`tickLingeringDoor`) once the villager has moved away. It is built in `registerGoals` (Mob's
+constructor calls that before field initializers). Autotest `cook/mutton [door_flaps]` counts closes
+while a villager is within 1.5 blocks: vanilla 8 of 8, now 0 of 7. `LingeringDoorGoalTest`.
+A door is left open if its villager unloads while near it.
+
+## A CANT_REACH need names the room it cannot get into (dev 2026-10-30)
+
+r23 #16: leaves grew across the kitchen door and the cook's only hint was "They can't find a way
+there." Dev: name the room. When `MoveToTownTargetSink` gives up, `unreachableRoomKey` asks the town
+(`TownInterface.roomRecipeHolding`, the flag's top recipe for the room whose floor plan or doorway
+holds the walk target, `RoomDoors.roomHolding`) and stores the recipe id in the synced unmet-item
+field, which `TownieNeed.carriesKey` now keeps for CANT_REACH too. `VisitorMobEntity.getUnreachableRoom`
+reads it back. `TownieNeedDetail.of` builds the named need line for both surfaces (the on-look hint
+in `NeedBubbleFocus` and the status tooltip in `ServerJobsRegistry.getStatusText`): "They can't get
+into the %s. Is its door blocked?". A target outside every room keeps the generic line. Pinned by
+`RoomDoorsTest` (inside, one above the floor, outside) and the
+`cook/mutton [blocked_kitchen_door]` autotest (persistent leaves outside the doorway kitchen's door;
+red with the lookup off: "unreachable room named: null").
+
+## Leaving villagers hide a second later (dev playtest 2026-10-30)
+
+"Villagers should disappear about a second later than they currently do when they leave town.
+Otherwise they disappear before actually reaching the workspot." `TripVisibility` now hides only
+after the job has asked to disappear for `HIDE_AFTER_TICKS` (20) ticks in a row. Before, it hid on
+the first tick. Showing still waits `SHOW_AFTER_TICKS` (2). The hunter's one-tick DROPPING_LOOT
+gap between hidden states resets the hide count, so the villager stays drawn and hides once, with
+no flicker. `TripVisibilityTest` (6).

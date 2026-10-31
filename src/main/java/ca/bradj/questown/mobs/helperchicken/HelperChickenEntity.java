@@ -96,6 +96,7 @@ public class HelperChickenEntity extends Chicken {
         // goal: SUNSET_AND_MAP has no structure-local peck target, so the two
         // never both want to run.
         this.goalSelector.addGoal(2, new HelperChickenSunsetChestGoal(this, this::getOwnerFlagPos));
+        this.goalSelector.addGoal(2, new HelperChickenRoomBuildGoal(this, this::getOwnerFlagPos));
         this.goalSelector.addGoal(2, new HelperChickenBeatPeckGoal(this, this::getOwnerFlagPos));
         this.goalSelector.addGoal(3, new HelperChickenFollowNearFlagGoal(this, 1.0D, this::getOwnerFlagPos));
         // SUNSET_AND_MAP phase-2 wander, only active when the follow goal stands
@@ -153,19 +154,19 @@ public class HelperChickenEntity extends Chicken {
         if (this.ownerFlagPos == null) {
             return super.interactAt(player, vec, hand);
         }
-        if (!(this.level.getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag)) {
+        if (!(this.getLevel().getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag)) {
             return super.interactAt(player, vec, hand);
         }
         ItemStack held = player.getItemInHand(hand);
         if (tryDeliverWorldlySeeds(sp, flag, held)) {
-            return InteractionResult.sidedSuccess(this.level.isClientSide);
+            return InteractionResult.sidedSuccess(this.getLevel().isClientSide);
         }
         // Only count main-hand interactions to avoid the off-hand follow-up
         // attempt double-incrementing the click counter.
         if (hand == InteractionHand.MAIN_HAND) {
             ChickenArcController.onPlayerClickedChicken(sp, flag);
         }
-        return InteractionResult.sidedSuccess(this.level.isClientSide);
+        return InteractionResult.sidedSuccess(this.getLevel().isClientSide);
     }
 
     private boolean tryDeliverWorldlySeeds(
@@ -197,7 +198,7 @@ public class HelperChickenEntity extends Chicken {
         if (this.ownerFlagPos == null) {
             return;
         }
-        if (this.level.getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag) {
+        if (this.getLevel().getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag) {
             ChickenArcController.onPlayerClickedChicken(player, flag);
         }
     }
@@ -271,7 +272,7 @@ public class HelperChickenEntity extends Chicken {
     public void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         if (tag.contains(NBT_OWNER_FLAG_POS)) {
-            this.ownerFlagPos = net.minecraft.nbt.NbtUtils.readBlockPos(tag.getCompound(NBT_OWNER_FLAG_POS));
+            this.ownerFlagPos = tag.contains(NBT_OWNER_FLAG_POS) ? net.minecraft.nbt.NbtUtils.readBlockPos(tag.getCompound(NBT_OWNER_FLAG_POS)) : null;
         }
     }
 
@@ -284,7 +285,7 @@ public class HelperChickenEntity extends Chicken {
         if (this.ownerFlagPos == null) {
             return ChickenBeatState.FORFEIT;
         }
-        if (this.level.getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag) {
+        if (this.getLevel().getBlockEntity(this.ownerFlagPos) instanceof TownFlagBlockEntity flag) {
             return flag.getChickenBeatState();
         }
         return ChickenBeatState.FORFEIT;

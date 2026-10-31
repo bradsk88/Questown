@@ -1,16 +1,13 @@
 package ca.bradj.questown.mobs.visitor;
 
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.render.BubbleRenderer;
-import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
-import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -18,16 +15,6 @@ import net.minecraft.world.item.crafting.Ingredient;
 import java.util.UUID;
 
 public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, PlayerModel<VisitorMobEntity>> {
-
-    // TODO: Just scan the directory for files
-    static ImmutableList<ResourceLocation> customSkins = ImmutableList.of(
-            Questown.ResourceLocation("textures/entity/1.png"),
-            Questown.ResourceLocation("textures/entity/2.png"),
-            Questown.ResourceLocation("textures/entity/3.png"),
-            Questown.ResourceLocation("textures/entity/4.png"),
-            Questown.ResourceLocation("textures/entity/5.png"),
-            Questown.ResourceLocation("textures/entity/6.png")
-    );
 
     public VisitorMobRenderer(
             EntityRendererProvider.Context ctx
@@ -44,11 +31,8 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
     }
 
     public static ResourceLocation getTextureLocation(UUID uuid) {
-        int index = Math.abs(uuid.hashCode()) % (customSkins.size() + 2);
-        if (index < 2) {
-            return DefaultPlayerSkin.getDefaultSkin(uuid);
-        }
-        return customSkins.get(index - 2);
+        // Deterministic per-UUID pick from the vanilla-1.20 + custom skin pool.
+        return TownieSkins.pick(uuid);
     }
 
     @Override
@@ -83,6 +67,11 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
         if (!NeedBubbleFocus.isShowingBubble(entity)) {
             return;
         }
+        var texture = entity.getNeed().iconTexture();
+        if (texture != null) {
+            BubbleRenderer.renderTextureBubbleFor(entity, texture, stack, buffer, this.entityRenderDispatcher);
+            return;
+        }
         BubbleRenderer.renderIconBubbleFor(
                 entity, needBubbleIcon(entity), stack, buffer, this.entityRenderDispatcher
         );
@@ -93,6 +82,10 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
      * representative, as the Inventory screen's "needs" row does); any other need keeps its icon.
      */
     private static ItemStack needBubbleIcon(VisitorMobEntity entity) {
+        ItemStack roomBlock = NeedBubbleFocus.missingRoomIcon(entity);
+        if (roomBlock != null) {
+            return roomBlock;
+        }
         Ingredient missing = NeedBubbleFocus.unmetNeedIngredient(entity);
         if (missing == null) {
             return entity.getNeed().icon();

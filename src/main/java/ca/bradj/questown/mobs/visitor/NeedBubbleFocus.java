@@ -1,8 +1,9 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.gui.ClientAccess;
-import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.town.rooms.AttentionBubbles;
 import ca.bradj.questown.town.rooms.DeadDoorBubbles;
 import ca.bradj.questown.town.rooms.DoorTrouble;
 import net.minecraft.client.Minecraft;
@@ -23,7 +24,9 @@ import java.util.UUID;
  *
  * <p>Exactly one bubble is shown at a time, so a twenty-townie town does not become a wall of
  * icons and the one thing that needs help is the thing the eye lands on. Townies (keyed by
- * entity UUID) and dead doors (keyed by {@link BlockPos}) compete in the SAME contest: the
+ * entity UUID), dead doors (keyed by {@link BlockPos}) and attention targets (a flag with
+ * incomplete quests, or a job board with no work requests, keyed by an
+ * {@link AttentionBubbles.Target}) compete in the SAME contest: the
  * winner is whichever candidate is closest to the crosshair — proximity, not hover, so the
  * player can sweep the crosshair across the square rather than walking up to each problem.
  *
@@ -63,9 +66,8 @@ public final class NeedBubbleFocus {
      */
     private static final int HINT_REPEAT_TICKS = 40;
 
-    /** Townie holders are UUIDs; dead-door holders are BlockPos. No other types. */
+    /** Townie holders are UUIDs; dead-door holders are BlockPos; attention holders are Targets. */
     private static @Nullable Object current;
-    private static double currentScore;
     private static int hintCooldown;
 
     private NeedBubbleFocus() {
@@ -78,6 +80,11 @@ public final class NeedBubbleFocus {
     /** The dead door currently holding the bubble, if the holder is a door. */
     public static @Nullable BlockPos currentDoor() {
         return current instanceof BlockPos pos ? pos : null;
+    }
+
+    /** The attention target (flag / job board) currently holding the bubble, if any. */
+    public static @Nullable AttentionBubbles.Target currentAttention() {
+        return current instanceof AttentionBubbles.Target t ? t : null;
     }
 
     /**
@@ -94,13 +101,19 @@ public final class NeedBubbleFocus {
         @Nullable VisitorMobEntity bestTownie = null;
         @Nullable String bestHintKey = null;
         @Nullable Vec3 bestPos = null;
+        // The holder's score this tick (0 when it no longer qualifies). A score saved when it took
+        // the bubble went stale: one looked at dead-on kept the bubble against everything else
+        // in the cone (2026-10-31: the flag's held it while the crosshair sat on a needy cook).
+        double holderScore = 0;
+        boolean townieNeedsShow = villagerNeedsShowAt(mc.level.getDayTime());
         for (VisitorMobEntity townie : mc.level.getEntitiesOfClass(
                 VisitorMobEntity.class, mc.player.getBoundingBox().inflate(16.0D)
         )) {
-            if (!townie.getNeed().isNeeded()) {
+            if (!townieNeedsShow || !townie.getNeed().isNeeded()) {
                 continue;
             }
             double score = crosshairAlignment(mc.player, townie.getEyePosition());
+            holderScore = holderScoreIf(townie.getUUID(), score, holderScore);
             if (score < CONE_DOT || score <= bestScore) {
                 continue;
             }
@@ -113,6 +126,7 @@ public final class NeedBubbleFocus {
         for (Map.Entry<BlockPos, DoorTrouble> door : DeadDoorBubbles.near(mc.player).entrySet()) {
             Vec3 bubbleAnchor = Vec3.atBottomCenterOf(door.getKey()).add(0, 2.0, 0);
             double score = crosshairAlignment(mc.player, bubbleAnchor);
+            holderScore = holderScoreIf(door.getKey(), score, holderScore);
             if (score < CONE_DOT || score <= bestScore) {
                 continue;
             }
@@ -122,7 +136,20 @@ public final class NeedBubbleFocus {
             bestHintKey = door.getValue().hintKey();
             bestPos = Vec3.atCenterOf(door.getKey());
         }
-        adopt(best, bestScore);
+        for (AttentionBubbles.Target target : AttentionBubbles.near(mc.player)) {
+            Vec3 bubbleAnchor = Vec3.atBottomCenterOf(target.pos()).add(0, 2.0, 0);
+            double score = crosshairAlignment(mc.player, bubbleAnchor);
+            holderScore = holderScoreIf(target, score, holderScore);
+            if (score < CONE_DOT || score <= bestScore) {
+                continue;
+            }
+            best = target;
+            bestScore = score;
+            bestTownie = null;
+            bestHintKey = target.kind().hintKey;
+            bestPos = Vec3.atCenterOf(target.pos());
+        }
+        adopt(best, bestScore, holderScore);
         explainIfExamined(mc, bestTownie, best, bestPos, bestHintKey, bestScore);
     }
 
@@ -169,44 +196,35 @@ public final class NeedBubbleFocus {
         if (townie == null) {
             return null;
         }
-        if (townie.getNeed() != TownieNeed.UNMET_ITEM) {
-            return null;
-        }
-        String key = townie.getUnmetItem();
-        if (key.isEmpty()) {
-            return null;
-        }
-        try {
-            return Ingredients.fromString(key);
-        } catch (RuntimeException e) {
-            return null;
-        }
+        return townie.getUnmetItemIngredient();
     }
 
     /**
-     * The on-look hint for a bubble holder. A resolved {@code UNMET_ITEM} names the missing item
-     * (the Inventory screen's "needs" row pattern); anything else keeps the generic per-need key.
+     * The on-look hint for a bubble holder. A need with a key names it ({@link TownieNeedDetail}:
+     * the missing room or item, or the room it cannot get into); anything else keeps the generic
+     * per-need key.
      */
     private static Component hintComponent(
             @Nullable VisitorMobEntity townie,
             String hintKey
     ) {
-        Ingredient missing = unmetNeedIngredient(townie);
-        if (missing == null) {
-            return Compat.translatable(hintKey);
-        }
-        return Compat.translatable(
-                "message.questown.townie_need.unmet_item.item", Ingredients.getName(missing)
-        );
+        Component detail = townie == null ? null : TownieNeedDetail.of(townie);
+        return detail != null ? detail : Compat.translatable(hintKey);
     }
 
-    private static void adopt(@Nullable Object best, double bestScore) {
-        if (keepsBubble(current, currentScore, best, bestScore)) {
-            currentScore = best != null && best.equals(current) ? bestScore : currentScore;
+    private static void adopt(@Nullable Object best, double bestScore, double holderScore) {
+        if (keepsBubble(current, holderScore, best, bestScore)) {
             return;
         }
         current = best;
-        currentScore = bestScore;
+    }
+
+    /** {@code score} when {@code candidate} holds the bubble and still qualifies, else {@code soFar}. */
+    private static double holderScoreIf(Object candidate, double score, double soFar) {
+        if (!candidate.equals(current) || score < CONE_DOT) {
+            return soFar;
+        }
+        return score;
     }
 
     /**
@@ -232,6 +250,46 @@ public final class NeedBubbleFocus {
         return challengerScore < holderScore + TAKEOVER_MARGIN;
     }
 
+    /**
+     * Villager bubbles show only in the working day (morning and noon): from the evening on, the
+     * town is eating and sleeping, so a work need is not stopping anything (dev playtest
+     * 2026-10-29). Door and attention bubbles are not affected.
+     */
+    static boolean villagerNeedsShowAt(long dayTime) {
+        Signals s = Signals.fromDayTime(new Signals.DayTime(dayTime));
+        return s == Signals.MORNING || s == Signals.NOON;
+    }
+
+    /**
+     * The bubble icon for a MISSING_ROOM need: the room's blocks in turn, one a second, so the
+     * bubble shows what to build (dev playtest 2026-10-29: "Their bubble can show the room blocks
+     * too"). Null when the room or its recipe is unknown here.
+     */
+    static @Nullable net.minecraft.world.item.ItemStack missingRoomIcon(VisitorMobEntity townie) {
+        net.minecraft.resources.ResourceLocation room = townie.getMissingRoom();
+        if (room == null) {
+            return null;
+        }
+        java.util.List<net.minecraft.world.item.ItemStack> blocks = new java.util.ArrayList<>();
+        ca.bradj.questown.logic.RoomRecipes.getByIdOrSpecial(townie.getLevel(), room).ifPresent(r -> {
+            for (Ingredient i : ca.bradj.questown.logic.RoomRecipes.filterSpecialBlocks(r.getIngredients())) {
+                net.minecraft.world.item.ItemStack[] stacks = i.getItems();
+                if (stacks.length > 0) {
+                    blocks.add(stacks[0]);
+                }
+            }
+        });
+        return cycle(blocks, System.currentTimeMillis() / 1000);
+    }
+
+    /** The item shown in second {@code seconds} when cycling through {@code items}; null when empty. */
+    static <T> @Nullable T cycle(java.util.List<T> items, long seconds) {
+        if (items.isEmpty()) {
+            return null;
+        }
+        return items.get((int) (seconds % items.size()));
+    }
+
     /** The holder keeps the bubble only while it is still needy and still in front of the player. */
     public static void forgetIfResolved(VisitorMobEntity townie) {
         if (townie.getUUID().equals(current) && !townie.getNeed().isNeeded()) {
@@ -241,7 +299,6 @@ public final class NeedBubbleFocus {
 
     private static void forget() {
         current = null;
-        currentScore = 0;
     }
 
     /**

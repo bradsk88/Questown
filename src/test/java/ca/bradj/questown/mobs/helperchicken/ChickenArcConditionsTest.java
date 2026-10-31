@@ -46,6 +46,14 @@ class ChickenArcConditionsTest {
     }
 
     @Test
+    void shouldPeckRun_signBeat_noHeldSignRequired() {
+        // The sign beat lost its held-sign gate (1be1b64d): only the sign →
+        // job-board placement in the room gates it, so the peck gate is
+        // permissive even with a null player.
+        Assertions.assertTrue(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_SIGN));
+    }
+
+    @Test
     void shouldPeckRun_terminals_returnTrue() {
         // COMPLETE/FORFEIT have no peck target so the gate is moot, but it
         // stays permissive — the false-gate semantic is reserved for "player
@@ -67,10 +75,12 @@ class ChickenArcConditionsTest {
     void shouldPeckRun_itemBeat_nullPlayer_returnsFalse() {
         // Player must be present and hold the item; null player → follow-near-flag
         // goal picks up and the chicken trails the player until they fetch it.
+        // (The sign beat intentionally has no held-item requirement — see
+        // commit 1be1b64d, which gates it on the job-board placement alone —
+        // so it is covered by the permissive-beat test instead.)
         Assertions.assertFalse(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_STICK));
         Assertions.assertFalse(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_WALL_BLOCK));
         Assertions.assertFalse(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_DOOR));
-        Assertions.assertFalse(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_SIGN));
         Assertions.assertFalse(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_CHEST));
     }
 

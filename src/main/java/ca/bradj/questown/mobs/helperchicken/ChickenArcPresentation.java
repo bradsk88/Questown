@@ -24,7 +24,6 @@ public final class ChickenArcPresentation {
     private static final String HINT_WAND_CAMPFIRE = "message.questown.chicken.hint.wand_on_campfire";
     private static final String HINT_WAND_CAMPFIRE_USE = "message.questown.chicken.hint.wand_on_campfire.use";
     private static final String HINT_SUNSET = "message.questown.chicken.hint.sunset";
-    private static final String HINT_SUNSET_PREPARING = "message.questown.chicken.hint.sunset.preparing";
     private static final String HINT_WALL_BLOCK = "message.questown.chicken.hint.wall_block";
     private static final String HINT_WALL_BLOCK_WITH_ITEM = "message.questown.chicken.hint.wall_block.with_item";
     private static final String HINT_DOOR = "message.questown.chicken.hint.door";
@@ -34,6 +33,8 @@ public final class ChickenArcPresentation {
     private static final String HINT_SIGN = "message.questown.chicken.hint.sign";
     private static final String HINT_CHEST = "message.questown.chicken.hint.chest";
     private static final String HINT_CHEST_WITH_ITEM = "message.questown.chicken.hint.chest.with_item";
+    private static final String HINT_ROOM_BUILD = "message.questown.chicken.hint.room_build";
+    private static final String HINT_ROOM_BUILD_DONE = "message.questown.chicken.hint.room_build.done";
     private static final String HINT_PRESSURE_PLATE = "message.questown.chicken.hint.pressure_plate";
     private static final String HINT_PRESSURE_PLATE_USE = "message.questown.chicken.hint.pressure_plate.use";
     private static final String HINT_WELCOME_MAT = "message.questown.chicken.hint.welcome_mat";
@@ -47,12 +48,12 @@ public final class ChickenArcPresentation {
     private static final String PLAIN_STICK = "message.questown.chicken.plain.stick";
     private static final String PLAIN_WAND_CAMPFIRE = "message.questown.chicken.plain.wand_on_campfire";
     private static final String PLAIN_SUNSET = "message.questown.chicken.plain.sunset";
-    private static final String PLAIN_SUNSET_PREPARING = "message.questown.chicken.plain.sunset_preparing";
     private static final String PLAIN_WALL_BLOCK = "message.questown.chicken.plain.wall_block";
     private static final String PLAIN_DOOR = "message.questown.chicken.plain.door";
     private static final String PLAIN_WAND_DOOR = "message.questown.chicken.plain.wand_on_door";
     private static final String PLAIN_SIGN = "message.questown.chicken.plain.sign";
     private static final String PLAIN_CHEST = "message.questown.chicken.plain.chest";
+    private static final String PLAIN_ROOM_BUILD = "message.questown.chicken.plain.room_build";
     private static final String PLAIN_PRESSURE_PLATE = "message.questown.chicken.plain.pressure_plate";
     private static final String PLAIN_WELCOME_MAT = "message.questown.chicken.plain.welcome_mat";
     private static final String PLAIN_FREE_FOOD = "message.questown.chicken.plain.free_food";
@@ -72,6 +73,7 @@ public final class ChickenArcPresentation {
                  WAITING_FOR_WAND_ON_DOOR -> in.hasItem() ? BeatPhase.READY_TO_USE : BeatPhase.NEED_TO_FETCH;
             case WAITING_FOR_WALL_BLOCK,
                  WAITING_FOR_DOOR -> in.hasItem() ? BeatPhase.READY_TO_PLACE : BeatPhase.NEED_TO_FETCH;
+            case WAITING_FOR_ROOM_BUILD -> BeatPhase.DEFAULT;
             case SUNSET_AND_MAP -> sunsetAndMapPhase(in);
             case WAITING_FOR_CHEST -> in.hasItem() ? BeatPhase.READY_TO_PLACE : BeatPhase.DEFAULT;
             case WAITING_FOR_PRESSURE_PLATE -> pressurePlatePhase(in);
@@ -85,10 +87,12 @@ public final class ChickenArcPresentation {
         };
     }
 
+    /**
+     * The sleep beat. The chest is dropped earlier (the WAITING_FOR_CHEST
+     * beat), so this beat no longer carries a chest-spawn "preparing" phase:
+     * it waits for night, then the chicken wanders to the campfire to sleep.
+     */
     private static BeatPhase sunsetAndMapPhase(PhaseInputs in) {
-        if (!in.chestSpawned()) {
-            return BeatPhase.PREPARING;
-        }
         if (in.isNight()) {
             return BeatPhase.READY_TO_USE;
         }
@@ -154,6 +158,7 @@ public final class ChickenArcPresentation {
             case WAITING_FOR_WALL_BLOCK -> wallBlockRow(phase);
             case WAITING_FOR_DOOR -> doorRow(phase);
             case WAITING_FOR_WAND_ON_DOOR -> wandOnDoorRow(phase);
+            case WAITING_FOR_ROOM_BUILD -> roomBuildRow();
             case WAITING_FOR_SIGN -> new Presentation(
                     Bubble.single(new ItemStack(Items.OAK_SIGN)), HINT_SIGN, PLAIN_SIGN);
             case WAITING_FOR_CHEST -> chestRow(phase);
@@ -219,6 +224,15 @@ public final class ChickenArcPresentation {
         };
     }
 
+    private static Presentation roomBuildRow() {
+        // The chicken builds the room itself, so the beat is not waiting on any
+        // held item; the bubble shows the block being laid (cobblestone) and
+        // the hint is a plain narration the player can follow without an
+        // action of their own.
+        Bubble bubble = Bubble.single(new ItemStack(Items.COBBLESTONE));
+        return new Presentation(bubble, HINT_ROOM_BUILD, PLAIN_ROOM_BUILD);
+    }
+
     private static Presentation chestRow(BeatPhase phase) {
         Bubble bubble = Bubble.single(new ItemStack(Items.CHEST));
         return switch (phase) {
@@ -262,9 +276,6 @@ public final class ChickenArcPresentation {
 
     private static Presentation sunsetAndMapRow(BeatPhase phase) {
         return switch (phase) {
-            case PREPARING -> new Presentation(
-                    Bubble.single(new ItemStack(Items.CHEST)),
-                    HINT_SUNSET_PREPARING, PLAIN_SUNSET_PREPARING);
             case READY_TO_USE -> new Presentation(
                     Bubble.alternating(
                             new ItemStack(ItemsInit.TOWN_WAND.get()),

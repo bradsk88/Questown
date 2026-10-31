@@ -6,9 +6,11 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.Brain;
@@ -54,6 +56,7 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
     private BlockPos entityPrevPosLastUnstick;
     private int reallyStuckTicks;
     private int failedUnsticks;
+    private final StrandedRescue stranded = new StrandedRescue();
 
     public MoveToTownTargetSink() {
         this(Compat.configGet(Config.WANDER_GIVEUP_TICKS).get(), Compat.configGet(Config.WANDER_GIVEUP_TICKS).get());
@@ -195,8 +198,18 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
             return;
         }
 
+        if (strandedInWater(p_23617_, vme, brain)) {
+            rescue(vme, brain, "in water without getting closer");
+            return;
+        }
+
         if (hasGivenUpReaching(p_23617_, brain)) {
+            if (vme.isStrandedOutsideTown()) {
+                rescue(vme, brain, "gave up reaching its target outside the town");
+                return;
+            }
             vme.setNeed(TownieNeed.CANT_REACH);
+            vme.setUnmetItem(unreachableRoomKey(vme, brain));
             brain.eraseMemory(MemoryModuleType.WALK_TARGET);
             brain.eraseMemory(MemoryModuleType.PATH);
             stuckTicks = 0;
@@ -237,11 +250,49 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
         }
     }
 
+    private boolean strandedInWater(ServerLevel level, VisitorMobEntity vme, Brain<?> brain) {
+        Optional<WalkTarget> target = brain.getMemory(MemoryModuleType.WALK_TARGET);
+        boolean inWater = vme.isInWater()
+                || level.getFluidState(vme.blockPosition().below()).is(FluidTags.WATER);
+        if (target.isEmpty()) {
+            stranded.reset();
+            return false;
+        }
+        double distance = Math.sqrt(target.get().getTarget().currentBlockPosition().distSqr(vme.blockPosition()));
+        return stranded.observeWater(inWater, distance) && vme.isStrandedOutsideTown();
+    }
+
+    /** Outside the town nothing the player built is in the way, so skip the bubble and go home. */
+    private void rescue(VisitorMobEntity vme, Brain<?> brain, String why) {
+        vme.rescueToGate(why);
+        brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+        brain.eraseMemory(MemoryModuleType.PATH);
+        brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+        stranded.reset();
+        stuckTicks = 0;
+        reallyStuckTicks = 0;
+        failedUnsticks = 0;
+    }
+
     /**
      * Two ways to fail to get somewhere, both meaning "the player needs to look at this":
      * pathfinding says the target is unreachable, or a path exists but the townie is physically
      * wedged and the unstick nudges have not freed it.
      */
+    /** The recipe id of the room holding the walk target, or "" when it is not in a room. */
+    private static String unreachableRoomKey(
+            VisitorMobEntity vme,
+            Brain<?> brain
+    ) {
+        if (vme.getTown() == null) {
+            return "";
+        }
+        return brain.getMemory(MemoryModuleType.WALK_TARGET)
+                    .flatMap(w -> vme.getTown().roomRecipeHolding(w.getTarget().currentBlockPosition()))
+                    .map(ResourceLocation::toString)
+                    .orElse("");
+    }
+
     /** A townie that can get where it is going is no longer asking for help. */
     private void clearCantReachNeed(Mob mob) {
         failedUnsticks = 0;

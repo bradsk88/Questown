@@ -2,6 +2,8 @@ package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.QT;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Items;
 
 /**
@@ -14,10 +16,20 @@ import net.minecraft.world.item.Items;
 public enum TownieNeed {
     /** Nothing wrong. Silence is the signal that the townie is fine. */
     NONE,
-    /** Gave up walking somewhere: no viable path, or wedged despite one. */
+    /**
+     * Gave up walking somewhere: no viable path, or wedged despite one. The key names the room the
+     * target is in, if any, so the hint can say which room it cannot get into.
+     */
     CANT_REACH,
     /** No viable job because the town lacks the item(s) the job needs as input. */
-    UNMET_ITEM;
+    UNMET_ITEM,
+    /** Holding work output with nowhere to put it: every town chest is full (NO_SPACE status). */
+    NO_STORAGE,
+    /**
+     * Every job it could do waits on a room the town lacks; the room id rides the unmet-item key
+     * (dev playtest 2026-10-29: "They need a Smithy to work", the bubble shows the room's blocks).
+     */
+    MISSING_ROOM;
 
     public static TownieNeed fromName(String name) {
         for (TownieNeed v : values()) {
@@ -34,6 +46,14 @@ public enum TownieNeed {
     }
 
     /**
+     * Whether the need keeps a key beside it (the synced unmet-item field): the missing item, the
+     * missing room, or the room a CANT_REACH townie could not get into (dev 2026-10-30).
+     */
+    public boolean carriesKey() {
+        return this == UNMET_ITEM || this == MISSING_ROOM || this == CANT_REACH;
+    }
+
+    /**
      * What the bubble shows. The barrier is vanilla's own "you cannot go here" glyph, so it reads
      * without a legend; a townie under it is asking the player to open a way through.
      */
@@ -41,9 +61,23 @@ public enum TownieNeed {
         return switch (this) {
             case CANT_REACH -> Items.BARRIER.getDefaultInstance();
             case UNMET_ITEM -> Items.BUNDLE.getDefaultInstance();
+            case NO_STORAGE -> ItemStack.EMPTY; // drawn from iconTexture()
+            case MISSING_ROOM -> Items.CRAFTING_TABLE.getDefaultInstance(); // fallback; the renderer shows the room's blocks
             case NONE -> ItemStack.EMPTY;
         };
     }
+
+    /**
+     * An authored questown texture to draw instead of {@link #icon()}, or null to use the item.
+     * NO_STORAGE shows the same "no space" art as the villager status card (dev, 2026-10-21: an
+     * item-model chest rendered at an angle, front facing away).
+     */
+    public @Nullable ResourceLocation iconTexture() {
+        return this == NO_STORAGE ? NO_SPACE_TEXTURE : null;
+    }
+
+    public static final ResourceLocation NO_SPACE_TEXTURE =
+            new ResourceLocation("questown", "textures/menu/gatherer/no_space.png");
 
     /**
      * Plain words for the same thing the icon says, shown when the player walks up and looks

@@ -14,9 +14,9 @@ import java.util.Set;
  * does not let the arc skip earlier beats. Instead, the advance function walks
  * states in enum-ordinal order and advances past every state whose condition
  * is satisfied. In practice this means "if the player already placed the chest
- * before placing the sign, the chest beat auto-completes the tick after the
- * sign beat does". The chicken's animation target always tracks the
- * lowest-numbered incomplete state, which is whatever this function returns.
+ * and lit the campfire before registering the door, those beats auto-complete
+ * the tick the door beat does". The chicken's animation target always tracks
+ * the lowest-numbered incomplete state, which is whatever this function returns.
  */
 public final class ChickenArcTransitions {
 
@@ -38,6 +38,7 @@ public final class ChickenArcTransitions {
             boolean wallBlockPlaced,
             boolean doorPlaced,
             boolean roomRegistered,
+            boolean roomBuilt,
             boolean signPlacedAsJobBoard,
             boolean chestPlaced,
             boolean welcomeMatPlaced,
@@ -45,7 +46,8 @@ public final class ChickenArcTransitions {
             boolean playerOpenedVillagerUi,
             boolean playerOpenedFlagUi,
             boolean worldlySeedsInAnyContainer,
-            boolean playerGaveSeedsToChicken
+            boolean playerGaveSeedsToChicken,
+            boolean handPlaced
     ) {
     }
 
@@ -102,7 +104,7 @@ public final class ChickenArcTransitions {
         return OPTIONAL.contains(state) && isSatisfied(nextOrdinal(state), o);
     }
 
-    private static boolean isSatisfied(
+    public static boolean isSatisfied(
             ChickenBeatState state,
             Observed o
     ) {
@@ -110,9 +112,16 @@ public final class ChickenArcTransitions {
             case WAITING_FOR_STICK -> o.playerHasWand();
             case WAITING_FOR_WAND_ON_CAMPFIRE -> o.campfireLit();
             case SUNSET_AND_MAP -> o.sleepHappenedToday();
-            case WAITING_FOR_WALL_BLOCK -> o.wallBlockPlaced();
+            // The fill-the-hole beat assumes the empty_town structure's pre-dug
+            // hole. A hand-placed flag has no such hole, so wallBlockPlaced can
+            // never be true and the beat would stall the arc forever. Skip it when
+            // the flag is hand-placed; the room lesson is still carried by the
+            // door beats that follow (a registered door with no room bubbles a
+            // "no room detected" hint that nudges the player to build one).
+            case WAITING_FOR_WALL_BLOCK -> o.wallBlockPlaced() || o.handPlaced();
             case WAITING_FOR_DOOR -> o.doorPlaced();
             case WAITING_FOR_WAND_ON_DOOR -> o.roomRegistered();
+            case WAITING_FOR_ROOM_BUILD -> o.roomBuilt();
             case WAITING_FOR_SIGN -> o.signPlacedAsJobBoard();
             case WAITING_FOR_CHEST -> o.chestPlaced();
             case WAITING_FOR_PRESSURE_PLATE -> o.welcomeMatPlaced();

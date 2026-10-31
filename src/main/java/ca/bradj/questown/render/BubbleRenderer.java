@@ -1,6 +1,7 @@
 package ca.bradj.questown.render;
 
 import ca.bradj.questown.mobs.helperchicken.BubbleRenderType;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.helperchicken.HelperChickenEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -8,14 +9,10 @@ import com.mojang.math.Matrix4f;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.ItemRenderer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * World-space speech-bubble renderer shared across the helper chicken, the
@@ -44,9 +41,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  *   <li>Fullbright: bubbles use {@code packedLight = 0xF000F0} so they stay
  *       legible in dark scenes.</li>
  * </ul>
- */
-@OnlyIn(Dist.CLIENT)
-public final class BubbleRenderer {
+ */public final class BubbleRenderer {
 
     private static final int FULLBRIGHT = 0xF000F0;
     private static final double VISIBILITY_RANGE_SQR = 16.0 * 16.0;
@@ -54,6 +49,12 @@ public final class BubbleRenderer {
 
     /** Additional lift in world-Y above the chicken's head. */
     private static final float HEAD_LIFT_BLOCKS = 0.5f;
+
+    /**
+     * Extra lift when the entity shows a nameplate: the bubble otherwise sits on the name
+     * ("Villag[!]2", 2026-10-22 playtest). Roughly one nameplate line (9 px at 0.025).
+     */
+    private static final float NAMEPLATE_CLEARANCE_BLOCKS = 0.3f;
 
     /** Outer scale applied before drawing bubble + icon. */
     private static final float ASSEMBLY_SCALE = 0.5f;
@@ -68,6 +69,14 @@ public final class BubbleRenderer {
     private static final float ICON_CENTRE_Y_INNER = 13.0f / 16.0f;
 
     private BubbleRenderer() {
+    }
+
+    private static double bubbleLift(Entity entity) {
+        double lift = entity.getBbHeight() + HEAD_LIFT_BLOCKS;
+        if (entity.shouldShowName()) {
+            return lift + NAMEPLATE_CLEARANCE_BLOCKS;
+        }
+        return lift;
     }
 
     /**
@@ -119,6 +128,23 @@ public final class BubbleRenderer {
      * <p>Same pose contract as {@link #renderBubbleFor}: call it after {@code super.render}, with
      * the pose still camera-relative and the origin at the entity's feet.
      */
+    /**
+     * Same as {@link #renderIconBubbleFor} with an authored texture instead of an item model - for
+     * needs whose icon is questown art (the NO_STORAGE "no space" status icon), drawn face-on.
+     */
+    public static void renderTextureBubbleFor(
+            Entity entity,
+            net.minecraft.resources.ResourceLocation texture,
+            PoseStack poseStack,
+            MultiBufferSource bufferSource,
+            EntityRenderDispatcher dispatcher
+    ) {
+        if (dispatcher.distanceToSqr(entity) > VISIBILITY_RANGE_SQR) {
+            return;
+        }
+        renderTextureBubble(poseStack, bufferSource, entity, texture, false, dispatcher);
+    }
+
     public static void renderIconBubbleFor(
             Entity entity,
             ItemStack icon,
@@ -147,7 +173,7 @@ public final class BubbleRenderer {
             EntityRenderDispatcher dispatcher
     ) {
         poseStack.pushPose();
-        poseStack.translate(0.0, entity.getBbHeight() + HEAD_LIFT_BLOCKS, 0.0);
+        poseStack.translate(0.0, bubbleLift(entity), 0.0);
         poseStack.scale(ASSEMBLY_SCALE, ASSEMBLY_SCALE, ASSEMBLY_SCALE);
         poseStack.mulPose(dispatcher.cameraOrientation());
 
@@ -236,6 +262,54 @@ public final class BubbleRenderer {
         poseStack.popPose();
     }
 
+    /**
+     * Draws the comic bubble over a block position with an authored texture icon instead of
+     * an item — the "!" attention bubbles (flag with incomplete quests, job board with no
+     * work requests). Same pose contract, 16-block gate and billboard as
+     * {@link #renderIconBubbleAtBlock}.
+     */
+    public static void renderTextureBubbleAtBlock(
+            net.minecraft.core.BlockPos pos,
+            net.minecraft.resources.ResourceLocation texture,
+            PoseStack poseStack,
+            MultiBufferSource bufferSource,
+            net.minecraft.world.phys.Vec3 cameraPos
+    ) {
+        if (texture == null
+                || cameraPos.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(pos)) > VISIBILITY_RANGE_SQR) {
+            return;
+        }
+        EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        poseStack.pushPose();
+        // The "!" targets are one-block-tall (flag, job board): anchor 1.0 above the block,
+        // unlike the dead-door item path which floats over a two-block door.
+        poseStack.translate(
+                pos.getX() + 0.5 - cameraPos.x,
+                pos.getY() + 1.0 + HEAD_LIFT_BLOCKS - cameraPos.y,
+                pos.getZ() + 0.5 - cameraPos.z
+        );
+        poseStack.scale(ASSEMBLY_SCALE, ASSEMBLY_SCALE, ASSEMBLY_SCALE);
+        poseStack.mulPose(dispatcher.cameraOrientation());
+
+        poseStack.pushPose();
+        poseStack.translate(0.0, ICON_CENTRE_Y_INNER, 0.0);
+        renderBubbleBackground(poseStack, bufferSource, false);
+        poseStack.popPose();
+
+        VertexConsumer consumer = bufferSource.getBuffer(
+                BubbleRenderType.texturedIcon(texture, false)
+        );
+        Matrix4f matrix = poseStack.last().pose();
+        // Slight forward offset so the quad sits in front of the bubble bg, same as the
+        // entity texture path.
+        float z = 0.001f;
+        float r = 0.5f;
+        float yc = ICON_CENTRE_Y_INNER;
+        textureQuad(consumer, matrix, -r, yc - r, +r, yc - r, +r, yc + r, -r, yc + r, z);
+
+        poseStack.popPose();
+    }
+
     private static void renderBubble(
             PoseStack poseStack,
             MultiBufferSource bufferSource,
@@ -246,7 +320,7 @@ public final class BubbleRenderer {
     ) {
         // Outer pose: +Y is world-up. Translate up to chicken's head + lift.
         poseStack.pushPose();
-        poseStack.translate(0.0, entity.getBbHeight() + HEAD_LIFT_BLOCKS, 0.0);
+        poseStack.translate(0.0, bubbleLift(entity), 0.0);
         renderBubbleAssembly(poseStack, bufferSource, shown, throughWalls, dispatcher);
         poseStack.popPose();
     }
@@ -254,8 +328,10 @@ public final class BubbleRenderer {
     /**
      * Scale + billboard + bubble background + icon, shared by the entity path (origin at the
      * entity's feet, pre-lifted) and the block path (origin at the bubble's world anchor).
-     * HEAD transform brings its own 180°Y rotation that orients the model toward the
-     * camera, so we DO NOT apply our own 180°Y here.
+     * After {@code cameraOrientation()} local +Z points away from the camera, but the GUI
+     * display transform expects the viewer at +Z, so the icon turns 180° about Y first.
+     * Without it a block showed its underside (dev playtest 2026-10-30: the "needs a Smithy"
+     * bubble's blacksmith table) and a flat item was mirrored.
      */
     private static void renderBubbleAssembly(
             PoseStack poseStack,
@@ -287,13 +363,14 @@ public final class BubbleRenderer {
         // icon sits inside it regardless of item kind.
         poseStack.pushPose();
         poseStack.translate(0.0, ICON_CENTRE_Y_INNER, 0.0);
-        itemRenderer.renderStatic(
+        poseStack.mulPose(com.mojang.math.Vector3f.YP.rotationDegrees(180.0F));
+        Compat.renderItemStaticGui(
+                itemRenderer,
                 shown,
-                ItemTransforms.TransformType.GUI,
                 FULLBRIGHT,
-                OverlayTexture.NO_OVERLAY,
                 poseStack,
                 effectiveBuffer,
+                Minecraft.getInstance().level,
                 0
         );
         poseStack.popPose();

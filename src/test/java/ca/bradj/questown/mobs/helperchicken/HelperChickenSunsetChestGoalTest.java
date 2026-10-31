@@ -1,7 +1,10 @@
 package ca.bradj.questown.mobs.helperchicken;
 
 import net.minecraft.SharedConstants;
+import ca.bradj.roomrecipes.core.space.InclusiveSpace;
+import ca.bradj.roomrecipes.core.space.Position;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -10,6 +13,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -209,4 +213,41 @@ class HelperChickenSunsetChestGoalTest {
     // is provided by the {@code F2_chest_spawn_after_campfire} scenario in
     // {@code ChickenArcBlueprintRegistry}, which runs against a live
     // ServerLevel via {@code /_qtdev testall} or {@code /_qtdev test}.
+
+    // -- chestCandidates: the storeroom chest stays out of the doorway ------
+
+    @Test
+    void chestCandidates_firstIsTheInteriorCellFarthestFromTheDoor_forEveryFacing() {
+        // r9: the chest landed on the interior cell just inside the door, so villagers
+        // climbed over it to enter the 2x2 storeroom. The first candidate must be the
+        // far corner, whichever way the door faces.
+        for (Direction inward : Direction.Plane.HORIZONTAL) {
+            BlockPos door = new BlockPos(0, 64, 0);
+            ChickenRoomShellPlan.DoorFrame frame = new ChickenRoomShellPlan.DoorFrame(
+                    door, inward, inward.getClockWise(), 64);
+            InclusiveSpace space = ChickenRoomShellPlan.space(frame);
+            Position doorPos = new Position(door.getX(), door.getZ());
+
+            List<Position> candidates = HelperChickenSunsetChestGoal.chestCandidates(
+                    List.of(space), doorPos);
+
+            Assertions.assertEquals(4, candidates.size(), "2x2 interior, inward=" + inward);
+            Position first = candidates.get(0);
+            for (Position other : candidates) {
+                Assertions.assertTrue(
+                        distSq(first, doorPos) >= distSq(other, doorPos),
+                        "inward=" + inward + ": first candidate " + first
+                                + " is closer to the door than " + other
+                );
+            }
+            Assertions.assertTrue(distSq(first, doorPos) > 2,
+                    "inward=" + inward + ": first candidate " + first + " touches the doorway");
+        }
+    }
+
+    private static int distSq(Position a, Position b) {
+        int dx = a.x - b.x;
+        int dz = a.z - b.z;
+        return dx * dx + dz * dz;
+    }
 }

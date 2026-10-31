@@ -91,6 +91,10 @@ class BeatOffsetsRotationTest {
                 HelperChickenBeatOffsets.resolveTarget(ChickenBeatState.WAITING_FOR_WAND_ON_DOOR, flagPos, r)
         );
         Assertions.assertEquals(
+                flagPos.offset(HelperChickenBeatOffsets.DOOR_OFFSET.rotate(r)),
+                HelperChickenBeatOffsets.resolveTarget(ChickenBeatState.WAITING_FOR_ROOM_BUILD, flagPos, r)
+        );
+        Assertions.assertEquals(
                 flagPos.offset(HelperChickenBeatOffsets.SIGN_OFFSET.rotate(r)),
                 HelperChickenBeatOffsets.resolveTarget(ChickenBeatState.WAITING_FOR_SIGN, flagPos, r)
         );
