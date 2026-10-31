@@ -1067,3 +1067,9 @@ eat them, and nothing restarts the diner chain (ticket
 `.scratch/agent-playtest-2026-10-30-overnight/starving-villager-ignores-food-after-give-up.md`).
 Without the clock move the carrots make `gather` possible, and the board sends the starving
 villager on a trip with a carrot as trip food: the same bug, by day.
+
+## `cook/fuel [storage_full]` counts at least 5 meals in the furnace (2026-10-31)
+
+The assertion checks the cook didn't take the meal out of the furnace. It required exactly the
+seeded 5 cooked beef; one run of 3 saw 6 (the furnace finished another beef before the check)
+with the NO_STORAGE need and the flag bubble both correct. Now `>= 5`.

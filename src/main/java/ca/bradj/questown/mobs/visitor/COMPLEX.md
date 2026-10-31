@@ -176,6 +176,15 @@ Side effect caught by `cook/fuel [no_coal]` (22:19 shard): a cook blocked on coa
 downtime, so its coal bubble now shows only while it seeks work. The town still tracks the need
 (`TownPossibleWork.trackedUnmetKey`), and the guard accepts that while the cook relaxes.
 
+## A working villager drops its item/room need at once (2026-10-31)
+
+`clearNeedWhileWorking(job, status)` runs at `setJob` and on every tick's status sync: an
+UNMET_ITEM or MISSING_ROOM need is cleared when `TownPossibleWork.showsUnmetNeed` says the
+villager isn't having a hard time (working, eating, relaxing). Dev ruling: a cook working through
+beef shows no bubble; the recompute pass had left the need from seeking work for up to a pass.
+NO_STORAGE is untouched (its own consumer, `syncStorageNeed`). See `town/COMPLEX.md` "All my
+requests are done".
+
 ## Townie skin pool (`TownieSkins`, 2026-10-14)
 
 Townie skins are a deterministic per-UUID pick from a pool: the 9 vanilla

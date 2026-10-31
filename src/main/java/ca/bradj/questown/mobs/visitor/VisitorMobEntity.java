@@ -368,6 +368,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         job = () -> initializedJob;
         entityData.set(jobName, initializedJob.getJobName().translationKey());
         QT.VILLAGER_LOGGER.info("Job changed to {} for {} [from {}]", initializedJob.getId(), uuid, curJobName);
+        clearNeedWhileWorking(initializedJob.getId(), initializedJob.getStatus());
         Collection<? extends Runnable> newCleanup = oldJob.notifyListenersOfNewJob(l -> {
             Function<Void, Void> out = initializedJob.addStatusListener(l);
             return () -> out.apply(null);
@@ -451,6 +452,21 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (blocked && (getNeed() == TownieNeed.NONE || getNeed() == TownieNeed.UNMET_ITEM || getNeed() == TownieNeed.MISSING_ROOM)) {
             setNeed(TownieNeed.NO_STORAGE);
         } else if (!blocked && getNeed() == TownieNeed.NO_STORAGE) {
+            setNeed(TownieNeed.NONE);
+        }
+    }
+
+    /**
+     * An unmet-item or missing-room need set while the villager was seeking work is dropped the tick
+     * it starts working (at the job change and on every tick), not at the next recompute pass (dev ruling 2026-10-31: a cook working
+     * through beef shows no bubble). The pass re-applies it once the villager struggles again.
+     */
+    private void clearNeedWhileWorking(JobID jobId, IStatus<?> jobStatus) {
+        TownieNeed n = getNeed();
+        if (n != TownieNeed.UNMET_ITEM && n != TownieNeed.MISSING_ROOM) {
+            return;
+        }
+        if (!ca.bradj.questown.town.TownPossibleWork.showsUnmetNeed(jobId, jobStatus)) {
             setNeed(TownieNeed.NONE);
         }
     }
@@ -684,6 +700,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (j.isInitialized()) {
             entityData.set(status, j.getStatusToSyncToClient());
             syncStorageNeed(j.getStatus());
+            clearNeedWhileWorking(j.getId(), j.getStatus());
             entityData.set(
                     heldItem, j.getInventory()
                                .getItem(0)

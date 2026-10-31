@@ -7,39 +7,30 @@ import java.util.List;
 
 class RequestsDoneTest {
 
-    private static RequestsDone.JobView open(boolean workable) {
-        return new RequestsDone.JobView(true, false, workable, false);
-    }
+    private static final RequestsDone.JobView OPEN = new RequestsDone.JobView(true, false, false);
 
-    private static RequestsDone.JobView stocked(boolean workable) {
-        return new RequestsDone.JobView(false, true, workable, false);
-    }
+    private static final RequestsDone.JobView STOCKED = new RequestsDone.JobView(false, true, false);
 
-    private static final RequestsDone.JobView UNREQUESTED = new RequestsDone.JobView(false, false, true, false);
+    private static final RequestsDone.JobView UNREQUESTED = new RequestsDone.JobView(false, false, false);
 
     /** A fuel/extract job: it answers the open request its makers answer. */
-    private static final RequestsDone.JobView SUPPORT_ON_OPEN = new RequestsDone.JobView(true, false, true, true);
+    private static final RequestsDone.JobView SUPPORT_ON_OPEN = new RequestsDone.JobView(true, false, true);
 
     @Test
-    void stockedWorkableJob_isDone() {
-        Assertions.assertTrue(RequestsDone.allDone(List.of(stocked(true))));
+    void stockedJob_isDone() {
+        Assertions.assertTrue(RequestsDone.allDone(List.of(STOCKED)));
     }
 
     @Test
-    void workableOpenRequest_isNotDone() {
-        Assertions.assertFalse(RequestsDone.allDone(List.of(stocked(true), open(true))));
-    }
-
-    @Test
-    void blockedOpenRequest_doesNotStopDone() {
-        // The dev's idle cook (2026-10-30): mutton for the stocked food, no pork for the porkchop.
-        Assertions.assertTrue(RequestsDone.allDone(List.of(stocked(true), open(false))));
+    void openRequest_isNotDone() {
+        // Dev ruling 2026-10-31: a porkchop request with no raw pork shows the raw-pork bubble.
+        Assertions.assertFalse(RequestsDone.allDone(List.of(STOCKED, OPEN)));
     }
 
     @Test
     void supportJobOnAnOpenRequest_doesNotStopDone() {
-        // cook/fuel [requests_done]: fuel and extract "answered" the porkchop request.
-        Assertions.assertTrue(RequestsDone.allDone(List.of(stocked(true), open(false), SUPPORT_ON_OPEN)));
+        // cook/fuel [requests_done]: fuel and extract "answer" whatever their makers answer.
+        Assertions.assertTrue(RequestsDone.allDone(List.of(STOCKED, SUPPORT_ON_OPEN)));
     }
 
     @Test
@@ -48,21 +39,8 @@ class RequestsDoneTest {
     }
 
     @Test
-    void onlyBlockedJobs_areStruggling_notDone() {
-        Assertions.assertFalse(RequestsDone.allDone(List.of(stocked(false), open(false))));
-    }
-
-    @Test
     void nothingRequestedOfIt_isNotDone() {
         Assertions.assertFalse(RequestsDone.allDone(List.of(UNREQUESTED)));
         Assertions.assertFalse(RequestsDone.allDone(List.of()));
-    }
-
-    @Test
-    void okAndNoRequest_areWorkable_noRoomAndBlocked_arent() {
-        Assertions.assertTrue(RequestsDone.workable(new GateReason.Ok()));
-        Assertions.assertTrue(RequestsDone.workable(new GateReason.NoRequest()));
-        Assertions.assertFalse(RequestsDone.workable(new GateReason.NoRoom(null, null)));
-        Assertions.assertFalse(RequestsDone.workable(new GateReason.Blocked(0, List.of("x"), List.of())));
     }
 }

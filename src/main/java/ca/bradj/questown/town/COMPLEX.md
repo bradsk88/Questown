@@ -897,12 +897,25 @@ The dev's idle cook sat by the board saying "They need raw pork to work" with mu
 the board's food requests were stocked (paused), and cook:porkchop, the one job still answering an
 open request, had no pork. Ruling: an idle villager whose fillable requests are all stocked shows
 no need and says "All my requests are done". `RequestsDone.allDone` (pure, `RequestsDoneTest`)
-decides it over the villager's unlocked jobs: done when no *workable* job answers an open request
-and at least one workable job answers a stocked one. A job blocked on a room, supply or tool is
-skipped, so the porkchop request doesn't keep the cook from being done; a villager whose jobs are
-all blocked still shows its need. Support jobs (`ServerJobsRegistry.makesNothing`: fuel, extract,
-stock, display) are skipped too: the first autotest run showed cook:fuel and cook:extract
-"answering" the open porkchop request with gate Ok, so the cook was never done.
+decides it over the villager's unlocked jobs: done when no job answers an open request and at
+least one answers a stocked one. Support jobs (`ServerJobsRegistry.makesNothing`: fuel, extract,
+stock, display) are skipped: the first autotest run showed cook:fuel and cook:extract "answering"
+the open porkchop request with gate Ok, so the cook was never done.
+
+Revised 2026-10-31 (dev ruling): the first version also skipped jobs blocked on a room, supply or
+tool, so the porkchop request with no pork left the cook "done". The dev's three cases instead:
+a porkchop request and no raw pork shows a raw-pork bubble; raw pork but no coal shows coal; with
+porkchop and beef requests and only beef and coal, a cook working through cook:beef shows no
+bubble. So an open request keeps the villager from being done whether or not its job can run
+(the `workable` flag is gone), and the bubble names that request's blocker first:
+`refreshUnmetNeeds` collects `openKeyJobs` (the keys of jobs with `board.answersOpen()`) and asks
+`primaryKey` / `primaryRoom` over those before falling back to any held job's key. Without the
+preference the no-pork cook bubbled beef: cook:beef answers no request but registers its missing
+beef (`GateReason.classify` reports Blocked before it looks at the board). The fallback keeps the
+day-1 cook's mutton bubble on an empty board. A need left from seeking work is dropped the moment
+the villager starts working (`VisitorMobEntity.clearNeedWhileWorking`, at `setJob` and on each
+tick's status sync); before that, the working cook held a stale mutton/porkchop bubble for
+~150 of ~2200 working ticks until the next pass.
 
 - `RequestCheck.answersOpen` (`ServerJobsRegistry.answersUnpaused`: a job that makes nothing
   answers paused requests too, so `satisfied != null` can't mean "open") and `answersStocked`
@@ -915,8 +928,11 @@ stock, display) are skipped too: the first autotest run showed cook:fuel and coo
   `hasDoneAllRequests(uuid)`, and no entity data was added.
 - The town-level need registry (economics item store, top-need quest beat) is unchanged: the pork
   need is still tracked for the town, just not shown on the villager.
-- Autotest `cook/fuel [requests_done]`: cooked mutton 10 at limit 4, an open cooked-porkchop
-  request, raw mutton + coal; asserts need NONE and the done line on the first done tick (4000
-  ticks: the cook fuels the furnace first). 3/3 green alone; in the full suite the cook ate and
-  relaxed first, and a downtime villager keeps downtime's own status lines, so the done line never
-  showed. Done is now for seeking work only (downtime already hides needs).
+- Autotests (`cookRequestsBlueprint`: cooked mutton 10 at limit 4, the cook also knows porkchop
+  and beef as the dev's cook did, a per-tick probe, 4000 ticks): `cook/fuel [requests_done]`
+  (mutton + coal, nothing open: need NONE and the done line on the first done tick),
+  `[open_request_no_pork]` and `[open_request_no_coal]` (an open porkchop request: the first
+  seeking-work bubble is raw pork / coal and the cook is never done), `[working_no_bubble]`
+  (porkchop + beef open, beef + coal: zero ticks with an item/room need while on a cook job that
+  isn't stuck). Done is for seeking work only: in the full suite a downtime villager keeps
+  downtime's own status lines (downtime already hides needs).

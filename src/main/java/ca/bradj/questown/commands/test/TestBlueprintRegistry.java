@@ -38,7 +38,9 @@ import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
@@ -181,6 +183,9 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("cook", "fuel", "fuelled_output_ready", cookOutputReadyBlueprint()));
         jobs.add(edgeCaseEntry("cook", "fuel", "no_coal", cookNoCoalBlueprint()));
         jobs.add(edgeCaseEntry("cook", "fuel", "requests_done", cookRequestsDoneBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "fuel", "open_request_no_pork", cookOpenRequestNoPorkBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "fuel", "open_request_no_coal", cookOpenRequestNoCoalBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "fuel", "working_no_bubble", cookWorkingNoBubbleBlueprint()));
         jobs.add(edgeCaseEntry("cook", "mutton", "doorway_kitchen", cookDoorwayKitchenBlueprint(false, false)));
         jobs.add(edgeCaseEntry("cook", "mutton", "rest_then_eat", cookDoorwayKitchenBlueprint(true, false)));
         jobs.add(edgeCaseEntry("cook", "mutton", "raw_food_only", cookDoorwayKitchenBlueprint(true, true)));
@@ -2842,8 +2847,9 @@ public class TestBlueprintRegistry {
                     // moves it into the cook's hands (2026-10-21 agent playtest, finding #40).
                     int left = level.getBlockEntity(flagPos.offset(COOK_FURNACE_OFFSET)) instanceof AbstractFurnaceBlockEntity f
                             ? f.getItem(2).getCount() : -1;
+                    // At least 5: the furnace may finish another beef before the check (one run saw 6).
                     output.msg("storage-full: cooked beef still in the furnace=" + left + " (seeded 5)");
-                    return anyNoStorage && flagBubble && left == 5;
+                    return anyNoStorage && flagBubble && left >= 5;
                 });
     }
 
@@ -2917,42 +2923,167 @@ public class TestBlueprintRegistry {
 
     /**
      * Dev playtest 2026-10-30: an idle cook said "They need raw pork to work" with mutton in the
-     * chest, and the dev ruled it should say "All my requests are done". Storage holds cooked
-     * mutton past its request limit (paused) and the board also asks for cooked porkchop, which
-     * no one can cook (no pork). The cook has raw mutton and coal, so every request it could fill
-     * is stocked: once it idles, it must show no need and the requests-done status line.
+     * chest, and the dev ruled an idle villager whose requests are all met says "All my requests
+     * are done". Storage holds cooked mutton past its request limit (paused) and the board asks
+     * for nothing else; the cook has raw mutton and coal. Once it idles, it must show no need and
+     * the requests-done status line.
      */
     private static TestBlueprint cookRequestsDoneBlueprint() {
-        TestExpectation realtime = new TestExpectation(List.of(), 0, 100);
         String[] seen = new String[1];
-        TestBlueprint base = cookRealtimeBlueprint(List.of(
-                new ItemStack(Items.MUTTON, 16),
-                new ItemStack(Items.COAL, 16),
-                new ItemStack(Items.COOKED_MUTTON, 10)
-        ), realtime);
+        return cookRequestsBlueprint(
+                List.of(new ItemStack(Items.MUTTON, 16), new ItemStack(Items.COAL, 16)),
+                List.of(),
+                (town, v, output) -> {
+                    if (seen[0] != null || !town.getPossibleWork().hasDoneAllRequests(v.getUUID())) {
+                        return;
+                    }
+                    String text = ServerJobsRegistry.getStatusText(v.getJobId(), v.getStatusForServer(), v).toString();
+                    seen[0] = "job=" + v.getJobId() + " need=" + v.getNeed()
+                            + " doneLine=" + text.contains("townie_status.requests_done");
+                    output.msg("[requests_done] " + seen[0]);
+                },
+                output -> {
+                    output.msg("[requests_done] first done tick: " + seen[0]);
+                    return seen[0] != null && seen[0].contains("need=NONE") && seen[0].contains("doneLine=true");
+                });
+    }
+
+    /**
+     * Dev ruling 2026-10-31: an open request the cook can't fill keeps it from being done, and its
+     * bubble names what is missing. With a porkchop request and no raw pork (mutton and coal in
+     * stock, mutton requests stocked), the idle cook shows the raw-pork bubble.
+     */
+    private static TestBlueprint cookOpenRequestNoPorkBlueprint() {
+        return cookOpenRequestBubbleBlueprint(
+                List.of(new ItemStack(Items.MUTTON, 16), new ItemStack(Items.COAL, 16)),
+                "no_pork",
+                item -> item.contains("porkchop") && !item.contains("cooked"));
+    }
+
+    /** Dev ruling 2026-10-31: a porkchop request with raw pork but no coal shows the coal bubble. */
+    private static TestBlueprint cookOpenRequestNoCoalBlueprint() {
+        return cookOpenRequestBubbleBlueprint(
+                List.of(new ItemStack(Items.PORKCHOP, 16)),
+                "no_coal",
+                item -> item.contains("coal"));
+    }
+
+    private static TestBlueprint cookOpenRequestBubbleBlueprint(
+            List<ItemStack> supplies,
+            String label,
+            java.util.function.Predicate<String> wantedItem
+    ) {
+        String tag = "[open_request_" + label + "]";
+        String[] seen = new String[1];
+        boolean[] everDone = new boolean[1];
+        return cookRequestsBlueprint(
+                supplies,
+                List.of(Items.COOKED_PORKCHOP),
+                (town, v, output) -> {
+                    if (town.getPossibleWork().hasDoneAllRequests(v.getUUID()) && !everDone[0]) {
+                        everDone[0] = true;
+                        output.msg(tag + " counted as done: job=" + v.getJobId() + " need=" + v.getNeed());
+                    }
+                    String item = v.getUnmetItem();
+                    if (seen[0] != null || v.getNeed() != TownieNeed.UNMET_ITEM || item == null) {
+                        return;
+                    }
+                    if (!ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.isSeekingWork(v.getJobId())) {
+                        return;
+                    }
+                    seen[0] = item;
+                    output.msg(tag + " bubble while seeking work: job=" + v.getJobId() + " unmet=" + item);
+                },
+                output -> {
+                    output.msg(tag + " first bubble: " + seen[0] + " everDone=" + everDone[0]);
+                    return seen[0] != null && wantedItem.test(seen[0]) && !everDone[0];
+                });
+    }
+
+    /**
+     * Dev ruling 2026-10-31: with porkchop and beef requests open and only beef and coal in town,
+     * a cook working through the beef never shows a need bubble. Every tick it holds a cook job
+     * that isn't stuck (not seeking work, relaxing or eating, nor NO_SUPPLIES / NO_JOBSITE), its
+     * need must not be an unmet item or room.
+     */
+    private static TestBlueprint cookWorkingNoBubbleBlueprint() {
+        String tag = "[working_no_bubble]";
+        int[] workingTicks = new int[1];
+        int[] bubbleTicks = new int[1];
+        java.util.Set<String> jobsSeen = new java.util.TreeSet<>();
+        return cookRequestsBlueprint(
+                List.of(new ItemStack(Items.BEEF, 16), new ItemStack(Items.COAL, 16)),
+                List.of(Items.COOKED_PORKCHOP, Items.COOKED_BEEF),
+                (town, v, output) -> {
+                    JobID job = v.getJobId();
+                    jobsSeen.add(job.toString());
+                    if (ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.isSeekingWork(job)
+                            || ca.bradj.questown.jobs.declarative.DowntimeWork.matches(job)
+                            || ca.bradj.questown.jobs.DiningStages.isDiner(job)) {
+                        return;
+                    }
+                    IStatus<?> status = v.getStatusForServer();
+                    if (ProductionStatus.NO_SUPPLIES.equals(status) || ProductionStatus.NO_JOBSITE.equals(status)) {
+                        return;
+                    }
+                    workingTicks[0]++;
+                    if (v.getNeed() == TownieNeed.UNMET_ITEM || v.getNeed() == TownieNeed.MISSING_ROOM) {
+                        if (bubbleTicks[0]++ == 0) {
+                            output.msg(tag + " bubble while working: job=" + job + " status=" + status
+                                    + " need=" + v.getNeed() + " unmet=" + v.getUnmetItem());
+                        }
+                    }
+                },
+                output -> {
+                    output.msg(tag + " working ticks=" + workingTicks[0] + " with bubble=" + bubbleTicks[0]
+                            + " jobs=" + jobsSeen);
+                    return workingTicks[0] > 0 && bubbleTicks[0] == 0;
+                });
+    }
+
+    private interface VillagerTickProbe {
+        void observe(TownFlagBlockEntity town, VisitorMobEntity villager, TestOutput output);
+    }
+
+    /**
+     * The cook kitchen with cooked mutton 10 at request limit 4 (paused), plus open requests for
+     * {@code openRequests}; {@code probe} sees the villager every server tick for 4000 ticks. The
+     * cook also knows the porkchop and beef recipes, as the dev's playtest cook did (its "They
+     * need raw pork to work" came from the learned porkchop job).
+     */
+    private static TestBlueprint cookRequestsBlueprint(
+            List<ItemStack> supplies,
+            List<net.minecraft.world.item.Item> openRequests,
+            VillagerTickProbe probe,
+            java.util.function.Predicate<TestOutput> verdict
+    ) {
+        List<ItemStack> stocked = new ArrayList<>(supplies);
+        stocked.add(new ItemStack(Items.COOKED_MUTTON, 10));
+        TestBlueprint base = cookRealtimeBlueprint(stocked, new TestExpectation(List.of(), 0, 100));
         TestBlueprint.PostSpawnAction unlockCookJobs = base.postSpawnAction();
         return base.withPostSpawnAction((level, flagPos, town, output) -> {
             unlockCookJobs.run(level, flagPos, town, output);
-            ca.bradj.questown.jobs.requests.WorkRequest mutton =
-                    ca.bradj.questown.jobs.requests.WorkRequest.of(Items.COOKED_MUTTON);
+            for (LivingEntity e : town.getVillagerHandle().entities()) {
+                town.getVillagerHandle().unlockJob(e.getUUID(), new JobID("cook", "porkchop"));
+                town.getVillagerHandle().unlockJob(e.getUUID(), new JobID("cook", "beef"));
+            }
+            WorkRequest mutton = WorkRequest.of(Items.COOKED_MUTTON);
             town.getWorkHandle().requestWork(mutton);
             town.getWorkHandle().setRequestLimit(mutton, 4);
-            town.getWorkHandle().requestWork(ca.bradj.questown.jobs.requests.WorkRequest.of(Items.COOKED_PORKCHOP));
+            for (net.minecraft.world.item.Item item : openRequests) {
+                town.getWorkHandle().requestWork(WorkRequest.of(item));
+            }
             net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new Object() {
                 @net.neoforged.bus.api.SubscribeEvent
                 public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
-                    for (LivingEntity e : town.getVillagerHandle().entities()) {
-                        if (seen[0] != null || !(e instanceof VisitorMobEntity v)) {
-                            continue;
-                        }
-                        if (!town.getPossibleWork().hasDoneAllRequests(v.getUUID())) {
-                            continue;
-                        }
-                        String text = ServerJobsRegistry.getStatusText(v.getJobId(), v.getStatusForServer(), v).toString();
-                        seen[0] = "job=" + v.getJobId() + " need=" + v.getNeed()
-                                + " doneLine=" + text.contains("townie_status.requests_done");
-                        output.msg("[requests_done] " + seen[0]);
+                    if (town.isRemoved()) {
                         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(this);
+                        return;
+                    }
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            probe.observe(town, v, output);
+                        }
                     }
                 }
             });
@@ -2960,13 +3091,12 @@ public class TestBlueprintRegistry {
         }).withCustomAssertion((level, flagPos, town, output) -> {
             for (LivingEntity e : town.getVillagerHandle().entities()) {
                 if (e instanceof VisitorMobEntity v) {
-                    output.msg("[requests_done] end: job=" + v.getJobId() + " status=" + v.getStatusForServer()
+                    output.msg("[cook requests] end: job=" + v.getJobId() + " status=" + v.getStatusForServer()
                             + " need=" + v.getNeed() + " unmet=" + v.getUnmetItem()
                             + " done=" + town.getPossibleWork().hasDoneAllRequests(v.getUUID()));
                 }
             }
-            output.msg("[requests_done] first done tick: " + seen[0]);
-            return seen[0] != null && seen[0].contains("need=NONE") && seen[0].contains("doneLine=true");
+            return verdict.test(output);
         }).withRealtimeTicks(4000);
     }
 

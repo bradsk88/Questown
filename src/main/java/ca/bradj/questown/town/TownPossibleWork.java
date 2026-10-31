@@ -278,13 +278,13 @@ public class TownPossibleWork {
             long tick = Util.getTick(sl);
             Map<String, GateReason> liveKeys = new HashMap<>();
             Map<String, Set<JobID>> keyJobs = new HashMap<>();
-            Map<JobID, GateReason> reasons = new HashMap<>();
+            // The keys of jobs that answer an open request, which the bubble names first.
+            Map<String, Set<JobID>> openKeyJobs = new HashMap<>();
             for (JobPossibility p : unfilteredJobs) {
                 if (p.facts() == null || p.board() == null) {
                     continue;
                 }
                 GateReason reason = gateReason(t, p);
-                reasons.put(p.jobID(), reason);
                 // Town-level needs must come from a variant the town can actually run:
                 // at least one villager has unlocked it. Without this, locked tool
                 // variants (e.g. gatherer:axe on day one) register needs the town can
@@ -297,6 +297,9 @@ public class TownPossibleWork {
                     continue;
                 }
                 keyJobs.computeIfAbsent(key, k -> new HashSet<>()).add(p.jobID());
+                if (p.board().answersOpen()) {
+                    openKeyJobs.computeIfAbsent(key, k -> new HashSet<>()).add(p.jobID());
+                }
                 GateReason existing = liveKeys.get(key);
                 // A supply-item need beats a keyless product handle for the same key.
                 if (existing == null || (reason.supplyItem() && !existing.supplyItem())) {
@@ -324,7 +327,7 @@ public class TownPossibleWork {
             for (VisitorMobEntity villager : townies) {
                 boolean shownItemOrRoom = villager.getNeed() == TownieNeed.UNMET_ITEM
                         || villager.getNeed() == TownieNeed.MISSING_ROOM;
-                if (WorkSeekerJob.isSeekingWork(villager.getJobId()) && hasDoneAllRequests(t, villager.getUUID(), unfilteredJobs, reasons)) {
+                if (WorkSeekerJob.isSeekingWork(villager.getJobId()) && hasDoneAllRequests(t, villager.getUUID(), unfilteredJobs)) {
                     requestsDone.add(villager.getUUID());
                     if (shownItemOrRoom) {
                         villager.setNeed(TownieNeed.NONE);
@@ -338,10 +341,17 @@ public class TownPossibleWork {
                     }
                     continue;
                 }
-                String primary = unmetNeeds.primaryKey(
-                        root, villager.getUUID(), key -> canHoldAnyOf(t, villager.getUUID(), keyJobs.get(key)));
-                String room = primary != null ? null : unmetNeeds.primaryRoom(
-                        root, villager.getUUID(), key -> canHoldAnyOf(t, villager.getUUID(), keyJobs.get(key)));
+                // A need behind an open request outranks an unrequested job's (dev ruling
+                // 2026-10-31: a porkchop request with no raw pork names raw pork, not the beef the
+                // cook could also cook). With no open request behind any need, any held job's.
+                Predicate<String> holdsOpen = key -> canHoldAnyOf(t, villager.getUUID(), openKeyJobs.get(key));
+                String primary = unmetNeeds.primaryKey(root, villager.getUUID(), holdsOpen);
+                String room = primary != null ? null : unmetNeeds.primaryRoom(root, villager.getUUID(), holdsOpen);
+                if (primary == null && room == null) {
+                    Predicate<String> holds = key -> canHoldAnyOf(t, villager.getUUID(), keyJobs.get(key));
+                    primary = unmetNeeds.primaryKey(root, villager.getUUID(), holds);
+                    room = primary != null ? null : unmetNeeds.primaryRoom(root, villager.getUUID(), holds);
+                }
                 if (room != null) {
                     // NO_STORAGE outranks it, as it does UNMET_ITEM.
                     if (villager.getNeed() != TownieNeed.MISSING_ROOM && villager.getNeed() != TownieNeed.NO_STORAGE) {
@@ -374,16 +384,14 @@ public class TownPossibleWork {
     private static boolean hasDoneAllRequests(
             TownFlagBlockEntity t,
             UUID villager,
-            List<JobPossibility> jobs,
-            Map<JobID, GateReason> reasons
+            List<JobPossibility> jobs
     ) {
         List<RequestsDone.JobView> views = jobs.stream()
-                .filter(p -> reasons.containsKey(p.jobID()))
+                .filter(p -> p.facts() != null && p.board() != null)
                 .filter(p -> t.getVillagerHandle().isUnlocked(villager, p.jobID()))
                 .map(p -> new RequestsDone.JobView(
                         p.board().answersOpen(),
                         p.board().answersStocked(),
-                        RequestsDone.workable(reasons.get(p.jobID())),
                         ServerJobsRegistry.makesNothing(p.jobID())
                 ))
                 .toList();
@@ -873,7 +881,7 @@ public class TownPossibleWork {
      * work to do"). 2026-10-29 hid it for relaxing villagers only. The next pass after the villager
      * struggles again re-applies the need.
      */
-    static boolean showsUnmetNeed(JobID currentJob, @Nullable IStatus<?> status) {
+    public static boolean showsUnmetNeed(JobID currentJob, @Nullable IStatus<?> status) {
         if (WorkSeekerJob.isSeekingWork(currentJob)) {
             return true;
         }
