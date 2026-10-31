@@ -59,6 +59,23 @@ class TownWorkHandleRequestWorkTest {
         assertEquals(null, changes.get(0).removed());
     }
 
+    /** Dev playtest 2026-10-30: "New job requests should go to the top of the list". */
+    @Test
+    void requestWork_putsTheNewRequestOnTop() {
+        TownWorkHandle h = newHandle();
+        h.requestWork(WorkRequest.of(Items.APPLE));
+        h.requestWork(WorkRequest.of(Items.BREAD));
+        assertEquals(List.of(WorkRequest.of(Items.BREAD), WorkRequest.of(Items.APPLE)), h.getRequestedResults());
+    }
+
+    @Test
+    void restoredRequests_keepTheSavedOrder() {
+        TownWorkHandle h = newHandle();
+        h.restoreRequest(WorkRequest.of(Items.BREAD));
+        h.restoreRequest(WorkRequest.of(Items.APPLE));
+        assertEquals(List.of(WorkRequest.of(Items.BREAD), WorkRequest.of(Items.APPLE)), h.getRequestedResults());
+    }
+
     @Test
     void requestWork_duplicateIsNoOp() {
         TownWorkHandle h = newHandle();

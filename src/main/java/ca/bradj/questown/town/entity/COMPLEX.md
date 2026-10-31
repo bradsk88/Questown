@@ -1891,3 +1891,12 @@ the mineshaft runs the trip's timer. Each flag tick (`TownFlagTicker.updateWorkS
 `MiningSounds.tick` finds mineshaft positions with a running timer in any villager's store
 (`minedShafts`) and plays `SoundEvents.STONE_HIT` there with one chance in 4. `MiningSoundsTest`
 (2). Not heard in game.
+
+## New board requests go on top (dev playtest 2026-10-30)
+
+"New job requests should go to the top of the list, not the bottom (including auto adds)."
+`TownWorkHandle.requestWork` inserts at index 0 (`requestedResults` is now a `List`). It's the one
+path for player posts and auto-posted starter requests. Loading a save must not reverse the
+board, so `TownWorkHandleSerializer` re-adds saved requests through `restoreRequest`, which
+appends in saved (top-first) order. `TownWorkHandleRequestWorkTest`
+(`requestWork_putsTheNewRequestOnTop`, `restoredRequests_keepTheSavedOrder`).

@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import ca.bradj.questown.jobs.requests.RequestLimits;
 import com.google.common.collect.ImmutableMap;
-import java.util.Collection;
 import java.util.List;
 import java.util.Stack;
 import java.util.function.Consumer;
@@ -57,7 +56,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
     ) {
     }
 
-    final Collection<WorkRequest> requestedResults = new ArrayList<>();
+    final List<WorkRequest> requestedResults = new ArrayList<>();
 
     // Not saved: recomputed from storage (TownFlagBlockEntity.refreshStockedRequests).
     private ImmutableSet<WorkRequest> stocked = ImmutableSet.of();
@@ -266,9 +265,18 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
             QT.FLAG_LOGGER.debug("Request already on the board, not duplicated: {}", e);
             return;
         }
-        requestedResults.add(e);
+        // New requests go on top, posted or auto-posted (dev playtest 2026-10-30).
+        requestedResults.add(0, e);
         this.listeners.forEach(l -> l.accept(new Change(null)));
         QT.FLAG_LOGGER.debug("Request added to job board: {}", e);
+    }
+
+    /** A saved request, re-added below those already restored (keeps the saved order). */
+    void restoreRequest(WorkRequest e) {
+        if (requestedResults.contains(e)) {
+            return;
+        }
+        requestedResults.add(e);
     }
 
     @Override

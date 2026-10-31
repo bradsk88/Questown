@@ -30,8 +30,9 @@ public class TownWorkHandleSerializer {
         deserializeBoards(QTNBT.getList(compound, "boards")).forEach(
                 workHandle::registerJobBoard
         );
+        // Restored in saved order (top first); requestWork would put each new one on top.
         deserializeRequests(QTNBT.getList(compound, "requests")).forEach(
-                workHandle::requestWork
+                workHandle::restoreRequest
         );
         // Absent in towns saved before 2026-10-29: every request keeps the default limit.
         if (QTNBT.contains(compound, "limits")) {
